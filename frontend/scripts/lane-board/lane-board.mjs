@@ -425,19 +425,29 @@ function idTime(id) {
     return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : 0;
 }
 
+// The /api snapshot (P-2026-10-11-1205). `lane-run status --all` runs as a child process, one run at a time,
+// killed at STATUS_KILL_MS, so a slow status never blocks the other routes. A run that fails or times out after
+// a success leaves that success's rows in the snapshot, marked stale since it: a timed-out status is never an
+// empty board. Only before any success is the snapshot empty, with the error.
 let cache = { at: 0, data: null };
+let lastGood = null;
+let statusFlight = null;
+const STATUS_KILL_MS = 15_000;
 
 let cposMem = { at: 0, v: new Map() };
 function chainPosMem() { if (Date.now() - cposMem.at > CACHE_MS) cposMem = { at: Date.now(), v: chainPositions() }; return cposMem.v; }
-function collect() {
-    if (cache.data && Date.now() - cache.at < CACHE_MS) return cache.data;
+/** The snapshot of one status run `r` ({ ok, stdout, error }), left in the cache. */
+function snapshot(r) {
     const now = Date.now();
     const load = loadavg();
-    const r = spawnSync(process.execPath, [LANE_RUN, 'status', '--all'], { encoding: 'utf8', timeout: 15_000 });
-    const error = r.status === 0 ? '' : (r.stderr || r.error?.message || 'lane-run status failed').trim();
+    if (!r.ok && lastGood) {
+        cache = { at: Date.now(), data: { ...lastGood, now: Date.now(), load: load.map((x) => x.toFixed(2)), error: r.error, stale: true, staleSince: lastGood.now } };
+        return cache.data;
+    }
+    const error = r.ok ? '' : r.error;
     const rows = [];
     const logs = new Set();
-    for (const line of (r.stdout || '').split('\n').slice(1)) {
+    for (const line of (r.ok ? r.stdout : '').split('\n').slice(1)) {
         if (!line.trim()) continue;
         const cols = line.trim().split(/\s{2,}/);
         if (cols.length < 4) continue;
@@ -504,9 +514,55 @@ function collect() {
         try { writeFileSync(TL_CACHE_FILE + '.tmp', JSON.stringify(tlCache)); renameSync(TL_CACHE_FILE + '.tmp', TL_CACHE_FILE); } catch { /* best effort */ }
         tlDirty = false;
     }
-    const data = { now: Date.now(), load: load.map((x) => x.toFixed(2)), error, rows };
+    const data = { now: Date.now(), load: load.map((x) => x.toFixed(2)), error, stale: false, rows };
+    if (r.ok) lastGood = data;
     cache = { at: Date.now(), data };
     return data;
+}
+
+/** One run of `lane-run status --all` as a child process: `{ ok, stdout, error }`, `error` one line; killed at `killMs`. */
+export function runStatus(spawnFn = spawn, killMs = STATUS_KILL_MS) {
+    return new Promise((done) => {
+        const out = [], err = [];
+        const fail = (error) => done({ ok: false, stdout: '', error: String(error).replace(/\s+/g, ' ').trim() });
+        let child, killed = false;
+        try { child = spawnFn(process.execPath, [LANE_RUN, 'status', '--all'], { stdio: ['ignore', 'pipe', 'pipe'] }); }
+        catch (e) { return fail('lane-run status: ' + e.message); }
+        const timer = setTimeout(() => { killed = true; child.kill('SIGKILL'); }, killMs);
+        child.stdout.on('data', (b) => out.push(b));
+        child.stderr.on('data', (b) => err.push(b));
+        child.on('error', (e) => { clearTimeout(timer); fail('lane-run status: ' + e.message); });
+        child.on('close', (code) => {
+            clearTimeout(timer);
+            if (code === 0 && !killed) done({ ok: true, stdout: Buffer.concat(out).toString('utf8'), error: '' });
+            else fail(killed ? 'lane-run status timed out after ' + killMs / 1000 + ' s' : Buffer.concat(err).toString('utf8').trim() || 'lane-run status failed (exit ' + code + ')');
+        });
+    });
+}
+
+/** Starts a status run unless one is in flight; resolves once its snapshot is in the cache. Never rejects. */
+function refreshStatus() {
+    if (!statusFlight) {
+        statusFlight = runStatus().then((r) => {
+            try { snapshot(r); } catch (e) { snapshot({ ok: false, stdout: '', error: String(e) }); }
+        }).finally(() => { statusFlight = null; });
+    }
+    return statusFlight;
+}
+
+/** The snapshot at once, `refreshing` while a run is in flight; one older than CACHE_MS starts a run in the background.
+ *  Synchronous because timeline() is: its routes are answered from the snapshot and never wait for a run. */
+function collect() {
+    if (!cache.data || Date.now() - cache.at >= CACHE_MS) refreshStatus();
+    return { ...(cache.data || { now: Date.now(), load: loadavg().map((x) => x.toFixed(2)), error: '', stale: false, rows: [] }), refreshing: statusFlight !== null };
+}
+
+/** /api: a request that finds no snapshot, or one older than CACHE_MS, starts a run and waits for it; a request that
+ *  arrives while a run is in flight gets the snapshot at once, `refreshing: true`, and starts no second run. */
+function apiStatus() {
+    if (statusFlight && cache.data) return Promise.resolve(collect());
+    if (!cache.data || Date.now() - cache.at >= CACHE_MS) return refreshStatus().then(() => collect());
+    return Promise.resolve(collect());
 }
 
 // ── timeline ────────────────────────────────────────────────────────────────
@@ -1283,7 +1339,8 @@ td.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap
 .title{display:block;color:var(--muted);font-size:11px;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;max-width:320px;white-space:normal}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid currentColor}
 .running{color:var(--run)}.blocked,.stopped{color:var(--warn)}.done,.resolved{color:var(--ok)}.question{color:var(--warn)}.hard-stop{color:var(--hs)}.blocked-o,.unparsed,.failed{color:var(--bad)}
-.phase{max-width:340px}.empty{padding:16px;color:var(--muted)}.err{color:var(--bad);margin:8px 0}
+.phase{max-width:340px}.empty{padding:16px;color:var(--muted)}.err{color:var(--bad);margin:8px 0}.err.stale{color:var(--warn)}
+.spin{display:inline-block;width:10px;height:10px;margin-left:-16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;align-self:center}.spin[hidden]{display:none}@keyframes spin{to{transform:rotate(360deg)}}
 td.phase .prow{display:flex;align-items:center;gap:6px;height:18px;overflow:hidden}td.phase .ptext{display:block;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}td.phase .n{flex:none;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
 .segs{display:flex;gap:2px;min-width:0}.segs .seg{display:block;flex:0 1 10px;min-width:3px;height:8px;border-radius:2px;border:1px solid var(--muted);background:transparent}.segs .seg.reached{background:var(--run);border-color:var(--run)}.segs .seg.skipped{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,transparent 1px 3px)}
 table.lfx{table-layout:fixed;width:100%;min-width:1200px}table.lfx th,table.lfx td{padding:8px;overflow:hidden;overflow-wrap:anywhere}table.lfx .pill{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
@@ -1295,13 +1352,13 @@ a.chat{color:var(--run);text-decoration:none}a.chat:hover{text-decoration:underl
 .filt{display:flex;gap:12px;align-items:baseline}.filt a{color:var(--accent);font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer}
 details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:8px 8px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 8px 8px}
 </style></head><body><main>
-<header><h1>Jjodel Harness Lane Management</h1><span class="meta" id="meta">loading…</span></header>
+<header><h1>Jjodel Harness Lane Management</h1><span class="meta" id="meta">loading…</span><span class="spin" id="spin" role="status" aria-label="Loading" hidden></span></header>
 <nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button><button data-tab="requirements">Requirements</button><div class="strip" id="strip" aria-label="Lanes by state">${STRIP.map(([k, label, cls]) => '<a href="#" role="button" class="pill sp ' + cls + ' zero" data-k="' + k + '" title="Show the ' + label + ' lanes"><b>0</b>' + label + '</a>').join('')}</div></nav>
 <div class="err" id="err"></div>
 <section id="tab-table">
 <div id="lanes-filt" hidden></div>
 <div id="lanes-all">
-<h2>Running</h2><div class="wrap" id="live"></div>
+<h2>Running</h2><div class="wrap" id="live"><div class="empty">Loading lanes…</div></div>
 <h2>Last ${RECENT_H} hours</h2><div class="wrap" id="recent"></div>
 <h2>Earlier lanes</h2><div id="older"></div>
 </div>
@@ -1314,6 +1371,12 @@ const REFRESH=${REFRESH_S}*1000;
 const stripKey=${stripKey.toString()};
 const STRIP=${JSON.stringify(STRIP)};
 let laneFilter='',lastRows=[];
+// The spinner beside "updated at": on while a request to /api or /api/* is in flight, from any tab (fetch is
+// counted here, so timeline.js, insights.js and requirements.js need nothing), or while the last /api answer
+// said the server was still refreshing; then the page asks again in 2 s.
+let inflight=0,refreshing=false,again=0,loaded=false;
+const spin=()=>{document.getElementById('spin').hidden=!(inflight||refreshing)};
+if(window.fetch){const f0=window.fetch.bind(window);window.fetch=function(u,o){const p=new URL(String(u&&u.url||u),location.href).pathname;if(p!=='/api'&&!p.startsWith('/api/'))return f0(u,o);inflight++;spin();return f0(u,o).finally(()=>{inflight--;spin()})}}
 function renderStrip(rows){
   const n={};STRIP.forEach(([k])=>{n[k]=0});rows.forEach(r=>{const k=stripKey(r);if(k)n[k]++});
   STRIP.forEach(([k])=>{const el=document.querySelector('#strip [data-k="'+k+'"]');if(!el)return;el.querySelector('b').textContent=n[k];el.classList.toggle('zero',!n[k]);el.classList.toggle('on',laneFilter===k)});
@@ -1371,7 +1434,7 @@ function phaseCell(r){
 // day: the reference day of Started and Ended, today unless given (an Earlier lanes group passes its own).
 function table(rows,live,day){
   day=day||ymd(new Date());
-  if(!rows.length)return '<div class="empty">'+(live?'No lane is running.':'No lanes in this period.')+'</div>';
+  if(!rows.length)return '<div class="empty">'+(live?(loaded?'No lane is running.':'Loading lanes…'):'No lanes in this period.')+'</div>';
   const cols=live?['Lane','State','Kind','Started','Elapsed','Span','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Span','Worktree','Launched by'];
   let h='<table class="lfx"><colgroup>'+cols.map(c=>'<col'+(COL_W[c]?' style="width:'+COL_W[c]+'px"':'')+'>').join('')+'</colgroup><thead><tr>'+cols.map(c=>'<th'+(tips[c]?' title="'+esc(tips[c])+'"':'')+'>'+c+'</th>').join('')+'</tr></thead><tbody>';
   for(const r of rows){
@@ -1390,10 +1453,17 @@ async function tick(){
     const t=new Date(d.now).toLocaleTimeString('en-GB');
     const hi=Number(d.load[0])>20;
     document.getElementById('meta').innerHTML='updated at <b>'+t+'</b> · refresh every '+(REFRESH/1000)+' s · load <span class="'+(hi?'load-hi':'')+'">'+d.load.join(' ')+'</span>';
-    document.getElementById('err').textContent=d.error||'';
+    // Stale rows (a status run that failed after a success) are drawn and counted, under an amber line.
+    const err=document.getElementById('err');
+    err.className=d.stale?'err stale':'err';
+    err.title=d.stale?d.error:'';
+    err.textContent=d.stale?(/timed out/.test(d.error)?'Status timed out':'Status failed')+' at load '+d.load[0]+'; showing data from '+new Date(d.staleSince).toLocaleTimeString('en-GB')+'.':d.error||'';
+    // Empty rows read "no lane" only when a status run gave them; before any success they read "loading".
+    loaded=!d.error||!!d.stale;
     lastRows=d.rows;renderStrip(d.rows);renderLanes(d.rows);
     const n=d.rows.filter(r=>r.live).length;document.title=(n?'('+n+') ':'')+'Jjodel Harness Lane Management';
-  }catch(e){document.getElementById('err').textContent='lane-board unreachable: '+e.message}
+    refreshing=!!d.refreshing;spin();clearTimeout(again);if(refreshing)again=setTimeout(tick,2000);
+  }catch(e){const err=document.getElementById('err');err.className='err';err.title='';err.textContent='lane-board unreachable: '+e.message;refreshing=false;spin()}
 }
 function renderOlder(rows){
   const days=[...new Set(rows.map(r=>r.day))].sort().reverse();
@@ -1421,6 +1491,9 @@ tick();setInterval(()=>{tick();if(!document.getElementById('tab-timeline').hidde
 const MAIN = (() => { try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); } catch { return false; } })();
 
 const server = createServer((req, res) => {
+    // timeline() reads the status synchronously: before the first snapshot, the routes that call it wait for one
+    // without blocking the others (refreshStatus always leaves a snapshot, so the request comes back here once).
+    if (!cache.data && /^\/(api\/timeline|export\/)/.test(req.url)) { refreshStatus().then(() => server.emit('request', req, res)); return; }
     const url = new URL(req.url, 'http://localhost');
     const days = Number(url.searchParams.get('days') || 0);
     if (url.pathname === '/insights.js') {
@@ -1465,10 +1538,11 @@ const server = createServer((req, res) => {
         return;
     }
     if (req.url === '/api') {
-        let body;
-        try { body = JSON.stringify(collect()); } catch (e) { body = JSON.stringify({ now: Date.now(), load: [], error: String(e), rows: [] }); }
-        res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-        return res.end(body);
+        apiStatus().then((d) => JSON.stringify(d), (e) => JSON.stringify({ now: Date.now(), load: [], error: String(e), rows: [] })).then((body) => {
+            res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+            res.end(body);
+        });
+        return;
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(PAGE);

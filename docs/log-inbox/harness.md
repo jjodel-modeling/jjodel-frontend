@@ -720,3 +720,172 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: scripts-only; chat check: 925/925 scripts tests, bench 29/29, backfill 42 cards
 **Notes**: Rollback tag `pre-ticket-cards` on `1328e35ff` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1127/result.json`.
 **Prompt document name**: 2026-10-11 11:27
+
+## 2026-10-11 — feat(harness): first-shot squares on the time axis (P-2026-10-11-1138)
+**Prompt**: `claude_2026-10-11_1138_prompt_firstshot_time_axis.md`, fast lane on `~/jjodel-w-fstime`, branch `firstshot-time-axis`: in the Insights card "First-shot over time" each square at its lane's start time, same-column squares stacked, height from the tallest stack with a 30-row cap that widens the columns, day ticks on the baseline, new subtitle, a new test file and a mutation bench.
+**Files touched**: `frontend/scripts/lane-board/insights.js`, `frontend/scripts/hooks/__tests__/laneBoardInsights.test.ts` (`3f5e33827`); uncommitted: this entry (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (chat RC-23 check passed) — node --check exit 0; laneBoard, laneBoardStrip, laneBoardRequirements and laneBoardInsights 101/101; check:scripts PASS 80 files; typecheck:scripts exit 0; the card's visual check is due (RC-23)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: chat RC-23 on 4702 (PID 8351, then stopped): 7 days 12 px columns, 21 rows; 30 days widened to 36 px, 24 rows; squares placed by start day (checked per day against their Prompt-IDs), marker lines readable against them, weekly rates and week labels kept
+**Notes**: Tallest stack, today's data: 7 days 21 rows, All 27, both at 12 px; 30 days 44 rows at 12 px, widened to 36 px (3 across) for 24 rows, the only range widened. A widened column holds k squares across, rows centred: one square per row in a wider column could never shorten a stack. New tests on the base commit 6/6 red, here 6/6 green; bench 15/15 killed (body of 3f5e33827).
+**Prompt document name**: 2026-10-11 11:38
+
+## 2026-10-11 — merge: firstshot-time-axis into alfonso-frontend-jjtl (P-2026-10-11-1152)
+**Prompt**: `claude_2026-10-11_1152_prompt_merge_firstshot-time-axis.md`, a direct merge by `lane-run merge --direct`, no session: `firstshot-time-axis` at `7d7ba62e5` into `alfonso-frontend-jjtl`, merge base `ef42d3596`, 3 commits on the branch side.
+**Files touched**: merge `899d5aa07`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-11_1138_prompt_firstshot_time_axis.md`, `frontend/scripts/hooks/__tests__/laneBoardInsights.test.ts`, `frontend/scripts/lane-board/insights.js`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `899d5aa07` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8536 tests in 353 files, 9 red at import, hooks 653; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702, squares at their start time, 7 days 21 rows at 12 px, 30 days widened to 36 px and 24 rows, marker lines readable
+**Notes**: Rollback tag `pre-firstshot-time-axis` on `cbbc1a204` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1152/result.json`.
+**Prompt document name**: 2026-10-11 11:52
+
+## 2026-10-11 — fix(harness): lane board keeps last good data, shows a loading indicator (P-2026-10-11-1205)
+**Prompt**: `claude_2026-10-11_1205_prompt_lane_board_loading_stale.md`, fast lane on `~/jjodel-w-boardload`, branch `board-loading`: `/api` answers the last good rows marked `stale` when `lane-run status --all` fails or times out, runs it as an async child process with one run in flight (`refreshing`), and the page gets a CSS spinner for in-flight `/api*` requests, an amber stale line and "Loading lanes…" before the first answer; one test, README paragraph.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts` (`f59f1ccd5`); uncommitted: this entry (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — node --check exit 0; laneBoard, laneBoardStrip, laneBoardRequirements, laneBoardInsights 102/102; check:scripts PASS 80 files; new test red on the pre-change script; curl on 4703: /api during a run 0.012 s, `refreshing: true`
+**Out-of-scope changes**: yes — a boot gate in the server handler makes `/api/timeline` and `/export/*` wait for the first snapshot (not blocking), because `timeline()` reads `collect()` synchronously; without it the existing raw-outcome test fails. Their code is untouched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the visual check is due by the chat (RC-23) on 4703, PID 83772
+**Notes**: collect() stays synchronous for timeline(), answered from the snapshot and refreshed in the background; /api waits only for the run it starts. Board on 4703 started with LANE_BOARD_CACHE in /tmp, so nothing is written under ~/.jjodel-lanes/. The prompt's subject (79 characters) was refused by bash-guard (CLAUDE.md 6.2), so it was shortened to 71. Mutation bench 4/4 red (commit body).
+**Prompt document name**: 2026-10-11 12:05
+
+**Ticket** (for a later lane): synchronous git calls left in the board, measured at load 11 on 2026-10-11 12:15. `promptCommits()` `git log --all --diff-filter=A -- docs/prompts/` took 3216 ms. It runs once every 5 min inside the `/api` row build and inside `timeline()`, so it still blocks the event loop for about 3 s. The `git()` helper takes 38-52 ms per call: `ls-tree` and `show` in `trunkPrompt`, `for-each-ref` in `refreshGit`, `ls-tree`/`show` of `docs/log-inbox/` and `show` of `docs/decisions.md` for Insights.
+
+## 2026-10-11 — merge: board-loading into alfonso-frontend-jjtl (P-2026-10-11-1221)
+**Prompt**: `claude_2026-10-11_1221_prompt_merge_board-loading.md`, a lane-run session (`lane-run merge --direct` fell back: tracked changes in the board-loading worktree): `board-loading` at `f59f1ccd5` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `1ec75cd32`, 1 commit on the branch side.
+**Files touched**: merge `9461bfd7c`: 3 files from the branch side (`frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: the P-2026-10-11-1205 entry carried verbatim from `~/jjodel-w-boardload` (RC-17), this entry, the Status of the 1205 and 1221 prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9461bfd7c`: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8537 tests (trunk tip 8536 + 1 new), 344/353 files, the same 9 red at import; hooks 654 (653 + 1); build exit 0; check:docs 5/5; check:agents, check:scripts (109 files) and check:addonly PASS.
+**Out-of-scope changes**: no — the 1205 entry and its Status flip were added to this commit by the chat's GO
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4703 (RC-23), 2026-10-11 12:21: spinner visible while /api is in flight, amber stale line with the rows kept and the strip counting them; the line reads 'Status failed' rather than 'timed out', accepted
+**Notes**: Merge-tree zero conflicts, tree `183dd6a9d` equal to the merge index; no file changed on both sides; governance files untouched on the branch; probe 1/1. Union: none. The prompt's step-6 rollback target `66ee3830d` should read `3c90527a9`, the pre-merge tip; not triggered, noted by the chat. The trunk moved after the merge (P-2026-10-11-1238, 1250, 1300); this commit sits on top.
+**Prompt document name**: 2026-10-11 12:21
+
+## 2026-10-11 — merge: insights-more into alfonso-frontend-jjtl (P-2026-10-11-1328)
+**Prompt**: `claude_2026-10-11_1328_prompt_merge_insights-more.md`, a direct merge by `lane-run merge --direct`, no session: `insights-more` at `d97744795` into `alfonso-frontend-jjtl`, merge base `cbbc1a204`, 1 commit on the branch side.
+**Files touched**: merge `5278fa2e9`: 1 files from the branch side (`docs/discovery/discovery_2026-10-11_insights_more_cards.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5278fa2e9` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8604 tests in 355 files, 9 red at import, hooks 654; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge (discovery report of P-2026-10-11-1150), no visual change; GO without scenes
+**Notes**: Rollback tag `pre-insights-more` on `a40dec6db` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1328/result.json`.
+**Prompt document name**: 2026-10-11 13:28
+
+
+## 2026-10-11 — discovery: lane board Insights, rework, decisions, lead time (P-2026-10-11-1150)
+**Prompt**: `claude_2026-10-11_1150_prompt_insights_more_cards_discovery.md`, lane auto, Phase 1 read-only: measure rework causes and Corregge chains, decision autonomy, lead time and branches left out of the trunk, the secondary data; write the data contract of the new Insights cards and the slices; hard stop after the report.
+**Files touched**: `docs/discovery/discovery_2026-10-11_insights_more_cards.md` (`d97744795`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: RC-22: the four named worktrees touch no board file, but 1138 merged into insights.js during the run and 1205 holds lane-board.mjs, README.md and laneBoard.test.ts, so S1-S3 queue after it. Awaiting Alfonso: RC-18 harness budget looks exceeded (proxy 19/49). Probes in /tmp/p1150/; /api/insights read from a throwaway board on 4791 with its cache in /tmp, 4700 untouched. Report §0 and §12.
+**Prompt document name**: 2026-10-11 11:50
+
+**Ticket** (P-2026-10-11-1150): the board resolves `Corregge` by the first Prompt-ID of the annotation before the timestamp prefix (`lane-board.mjs:968`): 2 of 164 entries misattributed, one marks the merge P-2026-10-11-1056 corrected instead of P-2026-10-10-2029. Fix planned in slice S1 of the report.
+
+## 2026-10-11 — merge: prov-digest into alfonso-frontend-jjtl (P-2026-10-11-1451)
+**Prompt**: `claude_2026-10-11_1451_prompt_merge_prov-digest.md`, a direct merge by `lane-run merge --direct`, no session: `prov-digest` at `b646a9a04` into `alfonso-frontend-jjtl`, merge base `4de76fb74`, 1 commit on the branch side.
+**Files touched**: merge `a98c3b1ce`: 1 files from the branch side (`docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a98c3b1ce` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8612 tests in 356 files, 9 red at import, hooks 654; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge (provisional rows digest), no visual change
+**Notes**: Rollback tag `pre-prov-digest` on `239ca4266` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1451/result.json`.
+**Prompt document name**: 2026-10-11 14:51
+
+
+## 2026-10-11 — docs(ratifiche): digest of the provisional decision rows (P-2026-10-11-1430)
+**Prompt**: `claude_2026-10-11_1430_prompt_provisional_rows_digest.md`, lane fast, docs only: list every row of `docs/decisions.md` whose header says provisional, classify it A/B/C by consequence for Alfonso, recommend ratify, amend or revoke for each, group the 49 headers `docs:digest` cannot parse with their minimal rewrite, change nothing in the register; hard stop with the digest ready.
+**Files touched**: `docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md` (`b646a9a04`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 77 provisional rows, not 60: the 1150 parser and docs:digest read only `- **` rows (R-UNDO-8, R-JS-2..11 have no bullet). All 24 cited code commits are on the trunk, so `reversible: branch` is stale. A 35, B 1, C 41; ratify 74, amend 3 (RC-38, R-SIM-120, R-VP-29), revoke 0; unsure 4; RC-26 items 8. Read first: R-UNDO-8, R-JS-10, RC-38. 49 unparsable headers in 5 kinds, rewrites not applied. Probes in /tmp/pd/.
+**Prompt document name**: 2026-10-11 14:30
+
+**Ticket** (P-2026-10-11-1430): `frontend/scripts/auto-intake.config.json` is `"mode": "live"`, `ratifiedBy: apierantonio`, since `53aed9baa` (2026-10-03 23:36), while RC-38 still reads `awaiting Alfonso`, RC-40 (2) says `ratifiedBy` stays null, and no row records the live switch. Digest §2 item 3.
+
+## 2026-10-11 — feat(harness): a written description for each requirement cluster (P-2026-10-11-1510)
+**Prompt**: `claude_2026-10-11_1510_prompt_cluster_descriptions.md`, lane full: write 2 to 4 sentences for each of the 17 req-trace clusters from their rows, have them checked by a fresh-context agent, attach them in req-trace with the drift since writing and orphan keys, show them in the Requirements tab (one fixed-height line in the summary, full text and drift line inside), README, tests and mutation bench, board on 4702.
+**Files touched**: code `16ebdfca5`: `frontend/scripts/req-trace.mjs`, `frontend/scripts/lane-board/requirements.js`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts`, `frontend/scripts/hooks/__tests__/laneBoardRequirements.test.ts`; docs `e1c750a8a`: `docs/goals/cluster-descriptions.json`, `docs/goals/README.md`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Five board suites 126/126; `node --check` 0 on both scripts; check:scripts and check:docs exit 0.
+**Out-of-scope changes**: no — six files over two commits, above five (RC-11), each named in the prompt's Lane line.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 4702, headless Chromium: 18 summary rows all 54.84 px, line 16 px under the title; then the chat's RC-23 check on 4702 passed: one-line description under each of the 17 cluster titles, full text when opened, no em dash, Unclustered without description; descriptions approved by Alfonso)
+**Notes**: New cases 8/8 red on 8840e4c83; bench 23/23 killed, control 41/41. Checkers: first pass 8 of 17 needs-fix, second pass 3 wording slips, all fixed. The tab draws no em dash; five remain in pre-existing tooltips (commit subjects, contribution why texts). Board PID 54444, cache /tmp/lane-board-4702-timeline-cache.json. Scratch in /tmp/cd1510/.
+**Prompt document name**: 2026-10-11 15:10
+
+**Ticket** (P-2026-10-11-1510): `parseRegister` in `req-trace.mjs` ends a row at an inner `**` paragraph or `- ` sub-bullet, so 21 clustered rows lose their tail, closures included (R-STR-6, R-STR-7 «Sciolta»); a reader of req-trace's row text misses them. Found by comparing each row with the lines up to the next row start.
+
+## 2026-10-11 — merge: cluster-descriptions into alfonso-frontend-jjtl (P-2026-10-11-1535)
+**Prompt**: `claude_2026-10-11_1535_prompt_merge_cluster-descriptions.md`, a direct merge by `lane-run merge --direct`, no session: `cluster-descriptions` at `e657a479a` into `alfonso-frontend-jjtl`, merge base `d4b8a6b09`, 4 commits on the branch side.
+**Files touched**: merge `ee5c07c2f`: 8 files from the branch side (`docs/goals/README.md`, `docs/goals/cluster-descriptions.json`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-11_1510_prompt_cluster_descriptions.md`, `frontend/scripts/hooks/__tests__/laneBoardRequirements.test.ts`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts`, `frontend/scripts/lane-board/requirements.js`, `frontend/scripts/req-trace.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ee5c07c2f` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8620 tests in 356 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passed: chat RC-23 on 4702, one-line description under each of the 17 cluster titles, full text when opened, no em dash; descriptions approved by Alfonso
+**Notes**: Rollback tag `pre-cluster-descriptions` on `8a22140d9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1535/result.json`.
+**Prompt document name**: 2026-10-11 15:35
+
+## 2026-10-11 — merge: ratify-provisional into alfonso-frontend-jjtl (P-2026-10-11-1559)
+**Prompt**: `claude_2026-10-11_1559_prompt_merge_ratify-provisional.md`, a direct merge by `lane-run merge --direct`, no session: `ratify-provisional` at `d7a251297` into `alfonso-frontend-jjtl`, merge base `88627f711`, 1 commit on the branch side.
+**Files touched**: merge `c6804f3d3`: 2 files from the branch side (`docs/decisions.md`, `docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c6804f3d3` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8636 tests in 357 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge (ratifications), no visual change
+**Notes**: Rollback tag `pre-ratify-provisional` on `88627f711` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1559/result.json`.
+**Prompt document name**: 2026-10-11 15:59
+
+
+## 2026-10-11 — docs(decisions): ratify the provisional rows of the digest, amend R-SIM-120 and R-VP-29, fix headers (P-2026-10-11-1540)
+**Prompt**: `claude_2026-10-11_1540_prompt_ratify_provisional_rows.md`, lane fast, unattended: apply Alfonso's «ok alle raccomandazioni» to the digest of P-2026-10-11-1430, RC-38 excepted: ratify 74 rows, amend R-SIM-120 and R-VP-29 then ratify them, apply the §7 header rewrites, regenerate `docs/digest/`, write the digest's §10 Outcome.
+**Files touched**: `d7a251297`: `docs/decisions.md`, `docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md`; this entry, uncommitted (RC-17).
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. `docs:digest --all` parses 401 of 402 rows, RC-38's header the only failure, as before; check:docs 5/5.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Partial: `--write` exits 2 on RC-38 and writes nothing, so the 34-date backfill of `docs/digest/` waits for RC-38 (adopted unattended, RC-21: the gate is not bypassed). 1 header says provisional (RC-38), 76 say `ratified by Alfonso 2026-10-11`; 39 cited commits on HEAD. Subject shortened to 72 (bash-guard). 1b clauses dropped: the section intros name the chat. Not applied: the R-SIM-70 paragraph (§6), the R-JS intros' «Marker: provisional». Detail: digest §10.
+**Prompt document name**: 2026-10-11 15:40
+
+**Ticket** (P-2026-10-11-1540): `docs:digest --write` writes nothing when any header fails to parse, so one row waiting for Alfonso (RC-38) blocks the digest of every date. Writing every date but the failing row's would unblock the backfill; a script change, Alfonso's call.

@@ -162,3 +162,44 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-10 08:10
 
 **Ticket** (low, observed, not changed): `do eval x.name end` parses as eval `x.name end`, because `parseEvalCommand` reads to the newline and swallows `end`. A `let ... in <non-command> end` body now fails with the same message, `in do block`, though its opener is `in`. A bare `do` message still parses clean as an empty block; whether `detect` should take it as JjScript is the detect question, left to its own lane.
+
+## 2026-10-11 — merge: do-freeze into alfonso-frontend-jjtl (P-2026-10-11-0034)
+**Prompt**: `claude_2026-10-11_0034_prompt_merge_do-freeze.md`, a merge in a lane-run session: `do-freeze` at `592b12e9e` into `alfonso-frontend-jjtl`, `--no-ff`, merge base `3099fb53c`, 2 commits on the branch side.
+**Files touched**: merge `294a29084`: 3 files from the branch side (`docs/log-inbox/jjscript.md`, `frontend/src/jjscript/__tests__/parserTermination.test.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `294a29084` in the session: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8232 tests in 337 files (trunk tip 8210 in 336, plus the branch's 22 in 1 new file measured on `592b12e9e`), the same 9 red at import; hooks 603 in 10 files; build exit 0; check:docs 5/5; check:agents green; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso, smoke on 3001, 2026-10-11
+**Notes**: merge-tree zero conflicts, tree `6804b284d` equal to the merge's index tree. Union: none. Probes: 21 decision rows once, control R-GEN-17 absent at the merge; 80 headings once. check:docs counted 5/5, not the prompt's 4/4 (Check E). The lane's prompt P-2026-10-10-0810 still reads `Status: da eseguire`: the Status precondition was read on the prompts the branch adds (none), as in `72762297b`. Not flipped here.
+**Prompt document name**: 2026-10-11 00:34
+
+## 2026-10-11 — fix(jjscript): block eval stops at end, a bare do fails a strict parse (P-2026-10-11-1145)
+**Prompt**: `claude_2026-10-11_1145_prompt_jjscript_do_block_followups.md`, fast lane on `~/jjodel-w-dotickets`, branch `do-tickets`, unattended. The two tickets of P-2026-10-10-0810: `do eval x.name end` swallowed the block's `end`, a `let … in <non-command> end` error named `do`, a bare `do` parsed clean under strict. Tests first, fix in `parser.ts` only.
+**Files touched**: `5ef4f9ebf`, `0641494c5`: `frontend/src/jjscript/parser/parser.ts`, `frontend/src/jjscript/__tests__/parserTermination.test.ts`. This commit: `docs/log-inbox/jjscript.md`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-10 08:10 (`claude_2026-10-10_0810_prompt_jjscript_do_block_freeze.md`: its no-progress error named `do` for every block)
+**Causa**: (a)
+**Regressions**: unknown. typecheck 14, the §17 set; test file 44 of 44; jjscript vitest 595 passed in 23 of 24 files (context-binding red at import, known); build exit 0; the two AST snapshots unchanged; `validateScriptIntegrity` on multi-line do, forall and let scripts valid as on the base. Jodie's routing was not run in the app.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no rendering change; the detect path is the strict parse the tests run)
+**Notes**: Deviation, the chat's answer (a), RC-21: a bare `do` fails only under strict. In both modes `validateScriptIntegrity` rejected every multi-line `do … end` script at line 1, since it parses line by line (measured). Side effect: under strict, `do create class A` without `end` is no longer a script. Base red: 16 of 44 on `e47e456b1`, 4 on `5ef4f9ebf`. Benches 4/5 (dropping `blockDepth--` equivalent), 3/3. Both tickets of P-2026-10-10-0810 closed.
+**Prompt document name**: 2026-10-11 11:45
+
+**Ticket** (low, observed, not changed): `parseEvalCommand` rebuilds the expression by joining token values with spaces, so `eval "a end b"` reaches JjEL as `a end b`, without its quotes, and `eval $x` as `$ x`. Pre-existing, at top level and in blocks alike; not measured whether JjEL evaluates either as meant.
+
+## 2026-10-11 — merge: do-tickets into alfonso-frontend-jjtl (P-2026-10-11-1300)
+**Prompt**: `claude_2026-10-11_1300_prompt_merge_do-tickets.md`, a merge in a lane-run session: `do-tickets` at `3955f9f2b` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `e47e456b1`, 3 commits on the branch side.
+**Files touched**: merge `75479afc6`: 3 files from the branch side (`docs/log-inbox/jjscript.md`, `frontend/src/jjscript/__tests__/parserTermination.test.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `75479afc6` in the session: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8604 tests in 355 files (trunk tip 8582 in 355, plus the branch's 22 new in `parserTermination.test.ts`, 22 to 44, measured on `3955f9f2b`), 0 failed, the same 9 red at import; hooks 654 in 12 files; build exit 0; check:docs 5/5; check:agents green; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (parser-only change, no rendering change; GO by the chat, unattended, lane auto: the gates are the check)
+**Notes**: Tip moved twice, docs-only, other chats: `2e3927bdd` (codegen-check closure) before the merge, accepted as trunk, merge-tree re-measured on it (tree `343620292`, zero conflicts, probes 6/6); `6181c9fef` before this commit. Union: none. check:docs 5/5, not the prompt's 4/4 (Check E). P-2026-10-11-1145 still reads `Status: da eseguire`: the branch adds no prompt, its lane leaves the flip to the chat.
+**Prompt document name**: 2026-10-11 13:00

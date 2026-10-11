@@ -6,8 +6,13 @@
  * active target, JavaScript in the pilot, so a later target plugs in under the same name:
  * - `name`: `'javascript'`;
  * - `runtime`: the helpers the printed code calls (`JS_RUNTIME`), declared once at the top of a generated program;
+ * - `ids`: the declaration of the program's `$ID` table (R-GEN-17, identifiers.ts `elementIdTable`), the model and
+ *   then every object of the model in model order, each id once, declared once near the top of a generated program;
+ * - `ref(element)`: the expression naming one element of the table, `$ID.<name>`, for an id or an object that
+ *   carries one (`id`, else `element`); an element the table does not hold throws;
  * - `initial`: the initial σ the simulator compiles for the model, as a JavaScript literal over the state of
- *   R-GEN-11 (`toJsState`: marking, semantic attributes, derived values, keyed by model id);
+ *   R-GEN-11 (`toJsState`: marking, semantic attributes, derived values, keyed by model id), its element keys
+ *   computed from `$ID` (`{ marking: { [$ID.ready]: 1 }, … }`), not JSON;
  * - `net`: the compiled net as data: places and transitions with their arcs, triggers, the guard and action sites
  *   that carry a guard or an action, `else` siblings, the bound, the final places, the declarations and the derived
  *   attributes in their order;
@@ -17,6 +22,8 @@
  * - `actions(site)`: the body of a function over `state` and `event` that returns the next state, the printer's
  *   own (`printActions`), for an action site `{element, role}` or an element id (role `transition`);
  * - `equation(d)`: a JavaScript expression over `state` for a derived attribute `{element, attr}` of `net.derived`.
+ * Guards, actions and equations name their elements through the `$ID` table, so a program that interpolates
+ * `ids` once and these everywhere else writes each element id exactly once.
  * A guard, an action or an equation the printer refuses throws its refusal: the hole is an error fragment and
  * «Run» is refused while it stands (origin.ts).
  *
@@ -53,8 +60,10 @@ import { decodeProfile, inferCustomProfile } from '../../../model/simulation/pro
 import { ROLE_CATALOG } from '../../../model/simulation/roleCatalog';
 import type { SimProfile } from '../../../model/simulation/simProfiles';
 import { STATE_ATTRIBUTES_KEY, decodeStateAttributes, mergeDeclarations } from '../../../model/simulation/stateAttributesCodec';
+import { elementIdTable, jsString } from './identifiers';
+import type { JsElement, JsIdTable } from './identifiers';
 import { JS_RUNTIME, printActions, printGuard, toJsState } from './printer';
-import type { JsPrintContext } from './printer';
+import type { JsPrintContext, JsState } from './printer';
 
 type Lookup = Record<string, any>;
 
@@ -242,6 +251,48 @@ export function derivedPlan(run: ModelRun): Array<{ element: string; attr: strin
         .map(p => ({ element: p.owner, attr: p.eq.decl.name, decl: p.eq.decl, expr: p.eq.expr }));
 }
 
+/** The elements a generated program names (R-GEN-17): the model, then every object of the model in model order. */
+function modelElements(lookup: Lookup, modelId: string): JsElement[] {
+    const metaclass = (id: string): string => {
+        const name = lookup[lookup[id]?.instanceof]?.name;
+        return typeof name === 'string' && name !== '' ? name : 'Object';
+    };
+    return [
+        { id: modelId, name: lookup[modelId]?.name, metaclass: 'Model' },
+        ...collectModelObjectIds(lookup, modelId).map(id => ({ id, name: lookup[id]?.name, metaclass: metaclass(id) })),
+    ];
+}
+
+/** `{ k: v, … }`, or `{}`. */
+function objectLiteral(entries: ReadonlyArray<readonly [string, string]>): string {
+    return entries.length === 0 ? '{}' : `{ ${entries.map(([k, v]) => `${k}: ${v}`).join(', ')} }`;
+}
+
+/** A property key: bare when it is an identifier, computed for `__proto__` (a literal would set the prototype), else quoted. */
+function propertyKey(k: string): string {
+    if (k === '__proto__') return `[${jsString(k)}]`;
+    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(k) ? k : jsString(k);
+}
+
+/** A value of σ as a JavaScript literal: the value `JSON.parse` gave back from `JSON.stringify`, strings in single quotes. */
+function valueLiteral(v: unknown): string {
+    if (typeof v === 'string') return jsString(v);
+    if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'null';
+    if (typeof v === 'boolean') return String(v);
+    if (Array.isArray(v)) return `[${v.map(valueLiteral).join(', ')}]`;
+    if (v !== null && typeof v === 'object') return objectLiteral(Object.entries(v).map(([k, x]) => [propertyKey(k), valueLiteral(x)] as const));
+    return 'null';
+}
+
+/** σ as a JavaScript literal whose element keys are computed from the `$ID` table (R-GEN-17). */
+function stateLiteral(state: JsState, table: JsIdTable): string {
+    const byElement = (record: Record<string, unknown>) =>
+        objectLiteral(Object.entries(record).map(([id, v]) => [`[${table.refs.get(id) ?? jsString(id)}]`, valueLiteral(v)] as const));
+    const parts: Array<readonly [string, string]> = [['marking', byElement(state.marking)], ['attrs', byElement(state.attrs)]];
+    if (state.derived) parts.push(['derived', byElement(state.derived)]);
+    return objectLiteral(parts);
+}
+
 /** The id of a site a template passes: an element id, or an object that carries one. */
 function idOf(x: unknown): string {
     if (typeof x === 'string') return x;
@@ -278,7 +329,8 @@ export function jsTarget(globals: Record<string, JjelValue>, lookup: Lookup, mod
     const run = compiled.run;
     const net = run.net;
     const nameOf = (id: string) => String(lookup[id]?.name ?? id);
-    const ctxFor = (site: string): JsPrintContext => ({ snapshot: run.snapshot, site, places: net.places, declared: net.declared });
+    const table = elementIdTable(modelElements(lookup, modelId));
+    const ctxFor = (site: string): JsPrintContext => ({ snapshot: run.snapshot, site, places: net.places, declared: net.declared, refs: table.refs });
     // A global's equation runs with `self` the model root (derivedEvaluator.ts): its handle, for the printer's fold.
     const withModel: SimSnapshot = {
         ...run.snapshot,
@@ -333,9 +385,15 @@ export function jsTarget(globals: Record<string, JjelValue>, lookup: Lookup, mod
         const attr = d && typeof d === 'object' ? (d as Record<string, unknown>).attr : undefined;
         const p = plan.find(x => x.element === element && x.attr === attr);
         if (!p) throw new Error(`No derived attribute '${String(attr)}' on ${nameOf(element)}`);
-        const out = printGuard(p.expr, { snapshot: withModel, site: element, places: net.places, declared: net.declared });
+        const out = printGuard(p.expr, { snapshot: withModel, site: element, places: net.places, declared: net.declared, refs: table.refs });
         if (!out.ok) throw new Error(refusalText(`The equation of ${String(attr)} on ${nameOf(element)}`, out.refusals));
         return out.code;
+    };
+    const ref = (element: unknown): string => {
+        const id = idOf(element);
+        const named = table.refs.get(id);
+        if (named === undefined) throw new Error(`No element '${id}' in the model`);
+        return named;
     };
     const fn = (f: (x: unknown) => string): JjelValue => createFunction(['site'], ([x]) => f(x) as JjelValue) as unknown as JjelValue;
 
@@ -343,7 +401,9 @@ export function jsTarget(globals: Record<string, JjelValue>, lookup: Lookup, mod
         __type: 'Target',
         name: JS_TARGET_NAME,
         runtime: JS_RUNTIME,
-        initial: JSON.stringify(toJsState(net.initial)),
+        ids: table.declaration,
+        ref: fn(ref),
+        initial: stateLiteral(toJsState(net.initial), table),
         net: deepFreeze(data),
         guard: fn(guard),
         actions: fn(actions),

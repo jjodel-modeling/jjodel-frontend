@@ -46,14 +46,22 @@ Only the description of the net differs.
 
 | Template | What it writes |
 |---|---|
-| `main` | The module: a header listing the places, the printer's runtime, the tables, `initial()`, `engine()` |
+| `main` | The module: a header listing the places, the table of element ids, the printer's runtime, the tables, `initial()`, `engine()` |
 | `transition(t)` | One entry per transition of `stc.net`, with a comment `deliver: produced -> ready + buffer` |
 | `entry(t, c, comment)` | The entry: id, preset, postset, inhibitor arcs, the printed guard |
 | `arcs(list)`, `placeName(p)`, `transitionName(t)` | Arcs written with place names (`x2` for a weight of 2), names by id |
-| `ids`, `event`, `declaration`, `derived`, `site`, `engine` | As in the turnstile |
+| `ids`, `arcList`, `event`, `declaration`, `derived`, `site`, `engine` | As in the turnstile |
+
+As in the turnstile, the program names elements through the table `$ID` (R-GEN-17): every element id appears once,
+in `const $ID = Object.freeze({ producerConsumer: 'M', ready: 'ready', … })`, and the entry of `deliver` reads
+
+```js
+id: $ID.deliver, name: 'deliver',
+preset: [{ place: $ID.produced, weight: 1 }], postset: [{ place: $ID.ready, weight: 1 }, { place: $ID.buffer, weight: 1 }], inhibitors: [],
+```
 
 The guard of `deliver` is printed by the JavaScript target profile:
-`$guard(() => ($lt($tokens(state, "buffer"), 2)))`.
+`$guard(() => ($lt($tokens(state, $ID.buffer), 2)))`.
 
 ### The roles the templates read (R-GEN-7)
 
@@ -67,41 +75,68 @@ The guard of `deliver` is printed by the JavaScript target profile:
 - `target.guard(site)`: the **Guard** role, printed in JavaScript.
 - `target.net` and `target.initial`: the same compile with the state attributes. The bound and the initial
   marking come from here.
+- `target.ids` and `target.ref(element)`: the table of element ids, and the name of one element in it.
 
 Every metamodel bound to the Petri net profile with these roles gets the same program from this set.
 
 ## Running it in Jjodel
 
-1. Settings → Advanced → turn on **Code generation** (experimental).
-2. Import the DemoPetri project. In the metamodel, open the Simulation panel and apply **Petri net**.
-3. Create a new model of DemoPetri. Run the `jjscript` lines of the fixture on it as JjScript at M1 (Jjodie's
-   «Run as JjScript», with the new model open). They create the five places, the four transitions and the ten arcs:
+You need no console and no JjScript: the example is a Jjodel project, ready to import, with the net already built.
 
+1. **Get the file.** Download `petri-producer-consumer.jjodel` from the Jjodel site, at
+   `/examples/codegen/petri-producer-consumer.jjodel` (for example
+   `https://<the Jjodel site>/examples/codegen/petri-producer-consumer.jjodel`). In the repository it is
+   `frontend/public/examples/codegen/petri-producer-consumer.jjodel`.
+2. **Import it.** On the Projects page press **Import** and drop the file on the page, or use **File → Import
+   Project** and choose it. The project shows up as **Producer-consumer copy**: Jjodel adds `copy` to every imported
+   project. Importing the file again gives **Producer-consumer copy2**, a separate project with its own ids.
+3. **Open the model.** Open the project, then the model **producerConsumer**. The project also holds `demoNet`, the
+   net of the DemoPetri scene, which this example does not use. The metamodel already has the **Petri net** profile
+   and the templates; the model already has the scenario.
+4. **Turn on the Code panel**, once per browser: Settings (the avatar at the top right, then **Settings**, or Ctrl+,)
+   → **Advanced** → **Experimental** → check **Code generation**.
+5. **Generate.** In the model's editor press **Code**, open the **Output** tab and press **Generate**.
+6. **Run.** Press **Run**: `main()` fires up to five steps, the first candidate each time, and shows the marking by
+   place name.
+7. **Check.** The select next to **Check** holds the stored scenario, **Fill the buffer, then consume**. Press
+   **Check**. The line under the buttons reads
+   `Agrees with the simulator on 8 steps · Fill the buffer, then consume`.
+
+### Trying the mutation
+
+The mutation sends `consume`'s token to `ready` instead of `idle`, in the generated program only.
+
+1. Open the **Templates** tab and select `main`. Its body ends with `${engine()}"`.
+2. Add this line after `${engine()}`, before the closing `"`, and press **Save**:
+
+   ```js
+   for (const t of TRANSITIONS) if (t.id === $ID.consume) t.postset = t.postset.map(a => (a.place === $ID.idle ? { place: $ID.ready, weight: a.weight } : a));
    ```
-   create instance of Place "ready"
-   set ready.tokens = 1
-   ...
-   create instance of Arc "a1"
-   set a1.src = ready
-   set a1.tgt = produce
-   ...
-   ```
 
-4. Put the templates on the metamodel, in the **Templates** tab of the Code panel. Or, in the browser console, run
-   `LPointerTargetable.fromPointer('<metamodel id>').state = { genTemplates: <the string in lookup.MM._state.genTemplates> }`.
-5. Open the model, press **Code**, then **Output**: the program is generated. **Run** fires up to five steps, the
-   first candidate each time, and shows the marking by place name.
+3. Back in **Output**, press **Generate**, then **Check**. The result reads `Diverges at step 8 · consume`, with
+   `place idle` and `place ready`, the value the simulator expected and the one the program computed. The link
+   `consume` selects the transition on the canvas.
+4. Delete the line, **Save**, **Generate**: **Check** agrees again.
 
-## Running the oracle
+## What the oracle compares
 
-The oracle runs the same way as for the turnstile:
+At every step, the step's kind and the observed state: the marking without its zeros, the data, and the derived
+values. The first step that differs is reported, with the transition fired there and the generated line whose
+origin is that transition.
 
-- **In the app.** Record the scenario in the Simulation panel's Scenarios, choosing each transition as in the table
-  above, and save it. Open the Code panel once, then run `await __jjodelOracle.run({ modelId: '<model id>' })` in
-  the console.
-- **In the tests.** `npx vitest run src/codegen/oracle`.
-- **In the browser probe.** `frontend/scripts/probe/codegen-oracle.ts`.
+### For developers
 
-The comparison at every step is the step's kind and the observed state: the marking without its zeros, the data,
-and the derived values. The first step that differs is reported, with the transition fired there and the generated
-line whose origin is that transition.
+- **Rebuilding the file.** `frontend/scripts/examples/build-codegen-examples.ts` builds this example in a running
+  app: it imports the DemoPetri scene, creates a new model, runs the fixture's `jjscript` lines on it, names it
+  `producerConsumer`, writes the roles, the templates and the scenario, and saves the app's own export (File →
+  Download Project). Rerun it when the fixture or the project format changes.
+- **Building the net by hand.** Run the `jjscript` lines of the fixture as JjScript at M1 on a new model of
+  DemoPetri (Jjodie's «Run as JjScript», with the new model open). They create the five places, the four transitions
+  and the ten arcs.
+- **In the tests.** `npx vitest run src/codegen/oracle src/codegen/examples`.
+- **In the browser probes.** `frontend/scripts/probe/codegen-examples.ts` imports the file as a student does;
+  `codegen-oracle.ts` and `codegen-check.ts` build the example from the fixture.
+- **From the console.** With the Code panel opened once, `await __jjodelOracle.run({ modelId: '<model id>' })` runs
+  the oracle on the first stored scenario, and
+  `LPointerTargetable.fromPointer('<metamodel id>').state = { genTemplates: <the string in lookup.MM._state.genTemplates> }`
+  writes the templates in one go.

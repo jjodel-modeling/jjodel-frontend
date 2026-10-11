@@ -23,6 +23,12 @@
  *              name: docs/goals/cluster-names.json when it maps the key, else the
  *              dominant families and the three most frequent title words. With the
  *              modularity and the share of rows left unclustered (no co-citation).
+ *              description: docs/goals/cluster-descriptions.json[key].description, else
+ *              null (P-2026-10-11-1510); descriptionDrift: null without a description,
+ *              else {written, by, added, removed}, the member ids gained and lost since
+ *              it was written, in id order.
+ *   orphanDescriptions  the keys of cluster-descriptions.json no cluster carries, in id
+ *              order: a description whose cluster is gone is attached nowhere.
  *   milestones docs/goals/milestones.json ([{id, name, date}]), else the one
  *              built-in milestone, MODELS freeze 2026-10-07. A realized row goes
  *              to the first milestone on or after the date of its first commit.
@@ -481,6 +487,30 @@ export function clusterRows(rows, prompts, { seed = 1, names = {}, maxRows = MAX
     };
 }
 
+/**
+ * The written descriptions joined to the clusters by key: each cluster gains `description` and
+ * `descriptionDrift` (the members gained and lost since the description was written). Returns the
+ * keys of `descriptions` that no cluster carries, in id order; `descriptions` null means none.
+ */
+export function attachDescriptions(list, descriptions) {
+    const all = descriptions || {};
+    const keys = new Set();
+    for (const cl of list) {
+        keys.add(cl.key);
+        const d = Object.prototype.hasOwnProperty.call(all, cl.key) ? all[cl.key] : null;
+        cl.description = d && typeof d.description === 'string' ? d.description : null;
+        if (cl.description === null) { cl.descriptionDrift = null; continue; }
+        const then = new Set(Array.isArray(d.members) ? d.members : []);
+        const now = new Set(cl.members);
+        cl.descriptionDrift = {
+            written: d.written ?? null, by: d.by ?? null,
+            added: cl.members.filter((id) => !then.has(id)).sort(byId),
+            removed: [...then].filter((id) => !now.has(id)).sort(byId),
+        };
+    }
+    return Object.keys(all).filter((k) => !keys.has(k)).sort(byId);
+}
+
 // ── milestones and the goal model ────────────────────────────────────────────
 
 /** The first milestone on or after the day of the row's first commit; null when not realized or after the last. */
@@ -559,6 +589,7 @@ export function trace({ repo, trunk = DEFAULT_TRUNK, withRc = false, cacheDir = 
         : [];
     const clusters = clusterRows(rows, prompts, { seed, names: readJson(join(goalsDir, 'cluster-names.json')) || {} });
     rows.forEach((r) => { r.cluster = clusters.byRow.get(r.id) || null; });
+    const orphanDescriptions = attachDescriptions(clusters.list, readJson(join(goalsDir, 'cluster-descriptions.json')));
 
     const msFile = readJson(join(goalsDir, 'milestones.json'));
     const milestones = assignMilestones(rows, msFile ? msFile.map((m) => ({ id: m.id, name: m.name, date: m.date, source: 'docs/goals/milestones.json' })) : BUILT_IN_MILESTONES);
@@ -581,6 +612,7 @@ export function trace({ repo, trunk = DEFAULT_TRUNK, withRc = false, cacheDir = 
             edges: clusters.edges, prompts: clusters.prompts, seed,
             list: clusters.list,
         },
+        orphanDescriptions,
         milestones,
         goalModel,
         rows: rows.map(({ text, section, ...r }) => r),

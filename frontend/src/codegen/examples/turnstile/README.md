@@ -54,19 +54,35 @@ The program exports four functions:
 
 | Template | What it writes |
 |---|---|
-| `main` | The whole module: a header, the printer's runtime (`target.runtime`), the model tables, `initial()`, then `engine()` |
+| `main` | The whole module: a header, the table of element ids (`target.ids`), the printer's runtime (`target.runtime`), the model tables, `initial()`, then `engine()` |
 | `transition(t)` | One entry of the transition table, with a comment `tc: locked --coin--> locked` |
 | `entry(t, c, comment)` | The entry itself: id, arcs, triggers, the guard of each guard site, the actions of each action site |
 | `site(s)` | The actions of one site, as the printer prints them (`target.actions(s)`) |
 | `declaration(d)`, `derived(d)`, `event(e)` | One row of the data, derived-value and event tables |
-| `ids(xs)`, `names(xs)`, `transitionName(t)` | Small helpers: a list of ids as a JavaScript array, names joined, a name |
+| `ids(xs)`, `arcList(list)`, `names(xs)`, `transitionName(t)` | Small helpers: a list of elements as a JavaScript array, arcs as `[{ place: $ID.locked, weight: 1 }]`, names joined, a name |
 | `engine()` | The part that does not depend on the model: candidates, `step`, `observe`, `main` |
+
+The program names elements, not ids (R-GEN-17). Every element id appears once, in a frozen table near the top:
+
+```js
+const $ID = Object.freeze({
+  demoESM: 'M',
+  locked: 'locked',
+  ...
+});
+```
+
+Everywhere else the program writes `$ID.locked`, `$ID.tc`, `$ID.demoESM`. The name is the element's name, made a
+valid JavaScript name and unique (`locked_2` for a second `locked`); an element without a name is
+`<metaclass>_<n>`. The values are still the ids, so the program computes the same thing. The templates write the
+table with `target.ids` and an element with `target.ref(element)`; `initial()` returns
+`{ marking: { [$ID.locked]: 1 }, attrs: { [$ID.demoESM]: { coins: 0 } }, … }`.
 
 Guards, actions and derived values are not translated by the templates. They are printed by the **JavaScript target
 profile**, `target` in a template, and run with the simulator's semantics: `and` and `or` evaluate both sides,
 division by zero gives `null`, and actions are parallel. For example, the guard of `tp`, `model.[paid]`, becomes
-`$guard(() => ($read(state, "M", "paid")))`. A guard or an action the printer cannot translate is a generation
-error, and «Run» is off until it is fixed.
+`$guard(() => ($read(state, $ID.demoESM, "paid")))`. A guard or an action the printer cannot translate is a
+generation error, and «Run» is off until it is fixed.
 
 ### The roles the templates read (R-GEN-7)
 
@@ -77,6 +93,7 @@ state machine profile that has these roles:
 - `stc.events`: the **Event** role, derived from the **Trigger** reference;
 - `stc.source(t)`, `stc.target(t)`, `stc.trigger(t)`: the **Owned transitions** (or **Source**), **Next state** and
   **Trigger** roles, for the comment of each transition;
+- `target.ids` and `target.ref(element)`: the table of element ids, and the name of one element in it;
 - `target.net` and `target.initial`: the net the simulator compiles from all the roles. That covers **Initial**,
   **Terminal**, the state attributes, the transitions with their arcs, and the sites of the **Guard**, **Action** and
   **Entry** roles;
@@ -85,36 +102,46 @@ state machine profile that has these roles:
 
 ## Running it in Jjodel
 
-1. Settings → Advanced → turn on **Code generation** (experimental).
-2. Import the DemoESM project. In the metamodel, open the Simulation panel and apply **Extended state machine**. In
-   the model's Data, declare the two attributes above:
-   - `coins`, range 0..3, initial 0;
-   - `paid`, boolean, equation `model.[coins] >= 2`.
-3. Put the templates on the metamodel. Either type them in the **Templates** tab of the Code panel, or write the
-   stored list in one go. To write it in one go, open the browser console, find the metamodel's id, and run
-   `LPointerTargetable.fromPointer('<metamodel id>').state = { genTemplates: <the string in lookup.MM._state.genTemplates> }`.
-4. Open the model, press **Code**, then **Output**. The program is generated. Hover any underlined text to see the
-   model element it came from, and click it to select that element on the canvas.
-5. Press **Run**: `main()` fires the first candidate of the first input, up to five times, and shows each state by
-   name. On
-   the dev server, the first run loads the worker. Give it a longer timeout (10000 ms) if it times out.
+You need no console and no JjScript: the example is a Jjodel project, ready to import.
 
-## Running the oracle
+1. **Get the file.** Download `turnstile.jjodel` from the Jjodel site, at `/examples/codegen/turnstile.jjodel` (for
+   example `https://<the Jjodel site>/examples/codegen/turnstile.jjodel`). In the repository it is
+   `frontend/public/examples/codegen/turnstile.jjodel`.
+2. **Import it.** On the Projects page press **Import** and drop the file on the page, or use **File → Import
+   Project** and choose it. The project shows up as **Turnstile copy**: Jjodel adds `copy` to every imported project.
+   Importing the file again gives **Turnstile copy2**, a separate project with its own ids.
+3. **Open the model.** Open the project, then the model **demoESM**. The metamodel already has the **Extended state
+   machine** profile, the templates and the two data attributes; the model already has the scenario.
+4. **Turn on the Code panel**, once per browser: Settings (the avatar at the top right, then **Settings**, or Ctrl+,)
+   → **Advanced** → **Experimental** → check **Code generation**.
+5. **Generate.** In the model's editor press **Code**, open the **Output** tab and press **Generate**. Hover any
+   underlined text to see the model element it came from; click it to select that element on the canvas.
+6. **Run.** Press **Run**: `main()` fires the first candidate of the first input, up to five times, and the panel
+   shows what it returned.
+7. **Check.** The select next to **Check** holds the stored scenario, **Pay twice, pass, stop**. Press **Check**. The
+   line under the buttons reads `Agrees with the simulator on 7 steps · Pay twice, pass, stop`: the program and the
+   simulator agree on every step.
 
-The oracle is not on a button yet. To run it:
+### Trying the mutation
 
-- **In the app.** Record the scenario in the Simulation panel's Scenarios: press the events in the order above and
-  save. Then, with the Code panel open once (that loads the oracle), run in the console
-  `await __jjodelOracle.run({ modelId: '<model id>' })`. It reads the first scenario stored on the model.
-  - The result is `{ ok: true }` when every step agrees.
-  - Otherwise it reports the first step that differs, what differs (`kind` or `observe`, with a `path` such as
-    `marking.<state>`), the transition the simulator fired there, and the generated line whose origin is that
-    transition.
-- **In the tests.** `npx vitest run src/codegen/oracle` runs this example end to end in node, including the mutation.
-- **In the browser probe.** `frontend/scripts/probe/codegen-oracle.ts` does all of the above in the app, from the
-  import of the scene to the mutation.
+Break the program on purpose and watch the oracle catch it. The mutation sends `tu` to `unlocked` instead of
+`locked`, in the generated program only.
 
-The oracle compares, at the start and after every step, the step's kind (`fired`, `discard`, `quiescence`, `halted`)
+1. Open the **Templates** tab and select `main`. Its body ends with `${engine()}"`.
+2. Add this line after `${engine()}`, before the closing `"`, and press **Save**:
+
+   ```js
+   for (const t of TRANSITIONS) if (t.id === $ID.tu) t.postset = t.postset.map(a => (a.place === $ID.locked ? { place: $ID.unlocked, weight: a.weight } : a));
+   ```
+
+3. Back in **Output**, press **Generate**, then **Check**. The result reads `Diverges at step 5 · tu`, with
+   `place locked` and `place unlocked`, the value the simulator expected and the one the program computed. The link
+   `tu` selects the transition on the canvas.
+4. Delete the line, **Save**, **Generate**: **Check** agrees again.
+
+## What the oracle compares
+
+At the start and after every step, the oracle compares the step's kind (`fired`, `discard`, `quiescence`, `halted`)
 and `observe(next)`. The projection holds:
 
 - the marking, without its zeros;
@@ -122,7 +149,22 @@ and `observe(next)`. The projection holds:
 - the derived values.
 
 Layout and colours (presentation) are left out. The scenario's final condition is not part of the comparison: it
-stays the simulator's own check.
+stays the simulator's own check. A different scenario is recorded in the Simulation panel's **Scenarios** and then
+shows up in the select next to **Check**.
+
+### For developers
+
+- **Rebuilding the file.** `frontend/scripts/examples/build-codegen-examples.ts` builds this example from
+  `turnstile.json` in a running app and saves the app's own export (File → Download Project). Rerun it when the
+  fixture or the project format changes.
+- **In the tests.** `npx vitest run src/codegen/oracle src/codegen/examples` runs this example end to end in node,
+  including the mutation, and checks the project file.
+- **In the browser probes.** `frontend/scripts/probe/codegen-examples.ts` imports the file as a student does;
+  `codegen-oracle.ts` and `codegen-check.ts` build the example from the fixture.
+- **From the console.** With the Code panel opened once, `await __jjodelOracle.run({ modelId: '<model id>' })` runs
+  the oracle on the first stored scenario, and
+  `LPointerTargetable.fromPointer('<metamodel id>').state = { genTemplates: <the string in lookup.MM._state.genTemplates> }`
+  writes the templates in one go.
 
 ## Limits of this template set
 

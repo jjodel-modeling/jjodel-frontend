@@ -18,8 +18,9 @@ import { buildGuardContext, toJjelStateAccess } from '../../../../model/simulati
 import { compileGuard, evaluateGuard } from '../../../../model/simulation/guardEvaluator';
 import { stateAccess } from '../../../../model/simulation/netStep';
 import type { SimState } from '../../../../model/simulation/netTypes';
+import { elementIdTable } from '../identifiers';
 import { JS_RUNTIME, printActions, printGuard, toJsState } from '../printer';
-import type { JsPrintResult, JsRefusalCode } from '../printer';
+import type { JsPrintContext, JsPrintResult, JsRefusalCode } from '../printer';
 import {
     DECLARED, PLACES, SIGMA, ctxFor, evaluateJjel, makeSnapshot, runPrintedActions, runPrintedGuard, sigma,
 } from './printerFixture';
@@ -453,5 +454,82 @@ describe('JS_RUNTIME', () => {
             attrs: { M: { a: 2, b: 0, f: true, s: 'x', e: 'RED' }, t1: { n: 1 }, Q: { n: 0 }, c1: { k: 1 }, c2: { k: 2 } },
             derived: { t2: { d: 7 } },
         });
+    });
+});
+
+describe('the id table in the context (R-GEN-17, P-2026-10-11-1052)', () => {
+    /** The fixture's M and its elements, as access.ts lists them: the model first, then its objects in model order. */
+    const TABLE = elementIdTable([
+        { id: 'M', name: 'machine', metaclass: 'Model' },
+        { id: 'P', name: 'P', metaclass: 'Place' },
+        { id: 'Q', name: 'Q', metaclass: 'Place' },
+        { id: 'c1', name: 'c1', metaclass: 'Child' },
+        { id: 'c2', name: 'c2', metaclass: 'Child' },
+        { id: 't1', name: 'T1', metaclass: 'Transition' },
+        { id: 't2', name: 'T2', metaclass: 'Transition' },
+        { id: 'go', name: 'go', metaclass: 'Event' },
+    ]);
+    const named = (site = 't1'): JsPrintContext => ({ ...ctxFor(site), refs: TABLE.refs });
+
+    function printedNamed(source: string, site = 't1'): string {
+        const out = printGuard(expr(source), named(site));
+        if (!out.ok) throw new Error(`refused: ${source}: ${out.refusals.map(r => `${r.code} ${r.message}`).join('; ')}`);
+        return out.code;
+    }
+
+    /** The printed guard after the table's declaration, as a generated program runs it. */
+    const runNamed = (code: string, state: SimState, event: string | null) =>
+        runPrintedGuard(`(() => {\n${TABLE.declaration}\nreturn (${code});\n})()`, toJsState(state), event);
+
+    it('a state read prints $read(state, $ID.<name>, attr) (mutant: the printer ignores the table for $read)', () => {
+        expect(printedNamed('model.[a] > 0')).toBe('$gt($read(state, $ID.machine, "a"), 0)');
+        expect(printedNamed('self.next.[n] == 0')).toBe('$eq($read(state, $ID.Q, "n"), 0)');
+    });
+
+    it('an element value prints $E($ID.<name>) (mutant: the printer ignores the table for $E)', () => {
+        expect(printedNamed('T1 == event')).toBe('$eq($E($ID.T1), $E(event))');
+        expect(printedNamed('self.items.any(x => x == event)')).toBe('(!!($eq($E($ID.P), $E(event))) || !!($eq($E($ID.Q), $E(event))))');
+    });
+
+    it('tokens and marked read a place through the table', () => {
+        expect(printedNamed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, $ID.P), 0), $marked(state, $ID.Q))');
+    });
+
+    it('the actions write their targets through the table', () => {
+        const out = printActions([action('model.[a] := model.[a] + 1'), action('self.next.[n] := 4')], named());
+        expect(out.ok && out.code).toBe([
+            'const $v0 = $value($add($read(state, $ID.machine, "a"), 1));',
+            'const $v1 = $value(4);',
+            'return $apply(state, [[$ID.machine, "a", $v0], [$ID.Q, "n", $v1]]);',
+        ].join('\n'));
+    });
+
+    it('with the table the printed code runs to what it runs to without it: the values are the ids', () => {
+        const sources = ['model.[a] > 1', 'T1 == event', 'self.items.any(x => x == event)', 'P.[tokens] > 0 and Q.[marked]', 'self.next.[n] + T2.[d]', 'model.[zzz] > 0'];
+        const cases: Array<[SimState, string | null]> = [[SIGMA, null], [SIGMA, 'go'], [SIGMA, 't1'], [sigma({ P: 0, Q: 2 }, { M: { a: 0 }, Q: { n: 5 } }, { t2: { d: 1 } }), 'P']];
+        for (const source of sources) {
+            for (const [state, event] of cases) {
+                const plain = runPrintedGuard(printed(source), toJsState(state), event);
+                expect(runNamed(printedNamed(source), state, event), `${source} / ${event}`).toEqual(plain);
+            }
+        }
+        const body = printActions(['model.[a] := model.[b]', 'model.[b] := model.[a]', 'self.next.[n] := 4'].map(action), named());
+        const plainBody = printActions(['model.[a] := model.[b]', 'model.[b] := model.[a]', 'self.next.[n] := 4'].map(action), ctxFor());
+        if (!body.ok || !plainBody.ok) throw new Error('refused');
+        expect(runPrintedActions(`${TABLE.declaration}\n${body.code}`, toJsState(SIGMA), null)).toEqual(runPrintedActions(plainBody.code, toJsState(SIGMA), null));
+    });
+
+    it('without the table the printer prints what it printed before (mutant: an absent table read as an empty one)', () => {
+        expect(printed('model.[a] > 0')).toBe('$gt($read(state, "M", "a"), 0)');
+        expect(printed('T1 == event')).toBe('$eq($E("t1"), $E(event))');
+        expect(printed('P.[tokens] > 0 and Q.[marked]')).toBe('$and($gt($tokens(state, "P"), 0), $marked(state, "Q"))');
+        const out = printedActions(['model.[a] := 1']);
+        expect(out.ok && out.code).toBe('const $v0 = $value(1);\nreturn $apply(state, [["M", "a", $v0]]);');
+    });
+
+    it('an element the table does not hold prints as its id, so the program still runs', () => {
+        const partial = elementIdTable([{ id: 'M', name: 'machine', metaclass: 'Model' }]);
+        const out = printGuard(expr('self.next.[n] == model.[a]'), { ...ctxFor(), refs: partial.refs });
+        expect(out.ok && out.code).toBe('$eq($read(state, "Q", "n"), $read(state, $ID.machine, "a"))');
     });
 });

@@ -119,6 +119,7 @@ export function useEditorMode(
     // re-evaluation of the rootable classes computation.
     // Classes can be at the model level OR inside packages/subpackages.
     // The string, and what it must carry, live in metamodelSignature.ts.
+    // Superclass ids: docs/discovery/discovery_2026-10-11_m1_edge_gesture_subclass_instances.md.
     const metamodelClassSignature = useSelector((state: any) =>
         metamodelSignature(state.idlookup, metamodelRefFromStore));
 
