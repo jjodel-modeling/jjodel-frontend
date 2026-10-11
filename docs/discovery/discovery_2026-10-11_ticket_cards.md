@@ -250,3 +250,90 @@ Effect on the board [M], read-only `gh project item-list 2 --owner jjodel-modeli
 5. The 25 `**Ticket** (` paragraphs (§2.4 (a)): none on the board? Recommended: none in this backfill; open ones the chat wants tracked get filed with `lane-run ticket` by hand afterwards.
 6. Labels: may `lane-run ticket` create the five missing labels (`ticket`, `priority:high|medium|low|unset`) on the board repo? Recommended: yes, created on first use, idempotently.
 7. How does the GO name the skip and close lists for `--backfill`? Recommended: a file of `<key> skip|close` lines passed as `--plan <file>`, keys from §4.
+
+## Addendum 2026-10-11 — Phase 2 (after the GO)
+
+Session `3c55c4e0`, same tree. Code `4cf89641e`, plan `11326b71a` (docs/harness/ticket-backfill-plan.txt). Tags as above.
+
+### A.1 Corrections to sections 0, 1 and 3 [M]
+
+Two counts above are wrong, measured again on the cards the backfill made:
+
+- **6 blocks**, not 5, take their front from a `Front:` line: harness:244, :249 (P-2026-10-10-1532), harness:269, :274 (P-2026-10-10-1612), gv-right-margin:22, :28 (P-2026-10-11-0040). The other 36 use the inbox name. H5 stays falsified.
+- Before the remaps the totals are **maintenance 23, harness 8**, graphvertex 6, simulator 4, codegen-pilot 1 (= 42). The "25" and "9" of §0.3 and §3 summed to 45. After the GO's five remaps: maintenance 20, harness 12, graphvertex 6, simulator 4. The dry-run table of §4 listed each row's front correctly. Only the totals were wrong.
+
+### A.2 What was built
+
+- `lane-run ticket` (one ticket) and `lane-run ticket --backfill [--plan] [--from] [--dry-run]`, in `frontend/scripts/lane-run.mjs`. Parser, writer, key, plan, `syncTicket` and `trackTicket` are in `frontend/scripts/lane-tracking.mjs`, following the shape in §5. `syncCard`'s steps after the issue exists moved verbatim into `applyCard` (with `heal` and `create`), and `syncTicket` shares them. The heal lists the `ticket` issues by label and matches the body line `- ticket-key: <key>`. It does not search by title, because two inboxes may hold the same title.
+- Item 3 at `lane-tracking.mjs` `projectLane`: `if (flipped) return card('Done', [], true);` now sits before the hard-stop row. `question` and an unresolved `blocked` keep their rows (tested).
+- Bench: control 79/79, 29 of 29 mutants killed (the list is in the body of `4cf89641e`). One mutation was not benched: dropping `trackTicket`'s enable switch. A mutant without it reaches the real `gh` on the PATH.
+
+### A.3 Deviations from the GO
+
+1. **The plan is not in the code commit.** The bash guard refused one commit holding docs and code: "docs/PROTOCOL.md P13: docs and code never in the same commit". The plan went in `11326b71a`, the next commit, before the backfill ran.
+2. **Two unintended card writes.** Partway through the work I read two lanes with `lane-run status`, which projects the card as a side effect (documented under `track`). That closed **#6** (P-2026-10-11-1001, `Outcome: hard-stop`, Status flipped: Done under the new rule) and **#8** (P-2026-10-11-1105, `Outcome: done`, Status flipped: Done under the old rule too). Until this branch reaches the trunk, a `track --sync` run with the trunk's lane-run would put #6 back to In review (waiting:visual). That is the flip-flop of harness:660.
+3. **One comment on #42** ("Duplicate of #43 …"), so the duplicate of GO answer 2 shows on the card.
+
+### A.4 The backfill [M]
+
+`node frontend/scripts/lane-run.mjs ticket --backfill --plan docs/harness/ticket-backfill-plan.txt`, from this tree. The trunk was at `28c9b0aad` by then; it adds no ticket heading since `96d38b2bf`. Result:
+
+- `backfill: 42 ticket blocks at alfonso-frontend-jjtl; 27 Backlog, 15 closed, 0 skipped; 0 without a card`, exit 0.
+- The five labels `ticket`, `priority:high|medium|low|unset` were created.
+- `gh issue list --label ticket --state all` returns 15 CLOSED and 27 OPEN.
+- `gh project item-list 2` shows 42 `ticket:` items: Backlog/maintenance 13, Backlog/harness 6, Backlog/graphvertex 5, Backlog/simulator 3; Done/maintenance 7, Done/harness 6, Done/graphvertex 1, Done/simulator 1.
+- The same command again with `--dry-run` prints `dry run: nothing to write` for 42 of 42.
+
+| Key | Inbox:line | Issue | Front | Priority | Column |
+|---|---|---|---|---|---|
+| 576ee13a | codegen-panel:24 | #9 | maintenance | medium | Backlog |
+| 8965a12c | gv-right-margin:22 | #10 | graphvertex | high | Backlog |
+| 5d12c874 | gv-right-margin:28 | #11 | graphvertex | medium | Backlog |
+| 24e831fe | harness:244 | #12 | harness | high | Done, closed |
+| 921b1aae | harness:249 | #13 | harness | medium | Done, closed |
+| d8f3007c | harness:269 | #14 | harness | low | Done, closed |
+| d6b054f9 | harness:274 | #15 | harness | low | Backlog |
+| d976fe82 | harness:346 | #16 | harness | low | Backlog |
+| 737bfd5d | harness:364 | #17 | harness | medium | Backlog |
+| 96fa82c4 | harness:660 | #18 | harness | medium | Done, closed |
+| 784904e2 | ir-graphvertex:63 | #19 | graphvertex | medium | Done, closed |
+| 8eb83e55 | ir-graphvertex:69 | #20 | graphvertex | medium | Backlog |
+| 0e8e54b0 | ir-graphvertex:75 | #21 | graphvertex | low | Backlog |
+| 4483dad5 | ir-graphvertex:96 | #22 | graphvertex | low | Backlog |
+| 94377a39 | jjel-lexer-own-keys:22 | #23 | maintenance | low | Backlog |
+| f5de8a8d | jjscript:50 | #24 | maintenance | medium | Backlog |
+| 7a929741 | jjscript:56 | #25 | maintenance | low | Backlog |
+| dd3603fb | jjscript:88 | #26 | maintenance | medium | Backlog |
+| 6a100f81 | jjscript:120 | #27 | maintenance | medium | Backlog |
+| c2c5b92c | jjscript:126 | #28 | maintenance | medium | Backlog |
+| 73f38848 | jjscript:132 | #29 | maintenance | medium | Backlog |
+| 7640cb90 | merge-gate:7 | #30 | harness | low | Done, closed |
+| 80ea0bda | simulation:261 | #31 | simulator | medium | Done, closed |
+| 51bffa5b | simulation:430 | #32 | simulator | low | Backlog |
+| 0bcb62f6 | simulation:435 | #33 | simulator | low | Backlog |
+| cef487df | simulation:546 | #34 | simulator | low | Backlog |
+| bb4e0f28 | stale-m1-edge:22 | #35 | maintenance | low | Backlog |
+| 89297077 | symbol-editor:35 | #36 | maintenance | medium | Done, closed |
+| 96459f70 | symbol-editor:41 | #37 | maintenance | low | Done, closed |
+| 88c0596b | symbol-editor:46 | #38 | maintenance | low | Done, closed |
+| aa2f9e6b | symbol-editor:91 | #39 | maintenance | medium | Done, closed |
+| 3e73fadc | views:50 | #40 | maintenance | low | Backlog |
+| 470fcb30 | views:56 | #41 | harness | medium | Backlog |
+| e61f96da | views:74 | #42 | harness | medium | Done, closed |
+| c3080b9b | views:119 | #43 | harness | medium | Backlog |
+| 65212c0b | views:166 | #44 | maintenance | medium | Backlog |
+| 63693ee8 | views:198 | #45 | maintenance | medium | Done, closed |
+| 14a9b3a0 | views:256 | #46 | maintenance | medium | Done, closed |
+| dff559c0 | views:275 | #47 | maintenance | medium | Done, closed |
+| d3f5ccf4 | views:309 | #48 | harness | low | Backlog |
+| ce6ea190 | views:473 | #49 | maintenance | low | Backlog |
+| 55a95052 | views:479 | #50 | maintenance | medium | Backlog |
+
+### A.5 `track --sync --dry-run`, before and after item 3 [M]
+
+The same dry run, made once with the code of `96d38b2bf` (temporary copies, removed afterwards) and once with `4cf89641e`. Two lines differ:
+
+- P-2026-10-11-0040 (#5). Before: `gh issue reopen 5 …; gh project item-edit … cd0ab9c8; gh issue edit 5 … --add-label waiting:visual`, so the sync would undo the chat's manual close. After: `nothing to write -> … · Done, closed`.
+- P-2026-10-11-1001 (#6). Before: `… In review (waiting:visual)`. After: `… · Done, closed`.
+
+P-2026-10-11-1105 (#8, `done`) is Done and closed under both versions. P-2026-10-11-0008 (#4) is In review (waiting:visual) under both: its Status is not flipped.
