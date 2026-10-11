@@ -6,7 +6,7 @@ Front: release-3-2
 Lane: full (test of the migration chain; reads a 3.0.0 build)
 Depends: P-2026-10-12-0010
 Request: none (Alfonso, 2026-10-12 00:06, "ok alle raccomandazioni, procedi in lane auto"; L5 of the 1812 report)
-Status: da eseguire
+Status: eseguito 2026-10-12 · lane rel31-fixture · adfb2241b · hard-stop, 3.0.0 save migrates to 2.230, 10/10, 8 mutants caught; merged 0d05e01b0
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply.
 
