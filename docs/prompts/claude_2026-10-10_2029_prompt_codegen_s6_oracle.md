@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0046
 Lane: full (new oracle module over the simulator's run and the S4 runner; two example template sets; a light visual
 check on the examples). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
 Depends: P-2026-10-10-0945, P-2026-10-10-0950, P-2026-10-10-0901
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane codegen-oracle · code a40c39948 · log dd75987f5 · tsc 14 = base, vitest codegen + simulation 968 (932 + 36), build exit 0, check:codegen-lazy green, probe 29/29, mutation bench 14/14 · visual check passata 2026-10-11 (RC-23 by the chat on 4 crops, GO by Alfonso 10:48); follow-ups: oracle button in the panel, readable names in generated code, importable example projects (ticket)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
