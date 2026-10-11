@@ -20,3 +20,16 @@ empties this file. The active log is not touched by this lane.
 **Prompt document name**: 2026-10-10 20:29
 
 **Ticket** (follow-up): no path in the app installs an example. The READMEs write `genTemplates` from the browser console, and the scenario is recorded by hand. An importable `.jjodel` per example, or an import of a template set in the panel, would serve the lecture. In dev the first «Run» needs a 10000 ms timeout (S4's ticket, lane P-2026-10-10-2027).
+
+## 2026-10-11 — merge: codegen-oracle into alfonso-frontend-jjtl (P-2026-10-11-1056)
+**Prompt**: `claude_2026-10-11_1056_prompt_merge_codegen-oracle.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-oracle` at `d8233842b` into `alfonso-frontend-jjtl`, merge base `f4c91bd71`, 4 commits on the branch side.
+**Files touched**: merge `28c9b0aad`: 17 files from the branch side (the oracle module, the two lecture examples, the probe, the S6 prompt and log entry); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes, fixed. On `28c9b0aad` vitest had 5 failures: the oracle example tests timed out at 15000 ms because S6's in-process test worker never posted the `ready` that S5b's runner protocol (merged just before, P-2026-10-11-1049) waits for. Fixed in the test fixture by P-2026-10-11-1105, merged by P-2026-10-11-1112 (`42337a06f`, every gate green); the lane was resolved with `lane-run resolve`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: RC-23 on the S6 crops (turnstile and Petri producer-consumer in the Output tab), GO by Alfonso 10:48
+**Notes**: Rollback tag `pre-codegen-oracle` on `bc6894a22` (RC-31). `lane-run go` refuses a closure over a blocked lane, so the chat wrote this closure by hand after the resolve. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1056/result.json`.
+**Prompt document name**: 2026-10-11 10:56
