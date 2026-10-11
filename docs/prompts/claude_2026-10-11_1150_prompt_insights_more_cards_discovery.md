@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01FWUFsDDVN1SMB4MGco19GJ
 Front: harness
 Lane: full (discovery; defines the data contract of new Insights cards). Model: the default of `.claude/settings.json`, no deviation. No critical-zone go-ahead.
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-11, lane P-2026-10-11-1150 (insights-more, discovery d97744795), merged 5278fa2e9 (P-2026-10-11-1328); hard stop of Phase 1, report read by the chat; slices S1..S4 wait for Alfonso
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

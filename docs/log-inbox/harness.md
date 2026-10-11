@@ -787,3 +787,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs-only merge (discovery report of P-2026-10-11-1150), no visual change; GO without scenes
 **Notes**: Rollback tag `pre-insights-more` on `a40dec6db` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1328/result.json`.
 **Prompt document name**: 2026-10-11 13:28
+
+
+## 2026-10-11 — discovery: lane board Insights, rework, decisions, lead time (P-2026-10-11-1150)
+**Prompt**: `claude_2026-10-11_1150_prompt_insights_more_cards_discovery.md`, lane auto, Phase 1 read-only: measure rework causes and Corregge chains, decision autonomy, lead time and branches left out of the trunk, the secondary data; write the data contract of the new Insights cards and the slices; hard stop after the report.
+**Files touched**: `docs/discovery/discovery_2026-10-11_insights_more_cards.md` (`d97744795`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: RC-22: the four named worktrees touch no board file, but 1138 merged into insights.js during the run and 1205 holds lane-board.mjs, README.md and laneBoard.test.ts, so S1-S3 queue after it. Awaiting Alfonso: RC-18 harness budget looks exceeded (proxy 19/49). Probes in /tmp/p1150/; /api/insights read from a throwaway board on 4791 with its cache in /tmp, 4700 untouched. Report §0 and §12.
+**Prompt document name**: 2026-10-11 11:50
+
+**Ticket** (P-2026-10-11-1150): the board resolves `Corregge` by the first Prompt-ID of the annotation before the timestamp prefix (`lane-board.mjs:968`): 2 of 164 entries misattributed, one marks the merge P-2026-10-11-1056 corrected instead of P-2026-10-10-2029. Fix planned in slice S1 of the report.
