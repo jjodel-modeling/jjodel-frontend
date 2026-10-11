@@ -5,7 +5,7 @@ Chat: C-2026-10-10-0046
 Lane: fast (two follow-ups of S5, five files at most, one visual check). Model: the default of
 `.claude/settings.json`, no deviation. No critical-zone go-ahead.
 Depends: P-2026-10-10-1825
-Status: da eseguire
+Status: eseguito 2026-10-10 · lane codegen-fix · code a880e5ab8 · log 93ea5fb4d · tsc 14 = base, vitest src/codegen green, build exit 0, check:codegen-lazy green, probe 46/46, mutation bench 17/17 · visual check passata 2026-10-11 (RC-23 by the chat on the retaken crops, GO by Alfonso 10:48); open: STARTUP_TIMEOUT_MS 30000 not yet measured against a cold dev start
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
