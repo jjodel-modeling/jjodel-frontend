@@ -46,14 +46,22 @@ Only the description of the net differs.
 
 | Template | What it writes |
 |---|---|
-| `main` | The module: a header listing the places, the printer's runtime, the tables, `initial()`, `engine()` |
+| `main` | The module: a header listing the places, the table of element ids, the printer's runtime, the tables, `initial()`, `engine()` |
 | `transition(t)` | One entry per transition of `stc.net`, with a comment `deliver: produced -> ready + buffer` |
 | `entry(t, c, comment)` | The entry: id, preset, postset, inhibitor arcs, the printed guard |
 | `arcs(list)`, `placeName(p)`, `transitionName(t)` | Arcs written with place names (`x2` for a weight of 2), names by id |
-| `ids`, `event`, `declaration`, `derived`, `site`, `engine` | As in the turnstile |
+| `ids`, `arcList`, `event`, `declaration`, `derived`, `site`, `engine` | As in the turnstile |
+
+As in the turnstile, the program names elements through the table `$ID` (R-GEN-17): every element id appears once,
+in `const $ID = Object.freeze({ producerConsumer: 'M', ready: 'ready', … })`, and the entry of `deliver` reads
+
+```js
+id: $ID.deliver, name: 'deliver',
+preset: [{ place: $ID.produced, weight: 1 }], postset: [{ place: $ID.ready, weight: 1 }, { place: $ID.buffer, weight: 1 }], inhibitors: [],
+```
 
 The guard of `deliver` is printed by the JavaScript target profile:
-`$guard(() => ($lt($tokens(state, "buffer"), 2)))`.
+`$guard(() => ($lt($tokens(state, $ID.buffer), 2)))`.
 
 ### The roles the templates read (R-GEN-7)
 
@@ -67,6 +75,7 @@ The guard of `deliver` is printed by the JavaScript target profile:
 - `target.guard(site)`: the **Guard** role, printed in JavaScript.
 - `target.net` and `target.initial`: the same compile with the state attributes. The bound and the initial
   marking come from here.
+- `target.ids` and `target.ref(element)`: the table of element ids, and the name of one element in it.
 
 Every metamodel bound to the Petri net profile with these roles gets the same program from this set.
 

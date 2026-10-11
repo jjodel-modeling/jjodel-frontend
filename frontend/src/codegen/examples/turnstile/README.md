@@ -54,19 +54,35 @@ The program exports four functions:
 
 | Template | What it writes |
 |---|---|
-| `main` | The whole module: a header, the printer's runtime (`target.runtime`), the model tables, `initial()`, then `engine()` |
+| `main` | The whole module: a header, the table of element ids (`target.ids`), the printer's runtime (`target.runtime`), the model tables, `initial()`, then `engine()` |
 | `transition(t)` | One entry of the transition table, with a comment `tc: locked --coin--> locked` |
 | `entry(t, c, comment)` | The entry itself: id, arcs, triggers, the guard of each guard site, the actions of each action site |
 | `site(s)` | The actions of one site, as the printer prints them (`target.actions(s)`) |
 | `declaration(d)`, `derived(d)`, `event(e)` | One row of the data, derived-value and event tables |
-| `ids(xs)`, `names(xs)`, `transitionName(t)` | Small helpers: a list of ids as a JavaScript array, names joined, a name |
+| `ids(xs)`, `arcList(list)`, `names(xs)`, `transitionName(t)` | Small helpers: a list of elements as a JavaScript array, arcs as `[{ place: $ID.locked, weight: 1 }]`, names joined, a name |
 | `engine()` | The part that does not depend on the model: candidates, `step`, `observe`, `main` |
+
+The program names elements, not ids (R-GEN-17). Every element id appears once, in a frozen table near the top:
+
+```js
+const $ID = Object.freeze({
+  demoESM: 'M',
+  locked: 'locked',
+  ...
+});
+```
+
+Everywhere else the program writes `$ID.locked`, `$ID.tc`, `$ID.demoESM`. The name is the element's name, made a
+valid JavaScript name and unique (`locked_2` for a second `locked`); an element without a name is
+`<metaclass>_<n>`. The values are still the ids, so the program computes the same thing. The templates write the
+table with `target.ids` and an element with `target.ref(element)`; `initial()` returns
+`{ marking: { [$ID.locked]: 1 }, attrs: { [$ID.demoESM]: { coins: 0 } }, … }`.
 
 Guards, actions and derived values are not translated by the templates. They are printed by the **JavaScript target
 profile**, `target` in a template, and run with the simulator's semantics: `and` and `or` evaluate both sides,
 division by zero gives `null`, and actions are parallel. For example, the guard of `tp`, `model.[paid]`, becomes
-`$guard(() => ($read(state, "M", "paid")))`. A guard or an action the printer cannot translate is a generation
-error, and «Run» is off until it is fixed.
+`$guard(() => ($read(state, $ID.demoESM, "paid")))`. A guard or an action the printer cannot translate is a
+generation error, and «Run» is off until it is fixed.
 
 ### The roles the templates read (R-GEN-7)
 
@@ -77,6 +93,7 @@ state machine profile that has these roles:
 - `stc.events`: the **Event** role, derived from the **Trigger** reference;
 - `stc.source(t)`, `stc.target(t)`, `stc.trigger(t)`: the **Owned transitions** (or **Source**), **Next state** and
   **Trigger** roles, for the comment of each transition;
+- `target.ids` and `target.ref(element)`: the table of element ids, and the name of one element in it;
 - `target.net` and `target.initial`: the net the simulator compiles from all the roles. That covers **Initial**,
   **Terminal**, the state attributes, the transitions with their arcs, and the sites of the **Guard**, **Action** and
   **Entry** roles;

@@ -64,9 +64,9 @@ describe('the turnstile, details', () => {
     it('the scenario holds a discard, and the program prints the guard and the actions of the transitions', () => {
         const { ex, out } = generated('turnstile');
         expect(ex.scenario.steps.some(s => s.kind === 'discard')).toBe(true);
-        expect(out.code).toContain('$guard(() => ($read(state, "M", "paid")))');
-        expect(out.code).toContain('$add($read(state, "M", "coins"), 1)');
-        expect(out.code).toContain('equation: (state, event) => $ge($read(state, "M", "coins"), 2)');
+        expect(out.code).toContain('$guard(() => ($read(state, $ID.demoESM, "paid")))');
+        expect(out.code).toContain('$add($read(state, $ID.demoESM, "coins"), 1)');
+        expect(out.code).toContain('equation: (state, event) => $ge($read(state, $ID.demoESM, "coins"), 2)');
     });
 
     it('a guard the printer refuses is an error fragment, and the run is refused (mutant: target.guard returns on a refusal)', () => {
@@ -86,6 +86,6 @@ describe('the producer-consumer, details', () => {
         const choices = result.sim.filter(s => (s.offered?.length ?? 0) >= 2);
         expect(choices.length).toBeGreaterThan(0);
         for (const s of choices) expect(s.offered).toContain(s.transition);
-        expect(out.code).toContain('$guard(() => ($lt($tokens(state, "buffer"), 2)))');
+        expect(out.code).toContain('$guard(() => ($lt($tokens(state, $ID.buffer), 2)))');
     });
 });

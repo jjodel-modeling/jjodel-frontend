@@ -76,11 +76,50 @@ describe('target, in a template', () => {
         expect(out.errors.map(e => e.message)).toEqual(["Cannot access property 'name' of null"]);
     });
 
-    it('initial is the compiled initial state as a JavaScript literal, derived values included', () => {
+    it('initial is the compiled initial state as a JavaScript literal over $ID, derived values included (mutant: initial printed as JSON again)', () => {
         const ex = loadExample('turnstile');
-        const out = gen(ex.lookup, '"${target.initial}"');
-        expect(JSON.parse(out.code)).toEqual(toJsState(runOf(loadExample('turnstile').lookup).net.initial));
-        expect(JSON.parse(out.code)).toEqual({ marking: { locked: 1 }, attrs: { M: { coins: 0 } }, derived: { M: { paid: false } } });
+        const out = gen(ex.lookup, '"${target.ids}\n---\n${target.initial}"');
+        expect(out.errors).toEqual([]);
+        const [ids, initial] = out.code.split('\n---\n');
+        expect(initial).toBe('{ marking: { [$ID.locked]: 1 }, attrs: { [$ID.demoESM]: { coins: 0 } }, derived: { [$ID.demoESM]: { paid: false } } }');
+        const value = new Function(`'use strict';\n${ids}\nreturn (${initial});`)();
+        expect(value).toEqual(toJsState(runOf(loadExample('turnstile').lookup).net.initial));
+        expect(value).toEqual({ marking: { locked: 1 }, attrs: { M: { coins: 0 } }, derived: { M: { paid: false } } });
+    });
+
+    it('ids is the $ID table: the model, then every object of the model in model order, each id once (R-GEN-17)', () => {
+        const ex = loadExample('turnstile');
+        const out = gen(ex.lookup, '"${target.ids}"');
+        expect(out.errors).toEqual([]);
+        expect(out.code).toBe([
+            'const $ID = Object.freeze({',
+            "  demoESM: 'M',",
+            ...['locked', 'unlocked', 'off', 'coin', 'push', 'stop', 'tc', 'tp', 'tu', 'ts'].map(id => `  ${id}: '${id}',`),
+            '});',
+        ].join('\n'));
+    });
+
+    it('ids names an element without a usable name <metaclass>_<n>, and two elements of one name apart', () => {
+        const ex = loadExample('petri-producer-consumer');
+        ex.lookup.produced.name = 'ready';
+        ex.lookup.a1.name = '';
+        delete ex.lookup.a2.name;
+        const out = gen(ex.lookup, '"${target.ids}|${target.ref(\'produced\')}|${target.ref(\'a2\')}"');
+        expect(out.errors).toEqual([]);
+        const [ids, produced, a2] = out.code.split('|');
+        const $ID = new Function(`'use strict';\n${ids}\nreturn $ID;`)();
+        expect(produced).toBe('$ID.ready_2');
+        expect(a2).toBe('$ID.Arc_2');
+        expect($ID).toMatchObject({ ready: 'ready', ready_2: 'produced', Arc_1: 'a1', Arc_2: 'a2', a3: 'a3' });
+    });
+
+    it('ref(element) is $ID.<name> for an id, a handle or a record with an element; an unknown element is an error fragment', () => {
+        const ex = loadExample('turnstile');
+        const out = gen(ex.lookup, '"${target.ref(\'tp\')}|${target.ref(target.net.transitions.first)}|${target.ref(target.net.declared.first)}|${target.ref(stc.nodes.first)}"');
+        expect(out.errors).toEqual([]);
+        expect(out.code).toBe('$ID.tp|$ID.tc|$ID.demoESM|$ID.locked');
+        const bad = gen(ex.lookup, '"${target.ref(\'nope\')}"');
+        expect(bad.errors.map(e => e.message)).toEqual(["No element 'nope' in the model"]);
     });
 
     it('net lists the transitions in compile order with their arcs and sites, and the derived attributes', () => {
@@ -94,7 +133,7 @@ describe('target, in a template', () => {
         const ex = loadExample('turnstile');
         const out = gen(ex.lookup, '"${target.guard(\'tp\')}|${target.guard(\'tc\')}"');
         expect(out.errors).toEqual([]);
-        expect(out.code).toBe('$guard(() => ($read(state, "M", "paid")))|({ kind: \'true\' })');
+        expect(out.code).toBe('$guard(() => ($read(state, $ID.demoESM, "paid")))|({ kind: \'true\' })');
     });
 
     it('guard(site) conjoins two Guard attributes as the bridge does: a defect wins, then false', () => {
@@ -105,9 +144,10 @@ describe('target, in a template', () => {
         ex.lookup.tp.features.push('V_tp_extra');
         const run = runOf(ex.lookup);
         expect(run.guards.get('tp')?.length).toBe(2);
-        const out = gen(ex.lookup, '"${target.guard(\'tp\')}"');
+        const out = gen(ex.lookup, '"${target.ids}\n---\n${target.guard(\'tp\')}"');
         expect(out.errors).toEqual([]);
-        const outcome = (paid: boolean, coins: number) => new Function('state', 'event', `'use strict';\n${JS_RUNTIME}\nreturn (${out.code});`)({ marking: {}, attrs: { M: { coins } }, derived: { M: { paid } } }, null);
+        const [ids, guard] = out.code.split('\n---\n');
+        const outcome = (paid: boolean, coins: number) => new Function('state', 'event', `'use strict';\n${JS_RUNTIME}\n${ids}\nreturn (${guard});`)({ marking: {}, attrs: { M: { coins } }, derived: { M: { paid } } }, null);
         expect(outcome(true, 1)).toEqual({ kind: 'true' });
         expect(outcome(true, 0)).toEqual({ kind: 'false' });
         expect(outcome(false, 1)).toEqual({ kind: 'false' });
@@ -128,7 +168,7 @@ describe('target, in a template', () => {
         const out = gen(ex.lookup, '"${target.actions(\'tc\')}\n---\n${target.actions(target.net.transitions.first.actionSites.filter(s => s.role == \'transition\').first)}"');
         expect(out.errors).toEqual([]);
         const [byId, bySite] = out.code.split('\n---\n');
-        expect(byId).toBe('const $v0 = $value($add($read(state, "M", "coins"), 1));\nreturn $apply(state, [["M", "coins", $v0]]);');
+        expect(byId).toBe('const $v0 = $value($add($read(state, $ID.demoESM, "coins"), 1));\nreturn $apply(state, [[$ID.demoESM, "coins", $v0]]);');
         expect(bySite).toBe(byId);
     });
 
@@ -136,7 +176,7 @@ describe('target, in a template', () => {
         const ex = loadExample('turnstile');
         const out = gen(ex.lookup, '"${target.equation(target.net.derived.first)}"');
         expect(out.errors).toEqual([]);
-        expect(out.code).toBe('$ge($read(state, "M", "coins"), 2)');
+        expect(out.code).toBe('$ge($read(state, $ID.demoESM, "coins"), 2)');
     });
 });
 

@@ -8,7 +8,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { JS_RESERVED_WORDS, JsIdentifierTable, RUNTIME_NAMES, isValidIdentifier, mangle } from '../identifiers';
+import { JS_RESERVED_WORDS, JsIdentifierTable, RUNTIME_NAMES, elementIdTable, isValidIdentifier, jsString, mangle } from '../identifiers';
+import type { JsElement } from '../identifiers';
 
 /**
  * The parser's verdict: `x` can be declared with `let` in strict code where
@@ -168,4 +169,96 @@ describe('JsIdentifierTable: collisions and an invertible table', () => {
             expect(t.entries().map(e => e.key).sort()).toEqual([...byKey.keys()].sort());
         });
     }
+});
+
+/** What a generated program sees: the declaration run in strict code, then each element's reference after it. */
+function runTable(elements: readonly JsElement[]) {
+    const table = elementIdTable(elements);
+    const refs = elements.map(e => table.refs.get(e.id) ?? 'undefined');
+    // eslint-disable-next-line no-new-func
+    const seen = new Function(`'use strict';\n${table.declaration}\nreturn { $ID, values: [${refs.join(', ')}] };`)() as { $ID: Record<string, string>; values: unknown[] };
+    return { table, refs, ...seen };
+}
+
+describe('elementIdTable: the $ID table of a generated program (R-GEN-17)', () => {
+    it('two elements with the same name get distinct identifiers, each naming its own id (mutant: the uniqueness suffix dropped)', () => {
+        const { refs, values, $ID } = runTable([
+            { id: 'Pointer_1', name: 'door', metaclass: 'Door' },
+            { id: 'Pointer_2', name: 'door', metaclass: 'Door' },
+            { id: 'Pointer_3', name: 'door-2', metaclass: 'Door' },
+        ]);
+        expect(refs).toEqual(['$ID.door', '$ID.door_2', '$ID.door_2_2']);
+        expect(values).toEqual(['Pointer_1', 'Pointer_2', 'Pointer_3']);
+        expect(Object.keys($ID)).toEqual(['door', 'door_2', 'door_2_2']);
+        expect(Object.isFrozen($ID)).toBe(true);
+    });
+
+    it('a JavaScript reserved word or a runtime name (state, event, next) is mangled (mutant: the name used as it is)', () => {
+        const names = ['class', 'new', 'state', 'event', 'next', 'locked'];
+        const { refs, values } = runTable(names.map((name, i) => ({ id: `P${i}`, name, metaclass: 'State' })));
+        expect(refs).toEqual(['$ID.class_', '$ID.new_', '$ID.state_', '$ID.event_', '$ID.next_', '$ID.locked']);
+        expect(values).toEqual(names.map((_, i) => `P${i}`));
+    });
+
+    it('an element without a usable name gets <metaclass>_<n>, n counted per metaclass in model order, mangled the same way', () => {
+        const { refs, values } = runTable([
+            { id: 'a', metaclass: 'Place' },
+            { id: 'b', name: '', metaclass: 'Place' },
+            { id: 'c', name: 'ready', metaclass: 'Place' },
+            { id: 'd', name: '中', metaclass: 'Transition' },
+            { id: 'e', name: null, metaclass: 'my class' },
+            { id: 'f', name: 7, metaclass: 'Place' },
+            { id: 'g', name: ' - ', metaclass: 'class' },
+        ]);
+        expect(refs).toEqual(['$ID.Place_1', '$ID.Place_2', '$ID.ready', '$ID.Transition_1', '$ID.my_class_1', '$ID.Place_3', '$ID.class_1']);
+        expect(values).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g']);
+    });
+
+    it('the generated <metaclass>_<n> does not take a name an element has, and the table stays unique', () => {
+        const { refs, values } = runTable([
+            { id: 'a', name: 'Place_1', metaclass: 'Place' },
+            { id: 'b', metaclass: 'Place' },
+        ]);
+        expect(refs).toEqual(['$ID.Place_1', '$ID.Place_1_2']);
+        expect(values).toEqual(['a', 'b']);
+    });
+
+    it('is deterministic: the same model gives the same text, one element per line in model order', () => {
+        const elements: JsElement[] = [
+            { id: 'M', name: 'demoESM', metaclass: 'Model' },
+            { id: 'Pointer1791659970959_USER_48', name: 'locked', metaclass: 'Initial' },
+            { id: 'Pointer1791659970959_USER_49', name: 'locked', metaclass: 'State' },
+        ];
+        const text = elementIdTable(elements).declaration;
+        expect(elementIdTable(elements).declaration).toBe(text);
+        expect(text).toBe([
+            'const $ID = Object.freeze({',
+            "  demoESM: 'M',",
+            "  locked: 'Pointer1791659970959_USER_48',",
+            "  locked_2: 'Pointer1791659970959_USER_49',",
+            '});',
+        ].join('\n'));
+    });
+
+    it('an id given twice is one entry; the empty table is an empty frozen object', () => {
+        const { refs, $ID } = runTable([{ id: 'x', name: 'a', metaclass: 'C' }, { id: 'x', name: 'b', metaclass: 'C' }]);
+        expect(refs).toEqual(['$ID.a', '$ID.a']);
+        expect(Object.keys($ID)).toEqual(['a']);
+        expect(elementIdTable([]).declaration).toBe('const $ID = Object.freeze({});');
+    });
+
+    it('every id is written once, as a string literal that keeps quotes, backslashes and line breaks', () => {
+        const ids = ["it's", 'a\\b', 'x\ny', 'p q', 'say "hi"'];
+        const { table, values } = runTable(ids.map((id, i) => ({ id, name: `e${i}`, metaclass: 'C' })));
+        expect(values).toEqual(ids);
+        for (const id of ids) expect(table.declaration.split(jsString(id)).length - 1, id).toBe(1);
+    });
+
+    it('jsString is a single-quoted JavaScript literal of the same string', () => {
+        for (const s of ['', 'plain', "it's", '\\', '\n\r', '  ', '"']) {
+            // eslint-disable-next-line no-new-func
+            expect(new Function(`'use strict'; return ${jsString(s)};`)()).toBe(s);
+            expect(jsString(s).startsWith("'")).toBe(true);
+        }
+    });
 });
