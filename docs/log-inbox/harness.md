@@ -1041,3 +1041,26 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs-only merge of cluster-descriptions.json; req-trace no drift, no orphan
 **Notes**: Rollback tag `pre-cluster-desc-refresh` on `6ab64e126` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-2328/result.json`.
 **Prompt document name**: 2026-10-11 23:28
+
+## 2026-10-11 — docs(goals): refresh drifted cluster descriptions (P-2026-10-11-2230)
+**Prompt**: `claude_2026-10-11_2230_prompt_cluster_descriptions_refresh.md`, lane fast, unattended: rewrite the drifted and missing cluster descriptions in `docs/goals/cluster-descriptions.json` from the member rows, fold the orphans, RC-27 check by a fresh-context agent, gates, one docs commit.
+**Files touched**: `docs/goals/cluster-descriptions.json` (`53c5e492c`, shortened in `b12def15d`); this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-11 15:10 (`claude_2026-10-11_1510_prompt_cluster_descriptions.md`: its descriptions drifted after P-2026-10-11-2025; R-JS-1's text called R-JS-7 superseded)
+**Causa**: (f)
+**Regressions**: no. Gates on `b12def15d`: the file parses; req-trace `--no-cache`: 15 clusters, 0 drift, 0 orphans; the 7 descriptions of this lane 461 to 664 chars (cap 700); em and en dash 0 (positive control on `R-A`); check:docs exit 0; only `description` changed in the second commit; 8 undrifted keys byte-identical to the base.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: This prompt's file co-cites 13 cluster keys, so the run differs from its list: R-A splits (+20 −48), new R-DEAD-1, R-GV-16 into R-A, R-LAY-19 orphan; without the file the list is reproduced. The run won. Orphans: R-IRN-3 to R-GEN-1, R-JS-1 and R-LAY-19 to R-A. RC-27: 2 errors, 4 gaps, fixed. On the chat's review the 7 texts (not 8) were cut to 461 to 664 chars; RC-27 recheck: 2 errors, 8 nits, fixed. Second Causa: (c).
+**Prompt document name**: 2026-10-11 22:30
+
+## 2026-10-11 — ticket: a prompt that names cluster keys moves the clusters
+**Ticket**: req-trace builds the co-citation graph from every non-merge prompt in `docs/prompts/` citing at most 25 rows, so a harness prompt that lists cluster keys (P-2026-10-11-2230 names 13) adds a clique among them and moves the Louvain partition it asks to describe: R-A split into R-A (27) and R-DEAD-1 (48), R-GV-16, R-IRN-3, R-JS-1..7, R-LAY-19 and R-UNDO-1..7 pulled into R-A. Measured by re-running `clusterRows` with and without that one file. Fix options: exclude prompts of the harness front from co-citation, or have refresh prompts not name row ids.
+**Priority**: medium
+**Found in**: P-2026-10-11-2230
+
+## 2026-10-11 — ticket: req-trace marks R-JS-7 superseded by a false positive
+**Ticket**: `linkKind` (`frontend/scripts/req-trace.mjs:125`) matches `/supersed/` anywhere in the clause before an id, so R-JS-8's «a superseded `set` not retried, at most 3 retry passes, R-JS-7 wait» marks R-JS-7 `superseded` (`:249`), though R-JS-8 cites it as in force; the status reaches the tab and the descriptions. Separately, `parseRegister` cuts some rows at a blank line or a sub-bullet (R-STR-7 loses its «Sciolta» paragraph, R-VP-60 its withdrawal note), so a reader of the rows misses the closing state.
+**Priority**: medium
+**Found in**: P-2026-10-11-2230
