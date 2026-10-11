@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01R4ggJvaEru8rnc1ttETkTN
 Front: harness
 Lane: full (four files: board, new requirements.js, README, one new test file)
 Depends: P-2026-10-10-2022, P-2026-10-10-2103
-Status: da eseguire
+Status: eseguito 2026-10-11, lane P-2026-10-11-0008 (board-requirements, 1aee982fa + ac2471ab0); visual check passed (chat, built-in browser on 4702, RC-23)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

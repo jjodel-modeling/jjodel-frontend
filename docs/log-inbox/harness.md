@@ -662,3 +662,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-11-0957
 **Detail**: `frontend/scripts/lane-tracking.mjs:181-193`
+
+## 2026-10-11 — feat(harness): lane board Requirements tab (P-2026-10-11-0008)
+**Prompt**: `claude_2026-10-11_0008_prompt_board_requirements_tab.md`, slice S5 of the board port (discovery P-2026-10-10-1806 §7): F2, `/api/requirements` running `req-trace.mjs` single-flight with a 60 s cache and a 120 s kill, `/requirements.js` and the Requirements tab; R5 milestones as req-trace returns them, R6 opposing pairs grouped by declared conflict; README; new `laneBoardRequirements.test.ts`; a mutation bench; a live check on 4702, left running for the chat's RC-23 check. Then the chat's GO with a correction inside the lane: the pairs no conflict names split by softgoal, the cluster titles without req-trace's em dash.
+**Files touched**: `1aee982fa`: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/requirements.js` (new), `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoardRequirements.test.ts` (new); `ac2471ab0`: `requirements.js`, `README.md`, `laneBoardRequirements.test.ts`; uncommitted (RC-17): this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown until the chat's RC-23 check. Measured: `node --check` exit 0 on the board and `requirements.js`; `laneBoard`, `laneBoardStrip` and `laneBoardRequirements` 95/95; check:scripts PASS 75 files.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: chat RC-23 on 4702 (PID 29252, then stopped) on `ac2471ab0`: 17 clusters, 11 conflict groups, 5 softgoal groups (364, 77, 67, 53, 48), all 34 closed by default, SG-1 opened with the fixed Cluster column, no em dash in the rendered text
+**Notes**: Red first: 14/14 on the base, 5/17 on 1aee982fa. Bench 28/28 and 15/15 killed, controls green. The first RC-23 check found 609 of 612 pairs without a conflict; ac2471ab0 groups them by softgoal (live: SG-1 364, SG-2 77, SG-4 67, SG-3 53, SG-7 48; SG-1 in 15 cluster runs). 5 em dashes remain, all in tooltips quoting data (2 contribution whys, 3 commit subjects). /private/tmp/mut_0008 and /private/tmp/base_0008 remain.
+**Prompt document name**: 2026-10-11 00:08
