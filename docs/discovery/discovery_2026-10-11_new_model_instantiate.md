@@ -233,3 +233,46 @@ Files: `frontend/src/redux/reducer/reducer.ts` (and `common/Defaults.ts` for (a)
 2. Open F1 as Phase 2 of this lane (3 files, not §3.2)? Recommended: yes.
 3. Palette click: create at the viewport centre, or keep drag-only with a clearer hint? Recommended: click-to-create, the Data manager already creates on a click.
 4. F2 (read-only views after a page load) as its own lane, core, with a discovery of the 15 `Defaults.check` sites? Recommended: yes, separate, after F1.
+
+## 8. Addendum 2026-10-11 — Phase 2, F1 measured (GO of the chat, scope F1 only)
+
+Code `b08c92322` on top of `d53d319dc`. It touches three files, as §4 proposed, none in CLAUDE.md §3.1 or §3.2:
+- `hooks/metamodelSignature.ts`, new;
+- `hooks/useEditorMode.ts`, where the selector now calls it;
+- `hooks/__tests__/metamodelSignature.test.ts`, new.
+
+The signature keeps its old prefix and appends, per class, `interface` and the supertype ids, and per reference `type/composition/aggregation/lowerBound/upperBound`. F2 and F3 are untouched: `PalettePanel.tsx`, `reducer.ts` and `Defaults.ts` are unchanged.
+
+`modeInfo` consumers [R]: `useEditorMode(` has one caller, `EditorV2.tsx:607`. `modeInfo` reaches:
+- the palette props (`:4844-4848`);
+- the IR palette memo (`:1710-1723`);
+- the memo at `:810-827`;
+- the canvas menu (`:3300-3306`);
+- the handlers, through `modeInfoRef`.
+
+`useJjomSync(` (`:573`) and `useM1ReferenceEdges(` (`:601`) do not receive it.
+
+Gates:
+- the new test, 22 of 22;
+- `editor-v2/hooks`, 10 files, 197 tests;
+- typecheck 14, the baseline by file and code;
+- build exit 0 (chunk-size warning only);
+- `check:scripts` PASS.
+
+Mutation bench: 11 mutants, 11 killed (listed in the commit body).
+
+Probe, the same file `309245922`, `lane-run probe … --port 3092`, tag `f1-worktree` (the tree equal to `b08c92322`), JSON `assets/new-model-instantiate/probe_f1-b08c92322.json`:
+
+| Path | trunk `be556435b` | F1 `b08c92322` |
+|---|---|---|
+| `palette-drag` | 5/5 | 5/5 |
+| `palette-click` | 0/5 | 0/5 (unchanged, F3 out of scope) |
+| `dm-new` | 5/5 | 5/5 |
+| `dm-outline` | 5/5 | 5/5 |
+| `ctx-child` | 5/5, «Add» only after a rename | **5/5, «Add NewClass1 (children)» on the first right-click** |
+| `uncontain` | **0/5**, palette `["NewClass"]` | **5/5**, palette `["NewClass","NewClass1"]` before and after the tab round trip |
+| `jjscript` | 5/5 | 5/5 |
+
+Path-window errors: 0. Setup errors and state facts are identical to Phase 1 (the F2 rows of §2b unchanged, as expected). Screenshot `assets/new-model-instantiate/f1_adv-card_uncontain.png`: the palette shows both classes, and `NewClass1_2` was created by the drag.
+
+Not measured: the containment edited through the M2 properties panel instead of the L-API (§6). The visual GO is Alfonso's.
