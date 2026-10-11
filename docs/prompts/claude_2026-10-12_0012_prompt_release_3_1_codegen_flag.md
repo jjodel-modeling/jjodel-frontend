@@ -6,7 +6,7 @@ Front: release-3-2
 Lane: full (build-time gate across codegen, EditorV2 and Settings)
 Depends: P-2026-10-11-1812
 Request: none (Alfonso, 2026-10-12 00:06, "ok alle raccomandazioni"; D3 of the 1812 report)
-Status: da eseguire
+Status: eseguito 2026-10-12 · lane rel31-codegen-flag · d7c1f3df3 · hard-stop, partial: orphan runner.worker still emitted; merged 5718511af (visual GO pending)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply.
 

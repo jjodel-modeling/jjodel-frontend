@@ -6,7 +6,7 @@ Front: release-3-2
 Lane: full (render path of EditorV2 auto anchors; optional for 3.1)
 Depends: P-2026-10-11-1812
 Request: none (Alfonso, 2026-10-12 00:06, "ok alle raccomandazioni"; D6 of the 1812 report)
-Status: da eseguire
+Status: eseguito 2026-10-12 · lane rel31-drag · a69fef5d9 · hard-stop, probe 0 of 66 crashes, control fixed; merged 07bfa0673 (visual GO pending)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply.
 

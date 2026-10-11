@@ -6,7 +6,7 @@ Front: release-3-2
 Lane: full (critical zone: VersionFixer and the 2.230 migration; merge of 110 commits)
 Depends: P-2026-10-11-1812
 Request: none (Alfonso, 2026-10-12 00:06, "ok alle raccomandazioni, procedi in lane auto"; D1 of the 1812 report)
-Status: da eseguire
+Status: eseguito 2026-10-12 · lane rel31-staging · c36e49d87 · hard-stop, probes 2.229 and 2.230 green; merged d7b24c83b (visual GO pending, RC-23 with D-A1)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply.
 
