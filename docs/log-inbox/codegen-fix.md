@@ -20,3 +20,16 @@ empties this file. The active log is not touched by this lane.
 **Prompt document name**: 2026-10-10 20:27
 
 **Ticket** (S4's and S5's, closed here): load time no longer counts against `timeoutMs`; the probe's first Run ran at 2000 ms with the worker script held back 3500 ms and returned in 3529 ms. The EditorV2 Backspace-in-TEXTAREA ticket of S5 stays open, untouched.
+
+## 2026-10-11 — merge: codegen-fix into alfonso-frontend-jjtl (P-2026-10-11-1049)
+**Prompt**: `claude_2026-10-11_1049_prompt_merge_codegen-fix.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-fix` at `f8992c4d0` into `alfonso-frontend-jjtl`, merge base `f4c91bd71`, 4 commits on the branch side.
+**Files touched**: merge `bd73d6e54`: 8 files from the branch side (`docs/log-inbox/codegen-fix.md`, `docs/prompts/claude_2026-10-10_2027_prompt_codegen_s5b_fixes.md`, `frontend/scripts/probe/codegen-panel.ts`, `frontend/src/codegen/runner/__tests__/runner.test.ts`, `frontend/src/codegen/runner/protocol.ts`, `frontend/src/codegen/runner/runner.ts`, `frontend/src/codegen/runner/runner.worker.ts`, `frontend/src/codegen/ui/CodePanel.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bd73d6e54` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8450 tests in 347 files, 9 red at import, hooks 603; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 on the S5b retaken crops (scroll at both ends, full-width error tint, fixed gutter), GO by Alfonso 10:48; all trunk gates green
+**Notes**: Rollback tag `pre-codegen-fix` on `96d38b2bf` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1049/result.json`.
+**Prompt document name**: 2026-10-11 10:49
