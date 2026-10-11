@@ -612,10 +612,11 @@ describe('applyContainerLayout: the pointer within a band of the box at rest (R-
     });
     it('bottom: t2 mostly below Warehouse, the pointer in the band: the last lane and the pool grow down', () => {
         setDragPointer({ x: 370, y: 460 + 20 });
-        const { model, idlookup, nodes } = world({ nodes: drag('Vt2', 300, 430) });
+        // Its centre (470) is past the border: the centre alone would let it go.
+        const { model, idlookup, nodes } = world({ nodes: drag('Vt2', 300, 440) });
         const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
-        expect(pick(out, 'Vwarehouse')).toMatchObject({ y: 280, h: 430 + 60 + PARTITION_CONTENT_MARGIN - 280 });
-        expect(pick(out, 'Vshop')).toMatchObject({ y: 100, h: 430 + 60 + PARTITION_CONTENT_MARGIN - 100 });
+        expect(pick(out, 'Vwarehouse')).toMatchObject({ y: 280, h: 440 + 60 + PARTITION_CONTENT_MARGIN - 280 });
+        expect(pick(out, 'Vshop')).toMatchObject({ y: 100, h: 440 + 60 + PARTITION_CONTENT_MARGIN - 100 });
     });
     it('the pointer past the band: the frame keeps its box at rest, though the grown box would hold the pointer', () => {
         setDragPointer({ x: 130 - FOLLOW_BAND - 8, y: 190 });
