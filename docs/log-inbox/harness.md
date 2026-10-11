@@ -915,3 +915,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Read-only on code and register. The script imports docs-digest.ts's parser; positive control 49 failing headers and 77 provisional rows on the pre-ratification register, as 1430 measured. H0 holds only narrowly: a hook holds the `Model:` trailer at 3.7% in trees that carry it vs 87.5% in trees that do not, and 52.5% for chat commits it never sees. Three helper agents (rule map, identifying strings, RC-26 rows). Report §0.
 **Prompt document name**: 2026-10-11 16:30
+
+## 2026-10-11 — merge: goal-tree into alfonso-frontend-jjtl (P-2026-10-11-1808)
+**Prompt**: `claude_2026-10-11_1808_prompt_merge_goal-tree.md`, a direct merge by `lane-run merge --direct`, no session: `goal-tree` at `041cd2d47` into `alfonso-frontend-jjtl`, merge base `f6e14efad`, 1 commit on the branch side.
+**Files touched**: merge `30e8e2b5e`: 7 files from the branch side (`docs/discovery/discovery_2026-10-11_goal_tree_hurts.md`, `docs/goals/README.md`, `docs/goals/conflicts.json`, `docs/goals/contributions.json`, `docs/goals/correlations.json`, `docs/goals/goal-tree.json`, `docs/goals/softgoals.json`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `30e8e2b5e` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8692 tests in 359 files, 9 red at import, hooks 662; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: data-only merge of docs/goals; Requirements tab checked on 4702 (12 softgoals, 13 conflicts, no em dash)
+**Notes**: Rollback tag `pre-goal-tree` on `58a407501` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1808/result.json`.
+**Prompt document name**: 2026-10-11 18:08
