@@ -662,3 +662,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-11-0957
 **Detail**: `frontend/scripts/lane-tracking.mjs:181-193`
+
+## 2026-10-11 — ticket: lane-run status writes the GitHub card, while the lane skill calls status read-only
+**Ticket**: `lane-run status <Prompt-ID>` projects the lane's card for real (`lane-run.mjs:1058`, `trackCard(id, { limit })` inside `status`): a GitHub write, documented under `track`. The `lane` skill describes itself as "read-only: status, wait, tail and ports", so a reader who uses status to look at a lane moves its card. Seen in P-2026-10-11-1017: two status reads closed issues #6 and #8 (report addendum A.3). Fix options: a `--no-track` read for status, or the skill text says that status and wait sync the card.
+**Priority**: low
+**Found in**: P-2026-10-11-1017
+**Detail**: docs/discovery/discovery_2026-10-11_ticket_cards.md
+
+## 2026-10-11 — feat(harness): lane-run ticket, tickets as Backlog cards, backfill (P-2026-10-11-1017)
+**Prompt**: `claude_2026-10-11_1017_prompt_ticket_cards.md`, full lane on `~/jjodel-w-ticketcards`, branch `ticket-cards`: Phase 1 report `7216c4464`, then the chat's GO (the seven recommended answers): `lane-run ticket` files a ticket in its inbox and as a Backlog card, `--backfill` cards the trunk's inbox tickets with the GO's plan, and in `projectLane` a flipped Status wins over hard-stop.
+**Files touched**: `7216c4464`: `docs/discovery/discovery_2026-10-11_ticket_cards.md`; `4cf89641e`: `frontend/scripts/lane-tracking.mjs`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneTracking.test.ts`, `frontend/scripts/hooks/__tests__/fixtures/fake-gh.cjs`; `11326b71a`: `docs/harness/ticket-backfill-plan.txt`; `861dab55d`: the report's Phase 2 addendum; this commit: this inbox (the ticket above, filed with `lane-run ticket`, and this entry). On GitHub: 5 labels, issues #9 to #51, one comment on #42, and #6 and #8 closed by `lane-run status`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. typecheck:scripts exit 0; vitest scripts/hooks and scripts/gates 925/925 in 17 files (laneTracking 52 to 79); check:scripts PASS 76 files; check:docs 5/5. Mutation bench 29/29 killed, control 79/79 (body of `4cf89641e`).
+**Out-of-scope changes**: yes — seven files over five commits (RC-11, rule 19): the four code and test files of COSA, the plan the GO named, the report and this inbox; and two card writes nobody asked for, #6 and #8, made by `lane-run status` (report A.3, ticket above).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Backfill: 42 cards, 27 Backlog and 15 closed, 0 skipped; a rerun writes nothing. The plan is not in the code commit because the bash guard refuses docs and code together (P13). The addendum corrects the Phase 1 totals. track --sync --dry-run: #5 is no longer reopened and #6 goes Done. Until this branch merges, a sync with the trunk's lane-run moves #6 back to In review. Report: docs/discovery/discovery_2026-10-11_ticket_cards.md.
+**Prompt document name**: 2026-10-11 10:17
