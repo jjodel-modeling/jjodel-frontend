@@ -1,0 +1,23 @@
+rule,enforcement,rule_from,check_from,unit,text_only_n,text_only_violations,text_only_rate,checked_n,checked_violations,checked_rate,last7_n,last7_violations,last7_rate,peak_date,peak_violations,peak_n,violations_repaired_at_ref
+RC-42 Depends: line,none,2026-10-06,,non-merge prompt committed,69,9,0.130,0,0,,69,9,0.130,2026-10-10,6,48,1
+RC-43 Request: line,warn,2026-10-10,2026-10-10,non-merge prompt committed,0,0,,66,29,0.439,66,29,0.439,2026-10-10,25,48,1
+RC-44 Front: line,block-auto,2026-10-11,2026-10-10,non-merge prompt committed,0,0,,18,2,0.111,18,2,0.111,2026-10-11,2,18,2
+RC-33 Chat: line,report,2026-09-28,2026-09-28,non-merge prompt committed,0,0,,183,0,0,78,0,0,2026-09-28,0,2,0
+RC-17 Lane: line,warn,2026-09-25,2026-09-28,non-merge prompt committed,70,5,0.071,194,39,0.201,78,1,0.013,2026-09-29,12,37,0
+P6 Model: trailer (lane-or-local),block-auto,2026-09-18,2026-09-22,non-merge commit of origin lane-or-local,116,53,0.457,1023,65,0.064,214,11,0.051,2026-09-18,40,51,
+P6 Model: trailer (chat),none (outside the hook scope),2026-09-18,,non-merge commit of origin chat,438,230,0.525,0,0,,136,93,0.684,2026-10-10,46,88,
+P6 Model: trailer (lane-run-script),none (outside the hook scope),2026-09-18,,non-merge commit of origin lane-run-script,379,14,0.037,0,0,,130,1,0.008,2026-09-28,5,36,
+CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,2026-09-01,2026-09-22,non-merge commit of origin lane-or-local,300,62,0.207,1023,22,0.022,214,4,0.019,2026-09-01,13,39,
+CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),2026-09-01,,non-merge commit of origin chat,708,182,0.257,0,0,,136,34,0.250,2026-10-10,21,88,
+CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),2026-09-01,,non-merge commit of origin lane-run-script,379,217,0.573,0,0,,130,70,0.538,2026-10-10,38,66,
+RC-13 docs and code apart (lane-or-local),block-auto,2026-09-01,2026-09-22,non-merge commit of origin lane-or-local,300,12,0.040,1023,5,0.005,214,3,0.014,2026-09-01,12,39,
+RC-13 docs and code apart (chat),none (outside the hook scope),2026-09-01,,non-merge commit of origin chat,708,16,0.023,0,0,,136,0,0,2026-09-01,8,37,
+"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,2026-09-22,2026-09-22,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,,991,37,0.037,214,11,0.051,2026-09-28,7,85,
+"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),2026-09-22,,non-merge commit of origin lane-or-local whose tree lacks the hook,32,28,0.875,0,0,,0,0,,2026-09-23,23,23,
+"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,2026-09-22,2026-09-22,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,,991,19,0.019,214,4,0.019,2026-09-27,7,159,
+"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),2026-09-22,,non-merge commit of origin lane-or-local whose tree lacks the hook,32,3,0.094,0,0,,0,0,,2026-09-23,3,23,
+RC-25..27 header grammar (rows since 2026-09-26),block-manual,2026-09-26,,register row dated >= 2026-09-26 (daily snapshot),2187,371,0.170,0,0,,1373,277,0.202,2026-10-10,59,209,
+RC-25 provisional row acknowledged within 2 days,report,2026-09-26,,register row dated >= 2026-09-26 (daily snapshot),2187,518,0.237,0,0,,1373,424,0.309,2026-10-07,75,188,
+RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),2026-09-26,2026-09-26,row in the class introduced,0,0,,27,17,0.630,2,0,0,2026-09-30,9,10,
+RC-26 waits for Alfonso (other classes),none,2026-09-26,,row in the class introduced,44,17,0.386,0,0,,4,1,0.250,2026-09-27,6,7,
+RC-18 harness budget,none,2026-09-25,,day (7-day window),17,2,0.118,0,0,,7,2,0.286,2026-10-10,1,1,

@@ -1,0 +1,692 @@
+{
+ "RC-20": {
+  "v": "fp",
+  "cls": "",
+  "note": "general mechanism only: 'a critical-zone lane needs the Layer Impact Report and the explicit go-ahead'; no edit decided"
+ },
+ "RC-21": {
+  "v": "fp",
+  "cls": "",
+  "note": "lists the gate classes ('Alfonso answers when the recommendation touches a critical-zone file...') but decides none of them"
+ },
+ "RC-22": {
+  "v": "fp",
+  "cls": "",
+  "note": "'neither depends on an exported interface the other changes' is a launch check, not an interface change"
+ },
+ "RC-23": {
+  "v": "fp",
+  "cls": "",
+  "note": "'Alfonso's GO stays mandatory on critical-zone lanes' restates the gate; 'Emenda P8' is a protocol clause, not an R- row"
+ },
+ "RC-25": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'The five-adoption cap of RC-21 is removed. Amends RC-21', ratified by Alfonso earlier the same day"
+ },
+ "RC-26": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "uncertain: decides none of its six classes; 'Only these wait for Alfonso' narrows the list of ratified RC-21 (implicit)"
+ },
+ "RC-27": {
+  "v": "fp",
+  "cls": "",
+  "note": "'touches more than one exported interface' routes to a second agent; no interface change decided"
+ },
+ "RC-29": {
+  "v": "fp",
+  "cls": "",
+  "note": "uncertain: 'Bash(git push*) stays', no push decided; dropping the commit ask completes RC-19 rather than amending RC-15(7)"
+ },
+ "RC-30": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Amends RC-19 (relaunch without the flag is no longer the only way)', RC-19 ratified 09-25; go-ahead itself general"
+ },
+ "RC-31": {
+  "v": "fp",
+  "cls": "",
+  "note": "uncertain: merge policy; 'four demo scenes ... re-run on the merged tree' is a check; abolished rule was prompt-level"
+ },
+ "RC-32": {
+  "v": "tp",
+  "cls": "model-effort-cost;amends-ratified",
+  "note": "'lane-run picks the model of each lane from its activity'; 'Amends RC-16' (ratified 09-25)"
+ },
+ "RC-36": {
+  "v": "fp",
+  "cls": "",
+  "note": "uncertain: 'The critical zone stays shut for automatic lanes' forbids edits; narrows RC-30 only for the new auto lanes"
+ },
+ "RC-37": {
+  "v": "fp",
+  "cls": "",
+  "note": "'the automation never merges and never pushes' forbids pushing; no push is decided"
+ },
+ "RC-38": {
+  "v": "tp",
+  "cls": "model-effort-cost",
+  "note": "'The night spends only the slack of the plan window': utilization caps, 240 minutes per night, the session budget"
+ },
+ "RC-39": {
+  "v": "tp",
+  "cls": "model-effort-cost",
+  "note": "'Phase 1 discovery only, light tier' and budget numbers for automatic sessions; the demo clause only defers live mode"
+ },
+ "RC-40": {
+  "v": "tp",
+  "cls": "model-effort-cost;amends-ratified",
+  "note": "'Amends RC-39: shadow prompts declare Lane: discovery' giving the light tier; RC-39 ratified in principle"
+ },
+ "RC-41": {
+  "v": "fp",
+  "cls": "",
+  "note": "uncertain: adds jdirocco to an allowlist RC-35 called 'initially apierantonio'; 'budget of RC-38 are unchanged'"
+ },
+ "RC-45": {
+  "v": "tp",
+  "cls": "model-effort-cost;amends-ratified",
+  "note": "'the chat draws heavy or light with probability 1/2'; 'Amends RC-32' (principle ratified by Alfonso)"
+ },
+ "R-EDGE-2": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'Modifica del core (Rule 5)': guarded setters on DReference and data types, in a C2 lane"
+ },
+ "R-EDGE-3": {
+  "v": "fp",
+  "cls": "",
+  "note": "'Nessuna migrazione dei progetti salvati ora': the VersionFixer delete-orphans option is only ticketed"
+ },
+ "R-IRN-37": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "collapse fields in irTypes.ts and IRNodeContent (viewpoint/ir/), 'Ratified ... §5 of the Layer Impact Report'"
+ },
+ "R-IRN-38": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'labelCanRename ... in ir/irLabelEdit.ts', irCompile.ts and LabelEntryEditor.tsx (viewpoint/ir, authoring); demo 0 px"
+ },
+ "R-IRN-40": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'FieldSegmentEditor.tsx draws checked = editable !== false' is in viewpoint/authoring/; demo scenes 0 px"
+ },
+ "R-IRN-39": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'objectSnapshotParts ... in ir/irResolveCore.ts' is viewpoint/ir/; 'four demo scenes 0 px'"
+ },
+ "R-IRN-41": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'labelEditableDefault in ir/irLabelEdit.ts', irCompile.ts; it amends R-IRN-38 while still provisional"
+ },
+ "R-SIM-66": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Emenda R-SIM-65': R-SIM-65 ratified at 15:31 (470c07ee7), this row written at 16:13"
+ },
+ "R-SIM-67": {
+  "v": "fp",
+  "cls": "",
+  "note": "additive bag key, 'nessun passo di VersionFixer'; the critical zone appears only in rejected option D2"
+ },
+ "R-SIM-69": {
+  "v": "fp",
+  "cls": "",
+  "note": "optional NetStc fields; 'i siti sono quelli del core' is the simulation engine, not the framework core"
+ },
+ "R-SIM-75": {
+  "v": "fp",
+  "cls": "",
+  "note": "'halt read-only nel core' is the simulation engine; optional record fields, no data deletion"
+ },
+ "R-SIM-76": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "'Il pannello riceve un selettore stored | derived': the demo ESM scene uses that table (script: 'derived', the equation)"
+ },
+ "R-SIM-78": {
+  "v": "fp",
+  "cls": "",
+  "note": "uncertain: 'Nella corsia demo il motore legge il bag come oggi'; not among the section's four RC-26 points"
+ },
+ "R-SIM-79": {
+  "v": "tp",
+  "cls": "demo;amends-ratified",
+  "note": "'quattro per la demo ... DFA, NFA, Moore e Mealy nascosti'; uncertain amend: 'scostamento dichiarato da R-SIM-55'"
+ },
+ "R-SIM-80": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "demo gap G1: event buttons and Last step 'leggono coin e non _136' in the demo scenes"
+ },
+ "R-SIM-81": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "'sulla rete della demo la proposta legge Bound -> 4, e il passo 3 del copione diventa ridondante'"
+ },
+ "R-SIM-82": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "'La faccia M1 per il pubblico': Marking row for the whole run, choices list moved; demo readiness gaps"
+ },
+ "R-SIM-83": {
+  "v": "fp",
+  "cls": "",
+  "note": "'Sui quattro preset della demo nulla cambia'"
+ },
+ "R-SIM-85": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "'la demo MODELS percorre il dialogo Simulation roles'"
+ },
+ "R-SIM-86": {
+  "v": "fp",
+  "cls": "",
+  "note": "id reused: intro (now R-SIM-91) and current off-role row both state the demo run readings are identical"
+ },
+ "R-SIM-87": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "id reused: current row 'Emenda R-SIM-31(1)' (ratified 09-25); intro text (now R-SIM-92) is fp"
+ },
+ "R-SIM-88": {
+  "v": "tp",
+  "cls": "amends-ratified;demo",
+  "note": "id reused: current row 'Emenda R-SIM-7'; amended by Alfonso: ESM scene select 'offre anche input'"
+ },
+ "R-SIM-89": {
+  "v": "fp",
+  "cls": "",
+  "note": "'verdicts ... on the four demo metamodels are identical before and after'"
+ },
+ "R-SIM-90": {
+  "v": "fp",
+  "cls": "",
+  "note": "uncertain: 'enters the MODELS build before the freeze' but no stated change to what the demo scenes show"
+ },
+ "R-SIM-91": {
+  "v": "fp",
+  "cls": "",
+  "note": "'sui quattro preset della demo ... righe di run identiche'"
+ },
+ "R-SIM-92": {
+  "v": "fp",
+  "cls": "",
+  "note": "'i quattro preset della demo identici come in R-SIM-91'"
+ },
+ "R-SIM-93": {
+  "v": "fp",
+  "cls": "",
+  "note": "hidden presets 'compaiono ... dopo MODELS': defers, the demo is unchanged"
+ },
+ "R-SIM-94": {
+  "v": "tp",
+  "cls": "amends-ratified;demo",
+  "note": "'Amends R-SIM-67, R-SIM-19, R-SIM-52' (19, 52 ratified); 'The demo script moves the declaration steps'"
+ },
+ "R-SIM-95": {
+  "v": "tp",
+  "cls": "amends-ratified;demo",
+  "note": "'Amends R-SIM-93' (ratified 09-28); the four presets enter the panel's Profile select before the freeze"
+ },
+ "R-SIM-96": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Amends the example of R-SIM-58' (ratified); 'push' here is an event name, not a git push"
+ },
+ "R-SIM-97": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "'The demo sets the Semantic type live in each scene'; 'the core's undo' is only a ticket"
+ },
+ "R-SIM-99": {
+  "v": "tp",
+  "cls": "amends-ratified;demo",
+  "note": "'Amends R-SIM-97' (ratified that day); 'The demo takes 7 clicks per scene ... where R-SIM-97 took 6'"
+ },
+ "R-SIM-100": {
+  "v": "tp",
+  "cls": "amends-ratified;demo",
+  "note": "'Amends R-SIM-35' (ratified 09-25); the Random button 'enters the MODELS build'; 'core' is the engine"
+ },
+ "R-SIM-101": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "'the demo script §2.2 ... gains one optional beat'; Play and the Choices row enter the MODELS build"
+ },
+ "R-SIM-103": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Amends the labels of R-SIM-71, R-SIM-81(3)', both ratified by Alfonso"
+ },
+ "R-SIM-105": {
+  "v": "fp",
+  "cls": "",
+  "note": "'the compact panel stays the default and the demo path'"
+ },
+ "R-SIM-108": {
+  "v": "tp",
+  "cls": "critical-zone;amends-ratified",
+  "note": "'Amends R-SIM-4' (ratified 08-17); 'editor-v2/viewpoint/ir/ counts as a critical-zone edit', LIR"
+ },
+ "R-SIM-109": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "'the demo shows the dialog and the M1 face as built, the inspector ... an optional beat'"
+ },
+ "R-SIM-115": {
+  "v": "fp",
+  "cls": "",
+  "note": "'Lanes: after the MODELS demo': defers"
+ },
+ "R-SIM-116": {
+  "v": "fp",
+  "cls": "",
+  "note": "'with no VersionFixer step'; an additive key, nothing deleted"
+ },
+ "R-SIM-122": {
+  "v": "fp",
+  "cls": "",
+  "note": "amends 'provisional R-SIM-111'; 'the four demo scenes byte-identical to the base'"
+ },
+ "R-SIM-123": {
+  "v": "fp",
+  "cls": "",
+  "note": "'no VersionFixer step'; 'no demo export carries a board'"
+ },
+ "R-SIM-132": {
+  "v": "fp",
+  "cls": "",
+  "note": "'an icon, no text: the demo scenes read the same'"
+ },
+ "R-SIM-144": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Amends R-SIM-16 (its last sentence made precise)', R-SIM-16 ratified 09-23"
+ },
+ "R-UNDO-8": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "core reducer change: 'qui il core cambia su GO' (redux reducer.ts); canvasToJjom only in rejected option C"
+ },
+ "R-VP-16": {
+  "v": "tp",
+  "cls": "amends-ratified;critical-zone",
+  "note": "'amends R-VP-15' (ratified at intro); ShapeForm 'bar' added in viewpoint/ir/irTypes.ts (449c583b6)"
+ },
+ "R-VP-18": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "'approved by Alfonso before the freeze knowing it changes every demo screenshot'; no §3.1 file"
+ },
+ "R-VP-28": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "uncertain: 'declared on DViewElement (view.tsx)', a core data class; its commit also edits IRNodeContent"
+ },
+ "R-VP-31": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'passes the new optional colorOverride prop to IRNodeContent (viewpoint/ir/, CLAUDE.md §3.1'"
+ },
+ "R-VP-19": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Amends R-VP-15 (5) and the last clause of R-VP-17', both ratified 09-29; no CZ file (3ed86119f)"
+ },
+ "R-VP-20": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'Five optional IR keys' with a Layer Impact Report: irTypes, irCompile, IRNodeContent; amends chat-decided R-VP-19"
+ },
+ "R-VP-21": {
+  "v": "tp",
+  "cls": "critical-zone;amends-ratified",
+  "note": "'ir.generated, declared optional in irTypes.ts'; 'Amends R-VP-15 (5) and R-VP-17' (ratified)"
+ },
+ "R-VP-22": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "IR keys 'ShapeSpec.entry?' and 'edge.curve?' with LIR; 'No earlier row is amended' (R-VP-17 only cited)"
+ },
+ "R-VP-23": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "IR keys 'edge.labels.sourceEnd?' with LIR (irTypes, irEdgeViews); 'No earlier row is amended'; demo 0 px"
+ },
+ "R-VP-24": {
+  "v": "tp",
+  "cls": "critical-zone;demo",
+  "note": "'EdgeTermination hollowCircle' in irTypes, EdgeAuthoringPanel; uncertain demo: 'DemoPetri preselects it'"
+ },
+ "R-VP-25": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'amends the filled arrowhead R-VP-16 kept and the arrowheads of R-VP-17' (ratified 09-29)"
+ },
+ "R-VP-26": {
+  "v": "tp",
+  "cls": "amends-ratified;demo",
+  "note": "'amends R-VP-22' (ratified 16:15 review); uncertain demo: 'the demos open on the new notations'; no CZ file"
+ },
+ "R-VP-32": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "LIR; 'irJunctions.ts, called at the end of synthesizeObjectAsEdges' is viewpoint/ir/"
+ },
+ "R-VP-33": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Amends the guard style of R-VP-26' (ratified 09-30), as Alfonso asked"
+ },
+ "R-VP-34": {
+  "v": "fp",
+  "cls": "",
+  "note": "'the MODELS demo runs in the default viewpoint and does not move'"
+ },
+ "R-VP-36": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'amends R-VP-26 (2) on the bar thickness only'; demo scenes 'byte-identical'"
+ },
+ "R-VP-38": {
+  "v": "fp",
+  "cls": "",
+  "note": "'Cost: the resolver builds the metamodel's graph' is runtime cost, not session cost"
+ },
+ "R-VP-39": {
+  "v": "fp",
+  "cls": "",
+  "note": "'VersionFixer.update' is only a measurement; optional persisted overrides map"
+ },
+ "R-VP-50": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "uncertain, id reused: intro (now R-VP-52) 'amends R-VP-26 (2)'; current glyph row amends provisional R-VP-27"
+ },
+ "R-VP-48": {
+  "v": "tp",
+  "cls": "demo",
+  "note": "'It may change what the MODELS demo scenes show after an auto-layout (RC-26)'"
+ },
+ "R-VP-49": {
+  "v": "fp",
+  "cls": "",
+  "note": "'waits for a critical-zone lane'; 'portDistribution.ts and handlePosition.ts untouched'"
+ },
+ "R-VP-52": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'amends R-VP-26 (2) on the orientation', R-VP-26 ratified 09-30"
+ },
+ "R-VP-41": {
+  "v": "fp",
+  "cls": "",
+  "note": "session store in elkLayout.ts; useJjomSync.ts is cited as the reason, not edited"
+ },
+ "R-VP-45": {
+  "v": "fp",
+  "cls": "",
+  "note": "'0 px outside Jodie's animated avatar on the four demo scenes'"
+ },
+ "R-VP-53": {
+  "v": "tp",
+  "cls": "amends-ratified;demo",
+  "note": "'amends R-VP-24 (3) on the anchor'; uncertain demo: DemoPetri classic 'differs at the three names'"
+ },
+ "R-VP-54": {
+  "v": "tp",
+  "cls": "critical-zone;amends-ratified;demo",
+  "note": "'Statechart (UML) as the demo draws it'; 'amends R-VP-22'; VertexViewIR.visible with LIR"
+ },
+ "R-VP-55": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'amends R-VP-24 (4)' (ratified 09-30); derive and notations.ts only"
+ },
+ "R-VP-56": {
+  "v": "tp",
+  "cls": "critical-zone;demo",
+  "note": "'endSideFor (viewpoint/ir/irEdgeViews.ts)', LIR; uncertain demo: 'acceptance of the cost on DemoFlowB'"
+ },
+ "R-VP-57": {
+  "v": "tp",
+  "cls": "critical-zone;demo",
+  "note": "LIR; 'ShapeSpec.barThickness?' and the ink in .ir-node-content; uncertain demo: Petri bars turn"
+ },
+ "R-VP-58": {
+  "v": "tp",
+  "cls": "amends-ratified;demo",
+  "note": "'amends R-VP-15 (4) ... and R-VP-24 (3)'; uncertain demo: Petri ink, 'non portare problemi con la demo'"
+ },
+ "R-VP-59": {
+  "v": "tp",
+  "cls": "amends-ratified;critical-zone;demo",
+  "note": "'amends R-VP-53'; irEdgeViews.ts and IRNodeContent.tsx; uncertain demo: classic Petri labels move"
+ },
+ "R-VP-60": {
+  "v": "tp",
+  "cls": "amends-ratified;critical-zone;demo",
+  "note": "'amends R-VP-49', RC-30 go-ahead, LIR; handles after Auto layout on the four demos; later withdrawn"
+ },
+ "R-EE-1": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'EdgeTermination gains filledCircle ...', declared in viewpoint/ir/irTypes.ts; demo scenes 0 px"
+ },
+ "R-EE-3": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'Compiled sourceEndRole' in irCompile/irEdgeViews (viewpoint/ir/); 'pushed along the axis' is not a push"
+ },
+ "R-JS-2": {
+  "v": "fp",
+  "cls": "",
+  "note": "'Accepted cost: ... waits 500 ms' is runtime latency, not session cost"
+ },
+ "R-JS-3": {
+  "v": "fp",
+  "cls": "",
+  "note": "'Never deferred: delete' is a script verb; '500 ms per pass' is runtime cost"
+ },
+ "R-JS-7": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Amends R-JS-1 for retry passes only' (ratified 09-17); 'Accepted cost' is runtime"
+ },
+ "R-JS-10": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Amends R-S1-5's scope', which was 'the roots of one model' (ratified 08-30)"
+ },
+ "R-GOAL-1": {
+  "v": "fp",
+  "cls": "",
+  "note": "names softgoals 'SG-3 demo readiness', 'SG-7 cost of the harness'; decides none of the classes"
+ },
+ "R-GEN-3": {
+  "v": "fp",
+  "cls": "",
+  "note": "'no irVersion bump, no VersionFixer migration'"
+ },
+ "R-GEN-11": {
+  "v": "tp",
+  "cls": "amends-ratified",
+  "note": "'Amends R-GEN-8: the oracle compares every step', R-GEN-8 ratified by Alfonso 10-10"
+ },
+ "R-GEN-13": {
+  "v": "fp",
+  "cls": "",
+  "note": "legacy M2T 'stays untouched' and the pilot 'does not delete it'; DV.tsx and VersionFixer only described"
+ },
+ "R-GV-6": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "uncertain: interpreter placement and optional 'layout' are viewpoint/ir/ work; R-IRN-37 fields 'are untouched'"
+ },
+ "R-GV-10": {
+  "v": "fp",
+  "cls": "",
+  "note": "useJjomSync Step 2bis gets 'a read-only discovery of their own before any code': defers"
+ },
+ "R-GV-13": {
+  "v": "tp",
+  "cls": "critical-zone",
+  "note": "'S1, S2 and S4, inside the CLAUDE.md §3.1 zone (viewpoint/ir/, viewpoint/authoring/), are granted'"
+ },
+ "RC-24": {
+  "v": "tn",
+  "cls": "",
+  "note": "one branch per lane; 'Emenda P13' is a protocol clause, not an R- row"
+ },
+ "RC-34": {
+  "v": "tn",
+  "cls": "",
+  "note": "add-only log check at merge; no class"
+ },
+ "RC-35": {
+  "v": "tn",
+  "cls": "",
+  "note": "intake allowlist and untrusted-data rules; no class"
+ },
+ "RC-44": {
+  "v": "tn",
+  "cls": "",
+  "note": "lanes declare a front, GitHub board and issues; no push, no deletion"
+ },
+ "R-SIM-143": {
+  "v": "tn",
+  "cls": "",
+  "note": "board editor layout, 'Layout only'; no class"
+ },
+ "R-SIM-133": {
+  "v": "tn",
+  "cls": "",
+  "note": "board extras (keycaps, buzzer); no class"
+ },
+ "R-SIM-142": {
+  "v": "tn",
+  "cls": "",
+  "note": "timeline slider in the panel; no stated demo change"
+ },
+ "R-SIM-130": {
+  "v": "tn",
+  "cls": "",
+  "note": "closed theme palettes for Variant B; no class"
+ },
+ "R-SIM-141": {
+  "v": "tn",
+  "cls": "",
+  "note": "lane order; 'authorised the merge of each lane', a merge not a push"
+ },
+ "R-SIM-131": {
+  "v": "tn",
+  "cls": "",
+  "note": "amends 'provisional R-SIM-126's green default': provisional target"
+ },
+ "R-SIM-125": {
+  "v": "tn",
+  "cls": "",
+  "note": "board spans and columns; no class"
+ },
+ "R-SIM-140": {
+  "v": "tn",
+  "cls": "",
+  "note": "coverage counts, 'nothing persisted'; no class"
+ },
+ "R-SIM-136": {
+  "v": "tn",
+  "cls": "",
+  "note": "'Amends decision 3 of R-SIM-122', a decision adopted provisionally by the chat"
+ },
+ "R-SIM-124": {
+  "v": "tn",
+  "cls": "",
+  "note": "board themes; no class"
+ },
+ "R-SIM-137": {
+  "v": "tn",
+  "cls": "",
+  "note": "watches as an additive key; no class"
+ },
+ "R-SIM-127": {
+  "v": "tn",
+  "cls": "",
+  "note": "icon suggestion module; no class"
+ },
+ "R-SIM-146": {
+  "v": "fn",
+  "cls": "amends-ratified",
+  "note": "'amends R-SIM-140 (a clear button empties them)', a scope sentence Alfonso ratified 10-05"
+ },
+ "R-SIM-134": {
+  "v": "tn",
+  "cls": "",
+  "note": "optional autoStart field; no class"
+ },
+ "R-SIM-126": {
+  "v": "tn",
+  "cls": "",
+  "note": "device styles; no class"
+ },
+ "R-SIM-135": {
+  "v": "tn",
+  "cls": "",
+  "note": "clock ownership moved to the panel; no class"
+ },
+ "R-SIM-121": {
+  "v": "tn",
+  "cls": "",
+  "note": "'Details R-SIM-112' (provisional then); no class"
+ },
+ "R-SIM-120": {
+  "v": "fn",
+  "cls": "amends-ratified",
+  "note": "'R-SIM-110's every press is a step is read as every press that reaches the machine': reinterprets ratified R-SIM-110"
+ },
+ "R-SIM-60": {
+  "v": "tn",
+  "cls": "",
+  "note": "title-only reason on a lit button; no class"
+ },
+ "R-SIM-138": {
+  "v": "tn",
+  "cls": "",
+  "note": "step back in the run; no class"
+ },
+ "R-SIM-61": {
+  "v": "tn",
+  "cls": "",
+  "note": "defects in 'un campo facoltativo di RunStart': optional field"
+ },
+ "R-SIM-139": {
+  "v": "tn",
+  "cls": "",
+  "note": "scenarios as an additive key; no class"
+ },
+ "R-B17": {
+  "v": "fn",
+  "cls": "critical-zone",
+  "note": "delete path 'in one pure TRANSACTION, clears their pair guards': code 5557a714b edits sync/canvasToJjom.ts"
+ },
+ "R-SIM-62": {
+  "v": "tn",
+  "cls": "",
+  "note": "panel texts and names; no class"
+ },
+ "R-SIM-63": {
+  "v": "tn",
+  "cls": "",
+  "note": "one-line panel rows; no class"
+ },
+ "R-SIM-73": {
+  "v": "tn",
+  "cls": "",
+  "note": "'Emenda la R-SIM-71 provvisoria': provisional target"
+ }
+}

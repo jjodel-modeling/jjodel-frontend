@@ -1,0 +1,598 @@
+date,rule,enforcement,period,unit,opportunities,violations,rate
+2026-09-29,RC-42 Depends: line,none,before,non-merge prompt committed,0,0,
+2026-09-30,RC-42 Depends: line,none,before,non-merge prompt committed,0,0,
+2026-10-01,RC-42 Depends: line,none,before,non-merge prompt committed,0,0,
+2026-10-02,RC-42 Depends: line,none,before,non-merge prompt committed,0,0,
+2026-10-03,RC-42 Depends: line,none,before,non-merge prompt committed,0,0,
+2026-10-04,RC-42 Depends: line,none,before,non-merge prompt committed,0,0,
+2026-10-05,RC-42 Depends: line,none,before,non-merge prompt committed,0,0,
+2026-10-06,RC-42 Depends: line,none,text-only,non-merge prompt committed,3,2,0.667
+2026-10-07,RC-42 Depends: line,none,text-only,non-merge prompt committed,0,0,
+2026-10-08,RC-42 Depends: line,none,text-only,non-merge prompt committed,0,0,
+2026-10-09,RC-42 Depends: line,none,text-only,non-merge prompt committed,0,0,
+2026-10-10,RC-42 Depends: line,none,text-only,non-merge prompt committed,48,6,0.125
+2026-10-11,RC-42 Depends: line,none,text-only,non-merge prompt committed,18,1,0.056
+2026-10-03,RC-43 Request: line,warn,before,non-merge prompt committed,0,0,
+2026-10-04,RC-43 Request: line,warn,before,non-merge prompt committed,0,0,
+2026-10-05,RC-43 Request: line,warn,before,non-merge prompt committed,0,0,
+2026-10-06,RC-43 Request: line,warn,before,non-merge prompt committed,0,0,
+2026-10-07,RC-43 Request: line,warn,before,non-merge prompt committed,0,0,
+2026-10-08,RC-43 Request: line,warn,before,non-merge prompt committed,0,0,
+2026-10-09,RC-43 Request: line,warn,before,non-merge prompt committed,0,0,
+2026-10-10,RC-43 Request: line,warn,checked,non-merge prompt committed,48,25,0.521
+2026-10-11,RC-43 Request: line,warn,checked,non-merge prompt committed,18,4,0.222
+2026-10-04,RC-44 Front: line,block-auto,before,non-merge prompt committed,0,0,
+2026-10-05,RC-44 Front: line,block-auto,before,non-merge prompt committed,0,0,
+2026-10-06,RC-44 Front: line,block-auto,before,non-merge prompt committed,0,0,
+2026-10-07,RC-44 Front: line,block-auto,before,non-merge prompt committed,0,0,
+2026-10-08,RC-44 Front: line,block-auto,before,non-merge prompt committed,0,0,
+2026-10-09,RC-44 Front: line,block-auto,before,non-merge prompt committed,0,0,
+2026-10-10,RC-44 Front: line,block-auto,before,non-merge prompt committed,0,0,
+2026-10-11,RC-44 Front: line,block-auto,checked,non-merge prompt committed,18,2,0.111
+2026-09-21,RC-33 Chat: line,report,before,non-merge prompt committed,0,0,
+2026-09-22,RC-33 Chat: line,report,before,non-merge prompt committed,0,0,
+2026-09-23,RC-33 Chat: line,report,before,non-merge prompt committed,0,0,
+2026-09-24,RC-33 Chat: line,report,before,non-merge prompt committed,0,0,
+2026-09-25,RC-33 Chat: line,report,before,non-merge prompt committed,0,0,
+2026-09-26,RC-33 Chat: line,report,before,non-merge prompt committed,0,0,
+2026-09-27,RC-33 Chat: line,report,before,non-merge prompt committed,0,0,
+2026-09-28,RC-33 Chat: line,report,checked,non-merge prompt committed,2,0,0
+2026-09-29,RC-33 Chat: line,report,checked,non-merge prompt committed,37,0,0
+2026-09-30,RC-33 Chat: line,report,checked,non-merge prompt committed,18,0,0
+2026-10-01,RC-33 Chat: line,report,checked,non-merge prompt committed,9,0,0
+2026-10-02,RC-33 Chat: line,report,checked,non-merge prompt committed,9,0,0
+2026-10-03,RC-33 Chat: line,report,checked,non-merge prompt committed,21,0,0
+2026-10-04,RC-33 Chat: line,report,checked,non-merge prompt committed,9,0,0
+2026-10-05,RC-33 Chat: line,report,checked,non-merge prompt committed,9,0,0
+2026-10-06,RC-33 Chat: line,report,checked,non-merge prompt committed,3,0,0
+2026-10-07,RC-33 Chat: line,report,checked,non-merge prompt committed,0,0,
+2026-10-08,RC-33 Chat: line,report,checked,non-merge prompt committed,0,0,
+2026-10-09,RC-33 Chat: line,report,checked,non-merge prompt committed,0,0,
+2026-10-10,RC-33 Chat: line,report,checked,non-merge prompt committed,48,0,0
+2026-10-11,RC-33 Chat: line,report,checked,non-merge prompt committed,18,0,0
+2026-09-18,RC-17 Lane: line,warn,before,non-merge prompt committed,0,0,
+2026-09-19,RC-17 Lane: line,warn,before,non-merge prompt committed,0,0,
+2026-09-20,RC-17 Lane: line,warn,before,non-merge prompt committed,0,0,
+2026-09-21,RC-17 Lane: line,warn,before,non-merge prompt committed,0,0,
+2026-09-22,RC-17 Lane: line,warn,before,non-merge prompt committed,0,0,
+2026-09-23,RC-17 Lane: line,warn,before,non-merge prompt committed,0,0,
+2026-09-24,RC-17 Lane: line,warn,before,non-merge prompt committed,0,0,
+2026-09-25,RC-17 Lane: line,warn,text-only,non-merge prompt committed,11,0,0
+2026-09-26,RC-17 Lane: line,warn,text-only,non-merge prompt committed,9,0,0
+2026-09-27,RC-17 Lane: line,warn,text-only,non-merge prompt committed,50,5,0.100
+2026-09-28,RC-17 Lane: line,warn,checked,non-merge prompt committed,13,3,0.231
+2026-09-29,RC-17 Lane: line,warn,checked,non-merge prompt committed,37,12,0.324
+2026-09-30,RC-17 Lane: line,warn,checked,non-merge prompt committed,18,12,0.667
+2026-10-01,RC-17 Lane: line,warn,checked,non-merge prompt committed,9,5,0.556
+2026-10-02,RC-17 Lane: line,warn,checked,non-merge prompt committed,9,5,0.556
+2026-10-03,RC-17 Lane: line,warn,checked,non-merge prompt committed,21,0,0
+2026-10-04,RC-17 Lane: line,warn,checked,non-merge prompt committed,9,1,0.111
+2026-10-05,RC-17 Lane: line,warn,checked,non-merge prompt committed,9,0,0
+2026-10-06,RC-17 Lane: line,warn,checked,non-merge prompt committed,3,0,0
+2026-10-07,RC-17 Lane: line,warn,checked,non-merge prompt committed,0,0,
+2026-10-08,RC-17 Lane: line,warn,checked,non-merge prompt committed,0,0,
+2026-10-09,RC-17 Lane: line,warn,checked,non-merge prompt committed,0,0,
+2026-10-10,RC-17 Lane: line,warn,checked,non-merge prompt committed,48,0,0
+2026-10-11,RC-17 Lane: line,warn,checked,non-merge prompt committed,18,1,0.056
+2026-09-11,P6 Model: trailer (lane-or-local),block-auto,before,non-merge commit of origin lane-or-local,0,0,
+2026-09-12,P6 Model: trailer (lane-or-local),block-auto,before,non-merge commit of origin lane-or-local,0,0,
+2026-09-13,P6 Model: trailer (lane-or-local),block-auto,before,non-merge commit of origin lane-or-local,0,0,
+2026-09-14,P6 Model: trailer (lane-or-local),block-auto,before,non-merge commit of origin lane-or-local,0,0,
+2026-09-15,P6 Model: trailer (lane-or-local),block-auto,before,non-merge commit of origin lane-or-local,7,7,1
+2026-09-16,P6 Model: trailer (lane-or-local),block-auto,before,non-merge commit of origin lane-or-local,59,59,1
+2026-09-17,P6 Model: trailer (lane-or-local),block-auto,before,non-merge commit of origin lane-or-local,14,14,1
+2026-09-18,P6 Model: trailer (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,51,40,0.784
+2026-09-19,P6 Model: trailer (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,41,13,0.317
+2026-09-20,P6 Model: trailer (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-21,P6 Model: trailer (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,24,0,0
+2026-09-22,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,0,0,
+2026-09-23,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,27,23,0.852
+2026-09-24,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,33,4,0.121
+2026-09-25,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,42,1,0.024
+2026-09-26,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,36,4,0.111
+2026-09-27,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,159,0,0
+2026-09-28,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,86,8,0.093
+2026-09-29,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,110,3,0.027
+2026-09-30,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,64,2,0.031
+2026-10-01,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,37,0,0
+2026-10-02,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,35,2,0.057
+2026-10-03,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,138,6,0.043
+2026-10-04,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,42,1,0.024
+2026-10-05,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,24,3,0.125
+2026-10-06,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,19,5,0.263
+2026-10-07,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,0,0,
+2026-10-08,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,1,1,1
+2026-10-09,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,0,0,
+2026-10-10,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,132,1,0.008
+2026-10-11,P6 Model: trailer (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,38,1,0.026
+2026-09-11,P6 Model: trailer (chat),none (outside the hook scope),before,non-merge commit of origin chat,4,4,1
+2026-09-12,P6 Model: trailer (chat),none (outside the hook scope),before,non-merge commit of origin chat,11,11,1
+2026-09-13,P6 Model: trailer (chat),none (outside the hook scope),before,non-merge commit of origin chat,10,10,1
+2026-09-14,P6 Model: trailer (chat),none (outside the hook scope),before,non-merge commit of origin chat,23,23,1
+2026-09-15,P6 Model: trailer (chat),none (outside the hook scope),before,non-merge commit of origin chat,51,51,1
+2026-09-16,P6 Model: trailer (chat),none (outside the hook scope),before,non-merge commit of origin chat,19,19,1
+2026-09-17,P6 Model: trailer (chat),none (outside the hook scope),before,non-merge commit of origin chat,5,5,1
+2026-09-18,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,2,0,0
+2026-09-19,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,0,0
+2026-09-20,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-09-21,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,13,3,0.231
+2026-09-22,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,1,0,0
+2026-09-23,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,5,0,0
+2026-09-24,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,9,7,0.778
+2026-09-25,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,37,5,0.135
+2026-09-26,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,14,1,0.071
+2026-09-27,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,59,15,0.254
+2026-09-28,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,24,17,0.708
+2026-09-29,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,38,34,0.895
+2026-09-30,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,20,9,0.450
+2026-10-01,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,4,0.400
+2026-10-02,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,19,14,0.737
+2026-10-03,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,28,22,0.786
+2026-10-04,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,13,6,0.462
+2026-10-05,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,6,6,1
+2026-10-06,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,2,2,1
+2026-10-07,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-10-08,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-10-09,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-10-10,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,88,46,0.523
+2026-10-11,P6 Model: trailer (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,40,39,0.975
+2026-09-11,P6 Model: trailer (lane-run-script),none (outside the hook scope),before,non-merge commit of origin lane-run-script,0,0,
+2026-09-12,P6 Model: trailer (lane-run-script),none (outside the hook scope),before,non-merge commit of origin lane-run-script,0,0,
+2026-09-13,P6 Model: trailer (lane-run-script),none (outside the hook scope),before,non-merge commit of origin lane-run-script,0,0,
+2026-09-14,P6 Model: trailer (lane-run-script),none (outside the hook scope),before,non-merge commit of origin lane-run-script,0,0,
+2026-09-15,P6 Model: trailer (lane-run-script),none (outside the hook scope),before,non-merge commit of origin lane-run-script,0,0,
+2026-09-16,P6 Model: trailer (lane-run-script),none (outside the hook scope),before,non-merge commit of origin lane-run-script,0,0,
+2026-09-17,P6 Model: trailer (lane-run-script),none (outside the hook scope),before,non-merge commit of origin lane-run-script,0,0,
+2026-09-18,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-19,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,1,0,0
+2026-09-20,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-21,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-22,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-23,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-24,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-25,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,3,1,0.333
+2026-09-26,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,4,3,0.750
+2026-09-27,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,28,0,0
+2026-09-28,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,36,5,0.139
+2026-09-29,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,63,0,0
+2026-09-30,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,24,0,0
+2026-10-01,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,6,0,0
+2026-10-02,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,21,0,0
+2026-10-03,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,49,4,0.082
+2026-10-04,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,14,0,0
+2026-10-05,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,11,0,0
+2026-10-06,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,12,0,0
+2026-10-07,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-10-08,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-10-09,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-10-10,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,66,0,0
+2026-10-11,P6 Model: trailer (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,41,1,0.024
+2026-09-01,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,39,13,0.333
+2026-09-02,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,25,3,0.120
+2026-09-03,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,3,1,0.333
+2026-09-04,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,20,11,0.550
+2026-09-05,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,11,5,0.455
+2026-09-06,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,5,3,0.600
+2026-09-07,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-08,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-09,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-10,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,1,0,0
+2026-09-11,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-12,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-13,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-14,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-15,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,7,0,0
+2026-09-16,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,59,11,0.186
+2026-09-17,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,14,0,0
+2026-09-18,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,51,8,0.157
+2026-09-19,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,41,7,0.171
+2026-09-20,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-21,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,24,0,0
+2026-09-22,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,0,0,
+2026-09-23,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,27,3,0.111
+2026-09-24,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,33,0,0
+2026-09-25,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,42,0,0
+2026-09-26,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,36,1,0.028
+2026-09-27,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,159,7,0.044
+2026-09-28,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,86,4,0.047
+2026-09-29,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,110,2,0.018
+2026-09-30,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,64,0,0
+2026-10-01,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,37,0,0
+2026-10-02,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,35,1,0.029
+2026-10-03,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,138,0,0
+2026-10-04,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,42,0,0
+2026-10-05,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,24,2,0.083
+2026-10-06,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,19,0,0
+2026-10-07,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,0,0,
+2026-10-08,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,1,0,0
+2026-10-09,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,0,0,
+2026-10-10,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,132,0,0
+2026-10-11,CLAUDE.md 6.2 subject <= 72 (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,38,2,0.053
+2026-09-01,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,37,6,0.162
+2026-09-02,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,17,3,0.176
+2026-09-03,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,4,3,0.750
+2026-09-04,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,9,5,0.556
+2026-09-05,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,6,0.600
+2026-09-06,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,11,10,0.909
+2026-09-07,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-09-08,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,23,4,0.174
+2026-09-09,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,34,7,0.206
+2026-09-10,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,2,0,0
+2026-09-11,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,4,3,0.750
+2026-09-12,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,11,1,0.091
+2026-09-13,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,3,0.300
+2026-09-14,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,23,2,0.087
+2026-09-15,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,51,12,0.235
+2026-09-16,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,19,3,0.158
+2026-09-17,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,5,2,0.400
+2026-09-18,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,2,0,0
+2026-09-19,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,8,0.800
+2026-09-20,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-09-21,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,13,6,0.462
+2026-09-22,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,1,1,1
+2026-09-23,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,5,0,0
+2026-09-24,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,9,0,0
+2026-09-25,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,37,3,0.081
+2026-09-26,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,14,0,0
+2026-09-27,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,59,18,0.305
+2026-09-28,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,24,6,0.250
+2026-09-29,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,38,4,0.105
+2026-09-30,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,20,2,0.100
+2026-10-01,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,3,0.300
+2026-10-02,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,19,12,0.632
+2026-10-03,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,28,13,0.464
+2026-10-04,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,13,2,0.154
+2026-10-05,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,6,2,0.333
+2026-10-06,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,2,1,0.500
+2026-10-07,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-10-08,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-10-09,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-10-10,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,88,21,0.239
+2026-10-11,CLAUDE.md 6.2 subject <= 72 (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,40,10,0.250
+2026-09-01,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-02,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-03,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-04,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-05,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-06,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-07,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-08,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-09,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-10,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-11,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-12,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-13,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-14,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-15,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-16,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-17,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-18,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-19,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,1,1,1
+2026-09-20,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-21,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-22,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-23,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-24,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-09-25,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,3,0,0
+2026-09-26,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,4,1,0.250
+2026-09-27,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,28,26,0.929
+2026-09-28,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,36,23,0.639
+2026-09-29,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,63,32,0.508
+2026-09-30,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,24,13,0.542
+2026-10-01,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,6,4,0.667
+2026-10-02,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,21,12,0.571
+2026-10-03,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,49,27,0.551
+2026-10-04,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,14,8,0.571
+2026-10-05,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,11,6,0.545
+2026-10-06,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,12,5,0.417
+2026-10-07,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-10-08,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-10-09,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,0,0,
+2026-10-10,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,66,38,0.576
+2026-10-11,CLAUDE.md 6.2 subject <= 72 (lane-run-script),none (outside the hook scope),text-only,non-merge commit of origin lane-run-script,41,21,0.512
+2026-09-01,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,39,12,0.308
+2026-09-02,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,25,0,0
+2026-09-03,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,3,0,0
+2026-09-04,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,20,0,0
+2026-09-05,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,11,0,0
+2026-09-06,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,5,0,0
+2026-09-07,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-08,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-09,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-10,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,1,0,0
+2026-09-11,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-12,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-13,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-14,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-15,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,7,0,0
+2026-09-16,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,59,0,0
+2026-09-17,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,14,0,0
+2026-09-18,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,51,0,0
+2026-09-19,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,41,0,0
+2026-09-20,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,0,0,
+2026-09-21,RC-13 docs and code apart (lane-or-local),block-auto,text-only,non-merge commit of origin lane-or-local,24,0,0
+2026-09-22,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,0,0,
+2026-09-23,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,27,0,0
+2026-09-24,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,33,0,0
+2026-09-25,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,42,0,0
+2026-09-26,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,36,0,0
+2026-09-27,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,159,2,0.013
+2026-09-28,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,86,0,0
+2026-09-29,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,110,0,0
+2026-09-30,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,64,0,0
+2026-10-01,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,37,0,0
+2026-10-02,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,35,0,0
+2026-10-03,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,138,0,0
+2026-10-04,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,42,0,0
+2026-10-05,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,24,0,0
+2026-10-06,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,19,0,0
+2026-10-07,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,0,0,
+2026-10-08,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,1,0,0
+2026-10-09,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,0,0,
+2026-10-10,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,132,3,0.023
+2026-10-11,RC-13 docs and code apart (lane-or-local),block-auto,checked,non-merge commit of origin lane-or-local,38,0,0
+2026-09-01,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,37,8,0.216
+2026-09-02,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,17,1,0.059
+2026-09-03,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,4,0,0
+2026-09-04,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,9,0,0
+2026-09-05,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,0,0
+2026-09-06,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,11,1,0.091
+2026-09-07,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-09-08,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,23,1,0.043
+2026-09-09,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,34,0,0
+2026-09-10,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,2,0,0
+2026-09-11,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,4,0,0
+2026-09-12,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,11,0,0
+2026-09-13,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,0,0
+2026-09-14,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,23,1,0.043
+2026-09-15,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,51,2,0.039
+2026-09-16,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,19,0,0
+2026-09-17,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,5,0,0
+2026-09-18,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,2,0,0
+2026-09-19,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,0,0
+2026-09-20,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-09-21,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,13,0,0
+2026-09-22,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,1,0,0
+2026-09-23,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,5,0,0
+2026-09-24,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,9,0,0
+2026-09-25,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,37,1,0.027
+2026-09-26,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,14,0,0
+2026-09-27,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,59,0,0
+2026-09-28,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,24,0,0
+2026-09-29,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,38,0,0
+2026-09-30,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,20,0,0
+2026-10-01,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,10,0,0
+2026-10-02,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,19,0,0
+2026-10-03,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,28,1,0.036
+2026-10-04,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,13,0,0
+2026-10-05,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,6,0,0
+2026-10-06,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,2,0,0
+2026-10-07,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-10-08,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-10-09,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,0,0,
+2026-10-10,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,88,0,0
+2026-10-11,RC-13 docs and code apart (chat),none (outside the hook scope),text-only,non-merge commit of origin chat,40,0,0
+2026-09-15,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-16,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-17,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-18,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-19,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-20,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-21,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,6,0,0
+2026-09-22,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-23,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,4,0,0
+2026-09-24,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,25,0,0
+2026-09-25,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,42,1,0.024
+2026-09-26,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,36,4,0.111
+2026-09-27,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,159,0,0
+2026-09-28,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,85,7,0.082
+2026-09-29,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,110,3,0.027
+2026-09-30,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,64,2,0.031
+2026-10-01,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,37,0,0
+2026-10-02,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,35,2,0.057
+2026-10-03,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,138,6,0.043
+2026-10-04,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,42,1,0.024
+2026-10-05,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,24,3,0.125
+2026-10-06,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,19,5,0.263
+2026-10-07,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-10-08,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,1,1,1
+2026-10-09,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-10-10,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,132,1,0.008
+2026-10-11,"P6 Model: trailer (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,38,1,0.026
+2026-09-15,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,7,7,1
+2026-09-16,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,59,59,1
+2026-09-17,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,14,14,1
+2026-09-18,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,51,40,0.784
+2026-09-19,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,41,13,0.317
+2026-09-20,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-21,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,18,0,0
+2026-09-22,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-23,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,23,23,1
+2026-09-24,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,8,4,0.500
+2026-09-25,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-26,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-27,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-28,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,1,1,1
+2026-09-29,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-30,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-01,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-02,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-03,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-04,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-05,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-06,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-07,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-08,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-09,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-10,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-11,"P6 Model: trailer (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-15,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-16,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-17,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-18,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-19,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-20,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-21,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,before,non-merge commit of origin lane-or-local whose tree carries the hook,6,0,0
+2026-09-22,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-09-23,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,4,0,0
+2026-09-24,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,25,0,0
+2026-09-25,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,42,0,0
+2026-09-26,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,36,1,0.028
+2026-09-27,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,159,7,0.044
+2026-09-28,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,85,4,0.047
+2026-09-29,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,110,2,0.018
+2026-09-30,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,64,0,0
+2026-10-01,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,37,0,0
+2026-10-02,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,35,1,0.029
+2026-10-03,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,138,0,0
+2026-10-04,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,42,0,0
+2026-10-05,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,24,2,0.083
+2026-10-06,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,19,0,0
+2026-10-07,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-10-08,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,1,0,0
+2026-10-09,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,0,0,
+2026-10-10,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,132,0,0
+2026-10-11,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, hook in tree)",block-auto,checked,non-merge commit of origin lane-or-local whose tree carries the hook,38,2,0.053
+2026-09-15,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,7,0,0
+2026-09-16,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,59,11,0.186
+2026-09-17,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,14,0,0
+2026-09-18,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,51,8,0.157
+2026-09-19,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,41,7,0.171
+2026-09-20,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-21,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),before,non-merge commit of origin lane-or-local whose tree lacks the hook,18,0,0
+2026-09-22,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-23,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,23,3,0.130
+2026-09-24,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,8,0,0
+2026-09-25,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-26,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-27,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-28,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,1,0,0
+2026-09-29,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-30,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-01,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-02,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-03,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-04,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-05,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-06,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-07,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-08,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-09,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-10,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-10-11,"CLAUDE.md 6.2 subject <= 72 (lane-or-local, no hook in tree)",none (outside the hook scope),text-only,non-merge commit of origin lane-or-local whose tree lacks the hook,0,0,
+2026-09-19,RC-25..27 header grammar (rows since 2026-09-26),block-manual,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-20,RC-25..27 header grammar (rows since 2026-09-26),block-manual,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-21,RC-25..27 header grammar (rows since 2026-09-26),block-manual,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-22,RC-25..27 header grammar (rows since 2026-09-26),block-manual,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-23,RC-25..27 header grammar (rows since 2026-09-26),block-manual,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-24,RC-25..27 header grammar (rows since 2026-09-26),block-manual,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-25,RC-25..27 header grammar (rows since 2026-09-26),block-manual,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-26,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),19,0,0
+2026-09-27,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),44,1,0.023
+2026-09-28,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),55,0,0
+2026-09-29,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),68,0,0
+2026-09-30,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),90,5,0.056
+2026-10-01,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),96,10,0.104
+2026-10-02,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),109,15,0.138
+2026-10-03,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),154,21,0.136
+2026-10-04,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),179,42,0.235
+2026-10-05,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),186,43,0.231
+2026-10-06,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),188,43,0.229
+2026-10-07,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),188,43,0.229
+2026-10-08,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),188,43,0.229
+2026-10-09,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),188,43,0.229
+2026-10-10,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),209,59,0.282
+2026-10-11,RC-25..27 header grammar (rows since 2026-09-26),block-manual,text-only,register row dated >= 2026-09-26 (daily snapshot),226,3,0.013
+2026-09-19,RC-25 provisional row acknowledged within 2 days,report,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-20,RC-25 provisional row acknowledged within 2 days,report,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-21,RC-25 provisional row acknowledged within 2 days,report,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-22,RC-25 provisional row acknowledged within 2 days,report,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-23,RC-25 provisional row acknowledged within 2 days,report,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-24,RC-25 provisional row acknowledged within 2 days,report,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-25,RC-25 provisional row acknowledged within 2 days,report,before,register row dated >= 2026-09-26 (daily snapshot),0,0,
+2026-09-26,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),19,0,0
+2026-09-27,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),44,0,0
+2026-09-28,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),55,1,0.018
+2026-09-29,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),68,1,0.015
+2026-09-30,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),90,1,0.011
+2026-10-01,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),96,1,0.010
+2026-10-02,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),109,22,0.202
+2026-10-03,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),154,28,0.182
+2026-10-04,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),179,40,0.223
+2026-10-05,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),186,52,0.280
+2026-10-06,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),188,71,0.378
+2026-10-07,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),188,75,0.399
+2026-10-08,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),188,75,0.399
+2026-10-09,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),188,75,0.399
+2026-10-10,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),209,75,0.359
+2026-10-11,RC-25 provisional row acknowledged within 2 days,report,text-only,register row dated >= 2026-09-26 (daily snapshot),226,1,0.004
+2026-09-19,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),before,row in the class introduced,0,0,
+2026-09-20,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),before,row in the class introduced,0,0,
+2026-09-21,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),before,row in the class introduced,0,0,
+2026-09-22,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),before,row in the class introduced,0,0,
+2026-09-23,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),before,row in the class introduced,0,0,
+2026-09-24,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),before,row in the class introduced,0,0,
+2026-09-25,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),before,row in the class introduced,0,0,
+2026-09-26,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,0,0,
+2026-09-27,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,1,1,1
+2026-09-28,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,0,0,
+2026-09-29,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,2,0,0
+2026-09-30,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,10,9,0.900
+2026-10-01,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,0,0,
+2026-10-02,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,5,5,1
+2026-10-03,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,6,1,0.167
+2026-10-04,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,1,1,1
+2026-10-05,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,0,0,
+2026-10-06,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,0,0,
+2026-10-07,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,0,0,
+2026-10-08,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,0,0,
+2026-10-09,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,0,0,
+2026-10-10,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,2,0,0
+2026-10-11,RC-26 waits for Alfonso (critical-zone class),block-auto partial (hook guards 6 files; go-ahead set by the chat),checked,row in the class introduced,0,0,
+2026-09-19,RC-26 waits for Alfonso (other classes),none,before,row in the class introduced,0,0,
+2026-09-20,RC-26 waits for Alfonso (other classes),none,before,row in the class introduced,0,0,
+2026-09-21,RC-26 waits for Alfonso (other classes),none,before,row in the class introduced,0,0,
+2026-09-22,RC-26 waits for Alfonso (other classes),none,before,row in the class introduced,0,0,
+2026-09-23,RC-26 waits for Alfonso (other classes),none,before,row in the class introduced,0,0,
+2026-09-24,RC-26 waits for Alfonso (other classes),none,before,row in the class introduced,0,0,
+2026-09-25,RC-26 waits for Alfonso (other classes),none,before,row in the class introduced,0,0,
+2026-09-26,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,3,0,0
+2026-09-27,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,7,6,0.857
+2026-09-28,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,3,2,0.667
+2026-09-29,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,8,2,0.250
+2026-09-30,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,4,2,0.500
+2026-10-01,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,2,1,0.500
+2026-10-02,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,5,0,0
+2026-10-03,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,7,2,0.286
+2026-10-04,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,1,1,1
+2026-10-05,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,0,0,
+2026-10-06,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,0,0,
+2026-10-07,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,0,0,
+2026-10-08,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,0,0,
+2026-10-09,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,0,0,
+2026-10-10,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,4,1,0.250
+2026-10-11,RC-26 waits for Alfonso (other classes),none,text-only,row in the class introduced,0,0,
+2026-09-18,RC-18 harness budget,none,before,day (7-day window),0,0,
+2026-09-19,RC-18 harness budget,none,before,day (7-day window),0,0,
+2026-09-20,RC-18 harness budget,none,before,day (7-day window),0,0,
+2026-09-21,RC-18 harness budget,none,before,day (7-day window),0,0,
+2026-09-22,RC-18 harness budget,none,before,day (7-day window),0,0,
+2026-09-23,RC-18 harness budget,none,before,day (7-day window),0,0,
+2026-09-24,RC-18 harness budget,none,before,day (7-day window),0,0,
+2026-09-25,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-09-26,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-09-27,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-09-28,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-09-29,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-09-30,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-01,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-02,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-03,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-04,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-05,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-06,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-07,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-08,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-09,RC-18 harness budget,none,text-only,day (7-day window),1,0,0
+2026-10-10,RC-18 harness budget,none,text-only,day (7-day window),1,1,1
+2026-10-11,RC-18 harness budget,none,text-only,day (7-day window),1,1,1
