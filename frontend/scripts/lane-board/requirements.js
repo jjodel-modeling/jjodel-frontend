@@ -3,7 +3,9 @@
 // trunk and its goal-model contributions; below, the pairs of realized rows that pull a softgoal both ways, one
 // closed group per declared conflict, then the pairs no conflict names, one closed group per softgoal. Read-only.
 // Data from /api/requirements (req-trace.mjs); drawn as plain HTML, no libraries. Every table has fixed widths, so
-// neither a filter nor an opened group moves a column.
+// neither a filter nor an opened group moves a column. A cluster's written description (docs/goals/
+// cluster-descriptions.json, P-2026-10-11-1510) is one line of fixed height under its title, empty when there is none,
+// and the whole text inside the group, with a muted line when members joined or left since it was written.
 (function () {
   const store = {
     get(k, d) { try { const v = localStorage.getItem('laneREQ.' + k); return v === null ? d : v; } catch (e) { return d; } },
@@ -41,6 +43,10 @@
   .rq-why{margin:0;padding:8px 12px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line)}
   table.rq-t{table-layout:fixed;width:100%;min-width:900px}table.rq-t th,table.rq-t td{overflow:hidden;overflow-wrap:anywhere}
   table.rq-t .pill{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}table.rq-t .title{max-width:none}
+  #req summary:has(>.rq-desc){display:grid;grid-template-columns:auto auto minmax(0,1fr);column-gap:16px;row-gap:2px;align-items:baseline}
+  .rq-desc{grid-column:2/4;grid-row:2;display:block;min-width:0;height:16px;line-height:16px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rq-about{margin:0;padding:8px 12px;font-size:12px;border-bottom:1px solid var(--line)}
+  .rq-drift{margin:0;padding:4px 12px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--line)}
   `;
 
   function el(tag, html) { const e = document.createElement(tag); e.innerHTML = html; return e; }
@@ -154,6 +160,23 @@
     return h;
   }
 
+  /** Under a cluster's title, its description on one line, the whole text in the title; an empty line without one, so
+   *  every summary row has the same height. */
+  const descLine = (g) => g.description ? '<span class="rq-desc" title="' + esc(undash(g.description)) + '">' + esc(undash(g.description)) + '</span>' : '<span class="rq-desc"></span>';
+
+  /** Inside the group: the whole description, then one muted line when members joined or left since it was written. */
+  function about(g) {
+    if (!g.description) return '';
+    let h = '<p class="rq-about">' + esc(undash(g.description)) + '</p>';
+    const d = g.drift;
+    if (d && (d.added.length || d.removed.length)) {
+      const then = g.members.size - d.added.length + d.removed.length;
+      const tip = [d.added.length ? 'Added: ' + d.added.join(', ') : '', d.removed.length ? 'Removed: ' + d.removed.join(', ') : '', d.by ? 'Written by ' + d.by : ''].filter(Boolean).join('\n');
+      h += '<p class="rq-drift" title="' + esc(tip) + '">Written ' + esc(d.written) + ' for ' + plural(then, 'row') + '; since then ' + d.added.length + ' added, ' + d.removed.length + ' removed.</p>';
+    }
+    return h;
+  }
+
   const pass = (r) => (!filter.family || r.family === filter.family) && (!filter.status || r.status === filter.status) &&
     (!filter.realized || (filter.realized === 'yes') === !!r.realized) &&
     (!filter.softgoal || (r.contributions || []).some((c) => c.softgoal === filter.softgoal));
@@ -193,21 +216,21 @@
       select('softgoal', 'Softgoal', [['', 'all']].concat((gm.softgoals || []).map((s) => [s.id, s.id + ' ' + s.name])), filter.softgoal, !gm.present) +
       '<span class="rq-shown">Showing <b>' + shownRows.length + '</b> of ' + rows.length + '</span></div>';
 
-    const groups = cl.list.map((k) => ({ key: k.key, name: k.name, goals: k.goals, members: new Set(k.members) }));
-    groups.push({ key: UNCL, name: 'Unclustered: rows no prompt co-cites', goals: null, members: new Set(rows.filter((r) => !r.cluster).map((r) => r.id)) });
+    const groups = cl.list.map((k) => ({ key: k.key, name: k.name, goals: k.goals, members: new Set(k.members), description: k.description || null, drift: k.descriptionDrift || null }));
+    groups.push({ key: UNCL, name: 'Unclustered: rows no prompt co-cites', goals: null, members: new Set(rows.filter((r) => !r.cluster).map((r) => r.id)), description: null, drift: null });
     const order = ms.map((m) => [m.id, m.name + ' · ' + m.date]).concat([['__after', 'Realized after the last milestone'], ['__no', 'Not realized']]);
     const slot = (r) => r.realized ? (r.milestone || '__after') : '__no';
     for (const g of groups) {
       const rs = shownRows.filter((r) => g.members.has(r.id));
       if (!rs.length) continue;
       const nReal = rs.filter((r) => r.realized).length;
-      let inner = '';
+      let inner = about(g);
       for (const [mid, label] of order) {
         const part = rs.filter((r) => slot(r) === mid);
         if (!part.length) continue;
         inner += '<div class="rq-ms">' + esc(label) + ' · ' + part.length + '</div>' + table(part, sgName);
       }
-      h += '<details data-key="' + esc(g.key) + '"' + (open.has(g.key) ? ' open' : '') + '><summary><b>' + esc(undash(g.name)) + '</b><span class="meta">' + (g.key === UNCL ? '' : esc(g.key) + ' · ') + rs.length + ' row' + (rs.length > 1 ? 's' : '') + ' · ' + nReal + ' realized' + totals(g.goals, sgName) + '</span></summary><div class="wrap rq-wrap">' + inner + '</div></details>';
+      h += '<details data-key="' + esc(g.key) + '"' + (open.has(g.key) ? ' open' : '') + '><summary><b>' + esc(undash(g.name)) + '</b><span class="meta">' + (g.key === UNCL ? '' : esc(g.key) + ' · ') + rs.length + ' row' + (rs.length > 1 ? 's' : '') + ' · ' + nReal + ' realized' + totals(g.goals, sgName) + '</span>' + descLine(g) + '</summary><div class="wrap rq-wrap">' + inner + '</div></details>';
     }
     if (gm.present && (gm.opposing.length || gm.conflicts.length)) h += opposingSection(gm, rows, sgName, cl);
     box.innerHTML = h;

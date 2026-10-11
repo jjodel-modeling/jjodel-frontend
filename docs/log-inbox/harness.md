@@ -832,3 +832,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-11 14:30
 
 **Ticket** (P-2026-10-11-1430): `frontend/scripts/auto-intake.config.json` is `"mode": "live"`, `ratifiedBy: apierantonio`, since `53aed9baa` (2026-10-03 23:36), while RC-38 still reads `awaiting Alfonso`, RC-40 (2) says `ratifiedBy` stays null, and no row records the live switch. Digest §2 item 3.
+
+## 2026-10-11 — feat(harness): a written description for each requirement cluster (P-2026-10-11-1510)
+**Prompt**: `claude_2026-10-11_1510_prompt_cluster_descriptions.md`, lane full: write 2 to 4 sentences for each of the 17 req-trace clusters from their rows, have them checked by a fresh-context agent, attach them in req-trace with the drift since writing and orphan keys, show them in the Requirements tab (one fixed-height line in the summary, full text and drift line inside), README, tests and mutation bench, board on 4702.
+**Files touched**: code `16ebdfca5`: `frontend/scripts/req-trace.mjs`, `frontend/scripts/lane-board/requirements.js`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts`, `frontend/scripts/hooks/__tests__/laneBoardRequirements.test.ts`; docs `e1c750a8a`: `docs/goals/cluster-descriptions.json`, `docs/goals/README.md`; this entry, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Five board suites 126/126; `node --check` 0 on both scripts; check:scripts and check:docs exit 0.
+**Out-of-scope changes**: no — six files over two commits, above five (RC-11), each named in the prompt's Lane line.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 4702, headless Chromium: 18 summary rows all 54.84 px, line 16 px under the title; then the chat's RC-23 check on 4702 passed: one-line description under each of the 17 cluster titles, full text when opened, no em dash, Unclustered without description; descriptions approved by Alfonso)
+**Notes**: New cases 8/8 red on 8840e4c83; bench 23/23 killed, control 41/41. Checkers: first pass 8 of 17 needs-fix, second pass 3 wording slips, all fixed. The tab draws no em dash; five remain in pre-existing tooltips (commit subjects, contribution why texts). Board PID 54444, cache /tmp/lane-board-4702-timeline-cache.json. Scratch in /tmp/cd1510/.
+**Prompt document name**: 2026-10-11 15:10
+
+**Ticket** (P-2026-10-11-1510): `parseRegister` in `req-trace.mjs` ends a row at an inner `**` paragraph or `- ` sub-bullet, so 21 clustered rows lose their tail, closures included (R-STR-6, R-STR-7 «Sciolta»); a reader of req-trace's row text misses them. Found by comparing each row with the lines up to the next row start.
