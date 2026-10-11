@@ -19,7 +19,8 @@
  *         frontend/scripts/probe/bpmn-lanes-fixture.ts --port 3071 --id P-2026-10-10-0105
  * Env:  GV_TAG    label of the run in file names (default after)
  *       GV_OUT    output directory (default docs/discovery/assets/graphvertex-s2 of this tree)
- *       GV_ONLY   comma list of scenes: bpmn, hull, demos, s3, s3hull, s6, s6flat, s6hull (default bpmn,hull)
+ *       GV_ONLY   comma list of scenes: bpmn, hull, demos, s3, s3hull, s6, s6flat, s6hull, drag4, relayout and carry
+ *                 (P-2026-10-11-1156) (default bpmn,hull)
  *       GV_DEMOS  directory of the demo exports for the `demos` scene (default ~/jjodel-demo-exports)
  *       GV_SAVE   opt-in: a directory where each built scene is exported, before any gesture, as the File menu's
  *                 «Download Project» does (gv-bpmn.jjodel, gv-hull.jjodel); open one with Import Project
@@ -620,6 +621,424 @@ export async function records(page: Page, ids: Record<string, { vertex: string }
         const idl = w.store.getState().idlookup; const key = ad.getActiveLayoutKey();
         return Object.fromEntries(Object.entries(a).map(([k, v]) => { const r = lay.readVertexLayout(idl[v.vertex] || {}, key); return [k, { x: r.x, y: r.y, w: r.w, h: r.h }]; }));`, ids, 0);
 }
+
+// ── drag4 and relayout-reload (P-2026-10-11-1156): the frame follows a dragged child on four sides ─────────────────
+
+/** PARTITION_CONTENT_MARGIN (irContainment.ts): the gap the frame keeps between a child box and each border. */
+export const DRAG4_MARGIN = 16;
+/** The drag of the prompt, flow px, toward each side. */
+export const DRAG4_STEP = 40;
+/** FOLLOW_BAND (irContainment.ts): how far past a container's box at rest the pointer may go and the frame follow. */
+export const DRAG4_BAND = 32;
+/** Where the band drags put the cursor past the old border, flow px (inside the band); the leave drag goes 16 past it. */
+export const DRAG4_IN_BAND = 20;
+export const DRAG4_PAST_BAND = DRAG4_BAND + 16;
+type Band = { side: 'w' | 'n'; size: number } | null;
+/** A framing container and the children it must hold: [container key, child keys, its own header band]. */
+export type FrameCheck = [string, string[], Band];
+export interface Drag4Subject {
+    label: string;
+    key: string;
+    /** Its framing container (the visual parent), with that container's band. */
+    container: string;
+    band: Band;
+    /** Every framing container measured after each drag (the subject's own, its siblings, the one around it). */
+    frames: FrameCheck[];
+    /** Objects whose absolute position no drag of the subject may change. */
+    others: string[];
+    /** The drag with the pointer outside the container, flow px, and what the view's membership makes of it. */
+    outside: { by: { x: number; y: number }; expect: 'snap' | 'move'; slot: [string, string] };
+}
+
+/** Gaps [left, right, top, bottom], flow px, between a container's content box (inside its band) and its drawn
+ *  children's union; null when it or every child is missing. */
+export function gapsOf(ns: Box[], ids: Record<string, { vertex: string }>, [c, kids, band]: FrameCheck): number[] | null {
+    const box = ns.find((n) => n.id === ids[c].vertex);
+    const ks = kids.map((k) => ns.find((n) => n.id === ids[k].vertex)).filter((n): n is Box => !!n);
+    if (!box || ks.length === 0) return null;
+    const bw = band?.side === 'w' ? band.size : 0;
+    const bh = band?.side === 'n' ? band.size : 0;
+    const r1 = (v: number) => Math.round(v * 10) / 10;
+    return [
+        r1(Math.min(...ks.map((k) => k.x)) - (box.x + bw)), r1(box.x + box.w - Math.max(...ks.map((k) => k.x + k.w))),
+        r1(Math.min(...ks.map((k) => k.y)) - (box.y + bh)), r1(box.y + box.h - Math.max(...ks.map((k) => k.y + k.h))),
+    ];
+}
+/** Every frame's gaps, by its container key. */
+const gapsAll = (ns: Box[], ids: Record<string, { vertex: string }>, frames: FrameCheck[]) =>
+    Object.fromEntries(frames.map((f) => [f[0], gapsOf(ns, ids, f)]));
+const minGap = (g: Record<string, number[] | null>) => Math.min(...Object.values(g).flatMap((v) => v ?? [-Infinity]));
+const boxOf = (ns: Box[], ids: Record<string, { vertex: string }>, k: string) => ns.find((n) => n.id === ids[k].vertex);
+const r4 = (b: Box | undefined) => (b ? [b.x, b.y, b.w, b.h] : null);
+
+/** A vertex's record moved under the layout key in force (setup, not the gesture under test). Not through the canvas's
+ *  batch write: that one marks the vertex as written by the canvas, and the sync then leaves its node where it is drawn
+ *  (anti-bounce, useJjomSync); this write is redrawn from the record. */
+export async function placeVertex(page: Page, vertexId: string, x: number, y: number) {
+    await ev(page, `const lay = await import('/src/components/editor-v2/viewpoint/layout/vertexLayout.ts');
+        const ad = await import('/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts');
+        const j = await import('/src/joiner/index.ts');
+        const wr = lay.resolveVertexLayoutWrite(w.store.getState().idlookup[a.id], { x: a.x, y: a.y }, ad.getActiveLayoutKey());
+        j.TRANSACTION('probe place', () => {
+            if (wr.target === 'dictionary') j.SetFieldAction.new(a.id, 'layoutByViewpoint', { [wr.vpId]: wr.record }, '+=', false);
+            else { j.SetFieldAction.new(a.id, 'x', a.x, undefined, false); j.SetFieldAction.new(a.id, 'y', a.y, undefined, false); }
+        });
+        return 1;`, { id: vertexId, x, y }, 1500);
+}
+/** placeVertex through a step aside: a record written back to the position the sync last drew is not redrawn when the
+ *  canvas has moved the node since (its node cache still holds it), measured in this probe. */
+export async function placeVertexAgain(page: Page, vertexId: string, x: number, y: number) {
+    await placeVertex(page, vertexId, x + DRAG4_MARGIN, y);
+    await placeVertex(page, vertexId, x, y);
+}
+/** The mouse pressed at `from` and moved to `to` in steps, not released: the caller measures, then calls the result. */
+export async function dragHold(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 12; i++) await page.mouse.move(from.x + (to.x - from.x) * i / 12, from.y + (to.y - from.y) * i / 12);
+    await page.waitForTimeout(700);
+    return async (settle = 2500) => { await page.mouse.up(); await page.waitForTimeout(settle); };
+}
+/** Each record under the layout key in force: [x, y, w, h, isResized]. */
+export async function recordsFull(page: Page, ids: Record<string, { vertex: string }>, keys: string[]) {
+    return ev<Record<string, [number, number, number, number, boolean]>>(page, `
+        const lay = await import('/src/components/editor-v2/viewpoint/layout/vertexLayout.ts');
+        const ad = await import('/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts');
+        const idl = w.store.getState().idlookup; const key = ad.getActiveLayoutKey();
+        return Object.fromEntries(a.map(([k, v]) => { const r = lay.readVertexLayout(idl[v] || {}, key);
+            return [k, [r.x, r.y, r.w, r.h, !!r.isResized]]; }));`, keys.map((k) => [k, ids[k].vertex]), 0);
+}
+/** Save, reload, reopen the project, its model and the viewpoint, light theme (gv-right-margin.ts, P-2026-10-11-0040). */
+export async function saveReload(page: Page, viewpoint: string) {
+    const saved = await ev<{ id: string; stored: boolean }>(page, `
+        const api = await import('/src/api/persistance/projects.ts');
+        const p = w.LProject.getProject();
+        await api.ProjectsApi.save(p, { silent: true });
+        await new Promise((r) => setTimeout(r, 2000));
+        const a = JSON.parse(localStorage.getItem('projects') || '[]');
+        return { id: p.id, stored: !!a.find((x) => x.id === p.id) };`, undefined, 0);
+    await page.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForTimeout(5000);
+    await page.goto(`${URL}/#/project?id=${saved.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await page.waitForTimeout(9000);
+    await page.addStyleTag({ content: '.notification-widget, .notification-content, .donation-banner { pointer-events: none !important; display: none !important; }' }).catch(() => {});
+    if (!(await page.locator('.toolbar-viewpoint-trigger:visible').count())) {
+        await ev(page, `const dm = await import('/src/components/abstract/DockManager.tsx'); const m = w.LProject.getProject().models[0];
+            await dm.default.open2(w.LPointerTargetable.fromPointer(m.id)); return 1;`, undefined, 8000);
+    }
+    await setTheme(page, 'light');
+    const current = await page.locator('.toolbar-viewpoint-trigger__label:visible').first().textContent().catch(() => null);
+    if (!current || !current.includes(viewpoint)) await pickViewpoint(page, viewpoint);
+    await page.waitForTimeout(3000);
+    return { ...saved, viewpointBefore: current };
+}
+
+/** What a pointer at (x, y) hits: the element's class and the node it belongs to. */
+async function hitAt(page: Page, x: number, y: number) {
+    return page.evaluate(([x, y]) => {
+        const el = document.elementFromPoint(x, y) as HTMLElement | null;
+        return { cls: String(el?.className ?? '').slice(0, 60), node: (el?.closest('.react-flow__node') as HTMLElement | null)?.dataset.id ?? null };
+    }, [x, y] as const);
+}
+/** A click on an empty point of the pane, which clears the selection: a selected lane is lifted by 1000 and would take
+ *  the press meant for its flow node (the S3 scene's own reason). */
+async function clickPane(page: Page) {
+    const pane = await page.locator('.dock-tabpane-active .react-flow__pane').first().boundingBox();
+    if (!pane) return false;
+    for (let fy = 0.95; fy >= 0.05; fy -= 0.1) for (let fx = 0.05; fx <= 0.95; fx += 0.1) {
+        const p = { x: pane.x + pane.width * fx, y: pane.y + pane.height * fy };
+        if ((await hitAt(page, p.x, p.y)).cls.includes('react-flow__pane')) { await page.mouse.click(p.x, p.y); await page.waitForTimeout(300); return true; }
+    }
+    return false;
+}
+
+/**
+ * drag4 on one fixture (P-2026-10-11-1156): for each subject, the drag with the pointer outside its container, then
+ * the four drags of DRAG4_STEP toward each side with the pointer inside (each from DRAG4_MARGIN off that side, placed
+ * by a record write), measured live (button held), at drag end and, for the state the last drag leaves, after a save
+ * and a reload. Checks named `<prefix>-<subject>-...`.
+ */
+export async function runDrag4(page: Page, ids: Record<string, { obj: string; vertex: string }>, subjects: Drag4Subject[],
+    opts: { prefix: string; viewpoint: string; shot: (file: string) => Promise<void>; check: typeof check; meas: typeof meas }) {
+    const { prefix } = opts;
+    const res: Record<string, unknown> = {};
+    // The whole canvas under the pointer: the side panel hidden (it covers the right of the pane), the view fitted.
+    const hide = page.locator('button[aria-label="Hide the side panel"]:visible');
+    if (await hide.count()) { await hide.first().click(); await page.waitForTimeout(900); }
+    const fit = page.locator('.toolbar-commands__level:visible');
+    // Before every press: no selection (a selected lane is lifted over its flow nodes), the view fitted (a placement can
+    // take the subject off the pane), the zoom read again.
+    let k = 1;
+    // The subject brought into the pane by a drag on an empty point of it (React Flow pans): a drag that leaves the pane
+    // auto-pans the canvas, and the fit button did not always bring the subject back (measured on this probe).
+    let subject = '';
+    const prep = async () => {
+        await clickPane(page);
+        k = await zoomOf(page);
+        if (!subject) return;
+        for (let i = 0; i < 4; i++) {
+            const pane = await page.locator('.dock-tabpane-active .react-flow__pane').first().boundingBox();
+            const b = await screenBox(page, ids[subject].vertex);
+            if (!pane || !b) return;
+            const c = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+            const goal = { x: pane.x + pane.width / 2, y: pane.y + pane.height / 2 };
+            if (Math.abs(c.x - goal.x) < pane.width / 4 && Math.abs(c.y - goal.y) < pane.height / 4) return;
+            let from: { x: number; y: number } | null = null;
+            for (let fy = 0.1; fy <= 0.9 && !from; fy += 0.1) for (let fx = 0.1; fx <= 0.9 && !from; fx += 0.1) {
+                const p = { x: pane.x + pane.width * fx, y: pane.y + pane.height * fy };
+                if ((await hitAt(page, p.x, p.y)).cls.includes('react-flow__pane')) from = p;
+            }
+            if (!from) return;
+            const clamp = (v: number, lo: number, hi: number) => Math.max(lo + 5, Math.min(hi - 5, v));
+            const to = { x: clamp(from.x + goal.x - c.x, pane.x, pane.x + pane.width), y: clamp(from.y + goal.y - c.y, pane.y, pane.y + pane.height) };
+            await drag(page, from, to, 600);
+        }
+    };
+    if (await fit.count()) { await fit.first().click(); await page.waitForTimeout(900); }
+    await prep();
+    res.zoom = k;
+    const allFrames = [...new Map(subjects.flatMap((s) => s.frames).map((f) => [f[0], f] as const)).values()];
+    for (const s of subjects) {
+        const sr: Record<string, unknown> = {};
+        res[s.key] = sr;
+        subject = s.key;
+        const n0 = await readNodes(page);
+        const orig = boxOf(n0, ids, s.key)!;
+        sr.orig = r4(orig);
+        const centreOf = async () => { const b = await screenBox(page, ids[s.key].vertex); return b ? { x: b.x + b.width / 2, y: b.y + b.height / 2 } : null; };
+        const othersMoved = (a: Box[], b: Box[]) => s.others.filter((o) => {
+            const p = boxOf(a, ids, o); const q = boxOf(b, ids, o);
+            return !p || !q || Math.abs(p.x - q.x) > 0.5 || Math.abs(p.y - q.y) > 0.5;
+        });
+
+        // The pointer outside: the container does not chase, the drop follows the view's membership.
+        const slot0 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+        const c0 = boxOf(n0, ids, s.container)!;
+        await prep();
+        const from0 = await centreOf();
+        const hit0 = from0 ? await hitAt(page, from0.x, from0.y) : null;
+        opts.check(`${prefix}-${s.key}-out-pressed the press lands on ${s.key}`, hit0?.node === ids[s.key].vertex, hit0);
+        if (from0) {
+            const release = await dragHold(page, from0, { x: from0.x + s.outside.by.x * k, y: from0.y + s.outside.by.y * k });
+            const live = await readNodes(page);
+            const cl = boxOf(live, ids, s.container)!;
+            const sub = boxOf(live, ids, s.key)!;
+            const centre = { x: sub.x + sub.w / 2, y: sub.y + sub.h / 2 };
+            const out = centre.x < c0.x || centre.x > c0.x + c0.w || centre.y < c0.y || centre.y > c0.y + c0.h;
+            await release();
+            const n1 = await readNodes(page);
+            const slot1 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+            const rec = (await recordsFull(page, ids, [s.key]))[s.key];
+            const back = Math.abs(rec[0] - orig.x) < 0.5 && Math.abs(rec[1] - orig.y) < 0.5;
+            sr.outside = { c0: r4(c0), live: r4(cl), centre, out, slot0, slot1, rec };
+            opts.check(`${prefix}-${s.key}-out-live the pointer outside ${s.container}: ${s.container} does not chase ${s.key} during the drag`,
+                out && Math.abs(cl.x - c0.x) < 0.5 && Math.abs(cl.y - c0.y) < 0.5 && Math.abs(cl.w - c0.w) < 0.5 && Math.abs(cl.h - c0.h) < 0.5,
+                { container0: r4(c0), live: r4(cl), centre, out });
+            opts.check(`${prefix}-${s.key}-out-drop the outside drop follows membership (${s.outside.expect})`,
+                JSON.stringify(slot1) === JSON.stringify(slot0) && (s.outside.expect === 'snap' ? back : !back),
+                { expect: s.outside.expect, rec, orig: r4(orig), slotKept: JSON.stringify(slot1) === JSON.stringify(slot0), others: othersMoved(n0, n1) });
+            // Back where it was, for the four drags. Through a step aside: a record written back to the position the sync
+            // last drew is not redrawn when the canvas has moved the node since (its node cache still holds it).
+            if (!back) await placeVertexAgain(page, ids[s.key].vertex, orig.x, orig.y);
+        }
+
+        // Leave: from DRAG4_MARGIN off the left side, the cursor DRAG4_PAST_BAND past the old border, 16 past the band: the
+        // frame does not chase, the drop follows the membership.
+        {
+            const nl = await readNodes(page);
+            const cl0 = boxOf(nl, ids, s.container)!;
+            const bwl = s.band?.side === 'w' ? s.band.size : 0;
+            const atL = { x: cl0.x + bwl + DRAG4_MARGIN, y: orig.y };
+            await placeVertexAgain(page, ids[s.key].vertex, atL.x, atL.y);
+            const nl2 = await readNodes(page);
+            const cl = boxOf(nl2, ids, s.container)!;
+            const pl = boxOf(nl2, ids, s.key)!;
+            await prep();
+            const fromL = await centreOf();
+            const slotL0 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+            if (fromL) {
+                const cxl = pl.x + pl.w / 2;
+                const hitL = await hitAt(page, fromL.x, fromL.y);
+                const releaseL = await dragHold(page, fromL, { x: fromL.x + (cl.x - DRAG4_PAST_BAND - cxl) * k, y: fromL.y });
+                const liveL = await readNodes(page);
+                const clLive = boxOf(liveL, ids, s.container)!;
+                await releaseL();
+                const recL = (await recordsFull(page, ids, [s.key]))[s.key];
+                const slotL1 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+                const stayed = Math.abs(recL[0] - atL.x) < 0.5 && Math.abs(recL[1] - atL.y) < 0.5;
+                sr.leave = { container0: r4(cl), live: r4(clLive), rec: recL, placed: atL, slotKept: JSON.stringify(slotL1) === JSON.stringify(slotL0), pressed: hitL };
+                opts.check(`${prefix}-${s.key}-leave-live the cursor ${DRAG4_PAST_BAND - DRAG4_BAND} px past the band: ${s.container} keeps its box at rest`,
+                    hitL.node === ids[s.key].vertex && [clLive.x - cl.x, clLive.y - cl.y, clLive.w - cl.w, clLive.h - cl.h].every((d) => Math.abs(d) < 0.5),
+                    { pressed: hitL, container0: r4(cl), live: r4(clLive) });
+                opts.check(`${prefix}-${s.key}-leave-drop the drop follows membership (${s.outside.expect})`,
+                    JSON.stringify(slotL1) === JSON.stringify(slotL0) && (s.outside.expect === 'snap' ? stayed : !stayed), { rec: recL, placed: atL });
+                await placeVertexAgain(page, ids[s.key].vertex, orig.x, orig.y);
+            }
+        }
+
+        // Left last: the growth the reload below keeps is one the rule can always give (the earlier ones may meet a
+        // sibling's children, which the rule cannot move).
+        for (const dir of ['top', 'right', 'bottom', 'left'] as const) {
+            const nb = await readNodes(page);
+            const c = boxOf(nb, ids, s.container)!;
+            const sb = boxOf(nb, ids, s.key)!;
+            const bw = s.band?.side === 'w' ? s.band.size : 0;
+            const bh = s.band?.side === 'n' ? s.band.size : 0;
+            const at = {
+                left: { x: c.x + bw + DRAG4_MARGIN, y: orig.y }, right: { x: c.x + c.w - DRAG4_MARGIN - sb.w, y: orig.y },
+                top: { x: orig.x, y: c.y + bh + DRAG4_MARGIN }, bottom: { x: orig.x, y: c.y + c.h - DRAG4_MARGIN - sb.h },
+            }[dir];
+            // Its centre not under a sibling (the press would take the sibling): past it, on the other axis.
+            const cx = at.x + sb.w / 2; const cy = at.y + sb.h / 2;
+            const over = s.others.map((o) => boxOf(nb, ids, o)).filter((b): b is Box => !!b
+                && cx >= b.x && cx <= b.x + b.w && cy >= b.y && cy <= b.y + b.h);
+            if (over.length && (dir === 'left' || dir === 'right')) at.y = Math.max(...over.map((b) => b.y + b.h)) + DRAG4_MARGIN;
+            if (over.length && (dir === 'top' || dir === 'bottom')) at.x = Math.max(...over.map((b) => b.x + b.w)) + DRAG4_MARGIN;
+            await placeVertex(page, ids[s.key].vertex, at.x, at.y);
+            const before = await readNodes(page);
+            const pb = boxOf(before, ids, s.key)!;
+            // The setup is a control (P12): the drawn node must be where the record was written, or nothing below is measured.
+            opts.check(`${prefix}-${s.key}-${dir}-placed the subject is drawn ${DRAG4_MARGIN} px off the ${dir} side before the drag`,
+                Math.abs(pb.x - at.x) < 1 && Math.abs(pb.y - at.y) < 1, { at, drawn: r4(pb) });
+            const cb = boxOf(before, ids, s.container)!;
+            const g0 = gapsAll(before, ids, s.frames);
+            const step = { left: { x: -DRAG4_STEP, y: 0 }, right: { x: DRAG4_STEP, y: 0 }, top: { x: 0, y: -DRAG4_STEP }, bottom: { x: 0, y: DRAG4_STEP } }[dir];
+            await prep();
+            const from = await centreOf();
+            if (!from) { opts.check(`${prefix}-${s.key}-${dir} subject on screen`, false, null); continue; }
+            const hit = await hitAt(page, from.x, from.y);
+            opts.check(`${prefix}-${s.key}-${dir}-pressed the press lands on ${s.key}`, hit.node === ids[s.key].vertex, hit);
+            const release = await dragHold(page, from, { x: from.x + step.x * k, y: from.y + step.y * k });
+            const live = await readNodes(page);
+            const sl = boxOf(live, ids, s.key)!;
+            const centre = { x: sl.x + sl.w / 2, y: sl.y + sl.h / 2 };
+            const inside = centre.x >= cb.x && centre.x <= cb.x + cb.w && centre.y >= cb.y && centre.y <= cb.y + cb.h;
+            const gl = gapsAll(live, ids, s.frames);
+            await release();
+            const after = await readNodes(page);
+            const ga = gapsAll(after, ids, s.frames);
+            const sa = boxOf(after, ids, s.key)!;
+            const moved = { x: Math.round((sa.x - pb.x) * 10) / 10, y: Math.round((sa.y - pb.y) * 10) / 10 };
+            const recs = await recordsFull(page, ids, [s.container, ...s.frames.map((f) => f[0])]);
+            sr[dir] = { placed: at, container0: r4(cb), gaps0: g0, live: gl, end: ga, moved, centreInside: inside, containerLive: r4(boxOf(live, ids, s.container)),
+                containerEnd: r4(boxOf(after, ids, s.container)), records: recs, othersLive: othersMoved(before, live), othersEnd: othersMoved(before, after) };
+            opts.meas(`${prefix} ${s.key} ${dir}`, { moved, inside, live: gl, end: ga });
+            opts.check(`${prefix}-${s.key}-${dir}-live dragged ${dir} by ${DRAG4_STEP} with the pointer inside ${s.container}: every gap >= ${DRAG4_MARGIN} while the button is held`,
+                inside && minGap(gl) >= DRAG4_MARGIN - 0.5, { inside, gaps: gl });
+            opts.check(`${prefix}-${s.key}-${dir}-end at drag end every gap >= ${DRAG4_MARGIN}, the subject moved toward ${dir}`,
+                minGap(ga) >= DRAG4_MARGIN - 0.5 && (step.x ? Math.sign(moved.x) === Math.sign(step.x) : Math.sign(moved.y) === Math.sign(step.y)),
+                { gaps: ga, moved });
+            opts.check(`${prefix}-${s.key}-${dir}-others the other children keep their absolute positions (live and at drag end)`,
+                othersMoved(before, live).length === 0 && othersMoved(before, after).length === 0,
+                { live: othersMoved(before, live), end: othersMoved(before, after) });
+
+            // The band (Alfonso's visual check of 15:58): from the same place, the child dragged mostly past the side, the
+            // cursor DRAG4_IN_BAND past the old border: the frame holds it whole, it stays a member.
+            await placeVertexAgain(page, ids[s.key].vertex, at.x, at.y);
+            const nb2 = await readNodes(page);
+            const c2 = boxOf(nb2, ids, s.container)!;
+            const p2 = boxOf(nb2, ids, s.key)!;
+            await prep();
+            const from2 = await centreOf();
+            if (!from2) { opts.check(`${prefix}-${s.key}-${dir}-band subject on screen`, false, null); continue; }
+            const cx2 = p2.x + p2.w / 2; const cy2 = p2.y + p2.h / 2;
+            const goal = {
+                left: { x: c2.x - DRAG4_IN_BAND, y: cy2 }, right: { x: c2.x + c2.w + DRAG4_IN_BAND, y: cy2 },
+                top: { x: cx2, y: c2.y - DRAG4_IN_BAND }, bottom: { x: cx2, y: c2.y + c2.h + DRAG4_IN_BAND },
+            }[dir];
+            const slotB0 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+            const hitB = await hitAt(page, from2.x, from2.y);
+            const releaseB = await dragHold(page, from2, { x: from2.x + (goal.x - cx2) * k, y: from2.y + (goal.y - cy2) * k });
+            const liveB = await readNodes(page);
+            const sl2 = boxOf(liveB, ids, s.key)!;
+            const past = { left: c2.x - sl2.x, right: sl2.x + sl2.w - (c2.x + c2.w), top: c2.y - sl2.y, bottom: sl2.y + sl2.h - (c2.y + c2.h) }[dir];
+            const across = dir === 'left' || dir === 'right' ? sl2.w : sl2.h;
+            const ownFrame = s.frames.find((f) => f[0] === s.container)!;
+            const gB = gapsOf(liveB, ids, ownFrame);
+            const gAllB = gapsAll(liveB, ids, s.frames);
+            await releaseB();
+            const afterB = await readNodes(page);
+            const gBe = gapsOf(afterB, ids, ownFrame);
+            const slotB1 = await slotIds(page, ids, s.outside.slot[0], s.outside.slot[1]);
+            sr[`${dir}Band`] = { goal, container0: r4(c2), live: gB, liveAll: gAllB, end: gBe, endAll: gapsAll(afterB, ids, s.frames),
+                past, across, containerLive: r4(boxOf(liveB, ids, s.container)), containerEnd: r4(boxOf(afterB, ids, s.container)), slotKept: JSON.stringify(slotB1) === JSON.stringify(slotB0) };
+            opts.meas(`${prefix} ${s.key} ${dir} band`, { past, across, live: gB, end: gBe });
+            opts.check(`${prefix}-${s.key}-${dir}-band-live the child mostly past the old ${dir} border, the cursor in the band: ${s.container} holds it whole while the button is held`,
+                hitB.node === ids[s.key].vertex && past > across / 2 && !!gB && Math.min(...gB) >= DRAG4_MARGIN - 0.5, { pressed: hitB, past, across, gaps: gB });
+            opts.check(`${prefix}-${s.key}-${dir}-band-end at drag end ${s.container} still holds it, every gap >= ${DRAG4_MARGIN}, and it is still a member`,
+                !!gBe && Math.min(...gBe) >= DRAG4_MARGIN - 0.5 && JSON.stringify(slotB1) === JSON.stringify(slotB0), { gaps: gBe, slotKept: JSON.stringify(slotB1) === JSON.stringify(slotB0) });
+        }
+        await opts.shot(`drag4-${prefix.toLowerCase()}-${s.key}`);
+        // Back where it was before the next subject, but the last: what it leaves is saved and reloaded below.
+        if (s !== subjects[subjects.length - 1]) await placeVertex(page, ids[s.key].vertex, orig.x, orig.y);
+    }
+
+    // The state the last drags leave, saved and reloaded: same frames, same gaps.
+    const pre = await readNodes(page);
+    const gPre = gapsAll(pre, ids, allFrames);
+    const keys = [...new Set(allFrames.flatMap(([c, kids]) => [c, ...kids]))];
+    res.reload = { reopen: await saveReload(page, opts.viewpoint) };
+    const post = await readNodes(page);
+    const gPost = gapsAll(post, ids, allFrames);
+    const drift = keys.filter((kk) => {
+        const p = boxOf(pre, ids, kk); const q = boxOf(post, ids, kk);
+        return !p || !q || [p.x - q.x, p.y - q.y, p.w - q.w, p.h - q.h].some((d) => Math.abs(d) > 1);
+    }).map((kk) => ({ kk, pre: r4(boxOf(pre, ids, kk)), post: r4(boxOf(post, ids, kk)) }));
+    Object.assign(res.reload as object, { gapsPre: gPre, gapsPost: gPost, drift });
+    opts.check(`${prefix}-reload after save and reload every gap >= ${DRAG4_MARGIN}`, minGap(gPost) >= DRAG4_MARGIN - 0.5, gPost);
+    opts.check(`${prefix}-reload-same every frame and child is drawn where it was before the reload (±1 px)`, drift.length === 0, drift);
+    await opts.shot(`drag4-${prefix.toLowerCase()}-reloaded`);
+    return res;
+}
+
+/**
+ * relayout-reload (P-2026-10-11-1156, ticket of P-2026-10-11-0040): one Auto layout, then a save and a reload. Every
+ * `boxed` container's record matches its box drawn before the reload (x, y, w, h, ±1 px); every `stacked` partition's
+ * record its position and its extent along the stack (its cross size is computed, R-GV-7); every container still
+ * holds its children; and the picture is the same after the reload.
+ */
+export async function runRelayoutReload(page: Page, ids: Record<string, { obj: string; vertex: string }>,
+    spec: { prefix: string; viewpoint: string; boxed: string[]; stacked: Array<[string, 'vertical' | 'horizontal']>; holds: Array<[string, string[]]> },
+    opts: { shot: (file: string) => Promise<void>; check: typeof check; meas: typeof meas }) {
+    const { prefix } = spec;
+    await autoLayout(page);
+    const pre = await readNodes(page);
+    const keys = [...new Set([...spec.boxed, ...spec.stacked.map(([kk]) => kk), ...spec.holds.flatMap(([c, ks]) => [c, ...ks])])];
+    const recPre = await recordsFull(page, ids, keys);
+    await opts.shot(`relayout-${prefix.toLowerCase()}-before-reload`);
+    const reopen = await saveReload(page, spec.viewpoint);
+    const recPost = await recordsFull(page, ids, keys);
+    const post = await readNodes(page);
+    const off = (kk: string, idx: number[]) => {
+        const d = boxOf(pre, ids, kk); const r = recPost[kk];
+        if (!d || !r) return true;
+        const drawn = [d.x, d.y, d.w, d.h];
+        return idx.some((i) => Math.abs(drawn[i] - Number(r[i])) > 1);
+    };
+    // A size is compared only where the record says it was set by hand (isResized): otherwise the box is computed.
+    const sized = (kk: string, idx: number[]) => (recPost[kk]?.[4] ? idx : []);
+    const boxedOff = spec.boxed.filter((kk) => off(kk, [0, 1, ...sized(kk, [2, 3])])).map((kk) => ({ kk, drawn: r4(boxOf(pre, ids, kk)), record: recPost[kk] }));
+    const stackedOff = spec.stacked.filter(([kk, axis]) => off(kk, [0, 1, ...sized(kk, axis === 'vertical' ? [3] : [2])]))
+        .map(([kk]) => ({ kk, drawn: r4(boxOf(pre, ids, kk)), record: recPost[kk] }));
+    opts.meas(`${prefix} relayout records`, { recPre, recPost });
+    opts.check(`${prefix}-relayout-1 after Auto layout, save and reload every container's record is where it was drawn before the reload, its box when sized by hand (±1 px)`,
+        boxedOff.length === 0, boxedOff);
+    opts.check(`${prefix}-relayout-2 every partition's record holds its drawn position, and its extent along the stack when sized by hand (±1 px)`,
+        stackedOff.length === 0, stackedOff);
+    const inside = (c: Box, p: Box) => c.x >= p.x - 1 && c.y >= p.y - 1 && c.x + c.w <= p.x + p.w + 1 && c.y + c.h <= p.y + p.h + 1;
+    const outside = spec.holds.flatMap(([c, ks]) => ks.filter((kk) => { const a = boxOf(post, ids, kk); const b = boxOf(post, ids, c); return !a || !b || !inside(a, b); }).map((kk) => `${kk} outside ${c}`));
+    opts.check(`${prefix}-relayout-3 after the reload every container holds its children`, outside.length === 0,
+        { outside, boxes: Object.fromEntries(spec.holds.map(([c]) => [c, r4(boxOf(post, ids, c))])) });
+    const drift = keys.filter((kk) => {
+        const p = boxOf(pre, ids, kk); const q = boxOf(post, ids, kk);
+        return !p || !q || [p.x - q.x, p.y - q.y, p.w - q.w, p.h - q.h].some((d) => Math.abs(d) > 1);
+    }).map((kk) => ({ kk, pre: r4(boxOf(pre, ids, kk)), post: r4(boxOf(post, ids, kk)) }));
+    opts.check(`${prefix}-relayout-4 the picture after the reload is the one before it (±1 px)`, drift.length === 0, drift);
+    await opts.shot(`relayout-${prefix.toLowerCase()}-after-reload`);
+    return { reopen, recPre, recPost, pre: pre.map((n) => `${n.name} ${n.x},${n.y} ${n.w}x${n.h}`), post: post.map((n) => `${n.name} ${n.x},${n.y} ${n.w}x${n.h}`), boxedOff, stackedOff, outside, drift };
+}
+
 const objectsOf = (page: Page, cls: string) => ev<string[]>(page, `const idl = w.store.getState().idlookup;
     return Object.values(idl).filter((d) => d && d.className === 'DObject' && idl[d.instanceof]?.name === a).map((d) => d.id);`, cls, 0);
 
@@ -961,6 +1380,72 @@ async function sceneS6Hull(browser: Browser, out: Record<string, unknown>) {
     out.s6hull = res;
 }
 
+/** The flow nodes of the BPMN fixture's lanes, and the lanes measured after each drag of drag4. */
+const BPMN_LANE_FRAMES: FrameCheck[] = [['sales', ['start', 'check', 'gw'], band as Band], ['warehouse', ['ship', 'end'], band as Band]];
+const BPMN_FLOW = ['start', 'check', 'gw', 'ship', 'end', 'place', 'receive'];
+
+/** drag4 (P-2026-10-11-1156): Check in Sales (the first lane) and Ship in Warehouse (the second), each dragged with
+ *  the pointer outside Shop (the lane's `reference` membership snaps it back) and toward each side inside its lane. */
+async function sceneDrag4(browser: Browser, out: Record<string, unknown>) {
+    const scene = await buildBpmnScene(browser, 'drag4_bpmn');
+    if (!scene) return;
+    const { page, errors, ids } = scene;
+    const subjects: Drag4Subject[] = [
+        { label: 'Check in Sales', key: 'check', container: 'sales', band: band as Band, frames: BPMN_LANE_FRAMES,
+            others: BPMN_FLOW.filter((k) => k !== 'check'), outside: { by: { x: 0, y: -260 }, expect: 'snap', slot: ['sales', 'flowNodeRefs'] } },
+        { label: 'Ship in Warehouse', key: 'ship', container: 'warehouse', band: band as Band, frames: BPMN_LANE_FRAMES,
+            others: BPMN_FLOW.filter((k) => k !== 'ship'), outside: { by: { x: 600, y: 0 }, expect: 'snap', slot: ['warehouse', 'flowNodeRefs'] } },
+    ];
+    out.drag4 = await runDrag4(page, ids, subjects, {
+        prefix: 'BPMN', viewpoint: 'BPMN', shot: (f) => shoot(page, `${f}-${TAG}-light.png`, true), check, meas,
+    });
+    (out.drag4 as Record<string, unknown>).errors = errors.slice(0, 20);
+}
+
+/** carry (P-2026-10-11-1156): Shop drawn left of its record (Check placed past Sales's band grows it, R-GV-17), then
+ *  dragged by its band: the whole box moves by the drag, its width kept, and its record moves by the same delta. */
+async function sceneCarry(browser: Browser, out: Record<string, unknown>) {
+    const scene = await buildBpmnScene(browser, 'carry_bpmn');
+    if (!scene) return;
+    const { page, errors, ids } = scene;
+    const hide = page.locator('button[aria-label="Hide the side panel"]:visible');
+    if (await hide.count()) { await hide.first().click(); await page.waitForTimeout(900); }
+    const fit = page.locator('.toolbar-commands__level:visible');
+    if (await fit.count()) { await fit.first().click(); await page.waitForTimeout(900); }
+    await placeVertex(page, ids.check.vertex, 136, 160);
+    const n0 = await readNodes(page);
+    const shop0 = boxOf(n0, ids, 'shop')!;
+    const rec0 = (await recordsFull(page, ids, ['shop'])).shop;
+    const k = await zoomOf(page);
+    const sb = await screenBox(page, ids.shop.vertex);
+    const press = sb ? { x: sb.x + 12 * k, y: sb.y + sb.height / 2 } : null;
+    const pressed = press ? await hitAt(page, press.x, press.y) : null;
+    if (press) await drag(page, press, { x: press.x + 96 * k, y: press.y + 48 * k }, 2500);
+    const n1 = await readNodes(page);
+    const shop1 = boxOf(n1, ids, 'shop')!;
+    const rec1 = (await recordsFull(page, ids, ['shop'])).shop;
+    const d = { x: shop1.x - shop0.x, y: shop1.y - shop0.y };
+    out.carry = { shop0: r4(shop0), rec0, shop1: r4(shop1), rec1, d, pressed, errors: errors.slice(0, 20) };
+    check('BPMN-carry-0 Check past Sales\'s band draws Shop left of its record', shop0.x < rec0[0] - 0.5, { shop0: r4(shop0), rec0 });
+    check('BPMN-carry-1 Shop dragged by its band moves as a whole: same width and height, drawn by the drag',
+        pressed?.node === ids.shop.vertex && d.x !== 0 && Math.abs(shop1.w - shop0.w) < 1 && Math.abs(shop1.h - shop0.h) < 1, { pressed, d, shop0: r4(shop0), shop1: r4(shop1) });
+    check('BPMN-carry-2 its record moved by the same delta as its box', Math.abs(rec1[0] - rec0[0] - d.x) < 1 && Math.abs(rec1[1] - rec0[1] - d.y) < 1,
+        { rec0, rec1, d });
+}
+
+/** relayout-reload (P-2026-10-11-1156): Auto layout, save, reload; Shop's and Customer's records are their drawn boxes,
+ *  the lanes' their place on the stack, Sales holds its flow nodes. */
+async function sceneRelayoutReload(browser: Browser, out: Record<string, unknown>) {
+    const scene = await buildBpmnScene(browser, 'relayout_bpmn');
+    if (!scene) return;
+    const { page, errors, ids } = scene;
+    out.relayout = await runRelayoutReload(page, ids, {
+        prefix: 'BPMN', viewpoint: 'BPMN', boxed: ['shop', 'customer'], stacked: [['sales', 'vertical'], ['warehouse', 'vertical']],
+        holds: [['sales', ['start', 'check', 'gw']], ['warehouse', ['ship', 'end']], ['shop', ['sales', 'warehouse']], ['customer', ['place', 'receive']]],
+    }, { shot: (f) => shoot(page, `${f}-${TAG}-light.png`, true, 3), check, meas });
+    (out.relayout as Record<string, unknown>).errors = errors.slice(0, 20);
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 if (process.argv[1] && /bpmn-lanes-fixture\.ts$/.test(process.argv[1])) {
@@ -975,6 +1460,9 @@ if (process.argv[1] && /bpmn-lanes-fixture\.ts$/.test(process.argv[1])) {
         if (ONLY.includes('s6')) await sceneS6(browser, out);
         if (ONLY.includes('s6flat')) await sceneS6Flat(browser, out);
         if (ONLY.includes('s6hull')) await sceneS6Hull(browser, out);
+        if (ONLY.includes('drag4')) await sceneDrag4(browser, out);
+        if (ONLY.includes('relayout')) await sceneRelayoutReload(browser, out);
+        if (ONLY.includes('carry')) await sceneCarry(browser, out);
     } finally {
         out.checks = { pass, fail };
         writeFileSync(`${OUT}/measures-${TAG}.json`, JSON.stringify(out, null, 2));

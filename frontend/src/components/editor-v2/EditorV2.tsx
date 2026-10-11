@@ -40,7 +40,7 @@ import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnch
 import { hydrateCollapsed, isCollapsed } from './viewpoint/ir/irCollapseState';
 import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView, resolveIRView } from './viewpoint/ir/irResolveCore';
 import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
-import { descendantsOf } from './viewpoint/ir/irContainment';
+import { descendantsOf, setDragPointer } from './viewpoint/ir/irContainment';
 import {
     compositionSlotFor, containedInSlot, createOwnerSlotOf, isRootFathered, nextValues, ownerSlotForNewObject, planDrop,
     resolveDropTarget, slotAccepts, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
@@ -3912,14 +3912,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 return p ? { ...n, position: p } : n;
             });
             setNodes(placed);
-            const moved = placed.filter(n => result.positions.has(n.id)).map(n => ({ id: n.id, x: n.position.x, y: n.position.y }));
+            // A box the layout grew travels with its position, one record per vertex: written by two calls in one tick,
+            // the size write took back the position (P-2026-10-11-1156, LIR 2026-10-11 §1). The size batch is left for a
+            // resized vertex the layout did not move.
+            const moved = placed.filter(n => result.positions.has(n.id)).map(n => {
+                const s = result.sizes.get(n.id);
+                return { id: n.id, x: n.position.x, y: n.position.y, ...(s ? { w: s.w, h: s.h } : {}) };
+            });
             if (moved.length > 0) syncPositionBatchToJjom(moved);
             // A partition or a container sized by hand that its content outgrew (S6): its new size, still by hand. The
             // presentation pass reads boxes off the records, which land a dispatch later: once they show the new sizes
             // (bounded retry), those nodes are handed back with a new `data` (the stabilizer above lets a node through on
             // its data's identity, not on a copy of the node) so the pass runs on them.
             if (result.sizes.size > 0) {
-                syncSizeBatchToJjom([...result.sizes].map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })));
+                const unmoved = [...result.sizes].filter(([v]) => !result.positions.has(v));
+                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })));
                 const redraw = (attempt: number) => {
                     const idl = (store.getState() as any).idlookup ?? {};
                     const landed = [...result.sizes].every(([v, s]) => {
@@ -4179,6 +4186,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     /** Where each node stood when its drag began (snap back, container delta); cleared at its drag end. */
     const gvDragStartRef = useRef(new Map<string, { x: number; y: number }>());
 
+    /** The cursor of a node drag, in flow coordinates, for the follow test of the presentation pass (R-GV-17: a frame
+     *  follows its child while the pointer stays within a band of the box it had before the drag). */
+    const handleNodeDragPointer = useCallback((event: React.MouseEvent) => {
+        setDragPointer(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    }, [screenToFlowPosition]);
+    const handleNodeDragPointerEnd = useCallback(() => setDragPointer(null), []);
+
     /**
      * What a single-node drag end does under the graphVertex rules; null = today's behaviour. A lane under a
      * `partitions` container goes back (its place is computed, R-GV-6); a container that declares a layout carries its
@@ -4328,6 +4342,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const ends = changes.filter((c: any) => c.type === 'position' && c.dragging === false && c.position);
                 if (isJjomMode && ends.length === 1) gvDrop = resolveGraphVertexDragEnd(ends[0]);
                 if (gvDrop?.kind === 'snap') ends[0].position = { ...gvDrop.to };
+                // A container lands with its record moved by the drag delta, not where its box was dropped: the box may be
+                // drawn off the record, grown by its children (R-GV-17), and the record keeps what was set by hand. The
+                // presentation pass draws the box from there; the write below takes this position.
+                if (gvDrop?.kind === 'container') {
+                    const own = irContainmentRef.current.model.vertexByObj.get(gvDrop.objectId);
+                    const src = own !== undefined ? (store.getState() as any).idlookup?.[own] : undefined;
+                    if (own === ends[0].id && src) {
+                        const rec = readVertexLayout(src, getActiveLayoutKey());
+                        ends[0].position = { x: rec.x + gvDrop.dx, y: rec.y + gvDrop.dy };
+                    }
+                }
                 for (const c of ends) gvDragStartRef.current.delete(c.id);
             }
 
@@ -4706,6 +4731,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 nodes={flowElements.nodes}
                 edges={flowElements.edges}
                 onNodesChange={handleNodesChange}
+                onNodeDrag={handleNodeDragPointer}
+                onNodeDragStop={handleNodeDragPointerEnd}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onConnectEnd={onConnectEnd}

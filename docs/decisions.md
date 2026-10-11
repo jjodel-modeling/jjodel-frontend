@@ -5919,6 +5919,25 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   its new size as sized by hand, which becomes its minimum; a frame nested in a lane or region is laid out with the
   root options (downward), not in the direction of the lanes around it. The open-time layout keeps its flat call.
   Verified by probe: `frontend/scripts/probe/bpmn-lanes-fixture.ts` and `statechart-fixture.ts` (slice S6).
+- **R-GV-17** (2026-10-11, decided by the chat on Alfonso's ok 2026-10-11 11:54 and by Alfonso 2026-10-11 14:23, evidence:
+  measured, verified: probe, reversible: branch).
+  **A framing container follows a dragged child on all four sides, and a size set by hand is its floor, never its
+  ceiling** (P-2026-10-11-1156, spec addendum §12; builds on R-GV-16 and P-2026-10-11-0040). Every child keeps at least
+  `PARTITION_CONTENT_MARGIN` (16 px) from every border; growing left or up moves the origin, the far border and the
+  children stay; along a stack a partition pushes the next ones down, or the earlier ones (each at its floor) and the
+  origin up. The frame follows while the pointer (the cursor) stays within the box the container had at rest grown by
+  `FOLLOW_BAND`, 32 px on every side (amended 2026-10-11 after Alfonso's visual check of 15:58: the node's centre capped
+  the growth near half the node); within the band it holds the whole child, past it the frame does not chase and the drop
+  follows `membership`; the band is measured on the box at rest, never on the growing one. **The drag end writes nothing
+  of the container**: the box is derived from the records and the children, in session and after a reload; a container
+  dragged as a whole lands at its record plus the delta. The toolbar Auto layout writes a grown box with its position as
+  one record (`syncPositionBatchToJjom` with `w`/`h`, LIR `docs/lir/lir_2026-10-11_gv_drag_frame_box_write.md`). Decided
+  unattended in the lane and kept here: the drop target is still resolved on the node's centre (S3), the follow test on
+  the pointer; where two partitions' children leave no room for a border, the earlier partition keeps its children; a
+  self frame keeps its declared `padding` as its margin; a paired lane resize stops at the neighbour's children; after
+  Auto layout a lane's record is compared on position and stack extent only (its cross size is computed). Open:
+  partitions packed edge to edge, and a child moved out of a `none` container framed again after the drop (inbox
+  tickets of P-2026-10-11-1156).
 
 ## Superate
 

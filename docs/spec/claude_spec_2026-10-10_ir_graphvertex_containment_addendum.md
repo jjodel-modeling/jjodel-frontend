@@ -194,3 +194,37 @@ interface ContainmentLayout {
 7. **Validation**: `frame` in `hull | self`, refused on `partitions`; `separator` in `solid | dashed`, refused on `free`. **Render permissive**: the compile keeps `frame` only as `self` on `free` and `separator` only as `dashed` on `partitions`, and leaves the key out otherwise, so a layout without them compiles to the keys it had.
 8. **The statechart views** (D-b, §9): one `State` view for exactly one region, channel `$regions.values[0].$subvertex.values`, `frame: 'self'`, band `n`; one for two or more regions, `partitions`, `axis: 'vertical'`, `separator: 'dashed'`, band `n`; one for a simple state; `Region` as the partition child (`free`, transparent border) and, as the only region of a state, not drawn. The fixture tells the two Region cases apart through `Region.state`, UML's owner end of `State.regions`, because a predicate cannot climb to the owner; the reference edge it draws is styled clear, since an edge view cannot hide a reference edge. Transitions are object-as-edge, labelled `trigger [guard]` as the derived statecharts are (P-2026-10-03-1304, Q6).
 9. **Out of scope**: bordered nodes (entry and exit points, a history pseudostate on the border), like BPMN boundary events. The next capability to open if statecharts are pursued in full.
+
+## 12. The frame follows a dragged child on four sides (2026-10-11, P-2026-10-11-1156)
+
+**Decided**: the chat C-2026-10-10-0057 on Alfonso's ok (2026-10-11 11:54), RC-25; the drag end without a container write
+and the batch write of a grown box, Alfonso 2026-10-11 14:23. Registered as R-GV-17. Amends §7 points 1, 2 and 6 and §11
+point 1 where they give a partition its content from where the stack starts it; it builds on R-GV-16 and
+P-2026-10-11-0040 (the right margin at rest). §1 to §11 are not edited.
+
+1. **Four sides.** A partition, and a self frame (§11), is drawn around the box its children need: each child's box (an
+   inner frame by its frame) plus `PARTITION_CONTENT_MARGIN` (16 px), the partition's own band included. A self frame keeps
+   its declared `padding` as that margin. Growing left or up moves the container's origin and its band with it; its far
+   border stays; the children never move.
+2. **A size set by hand is a floor, never a ceiling.** A partition, a frame or a pool sized by hand (`isResized`, R-LAY-4,
+   R-GV-16) keeps at least its stored size (a `partitions` container also its stored origin; a self frame's place stays
+   derived, §11.1) and grows past it when a child needs it.
+3. **Lanes of a pool.** Across the stack the growth goes to the pool (the partitions span it). Along the stack a partition
+   that grows pushes the next ones down; one that grows against the stack pushes the earlier ones, each keeping its floor,
+   and the container's origin, up. Where two partitions' children leave no room for a border between them with the margin,
+   the earlier partition keeps its children (a case the rule cannot satisfy without moving a child).
+4. **The pointer and the band** (amended 2026-10-11 15:58 after Alfonso's visual check: a test on the node's centre
+   capped the growth near half the node). While a node is dragged, its container follows it as long as the pointer (the
+   cursor, in flow coordinates) stays inside the box the container had at rest grown by `FOLLOW_BAND` (32 px) on every
+   side: within the band the frame holds the whole child plus the margin, even when most of the child is past the old
+   border. Past the band the container and those around it count the node where it rests, and the drop follows
+   `membership` (§6), resolved as before on the node's centre. The band is measured on the box at rest, never on the
+   growing one. A paired lane resize (§7.5) stops at the margin of the neighbour's children.
+5. **Derived, not written.** The box is computed from the records and the children on every render, in session and after a
+   reload; at a child's drag end nothing of the container is written. A container dragged as a whole lands with its record
+   moved by the drag's delta, its descendants too (§6), so a box drawn off its record keeps its far border.
+6. **Auto layout** (R-GV-16) writes a box it grew together with its position, as one record (`syncPositionBatchToJjom`
+   with `w` and `h`, LIR `docs/lir/lir_2026-10-11_gv_drag_frame_box_write.md`), so a reload draws the same picture.
+7. **Open** (tickets of P-2026-10-11-1156): regions packed edge to edge leave no room to grow across their shared border
+   (point 3); a child moved out of a `none` container is not chased during the drag but framed again after it, the model
+   being untouched (§6).
