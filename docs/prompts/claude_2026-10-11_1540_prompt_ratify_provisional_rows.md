@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_01FWUFsDDVN1SMB4MGco19GJ
 Front: harness
 Lane: fast (docs only: `docs/decisions.md`, the digest file, the regenerated `docs/digest/` files, the log entry). No critical-zone go-ahead.
 Depends: P-2026-10-11-1430
-Status: da eseguire
+Status: eseguito 2026-10-11, lane P-2026-10-11-1540 (ratify-provisional, d7a251297), merged c6804f3d3 (P-2026-10-11-1559); RC-38 still awaiting Alfonso
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 

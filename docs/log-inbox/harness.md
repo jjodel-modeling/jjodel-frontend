@@ -873,3 +873,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs-only merge (ratifications), no visual change
 **Notes**: Rollback tag `pre-ratify-provisional` on `88627f711` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1559/result.json`.
 **Prompt document name**: 2026-10-11 15:59
+
+
+## 2026-10-11 — docs(decisions): ratify the provisional rows of the digest, amend R-SIM-120 and R-VP-29, fix headers (P-2026-10-11-1540)
+**Prompt**: `claude_2026-10-11_1540_prompt_ratify_provisional_rows.md`, lane fast, unattended: apply Alfonso's «ok alle raccomandazioni» to the digest of P-2026-10-11-1430, RC-38 excepted: ratify 74 rows, amend R-SIM-120 and R-VP-29 then ratify them, apply the §7 header rewrites, regenerate `docs/digest/`, write the digest's §10 Outcome.
+**Files touched**: `d7a251297`: `docs/decisions.md`, `docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md`; this entry, uncommitted (RC-17).
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. `docs:digest --all` parses 401 of 402 rows, RC-38's header the only failure, as before; check:docs 5/5.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Partial: `--write` exits 2 on RC-38 and writes nothing, so the 34-date backfill of `docs/digest/` waits for RC-38 (adopted unattended, RC-21: the gate is not bypassed). 1 header says provisional (RC-38), 76 say `ratified by Alfonso 2026-10-11`; 39 cited commits on HEAD. Subject shortened to 72 (bash-guard). 1b clauses dropped: the section intros name the chat. Not applied: the R-SIM-70 paragraph (§6), the R-JS intros' «Marker: provisional». Detail: digest §10.
+**Prompt document name**: 2026-10-11 15:40
+
+**Ticket** (P-2026-10-11-1540): `docs:digest --write` writes nothing when any header fails to parse, so one row waiting for Alfonso (RC-38) blocks the digest of every date. Writing every date but the failing row's would unblock the backfill; a script change, Alfonso's call.
