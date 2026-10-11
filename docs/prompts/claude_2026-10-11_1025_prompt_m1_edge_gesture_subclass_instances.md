@@ -6,7 +6,7 @@ Request: Alfonso, 2026-10-11 10:22 and 11:50, M1 edge gesture inert on instances
 Front: maintenance
 Depends: none
 Lane: full (canvas edge creation, possible critical zone: `useJjomSync.ts`, `portDistribution.ts`)
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane subclass-edge-gesture · 233f0b46b
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
