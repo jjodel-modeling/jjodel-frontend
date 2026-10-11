@@ -7,7 +7,7 @@ them; a light visual check). Model: the default of `.claude/settings.json`, no d
 Depends: P-2026-10-11-1052, P-2026-10-11-1053
 Front: codegen-pilot
 Request: https://claude.ai/code/session_01QYGEHstF7K66SVXwe8L7ep
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane codegen-examples · discovery 2cf1ae68c · code 4a7fb2755 · log 0e6153215 · tsc 14 = base, vitest src/codegen 345 (329 + 16), build exit 0 (files in dist/examples/codegen), check:codegen-lazy green, probes codegen-examples 71/71, codegen-panel 46/46, codegen-oracle 35/35, codegen-check 43/43, build script 21/21, mutation bench 3/3 · visual check passata 2026-10-11 (RC-23 by the chat on 3 crops, GO by Alfonso 15:37); files are .jjodel, not .jjodel.json; ticket: ProjectEditor Download button writes a format Import cannot read (read, not run)
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
 Worktree: `~/jjodel-w-codegen-examples`, branch `codegen-examples`, cut from the trunk tip that carries S1..S7b
