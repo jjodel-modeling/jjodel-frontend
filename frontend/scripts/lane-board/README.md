@@ -66,8 +66,9 @@ code areas, model by area and by size, and first-shot success over time.
 **Requirements.** Every R- row of `docs/decisions.md`, grouped by co-citation cluster and,
 inside a cluster, by milestone, with whether a commit on the trunk realized it and its
 goal-model contributions; filters by family, status, realized and softgoal. Below, the
-pairs of realized rows that pull a softgoal both ways, grouped by declared conflict, then by
-softgoal. See
+softgoal balance (one diverging bar per softgoal, under its macro goal), the clusters by
+macro goal matrix, the side effects between softgoals, and the pairs of realized rows that
+pull a softgoal both ways, grouped by declared conflict. See
 "The Requirements tab" below.
 
 ## Progress, the estimate and `resolved`
@@ -153,7 +154,7 @@ The log entries and RC rows are re-read only when the trunk moves.
 override them.
 
 - **What it reads.** `docs/decisions.md`, `docs/prompts/*.md` and, when present,
-  `docs/goals/{cluster-names,milestones,softgoals,contributions,conflicts}.json` from the
+  `docs/goals/{cluster-names,cluster-descriptions,milestones,softgoals,contributions,conflicts,goal-tree,correlations}.json` from the
   **working tree** of that checkout, not from the trunk ref: for the launchd agent, the
   working tree of `~/jjodel-release`. Uncommitted edits there show in the tab; a clean tree
   at the trunk tip shows the trunk. What realized a row comes from git: the `feat`, `fix`, `refactor` and
@@ -168,18 +169,51 @@ override them.
   its first commit, then come the rows realized after the last milestone, then the rows not
   realized. The milestones are those of `docs/goals/milestones.json` when it exists, else
   the one built into `req-trace.mjs` (MODELS freeze, 2026-10-07); the tab adds none.
-- **Opposing contributions.** One closed group per conflict of `docs/goals/conflicts.json`,
-  in its order, named by its two rows and its softgoal, with its pair count; a pair belongs
-  to a conflict with the same softgoal and the same two rows, in either order; a conflict
-  that names no pair still has its group, which says why. The pairs no conflict names follow
-  under "Pairs without a declared conflict, by softgoal": one closed group per softgoal,
-  the largest first, its pairs ordered by the cluster of the row that helps (in the order
-  of the cluster list, unclustered last) and then by row id, the cluster in the first
-  column. The tab remembers which groups a viewer opened.
+- **Softgoal balance** (P-2026-10-11-1735). Reads `goalModel.balance` (per softgoal, the
+  realized rows that help it and those that hurt it, in id order) and `goalModel.tree`
+  (`docs/goals/goal-tree.json`). One block per macro goal in tree order, its id, name and
+  description; the softgoals in no macro goal, or all of them when the tree is absent, in a
+  last block "Other softgoals". One row per softgoal: a 200 px label (id, name, `n help · m
+  hurt`), then a diverging bar on one scale for the whole section: the hurting rows left of a
+  centre axis in one red, the helping rows right of it as one segment per cluster, the largest
+  first (ties in the order of the cluster groups, unclustered last), two blues alternating
+  with a 2 px gap, the cluster and its count in the segment's title. The scale is computed
+  once: a 720 px track holds the largest hurt count, the largest help count and the most
+  gaps, so equal counts have equal widths in every bar and every left side is as wide as the
+  largest hurt, which aligns the axes. Under the bar, the hurting rows as chips, the row title
+  in the title. A click on a segment opens under the softgoal the cluster's helping rows (id,
+  title, kind, evidence) beside the hurting rows, from which any pair can be rebuilt; one list
+  per softgoal, a second click closes it.
+  It replaces "Pairs without a declared conflict, by softgoal": for every softgoal those pairs
+  were exactly the product of the realized rows that help it and those that hurt it (SG-1: 61
+  x 18 = 1098 of 6569 pairs on 2026-10-11), so the tables said nothing the two sets do not,
+  and read as noise.
+  `goalModel.opposing` is still in the document.
+- **Clusters by macro goal.** Reads the same rows, the cluster groups and the tree. One row
+  per cluster, in the order and with the names of the groups above, unclustered last; one
+  column per macro goal, plus "Other" when a softgoal is in none. A cell reads `+h / −k`: the
+  cluster's realized rows that help, and that hurt, any softgoal of that macro goal; a row
+  counts once on each side, so a row that helps one of its softgoals and hurts another counts
+  on both. Background in five steps of one blue by `h + k` (the step is `ceil(5 (h + k) /
+  max)`), an empty cell blank, `−k` in the danger colour when `k > 0`. A click on a cell lists
+  under the matrix the rows behind it, each once, with their contributions to that macro
+  goal's softgoals; a second click closes it.
+- **Side effects between softgoals.** Reads `goalModel.correlations`
+  (`docs/goals/correlations.json`) and appears only when it has links: a closed group, one
+  line per link (from, to, kind, the witness ids as chips, `why` in the title), ordered by the
+  macro goal of `from`, then of `to`, the file's order inside.
+- **Opposing contributions.** Last, under its own heading: one closed group per conflict of
+  `docs/goals/conflicts.json`, in its order, named by its two rows and its softgoal, with its
+  pair count; a pair belongs to a conflict with the same softgoal and the same two rows, in
+  either order; a conflict that names no pair still has its group, which says why. The tab
+  remembers which groups, balance lists and matrix cell a viewer opened.
 - **Cluster names.** `req-trace.mjs` names a cluster by its families and title words joined
-  by an em dash; the tab draws ` · ` in its place.
+  by an em dash; the tab draws ` · ` in its place, and does the same in every other text it
+  draws, titles included (descriptions, `why`, commit subjects).
 - **Fixed widths.** Every table of the tab has a fixed layout, and the tables of one kind
-  share their column widths, so a filter or an opened group never moves a column.
+  share their column widths, so a filter or an opened group never moves a column. The bars
+  and the lists have fixed widths too, and a bar row a fixed height: an opened list or cell
+  adds content below and never moves a bar, an axis or a matrix column.
 
 ## Running it
 

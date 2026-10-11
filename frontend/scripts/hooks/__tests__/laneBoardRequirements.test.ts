@@ -175,6 +175,7 @@ function git(cwd: string, args: string[], date = '2026-09-30T10:00:00') {
 
 const json = (o: unknown) => JSON.stringify(o, null, 2) + '\n';
 const A_DESC = 'The first three rows of the fixture — written long enough that one line of the summary cannot hold it, so the tab has to cut it.';
+const MG1_DESC = 'What the screen shows is enough — nothing held in mind.';
 const contrib = (req: string, softgoal: string, kind: string) => ({ req, softgoal, kind, evidence: 'read', verified: 'none', why: req + ' ' + kind + ' ' + softgoal });
 
 /** Seven rows, listed out of id order; two prompts co-cite the three R-A rows and the two R-C rows, the R-B rows
@@ -187,8 +188,11 @@ const contrib = (req: string, softgoal: string, kind: string) => ({ req, softgoa
  *  SG-1, the softgoal with fewer pairs carrying the smaller id. Cluster names are req-trace's own, with its em
  *  dash: "R-A — first, second, third" (3 rows, listed first) and "R-C — fifth, sixth". Both clusters have a written
  *  description (P-2026-10-11-1510): R-A-1's was written for four rows, so since then R-A-3 joined and R-B-8, R-B-9
- *  left, and it carries an em dash; R-C-1's members are unchanged; a third key, R-Z-1, names no cluster. */
-function fixtureRepo(): string {
+ *  left, and it carries an em dash; R-C-1's members are unchanged; a third key, R-Z-1, names no cluster.
+ *  The goal tree (P-2026-10-11-1735): MG-1 Usability holds SG-1 and SG-3, its description with an em dash; MG-2
+ *  Dependability holds SG-2; SG-4 is in no macro goal. SG-3 and SG-4 add helps only (and two contributions of the
+ *  unrealized R-A-3), so the opposing pairs above stay as they are. `correlations` writes correlations.json. */
+function fixtureRepo(correlations: Stub[] | null = null): string {
     const repo = tmp();
     mkdirSync(join(repo, 'docs', 'prompts'), { recursive: true });
     mkdirSync(join(repo, 'docs', 'goals'));
@@ -208,11 +212,19 @@ function fixtureRepo(): string {
     writeFileSync(join(repo, 'docs', 'goals', 'softgoals.json'), json([
         { id: 'SG-1', name: 'Low cognitive load', description: '' },
         { id: 'SG-2', name: 'Reversibility', description: '' },
+        { id: 'SG-3', name: 'Demo readiness', description: '' },
+        { id: 'SG-4', name: 'Determinism', description: '' },
     ]));
+    writeFileSync(join(repo, 'docs', 'goals', 'goal-tree.json'), json([
+        { id: 'MG-1', name: 'Usability', description: MG1_DESC, softgoals: ['SG-1', 'SG-3'] },
+        { id: 'MG-2', name: 'Dependability', description: 'The work survives.', softgoals: ['SG-2'] },
+    ]));
+    if (correlations) writeFileSync(join(repo, 'docs', 'goals', 'correlations.json'), json(correlations));
     writeFileSync(join(repo, 'docs', 'goals', 'contributions.json'), json([
         contrib('R-A-1', 'SG-1', 'help'), contrib('R-A-2', 'SG-1', 'hurt'), contrib('R-B-1', 'SG-1', 'some-'),
         contrib('R-B-1', 'SG-2', 'some+'), contrib('R-A-1', 'SG-2', 'hurt'), contrib('R-A-3', 'SG-1', 'hurt'),
         contrib('R-B-2', 'SG-2', 'help'), contrib('R-C-1', 'SG-2', 'help'), contrib('R-C-2', 'SG-2', 'make'), contrib('R-A-2', 'SG-2', 'some+'),
+        contrib('R-A-1', 'SG-3', 'help'), contrib('R-A-2', 'SG-3', 'help'), contrib('R-C-1', 'SG-4', 'help'), contrib('R-A-3', 'SG-3', 'help'), contrib('R-A-3', 'SG-4', 'hurt'),
     ]));
     writeFileSync(join(repo, 'docs', 'goals', 'conflicts.json'), json([
         { a: 'R-A-1', b: 'R-A-2', softgoal: 'SG-1', evidence: 'read', why: 'First against second.' },
@@ -394,7 +406,7 @@ describe('the board: the Requirements route, its asset and its tab', () => {
         const { base } = await reqBoard();
         const { tail, groups } = opposing(await reqTab(base));
         expect(tail.slice(0, tail.indexOf('<details'))).not.toContain('<table');
-        expect(tail).toContain('7 pairs of realized rows pull a softgoal both ways: 2 match one of the 3 declared conflicts (same softgoal, same two rows, either order), 5 do not and are grouped by softgoal below. Open a group to see its pairs.');
+        expect(tail).toContain('7 pairs of realized rows pull a softgoal both ways: 2 match one of the 3 declared conflicts (same softgoal, same two rows, either order), 5 do not; the softgoal balance above holds their rows. Open a group to see its pairs.');
         const cf = groups.slice(0, 3);
         expect(cf.map((g) => [g[1], !!g[2], g[3], g[4]])).toEqual([
             ['cf:SG-1:R-A-1:R-A-2', false, 'R-A-1 vs R-A-2', 'SG-1 Low cognitive load · 1 pair'],
@@ -410,38 +422,242 @@ describe('the board: the Requirements route, its asset and its tab', () => {
         expect(cf[2][5]).toContain('No opposing pair');
     });
 
-    test('kills "the pairs without a conflict in one group", "a pair in two softgoal groups or in none", "softgoal groups by id, not by pair count", "a softgoal group open by default", "the heading missing or before the conflicts", "pairs in req-trace\'s order", "no cluster column": the pairs no conflict names, under one heading, one closed group per softgoal by pair count, each pair once, by the cluster of the row that helps, then by row ids', async () => {
+    test('kills "the softgoal pair tables kept", "the conflicts before the balance", "the matrix before the balance", "the conflicts without their heading": the pair tables per softgoal are gone; after the cluster groups come the balance, the matrix, then the declared conflicts under their own heading', async () => {
         const { base } = await reqBoard();
-        const d = JSON.parse(await text(base, '/api/requirements'));
-        const { tail, groups } = opposing(await reqTab(base));
-        expect(groups.map((g) => g[1])).toEqual(['cf:SG-1:R-A-1:R-A-2', 'cf:SG-2:R-A-1:R-B-1', 'cf:SG-1:R-A-2:R-A-3', 'sg:SG-2', 'sg:SG-1']);
-        const head = tail.indexOf('<h2>Pairs without a declared conflict, by softgoal (5)</h2>');
-        expect(head).toBeGreaterThan(tail.lastIndexOf('<details data-key="cf:'));
-        expect(head).toBeLessThan(tail.indexOf('<details data-key="sg:'));
-        const sg = groups.slice(3);
-        expect(sg.map((g) => [g[1], !!g[2], g[3], g[4]])).toEqual([
-            ['sg:SG-2', false, 'SG-2 Reversibility', '4 pairs'],
-            ['sg:SG-1', false, 'SG-1 Low cognitive load', '1 pair'],
-        ]);
-        const rows = sg.map((g) => softgoalPairs(g[5]));
-        expect(rows).toEqual([
-            [['R-A · first, second, third', 'R-A-2', 'R-A-1'], ['R-C · fifth, sixth', 'R-C-1', 'R-A-1'], ['R-C · fifth, sixth', 'R-C-2', 'R-A-1'], ['(unclustered)', 'R-B-2', 'R-A-1']],
-            [['R-A · first, second, third', 'R-A-1', 'R-B-1']],
-        ]);
-        // Every pair of /api/requirements once: in a conflict group or in the group of its softgoal, never both.
-        const key = (a: string, b: string, s: string) => a + ' ' + b + ' ' + s;
-        const placed = [
-            ...groups.slice(0, 3).flatMap((g) => conflictPairs(g[5]).map(([a, b, s]) => key(a, b, s.split(' ')[0]))),
-            ...sg.flatMap((g, i) => rows[i].map(([, a, b]) => key(a, b, g[1].slice(3)))),
-        ];
-        expect(placed.slice().sort()).toEqual(d.goalModel.opposing.map((p: Stub) => key(p.a, p.b, p.softgoal)).sort());
-        expect(sg.reduce((n, g) => n + Number(g[4].split(' ')[0]), 0)).toBe(5);
+        const html = await reqTab(base);
+        expect(html).not.toContain('Pairs without a declared conflict');
+        expect(html).not.toContain('data-key="sg:');
+        const at = ['<h2>Softgoal balance</h2>', '<h2>Clusters by macro goal</h2>', '<h2>Opposing contributions</h2>'].map((h) => html.indexOf(h));
+        expect(at[0]).toBeGreaterThan(html.indexOf('<details data-key="(unclustered)"'));
+        expect(at).toEqual(at.slice().sort((a, b) => a - b));
+        expect(opposing(html).groups.map((g) => g[1])).toEqual(['cf:SG-1:R-A-1:R-A-2', 'cf:SG-2:R-A-1:R-B-1', 'cf:SG-1:R-A-2:R-A-3']);
     });
 
-    test('kills "an opened softgoal group forgotten": a softgoal group opened by this viewer opens again, the others stay closed', async () => {
+    // ── the softgoal balance, the matrix and the side effects (P-2026-10-11-1735) ──
+
+    const between = (s: string, from: string, to: string) => { const a = s.indexOf(from); expect(a, from).toBeGreaterThan(-1); const b = s.indexOf(to, a + from.length); return s.slice(a, b < 0 ? undefined : b); };
+    const balanceOf = (html: string) => between(html, '<h2>Softgoal balance</h2>', '<h2>Clusters by macro goal</h2>');
+    /** The blocks of the balance: [heading, its description or null, its softgoal ids]. */
+    const blocks = (html: string) => balanceOf(html).split('<div class="sb-mg"').slice(1).map((b) => [
+        /<h3>([^<]*)<\/h3>/.exec(b)![1], (/<p class="sb-mgd">([^<]*)<\/p>/.exec(b) || [null, null])[1], [...b.matchAll(/<div class="sb-sg" data-sg="([^"]+)">/g)].map((m) => m[1]),
+    ]);
+    /** One softgoal of the balance: its bar row (label, left side, hurt bar, right side, segments), its chips, its open list. */
+    function bar(html: string, sg: string) {
+        const b = balanceOf(html);
+        const at = b.indexOf('<div class="sb-sg" data-sg="' + sg + '">');
+        expect(at, sg).toBeGreaterThan(-1);
+        const next = b.slice(at + 1).search(/<div class="sb-(sg|mg)"/);
+        const s = next < 0 ? b.slice(at) : b.slice(at, at + 1 + next);
+        const row = between(s, '<div class="sb-row">', '<div class="sb-chips">');
+        const lab = /<b[^>]*>([^<]*)<\/b><span class="sb-n">([^<]*)<\/span>/.exec(row)!;
+        return {
+            row, label: [lab[1], lab[2]],
+            left: Number(/class="sb-l" style="width:([\d.]+)px"/.exec(row)![1]),
+            right: Number(/class="sb-r" style="width:([\d.]+)px"/.exec(row)![1]),
+            hurt: Number((/class="sb-hurt" style="width:([\d.]+)px"/.exec(row) || [0, 0])[1]),
+            segs: [...row.matchAll(/<span class="sb-seg (sb-b[01])( sb-on)?" data-sb-sg="([^"]+)" data-sb-cl="([^"]+)" data-n="(\d+)" style="width:([\d.]+)px" title="([^"]*)"><\/span>/g)]
+                .map((m) => ({ blue: m[1], on: !!m[2], sg: m[3], cl: m[4], n: Number(m[5]), w: Number(m[6]), title: m[7] })),
+            chips: [...between(s, '<div class="sb-chips">', '</div>').matchAll(/<span class="sb-chip" title="([^"]*)">([^<]+)<\/span>/g)].map((m) => [m[2], m[1]]),
+            open: s.includes('<div class="sb-open">') ? s.slice(s.indexOf('<div class="sb-open">')) : null,
+        };
+    }
+    const columns = (open: string) => open.split('<div class="sb-col">').slice(1);
+    const listRows = (col: string) => [...col.matchAll(/<div class="sb-li"><span class="sb-id">([^<]+)<\/span><span class="sb-t"[^>]*>([^<]*)<\/span><span class="sb-k">([^<]*)<\/span><span class="sb-e">([^<]*)<\/span><\/div>/g)].map((m) => m.slice(1, 5));
+    const SGS = ['SG-1', 'SG-3', 'SG-2', 'SG-4'];
+    const UNCL_NAME = 'Unclustered: rows no prompt co-cites';
+
+    /** The tab on the stub DOM with its stylesheet; `click(selector, dataset)` clicks an element that answers `closest(selector)`. */
+    async function reqDom(base: string, store: Record<string, string> = {}) {
+        const d = dom(base, store);
+        const styles: string[] = [];
+        const byId = d.ctx.document.getElementById;
+        d.ctx.document.getElementById = (id: string) => (id === 'rq-css' ? null : byId(id));
+        d.ctx.document.head.appendChild = (e: Stub) => { styles.push(e.innerHTML); };
+        d.run(await text(base, '/requirements.js'));
+        await d.ctx.REQ.refresh();
+        const box = d.el('req');
+        const click = (selector: string, dataset: Record<string, string>) => {
+            for (const f of box.on.click || []) f({ target: { closest: (s: string) => (s === selector ? { dataset } : null) } });
+            return box.innerHTML as string;
+        };
+        return { d, css: () => styles.join('\n'), html: () => box.innerHTML as string, click };
+    }
+    /** The tab drawn from the board's /api/requirements after `edit` changed it. */
+    async function reqTabFrom(base: string, edit: (doc: Stub) => void): Promise<string> {
+        const doc = JSON.parse(await text(base, '/api/requirements'));
+        edit(doc);
+        const d = dom(base);
+        d.ctx.fetch = async () => ({ json: async () => doc });
+        d.run(await text(base, '/requirements.js'));
+        await d.ctx.REQ.refresh();
+        return d.el('req').innerHTML;
+    }
+
+    test('kills "no block per macro goal", "blocks out of tree order", "a softgoal in no macro goal dropped", "the Other block first", "a softgoal twice", "no description line", "the label counts swapped", "unrealized rows counted": one block per macro goal in tree order, its softgoals in its order, then Other softgoals; one bar row per softgoal labelled with id, name and counts', async () => {
+        const html = await reqTab((await reqBoard()).base);
+        expect(blocks(html)).toEqual([
+            ['MG-1 Usability', MG1_DESC.replace(' — ', ' · '), ['SG-1', 'SG-3']],
+            ['MG-2 Dependability', 'The work survives.', ['SG-2']],
+            ['Other softgoals', null, ['SG-4']],
+        ]);
+        expect(SGS.map((sg) => bar(html, sg).label)).toEqual([
+            ['SG-1 Low cognitive load', '1 help · 2 hurt'], ['SG-3 Demo readiness', '2 help · 0 hurt'],
+            ['SG-2 Reversibility', '5 help · 1 hurt'], ['SG-4 Determinism', '1 help · 0 hurt'],
+        ]);
+    });
+
+    test('kills "no Other block without a tree", "an empty tree drops the softgoals": with an empty tree every softgoal sits in Other softgoals, in softgoals order, and the matrix has the Other column alone', async () => {
+        const html = await reqTabFrom((await reqBoard()).base, (doc) => { doc.goalModel.tree = []; });
+        expect(blocks(html)).toEqual([['Other softgoals', null, ['SG-1', 'SG-2', 'SG-3', 'SG-4']]]);
+        expect(matrix(html).head).toEqual(['Cluster', 'Other']);
+    });
+
+    test('kills "one segment per row", "segments not summing to the help count", "segments by key, not largest first", "ties by key, not in cluster order", "one blue", "no cluster name or count in the title": per softgoal, one segment per cluster of the rows that help, the largest first (ties in the order of the cluster list, unclustered last), two blues alternating', async () => {
+        const html = await reqTab((await reqBoard()).base);
+        const sg2 = bar(html, 'SG-2');
+        expect(sg2.segs.map((s) => [s.cl, s.n, s.blue])).toEqual([['R-C-1', 2, 'sb-b0'], ['(unclustered)', 2, 'sb-b1'], ['R-A-1', 1, 'sb-b0']]);
+        expect(sg2.segs.map((s) => s.title)).toEqual(['R-C · fifth, sixth · 2 rows help SG-2', UNCL_NAME + ' · 2 rows help SG-2', 'R-A · first, second, third · 1 row helps SG-2']);
+        for (const sg of SGS) {
+            const b = bar(html, sg);
+            expect(b.segs.reduce((n, s) => n + s.n, 0), sg).toBe(Number(b.label[1].split(' ')[0]));
+            expect(b.segs.every((s) => s.sg === sg), sg).toBe(true);
+        }
+        expect(bar(html, 'SG-3').segs.map((s) => [s.cl, s.n])).toEqual([['R-A-1', 2]]);
+    });
+
+    test('kills "a scale per softgoal", "a width not proportional to the count", "the left side as wide as its own hurt", "the scale not from the largest side", "a right side of free width": one scale for the section, so equal counts give equal widths across softgoals, every axis at the same x, and the largest bar fills the track', async () => {
+        const html = await reqTab((await reqBoard()).base);
+        const bars = SGS.map((sg) => bar(html, sg));
+        const px = bars[2].segs[2].w; // SG-2, the one row of R-A-1
+        for (const b of bars) for (const s of b.segs) expect(Math.abs(s.w - s.n * px), s.sg + ' ' + s.cl).toBeLessThan(0.02);
+        // Equal counts, equal widths, across softgoals: one row in SG-1, SG-2 and SG-4; two rows in SG-3 and SG-2.
+        expect(new Set([bars[0].segs[0].w, bars[2].segs[2].w, bars[3].segs[0].w]).size).toBe(1);
+        expect(new Set([bars[1].segs[0].w, bars[2].segs[0].w, bars[2].segs[1].w]).size).toBe(1);
+        // The hurt side on the same scale: SG-1's two rows as wide as two helping rows, SG-2's one as one, SG-4 none.
+        expect([bars[0].hurt, bars[2].hurt, bars[3].hurt]).toEqual([bars[1].segs[0].w, px, 0]);
+        // Aligned axes: every left side is as wide as the largest hurt (SG-1, two rows); every right side alike.
+        expect(new Set(bars.map((b) => b.left))).toEqual(new Set([bars[0].hurt]));
+        expect(new Set(bars.map((b) => b.right)).size).toBe(1);
+        // The scale comes from the largest sides: SG-2's five rows and two gaps fill the right side, to 0.05 px.
+        const used = bars[2].segs.reduce((n, s) => n + s.w, 0) + 2 * (bars[2].segs.length - 1);
+        expect(Math.abs(bars[2].right - used)).toBeLessThan(0.05);
+    });
+
+    test('kills "chips from the help side", "unrealized rows as chips", "no title on a chip": under each bar, one chip per row that hurts its softgoal, in id order, the row title in title', async () => {
+        const html = await reqTab((await reqBoard()).base);
+        expect(SGS.map((sg) => bar(html, sg).chips)).toEqual([[['R-A-2', 'Second.'], ['R-B-1', 'Fourth.']], [], [['R-A-1', 'First.']], []]);
+    });
+
+    test('kills "no click handler", "the list of every helping row", "the list of another cluster", "no hurting rows beside", "two lists on one softgoal", "a second click does not close", "the open list not remembered": a click on a segment opens under its softgoal the cluster\'s helping rows beside the hurting rows, one list per softgoal, remembered', async () => {
         const { base } = await reqBoard();
-        const { groups } = opposing(await reqTab(base, { 'laneREQ.open': '["sg:SG-1"]' }));
-        expect(groups.filter((g) => g[2]).map((g) => g[1])).toEqual(['sg:SG-1']);
+        const t = await reqDom(base);
+        expect(SGS.map((sg) => bar(t.html(), sg).open)).toEqual([null, null, null, null]);
+        let html = t.click('[data-sb-cl]', { sbSg: 'SG-2', sbCl: '(unclustered)' });
+        const [help, hurt] = columns(bar(html, 'SG-2').open!);
+        expect(listRows(help)).toEqual([['R-B-1', 'Fourth.', 'some+', 'read'], ['R-B-2', 'Seventh.', 'help', 'read']]);
+        expect(listRows(hurt)).toEqual([['R-A-1', 'First.', 'hurt', 'read']]);
+        expect(help).toContain(UNCL_NAME);
+        expect(bar(html, 'SG-2').segs.map((s) => s.on)).toEqual([false, true, false]);
+        for (const sg of ['SG-1', 'SG-3', 'SG-4']) expect(bar(html, sg).open, sg).toBe(null);
+        expect(JSON.parse(t.d.ls.get('laneREQ.sbOpen')!)).toEqual({ 'SG-2': '(unclustered)' });
+        // Another segment of the same softgoal replaces the list; a segment of another softgoal opens one there too.
+        html = t.click('[data-sb-cl]', { sbSg: 'SG-2', sbCl: 'R-C-1' });
+        expect(listRows(columns(bar(html, 'SG-2').open!)[0]).map((r) => r[0])).toEqual(['R-C-1', 'R-C-2']);
+        html = t.click('[data-sb-cl]', { sbSg: 'SG-1', sbCl: 'R-A-1' });
+        expect(columns(bar(html, 'SG-1').open!).map((c) => listRows(c).map((r) => r[0]))).toEqual([['R-A-1'], ['R-A-2', 'R-B-1']]);
+        expect(html.split('<div class="sb-open">').length - 1).toBe(2);
+        // Remembered per viewer: a new page with this store opens the same two lists.
+        const again = await reqTab(base, { 'laneREQ.sbOpen': t.d.ls.get('laneREQ.sbOpen')! });
+        expect(['SG-1', 'SG-2'].map((sg) => listRows(columns(bar(again, sg).open!)[0]).map((r) => r[0]))).toEqual([['R-A-1'], ['R-C-1', 'R-C-2']]);
+        // A second click on the open segment closes its list.
+        html = t.click('[data-sb-cl]', { sbSg: 'SG-1', sbCl: 'R-A-1' });
+        expect(bar(html, 'SG-1').open).toBe(null);
+        expect(JSON.parse(t.d.ls.get('laneREQ.sbOpen')!)).toEqual({ 'SG-2': 'R-C-1' });
+    });
+
+    test('kills "the list inside the bar row", "a row of free height", "the open segment marked by its box": a bar row is the same markup at the same fixed height with its list open or closed', async () => {
+        const { base } = await reqBoard();
+        const t = await reqDom(base);
+        const before = bar(t.html(), 'SG-2').row;
+        const after = bar(t.click('[data-sb-cl]', { sbSg: 'SG-2', sbCl: 'R-C-1' }), 'SG-2').row;
+        expect(after).not.toContain('sb-open');
+        expect(after).toContain(' sb-on');
+        expect(after.replace(' sb-on', '')).toBe(before);
+        const css = t.css();
+        expect(cssRule(css, '.sb-row')).toMatch(/(?:^|[{;])height:\d+px/);
+        expect(cssRule(css, '.sb-on')).not.toMatch(/border|margin|padding|width|height/);
+    });
+
+    /** The matrix: its header cells, its rows as [cluster, ...cells as [text, step, key, red minus]], its open detail. */
+    function matrix(html: string) {
+        const m = between(html, '<h2>Clusters by macro goal</h2>', '<h2>Opposing contributions</h2>');
+        const table = between(m, '<table', '</table>');
+        const head = [...between(table, '<thead>', '</thead>').matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((x) => x[1]);
+        const rows = [...between(table, '<tbody>', '</tbody>').matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((r) => {
+            const cells = [...r[1].matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/g)];
+            return [cells[0][2], ...cells.slice(1).map((c) => [c[2].replace(/<[^>]+>/g, ''), (/mx-s(\d)/.exec(c[1]) || [0, ''])[1], (/data-mx="([^"]*)"/.exec(c[1]) || [0, ''])[1], /class="rq-hurt"/.test(c[2])])] as any[];
+        });
+        const open = m.includes('<div class="mx-open">') ? m.slice(m.indexOf('<div class="mx-open">')) : null;
+        return { head, rows, open };
+    }
+
+    test('kills "a row counted once per contribution", "unrealized rows counted", "help and hurt swapped", "clusters out of the list order", "unclustered not last", "no Other column", "a step not by h + k", "the minus always red": one row per cluster, one column per macro goal and Other, +h / -k per cell against a hand count', async () => {
+        const mx = matrix(await reqTab((await reqBoard()).base));
+        expect(mx.head).toEqual(['Cluster', 'MG-1 Usability', 'MG-2 Dependability', 'Other']);
+        // R-A-1 helps SG-1 and SG-3 (both MG-1): one row. R-A-2 hurts SG-1 and helps SG-3: once on each side. R-A-3 is not realized.
+        expect(mx.rows.map((r) => [r[0], ...r.slice(1).map((c: any) => c[0])])).toEqual([
+            ['R-A · first, second, third', '+2 / −1', '+1 / −1', ''],
+            ['R-C · fifth, sixth', '', '+2 / −0', '+1 / −0'],
+            [UNCL_NAME, '+0 / −1', '+2 / −0', ''],
+        ]);
+        // Five steps of one blue by h + k, the largest 3: 3 -> 5, 2 -> 4, 1 -> 2; an empty cell has no step and no key.
+        expect(mx.rows.map((r) => r.slice(1).map((c: any) => c[1]))).toEqual([['5', '4', ''], ['', '4', '2'], ['2', '4', '']]);
+        expect(mx.rows.map((r) => r.slice(1).map((c: any) => c[2]))).toEqual([['R-A-1|MG-1', 'R-A-1|MG-2', ''], ['', 'R-C-1|MG-2', 'R-C-1|(other)'], ['(unclustered)|MG-1', '(unclustered)|MG-2', '']]);
+        expect(mx.rows.map((r) => r.slice(1).map((c: any) => c[3]))).toEqual([[true, true, false], [false, false, false], [true, false, false]]);
+    });
+
+    test('kills "no cell click", "the rows of another cell", "a row twice in the detail", "contributions to other macro goals shown", "a second click does not close", "the open cell not remembered", "a click moves the matrix": a click on a cell lists under the matrix the rows behind it, each once, with their contributions to that macro goal\'s softgoals', async () => {
+        const { base } = await reqBoard();
+        const t = await reqDom(base);
+        const before = matrix(t.html());
+        expect(before.open).toBe(null);
+        const mx = matrix(t.click('[data-mx]', { mx: 'R-A-1|MG-1' }));
+        const items = [...mx.open!.matchAll(/<div class="mx-li"><span class="sb-id">([^<]+)<\/span><span class="sb-t"[^>]*>([^<]*)<\/span><span class="mx-cs">([\s\S]*?)<\/span><\/div>/g)]
+            .map((m) => [m[1], m[2], [...m[3].matchAll(/<span class="rq-c[^"]*"[^>]*>([^<]+)<\/span>/g)].map((c) => c[1])]);
+        expect(items).toEqual([['R-A-1', 'First.', ['+SG-1', '+SG-3']], ['R-A-2', 'Second.', ['−SG-1', '+SG-3']]]);
+        expect(mx.rows.map((r) => r.slice(1).map((c: any) => c.slice(0, 3)))).toEqual(before.rows.map((r) => r.slice(1).map((c: any) => c.slice(0, 3))));
+        expect(t.d.ls.get('laneREQ.mxOpen')).toBe('R-A-1|MG-1');
+        expect(matrix(await reqTab(base, { 'laneREQ.mxOpen': 'R-C-1|(other)' })).open).toContain('R-C-1');
+        expect(matrix(t.click('[data-mx]', { mx: 'R-A-1|MG-1' })).open).toBe(null);
+        expect(t.d.ls.get('laneREQ.mxOpen')).toBe('');
+    });
+
+    const CORR = [
+        { from: 'SG-2', to: 'SG-1', kind: 'some-', witnesses: ['R-B-1', 'R-A-1'], evidence: 'read', verified: 'agent', why: 'Undo costs load — a second path.' },
+        { from: 'SG-4', to: 'SG-2', kind: 'help', witnesses: ['R-C-1'], evidence: 'read', verified: 'agent', why: 'Replay helps undo.' },
+        { from: 'SG-3', to: 'SG-2', kind: 'some-', witnesses: ['R-A-2'], evidence: 'inferred', verified: 'none', why: 'Scripted demos fix the history.' },
+        { from: 'SG-1', to: 'SG-3', kind: 'some+', witnesses: ['R-A-1'], evidence: 'read', verified: 'agent', why: 'A light screen demos well.' },
+    ];
+    let corrBoard: Promise<{ base: string; reqRuns: () => number }> | null = null;
+
+    test('kills "the group without links", "no group with links", "links in file order", "ordered by from only", "ordered by softgoal id", "the group open by default", "no witness chips", "no why in title": side effects between softgoals, a closed group after the matrix only when correlations.json has links, ordered by the macro goal of from, then of to', async () => {
+        expect(await reqTab((await reqBoard()).base)).not.toContain('Side effects between softgoals');
+        const { base } = await (corrBoard ||= board(fixtureRepo(CORR)));
+        const html = await reqTab(base);
+        const g = /<details data-key="corr"( open)?><summary><b>([^<]*)<\/b>[\s\S]*?<\/summary>([\s\S]*?)<\/details>/.exec(html);
+        expect(g).not.toBe(null);
+        expect([!!g![1], g![2]]).toEqual([false, 'Side effects between softgoals (4)']);
+        expect(html.indexOf('<details data-key="corr"')).toBeGreaterThan(html.indexOf('<h2>Clusters by macro goal</h2>'));
+        expect(html.indexOf('<details data-key="corr"')).toBeLessThan(html.indexOf('<h2>Opposing contributions</h2>'));
+        const links = [...g![3].matchAll(/<div class="cx-li" title="([^"]*)"><span class="cx-sg"[^>]*>([^<]*)<\/span><span class="cx-to">→<\/span><span class="cx-sg"[^>]*>([^<]*)<\/span><span class="rq-c[^"]*">([^<]*)<\/span><span class="cx-w">([\s\S]*?)<\/span><\/div>/g)]
+            .map((m) => [m[2].split(' ')[0], m[3].split(' ')[0], m[4], [...m[5].matchAll(/<span class="cx-chip"[^>]*>([^<]+)<\/span>/g)].map((c) => c[1]).join(' '), m[1]]);
+        expect(links).toEqual([
+            ['SG-1', 'SG-3', 'some+', 'R-A-1', 'A light screen demos well.'],
+            ['SG-3', 'SG-2', 'some-', 'R-A-2', 'Scripted demos fix the history.'],
+            ['SG-2', 'SG-1', 'some-', 'R-B-1 R-A-1', 'Undo costs load · a second path.'],
+            ['SG-4', 'SG-2', 'help', 'R-C-1', 'Replay helps undo.'],
+        ]);
+        expect(html).not.toContain('—');
     });
 
     test('kills "the em dash of req-trace rendered": a cluster title reads " · " where req-trace writes " — ", and no em dash is left in the tab', async () => {
@@ -472,15 +688,16 @@ describe('the board: the Requirements route, its asset and its tab', () => {
         const { base } = await reqBoard();
         const html = await reqTab(base);
         const tables = [...html.matchAll(/<table([^>]*)>(<colgroup>[\s\S]*?<\/colgroup>)?<thead><tr><th[^>]*>([^<]*)/g)];
-        expect(tables.length).toBe(5 + 2 + 2);
+        expect(tables.length).toBe(5 + 2 + 1);
         const kinds = new Map<string, string[]>();
         for (const t of tables) {
             expect(t[1]).toBe(' class="rq-t"');
             expect(t[2]).toMatch(/^<colgroup>(<col( style="width:\d+px")?>)+<\/colgroup>$/);
             kinds.set(t[3], [...(kinds.get(t[3]) || []), t[2]]);
         }
-        expect([...kinds].map(([k, cs]) => [k, cs.length, new Set(cs).size])).toEqual([['Requirement', 5, 1], ['Helps', 2, 1], ['Cluster', 2, 1]]);
-        expect(kinds.get('Cluster')![0]).toMatch(/^<colgroup><col style="width:\d+px">/);
+        expect([...kinds].map(([k, cs]) => [k, cs.length, new Set(cs).size])).toEqual([['Requirement', 5, 1], ['Cluster', 1, 1], ['Helps', 2, 1]]);
+        // The cluster by macro goal matrix: the cluster column takes the rest, every macro-goal column has its width.
+        expect(kinds.get('Cluster')![0]).toMatch(/^<colgroup><col>(<col style="width:\d+px">){3}<\/colgroup>$/);
     });
 
     // ── the written descriptions (P-2026-10-11-1510) ──

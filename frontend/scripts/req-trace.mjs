@@ -34,7 +34,12 @@
  *              to the first milestone on or after the date of its first commit.
  *   goalModel  docs/goals/softgoals.json and contributions.json (conflicts.json
  *              optional), when present: per cluster the help and hurt totals per
- *              softgoal, and the realized rows that pull a softgoal both ways.
+ *              softgoal, and the realized rows that pull a softgoal both ways
+ *              (opposing, every pair). tree: docs/goals/goal-tree.json as written,
+ *              correlations: docs/goals/correlations.json as written, each [] when
+ *              absent (P-2026-10-11-1735). balance: per softgoal, in softgoals
+ *              order, {softgoal, help, hurt}, the realized rows that help it and
+ *              that hurt it, in id order; opposing is the product of the two.
  *
  * The git side (the typed commits and their trunk merges) is cached in
  * <cache-dir>/<trunk sha>.json, by default in the system temp folder: a new
@@ -528,7 +533,7 @@ export function assignMilestones(rows, milestones) {
 export function joinGoals(rows, clusters, goals) {
     if (!goals) {
         rows.forEach((r) => { r.contributions = []; });
-        return { present: false, softgoals: [], conflicts: [], opposing: [] };
+        return { present: false, softgoals: [], conflicts: [], opposing: [], tree: [], correlations: [], balance: [] };
     }
     const byReq = new Map();
     for (const c of goals.contributions || []) {
@@ -546,13 +551,18 @@ export function joinGoals(rows, clusters, goals) {
         cl.goals = totals;
     }
     const opposing = [];
+    const balance = [];
     const realized = rows.filter((r) => r.realized);
     for (const sg of goals.softgoals || []) {
         const pos = realized.filter((r) => r.contributions.some((c) => c.softgoal === sg.id && POSITIVE.has(c.kind)));
         const neg = realized.filter((r) => r.contributions.some((c) => c.softgoal === sg.id && NEGATIVE.has(c.kind)));
         for (const a of pos) for (const b of neg) if (a.id !== b.id) opposing.push({ a: a.id, b: b.id, softgoal: sg.id });
+        balance.push({ softgoal: sg.id, help: pos.map((r) => r.id).sort(byId), hurt: neg.map((r) => r.id).sort(byId) });
     }
-    return { present: true, softgoals: goals.softgoals || [], conflicts: goals.conflicts || [], opposing };
+    return {
+        present: true, softgoals: goals.softgoals || [], conflicts: goals.conflicts || [], opposing,
+        tree: goals.tree || [], correlations: goals.correlations || [], balance,
+    };
 }
 
 const readJson = (path) => (existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : null);
@@ -596,7 +606,10 @@ export function trace({ repo, trunk = DEFAULT_TRUNK, withRc = false, cacheDir = 
 
     const softgoals = readJson(join(goalsDir, 'softgoals.json'));
     const contributions = readJson(join(goalsDir, 'contributions.json'));
-    const goalModel = joinGoals(rows, clusters, softgoals && contributions ? { softgoals, contributions, conflicts: readJson(join(goalsDir, 'conflicts.json')) || [] } : null);
+    const goalModel = joinGoals(rows, clusters, softgoals && contributions ? {
+        softgoals, contributions, conflicts: readJson(join(goalsDir, 'conflicts.json')) || [],
+        tree: readJson(join(goalsDir, 'goal-tree.json')) || [], correlations: readJson(join(goalsDir, 'correlations.json')) || [],
+    } : null);
 
     const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).stdout.trim() || null;
     const count = (f) => rows.filter(f).length;
