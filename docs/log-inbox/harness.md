@@ -1028,3 +1028,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile in this lane (harness and data); the chat RC-23 check on 4702 passed on 2026-10-11 (1005 contributions on rows, equal to the file; 16 mixed realized rows on both sides of their bars; SG-5 shows R-SIM-122; no em dash).
 **Notes**: Parser: 520 to 523 rows, only the three appear. Mixed: 25 added (2 of 27 quote a neighbouring bullet), 23 confirmed, 2 regraded; SG-5 gets its first cost. SG-3: 33 confirmed, 6 regraded, 18 removed. 998 to 1005 entries; opposing pairs 6569 to 7173. Same sign: refused and listed in `goalModel.duplicates`. New cases 5 of 6 red on the base; bench 11/11. Second Causa letter: (a). Eight unattended decisions in report §8.
 **Prompt document name**: 2026-10-11 20:25
+
+## 2026-10-11 — merge: cluster-desc-refresh into alfonso-frontend-jjtl (P-2026-10-11-2328)
+**Prompt**: `claude_2026-10-11_2328_prompt_merge_cluster-desc-refresh.md`, a direct merge by `lane-run merge --direct`, no session: `cluster-desc-refresh` at `b12def15d` into `alfonso-frontend-jjtl`, merge base `2f778e9d6`, 2 commits on the branch side.
+**Files touched**: merge `56af77b88`: 1 files from the branch side (`docs/goals/cluster-descriptions.json`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `56af77b88` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8711 tests in 359 files, 9 red at import, hooks 681; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge of cluster-descriptions.json; req-trace no drift, no orphan
+**Notes**: Rollback tag `pre-cluster-desc-refresh` on `6ab64e126` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-2328/result.json`.
+**Prompt document name**: 2026-10-11 23:28
