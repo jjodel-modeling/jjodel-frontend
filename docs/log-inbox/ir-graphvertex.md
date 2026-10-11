@@ -152,3 +152,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Alfonso visual GO 2026-10-11 00:03 on ir-graphvertex; fixtures re-run on 7523373cb (BPMN 31/31, statechart 7/7)
 **Notes**: Rollback tag `pre-ir-graphvertex` on `294a29084` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-0059/result.json`.
 **Prompt document name**: 2026-10-11 00:59
+
+## 2026-10-11 — fix(ir): graphVertex frame follows a dragged child on four sides (P-2026-10-11-1156)
+**Prompt**: `claude_2026-10-11_1156_prompt_gv_drag_frame.md`, full lane on `~/jjodel-w-gvdrag` (`gv-drag-frame`): probe first (drag4, relayout), the four-side frame, a size set by hand as a floor, the pool record after Auto layout; LIR and question on `canvasToJjom.ts`, go-ahead by Alfonso 14:23 (one function), resumed by hand after the RC-19 hook; spec §12, R-GV-17, hard stop for the visual GO.
+**Files touched**: `2d2f75846`: `viewpoint/ir/` irPartitions, irContainment, tests irPartitions, irContainerLayout. `18569bcc3`, `d7b6914a4`: `EditorV2.tsx`, `sync/canvasToJjom.ts`, test syncPositionBatch (new). `7b23cfa74`: that test. `6fdf5be0d`: probes bpmn-lanes-fixture, statechart-fixture. `74ce6c94f`, `879276a2a`: LIR (new), `docs/discovery/assets/graphvertex-drag4/`, spec addendum §12, `docs/decisions.md` R-GV-17. This commit: this inbox file.
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-10-10 01:05 (`claude_2026-10-10_0105_prompt_graphvertex_bpmn_lanes_discovery.md`, slices S2 and S6)
+**Causa**: (c)
+**Regressions**: unknown. tsc 14 = the §17 set; full suite 8563, 9 known import failures; build 0; check:docs 5/5; check:scripts 82. Probes base→after: BPMN drag4+relayout+carry 36/55→55/55, statechart 41/52→48/52; S2, S3, S6 (rerun 6/6), S2b 7/7 green; S1 hull shots byte-identical; S6 flat as base. Unmeasured: derived viewpoints.
+**Out-of-scope changes**: yes (`canvasToJjom.ts`, granted mid-lane; two temporary worktrees at the base, removed; 13 files and the assets folder over 8 commits, above five)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — lane probes on 3121-3124, light theme, `docs/discovery/assets/graphvertex-drag4/`; Alfonso's visual GO pending (RC-23)
+**Notes**: Partial: 4 statechart reds are the open ticket below, (a) second. Closes the ticket «Auto layout writes a grown pool's size with its old position» (P-2026-10-11-0040): relayout 4/4. `lane-run ticket` closes only through `--backfill --plan`, which syncs every block to GitHub: not run. Bench: 20/20 on the frame; batch 4/5, B3 not re-run (shell edit of canvasToJjom.ts denied). Detail: `docs/lir/lir_2026-10-11_gv_drag_frame_box_write.md`.
+**Prompt document name**: 2026-10-11 11:56
+
+## 2026-10-11 — ticket: regions packed edge to edge cannot grow across their shared border
+**Ticket**: R-GV-17 grows a partition against the stack by moving the border with its neighbour, and the neighbour cannot give room its own children need. In the statechart fixture A1 and A2 meet with exactly 16 + 16 px between Waiting and Running's frame, so Fetch dragged 40 px up in Running, or Waiting 40 px down in A1, leaves A2's top gap at −24 and −16 px (4 reds of drag4). The earlier partition keeps its children by rule; whether a pushed partition should carry its children instead is open.
+**Priority**: medium
+**Found in**: P-2026-10-11-1156
+**Detail**: docs/discovery/assets/graphvertex-drag4/statechart-drag4-relayout-statechart-s6-after.json
+
+## 2026-10-11 — ticket: a child dragged out of a none container is framed again after the drop
+**Ticket**: with membership `none` (the statechart fixture), the frame stops following a child once the pointer leaves the box it had at rest, so the drag shows the child leaving; the drop is a plain move and the model is untouched, so the child is still a member and the frame, derived from its members, takes it back in at rest (Fetch dropped below Active: Running grows down to it). Measured by SC-fetch-out and SC-waiting-out of drag4.
+**Priority**: low
+**Found in**: P-2026-10-11-1156
+**Detail**: docs/spec/claude_spec_2026-10-10_ir_graphvertex_containment_addendum.md
