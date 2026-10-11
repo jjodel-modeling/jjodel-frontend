@@ -803,3 +803,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-11 11:50
 
 **Ticket** (P-2026-10-11-1150): the board resolves `Corregge` by the first Prompt-ID of the annotation before the timestamp prefix (`lane-board.mjs:968`): 2 of 164 entries misattributed, one marks the merge P-2026-10-11-1056 corrected instead of P-2026-10-10-2029. Fix planned in slice S1 of the report.
+
+## 2026-10-11 — merge: prov-digest into alfonso-frontend-jjtl (P-2026-10-11-1451)
+**Prompt**: `claude_2026-10-11_1451_prompt_merge_prov-digest.md`, a direct merge by `lane-run merge --direct`, no session: `prov-digest` at `b646a9a04` into `alfonso-frontend-jjtl`, merge base `4de76fb74`, 1 commit on the branch side.
+**Files touched**: merge `a98c3b1ce`: 1 files from the branch side (`docs/ratifiche/claude_ratifiche_2026-10-11_provisional_digest.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a98c3b1ce` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8612 tests in 356 files, 9 red at import, hooks 654; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge (provisional rows digest), no visual change
+**Notes**: Rollback tag `pre-prov-digest` on `239ca4266` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1451/result.json`.
+**Prompt document name**: 2026-10-11 14:51
