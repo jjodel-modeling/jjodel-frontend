@@ -177,3 +177,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-11-1156
 **Detail**: docs/spec/claude_spec_2026-10-10_ir_graphvertex_containment_addendum.md
+
+## 2026-10-11 — fix(ir): a frame follows its child while the pointer is in a band (P-2026-10-11-1156)
+**Prompt**: correction of P-2026-10-11-1156 after Alfonso's visual check (15:58): a dragged child grew the frame a few pixels, then left it. The follow test reads the cursor against the container's box at rest grown by a 32 px band; band and leave cases in the unit tests and in drag4; reruns, gates, R-GV-17 and spec §12 amended, hard stop for the visual GO.
+**Files touched**: `efb97f948`: `viewpoint/ir/irContainment.ts`, `EditorV2.tsx`, test irContainerLayout. `dda304dbb`: that test. `76f741e2a`: `frontend/scripts/probe/bpmn-lanes-fixture.ts`. `23f78e4c8`: spec addendum §12, `docs/decisions.md` R-GV-17, `docs/discovery/assets/graphvertex-drag4/`. This commit: R-GV-17 rewrapped, this inbox entry.
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-10-11 11:56 (`claude_2026-10-11_1156_prompt_gv_drag_frame.md`, the frame's follow test)
+**Causa**: (d)
+**Regressions**: unknown. tsc 14 = the §17 set; full suite 8570, 9 known import failures; build 0; check:docs 5/5; check:scripts 82. Probes (tag band): BPMN 104/106 with S2, S3, S6 and carry; statechart 77/82 with S2b 7/7 and S6 3/3; hull shots byte-identical, S6 flat and hull as the base. Unmeasured: derived viewpoints.
+**Out-of-scope changes**: yes (`EditorV2.tsx`: the GO named `irContainment.ts` only, and the cursor reaches the pass only from React Flow's `onNodeDrag`)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probes on 3123-3124, light theme, `docs/discovery/assets/graphvertex-drag4/` (tag band); Alfonso's visual GO pending (RC-23)
+**Notes**: Unit: 5 of the 7 band tests red on the previous module, 2 controls; bench 4/4. Reds: BPMN Ship dragged up into Sales and the 4 statechart ones, all the open tight-packing ticket; a relayout red was a fixture flake (rerun 7/7). The drop target is still read on the node's centre (S3): a press far from it, past the band, keeps the child where its centre stays in the box at rest.
+**Prompt document name**: 2026-10-11 11:56

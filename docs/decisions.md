@@ -5951,9 +5951,10 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   one record (`syncPositionBatchToJjom` with `w`/`h`, LIR `docs/lir/lir_2026-10-11_gv_drag_frame_box_write.md`). Decided
   unattended in the lane and kept here: the drop target is still resolved on the node's centre (S3), the follow test on
   the pointer; where two partitions' children leave no room for a border, the earlier partition keeps its children; a
-  self frame keeps its declared `padding` as its margin; a paired lane resize stops at the neighbour's children; after Auto layout a lane's record is compared on position and stack extent only (its cross size
-  is computed). Open: regions packed edge to edge, and a child moved out of a `none` container framed again after the drop
-  (inbox tickets of P-2026-10-11-1156).
+  self frame keeps its declared `padding` as its margin; a paired lane resize stops at the neighbour's children; after
+  Auto layout a lane's record is compared on position and stack extent only (its cross size is computed). Open:
+  partitions packed edge to edge, and a child moved out of a `none` container framed again after the drop (inbox
+  tickets of P-2026-10-11-1156).
 
 ## Superate
 
