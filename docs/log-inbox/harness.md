@@ -707,3 +707,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Backfill: 42 cards, 27 Backlog and 15 closed, 0 skipped; a rerun writes nothing. The plan is not in the code commit because the bash guard refuses docs and code together (P13). The addendum corrects the Phase 1 totals. track --sync --dry-run: #5 is no longer reopened and #6 goes Done. Until this branch merges, a sync with the trunk's lane-run moves #6 back to In review. Report: docs/discovery/discovery_2026-10-11_ticket_cards.md.
 **Prompt document name**: 2026-10-11 10:17
+
+## 2026-10-11 — merge: ticket-cards into alfonso-frontend-jjtl (P-2026-10-11-1127)
+**Prompt**: `claude_2026-10-11_1127_prompt_merge_ticket-cards.md`, a direct merge by `lane-run merge --direct`, no session: `ticket-cards` at `db0390b33` into `alfonso-frontend-jjtl`, merge base `96d38b2bf`, 6 commits on the branch side.
+**Files touched**: merge `bcffa0c76`: 8 files from the branch side (`docs/discovery/discovery_2026-10-11_ticket_cards.md`, `docs/harness/ticket-backfill-plan.txt`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-11_1017_prompt_ticket_cards.md`, `frontend/scripts/hooks/__tests__/fixtures/fake-gh.cjs`, `frontend/scripts/hooks/__tests__/laneTracking.test.ts`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-tracking.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bcffa0c76` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8530 tests in 352 files, 9 red at import, hooks 647; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only; chat check: 925/925 scripts tests, bench 29/29, backfill 42 cards
+**Notes**: Rollback tag `pre-ticket-cards` on `1328e35ff` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-1127/result.json`.
+**Prompt document name**: 2026-10-11 11:27
