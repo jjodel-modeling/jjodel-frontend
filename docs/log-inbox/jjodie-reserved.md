@@ -30,3 +30,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-10 00:45
 
 **Ticket** (high, freeze): a Jjodie chat message starting with `do` (for example "do not use copy") hangs the tab and then crashes the renderer. `parseBlockBody` never advances on an `eval` body (`parser.ts:182-186`, `:1041`). Lane P-2026-10-10-0810 (branch `do-freeze`), which owns `parser.ts`, is fixing it in parallel. Evidence: report §4.4.
+
+## 2026-10-11 — merge: jjodie-reserved into alfonso-frontend-jjtl (P-2026-10-11-0023)
+**Prompt**: `claude_2026-10-11_0023_prompt_merge_jjodie-reserved.md`, a merge in a lane-run session: `jjodie-reserved` at `e5d95a99c` into `alfonso-frontend-jjtl`, `--no-ff`, merge base `571392718`, 6 commits on the branch side.
+**Files touched**: merge `72762297b`: 11 files from the branch side (`docs/discovery/discovery_2026-10-10_jjodie_reserved_identifiers.md`, `docs/log-inbox/jjodie-reserved.md`, `frontend/src/components/Jodie/Jodie.tsx`, `Jodie/__tests__/reservedIdentifierGate.test.ts`, `Jodie/reservedIdentifierGate.ts`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/__tests__/reservedIdentifiers.test.ts`, `jjscript/components/ScriptBlock.tsx`, `jjscript/parser/lexer.ts`, `jjscript/reservedIdentifiers.ts`, `jjscript/types.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `72762297b` in the session: typecheck 14 errors, the §17 set; typecheck:scripts exit 0; vitest 8210 tests in 336 files (trunk tip 8180 in 334, plus the branch's 30 in 2 new files measured on `e5d95a99c`), the same 9 red at import; hooks 603 in 10 files; build exit 0; check:docs 5/5; check:agents green; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso, smoke on 3001, 2026-10-11
+**Notes**: merge-tree zero conflicts, tree `a4074da24` equal to the merge's index tree. Union: none. Probes: 21 decision rows once, control R-GEN-17 absent at the merge; 79 headings once. check:docs counted 5/5, not the prompt's 4/4 (Check E). No rollback tag (not asked). The lane's prompt P-2026-10-10-0045 still reads `Status: da eseguire`; not flipped here.
+**Prompt document name**: 2026-10-11 00:23
+
+**Ticket** (low, lane-run template): step 6 of `frontend/scripts/lane-templates/merge-into-trunk.md` renders the `check:addonly` fallback as `git reset --hard {{trunkTip}}`, «the pre-merge tip»; `{{trunkTip}}` is the parent of the prompt's own commit, so the reset would also drop the prompt. Here `dfdef69f1` against a real pre-merge tip `7b670fc45`. Not exercised: check:addonly passed.
