@@ -23,6 +23,17 @@ text, cut, on its second (next section). The estimate is a heuristic, not a prom
 measured median per kind, minus the elapsed time, corrected by the phase and the load
 average. Below it, the earlier lanes grouped by day, with their outcome.
 
+**When the status is slow.** `/api`, the data of the Lanes tab and the strip, runs
+`lane-run status --all` as a child process, one run at a time, killed after 15 s, and keeps
+the answer 10 s. A request that arrives while a run is in flight gets the last answer at once
+with `refreshing: true`. A run that fails or times out after a success answers that success's
+rows with `stale: true`, `staleSince` (ms of the success) and `error`; only before any success
+are the rows empty. The page draws stale rows and counts them in the strip, under an amber
+line `Status timed out at load <x>; showing data from <HH:MM:SS>.` in place of the red error.
+A spinner beside "updated at" turns while a request to `/api` or `/api/*` is in flight, from
+any tab, or while the last answer said `refreshing`, when the page asks again in 2 s; before
+the first answer the Running table reads "Loading lanes…".
+
 **Status strip.** Six pills end the tab bar, whichever tab is open: running,
 question, hard-stop, blocked, resolved and done in the last 24 hours, each with its
 count, in the outcome colours of the Lanes table (hard-stop in its soft green), a
