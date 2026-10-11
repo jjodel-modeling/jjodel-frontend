@@ -4461,6 +4461,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             moved.set(v, { x: rec.x + gvDrop.dx, y: rec.y + gvDrop.dy });
                         }
                         for (const [id, p] of moved) positionWrites.push({ id, ...p });
+                        // Its own record moves by the same delta, not to where it was dropped: its box may be drawn off
+                        // its record, grown by its children (R-GV-17), and the record keeps what was set by hand.
+                        const own = model.vertexByObj.get(gvDrop.objectId);
+                        if (own && idl[own]) {
+                            const rec = readVertexLayout(idl[own], key);
+                            const to = { x: rec.x + gvDrop.dx, y: rec.y + gvDrop.dy };
+                            const i = positionWrites.findIndex((w) => w.id === own);
+                            if (i !== -1) positionWrites[i] = { id: own, ...to };
+                            else positionWrites.push({ id: own, ...to });
+                            moved.set(own, to);
+                        }
                         if (moved.size > 0) setNodes(replaySafe((nds: Node[]) => nds.map((n) => moved.has(n.id) ? { ...n, position: moved.get(n.id)! } : n)));
                     }
                     if (gvDrop?.kind === 'edit') {

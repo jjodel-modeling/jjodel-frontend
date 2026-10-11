@@ -165,3 +165,76 @@ describe('resizePartitionBorder (paired border, sum constant)', () => {
         expect(resizePartitionBorder([80, 120], 0, Number.NaN)).toEqual([80, 120]);
     });
 });
+
+/**
+ * P-2026-10-11-1156 (R-GV-17): a partition that knows the box its children need (`cover`, absolute, its band and the
+ * margin included) is drawn around it on all four sides. Growing left or up moves the container's origin and keeps its
+ * far border; a size set by hand is a floor, never a ceiling; growth along the stack goes to the partition and pushes
+ * the next ones down, growth against the stack pushes the earlier ones and the origin up. The children are not inputs
+ * of the stack beyond their box, so they cannot move.
+ */
+describe('layoutPartitions — cover: the frame follows its children on four sides', () => {
+    // The BPMN fixture: Shop at (100, 100) sized by hand 900 x 360, band w 30; Sales and Warehouse sized by hand 180.
+    const pool = (sales: { x0: number; y0: number; x1: number; y1: number }, warehouse = { x0: 484, y0: 324, x1: 656, y1: 416 }, container: any = { x: 100, y: 100, w: 900, h: 360, isResized: true }) =>
+        layoutPartitions({
+            container, header: { side: 'w', size: 30 },
+            partitions: [{ stored: 180, isResized: true, content: 92, cover: sales }, { stored: 180, isResized: true, content: 92, cover: warehouse }],
+        });
+    it('inside the boxes it had, nothing moves: the cover only adds where the children need it', () => {
+        const l = pool({ x0: 274, y0: 144, x1: 456, y1: 236 });
+        expect(l.container).toEqual({ x: 100, y: 100, w: 900, h: 360 });
+        expect(l.partitions).toEqual([{ x: 130, y: 100, w: 870, h: 180 }, { x: 130, y: 280, w: 870, h: 180 }]);
+    });
+    it('a child past the left border moves the origin left, the band with it; the right border stays', () => {
+        const l = pool({ x0: 100, y0: 144, x1: 466, y1: 236 });
+        expect(l.container).toEqual({ x: 70, y: 100, w: 930, h: 360 });
+        expect(l.header).toEqual({ x: 70, y: 100, w: 30, h: 360 });
+        expect(l.partitions).toEqual([{ x: 100, y: 100, w: 900, h: 180 }, { x: 100, y: 280, w: 900, h: 180 }]);
+    });
+    it('a child past the right border grows the pool past the size set by hand: a floor, never a ceiling', () => {
+        const l = pool({ x0: 274, y0: 144, x1: 1040, y1: 236 });
+        expect(l.container).toEqual({ x: 100, y: 100, w: 940, h: 360 });
+        expect(l.partitions[1]).toEqual({ x: 130, y: 280, w: 910, h: 180 });
+    });
+    it('a child above the first partition moves the origin up; its bottom and the next partition stay', () => {
+        const l = pool({ x0: 274, y0: 60, x1: 456, y1: 236 });
+        expect(l.container).toEqual({ x: 100, y: 60, w: 900, h: 400 });
+        expect(l.partitions).toEqual([{ x: 130, y: 60, w: 870, h: 220 }, { x: 130, y: 280, w: 870, h: 180 }]);
+    });
+    it('a child below a partition sized by hand grows it past its size and pushes the next one down, size kept', () => {
+        const l = pool({ x0: 274, y0: 144, x1: 456, y1: 300 });
+        expect(l.extents).toEqual([200, 180]);
+        expect(l.partitions).toEqual([{ x: 130, y: 100, w: 870, h: 200 }, { x: 130, y: 300, w: 870, h: 180 }]);
+        expect(l.container).toEqual({ x: 100, y: 100, w: 900, h: 380 });
+    });
+    it('a child above the second partition grows it up; the first keeps its size and pushes the origin up', () => {
+        const l = pool({ x0: 274, y0: 114, x1: 456, y1: 206 }, { x0: 484, y0: 214, x1: 656, y1: 416 });
+        expect(l.partitions).toEqual([{ x: 130, y: 34, w: 870, h: 180 }, { x: 130, y: 214, w: 870, h: 246 }]);
+        expect(l.container).toEqual({ x: 100, y: 34, w: 900, h: 426 });
+    });
+    it('a partition not sized by hand reaches the margin past its lowest child wherever the stack starts it', () => {
+        const l = layoutPartitions({
+            container: { x: 100, y: 100 }, header: { side: 'w', size: 30 },
+            partitions: [{ content: 92, cover: { x0: 274, y0: 144, x1: 456, y1: 236 } }, { content: 92, cover: { x0: 484, y0: 324, x1: 656, y1: 416 } }],
+        });
+        expect(l.partitions).toEqual([{ x: 130, y: 100, w: 526, h: 136 }, { x: 130, y: 236, w: 526, h: 180 }]);
+        expect(l.container).toEqual({ x: 100, y: 100, w: 556, h: 316 });
+    });
+    it('when two partitions\' children leave no room for a border between them, the earlier partition keeps its children', () => {
+        const l = pool({ x0: 274, y0: 144, x1: 456, y1: 236 }, { x0: 484, y0: 220, x1: 656, y1: 416 });
+        // The border stays under the first partition's children, at 236; that partition keeps its size set by hand above it.
+        expect(l.partitions[0]).toEqual({ x: 130, y: 56, w: 870, h: 180 });
+        expect(l.partitions[1]).toEqual({ x: 130, y: 236, w: 870, h: 224 });
+        // Its border cannot go above 236; the second partition starts there.
+        const l2 = pool({ x0: 274, y0: 144, x1: 456, y1: 236 }, { x0: 484, y0: 200, x1: 656, y1: 416 });
+        expect(l2.partitions[1].y).toBe(236);
+    });
+    it('side by side, a child left of the second partition grows it left and pushes the first and the origin left', () => {
+        const l = layoutPartitions({
+            container: { x: 100, y: 100, w: 400, h: 200, isResized: true }, axis: 'horizontal', header: { side: 'n', size: 30 },
+            partitions: [{ stored: 200, isResized: true, cover: { x0: 120, y0: 150, x1: 240, y1: 250 } }, { stored: 200, isResized: true, cover: { x0: 260, y0: 150, x1: 480, y1: 250 } }],
+        });
+        expect(l.partitions).toEqual([{ x: 60, y: 130, w: 200, h: 170 }, { x: 260, y: 130, w: 240, h: 170 }]);
+        expect(l.container).toEqual({ x: 60, y: 100, w: 440, h: 200 });
+    });
+});

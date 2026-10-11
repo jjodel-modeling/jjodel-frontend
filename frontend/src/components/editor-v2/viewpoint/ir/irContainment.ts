@@ -654,14 +654,52 @@ export function applyContainerLayout(
             const n = v !== undefined ? byId.get(v) : undefined;
             return !!n && !n.hidden;
         });
+
+    // While a node is dragged (R-GV-17), the pass runs twice: once at rest (every dragged node at its record, nothing
+    // carried), for the boxes the containers had before the gesture; then live. A dragged node whose centre has left the
+    // box its container had at rest is pinned: that container, and the ones around it, count it where it rests, so the
+    // frame does not chase a child the pointer has taken out (the drop then follows the membership, S3).
+    let patch: Map<string, Partial<Box> & { z?: number; cls?: string }>;
+    if (!nodes.some(n => n.dragging)) {
+        patch = layoutPass(null, new Map()).patch;
+    } else {
+        const rest = layoutPass(null, new Map());
+        const pinned = new Map<string, Box>();
+        for (const n of nodes) {
+            if (!n.dragging) continue;
+            const o = model.objByVertex.get(n.id);
+            const parent = o !== undefined ? model.parentOf.get(o) : undefined;
+            const pb = parent !== undefined ? rest.boxOf(parent) : null;
+            const own = o !== undefined ? rest.boxOf(o) : null;
+            if (!pb || !own || !model.containers.get(parent!)?.layout) continue;
+            const s = sizeOf(n);
+            const cx = n.position.x + s.w / 2;
+            const cy = n.position.y + s.h / 2;
+            if (cx < pb.x || cx > pb.x + pb.w || cy < pb.y || cy > pb.y + pb.h) pinned.set(o!, own);
+        }
+        patch = layoutPass(rest.boxOf, pinned).patch;
+    }
+
+    function layoutPass(restBoxOf: ((objectId: string) => Box | null) | null, pinned: Map<string, Box>) {
+    const atRest = restBoxOf === null;
     const patch = new Map<string, Partial<Box> & { z?: number; cls?: string }>();
 
     // Drag offsets (S3): an object a dragged container carries, by object id. Empty until computed below, from the
-    // geometry at rest; every position read after that goes through `posOf`.
+    // geometry at rest; every position read after that goes through `posOf`. In the pass at rest a dragged node is read
+    // at its record.
     const offset = new Map<string, { x: number; y: number }>();
     const posOf = (n: Node, objectId: string | undefined) => {
+        if (atRest && n.dragging) { const r = recOf(n.id); return { x: r.x, y: r.y }; }
         const o = objectId !== undefined ? offset.get(objectId) : undefined;
         return o ? { x: n.position.x + o.x, y: n.position.y + o.y } : n.position;
+    };
+    // Where a container's own record sits now: its node's position at rest; dragged, its record moved by the drag (the
+    // node's move from the box it was drawn in at rest), so the far border of a size set by hand moves with it.
+    const anchorOf = (n: Node, objectId: string) => {
+        const was = !atRest && n.dragging ? restBoxOf!(objectId) : null;
+        if (!was) return posOf(n, objectId);
+        const r = recOf(n.id);
+        return { x: r.x + n.position.x - was.x, y: r.y + n.position.y - was.y };
     };
     const nodeBox = (objectId: string): Box => {
         const n = byId.get(model.vertexByObj.get(objectId)!)!;
@@ -692,7 +730,7 @@ export function applyContainerLayout(
                 ? { w: (node.measured?.width ?? node.width) as number | undefined, h: (node.measured?.height ?? node.height) as number | undefined, isResized: true }
                 : { w: rec.w, h: rec.h, isResized: !!rec.isResized };
             const frameOver = (kids: string[]) => frameBox({
-                children: kids.map(k => frameOf(k, seen) ?? stackOf(k) ?? nodeBox(k)),
+                children: kids.map(k => pinned.get(k) ?? frameOf(k, seen) ?? stackOf(k) ?? nodeBox(k)),
                 padding: info.layout!.padding, header: info.layout!.header, stored,
             });
             out = frameOver(visibleKids(objectId));
@@ -711,8 +749,9 @@ export function applyContainerLayout(
     };
 
     // What a container's own children need, as a box size (spec addendum §7.1, content), and, when they are not a stack,
-    // the far corner they need in absolute coordinates: their far edges plus the margin. Memoized, cycle-guarded.
-    type Need = { w: number; h: number; end?: { x: number; y: number } };
+    // the box they need in absolute coordinates: from their near edges less the margin and the band, to their far edges
+    // plus the margin (R-GV-17). Memoized, cycle-guarded.
+    type Need = { w: number; h: number; start?: { x: number; y: number }; end?: { x: number; y: number } };
     const needMemo = new Map<string, Need>();
     const needOf = (objectId: string, seen: Set<string> = new Set()): Need => {
         const memo = needMemo.get(objectId);
@@ -732,7 +771,7 @@ export function applyContainerLayout(
         } else if (kids.length > 0) {
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             for (const k of kids) {
-                const r = frameOf(k) ?? stackOf(k) ?? nodeBox(k);
+                const r = pinned.get(k) ?? frameOf(k) ?? stackOf(k) ?? nodeBox(k);
                 minX = Math.min(minX, r.x); minY = Math.min(minY, r.y);
                 maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h);
             }
@@ -740,6 +779,10 @@ export function applyContainerLayout(
             out = {
                 w: maxX - minX + 2 * PARTITION_CONTENT_MARGIN + (band?.side === 'w' ? band.size : 0),
                 h: maxY - minY + 2 * PARTITION_CONTENT_MARGIN + (band?.side === 'n' ? band.size : 0),
+                start: {
+                    x: minX - PARTITION_CONTENT_MARGIN - (band?.side === 'w' ? band.size : 0),
+                    y: minY - PARTITION_CONTENT_MARGIN - (band?.side === 'n' ? band.size : 0),
+                },
                 end: { x: maxX + PARTITION_CONTENT_MARGIN, y: maxY + PARTITION_CONTENT_MARGIN },
             };
         }
@@ -759,6 +802,8 @@ export function applyContainerLayout(
             isResized: !!rec.isResized,
             content: vertical ? need.h : need.w,
             contentCross: Math.max(vertical ? need.w : need.h, reach),
+            // R-GV-17: the partition is drawn around its children's box on all four sides.
+            ...(need.start && need.end ? { cover: { x0: need.start.x, y0: need.start.y, x1: need.end.x, y1: need.end.y } } : {}),
         };
     };
     // Where the partitions of a `partitions` container at `at` start on the cross axis: past its band on that axis and its
@@ -777,7 +822,7 @@ export function applyContainerLayout(
         const node = info ? byId.get(info.vertexId) : undefined;
         if (!info || !node || layout?.mode !== 'partitions') return null;
         const rec = recOf(info.vertexId);
-        const at = posOf(node, objectId);
+        const at = anchorOf(node, objectId);
         const from = crossFromOf(at, layout);
         return layoutPartitions({
             container: { x: at.x, y: at.y, w: rec.w, h: rec.h, isResized: !!rec.isResized }, axis: layout.axis, header: layout.header,
@@ -794,10 +839,11 @@ export function applyContainerLayout(
     // whose place is computed. At drag end EditorV2 writes the same offset to the records, and the offset drops to zero.
     for (const { c } of ordered) {
         const node = byId.get(c.vertexId);
-        if (!node?.dragging) continue;
+        if (atRest || !node?.dragging) continue;
         const parent = model.parentOf.get(c.objectId);
         if (parent !== undefined && model.containers.get(parent)?.layout?.mode === 'partitions') continue;
-        const rest = frameOf(c.objectId) ?? recOf(c.vertexId);
+        // Where it rests is where the pass at rest drew it (R-GV-17: a frame may be drawn off its record).
+        const rest = restBoxOf!(c.objectId) ?? frameOf(c.objectId) ?? recOf(c.vertexId);
         const dx = node.position.x - rest.x;
         const dy = node.position.y - rest.y;
         if (!Number.isFinite(dx) || !Number.isFinite(dy) || (dx === 0 && dy === 0)) continue;
@@ -824,7 +870,7 @@ export function applyContainerLayout(
         // A container that is itself a partition was placed by its parent: its box is that, as if sized by hand.
         const placed = own.w !== undefined && own.h !== undefined;
         const rec = recOf(c.vertexId);
-        const at = posOf(node, c.objectId);
+        const at = anchorOf(node, c.objectId);
         const box = placed
             ? { x: own.x!, y: own.y!, w: own.w!, h: own.h!, isResized: true }
             : { x: at.x, y: at.y, w: rec.w, h: rec.h, isResized: !!rec.isResized };
@@ -837,10 +883,18 @@ export function applyContainerLayout(
             const ln = byId.get(model.vertexByObj.get(kids[live])!)!;
             const liveExtent = layout.axis === 'horizontal' ? (ln.measured?.width ?? ln.width) : (ln.measured?.height ?? ln.height);
             if (typeof liveExtent === 'number' && Number.isFinite(liveExtent)) {
-                const extents = specs.map(sp => partitionExtent(sp));
+                // From the stack at rest: the border the gesture moves stays past the partition's own children and short
+                // of the next one's (R-GV-17: a resize never cuts a child), and the floor holds as before.
+                const l0 = layoutPartitions({ container: box, axis: layout.axis, header: layout.header, padding: layout.padding, partitions: specs });
+                const extents = l0.extents;
+                const vertical = layout.axis !== 'horizontal';
+                const startOf = (i: number) => (vertical ? l0.partitions[i].y : l0.partitions[i].x);
+                const near = (i: number) => { const cv = specs[i].cover; return cv ? (vertical ? cv.y0 : cv.x0) : Infinity; };
+                const far = (i: number) => { const cv = specs[i].cover; return cv ? (vertical ? cv.y1 : cv.x1) : -Infinity; };
+                const border = Math.max(startOf(live) + liveExtent, far(live));
                 const next = live < extents.length - 1
-                    ? resizePartitionBorder(extents, live, liveExtent - extents[live])
-                    : extents.map((e, i) => (i === live ? Math.max(liveExtent, MIN_PARTITION_EXTENT) : e));
+                    ? resizePartitionBorder(extents, live, Math.min(border, near(live + 1)) - (startOf(live) + extents[live]))
+                    : extents.map((e, i) => (i === live ? Math.max(border - startOf(live), MIN_PARTITION_EXTENT) : e));
                 specs = specs.map((sp, i) => ({ ...sp, stored: next[i], isResized: true }));
             }
         }
@@ -848,7 +902,8 @@ export function applyContainerLayout(
             container: box, axis: layout.axis, header: layout.header, padding: layout.padding,
             partitions: specs,
         });
-        patch.set(c.vertexId, { ...patch.get(c.vertexId), w: l.container.w, h: l.container.h });
+        // Its origin moves up or left when a child needs it (R-GV-17); placed by a parent, it stays where it was put.
+        patch.set(c.vertexId, { ...patch.get(c.vertexId), ...(placed ? {} : { x: l.container.x, y: l.container.y }), w: l.container.w, h: l.container.h });
         const axis = layout.axis === 'horizontal' ? 'horizontal' : 'vertical';
         kids.forEach((k, i) => {
             const v = model.vertexByObj.get(k)!;
@@ -879,6 +934,19 @@ export function applyContainerLayout(
         const p = patch.get(v!);
         if (p?.x !== undefined) continue;
         patch.set(v!, { ...p, x: n.position.x + o.x, y: n.position.y + o.y });
+    }
+
+    // The box each object is drawn in by this pass: its patch over its node.
+    const boxOf = (objectId: string): Box | null => {
+        const v = model.vertexByObj.get(objectId);
+        const n = v !== undefined ? byId.get(v) : undefined;
+        if (!n) return null;
+        const p = patch.get(v!) ?? {};
+        const at = posOf(n, objectId);
+        const s = sizeOf(n);
+        return { x: p.x ?? at.x, y: p.y ?? at.y, w: p.w ?? s.w, h: p.h ?? s.h };
+    };
+    return { patch, boxOf };
     }
 
     let changed = false;

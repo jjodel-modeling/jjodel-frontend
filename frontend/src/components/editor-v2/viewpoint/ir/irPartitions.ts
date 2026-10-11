@@ -26,6 +26,10 @@ export interface PartitionSpec {
     content?: number;
     /** The extent its content needs on the cross axis. */
     contentCross?: number;
+    /** The box its children need, in absolute coordinates: their union, plus the content margin and the partition's own
+     *  band (R-GV-17, P-2026-10-11-1156). The partition is drawn around it on every side; the stack moves its borders
+     *  and the container's origin, never the children. */
+    cover?: { x0: number; y0: number; x1: number; y1: number };
 }
 
 export interface PartitionLayoutInput {
@@ -62,6 +66,14 @@ export function partitionExtent(p: PartitionSpec, minExtent: number = MIN_PARTIT
  * The container box, the header band and the partition boxes (spec addendum §7, points 1 to 4).
  * `vertical` stacks top to bottom (main = y), `horizontal` left to right (main = x). A band on `w` consumes width,
  * on `n` height; it adds to the main size when it consumes the main dimension, to the cross size otherwise.
+ *
+ * A partition that declares `cover` is drawn around that box on every side (R-GV-17, P-2026-10-11-1156): along the
+ * stack, a partition reaches past its children's far side and pushes the next ones down, and starts before their near
+ * side, pushing the earlier ones (each keeping its floor: its size set by hand, or the minimum) and the container's
+ * origin up; across, the region starts before the leftmost need and ends past the farthest. The container's origin
+ * only moves up or left of where it is stored, and its far border stays where its stored size puts it when sized by
+ * hand: the frame grows, the children do not move. Where two partitions' children leave no room for a border between
+ * them, the earlier partition keeps its children. Without any `cover` the result is the stack of before.
  */
 export function layoutPartitions(input: PartitionLayoutInput): PartitionLayout {
     const vertical = (input.axis ?? 'vertical') !== 'horizontal';
@@ -71,12 +83,24 @@ export function layoutPartitions(input: PartitionLayoutInput): PartitionLayout {
     const band = input.header && (side === 'w' || side === 'n') ? positive(input.header.size) : 0;
     // The band consumes width on 'w', height on 'n'; main is height when vertical.
     const bandOnMain = band > 0 && (vertical ? side === 'n' : side === 'w');
-    const bandW = band > 0 && side === 'w' ? band : 0;
-    const bandH = band > 0 && side === 'n' ? band : 0;
+    const bandMain = bandOnMain ? band : 0;
+    const bandCross = band > 0 && !bandOnMain ? band : 0;
 
     const extents = input.partitions.map(p => partitionExtent(p, min));
-    const sumMain = extents.reduce((s, e) => s + e, 0);
-    const maxCross = input.partitions.reduce((m, p) => Math.max(m, positive(p.contentCross)), 0);
+    const covers = input.partitions.map(p => {
+        const b = p.cover;
+        if (!b || ![b.x0, b.y0, b.x1, b.y1].every(v => typeof v === 'number' && Number.isFinite(v))) return null;
+        return vertical ? { m0: b.y0, m1: b.y1, c0: b.x0, c1: b.x1 } : { m0: b.x0, m1: b.x1, c0: b.y0, c1: b.y1 };
+    });
+    // A partition with a cover needs across what its cover spans; its content size, measured from where the region was
+    // stored, would overshoot once the region starts further out.
+    const maxCross = input.partitions.reduce((m, p, i) => (covers[i] ? m : Math.max(m, positive(p.contentCross))), 0);
+    // What a partition keeps when an earlier one is pushed: its size set by hand, the minimum when its children set it
+    // (their cover holds them), its extent otherwise.
+    const floorOf = (i: number) => {
+        const p = input.partitions[i];
+        return covers[i] && !(p.isResized === true && positive(p.stored) > 0) ? min : extents[i];
+    };
 
     const c = input.container;
     const resized = c.isResized === true;
@@ -84,32 +108,54 @@ export function layoutPartitions(input: PartitionLayoutInput): PartitionLayout {
     const storedCross = resized ? positive(vertical ? c.w : c.h) : 0;
     const contentMain = positive(vertical ? c.contentH : c.contentW);
     const contentCross = positive(vertical ? c.contentW : c.contentH);
-
-    const needMain = sumMain + 2 * pad + (bandOnMain ? band : 0);
-    const needCross = maxCross + 2 * pad + (bandOnMain ? 0 : band);
-    const main = Math.max(needMain, storedMain, contentMain);
-    const cross = Math.max(needCross, storedCross, contentCross);
-    if (extents.length > 0) extents[extents.length - 1] += main - needMain;
-
     const x = finite(c.x);
     const y = finite(c.y);
-    const container: Rect = vertical ? { x, y, w: cross, h: main } : { x, y, w: main, h: cross };
-    const header: Rect | null = band === 0 ? null
-        : side === 'w' ? { x, y, w: band, h: container.h } : { x, y, w: container.w, h: band };
+    const atMain = vertical ? y : x;
+    const atCross = vertical ? x : y;
 
-    const regionX = x + bandW + pad;
-    const regionY = y + bandH + pad;
-    const regionW = container.w - bandW - 2 * pad;
-    const regionH = container.h - bandH - 2 * pad;
-    const partitions: Rect[] = [];
-    let offset = 0;
-    for (const e of extents) {
-        partitions.push(vertical
-            ? { x: regionX, y: regionY + offset, w: regionW, h: e }
-            : { x: regionX + offset, y: regionY, w: e, h: regionH });
-        offset += e;
+    // Main axis: the borders t[0..n]. Down from where the stack starts, each partition its extent and past its
+    // children's far side; then up, before their near side, the earlier ones keeping their floor.
+    const n = extents.length;
+    const t: number[] = [atMain + bandMain + pad];
+    for (let i = 0; i < n; i++) t.push(Math.max(t[i] + extents[i], covers[i]?.m1 ?? -Infinity));
+    for (let i = n - 1; i >= 0; i--) {
+        t[i] = Math.min(t[i], covers[i]?.m0 ?? Infinity, t[i + 1] - floorOf(i));
+        if (i > 0) t[i] = Math.max(t[i], covers[i - 1]?.m1 ?? -Infinity);
     }
-    return { container, header, partitions, extents };
+    const endMain = Math.max(t[n] + pad, atMain + storedMain, atMain + contentMain);
+    if (n > 0) t[n] = endMain - pad;   // the slack goes to the last
+    // Where it is stored, unless a child took the origin up or left (exact: no rounding when nothing moved).
+    const originMain = t[0] < atMain + bandMain + pad ? t[0] - pad - bandMain : atMain;
+
+    // Cross axis: the region from where it is stored, widened to every cover.
+    const storedStart = atCross + bandCross + pad;
+    let regionStart = storedStart;
+    let regionEnd = regionStart + maxCross;
+    for (const cv of covers) {
+        if (!cv) continue;
+        regionStart = Math.min(regionStart, cv.c0);
+        regionEnd = Math.max(regionEnd, cv.c1);
+    }
+    const endCross = Math.max(regionEnd + pad, atCross + storedCross, atCross + contentCross);
+    const originCross = regionStart < storedStart ? regionStart - pad - bandCross : atCross;
+
+    const container: Rect = vertical
+        ? { x: originCross, y: originMain, w: endCross - originCross, h: endMain - originMain }
+        : { x: originMain, y: originCross, w: endMain - originMain, h: endCross - originCross };
+    const header: Rect | null = band === 0 ? null
+        : side === 'w' ? { x: container.x, y: container.y, w: band, h: container.h } : { x: container.x, y: container.y, w: container.w, h: band };
+
+    const regionCross = endCross - pad - regionStart;
+    const partitions: Rect[] = [];
+    const used: number[] = [];
+    for (let i = 0; i < n; i++) {
+        const e = t[i + 1] - t[i];
+        used.push(e);
+        partitions.push(vertical
+            ? { x: regionStart, y: t[i], w: regionCross, h: e }
+            : { x: t[i], y: regionStart, w: e, h: regionCross });
+    }
+    return { container, header, partitions, extents: used };
 }
 
 /**

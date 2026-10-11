@@ -76,9 +76,10 @@ describe('applyContainerLayout: partitions (R-GV-7) in absolute coordinates (R-G
     });
     it('reads the records under the layout key in force, not the seed', () => {
         const base = world();
-        const idlookup = { ...base.idlookup, Vsales: { ...base.idlookup.Vsales, h: 50, layoutByViewpoint: { VP: { x: 0, y: 0, w: 200, h: 220, isResized: true } } } };
+        // The seed's 250 and the viewpoint's 220 both hold t1 (R-GV-17: a size under its child's need would grow).
+        const idlookup = { ...base.idlookup, Vsales: { ...base.idlookup.Vsales, h: 250, layoutByViewpoint: { VP: { x: 0, y: 0, w: 200, h: 220, isResized: true } } } };
         const seedOut = applyContainerLayout(base.nodes, base.model, idlookup, null, new Set());
-        expect(pick(seedOut, 'Vsales').h).toBe(50);
+        expect(pick(seedOut, 'Vsales').h).toBe(250);
         const vpOut = applyContainerLayout(base.nodes, base.model, idlookup, 'VP', new Set());
         expect(pick(vpOut, 'Vsales').h).toBe(220);
         expect(pick(vpOut, 'Vwarehouse').y).toBe(320);
@@ -86,10 +87,11 @@ describe('applyContainerLayout: partitions (R-GV-7) in absolute coordinates (R-G
     it('a lane not resized by hand takes its children span plus the margins', () => {
         const { model, idlookup, nodes } = world({ sales: { x: 0, y: 0, w: 200, h: 180, isResized: false }, shop: { x: 100, y: 100, w: 900, h: 100, isResized: true } });
         const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
-        // t1 is 60 high: 60 + 2 * margin.
-        expect(pick(out, 'Vsales').h).toBe(60 + 2 * PARTITION_CONTENT_MARGIN);
-        expect(pick(out, 'Vwarehouse').y).toBe(100 + 60 + 2 * PARTITION_CONTENT_MARGIN);
-        expect(pick(out, 'Vshop').h).toBe(60 + 2 * PARTITION_CONTENT_MARGIN + 180);
+        // t1 is drawn 160..220, 60 px into Sales: Sales reaches the margin under it (R-GV-17), no longer its span plus
+        // two margins from where it starts, which cut t1 (the bottom-margin ticket of P-2026-10-11-0040).
+        expect(pick(out, 'Vsales').h).toBe(220 + PARTITION_CONTENT_MARGIN - 100);
+        expect(pick(out, 'Vwarehouse').y).toBe(220 + PARTITION_CONTENT_MARGIN);
+        expect(pick(out, 'Vshop').h).toBe(220 + PARTITION_CONTENT_MARGIN - 100 + 180);
     });
     it('a pool not resized by hand is as wide as its band plus the widest lane content', () => {
         const { model, idlookup, nodes } = world({ shop: { x: 100, y: 100, w: 900, h: 360, isResized: false } });
@@ -142,8 +144,10 @@ describe('applyContainerLayout: partitions (R-GV-7) in absolute coordinates (R-G
     it('follows the pool node where it is now (a drag in progress), not where its record says', () => {
         const { model, idlookup, nodes } = world({ nodes: { Vshop: { position: { x: 400, y: 50 } } } });
         const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
-        expect(pick(out, 'Vsales')).toMatchObject({ x: 430, y: 50 });
-        expect(pick(out, 'Vwarehouse')).toMatchObject({ x: 430, y: 230 });
+        // The stack starts at the node, y 50; the lanes reach back left to their children, which no drag carried, and
+        // Sales down past t1 (R-GV-17).
+        expect(pick(out, 'Vsales')).toMatchObject({ x: 300 - PARTITION_CONTENT_MARGIN - 30, y: 50 });
+        expect(pick(out, 'Vwarehouse')).toMatchObject({ x: 300 - PARTITION_CONTENT_MARGIN - 30, y: 220 + PARTITION_CONTENT_MARGIN });
     });
     it('leaves a hidden partition out of the stack', () => {
         const { model, idlookup, nodes } = world();
@@ -204,7 +208,8 @@ describe('applyContainerLayout: partitions (R-GV-7) in absolute coordinates (R-G
         expect(pick(out, 'Vwarehouse')).toMatchObject({ y: 230, h: 230 });
     });
     it('a band on top of a lane not sized by hand adds to its content height', () => {
-        const base = world({ sales: { x: 0, y: 0, w: 200, h: 180, isResized: false } });
+        // t1 one band and one margin under the stack's start, so the lane's top meets its need (R-GV-17).
+        const base = world({ sales: { x: 0, y: 0, w: 200, h: 180, isResized: false }, nodes: { Vt1: { position: { x: 300, y: 136 } } } });
         (base.model.containers.get('sales') as any).layout = free({ side: 'n', size: 20 });
         const out = applyContainerLayout(base.nodes, base.model, base.idlookup, null, new Set());
         expect(pick(out, 'Vsales').h).toBe(60 + 2 * PARTITION_CONTENT_MARGIN + 20);
@@ -324,8 +329,14 @@ describe('applyContainerLayout: live gestures (S3)', () => {
     it('the floor holds the neighbour, and the last lane grows the pool', () => {
         const big = world({ nodes: { Vsales: { resizing: true, measured: { width: 870, height: 500 } } } });
         const o1 = applyContainerLayout(big.nodes, big.model, big.idlookup, null, new Set());
-        expect(pick(o1, 'Vwarehouse').h).toBe(24);
-        expect(pick(o1, 'Vsales').h).toBe(336);
+        // The border stops at the margin over t2, the neighbour's child (R-GV-17: a resize never cuts a child).
+        expect(pick(o1, 'Vwarehouse')).toMatchObject({ y: 340 - PARTITION_CONTENT_MARGIN, h: 460 - 340 + PARTITION_CONTENT_MARGIN });
+        expect(pick(o1, 'Vsales').h).toBe(340 - PARTITION_CONTENT_MARGIN - 100);
+        // With no child in the way the floor still holds the neighbour.
+        const empty = world({ nodes: { Vsales: { resizing: true, measured: { width: 870, height: 500 } }, Vt2: { hidden: true } } });
+        const o3 = applyContainerLayout(empty.nodes, empty.model, empty.idlookup, null, new Set());
+        expect(pick(o3, 'Vwarehouse').h).toBe(24);
+        expect(pick(o3, 'Vsales').h).toBe(336);
         const last = world({ nodes: { Vwarehouse: { resizing: true, measured: { width: 870, height: 230 } } } });
         const o2 = applyContainerLayout(last.nodes, last.model, last.idlookup, null, new Set());
         expect(pick(o2, 'Vwarehouse').h).toBe(230);
@@ -489,5 +500,81 @@ describe('applyContainerLayout: self-framing containers and separators (S2b)', (
         expect(scPick(applyContainerLayout(live.nodes, live.model, live.idlookup, null, new Set()), 'Vrun')).toEqual({ x: 204, y: 236, w: 500, h: 200 });
         const hand = scWorld({ recs: { Vrun: { x: 900, y: 900, w: 400, h: 100, isResized: true } } });
         expect(scPick(applyContainerLayout(hand.nodes, hand.model, hand.idlookup, null, new Set()), 'Vrun')).toEqual({ x: 204, y: 236, w: 400, h: 120 });
+    });
+});
+
+/**
+ * P-2026-10-11-1156 (R-GV-17): with the pointer inside its container, the frame follows a child on all four sides,
+ * live and at rest; with the pointer outside (the node's centre outside the box the container had before the drag), it
+ * does not chase it. A dragged container carries its descendants from where it is drawn at rest, not from its record.
+ */
+describe('applyContainerLayout: the frame follows a child on four sides (R-GV-17)', () => {
+    it('a lane\'s child left of the lane moves the pool\'s origin left, its band with it; the children do not move', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vt1: { position: { x: 120, y: 160 } } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vshop')).toMatchObject({ x: 44, y: 100, w: 956, h: 360 });
+        expect(pick(out, 'Vsales')).toMatchObject({ x: 74, y: 100, w: 926, h: 180 });
+        expect(pick(out, 'Vwarehouse')).toMatchObject({ x: 74, y: 280, w: 926, h: 180 });
+        for (const id of ['Vt1', 'Vt2']) expect(out.find(n => n.id === id)).toBe(nodes.find(n => n.id === id));
+    });
+    it('a first lane\'s child above it moves the pool\'s origin up; the bottom stays', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vt1: { position: { x: 300, y: 90 } } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vshop')).toMatchObject({ x: 100, y: 74, w: 900, h: 386 });
+        expect(pick(out, 'Vsales')).toMatchObject({ y: 74, h: 206 });
+        expect(pick(out, 'Vwarehouse')).toMatchObject({ y: 280, h: 180 });
+    });
+    it('a lane sized by hand grows past its size when a child needs it, and pushes the next lane down', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vt1: { position: { x: 300, y: 240 } } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vsales')).toMatchObject({ y: 100, h: 216 });
+        expect(pick(out, 'Vwarehouse')).toMatchObject({ y: 316, h: 180 });
+        expect(pick(out, 'Vshop')).toMatchObject({ y: 100, h: 396 });
+    });
+    it('a second lane\'s child above it grows that lane up, the first keeps its size and pushes the origin up', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vt1: { position: { x: 300, y: 130 } }, Vt2: { position: { x: 300, y: 230 } } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vsales')).toMatchObject({ y: 34, h: 180 });
+        expect(pick(out, 'Vwarehouse')).toMatchObject({ y: 214, h: 246 });
+        expect(pick(out, 'Vshop')).toMatchObject({ y: 34, h: 426 });
+    });
+    it('the pointer inside the lane: a dragged child is followed live', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vt1: { position: { x: 300, y: 76 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vshop')).toMatchObject({ y: 60, h: 400 });
+    });
+    it('the pointer outside the lane: the lane and the pool do not chase the dragged child', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vt1: { position: { x: 300, y: -200 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vshop')).toMatchObject({ x: 100, y: 100, w: 900, h: 360 });
+        expect(pick(out, 'Vsales')).toMatchObject({ x: 130, y: 100, h: 180 });
+    });
+    it('the pointer outside a self frame: the frame keeps the box it had, the region around it too', () => {
+        const { model, idlookup, nodes } = scWorld({ nodes: { Vf: { position: { x: 220, y: 700 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(scPick(out, 'Vrun')).toEqual({ x: 204, y: 236, w: 352, h: 120 });
+        expect(scPick(out, 'Va2')).toMatchObject({ y: 220, h: 152 });
+    });
+    it('the pointer inside a self frame: the frame follows the dragged substate left (control: frames followed before)', () => {
+        const { model, idlookup, nodes } = scWorld({ nodes: { Vf: { position: { x: 150, y: 280 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(scPick(out, 'Vrun')).toMatchObject({ x: 134, y: 236 });
+        expect(scPick(out, 'Vactive')).toMatchObject({ x: 100 });
+        expect(scPick(out, 'Vw')).toEqual({ x: 170, y: 144, w: 140, h: 60 });
+    });
+    it('a region\'s child left of the region moves the orthogonal state\'s origin left', () => {
+        const { model, idlookup, nodes } = scWorld({ nodes: { Vw: { position: { x: 90, y: 144 } } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(scPick(out, 'Vactive')).toMatchObject({ x: 74, y: 100 });
+        expect(scPick(out, 'Va1')).toMatchObject({ x: 74 });
+        expect(scPick(out, 'Va2')).toMatchObject({ x: 74 });
+    });
+    it('a pool drawn left of its record carries its children by its move from where it is drawn', () => {
+        const { model, idlookup, nodes } = world({ nodes: { Vt1: { position: { x: 120, y: 160 } }, Vshop: { position: { x: 54, y: 100 }, dragging: true } } });
+        const out = applyContainerLayout(nodes, model, idlookup, null, new Set());
+        expect(pick(out, 'Vt2')).toMatchObject({ x: 310, y: 340 });
+        expect(pick(out, 'Vt1')).toMatchObject({ x: 130, y: 160 });
+        // Its record moves with it: the far border of its size set by hand too (1000 + 10).
+        expect(pick(out, 'Vshop')).toMatchObject({ x: 54, w: 1010 - 54 });
     });
 });
