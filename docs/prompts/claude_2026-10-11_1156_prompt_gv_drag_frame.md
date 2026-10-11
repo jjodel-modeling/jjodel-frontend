@@ -6,7 +6,7 @@ Request: Alfonso, 2026-10-11 11:42 and 11:54: «qualsiasi vertex dentro un conta
 Front: graphvertex
 Lane: full (no Phase 1; one probe-first Phase 2; `viewpoint/ir/`, `utils/elkContainers.ts`, the drag-end and Auto layout call sites of `EditorV2.tsx`; no §3.2 file), unattended (RC-21)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane gv-drag-frame · 2d2f75846, 18569bcc3, 6fdf5be0d, 74ce6c94f, d7b6914a4, 7b23cfa74, 879276a2a, 6966e468c, efb97f948, dda304dbb, 76f741e2a, 23f78e4c8, dd1e66f57 · flip 2026-10-11 dalla chat
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).
 
