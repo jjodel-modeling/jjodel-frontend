@@ -217,6 +217,30 @@
  *                FRONT_FROM whose `Front:` line is missing, unknown or closed
  *                (P13), before anything runs.
  *
+ *   ticket --front <slug> --priority high|medium|low --found <Prompt-ID> [--detail <path>] [--inbox <name>] --title "<one line>" --body-file <file>
+ *                files a ticket (P-2026-10-11-1017): appends its block, in the
+ *                P9 ticket format dated today, to docs/log-inbox/<inbox>.md of
+ *                the caller's worktree (<inbox> defaults to the front's slug;
+ *                a new inbox gets the usual head), and does not commit it;
+ *                then its card, labels `ticket` and `priority:<p>`, the front's
+ *                milestone, column Backlog. A block of the same title already
+ *                in that inbox is not written again: the card follows it, so a
+ *                rerun retries the card. The card is keyed by 8 hex of
+ *                sha1(<inbox> + "\n" + <title>), recorded in
+ *                ~/.jjodel-lanes/_tracking/tickets/<key>.json, healed by the
+ *                `- ticket-key: <key>` line of its body, never created twice;
+ *                the five ticket labels are created on the board's repo on
+ *                first use. Fails open like track: a GitHub failure is the
+ *                `card:` line, and the inbox block is written all the same.
+ *   ticket --backfill [--plan <file>] [--from <ref>] [--dry-run]
+ *                one card per ticket block of docs/log-inbox/*.md at <ref>
+ *                (default alfonso-frontend-jjtl), one line each, then a count.
+ *                The front is the `Front:` line of the prompt its Found in
+ *                names, if that is an open front, else by the inbox's name.
+ *                The plan file holds `<key> skip|close|backlog [front <slug>]`
+ *                lines (close: Done, issue closed); it is checked whole, and
+ *                refused on a key no block has, before any gh call.
+ *
  * Every run passes `--output-format stream-json --verbose` (stream-json under -p
  * requires --verbose) and `--permission-mode bypassPermissions` (RC-19: a -p
  * session in default mode cannot commit). The model follows the activity
@@ -274,6 +298,7 @@ import { fileURLToPath } from 'node:url';
 import { CRITICAL_FILES } from './hooks/critical-zone.mjs';
 import {
     FRONT_FROM, closeFrontMilestones, frontProblem, inFrontScope, isGoMessage, loadBoard, loadFronts, promptLink, promptWorktree, trackLane, trackingConfig, trackingDir,
+    FRONTS_FILE, frontOfInbox, parseFrontLine, parseTicketBlocks, parseTicketPlan, ticketBlock, ticketKey, ticketProblem, trackTicket,
 } from './lane-tracking.mjs';
 
 // Model by activity (RC-32). heavy: the pin of .claude/settings.json, no --model (RC-16).
@@ -2693,6 +2718,157 @@ function trackSync(dryRun) {
     return 0;
 }
 
+// ── ticket: a finding on the board, in Backlog (P-2026-10-11-1017) ──────────
+
+const TICKET_USAGE = 'usage: lane-run ticket --front <slug> --priority high|medium|low --found <Prompt-ID> [--detail <path>] [--inbox <name>] --title "<one line>" --body-file <file>' +
+    ' | ticket --backfill [--plan <file>] [--from <ref>] [--dry-run]';
+const TICKET_VALUED = ['--front', '--priority', '--found', '--detail', '--inbox', '--title', '--body-file', '--plan', '--from'];
+const INBOX_NAME = /^[a-z0-9]+(?:[-.][a-z0-9]+)*$/;
+
+/** The head of a new inbox file, in the form the inboxes of the repo carry. */
+const inboxPreamble = (inbox) =>
+    '# log-inbox — lane «' + inbox + '»\n\n' +
+    'Entries written by the ' + inbox + ' lane on its own branch (P9, parallel lanes).\n' +
+    'Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim and in this order**\n' +
+    '(RC-12) and empties this file. The active log is not touched by this lane.\n\n---\n';
+
+/** ticket ... | ticket --backfill ...: one ticket into its inbox and onto the board, or every inbox ticket of the trunk onto the board. */
+function ticket(rest) {
+    const o = {};
+    for (let i = 0; i < rest.length; i++) {
+        const a = rest[i];
+        if (a === '--backfill' || a === '--dry-run') o[a] = true;
+        else if (TICKET_VALUED.includes(a)) {
+            const v = rest[i + 1];
+            if (v === undefined || TICKET_VALUED.includes(v) || v === '--backfill' || v === '--dry-run') refuse(a + ' needs a value; ' + TICKET_USAGE);
+            if (o[a] !== undefined) refuse(a + ' given twice; ' + TICKET_USAGE);
+            o[a] = v;
+            i++;
+        } else refuse('unknown argument for ticket: ' + a + '; ' + TICKET_USAGE);
+    }
+    if (o['--backfill']) {
+        const single = Object.keys(o).filter((k) => !['--backfill', '--dry-run', '--plan', '--from'].includes(k));
+        if (single.length) refuse(single.join(', ') + ': for one ticket, not with --backfill; ' + TICKET_USAGE);
+        return ticketBackfill(o);
+    }
+    for (const k of ['--plan', '--from', '--dry-run']) if (o[k] !== undefined) refuse(k + ' goes with --backfill; ' + TICKET_USAGE);
+    for (const k of ['--front', '--priority', '--found', '--title', '--body-file']) if (o[k] === undefined) refuse(k + ' is required; ' + TICKET_USAGE);
+    return ticketOne(o);
+}
+
+/**
+ * One ticket: its block appended to docs/log-inbox/<inbox>.md of the caller's
+ * worktree, not committed, then its card. A block of the same title already in
+ * the inbox is not written again (the inbox is add-only): the card is synced
+ * from it, which is how a rerun after a GitHub failure retries the card.
+ */
+function ticketOne(o) {
+    const top = cwdRepo();
+    if (!top) refuse('ticket runs from a worktree of the repo: it appends the block to docs/log-inbox/ there');
+    const fronts = loadFronts(REPO);
+    const front = fronts.find((f) => f.slug === o['--front']);
+    if (!front) refuse('--front ' + o['--front'] + ': not a slug of ' + FRONTS_FILE);
+    if (front.state !== 'open') refuse('--front ' + front.slug + ': the front is ' + front.state + ', not open');
+    const inbox = (o['--inbox'] ?? front.slug).replace(/\.md$/, '');
+    if (!INBOX_NAME.test(inbox)) refuse('--inbox ' + o['--inbox'] + ': a file name of docs/log-inbox/ (lower case, digits, dashes)');
+    const bodyFile = resolve(o['--body-file']);
+    if (!existsSync(bodyFile)) refuse('no body file: ' + bodyFile);
+    const fields = { title: o['--title'], ticket: readFileSync(bodyFile, 'utf8'), priority: o['--priority'], found: o['--found'], detail: o['--detail'] ?? null };
+    const why = ticketProblem(fields);
+    if (why) refuse(why);
+    const title = fields.title.trim();
+    const block = ticketBlock({ ...fields, date: stamp(clock()).date });
+    const rel = 'docs/log-inbox/' + inbox + '.md';
+    const path = join(top, rel);
+    const current = existsSync(path) ? readFileSync(path, 'utf8') : '';
+    const held = parseTicketBlocks(current).find((b) => b.title === title);
+    if (held) {
+        const same = held.text.replace(/^## \S+/, '') === block.trimEnd().replace(/^## \S+/, '');
+        console.log('inbox: ' + rel + ':' + held.line + ' already holds this ticket' + (same ? '' : ', with another text') + ': not written again (add-only); the card follows it');
+    } else {
+        const text = current === '' ? inboxPreamble(inbox) : current;
+        const sep = text.endsWith('\n\n') ? '' : text.endsWith('\n') ? '\n' : '\n\n';
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, text + sep + block);
+        console.log('inbox: ' + rel + ' in ' + top + ', not committed');
+    }
+    const r = trackTicket(ticketKey(inbox, title), { block: held ? held.text : block, title, inbox, front: front.slug, priority: fields.priority, close: false, fronts }, { board: () => loadBoard(REPO) });
+    console.log('card: ' + r.line);
+    return 0;
+}
+
+/**
+ * The backfill: every ticket block of docs/log-inbox/*.md at <ref> (the trunk
+ * by default), one card each. The front is the `Front:` line of the prompt its
+ * Found in names, when that is an open front, else frontOfInbox; the plan
+ * skips a key, closes it (Done) or moves its front. The plan is checked whole
+ * before the first gh call; each card fails open on its own.
+ */
+function ticketBackfill(o) {
+    const top = cwdRepo();
+    if (!top) refuse('ticket --backfill runs from a worktree of the repo: it reads the inboxes of ' + (o['--from'] ?? DEFAULT_TRUNK));
+    const ref = o['--from'] ?? DEFAULT_TRUNK;
+    commitOf(top, ref);
+    const fronts = loadFronts(REPO);
+    const open = new Set(fronts.filter((f) => f.state === 'open').map((f) => f.slug));
+    let plan = new Map();
+    if (o['--plan'] !== undefined) {
+        const file = resolve(o['--plan']);
+        if (!existsSync(file)) refuse('no plan file: ' + file);
+        try {
+            plan = parseTicketPlan(readFileSync(file, 'utf8'));
+        } catch (err) {
+            refuse(o['--plan'] + ': ' + err.message);
+        }
+    }
+    const prompts = nonEmpty(git(top, ['ls-tree', '--name-only', ref, 'docs/prompts/']).out);
+    const promptFront = (foundIn) => {
+        const m = /^P-(\d{4}-\d{2}-\d{2})-(\d{4})(?:\s|$)/.exec(foundIn || '');
+        if (!m) return null;
+        for (const p of prompts.filter((x) => basename(x).startsWith('claude_' + m[1] + '_' + m[2] + '_'))) {
+            const text = git(top, ['show', ref + ':' + p]).out;
+            if (headerPromptId(text) === 'P-' + m[1] + '-' + m[2]) return parseFrontLine(text);
+        }
+        return null;
+    };
+    const rows = [];
+    for (const p of nonEmpty(git(top, ['ls-tree', '--name-only', ref, 'docs/log-inbox/']).out).filter((x) => x.endsWith('.md')).sort()) {
+        const inbox = basename(p, '.md');
+        for (const b of parseTicketBlocks(git(top, ['show', ref + ':' + p]).out)) {
+            const named = promptFront(b.foundIn);
+            rows.push({ inbox, b, key: ticketKey(inbox, b.title), front: named && open.has(named) ? named : frontOfInbox(inbox) });
+        }
+    }
+    const keys = new Map();
+    for (const r of rows) {
+        if (keys.has(r.key)) refuse('two ticket blocks share the key ' + r.key + ': ' + keys.get(r.key) + ' and ' + r.inbox + ':' + r.b.line);
+        keys.set(r.key, r.inbox + ':' + r.b.line);
+    }
+    for (const [key, step] of plan) {
+        if (!keys.has(key)) refuse('the plan names ' + key + ', no ticket block of ' + ref + ' has that key');
+        if (step.front !== null && !open.has(step.front)) refuse('the plan moves ' + key + ' to "' + step.front + '", not an open front of ' + FRONTS_FILE);
+    }
+    const dryRun = Boolean(o['--dry-run']);
+    const count = { backlog: 0, close: 0, skip: 0, failed: 0 };
+    for (const r of rows) {
+        const step = plan.get(r.key) || { action: 'backlog', front: null };
+        const front = step.front || r.front;
+        const priority = r.b.priority || '(none)';
+        const head = 'ticket ' + r.key + ' ' + r.inbox + ':' + r.b.line + ' ' + front + ' ' + priority + ' ' + step.action;
+        count[step.action]++;
+        if (step.action === 'skip') {
+            console.log(head + ': skipped by the plan');
+            continue;
+        }
+        const res = trackTicket(r.key, { block: r.b.text, title: r.b.title, inbox: r.inbox, front, priority: r.b.priority, close: step.action === 'close', fronts }, { board: () => loadBoard(REPO), dryRun });
+        if (res.ok === false || /^tracking (off|skipped)/.test(res.line)) count.failed++;
+        console.log(head + ': ' + res.line);
+    }
+    console.log('backfill' + (dryRun ? ' (dry run)' : '') + ': ' + rows.length + ' ticket blocks at ' + ref + '; ' + count.backlog + ' Backlog, ' + count.close + ' closed, ' + count.skip + ' skipped; ' +
+        count.failed + ' without a card');
+    return 0;
+}
+
 // ── monitor ──────────────────────────────────────────────────────────────────
 
 const MONITOR_PORT = 3008;
@@ -2778,11 +2954,12 @@ async function main(argv) {
     if (command === 'chain') return chain(rest);
     if (command === 'chain-run') return chainRun(rest[0]);
     if (command === 'track') return track(rest);
+    if (command === 'ticket') return ticket(rest);
     refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file>|--text "<message>"|- | ' +
         'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | resolve <Prompt-ID> --why "<text>" | ' +
         'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>] | ' +
         'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n> | monitor [--port <n>] [--no-open] | ' +
-        'track <Prompt-ID>|--sync [--dry-run]');
+        'track <Prompt-ID>|--sync [--dry-run] | ticket --front <slug> --priority <p> --found <id> --title "<t>" --body-file <f> | ticket --backfill [--plan <f>] [--dry-run]');
 }
 
 main(process.argv.slice(2)).then(

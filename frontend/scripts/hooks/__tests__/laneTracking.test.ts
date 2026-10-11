@@ -1,9 +1,10 @@
 import { describe, test, expect, afterAll } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { lintEntry, parseFields, splitLog, TICKET_HEADING } from '../../gates/log-tools.ts';
 
 // lane-tracking.mjs imported and run, the way check-docs.ts (Check E) runs it
 // (P11). A test name states the mutation of the module that turns it red
@@ -16,6 +17,8 @@ const REPO = resolve(HERE, '..', '..', '..', '..');
 const SCRIPT = process.env.LANE_TRACKING ? resolve(process.env.LANE_TRACKING) : resolve(HERE, '..', '..', 'lane-tracking.mjs');
 const { FRONT_FROM, FRONTS_FILE, loadFronts, parseFrontLine, frontProblem } = await import(pathToFileURL(SCRIPT).href);
 const { projectLane, isGoMessage, isDiscoveryPrompt, inFrontScope, cardTitle, cardBody, promptWorktree, promptLink, loadBoard, syncCard, closeFrontMilestones, trackLane, TRACK_LABELS } =
+    await import(pathToFileURL(SCRIPT).href);
+const { parseTicketBlocks, ticketKey, frontOfInbox, ticketProblem, ticketBlock, ticketTitle, ticketBody, projectTicket, parseTicketPlan, syncTicket, trackTicket, TICKET_LABELS } =
     await import(pathToFileURL(SCRIPT).href);
 
 const FRONTS = [
@@ -202,6 +205,19 @@ describe('projectLane: the mapping, one row each (report answers 1, 3, 6)', () =
     test('`hard-stop` of any other prompt is In review + waiting:visual, never Done (hard-stop mapped to Done)', () => {
         expect(seen({ outcome: 'Outcome: hard-stop' })).toEqual(card('In review', ['waiting:visual']));
         expect(seen({ outcome: 'Outcome: hard-stop (abc1234)' })).toEqual(card('In review', ['waiting:visual']));
+    });
+
+    test('`hard-stop` with the Status flipped is Done and closed, a discovery before its GO and any other prompt alike (flip read after hard-stop)', () => {
+        const flipped = 'eseguito 2026-10-11 · lane gv-right-margin · 9d9e0be57';
+        const disc = lanePrompt('# Lane tracking on GitHub Projects: discovery');
+        expect(seen({ outcome: 'Outcome: hard-stop', headerStatus: flipped })).toEqual(card('Done', [], true));
+        expect(seen({ outcome: 'Outcome: hard-stop', headerStatus: flipped, promptText: disc })).toEqual(card('Done', [], true));
+    });
+
+    test('a flipped Status does not override `question` or an unresolved `blocked` (flip read before them)', () => {
+        const flipped = 'eseguito 2026-10-11 · lane x · abc';
+        expect(seen({ outcome: 'Outcome: question', headerStatus: flipped })).toEqual(card('In progress', ['waiting:question']));
+        expect(seen({ outcome: 'Outcome: blocked', headerStatus: flipped })).toEqual(card('In progress', ['blocked']));
     });
 
     test('`done` with the Status flipped is Done and the issue closed; a suffix after the word parses', () => {
@@ -481,5 +497,404 @@ describe('lane-run resolve and the card', () => {
         expect(out.status, out.stderr).toBe(0);
         expect(readFileSync(join(r.lane, 'resolved.txt'), 'utf8')).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2} · alfonso · fixed by hand\n$/);
         expect(cardOf(out.stdout)).toBe('card: tracking skipped: gh project view: error connecting to api.github.com');
+    });
+});
+
+// ── tickets as Backlog cards (P-2026-10-11-1017) ─────────────────────────────
+
+// Real blocks of docs/log-inbox at 96d38b2bf (merge-gate.md:7, views.md:50), and
+// around them what the rule must leave out: a task entry with a `**Ticket** (`
+// paragraph, a legacy `ticket extension:` heading. The views block carries a
+// second Priority line, added here, for the first-occurrence rule.
+const MERGE_GATE_TICKET = [
+    '## 2026-10-02 — ticket: a lane removes the node_modules symlink the direct merge needs later',
+    '',
+    '**Ticket**: Lane P-2026-10-02-2045 linked `frontend/node_modules` in `~/jjodel-w-vpglyph` to run its gates and removed the link at the end. The direct merge P-2026-10-02-2315 then ran the incoming vitest gate in that worktree, found no vitest (`sh: vitest: command not found`), wrote no report and stopped at `Outcome: blocked` before any merge commit. The chat restored the link and reran the merge as P-2026-10-02-2330 (green, merged `e2e4fbc35`). Fix options: `lane-run merge --direct` checks or creates the worktree link before the incoming gate, or lanes keep the link (it is gitignored).',
+    '**Priority**: low',
+    '**Found in**: P-2026-10-02-2315 (chat C-2026-10-01-2220)',
+];
+const VIEWS_TICKET = [
+    '## 2026-09-30 — ticket: colour the edges of a coloured viewpoint by source or target',
+    '**Ticket**: Edges are not coloured by «Color by metaclass» (out of scope of P-2026-09-30-2022, decision 4). Cheap to add: the resolver answers per class id, and `UnifiedEdge.tsx:709-712` already applies an inline `stroke` for IR edges. One selector on the source (or target) node\'s metaclass plus the same inline stroke would do it. Use the border shade (L 55 %), not the pastel fill: L 82-88 on a white canvas reads 1.2-1.9:1.',
+    '**Priority**: low',
+    '**Priority**: high',
+    '**Found in**: P-2026-09-30-2022',
+    '**Detail**: docs/discovery/discovery_2026-09-30_viewpoint_colors_pastel.md',
+];
+const INBOX_LINES = [
+    '# log-inbox — lane «fixture»',
+    '',
+    '---',
+    '',
+    '## 2026-10-10 — feat(harness): a task entry (P-2026-10-10-1612)',
+    '**Prompt**: a task.',
+    '**Outcome**: ✅ completed',
+    '**Prompt document name**: 2026-10-10 16:12',
+    '',
+    '**Ticket** (closed here): a paragraph after a task entry, prose and not a ticket.',
+    '',
+    ...MERGE_GATE_TICKET,
+    '',
+    '## 2026-09-20 — ticket extension: a legacy heading, a task entry',
+    '**Priority**: high',
+    '',
+    '## 2026-10-04 — ticket: a block with no priority',
+    '**Ticket**: synthetic: the backfill cards it priority:unset.',
+    '**Found in**: P-2026-10-04-0946',
+    '',
+    ...VIEWS_TICKET,
+    '',
+];
+const INBOX = INBOX_LINES.join('\n');
+const lineOf = (heading: string) => INBOX_LINES.indexOf(heading) + 1;
+
+describe('parseTicketBlocks: the rule of check:docs', () => {
+    test('three blocks, in file order, with their fields; the task entry, its `**Ticket** (` paragraph and `ticket extension:` left out (heading test dropped)', () => {
+        const blocks = parseTicketBlocks(INBOX);
+        expect(blocks.map((b: { title: string }) => b.title)).toEqual([
+            'a lane removes the node_modules symlink the direct merge needs later', 'a block with no priority', 'colour the edges of a coloured viewpoint by source or target',
+        ]);
+        expect(blocks[0]).toEqual({
+            line: lineOf(MERGE_GATE_TICKET[0]), date: '2026-10-02', title: 'a lane removes the node_modules symlink the direct merge needs later',
+            ticket: MERGE_GATE_TICKET[2].slice('**Ticket**: '.length), priority: 'low', foundIn: 'P-2026-10-02-2315 (chat C-2026-10-01-2220)', detail: null,
+            text: MERGE_GATE_TICKET.join('\n'),
+        });
+        expect(blocks[2]).toMatchObject({ line: lineOf(VIEWS_TICKET[0]), date: '2026-09-30', detail: 'docs/discovery/discovery_2026-09-30_viewpoint_colors_pastel.md', text: VIEWS_TICKET.join('\n') });
+    });
+
+    test('a block ends at the next entry heading: the block without Priority does not take the next one\'s (block runs to the end)', () => {
+        expect(parseTicketBlocks(INBOX)[1]).toMatchObject({ priority: null, foundIn: 'P-2026-10-04-0946', detail: null });
+    });
+
+    test('the first occurrence of a field wins (last occurrence kept)', () => {
+        expect(parseTicketBlocks(INBOX)[2].priority).toBe('low');
+    });
+
+    test('agrees with check:docs (log-tools splitLog, TICKET_HEADING, parseFields) on the fixture and on every inbox of the repo (rule copied wrong)', () => {
+        const dir = join(REPO, 'docs', 'log-inbox');
+        const texts = [INBOX, ...readdirSync(dir).filter((n) => n.endsWith('.md')).map((n) => readFileSync(join(dir, n), 'utf8'))];
+        let total = 0;
+        for (const text of texts) {
+            const theirs = splitLog(text).entries.filter((e) => TICKET_HEADING.test(e.heading)).map((e) => {
+                const f = parseFields(e.text);
+                return { date: e.date, title: e.heading.replace(TICKET_HEADING, '').trim(), ticket: f.get('Ticket') ?? null, priority: f.get('Priority') ?? null, foundIn: f.get('Found in') ?? null, detail: f.get('Detail') ?? null };
+            });
+            const ours = parseTicketBlocks(text).map((b: Record<string, unknown>) => ({ date: b.date, title: b.title, ticket: b.ticket, priority: b.priority, foundIn: b.foundIn, detail: b.detail }));
+            expect(ours).toEqual(theirs);
+            total += ours.length;
+        }
+        expect(total).toBeGreaterThanOrEqual(3);
+    });
+});
+
+describe('a new ticket: checked, written, keyed, fronted', () => {
+    const FIELDS = { title: 'a finding', ticket: 'First line of the finding.\nA second line.', priority: 'medium', found: 'P-2026-10-11-1017', detail: 'docs/discovery/x.md' };
+
+    test('ticketBlock writes the P9 ticket format, which check:docs lints clean and the parser reads back (field dropped or renamed)', () => {
+        const block = ticketBlock({ ...FIELDS, date: '2026-10-11' });
+        expect(block).toBe('## 2026-10-11 — ticket: a finding\n**Ticket**: First line of the finding.\nA second line.\n**Priority**: medium\n**Found in**: P-2026-10-11-1017\n**Detail**: docs/discovery/x.md\n');
+        const entry = splitLog(block).entries[0];
+        expect(lintEntry(entry, new Set()).findings).toEqual([]);
+        expect(parseTicketBlocks(block)[0]).toMatchObject({ title: 'a finding', ticket: 'First line of the finding.', priority: 'medium', foundIn: 'P-2026-10-11-1017', detail: 'docs/discovery/x.md' });
+        expect(ticketBlock({ ...FIELDS, detail: null, date: '2026-10-11' })).not.toContain('**Detail**');
+    });
+
+    test('ticketProblem refuses what would not read back, and passes a good ticket (check dropped)', () => {
+        expect(ticketProblem(FIELDS)).toBeNull();
+        expect(ticketProblem({ ...FIELDS, title: ' ' })).toContain('title');
+        expect(ticketProblem({ ...FIELDS, title: 'two\nlines' })).toContain('title');
+        expect(ticketProblem({ ...FIELDS, priority: 'unset' })).toContain('priority');
+        expect(ticketProblem({ ...FIELDS, found: 'yesterday' })).toContain('Found in');
+        expect(ticketProblem({ ...FIELDS, found: 'C-2026-10-10-0057 (chat)' })).toBeNull();
+        expect(ticketProblem({ ...FIELDS, detail: '' })).toContain('detail');
+        expect(ticketProblem({ ...FIELDS, ticket: '  \n' })).toContain('empty');
+        expect(ticketProblem({ ...FIELDS, ticket: 'text\n## 2026-10-11 — ticket: smuggled' })).toContain('opens an entry');
+        expect(ticketProblem({ ...FIELDS, ticket: 'text\n**Priority**: high' })).toContain('reads as a field');
+    });
+
+    test('ticketKey: 8 hex of sha1(inbox + "\\n" + title), the keys of report section 4 (hash input changed)', () => {
+        expect(ticketKey('codegen-panel', 'EditorV2\'s onKeyDown deletes the selection on Backspace typed in a TEXTAREA')).toBe('576ee13a');
+        expect(ticketKey('views', 'colour the edges of a coloured viewpoint by source or target')).toMatch(/^[0-9a-f]{8}$/);
+        expect(ticketKey('harness', 'a finding')).not.toBe(ticketKey('views', 'a finding'));
+    });
+
+    test('frontOfInbox: the file-name rule of the prompt (a mapping row dropped)', () => {
+        const rows: [string, string][] = [['ir-graphvertex', 'graphvertex'], ['ir-graphvertex-s4', 'graphvertex'], ['gv-right-margin', 'graphvertex'], ['harness', 'harness'],
+            ['merge-gate', 'harness'], ['smoke-baseurl', 'harness'], ['codegen-panel', 'codegen-pilot'], ['codegen', 'codegen-pilot'], ['simulation', 'simulator'],
+            ['standalone-environment', 'standalone-editor'], ['views', 'maintenance'], ['jjscript', 'maintenance'], ['harness-x', 'maintenance']];
+        for (const [inbox, front] of rows) expect(frontOfInbox(inbox), inbox).toBe(front);
+    });
+
+    test('projectTicket: Backlog and open, or Done and closed; `ticket` and the priority, unset when absent; the front\'s milestone', () => {
+        expect(projectTicket({ priority: 'high', front: 'harness', fronts: TRACK_FRONTS })).toEqual({ column: 'Backlog', labels: ['priority:high', 'ticket'], milestone: 2, closed: false });
+        expect(projectTicket({ priority: null, front: 'maintenance', close: true, fronts: TRACK_FRONTS })).toEqual({ column: 'Done', labels: ['priority:unset', 'ticket'], milestone: 1, closed: true });
+    });
+
+    test('the card text: title `ticket: <title>`, body the block then the inbox, the front and the key line', () => {
+        expect(ticketTitle('a finding')).toBe('ticket: a finding');
+        const body = ticketBody('## 2026-10-11 — ticket: a finding\n**Ticket**: x\n\n', { inbox: 'harness', front: 'harness', key: 'abcd1234' });
+        expect(body.startsWith('## 2026-10-11 — ticket: a finding\n**Ticket**: x\n\n---\n')).toBe(true);
+        for (const row of ['- Inbox: docs/log-inbox/harness.md', '- Front: harness', '- ticket-key: abcd1234']) expect(body.split('\n')).toContain(row);
+    });
+
+    test('parseTicketPlan: skip, close, backlog, an optional front, comments; a bad line or a key twice throws naming the line', () => {
+        const plan = parseTicketPlan('# the plan\n576ee13a backlog front maintenance\n\n24e831fe close   # fixed\nd8f3007c skip\n');
+        expect([...plan.entries()]).toEqual([['576ee13a', { action: 'backlog', front: 'maintenance' }], ['24e831fe', { action: 'close', front: null }], ['d8f3007c', { action: 'skip', front: null }]]);
+        expect(() => parseTicketPlan('576ee13a drop\n')).toThrow('plan line 1');
+        expect(() => parseTicketPlan('576ee13a close\n576ee13a skip\n')).toThrow('plan line 2: key 576ee13a given twice');
+    });
+});
+
+// ── syncTicket against the fake gh ──────────────────────────────────────────
+
+const tmeta = (key: string) => ({ title: 'ticket: a finding', body: '## 2026-10-11 — ticket: a finding\n\n---\n- ticket-key: ' + key + '\n' });
+const tcard = (column = 'Backlog', closed = false) => ({ column, labels: ['priority:medium', 'ticket'], milestone: 1, closed });
+const LABEL_CREATE = (a: string[]) => a[0] === 'label' && a[1] === 'create';
+
+describe('syncTicket', () => {
+    const tsync = (g: ReturnType<typeof ghLab>, key: string, wanted: object, extra: object = {}) =>
+        syncTicket(key, wanted, { dir: g.dir, config: { gh: g.gh }, board: BOARD, meta: tmeta(key), ...extra });
+    const recOf = (g: ReturnType<typeof ghLab>, key: string) => join(g.dir, 'tickets', key + '.json');
+
+    test('the first card makes the five labels, then the issue with its labels in Backlog; the same card again makes no gh call (labels not made first, difference not computed)', () => {
+        const g = ghLab();
+        const r = tsync(g, 'abcd1234', tcard());
+        expect(r.ok, r.line).toBe(true);
+        expect(r.line).toBe('https://github.com/jjodel-modeling/jjodel-lanes/issues/1 · Backlog (priority:medium, ticket)');
+        const calls = g.calls();
+        expect(calls.filter(LABEL_CREATE).map((a) => a[2])).toEqual(TICKET_LABELS);
+        expect(calls.findIndex((a) => a[0] === 'issue' && a[1] === 'create')).toBeGreaterThan(calls.findLastIndex(LABEL_CREATE));
+        expect(g.gstate().issues[0]).toMatchObject({ title: 'ticket: a finding', labels: [{ name: 'priority:medium' }, { name: 'ticket' }], milestone: { number: 1, title: 'maintenance' }, state: 'OPEN' });
+        expect(g.columnOf(1)).toBe('Backlog');
+        const n = g.calls().length;
+        expect(tsync(g, 'abcd1234', tcard()).line).toBe(r.line);
+        expect(g.calls().length).toBe(n);
+        expect(JSON.parse(readFileSync(recOf(g, 'abcd1234'), 'utf8'))).toMatchObject({ key: 'abcd1234', issue: 1, error: null, applied: { column: 'Backlog', milestone: 1 } });
+    });
+
+    test('labels the repo has are not made again, and once cached no label call is made (existing labels recreated)', () => {
+        const g = ghLab();
+        tsync(g, 'abcd1234', tcard());
+        rmSync(join(g.dir, 'tickets', 'labels.json'));
+        tsync(g, 'beef0001', tcard());
+        expect(g.calls().filter(LABEL_CREATE)).toHaveLength(5);
+        expect(g.calls().filter((a) => a[0] === 'label' && a[1] === 'list')).toHaveLength(2);
+        tsync(g, 'beef0002', tcard());
+        expect(g.calls().filter((a) => a[0] === 'label' && a[1] === 'list')).toHaveLength(2);
+    });
+
+    test('a lost record is healed by its key line, never by a second create, and not by another ticket of the same title (key line not read)', () => {
+        const g = ghLab();
+        tsync(g, 'abcd1234', tcard());
+        tsync(g, 'beef0001', tcard());
+        unlinkSync(recOf(g, 'beef0001'));
+        const r = tsync(g, 'beef0001', tcard('Done', true));
+        expect(r.ok, r.line).toBe(true);
+        expect(r.line).toBe('https://github.com/jjodel-modeling/jjodel-lanes/issues/2 · Done (priority:medium, ticket), closed');
+        expect(g.writes().filter((a) => a[1] === 'create')).toHaveLength(2);
+        expect(g.calls().some((a) => a[0] === 'issue' && a[1] === 'list' && a.includes('--label') && a.includes('ticket'))).toBe(true);
+        expect(g.gstate().issues.map((i: { state: string }) => i.state)).toEqual(['OPEN', 'CLOSED']);
+        expect(g.columnOf(2)).toBe('Done');
+        expect(JSON.parse(readFileSync(recOf(g, 'beef0001'), 'utf8')).healed).toBeTruthy();
+    });
+
+    test('a gh failure is one line and the record\'s error, and it never throws (fail open dropped)', () => {
+        const g = ghLab('fail');
+        const r = tsync(g, 'abcd1234', tcard());
+        expect(r).toMatchObject({ ok: false, line: 'tracking skipped: gh project view: error connecting to api.github.com' });
+        expect(JSON.parse(readFileSync(recOf(g, 'abcd1234'), 'utf8')).error).toBe('gh project view: error connecting to api.github.com');
+    });
+
+    test('a dry run reads, writes nothing, and lists the label and issue writes it would make', () => {
+        const g = ghLab();
+        const r = tsync(g, 'abcd1234', tcard(), { dryRun: true });
+        expect(r.ok, r.line).toBe(true);
+        expect(r.line).toMatch(/^dry run: gh label create ticket --repo jjodel-modeling\/jjodel-lanes .*; gh issue create --repo jjodel-modeling\/jjodel-lanes --title "ticket: a finding" --body <body> --milestone maintenance --label priority:medium --label ticket; /);
+        expect(g.calls().filter((a) => WRITES.test(a.join(' ')) || LABEL_CREATE(a))).toEqual([]);
+        expect(existsSync(recOf(g, 'abcd1234'))).toBe(false);
+        expect(existsSync(join(g.dir, 'tickets', 'labels.json'))).toBe(false);
+    });
+
+    test('trackTicket: without config.json tracking is off and no gh call is made (enable switch dropped)', () => {
+        const g = ghLab();
+        const t = { block: '## 2026-10-11 — ticket: a finding\n', title: 'a finding', inbox: 'harness', front: 'harness', priority: 'low', fronts: TRACK_FRONTS };
+        expect(trackTicket('abcd1234', t, { dir: g.dir, board: BOARD }).line).toBe('tracking off (no ' + join(g.dir, 'config.json') + ')');
+        expect(g.calls()).toEqual([]);
+    });
+});
+
+// ── lane-run ticket ──────────────────────────────────────────────────────────
+
+/** A throwaway HOME with tracking on and the fake gh, and a git repo on branch trunkx as the caller's worktree. */
+function ticketLab(mode = '') {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'lane-ticket-')));
+    dirs.push(root);
+    const home = join(root, 'home');
+    const state = join(root, 'state');
+    const repo = join(root, 'repo');
+    const tracking = join(home, '.jjodel-lanes', '_tracking');
+    for (const d of [state, repo, tracking]) mkdirSync(d, { recursive: true });
+    writeFileSync(join(tracking, 'config.json'), '{}\n');
+    const gh = join(state, 'gh');
+    writeFileSync(gh, `#!/bin/sh\nexec '${process.execPath}' '${FAKE_GH}' "$@"\n`);
+    chmodSync(gh, 0o755);
+    const env = { HOME: home, PATH: '/usr/bin:/bin', LANE_TRACK_GH: gh, FAKE_GH_STATE: state, LANE_RUN_NOW: '2026-10-11T12:00', ...(mode ? { FAKE_GH_MODE: mode } : {}) };
+    const git = (...args: string[]) => {
+        const r = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd: repo, env, encoding: 'utf8' });
+        if (r.status !== 0) throw new Error('git ' + args.join(' ') + ': ' + r.stderr);
+        return r.stdout;
+    };
+    git('init', '-q', '-b', 'trunkx');
+    const put = (rel: string, text: string) => {
+        mkdirSync(dirname(join(repo, rel)), { recursive: true });
+        writeFileSync(join(repo, rel), text);
+    };
+    const run = (args: string[]) => spawnSync(process.execPath, [LANE_RUN, 'ticket', ...args], { cwd: repo, env, encoding: 'utf8', timeout: 60000 });
+    const calls = (): string[][] => (existsSync(join(state, 'gh-calls.jsonl')) ? readFileSync(join(state, 'gh-calls.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((x) => JSON.parse(x)) : []);
+    const writes = () => calls().filter((a) => WRITES.test(a.join(' ')) || LABEL_CREATE(a));
+    const gstate = () => JSON.parse(readFileSync(join(state, 'gh.json'), 'utf8'));
+    const columnOf = (n: number) => {
+        const s = gstate();
+        return String(s.status[s.items[s.issues.find((i: { number: number }) => i.number === n).url]] || '').replace(/^opt-/, '');
+    };
+    return { root, repo, tracking, git, put, run, calls, writes, gstate, columnOf };
+}
+
+const cardLines = (out: string) => out.split('\n').filter((x) => x.startsWith('card: '));
+
+describe('lane-run ticket: one ticket', () => {
+    const args = (lab: ReturnType<typeof ticketLab>, extra: string[] = []) => {
+        const body = join(lab.root, 'body.md');
+        writeFileSync(body, 'The finding, measured on a fixture.\nIts second line.\n');
+        return ['--front', 'maintenance', '--priority', 'medium', '--found', 'P-2026-10-11-1017', '--title', 'a ticket filed by the CLI', '--body-file', body, ...extra];
+    };
+
+    test('appends the block to a new inbox of the front, uncommitted, and files its card in Backlog; a rerun writes neither again (inbox not written, card duplicated)', () => {
+        const lab = ticketLab();
+        const r = lab.run(args(lab));
+        expect(r.status, r.stderr).toBe(0);
+        const inbox = readFileSync(join(lab.repo, 'docs/log-inbox/maintenance.md'), 'utf8');
+        expect(inbox.startsWith('# log-inbox — lane «maintenance»\n')).toBe(true);
+        const block = '## 2026-10-11 — ticket: a ticket filed by the CLI\n**Ticket**: The finding, measured on a fixture.\nIts second line.\n**Priority**: medium\n**Found in**: P-2026-10-11-1017\n';
+        expect(inbox.endsWith('---\n\n' + block)).toBe(true);
+        for (const e of splitLog(inbox).entries) expect(lintEntry(e, new Set()).findings).toEqual([]);
+        expect(lab.git('status', '--porcelain')).toBe('?? docs/\n');
+        expect(cardLines(r.stdout)).toEqual(['card: https://github.com/jjodel-modeling/jjodel-lanes/issues/1 · Backlog (priority:medium, ticket)']);
+        const issue = lab.gstate().issues[0];
+        expect(issue).toMatchObject({ title: 'ticket: a ticket filed by the CLI', milestone: { number: 1, title: 'maintenance' } });
+        expect(issue.body).toContain(block.trimEnd());
+        expect(issue.body).toContain('- Inbox: docs/log-inbox/maintenance.md');
+        expect(issue.body).toContain('- ticket-key: ' + ticketKey('maintenance', 'a ticket filed by the CLI'));
+        expect(lab.columnOf(1)).toBe('Backlog');
+        const n = lab.calls().length;
+        const again = lab.run(args(lab));
+        expect(again.status, again.stderr).toBe(0);
+        expect(again.stdout).toContain('already holds this ticket');
+        expect(readFileSync(join(lab.repo, 'docs/log-inbox/maintenance.md'), 'utf8')).toBe(inbox);
+        expect(lab.gstate().issues).toHaveLength(1);
+        expect(lab.calls().length).toBe(n);
+    });
+
+    test('--inbox names another inbox, appended after its last entry', () => {
+        const lab = ticketLab();
+        lab.put('docs/log-inbox/harness.md', '# log-inbox — lane «harness»\n\n---\n\n## 2026-10-10 — ticket: an older one\n**Ticket**: x\n**Priority**: low\n**Found in**: P-2026-10-10-1612\n');
+        const r = lab.run(args(lab, ['--inbox', 'harness']));
+        expect(r.status, r.stderr).toBe(0);
+        const blocks = parseTicketBlocks(readFileSync(join(lab.repo, 'docs/log-inbox/harness.md'), 'utf8'));
+        expect(blocks.map((b: { title: string }) => b.title)).toEqual(['an older one', 'a ticket filed by the CLI']);
+        expect(lab.gstate().issues[0].body).toContain('- Inbox: docs/log-inbox/harness.md');
+    });
+
+    test('gh exits 1: the block is written all the same, exit 0, and the card line says why (fail open dropped)', () => {
+        const lab = ticketLab('fail');
+        const r = lab.run(args(lab));
+        expect(r.status, r.stderr).toBe(0);
+        expect(parseTicketBlocks(readFileSync(join(lab.repo, 'docs/log-inbox/maintenance.md'), 'utf8'))).toHaveLength(1);
+        expect(cardLines(r.stdout)).toEqual(['card: tracking skipped: gh project view: error connecting to api.github.com']);
+    });
+
+    test('refused before anything is written: an unknown front, a priority outside the three, a missing --title', () => {
+        const lab = ticketLab();
+        for (const bad of [['--front', 'nope'], ['--priority', 'unset']]) {
+            const a = args(lab);
+            a[a.indexOf(bad[0]) + 1] = bad[1];
+            const r = lab.run(a);
+            expect(r.status, bad.join(' ')).toBe(2);
+        }
+        const a = args(lab);
+        a.splice(a.indexOf('--title'), 2);
+        expect(lab.run(a).status).toBe(2);
+        expect(existsSync(join(lab.repo, 'docs'))).toBe(false);
+        expect(lab.calls()).toEqual([]);
+    });
+});
+
+describe('lane-run ticket --backfill', () => {
+    const A = ['## 2026-10-11 — ticket: a pool keeps its old position', '**Ticket**: a.', '**Priority**: high', '**Found in**: P-2026-10-11-0040'];
+    const B = ['## 2026-10-02 — ticket: a lane removes the link', '**Ticket**: b.', '**Priority**: low', '**Found in**: P-2026-10-02-2315 (chat C-2026-10-01-2220)'];
+    const C = ['## 2026-10-04 — ticket: no priority here', '**Ticket**: c.', '**Found in**: P-2026-10-04-0946'];
+    const D = ['## 2026-10-03 — ticket: skipped by the plan', '**Ticket**: d.', '**Priority**: medium', '**Found in**: P-2026-10-03-1300'];
+    const key = (inbox: string, b: string[]) => ticketKey(inbox, b[0].replace(/^## \S+ — ticket: /, ''));
+
+    /** The trunk (trunkx) carries four blocks and the prompt of A, Front: graphvertex; the worktree adds a fifth, uncommitted. */
+    function backfillLab(mode = '') {
+        const lab = ticketLab(mode);
+        lab.put('docs/log-inbox/harness.md', '# head\n\n---\n\n' + A.join('\n') + '\n\n' + B.join('\n') + '\n');
+        lab.put('docs/log-inbox/views.md', '# head\n\n---\n\n' + C.join('\n') + '\n\n' + D.join('\n') + '\n');
+        lab.put('docs/prompts/claude_2026-10-11_0040_prompt_gv_right_margin.md', '# A graphVertex lane\n\nPrompt-ID: P-2026-10-11-0040\nChat: C-2026-10-10-0057\nLane: full\nFront: graphvertex\nStatus: da eseguire\n\n## COSA\n');
+        lab.git('add', '-A');
+        lab.git('commit', '-q', '-m', 'fixture');
+        lab.git('checkout', '-q', '-b', 'lane');
+        lab.put('docs/log-inbox/views.md', readFileSync(join(lab.repo, 'docs/log-inbox/views.md'), 'utf8') + '\n## 2026-10-11 — ticket: only in the worktree\n**Ticket**: e.\n**Priority**: low\n**Found in**: P-2026-10-11-1017\n');
+        lab.put('plan.txt', '# GO of the fixture\n' + key('views', D) + ' skip\n' + key('harness', B) + ' close front maintenance   # fixed on the trunk\n');
+        return lab;
+    }
+
+    test('a dry run reads the trunk\'s inboxes, prints one line per block and the count, and writes nothing', () => {
+        const lab = backfillLab();
+        const r = lab.run(['--backfill', '--from', 'trunkx', '--plan', 'plan.txt', '--dry-run']);
+        expect(r.status, r.stderr).toBe(0);
+        const lines = r.stdout.split('\n').filter((x) => x.startsWith('ticket '));
+        expect(lines.map((x) => x.split(':')[0] + ':' + x.split(':')[1].split(' ')[0])).toEqual([
+            'ticket ' + key('harness', A) + ' harness:5', 'ticket ' + key('harness', B) + ' harness:10', 'ticket ' + key('views', C) + ' views:5', 'ticket ' + key('views', D) + ' views:9',
+        ]);
+        expect(r.stdout).toContain('backfill (dry run): 4 ticket blocks at trunkx; 2 Backlog, 1 closed, 1 skipped; 0 without a card');
+        expect(lab.writes()).toEqual([]);
+        expect(existsSync(join(lab.tracking, 'tickets', key('harness', A) + '.json'))).toBe(false);
+    });
+
+    test('the real run: the Front: of the Found-in prompt, else the inbox name, the plan\'s skip, close and front; priority:unset; a rerun writes nothing (Front: line not read, plan not applied, card duplicated)', () => {
+        const lab = backfillLab();
+        const r = lab.run(['--backfill', '--from', 'trunkx', '--plan', 'plan.txt']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('backfill: 4 ticket blocks at trunkx; 2 Backlog, 1 closed, 1 skipped; 0 without a card');
+        const issues = lab.gstate().issues;
+        expect(issues.map((i: { title: string }) => i.title)).toEqual(['ticket: a pool keeps its old position', 'ticket: a lane removes the link', 'ticket: no priority here']);
+        expect(issues.map((i: { milestone: { title: string } }) => i.milestone.title)).toEqual(['graphvertex', 'maintenance', 'maintenance']);
+        expect(issues.map((i: { labels: { name: string }[] }) => i.labels.map((l) => l.name).join(','))).toEqual(['priority:high,ticket', 'priority:low,ticket', 'priority:unset,ticket']);
+        expect(issues.map((i: { state: string }) => i.state)).toEqual(['OPEN', 'CLOSED', 'OPEN']);
+        expect([1, 2, 3].map(lab.columnOf)).toEqual(['Backlog', 'Done', 'Backlog']);
+        expect(issues[0].body).toContain(A.join('\n') + '\n\n---\n- Inbox: docs/log-inbox/harness.md\n- Front: graphvertex\n- ticket-key: ' + key('harness', A));
+        const n = lab.writes().length;
+        const again = lab.run(['--backfill', '--from', 'trunkx', '--plan', 'plan.txt']);
+        expect(again.status, again.stderr).toBe(0);
+        expect(lab.writes().length).toBe(n);
+        expect(lab.gstate().issues).toHaveLength(3);
+    });
+
+    test('a plan naming a key no block has, or an unknown front, is refused before any gh call (plan not checked whole)', () => {
+        const lab = backfillLab();
+        lab.put('plan.txt', key('harness', A) + ' close\n0000beef skip\n');
+        expect(lab.run(['--backfill', '--from', 'trunkx', '--plan', 'plan.txt']).status).toBe(2);
+        lab.put('plan.txt', key('harness', A) + ' backlog front nowhere\n');
+        expect(lab.run(['--backfill', '--from', 'trunkx', '--plan', 'plan.txt']).status).toBe(2);
+        expect(lab.calls()).toEqual([]);
+    });
+
+    test('gh exits 1: every block is one skipped line, the count says so, exit 0 (fail open dropped)', () => {
+        const lab = backfillLab('fail');
+        const r = lab.run(['--backfill', '--from', 'trunkx']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('backfill: 4 ticket blocks at trunkx; 4 Backlog, 0 closed, 0 skipped; 4 without a card');
     });
 });
