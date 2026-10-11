@@ -1,0 +1,116 @@
+{
+  "tag": "pre-relayout-on-open-52ffbe5db",
+  "url": "http://localhost:3096",
+  "at": "2026-10-11T11:06:18.628Z",
+  "scenarios": {
+    "adv-card": {
+      "steps": {
+        "project": "Pointer1791716885377_USER_2",
+        "openedBy": "card",
+        "classes": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "model": "Pointer1791716917909_USER_20"
+      },
+      "facts": {
+        "ptrDefaultInIdlookup": "object",
+        "ptrDefaultInDefaultsMap": "object",
+        "stateViewpoints": [
+          "Pointer_ViewPointDefault"
+        ],
+        "stateViewpoint": "",
+        "viewsInIdlookup": 0,
+        "viewsCheckedDefault": 0,
+        "defaultViewsMapSize": 20,
+        "interfaceMode": "advanced",
+        "model": {
+          "instanceof": "Pointer1791716899526_USER_8",
+          "isMetamodel": false
+        },
+        "rootable": [
+          "NewClass",
+          "NewClass1"
+        ],
+        "graphs": [
+          "classic",
+          "v2-flow",
+          "v2-flow"
+        ]
+      },
+      "paths": [
+        {
+          "path": "palette-drag",
+          "reached": true,
+          "note": "palette: [\"NewClass\",\"NewClass1\"]",
+          "created": [
+            {
+              "id": "Pointer1791716927074_USER_25",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791716927074_USER_25",
+              "name": "NewClass_0",
+              "of": "NewClass",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791716927243_166 [CREATE_ELEMENT idlookup.Pointer1791716927074_USER_25 @Action_1791716927074_156, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20.pointedBy @Action_1791716927074_154, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20.objects @Action_1791716927074_155, SET_ME_FIELD idlookup.Pointer1791716927074_USER_25.instanceof @Action_1791716927074_157, SET_ME_FIELD idlookup.Pointer1791716908658_USER_14.instances @Action_1791716927075_158, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716927075_159, CREATE_ELEMENT idlookup.Pointer1791716927075_USER_27 @Action_1791716927075_164, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20_graph5.pointedBy @Action_1791716927075_160, SET_ME_FIELD idlookup.Pointer1791716927074_USER_25.pointedBy @Action_1791716927075_161, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20_graph5.pointedBy @Action_1791716927075_162, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20_graph5.subElements @Action_1791716927075_163, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716927075_165]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-relayout-on-open-52ffbe5db/adv-card_palette-drag.png"
+        },
+        {
+          "path": "ctx-child",
+          "reached": true,
+          "note": "stale menu: [\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\"]; after a rename of the reference: [\"Add NewClass1 (kids)\",\"Edit\",\"Duplicate\",\"Delete\",\"Up\",\"Down\",\"Disable auto-sizing\",\"Help\",\"Explain this\"]; ref: {\"d\":{\"composition\":true,\"aggregation\":false,\"upperBound\":-1},\"editorMode\":[\"children:true:NewClass1\"],\"rootable\":[\"NewClass\"]}",
+          "created": [
+            {
+              "id": "Pointer1791716939374_USER_31",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "createdLate": [
+            {
+              "id": "Pointer1791716939374_USER_31",
+              "name": "NewClass1_0",
+              "of": "NewClass1",
+              "model": null
+            }
+          ],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791716930845_180 [CREATE_ELEMENT idlookup.Pointer1791716930784_USER_28 @Action_1791716930785_176, CREATE_ELEMENT idlookup.Pointer1791716930785_USER_29 @Action_1791716930785_177, SET_ME_FIELD idlookup.Pointer1791716927074_USER_25.pointedBy @Action_1791716930785_171, SET_ME_FIELD idlookup.Pointer1791716930784_USER_28.pointedBy @Action_1791716930785_172, SET_ME_FIELD idlookup.Pointer1791716930784_USER_28.instances @Action_1791716930785_173, SET_ME_FIELD idlookup.Pointer1791716927074_USER_25.features @Action_1791716930785_174, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716930785_178, SET_ME_FIELD idlookup.Pointer1791716908658_USER_14.pointedBy @Action_1791716930784_169, SET_ME_FIELD idlookup.Pointer1791716911308_USER_17.pointedBy @Action_1791716930785_170, SET_ME_FIELD idlookup.Pointer1791716908658_USER_14.references @Action_1791716930785_175, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716930785_179]",
+            "COMPOSITE_ACTION @Action_1791716931145_193 [CREATE_ELEMENT idlookup.Pointer1791716930865_USER_30 @Action_1791716930866_191, SET_ME_FIELD idlookup.Pointer1791716899526_USER_8_graph2.pointedBy @Action_1791716930865_183, SET_ME_FIELD idlookup.Pointer1791716930784_USER_28.pointedBy @Action_1791716930866_184, SET_ME_FIELD idlookup.Pointer1791716899526_USER_8_graph2.pointedBy @Action_1791716930866_185, SET_ME_FIELD idlookup.Pointer1791716899526_USER_8_graph2.subElements @Action_1791716930866_186, SET_ME_FIELD idlookup.Pointer1791716908658_USER_16.pointedBy @Action_1791716930866_187, SET_ME_FIELD idlookup.Pointer1791716911308_USER_19.pointedBy @Action_1791716930866_188, SET_ME_FIELD idlookup.Pointer1791716908658_USER_16.edgesOut @Action_1791716930866_189, SET_ME_FIELD idlookup.Pointer1791716911308_USER_19.edgesIn @Action_1791716930866_190, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716930866_192]",
+            "COMPOSITE_ACTION @Action_1791716931743_197 [SET_ME_FIELD idlookup.Pointer1791716930784_USER_28.composition @Action_1791716931589_195, SET_ME_FIELD idlookup.Pointer1791716930784_USER_28.upperBound @Action_1791716931589_196]",
+            "COMPOSITE_ACTION @Action_1791716937145_199 [SET_ME_FIELD idlookup.Pointer1791716930784_USER_28.name @Action_1791716937009_198]",
+            "COMPOSITE_ACTION @Action_1791716939543_224 [CREATE_ELEMENT idlookup.Pointer1791716939374_USER_31 @Action_1791716939375_202, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20.pointedBy @Action_1791716939374_200, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20.objects @Action_1791716939375_201, SET_ME_FIELD idlookup.Pointer1791716939374_USER_31.instanceof @Action_1791716939375_203, SET_ME_FIELD idlookup.Pointer1791716911308_USER_17.instances @Action_1791716939375_204, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716939375_205, CREATE_ELEMENT idlookup.Pointer1791716939375_USER_33 @Action_1791716939375_210, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20_graph5.pointedBy @Action_1791716939375_206, SET_ME_FIELD idlookup.Pointer1791716939374_USER_31.pointedBy @Action_1791716939375_207, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20_graph5.pointedBy @Action_1791716939375_208, SET_ME_FIELD idlookup.Pointer1791716917909_USER_20_graph5.subElements @Action_1791716939375_209, SET_ROOT_FIELD ELEMENT_CREATED @Action_1791716939375_211, … +12]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-relayout-on-open-52ffbe5db/adv-card_ctx-child.png"
+        },
+        {
+          "path": "uncontain",
+          "reached": false,
+          "note": "reference kids composition=false; metamodel rootable [\"NewClass\",\"NewClass1\"]; palette [\"NewClass\"], after a tab round trip [\"NewClass\"]: no NewClass1 entry",
+          "created": [],
+          "createdLate": [],
+          "errors": [],
+          "trail": [
+            "COMPOSITE_ACTION @Action_1791716944644_230 [SET_ME_FIELD idlookup.Pointer1791716930784_USER_28.composition @Action_1791716944624_228, SET_ME_FIELD idlookup.Pointer1791716939374_USER_31.father @Action_1791716944625_229]"
+          ],
+          "shot": "/Users/alfonso/.jjodel-lanes/P-2026-10-11-1135/shots/pre-relayout-on-open-52ffbe5db/adv-card_uncontain.png"
+        }
+      ],
+      "setupErrors": [
+        "console: init_dash"
+      ]
+    }
+  }
+}
