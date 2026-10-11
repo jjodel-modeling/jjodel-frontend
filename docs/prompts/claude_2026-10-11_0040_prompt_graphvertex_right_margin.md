@@ -6,7 +6,7 @@ Request: Alfonso in chat, 2026-10-11 00:38, «lascia un po' di padding a destra 
 Front: graphvertex
 Lane: fast (one visual defect, at most three files under `viewpoint/ir/` plus a test, no §3.2 file)
 Depends: P-2026-10-11-0011 (ir-graphvertex took the trunk)
-Status: da eseguire
+Status: eseguito 2026-10-11 · lane gv-right-margin · aea222c46, dfa6f07ce, 1ceda9802 · verifica visiva passata 2026-10-11 (Alfonso) · flip 2026-10-11 dalla chat
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
 
