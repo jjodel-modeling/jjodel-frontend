@@ -1002,3 +1002,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: The direct merge P-2026-10-11-1903 ended blocked on one red test: the laneRun probe case (`frontend/scripts/hooks/__tests__/laneRun.test.ts:1341`, "the probe runs against the served port") failed with `lane-run: port 55980 is in use (lsof): pick another`, expected exit 5, got 2. Rerun alone on the merge commit it passed. The test picks a port that another process (a board, a probe, another lane's vite) can hold at that moment, so any merge can go red by chance and a human has to `resolve` it. Fix: let the test ask the OS for a free port (listen on 0, read the port, close) right before the probe, or retry once on the in-use refusal; then the merge gate stops depending on what else runs on the Mac.
 **Priority**: medium
 **Found in**: P-2026-10-11-1903
+
+## 2026-10-11 — merge: goal-model-fixes into alfonso-frontend-jjtl (P-2026-10-11-2111)
+**Prompt**: `claude_2026-10-11_2111_prompt_merge_goal-model-fixes.md`, a direct merge by `lane-run merge --direct`, no session: `goal-model-fixes` at `945f17853` into `alfonso-frontend-jjtl`, merge base `47539f7fe`, 2 commits on the branch side.
+**Files touched**: merge `224af2584`: 6 files from the branch side (`docs/discovery/discovery_2026-10-11_goal_model_fixes.md`, `docs/goals/README.md`, `docs/goals/contributions.json`, `frontend/scripts/hooks/__tests__/laneBoardRequirements.test.ts`, `frontend/scripts/hooks/__tests__/reqTrace.test.ts`, `frontend/scripts/req-trace.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `224af2584` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 8711 tests in 359 files, 9 red at import, hooks 681; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Requirements tab on 4702: 1005 contributions on rows, mixed rows on both sides of their bars
+**Notes**: Rollback tag `pre-goal-model-fixes` on `47539f7fe` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-11-2111/result.json`.
+**Prompt document name**: 2026-10-11 21:11
