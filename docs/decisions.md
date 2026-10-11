@@ -5838,6 +5838,17 @@ Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
   refused while errors exist. Raised by the S6 lane (P-2026-10-10-2029): without it no template could print a
   runnable guard, and a Petri template could not write `initial()`. Named `target`, not `js`, so a second target
   plugs in without renaming.
+- **R-GEN-17** (2026-10-11, decided by the chat on Alfonso's «decidi tu», provisional; evidence: read, verified: none,
+  reversible: branch).
+  **Generated JavaScript names elements, not ids.** Every element id appears exactly once in the generated program,
+  in one frozen table `const $ID = Object.freeze({ … })` near the top; everywhere else the program refers to an element
+  as `$ID.<name>`, where `<name>` is the element's name through `mangle`, made unique by `JsIdentifierTable`, and
+  `<metaclass>_<n>` in model order for an element without a usable name. The values at run time stay the id strings,
+  so `observe`, `step` and the oracle are unchanged. The JS printer takes the table as an optional context field
+  (absent: today's output), and `target` gains `ids` and `ref(element)`; JSON-shaped values that contain ids
+  (`initial`, Petri presets) print as JS literals over `$ID`. Raised by the S6 crops (P-2026-10-10-2029): the lecture
+  examples were correct but unreadable for students. Implemented by P-2026-10-11-1052; the oracle's «Check» control
+  in the Code panel, sharing the result area of «Run», by P-2026-10-11-1053.
 
 ## R-GV — graphVertex containment: channel, layout, membership (ratifiche 2026-10-10)
 
