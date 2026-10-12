@@ -340,9 +340,11 @@ type OpenPicker = {
  * (`IRForm` takes `permissionOf`), and neither does this section. `onCreate` absent: no
  * create control at all.
  */
-function RefSlotsSection({ objectId, slots, idlookup, nested, onOpen, onCreate, isHidden, liveOf, offerOf }: {
+function RefSlotsSection({ objectId, slots, idlookup, nested, onOpen, onCreate, isHidden, liveOf, offerOf, rootRef }: {
     /** The instance these slots belong to: the address of every write of the section. */
     objectId: string;
+    /** The section's element, for the summary chip of this instance's form (R-REF-2). */
+    rootRef?: (el: HTMLDivElement | null) => void;
     slots: RefSlot[];
     idlookup: Record<string, any>;
     nested?: boolean;
@@ -479,7 +481,7 @@ function RefSlotsSection({ objectId, slots, idlookup, nested, onOpen, onCreate, 
     };
 
     return (
-        <div className={'instance-manager__inline instance-manager__refs'
+        <div ref={rootRef} className={'instance-manager__inline instance-manager__refs'
             + (nested ? ' instance-manager__refs--nested' : '')}>
             {slots.map(slot => {
                 const key = slot.ref.key;
@@ -489,7 +491,14 @@ function RefSlotsSection({ objectId, slots, idlookup, nested, onOpen, onCreate, 
                 const shown: FieldDiagnostic[] = refusal ? [{ severity: 'error', message: refusal }, ...found] : found;
                 const worst = worstSeverity(shown);
                 return (
-                <div className="instance-manager__inline-slot" key={key} data-ref={key}>
+                <div
+                    className="instance-manager__inline-slot"
+                    key={key}
+                    data-ref={key}
+                    /* The severities the problems registry reports on this reference: what the
+                       summary chip of the form looks for (`focusReference`). */
+                    data-problems={found.length ? Array.from(new Set(found.map(d => d.severity))).join(' ') : undefined}
+                >
                     <h3 className="instance-manager__eyebrow">
                         {slot.label}
                         {slot.ref.required && (
@@ -734,6 +743,25 @@ export function InstanceDetail({
         const lookup = (store.getState() as any)?.idlookup ?? {};
         return ruleRefSlot(lookup, objectId, ref, permOfClass(lookup[objectId]?.instanceof) === 'edit', profileReads);
     };
+
+    /** The reference sections on screen, by the instance they belong to. */
+    const refsEls = useRef<Record<string, HTMLDivElement | null>>({});
+
+    /** R-REF-2 — what `IRForm` is handed so that it renders no field for the references
+     *  this panel lists. ONE object per instance for the life of the panel: the form keeps
+     *  it among the dependencies of its summary chip. `focusFirst` is the chip finding no
+     *  field of its severity in the form: the first reference of that instance with such a
+     *  diagnostic is scrolled into view and its first control takes the focus, as the chip
+     *  does with a field. */
+    const hostRefsCache = useRef<Record<string, { focusFirst: (severity: 'error' | 'warning') => void }>>({});
+    const hostReferencesOf = (objectId: string) => (hostRefsCache.current[objectId] ??= {
+        focusFirst: severity => {
+            const slot = refsEls.current[objectId]?.querySelector<HTMLElement>(`[data-problems~="${severity}"]`);
+            if (!slot) return;
+            slot.scrollIntoView({ block: 'nearest' });
+            slot.querySelector<HTMLElement>('button')?.focus();
+        },
+    });
 
     /** The candidates of a reference, asked when its picker opens and filtered for the
      *  profile exactly as the form filtered its own (`offerForProfile`). */
@@ -1100,7 +1128,7 @@ export function InstanceDetail({
             </header>
 
             <ReadOnlyGate readOnly={permOfInstance(formSubjectId ?? subjectId) === 'read'}>
-                <IRForm objectId={formSubjectId ?? subjectId} host="manager" permissionOf={permissionOf} />
+                <IRForm objectId={formSubjectId ?? subjectId} host="manager" permissionOf={permissionOf} hostReferences={hostReferencesOf(formSubjectId ?? subjectId)} />
             </ReadOnlyGate>
 
             {/* The depth rule of 12c, and it is ONE comparison:
@@ -1136,7 +1164,7 @@ export function InstanceDetail({
                                             <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
                                         </button>
                                         <ReadOnlyGate readOnly={permOfInstance(childId) === 'read'}>
-                                            <IRForm objectId={childId} host="manager" permissionOf={permissionOf} />
+                                            <IRForm objectId={childId} host="manager" permissionOf={permissionOf} hostReferences={hostReferencesOf(childId)} />
                                         </ReadOnlyGate>
                                         {/* #158 P3 — the child's own reference
                                             sections, under its own form and inside
@@ -1145,6 +1173,7 @@ export function InstanceDetail({
                                             goes THROUGH the child (`via`). */}
                                         <RefSlotsSection
                                             objectId={childId}
+                                            rootRef={el => { refsEls.current[childId] = el; }}
                                             slots={inlineRefSlots[childId] ?? []}
                                             idlookup={idlookup}
                                             nested
@@ -1190,6 +1219,7 @@ export function InstanceDetail({
                 the one instance everything points at, said in the link title. */}
             <RefSlotsSection
                 objectId={formSubjectId ?? subjectId}
+                rootRef={el => { refsEls.current[formSubjectId ?? subjectId] = el; }}
                 slots={refSlots}
                 idlookup={idlookup}
                 isHidden={isHidden}
