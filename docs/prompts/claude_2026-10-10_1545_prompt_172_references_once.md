@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-10-1545
 Chat: C-2026-10-10-1540
 Lane: full (a candidate file sits under `viewpoint/ir/`, a row of the §3.1 table; more than three files; a visual check)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-12 · lane feat/172-references-once · 6cc99ca73 · verifica visiva passata 2026-10-12
 Limite: 75 minuti per la Fase 1, 90 minuti per ogni passo della Fase 2
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
