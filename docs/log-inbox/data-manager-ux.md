@@ -71,3 +71,16 @@ order** (RC-12) and empties this file. The active log is not touched by this lan
 **Ticket**: in the instance detail the foot of a reference section offers «Link existing <Type>» whenever the slot may take a link, without asking whether a candidate is left. Measured under the profile «Edu» (Badge `read`) on the stand-alone page, on `Session_0.badges`, an aggregation holding `B1` while a second Badge `B2` is free: the control is there and its picker prints «No Badge matches», no candidate. Controls of the same run: with no profile the picker offers `B2`; on the plain reference `learners` (target type `read`) the profile filters nothing and the four Learners are offered. The filter is `offerForProfile` (`formPermissions.ts:101-109`: into a slot that re-fathers, only free elements of an `edit` class). Where the measure is: arms B1, B2, B3 of the lane's probe `_tmp_172_probe.ts` (`ONLY=badges MODE=after`, gitignored), run 17 of `~/.jjodel-lanes/P-2026-10-10-1545/probe-_tmp_172_probe.log`. Read, not measured: before #172 the form field's picker took its candidates through the same filter (`IRForm.tsx`, its `offer`), so it would have opened empty too; the BEFORE fixture had no aggregation. Not changed here.
 **Priority**: low
 **Found in**: P-2026-10-10-1545
+
+## 2026-10-12 — merge: feat/172-references-once into staging (P-2026-10-12-1639)
+**Prompt**: `claude_2026-10-12_1639_prompt_merge_feat-172-references-once.md`, a direct merge by `lane-run merge --direct`, no session: `feat/172-references-once` at `6bad24e94` into `staging`, merge base `094c82bab`, 8 commits on the branch side.
+**Files touched**: merge `26c795f80`: 14 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-10_172_references_once.md`, `docs/lir/lir_2026-10-10_172_fields_leave_form.md`, `docs/log-inbox/data-manager-ux.md`, `docs/prompts/claude_2026-10-10_1545_prompt_172_references_once.md`, `docs/ratifiche/claude_2026-10-12_memo_172_references_once.md`, `frontend/src/components/abstract/tabs/InstanceDetail.tsx`, `frontend/src/components/abstract/tabs/__tests__/instanceManager10c.test.ts`, and 6 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `26c795f80` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7992 tests in 322 files, 9 red at import, hooks 424; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: the chat's independent probe (172_independent.mts) rerun on the merged tree on port 3173, 18/18, no page error: 0 form fields and 1 section per reference, the row menu by kind of slot, Remove leaves a hole, Link existing, the upper bound, the inline child; Juri's visual GO of 2026-10-12 was given on the lane tree, 9/9
+**Notes**: Rollback tag `pre-feat/172-references-once` on `094c82bab` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-12-1639/result.json`.
+**Prompt document name**: 2026-10-12 16:39
