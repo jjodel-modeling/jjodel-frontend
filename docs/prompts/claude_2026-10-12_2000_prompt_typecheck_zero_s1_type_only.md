@@ -6,7 +6,7 @@ Lane: full (more than 3 files). One phase: the six edits were measured by the ch
 Depends: none
 Front: maintenance
 Request: none (no URL: Juri asked in a local Claude Code session on 2026-10-12; his words are `request.md` in the lane folder, RC-43)
-Status: da eseguire
+Status: eseguito 2026-10-12 · lane fix/typecheck-baseline-zero · b3f44be17
 Limite: 60 minuti
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
