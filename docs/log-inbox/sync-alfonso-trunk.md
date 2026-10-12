@@ -25,3 +25,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: C-2026-10-06-1210
 **Detail**: docs/discovery/discovery_2026-10-06_178_sync_alfonso_trunk.md
+
+## 2026-10-12 — merge: Alfonso's trunk into staging, his branch aligned by fast-forward (C-2026-10-12-1927)
+**Prompt**: Juri in chat, no prompt file: «Fai pull di tutti i branch e: 1) mergia alfonso-frontend-jjtl su staging e 2) staging su alfonso-frontend-jjtl». Run in the main tree on `staging`. No hard stop between the report and the merge: the request was the merge itself (P4 derogated, flagged here).
+**Files touched**: `2b61eeeb3`: `docs/discovery/discovery_2026-10-12_sync_alfonso_trunk.md`. `c2cf77016` (merge, 744 files of the other side; by hand: `docs/decisions.md`, `frontend/src/components/Jodie/Jodie.tsx`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/components/Jodie/__tests__/reservedIdentifierGate.test.ts`). This commit: this inbox. Refs, local only: `alfonso-frontend-jjtl`, `dotnet-backend-integration` and `master` fast-forwarded to their remotes before the merge; tag `pre-alfonso-frontend-jjtl-2026-10-12` on `2b61eeeb3`; `alfonso-frontend-jjtl` fast-forwarded to the tip of `staging` after this commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gates on the resolved trial tree `269dc1145`, equal to the tree of `c2cf77016` but for the report (`git diff-tree`): typecheck 14, the §17 list; vitest 360 files and 9005 tests green, red the 9 baseline files and `bashGuard.test.ts` (32, `MERGE_HEAD` present); build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly, check:codegen-lazy, typecheck:scripts exit 0. On `c2cf77016`: `bashGuard.test.ts` and `reservedIdentifierGate.test.ts` 180/180, check:addonly exit 0. The merged app was not opened in a browser.
+**Out-of-scope changes**: yes — `reservedIdentifierGate.test.ts` is not a conflicted file: it pinned chat prompt version 6 and now expects 7. Six files by hand over three commits, above five (RC-11, rule 19): the report, the three conflicted files, that test, this inbox.
+**Layer Impact Report**: not-required (no sync or D-L file edited by hand; the other side's commits carry their own)
+**Smoke visivo**: non eseguito (build only)
+**Notes**: Three conflicts: `decisions.md` by union, one import each side in `Jodie.tsx`, and two chat prompts v6, joined as v7 on the #178 precedent (`851dec87f`). That numbering was taken by the executor and is not ratified: question 1 of the report. Nothing pushed: `staging` and `alfonso-frontend-jjtl` wait for Juri's word. The inboxes of both lines are unfolded; the fold is a lane of its own at this alignment point.
+**Prompt document name**: 2026-10-12 19:27
