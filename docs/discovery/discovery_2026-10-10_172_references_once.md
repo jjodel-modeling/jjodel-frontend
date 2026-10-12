@@ -655,3 +655,94 @@ Open questions, numbered:
 3. Is «Link existing <Type>» the wording, or «Link <Type>»? The mockup of the issue shows no such control.
 4. The duplicate link of the chip picker and the two-target path are measured defects of code this lane removes from
    the detail but does not fix at the source (`IRFormField`, the hosts' `createAndLink`): a ticket each, or nothing?
+
+## A. Addendum 2026-10-12: the row's menu
+
+Read-only, on HEAD `b9a9be322`, after Juri's answers of 2026-10-12: J1 is a **menu per row**, not the single action button; J2, J3, J5 yes; J4 accepted; J6 with #166. From the chat (RC-25): Q1 as recommended, Q3 «Link existing <Type>», Q4 two tickets at the closure, Q2 no multiplicity in the heading: it goes in the `title` of the existing `[n/m]` chip. This section replaces the `action` of §7 and, in §9, `__ref-action` and `__ref-mult`.
+
+### A1. The menus that exist (read), and the clip (measured)
+
+| # | Menu | Where | Placed | Closes on | Roles, keys |
+|---|---|---|---|---|---|
+| 1 | Outline «Add inside» | `InstanceManagerTab.tsx:1043-1053` (button), `:1061-1087` (`div.instance-manager__outline-menu`) | a block IN FLOW under the node (`instanceManagerTab.scss:2304-2317`, no `position`) | its own button only (`:2348`) | `role="menu"`, `menuitem`; no Escape, no arrows |
+| 2 | Columns panel | `:2718-2750` | portal on `document.body`, `fixed`, `computeColumnsPanelStyle(rect)` (`:1295`, not exported) | outside `mousedown`, Escape, scroll, resize (`:1537-1553`) | `role="group"`, checkboxes |
+| 3 | `contextMenu/ContextMenu.tsx` (763 lines) | mounted by `MetamodelTab.tsx:161`, `ModelTab.tsx:42` | `top: position.y - 100` (`:67`), per graph, from `state.contextMenu` (`:267`, `:742`) | its own handlers | the classic canvas menu, built from a graph node |
+| 4 | `forEndUser/ContextMenu.tsx` (76 lines) | a tag of the view JSX | renders nothing: it pushes entries on `tnv.contextMenu` (`:53`, `:59`) | — | not a widget |
+| 5 | `common/ExportImportMenu.tsx` | trigger `:86-95`, dropdown `:98` | `position: absolute` in its wrapper (`ExportImportMenu.scss:47-55`) | outside `mousedown`, Escape (`:31-58`); an item closes before it acts (`:59-62`) | `bi-three-dots-vertical`, `aria-haspopup`, `aria-expanded`, `role="menu"`, `menuitem`; no arrows |
+| 6 | `ReferencePicker.tsx` | `:132-174` | portal, `style={computeListStyle(anchor)}` (`:133`) | outside `mousedown` in capture (`:106-114`), Escape | listbox; arrows, Enter, Escape (`:122-130`), focus on open (`:98`) |
+| 7 | `editor-v2/ContextMenu.tsx` (71 lines; not in the prompt's list) | `EditorV2.tsx:4615-4616`, portaled | `fixed` at the caller's `x, y`, no flip | a transparent backdrop | none; its classes are in `EditorV2.scss:3982-4130`, and the component imports no stylesheet |
+
+**The row's menu follows 6 for placement and closing** (a portal anchored on a DOMRect, `computeListStyle` by import as its fourth importer, after `Toolbar.tsx:11`, `InlineEnumSelect.tsx:3` and `ReferencePicker.tsx:19`, outside `mousedown`, Escape), takes scroll and resize from 2, **the roles and the trigger from 5**, and the item's look from 1 **by class name** (`instance-manager__outline-menu-item` is a flat class, reachable in a portal as `:2734-2743` says of the Columns rules). No file of the seven is edited. Not 3 or 4: they are not menus one can mount on a row. Not 7 by import: no role and no key (an edit outside the DOVE), no flip, and its look arrives only where `EditorV2.scss` is loaded (`EditorV2.tsx:124`), which the stand-alone page is not shown to do.
+
+**The clip, measured** (probe `ONLY=clip`, run 5 of the log; a stand-in of the probe, 180×96 px, the size of three items, injected under a row; fixture filled through the store). Control: under the FIRST row scrolled to the top of the pane the stand-in is whole (K1.ctl, K2.ctl, K4.ctl PASS).
+
+| Host, form body | Under the LAST row, pane at its end: `absolute` dropdown | the same as a block in flow |
+|---|---|---|
+| Data Manager, `Session_0` (an «Add» bar follows the sections) | 95 of 96 px; `scrollHeight` 2119 → 2125 | 95 of 96; 2119 → 2221 |
+| Data Manager, `Phase_0` (the section ends the pane) | **61 of 96 px**, cut by `section.instance-manager__pane` (`overflow: auto`); 663 → 701 | 84 of 96; 663 → 765, the section's foot pushed 96 px down |
+| Configurator, `Session_0` | 94 of 96, cut by `div.configurator__detail` (`overflow: auto`) | 94 of 96 |
+| Configurator, `Phase_0` (the pane does not scroll) | 96 of 96 | 96 of 96 |
+
+So a menu inside the tree is cut where a section ends a scrolled pane (35 px of three items), and in flow it also moves the foot: **a portal with the flip of `computeListStyle` is needed**. The run exits 1 on one FAIL, K3.ctl, and it is not a clip: the stand-in is whole by geometry (96 of 96) and the element on top at its three points is `div.donation-banner` (`DonationBanner.scss:2-11`: `fixed`, bottom 20px, right 100px, `z-index: 9000`), which covers the bottom right of the Data Manager's pane in a fresh profile, today's rows included. `computeListStyle` sets `zIndex: 10000` (`InlineObjectSelect.tsx:48`), above it; arm W6 measures it on the real menu. Run 4 is void: its control assumed the first row is on screen with the pane at its top, and it sits about 1000 px under the pane's lower edge.
+
+### A2. The design, confirmed with one correction and one addition
+
+- The card stays as it is and opens the target on a click. At its right, only when the row has an item besides Open, one button: `bi-three-dots-vertical`, `aria-haspopup="menu"`.
+- Items, in this order: «Open» (not on a broken pointer); «Change…» on a single-valued writable row; «Remove from the list» on a multi-valued writable row and on a single-valued one whose lower bound is 0 (`clearValue` at the row's raw index, the write of «(none)»). A 1..1 row has Open and Change… only. No item is drawn disabled: what cannot be done is absent (the rule of `InstanceManagerTab.tsx:1056-1060`).
+- «Change…» closes the menu and opens the shared `ReferencePicker`, with «(none)» where the lower bound is 0. **Correction proposed:** anchored on the ROW's rect, not on the button's. `computeListStyle` puts the popover's left edge on the anchor's (`InlineObjectSelect.tsx:47`), so on a small button at the row's end the picker (220 px at least, `irFormStyle.scss:639`) opens beside the row; on the row it opens under the card it changes. The menu stays anchored on its button.
+- **Addition, from a hazard read in the layout:** an item closes the menu before it acts, so the second click of a double click reaches what is under the menu. Under the last row of a multi-valued section that is the foot's «New … & link», which the Configurator executes at once (`ConfiguratorTab.tsx:310-316`). After an item acts, the menu's box stays 300 ms as an inert shield (no item, the pointer swallowed), then leaves. Arm W5.
+- Keyboard: Enter or Space on the button opens and focuses the first item; ArrowDown and ArrowUp move and wrap; Enter or Space on an item acts; Escape closes and returns the focus to the button, and so does Tab; an outside `mousedown`, a scroll of any ancestor and a resize close (the geometry is computed once, as in menu 2).
+- **Right click, described and not decided.** `onContextMenu` on the row: `preventDefault()`, the same menu anchored on `new DOMRect(clientX, clientY, 0, 0)`. Cost: about 6 lines and one arm (W7). It works only on rows that have the button (a row that can only be opened keeps the browser's menu); it is a gesture nothing on screen announces; it takes the browser's own menu away from those cards; and it has no precedent in these two hosts (`command grep -rn onContextMenu` on `abstract/tabs` and `environment`: 0; control, `editor-v2`: 9).
+
+### A3. The rule of §7, rewritten
+
+```ts
+export type RefRowAction = 'open' | 'change' | 'remove';
+export interface RefSlotRow { value: string; index: number; broken: boolean; actions: RefRowAction[] }
+export function hasRowMenu(row: RefSlotRow): boolean   // the row gets the menu button: an action besides 'open'
+```
+
+`RefSlotControls` (`rows`, `lockedBy`, `allowNone`, `link`, `full`) and the signature of `refSlotControls` are as in §7. `actions`, in the order the menu prints them: `open` unless the pointer is broken; then, only when the slot is writable and the value is not locked, `change` on a single-valued slot, and `remove` on a multi-valued one or on a single-valued one with `lower < 1`.
+
+Tests 1, 2, 3, 5, 10 and 11 of §7 stand. Revised (T4 to T9) and added (T12 to T15), each named after the mutation that kills it:
+
+- T4: the rows of a multi-valued slot keep their raw indices across holes, with `['open', 'remove']`: kills a re-packed index;
+- T6: read-only, and derived: `['open']` on every row, no link, `lockedBy` says which: kills either flag dropped;
+- T7: a source the viewer cannot edit: `['open']`, no link, `lockedBy: 'profile'`: kills a write offered outside the gate (§3.7);
+- T8: a locked value has `['open']`, its neighbours keep their write, the link stays: kills the lock ignored, and the lock widened to the slot;
+- T9: a broken pointer has no `open` and keeps its write, and counts toward the upper bound: kills Open on a dead pointer;
+- T12: a 1..1 row is `['open', 'change']` and a 0..1 row `['open', 'change', 'remove']`: kills Remove on a required single reference, and `lower < 1` dropped;
+- T13: a multi-valued row never has `change`: kills Change leaking to a list; T14: the order is open, change, remove: kills a reorder;
+- T15: `hasRowMenu` is false for `['open']` and for `[]`, true for `['remove']` alone (a broken writable row): kills a button on a row that can only be opened.
+
+### A4. The markup of §9, revised (heading and row; the foot is unchanged)
+
+```
+h3.instance-manager__eyebrow
+  «label or key» · span.__ref-required · i.bi-lock-fill.__ref-lock · span.__ref-dirty      as in §9
+  span.instance-manager__draft-card    existing «Goal [1/1]»; new: title «1..1» (Q2)
+  span.instance-manager__ref-derived   new, «derived» only, in place of __ref-mult
+div.instance-manager__ref-row          new; if the right click is kept, its onContextMenu
+  button.instance-manager__inline-link.instance-manager__ref-link     existing, unchanged (a span when the pointer is broken)
+  button.instance-manager__ref-menu-btn    new: i.bi-three-dots-vertical, aria-haspopup="menu", aria-expanded, aria-controls=<menu id>, aria-label «Actions for <name>», title «Actions»
+div.instance-manager__ref-menu         new, a portal on document.body, style={computeListStyle(rect)}: role="menu", id (useId), aria-label «<label>: <name>»
+  button.instance-manager__outline-menu-item.instance-manager__ref-menu-item    role="menuitem", tabIndex -1: «Open» (bi-box-arrow-in-right) · «Change…» (bi-arrow-left-right) · «Remove from the list» (bi-x)
+```
+
+- New classes, 0 hits each in `frontend/src` and as `&__…` in the stylesheet (`command grep -rn`; control `instance-manager__outline-menu-item`: 1 and 1): `__ref-row`, `__ref-menu-btn`, `__ref-menu`, `__ref-menu-item`, `__ref-derived`. Dropped from §9: `__ref-action`, `__ref-mult`. Reused by name: `__outline-menu-item`. The box takes the look of `&__columns-panel` (`instanceManagerTab.scss:669`) with tokens that exist (`command grep` on `styles/`: `--radius-dropdown` 1 definition, `--color-node-shadow` 2, `--color-form-border` 8, `--color-bg-primary` 3; the item's `--color-bg-tertiary` 8). No variable defined in the component stylesheet. `bi-three-dots-vertical` has 6 uses; `useId` 4 (React 18.3.1).
+
+### A5. The probe arms the menu adds (Phase 2, step 2; both hosts, subject and inline child)
+
+- W1 the button: present on a writable row, absent on a read-only row, under a `read` source and on a locked value; a click shows the items of the kind (1..1: Open, Change…; 0..1: all three; multi-valued: Open, Remove from the list).
+- W2 the keyboard: Enter on the focused button, the first item is `document.activeElement`; ArrowDown, ArrowUp wrapping; Enter on «Remove from the list» leaves the oracle's hole (L4); Space opens too; Escape and Tab: no menu, the focus on the button.
+- W3 a `mousedown` outside, a scroll of the pane, a resize: no menu, the raw array unchanged.
+- W4 each item: Open (the header names the target); Change… (the picker, then G2, T2; «(none)» only at lower 0); Remove (L4 on a list, T3 on a 0..1).
+- W5 a double click on each item: one write, and nothing else moves (the number of instances, the other slots), on the last row of a multi-valued section in the Configurator above all.
+- W6 `elementsFromPoint` at the centre of every item of the LAST row with the pane at its end, in the Data Manager on `Phase_0` (the 61-of-96 case) and with the donation banner on screen: the item is on top and inside the viewport.
+- W7, only if the right click is kept: it opens the same menu at the pointer; on a row with no button `defaultPrevented` stays false.
+
+### A6. The file list of §11.1
+
+**No file is added: the eight stay the eight.** The menu is a local component of `InstanceDetail.tsx` (file 4), as `RefSlotsSection` and `ReadOnlyGate` are, with its rules in `instanceManagerTab.scss` (file 5); `refSlot.ts` and its test (files 1 and 3) take the shape of A3. Two more imports in `InstanceDetail.tsx`, read-only uses: `createPortal` (`react-dom`) and `computeListStyle` (`editor-v2/components/InlineObjectSelect`). `IRForm.tsx` and the diff of §11.3 do not change.
+
+Questions: (1) the picker of «Change…» anchored on the row or on the button? Recommended: on the row. (2) The right click of A2: kept or not? No recommendation is asked; without an answer it is not built.
