@@ -119,7 +119,7 @@ export const fakevsar = 1;
 //         GraphDragHandler.isDragging = true;
 //         this.startDragClickedPoint = new Point(e.screenX, e.screenY);
 //         // this.totalDragOffset.set(0, 0);
-//         // let state: IStore =  store.getState();
+//         // let state: IStore =  DState.getState();
 //         this.draggingSelection = Selectors.getVertex(false, true).filter( (v) => (v.isSelected[DUser.current] || v.id === manualAddLastSelectedid));
 //
 //         this.draggingInitialPositions = []; // this.draggingSelection.map<GraphPoint>( (v) => new GraphPoint(v.x, v.y));

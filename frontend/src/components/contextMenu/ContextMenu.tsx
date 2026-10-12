@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode, useRef} from 'react';
 import {connect} from 'react-redux';
 import {CtxMenuAllProps, CtxMenuPathSeparator} from '../forEndUser/ContextMenu';
-import type {
+import {
     DGraph,
     DGraphElement,
     Dictionary,
@@ -90,10 +90,7 @@ export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: nu
 let contextMenuMap: Dictionary<Pointer<DGraph>, (nodeid: Pointer<DGraphElement>, x: number, y: number)=>void> = {};
 windoww.ShowContextMenu = ShowContextMenu;
 windoww.contextMenuMap = contextMenuMap;
-type RecursiveArray<A> = A[] | RecursiveArray<A>[];
-export type NestedDictionary<K extends keyof GObject = any, V = any> =
-    | Dictionary<K, V>
-    | { [key: string]: NestedDictionary<K, V> };
+
 
 function addDynamicEntries(jsxList: ReactNode[], nodeid: Pointer<DGraphElement>, data: LModelElement | undefined, node: LGraphElement){
     let tn = transientProperties.node[nodeid];
@@ -348,7 +345,7 @@ function ContextMenuComponentInner(props: AllProps) {
             if (!child || !model?.id || !lref?.name) return;
             const parent = (l as any).father as LObject | undefined;
             if (!parent?.id) return;
-            const state = store.getState();
+            const state = DState.getState();
             const graphIds: string[] = (state as any).graphs ?? [];
             let graphId: string | null = null;
             for (const id of graphIds) {
@@ -606,7 +603,7 @@ function ContextMenuComponentInner(props: AllProps) {
 
 /*************** keybindings events *****************/
 function getSelected(): {s: DState} & Partial<DState['_lastSelected']> {
-    let s: DState = store.getState();
+    let s: DState = DState.getState();
     return {s, ...(s._lastSelected || {})};
 }
 

@@ -28,6 +28,7 @@ import {
     SetRootFieldAction,
     U
 } from "../joiner";
+import {ProxyCache} from "./ProxyCache";
 
 type NotAConcatenation = null;
 type ERROR = "_Type_Error_";
@@ -55,13 +56,16 @@ export class LogicContext<
         this.data = data;
         this.proxyObject = proxyObject;
         this.write = proxyObject as any;
-        if (U.liveStateChanges && data) {
+        /*if (U.liveStateChanges && data) { constructor's parameter are already updated before the call
             let id = data.id;
             let newd = transientProperties.livePatches?.idlookup?.[id];
             // if (newd) this.data = U.objectMergeInPlace({...data}, newd);
             // if (newd) this.data = Uobj.applyObjectDelta(this.data, newd, false);
-            if (newd) this.data = newd as any;
-        }
+            if (newd) {
+                this.data = newd as any;
+                this.proxyObject = L.from(newd);
+            }
+        }*/
     }
     /*
         saveToRedux(propkey: "keyof data" | string, val: "typeof data[path]" | any): void { // todo: ask non stackoverflow
@@ -109,6 +113,11 @@ RuntimeAccessibleClass.set_extend(LogicContext, MapLogicContext);
 
 @RuntimeAccessible('MyProxyHandler')
 export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
+    // NB: if false, and cache is on, it will have a mix of updated and not update properties,
+    // according to the version of the object that was interrogated before caching, making a total mess
+    // so i'm forcing on always, which is also likely desirable in most occasions without to resort to ".r"
+    static autoUpdateObjects = true;
+
     s: string = 'set_';
     g: string = 'get_';
     /*get(target: T, p: string | number | symbol, proxyitself: Proxyfied<T>): boolean {
@@ -154,9 +163,9 @@ export type GetPath<T = GObject> = T;
 * handling proxy += and proxy -=
 *
 * will become var = var + add; which will call Symbol.getPrimitive
-// console.log(+obj2);     // 10        — hint is "number"         NaN with +array with multiple vals, +array[0] with array of size 1, NaN with functions & objects
-// console.log(`${obj2}`); // "hello"   — hint is "string"         array => array.join(','), object => "[object Object]", function => function.toString() whole func definition with body code
-// console.log(obj2 + ""); // "true"    — hint is "default"        array, object, function => same as with hint "string"
+console.log(+obj2);     // 10        — hint is "number"         NaN with +array with multiple vals, +array[0] with array of size 1, NaN with functions & objects
+console.log(`${obj2}`); // "hello"   — hint is "string"         array => array.join(','), object => "[object Object]", function => function.toString() whole func definition with body code
+console.log(obj2 + ""); // "true"    — hint is "default"        array, object, function => same as with hint "string"
 *
 * */
 
@@ -228,6 +237,7 @@ export let lang_hiddenkeys = [
     'id',
 ];
 
+
 @RuntimeAccessible('TargetableProxyHandler')
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
     lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
@@ -241,6 +251,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     constructor(d: ME, baseObjInLookup?: DPointerTargetable, additionalPath: string = '', l?: LE) {
         super();
         this.d = d;
+
+        if (!d) Log.eDevv("faulty proxy constructor", {d, thiss:this, arguments});
         if (!l) {
             l = RuntimeAccessibleClass.get(d.className)?.logic?.singleton as LE;
             Log.exDev(!l, 'Trying to wrap class without singleton or logic mapped: ' + d.className, { object: d, className: d.className })
@@ -279,12 +291,17 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             return Reflect.get(targetObj, propKey, proxyitself);
         }
         let ret;
-        let isError = false;
+
+        if (!targetObj || !proxyitself) Log.eDevv("faulty proxy get", {propKey, thiss:this, targetObj, proxyitself, arguments});
+
+        if (!U.safeMode) return this.get0(targetObj, propKey, proxyitself);
         // console.error('_proxy get PRE:', {targetObj, propKey, proxyitself, arguments});
-        try { ret = this.get0(targetObj, propKey, proxyitself); } catch(e) {
+        try {
+            ret = this.get0(targetObj, propKey, proxyitself);
+        } catch(e: any) {
             // Log.eDevv('failed to get property', {targetObj, propKey, e}); // Silenced - too noisy
+            Log.eDevv('failed to get property', {targetObj, propKey, e, stack:(e.stack||"").split("\n")}); // Silenced - too noisy
             ret = e;
-            isError = true;
         }
 
         // if (isError) throw ret;
@@ -292,31 +309,45 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         return ret;
     }
 
-    public get0(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
-        // console.log('proxy keysearch', {propKey, targetObj, l: this.l, proxyitself, d: this.d});
+    public get0(targetObj: ME, propKey0: string | symbol, proxyitself: Proxyfied<ME>): any {
+        this.d = targetObj;
+        if (windoww.pxDebug) console.log('proxy keysearch', {propKey0, targetObj, l: this.l, proxyitself, d: this.d, t:this});
         let canThrowErrors = true;
 
-        switch (typeof propKey) {
+        // refresh target object by default with most recent version if livechanges are on
+        if (TargetableProxyHandler.autoUpdateObjects) {
+            const d = DPointerTargetable.from(targetObj.id);
+            if (d) { targetObj = this.d = d as any; }
+            if (targetObj && !d) {
+                Log.eDevv("Proxy error: failed to update d-object", U.jsonCopy(
+                    {targetObj, d, id: targetObj?.id, slook: windoww.DState.getState().idlookup, pending: DPointerTargetable.pendingCreation}));
+            }
+            proxyitself = LPointerTargetable.fromD(targetObj as any);
+        }
+
+        switch (typeof propKey0) {
             case "symbol":
-                propKey = String(propKey);
+                propKey0 = String(propKey0);
                 // console.log('get symbol', {propKey});
-                switch (propKey) {
-                    default: Log.exDevv('unexpected symbol in proxy getter:', propKey); break;
+                switch (propKey0) {
+                    default: Log.exDevv('unexpected symbol in proxy getter:', propKey0); break;
                     // for object returns undefined, for arrays returns a function returning an iterator: arr[Symbol.iterator] = ()=>new Iterator(...);
                     case "Symbol(Symbol.iterator)": return undefined;
-                    case 'Symbol(Symbol.toStringTag)': propKey = 'toString'; break; //return (()=>"[Proxy]");
-                    case "Symbol(Symbol.toPrimitive)": propKey = 'toPrimitive'; break;
+                    case 'Symbol(Symbol.toStringTag)': propKey0 = 'toString'; break; //return (()=>"[Proxy]");
+                    case "Symbol(Symbol.toPrimitive)": propKey0 = 'toPrimitive'; break;
                 }
                 break;
             // case "number": return null;
         }
+        if (typeof propKey0 === 'symbol') return undefined;
+        let propKey: string = propKey0 as any;
 
         switch (propKey) {
             case '__l': return this.l;
             case '__d': return this.d;
             case '__t': return this;
             case 'inspect': // node.js util
-            case "r":
+            case "r": // reload methods became obsolete because they are now always reloading due to autoUpdateObjects constant
             case "_refresh":
             case "_reload": return LPointerTargetable.wrap(targetObj.id);
             case '__Raw':
@@ -328,20 +359,27 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 let ret: GObject = {...targetObj};
                 if (ret._state) ret.state = ret._state;
                 for (let k of hiddenkeys) { delete ret[k]; }
+                let keptChildKeys = {'values': true, 'value': true};
                 if (propKey === 'json' || propKey === 'deepJson') for (let k of lang_hiddenkeys) { delete ret[k]; }
                 let childKeys_ = windoww.DPointerTargetable.childKeys;
                 let pointerKeys = windoww.DPointerTargetable.pointerKeys;
                 // replace children pointers with json or remove them
                 if (propKey === 'deepJson' || propKey === '__deepJson') {
                     for (let k of childKeys_) {
-                        if (!(k in ret)) continue;
+                        if (!ret.hasOwnProperty(k)) continue;
+                        let isValues = k === 'values' || k === 'value';
                         switch (k) {
                             case 'values':
                                 let isArr = Array.isArray(ret[k]);
                                 let v: LValue["values"] = ret[k];
                                 if (v === undefined || v === null) v = [];
                                 else if (!isArr) { v = [ret[k]]; }
-                                v = v.map(e=>(L.from(e as any) as any)?.[propKey] || e);
+                                v = v.map(e=> {
+                                    let ltarget: GObject<LModelElement> = L.from(e as any);
+                                    if (!ltarget && isValues) return e;
+                                    if (ltarget.className === "DEnumLiteral") return ltarget.name;
+                                    return ltarget?.[propKey];
+                                });
                                 if (v.length === 0) { delete ret[k]; break; }
                                 if (v.length === 1) { ret[k] = v; break; }
                                 ret[k] = v;
@@ -354,13 +392,18 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                         }
                     }
                 }
-                else if (propKey !== '__json') for (let k of childKeys_) { delete ret[k]; }
+                else if (propKey !== '__json') for (let k of childKeys_) {
+                    if (k in keptChildKeys) continue;
+                    delete ret[k];
+                }
+
                 // replace non-containing pointers (type) with names
                 if (propKey !== '__json') for (let k of pointerKeys) {
                     if (!(k in ret)) continue;
                     if (Array.isArray(ret[k])) ret[k] = ret[k].map(e => (L.from(e) as any)?.name).filter(e=>!!e);
                     else ret[k] = ret[k] = (L.from(ret[k]) as any)?.name;
                 }
+
                 for (let k of Object.keys(ret)) {
                     let v = ret[k];
                     if ((Array.isArray(v) && v.length === 0) || U.isEmptyObject(v)) delete ret[k];
@@ -388,25 +431,35 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 return this.d.className;
             case 'parent': propKey = 'father'; break;
         }
-        if (propKey[0] === "_" && propKey.indexOf("__info_of__")===0) {
-            return (this.l as GObject)[propKey];
-        }
+
+        if (propKey[0] === "_" && propKey.indexOf("__info_of__") === 0) { return (this.l as GObject)[propKey]; }
 
         let logicContext = this.additionalPath
             ? new LogicContext2(proxyitself, targetObj, this.baseObjInLookup, this.additionalPath)
             : new LogicContext(proxyitself as any, targetObj);
+
+        if (windoww.pxDebug) console.log('proxy keysearch 3', {propKey0, targetObj, l: this.l, proxyitself, d: this.d, t:this});
         // check if exist directly in D.key, L.key or through a get_key
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.g + (propKey as string)]) {
-            // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
-            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](logicContext);
 
-
-
-            // if specific custom getter exist
+            // normal getter method call
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) {
-                let getterMethod: Function = this.lg[this.g + propKey]; // || this.defaultGetter;
-                // console.log("gets method", {getterMethod, lg:this.lg, thiss: this});
-                if (getterMethod) return getterMethod(logicContext);
+
+                // if (propKey === "name") Log.eDevv("faulty proxy get", {logicContext, propKey, thiss:this, targetObj, proxyitself, arguments});
+                let cache = ProxyCache.get(propKey, this.d as any, this.lg["__info_of__"+propKey]);
+                if (propKey === "toString" && windoww.pxDebug) { let cc = {...cache, history: null} as any;
+                    let gcache = cache as any;
+                    if (!(gcache).history) gcache.history = [];
+                    gcache.history.push(cc);
+                    cc.f = cc.success; cc.d = U.jsonCopy(targetObj); cc.c = logicContext; cc.ret = cc.value();
+                    cc.cc = cc.d.clonedCounter; cc.n = targetObj.name; }
+
+                if (windoww.pxDebug) console.warn("getter proxy cache " + propKey, {ret: this.lg[this.g + propKey](logicContext), d: this.d, targetObj,
+                    cache:{...cache}, cs:cache?.success, propKey, logicContext, i:this.lg["__info_of__"+propKey], lg:this.lg, t:this});
+                if (cache?.success) return cache.value;
+                const ret = this.lg[this.g + propKey](logicContext);
+                if (cache) ProxyCache.set(ret, cache, propKey, this.d as any);
+                return ret;
             }
 
         }
@@ -415,8 +468,15 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
 
         // if custom generic getter exist
-        // @ts-ignore
-        if (this.lg._defaultGetter) return this.lg._defaultGetter(logicContext, propKey);
+        if (this.lg._defaultGetter) {
+            let cache = ProxyCache.get(propKey, this.d as any, this.lg["__info_of__"+propKey]);
+            if ((window as any).debugp) console.warn("default getter proxy cache " + propKey, {cache:{...cache}});
+            if (cache?.success) return cache.value;
+            // @ts-ignore
+            const ret = this.lg._defaultGetter(logicContext, propKey);
+            if (cache) ProxyCache.set(ret, cache, propKey, this.d as any);
+            return ret;
+        }
 
         // if property do not exist, try a concatenation
         /*let concatenationTentative = null;
@@ -455,6 +515,12 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         }
         // console.error('_proxy set PRE:', {targetObj, propKey, value, proxyitself, arguments});
         // if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)] || (this.l as GObject)[(propKey as string)]) {
+
+        // refresh target object by default with most recent version if liveChanges are on
+        if (TargetableProxyHandler.autoUpdateObjects) {
+            targetObj = this.d = DPointerTargetable.from(targetObj.id);
+            proxyitself = LPointerTargetable.fromD(targetObj as any);
+        }
 
         if ((this.d as GObject).__readonly && propKey !== '__readonly') {
             //todo if there is a transaction open i should throw exception?
@@ -508,27 +574,48 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             problemone 2: non so a quali proprietà dello store devo abbonarmi, devo leggere sempre tutto lo store?
             !!!!! soluzione 2?: dovrei dichiarare le variabili a cui mi abbono, salvarle nello stato e precaricarle tramite mapStateToProps*/
 
-    public deleteProperty(target: ME, key: string | symbol, proxyItself?: Proxyfied<any>): boolean {
+    public deleteProperty(targetObj: ME, key: string | symbol, proxyItself?: Proxyfied<any>): boolean {
         if (typeof key === "symbol") return false;
-        this.set(target, key, undefined, proxyItself);
+        // refresh target object by default with most recent version if liveChanges are on
+        /*if (TargetableProxyHandler.autoUpdateObjects) {
+            targetObj = this.d = DPointerTargetable.from(targetObj.id);
+            proxyItself = LPointerTargetable.fromD(targetObj as any);
+        }*/
+        this.set(targetObj, key, undefined, proxyItself);
         // delete target[key]; must be done in redux action
         return true; }
 
-    private mergedObject(target: ME): GObject{
-        let ret: GObject = {...target}; // U.arrayMergeInPlace(Object.keys(target), Object.keys(this.l).filter(k => k.indexOf('set_') !== 0 && k.indexOf('get_') !== 0));
+    private mergedObject(targetObj: ME): GObject {
+        let ret: GObject = {...targetObj};
         for (let k in this.l) {
-            if (!(k in ret) && k.lastIndexOf('get_', 4) !== 0 && k.lastIndexOf('set_', 4) !== 0) ret[k] = true;
+            if (
+                !(k in ret)
+                && k.lastIndexOf('get_', 4) !== 0
+                && k.lastIndexOf('set_', 4) !== 0
+            ) ret[k] = true;
         }
         return ret;
     }
-    ownKeys(target: ME): ArrayLike<string | symbol>{
-        const ret: GObject = this.mergedObject(target);
+    ownKeys(targetObj: ME): ArrayLike<string | symbol> {
+        // refresh target object by default with most recent version if liveChanges are on
+        if (TargetableProxyHandler.autoUpdateObjects) {
+            targetObj = this.d = DPointerTargetable.from(targetObj.id);
+            // proxyitself = LPointerTargetable.fromD(targetObj as any);
+        }
+
+        const ret: GObject = this.mergedObject(targetObj);
         // ret = Reflect.ownKeys(ret);
         return Reflect.ownKeys(ret);
     }
 
-    // has(target: ME, p: string | symbol): boolean { return p in this.mergedObject(target); }
-    has(target: ME, p: string | symbol): boolean { return (p in target) || (p in this.l); }
+    has(targetObj: ME, p: string | symbol): boolean {
+        // refresh target object by default with most recent version if liveChanges are on
+        if (TargetableProxyHandler.autoUpdateObjects) {
+            targetObj = this.d = DPointerTargetable.from(targetObj.id);
+            // proxyitself = LPointerTargetable.fromD(targetObj as any);
+        }
+
+        return (p in targetObj) || (p in this.l); }
 
     /*
     apply(target: DModelElement, thisArg: any, argArray: any[]): any {

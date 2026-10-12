@@ -78,7 +78,7 @@ export const DATA_MANAGER_VIEWPOINT_NAME = 'Data Manager';
  * answer here, and it must come back as null rather than as a throw or a hollow proxy.
  */
 export function findDataManagerViewpoint(state?: any): DViewPoint | null {
-    const st = state ?? store.getState();
+    const st = state ?? state.getState();
     const d = st?.idlookup?.[DATA_MANAGER_VIEWPOINT_ID];
     return d && isDataManagerViewpoint(d) ? (d as DViewPoint) : null;
 }

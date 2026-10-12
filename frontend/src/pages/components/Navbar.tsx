@@ -24,7 +24,7 @@ import {
     Pointer, Pointers, Log,
     UndoAction,
     RedoAction,
-    GraphPoint
+    GraphPoint, LClass
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
@@ -643,7 +643,7 @@ function NavbarComponent(props: AllProps) {
             const tabs = (modelsPanel as any)?.tabs || [];
             const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
             if (!activeId) return null;
-            const state = store.getState() as any;
+            const state = DState.getState() as any;
             const raw = state[activeId] || state.idlookup?.[activeId];
             if (!raw) return null;
             return { id: activeId, isModel: raw.isMetamodel === false };
@@ -797,13 +797,14 @@ function NavbarComponent(props: AllProps) {
         // MCWS: # Metaclasses with Superclass
         // Use DClass extends array
         const MCWS = dclasses.filter((c: any) => {
-            const extendsArr = c?.extends;
+            const extendsArr = (L.from(c) as LClass)?.extends;
             return Array.isArray(extendsArr) && extendsArr.length > 0;
         }).length;
 
         // LMC: % Isolated Metaclasses (no superclass and no subclasses)
         // Use LClass for computed properties (extends and extendedBy)
         const isolated = classes.filter((c: any) => {
+            c = (L.from(c) as LClass);
             const extendsArr = c.extends;
             const extendedByArr = c.extendedBy;
             const hasSuper = Array.isArray(extendsArr) && extendsArr.length > 0;
@@ -1036,7 +1037,7 @@ function NavbarComponent(props: AllProps) {
                         // Try to find the metamodel from last selected element, fallback to first metamodel
                         let activeMetamodel = metamodels.find(m => m);
                         // Get lastSelectedModelElement directly from store to avoid re-renders
-                        const currentState = store.getState();
+                        const currentState = DState.getState();
                         let lastSelectedModelElement: string | undefined;
                         if (currentState._lastSelected?.modelElement) {
                             try {
@@ -1554,7 +1555,13 @@ function NavbarComponent(props: AllProps) {
                         },
                         icon: <i className="bi bi-grid-3x3-gap" />
                     },
-                ])
+                {name: 'Config',
+                    function: () => {
+                        TRANSACTION('showConfig', ()=>SetRootFieldAction.new('showConfig', true));
+                    },
+                    icon: <i className={`bi bi-gear`} />
+                }
+            ])
             ]
         },
 
@@ -1637,7 +1644,7 @@ function NavbarComponent(props: AllProps) {
 
                 const tabs = (modelsPanel as any).tabs || [];
                 const activeId = (modelsPanel as any).activeId || tabs[0]?.id;
-                const state = store.getState();
+                const state = DState.getState();
 
                 type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean };
                 const tabList: TabListItem[] = (tabs.map((tab: any): TabListItem | null => {

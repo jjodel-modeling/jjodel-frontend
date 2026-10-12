@@ -93,6 +93,12 @@ font-weight: var(--font-extrabold) !important;
     z-index:1;
     position: absolute;
     box-shadow: var(--smart-elevation-8);
+    &.shadow{
+      box-shadow: var(--smart-elevation-8);
+    }
+    &.no-shadow{
+      box-shadow: none;
+    }
     &.fixed{
       position: fixed;
     }
@@ -105,6 +111,11 @@ font-weight: var(--font-extrabold) !important;
     &.top {
       left: 50%;
       transform: translate(-50%, -100%);
+    }
+    &.center {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
     &.right {
       min-height: 100%;
@@ -364,6 +375,11 @@ body{
   --text-shadow-g1: 1px 1px 0px #777777, 1px -1px 0px #777777, -1px 1px 0px #777777, -1px -1px 0px #777777, 1px 0px 0px #777777, 0px 1px 0px #777777, -1px 0px 0px #777777, 0px -1px 0px #777777;
 }
 
+select {
+  color: inherit;
+  text-align: inherit;
+  font-weight: inherit;
+}
 
 body, .my-tooltip, .unselectable{
   -webkit-touch-callout: none; /* iOS Safari */

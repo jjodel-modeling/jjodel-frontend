@@ -596,6 +596,7 @@ function ProjectDashboard(props: DashProps): any {
             const { editorType } = (e as CustomEvent).detail;
             try {
                 const layout = DockManager.dock?.getLayout();
+                // @ts-ignore
                 const activeId = layout?.dockbox?.children?.[0]?.activeId;
                 if (activeId) tabTypeMapRef.current.set(activeId, editorType);
             } catch { /* dock not ready */ }
@@ -636,6 +637,13 @@ function ProjectDashboard(props: DashProps): any {
         return parts.join('\n\n');
     });
 
+    const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
+    let vparr = project?.viewpoints || [];
+    let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
+    allViews.push(...vparr as LViewElement[]);
+    allViews = allViews.filter(v => v);
+    for (let v of allViews) viewsDeDuplicator[v.id] = v;
+
     return (<>
         <Try>
             <>
@@ -643,6 +651,9 @@ function ProjectDashboard(props: DashProps): any {
                     {allViewsCss}
                 </style>
                 {CSS_Units.jsx}
+                <div id={"views-css-injector-d2"}>
+                    {Object.values(viewsDeDuplicator).map(v => <style id={"css_"+v.id}>{v.compiled_css}</style>)}
+                </div>
             </>
         </Try>
         <Try><Navbar /></Try>

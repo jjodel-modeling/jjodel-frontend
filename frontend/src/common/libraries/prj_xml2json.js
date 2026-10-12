@@ -5,10 +5,22 @@
 	Author:  Stefan Goessner/2006
 	Web:     http://goessner.net/
 */
+
+/*
+Edited by Damiano Di Vincenzo ~2026
+I don't claim any change in the license.
+both the original and my edit are free to use and share following LGPL/2.1.
+
+additions:
+   unique identifier for comments (path-based),
+   additional error handling,
+   ability to parse strings instead of documents
+   other ecore-based and misc utilities.
+*/
 import xmlFormat from 'xml-formatter';
 
 var X = {
-   toObj: function(xml) {
+   toObj: function(xml, indices/*: number[]*/ = []) {
       var o = {};
       if (xml.nodeType==1) {   // element node ..
          if (xml.attributes.length)   // element with attributes  ..
@@ -24,19 +36,21 @@ var X = {
             if (hasElementChild) {
                if (textChild < 2 && cdataChild < 2) { // structured element with evtl. a single text or/and cdata node ..
                   X.removeWhite(xml);
+                  let i = 0;
                   for (var n=xml.firstChild; n; n=n.nextSibling) {
+                     i++;
                      if (n.nodeType == 3)  // text node
                         o["#text"] = X.escape(n.nodeValue, true);
                      else if (n.nodeType == 4)  // cdata node
                         o["#cdata"] = X.escape(n.nodeValue);
                      else if (o[n.nodeName]) {  // multiple occurence of element ..
                         if (o[n.nodeName] instanceof Array)
-                           o[n.nodeName][o[n.nodeName].length] = X.toObj(n);
+                           o[n.nodeName][o[n.nodeName].length] = X.toObj(n, [...indices, i]);
                         else
-                           o[n.nodeName] = [o[n.nodeName], X.toObj(n)];
+                           o[n.nodeName] = [o[n.nodeName], X.toObj(n, [...indices, i])];
                      }
                      else  // first occurence of element..
-                        o[n.nodeName] = X.toObj(n); // damiano: qua parsa sottonodi
+                        o[n.nodeName] = X.toObj(n, [...indices, i]); // damiano: qui parsa sottonodi
                   }
                }
                else { // mixed content
@@ -63,7 +77,12 @@ var X = {
          if (!xml.attributes.length && !xml.firstChild) o = null;
       }
       else if (xml.nodeType==9) { // document.node
-         o = X.toObj(xml.documentElement);
+         o = X.toObj(xml.documentElement, indices);
+      }
+      else if (xml.nodeType==8) { // comment
+         // console.error("unhandled xml node comment: " + xml.nodeType, {xml, nodetype:xml.nodeType});
+         return {type: "#comment", details: {comment:xml.data}, source: "XMI_Element_"+indices.join(".")} // ; .data; .nodeValue, .textContent are the same
+
       }
       else console.error("unhandled xml node type: " + xml.nodeType, {xml, nodetype:xml.nodeType});
       return o;
@@ -75,12 +94,16 @@ var X = {
             o[i] = X.toJson(o[i], "", ind+"\t");
          json += (name?":[":"[") + (o.length > 1 ? ("\n"+ind+"\t"+o.join(",\n"+ind+"\t")+"\n"+ind) : o.join("")) + "]";
       }
-      else if (o == null)
+      else if (o === null || o === undefined)
          json += (name&&":") + "null";
       else if (typeof(o) == "object") {
          var arr = [];
-         for (var m in o)
-            arr[arr.length] = X.toJson(o[m], m, ind+"\t");
+         if (o.type === "#comment") {
+            const text = o.details?.comment || ""; // o.text
+            arr = text ? [text] : [];
+            // arr = {details: o.text, source: ??}
+         } else
+         for (var m in o) { arr[arr.length] = X.toJson(o[m], m, ind+"\t"); }
          json += (name?":{":"{") + (arr.length > 1 ? ("\n"+ind+"\t"+arr.join(",\n"+ind+"\t")+"\n"+ind) : arr.join("")) + "}";
       }
       else if (typeof(o) == "string")
@@ -185,7 +208,7 @@ export function xml2json(xml/*document|string*/, tab = '    '/*XML_DOM, string*/
    // document node
    if (xml.nodeType == 9) xml = xml.documentElement;
    let obj = X.toObj(X.removeWhite(xml));
-   console.log('xml2json xsi', {obj, xml});
+   // console.log('xml2json xsi', {obj, xml});
    for (let k in obj) if (k === 'xsitype' || k === window.ECoreParser.prefix+'xsitype') { obj[window.ECoreClass.xsitype] = obj[k]; delete obj[k];}
    if (!asString) return obj;
    var json = X.toJson(obj, xml.nodeName, "\t");
@@ -269,4 +292,4 @@ export function json2xml(o, tab/*obj, string*/) {
 
 export const XML = {parse: parseXml, toJson:xml2json, toJSON:xml2json, toJsonObject: xml2jsonobj, toJsonString: xml2jsonstr, fromJSON:json2xml};
 export const XMI = XML;
-// damiano: i need X.toObj(X.removeWhite(xml))
+// use X.toObj(X.removeWhite(xml))

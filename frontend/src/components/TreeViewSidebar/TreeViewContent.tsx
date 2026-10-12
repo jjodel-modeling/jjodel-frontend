@@ -651,7 +651,7 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
         if (!isAdvancedMode()) return;
         const menuWidth = 200;
         // The same test createDerivedViewpoint applies: a metamodel, not a model
-        const canDerive = isDerivableMetamodel((store.getState() as any).idlookup?.[elementId]);
+        const canDerive = isDerivableMetamodel((DState.getState() as any).idlookup?.[elementId]);
         const menuHeight = canDerive ? 80 : 40;
         let x = e.clientX;
         let y = e.clientY;

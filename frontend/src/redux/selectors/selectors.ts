@@ -63,7 +63,7 @@ export class Selectors{
 
     static getActiveModel(): null|LModel {
         let metamodel: null|LModel;
-        let state: DState & GObject = store.getState();
+        let state: DState & GObject = DState.getState();
         const selected = state._lastSelected?.modelElement;
         if(selected) {
             const me = LPointerTargetable.fromPointer(selected) as LModelElement
@@ -73,7 +73,7 @@ export class Selectors{
     }
 
     public static getLastSelectedModel<RET extends {m1?:LModel, m2?:LModel, model?:LModel, element?:LModelElement}>(state?: DState): RET {
-        state = state || store.getState();
+        state = state || DState.getState();
         let me = state._lastSelected?.modelElement;
         if (!me) return {} as RET;
         let ret: RET = {element: LPointerTargetable.fromPointer(me, state)} as RET;
@@ -87,8 +87,8 @@ export class Selectors{
     }
 
     static getAllViewElements(state0?: DState): DViewElement[] {
-        // return Object.values(store.getState().idlookup).filter(v => v.className === DViewElement.name) as DViewElement[];
-        const state: GObject<DState> = state0 || store.getState();
+        // return Object.values(DState.getState().idlookup).filter(v => v.className === DViewElement.name) as DViewElement[];
+        const state: GObject<DState> = state0 || DState.getState();
         const ptrs: Pointer<DViewElement>[] = Object.values((state).viewelements);
         let views: DViewElement[] = ptrs.map<DViewElement>( (ptr) => DPointerTargetable.fromPointer(ptr, state) as DViewElement);
         return views;
@@ -96,16 +96,16 @@ export class Selectors{
     //Giordano: start
 
     public static getViewpoints() : LViewPoint[] {
-        const state: DState & GObject = store.getState();
+        const state: DState & GObject = DState.getState();
         return LPointerTargetable.fromPointer(state.viewpoints);
     }
     public static getViewpoint() : LViewPoint {
-        const state: DState & GObject = store.getState();
+        const state: DState & GObject = DState.getState();
         return LPointerTargetable.fromPointer(state.viewpoint);
     }
 
     public static getObjects(): LObject[] {
-        let state: DState & GObject = store.getState();
+        let state: DState & GObject = DState.getState();
         const ptrs: Pointer<DObject, 0, 'N'> = Object.values((state).objects);
         const dObjects: DObject[] = ptrs.map<DObject>( (ptr) => state.idlookup[ptr] as DObject);
         const lObjects: LObject[] = [];
@@ -115,7 +115,7 @@ export class Selectors{
         return lObjects;
     }
     public static getValues(): LValue[] {
-        let state: DState & GObject = store.getState();
+        let state: DState & GObject = DState.getState();
         const ptrs: Pointer<DValue, 0, 'N'> = Object.values((state).values);
         const dValues: DValue[] = ptrs.map<DValue>( (ptr) => state.idlookup[ptr] as DValue);
         const lValues: LValue[] = [];
@@ -128,28 +128,28 @@ export class Selectors{
     }
 
     public static getDeleted(): string [] {
-        const state: DState & GObject = store.getState();
+        const state: DState & GObject = DState.getState();
         return state.deleted;
     }
 
     public static getState(): any {
-        const state: DState & GObject = store.getState();
+        const state: DState & GObject = DState.getState();
         return state;
     }
 
     static getDefaultEcoreClass(type: DefaultEClasses | ShortDefaultEClasses, state?: DState): DClassifier {
         let shorttype: string = (toShortEClass(type as any) || type).toUpperCase();
-        if (!state) state = store.getState();
+        if (!state) state = DState.getState();
         // todo: make other m3 classes and make this generic like getPrimitiveType
         return state.idlookup["Pointer_"+ShortDefaultEClasses.EObject.toUpperCase()] as DClassifier;
     }
     static getPrimitiveType(type: AttribETypes | ShortAttribETypes, state?: DState): DClassifier {
         let shorttype: string = (toShortEType(type as any) || type).toUpperCase();
-        if (!state) state = store.getState();
+        if (!state) state = DState.getState();
         return state.idlookup["Pointer_"+shorttype] as DClassifier;
     }
     static getAllPrimitiveTypes(): DClassifier[] {
-        let state: DState & GObject = store.getState();
+        let state: DState & GObject = DState.getState();
         const ptrs: Pointer<DClassifier, 0, 'N'> = Object.values((state).primitiveTypes);
         const classifiers: DClassifier[] = ptrs.map<DClassifier>( (ptr) => state.idlookup[ptr] as DClassifier);
         return classifiers;
@@ -158,43 +158,43 @@ export class Selectors{
         return Selectors.getAllPrimitiveTypes()[0];
     }
     static getRefEdges(): DRefEdge[] {
-        const state: DState & GObject = store.getState();
+        const state: DState & GObject = DState.getState();
         const pointers: Pointer<DRefEdge, 0, 'N', LRefEdge> = Object.values((state).refEdges);
         const dRefEdges: DRefEdge[] = pointers.map<DRefEdge>( (ptr) => state.idlookup[ptr] as DRefEdge);
         return dRefEdges;
     }
     static getField(field: string): string[] {
-        let state: DState & GObject = store.getState();
+        let state: DState & GObject = DState.getState();
         const pointers: Pointer<DModelElement, 0, 'N'> = Object.values((state)[field]);
         return pointers;
     }
 
     static getAllAttributes(): string[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         return Object.values((state).attributes);
     }
     static getAllEnumLiterals(): Pointer<DEnumLiteral>[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         return Object.values((state).enumliterals);
     }
     static getAllReferences(): Pointer<DReference>[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         return Object.values((state).references);
     }
-    // static getAllReferenceEdges(): string[] { const state: DState = store.getState(); return Object.values((state).refEdges); }
+    // static getAllReferenceEdges(): string[] { const state: DState = DState.getState(); return Object.values((state).refEdges); }
     static getAllClasses(): Pointer<DClass>[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         return Object.values((state).classs);
     }
     static getReturnTypes(): LClass[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         return LPointerTargetable.from(Object.values((state).returnTypes));
     }
 
     static getAllClassesWithoutPrimitive(): string[] {
         // this solution does not look good. what if a primitive type is inserted at runtime in between?
         // coould reach the same goal by taking all Classes of a model (m2), excluding classes from other models (types are classes from m3 model)
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         const classList: string[] = Object.values((state).classs);
         classList.splice(0, Selectors.getAllPrimitiveTypes().length);
         /* todo: need to change it in something like this once cross-references between models and instances are implemented
@@ -206,37 +206,37 @@ export class Selectors{
     }
 
     static getAllEnumerators(flag = false): string[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         return Object.values((state).enumerators);
     }
     static getAllPackages(): string[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         return Object.values((state).packages);
     }
 
     static getAllParameters(): string[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         return Object.values((state).parameters);
     }
     static getAllOperations(): string[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         return Object.values((state).operations);
     }
 
     static getDElement<T extends DModelElement>(pointer: string): T {
-        const state: DState & GObject = store.getState();
+        const state: DState & GObject = DState.getState();
         const dElement: T = state.idlookup[pointer] as T;
         return dElement;
     }
 
     static getAllMetamodels(): LModel[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         const dModels = Object.values((state).m2models);
         return LPointerTargetable.fromPointer(dModels);
     }
 
     static getAllModels(): LModel[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         const dModels = Object.values((state).m1models);
         return LPointerTargetable.fromPointer(dModels);
     }
@@ -245,7 +245,7 @@ export class Selectors{
 
     static getVertex<W extends boolean = true, RP extends boolean = true>(wrap?: W /* = true */, resolvePointers?: RP /**/):
         W extends false ? (RP extends false ? Pointer<DVoidVertex, 1, 1, LVoidVertex>[] : DVoidVertex[]) : LVoidVertex[] {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         let ptrs: Pointer<DVoidVertex>[] = [];
 
         U.ArrayMerge0(false, ptrs,
@@ -264,7 +264,7 @@ export class Selectors{
     static getAll<D extends DPointerTargetable, L extends LPointerTargetable, DT extends typeof DPointerTargetable = typeof DPointerTargetable,
         W extends undefined | true | false = false, RP extends undefined | true | false = true, RET = W extends false ? (RP extends false ? Pointer<D, 1, 1, L> : D) : L>
         (Classe?: DT, condition?: (e:RET) => boolean, state?: DState, resolvePointers?: RP /**/, wrap?: W /* = true */): RET[] {
-        if (!state) state = store.getState();
+        if (!state) state = DState.getState();
         let GClass = (Classe as GObject) || {name:"idlookup", cname:"idlookup"};
         const className: string = (GClass?.staticClassName || GClass.cname).toLowerCase();
         const allIdByClassName: Pointer<D, 1, 1, L>[]
@@ -278,7 +278,7 @@ export class Selectors{
         if (resolvePointers || wrap) {
             allDByClassName = allIdByClassName.map( (e) => (state as DState).idlookup[e] ) as D[];
             if (wrap) {
-                let s: DState = store.getState();
+                let s: DState = DState.getState();
                 allLByClassName = allDByClassName.map(e => LPointerTargetable.from(e, s)) as any as L[];
             }
         }
@@ -311,7 +311,7 @@ export class Selectors{
     static getByName2(name?: string | DPointerTargetable | LPointerTargetable, dtype?: typeof DPointerTargetable | undefined | string, caseSensitive: boolean = false, s?:DState): DPointerTargetable | null {
         if (!name) { return null; }
         if (typeof name === 'object') { return name as DPointerTargetable; }
-        if (!s) s = store.getState();
+        if (!s) s = DState.getState();
         //let ret: DPointerTargetable[];
         let classname: string | undefined = (dtype as typeof DClass)?.cname || dtype as string; // Selectors.getName(dtype, s); this was if dtype was allowed to be a class (filter Humans instead of filter DObjects)
         if (!caseSensitive) {
@@ -382,7 +382,7 @@ export class Selectors{
 
 
     static getViewByIDOrNameD(name: string | DViewElement | LViewElement, state?: DState): undefined | DViewElement {
-        if (!state) state = store.getState();
+        if (!state) state = DState.getState();
         if (typeof name === "object") { return (name as any).__raw || name as any; }
         if (state.idlookup[name]?.className === DViewElement.cname) return state.idlookup[name] as DViewElement;
         let id = Selectors.getViewIdFromName(name, state);
@@ -396,7 +396,7 @@ export class Selectors{
     // path is not required to start with a root, it's also possible to start navigating from a subview (notviewpoint/model view)
     // in case multiple matches are given due to incomplete path not starting from a viewpoint, the oldest matching view is returned.
     static getViewIdFromName(namepath: string, state?: DState): undefined | Pointer<DViewElement> {
-        if (!state) state = store.getState();
+        if (!state) state = DState.getState();
         let names: string[] = namepath.split(".");
         let eligibleContainers: Pointer<DViewElement>[] = state.viewelements;
         for (let i = 0; i < names.length; i++) {
@@ -410,7 +410,7 @@ export class Selectors{
 
     static getAllGraphElementPointers(): Pointer<DGraphElement>[] {
         // graphelements = fields;
-        let state: DState = store.getState();
+        let state: DState = DState.getState();
         return [...state.graphs, ...state.graphvertexs, ...state.graphelements, ...state.vertexs, ...state.edgepoints, ...state.edges];
     }
 
@@ -521,7 +521,7 @@ export class Selectors{
 
         //console.log('2302, getviews 2', {datachanged, nodechanged, olddata, oldnode, data, node, allViews: Selectors.getAllViewElements()});
 
-        if (!state) state = store.getState();
+        if (!state) state = DState.getState();
         const allViews: DViewElement[] = Selectors.getAllViewElements(state);
 
         //const user = LUser.getUser();
@@ -608,7 +608,7 @@ export class Selectors{
     // get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)
     static getAppliedViewsNew({data:data0, node, pv, nid}:{ node: LGraphElement | undefined; data: LModelElement | undefined; pv: DViewElement | undefined; nid: Pointer<DGraphElement>}): NodeTransientProperties {
         // console.trace('2302, getviews', {tnode: transientProperties.node[nid], nid, pv})
-        let state = store.getState();
+        let state = DState.getState();
         let needsorting: boolean = Selectors.updateScores(data0, node, nid, pv, state);
 
         let tn: NodeTransientProperties = transientProperties.node[nid]; // needs to be placed after updateScores() which will initialize it.
@@ -632,17 +632,17 @@ export class Selectors{
     }
 
     static getAllMP(state?: DState): DModelElement[] {
-        if (!state) state = store.getState();
+        if (!state) state = DState.getState();
         let allD: DPointerTargetable[] = Object.values(state.idlookup);
         return allD.filter( (d: DPointerTargetable) => U.isObject(d) && Selectors.isOfSubclass(d, DModelElement)) as DModelElement[]; }
 
     static toObject<D extends DPointerTargetable>(ptrs: Pointer<D>[], state?: DState):D[] {
-        if (!state) state = store.getState();
+        if (!state) state = DState.getState();
         return ptrs.map(p => (state as DState).idlookup[p]) as D[]; }
 
     static wrap<D extends DPointerTargetable, L extends LPointerTargetable>(arr: (Pointer<D, 1, 1, L> | D)[], state?: DState): L[] {
         if (!arr.length) return [];
-        if (!state) state = store.getState();
+        if (!state) state = DState.getState();
         let objarr: D[];
         if (typeof arr[0] === "string") { objarr = Selectors.toObject(arr as string[], state); }
         else objarr = arr as D[];
@@ -650,7 +650,7 @@ export class Selectors{
 
     static unwrap<D extends DPointerTargetable, L extends LPointerTargetable>(arr:L[]): D[] { return arr.map( (a)=> a.__raw) as any[]; }
     static getSubNodeElements(forGraph: Pointer<DGraph, 1, 1>, asPointers: boolean = false, wrap: boolean = false): Pointer<DGraphElement>[] | DGraphElement[] | LGraphElement[] {
-        const state : DState = store.getState();
+        const state : DState = DState.getState();
         const g: DGraph = state.idlookup[forGraph] as DGraph;
         if (asPointers) return g.subElements;
         const subelements: DGraphElement[] = g.subElements.map( geid => state.idlookup[geid]) as DGraphElement[];

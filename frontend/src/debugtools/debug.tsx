@@ -29,7 +29,7 @@ export class Debug {
         // warning: might break undo/redo for direct state editing
         let eids = windoww.LPointerTargetable.wrapAll(windoww.LState.get().edges).map((e: any)=>e.id)
         let epids = windoww.LPointerTargetable.wrapAll(windoww.LState.get().edgepoints).map((e: any)=>e.id)
-        let ss = windoww.store.getState();
+        let ss = windoww.DState.getState();
         ss.edges = [];
         ss.edgepoints = [];
         for (let e of eids) delete ss.idlookup[e];

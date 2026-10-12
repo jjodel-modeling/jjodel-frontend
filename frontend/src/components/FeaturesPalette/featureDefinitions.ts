@@ -49,6 +49,29 @@ export const featureDefinitions: FeatureDefinition[] = [
             name: 'NewEnum',
             literals: []
         }
+    },
+    /*{
+        id: '*',
+        name: 'Global',
+        icon: '*',
+        description: '',
+        dragType: 'FEATURE_PACKAGE',
+        defaultData: {
+            name: '*',
+            elements: []
+        }
+    },*/
+    {
+        id: 'annotation',
+        name: 'Annotation',
+        icon: 'code', // other candidates: puzzle, hexagon, diamond
+        description: 'Add annotation',
+        dragType: 'ANNOTATION',
+        parentId: '*',
+        defaultData: {
+            name: 'newAnnotation',
+            returnType: 'void',
+        }
     }
 ];
 
@@ -93,6 +116,18 @@ export const subFeatureDefinitions: FeatureDefinition[] = [
             parameters: []
         }
     },
+    {
+        id: 'type',
+        name: 'Generic type',
+        icon: 'code', // other candidates: puzzle, hexagon, diamond
+        description: 'Add generic type declaration',
+        dragType: 'FEATURE_GENERICS',
+        parentId: 'class',
+        defaultData: {
+            name: 'newGenericType',
+            returnType: 'void',
+        }
+    },
     // Enumerator sub-features
     {
         id: 'literal',
@@ -105,7 +140,46 @@ export const subFeatureDefinitions: FeatureDefinition[] = [
             name: 'NEW_LITERAL',
             value: null
         }
-    }
+    },
+    {
+        id: 'parameter',
+        name: 'Parameter',
+        icon: 'box-arrow-in-right',
+        description: 'Add an argument to this operation',
+        dragType: 'PARAMETER',
+        parentId: 'class',
+        defaultData: {
+            name: 'newParameter',
+            returnType: 'void',
+            parameters: []
+        }
+    },
+    /*{
+        id: 'type',
+        name: 'Generic type',
+        icon: 'code', // other candidates: puzzle, hexagon, diamond
+        description: 'Add generic type declaration',
+        dragType: 'FEATURE_GENERICS',
+        parentId: 'operation',
+        defaultData: {
+            name: 'newGenericType',
+            returnType: 'void',
+            parameters: []
+        }
+    },
+    {
+        id: 'annotation',
+        name: 'Annotation',
+        icon: 'code', // other candidates: puzzle, hexagon, diamond
+        description: 'Add annotation',
+        dragType: 'ANNOTATION',
+        parentId: '*',
+        defaultData: {
+            name: 'newAnnotation',
+            returnType: 'void',
+            parameters: []
+        }
+    },*/
 ];
 
 /**
@@ -131,7 +205,8 @@ export function getSubFeatures(parentId: string): FeatureDefinition[] {
 
 /**
  * Check if a feature has sub-features
- */
 export function hasSubFeatures(featureId: string): boolean {
     return subFeatureDefinitions.some(f => f.parentId === featureId);
 }
+
+*/

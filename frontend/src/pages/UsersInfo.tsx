@@ -6,13 +6,6 @@ import {useEffect, useState} from "react";
 type Props = {};
 function UsersInfoPage(props: Props) {
     const [users, setUsers] = useState<DUser[]>([]);
-    /*useEffect(() => {
-        (async function() {
-            // damiano: questo è inutile, vengono eseguiti entrambi assieme con un leggero ritardo.
-            SetRootFieldAction.new('isLoading', true);
-            SetRootFieldAction.new('isLoading', false);
-        })();
-    }, []);*/
 
     return(<Try>
         <Dashboard active={'UsersInfo'} version={{n: 0, date:'fake-date'}}>

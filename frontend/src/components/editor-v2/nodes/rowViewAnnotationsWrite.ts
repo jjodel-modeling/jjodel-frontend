@@ -54,7 +54,7 @@ export function declareRowViewAnnotation(
     // constructor pushes the pointer into `DAttribute.annotations`
     // (`joiner/classes.ts:810`, `setExternalPtr(father, "annotations", "+=")`),
     // so no second action is needed to link it.
-    DAnnotation.new(source, [], featureId, true);
+    DAnnotation.new(source, {}, featureId, true);
 }
 
 /**

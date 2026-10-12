@@ -279,7 +279,7 @@ function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?:
                     </button>
                 )}
             </div>
-            {inspectorKind && inspectorOpen && entry.rawValue && (
+            {inspectorKind && inspectorOpen && (entry.rawValue as any) && (
                 <JjelValueInspector
                     value={entry.rawValue as Record<string, unknown>}
                     kind={inspectorKind}

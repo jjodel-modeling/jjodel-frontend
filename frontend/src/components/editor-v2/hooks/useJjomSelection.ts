@@ -48,7 +48,7 @@ function findModelElement(modelid: string): string {
 /** Collect all subElement IDs for the graph matching modelid. */
 function getGraphSubElementIds(modelid: string): string[] {
     try {
-        const state: DState = store.getState();
+        const state: DState = DState.getState();
         const dGraphs: DGraph[] = DGraph.fromPointer(state.graphs);
         const dGraph = dGraphs.find(g => g?.model === modelid);
         if (!dGraph) return [];
@@ -93,7 +93,7 @@ function selectElement(elementId: string, modelid: string, modelElementId?: stri
         if (allIds.length > 0) markCanvasUpdatedBatch(allIds);
 
         TRANSACTION('EditorV2 select', () => {
-            const state: DState = store.getState();
+            const state: DState = DState.getState();
             const dGraphs: DGraph[] = DGraph.fromPointer(state.graphs);
             const dGraph = dGraphs.find(g => g?.model === modelid);
             if (dGraph) {
@@ -142,7 +142,7 @@ function deselectAll(modelid: string): void {
         if (allIds.length > 0) markCanvasUpdatedBatch(allIds);
 
         TRANSACTION('EditorV2 deselect', () => {
-            const state: DState = store.getState();
+            const state: DState = DState.getState();
             const dGraphs: DGraph[] = DGraph.fromPointer(state.graphs);
             const dGraph = dGraphs.find(g => g?.model === modelid);
             if (dGraph) {

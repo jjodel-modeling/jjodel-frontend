@@ -6,10 +6,11 @@ import {
     Input, isDataManagerViewpoint, LAttribute, LClass, LClassifier, LEnumerator,
     LGraphElement,
     LModel,
+    LAnnotation, LTypeDeclaration,
     LModelElement,
     LObject, LPackage, LPointerTargetable, LProject, LReference, LStructuralFeature, LValue,
     LViewElement, LViewPoint, Pointer, Pointers,
-    Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail
+    Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail, Select
 } from '../../joiner';
 import { ViewData } from './views/ViewData';
 import ViewpointProperties from './viewpoint/properties/ViewpointProperties';
@@ -489,7 +490,7 @@ class builder {
         let d = l.__raw;
         let multiselectArr = d.dependencies;
         let multiselectValue: {value: string, label: string}[] = [];
-        let state = store.getState();
+        let state = DState.getState();
         let validoptionsarr = Selectors.getAll(DModel, undefined, state, true, false) as DModel[];
         let multiselectOptions: {value: string, label: string}[] = validoptionsarr.map(c => {
             let opt = {value:c.id, label: c.name};
@@ -558,7 +559,6 @@ class builder {
             </CollapsibleSection>
         </>);
     }
-    
 
     static class(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         let lclass: LClass = data as any;
@@ -980,7 +980,7 @@ class builder {
         }
         const featureType: LClassifier = feature?.type;
         let isAttribute = false, isEnumerator = false, isReference = false, isShapeless = false, isComposition = false;
-        
+
         // Detect if a reference is also a composition
         switch (feature?.className){
             case DReference.cname:
@@ -988,7 +988,7 @@ class builder {
                 // Check if the reference is a composition
                 isComposition = (feature as LReference)?.composition === true;
                 if (isComposition) {
-                    isReference = false; // 
+                    isReference = false;
                 }
             break;
             case DAttribute.cname:
@@ -1164,6 +1164,56 @@ class builder {
             </label>}
         </>)
     }
+
+    static typeDeclaration(data: LTypeDeclaration, advanced: boolean, skipTitle: boolean = false): JSX.Element {
+        return (<>
+            {this.named(data, advanced, skipTitle)}
+            <label className={'input-container'}>
+                <b className={'me-2'}>Type:</b>
+                <Input type={"text"}
+                       data={data}
+                       getter={(l)=> l.toString()}
+                       setter={(v: any, l: LTypeDeclaration) => {
+                           console.error("parse setter");
+                           l.parse(v)
+                       } } />
+            </label>
+            {advanced && <>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Direction:</b>
+                    <Select data={data} field={'direction'}>
+                        <option value={"inout"}>IN-OUT</option>
+                        <option value={"in"}>IN</option>
+                        <option value={"out"}>OUT</option>
+                    </Select>
+                </label>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>is Reified:</b>
+                    <Input data={data} field={'isReified'} type={'switch'}/>
+                </label>
+            </>}
+        </>);
+    }
+
+    static annotation(data: LAnnotation, advanced: boolean, skipTitle: boolean = false): JSX.Element {
+        /* todo:
+        data.contents
+        data.annotations;
+        data.references;
+        data.rawContents;*/
+        if (!advanced) return null as any;
+        let details = data.details;
+        return (<>
+            {this.named(data, advanced, skipTitle)}
+            <h3>Details:</h3>
+            {Object.keys(details).map(k => <div className={"row"} key={k}>
+                <Input type="text" getter={()=> k} setter={ v=> data.updateDetailKey(k, v as string)} />
+                <span> = </span>
+                <Input type="text" getter={()=> k} setter={ v=> data.updateDetailKey(k, v as string)} />
+            </div>)}
+        </>);
+    }
+
 }
 
 // Helper to get element type info
@@ -1306,6 +1356,7 @@ function PropertiesOverview(props: { data: LModel; isMetamodel: boolean; onViewA
         const packages = data.packages?.length || 0;
         const classes = data.classes?.length || 0;
         const enumerators = data.enumerators?.length || 0;
+        const types = data.typeDeclarations?.length || 0;
 
         return (
             <div className="properties-section">
@@ -1328,6 +1379,11 @@ function PropertiesOverview(props: { data: LModel; isMetamodel: boolean; onViewA
                             <i className="bi bi-list-ul" />
                             <span className="cell-value">{enumerators}</span>
                             <span className="cell-label">Enumerators</span>
+                        </div>
+                        <div className="overview-cell">
+                            <i className="bi bi-list-ul" />
+                            <span className="cell-value">{types}</span>
+                            <span className="cell-label">Type Declarations</span>
                         </div>
                     </div>
 
@@ -1477,13 +1533,15 @@ function InfoComponent(props: AllProps) {
 
         // MCWS: # Metaclasses with Superclass
         const MCWS = dclasses.filter((c: any) => {
-            const extendsArr = c?.extends;
+            const extendsArr = (LPointerTargetable.from(c) as LClass)?.extends;
             return Array.isArray(extendsArr) && extendsArr.length > 0;
         }).length;
 
         // LMC: % Isolated Metaclasses (no superclass and no subclasses)
         const isolated = classes.filter((c: any) => {
-            const extendsArr = c.extends;
+            c = LPointerTargetable.from(c) as LClass;
+            if (!c) return true;
+            const extendsArr = c?.extends;
             const extendedByArr = c.extendedBy;
             const hasSuper = Array.isArray(extendsArr) && extendsArr.length > 0;
             const hasSub = Array.isArray(extendedByArr) && extendedByArr.length > 0;
@@ -1648,8 +1706,15 @@ function InfoComponent(props: AllProps) {
             jsx = builder.object(data, topics, advanced, mode); break;
         case 'DValue':
             jsx = builder.value(data, topics, advanced, mode); break;
+        case "DTypeDeclaration":
+            jsx = builder.typeDeclaration(data as LTypeDeclaration, advanced); break;
+        case "Dannotation":
+            jsx = builder.annotation(data as LAnnotation, advanced); break;
+        case "DPlaceholder":
+            jsx = <span>Placeholder structure editor</span>; break;
         default: jsx = <Empty />; break;
     } else jsx = <Empty />;
+
 
     // Tab mode: Always show the Properties panel structure
     if (tab) {

@@ -409,8 +409,9 @@ export class DViewElement extends DPointerTargetable {
         // let id = isDefaultView ? 'Pointer_View' + name : undefined;
         let father: DViewElement = father0 || DPointerTargetable.from(Defaults.viewpoints[0]);
         let vp = father.viewpoint || Defaults.viewpoints[0];
-        return new Constructors(new DViewElement('dwc'), father.id, persist, undefined, id)
+        let d = new Constructors(new DViewElement('dwc'), father.id, persist, undefined, id)
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
+        return d;
     }
 
     static newDefault(forData?: DModelElement | DGraphElement, forSelf: boolean = false): DViewElement{
@@ -555,7 +556,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     // own properties
     isValidation!: boolean; // only for root views (ex viewpoints) to group views semantically.
     name!: string;
-    __info_of__name: Info = {isGlobal: true, type: ShortAttribETypes.EString, txt:<div>Name of the view</div>}
+    __info_of__name: Info = {isGlobal: true, type: ShortAttribETypes.EString, txt:<div>Name of the view</div>, dependencies: [""]}
     isOverlay!:boolean;
     __info_of__isOverlay: Info = {isGlobal:true, type: ShortAttribETypes.EBoolean, txt:<div>If not exclusive, the view is meant to add a functional outline of tools to a primary View, or css.
             <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
@@ -809,7 +810,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             if (isNode) {
                 TRANSACTION('delete node.grid', ()=>{
                     SetFieldAction.new(c.data, 'grid', undefined, '', false);
-                    let arr = store.getState().NODES_RECOMPILE_grid;
+                    let arr = DState.getState().NODES_RECOMPILE_grid;
                     arr = [...arr];
                     for (let l of (c.proxyObject as LGraph).allSubVertexes) arr.push(l?.id)
                     // NB: direct assignment instead of += if faulty but more efficient. but is not so important if some grid updates are skipped/overwritten
@@ -861,14 +862,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         TRANSACTION('Update grid', ()=> {
             SetFieldAction.new(c.data, 'grid', gval as any, '+=', false);
             if (isNode) {
-                let arr = store.getState().NODES_RECOMPILE_grid;
+                let arr = DState.getState().NODES_RECOMPILE_grid;
                 arr = [...arr];
                 for (let l of (c.proxyObject as LGraph).allSubVertexes) arr.push(l?.id)
                 // NB: direct assignment instead of += if faulty but more efficient. but is not so important if some grid updates are skipped/overwritten
                 SetRootFieldAction.new("NODES_RECOMPILE_grid", arr, '');
             } else {
                 // NB: VIEWS_RECOMPILE_grid was deprecated on birth because from view in reducer i cannot query the state to get nodes. so i need to do it here.
-                let arr = store.getState().NODES_RECOMPILE_grid;
+                let arr = DState.getState().NODES_RECOMPILE_grid;
                 arr = [...arr];
                 let graphs = LViewElement.prototype.get_nodes.apply(LViewElement.singleton, [c]);
                 for (let l of graphs) {
@@ -1199,7 +1200,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let arr: Pointer<DViewElement>[] = Object.keys(c.data.subViews);
         let nextarr: Pointer<DViewElement>[] = [];
         let idmap: Dictionary<Pointer, DViewElement> = {};
-        let s: DState = store.getState();
+        let s: DState = DState.getState();
         let dview: DViewElement;
         while (arr.length) {
             for (let vid of arr) {
@@ -1521,7 +1522,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     set_edgePointCoordMode(val: CoordinateMode, c: Context): boolean {
         TRANSACTION('change '+this.get_name(c)+'.edgePointCoordMode', ()=>{
             setTimeout(()=>{ // needs to be done after coordinatemode change is applied
-                let s: DState = store.getState();
+                let s: DState = DState.getState();
                 for (let nid in transientProperties.node) {
                     let tn = transientProperties.node[nid];
                     if (!tn || tn.mainView?.id !== c.data.id) continue;
@@ -1695,7 +1696,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         const targetvp = (pvid && dfather && typeof dfather === "object") ? (dfather as any).viewpoint : undefined;
         const viewsToRealign: string[] = [];
         if (targetvp) {
-            const preWriteState: DState = store.getState();
+            const preWriteState: DState = DState.getState();
             for (const descendantId of collectViewSubtree(preWriteState as any, id as any)) {
                 if ((preWriteState.idlookup[descendantId] as DViewElement)?.viewpoint !== targetvp) viewsToRealign.push(descendantId);
             }
@@ -1909,7 +1910,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     /*protected*/ get_duplicate(c: Context): ((deep?: boolean, new_vp?: DuplicateVPChange) => LViewElement) {
         return (deep: boolean = false, new_vp0?: DuplicateVPChange) => {
             let lview: LViewElement = undefined as any;
-            let state: DState = store.getState();
+            let state: DState = DState.getState();
             TRANSACTION('duplicate ' + this.get_name(c), () => {
                 // let pvid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
                 let pvid: Pointer<DViewPoint> = c.data.father as Pointer<DViewPoint>;
@@ -2003,7 +2004,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     }
 
     static updateDefaultView(v: DViewElement | DViewPoint, state?: DState): void {
-        let s = state || store.getState();
+        let s = state || DState.getState();
         let newView: DViewElement | DViewPoint = Defaults.defaultViewPointsMap[v.id]||Defaults.defaultViewsMap[v.id];
         if (!newView || typeof newView !== 'object') return; // not a default view, or a registry entry never resolved to an object (R-IRN-15)
         newView = {...newView} as DViewElement & DViewPoint;

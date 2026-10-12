@@ -3,7 +3,10 @@ import {
     GObject,
     GraphPoint, DViewPoint, DViewElement, PointedBy,
     DProject, LViewElement,
-    DV, DPackage, DObject, EdgeBendingMode, EdgeHead,
+    DV, DPackage, DObject,
+    EdgeBendingMode, EdgeHead,
+    DModel, LObject, Uarr, DClass, DAnnotation, DClassifier, DEnumerator, DAttribute,
+    DEnumLiteral, DOperation, DParameter, DTypeDeclaration, DPlaceholder,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -98,13 +101,15 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         let instanceKeys = Object.getOwnPropertyNames(VersionFixer.prototype); // object.keys does not list not-enumarable stuff (like class funcs)
         let allKeys = [...staticKeys, ...instanceKeys];
         for (let k of allKeys){
-            switch(k){
-                case 'constructor': case 'd': case 'className':
+            if(isNaN(+k[0])) continue;
+            /*switch(k) {
+                case 'constructor': case 'd': case 'className': case "getByClassName":
                 case 'prefix': case 'highestVersion': case 'versionAdapters':
                 case 'get_highestversion':
                 case 'staticClassName': case 'cname': case 'subclasses':
                 case 'help': case 'setup': case 'update': continue;
-            }
+                default:
+            }*/
             let [froms, tos] = k.split(' -> ');
             Log.exDev(!froms?.length || !tos?.length, errormsg(k));
             let from = +froms; let to = +tos;
@@ -124,6 +129,8 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         let singleton = new VersionFixer();
         let canAutocorrect = U.getHashParam('repair') === '1';
         if (canAutocorrect) s = VersionFixer.autocorrect(s, false, false);
+        if (currVer >= VersionFixer.highestVersion) return s; // highest version can happen when migrating a save from staging to production
+
         while (currVer !== VersionFixer.highestVersion) {
             Log.exDev(!VersionFixer.versionAdapters[currVer], "missing version adapter from \""+ currVer+"\", please notify the developers.",
                 {adapers: VersionFixer.versionAdapters, curr: VersionFixer.versionAdapters[currVer]});
@@ -248,7 +255,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
     public static autocorrect(s0?: DState, popupIfCorrect: boolean = false, canLoadAction: boolean = false): DState {
         let s: DState;
         if (s0) s = {...s0} as any;
-        else s = {...store.getState()} as any;
+        else s = {...DState.getState()} as any;
         if (!s0) s0 = {...s} as any;
 
         let validPtrs: typeof s.idlookup = {};
@@ -303,7 +310,6 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 let isPointer = Pointers.isPointer(obj);
                 let isValidPointer = isPointer && s.idlookup[obj]?.id === obj;
                 let id: Pointer<any> = fullpath?.[1];
-                // if (id === 'Pointer1745981301328_USER_504') console.log('deepreplace 0', {isPointer, isValidPointer, key, obj, fullpath, removedPointers, removedElements});
                 if (isPointer && isValidPointer) return obj;
                 // if: undef or invalid pointer implicates full object removal
                 // NB: critical pointers missing are also handled above, but the above part is including also missing properties ("in") while this part doesn't
@@ -314,7 +320,6 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                     || (key === 'start' && fullpath.length === 3))
                     //|| key === 'viewpoint' && fullpath.length === 3
                 ) {
-                    // if (key === 'father' && id === 'Pointer1745981301328_USER_504') console.log('deepreplace 1', {});
 
                     if (!Pointers.isPointer(id)) { Log.eDevv('found mandatory key in an unexpected position', {fullpath, final_id:obj, s}); return obj; }
                     let d: GObject = s.idlookup[id];
@@ -322,7 +327,6 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                     removedElements.push({d, d_id: id, final_id:obj, key: key as any, fullpath});
                     if (!(id in s.idlookup)) return undefined;
                     hasDeleted = true;
-                    // if (key === 'father' && id === 'Pointer1745981301328_USER_504') console.log('deepreplace 2', {hasDeleted});
                     return undefined;
                 }
 
@@ -432,6 +436,10 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             output.push('removed ' + out.counter + ' invalid pointers.'); // undef in ptr collection
         }
         */
+        let modelRootOutput =  {added:0, removed:0, addedLogs: [], removedLogs: []}
+        VersionFixer.fixModelRoots(s, popupIfCorrect, modelRootOutput);
+        if (modelRootOutput.added) output.push("inserted "+modelRootOutput.added+" missing model roots");
+        if (modelRootOutput.removed) output.push("removed "+modelRootOutput.removed+" invalid model roots");
         if (output.length > 1) {
             Tooltip.show(<div className={'m-auto text-center'}>{(output as any).separator(<br/>)}</div>, undefined, undefined, 10);
             Log.ii('project repair report', {removedPointers,
@@ -440,6 +448,10 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 removedObjects: diff.removed.map(e=>oldIDlookup[e]),
                 removedValues: out.counter, output, out});
             if (canLoadAction) TRANSACTION('project repair', () => { LoadAction.new(s); });
+            // @ts-ignore
+            for (let o of modelRootOutput.addedLogs) { console.log(...o); }
+            // @ts-ignore
+            for (let o of modelRootOutput.removedLogs) { console.log(...o); }
         }
         else {
             if (popupIfCorrect) Tooltip.show('project repair report:\tall good, no anomalies detected!', undefined, undefined, 3);
@@ -447,6 +459,36 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
 
         return s;
+    }
+    public static fixModelRoots(s: DState, popupIfCorrect: boolean, logMessages?: {added: number, removed: number, addedLogs: any[][], removedLogs: any[][]}) {
+        let models: DModel[] = s.m1models.map(e => VersionFixer.D(e, s));
+        let modelsmap = Uarr.toDictionary(models, "id");
+        let objects: DObject[] = s.objects.map(e => VersionFixer.D(e, s));
+        for (let o of objects) {
+            let model = modelsmap[o.father];
+            if (!model) continue; // not a root
+            if (!model.objects.includes(o.id)) {
+                model.objects.push(o.id);
+                if (logMessages) {
+                    logMessages.added++;
+                    logMessages.addedLogs.push(["added a missing model root", {model, root: o}]);
+                }
+            }
+        }
+        for (let model of models) {
+            for (let i = 0; i < model.objects.length; i++) {
+                let id = model.objects[i];
+                if (!id) continue;
+                let root = this.D(id, s);
+                if (root.father === model.id) continue;
+                if (logMessages) {
+                    logMessages.removed++;
+                    logMessages.removedLogs.push(["removed an invalid model root", {model, root}]);
+                }
+                model.objects[i] = undefined as any;
+            }
+            model.objects = model.objects.filter(e=>!!e);
+        }
     }
 
     public static mandatoryKeys = ['father'];
@@ -487,17 +529,25 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
     }
 
-    private d<D extends DPointerTargetable, L extends LPointerTargetable>(ptr: Pointer<D>, s: DState): D{
+    private d<D extends DPointerTargetable, L extends LPointerTargetable>(ptr: Pointer<D>, s: DState): D{ return VersionFixer.D(ptr, s) }
+    private static D<D extends DPointerTargetable, L extends LPointerTargetable>(ptr: Pointer<D>, s: DState): D{
         return s.idlookup[ptr] as any;
-        // {n}
     }
+    protected getByClassName(s: DState, cn: string): GObject[] {
+        let arr: GObject[] = [];
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            if (!e?.className) continue;
+            if (e.className === cn) { arr.push(e); }
+        }
+        return arr;
+    }
+
     private ['0 -> 2.1'](s: DState): DState {
         s.version = {n: 2.1, date:"_reconverted", conversionList:[0]};
         return s;
     }
-    private ['2.1 -> 2.2'](s: DState): DState {
-        return s;
-    }
+    private ['2.1 -> 2.2'](s: DState): DState { return s; }
 
     private ['2.2 -> 2.201'](s: DState): DState {
         // let ls: LState = LPointerTargetable.from(s); nope, avoid L-objects. actions would fire in present state instead of in parameter state
@@ -1354,6 +1404,97 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    private ['2.229 -> 2.2291'](s: DState): DState { // by dam
+        this.getByClassName(s, "DReference").forEach(r=> r.EKeys = r.EKeys || []);
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            let cn = e?.className;
+            if (!cn) continue;
+            if (cn === 'DProject' && !e.tagNames) {
+                let d: DProject = e as any;
+                if (!d.collaboratorsMap) d.collaboratorsMap = {};
+                if (!d.collaborators) d.collaborators = [];
+                if (!d.onlineUsersID) d.onlineUsersID = [];
+                continue;
+            }
+        }
+        return s;
+    }
+    private ['2.2291 -> 2.2292'](s: DState): DState { // by dam
+        this.getByClassName(s, "DReference").forEach(r=> r.EKeys = r.EKeys || []);
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            let cn = e?.className;
+            if (!cn) continue;
+            if ((cn === 'DClass' || cn === "DOperation") && !e.typeParameters) {
+                (e as DClass).typeParameters = [];
+                continue;
+            }
+            if ((cn === 'DClass' || cn === "DObject") && !(e as DClass).eidFeature) {
+                (e as DClass | DObject).eidFeature = "__recalculating__";
+                continue;
+            }
+        }
+        return s;
+    }
+    private ['2.2292 -> 2.2293'](s: DState): DState { // by dam
+        this.getByClassName(s, "DReference").forEach(r=> r.EKeys = r.EKeys || []);
+
+        if (!Array.isArray(s.annotations))      s.annotations = [];
+        if (!Array.isArray(s.typedeclarations)) s.typedeclarations = [];
+        if (!Array.isArray(s.placeholders))     s.placeholders = [];
+
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            let cn = e?.className;
+            if (!cn) continue;
+            if ((cn === 'DClass') && !e.typeParameters) {
+                (e as DClass).genericSuperTypes = [];
+                continue;
+            }
+        }
+
+        if (!s.idlookup.Pointer_EVOID) {
+            s.returnTypes = (s.returnTypes || []);
+            s.returnTypes.push("Pointer_EVOID");
+            s.idlookup.Pointer_EVOID = {
+                "className": "DClass",
+                "id": "Pointer_EVOID",
+                "pointedBy": [
+                    {"source": "classs"},
+                    {"source": "primitiveTypes"},
+                    {"source": "classs"}
+                ],
+                "_state": {},
+                "name": "EVoid",
+                "parent": [],
+                "annotations": [],
+                "abstract": false,
+                "interface": false,
+                "instances": [],
+                "operations": [],
+                "features": [],
+                "references": [],
+                "attributes": [],
+                "referencedBy": [],
+                "extends": [],
+                "isPrimitive": true,
+                "implements": [],
+                "implementedBy": [],
+                "partial": false,
+                "partialdefaultname": "",
+                "isSingleton": false,
+                "sealed": [],
+                "final": false,
+                "allowCrossReference": false,
+                "eidFeature": "__recalculating__",
+                "typeParameters": [],
+                "genericSuperTypes": []
+            } as any // DClass
+        }
+        return s;
+    }
+
     /** Every instance is listed by its model (R-NEST-6, #174): `DModel.objects` holds the nested instances too
      *  (R-NEST-1), and a state saved before held only the roots and the nested ones written by a `set` or by
      *  the XMI import. For every `DObject` whose `father` chain ends at a `DModel`, the id is appended to that
@@ -1363,7 +1504,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
      *  untouched, and no `father` is rewritten: an aggregation keeps its re-father (R-NEST-2).
      *  Layer Impact Report: docs/lir/lir_2026-10-07_174_migration.md. Pure, idempotent, a no-op on a
      *  coherent state. */
-    private ['2.229 -> 2.230'](s: DState): DState {
+    private ['2.2293 -> 2.230'](s: DState): DState {
         const idlookup: any = s.idlookup;
         if (!idlookup || typeof idlookup !== 'object') return s;
 
@@ -1399,6 +1540,8 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             + `${deduped} voce/i doppia/e tolta/e da objects, ${dangling} con un padre che non risolve (lasciata/e com'era).`);
         return s;
     }
+
+
 
 }
 
@@ -1470,6 +1613,6 @@ private static buildVersionSignature(): DState {
 
 
 
-    return store.getState();
+    return DState.getState();
 }
 */

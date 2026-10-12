@@ -86,7 +86,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         let redoarr = history.redoable;
         // console.log("statemanager undo update", {thiss:this, undoarr, redoarr, user: this.state.user, props: this.props, state:this.state});
         if (!this.undoredolistoutdated) return;
-        let s: DState = store.getState();
+        let s: DState = DState.getState();
         let arr = [...(key === 'undo' ? undoarr : redoarr)].reverse().slice(0, this.props.maxlistsize);
         let out: {best: R, obj: GObject}&R[] = [] as any;
         let strings = arr.map( delta => U.ObjectToAssignementStrings(delta, 10, 6, 20, "…", out, true));
@@ -116,7 +116,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         let redoarr = history.redoable;
         // console.log("statemanager undo update", {thiss:this, undoarr, redoarr, user: this.state.user, props: this.props, state:this.state});
         if (!this.undoredolistoutdated) return;
-        let s: DState = store.getState();
+        let s: DState = DState.getState();
         // let arr = [...(this.props as GObject)[key]].reverse().slice(0, this.props.maxlistsize);
         let fullarr = [...(key === 'undo' ? undoarr : redoarr)].reverse()
         let arr = fullarr.slice(0, this.props.maxlistsize);
