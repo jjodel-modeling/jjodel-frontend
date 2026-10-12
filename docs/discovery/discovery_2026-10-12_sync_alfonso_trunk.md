@@ -115,3 +115,12 @@ No decision was asked of Juri before the merge. The request was the merge itself
 ## Files read
 
 `docs/PROTOCOL.md` P4, P6, P13, P14, P15 (`:32-63`, `:220-375`), `docs/decisions.md` RC-14 and RC-31 (`:68-80`, `:253-262`), `docs/claude-code-log.md` (the first 6000 bytes), `docs/discovery/discovery_2026-10-06_178_sync_alfonso_trunk.md` (`:1-125`), `docs/log-inbox/sync-alfonso-trunk.md` (the first 1500 bytes). From `origin/staging` and `origin/alfonso-frontend-jjtl`: `frontend/src/constants/defaultPrompts.ts` (the diffs `799e9f50a..` of both sides, `:9-25`, the version block), `frontend/src/components/Jodie/Jodie.tsx` (`:25-110` of the merged file), `frontend/src/components/Jodie/__tests__/reservedIdentifierGate.test.ts` (`:150-183`), the `git diff --stat` of `registry.ts`, `parser.ts`, `AISettingsContent.scss`, `frontend/package.json`. The commit bodies of `851dec87f` and `26c795f80`.
+
+## Addendum 2026-10-12 — Phase 2 as run, question 1 ratified
+
+- Merge `c2cf77016`, parents `2b61eeeb3` and `ec62c080e`. Its tree differs from the gated trial tree `269dc1145` by this report alone (MEASURED, `git diff-tree -r --name-status`).
+- On `c2cf77016`, with no `MERGE_HEAD`: `bashGuard.test.ts` and `reservedIdentifierGate.test.ts`, 2 files, 180/180 (MEASURED). `check:addonly` exit 0.
+- Entry in `docs/log-inbox/sync-alfonso-trunk.md`, commit `a2330a062`; `check:docs` 5/5 with it.
+- Local `alfonso-frontend-jjtl` fast-forwarded from `ec62c080e` to the tip of `staging`. Nothing pushed.
+- **Question 1, ratified.** Juri, chat C-2026-10-12-1927, after the closing report: «ok al prompt v7». The numbering of §4 point 3 stands: chat prompt at version 7, the two v6 notes joined in one v6 entry, the version test at 7. Nothing to change in `c2cf77016`. The merge body and the log entry call it «not ratified»: they were written before this answer, and they are not amended.
+- Questions 2 and 3 stay open.
