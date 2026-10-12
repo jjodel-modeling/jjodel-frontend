@@ -4,6 +4,13 @@
  */
 
 import { PromptType, PromptChangelogEntry } from '../types/prompts';
+import {
+    JJSCRIPT_COMMAND_WORDS,
+    JJSCRIPT_ELEMENT_TYPE_WORDS,
+    JJSCRIPT_KEYWORD_WORDS,
+    JJSCRIPT_BOOLEAN_WORDS,
+} from '../jjscript/reservedIdentifiers';
+import { JJSCRIPT_PRIMITIVE_TYPE_NAMES } from '../jjscript/types';
 
 // ============================================
 // VERSIONING / RELEASE NOTES — BUMP RULE
@@ -23,6 +30,32 @@ import { PromptType, PromptChangelogEntry } from '../types/prompts';
 // Versions are plain incremental integers, not semver. This is surfaced
 // in Settings > Prompts so users who customized a prompt can see when the
 // default advanced; it does NOT auto-migrate their customization.
+
+// ============================================
+// RESERVED WORDS (rule 8 of the chat prompt)
+// ============================================
+//
+// Rendered from the JjScript lexer's own list (`jjscript/reservedIdentifiers.ts`) and from
+// `TYPE_ALIASES`, never typed by hand (P-2026-10-10-0045). Each word once, in its first group.
+
+const asCodeList = (words: readonly string[]): string => words.map(word => `\`${word}\``).join(', ');
+
+const RESERVED_WORD_GROUPS = (() => {
+    const seen = new Set<string>();
+    const fresh = (words: readonly string[]): string[] => words.filter(word => {
+        if (word.includes(' ') || seen.has(word)) return false;
+        seen.add(word);
+        return true;
+    });
+    return {
+        commands: asCodeList(fresh(JJSCRIPT_COMMAND_WORDS)),
+        elementTypes: asCodeList(fresh(JJSCRIPT_ELEMENT_TYPE_WORDS)),
+        keywords: asCodeList(fresh(JJSCRIPT_KEYWORD_WORDS)),
+        literals: asCodeList(fresh(JJSCRIPT_BOOLEAN_WORDS)),
+    };
+})();
+
+const PRIMITIVE_TYPE_NAME_LIST = asCodeList([...JJSCRIPT_PRIMITIVE_TYPE_NAMES]);
 
 // ============================================
 // CHAT PROMPT
@@ -126,21 +159,26 @@ rename attribute oldAttr to newAttr in ClassName
    - first, create the enum and its literals: \`create enum TaskType\`, then \`create literal USER_TASK in TaskType\`, \`create literal SYSTEM_TASK in TaskType\`
    - then, create the attribute on the class with the enum as its type: \`create attribute taskType in Task type TaskType\`
    FORBIDDEN: \`create literal USER_TASK in taskType\` (taskType is an attribute, not an enum). Literals MUST target an enum by name.
-8. **NEVER use JjScript reserved keywords as identifiers**: the names of classes, attributes, references, containments, enums and literals MUST NOT coincide (case-insensitive) with any JjScript keyword or primitive type. If the user's domain concept naturally matches a reserved word, rename it to a non-colliding alternative (e.g., \`abstract\` on a Project becomes \`isAbstract\` for a boolean flag, or \`abstractText\` / \`summary\` for a textual summary).
+8. **NEVER use JjScript reserved words as identifiers**: the names of classes, attributes, references, containments, enums and literals MUST NOT be a JjScript reserved word. Reserved words are lowercase and match exactly: \`copy\` is reserved, \`Copy\` and \`bookCopy\` are not. If the user's domain concept naturally matches a reserved word, rename it to a non-colliding alternative (e.g., \`abstract\` on a Project becomes \`isAbstract\` for a boolean flag, or \`abstractText\` / \`summary\` for a textual summary; a \`copy\` reference becomes \`bookCopy\`). A script that declares a reserved word is not run.
 
-   Reserved words (case-insensitive):
-   - keywords: \`create\`, \`delete\`, \`rename\`, \`class\`, \`abstract\`, \`attribute\`, \`reference\`, \`containment\`, \`enum\`, \`literal\`, \`extends\`, \`in\`, \`to\`, \`type\`
-   - primitive types: \`String\`, \`int\`, \`boolean\`, \`Date\`
+   Reserved words (lowercase, exact match):
+   - commands: ${RESERVED_WORD_GROUPS.commands}
+   - element types: ${RESERVED_WORD_GROUPS.elementTypes}
+   - keywords: ${RESERVED_WORD_GROUPS.keywords}
+   - literals: ${RESERVED_WORD_GROUPS.literals}
+
+   Primitive type names, in any case, MUST NOT name a class or an enum: \`type <name>\` always means the primitive. They are: ${PRIMITIVE_TYPE_NAME_LIST}
 
    FORBIDDEN examples:
    - \`create attribute abstract in Project type String\` (uses reserved \`abstract\`)
-   - \`create class Type\` (uses reserved \`type\`)
-   - \`create attribute String in Book type String\` (uses reserved primitive \`String\`)
+   - \`create reference copy in Loan type Book\` (uses reserved \`copy\`)
+   - \`create class Date\` (a class named after the primitive type \`date\`)
 
    CORRECT alternatives:
    - \`create attribute isAbstract in Project type boolean\` (if the intent was a boolean flag)
    - \`create attribute abstractText in Project type String\` (if the intent was a textual summary)
-   - \`create class DataType\` (rename the class to avoid collision)
+   - \`create reference bookCopy in Loan type Book\`
+   - \`create class CalendarDate\` (rename the class to avoid collision)
 
 9. **Respect the editing context (M1 model vs M2 metamodel)**: the project context header below states what the user is currently editing. When it is an **M1 model**, do NOT emit metaclass commands (\`create class\`, \`create attribute\`, …) — the runtime rejects them. Emit the M1 instance commands documented in the **M1 INSTANCE COMMANDS** section below instead.
 
@@ -703,14 +741,15 @@ export const DEFAULT_PROMPTS: Record<PromptType, string> = {
 
 export const DEFAULT_PROMPT_VERSIONS: Record<PromptType, { version: number; changelog: PromptChangelogEntry[] }> = {
     chat: {
-        version: 6,
+        version: 7,
         changelog: [
             { version: 1, note: 'Initial JjScript-based metamodeling assistant' },
             { version: 2, note: 'Significant revision: project-context injection, JjScript hardening, M1 instance commands' },
             { version: 3, note: 'Add M1 model-recommendation guidance grounded on conformance violations' },
             { version: 4, note: 'Require M1 instance names to be bare identifiers (no spaces/symbols) so set/delete can address them' },
             { version: 5, note: 'Two parallel v5 lines: (1) Single-valued reference set replaces; teach containment as create then set; add an end-user section gated on the environment block. (2) Create M1 instances inside their container with create instance ... in parent.reference' },
-            { version: 6, note: 'Join the two v5 lines: create contained M1 instances with create instance ... in parent.reference, a single-valued set replaces, the end-user section keeps create then set' },
+            { version: 6, note: 'Two parallel v6 lines: (1) Join the two v5 lines: create contained M1 instances with create instance ... in parent.reference, a single-valued set replaces, the end-user section keeps create then set. (2) List every JjScript reserved word (lowercase, exact) and the primitive type names, generated from the lexer list' },
+            { version: 7, note: 'Join the two v6 lines: the reserved-word and primitive-type list of rule 8 beside the joined M1 and end-user rules' },
         ],
     },
     documentation: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },

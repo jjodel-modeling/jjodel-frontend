@@ -4,15 +4,16 @@
  *
  * With «Color by metaclass» on, `metaclassColoringVars` rebinds `--color-inode-name` (and the root's
  * `color`) inline on `.ir-node-content`. The outside label and the entry mark sit on the canvas, so they
- * must paint as with coloring off, in light and in dark; what is inside the box keeps the WCAG text colour.
+ * must paint as with coloring off (light: Jjodel has no dark theme, D-UI-15); what is inside the box keeps the
+ * WCAG text colour.
  *
  * ── Bench ────────────────────────────────────────────────────────────────────
  * The bench of irGlyphNoColor.test.ts (ObjectNode rendered to markup on its IR branch, the joiner barrel
  * mocked, the real derivation's documents on the demo metamodels). Markup alone is not the measure: the
  * Q5 attempt of P-2026-10-02-2045 passed a markup test and failed in the browser, because the colour
  * string was right and the token it named was rebound one element up. So the markup is RESOLVED: a small
- * model of the cascade walks it from the root, seeded with the custom properties of the two token files
- * compiled by sass (`:root` light, then `:root[data-theme="dark"]` over it, as the two blocks cascade),
+ * model of the cascade walks it from the root, seeded with the custom properties of `_colors-light.scss`
+ * compiled by sass,
  * inherits custom properties and `color`, substitutes `var()` at each element against that element's own
  * values, and reads SVG `fill`/`stroke` as presentation attributes. Class rules are not in the model: none
  * of the rules on these elements sets a colour (irStyle.ts, the outside label's halo aside). The root's
@@ -212,13 +213,12 @@ function substitute(value: string, get: (name: string) => string | undefined): s
 interface Scope { vars: Map<string, string>; color: string }
 const CANVAS_TEXT = '<.mm-node color>';
 
-function tokenMap(theme: 'light' | 'dark'): Map<string, string> {
+function tokenMap(theme: 'light'): Map<string, string> {
     const decls = (file: string) => {
         const css = sass.compile(resolve(__dirname, `../../../../styles/tokens/${file}`)).css.replace(/\/\*[\s\S]*?\*\//g, '');
         return [...css.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(m => [m[1], m[2].trim()] as [string, string]);
     };
     const raw = new Map(decls('_colors-light.scss'));
-    if (theme === 'dark') for (const [k, v] of decls('_colors-dark.scss')) raw.set(k, v);
     // Substitution happens at :root, over the winning declarations of both blocks.
     const out = new Map<string, string>();
     const resolving = new Set<string>();
@@ -232,9 +232,9 @@ function tokenMap(theme: 'light' | 'dark'): Map<string, string> {
     for (const k of raw.keys()) get(k);
     return out;
 }
-const TOKENS = { light: tokenMap('light'), dark: tokenMap('dark') };
+const TOKENS = { light: tokenMap('light') };
 
-function scopeOf(el: El, theme: 'light' | 'dark'): Scope {
+function scopeOf(el: El, theme: 'light'): Scope {
     if (!el.parent) return { vars: TOKENS[theme], color: CANVAS_TEXT };
     const parent = scopeOf(el.parent, theme);
     const decls = parseStyle(el.attrs.style ?? '');
@@ -257,11 +257,11 @@ function scopeOf(el: El, theme: 'light' | 'dark'): Scope {
     if (c !== undefined) { try { color = substitute(c, n => vars.get(n)); } catch { /* inherits */ } }
     return { vars, color };
 }
-const colourOf = (el: El, theme: 'light' | 'dark') => scopeOf(el, theme).color;
-const paintOf = (el: El, attr: 'fill' | 'stroke', theme: 'light' | 'dark') => substitute(el.attrs[attr], n => scopeOf(el, theme).vars.get(n));
+const colourOf = (el: El, theme: 'light') => scopeOf(el, theme).color;
+const paintOf = (el: El, attr: 'fill' | 'stroke', theme: 'light') => substitute(el.attrs[attr], n => scopeOf(el, theme).vars.get(n));
 
-const THEMES = ['light', 'dark'] as const;
-const INK = (theme: 'light' | 'dark') => TOKENS[theme].get('--color-inode-name')!;
+const THEMES = ['light'] as const;
+const INK = (theme: 'light') => TOKENS[theme].get('--color-inode-name')!;
 
 // ---------------------------------------------------------------------------
 // Hand-written views (no `generated`, so never a glyph): what the derivation does not draw

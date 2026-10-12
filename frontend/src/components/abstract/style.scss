@@ -1221,31 +1221,6 @@ body[data-layout-mode="canvas-only"] {
   transition: width 200ms ease;
 }
 
-/* Dark mode sidebar shadow */
-[data-theme="dark"] body[data-layout-mode="sidebar"] {
-  // F2-fix (2026-07-29): :not(:first-child) — pairs with the light sidebar block,
-  // so a single-child dockbox (canvas only) never gets the properties-edge shadow.
-  .dock-hbox > .dock-panel:not(:first-child):last-child,
-  .dock-hbox > .dock-box:not(:first-child):last-child {
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
-  }
-}
-
-/* Dark mode dock divider handle */
-[data-theme="dark"] .dock-divider {
-  border-color: #333;
-}
-
-[data-theme="dark"] .dock-divider::after {
-  color: #64748b;
-  background-color: transparent;
-}
-
-[data-theme="dark"] .dock-divider:hover::after {
-  color: #94a3b8;
-  background-color: #334155;
-}
-
 /* ============================================
    JJTL EDITOR ACTIVE - HIDE RIGHT PANEL
    NOTE: Now handled via JavaScript (rc-dock layout manipulation)

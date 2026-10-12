@@ -1,0 +1,18 @@
+date,trunk_commit,rows_lenient,rows_parsed,rows_failing,fail_multiline-header,fail_free-text-in-provisional,fail_keys-partial,fail_outside-vocabulary,fail_separator,fail_not-a-date,fail_no-paren,fail_empty-field,fail_other,invisible_no_dash,invisible_non_r_id,invisible_total,unaccounted,provisional_rows,provisional_invisible,docs_digest_exit,rows_since_grammar,since_grammar_parsed,since_grammar_failing,since_grammar_invisible,provisional_older_than_2d,snapshot
+2026-09-26,651f10543,375,197,0,0,0,0,0,0,0,0,0,0,127,51,178,0,0,0,0,19,19,0,0,0,last trunk commit of the day
+2026-09-27,e87df1ff6,400,221,1,1,0,0,0,0,0,0,0,0,127,51,178,0,20,0,2,44,43,1,0,0,last trunk commit of the day
+2026-09-28,024d95345,411,233,0,0,0,0,0,0,0,0,0,0,127,51,178,0,1,0,0,55,55,0,0,1,last trunk commit of the day
+2026-09-29,62f4ac3fc,424,246,0,0,0,0,0,0,0,0,0,0,127,51,178,0,1,0,0,68,68,0,0,1,last trunk commit of the day
+2026-09-30,4b018b82b,446,263,5,5,0,0,0,0,0,0,0,0,127,51,178,0,15,0,2,90,85,5,0,1,last trunk commit of the day
+2026-10-01,54a9b0a12,452,264,5,5,0,0,0,0,0,0,0,0,132,51,183,0,20,5,2,96,86,5,5,1,last trunk commit of the day
+2026-10-02,7c9ae4e0d,465,272,9,5,4,0,0,0,0,0,0,0,133,51,184,0,32,6,2,109,94,9,6,22,last trunk commit of the day
+2026-10-03,95c38845d,510,311,14,9,5,0,0,0,0,0,0,0,134,51,185,0,52,7,2,154,133,14,7,28,last trunk commit of the day
+2026-10-04,0e77734a2,535,315,29,9,19,1,0,0,0,0,0,0,138,53,191,0,71,11,2,179,137,29,13,40,last trunk commit of the day
+2026-10-05,c6d8ab56c,542,321,30,9,19,1,0,1,0,0,0,0,138,53,191,0,75,11,2,186,143,30,13,52,last trunk commit of the day
+2026-10-06,799e9f50a,544,323,30,9,19,1,0,1,0,0,0,0,138,53,191,0,75,11,2,188,145,30,13,71,last trunk commit of the day
+2026-10-07,799e9f50a,544,323,30,9,19,1,0,1,0,0,0,0,138,53,191,0,75,11,2,188,145,30,13,75,last trunk commit of the day
+2026-10-08,0c516ef1f,544,323,30,9,19,1,0,1,0,0,0,0,138,53,191,0,75,11,2,188,145,30,13,75,last trunk commit of the day
+2026-10-09,0c516ef1f,544,323,30,9,19,1,0,1,0,0,0,0,138,53,191,0,75,11,2,188,145,30,13,75,last trunk commit of the day
+2026-10-10,f731577da,565,328,46,9,20,5,0,12,0,0,0,0,138,53,191,0,76,11,2,209,150,46,13,75,last trunk commit of the day
+2026-10-11,154311f55,582,401,1,0,1,0,0,0,0,0,0,0,127,53,180,0,1,0,2,226,223,1,2,1,last trunk commit of the day
+2026-10-11,2a10e9f36,582,342,49,10,20,5,2,12,0,0,0,0,138,53,191,0,77,11,2,226,164,49,13,75,trunk before the ratification merge P-2026-10-11-1559

@@ -16,6 +16,7 @@ import {parseError, errorFromResult, ExecutionPauseInfo, ExecutionSummary, JjScr
 import type { ExecutionError } from '../types';
 import { collectClassifierNames, validateScriptIntegrity } from '../executor/scriptValidator';
 import { runPasses, isDeferrable } from '../executor/runPasses';
+import { findReservedDeclarations, reservedRefusalMessage, type ReservedDeclaration } from '../../components/Jodie/reservedIdentifierGate';
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 import {TransformationAST} from "../../jjtl";
 import {ExecutionContext} from "../../jjtl/executor";
@@ -445,11 +446,64 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         byLine: getScriptLine(byIndex),
     }), [commands, getScriptLine]);
 
+    /**
+     * Refuse a script that declares a reserved identifier, before command 1, on Run and on Step
+     * (P-2026-10-10-0045). Same shape as the integrity refusal: nothing runs, the strip and the
+     * summary list the names. `line` is the editor line, as the validator's.
+     */
+    const refuseReserved = useCallback((found: ReservedDeclaration[]) => {
+        const first = found[0];
+        const message = reservedRefusalMessage(found);
+        setExecutionErrorInfo({
+            lineNumber: first.line,
+            scriptLine: first.line,
+            command: first.command,
+            error: `Script refused before command 1: ${message} Nothing was executed.`,
+            executedSoFar: 0,
+            totalCommands: commands.length,
+            elapsedMs: 0,
+        });
+        setExecutionStats({
+            totalCommands: commands.length,
+            executedCommands: 0,
+            skippedLines: 0,
+            errors: found.length,
+            duration: 0,
+        });
+        setExecutionState('error');
+        setOutcome({ kind: 'refused', line: first.line, message });
+        setRunBefore(null);
+        setRunSummary({
+            refused: true,
+            executedCount: 0,
+            totalCommands: commands.length,
+            resolvedOnRetryLines: [],
+            durationMs: 0,
+            errors: found.map(f => ({
+                commandIndex: -1,
+                line: f.line,
+                command: f.command,
+                message: `'${f.name}' is ${f.reason === 'reserved-word' ? 'a JjScript reserved word' : 'a primitive type name'}.`,
+                actions: [],
+            })),
+            superseded: [],
+        });
+        setShowRunSummary(true);
+    }, [commands.length]);
+
     // Execute all commands (or continue from where stepping left off)
     const handleExecute = useCallback(async () => {
         if (!onExecute || commands.length === 0) return;
         if (!hasValidTarget && availableTargets.length > 0) {
             console.warn('[ScriptBlock] No target selected');
+            return;
+        }
+
+        // Reserved identifiers (P-2026-10-10-0045): checked before the integrity guard, so the
+        // refusal names the identifier instead of the parser's `Expected element name`.
+        const reserved = findReservedDeclarations(code);
+        if (reserved.length > 0) {
+            refuseReserved(reserved);
             return;
         }
 
@@ -615,13 +669,21 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 errorCount: failed.length,
             }
         }));
-    }, [code, commands, onExecute, executionState, currentLineIndex, hasValidTarget, availableTargets.length, resolvedTarget, getScriptLine, executeLine, errorRowFor, supersededRowFor]);
+    }, [code, commands, onExecute, executionState, currentLineIndex, hasValidTarget, availableTargets.length, resolvedTarget, getScriptLine, executeLine, errorRowFor, supersededRowFor, refuseReserved]);
 
     // Step through commands one by one
     const handleStep = useCallback(async () => {
         if (!onExecute || commands.length === 0) return;
         if (!hasValidTarget && availableTargets.length > 0) {
             console.warn('[ScriptBlock] No target selected');
+            return;
+        }
+
+        // Reserved identifiers (P-2026-10-10-0045): Step refuses on every press, not only at the
+        // first, since a press after a refusal would otherwise start at line 1.
+        const reserved = findReservedDeclarations(code);
+        if (reserved.length > 0) {
+            refuseReserved(reserved);
             return;
         }
 
@@ -819,7 +881,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 }
             }));
         }
-    }, [code, commands, currentLineIndex, executionState, onExecute, hasValidTarget, availableTargets.length, resolvedTarget, getScriptLine]);
+    }, [code, commands, currentLineIndex, executionState, onExecute, hasValidTarget, availableTargets.length, resolvedTarget, getScriptLine, refuseReserved]);
 
     // Stop execution
     const handleStop = useCallback(() => {

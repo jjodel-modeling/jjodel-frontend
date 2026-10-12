@@ -21,12 +21,19 @@ import type {
     CompiledPredicate,
     CompiledRowView,
     CompiledView,
+    CompiledContainmentLayout,
+    ChannelEdges,
     Conditional,
+    ContainerFrame,
+    ContainmentMembership,
     FieldSegment,
     FontFamilyToken,
     FontWeightToken,
     LabelAnchor,
+    LabelOrientation,
     Literal,
+    MembershipMode,
+    PartitionSeparator,
     PathExpr,
     TextStyle,
     Predicate,
@@ -396,6 +403,57 @@ function segmentStylesOf(segments: FieldSegment[], deps: Set<string>): { segment
  */
 export const LABEL_ANCHORS: Record<LabelAnchor, true> = { n: true, e: true, s: true, w: true };
 
+/** Closed vocabularies of the R-GV keys (spec addendum 2026-10-10 §2), Records keyed on the unions as
+ *  LABEL_ANCHORS is: irValidate reads them for the authoring-time rules, the compile below for what it keeps. */
+export const LABEL_ORIENTATIONS: Record<LabelOrientation, true> = { horizontal: true, vertical: true };
+export const LAYOUT_MODES: Record<CompiledContainmentLayout['mode'], true> = { free: true, partitions: true };
+export const PARTITION_AXES: Record<CompiledContainmentLayout['axis'], true> = { vertical: true, horizontal: true };
+export const HEADER_SIDES: Record<NonNullable<CompiledContainmentLayout['header']>['side'], true> = { w: true, n: true };
+export const CONTAINER_FRAMES: Record<ContainerFrame, true> = { hull: true, self: true };
+export const PARTITION_SEPARATORS: Record<PartitionSeparator, true> = { solid: true, dashed: true };
+export const MEMBERSHIP_MODES: Record<MembershipMode, true> = { none: true, forbid: true, reference: true, reparent: true };
+export const CHANNEL_EDGES: Record<ChannelEdges, true> = { show: true, hide: true };
+
+const inVocabulary = <T extends string>(vocabulary: Record<T, true>, v: unknown): v is T =>
+    typeof v === 'string' && Object.prototype.hasOwnProperty.call(vocabulary, v);
+
+/**
+ * The declared layout of a graphVertex (R-GV-5), read permissively (R-B9-bis): an unknown mode reads 'free',
+ * an unknown axis 'vertical', a malformed header no band, a malformed padding 0. Undefined when not an object.
+ * `frame` and `separator` (S2b) are kept only when they change something: `self` on `free`, `dashed` on `partitions`;
+ * anything else reads as their default and is left out, so a layout without them compiles to the keys it had.
+ */
+export function compileContainmentLayout(raw: unknown): CompiledContainmentLayout | undefined {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+    const r = raw as Record<string, unknown>;
+    const h = r.header as Record<string, unknown> | undefined;
+    const header = h && typeof h === 'object' && inVocabulary(HEADER_SIDES, h.side)
+        && typeof h.size === 'number' && Number.isFinite(h.size) && h.size > 0
+        ? { side: h.side, size: h.size } : null;
+    const out: CompiledContainmentLayout = {
+        mode: inVocabulary(LAYOUT_MODES, r.mode) ? r.mode : 'free',
+        axis: inVocabulary(PARTITION_AXES, r.axis) ? r.axis : 'vertical',
+        header,
+        padding: typeof r.padding === 'number' && Number.isFinite(r.padding) && r.padding >= 0 ? r.padding : 0,
+    };
+    if (out.mode === 'free' && r.frame === 'self') out.frame = 'self';
+    if (out.mode === 'partitions' && r.separator === 'dashed') out.separator = 'dashed';
+    return out;
+}
+
+/** The declared membership of a graphVertex (R-GV-8), read permissively: an unknown mode reads 'none', a malformed
+ *  `create` is dropped. Undefined when not an object. */
+export function compileContainmentMembership(raw: unknown): ContainmentMembership | undefined {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+    const r = raw as Record<string, unknown>;
+    const out: ContainmentMembership = { mode: inVocabulary(MEMBERSHIP_MODES, r.mode) ? r.mode : 'none' };
+    const c = r.create as Record<string, unknown> | undefined;
+    if (c && typeof c === 'object' && typeof c.ownerKind === 'string' && c.ownerKind && typeof c.feature === 'string' && c.feature) {
+        out.create = { ownerKind: c.ownerKind, feature: c.feature };
+    }
+    return out;
+}
+
 /** The render side of the anchor: permissive towards what is persisted, so an absent or
  *  unknown anchor draws below ('s') instead of dropping the label (R-B9-bis). */
 export function resolveLabelAnchor(anchor: unknown): LabelAnchor {
@@ -430,7 +488,8 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     const predicate = compilePredicate(ir.predicate, deps);
     const form = compileConditional(ir.shape.form, 'rect' as const, deps);
     // Q7 (P-2026-10-03-1304): compiled only when declared, so a view without it compiles to the key list it had.
-    const declaredVisible = ir.kind === 'vertex' ? ir.visible : undefined;
+    // R-GV-9: a graphVertex declares it as a vertex does, and is hidden by the same containment pass.
+    const declaredVisible = ir.kind === 'vertex' || ir.kind === 'graphVertex' ? ir.visible : undefined;
     const visible = declaredVisible !== undefined ? compileConditional<boolean>(declaredVisible, true, deps) : undefined;
     const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
     // Border, one compile per axis (slice 2, D1): the same three lines compileEdgeView
@@ -495,6 +554,8 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         // Outside label (R-VP-15 (1)): the side is resolved here, once, so the render only
         // reads it. An inside label carries no anchor, even a stray persisted one.
         if (l.position === 'outside') compiled.anchor = resolveLabelAnchor(l.anchor);
+        // Header label (R-GV-5): its text direction, only when declared in the vocabulary on a header label.
+        if (l.position === 'header' && inVocabulary(LABEL_ORIENTATIONS, l.orientation)) compiled.orientation = l.orientation;
         // Path label (R-IRN-41): its feature only when it can edit, so every other label keeps its keys.
         const editsFeature = labelEditsFeature(l);
         if (editsFeature !== null) compiled.editsFeature = editsFeature;
@@ -553,6 +614,21 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
                 tooltip: c.collapsed.badge.tooltip,
             } : null,
         };
+        // R-GV keys (spec addendum 2026-10-10 §2), each written only when declared, so a view without them compiles
+        // to the key list it had. The channel is a PathExpr like any other: a bad one throws here, as a bad label
+        // path does, and its features (and cross paths, when multi-hop) join the view's dependencies.
+        const channelExpr: unknown = c.children;
+        if (typeof channelExpr === 'string' && channelExpr !== '') {
+            const { featureNames } = compilePath(channelExpr, false);
+            featureNames.forEach(f => deps.add(f));
+            const { steps } = parsePathExpr(channelExpr);
+            containment.channel = { expr: channelExpr, steps: steps.map(s => ({ feature: s.feature as string, take: s.take })) };
+        }
+        const layout = compileContainmentLayout(c.layout);
+        if (layout) containment.layout = layout;
+        const membership = compileContainmentMembership(c.membership);
+        if (membership) containment.membership = membership;
+        if (inVocabulary(CHANNEL_EDGES, c.edges)) containment.edges = c.edges;
     }
 
     const crossPaths = dedupeCrossPaths(crossPathSink ?? []);

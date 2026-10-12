@@ -47,8 +47,12 @@ export type NodeProblemSeverity = 'warning' | 'error';
  * later producer of the same concern shares it. The same price as `'validation'`: not an
  * optional property under Rule 11, authorized by the Phase 2 prompt. No consumer switches on
  * `kind` exhaustively (discovery_2026-09-27_sim_checker_gap.md §4.3), so none breaks.
+ *
+ * `'containment'` (R-GV-2, P-2026-10-10-0105 S2) is the sixth: the objects more than one IR container claims and
+ * those no container claims beside claimed ones, mapped by `containmentToProblems.ts` from the containment model the
+ * presentation pass builds. Same price and same reasoning as the two above; the S2 prompt asks for it by name.
  */
-export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation';
+export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation' | 'containment';
 
 export interface NodeProblemAction {
     label: string;

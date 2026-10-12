@@ -22,6 +22,12 @@
  * folds; and `checkInputTarget`, a target the run resolves whose name only an
  * input has (a folded one is the bridge's, as for a derived target).
  *
+ * R-SIM-144 (P-2026-10-10-1630) adds the reads of the root `event`: P3
+ * (`checkEventRead`), a read where no event is bound, and P4
+ * (`checkEventFeature`), `event.a` on a name the trigger's declared type does
+ * not have; `eventReads` lists the names read on `event`, for the bridge's
+ * unset warning.
+ *
  * Every rule is a certainty before the run: the texts are those the run would
  * give when it meets the same text. What depends on σ or the event stays the
  * run's to halt on (R-SIM-70), and a guard or an action judged here is still
@@ -43,7 +49,7 @@ import type { CompiledAction, FoldedTarget } from './actionEvaluator';
 import type { ActionSite, CompiledNet, Domain, InputRead, NetTransition, SimValue } from './netTypes';
 
 /** The reasons of a rule, a subset of the bridge's `CompileDefect['reason']`. */
-export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value' | 'else-alone' | 'read-only';
+export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value' | 'else-alone' | 'read-only' | 'event' | 'event-feature';
 
 export interface StcDefect {
     readonly reason: StcDefectReason;
@@ -58,6 +64,11 @@ export interface StcScope {
     readonly net: Pick<CompiledNet, 'attributes' | 'declared' | 'places'>;
     /** Never the id: the line and the title name elements (R-SIM-62). */
     readonly nameOf: (id: string) => string;
+    /**
+     * R-SIM-144 (P4): the trigger's declared type, by name, and the names of the features it and its
+     * ancestors declare; absent without the event role, and then `event.a` is not checked.
+     */
+    readonly event?: { readonly name: string; readonly features: ReadonlySet<string> };
 }
 
 /** Path B, as for guards and actions: no context at construction, so no builtins. */
@@ -311,4 +322,71 @@ export function inputReads(expr: JjelExpression, site: string, scope: StcScope):
         for (const element of scope.net.declared.keys()) add(element, e.attribute);
     });
     return out;
+}
+
+/** The root of the event that fired the step (R-SIM-14, R-SIM-42). */
+const EVENT = 'event';
+
+/** R-SIM-144 (P4): the keys every pool handle has whatever its class, so `event.a` may always read them. */
+const HANDLE_KEYS: ReadonlySet<string> = new Set(['name', 'id', 'instanceOf', 'parent']);
+
+/**
+ * R-SIM-144 (P3): where a guard or an action sits, as far as `event` goes. A guard or a transition
+ * action names `untriggered`, a transition carrying the site that has no trigger, `null` when every one
+ * has; an entry or an exit action never has an event of its own.
+ */
+export type EventSite =
+    | { readonly role: 'guard' | 'transition'; readonly untriggered: string | null }
+    | { readonly role: 'entry' | 'exit' };
+
+/** Whether `node` (an expression, or an action: its target and its value) reads the root `event`, in any form. */
+function readsEvent(node: unknown): boolean {
+    let found = false;
+    walk(node, NONE, (e, bound) => {
+        if (e.type === 'Identifier' && e.name === EVENT && !bound.has(EVENT)) found = true;
+    });
+    return found;
+}
+
+/**
+ * R-SIM-144 (P3): a read of `event`, in any form (`event.a`, `event.[x]`, `event == null`), where no
+ * event is bound: in a guard or a transition action of a transition without a trigger, where `event` is
+ * `null` in the step, or in an entry or an exit action, where what a node does would depend on the path.
+ * The run is unchanged: such a read still fails, or reads `null`, when it is evaluated.
+ */
+export function checkEventRead(node: unknown, site: EventSite, scope: Pick<StcScope, 'nameOf'>): StcDefect | null {
+    if ('untriggered' in site) {
+        if (site.untriggered === null || !readsEvent(node)) return null;
+        return { reason: 'event', detail: `reads event, but ${scope.nameOf(site.untriggered)} has no trigger: event is null in its step`, short: 'reads event, no trigger' };
+    }
+    if (!readsEvent(node)) return null;
+    return {
+        reason: 'event',
+        detail: `an ${site.role} action cannot read event: what a node does on ${site.role} does not depend on the path that reached it`,
+        short: `reads event in ${site.role}`,
+    };
+}
+
+/** R-SIM-144: the names `node` reads on `event` (`event.a`, `event?.a`), each once, in pre-order; never a state read `event.[x]`. */
+export function eventReads(node: unknown): string[] {
+    const out: string[] = [];
+    walk(node, NONE, (e, bound) => {
+        if (e.type !== 'MemberAccess' && e.type !== 'NullSafeMemberAccess') return;
+        if (e.object.type !== 'Identifier' || e.object.name !== EVENT || bound.has(EVENT)) return;
+        if (!out.includes(e.property)) out.push(e.property);
+    });
+    return out;
+}
+
+/**
+ * R-SIM-144 (P4): `event.a` where `a` is neither a feature of the trigger's declared type or of its
+ * ancestors (R-SIM-38, no downcast) nor a key of the handle. Its short never starts `undeclared '`, so
+ * the Reset line does not offer to declare it as a global (`undeclaredGlobals`, R-SIM-94).
+ */
+export function checkEventFeature(node: unknown, scope: Pick<StcScope, 'event'>): StcDefect | null {
+    const type = scope.event;
+    if (!type) return null;
+    const a = eventReads(node).find(name => !type.features.has(name) && !HANDLE_KEYS.has(name));
+    if (a === undefined) return null;
+    return { reason: 'event-feature', detail: `'${a}' is not a feature of ${type.name}, the type of the trigger`, short: `event.${a}: not on ${type.name}` };
 }

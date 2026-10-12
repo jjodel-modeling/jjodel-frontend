@@ -281,11 +281,16 @@ Source: `docs/ratifiche/claude_ratifiche_2026-10-03_issue_driven_auto_lanes.md`,
 - **RC-35** (2026-10-03, ratified in principle by Alfonso 2026-10-03, evidence: read, verified: agent, reversible: trunk): **An issue enters the automation only through a label applied by an allowlisted maintainer.** Label `auto`; the actor of the latest `labeled auto` event, read from the issue events API, must be in the allowlist (initially `apierantonio`). A title or body edited after that event is refused; hidden content (HTML comments, zero-width or bidirectional characters) is parked; pull requests are dropped; comments are never read. Title and body are untrusted data, rendered as a capped data block inside a fence longer than any backtick run in them, which the lane analyses and never follows; the branch slug matches `[a-z0-9-]{1,40}` and values reach commands as arguments only. A skip label (`needs-alfonso`, `auto-parked`) wins while present; one attempt per `labeled` event id.
 - **RC-36** (2026-10-03, ratified in principle by Alfonso 2026-10-03, evidence: read, verified: agent, reversible: trunk): **The critical zone stays shut for automatic lanes, on three layers.** The DOVE predicted by the discovery is checked before Phase 2. `lane-run start --auto` refuses `--critical-zone-goahead`, removes GitHub credentials from the session, disallows the web tools and marks the lane; the ledger flags an automatic lane holding `goahead.txt`. After the session the branch diff against the base sha recorded at the cut, plus untracked and ignored files, is guarded on `CRITICAL_FILES`, the D-layer creators of CLAUDE.md 3.2, the governance files, `.claude/`, `.github/`, `frontend/scripts/hooks/`, `lane-run.mjs` and the `auto-intake` files, `VersionFixer.tsx`, dependencies, deletions, and removed or changed exports. Any hit parks the issue or the branch, which is kept and never merged. RC-30 is unchanged for lanes not launched by the automation.
 - **RC-37** (2026-10-03, ratified in principle by Alfonso 2026-10-03, evidence: read, verified: agent, reversible: trunk): **Automatic output stays off the trunk.** Branch `auto/<issue>-<slug>`, worktree `~/jjodel-a-<issue>`; the automation never merges and never pushes; merges follow RC-23 and RC-31. No GitHub writes in shadow mode, labels only in live mode, never comments.
-- **RC-38** (2026-10-03, provisional, awaiting Alfonso under RC-26, evidence: measured, verified: agent, reversible: trunk): **The night spends only the slack of the plan window.** Admission reads the latest `rate_limit_event` of the lane logs. Seven-day utilization at or below the elapsed fraction of the window (from `resetsAt`) minus 0.05, below 0.70, and no reset due within 24 hours; at most 0.03 above the night's baseline (`baseline.json`, first fresh reading); 240 minutes of cumulative lane time per night, admission with at least 30 left, lanes limited to 90 minutes, at most 2 in parallel, the second only after the first has produced a reading. A `rejected` status, a five-hour utilization at or above 0.80, or a seven-day `surpassedThreshold` ends the night with a trip file and no retry. A reading older than six hours or past its `resetsAt` is stale and admits one light discovery lane only. Cost and tokens are recorded, not used for admission.
+- **RC-38** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: measured, verified: agent, reversible: trunk): **The night spends only the slack of the plan window.** Commit `53aed9baa` (2026-10-03) switched live mode on with the subject «ratified by apierantonio»; on 2026-10-11 Alfonso did not recognize that ratification, so it is recorded as unverified, and he ratified this row and the live switch that day (chat `C-2026-10-10-1145`). Admission reads the latest `rate_limit_event` of the lane logs. Seven-day utilization at or below the elapsed fraction of the window (from `resetsAt`) minus 0.05, below 0.70, and no reset due within 24 hours; at most 0.03 above the night's baseline (`baseline.json`, first fresh reading); 240 minutes of cumulative lane time per night, admission with at least 30 left, lanes limited to 90 minutes, at most 2 in parallel, the second only after the first has produced a reading. A `rejected` status, a five-hour utilization at or above 0.80, or a seven-day `surpassedThreshold` ends the night with a trip file and no retry. A reading older than six hours or past its `resetsAt` is stale and admits one light discovery lane only. Cost and tokens are recorded, not used for admission.
 - **RC-39** (2026-10-03, ratified in principle by Alfonso 2026-10-03, evidence: read, verified: agent, reversible: trunk): **Shadow mode first.** Phase 1 discovery only, light tier, `Lane: full` with its hard stop, an eligibility verdict and the predicted DOVE on a machine-readable line in each report, until Alfonso switches to live mode, not before the MODELS demo; the script refuses `live` unless the configuration records who ratified the budget numbers and when. Live mode adds Phase 2 in cascade for `auto-eligible` issues that pass the first layer of RC-36, on the tier chosen at start.
 - **RC-40** (2026-10-03, decided by chat `C-2026-10-03-1705` on Alfonso's delegation «decidi tu su tutto ma avanza il più possibile», 2026-10-03 18:40, evidence: measured, verified: agent, reversible: trunk): **The shadow pipeline is switched on.** (1) Amends RC-39: shadow prompts declare `Lane: discovery`, so `tierRule` gives the light tier with no code change, and live prompts declare `Lane: full`; the value lives in `laneByMode` of `frontend/scripts/auto-intake.config.json` (measured on a dry render: `tier: light (claude-sonnet-5-5)`, addendum of `docs/discovery/discovery_2026-10-03_auto_intake.md`). (2) The RC-38 numbers hold for the shadow mode as configured; `ratifiedBy` and `ratifiedOn` stay null, so live mode stays refused until Alfonso fills them, after the MODELS demo. (3) The labels `auto`, `needs-alfonso`, `auto-parked` and `auto-ready` exist on `jjodel-modeling/jjodel-frontend`; the chat labelled #65 (console re-focus, read and found benign and bounded) as the first intake. (4) A nightly scheduled task drives the pipeline from 01:10 local, one lane at a time, never resuming or merging an automatic lane, and ends with a digest in `~/.jjodel-lanes/auto/<night>/digest.md`. Merge of `auto-intake`: P-2026-10-03-1840.
 - **RC-41** (2026-10-03, decided by Alfonso in chat `C-2026-10-03-1705`, evidence: read, verified: none, reversible: trunk): **`jdirocco` joins the intake allowlist of RC-35.** A `labeled auto` event by `jdirocco` (admin on `jjodel-modeling/jjodel-frontend`) is trusted by the nightly task as one by `apierantonio`; `allowlist` of `frontend/scripts/auto-intake.config.json` reads `["apierantonio", "jdirocco"]`. The other gates of RC-35, the guard of RC-36 and the budget of RC-38 are unchanged.
 - **RC-42** (2026-10-05, requested by Alfonso in chat `C-2026-10-05-1116`, evidence: read, verified: agent, reversible: trunk): **Every prompt declares its dependencies.** From 2026-10-06 the header of a prompt in `docs/prompts/` carries `Depends: none` or a comma-separated list of the Prompt-IDs whose result the lane needs; merge prompts rendered by `lane-run` are exempt and earlier prompts are not amended (P13). A Prompt-ID cited in the body is context, not a dependency, and the lane board needs exact edges, which it cannot infer from citations.
+- **RC-43** (2026-10-10, requested by Alfonso in chat `C-2026-10-10-0840`, evidence: measured, verified: agent, reversible: trunk): **Every prompt names the request it answers.** From 2026-10-10 the header of a prompt in `docs/prompts/` carries `Request: <URL>`, the claude.ai conversation or session where Alfonso asked or the GitHub issue of an auto-intake lane, or `Request: none (<reason>)` when nobody asked (a lane the chat opens on its own initiative, a follow-up it derives from a report); merge prompts rendered by `lane-run` are exempt and earlier prompts are not amended (P13). The words of the request are never committed: the launching chat passes them to `lane-run start --request <file>`, which keeps them as `~/.jjodel-lanes/<Prompt-ID>/request.md`, and the lane board shows the request first in a lane's detail. Measured 2026-10-10: of the 138 commits that added a prompt under `docs/prompts/` since 2026-10-01, 56 carry a `Claude-Session:` trailer, the only link back to the request; `Chat: C-…` resolves to nothing.
+- **RC-44** (2026-10-10, adopted by chat `C-2026-10-10-1256` from the `Recommended:` lines of the discovery under RC-21 and RC-25, the P13 amendment and the GitHub bootstrap approved by Alfonso, evidence: measured, verified: agent, reversible: trunk): **Lanes declare a front.** The `Front:` line of the P13 header names a front of the registry `docs/harness/fronts.json`. One GitHub board for all lanes, org Project 2 «Jjodel Lanes»; cards are issues of the private repo `jjodel-modeling/jjodel-lanes`, and a front is a milestone of that repo. No dedicated Project per front for now; Project 1 is not ours. The chat opens a front on four criteria (P13) and Alfonso can veto. Discovery P-2026-10-10-1330, lane P-2026-10-10-1500.
+- **RC-45** (2026-10-10, decided by chat `C-2026-10-10-1512` on Alfonso's delegation «per le decisioni che restano a me decidi tu», 2026-10-10 15:57, evidence: measured, verified: agent, reversible: trunk): **The tier of eligible lanes is drawn at random, and rework prompts always fill `Corregge`.** (1) The discovery `docs/discovery/discovery_2026-10-10_lane_board_model_insights.md` (§6.5) shows that the model effect cannot be read from the lanes so far: the chat chose the tier, 23 of 24 light lanes by explicit `--tier light`, and Sonnet got the small lanes. From 2026-10-11, for every lane that is `Lane: fast`, outside the critical zone, not a merge, not a discovery and not changing what the MODELS demo shows, the chat draws heavy or light with probability 1/2 before writing the prompt, writes the draw in the `Lane:` line as `tier drawn (RC-45): heavy|light`, and launches with the matching `--tier`. A drawn lane keeps its tier on resume and is never re-launched on the other tier to rescue it; a failure is data. The draw stops at 40 drawn lanes or on 2026-11-08, whichever comes first, and the chat then reports the drawn subset from the lane board Insights tab; RC-16 and RC-32 apply unchanged to every lane outside the draw. Amends RC-32 for the eligible lanes only. (2) Measured in the same discovery (§9, risk 4): no log entry since 2026-10-05 fills `Corregge`, so recent rework is invisible to the board. From 2026-10-11 every prompt that corrects or redoes the work of an earlier lane names that lane's Prompt-ID in its body, and its log-inbox entry fills `Corregge`; a prompt that corrects nothing fills `Corregge` with the sentinel that `check:docs` accepts (amended 2026-10-10 18:45: Check B of `check:docs` rejects `none`, measured by P-2026-10-10-1757), so an explicit sentinel means "checked, corrects nothing" and only a missing field means "not filled". Amended 2026-10-10 17:55, on Alfonso's request «fai partire RC-45 adesso, il più possibile in lane auto»: the draw starts now, not on 2026-10-11; a fast lane whose DOVE writes only under `docs/` is not drawn; the draw moves into `lane-run` (P-2026-10-10-1757), which records every draw in `~/.jjodel-lanes/rc45-draws.jsonl` and in the lane's `tier.txt` and refuses `--tier` on an eligible lane unless `--no-draw "<reason>"` is given; until that lands, the chat draws by hand into the same ledger. First drawn lane: P-2026-10-10-1756 (light).
+- **RC-46** (2026-10-11, recommended by chat `C-2026-10-11-1735` from the discovery of P-2026-10-11-1745, approved by Alfonso 2026-10-11 18:16, evidence: measured, verified: agent, reversible: trunk): **No mod reaches a lane unless the harness names it.** A loaded Claude Code mod overrides the deny list and the `PreToolUse` hooks and runs host commands no permission layer sees (report s2, s5). `lane-run start` and `resume` refuse to launch when the environment carries `CLAUDE_CODE_PLUGIN_DIRS` or when the fold would hold a hooks module the harness did not name; lane sessions are refused writes to `~/.claude/settings.json`, `~/.claude/plugins/` and any `.claude-plugin/` under a skills folder. `cc-plugin-sec-default` is not seated now; seating it is a system-wide change for a later lane Alfonso authorises. Memo: `docs/ratifiche/claude_ratifiche_2026-10-11_claude_code_mods.md`.
+- **RC-47** (2026-10-11, recommended by chat `C-2026-10-11-1735` from the discovery of P-2026-10-11-1745, approved by Alfonso 2026-10-11 18:16, evidence: measured, verified: agent, reversible: trunk): **The lane discipline is checked by one repo-held mod, after RC-46.** `lane-run` loads exactly one mod from the repo with `--plugin-dir`. It blocks a message whose Prompt-ID differs from the session's or is missing (P13, at `prompt.submit`), blocks once a final message without an `Outcome:` line (at `classic.Stop`), and flags, never rewrites, a reply without the `[P-… · session …]` prefix. Every gating hook carries a refusing `.catch`, so the mod fails closed. The same mod writes per-turn `usage` and `session.measure` into the lane folder for the CAIN dataset, with no export of its own. Supersedes the planned `Stop` hook. Memo as RC-46.
 
 ## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
 
@@ -322,28 +327,28 @@ Evidence: `docs/discovery/discovery_2026-09-30_edge_click_properties.md` (`37180
 the chat `C-2026-09-30-1940` in the prompt `P-2026-09-30-1940` under RC-25, adopted by the lane as written; code
 `bb0fd90c9`. Alfonso receives the digest at the close of the lane.
 
-- **R-ESEL-1** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-ESEL-1** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **One pure resolver maps a clicked edge to the element the Properties panel shows.**
   `resolveEdgeSelectionTarget(edgeId, idlookup)` in `editor-v2/utils/edgeSelectionTarget.ts` reads the D-layer from
   the edge id, never the React Flow `data` (the mirrored click passes `{ id }` only, `EditorV2.tsx:2845`). An edge
   kind it does not know returns `null` and the click keeps its previous path exactly. The prompt's `viewId` is
   dropped: a view id in `_lastSelected.view` turns the panel into the view editor (`Info.tsx:1591`).
-- **R-ESEL-2** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-ESEL-2** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **What each edge shows.** M2 reference and M2 composition: the `DReference` (as before). M1 reference and M1
   composition: the reference slot, the `DValue` of the source object whose `instanceof` is the edge's `DReference`
   (before: the metamodel's `DReference`, whose editor then opened inside the model tab); the slot, not the feature,
   because the panel has a slot view that names the owner and edits the value. Object-as-edge `irobj_<id>`: the
   `DObject`, as its node click shows it (before: nothing changed). Inheritance and IR-lifted `<id>__irlift`: `null`,
   today's behaviour (the empty panel, respectively nothing); a follow-up is ticketed.
-- **R-ESEL-3** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-ESEL-3** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **The clicked edge stays the canvas selection.** Only `_lastSelected.modelElement` changes. An object-as-edge has no
   D-element behind its id: nothing is `select()`ed, every graph element is deselected as for any selection, and
   `_lastSelected.node` is `''`; the object's node, hidden or absent, is not selected.
-- **R-ESEL-4** (2026-09-30, provisional, unattended, evidence: read, verified: none, reversible: branch).
+- **R-ESEL-4** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
   **Native and mirrored edge clicks take the same path.** `EditorV2.onEdgeClick` and `EditorV2.selectEdge` call the
   same hook handlers: `jjomSelection.onEdgeClick` for D-edges, `jjomSelection.onObjectAsEdgeClick` in their two
   `irobj_` branches; both end in the resolver.
-- **R-ESEL-5** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-ESEL-5** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Highlight mode, node click and pane click are unchanged.** In highlight mode a D-edge click assigns the colour
   and does not select; an object-as-edge click neither assigns nor selects, as before it had a handler.
 
@@ -1509,7 +1514,7 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   Nessun cambio di schema, nessuna migrazione. Implementato in P-2026-09-29-2122 (`04acac227`,
   `61a45540e`), fuso in `889906e43`. (Ratified by Alfonso on 2026-09-29, §5 of the Layer Impact Report.)
 
-- **R-IRN-38** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **One predicate decides
+- **R-IRN-38** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk) — **One predicate decides
   whether a label renames the element, and the Editable toggle shows it.** `labelCanRename(source)` and
   `labelEditsName(label)` in `ir/irLabelEdit.ts`: an intrinsic `name` or `qualifiedName` label renames unless
   `editable === false`; absent, `true` and the widget object all rename, so the absent key is the default.
@@ -1519,7 +1524,7 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   key, so the IR stays minimal. No schema change, no migration. Implemented in P-2026-10-01-2349 (`20c843f14`);
   mutation bench 17/17, probe 23/23, four demo scenes 0 px from the base run.
 
-- **R-IRN-40** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **The «editable inline»
+- **R-IRN-40** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk) — **The «editable inline»
   toggle of a value segment reads the effective value, inline, with no predicate module.** The runtime edits a row
   value unless `seg.editable === false` (`IRNodeContent.tsx:706`, and the singleton select at `:714`), so
   `FieldSegmentEditor.tsx` draws `checked = editable !== false`; OFF writes `editable: false`, ON removes the key
@@ -1532,7 +1537,7 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   mutation bench 18/18, the base reads OFF at rest on the real app and the fix ON, four demo scenes 0 px from the
   base run.
 
-- **R-IRN-39** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **The IR node and row
+- **R-IRN-39** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk) — **The IR node and row
   subscriptions carry the object's name and its metaclass's name.** `objectSnapshotParts(lookup, objectId, irSig)` in
   `ir/irResolveCore.ts` is the one self snapshot behind `useIRView` and `useIRRowView`: the slot values as before, then
   `n=` the name as `getName` reads it from the D-layer (`name ?? initialName`) and `c=` the metaclass's own name, both
@@ -1544,7 +1549,7 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   test for an object holding both), probe 21/22 after against 11/18 before, memo re-runs of other nodes 0, four demo
   scenes 0 px from `adb5d9731`.
 
-- **R-IRN-41** (2026-10-02, provisional, unattended; evidence: measured; reversible: branch) — **A path label on one
+- **R-IRN-41** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk) — **A path label on one
   attribute of its own object edits on the canvas, opt-in.** Amends R-IRN-38 on the path case only. The absent
   `editable` is read per source (`labelEditableDefault` in `ir/irLabelEdit.ts`): a path label edits only when the IR
   opts in (`true` or the widget object), every other source keeps «absent = editable», so no derived view changes. The
@@ -2117,7 +2122,7 @@ alla chiusura della corsia C1 e può porre il veto. Le domande 3, 4, 6, 9, 10, 1
 adottate come raccomandate e restano nel report; qui stanno le sei che fissano un formato, un'interfaccia
 o una corsia.
 
-- **R-SIM-67** (2026-09-26, provisional, unattended). **Le dichiarazioni vivono in una chiave additiva del
+- **R-SIM-67** (2026-09-26, ratified by Alfonso 2026-10-11). **Le dichiarazioni vivono in una chiave additiva del
   bag, `simStateAttributes`.** Il valore è una stringa JSON, come `simProfile` (R-SIM-55): un oggetto
   `{ "v": 1, "attrs": [record...] }`, con record dalla forma di `StateAttributeDecl` (`name`, `metaclass`
   puntatore o `null`, `space`, `domain`, `initial`, più `equation` dalla C2), serializzato con ordine dei
@@ -2557,19 +2562,19 @@ Evidence: the design canvas «Simulator UI and state data» (Claude Design), row
 - **R-SIM-110** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: read, verified: none, reversible: branch).
   **The I/O board is the machine's environment, not a view.** Its devices bind to what a run already has: inputs to events and IVAR, outputs to read-only expressions over σ. The board adds no VAR, never writes σ or M (R-SIM-6 holds), and every press is a step recorded in the trace and replayable from the seed (R-SIM-100, R-SIM-106). It is not a viewpoint component: views stay read-only (R-SIM-18, R-SIM-108), the notation draws the model, the board draws the system's interface to its environment.
 
-- **R-SIM-111** (2026-10-03, provisional, unattended, evidence: read, verified: none, reversible: branch).
+- **R-SIM-111** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
   **A fixed device library in the first cut.** Inputs: Button (an event), Switch (a boolean IVAR, or two events on/off; it keeps its position between steps and each step reads it as an input), Slider (a ranged IVAR), Numeric keypad (R-SIM-112). Outputs: LED (a boolean over σ, a Moore output; `X.[marked]` works on the State machine profile without state attributes), Pulse LED (lit for the one step in which a named transition or event fired, a Mealy output; it reads the trace, not σ, so it is presentation only and absent from the `.smv` export), 7-segment display (an integer expression; a value out of domain shows `Err` in red), Text display (a state name, an enum or a short template, two lines), Gauge (an attribute with a range domain, the Watch bar of R-SIM-104). Mapping to nuXmv: inputs to the event set or IVAR the model already declares, outputs to DEFINE. User-defined and composite devices are out of the first cut.
 
-- **R-SIM-112** (2026-10-03, provisional, unattended, evidence: read, verified: none, reversible: branch).
+- **R-SIM-112** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
   **The keypad declares its mode in the binding.** Value: the digit buffer lives in the device, the keypad answers one IVAR and Enter fires the event the binding names (the input dialog of R-SIM-88 with another face). Events: every key fires an event carrying its digit and the machine keeps the buffer in σ (the PIN lock exercise). Keys outside the IVAR's domain are shown and rejected with the reason by default, or hidden.
 
-- **R-SIM-113** (2026-10-03, provisional, unattended, evidence: read, verified: none, reversible: branch).
+- **R-SIM-113** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
   **Devices follow the panel's rules.** An input device is off when no transition accepts its event, with the reason in the title; an input out of domain or a false guard shows its reason and fires nothing. Choices Ask | Random (R-SIM-101) applies to presses. While a past step is viewed (R-SIM-106) the outputs show that step, and a press acts on the live configuration and returns the view to live.
 
 - **R-SIM-114** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: read, verified: none, reversible: branch).
   **One board, two skins.** Variant A, the working surface: a docked board opened from the run panel like the inspector, outputs above, inputs below, the binding caption under each device, the status block at the foot. Variant B: a front-panel skin of the same board (same devices, same bindings, a physical rendering) with a «Show bindings» toggle that outlines each device and names its binding. The skin is a viewer preference beside the pins of R-SIM-104. Variant C (a Board tab inside the compact panel) is dropped; the compact panel gains only the button that opens the board.
 
-- **R-SIM-115** (2026-10-03, provisional, unattended, evidence: inferred, verified: none, reversible: branch).
+- **R-SIM-115** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: inferred, verified: none, reversible: trunk).
   **The board is saved with the model.** Devices, positions and bindings persist with the model, where its own state declarations live (R-SIM-94), not in M2, because bindings name that model's events and states; the discovery names the key. An editor opens from the board: a palette of the library, the board in edit mode, a binding inspector, and a table device → binding → nuXmv. A binding that no longer resolves (a renamed event, a deleted state) flags its device and never breaks the run. A device whose binding needs state attributes is flagged under a profile without them.
   Lanes: after the MODELS demo. One read-only discovery (where the board mounts, the persistence key, binding resolution, output evaluation in the guard context with `event` null, reuse of the panel's event and input machinery), then Phase 2 in two lanes on disjoint files: the board model and editor, then the two skins.
 
@@ -2577,32 +2582,32 @@ Evidence: the design canvas «Simulator UI and state data» (Claude Design), row
 
 Evidence: `docs/discovery/discovery_2026-10-03_sim_io_board.md` (P-2026-10-03-1845, branch `sim-io-board`, report `bf8ed5b78`, probe `ba0668d80`), its §0 decisions 1-6 and question 1 adopted by the chat C-2026-10-03-1610 as recommended (RC-21, RC-25) in the GO of Phase 2 Lane 1; built by the same session: `879b591ef` (feat), `f03462c33` (test), `6b2a1f53c` (probe). Phase 2 is two lanes on disjoint files, Lane 1 `sim-io-board-model` (these rows) then Lane 2 `sim-io-board-skins`; merging the board into the trunk, Lane 1 included, waits for Alfonso.
 
-- **R-SIM-116** (2026-10-03, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+- **R-SIM-116** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: measured, verified: agent, reversible: trunk).
   **The board is the key `ioBoard` of the M1 bag. Details R-SIM-115.** One JSON string `{"v":1,"devices":[…]}` (`boardCodec.ts`), a device `id, kind, cell, label, binding` in that order, the binding's fields in a fixed order per kind, so the same board gives the same string; positions are grid cells `[column, row]` on four columns and eight rows, so both skins draw the same record (R-SIM-114). Written in one `state` assignment, one undo step; the empty board is `devices: []`, never a removed key. Not a `sim*` key: `runSignature` folds every `sim*` key of the model bag, so a `simBoard` would interrupt the run at every board edit (measured); `ioBoard` does not move it (measured on the editor's Apply). It survives save, the `.jjodel` text, import with its ids renewed and the reopen (measured), with no VersionFixer step. Decoding is tolerant device by device (R-SIM-68). Ecore/XMI does not carry the board, as it does not carry the declarations.
   Verified (RC-27, agent, 2026-10-03): `modelRunBag` copies every `sim*` key of the M1 bag into `runSignature` and the model's other fields enter only as name, metaclass and slots, and the three interrupt paths all go through `runSignature`; no consumer of `_state` outside `sim/` strips, migrates or breaks an extra string key (VersionFixer, SaveManager, export searched); would fail if an interrupt path folded the whole `_state`. Holds.
 
-- **R-SIM-117** (2026-10-03, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-SIM-117** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Bindings name elements of M by id, declarations by element and name, outputs by their text.** Ten binding forms (`event`, `events`, `ivar`, `keypadValue`, `keypadEvents`, `marked`, `expr`, `transition`, `configuration`, `attr`), each kind taking its own (`BINDING_KINDS`). A binding that no longer resolves flags its device with the reason in its title and never joins the run's compile defects (`resolveDevice`, `simBoard.ts`): an event gone, or an id that is not an event; an input not declared, or of the wrong domain; a state or a transition gone; an expression's compile defect. Under a profile whose state attributes are off, what needs them is flagged with the panel's words, `«State machine» has no state attributes: use Extended state machine.`; `X.[marked]` and the events still resolve. A rename keeps a binding by id; a renamed declaration breaks one by name, declarations having no id (R-SIM-67's record form unchanged).
 
-- **R-SIM-118** (2026-10-03, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+- **R-SIM-118** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: measured, verified: agent, reversible: trunk).
   **An output is a global DEFINE, evaluated on the run's own frozen M.** `SimRun` gains the optional `snapshot`, set by `startRun`; `compileOutput` applies the checks of a semantic equation (parse, subset with E-NODE, `event`, an input, a presentation name), R1, and, with a run's snapshot, its own R2: the element left of a `.[x]` named by a bare identifier no lambda or quantifier binds is folded over M with `self` the model root and must carry the attribute, a place for `marked` and `tokens`. `stcChecks.checkGuard` cannot do it at the model: its fold binds `self` to the site's pool handle, and the model has none (found in the lane). Without a run (the editor before Reset) there is no R2, and such a read fails when evaluated. `evaluateOutput` reads the committed σ with `event` null, a DEFINE from σ's derived map; a defect is a reading, never a throw; a NaN or an infinite value is a defect on the board where a DEFINE accepts it. The Pulse LED reads the trace, lit on the step that fired the transition or the event named, a halted or discarded step dark.
   Verified (RC-27, agent, 2026-10-03): `SimRun` lives in a module map and is only ever copied by shallow spread; no production code serializes, clones or deep-compares a run (searched), which matters because the snapshot is cyclic; `checkGuard` returns no R2 and no R6 at the model; `evaluateOutput` builds the context of a global equation. Would fail if a run were serialized or the pool held the model. Holds, with the qualifications written above.
 
-- **R-SIM-119** (2026-10-03, provisional, unattended, evidence: inferred, verified: none, reversible: branch).
+- **R-SIM-119** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: inferred, verified: none, reversible: trunk).
   **The board and the run inspector share one card slot; the board closes with the panel.** Opening one closes the other; closing the last one returns to live. The board's foot carries the viewed step and «Back to live» (R-SIM-106, R-SIM-113). Beside the inspector there is no room: the inspector is clamped to 372 px with the rail open (report H1). Variant B does not outlive a collapsed panel in the first cut: the choice list and the input dialog render only in the panel's open branch. For Lane 2.
 
-- **R-SIM-120** (2026-10-03, provisional, unattended, evidence: read, verified: none, reversible: branch).
-  **Held inputs answer hand presses only; a press is what reaches the machine.** The values a Switch or a Slider holds answer the inputs a press asks while the board is open (`heldAnswer`), matched by element and name; the dialog of R-SIM-88 asks the rest. Play keeps stopping where an ε press asks an input (R-SIM-101 A2 unchanged): Play continuing on held values would amend that ratified row and waits for Alfonso. R-SIM-113's «Choices applies to presses» is read with R-SIM-101 A3: an event's list opens under Ask and Random alike. R-SIM-110's «every press is a step» is read as every press that reaches the machine: a switch flip or a keypad digit is not a step, its value enters the trace on the step that reads it (`SimTraceStep.inputs`), so the run replays.
+- **R-SIM-120** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
+  **Held inputs answer hand presses only; a press is what reaches the machine.** Amended 2026-10-11 on the provisional digest: «hand presses» reads as every press from the board, Clock ticks included, so held values answer the inputs a tick asks too; this is the reading R-SIM-122 already applies. The values a Switch or a Slider holds answer the inputs a press asks while the board is open (`heldAnswer`), matched by element and name; the dialog of R-SIM-88 asks the rest. Play keeps stopping where an ε press asks an input (R-SIM-101 A2 unchanged): Play continuing on held values would amend that ratified row and waits for Alfonso. R-SIM-113's «Choices applies to presses» is read with R-SIM-101 A3: an event's list opens under Ask and Random alike. R-SIM-110's «every press is a step» is read as every press that reaches the machine: a switch flip or a keypad digit is not a step, its value enters the trace on the step that reads it (`SimTraceStep.inputs`), so the run replays.
 
-- **R-SIM-121** (2026-10-03, provisional, unattended, evidence: read, verified: none, reversible: branch).
+- **R-SIM-121** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
   **The keypad: the value buffer in the device, one event per key in the events mode. Details R-SIM-112.** Value mode: an IVAR with a range from 0 and an Enter event; a leading zero is replaced; a key that would take the buffer above the maximum is off with its reason (`keypadKeyReason`), or hidden (`hideOut`); Enter gives the value only within the domain. Events mode: each key bound to an event instance whose slot the machine reads (`event.digit`), the buffer in σ as a VAR the model declares; one event plus an IVAR answered per key is left out of the first cut.
 
 ### Decisions 2026-10-04: the I/O board's Clock (R-SIM-122)
 
 Evidence: `docs/discovery/discovery_2026-10-04_sim_io_clock.md` (P-2026-10-04-0150, branch `sim-io-clock`, report `51b074753`); built by the same session: `52ddd7163` (feat), `bed918e5f` (test). Alfonso's case, 2026-10-04: a microwave whose display counts down one second per second once started; the simulator has no time by construction (spec 2026-09-13, exclusions), so the missing piece is something in the environment that presses `tick` on its own.
 
-- **R-SIM-122** (2026-10-04, principle ratified by Alfonso 2026-10-04; decisions 2..7 provisional, unattended, adopted by the chat C-2026-10-04-0145 under RC-25; evidence: measured, verified: none, reversible: branch).
-  **A Clock is an environment source, not model time.** (1) `clock` is a fifth input kind of the board, beside Button, Switch, Slider and Keypad; it amends provisional R-SIM-111 on Alfonso's request. (2) Its binding is the Button's, one event instance; the record also carries `period`, milliseconds, a whole number in 100..60000, default 1000; a stored period out of range is a defect of its device, never a clamp. (3) The engine sees only events: each tick is one press of the bound event through the panel's `fire`, with the same totality, so a tick whose event enables nothing is discarded as a hand press is and the clock keeps ticking; σ, the STC, the step, the trace and any future `.smv` export are unchanged, a clock-bound event being an ordinary event. (4) The face has an on/off switch and shows the period and the ticks since it was switched on; on/off is view state of the board, never written to the model and never an undo step. (5) It ticks only while the run is Running and switches itself off at Terminated, Deadlock or Halted, at Reset, when the model changes (the interruption, a model switch) and when the board card closes; a hand press does not stop it. (6) Clock and Play run together, each press one step in arrival order; a tick does not stop Play and Play does not stop the clock. (7) A tick that arrives while a press waits on the input dialog (R-SIM-88) is dropped and counted in the face's title, never queued.
+- **R-SIM-122** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
+  **A Clock is an environment source, not model time.** Principle ratified by Alfonso 2026-10-04; decisions 2..7 adopted by the chat C-2026-10-04-0145 under RC-25. (1) `clock` is a fifth input kind of the board, beside Button, Switch, Slider and Keypad; it amends provisional R-SIM-111 on Alfonso's request. (2) Its binding is the Button's, one event instance; the record also carries `period`, milliseconds, a whole number in 100..60000, default 1000; a stored period out of range is a defect of its device, never a clamp. (3) The engine sees only events: each tick is one press of the bound event through the panel's `fire`, with the same totality, so a tick whose event enables nothing is discarded as a hand press is and the clock keeps ticking; σ, the STC, the step, the trace and any future `.smv` export are unchanged, a clock-bound event being an ordinary event. (4) The face has an on/off switch and shows the period and the ticks since it was switched on; on/off is view state of the board, never written to the model and never an undo step. (5) It ticks only while the run is Running and switches itself off at Terminated, Deadlock or Halted, at Reset, when the model changes (the interruption, a model switch) and when the board card closes; a hand press does not stop it. (6) Clock and Play run together, each press one step in arrival order; a tick does not stop Play and Play does not stop the clock. (7) A tick that arrives while a press waits on the input dialog (R-SIM-88) is dropped and counted in the face's title, never queued.
   Taken in the lane (report §5, unattended): a tick presses as the board's Button does, held values answering its asks (read of provisional R-SIM-120 «hand presses only» as «presses from the board»); (7) also covers an open nondeterministic choice; a stored clock without `period` reads 1000; `fire` takes an optional `keepPlay`, a hand press passes none; the first tick falls one period after the switch-on (`setInterval`); Reset is told by the run's `net`; an edit of the board switches every clock off. The driver is `simBoardClock.ts`, pure, owned by the board card.
   Measured: unit tests on a microwave run with fake timers, mutation bench 48/48; the lane probe on 3083 at `bed918e5f`: DemoESM 5.2 s at 1000 ms, 5 ticks and step 5; 100 ms, 21 ticks in 2195 ms on, ticks equal to steps; off at Reset, at board close (no step while closed), at Halted on the fourth coin; the microwave built on DemoESM's metamodel reads `01:25` five seconds after `plus` ×3, `start` and the switch-on; Play and the clock together, Play still playing after three ticks, which fails with `keepPlay` ignored; the four demo scenes byte-identical to the base, header and board card included.
 
@@ -2610,49 +2615,49 @@ Evidence: `docs/discovery/discovery_2026-10-04_sim_io_clock.md` (P-2026-10-04-01
 
 Evidence: `docs/discovery/discovery_2026-10-04_sim_io_panel_styles.md` (P-2026-10-04-1130, branch `sim-io-panel`, report `d03957dd1`); built by the same session: `906cb0f2e` (feat), `c18397a5c` (test). Adopted by the chat C-2026-10-04-1126 under RC-25 (Alfonso keeps the veto) after Alfonso's request of 2026-10-04 (themes, button and display styles, an icon from the event's name, extras, panel sizes) and his «procedi» in lane auto on the validated mock-up «Front panel styles». The report's two questions were answered by the chat as recommended (RC-21, unattended, internal to the chain): question 1 widened this lane's DOVE by one entry per new kind in two `.tsx` maps; question 2 is written into R-SIM-127. What is drawn is P-2026-10-04-1131's (R-SIM-130..133).
 
-- **R-SIM-123** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-123** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **The style is authoring, saved in `ioBoard`.** Theme, accent, columns, spans and device styles are optional fields of the board record (R-SIM-116). An absent field means the default and is never written, so every board saved today encodes to the same string, byte for byte (tested on the codec's fixture against the base commit; no demo export carries a board). `v` stays 1, no VersionFixer step, `ioBoard` still never moves `runSignature`. Decoding stays tolerant device by device (R-SIM-68): an unknown value of a style field drops that field with a defect, never the device. The skin choice A or B stays a viewer preference (R-SIM-114).
   Taken in the lane (report §7, unattended): a default is not written whether the record holds it explicitly or not (graphite, 4 columns, `[1, 1]`, the key shape, `both`, `M`, round, green), so the same board gives the same string; fields whose absence means «suggested» or «the theme's» (`role`, `icon`, `key`, `face`) are written whenever present. The board's fields follow `devices` in the order `theme`, `accent`, `cols`; a device's `span` and `style` follow `period`. A dropped field is a defect with the existing codes, `key` (index null) for a board field and `device` for a device's, and the new optional `BoardDefect.field` naming it (rule 11: the union of codes unchanged). The accent is stored in lower case.
 
-- **R-SIM-124** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: read, verified: none, reversible: branch).
+- **R-SIM-124** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
   **Themes of the front panel.** Board field `theme`: `graphite` (default, today's look), `appliance`, `instrument`, `print`. Board field `accent`: a colour `#rrggbb`, absent means the theme's own. Themes apply to Variant B only (D-UI-16); Variant A ignores them.
 
-- **R-SIM-125** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-125** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Panel size and spans.** Board field `cols`: 4 (default), 6 or 8; rows stay 8. Device field `span`: `[w, h]`, `1 <= w <= 4`, `1 <= h <= 2`, absent means `[1, 1]`; a device covers the cells from its `cell` over its span. Occupancy is by covered cells: the codec's cell-taken defect, `firstFreeCell`, `addDevice`, `moveDevice` and a new `setSpan` all use it; a span or a move that would leave the grid or overlap is refused and nothing changes. Narrowing `cols` is refused while a device covers a removed column.
   Taken in the lane: in the decoder a span out of its domain drops the span (the device takes one cell), while a valid span that leaves the grid of the board's columns or covers a cell an earlier device covers drops the device, as the off-grid and cell-taken defects do. `moveDevice` keeps its committed swap: onto the one device covering the cell dropped on, the two swap when the swapped board fits, otherwise nothing changes. A 6- or 8-column board does not fit the 372 px card slot beside the rail (report H5): R-SIM-132's floating window is needed.
 
-- **R-SIM-126** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-126** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Device styles.** Device field `style`, an object with fields in a fixed order, each optional, each valid only on some kinds (a field on another kind is a defect that drops the field). Button, Clock: `shape` (`key` default, `membrane`, `round`, `text`), `role` (`neutral`, `go`, `stop`, `accent`; absent means the role suggested from the event's name, R-SIM-127), `icon` (a Bootstrap icon name without the `bi-` prefix, or `none`; absent means the suggested one), `iconMode` (`both` default, `icon`, `text`), `key` (one character `[a-z0-9]`, or `none`; absent means the suggested one). Text display and 7-segment: `size` (`S`, `M` default, `L`, `XL`), `face` (`plain`, `lcd`, `vfd`; absent means the theme's). LED and Pulse LED: `shape` (`round` default, `square`, `bar`), `color` (`green` default, `red`, `amber`, `blue`, `violet`). A text display sizes its glyphs for the longest value its binding's domain can produce, never the current value, so the box keeps its size while the value runs: `maxDisplayLength(device, ctx)` (a range: the longer of min and max; an enum: the longest literal; a state name: the longest state label; an expression without a known domain: null, the face then uses the cell width).
   Taken in the lane: the codec checks an icon name by its form only (lower-case words joined by `-`, no `bi-`), since the pure codec does not load the icon set; the picker of P-2026-10-04-1131 lists the installed names. `setStyle` refuses the whole change when one field is not valid for the kind. `maxDisplayLength` finds a domain only when the expression is one read `X.[attr]` of a declared attribute (`model` and `self` the globals, another identifier the element of that name); `marked` and a boolean count as `false`, 5; the configuration shows the marked states joined, so two regions can exceed the longest label.
 
-- **R-SIM-127** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-127** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **An icon from the event's name.** A pure module `simBoardIcons.ts`: `eventWords(name)` splits camelCase, snake_case, kebab, spaces and letter-digit boundaries, strips accents, lowercases; `suggestIcon(name)` tries pairs first (`door open`, `open door`, `apri porta`, `door close`, `chiudi porta`), then the single words in the name's order against a curated English and Italian dictionary, the first hit wins, no hit gives no icon (never a random one); it returns `{ icon, role, rule }`. The suggestion is computed at render time from the event's label in the board context (`ctx.events`), never stored, so renaming the event updates it; only an explicit `icon` (or `none`) is stored. A test fails if any icon of the dictionary is missing from the installed `bootstrap-icons/font/bootstrap-icons.json`. `suggestKeys` gives a shortcut to each device its caller passes, in board order (row, then column): a single-digit name keeps its digit, otherwise the first letter of the name not taken by an earlier device; an explicit key wins and is reserved first; two explicit equal keys are a board defect on the second.
   Shortcut keys go to Button, Switch and Clock only (the chat's answer to the report's question 2, as recommended, unattended): a Slider has no press and a Keypad has its own keys; `suggestKeys` works on the names its caller passes. The explicit `key` is a style field of Button and Clock only (R-SIM-126), so a Switch always carries its suggested key. Taken in the lane: `plus` suggests `plus-lg` and `minus` `dash-lg`; a door alone suggests `door-open`; the pairs also include `close door`, `apri sportello`, `chiudi sportello`; a duplicate explicit key that reaches `suggestKeys` is reported (`duplicate`) and the entry suggested like the others.
 
-- **R-SIM-128** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-128** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Two new device kinds, amending R-SIM-111 (Alfonso asked for the extras).** `silk`, a silkscreen: no binding, a label, drawn as a caption with a rule; it never takes input and never flags. `buzzer`, an output: a boolean expression over σ like the LED (same binding forms as `led`), sounding on the rising edge in P-2026-10-04-1131; presentation only, absent from any `.smv` export like the Pulse LED.
   Taken in the lane: widening `DeviceKind` breaks the two exhaustive maps of the `.tsx` files (`KIND_ICON`, `SimBoardEditor.tsx`; `FACES`, `simBoardDevices.tsx`); the chat widened this lane's DOVE for one entry per kind (the report's question 1, as recommended, unattended), the buzzer drawn by `LampFace` and the silkscreen by `TextFace` with its label until P-2026-10-04-1131 draws them. Until then the editor's palette lists both under Outputs. A silkscreen stored with a binding loses it with a binding defect.
 
-- **R-SIM-129** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: read, verified: none, reversible: branch).
+- **R-SIM-129** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
   **What stays out of the first cut.** Export of the board as SVG or PNG (it needs either hand-written serialisation or a new dependency, and no dependency enters without Alfonso): parked as a question. User-defined themes beyond the accent: out.
 
 ### Decisions 2026-10-04: the styles of the I/O board's front panel, what is drawn (R-SIM-130..133)
 
 Evidence: the report of P-2026-10-04-1130 (`docs/discovery/discovery_2026-10-04_sim_io_panel_styles.md`, no discovery of its own, RC-11), built by P-2026-10-04-1131 on branch `sim-io-panel`: `c79cf7774` (feat), `372273fd8` (test). Adopted by the chat C-2026-10-04-1126 under RC-25 (Alfonso keeps the veto) on the validated mock-up «Front panel styles», which the lane could not see: the colours it does not name below were chosen in the lane and are listed as taken. Measured: unit tests on the card rendered in node, the base markup of a fixture board rendered at `ab7907ad9`; mutation bench 58/58; the lane probe on 3084 at 1600 by 1000, light app theme (D-UI-15), panel 32/32, the four demo scenes 50/50 on the base and after, 0 differing paths.
 
-- **R-SIM-130** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-130** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **The four themes are closed palettes on Variant B only.** One class per theme on the front panel's root, `.sim-board__front--<theme>`, the palettes a Sass map local to `SimBoard.scss` that reads no app token and no `data-theme` (D-UI-16): Graphite today's slate, its rules unchanged; Appliance white enamel `#fbfbf8` to `#e7e9e3`, ink `#2b2f33`, glass `#16201d`, digits `#5eead4`, keys `#dfe2dc`; Instrument cream `#efe8d6` to `#ddd3b9`, ink `#3a3326`, glass `#14110b`, amber digits `#fbbf24` with glow, brass keys `#cfc5ab`; Print white, black ink and edges, no gradient, no glow, lit lamps filled black. `accent` overrides the Accent role only, never on Print. Variant A keeps the app's light look and ignores theme, accent, shape, role colours, display face and size.
   Taken in the lane: the roles Go, Stop, Accent are Graphite `#16a34a`, `#dc2626`, `#f59e0b`; Appliance `#2f9e44`, `#e03131`, `#1c7ed6`; Instrument `#4d7c0f`, `#9f1239`, `#b45309`; Print Go filled black, Stop white with a 2 px edge, Accent white. The accent is an inline `background-color` over the role's sheen (`background-image`), so no CSS custom property is defined in a component (rule 28). A display without a face takes the theme's: Graphite's text display `lcd` and 7-segment `plain` (today's), the other themes `plain`; `vfd` is a cyan glow on dark glass, Print's digits black on white whatever the face. The probe measured each theme's face colour in the DOM.
 
-- **R-SIM-131** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-131** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Shapes, roles, icons, sizes.** On Variant B a Button and a Clock follow `shape` and the resolved role (style, else suggested, else neutral); on both skins the resolved icon (style, else `suggestIcon` on the event's label in the board context, `none` hiding it) is a `<i class="bi bi-NAME">`, and `iconMode` `icon` hides the text, kept as title and aria-label, `text` hides the icon. A display's glyph box is sized from `size` and `maxDisplayLength`, never from its value: the probe measured the configuration display at 316 by 46 px reading `locked` and `unlocked`. LED shape and colour from `style`. The logic is `simBoardLook.ts` (pure).
   Taken in the lane: Variant A keeps its glyph (`bi-record-circle`, the Clock's `bi-stopwatch`) when nothing resolves and the icon is not `none` nor the mode `text`, so a board without the new fields renders as before; the mode `icon` hides the text only when an icon is drawn; a round press shows its icon only, its name under it when it has none; a Clock's icon sits beside its lamp and its name row is its text. Glyphs are at least 3 (`Err`), a 7-segment's at most 4; the font is `min(<size>px, calc((100cqw - pad) / glyphs × advance))` with the face as the container, heights fixed per size; Variant A ignores sizes. A Pulse LED without a colour stays amber, its lamp before styles: the codec's default for its colour is now amber (`boardCodec.ts`, a bug found here in P-2026-10-04-1130's module), so green stays storable; this amends provisional R-SIM-126's «green default» for the Pulse LED. Lamp shape and colour are drawn on Variant B only.
 
-- **R-SIM-132** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-132** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Columns and pop out.** A board of 4 columns stays in the card slot (R-SIM-119); one of 6 or 8 columns, or of 4 whose viewer chose it, floats over the canvas as a window, dragged by its header and clamped to the canvas, with a Dock button that returns it to the slot when it fits and is refused otherwise. Window place and docked or floating are viewer prefs per model (`simViewerPrefs.ts` `boardFloating`, `boardWindow`), never in the model and never an undo step, lost on reload. The window is the card itself, so it carries the same foot.
   Taken in the lane: no `SimBoardWindow.tsx` and no change to `SimulationPanel.tsx`: the card sets its own class and inline place, one component as the report wanted. The canvas is the card's containing block less the toolbar (`--jj-toolbar-height`) and the rail (`--jj-canvas-right-inset`), both read, never defined; the first place is the slot's left and 16 px under the toolbar, clamped; a drag stores the place on release; the window re-clamps on a resize. The header gains a Pop out button on every board (an icon, no text: the demo scenes read the same). Widths 582 px for 6 columns and 764 px for 8 (report §4.6). The board and the inspector still share one slot, floating or not. Seen in the probe: at its first place a wide window can sit under the canvas layer's Globals control, top right; for the chat's visual check.
 
-- **R-SIM-133** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-133** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Extras.** Each Button, Switch and Clock shows its resolved key as a keycap (`boardKeys`, board order); a key press fires the device as its click does, only while the focus is in the card or its window and never in an input field, a disabled device ignoring it: the probe pressed the Coin key with the focus in the board, step 0 to 1, and with the focus outside, no step. A silkscreen is a caption with a rule across its span in the theme's ink. A Buzzer sounds on the rising edge of its boolean through WebAudio, about 1.3 kHz for 0.45 s, the context made on the first user gesture, muted by default with a toggle in the board header kept as a viewer pref (`boardSound`), a muted buzzer still lit. The editor's inspector gains the kind's style fields, the span, and for a Button and a Clock an icon picker over the installed `bootstrap-icons.json` (lazy import, no new dependency) with Auto, showing the suggestion and its rule, and None; its header theme, accent (five swatches and Auto) and columns. The palette lists the Buzzer under Outputs and the Silkscreen under a Panel group.
   Taken in the lane: keycaps on both skins, with `aria-keyshortcuts`; the card takes `tabindex="-1"`, so a click on it gives the focus its keys need; a modifier or a repeat is not a shortcut, and a field is any `input`, `textarea`, `select` or editable text, a focused slider included. The test of a board without the new fields compares the base markup with these additions and the Pop out button taken out, nothing else. Variant A leaves silkscreens out: it lists bindings, a silkscreen has none. The buzzer is a bell beside a bar lamp on both skins, its toggle only on a board that has one; its first reading never sounds, a past step viewed neither sounds nor moves the edge (`simBoardSound.ts`, pure). The swatches are `#e8590c`, `#1c7ed6`, `#2f9e44`, `#ae3ec9`, `#f59f00`; the key select disables keys another device holds; narrowing the columns under a device is refused with its reason.
 
@@ -2660,15 +2665,15 @@ Evidence: the report of P-2026-10-04-1130 (`docs/discovery/discovery_2026-10-04_
 
 Evidence: `docs/discovery/discovery_2026-10-04_sim_clock_auto.md` (P-2026-10-04-1625, branch `sim-clock-auto`, report `c106cb329`); built by the same session: `3a71b2a21` (feat), `7aa9e4889` (test). Alfonso asked (2026-10-04) whether the clock could be implicit; the chat C-2026-10-04-1126 found the hand switch-on needed only because idle ticks became steps, and adopted the three decisions under RC-25 (Alfonso keeps the veto), «vai in lane auto». Decision 3 amends decision 3 of R-SIM-122, which was provisional. Measured: unit tests with fake timers, 27 red at the base; mutation bench 33/35, two survivors equivalent; the lane probe on 3085 at `7aa9e4889`, microwave 20/20, the four demo scenes 50/50 on the base and after, 0 differing paths.
 
-- **R-SIM-134** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-134** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **A Clock may start with its run.** The clock record gains the optional boolean `autoStart`, written after `period` and only when true: absent means false, a stored false reads as absent, so every board saved before encodes byte for byte as before (tested against the codec's base fixture); a stored value that is not a boolean drops the field with a defect naming it (`field: 'autoStart'`), never the device; on another kind it is ignored, as `period` is. The editor creates new Clocks with `autoStart: true` (`addDevice`) and shows an Auto-start switch in the clock's inspector (`setAutoStart`, off removes the field). An auto clock switches itself on when its run is first seen Running, which is Reset (a new compiled net), and goes off on today's conditions; the hand switch pauses and resumes it, and a pause holds until the next Reset.
   Taken in the lane (report §5, unattended): arming is once per run (`Clocks.arm`), so only a Reset re-arms; an edit of the board and a collapse also leave the clocks off until Reset or the hand; only clocks whose event the run's alphabet holds are armed, so a flagged clock never ticks unseen; the face of an auto clock that is off ends with «Auto-start: on at the next Reset.».
 
-- **R-SIM-135** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-135** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **The clocks belong to the run, not to the card.** `createClocks` moves from the board card to `SimulationPanel`, one set per model, disposed on a model switch and at the panel's unmount; the card receives the clocks, shows and toggles them, and leaves the values it holds in a ref the panel's ticks read (R-SIM-120), emptied at its unmount. A tick is the panel's plan of the press (`planPress`) sent by `fire` with `keepPlay`, else the input dialog. Manual clocks are freed from the card too, as the decision allowed: one owner, no board-close stop. The probe measured the countdown going on 3 s with the board closed.
   Taken in the lane: collapsing the panel does not unmount it (`SimulationPanel.tsx`, the early return of `!open`), so the collapse switches every clock off explicitly, with the new reason `panel` («the panel was collapsed»), while Play goes on collapsed as before; `SimBoardProps.clockFire` and `waiting` are unread and kept with `// TODO: cleanup` (rules 9 and 11). The panel does not import under the node bench, so its wiring is measured by the probe.
 
-- **R-SIM-136** (2026-10-04, provisional, unattended, adopted by the chat C-2026-10-04-1126 under RC-25; evidence: measured, verified: none, reversible: branch).
+- **R-SIM-136** (2026-10-04, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **A clock tick that enables nothing is not a step. Amends decision 3 of R-SIM-122.** Before pressing, after the waiting check of decision 7, the clock asks `clockEnables(run, event)`: the test that greys the panel's button and the board's Button, `panelInputs(runStatus(run), structuralInputs(...))`. A tick it refuses presses nothing: no step, no trace entry, no configuration kept; the face counts it `idle` in its title, never on the counter, and the Variant B lamp blinks on presses only. Hand presses are unchanged: an unaccepted hand press stays a step at unchanged state. Reason: the environment may always not produce an event, so a tick nobody listens to equals no tick.
   Taken in the lane: the test is structural, so a tick whose guards all refuse it is still pressed and is a discard step, as a hand press on a lit button (report R3); the microwave of the probe read step 0 after 5 s idle at Reset, and step 9 for four presses and five ticks.
 
@@ -2676,10 +2681,10 @@ Evidence: `docs/discovery/discovery_2026-10-04_sim_clock_auto.md` (P-2026-10-04-
 
 Alfonso asked (2026-10-05) what the simulator should gain next; the chat C-2026-10-05-1110 proposed three additions that move the simulator towards verification, and Alfonso ratified the three and their order («si procedi con tutto, usa /lane auto»). The scope of each row is ratified; the details marked «to settle» are answered by the discovery P-2026-10-05-1655 and adopted under RC-25 (Alfonso keeps the veto). Bounded state-space exploration and the `.smv` mapping of invariants stay out of this round (no exporter yet, R-SIM-6).
 
-- **R-SIM-137** (2026-10-05, ratified by Alfonso for scope; details provisional until the discovery).  **Watches: invariants and breakpoints.** A watch is a named boolean JjEL expression over the abstract state σ (`self.[x]`, `model.[x]`, `X.[marked]` and the model's elements), of kind `invariant` (expected true on every configuration) or `breakpoint` (of interest when true). After every step, on the new configuration, with `event` null, the run evaluates its watches with the evaluator that reads guards; Play stops at the first configuration where an invariant is false or a breakpoint is true, and the panel names the watch, the step and the firing that led there. A single step reports the same and never refuses to fire. A watch that does not compile, or whose value is not boolean, is a defect shown on the watch, never a run error. `node.[x]` is not readable in a watch (it is presentation, not σ, R-SIM-108). Watches are stored per model next to the state declarations (R-SIM-94), as an additive key that round-trips byte for byte when absent. Reason: the same text becomes an `INVARSPEC` when the exporter exists, so the property is written once, seen violated in simulation, then proved or refuted by nuXmv. To settle: the key and codec, where watches are edited (the State page of R-SIM-102 or a group of their own), the stop of Play in Choices Random.
-- **R-SIM-138** (2026-10-05, ratified by Alfonso for scope; details provisional until the discovery).  **Step back.** The run can undo its last step: configuration, σ, marking, the trace entry and the outputs the board derives from them return to the state before the step, at Running whatever the status after it was (Terminated, Deadlock, Halted). Step back is not viewing a past step (R-SIM-106): viewing leaves the run where it is, Step back changes it. A Random choice taken again after a Step back may differ. Clocks are environment, not state: a Step back does not rewind them. To settle: whether the configurations the trace keeps already allow a pop or a stack must be added, its bound, and the button's place next to Step and Reset.
-- **R-SIM-139** (2026-10-05, ratified by Alfonso for scope; details provisional until the discovery).  **Scenarios.** A scenario is a named sequence of inputs from Reset (the event fired, the values given to input variables, the transition taken at each ε choice) with an optional final watch that must hold at the end. It is recorded from the current trace and replayed from Reset; a replay that meets an input not enabled, or a choice that is not offered, stops at that step and says so (divergence), and a replay whose final watch is false fails. Scenarios are stored per model as an additive key (this settles the «home of the scenarios» left open on 2026-09-14). Reason: a scenario is a regression test of the model and an exercise a student can hand in. To settle: the identity of an input across renames (ids or names), the key and codec, the list's place in the panel.
-- **R-SIM-140** (2026-10-05, ratified by Alfonso for scope; details provisional until the discovery).  **Coverage.** The panel counts, per model, the visits of every node and the firings of every transition over the runs since the counts were last cleared (Reset keeps them, a clear button empties them), and can lay them over the canvas: elements never visited or never fired stand out. View only: no model write, nothing persisted, nothing on the undo stack, every box unchanged (0 px). A replayed scenario counts like a run. To settle: where the counts live (the run-state per modelId, R-SIM-12), the overlay's look within the canvas layer of the run (`SimCanvasLayer.tsx`), the off state.
+- **R-SIM-137** (2026-10-05, ratified by Alfonso 2026-10-11).  **Watches: invariants and breakpoints.** A watch is a named boolean JjEL expression over the abstract state σ (`self.[x]`, `model.[x]`, `X.[marked]` and the model's elements), of kind `invariant` (expected true on every configuration) or `breakpoint` (of interest when true). After every step, on the new configuration, with `event` null, the run evaluates its watches with the evaluator that reads guards; Play stops at the first configuration where an invariant is false or a breakpoint is true, and the panel names the watch, the step and the firing that led there. A single step reports the same and never refuses to fire. A watch that does not compile, or whose value is not boolean, is a defect shown on the watch, never a run error. `node.[x]` is not readable in a watch (it is presentation, not σ, R-SIM-108). Watches are stored per model next to the state declarations (R-SIM-94), as an additive key that round-trips byte for byte when absent. Reason: the same text becomes an `INVARSPEC` when the exporter exists, so the property is written once, seen violated in simulation, then proved or refuted by nuXmv. To settle: the key and codec, where watches are edited (the State page of R-SIM-102 or a group of their own), the stop of Play in Choices Random.
+- **R-SIM-138** (2026-10-05, ratified by Alfonso 2026-10-11).  **Step back.** The run can undo its last step: configuration, σ, marking, the trace entry and the outputs the board derives from them return to the state before the step, at Running whatever the status after it was (Terminated, Deadlock, Halted). Step back is not viewing a past step (R-SIM-106): viewing leaves the run where it is, Step back changes it. A Random choice taken again after a Step back may differ. Clocks are environment, not state: a Step back does not rewind them. To settle: whether the configurations the trace keeps already allow a pop or a stack must be added, its bound, and the button's place next to Step and Reset.
+- **R-SIM-139** (2026-10-05, ratified by Alfonso 2026-10-11).  **Scenarios.** A scenario is a named sequence of inputs from Reset (the event fired, the values given to input variables, the transition taken at each ε choice) with an optional final watch that must hold at the end. It is recorded from the current trace and replayed from Reset; a replay that meets an input not enabled, or a choice that is not offered, stops at that step and says so (divergence), and a replay whose final watch is false fails. Scenarios are stored per model as an additive key (this settles the «home of the scenarios» left open on 2026-09-14). Reason: a scenario is a regression test of the model and an exercise a student can hand in. To settle: the identity of an input across renames (ids or names), the key and codec, the list's place in the panel.
+- **R-SIM-140** (2026-10-05, ratified by Alfonso 2026-10-11).  **Coverage.** The panel counts, per model, the visits of every node and the firings of every transition over the runs since the counts were last cleared (Reset keeps them, a clear button empties them), and can lay them over the canvas: elements never visited or never fired stand out. View only: no model write, nothing persisted, nothing on the undo stack, every box unchanged (0 px). A replayed scenario counts like a run. To settle: where the counts live (the run-state per modelId, R-SIM-12), the overlay's look within the canvas layer of the run (`SimCanvasLayer.tsx`), the off state.
 - **R-SIM-141** (2026-10-05, ratified by Alfonso).  **Order.** One read-only discovery for the three rows of this round, then Phase 2 lanes on disjoint files written by the chat from its report, watches first, step back and scenarios second, coverage third (coverage may run in parallel when its files are disjoint). Alfonso authorised the merge of each lane on the trunk after the chat's visual check (RC-23).
 - **R-SIM-142** (2026-10-05, ratified by Alfonso for scope: «introduci uno slider che fa andare avanti e indietro l'esecuzione»; the view-only reading and «Continue from here» are the chat's choice, Alfonso keeps the veto).  **A timeline slider.** Under the transport row of the simulation panel a slider runs from step 0 to the current step. Moving it views that step in the mode of R-SIM-106 (the run does not change, the right end is live), in sync with the trace click. While it is not at live, «Continue from here» pops the run to that step with `simStepBack` repeated (R-SIM-138), discarding the later steps. Grabbing it stops Play; ←/→ move one step, Home/End go to 0 and live. Reason: scrubbing must not lose steps by a slip of the hand, and a discarded Random choice cannot be taken again identically, so going back for real stays an explicit action.
 
@@ -2688,6 +2693,20 @@ Alfonso asked (2026-10-05) what the simulator should gain next; the chat C-2026-
 ### Decisions 2026-10-06: the board editor layout (R-SIM-143)
 
 - **R-SIM-143** (2026-10-06, ratified by Alfonso: his request of 2026-10-06 sets the layout; the details the lane settles are adopted under RC-25).  **The board editor's layout.** The «Board of <machine>» editor is a modal of about 1080 px: a one-row header with title, subtitle, the Theme dropdown (accent inside it, Auto plus 5 swatches), the Columns dropdown and close; a two-column body of fixed height with no nested scrollbars, a live preview of the board in its theme on the left (devices drawn as at runtime, faint empty cells, click to select, drag to move, edge to resize) and a 400 px device list on the right (grouped Inputs and Outputs, one row expanded inline with label, binding, the read-only nuXmv line, size and delete); amber warnings for unknown bindings on the row and the device; a footer with the accent, the σ0 note, the counters of bindings to review and unsaved changes, Cancel and Apply. The Pulse LED and configuration display note moves to a tooltip on those types. Layout only: the board model, its codec, the bindings, output evaluation and the nuXmv generation are unchanged; at 8 columns or more the board still opens as a floating window over the canvas. The subtitle uses a comma instead of the dash of the request (house rule: no em dash).
+
+### Decisions 2026-10-10: the attributes of the event that fired the step (R-SIM-144)
+
+Evidence: `docs/discovery/discovery_2026-10-10_sim_event_attributes.md` (P-2026-10-10-1630, branch `sim-event-attrs`, report `325cfafec`, probe `413f0096d`), on the memo `docs/ratifiche/claude_2026-10-10_memo_proposta_event_attributes.md` (`99bd030d9`), which Alfonso accepted on the merits. Alfonso, 2026-10-10 17:23, «sì alle 5 raccomandazioni» (the report's §12, items 1 to 5; item 6 needs no decision, the census found no use to break). R-SIM-145 stays reserved for guard evaluation errors.
+
+- **R-SIM-144** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: measured, verified: none, reversible: branch). **Amends R-SIM-16 (its last sentence made precise) and spec §8.**
+  **A guard or an action reads the attributes of the event that fired the step as `event.a`; Reset checks where and what.** The root stays `event` (R-SIM-14, R-SIM-18, R-SIM-42): bound to the pool handle of the event instance, `null` on an ε step. Measured on the trunk: `event.a` already reads in guards, arc actions, entry and exit, on Petri and fused transitions, in the node bench and in the app; the memo's vending machine (one arc, a multi-valued trigger on every coin, `model.[credit] := model.[credit] + event.amount`) gives 10, 30, 80. At Reset two checks are added, defects of the line of R-SIM-61 and of the problems registry as every compile defect (R-SIM-70): (P3) a read of `event` in a guard or an action of a transition without a trigger, or in an entry or an exit action, is the defect `event`, whatever its form (`event == null` included); a guard or action site carried by more than one transition is judged on each, and the trigger of a transition fused by a fork or a join is that of its choice edge (R-SIM-31(3)); (P4) `event.a` where `a` is neither a feature of the trigger's declared type or of its ancestors (R-SIM-38, no downcast) nor a key of the handle (`name`, `id`, `instanceOf`, `parent`) is the defect `event-feature`. The run does not change. An unset attribute reads what the frozen M holds: a mandatory `EInt` 0, an attribute with a default its default, an optional one without default `null`; a guard compares `null` (false, true for `== null`) and an action that uses it halts as today; a warning at Reset on the run warning line (R-SIM-37) lists the trigger instances whose read attributes are unset. `event.a := …` stays a parse error (R-SIM-40); `event.[x]`, σ declared on the event metaclass, is unchanged and outside this row. nuXmv: one `DEFINE event_a` by cases on the event `IVAR` (spec §8). A model that never reads `event` behaves as before: the parity oracle of the lane.
+
+### Decisions 2026-10-10: the RC-26 points of 2026-10-06 (R-SIM-146)
+
+Evidence: the five points the chat C-2026-10-05-1110 parked for Alfonso at the close of 2026-10-06 (the entries of P-2026-10-06-0100 and P-2026-10-06-0115 in `docs/log-inbox/simulation.md`), with the recommendations of the owner chat C-2026-10-10-1620. Alfonso, 2026-10-10 16:40: «sì sui cinque punti RC-26». R-SIM-144 and R-SIM-145 are reserved for the event attributes (P-2026-10-10-1630) and for guard evaluation errors, both awaiting their reports.
+
+- **R-SIM-146** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Five details of the board editor and of the coverage.** (1) The rules of the old board editor marked `TODO: cleanup` in `SimBoardEditor.scss` (the palette, the edit grid's tiles, the nuXmv table and the inspector, unused since R-SIM-143) are deleted, once a search shows that no class of theirs is referenced. (2) In the board editor an arrow moves the selected device one cell and Shift with an arrow selects the neighbouring device, as in design tools; this reverses the map taken in P-2026-10-06-0100 (arrows selected, Shift and an arrow moved). (3) The editor's preview keeps the runtime colours of LEDs and displays, not the amber and cyan of the request, because the preview draws the board as it runs (R-SIM-143); no code change. (4) The Coverage switch of the canvas layer becomes an icon of fixed width with its summary in the title, and its Clear keeps a reserved slot, so the layer's controls have one width with coverage off and on. (5) Clear counts the places marked in the live configuration as visited once, so a place that holds a token is not veiled after a Clear; amends R-SIM-140 («a clear button empties them») on this point.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
@@ -3400,7 +3419,7 @@ Prompt e GO: `_1845_`, `_1910_`, `_2255_`, `_2330_` del 2026-08-24, `_0030_` del
 
 **R-UNDO-7** (2026-08-25) — **Il gesto «crea una view e aprila» è già un passo solo; una selezione da sola non è un passo affatto.** Misurato con la sonda `_tmp_undo_view_entry.ts` su fixture sintetica (due classi che esistono solo nella sonda, viewpoint IR dichiarato su una sola), 9/10, gesti reali sul menù contestuale del canvas. **Ingresso «Create view for …»**: i due dispatch (`DViewElement.new2` in `createViewInWorkbench`, poi `_lastSelected` in `DockManager.openView`) **si fondono** in un delta solo, che porta `viewelements`, i due id nuovi in `idlookup` e `_lastSelected`; un solo ⌘Z rimuove la view creata **e** riporta la selezione precedente; la view nasce completa (`ir` e `oclCondition` popolate). Conforme, nessuna modifica: la variante transazionale prevista per il ramo di perdita non serve e non è stata scritta. **Ingresso «Edit view …»** (sola apertura): la scrittura di `_lastSelected` viene **scartata**, né spinta né fusa, con `U.userHasInteracted = true` e stack non vuoto — gate R-UNDO-2 e assenza di `pastDelta` esclusi per misura. Controllo positivo nella stessa corsa: la stessa scrittura sparisce se sola e sopravvive se accompagnata da una chiave non transitoria nella stessa `TRANSACTION`. Il discriminante è l'**arietà del delta**: `isOnlyTransientTopLevelChange` (`reducer.ts:1195`) intercetta i cambi di sola `dragging`/`_lastSelected`/`contextMenu` prima del calcolo del delta e ritorna, quindi il ramo di fusione non viene mai raggiunto. Ne discende la **rettifica di R-UNDO-4**: un cambio di sola selezione non è «fuso nel precedente, mai scartato» — è scartato, ed è un passo di undo solo quando viaggia insieme ad altro (che è esattamente ciò che rende conforme l'ingresso di creazione). Il reducer non si tocca: è core, e la chiusura locale prevista (`openView` che marca l'interazione) non si applica perché il motivo dello scarto non è l'interazione. Misura e numeri: `docs/prompts/claude_2026-08-25_1216_prompt_undo_ingressi_views_editor.md`.
 
-**R-UNDO-8** (2026-10-03, provisional, unattended, evidence: measured, verified: none, reversible: branch) — **La copy-on-write di `CompositeActionReducer` non scrive mai nello stato precedente: il `prevAction` è l'ultima azione che lo ha cambiato.** Misurato con la sonda `frontend/scripts/probe/undo-inline-edit.ts` su DemoPetri: una scrittura di slot emette `isMirage = false` accanto a `values.N` (`LValue.setValueAtPosition`), no-op su uno slot che ha già un valore; ordinata per prima, le sue copie andavano perse e `values.N`, che la riceveva come azione precedente, assegnava nello slot vivo dello stato prima: il delta di undo teneva solo `action_title` e ⌘Z non ripristinava nulla, per ogni scrittura inline sul canvas (riga IR, path label, cella ObjectNode) e per ogni `.value =` altrove. Chiusura (A) del report `docs/discovery/discovery_2026-10-03_undo_inline_edit.md`, adottata dalla chat al GO della Fase 2 di P-2026-10-03-1632 (ratified as recommended, unattended): ogni scrittura di slot diventa annullabile, non solo quelle del canvas. Scartate: (B) la guardia `c.data.isMirage &&` in `setValueAtPosition` e (C) un bypass in `canvasToJjom.ts`, entrambe lasciano lo stato precedente mutato. Non emenda R-UNDO-5 né R-UNDO-7: la fusione a 450 ms (`U.objectMergeInPlace`) e lo scarto delle chiavi transitorie restano come sono; il «reducer non si tocca» di R-UNDO-7 riguardava quello scarto, qui il core cambia su GO. Codice `ac64b213b`.
+- **R-UNDO-8** (2026-10-03, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk) — **La copy-on-write di `CompositeActionReducer` non scrive mai nello stato precedente: il `prevAction` è l'ultima azione che lo ha cambiato.** Misurato con la sonda `frontend/scripts/probe/undo-inline-edit.ts` su DemoPetri: una scrittura di slot emette `isMirage = false` accanto a `values.N` (`LValue.setValueAtPosition`), no-op su uno slot che ha già un valore; ordinata per prima, le sue copie andavano perse e `values.N`, che la riceveva come azione precedente, assegnava nello slot vivo dello stato prima: il delta di undo teneva solo `action_title` e ⌘Z non ripristinava nulla, per ogni scrittura inline sul canvas (riga IR, path label, cella ObjectNode) e per ogni `.value =` altrove. Chiusura (A) del report `docs/discovery/discovery_2026-10-03_undo_inline_edit.md`, adottata dalla chat al GO della Fase 2 di P-2026-10-03-1632 (ratified as recommended, unattended): ogni scrittura di slot diventa annullabile, non solo quelle del canvas. Scartate: (B) la guardia `c.data.isMirage &&` in `setValueAtPosition` e (C) un bypass in `canvasToJjom.ts`, entrambe lasciano lo stato precedente mutato. Non emenda R-UNDO-5 né R-UNDO-7: la fusione a 450 ms (`U.objectMergeInPlace`) e lo scarto delle chiavi transitorie restano come sono; il «reducer non si tocca» di R-UNDO-7 riguardava quello scarto, qui il core cambia su GO. Codice `ac64b213b`.
 
 ## R-HND — handle di ridimensionamento sulle forme IR
 
@@ -4541,7 +4560,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   edges with no authored colour (SM, ESM, activity) take the new ink, 2.34:1 to 16.3:1, and the ESM derived `—` 1.48:1
   to 4.76:1; derived Petri views unchanged (`#0f172a` before and after); `--node-header-text` also colours the classic
   object view's header. Dark theme untouched. Prompt P-2026-09-29-1332.
-- **R-VP-27** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-27** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **The viewpoint panel carries «Color by metaclass», off by default, with «Base color» and «Border» under it.**
   Chat decision 1 of P-2026-09-30-1815 (RC-25). The switch reuses `.wp-toggle` and `.wp-switch` of
   `properties.scss`, which were styled and used by no component. Base color is a native `<input type="color">` framed
@@ -4549,7 +4568,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   are hidden while off and keep their values across off and on. `readOnly` disables all three. Measured by the lane probe
   on 3091: the labels are `Name, Type, Color by metaclass, Base color, Border`; off then on then off keeps `#f59e0b` and
   Border. Commit `fa0b20de1`. Numbered R-VP-19 until the rework (`viewpoint-notations` holds R-VP-19..26).
-- **R-VP-28** (2026-09-30, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+- **R-VP-28** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: agent, reversible: trunk).
   **Persisted as one optional field `DViewElement.metaclassColoring?: { enabled; baseColor; border }`; absent = off.**
   Chat decision 2. The field is declared on `DViewElement` (`view.tsx`), beside `formTheme` and `formPalette`, for the
   reason written there. It is written whole through the L proxy's default setter, as Name is: one `SetFieldAction`, one
@@ -4561,23 +4580,15 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   agent, RC-27). Its caveat: writes less than 450 ms apart merge into one undo step, first-wins (`U.tsx:896-905`), an
   older bug that three flat fields would share. Measured: undo and redo of one Border write, and the field through the
   save serializer, `JSON.parse` and `VersionFixer.update` unchanged. Commit `fa0b20de1`. Was R-VP-20.
-- **R-VP-29** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
-  **The palette is ANALOGOUS to the base: colour 0 is the base as picked, the others within ±60° of its hue, in
-  metamodel order.** Amended in the rework (Alfonso accepted the chat's recommendation, 19:20): the golden-angle first
-  version (i × 137.508°) read as categorical, not as a scheme that goes with the picked colour.
-  - The rule, in `metaclassPalette(base, count)` (`view/viewPoint/metaclassPalette.ts`, pure, hand-written). From
-    colour 1 the hues go +1 step, −1 step, +2, −2, … inside ±60°. The step is 120° / (count − 1), capped at 30°. When
-    the window is used up, the hues cycle again from the base hue, with the lightness 10 points darker, then 10 lighter,
-    then 20 darker, …, inside L 35..75, and a level outside that range is skipped. Saturation is the base's, clamped to
-    40..80 %. An invalid hex falls back to `#0ea5e9`.
-  - The lane added a floor of 15° to the step. The literal step, 13.3° at count 10, gave neighbours ΔE76 7.4 apart
-    with the same lightness. With the floor, every pair of neighbours is at least 15° or 10 points apart for 2..10
-    classes, on eight bases; for 2..9 classes the palette is identical to the literal rule.
+- **R-VP-29** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
+  **The classes are indexed depth-first, in metamodel order; the hue rule is superseded by R-VP-37.** Amended
+  2026-10-11 on the provisional digest: only the class order below stands, and the analogous palette within ±60° of
+  the base moved to «Superate».
   - The index is the class's position in a depth-first walk: `DModel.packages`, then in each package its `classes`
     followed by its `subpackages`. Every class takes an index, abstract ones included.
   - Tests 33/33. Mutation bench 37/38; the survivor is a tie that no 24-bit hex reaches. Commit `390bcaddd`. Was
     R-VP-21.
-- **R-VP-30** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-30** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Text is black or white by WCAG 2.x contrast, a tie goes to black; the border is the fill less 25 points of
   lightness, floor 10 %; Border off paints it transparent, keeping its width.** Chat decisions 4 and 5.
   - The lane chose to override the border COLOUR only, so an authored 3 px double border keeps its width. Markers are
@@ -4593,7 +4604,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     Measured on 3091: a white-text node selected shows the name at 7.54:1 on its fill, and a black-text one at 14.9:1.
     A selected node with the option off is 0 px from the trunk tip `45ff6c290`, both before the first write and after
     `enabled: false`. Commit `390bcaddd`. Was R-VP-22.
-- **R-VP-31** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-31** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Only the active viewpoint's setting colours M1 object nodes, in both paint paths; toggle off is 0 px.**
   Chat decision 6.
   - The paint paths: `resolveMetaclassColoring` reads `state.viewpoint`. `ObjectNode` sets the `--color-inode-*`
@@ -4608,8 +4619,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     before run (the Simulation chip of the bag, an edge re-route). The switch was never on there and the resolver
     answered null; no run on the old code attributes it.
   - Report `docs/discovery/discovery_2026-09-30_viewpoint_metaclass_colors.md` (`c29280962`). Was R-VP-23.
-- **R-VP-19** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
-  evidence: measured, verified: none, reversible: branch).
+- **R-VP-19** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening, evidence: measured, verified: none, reversible: branch).
   **The derived viewpoint draws the generic structural notation (variant C) when no role is bound.** Source:
   `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320, §0 questions 1 and 2,
   §1 rows 13, 14, 15, 17, §4, §5 C1) and the mockups `docs/mockups/derived-viewpoints/*-C-generic.svg`. Alfonso chose
@@ -4636,8 +4646,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   rows, from the fixtures and from the exports; the derived box on the turnstile is 198 px wide, the 200 px floor of
   `.mm-node.mm-object` (`nodes/instanceNode.scss:35`), not the 140 px of `irStyle.ts:82`. Prompt P-2026-09-29-2350,
   commit `3ed86119f`.
-- **R-VP-20** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
-  evidence: measured, verified: none, reversible: branch).
+- **R-VP-20** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening, evidence: measured, verified: none, reversible: branch).
   **Five optional IR keys for text and edge labels (slice C2), and the generic notation using them.** Source:
   `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320, §1 rows 6, 8, 13, 15, §2, §5
   C2), the TextStyle addendum (TS3), and `docs/discovery/discovery_2026-09-30_c2_ir_keys.md` (the Layer Impact Report and
@@ -4663,8 +4672,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   labelled edges (5 before) and 0 name rows (7 before); the lane probe on 3072 46/46, the four demo scenes in the
   default viewpoint pixel-identical to the C1 tip outside the animated Jodie launcher (12 of 12, 7 byte-identical);
   mutation bench 43/43. Prompt P-2026-09-30-0150, commit `2360515f4`.
-- **R-VP-21** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
-  evidence: measured, verified: none, reversible: branch).
+- **R-VP-21** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening, evidence: measured, verified: none, reversible: branch).
   **«Derive viewpoint» opens a dialog, a notation select (Generic by default) and a metaclass → role table; a notation
   applies only when picked; the dialog's binding and each view's provenance are stored with the derived viewpoint.**
   Source: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320, §0 decision 2 and
@@ -4703,8 +4711,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   mutation bench 44/45, the survivor equivalent. Prompt P-2026-09-30-0255, commit `64ea9f216`.
   - Ratified by Alfonso on 2026-09-30 (review of the crops of C1, C2, D, A1+A3, A4, verbatim «Q2: ratificato ma con frecce
     aperte»); the open arrowheads are R-VP-25. Recorded by P-2026-09-30-1521.
-- **R-VP-22** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
-  evidence: measured, verified: none, reversible: branch).
+- **R-VP-22** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening, evidence: measured, verified: none, reversible: branch).
   **Two notations beside their siblings, Statechart (UML) and Flowchart (ISO 5807), and two optional IR keys, the entry
   mark and the arc.** Source: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md` (P-2026-09-29-2320,
   §1 rows 1, 2, 7, 19, 20, §5 A1 and A3), the C3 report (`fb8944688`, causes 1-3) and
@@ -4739,8 +4746,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   two line ends on `locked` within 6 px (minimum 10.5), arrow tips 1.00 to 1.01 px from the visible border (the handle
   centre, on the RF box, 1 px outside it); the four demo scenes in the default viewpoint 0 px from the D tip left of the
   rail; mutation bench 46/46. Prompt P-2026-09-30-0355, commit `74995f429`.
-- **R-VP-23** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening,
-  evidence: measured, verified: none, reversible: branch).
+- **R-VP-23** (2026-09-30, ratified by the chat C-2026-09-29-2230 on Alfonso's delegation of 2026-09-29 evening, evidence: measured, verified: none, reversible: branch).
   **A notation «ER (Chen)» with no simulation profile, its table prefilled by name and structure signals, and two
   optional IR keys, the end labels.** Source: `docs/discovery/discovery_2026-09-29_derived_viewpoint_notations.md`
   (P-2026-09-29-2320, §1 rows 9 and 22, §3 «ER and UML signals», §5 A4) and `docs/discovery/discovery_2026-09-30_a4_er_chen.md`
@@ -4849,7 +4855,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   opening on Statechart (UML), Petri net (classic), State machine, Activity (UML); DemoFlowB's nine flows open-headed, the
   guards `[model.[count] < 2]` and `[model.[count] >= 2]` the only labels); mutation bench 44/45, the survivor equivalent.
   Prompt P-2026-09-30-1552, commit `ca3e41a92`.
-- **R-VP-32** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-32** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Activity (UML) draws a view-only decision and merge where the engine chooses and merges.** Alfonso, 2026-09-30 19:30,
   on the Activity view of DemoFlowB («questa è la notazione giusta», «ok su tutto, procedi»); target
   `docs/design/activity_uml_target_2026-09-30.svg`. Source: `docs/discovery/discovery_2026-09-30_activity_decision_merge.md`
@@ -4871,7 +4877,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   `fin`, `left`, `right`; the model's M1 and M2 JSON identical after rendering, a run, undo/redo and save/load; with
   Decision read as an Action, the decision after `d1` with the two guards on its branches, its trunk sharing `d1`'s left
   side with `f2` (6 px off the axis, a measured limit). Prompt P-2026-09-30-1935, commit `d2e4e7959`.
-- **R-VP-33** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-33** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **The Activity guard is mono 11.5 px, slate-700, on a white patch; the expression verbatim.** Amends the guard style of
   R-VP-26 (the C2 label style) as Alfonso asked on 2026-09-30 (the prompt's point 2). The document's `labels.style` is `{ fontFamily: 'mono', fontSize: 11.5, fontWeight:
   'normal', color: 'var(--color-text-secondary)' }`; the edge of an Activity flow draws its label on
@@ -4881,7 +4887,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   Activity lists with a guard equal to them with the style substituted; on the probe `IBM Plex Mono`, 11.5 px, 400,
   `rgb(51, 65, 85)` on `rgba(255, 255, 255, 0.9)`, no text shadow. Viewpoints already derived keep their font and get the
   patch. The two guards of DemoFlowB still overlap each other (the layout ticket). Prompt P-2026-09-30-1935, commit `d2e4e7959`.
-- **R-VP-34** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-34** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **On a node a derived viewpoint draws, the run's token is a dot inside the node and the marked node a 2 px cyan border.**
   The run overlay (S15) is shared by every node of every viewpoint; the new drawing applies only where the node's view
   carries `ir.generated`, so the default viewpoint and user views keep the corner pill and the outline byte for byte (the
@@ -4894,7 +4900,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   the default viewpoint and does not move. Measured on the probe: the dot on `work` 10.5 px disc plus ring, 12.75 px from
   the painted edge, amber, `work`'s border pixels cyan; the default view in the same run keeps the pill «1» and the
   wrapper outline. Prompt P-2026-09-30-1935, commit `d2e4e7959`.
-- **R-VP-35** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-35** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Points 4 to 6 of the review change nothing in the code.** (1) The action border already paints the edge's ink at the
   edge's width, `1px solid rgb(15, 23, 42)`, computed and in the pixels; `#334155` would make it lighter than the arrows
   (question 3). (2) Fork and join are identical at rest; the join's «light border» is the run's dashed enabled ring on
@@ -4917,7 +4923,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   `defaultSize` 7×120; the initial 20, the bull's-eye 24, the decision 36 and the actions 44 unchanged; the four demo scenes
   in the default viewpoint byte-identical to the run at 5 (0 px); the tests 2 of 47 red first, 441/441 after; mutation
   bench 16/16. Prompt P-2026-10-01-2230, commit `c3b0556d6`.
-- **R-VP-37** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-37** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **The fills are twelve fixed pastel swatches, one every 30° of hue; «Base color» is the seed; the border is the
   fill's hue at 55 % lightness.** Chat decision 1 of P-2026-09-30-2022, on Alfonso's review point (1) («the colours
   must be pastel»). Amends R-VP-29 (analogous hues within ±60° of the base, colour 0 the base as picked) and the border
@@ -4932,7 +4938,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     seed, +30°, −30°, +60°, …, +180° last, again from the seed past twelve.
   - Border on: `hsl(h, s, 55 %)` of the fill, 1 px, width unchanged; off: transparent, as before.
     Was R-VP-32 on the branch, renumbered by P-2026-10-02-1506.
-- **R-VP-38** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-38** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **The swatches are assigned by reference: greedy in metamodel order, each class as far in hue as it can be from
   the classes it is connected to.** Chat decision 2, on Alfonso's point (3).
   - Graph (`metaclassGraph`): two classes are adjacent when a DECLARED reference of one, containment included, is typed
@@ -4952,7 +4958,7 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - Cost: the resolver builds the metamodel's graph on every call while the option is on. 28.6 µs a call at 30
     classes and 60 references, 60.9 µs at 60 and 150 (gitignored `_tmp_vppastel_perf.ts`). No memo (Rule 6).
     Was R-VP-33 on the branch, renumbered by P-2026-10-02-1506.
-- **R-VP-39** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-39** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Per-metaclass colour in the viewpoint panel: a dropdown of the metaclasses beside the twelve swatches, «Reset» and
   «Reset all»; persisted as `metaclassColoring.overrides?: Record<metaclass id, hex>`.** Chat decision 3, on Alfonso's
   point (2).
@@ -5054,37 +5060,37 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
   Was R-VP-39 on the branch, renumbered by P-2026-10-02-1718.
   Was R-VP-50 on the branch, renumbered by P-2026-10-03-0050.
-- **R-VP-40** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-40** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **A notation's layout profile is an optional `layout` on `DerivedNotation` (`notations.ts`), copied into the derived
   viewpoint's `_state` as `derivedLayout`, a JSON string (Q2).** Profiles for Flowchart, Activity (UML), Petri net
   (classic), Statechart (UML) and ER (Chen); the others have none and keep today's strategy. `notationCatalog.ts` (symbol
   presets) is not the place. Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
-- **R-VP-41** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-41** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **ELK's routes are drawn, never persisted (Q3).** A session store in `elkLayout.ts` keyed by edge id, not `edge.data`:
   `useJjomSync.ts` rebuilds patched edges keeping only waypoints, anchors, `jjomRefId` and `reference`. A route holds while
   both end nodes keep the rects it was computed for (0.5 px); a move or a resize drops it and the router takes over.
   Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
-- **R-VP-42** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-42** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **The toolbar auto-layout puts every node on the 8 px grid; the 16 px drag snap is unchanged (Q4).** A route's ends on
   real nodes move with their node's snap along their own axis. Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
-- **R-VP-43** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-43** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **No fixed-side ports; each edge's sides come from its ELK route (Q5).** Phase 1 V5 measured no gain and more bends.
   Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
-- **R-VP-44** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-44** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **ER (Chen) lays out with stress, then ELK's overlap removal, and straight lines (Q6).** The Chen lines keep their ends
   on the handles (a stress route ends on the box, not on a diamond's or an ellipse's outline). Prompt P-2026-10-01-2215
   Phase 2, commit `803b84e3a`.
-- **R-VP-45** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-45** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Only the toolbar runs the full layout.** The first-open layout and the late-edge re-layout (`autoLayoutRef`) keep
   today's `computeElkLayout`, unchanged, so opening a project or a viewpoint renders as before: measured on the rest
   probe against a baseline server serving the five changed files from `5c9aadb1c`, 0 px outside Jodie's animated avatar
   on the four demo scenes and three DemoFlowB derived viewpoints (the same avatar noise baseline against baseline).
   Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
-- **R-VP-46** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-46** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **A metamodel canvas without a derived profile takes the class view profile (DOWN, NETWORK_SIMPLEX, compact spacing);
   every other canvas without one keeps today's strategy with the input fixes.** Phase 1 §5.1: V4-ns best on both class
   scenes. Prompt P-2026-10-01-2215 Phase 2, commit `803b84e3a`.
-- **R-VP-47** (2026-10-02, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-VP-47** (2026-10-02, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Three renderings follow the route's ends.** (1) Activity (UML)'s view-only merge and decision are laid out as a
   28 px ELK node each, the branches routed to it and fitted to the diamond's vertex. (2) A `curve: 'arc'` edge (Statechart
   (UML), Petri net (classic)) draws its chord between the route's ends, the opposite edge of a pair read the same way so
@@ -5119,10 +5125,9 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     byte-identical to the baseline; DemoPetri under Petri net (classic) differs at the three names only. Tests went red
     first, then green. Mutation bench 28/29, the survivor equivalent. Prompt P-2026-10-03-1415, commits `79e18efb9`,
     `1c33f3f46`, `db2ae3577`.
-- **R-VP-54** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: visual OK by Alfonso 2026-10-03,
-  reversible: branch).
+- **R-VP-54** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: none, reversible: branch).
   **Statechart (UML) as the demo draws it: State machine converges on it, a transition reads `event [guard]`, the Event
-  objects are not drawn; amends R-VP-22.** Alfonso's answers A3, A4, A5 to P-2026-10-03-1304 Phase 1, 2026-10-03. The text
+  objects are not drawn; amends R-VP-22.** Verified: visual OK by Alfonso 2026-10-03. Alfonso's answers A3, A4, A5 to P-2026-10-03-1304 Phase 1, 2026-10-03. The text
   of R-VP-22 is not edited (add-only). Source: `docs/discovery/discovery_2026-10-03_derived_notations_edges.md` §3.5-3.7,
   §3.9, §9.
   - State machine converges on Statechart (UML): since P-2026-10-03-1300 the notation is hidden and drawn as Statechart
@@ -5141,15 +5146,13 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
     mark ends in the open arrowhead of R-VP-25 (`5691c3992`); three or more `curve: 'arc'` edges between one pair fan out, an
     arc alone bows round the nodes and labels its chord would cross, and an arc alone between its two nodes takes ELK's route
     after an Auto layout (`104f2c0cf`). The pair of R-VP-22 is drawn as before, byte for byte.
-- **R-VP-55** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: visual OK by Alfonso 2026-10-03,
-  reversible: branch).
-  **Petri net (classic) arcs on the orthogonal router; amends R-VP-24 (4).** Alfonso's A1 to P-2026-10-03-1304 Phase 1,
+- **R-VP-55** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: none, reversible: branch).
+  **Petri net (classic) arcs on the orthogonal router; amends R-VP-24 (4).** Verified: visual OK by Alfonso 2026-10-03. Alfonso's A1 to P-2026-10-03-1304 Phase 1,
   2026-10-03. The text of R-VP-24 is not edited (add-only). The arc and inhibitor arc documents lose `curve: 'arc'`, so they
   take the orthogonal router as Petri net's arcs do, and the notation's layout profile routes ORTHOGONAL (`notations.ts`).
   Measured: the long diagonals and the few-px slants of the chords gone. Commit `567423cd6`.
-- **R-VP-56** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: visual OK by Alfonso 2026-10-03,
-  reversible: branch).
-  **The side an edge end takes on a bar and on a diamond.** Alfonso's A2 to P-2026-10-03-1304 Phase 1 and his acceptance of
+- **R-VP-56** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: none, reversible: branch).
+  **The side an edge end takes on a bar and on a diamond.** Verified: visual OK by Alfonso 2026-10-03. Alfonso's A2 to P-2026-10-03-1304 Phase 1 and his acceptance of
   the cost on DemoFlowB without a layout, 2026-10-03. `endSideFor` (`viewpoint/ir/irEdgeViews.ts`): an end on a `bar` takes
   one of its two long sides only (left or right upright, top or bottom lying, by the sign across the bar), two ends sharing
   a long side rather than taking a short one; an end on a `diamond` takes the free side that faces the other end (cosine at
@@ -5157,10 +5160,9 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   are tagged on the edge (`irSourceForm` / `irTargetForm`, session only), and an ELK route ending on a diamond is refitted so
   each end has a vertex of its own (`edgeUtils.ts`, `UnifiedEdge.tsx`). Commit `d914d540c`, LIR
   `docs/lir/lir_2026-10-03_end_side_rule.md`.
-- **R-VP-57** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: visual OK by Alfonso 2026-10-03,
-  reversible: branch).
+- **R-VP-57** (2026-10-03, ratified by Alfonso 2026-10-03, evidence: measured, verified: none, reversible: branch).
   **A Petri transition bar turns by its neighbours inside a square box (Q3, option B); Activity's and Flowchart's fork and
-  join do not turn.** Alfonso's approval of the Q3 design and his decision on its report (options 2 and 3), 2026-10-03.
+  join do not turn.** Verified: visual OK by Alfonso 2026-10-03. Alfonso's approval of the Q3 design and his decision on its report (options 2 and 3), 2026-10-03.
   Source: the report §10-11, LIR `docs/lir/lir_2026-10-03_bar_orientation.md` (its §3 row for Activity superseded by §11.1).
   - The persisted name, permanent once saved (R-B9): `ShapeSpec.barThickness?: number`, a finite number above 0 or absent;
     absent is the bar of before, drawn as its box, never turned (every view saved before Q3). Additive (Rule 11, R-IRN-32:
@@ -5243,7 +5245,7 @@ Source: `docs/discovery/discovery_2026-09-30_edge_ends.md` (P-2026-09-30-1810, �
 `edge-ends`, commits `8f3e7c307`, `462fba92d`. Taken by the lane under RC-25, each the Recommended line of its question;
 Alfonso receives the digest. The mechanism only: no derived notation and no demo binds it (the prompt's COSA).
 
-- **R-EE-1** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-EE-1** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Seven more edge ends, drawn from a glyph table, the line cut at each glyph's back.** Persisted names, permanent once
   saved (R-B9), additive, no migration: `EdgeTermination` gains `filledCircle`, `bar`, `cross`, `erZeroOrOne`,
   `erExactlyOne`, `erZeroOrMany`, `erOneOrMany`; `bar` is also a `ShapeForm` value (R-VP-16), a different vocabulary on a
@@ -5256,7 +5258,7 @@ Alfonso receives the digest. The mechanism only: no derived notation and no demo
   16/16, 42 fixture links in light and dark at widths 1 and 2, every new end cut at its back at both ends, every old end
   uncut, hollow fill equal to the canvas background in both themes; the four demo scenes in the default viewpoint 0 px
   from the pre-edit shots.
-- **R-EE-2** (2026-09-30, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+- **R-EE-2** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: none, reversible: trunk).
   **Each end takes a `Conditional<EdgeTermination>`, resolved per edge instance as `line.color`.** `Conditional<T>`
   already admits a plain `T`, so the declared type needs no union. The compile adds a resolver only for a Conditional end
   (`CompiledEdgeView.sourceEndTermination` / `targetEndTermination`); `terminations` keeps its type, holding the plain
@@ -5266,7 +5268,7 @@ Alfonso receives the digest. The mechanism only: no derived notation and no demo
   predicate, a `rules` that is not a list. Measured: the fixture of the prompt (a reference view, `erZeroOrMany` where
   `upperBound` is -1, `erExactlyOne` otherwise, two references) gives the two ends; in the app, 42 links each resolved from
   a fourteen-rule Conditional on `$end.value`.
-- **R-EE-3** (2026-09-30, provisional, unattended, evidence: measured, verified: agent, reversible: branch).
+- **R-EE-3** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: measured, verified: agent, reversible: trunk).
   **An end label is a text source or `{ multiplicity?, role? }`; amends nothing of R-VP-23.** `labels.sourceEnd` /
   `targetEnd` widen to `TextSource | EdgeEndLabels` (Q2): the bare text source of R-VP-23 is the multiplicity, the object
   form is told apart by the absence of `from`. The multiplicity sits where R-VP-23 put the label; the role at the same
@@ -5277,7 +5279,7 @@ Alfonso receives the digest. The mechanism only: no derived notation and no demo
   including `{}` are newly accepted), the 3 test files passing 34/34, and every `sourceEnd`/`targetEnd` reader in
   `frontend/src`; it would be falsified by a legal text source that compiles to a role or loses `sourceEndText`, or by a
   reader outside the lane's files that reads `.from`/`.text` on `labels.sourceEnd`/`targetEnd` without a check.
-- **R-EE-4** (2026-09-30, provisional, unattended, evidence: read, verified: none, reversible: branch).
+- **R-EE-4** (2026-09-30, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
   **The edge authoring panel lists the ends grouped and edits the Conditional ends and the end labels in Advanced.**
   Groups Arrows, UML, ER, Petri (`TERMINATION_OPTION_GROUPS`), the seven options of before in their order and wording.
   Basic: the grouped Select as before; a Conditional end shows the editor's read-only chip. Advanced: the Fixed /
@@ -5617,7 +5619,7 @@ R-JS-2..6 below: decided by the chat `C-2026-10-01-1725` in the prompt `P-2026-1
 measured in `docs/discovery/discovery_2026-10-01_jjscript_requeue.md`, with the GO's amendment to the
 report's D15 written into R-JS-3. Marker: **provisional, unattended**.
 
-**R-JS-2** (2026-10-01, provisional, unattended) — **The wait accepts what the guard accepts.** In a
+- **R-JS-2** (2026-10-01, ratified by Alfonso 2026-10-11) — **The wait accepts what the guard accepts.** In a
 scope-bound M2 run (`scopeBound && level !== 'M1'`, the guard's own condition at `executor.ts:123`) a
 one-segment name counts as resolved for `waitForDependencies` only when the bound metamodel resolves
 it. The project-wide fallback stays for qualified names, unbound runs, M1, and a bound metamodel that
@@ -5626,7 +5628,7 @@ the wait at the first poll and `checkBoundScope` then refused the line (the Petr
 report §3.1). Accepted cost: a bare name that lives only in another metamodel waits 500 ms before the
 guard refuses it. Code `5fa749339`.
 
-**R-JS-3** (2026-10-01, provisional, unattended) — **Run executes in passes.** Pass 1 runs every
+- **R-JS-3** (2026-10-01, ratified by Alfonso 2026-10-11) — **Run executes in passes.** Pass 1 runs every
 command in script order and never pauses. A failed command is deferred when its verb is `create`,
 `add`, `set` or the standalone `A extends B`, and its executor code (`result.errors[0].code`, not the
 dialog's mapping) is one of `PARENT_NOT_FOUND`, `CHILD_NOT_FOUND`, `MEMBER_NOT_FOUND`, `NO_PARENT`,
@@ -5643,20 +5645,20 @@ each other. Accepted as declared: a deferred `create` can bring back what a late
 to remove (R2), and a forward reference with a required dependency costs up to 500 ms per pass (R3).
 Pure module `executor/runPasses.ts`, code `daba6e27e`.
 
-**R-JS-4** (2026-10-01, provisional, unattended) — **The forward-reference refusal leaves Run.** Run
+- **R-JS-4** (2026-10-01, ratified by Alfonso 2026-10-11) — **The forward-reference refusal leaves Run.** Run
 calls `validateScriptIntegrity(code)` without the name set, so a forward reference completes on pass 2
 instead of being refused before command 1. Parse and syntax errors are still refused before command 1
 and listed in the summary, titled `Script not executed: n errors`. `scriptValidator.ts` is unchanged;
 `ScriptBlock.tsx:projectClassifierNames` has no caller left and is marked `TODO: cleanup`.
 Code `daba6e27e`.
 
-**R-JS-5** (2026-10-01, provisional, unattended) — **Run never pauses.** The interactive Skip dialog
+- **R-JS-5** (2026-10-01, ratified by Alfonso 2026-10-11) — **Run never pauses.** The interactive Skip dialog
 leaves Run; Step keeps its pause on error, unchanged. The recovery rules are evaluated on each final
 error and their actions sit on that error's row of the summary; an action applies its fix and reruns
 only the final failures, with R-JS-3 semantics. `skipMatchingCreateLiteral` is not offered, since Run
 already goes on past those lines. Code `daba6e27e`, `1315e15c4`.
 
-**R-JS-6** (2026-10-01, provisional, unattended) — **One summary modal closes every Run.** Titles
+- **R-JS-6** (2026-10-01, ratified by Alfonso 2026-10-11) — **One summary modal closes every Run.** Titles
 `Script executed` and `Script executed with n errors`. It shows before, after and delta per model whose
 figures changed: classes (abstract inside the count), attributes, references, operations,
 enumerations, literals and packages, or instances for an M1 model. It also shows the commands
@@ -5668,7 +5670,7 @@ There was no success toast on this path to replace. The inline strip stays as th
 `RunSummaryDialog` is a new component that reuses the `ExecutionErrorDialog` shell; light theme only.
 Code `1315e15c4`.
 
-**R-JS-7** (2026-10-01, provisional, unattended) — **A retry pass waits for every dependency.** Decided
+- **R-JS-7** (2026-10-01, ratified by Alfonso 2026-10-11) — **A retry pass waits for every dependency.** Decided
 by the chat `C-2026-10-01-1725` in the GO of `P-2026-10-01-2136` under RC-25, from ticket T8
 (`docs/discovery/discovery_2026-10-01_jjscript_run_slowdown.md` §4.8). In pass 2 and later of a Run
 (R-JS-3), `waitForDependencies` awaits every dependency of the retried command, `type-reference` and
@@ -5685,14 +5687,14 @@ R-JS-8..11 below: decided by the chat `C-2026-10-04-0946` in the GO of `P-2026-1
 recommendations D1-D4 and Q3 of `docs/discovery/discovery_2026-10-04_jjscript_m1_containment.md`. Marker:
 **provisional**.
 
-**R-JS-8** (2026-10-04, provisional) — **Run defers M1 lines too.** R-JS-3 extends to M1 with its rules unchanged
+- **R-JS-8** (2026-10-04, ratified by Alfonso 2026-10-11) — **Run defers M1 lines too.** R-JS-3 extends to M1 with its rules unchanged
 (destructive verbs never deferred, a superseded `set` not retried, at most 3 retry passes, R-JS-7 wait). The M1
 codes sit in their own set, `M1_DEFERRABLE_ERROR_CODES = {INSTANCE_NOT_FOUND, CONTAINER_NOT_READY}`, read by
 `isDeferrable` beside the twelve M2 codes, which stay as R-JS-3 lists them. Both are emitted before anything is
 written (report §4.2). Cause: the microwave script of 2026-10-04 ended with 8 final `not found` errors and its 4
 `Transition` at the model root (report §4.1). Code `602f64413`.
 
-**R-JS-9** (2026-10-04, provisional) — **An M1 instance is born inside its container.**
+- **R-JS-9** (2026-10-04, ratified by Alfonso 2026-10-11) — **An M1 instance is born inside its container.**
 `create instance of <Class> "<name>" in <Parent>.<ref>` is the documented form; the order with the container
 before the name is accepted too; `.<ref>` is mandatory, the slot is never inferred, and a `create instance`
 without `in` stays at the root as before. The father is the parent's slot, a `DValue`, as `LValue.addObject`
@@ -5703,14 +5705,14 @@ land about 300 ms after the parent's create, report §4.5); `<ref>` a reference 
 room in the slot, counting the committed values plus the children this run created into it and the store has not
 listed yet (`MULTIPLICITY_EXCEEDED`, the count kept beside the handles in `handleRegistry.ts`). Code `9916cefce`.
 
-**R-JS-10** (2026-10-04, provisional) — **The M1 name lookup is model-wide.** `findInstanceByName` reads the roots
+- **R-JS-10** (2026-10-04, ratified by Alfonso 2026-10-11) — **The M1 name lookup is model-wide.** `findInstanceByName` reads the roots
 of the model and every instance its containment slots hold, each once. **Amends R-S1-5's scope**, which was «the
 roots of one model»: an instance born in a slot is never in `model.objects`, and without this it could not be
 addressed by a later Jjodie reply (report §4.5, measured `INSTANCE_NOT_FOUND`). Accepted consequence: a name held
 by a root and by a contained instance is ambiguous and refused where it used to resolve the root; auto-names and
 the rename conflict check follow the same scope. Code `9916cefce`.
 
-**R-JS-11** (2026-10-04, provisional) — **The M1 wait waits for readiness.** The container of
+- **R-JS-11** (2026-10-04, ratified by Alfonso 2026-10-11) — **The M1 wait waits for readiness.** The container of
 `create instance … in` is a required dependency, so pass 1 waits for a parent the previous line created. In the
 wait an instance is present when the model shows it (roots or contained) or when the run's handle names it and its
 metaclass is in the store: a bare handle hit is not enough, since before its metaclass lands the handler answers
@@ -5766,7 +5768,7 @@ Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homony
 Evidence: `docs/goals/` and `docs/discovery/discovery_2026-10-05_goal_model.md` (P-2026-10-05-1725, chat
 `C-2026-10-05-1648`).
 
-- **R-GOAL-1** (2026-10-05, ratified by Alfonso 2026-10-05 («vai», on the chat's proposal of seven), evidence: read, verified: none, reversible: trunk).
+- **R-GOAL-1** (2026-10-05, ratified by Alfonso 2026-10-05 «vai» on the chat's proposal of seven, evidence: read, verified: none, reversible: trunk).
   **The requirements have a softgoal level, seven softgoals in `docs/goals/softgoals.json`.** SG-1 low cognitive
   load, SG-2 no layout shift, SG-3 demo readiness, SG-4 reversibility, SG-5 determinism of the simulation engine,
   SG-6 fidelity to the formalism, SG-7 cost of the harness. The R- rows contribute to them in
@@ -5912,8 +5914,220 @@ Change opens anchored on the row, the menu on its button (addendum A2). The two 
 on the form field (two targets in a 0..1 slot, the chip picker linking a target twice) are ticketed at the closure
 and not fixed at their source.
 
+## R-GEN: model-to-text code generation, the pilot (ratifications 2026-10-10)
+
+Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
+`docs/spec/claude_spec_2026-10-10_code_generation_pilot.md`. Ratified before the discovery
+`P-2026-10-10-0815`, which may reshape the points the spec marks *to be confirmed*.
+
+- **R-GEN-1** (2026-10-10, ratified by Alfonso 2026-10-10 «ratifico», evidence: inferred, verified: none, reversible: trunk).
+  **The pilot ships in 3.2, which absorbs the content planned for 3.1; no separate 3.1 tag.** The MDE course sets
+  the date: 3.2 is live by 2026-10-26, content freeze 2026-10-23; a 3.1 item that is not solid by the freeze stays
+  out instead of delaying the release.
+- **R-GEN-2** (2026-10-10, ratified by Alfonso 2026-10-10 «ratifico», evidence: inferred, verified: none, reversible: trunk).
+  **The generator sits behind a user-level experimental setting, off by default.** With the setting off no module
+  of the generator is loaded (lazy chunk) and the application behaves as a build without the generator; a test
+  proves it on the build output or the import graph.
+- **R-GEN-3** (2026-10-10, ratified by Alfonso 2026-10-10 «ratifico», evidence: inferred, verified: none, reversible: trunk).
+  **Template persistence is additive: no `irVersion` bump, no VersionFixer migration.** A project with templates,
+  saved by a user with the setting off, keeps them intact. If templates live in `jjodel/*` annotations, the known
+  loss of those annotations in the `.ecore` round trip is in the perimeter.
+- **R-GEN-4** (2026-10-10, ratified by Alfonso 2026-10-10 «ratifico», evidence: inferred, verified: none, reversible: trunk).
+  **A template is a JjEL function with string interpolation, whose result is Text with block indentation.** No new
+  parser if the evaluator can host it; otherwise a minimal extension, ratified on its own.
+- **R-GEN-5** (2026-10-10, ratified by Alfonso 2026-10-10 «ratifico», evidence: inferred, verified: none, reversible: trunk).
+  **Every fragment copied from a model value records the triple (element id, feature, transformation) from the
+  first slice.** Fragments from the template's literal text record their template position. Round-trip is outside
+  the pilot; the triple is not, because retrofitting it rewrites the evaluator's value path.
+- **R-GEN-6** (2026-10-10, ratified by Alfonso 2026-10-10 «ratifico», evidence: inferred, verified: none, reversible: trunk).
+  **One runnable target in the pilot: JavaScript, in an isolated Web Worker with a timeout, no network, no DOM.**
+  A target profile is identifier policy (invertible mangling), expression printer for a translatable JjEL subset,
+  and runner.
+- **R-GEN-7** (2026-10-10, ratified by Alfonso 2026-10-10 «ratifico», evidence: inferred, verified: none, reversible: trunk).
+  **Templates are written against the concrete metamodel, with read-only access to the roles of its simulation
+  STC.** A template over roles applies to every metamodel bound to that STC. Templates never write the model or
+  the simulator state.
+- **R-GEN-8** (2026-10-10, ratified by Alfonso 2026-10-10 «ratifico», evidence: inferred, verified: none, reversible: trunk).
+  **The oracle against the simulator's scenarios (R-SIM-139) is the goal of the third week, not a requirement of
+  the pilot.** The generated program's trace on a scenario's events is compared with the simulator's trace under
+  the scenario's `expect`.
+- **R-GEN-9** (2026-10-10, ratified by Alfonso 2026-10-10 «ratifico», evidence: inferred, verified: none, reversible: trunk).
+  **Outside the pilot: round-trip (except the triple of R-GEN-5), targets other than JavaScript, the assistant as
+  template author, protected regions.** The assistant comes after the oracle, so that what it writes is checked;
+  the generation gap pattern replaces protected regions.
+- **R-GEN-10** (2026-10-10, ratified by Alfonso 2026-10-10 «sì su A1 e A2», evidence: read, verified: none, reversible: trunk).
+  **The JjEL extension for templates is opt-in and inert when unused.** A lexer option `interpolation`, off by
+  default (the `actionMode` precedent), completes the half-built `"…${…}…"` form; a `parseTemplate` entry point
+  (the `parseAction` twin, strict end of input) builds `InterpolatedStringExpr`; two optional context fields,
+  `textHost` (Text values through interpolation, `+`, `join`, `stringify`) and `readObserver` (member reads),
+  are inherited by children like `stateAccess`. With the option off and both fields absent every existing path
+  is byte-identical; no current consumer sets them. Evidence: discovery §A.2, §A.7, §B.
+- **R-GEN-11** (2026-10-10, ratified by Alfonso 2026-10-10 «sì su A1 e A2», evidence: read, verified: none, reversible: trunk).
+  **Amends R-GEN-8: the oracle compares every step, not the scenario's `expect`.** `expect` is a single predicate on
+  the final configuration (`simScenarios.ts:107-113`) and defines no equality. The generated program exports
+  `initial()`, `step(state, event, selector, inputs)` and `observe(state)`; per step the oracle compares the
+  `kind` and `observe(next)` with the same projection of `configAt(run, n).state`, and reports the first mismatch
+  with its step, transition and generating fragment. `expect` stays the simulator's final check. Evidence:
+  discovery §G.1, §G.2.
+- **R-GEN-12** (2026-10-10, ratified as recommended, unattended, evidence: read, verified: none, reversible: trunk).
+  **Templates persist as one JSON key `genTemplates` in the metamodel's `_state`, written through the `state`
+  setter.** Reshapes the storage of R-GEN-3 (`_state`, not `jjodel/*` annotations); no migration, unknown keys
+  survive save and load, and the key is lost in the `.ecore` export like the STC roles already are. A template is
+  a record `{name, params, body}` registered as a JjEL builtin (the JjTL helper precedent). Evidence: §C, §A.3.
+- **R-GEN-13** (2026-10-10, ratified as recommended, unattended, evidence: read, verified: none, reversible: trunk).
+  **The legacy M2T subsystem (`DState.languages`, `doM2T` in `MTM.tsx`) stays untouched and coexists.** The pilot
+  does not build on it (eager, `eval` on the main thread, no origin, seeded and migrated by `DV.tsx` and
+  `VersionFixer.tsx`) and does not delete it. `jjel/SPEC.md:37` and `:660` stop naming Handlebars as the M2T engine
+  in the docs commit of slice S1. Evidence: §H.1.
+- **R-GEN-14** (2026-10-10, ratified as recommended, unattended, evidence: read, verified: none, reversible: trunk).
+  **In the pilot, origin navigation to a transition drawn as an edge selects its source node and outlines the
+  edge through the code panel's own overlay.** An edge-select event is a follow-up. Evidence: §H.3.
+- **R-GEN-15** (2026-10-10, ratified as recommended, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **The oracle (slice S6) enters 3.2 behind the setting if it is green by the 2026-10-23 freeze, otherwise 3.2.x.**
+  Consistent with R-GEN-8, which makes it a goal, not a requirement.
+
+- **R-GEN-16** (2026-10-10, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
+  **Templates reach the target profile through one context value, `target`, bound next to `stc` by `generate`.**
+  In the pilot it is the JavaScript profile: `target.runtime`, `target.guard(site)`, `target.actions(site)`,
+  `target.initial` (the compiled initial state) and `target.net` (the net with its declarations), built in
+  `codegen/target/js/access.ts` from the S4 printer. A refused guard or action is an error fragment, and Run is
+  refused while errors exist. Raised by the S6 lane (P-2026-10-10-2029): without it no template could print a
+  runnable guard, and a Petri template could not write `initial()`. Named `target`, not `js`, so a second target
+  plugs in without renaming.
+- **R-GEN-17** (2026-10-11, ratified by Alfonso 2026-10-11, evidence: read, verified: none, reversible: trunk).
+  **Generated JavaScript names elements, not ids.** Decided by the chat on Alfonso's «decidi tu». Every element id appears exactly once in the generated program,
+  in one frozen table `const $ID = Object.freeze({ … })` near the top; everywhere else the program refers to an element
+  as `$ID.<name>`, where `<name>` is the element's name through `mangle`, made unique by `JsIdentifierTable`, and
+  `<metaclass>_<n>` in model order for an element without a usable name. The values at run time stay the id strings,
+  so `observe`, `step` and the oracle are unchanged. The JS printer takes the table as an optional context field
+  (absent: today's output), and `target` gains `ids` and `ref(element)`; JSON-shaped values that contain ids
+  (`initial`, Petri presets) print as JS literals over `$ID`. Raised by the S6 crops (P-2026-10-10-2029): the lecture
+  examples were correct but unreadable for students. Implemented by P-2026-10-11-1052; the oracle's «Check» control
+  in the Code panel, sharing the result area of «Run», by P-2026-10-11-1053.
+
+## R-GV — graphVertex containment: channel, layout, membership (ratifiche 2026-10-10)
+
+Source: `docs/discovery/discovery_2026-10-10_graphvertex_bpmn_lanes.md` (P-2026-10-10-0105 Phase 1, §H and §I), spec
+`docs/spec/claude_spec_2026-10-10_ir_graphvertex_containment_addendum.md`. Ratified by Alfonso in chat
+`C-2026-10-10-0057` on 2026-10-10 08:27, «ratifico tutto», on the eight decisions taken unattended, the four awaiting
+him and the three open questions of the report. No `irVersion` bump, no VersionFixer, no migration for any row.
+
+- **R-GV-1** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **A graphVertex may declare its children channel, `containment.children: PathExpr`, containment or not.** Absent =
+  the composition children, as today. Hops follow `navigateRefHop` (`value` or `values[N]`), the terminal may read
+  the whole list; `container` and `node.[x]` are illegal there. v1 does not fan out over a list: a pool reaches its
+  lanes through `$processRef.value.$laneSets.values[0].$lanes.values`, and the JjEL profile (R-J2, R-J7) is not
+  extended. Spec addendum §2.1.
+- **R-GV-2** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **A node is drawn inside one container at most: the innermost claimant wins, then canvas order.** Fixed by the
+  interpreter, not per view. Depth is the shortest claim path from an unclaimed container; a link that would close
+  a claim cycle is not set. The containment model exposes `multiClaimed`, `unclaimed` and `channelSlots`; the
+  problems overlay reads the first two in slice S2. Spec addendum §4.
+- **R-GV-3** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **D-c: when a row compartment and the containment channel of the same view claim one object, the row wins.**
+  `validateIR` warns, without refusing, on a graphVertex with a `children`-source compartment and no declared
+  channel. Warning in slice S1, interpreter precedence in slice S2. Spec addendum §8.
+- **R-GV-4** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Channel edges are suppressed by `containment.edges: 'hide'`; absent = `show`.** Existing views keep their
+  edges; the authoring seed writes `hide` on a non-composition channel. Suppression by `hidden` in the presentation
+  pass, slice S2. Spec addendum §5.
+- **R-GV-5** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **The arrangement key keeps the spec's name, `containment.layout`, optional, `mode: 'free' | 'partitions'`,** with
+  `axis`, a `header` band (`w` or `n`) and `padding`. `LabelPosition` gains `'header'` and `LabelSpec` gains
+  `orientation` (`horizontal` | `vertical`) for the band's label. Spec addendum §2.2, §2.3.
+- **R-GV-6** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Amends spec v1.2 §8 (`docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md:157-173`): computed placement in
+  absolute coordinates, strategy (β).** Children stay top-level React Flow nodes in absolute coordinates; the
+  interpreter computes the partitions' boxes and moves descendants with their container; no `parentId`. `layout`
+  becomes optional; the v1.1 values `vertical | horizontal | grid` are withdrawn as never implemented. The collapse
+  fields of §8, amended by R-IRN-37, are untouched; the text of §8 is not edited (the addendum §3 carries the
+  amendment).
+- **R-GV-7** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Partition geometry: partitions fill the container's inner width, stack along the axis, the container's main
+  size is their sum, slack goes to the last; a paired-border resize keeps the sum.** Extents come from each
+  partition's `isResized` record (R-LAY-4, R-LAY-14) or its content, floor 24 px. Pure module `irPartitions.ts`.
+  Spec addendum §7.
+- **R-GV-8** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Membership edit is declared by `containment.membership.mode`: `none` (absent, today), `forbid`, `reference`,
+  `reparent`; `create: {ownerKind, feature}` names the creation owner of a `reference` container.** `reparent`
+  relies on the model's single-container auto-move (`LValue.setValueAtPosition`, discovery 2026-07-27), a
+  primitive the Phase 1 report §D4 missed. Gestures in slice S3. Spec addendum §6.
+- **R-GV-9** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **graphVertex gains the vertex kind's `visible`, `resizable` and `defaultSize`,** same types, defaults and
+  validation. Spec addendum §2.6.
+- **R-GV-10** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **v1 covers the root form of a model only (objects in `DModel.objects`, appended to the containment slots).**
+  Vertices for nested objects (`useJjomSync.ts` Step 2bis, slice S5) get a read-only discovery of their own before
+  any code: P-2026-10-10-0830, branch `nested-vertices`.
+- **R-GV-11** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **graphVertex becomes an authorable kind, effective when slice S1 has landed. Amends R-6 (2026-08-04,
+  `docs/sessioni/claude_sessione_2026-08-04_3.md:20`, «`graphVertex` in `showIRTab` **non** entra da solo») and
+  R-IRN-4 (this file, «graph e graphVertex non sono kind autorabili»).** D-a, the seed: `form: 'rect'`, a `top`
+  intrinsic-name label, `containment: {}` (composition channel, free layout, collapsible), so a seeded view
+  renders as today's hull. The amended rows are not edited. Panel and seed in slice S4.
+- **R-GV-12** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **D-b: a metaclass whose drawing changes with its structure gets two views told apart by `predicate` and
+  `priority`, not one adaptive view.** Spec addendum §9.
+- **R-GV-13** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **Critical-zone go-ahead slice by slice (RC-26, RC-30).** S1, S2 and S4, inside the `CLAUDE.md` §3.1 zone
+  (`viewpoint/ir/`, `viewpoint/authoring/`), are granted; S3 gets its own go-ahead and its own Layer Impact Report in
+  `docs/lir/` if it touches `canvasToJjom.ts`.
+- **R-GV-14** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
+  **The report's three open questions.** MessageFlow ends: the metamodel's `InteractionNode` typing (Participant,
+  Task, StartEvent, EndEvent) is the OMG restriction, no extra check. A pool without `processRef` draws as a thin
+  band (slice S2). Lanes are `collapsible: false` and persist no `irCollapsed`.
+- **R-GV-15** (2026-10-10, decided by Alfonso 2026-10-10 13:25, evidence: measured, verified: none, reversible: branch).
+  **Hierarchical UML state machines are a target of graphVertex, beside BPMN pools and lanes.** `containment.layout`
+  gains `frame: 'hull' | 'self'` (free only, absent = `hull`, today's) and `separator: 'solid' | 'dashed'` (partitions
+  only, absent = `solid`): a composite state is the box of its substates, orthogonal regions share a dashed line. A
+  selected container that holds layout containers stays under them; an object-as-edge with a collapsed end is lifted.
+  Bordered nodes (entry and exit points, history on the border) are deferred, the next capability to open if
+  statecharts are pursued in full. Spec addendum §11; fixture `frontend/scripts/probe/statechart-fixture.ts` (slice
+  S2b). Verified by probe: `statechart-fixture.ts`.
+- **R-GV-16** (2026-10-11, ratified by Alfonso 2026-10-11 00:05, evidence: measured, verified: none, reversible: branch).
+  **The toolbar Auto layout lays graphVertex containers out bottom-up and keeps containment** (slice S6,
+  `utils/elkContainers.ts`): a partitions container takes one layered run over the flow nodes of all its partitions,
+  each node placed in its own band; a self-framed or free container takes its own run over its children. Two
+  consequences are accepted for v1: a pool or orthogonal state that the shared flow coordinate outgrows is written with
+  its new size as sized by hand, which becomes its minimum; a frame nested in a lane or region is laid out with the
+  root options (downward), not in the direction of the lanes around it. The open-time layout keeps its flat call.
+  Verified by probe: `frontend/scripts/probe/bpmn-lanes-fixture.ts` and `statechart-fixture.ts` (slice S6).
+- **R-GV-17** (2026-10-11, decided by the chat on Alfonso's ok 2026-10-11 11:54 and by Alfonso 2026-10-11 14:23, evidence:
+  measured, verified: probe, reversible: branch).
+  **A framing container follows a dragged child on all four sides, and a size set by hand is its floor, never its
+  ceiling** (P-2026-10-11-1156, spec addendum §12; builds on R-GV-16 and P-2026-10-11-0040). Every child keeps at least
+  `PARTITION_CONTENT_MARGIN` (16 px) from every border; growing left or up moves the origin, the far border and the
+  children stay; along a stack a partition pushes the next ones down, or the earlier ones (each at its floor) and the
+  origin up. The frame follows while the pointer (the cursor) stays within the box the container had at rest grown by
+  `FOLLOW_BAND`, 32 px on every side (amended 2026-10-11 after Alfonso's visual check of 15:58: the node's centre capped
+  the growth near half the node); within the band it holds the whole child, past it the frame does not chase and the drop
+  follows `membership`; the band is measured on the box at rest, never on the growing one. **The drag end writes nothing
+  of the container**: the box is derived from the records and the children, in session and after a reload; a container
+  dragged as a whole lands at its record plus the delta. The toolbar Auto layout writes a grown box with its position as
+  one record (`syncPositionBatchToJjom` with `w`/`h`, LIR `docs/lir/lir_2026-10-11_gv_drag_frame_box_write.md`). Decided
+  unattended in the lane and kept here: the drop target is still resolved on the node's centre (S3), the follow test on
+  the pointer; where two partitions' children leave no room for a border, the earlier partition keeps its children; a
+  self frame keeps its declared `padding` as its margin; a paired lane resize stops at the neighbour's children; after
+  Auto layout a lane's record is compared on position and stack extent only (its cross size is computed). Open:
+  partitions packed edge to edge, and a child moved out of a `none` container framed again after the drop (inbox
+  tickets of P-2026-10-11-1156).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
+
+- R-VP-29, the hue rule (2026-09-30) — superseded by R-VP-37 on 2026-09-30, moved here on 2026-10-11
+  (P-2026-10-11-1540); the class order stays in R-VP-29.
+  **The palette is ANALOGOUS to the base: colour 0 is the base as picked, the others within ±60° of its hue, in
+  metamodel order.** Amended in the rework (Alfonso accepted the chat's recommendation, 19:20): the golden-angle first
+  version (i × 137.508°) read as categorical, not as a scheme that goes with the picked colour.
+  - The rule, in `metaclassPalette(base, count)` (`view/viewPoint/metaclassPalette.ts`, pure, hand-written). From
+    colour 1 the hues go +1 step, −1 step, +2, −2, … inside ±60°. The step is 120° / (count − 1), capped at 30°. When
+    the window is used up, the hues cycle again from the base hue, with the lightness 10 points darker, then 10 lighter,
+    then 20 darker, …, inside L 35..75, and a level outside that range is skipped. Saturation is the base's, clamped to
+    40..80 %. An invalid hex falls back to `#0ea5e9`.
+  - The lane added a floor of 15° to the step. The literal step, 13.3° at count 10, gave neighbours ΔE76 7.4 apart
+    with the same lightness. With the floor, every pair of neighbours is at least 15° or 10 points apart for 2..10
+    classes, on eight bases; for 2..9 classes the palette is identical to the literal rule.

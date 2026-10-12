@@ -1,0 +1,775 @@
+[
+  {
+    "from": "SG-1",
+    "to": "SG-8",
+    "kind": "some+",
+    "witnesses": [
+      "R-RAIL-35",
+      "R-RAIL-41",
+      "R-IRN-10",
+      "R-IRN-38",
+      "R-IRN-40",
+      "R-SIM-34",
+      "R-SIM-103",
+      "R-SIM-109",
+      "R-UNDO-1",
+      "R-STR-4",
+      "R-STR-6",
+      "R-FORM-14",
+      "R-FORM-15",
+      "R-S1-3",
+      "R-VP-54",
+      "R-VAL-18",
+      "R-NV-3"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "One channel or one name per thing also makes it learnable across surfaces: R-RAIL-35 marks abstractness in italic, «stesso canale che il tree usa già»; R-SIM-103 renames «Data» since it «collides with the Data Manager (R-DMV-1)»."
+  },
+  {
+    "from": "SG-1",
+    "to": "SG-8",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-97",
+      "R-SIM-107",
+      "R-VAL-11",
+      "R-VAL-19-bis",
+      "R-NV-1"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Hiding to keep the screen light also hides from a newcomer: R-SIM-107 turns the σ card into opt-in tags, «default: none», and R-VAL-19-bis accepts that «chi chiude VIEWPOINTS perde anche il Data Manager dall'indice» rather than add an exception."
+  },
+  {
+    "from": "SG-1",
+    "to": "SG-11",
+    "kind": "help",
+    "witnesses": [
+      "R-IRN-9",
+      "R-IRN-22",
+      "R-IRN-38",
+      "R-SIM-38",
+      "R-VAL-18",
+      "R-NV-3"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Removing a second reading from what the user sees is done with one shared definition, so the code loses a copy too: the button hides with the same test, «invece di due che possono divergere» (R-IRN-22); one predicate «so the panel and the canvas cannot disagree again» (R-IRN-38)."
+  },
+  {
+    "from": "SG-1",
+    "to": "SG-11",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-86",
+      "R-SGL-4",
+      "R-FORM-14"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Matching what the user sees with what runs, or hiding a control, adds a second code path: R-SIM-86 filters the run's bag while «Restano sul bag grezzo i lettori fuori dal run», and R-FORM-14's exclusion «e' applicata due volte, in multiModel e di nuovo in bulkPlan»."
+  },
+  {
+    "from": "SG-2",
+    "to": "SG-12",
+    "kind": "some+",
+    "witnesses": [
+      "R-B10",
+      "R-LAY-5",
+      "R-LAY-14",
+      "R-LAY-15"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Persisting human layout per viewpoint keeps the saved record whole: R-LAY-5 «Il record di layout non si cancella quando l'elemento non è renderizzato»; R-LAY-15 writes the full record on the first gesture, «mai record parziali»."
+  },
+  {
+    "from": "SG-3",
+    "to": "SG-1",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-79",
+      "R-SIM-105",
+      "R-VP-54"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Shaping a surface for the demo trims what the user must read: R-SIM-79 offers presets «quattro per la demo» with the rest «nascosti», and R-SIM-105 keeps «the compact panel» as «the default and the demo path»."
+  },
+  {
+    "from": "SG-3",
+    "to": "SG-4",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-85",
+      "R-SIM-101",
+      "R-SIM-109"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "A surface brought into the demo build before the freeze arrives as a tagged merge that can be taken back: R-SIM-109 merges «one at a time, each tagged `pre-<branch>` for rollback»; R-SIM-101: «a regression on the trial run on 3001 means rollback»."
+  },
+  {
+    "from": "SG-3",
+    "to": "SG-7",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-76",
+      "R-SIM-85",
+      "R-VP-60"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Protecting or reshaping a demo surface adds a digest item, a docs lane or a redone lane: R-SIM-76 «è un punto di RC-26 e va nel digest», R-VP-60 withdrawn before the demo, «it returns after Málaga (2026-10-09) as a lane of its own»."
+  },
+  {
+    "from": "SG-3",
+    "to": "SG-8",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-79",
+      "R-SIM-80",
+      "R-SIM-98",
+      "R-VP-26",
+      "R-VP-54"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Demo-readiness work makes what a scene shows legible to a first-time viewer: R-SIM-80 makes the event buttons «leggono coin e non …_136», and R-VP-26 opens DemoFlowB on a new notation since the old one was «non è per niente conforme alla notazione comunemente nota»."
+  },
+  {
+    "from": "SG-3",
+    "to": "SG-9",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-79",
+      "R-SIM-82",
+      "R-SIM-93",
+      "R-VP-16"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Protecting the scenes defers constructs past MODELS: R-SIM-93 keeps DFA, NFA, Moore and Mealy hidden, «compaiono con la fetta delle facce dopo MODELS»; R-SIM-82 scripts the demo flowchart so «R-SIM-53 e else verso Fork/Join» wait «dopo MODELS»."
+  },
+  {
+    "from": "SG-4",
+    "to": "SG-1",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-78",
+      "R-SIM-94",
+      "R-VP-22",
+      "R-VP-24",
+      "R-VP-26",
+      "R-VAL-9"
+    ],
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Keeping what exists so nothing is lost or migrated leaves more for the user to hold: in R-SIM-78 «i legami di un profilo precedente restano», and in R-SIM-94 «the model's record overrides the metamodel's, by name» so a global has two homes and no migration."
+  },
+  {
+    "from": "SG-4",
+    "to": "SG-2",
+    "kind": "help",
+    "witnesses": [
+      "R-B10",
+      "R-LAY-5",
+      "R-LAY-14"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping persisted geometry instead of deleting or rewriting it makes a change reversible and leaves the layout where it was: «NOT IN THIS VIEWPOINT è reversibile e il layout deve sopravvivere al ritorno» (R-LAY-5); waypoints «tornano vivi al ritorno a orthogonal» (R-B10)."
+  },
+  {
+    "from": "SG-4",
+    "to": "SG-7",
+    "kind": "some-",
+    "witnesses": [
+      "R-EDGE-2",
+      "R-IRN-34",
+      "R-DEAD-4"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping saved projects opening adds gates and waits: R-EDGE-2 must measure before Phase 2, «altrimenti i progetti salvati smetterebbero di aprirsi», and R-IRN-34 stays «aperto per la conferma di Alfonso» on a real saved project."
+  },
+  {
+    "from": "SG-4",
+    "to": "SG-8",
+    "kind": "some-",
+    "witnesses": [
+      "R-SKIN-4",
+      "R-NV-1"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping saved values valid leaves things the screen cannot teach: per-view skins stay definitive literals, «un'altra cosa con un nome simile» (R-SKIN-4); disabled types stay visible for saved viewpoints while «quel testo è irraggiungibile» (R-NV-1)."
+  },
+  {
+    "from": "SG-4",
+    "to": "SG-9",
+    "kind": "some-",
+    "witnesses": [
+      "R-MK-2"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "_state stays out of IR expressions because a restriction can be lifted later but an exposure cannot be taken back: exposing it is «una ratifica additiva», withdrawing it «una migrazione su view che per R-B9 non hanno VersionFixer» (R-MK-2)."
+  },
+  {
+    "from": "SG-4",
+    "to": "SG-11",
+    "kind": "some+",
+    "witnesses": [
+      "R-B9-bis",
+      "R-IRN-16",
+      "R-SIM-67",
+      "R-SIM-94",
+      "R-J4"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Saved data keeps opening because compatibility is put in one place rather than spread or copied: R-J4 «La retrocompatibilità vive nel walker dell'IR, non nel contesto»; R-IRN-16 reuses «lo stesso predicato di VersionFixer.tsx:143» instead of frozen signatures."
+  },
+  {
+    "from": "SG-4",
+    "to": "SG-11",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-68",
+      "R-UNDO-5",
+      "R-SGL-2",
+      "R-EE-3",
+      "R-MCID-1"
+    ],
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Keeping saved forms and committed behaviour unchanged leaves a second branch, form or copy in the code: R-SGL-2 «resta come fallback dichiarato per i modelli salvati prima della feature», R-SKIN-4 «La riconciliazione resta il debito FL4»."
+  },
+  {
+    "from": "SG-4",
+    "to": "SG-12",
+    "kind": "some+",
+    "witnesses": [
+      "R-B9",
+      "R-B10",
+      "R-IRN-34",
+      "R-SIM-55",
+      "R-SIM-78",
+      "R-SIM-90",
+      "R-SIM-99",
+      "R-SIM-123",
+      "R-SIM-134",
+      "R-MK-2",
+      "R-LAY-5",
+      "R-LAY-14",
+      "R-STR-1",
+      "R-VP-28",
+      "R-VP-21"
+    ],
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "An additive optional key read with a default and no migration keeps saved projects opening unchanged, and the same rule brings the saved form back complete: R-SIM-134 «every board saved before encodes byte for byte as before»; R-LAY-5 «il layout deve sopravvivere al ritorno»."
+  },
+  {
+    "from": "SG-4",
+    "to": "SG-12",
+    "kind": "some-",
+    "witnesses": [
+      "R-EDGE-3",
+      "R-IRN-33",
+      "R-SIM-38"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping saved projects opening by not migrating or purging them leaves stale or ill-formed parts in them: R-EDGE-3 «Nessuna migrazione dei progetti salvati ora»; R-SIM-38 «un valore già presente in un bag si ignora, senza migrazione»."
+  },
+  {
+    "from": "SG-5",
+    "to": "SG-11",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-100",
+      "R-SIM-101",
+      "R-SIM-136"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Making runs reproducible routes choices through shared pure code: R-SIM-100 fires a drawn transition «through the same `step()` and admissibility gate», and R-SIM-136 refuses idle ticks with «the test that greys the panel's button»."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-1",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-72",
+      "R-VP-1"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping semantics apart from presentation also removes what the user must hold: R-SIM-72 rejected a kept, ignored initial since «l'esportatore emetterebbe VAR con init e DEFINE per lo stesso nome, e il pannello mostrerebbe un campo senza senso»."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-1",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-19",
+      "R-SIM-88",
+      "R-VAL-12"
+    ],
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Faithfulness to the formal semantics adds distinctions the user must hold: «L'asimmetria con i viewpoint di sintassi va dichiarata in interfaccia, perché per analogia ci si aspetta l'override» (R-VAL-12); inputs as IVAR mean «Un passo ha quindi tre ingressi» (R-SIM-88)."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-5",
+    "kind": "help",
+    "witnesses": [
+      "R-SIM-7",
+      "R-SIM-19",
+      "R-SIM-21",
+      "R-SIM-25",
+      "R-SIM-73",
+      "R-SIM-88",
+      "R-SIM-110"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Executing the formalism's own step semantics makes runs reproducible: R-SIM-21's one firing per step «coincide con la semantica a sequenze di firing», and R-SIM-25 keeps external choice a selector policy so «la guardia resta pura»."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-7",
+    "kind": "some-",
+    "witnesses": [
+      "R-EDGE-2",
+      "R-SIM-17",
+      "R-SIM-33"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Fidelity often lands in the core, and a core change costs a lane and documents of its own: R-EDGE-2's invariant «arriva in una corsia C2 separata» with a measure owed before Phase 2, and R-SIM-17 is «una modifica del core: corsia dedicata con discovery e Layer Impact Report»."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-8",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-29",
+      "R-SGL-1",
+      "R-MCID-1"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping the formalism's distinctions makes them visible and uniform: R-SIM-29 «Terminazione e deadlock sono distinti» yields named run states; R-MCID-1 keeps same-name metaclasses apart, so «Il picker esclude per id, non per nome»."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-8",
+    "kind": "some-",
+    "witnesses": [
+      "R-VAL-12"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Inherited rules accumulate and can never be weakened, as predicates conjoin, which breaks the analogy with syntax views: «L'asimmetria con i viewpoint di sintassi va dichiarata in interfaccia, perché per analogia ci si aspetta l'override» (R-VAL-12)."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-9",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-21",
+      "R-SIM-89",
+      "R-MCID-1"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Taking the formalism as it is opens constructs: the Petri transition nucleus brings arc weights and inhibitors (R-SIM-21), and binding «to the metamodel as it is» lets a mixin feature be bound with a warning (R-SIM-89)."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-9",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-75",
+      "R-VAL-12"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping equations and rules faithful to their formal meaning removes forms the user could write: «event vietato (difetto di dichiarazione: un DEFINE non dipende dall'input)» (R-SIM-75); rules accumulate, so «Indebolire una regola in una sottoclasse non si può» (R-VAL-12)."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-11",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-7",
+      "R-SIM-33",
+      "R-SIM-47",
+      "R-VAL-13"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Replacing a semantics the formalism excludes, instead of keeping it beside, leaves one implementation: R-SIM-7 fire-all «viene sostituito, non affiancato»; R-VAL-13 a conversion in the validator «sarebbe la terza semantica del sistema»."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-11",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-118",
+      "R-SGL-2",
+      "R-SGL-6",
+      "R-CR2-4"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping checks faithful forces logic into extra places: the singleton flag is «applicato al consumo» in six filters because concreteSubclasses «serve alla conformità degli endpoint» (R-SGL-6); outputs carry «its own R2» since checkGuard cannot run at the model (R-SIM-118)."
+  },
+  {
+    "from": "SG-6",
+    "to": "SG-12",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-17",
+      "R-FORM-9",
+      "R-CR2-4"
+    ],
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "Executing containment, aggregation and record forms as the formalism defines them leaves no broken structure in the stored model: R-FORM-9 the core alone left an «orfano invisibile»; R-CR2-4 aggregation no longer leaves «un buco [null] nello slot del padre precedente»."
+  },
+  {
+    "from": "SG-8",
+    "to": "SG-1",
+    "kind": "some+",
+    "witnesses": [
+      "R-IRN-22",
+      "R-SIM-57",
+      "R-SIM-61",
+      "R-SIM-62",
+      "R-SIM-77",
+      "R-SIM-80",
+      "R-SIM-81",
+      "R-SIM-96",
+      "R-SIM-113",
+      "R-STR-2",
+      "R-VAL-14",
+      "R-VAL-15",
+      "R-VAL-17"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "A screen that says what happened leaves nothing to guess or hold in mind: R-VAL-14 shows the unevaluable count, else the author «vedrebbe silenzio, indistinguibile da un modello valido»; R-SIM-96 reads «guard false» where the old line «did not say what was false»."
+  },
+  {
+    "from": "SG-8",
+    "to": "SG-1",
+    "kind": "some-",
+    "witnesses": [
+      "R-VP-26",
+      "R-VAL-2"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "One pattern across surfaces adds a concept to hold: validation viewpoints «come quelli di sintassi» make «valido» relative to the active set, «Conseguenza accettata» (R-VAL-2); R-VP-26's familiar Activity notation adds «a notation-own role»."
+  },
+  {
+    "from": "SG-8",
+    "to": "SG-11",
+    "kind": "help",
+    "witnesses": [
+      "R-IRN-22",
+      "R-IRN-38",
+      "R-IRN-41",
+      "R-STR-6",
+      "R-FORM-15",
+      "R-S1-5",
+      "R-VAL-18",
+      "R-NV-3"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Surfaces are made to agree for the user by one shared decision, which also removes a second copy: R-NV-3 «garantita per costruzione riusando createViewInWorkbench», R-IRN-38 «so the panel and the canvas cannot disagree again»."
+  },
+  {
+    "from": "SG-9",
+    "to": "SG-1",
+    "kind": "some+",
+    "witnesses": [
+      "R-IRN-35",
+      "R-SIM-18",
+      "R-VP-54"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "A new construct added inside one uniform mechanism keeps one reading: state access gets its own operator, «e.f è sempre navigazione su M, e.[x] è sempre stato» (R-SIM-18); the radius becomes a Conditional since a scalar «sarebbe l'unico asse fuori dal meccanismo» (R-IRN-35)."
+  },
+  {
+    "from": "SG-9",
+    "to": "SG-1",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-88",
+      "R-VP-22",
+      "R-VP-24",
+      "R-VP-26",
+      "R-EE-1"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Each added construct or notation is itself one more thing to choose or hold in mind: R-VP-24 adds a second Petri rendering, «The dialog lists eight notations»; R-EE-1 «bar is also a ShapeForm value (R-VP-16), a different vocabulary on a different key»."
+  },
+  {
+    "from": "SG-9",
+    "to": "SG-3",
+    "kind": "some+",
+    "witnesses": [
+      "R-VP-22",
+      "R-VP-24",
+      "R-VP-26"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "A notation added to draw a formalism as the textbook does becomes what a demo scene opens on: R-VP-24 «DemoPetri preselects it»; R-VP-26 «DemoFlowB opens on it, DemoPEST on Statechart (UML)»."
+  },
+  {
+    "from": "SG-9",
+    "to": "SG-5",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-22",
+      "R-SIM-73",
+      "R-SIM-88"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "A construct added as an explicit engine input or as a value rebuilt from the state keeps the run reproducible: R-SIM-88 «Un passo ha quindi tre ingressi: evento, selettore, valutazione degli input»; R-SIM-73 derived values «ricostruita ogni volta e mai copiata in avanti»."
+  },
+  {
+    "from": "SG-9",
+    "to": "SG-6",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-17",
+      "R-SIM-19",
+      "R-SIM-22",
+      "R-SIM-23",
+      "R-SIM-24",
+      "R-SIM-30",
+      "R-SIM-31",
+      "R-SIM-50",
+      "R-SIM-51",
+      "R-SIM-53",
+      "R-SIM-64",
+      "R-SIM-73",
+      "R-SIM-74",
+      "R-SIM-83",
+      "R-SIM-84",
+      "R-SIM-88",
+      "R-SIM-91",
+      "R-SIM-92"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "New constructs are added by compiling them into the Petri nucleus or onto their nuXmv counterpart, so each also widens the semantics executed: an inhibitor «compila nel congiunto di guardia tokens(p) < w» (R-SIM-30), the input form is «l'IVAR di nuXmv» (R-SIM-88)."
+  },
+  {
+    "from": "SG-9",
+    "to": "SG-7",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-17",
+      "R-SIM-108",
+      "R-VP-26"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "A construct that reaches the core or the critical zone brings its own lane, discovery and report: R-SIM-17 «È una modifica del core: corsia dedicata con discovery e Layer Impact Report», R-SIM-108 «its Phase 2 waits for that report»."
+  },
+  {
+    "from": "SG-9",
+    "to": "SG-8",
+    "kind": "some-",
+    "witnesses": [
+      "R-IRN-31",
+      "R-SIM-83",
+      "R-SIM-91",
+      "R-SIM-92"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Constructs land before the surface that shows them: R-SIM-83's activity final «si vede solo nelle proposte di Apply» until its panel row, and R-IRN-31's cornerRadius is «Ignorato» on round shapes while «l'avviso in authoring per questo caso resta dovuto»."
+  },
+  {
+    "from": "SG-9",
+    "to": "SG-11",
+    "kind": "some+",
+    "witnesses": [
+      "R-MK-1",
+      "R-GEN-4",
+      "R-GEN-16",
+      "R-GV-8"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "New constructs are defined as instances of existing mechanisms, so they add no parallel code: marked is a Predicate «sul precedente esatto di isKind» and «la grammatica delle espressioni non si tocca» (R-MK-1); a template needs «No new parser» (R-GEN-4)."
+  },
+  {
+    "from": "SG-11",
+    "to": "SG-1",
+    "kind": "some+",
+    "witnesses": [
+      "R-RAIL-13",
+      "R-J3",
+      "R-STR-4",
+      "R-STR-6",
+      "R-FORM-15",
+      "R-S1-3",
+      "R-DMV-1",
+      "R-NV-2"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "One source for one value in the code leaves the user one reading of it: the canvas diverged because of «una seconda copia della regola» (R-FORM-15), and with the same ladder call «i due rami non possono divergere su come si vede un valore» (R-STR-6)."
+  },
+  {
+    "from": "SG-11",
+    "to": "SG-6",
+    "kind": "some+",
+    "witnesses": [
+      "R-SIM-8",
+      "R-FORM-15",
+      "R-GT-1",
+      "R-VAL-16"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "One copy of a rule inside its module stops copies diverging into a wrong check: R-VAL-16 a downstream filter, «duplicando fuori dal modulo una conoscenza che e' del modulo», lets validation miss a case «in silenzio»; R-FORM-15 removes «una seconda copia della regola»."
+  },
+  {
+    "from": "SG-11",
+    "to": "SG-8",
+    "kind": "some+",
+    "witnesses": [
+      "R-SGL-1",
+      "R-STR-4",
+      "R-S1-2",
+      "R-S1-3",
+      "R-M2U-1",
+      "R-VAL-2"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "One verdict, key or path in the code gives every surface the same rule and wording: R-S1-2 consumers «a comportamento invariato (stessa frase a schermo)», R-STR-4 two surfaces on one key, «nessuno stato duplicato di provenienza»."
+  },
+  {
+    "from": "SG-11",
+    "to": "SG-9",
+    "kind": "some-",
+    "witnesses": [
+      "R-SIM-14",
+      "R-SIM-38",
+      "R-J7"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping a seam closed or a value derived restricts what the user can write: R-J7 «Il profilo è l'unico punto di estensione della grammatica delle espressioni» after three pressures on one seam; R-SIM-38 derived event type, «nessun override»."
+  },
+  {
+    "from": "SG-11",
+    "to": "SG-10",
+    "kind": "some-",
+    "witnesses": [
+      "R-VP-38"
+    ],
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "The swatch resolver stays simple under the rule against over-engineering and pays on every call: it «builds the metamodel's graph on every call while the option is on», «28.6 µs a call», with «No memo (Rule 6)» (R-VP-38)."
+  },
+  {
+    "from": "SG-12",
+    "to": "SG-4",
+    "kind": "help",
+    "witnesses": [
+      "R-B9-bis",
+      "R-B15",
+      "R-SIM-68",
+      "R-SIM-116",
+      "R-STR-2",
+      "R-VP-39",
+      "R-VP-50"
+    ],
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "Refusing to drop, sanitize or silently rewrite a persisted value keeps the saved form whole, and the kept value is what lets a change be taken back: R-STR-2 «mai riscritture silenziose»; R-B15 «Un container già persistito si preserva sempre nella UI, mai sanificato»."
+  },
+  {
+    "from": "SG-12",
+    "to": "SG-6",
+    "kind": "some+",
+    "witnesses": [
+      "R-F",
+      "R-SIM-45",
+      "R-DEL-4"
+    ],
+    "evidence": "inferred",
+    "verified": "agent",
+    "why": "Keeping stored pointers and identities intact on delete, import and normalization keeps the model conforming: R-DEL-4 «il (c) del fixture passa da dangling 1 a dangling 0»; R-SIM-45 «una classe utente chiamata Action o Expression vince»."
+  },
+  {
+    "from": "SG-12",
+    "to": "SG-9",
+    "kind": "some-",
+    "witnesses": [
+      "R-MK-2"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Keeping view expressions off the persisted bag protects saved state and narrows what a view can read: in R-MK-2 «_state resta invisibile alle espressioni IR», since withdrawing it later «è una migrazione su view che per R-B9 non hanno VersionFixer»."
+  },
+  {
+    "from": "SG-12",
+    "to": "SG-10",
+    "kind": "some-",
+    "witnesses": [
+      "R-UNDO-3",
+      "R-DEL-4"
+    ],
+    "evidence": "measured",
+    "verified": "agent",
+    "why": "Writes that keep the saved project whole add waits and scans: R-UNDO-3 re-queues a silent save after every undo/redo at «0,9 s in `U.compressedState`», and R-FORM-11 defers deletes by «`U.UpdatingTimer * 2`» so no value is lost."
+  },
+  {
+    "from": "SG-12",
+    "to": "SG-11",
+    "kind": "some+",
+    "witnesses": [
+      "R-B9-bis",
+      "R-IRN-15",
+      "R-SIM-67",
+      "R-WCX-3",
+      "R-NV-4"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Protecting saved data puts each rule in one declared place: R-WCX-3 lists host obligations in the contract because «Un adapter che ne salta uno perde dati in silenzio»; R-B9-bis keeps rules in validateIR so render stays «permissivo verso i dati già persistiti»."
+  },
+  {
+    "from": "SG-12",
+    "to": "SG-11",
+    "kind": "some-",
+    "witnesses": [
+      "R-IRN-20",
+      "R-SIM-68",
+      "R-CR2-4"
+    ],
+    "evidence": "read",
+    "verified": "agent",
+    "why": "Closing a loss in the saved project without touching the core leaves a second reading, policy or copy: R-CR2-4 «Due letture della stessa parola divergono e restano entrambe», R-IRN-20 migration test «le due copie possono divergere»."
+  }
+]

@@ -7,7 +7,7 @@
  * says so (merge, with --launch, moves the prompt it rendered into the tree and
  * commits it alone).
  *
- *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--auto]
+ *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--no-draw "<reason>"] [--auto] [--request <file>]
  *                runs `claude -p` in <worktree> with the prompt file on stdin
  *                (the path as given, absolute or relative to the caller's
  *                directory, then relative to the worktree; refused, naming both,
@@ -30,6 +30,12 @@
  *                the report of P-2026-10-03-1705, section 7). auto.json in the
  *                lane folder records the flags, that folder and the time; a
  *                resume of the lane re-applies them and never passes a go-ahead.
+ *                --request <file> (RC-43, P13): the words of the request the
+ *                prompt answers, which are never committed; copied into the lane
+ *                folder as request.md before the session starts, refused, naming
+ *                the path, when the file is missing or empty. A prompt whose
+ *                header has no `Request:` line, started without --request, gets
+ *                one warning line and runs; a merge prompt gets none.
  *   resume <Prompt-ID> <message-file> | --text "<message>" | -
  *                `claude -p --resume <session id>` with the message on stdin, in
  *                the worktree recorded at start: a resume runs in the caller's
@@ -64,10 +70,22 @@
  *                warning line when its prompt (prompt.txt, else the docs/prompts
  *                file whose header holds its id) still reads `Status: da eseguire`:
  *                the closure commit owes the flip (P16, RC-17).
+ *                A lane that exited blocked and holds resolved.txt (written by
+ *                resolve) prints `outcome: resolved`, then `recorded: <the Outcome
+ *                line>` and `resolved: <the line of resolved.txt>` (P-2026-10-05-1720).
  *   status --all [--limit <minutes>]
  *                every lane folder of ~/.jjodel-lanes in one table (id, state,
  *                outcome, elapsed), newest Prompt-ID first; a chain is one row,
  *                its position in the outcome column, its lanes not listed apart.
+ *                The outcome of a lane that exited blocked and holds resolved.txt
+ *                reads `resolved`; any other outcome ignores the file.
+ *   resolve <Prompt-ID> --why "<text>" [--by <name>]
+ *                writes resolved.txt in the lane folder, one line: date and time
+ *                (LANE_RUN_NOW honoured), who (--by, else $USER), why. Refused
+ *                unless the lane has exited with `Outcome: blocked`, and when the
+ *                file already exists: a resolution is written once. Then projects
+ *                the lane's card (track, RC-44), which reads a resolved lane as a
+ *                done one, and prints its `card:` line.
  *   status <chain-id>
  *                a chain: state (running, done, stopped, lost when its
  *                supervisor died), position, lanes, the merge after, where it
@@ -144,7 +162,7 @@
  *                both are named in result.json and the merge commit body.
  *                A failed precondition falls back, saying why: the
  *                rendered prompt is launched with --launch, parked without.
- *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light]
+ *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] [--no-draw "<reason>"] [--request <file>]
  *                validates every prompt (a header Prompt-ID, no id twice, no lane
  *                folder yet; one in the tree committed, one outside it not yet in
  *                docs/prompts/), writes ~/.jjodel-lanes/chain-<first Prompt-ID>/
@@ -160,6 +178,12 @@
  *                `merge <branch> --into <trunk> --direct` run in the trunk's
  *                worktree (default alfonso-frontend-jjtl); a fallback is parked,
  *                never launched.
+ *                --request <file> (RC-43): the request every lane of the chain
+ *                answers; refused as start refuses it (missing, empty, no value)
+ *                before the chain folder is written, kept there as request.md,
+ *                and passed as --request <chain folder>/request.md to the start
+ *                of every lane, the first included. The merge of --merge-after
+ *                gets none (RC-43 exempts merge prompts).
  *   chain --stop <chain-id>
  *                the chain stops after its running lane, which runs to its end.
  *   monitor [--port <n>] [--no-open]
@@ -170,6 +194,52 @@
  *                lane stops (P-2026-09-27-1030). Waits for its /health, prints the
  *                URL, the pid and the log (~/.jjodel-lanes/_monitor/), and opens
  *                the page as an app window unless --no-open.
+ *   track <Prompt-ID> | --sync [--dry-run]
+ *                the lane's card on the board of docs/harness/fronts.json (RC-44,
+ *                lane-tracking.mjs): an issue of the board's repo whose title
+ *                opens with the Prompt-ID, its Project Status, waiting labels and
+ *                the front's milestone, projected from the lane's own state.
+ *                --sync, run from any worktree of the repo, reconciles every
+ *                prompt committed on a branch and every lane folder at or after
+ *                FRONT_FROM: it creates the missing cards (Ready for a prompt not
+ *                started), heals the misses of a fail-open call, and closes the
+ *                milestone of a front the registry marks closed. --dry-run
+ *                prints the gh writes it would make and makes none.
+ *                Tracking runs only when ~/.jjodel-lanes/_tracking/config.json
+ *                exists (its `gh` names the binary; LANE_TRACK_GH overrides it).
+ *                start and resume (In progress), status <id> and so wait (the
+ *                observed exit), resolve, the chain supervisor and go on a direct merge
+ *                (the lanes it merged) each project the card and print one
+ *                `card:` line: the issue URL and column, or why there is none.
+ *                It fails open (RC-15): a gh error, a missing project scope or
+ *                no network is that one line and the card file's `error`, and
+ *                the command goes on. start refuses a prompt at or after
+ *                FRONT_FROM whose `Front:` line is missing, unknown or closed
+ *                (P13), before anything runs.
+ *
+ *   ticket --front <slug> --priority high|medium|low --found <Prompt-ID> [--detail <path>] [--inbox <name>] --title "<one line>" --body-file <file>
+ *                files a ticket (P-2026-10-11-1017): appends its block, in the
+ *                P9 ticket format dated today, to docs/log-inbox/<inbox>.md of
+ *                the caller's worktree (<inbox> defaults to the front's slug;
+ *                a new inbox gets the usual head), and does not commit it;
+ *                then its card, labels `ticket` and `priority:<p>`, the front's
+ *                milestone, column Backlog. A block of the same title already
+ *                in that inbox is not written again: the card follows it, so a
+ *                rerun retries the card. The card is keyed by 8 hex of
+ *                sha1(<inbox> + "\n" + <title>), recorded in
+ *                ~/.jjodel-lanes/_tracking/tickets/<key>.json, healed by the
+ *                `- ticket-key: <key>` line of its body, never created twice;
+ *                the five ticket labels are created on the board's repo on
+ *                first use. Fails open like track: a GitHub failure is the
+ *                `card:` line, and the inbox block is written all the same.
+ *   ticket --backfill [--plan <file>] [--from <ref>] [--dry-run]
+ *                one card per ticket block of docs/log-inbox/*.md at <ref>
+ *                (default alfonso-frontend-jjtl), one line each, then a count.
+ *                The front is the `Front:` line of the prompt its Found in
+ *                names, if that is an open front, else by the inbox's name.
+ *                The plan file holds `<key> skip|close|backlog [front <slug>]`
+ *                lines (close: Done, issue closed); it is checked whole, and
+ *                refused on a key no block has, before any gh call.
  *
  * Every run passes `--output-format stream-json --verbose` (stream-json under -p
  * requires --verbose) and `--permission-mode bypassPermissions` (RC-19: a -p
@@ -179,7 +249,27 @@
  * tier from the prompt's header and DOVE and from the command, never from free
  * text (tierRule, below; heavy when in doubt), prints it, and writes it to
  * tier.txt; --tier heavy|light on start, merge --launch and chain overrides it,
- * light refused where the rule forces heavy. A resume passes no --model: the
+ * light refused where the rule forces heavy. DOVE is the `## DOVE` section, or
+ * without one every paragraph that opens with `DOVE:` or `DOVE.` (bold or not).
+ * The draw (RC-45, P-2026-10-10-1757): a lane is eligible when the rule does not
+ * force heavy, its Lane word is `fast`, its DOVE names a path outside docs/, and
+ * the window is open (fewer than 40 lines in ~/.jjodel-lanes/rc45-draws.jsonl,
+ * the local date not after 2026-11-08). start draws its tier with
+ * crypto.randomInt(2), after every other refusal, under a lock beside the ledger,
+ * appends {promptId, tier, at, by: "lane-run", n} (n the count after the append)
+ * and writes tier.txt as `<tier> (<model>): drawn (RC-45), <n>/40`. A lane is
+ * drawn once: the ledger's entry for its Prompt-ID, else its Lane line's `tier
+ * drawn (RC-45): heavy|light`, is its tier whatever the eligibility (a Lane-line
+ * draw missing from the ledger is appended there, `by` saying so); the two
+ * disagreeing, a Lane line naming no tier, or a light draw where the rule forces
+ * heavy are refused. On an eligible lane --tier is refused unless --no-draw
+ * "<reason>" skips the draw, which tier.txt records as `; not drawn (RC-45):
+ * <reason>` after the rule's reason; on a drawn lane --tier is accepted only
+ * equal to the draw, and --no-draw is refused. A light draw with no light model
+ * is refused, the draw kept. Every start prints one `draw:` line. A chain checks
+ * every lane the same way before it runs and passes --no-draw on; each lane
+ * draws at its own start. The ledger follows HOME, as the lane folders do; no
+ * variable forces a draw. A resume passes no --model: the
  * session keeps its own (measured, report of P-2026-09-27-2330, 7.1). `claude` is
  * looked up on the PATH, then in
  * ~/.local/bin; the child's PATH starts with the directory of the node running
@@ -196,20 +286,30 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process';
+import { randomInt } from 'node:crypto';
 import {
-    accessSync, closeSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync,
-    readlinkSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync,
+    accessSync, appendFileSync, closeSync, constants, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync,
+    readlinkSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync,
 } from 'node:fs';
 import { get as httpGet } from 'node:http';
 import { homedir, tmpdir } from 'node:os';
 import { basename, delimiter, dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CRITICAL_FILES } from './hooks/critical-zone.mjs';
+import {
+    FRONT_FROM, closeFrontMilestones, frontProblem, inFrontScope, isGoMessage, loadBoard, loadFronts, promptLink, promptWorktree, trackLane, trackingConfig, trackingDir,
+    FRONTS_FILE, frontOfInbox, parseFrontLine, parseTicketBlocks, parseTicketPlan, ticketBlock, ticketKey, ticketProblem, trackTicket,
+} from './lane-tracking.mjs';
 
 // Model by activity (RC-32). heavy: the pin of .claude/settings.json, no --model (RC-16).
 // light: LIGHT_MODEL, set by the owner chat under RC-32; null runs every lane heavy.
 const LIGHT_MODEL = 'claude-sonnet-5-5';
 const TIERS = ['heavy', 'light'];
+// RC-45: the tier of an eligible lane is drawn until RC45_MAX draws or the end of RC45_LAST_DAY, local time.
+const RC45_MAX = 40;
+const RC45_LAST_DAY = '2026-11-08';
+const RC45_LOCK_WAIT_MS = 10000;
+const RC45_LOCK_STALE_MS = 30000;
 
 const DEFAULT_LIMIT_MINUTES = 90;
 const START_WAIT_MS = 120000;
@@ -221,6 +321,8 @@ const FLAGS = ['--output-format', 'stream-json', '--verbose', '--permission-mode
 // RC-36: what --auto adds to every run of an automatic lane, start and resume alike.
 const AUTO_FLAGS = ['--disallowedTools', 'WebFetch,WebSearch', '--strict-mcp-config'];
 const SELF = fileURLToPath(import.meta.url);
+// The tree of this script: its docs/harness/fronts.json is the registry start enforces and the cards read (RC-44).
+const REPO = resolve(dirname(SELF), '..', '..');
 const TEMPLATES = join(dirname(SELF), 'lane-templates');
 const DEFAULT_TRUNK = 'alfonso-frontend-jjtl';
 const GOVERNANCE = ['CLAUDE.md', 'AGENTS.md', 'docs/PROTOCOL.md', '.claude/settings.json'];
@@ -277,6 +379,8 @@ function laneFiles(id) {
         prompt: join(dir, 'prompt.txt'),
         tier: join(dir, 'tier.txt'),
         auto: join(dir, 'auto.json'),
+        request: join(dir, 'request.md'),
+        resolved: join(dir, 'resolved.txt'),
     };
 }
 
@@ -437,20 +541,47 @@ function readAuto(f) {
     return { ...a, ghConfigDir };
 }
 
+/** `--request <file>` (RC-43): the file holding the words of the request, refused when missing or empty; null when the flag is absent. */
+function requestOption(rest) {
+    const v = option(rest, '--request');
+    if (v === null) return null;
+    const path = resolve(v);
+    if (!existsSync(path) || !statSync(path).isFile()) refuse('--request: no request file: ' + path);
+    if (readFileSync(path, 'utf8').trim() === '') refuse('--request: the request file is empty: ' + path);
+    return path;
+}
+
 // ── the model tier (RC-32) ───────────────────────────────────────────────────
 
 /** The names that put a prompt in the critical zone: the six files of CLAUDE.md 3.2 (the hook's list) and rule 14's two. */
 const CRITICAL_NAMES = [...CRITICAL_FILES.map((p) => basename(p)), 'DV.tsx', 'defaultViewTemplate.ts'];
 
-/** The header of a prompt (the lines before its first `## `) and its DOVE section, null when it has none. */
+/** The header of a prompt (the lines before its first `## `) and its DOVE section, else its inline DOVE; null when it has neither. */
 function promptParts(text) {
     const lines = text.split('\n');
     const first = lines.findIndex((l) => l.startsWith('## '));
     const header = (first === -1 ? lines : lines.slice(0, first)).join('\n');
     const s = lines.findIndex((l) => /^## DOVE\b/.test(l));
-    if (s === -1) return { header, dove: null };
+    if (s === -1) return { header, dove: inlineDove(lines) };
     const e = lines.findIndex((l, i) => i > s && l.startsWith('## '));
     return { header, dove: lines.slice(s + 1, e === -1 ? lines.length : e).join('\n') };
+}
+
+/**
+ * The DOVE of a prompt with no `## DOVE` section (report of P-2026-10-10-1757,
+ * 3.3): every paragraph that opens with `DOVE:` or `DOVE.`, bold or not, up to
+ * its blank line or the next heading; null when there is none.
+ */
+function inlineDove(lines) {
+    const paragraphs = [];
+    for (let i = 0; i < lines.length; i++) {
+        if (!/^(\*\*)?DOVE(\*\*)?[.:](\*\*)?(\s|$)/.test(lines[i])) continue;
+        let j = i + 1;
+        while (j < lines.length && lines[j].trim() !== '' && !lines[j].startsWith('#')) j++;
+        paragraphs.push(lines.slice(i, j).join('\n'));
+        i = j - 1;
+    }
+    return paragraphs.length ? paragraphs.join('\n') : null;
 }
 
 /**
@@ -495,11 +626,16 @@ function tierRule(text, ctx) {
     };
 }
 
+/** The light model: LANE_RUN_LIGHT_MODEL when set, else LIGHT_MODEL; null when empty or `null`. */
+function lightModel() {
+    const raw = 'LANE_RUN_LIGHT_MODEL' in process.env ? process.env.LANE_RUN_LIGHT_MODEL.trim() : LIGHT_MODEL;
+    return raw && raw !== 'null' ? raw : null;
+}
+
 /** The tier a lane runs: the rule, or --tier where the rule does not force; the model it passes, and the line printed and kept in tier.txt. */
 function chooseTier(text, ctx = {}, requested = null) {
     const rule = tierRule(text, ctx);
-    const raw = 'LANE_RUN_LIGHT_MODEL' in process.env ? process.env.LANE_RUN_LIGHT_MODEL.trim() : LIGHT_MODEL;
-    const light = raw && raw !== 'null' ? raw : null;
+    const light = lightModel();
     let t;
     if (requested === 'heavy') t = { tier: 'heavy', reason: '--tier heavy' };
     else if (requested === 'light') {
@@ -520,8 +656,211 @@ function tierOption(rest) {
     return v;
 }
 
+// ── the tier draw (RC-45) ────────────────────────────────────────────────────
+
+const rc45Ledger = () => join(lanesRoot(), 'rc45-draws.jsonl');
+const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+/** `--no-draw "<reason>"` (RC-45): the reason, refused when blank; null when the flag is absent. */
+function noDrawOption(rest) {
+    const v = option(rest, '--no-draw');
+    if (v !== null && v.trim() === '') refuse('--no-draw needs a reason: --no-draw "<reason>" (RC-45)');
+    return v === null ? null : v.trim();
+}
+
+/** The draws of the ledger, one JSON object a line; refused, naming the line, when one does not parse: the count and the reuse read it. */
+function readLedger() {
+    const path = rc45Ledger();
+    if (!existsSync(path)) return [];
+    const rows = [];
+    readFileSync(path, 'utf8').split('\n').forEach((line, i) => {
+        if (line.trim() === '') return;
+        let d = null;
+        try {
+            d = JSON.parse(line);
+        } catch {
+            // refused below
+        }
+        if (!d || typeof d.promptId !== 'string' || !TIERS.includes(d.tier)) refuse(path + ':' + (i + 1) + ' is not a draw {promptId, tier, at, by, n}: fix the line by hand (RC-45)');
+        rows.push(d);
+    });
+    return rows;
+}
+
+/** Why the draw window is closed (RC-45), null while it is open. */
+function drawWindowClosed(rows) {
+    if (rows.length >= RC45_MAX) return 'the RC-45 window is closed: ' + rows.length + ' draws in the ledger, ' + RC45_MAX + ' at most';
+    if (stamp(clock()).date > RC45_LAST_DAY) return 'the RC-45 window is closed: the draw ended on ' + RC45_LAST_DAY;
+    return null;
+}
+
+/** The prompt's own eligibility for the draw, the window apart: the rule does not force heavy, `Lane: fast`, DOVE names a path outside docs/. */
+function drawEligibility(text, rule) {
+    if (rule.forced) return { eligible: false, why: 'the rule forces heavy (' + rule.reason + ')' };
+    const { header, dove } = promptParts(text);
+    const lane = (/^Lane:\s*([A-Za-z-]+)/m.exec(header) || [])[1] || '';
+    if (lane !== 'fast') return { eligible: false, why: lane ? 'Lane: ' + lane : 'no Lane line' };
+    const targets = dove === null ? [] : doveTargets(dove);
+    if (dove === null) return { eligible: false, why: 'no DOVE' };
+    if (!targets.some((p) => !p.startsWith('docs/'))) return { eligible: false, why: targets.length ? 'DOVE writes docs only' : 'DOVE names no path' };
+    return { eligible: true, why: 'Lane: fast, DOVE writes outside docs/' };
+}
+
+/** The draw of the Lane line, `tier drawn (RC-45): heavy|light`; null without one, refused when it names no tier. */
+function laneLineDraw(header) {
+    const line = (/^Lane:.*$/m.exec(header) || [''])[0];
+    if (!/tier drawn \(RC-45\)/i.test(line)) return null;
+    const m = /tier drawn \(RC-45\)\s*:\s*(heavy|light)\b/i.exec(line);
+    if (!m) refuse('the Lane line says `tier drawn (RC-45)` and names no tier, heavy or light: ' + line);
+    return m[1].toLowerCase();
+}
+
+/** A local timestamp with its offset, as the ledger keeps it: 2026-10-10T17:52:42+0200. */
+function ledgerTime(d) {
+    const off = -d.getTimezoneOffset();
+    const a = Math.abs(off);
+    return stamp(d).date + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()) + (off < 0 ? '-' : '+') + pad2(Math.floor(a / 60)) + pad2(a % 60);
+}
+
+/** fn() under the mkdir lock beside the ledger, so two starts never both read the same count (the withLock of lane-tracking.mjs). */
+function withLedgerLock(fn) {
+    mkdirSync(lanesRoot(), { recursive: true });
+    const lock = rc45Ledger() + '.lock';
+    const end = Date.now() + RC45_LOCK_WAIT_MS;
+    for (;;) {
+        try {
+            mkdirSync(lock);
+            break;
+        } catch (err) {
+            if (!err || err.code !== 'EEXIST') throw err;
+        }
+        let age;
+        try {
+            age = Date.now() - statSync(lock).mtimeMs;
+        } catch {
+            continue;
+        }
+        if (age > RC45_LOCK_STALE_MS) {
+            try {
+                rmdirSync(lock);
+            } catch {
+                // another start broke it first
+            }
+            continue;
+        }
+        if (Date.now() >= end) refuse('the RC-45 ledger is locked by another lane-run: ' + lock);
+        sleepSync(100);
+    }
+    try {
+        return fn();
+    } finally {
+        try {
+            rmdirSync(lock);
+        } catch {
+            // already gone
+        }
+    }
+}
+
+/** A light draw cannot run without a light model, and never falls back to heavy (RC-45): refused, the draw kept. */
+function refuseNoLight(id, source) {
+    refuse(id + ' is drawn light (' + source + ') and no light model is set (LIGHT_MODEL, LANE_RUN_LIGHT_MODEL): set one and start again; the draw stands in ' + rc45Ledger() + ' (RC-45)');
+}
+
+/** The tier line of a drawn lane, refused for light without a light model (the draw stays) or with a malformed one. */
+function drawnLine(id, tier, n, source) {
+    const light = lightModel();
+    if (tier === 'light' && !light) refuseNoLight(id, source);
+    if (tier === 'light' && !/^claude-[a-z0-9][a-z0-9.-]*$/.test(light)) refuse('the light model id is malformed: "' + light + '"');
+    const model = tier === 'light' ? light : null;
+    const reason = 'drawn (RC-45), ' + n + '/' + RC45_MAX;
+    return { tier, reason, model, line: tier + ' (' + (model || 'settings pin') + '): ' + reason, draw: tier + ', ' + source };
+}
+
+/**
+ * The tier of a lane under RC-32 and RC-45, decided before anything is written,
+ * every refusal of the draw made here: an earlier draw (the ledger's, else the
+ * Lane line's), a draw to make, or the rule and --tier of chooseTier. A merge
+ * session never reads the ledger. settleTier makes the draw.
+ */
+function planTier(text, ctx = {}, requested = null, noDraw = null) {
+    const id = headerPromptId(text);
+    const rule = tierRule(text, ctx);
+    const ruled = (draw, note = null) => {
+        const t = chooseTier(text, ctx, requested);
+        if (note) {
+            t.reason += '; not drawn (RC-45): ' + note;
+            t.line += '; not drawn (RC-45): ' + note;
+        }
+        return { kind: 'rule', ...t, draw };
+    };
+    if (ctx.merge) return ruled('not eligible: ' + rule.reason);
+    const rows = readLedger();
+    const mine = rows.filter((d) => d.promptId === id);
+    if (mine.some((d) => d.tier !== mine[0].tier)) refuse('the ledger ' + rc45Ledger() + ' holds two different draws for ' + id + ': fix it by hand (RC-45)');
+    const ledgered = mine[0] || null;
+    const header = laneLineDraw(promptParts(text).header);
+    if (ledgered && header && ledgered.tier !== header) {
+        refuse(id + ': the Lane line says tier drawn (RC-45): ' + header + ', the ledger ' + rc45Ledger() + ' holds ' + ledgered.tier + ' (by ' + ledgered.by + '): one of them is wrong, fix it by hand (RC-45)');
+    }
+    const drawn = ledgered ? ledgered.tier : header;
+    if (drawn) {
+        const source = ledgered ? 'from the ledger (by ' + ledgered.by + ')' : 'from the Lane line';
+        if (noDraw !== null) refuse(id + ' is already drawn ' + drawn + ' (' + source + '): --no-draw cannot undo a draw (RC-45)');
+        if (requested && requested !== drawn) refuse('--tier ' + requested + ' refused: ' + id + ' is drawn ' + drawn + ' (' + source + '), and a drawn lane keeps its tier (RC-45)');
+        if (drawn === 'light' && rule.forced) refuse(id + ' is drawn light (' + source + ') but the rule forces heavy (' + rule.reason + '): fix the prompt or the draw by hand (RC-45)');
+        if (drawn === 'light' && !lightModel()) refuseNoLight(id, source);
+        return { kind: 'drawn', id, tier: drawn, record: !ledgered, n: ledgered ? ledgered.n : null, source };
+    }
+    const e = drawEligibility(text, rule);
+    const closed = e.eligible ? drawWindowClosed(rows) : null;
+    if (!e.eligible || closed) return ruled('not eligible: ' + (closed || e.why) + (noDraw !== null ? '; --no-draw has nothing to skip' : ''));
+    if (noDraw !== null) return ruled('skipped by --no-draw: ' + noDraw, noDraw);
+    if (requested) {
+        refuse('--tier ' + requested + ' refused: ' + id + ' is eligible for the RC-45 draw (' + e.why + '); start it without --tier, or skip the draw with --no-draw "<reason>"');
+    }
+    return { kind: 'draw', id, text, ctx };
+}
+
+/**
+ * The tier line of a plan, made once start has passed every other refusal: a
+ * draw is appended under the ledger's lock (the Prompt-ID and the window read
+ * again there), a Lane-line draw missing from the ledger is recorded, an earlier
+ * draw is reused. A light draw without a light model is refused after it is kept.
+ */
+function settleTier(plan) {
+    if (plan.kind === 'rule') return plan;
+    if (plan.kind === 'drawn' && !plan.record) return drawnLine(plan.id, plan.tier, plan.n, plan.source);
+    let entry = null;
+    let fresh = false;
+    let closed = null;
+    withLedgerLock(() => {
+        const rows = readLedger();
+        const mine = rows.find((d) => d.promptId === plan.id);
+        if (mine) {
+            entry = mine;
+            return;
+        }
+        if (plan.kind === 'draw') closed = drawWindowClosed(rows);
+        if (closed) return;
+        entry = {
+            promptId: plan.id,
+            tier: plan.kind === 'draw' ? TIERS[randomInt(2)] : plan.tier,
+            at: ledgerTime(clock()),
+            by: plan.kind === 'draw' ? 'lane-run' : 'lane-run: recorded from the Lane line, not drawn here',
+            n: rows.length + 1,
+        };
+        appendFileSync(rc45Ledger(), JSON.stringify(entry) + '\n');
+        fresh = true;
+    });
+    if (closed) return { kind: 'rule', ...chooseTier(plan.text, plan.ctx, null), draw: 'not eligible: ' + closed };
+    if (plan.kind === 'drawn' && entry.tier !== plan.tier) refuse(plan.id + ': the Lane line says tier drawn (RC-45): ' + plan.tier + ', the ledger now holds ' + entry.tier + ' (RC-45)');
+    const source = !fresh ? 'from the ledger (by ' + entry.by + ')' : plan.kind === 'draw' ? 'drawn (RC-45) now, ' + entry.n + '/' + RC45_MAX : plan.source + ', recorded in the ledger';
+    return drawnLine(plan.id, entry.tier, entry.n, source);
+}
+
 async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
-    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--auto]');
+    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--no-draw "<reason>"] [--auto] [--request <file>]');
     const worktree = resolve(worktreeArg);
     if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
     // As given (absolute, or relative to the caller's directory), then relative to the worktree.
@@ -535,15 +874,33 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     if (auto && rest.includes('--critical-zone-goahead')) refuse('--auto refuses --critical-zone-goahead: an automatic lane never edits the critical zone (RC-36)');
     if (auto && headerStatus(text) !== 'da eseguire') refuse('--auto starts only a prompt that reads `Status: da eseguire`: ' + promptFile + ' reads `Status: ' + headerStatus(text) + '`');
     const goAhead = goAheadOption(rest, id);
-    const tier = chooseTier(text, { ...ctx, goahead: Boolean(goAhead) }, tierOption(rest));
+    // RC-45: every refusal of the draw here; the draw itself only once every other refusal has passed (settleTier).
+    const plan = planTier(text, { ...ctx, goahead: Boolean(goAhead) }, tierOption(rest), noDrawOption(rest));
+    const request = requestOption(rest);
+    // RC-43: a prompt names its request; the merge prompts lane-run renders are exempt (their Lane line, also on a launch by hand).
+    const { header } = promptParts(text);
+    const unnamed = !request && !/^Request:[ \t]*\S/m.test(header) && !ctx.merge && !/^Lane:\s*full \(merge\b/m.test(header);
+    // RC-44: a prompt in the front rule's scope names an open front of the registry; Check E is the backstop.
+    if (!ctx.merge && inFrontScope(text, id)) {
+        let fronts;
+        try {
+            fronts = loadFronts(REPO);
+        } catch (err) {
+            refuse('the front of ' + id + ' cannot be checked: ' + err.message);
+        }
+        const why = frontProblem(text, id, fronts);
+        if (why) refuse(promptFile + ': ' + why + ' (P13, RC-44)');
+    }
 
     const claude = findClaude();
     const f = laneFiles(id);
     if (existsSync(f.session)) refuse(id + ' already has a session (' + readTrim(f.session) + '): use resume');
     if (isRunning(f)) refuse(id + ' is running');
+    const tier = settleTier(plan);
     mkdirSync(f.dir, { recursive: true });
     writeFileSync(f.worktree, worktree + '\n');
     writeFileSync(f.prompt, promptFile + '\n');
+    if (request) copyFileSync(request, f.request);
     closeSync(openSync(f.log, 'a'));
     const from = statSync(f.log).size;
 
@@ -558,8 +915,12 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     launch(f, claude, worktree, promptFile, ['-p', ...FLAGS, ...(autoRun ? AUTO_FLAGS : []), ...(tier.model ? ['--model', tier.model] : [])], goAhead, autoRun);
     console.log('prompt: ' + promptFile);
     console.log('tier: ' + tier.line);
+    console.log('draw: ' + tier.draw);
+    if (request) console.log('request: ' + f.request);
+    if (unnamed) console.log('warning: ' + promptFile + ': no `Request:` line in the header and no --request; the request is not recorded (P13, RC-43)');
     if (autoRun) console.log('auto: ' + AUTO_FLAGS.join(' ') + '; GH_TOKEN and GITHUB_TOKEN removed; GH_CONFIG_DIR ' + autoRun.ghConfigDir);
     console.log('log: ' + f.log);
+    trackCard(id, { launched: true });
 
     const end = Date.now() + START_WAIT_MS;
     while (Date.now() < end) {
@@ -629,6 +990,7 @@ function resume(idArg, rest) {
     launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS, ...(autoRun ? AUTO_FLAGS : [])], goAhead || null, autoRun);
     console.log('log: ' + f.log);
     console.log('session: ' + session);
+    trackCard(id, { launched: true });
     return 0;
 }
 
@@ -664,7 +1026,11 @@ function laneState(f, limit) {
     let state = running ? 'running' : 'exited';
     if (running && elapsedMs > limit * 60000) state = 'blocked';
     // An Outcome line is the result of a turn: while a turn runs, the last one belongs to an earlier turn.
-    return { state, exited, outcome: running ? null : lastOutcome(f.log), minutes: Math.floor(elapsedMs / 60000) };
+    const outcome = running ? null : lastOutcome(f.log);
+    // resolved (P-2026-10-05-1720): a lane that exited blocked and was resolved afterwards, resolved.txt in its folder.
+    const closed = outcome === null ? null : OUTCOME.exec(outcome);
+    const resolved = closed && closed[1] === 'blocked' && existsSync(f.resolved) ? readTrim(f.resolved) : null;
+    return { state, exited, outcome, resolved, minutes: Math.floor(elapsedMs / 60000) };
 }
 
 function status(idArg, rest) {
@@ -679,10 +1045,17 @@ function status(idArg, rest) {
     console.log('lane: ' + id);
     console.log('state: ' + s.state);
     console.log('exit: ' + (s.exited ? readTrim(f.exit) : '-'));
-    console.log('outcome: ' + (s.outcome === null ? 'none' : OUTCOME.test(s.outcome) ? s.outcome : 'unparsed: ' + s.outcome));
+    if (s.resolved !== null) {
+        console.log('outcome: resolved');
+        console.log('recorded: ' + s.outcome);
+        console.log('resolved: ' + s.resolved);
+    } else {
+        console.log('outcome: ' + (s.outcome === null ? 'none' : OUTCOME.test(s.outcome) ? s.outcome : 'unparsed: ' + s.outcome));
+    }
     console.log('elapsed: ' + s.minutes + ' min, limit ' + limit + ' min');
     console.log('session: ' + (readTrim(f.session) || '-'));
     console.log('log: ' + f.log);
+    trackCard(id, { limit });
     if (s.state !== 'exited') return 0;
     const tree = readTrim(f.worktree);
     for (const path of laneReports(f, id)) {
@@ -749,13 +1122,40 @@ function statusAll(rest) {
     for (const id of ids.sort().reverse()) {
         const s = laneState(laneFiles(id), limit);
         const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
-        rows.push([id, s.state, s.outcome === null ? 'none' : m ? m[1] : 'unparsed', s.minutes + ' min']);
+        rows.push([id, s.state, s.outcome === null ? 'none' : s.resolved !== null ? 'resolved' : m ? m[1] : 'unparsed', s.minutes + ' min']);
     }
     for (const c of chains.sort((a, b) => (a.id < b.id ? 1 : -1))) {
         rows.push([c.id, chainState(c), chainPosition(c), Math.floor((Date.now() - c.created) / 60000) + ' min']);
     }
     const widths = rows[0].map((_, c) => Math.max(...rows.map((r) => r[c].length)));
     for (const r of rows) console.log(r.map((x, c) => (c === r.length - 1 ? x : x.padEnd(widths[c]))).join('  '));
+    return 0;
+}
+
+// ── resolve ──────────────────────────────────────────────────────────────────
+
+/**
+ * resolved.txt for a lane that exited blocked: one line, date, who, why; refused on any other lane and on a second resolve.
+ * Then the card is projected again (RC-44), after the file is written: tracking fails open (RC-15) and never undoes it.
+ */
+function resolve_(idArg, rest) {
+    const id = checkId(idArg);
+    const why = (option(rest, '--why') || '').replace(/\s+/g, ' ').trim();
+    if (!why) refuse('usage: lane-run resolve <Prompt-ID> --why "<text>" [--by <name>]');
+    const by = (option(rest, '--by') || process.env.USER || process.env.LOGNAME || 'unknown').replace(/\s+/g, ' ').trim();
+    const f = laneFiles(id);
+    if (!existsSync(f.dir)) refuse('no lane ' + id + ' in ' + lanesRoot());
+    if (existsSync(f.resolved)) refuse(id + ' is already resolved: ' + readTrim(f.resolved));
+    const s = laneState(f, DEFAULT_LIMIT_MINUTES);
+    if (s.state !== 'exited') refuse(id + ' is ' + s.state + ', not exited: only a lane that exited blocked can be resolved');
+    const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
+    if (!m || m[1] !== 'blocked') refuse(id + ' is not blocked (outcome: ' + (s.outcome === null ? 'none' : s.outcome) + '): only a lane that exited blocked can be resolved');
+    const d = clock();
+    const { date } = stamp(d);
+    const line = date + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' · ' + by + ' · ' + why;
+    writeFileSync(f.resolved, line + '\n');
+    console.log('resolved: ' + id + ': ' + line);
+    trackCard(id);
     return 0;
 }
 
@@ -1851,7 +2251,7 @@ const CHAIN_POLL_MS = 500;
 
 function chainFiles(id) {
     const dir = join(lanesRoot(), id);
-    return { dir, json: join(dir, 'chain.json'), stop: join(dir, 'stop'), log: join(dir, 'chain.log') };
+    return { dir, json: join(dir, 'chain.json'), stop: join(dir, 'stop'), log: join(dir, 'chain.log'), request: join(dir, 'request.md') };
 }
 
 function readChain(id) {
@@ -1888,14 +2288,21 @@ function chainStatus(id) {
  */
 function chain(rest) {
     if (rest[0] === '--stop') return chainStop(rest[1]);
-    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] | chain --stop <chain-id>';
+    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] [--no-draw "<reason>"] [--request <file>] | chain --stop <chain-id>';
     const positional = [];
-    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null, tier: null };
+    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null, tier: null, noDraw: null, request: null };
     for (let i = 0; i < rest.length; i++) {
         const a = rest[i];
         if (a === '--merge-after') o.mergeAfter = true;
         else if (a === '--into' || a === '--chat' || a === '--tier') {
             o[a.slice(2)] = option(rest.slice(i), a);
+            i++;
+        } else if (a === '--no-draw') {
+            o.noDraw = noDrawOption(rest.slice(i));
+            i++;
+        } else if (a === '--request') {
+            // Refused here as start refuses it, before the chain folder or any lane exists (RC-43).
+            o.request = requestOption(rest.slice(i));
             i++;
         } else if (a === '--limit') {
             o.limit = limitOption(rest.slice(i));
@@ -1932,8 +2339,10 @@ function chain(rest) {
         } else if (existsSync(join(top, 'docs', 'prompts', basename(file))) || lanes.some((l) => !l.inTree && basename(l.prompt) === basename(file))) {
             refuse('docs/prompts/' + basename(file) + ' would be written twice');
         }
-        // The tier of each lane, --tier light refused on a lane the rule forces heavy, before anything runs.
-        const tier = chooseTier(readFileSync(file, 'utf8'), {}, o.tier);
+        // The tier of each lane, --tier light refused on a lane the rule forces heavy and --tier on a lane RC-45 draws,
+        // before anything runs; the draw itself is made at the lane's start, so a lane the chain never reaches takes no draw.
+        const plan = planTier(readFileSync(file, 'utf8'), {}, o.tier, o.noDraw);
+        const tier = plan.kind === 'draw' ? { tier: 'drawn at its start', reason: 'RC-45' } : plan.kind === 'drawn' ? { tier: plan.tier, reason: 'drawn (RC-45), ' + plan.source } : plan;
         lanes.push({ id, prompt: file, inTree, state: 'queued', tier: tier.tier, tierReason: tier.reason });
     }
     let into = null;
@@ -1945,9 +2354,10 @@ function chain(rest) {
     const cf = chainFiles(id);
     if (existsSync(cf.dir)) refuse(id + ' already exists in ' + lanesRoot());
     mkdirSync(cf.dir, { recursive: true });
+    if (o.request) copyFileSync(o.request, cf.request);
     writeJson(cf.json, {
-        id, worktree: top, branch, state: 'running', position: 0, created: Date.now(), limit: o.limit, chat: o.chat, tier: o.tier,
-        lanes, mergeAfter: into ? { into, state: 'queued' } : null, stoppedAt: null, supervisor: null,
+        id, worktree: top, branch, state: 'running', position: 0, created: Date.now(), limit: o.limit, chat: o.chat, tier: o.tier, noDraw: o.noDraw,
+        request: o.request ? cf.request : null, lanes, mergeAfter: into ? { into, state: 'queued' } : null, stoppedAt: null, supervisor: null,
     });
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
     const child = spawn('/bin/sh', ['-c', 'nohup "$@" >> "$0" 2>&1', cf.log, process.execPath, SELF, 'chain-run', id], {
@@ -1956,6 +2366,7 @@ function chain(rest) {
     child.unref();
     console.log('chain: ' + id);
     console.log('lanes: ' + lanes.map((l) => l.id).join(', '));
+    if (o.request) console.log('request: ' + cf.request);
     console.log('merge after: ' + (into ? 'into ' + into + ' --direct' : 'none'));
     console.log('log: ' + cf.log);
     return 0;
@@ -2007,7 +2418,8 @@ async function chainRun(id) {
         save();
         let code;
         try {
-            code = await start(c.worktree, promptFile, c.tier ? ['--tier', c.tier] : []);
+            // Every lane gets the chain's copy of the request (RC-43); the caller's file may be gone by now.
+            code = await start(c.worktree, promptFile, [...(c.tier ? ['--tier', c.tier] : []), ...(c.noDraw ? ['--no-draw', c.noDraw] : []), ...(c.request ? ['--request', c.request] : [])]);
         } catch (err) {
             return stop(lane.id, 'start refused: ' + (err && err.message ? err.message : String(err)));
         }
@@ -2021,6 +2433,7 @@ async function chainRun(id) {
         const m = line === null ? null : OUTCOME.exec(line);
         lane.exit = readTrim(f.exit) || '-';
         lane.outcome = line === null ? 'none' : m ? m[1] : 'unparsed';
+        trackCard(lane.id, { limit: c.limit });
         if (lane.outcome !== 'done') {
             lane.state = 'ended';
             return stop(lane.id, 'Outcome: ' + lane.outcome);
@@ -2159,6 +2572,300 @@ function closeDirect(id, smoke, frontArg) {
     console.log('closure: committed ' + res.closure.slice(0, 9));
     console.log('status: ' + promptRel);
     console.log('entry: ' + inbox);
+    if (plan.mode === 'into') trackMerged(plan);
+    return 0;
+}
+
+// ── track: the lane's card on GitHub (RC-44) ─────────────────────────────────
+
+/** The input files of a lane, input-1.md first. */
+function laneInputs(f) {
+    if (!existsSync(f.dir)) return [];
+    return readdirSync(f.dir).map((n) => /^input-(\d+)\.md$/.exec(n)).filter(Boolean)
+        .sort((a, b) => Number(a[1]) - Number(b[1])).map((m) => join(f.dir, m[0]));
+}
+
+/**
+ * The lane as lane-tracking.mjs projects it: lane-run's own laneState,
+ * lastOutcome and headerStatus, not the board's derivation (report of
+ * P-2026-10-10-1330, 4.2). `launched`: start and resume, which have just
+ * started a run. `prompt`: { text, path } of a committed prompt, for a lane
+ * whose prompt file is not on disk or that has no folder yet.
+ */
+function observeLane(id, { launched = false, limit = DEFAULT_LIMIT_MINUTES, prompt = null, top = null } = {}) {
+    const f = laneFiles(id);
+    const folder = existsSync(f.dir);
+    const file = folder ? findLanePrompt(f, id) : null;
+    const text = file ? readFileSync(file, 'utf8') : prompt ? prompt.text : null;
+    const s = folder && !launched ? laneState(f, limit) : null;
+    const tree = folder ? readTrim(f.worktree) : '';
+    const named = promptWorktree(text);
+    const here = tree && existsSync(tree) ? tree : top;
+    const measured = tree && existsSync(tree) ? spawnSync('git', ['branch', '--show-current'], { cwd: tree, encoding: 'utf8' }) : null;
+    const branch = (measured && measured.status === 0 && measured.stdout.trim()) || named.branch;
+    const remote = here ? spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: here, encoding: 'utf8' }) : null;
+    const promptFile = file || (prompt ? prompt.path : null);
+    return {
+        folder,
+        merge: folder && existsSync(join(f.dir, 'direct.json')),
+        state: launched ? 'running' : s ? s.state : null,
+        outcome: s ? s.outcome : null,
+        resolved: s ? s.resolved : null,
+        headerStatus: text === null ? '' : headerStatus(text),
+        goSeen: laneInputs(f).slice(1).some((p) => isGoMessage(readFileSync(p, 'utf8'))),
+        promptText: text,
+        promptFile,
+        fronts: loadFronts(REPO),
+        branch: branch || null,
+        worktree: tree ? basename(tree) : named.worktree,
+        promptLink: remote && remote.status === 0 && promptFile ? promptLink(remote.stdout.trim(), branch, 'docs/prompts/' + basename(promptFile)) : null,
+    };
+}
+
+/** Projects a lane onto its card and prints one `card:` line; fails open (RC-15), so it never stops the command that calls it. */
+function trackCard(id, opts = {}) {
+    const r = trackLane(id, () => observeLane(id, opts), { board: () => loadBoard(REPO), dryRun: opts.dryRun });
+    console.log((opts.label ? 'card ' + id : 'card') + ': ' + r.line);
+}
+
+/** go on a direct merge: the cards of the lanes whose prompts the branch adds, projected again now that they are merged. */
+function trackMerged(plan) {
+    try {
+        if (!trackingConfig()) return;
+        const ids = new Set();
+        for (const p of nonEmpty(git(plan.top, ['diff', '--name-only', '--diff-filter=A', plan.base, plan.branchTip, '--', 'docs/prompts/']).out)) {
+            const pid = headerPromptId(git(plan.top, ['show', plan.branchTip + ':' + p]).out);
+            if (pid && pid !== plan.promptId) ids.add(pid);
+        }
+        for (const pid of ids) trackCard(pid, { label: true });
+    } catch (err) {
+        console.log('card: tracking skipped: ' + (err && err.message ? err.message.split('\n')[0] : String(err)));
+    }
+}
+
+/** The toplevel of the git worktree around the caller's directory; null outside one. */
+function cwdRepo() {
+    const r = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: process.cwd(), encoding: 'utf8' });
+    return r.status === 0 ? r.stdout.trim() : null;
+}
+
+/**
+ * The prompts committed on the branches of the repo at `top` whose Prompt-ID
+ * is at or after FRONT_FROM: id → { text, path }. The text is the one of the
+ * newest commit touching the file on any branch (its Status as flipped there);
+ * of several files with one id (a GO file reuses its prompt's), the first added.
+ */
+function committedPrompts(top) {
+    const out = new Map();
+    const added = nonEmpty(git(top, ['log', '--branches', '--diff-filter=A', '--name-only', '--format=', '--', 'docs/prompts/']).out);
+    // Newest first: the last file of an id met here is its first added.
+    for (const path of added) {
+        const m = /^docs\/prompts\/claude_(\d{4}-\d{2}-\d{2})_(\d{4})_[^/]*\.md$/.exec(path);
+        if (!m || 'P-' + m[1] + '-' + m[2] < FRONT_FROM) continue;
+        const sha = git(top, ['log', '--branches', '-1', '--format=%H', '--diff-filter=AM', '--', path]).out.trim();
+        const shown = sha ? git(top, ['show', sha + ':' + path], [0, 128]) : null;
+        if (!shown || shown.status !== 0) continue;
+        const id = headerPromptId(shown.out);
+        if (id && id >= FRONT_FROM) out.set(id, { text: shown.out, path: join(top, path) });
+    }
+    return out;
+}
+
+/** track <Prompt-ID> | --sync [--dry-run]: one card, or every card in the front rule's scope (RC-44). */
+function track(rest) {
+    const usage = 'usage: lane-run track <Prompt-ID> | --sync [--dry-run]';
+    const dryRun = rest.includes('--dry-run');
+    const args = rest.filter((a) => a !== '--dry-run');
+    if (args.length !== 1) refuse(usage);
+    if (args[0] === '--sync') return trackSync(dryRun);
+    if (!PROMPT_ID.test(args[0])) refuse(usage);
+    const top = cwdRepo();
+    trackCard(args[0], { prompt: top ? committedPrompts(top).get(args[0]) || null : null, top, dryRun });
+    return 0;
+}
+
+/**
+ * The reconciler (report answers 2 and 7): every prompt committed on a branch
+ * and every lane folder at or after FRONT_FROM gets its card projected, so a
+ * prompt not started gets its Ready card and a fail-open miss is healed; then
+ * the milestone of each front the registry marks closed is closed.
+ */
+function trackSync(dryRun) {
+    const top = cwdRepo();
+    if (!top) refuse('track --sync runs from a worktree of the repo: it reads the prompts committed on its branches');
+    let config;
+    try {
+        config = trackingConfig();
+    } catch (err) {
+        console.log('sync: tracking skipped: ' + err.message);
+        return 0;
+    }
+    if (!config) {
+        console.log('sync: tracking off (no ' + join(trackingDir(), 'config.json') + ')');
+        return 0;
+    }
+    const prompts = committedPrompts(top);
+    const root = lanesRoot();
+    const folders = existsSync(root) ? readdirSync(root).filter((n) => PROMPT_ID.test(n) && n >= FRONT_FROM && statSync(join(root, n)).isDirectory()) : [];
+    for (const id of [...new Set([...prompts.keys(), ...folders])].sort()) trackCard(id, { prompt: prompts.get(id) || null, top, dryRun, label: true });
+    let lines;
+    try {
+        lines = closeFrontMilestones(loadFronts(REPO), { config, board: loadBoard(REPO), dryRun });
+    } catch (err) {
+        lines = ['milestones: tracking skipped: ' + err.message];
+    }
+    for (const l of lines) console.log('front: ' + l);
+    return 0;
+}
+
+// ── ticket: a finding on the board, in Backlog (P-2026-10-11-1017) ──────────
+
+const TICKET_USAGE = 'usage: lane-run ticket --front <slug> --priority high|medium|low --found <Prompt-ID> [--detail <path>] [--inbox <name>] --title "<one line>" --body-file <file>' +
+    ' | ticket --backfill [--plan <file>] [--from <ref>] [--dry-run]';
+const TICKET_VALUED = ['--front', '--priority', '--found', '--detail', '--inbox', '--title', '--body-file', '--plan', '--from'];
+const INBOX_NAME = /^[a-z0-9]+(?:[-.][a-z0-9]+)*$/;
+
+/** The head of a new inbox file, in the form the inboxes of the repo carry. */
+const inboxPreamble = (inbox) =>
+    '# log-inbox — lane «' + inbox + '»\n\n' +
+    'Entries written by the ' + inbox + ' lane on its own branch (P9, parallel lanes).\n' +
+    'Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim and in this order**\n' +
+    '(RC-12) and empties this file. The active log is not touched by this lane.\n\n---\n';
+
+/** ticket ... | ticket --backfill ...: one ticket into its inbox and onto the board, or every inbox ticket of the trunk onto the board. */
+function ticket(rest) {
+    const o = {};
+    for (let i = 0; i < rest.length; i++) {
+        const a = rest[i];
+        if (a === '--backfill' || a === '--dry-run') o[a] = true;
+        else if (TICKET_VALUED.includes(a)) {
+            const v = rest[i + 1];
+            if (v === undefined || TICKET_VALUED.includes(v) || v === '--backfill' || v === '--dry-run') refuse(a + ' needs a value; ' + TICKET_USAGE);
+            if (o[a] !== undefined) refuse(a + ' given twice; ' + TICKET_USAGE);
+            o[a] = v;
+            i++;
+        } else refuse('unknown argument for ticket: ' + a + '; ' + TICKET_USAGE);
+    }
+    if (o['--backfill']) {
+        const single = Object.keys(o).filter((k) => !['--backfill', '--dry-run', '--plan', '--from'].includes(k));
+        if (single.length) refuse(single.join(', ') + ': for one ticket, not with --backfill; ' + TICKET_USAGE);
+        return ticketBackfill(o);
+    }
+    for (const k of ['--plan', '--from', '--dry-run']) if (o[k] !== undefined) refuse(k + ' goes with --backfill; ' + TICKET_USAGE);
+    for (const k of ['--front', '--priority', '--found', '--title', '--body-file']) if (o[k] === undefined) refuse(k + ' is required; ' + TICKET_USAGE);
+    return ticketOne(o);
+}
+
+/**
+ * One ticket: its block appended to docs/log-inbox/<inbox>.md of the caller's
+ * worktree, not committed, then its card. A block of the same title already in
+ * the inbox is not written again (the inbox is add-only): the card is synced
+ * from it, which is how a rerun after a GitHub failure retries the card.
+ */
+function ticketOne(o) {
+    const top = cwdRepo();
+    if (!top) refuse('ticket runs from a worktree of the repo: it appends the block to docs/log-inbox/ there');
+    const fronts = loadFronts(REPO);
+    const front = fronts.find((f) => f.slug === o['--front']);
+    if (!front) refuse('--front ' + o['--front'] + ': not a slug of ' + FRONTS_FILE);
+    if (front.state !== 'open') refuse('--front ' + front.slug + ': the front is ' + front.state + ', not open');
+    const inbox = (o['--inbox'] ?? front.slug).replace(/\.md$/, '');
+    if (!INBOX_NAME.test(inbox)) refuse('--inbox ' + o['--inbox'] + ': a file name of docs/log-inbox/ (lower case, digits, dashes)');
+    const bodyFile = resolve(o['--body-file']);
+    if (!existsSync(bodyFile)) refuse('no body file: ' + bodyFile);
+    const fields = { title: o['--title'], ticket: readFileSync(bodyFile, 'utf8'), priority: o['--priority'], found: o['--found'], detail: o['--detail'] ?? null };
+    const why = ticketProblem(fields);
+    if (why) refuse(why);
+    const title = fields.title.trim();
+    const block = ticketBlock({ ...fields, date: stamp(clock()).date });
+    const rel = 'docs/log-inbox/' + inbox + '.md';
+    const path = join(top, rel);
+    const current = existsSync(path) ? readFileSync(path, 'utf8') : '';
+    const held = parseTicketBlocks(current).find((b) => b.title === title);
+    if (held) {
+        const same = held.text.replace(/^## \S+/, '') === block.trimEnd().replace(/^## \S+/, '');
+        console.log('inbox: ' + rel + ':' + held.line + ' already holds this ticket' + (same ? '' : ', with another text') + ': not written again (add-only); the card follows it');
+    } else {
+        const text = current === '' ? inboxPreamble(inbox) : current;
+        const sep = text.endsWith('\n\n') ? '' : text.endsWith('\n') ? '\n' : '\n\n';
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, text + sep + block);
+        console.log('inbox: ' + rel + ' in ' + top + ', not committed');
+    }
+    const r = trackTicket(ticketKey(inbox, title), { block: held ? held.text : block, title, inbox, front: front.slug, priority: fields.priority, close: false, fronts }, { board: () => loadBoard(REPO) });
+    console.log('card: ' + r.line);
+    return 0;
+}
+
+/**
+ * The backfill: every ticket block of docs/log-inbox/*.md at <ref> (the trunk
+ * by default), one card each. The front is the `Front:` line of the prompt its
+ * Found in names, when that is an open front, else frontOfInbox; the plan
+ * skips a key, closes it (Done) or moves its front. The plan is checked whole
+ * before the first gh call; each card fails open on its own.
+ */
+function ticketBackfill(o) {
+    const top = cwdRepo();
+    if (!top) refuse('ticket --backfill runs from a worktree of the repo: it reads the inboxes of ' + (o['--from'] ?? DEFAULT_TRUNK));
+    const ref = o['--from'] ?? DEFAULT_TRUNK;
+    commitOf(top, ref);
+    const fronts = loadFronts(REPO);
+    const open = new Set(fronts.filter((f) => f.state === 'open').map((f) => f.slug));
+    let plan = new Map();
+    if (o['--plan'] !== undefined) {
+        const file = resolve(o['--plan']);
+        if (!existsSync(file)) refuse('no plan file: ' + file);
+        try {
+            plan = parseTicketPlan(readFileSync(file, 'utf8'));
+        } catch (err) {
+            refuse(o['--plan'] + ': ' + err.message);
+        }
+    }
+    const prompts = nonEmpty(git(top, ['ls-tree', '--name-only', ref, 'docs/prompts/']).out);
+    const promptFront = (foundIn) => {
+        const m = /^P-(\d{4}-\d{2}-\d{2})-(\d{4})(?:\s|$)/.exec(foundIn || '');
+        if (!m) return null;
+        for (const p of prompts.filter((x) => basename(x).startsWith('claude_' + m[1] + '_' + m[2] + '_'))) {
+            const text = git(top, ['show', ref + ':' + p]).out;
+            if (headerPromptId(text) === 'P-' + m[1] + '-' + m[2]) return parseFrontLine(text);
+        }
+        return null;
+    };
+    const rows = [];
+    for (const p of nonEmpty(git(top, ['ls-tree', '--name-only', ref, 'docs/log-inbox/']).out).filter((x) => x.endsWith('.md')).sort()) {
+        const inbox = basename(p, '.md');
+        for (const b of parseTicketBlocks(git(top, ['show', ref + ':' + p]).out)) {
+            const named = promptFront(b.foundIn);
+            rows.push({ inbox, b, key: ticketKey(inbox, b.title), front: named && open.has(named) ? named : frontOfInbox(inbox) });
+        }
+    }
+    const keys = new Map();
+    for (const r of rows) {
+        if (keys.has(r.key)) refuse('two ticket blocks share the key ' + r.key + ': ' + keys.get(r.key) + ' and ' + r.inbox + ':' + r.b.line);
+        keys.set(r.key, r.inbox + ':' + r.b.line);
+    }
+    for (const [key, step] of plan) {
+        if (!keys.has(key)) refuse('the plan names ' + key + ', no ticket block of ' + ref + ' has that key');
+        if (step.front !== null && !open.has(step.front)) refuse('the plan moves ' + key + ' to "' + step.front + '", not an open front of ' + FRONTS_FILE);
+    }
+    const dryRun = Boolean(o['--dry-run']);
+    const count = { backlog: 0, close: 0, skip: 0, failed: 0 };
+    for (const r of rows) {
+        const step = plan.get(r.key) || { action: 'backlog', front: null };
+        const front = step.front || r.front;
+        const priority = r.b.priority || '(none)';
+        const head = 'ticket ' + r.key + ' ' + r.inbox + ':' + r.b.line + ' ' + front + ' ' + priority + ' ' + step.action;
+        count[step.action]++;
+        if (step.action === 'skip') {
+            console.log(head + ': skipped by the plan');
+            continue;
+        }
+        const res = trackTicket(r.key, { block: r.b.text, title: r.b.title, inbox: r.inbox, front, priority: r.b.priority, close: step.action === 'close', fronts }, { board: () => loadBoard(REPO), dryRun });
+        if (res.ok === false || /^tracking (off|skipped)/.test(res.line)) count.failed++;
+        console.log(head + ': ' + res.line);
+    }
+    console.log('backfill' + (dryRun ? ' (dry run)' : '') + ': ' + rows.length + ' ticket blocks at ' + ref + '; ' + count.backlog + ' Backlog, ' + count.close + ' closed, ' + count.skip + ' skipped; ' +
+        count.failed + ' without a card');
     return 0;
 }
 
@@ -2239,16 +2946,20 @@ async function main(argv) {
     if (command === 'resume') return resume(rest[0], rest.slice(1));
     if (command === 'go') return go(rest[0], rest.slice(1));
     if (command === 'status') return status(rest[0], rest.slice(1));
+    if (command === 'resolve') return resolve_(rest[0], rest.slice(1));
     if (command === 'merge') return merge(rest);
     if (command === 'wait') return waitLanes(rest);
     if (command === 'probe') return probe(rest);
     if (command === 'direct-run') return directRun(rest[0]);
     if (command === 'chain') return chain(rest);
     if (command === 'chain-run') return chainRun(rest[0]);
+    if (command === 'track') return track(rest);
+    if (command === 'ticket') return ticket(rest);
     refuse('usage: lane-run start <worktree> <prompt-file> | resume <Prompt-ID> <message-file>|--text "<message>"|- | ' +
-        'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | ' +
+        'go <Prompt-ID> --smoke "<text>" [--step <n>] | status <Prompt-ID> [--limit <minutes>] | resolve <Prompt-ID> --why "<text>" | ' +
         'merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>] | ' +
-        'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n> | monitor [--port <n>] [--no-open]');
+        'wait <Prompt-ID>|--any <ids> [--max <s>] | probe <worktree> <probe.ts> --port <n> | monitor [--port <n>] [--no-open] | ' +
+        'track <Prompt-ID>|--sync [--dry-run] | ticket --front <slug> --priority <p> --found <id> --title "<t>" --body-file <f> | ticket --backfill [--plan <f>] [--dry-run]');
 }
 
 main(process.argv.slice(2)).then(

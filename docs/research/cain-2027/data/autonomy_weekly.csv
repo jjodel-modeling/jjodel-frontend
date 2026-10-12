@@ -1,0 +1,4 @@
+week,session_lanes,asking_lanes,asks,asks_per_lane,question_exits,recommended_stops,asks_pairable,answered_by_resume,adopted_by_chat,alfonso,overturned,bare_go,other,not_resumed,alfonso_share_of_answered
+2026-09-21,82,24,25,0.305,12,13,0,0,0,0,0,0,0,25,
+2026-09-28,155,54,63,0.406,20,43,57,31,20,6,0,4,1,32,0.194
+2026-10-05,91,24,29,0.319,9,20,29,21,8,7,1,4,1,8,0.333

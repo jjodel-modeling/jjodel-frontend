@@ -1059,7 +1059,7 @@ function DocumentationTabComponent(props: AllProps) {
                                     width="100%"
                                     height="100%"
                                     language="markdown"
-                                    theme={document.documentElement.getAttribute('data-theme') === 'dark' ? 'vs-dark' : 'vs'}
+                                    theme="vs"
                                     value={editContent}
                                     onChange={(value) => setEditContent(value || '')}
                                     options={{

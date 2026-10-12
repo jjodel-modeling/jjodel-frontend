@@ -1,0 +1,85 @@
+probe=/Users/alfonso/jjodel-w-staleedge/frontend/scripts/probe/stale-m1-edge.ts
+CFG=/Users/alfonso/jjodel-w-staleedge/frontend/scripts/smoke/_tmp_lane_vite_3123.config.ts
+url=http://localhost:3123/
+server=200
+PASS  project created  Pointer1791647182315_USER_2
+PASS  metamodel imported  [{"id":"Pointer1791647197357_USER_4","name":"statemachine"}]
+PASS  M1 model imported  [{"id":"Pointer1791647202362_USER_30","name":"sample-StateMachine"}]
+PASS  subject found (object with two outgoing values, both vertices)  {"graphId":"Pointer1791647202362_USER_30_graph2","srcObj":"Pointer1791647202367_USER_45","srcName":"Running","valueId":"Pointer1791647202368_USER_53","refMeta":"Pointer1791647197359_USER_22","tgtObj":"Pointer1791647202377_USER_101","tgtName":"stop","index":0,"srcV":"Pointer1791647209099_USER_120","tgtV":"Pointer1791647209100_USER_132","values":["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"]}
+MEAS  baseline  {"values":["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"],"D":"subElements 1 live (0 dangling ids in the graph), idlookup 1","known":"USER_138 lookup=1 subs=1 out=1 in=1","RF":"state 1 prop 1 store 1 dom 1","rfIds":"USER_138 top-0->bottom-0","totals":"state 18 prop 18 store 18 dom 18","srcHandles":"out:top-0 out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+PASS  baseline: EditorV2 edges state located  {"editorFound":true,"hookIndex":2,"state":[{"id":"Pointer1791647209101_USER_138","hidden":false,"sourceHandle":"top-0","targetHandle":"bottom-0"}],"stateTotal":18,"prop":[{"id":"Pointer1791647209101_USER_138","hidden":false,"sourceHandle":"top-0","targetHandle":"bottom-0"}],"propTotal":18,"store":[{"id":"Pointer1791647209101_USER_138","hidden":false,"sourceHandle":"top-0","targetHandle":"bottom-0"}],"storeTotal":18,"domPair":1,"domPairIds":["Pointer1791647209101_USER_138"],"domTotal":18,"srcHandles":["out:top-0","out:bottom-0","out:left-0","out:left-1","in:left-0","in:top-0","in:bottom-0","in:top-1"]}
+PASS  baseline: the pair has one D edge and one RF edge, drawn  {"d":1,"state":[{"id":"Pointer1791647209101_USER_138","hidden":false,"sourceHandle":"top-0","targetHandle":"bottom-0"}],"dom":1}
+MEAS  R1 remove t=0s  {"values":["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"],"D":"subElements 1 live (0 dangling ids in the graph), idlookup 1","known":"USER_138 lookup=1 subs=1 out=1 in=1","RF":"state 1 prop 1 store 1 dom 1","rfIds":"USER_138 top-0->bottom-0","totals":"state 18 prop 18 store 18 dom 18","srcHandles":"out:top-0 out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+MEAS  R1 remove t=1s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+MEAS  R1 remove t=5s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+PASS  R1 remove t=1s: 0 pair edge in RF state, prop, store and DOM  {"state":0,"prop":0,"store":0,"dom":0}
+PASS  R1 remove t=1s: no dangling pair id in subElements  []
+PASS  R1 remove t=1s: the pane draws 17 edges (baseline 18 - 1)  {"dom":17,"state":17}
+PASS  R1 remove t=5s: 0 pair edge in RF state, prop, store and DOM  {"state":0,"prop":0,"store":0,"dom":0}
+PASS  R1 remove t=5s: no dangling pair id in subElements  []
+PASS  R1 remove t=5s: the pane draws 17 edges (baseline 18 - 1)  {"dom":17,"state":17}
+PASS  R1 landed: the slot no longer holds the target  [null,"Pointer1791647202379_USER_107"]
+MEAS  A1 add back t=0s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+MEAS  A1 add back t=1s  {"values":["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"],"D":"subElements 1 live (0 dangling ids in the graph), idlookup 1","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=1 subs=1 out=1 in=1","RF":"state 1 prop 1 store 1 dom 1","rfIds":"USER_155 top-0->right-0","totals":"state 18 prop 18 store 18 dom 18","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1 out:top-0"}
+MEAS  A1 add back t=5s  {"values":["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"],"D":"subElements 1 live (0 dangling ids in the graph), idlookup 1","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=1 subs=1 out=1 in=1","RF":"state 1 prop 1 store 1 dom 1","rfIds":"USER_155 top-0->right-0","totals":"state 18 prop 18 store 18 dom 18","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1 out:top-0"}
+PASS  A1 add back t=1s: 1 pair edge in RF state, prop, store and DOM  {"state":1,"prop":1,"store":1,"dom":1}
+PASS  A1 add back t=1s: no dangling pair id in subElements  []
+PASS  A1 add back t=1s: the pane draws 18 edges (baseline 18)  {"dom":18,"state":18}
+FAIL  A1 add back t=1s: the live edge sits on its baseline handles (top-0->bottom-0)  {"id":"Pointer1791647226199_USER_155","hidden":false,"sourceHandle":"top-0","targetHandle":"right-0"}
+PASS  A1 add back t=5s: 1 pair edge in RF state, prop, store and DOM  {"state":1,"prop":1,"store":1,"dom":1}
+PASS  A1 add back t=5s: no dangling pair id in subElements  []
+PASS  A1 add back t=5s: the pane draws 18 edges (baseline 18)  {"dom":18,"state":18}
+FAIL  A1 add back t=5s: the live edge sits on its baseline handles (top-0->bottom-0)  {"id":"Pointer1791647226199_USER_155","hidden":false,"sourceHandle":"top-0","targetHandle":"right-0"}
+PASS  A1 landed: the slot holds the target again  ["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"]
+MEAS  R2 remove again t=0s  {"values":["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"],"D":"subElements 1 live (0 dangling ids in the graph), idlookup 1","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=1 subs=1 out=1 in=1","RF":"state 1 prop 1 store 1 dom 1","rfIds":"USER_155 top-0->right-0","totals":"state 18 prop 18 store 18 dom 18","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1 out:top-0"}
+MEAS  R2 remove again t=1s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+MEAS  R2 remove again t=5s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+PASS  R2 remove again t=1s: 0 pair edge in RF state, prop, store and DOM  {"state":0,"prop":0,"store":0,"dom":0}
+PASS  R2 remove again t=1s: no dangling pair id in subElements  []
+PASS  R2 remove again t=1s: the pane draws 17 edges (baseline 18 - 1)  {"dom":17,"state":17}
+PASS  R2 remove again t=5s: 0 pair edge in RF state, prop, store and DOM  {"state":0,"prop":0,"store":0,"dom":0}
+PASS  R2 remove again t=5s: no dangling pair id in subElements  []
+PASS  R2 remove again t=5s: the pane draws 17 edges (baseline 18 - 1)  {"dom":17,"state":17}
+PASS  R2 landed  [null,"Pointer1791647202379_USER_107"]
+MEAS  A2 add back again t=0s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+MEAS  A2 add back again t=1s  {"values":["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"],"D":"subElements 1 live (0 dangling ids in the graph), idlookup 1","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1, USER_156 lookup=1 subs=1 out=1 in=1","RF":"state 1 prop 1 store 1 dom 1","rfIds":"USER_156 top-0->right-0","totals":"state 18 prop 18 store 18 dom 18","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1 out:top-0"}
+MEAS  A2 add back again t=5s  {"values":["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"],"D":"subElements 1 live (0 dangling ids in the graph), idlookup 1","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1, USER_156 lookup=1 subs=1 out=1 in=1","RF":"state 1 prop 1 store 1 dom 1","rfIds":"USER_156 top-0->right-0","totals":"state 18 prop 18 store 18 dom 18","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1 out:top-0"}
+PASS  A2 add back again t=1s: 1 pair edge in RF state, prop, store and DOM  {"state":1,"prop":1,"store":1,"dom":1}
+PASS  A2 add back again t=1s: no dangling pair id in subElements  []
+PASS  A2 add back again t=1s: the pane draws 18 edges (baseline 18)  {"dom":18,"state":18}
+FAIL  A2 add back again t=1s: the live edge sits on its baseline handles (top-0->bottom-0)  {"id":"Pointer1791647236077_USER_156","hidden":false,"sourceHandle":"top-0","targetHandle":"right-0"}
+PASS  A2 add back again t=5s: 1 pair edge in RF state, prop, store and DOM  {"state":1,"prop":1,"store":1,"dom":1}
+PASS  A2 add back again t=5s: no dangling pair id in subElements  []
+PASS  A2 add back again t=5s: the pane draws 18 edges (baseline 18)  {"dom":18,"state":18}
+FAIL  A2 add back again t=5s: the live edge sits on its baseline handles (top-0->bottom-0)  {"id":"Pointer1791647236077_USER_156","hidden":false,"sourceHandle":"top-0","targetHandle":"right-0"}
+PASS  A2 landed  ["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"]
+MEAS  R3 remove a third time t=0s  {"values":["Pointer1791647202377_USER_101","Pointer1791647202379_USER_107"],"D":"subElements 1 live (0 dangling ids in the graph), idlookup 1","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1, USER_156 lookup=1 subs=1 out=1 in=1","RF":"state 1 prop 1 store 1 dom 1","rfIds":"USER_156 top-0->right-0","totals":"state 18 prop 18 store 18 dom 18","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1 out:top-0"}
+MEAS  R3 remove a third time t=1s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1, USER_156 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+MEAS  R3 remove a third time t=5s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1, USER_156 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+PASS  R3 remove a third time t=1s: 0 pair edge in RF state, prop, store and DOM  {"state":0,"prop":0,"store":0,"dom":0}
+PASS  R3 remove a third time t=1s: no dangling pair id in subElements  []
+PASS  R3 remove a third time t=1s: the pane draws 17 edges (baseline 18 - 1)  {"dom":17,"state":17}
+PASS  R3 remove a third time t=5s: 0 pair edge in RF state, prop, store and DOM  {"state":0,"prop":0,"store":0,"dom":0}
+PASS  R3 remove a third time t=5s: no dangling pair id in subElements  []
+PASS  R3 remove a third time t=5s: the pane draws 17 edges (baseline 18 - 1)  {"dom":17,"state":17}
+PASS  R3 landed  [null,"Pointer1791647202379_USER_107"]
+MEAS  C1 dangling pair ids in subElements before the scrub  []
+PASS  C1: nothing left to scrub after R3  []
+MEAS  C1 scrub subElements t=0s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1, USER_156 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+MEAS  C1 scrub subElements t=1s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1, USER_156 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+MEAS  C1 scrub subElements t=5s  {"values":[null,"Pointer1791647202379_USER_107"],"D":"subElements 0 live (0 dangling ids in the graph), idlookup 0","known":"USER_138 lookup=0 subs=0 out=1 in=1, USER_155 lookup=0 subs=0 out=1 in=1, USER_156 lookup=0 subs=0 out=1 in=1","RF":"state 0 prop 0 store 0 dom 0","rfIds":"","totals":"state 17 prop 17 store 17 dom 17","srcHandles":"out:bottom-0 out:left-0 out:left-1 in:left-0 in:top-0 in:bottom-0 in:top-1"}
+MEAS  hookLogs  8
+MEAS  hookLog  1791647221079 [useM1ReferenceEdges] creating 0 DVoidEdge(s): []
+MEAS  hookLog  1791647221079 [useM1ReferenceEdges] removing 1 stale DVoidEdge(s): [Object]
+MEAS  hookLog  1791647226201 [useM1ReferenceEdges] creating 1 DVoidEdge(s): [Object]
+MEAS  hookLog  1791647231289 [useM1ReferenceEdges] creating 0 DVoidEdge(s): []
+MEAS  hookLog  1791647231289 [useM1ReferenceEdges] removing 1 stale DVoidEdge(s): [Object]
+MEAS  hookLog  1791647236077 [useM1ReferenceEdges] creating 1 DVoidEdge(s): [Object]
+MEAS  hookLog  1791647241182 [useM1ReferenceEdges] creating 0 DVoidEdge(s): []
+MEAS  hookLog  1791647241182 [useM1ReferenceEdges] removing 1 stale DVoidEdge(s): [Object]
+MEAS  pageErrors  0
+MEAS  consoleErrors  1
+MEAS  json  /Users/alfonso/.jjodel-lanes/P-2026-10-10-1600/probe_after_f1.json
+FAILURES 4
+EXIT=4
+end=2026-10-10T15:47:31.211Z

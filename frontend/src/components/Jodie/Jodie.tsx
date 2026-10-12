@@ -15,7 +15,7 @@ import {
     ChatState,
     TAIProvider, AIConfig, AI, JodieConfig,
     ConsoleMode, CodeFlavor, CodeEntry, isChatEntry,
-    CONSOLE_MODES, ConsoleModeSwitchVia, JjodieScope
+    CONSOLE_MODES, ConsoleModeSwitchVia, JjodieScope, ConsoleEntry
 } from '../../types/jodie';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents, EnvGenEvents } from '../../events/registry';
@@ -38,6 +38,7 @@ import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { consoleLanguageRegistry } from './console/languageRegistry';
 import type { ConsoleContext } from './console/types';
 import { consumerHelpText } from './consumerVoice';
+import { gateReply } from './reservedIdentifierGate';
 import './JodieWindow.css';
 
 // Generate unique message ID
@@ -51,6 +52,27 @@ function generateMessageId(): string {
 const jjodieProvider = consoleLanguageRegistry.get('jjodie')!;
 const jjscriptProvider = consoleLanguageRegistry.get('jjscript')!;
 const jjelProvider = consoleLanguageRegistry.get('jjel')!;
+
+/**
+ * A reply whose JjScript declares a reserved identifier gets one repair turn through the model
+ * before it is shown (`reservedIdentifierGate.ts`, P-2026-10-10-0045). The repair turn sees the
+ * conversation, the input and the offending reply; none of them is added to the chat, which
+ * shows the gated reply only.
+ */
+async function gateReservedIdentifiers(entries: ConsoleEntry[], input: string, ctx: ConsoleContext): Promise<ConsoleEntry[]> {
+    return Promise.all(entries.map(async entry => {
+        if (!isChatEntry(entry) || entry.role !== 'assistant' || !entry.content) return entry;
+        const gate = await gateReply(entry.content, async request => {
+            const userTurn: ChatMessage = { id: ctx.makeId(), kind: 'chat', role: 'user', content: input, timestamp: Date.now() };
+            const history = [...(ctx.history ?? []), userTurn, entry];
+            const { entries: repaired } = await jjodieProvider.run(request, { ...ctx, history, images: undefined, documents: undefined });
+            const reply = repaired.find(isChatEntry);
+            if (!reply) throw new Error('the repair turn returned no reply');
+            return reply.content;
+        });
+        return gate.content === entry.content ? entry : { ...entry, content: gate.content };
+    }));
+}
 
 // localStorage key for the code-flavor switcher. The console mode itself is no
 // longer persisted (2b.3): it boots to 'jjodie' and is sticky only in-memory;
@@ -709,8 +731,9 @@ export function Jodie(): JSX.Element {
                 documents,
             };
             const { entries } = await jjodieProvider.run(content, ctx);
+            const gated = await gateReservedIdentifiers(entries, content, ctx);
             // Stamp the reply with the scope its context showed (projectContextBundle).
-            const scoped = entries.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
+            const scoped = gated.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
 
             setChatState(prev => ({
                 ...prev,
@@ -753,8 +776,9 @@ export function Jodie(): JSX.Element {
                 ragInitialized: ragInitialized && !isConsumerMode(),
             };
             const { entries } = await jjodieProvider.run(input, ctx);
+            const gated = await gateReservedIdentifiers(entries, input, ctx);
             // Stamp the reply with the scope its context showed (projectContextBundle).
-            const scoped = entries.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
+            const scoped = gated.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
             setChatState(prev => ({
                 ...prev,
                 messages: [...prev.messages, ...scoped],

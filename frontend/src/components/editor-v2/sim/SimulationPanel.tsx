@@ -636,7 +636,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             return refused;
         }
         setRunError(null);
-        setRunWarning(verdict ? overlapMessage(lookup, verdict.overlap) : null);
+        // The run warning line (R-SIM-37): the overlap, and the unset event attributes (R-SIM-144); one line, the text in its title.
+        const warnings = [...(verdict ? [overlapMessage(lookup, verdict.overlap)] : []), ...(started.runWarnings ?? [])];
+        setRunWarning(warnings.length > 0 ? warnings.join(' ') : null);
         simReset(modelid, started.run);
         // One line for the net's defects and the guards' (R-SIM-61), every defect in full in its title.
         const line = defectsLine(started.run.net, lookup, started.compileDefects);

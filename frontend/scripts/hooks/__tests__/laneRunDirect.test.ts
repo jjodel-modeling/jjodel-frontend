@@ -903,3 +903,56 @@ describe('lane-run chain, the model tier', { timeout: 60000 }, () => {
         expect(readFileSync(join(c.l.lanes, A, 'tier.txt'), 'utf8')).toContain('light (claude-light-test)');
     });
 });
+
+describe('lane-run chain --request (RC-43)', { timeout: 60000 }, () => {
+    const REQUEST = 'The words of the request, kept out of every tree.\n';
+
+    test('kills "the request not kept in the chain folder", "the request not forwarded to the lanes", "only the first lane gets the request", "a lane reads the caller\'s file, not the chain\'s copy": the same request.md in the chain folder and in both lane folders, the caller\'s file gone before the second lane starts', () => {
+        const c = chainLab();
+        const req = join(c.l.root, 'request.txt');
+        writeFileSync(req, REQUEST);
+        writeFileSync(join(c.l.fake, A + '.hold'), '');
+        const out = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B], '--request', req]);
+        expect(out.status, out.stderr).toBe(0);
+        expect(waitFor(join(c.l.lanes, A, 'session.txt'))).toBe(true);
+        rmSync(req);
+        writeFileSync(join(c.l.fake, A + '.release'), '');
+        expect(chainEnd(c.l)).toBe(true);
+        const ch = chainJson(c.l);
+        expect(ch.state, JSON.stringify(ch.stoppedAt)).toBe('done');
+        for (const dir of [chainDir(c.l), join(c.l.lanes, A), join(c.l.lanes, B)]) expect(readFileSync(join(dir, 'request.md'), 'utf8'), dir).toBe(REQUEST);
+        expect(readFileSync(join(chainDir(c.l), 'chain.log'), 'utf8')).not.toContain('no `Request:` line');
+    });
+
+    test('kills "a missing request found only by the first lane", "an empty request accepted", "--request without a value accepted": each is refused before the chain folder or any lane exists', () => {
+        const c = chainLab();
+        const missing = join(c.l.root, 'missing.txt');
+        const empty = join(c.l.root, 'empty.txt');
+        writeFileSync(empty, ' \n');
+        const cases: [string[], string][] = [
+            [['--request', missing], '--request: no request file: ' + missing],
+            [['--request', empty], '--request: the request file is empty: ' + empty],
+            [['--request'], '--request needs a value'],
+        ];
+        for (const [args, said] of cases) {
+            const r = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B], ...args]);
+            expect(r.status, said).toBe(2);
+            expect(r.stderr).toContain(said);
+            expect(existsSync(chainDir(c.l))).toBe(false);
+            expect(existsSync(join(c.l.lanes, A))).toBe(false);
+        }
+        expect(calls(c.l)).toEqual([]);
+        expect(existsSync(c.files[A])).toBe(true);
+    });
+
+    test('kills "a request.md written without --request", "the start warning lost in a chain": a chain without --request leaves no request.md, and each lane warns once on its prompt without a Request: line', () => {
+        const c = chainLab();
+        const out = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B]]);
+        expect(out.status, out.stderr).toBe(0);
+        expect(chainEnd(c.l)).toBe(true);
+        expect(chainJson(c.l).state).toBe('done');
+        for (const dir of [chainDir(c.l), join(c.l.lanes, A), join(c.l.lanes, B)]) expect(existsSync(join(dir, 'request.md')), dir).toBe(false);
+        const warnings = readFileSync(join(chainDir(c.l), 'chain.log'), 'utf8').split('\n').filter((x) => x.includes('no `Request:` line'));
+        expect(warnings).toHaveLength(2);
+    });
+});

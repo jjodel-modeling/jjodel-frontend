@@ -273,7 +273,23 @@
     }
 }
 
+// An icon button of fixed width (R-SIM-146 point 4): the Coverage switch and its Clear, the same box with
+// coverage off and on. Clear keeps its slot when off: hidden, not removed, so it takes no click and no focus.
+.sim-canvas-layer__toggle--icon {
+    box-sizing: border-box;
+    flex: none;
+    justify-content: center;
+    width: 24px;
+    padding: 0;
+    font-size: 13px;
+}
+
+.sim-canvas-layer__coverage-clear--hidden {
+    visibility: hidden;
+}
+
 // The coverage summary beside its switch (R-SIM-140): places visited and transitions fired, of all.
+// TODO: cleanup -- the summary moved into the switch's title (R-SIM-146 point 4); no element carries this class.
 .sim-canvas-layer__coverage {
     font-size: 11px;
     color: var(--color-text-secondary);

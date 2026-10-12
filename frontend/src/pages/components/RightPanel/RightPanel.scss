@@ -115,33 +115,6 @@
   }
 }
 
-/* Dark mode for overview grid */
-[data-theme="dark"] {
-  .overview-grid {
-    background: #334155; /* Dark divider color */
-    border-color: #334155;
-  }
-
-  .overview-cell {
-    background: #1e293b;
-
-    &:hover {
-      background: #334155;
-    }
-
-    .overview-label {
-      color: #94a3b8;
-    }
-
-    .cell-value {
-      color: #f1f5f9;
-    }
-
-    /* Keep icon colors in dark mode */
-    &:nth-child(1) .overview-icon { color: #94a3b8; }
-  }
-}
-
 /* Legacy stat-card support (for other parts of the app) */
 .stats-grid {
   display: grid;

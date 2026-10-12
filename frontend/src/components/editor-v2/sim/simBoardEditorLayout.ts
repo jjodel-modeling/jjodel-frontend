@@ -3,9 +3,9 @@
  *
  * The editor (SimBoardEditor.tsx) shows the board twice: a live preview on the left, drawn by the front panel's own
  * faces, and the device list on the right. One selection serves both, and one row of the list is expanded at a
- * time (`selectDevice`). The keyboard map (`editorKeyAction`): an arrow selects the device that way on the board,
- * Shift and an arrow moves the selected device one cell, Delete removes it, Enter expands its row, Escape closes;
- * a field keeps its keys. A drag on the preview reads the cell under the pointer (`cellAtPoint`) and moves the
+ * time (`selectDevice`). The keyboard map (`editorKeyAction`, R-SIM-146 (2)): an arrow moves the selected device one
+ * cell, Shift and an arrow select the device that way on the board, Delete removes it, Enter expands its row, Escape
+ * closes; a field keeps its keys. A drag on the preview reads the cell under the pointer (`cellAtPoint`) and moves the
  * device there or resizes it by an edge (`dragResult`), through the board's own `moveDevice` and `setSpan`, so a
  * place or a span the board refuses changes nothing. The footer counts the unsaved changes and the bindings to
  * review, and Apply follows `applyState`.
@@ -34,7 +34,7 @@ export const NO_SELECTION: EditorSelection = { selected: null, expanded: null };
 
 /**
  * How a device is chosen: `open` (a click on the preview, Enter) selects it and expands its row; `toggle` (a click
- * on its row) expands a collapsed row and collapses the expanded one; `focus` (an arrow) selects it, the expanded row
+ * on its row) expands a collapsed row and collapses the expanded one; `focus` (Shift and an arrow) selects it, the expanded row
  * following only when one was open.
  */
 export type SelectHow = 'open' | 'toggle' | 'focus';
@@ -111,10 +111,12 @@ export type EditorKeyAction =
 const FIELDS: ReadonlySet<string> = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 
 /**
- * The editor's keyboard (R-SIM-143 item 5): Escape closes from anywhere; outside a field and without Ctrl, Cmd or
- * Alt, an arrow selects the neighbour (`neighbourDevice`) and Shift with an arrow moves the selected device one cell,
- * Delete or Backspace removes it, Enter expands its row unless the focus is on a button, whose Enter is its own.
- * `null`: the key is the page's.
+ * The editor's keyboard (R-SIM-143 item 5, the arrows reversed by R-SIM-146 (2)): Escape closes from anywhere; outside
+ * a field and without Ctrl, Cmd or Alt, an arrow moves the selected device one cell and Shift with an arrow selects the
+ * neighbour (`neighbourDevice`); with no device selected an arrow, Shift or not, selects the neighbour of nothing, the
+ * first device in board order. A move the board refuses (`moveDevice`) changes nothing. Delete or Backspace removes the
+ * selected device, Enter expands its row unless the focus is on a button, whose Enter is its own. `null`: the key is the
+ * page's.
  */
 export function editorKeyAction(e: EditorKeyEvent, devices: readonly BoardDevice[], selected: string | null): EditorKeyAction | null {
     if (e.key === 'Escape') return { kind: 'close' };
@@ -123,8 +125,7 @@ export function editorKeyAction(e: EditorKeyEvent, devices: readonly BoardDevice
     if (e.ctrlKey || e.metaKey || e.altKey) return null;
     const device = selected === null ? undefined : devices.find(d => d.id === selected);
     if (isArrow(e.key)) {
-        if (e.shiftKey) {
-            if (!device) return null;
+        if (device && !e.shiftKey) {
             const [dx, dy] = ARROWS[e.key];
             return { kind: 'move', id: device.id, cell: [device.cell[0] + dx, device.cell[1] + dy] };
         }

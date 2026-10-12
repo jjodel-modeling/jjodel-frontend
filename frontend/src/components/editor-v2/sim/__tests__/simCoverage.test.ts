@@ -231,6 +231,85 @@ describe('what keeps the counts: Reset, a step back, Stop, a model switch; Clear
     });
 });
 
+describe('Clear sees the live marking: a place that holds a token is visited once after it (R-SIM-146 point 5)', () => {
+    /** t then v: the live marking holds c with two tokens, and a and b emptied. */
+    function toC() {
+        simReset('M', fresh());
+        for (const sel of ['t', 'v']) fire('M', sel);
+        simObserveRun('M', getSimRun('M')!);
+        expect(getSimRun('M')!.config.state.marking.get('c')).toBe(2);
+    }
+
+    it('Clear with the run counts each marked place once, whatever its tokens, and no firing; again, still once (mutants: the tokens added; the old counts kept; the firings kept; a second Clear adds)', () => {
+        toC();
+        simClearCoverage('M', getSimRun('M'));
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map([['c', 1]]), firings: new Map() }));
+        simClearCoverage('M', getSimRun('M'));
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map([['c', 1]]), firings: new Map() }));
+    });
+
+    it('at the start of a run, the initial marking\'s places with a token, not d held at 0 (mutant: a place at 0 counted)', () => {
+        simReset('M', fresh());
+        simObserveRun('M', getSimRun('M')!);
+        expect(getSimRun('M')!.config.state.marking.get('d')).toBe(0);
+        simClearCoverage('M', getSimRun('M'));
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map([['a', 1]]), firings: new Map() }));
+    });
+
+    it('the next fired step counts on top of the marking, from the run seen: nothing recounted (mutants: Clear forgets the trace; Clear forgets the net)', () => {
+        toC();
+        simClearCoverage('M', getSimRun('M'));
+        simObserveRun('M', getSimRun('M')!);
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map([['c', 1]]), firings: new Map() }));
+        fire('M', 'r');
+        simObserveRun('M', getSimRun('M')!);
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map([['a', 1], ['c', 1]]), firings: new Map([['r', 1]]) }));
+    });
+
+    it('without a run, Clear empties: Stop leaves none to hand over, and a call with none is the old call (mutant: the last marking kept)', () => {
+        toC();
+        simClear('M');
+        expect(getSimRun('M')).toBeUndefined();
+        simClearCoverage('M', getSimRun('M'));
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map(), firings: new Map() }));
+        simReset('M', fresh());
+        simObserveRun('M', getSimRun('M')!);
+        simClearCoverage('M');
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map(), firings: new Map() }));
+    });
+
+    it('one bump of the coverage version per Clear, with the run or without, and none of \'mark\' (mutants: a bump per place; the run\'s Clear on \'mark\')', () => {
+        toC();
+        const mark = getSimVersion();
+        const v = getSimCoverageVersion();
+        simClearCoverage('M', getSimRun('M'));
+        expect(getSimCoverageVersion()).toBe(v + 1);
+        simClearCoverage('M');
+        expect(getSimCoverageVersion()).toBe(v + 2);
+        expect(getSimVersion()).toBe(mark);
+    });
+
+    it('a past step viewed does not matter: the live configuration counts (R-SIM-106; mutant: the shown step\'s marking)', () => {
+        toC();
+        simSetView('M', 0);
+        expect(getSimRun('M')!.config.state.marking.get('c')).toBe(2);
+        simClearCoverage('M', getSimRun('M'));
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map([['c', 1]]), firings: new Map() }));
+    });
+
+    it('it touches its own model only; a count handed out before is a snapshot; a model never seen stays empty (mutants: another model\'s counts changed or marking read; the shared empty map written; the old map edited)', () => {
+        toC();
+        simReset('N', fresh('N'));
+        simObserveRun('N', getSimRun('N')!);
+        const before = getSimCoverage('M');
+        simClearCoverage('M', getSimRun('M'));
+        expect(before.visits.get('b')).toBe(1);
+        expect(text(getSimCoverage('M'))).toBe(text({ visits: new Map([['c', 1]]), firings: new Map() }));
+        expect(text(getSimCoverage('N'))).toBe(text({ visits: new Map([['a', 1]]), firings: new Map() }));
+        expect(text(getSimCoverage('Z'))).toBe(text({ visits: new Map(), firings: new Map() }));
+    });
+});
+
 describe('the channel: its own version, never the \'mark\' one', () => {
     it('an observation that changes a count bumps the coverage version once and never \'mark\'; one that changes none does not bump (mutants: on \'mark\'; a bump at every observation)', () => {
         simReset('M', fresh());
@@ -355,18 +434,38 @@ describe('the overlay and the canvas layer: nothing changes with coverage off (V
         expect(node('d')).toBe('');
     });
 
-    it('the layer: off, one toggle and no summary or Clear; on, the summary and Clear (mutants: the summary shown off; no Clear on)', () => {
+    it('the layer: the Coverage switch is an icon with its name and state on the button, the summary in its title when on, no visible text (R-SIM-146 point 4; mutants: the text span kept; no aria-label; the summary shown off)', () => {
         simReset('M', fresh());
         for (const sel of PATH) fire('M', sel);
         simObserveRun('M', getSimRun('M')!);
         const off = layer();
+        expect(off).toContain('aria-label="Coverage"');
         expect(off).toContain('aria-pressed="false"');
-        expect(off).toContain('Coverage');
-        expect(off).not.toContain('sim-canvas-layer__coverage');
+        expect(off).toContain('bi-bullseye');
+        expect(off).not.toContain('<span>Coverage</span>');
+        expect(off).not.toContain('places ·');
+        expect(off).toContain('title="Show on the nodes how often the runs since the last Clear visited or fired them"');
         setSimViewerPrefs('M', { coverage: true });
         const on = layer();
         expect(on).toContain('aria-pressed="true"');
-        expect(on).toContain('3/4 places · 6/8 transitions');
+        expect(on).toContain('title="Hide the coverage of the runs: 3/4 places · 6/8 transitions"');
+        expect(on).not.toContain('class="sim-canvas-layer__coverage"');
+        expect(on.replace(/title="[^"]*"/g, '').match(/places ·/g)).toBeNull();
+    });
+
+    it('the layer: Clear keeps its slot with coverage off, hidden by a class, and the controls hold the same elements off and on (R-SIM-146 point 4; mutants: Clear rendered only on; the hide class on when on)', () => {
+        simReset('M', fresh());
+        for (const sel of PATH) fire('M', sel);
+        simObserveRun('M', getSimRun('M')!);
+        const off = layer();
+        setSimViewerPrefs('M', { coverage: true });
+        const on = layer();
+        expect(off).toContain('sim-canvas-layer__coverage-clear');
+        expect(off).toContain('sim-canvas-layer__coverage-clear--hidden');
         expect(on).toContain('sim-canvas-layer__coverage-clear');
+        expect(on).toContain('bi-eraser');
+        expect(on).not.toContain('sim-canvas-layer__coverage-clear--hidden');
+        const bare = (s: string) => s.replace(/ title="[^"]*"/g, '').replace(/ aria-pressed="(true|false)"/g, '').replace(' sim-canvas-layer__coverage-clear--hidden', '');
+        expect(bare(on)).toBe(bare(off));
     });
 });

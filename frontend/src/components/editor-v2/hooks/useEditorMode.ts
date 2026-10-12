@@ -22,6 +22,7 @@
 import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { LPointerTargetable, store } from '../../../joiner';
+import { metamodelSignature } from './metamodelSignature';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -117,72 +118,10 @@ export function useEditorMode(
     // When the metamodel's classes change (added/removed), this triggers
     // re-evaluation of the rootable classes computation.
     // Classes can be at the model level OR inside packages/subpackages.
-    const metamodelClassSignature = useSelector((state: any) => {
-        const mmId = metamodelRefFromStore;
-        if (!mmId) return '';
-        const raw = state.idlookup?.[mmId] as any;
-        if (!raw) return '';
-
-        // Collect all class IDs from model + packages + subpackages
-        const allClassIds: string[] = [];
-
-        const collectClassIds = (containerId: string, depth = 0) => {
-            if (depth > 10) return;
-            const container = state.idlookup?.[containerId] as any;
-            if (!container) return;
-            // Direct classes on this container
-            const classIds = container.classes ?? [];
-            if (Array.isArray(classIds)) {
-                for (const cid of classIds) {
-                    const id = typeof cid === 'string' ? cid : null;
-                    if (id) allClassIds.push(id);
-                }
-            }
-            // Recurse into subpackages
-            const subPkgs = container.subpackages ?? [];
-            if (Array.isArray(subPkgs)) {
-                for (const spId of subPkgs) {
-                    const sid = typeof spId === 'string' ? spId : null;
-                    if (sid) collectClassIds(sid, depth + 1);
-                }
-            }
-        };
-
-        // Collect from model directly
-        collectClassIds(mmId);
-
-        // Collect from packages
-        const pkgIds = raw.packages ?? [];
-        if (Array.isArray(pkgIds)) {
-            for (const pid of pkgIds) {
-                const pkgId = typeof pid === 'string' ? pid : null;
-                if (pkgId) collectClassIds(pkgId);
-            }
-        }
-
-        // Build signature from all collected class IDs
-        const parts: string[] = [];
-        for (const id of allClassIds) {
-            const cls = state.idlookup?.[id] as any;
-            if (!cls) continue;
-            const refs = cls.allReferences ?? cls.references ?? [];
-            const refCount = Array.isArray(refs) ? refs.length : 0;
-            // Include feature NAMES so an id-preserving M2 rename (which keeps
-            // both the id and the count unchanged) still changes this signature
-            // and re-derives modeInfo. Counting alone let a rename slip through,
-            // feeding a stale reference name to the M1 connect write path
-            // (see docs/discovery/discovery_2026-07-26_coevolution_edge_rename.md).
-            const refNames = Array.isArray(refs)
-                ? refs.map((rid: any) => (typeof rid === 'string' ? state.idlookup?.[rid]?.name : rid?.name) ?? '').join(',')
-                : '';
-            const attrs = cls.attributes ?? [];
-            const attrNames = Array.isArray(attrs)
-                ? attrs.map((aid: any) => (typeof aid === 'string' ? state.idlookup?.[aid]?.name : aid?.name) ?? '').join(',')
-                : '';
-            parts.push(`${id}:${cls.name}:${cls.abstract}:${cls.isSingleton}:${refCount}:${refNames}:${attrNames}`);
-        }
-        return parts.join('|');
-    });
+    // The string, and what it must carry, live in metamodelSignature.ts.
+    // Superclass ids: docs/discovery/discovery_2026-10-11_m1_edge_gesture_subclass_instances.md.
+    const metamodelClassSignature = useSelector((state: any) =>
+        metamodelSignature(state.idlookup, metamodelRefFromStore));
 
     return useMemo(() => {
         const empty: EditorModeInfo = {

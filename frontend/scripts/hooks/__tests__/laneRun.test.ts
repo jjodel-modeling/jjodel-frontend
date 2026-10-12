@@ -1,5 +1,5 @@
 import { describe, test, expect, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, chmodSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, chmodSync, realpathSync, rmSync, unlinkSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -1146,6 +1146,76 @@ describe('lane-run status --all', () => {
     });
 });
 
+// ── resolved (P-2026-10-05-1720, ported by P-2026-10-10-2020) ────────────────
+
+describe('lane-run resolved and resolve', () => {
+    const RESOLVED_LINE = '2026-10-05 17:30 · alfonso · fixed by hand in 1234abcd';
+
+    test('kills "resolved.txt ignored", "the raw outcome dropped": blocked plus resolved.txt reads resolved, in status --all and in status <id> with the recorded outcome beside it', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Gate red.\nOutcome: blocked'] });
+        writeFileSync(join(laneDir(l), 'resolved.txt'), RESOLVED_LINE + '\n');
+        const all = laneRun(l, ['status', '--all']);
+        expect(all.status, all.stderr).toBe(0);
+        expect(all.stdout.trimEnd().split('\n')[1].split(/\s+/)).toEqual([ID, 'exited', 'resolved', '1', 'min']);
+        const one = laneRun(l, ['status', ID]);
+        expect(one.status, one.stderr).toBe(0);
+        expect(one.stdout).toContain('outcome: resolved\n');
+        expect(one.stdout).toContain('recorded: Outcome: blocked\n');
+        expect(one.stdout).toContain('resolved: ' + RESOLVED_LINE + '\n');
+    });
+
+    test('kills "resolved.txt read on any outcome": done plus resolved.txt stays done, and a blocked lane without the file stays blocked', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: done'] });
+        writeFileSync(join(laneDir(l), 'resolved.txt'), RESOLVED_LINE + '\n');
+        fakeLane(l, ID2, { texts: ['Outcome: blocked'] });
+        const all = laneRun(l, ['status', '--all']);
+        expect(all.status, all.stderr).toBe(0);
+        const rows = all.stdout.trimEnd().split('\n').slice(1).map((r) => r.split(/\s+/).slice(0, 3));
+        expect(rows).toEqual([[ID2, 'exited', 'blocked'], [ID, 'exited', 'done']]);
+        const one = laneRun(l, ['status', ID]);
+        expect(one.stdout).toContain('outcome: Outcome: done\n');
+        expect(one.stdout).not.toContain('recorded:');
+    });
+
+    test('kills "resolve writes on any lane", "resolve writes twice": resolve is refused on done, running and unknown lanes and on a lane already resolved, and writes nothing', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: done'] });
+        const done = laneRun(l, ['resolve', ID, '--why', 'nothing to resolve']);
+        expect(done.status).toBe(2);
+        expect(done.stderr).toContain('not blocked');
+        expect(existsSync(join(laneDir(l), 'resolved.txt'))).toBe(false);
+
+        fakeLane(l, ID2, { texts: ['Outcome: blocked'], running: true });
+        const running = laneRun(l, ['resolve', ID2, '--why', 'still running']);
+        expect(running.status).toBe(2);
+        expect(existsSync(join(laneDir(l, ID2), 'resolved.txt'))).toBe(false);
+
+        expect(laneRun(l, ['resolve', 'P-2026-09-26-1700', '--why', 'x']).status).toBe(2);
+
+        const third = 'P-2026-09-26-1642';
+        fakeLane(l, third, { texts: ['Outcome: blocked'] });
+        writeFileSync(join(laneDir(l, third), 'resolved.txt'), RESOLVED_LINE + '\n');
+        const twice = laneRun(l, ['resolve', third, '--why', 'again']);
+        expect(twice.status).toBe(2);
+        expect(readFileSync(join(laneDir(l, third), 'resolved.txt'), 'utf8')).toBe(RESOLVED_LINE + '\n');
+    });
+
+    test('kills "resolve without --why", "the line not date · who · why": resolve on an exited blocked lane writes one line, then status reads resolved', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: blocked'] });
+        expect(laneRun(l, ['resolve', ID]).status).toBe(2);
+        expect(laneRun(l, ['resolve', ID, '--why', '  ']).status).toBe(2);
+        expect(existsSync(join(laneDir(l), 'resolved.txt'))).toBe(false);
+        const r = laneRun(l, ['resolve', ID, '--why', 'fixed by the merge\nof 1234abcd', '--by', 'alfonso'], { env: { LANE_RUN_NOW: '2026-10-05T17:30' } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(readFileSync(join(laneDir(l), 'resolved.txt'), 'utf8')).toBe('2026-10-05 17:30 · alfonso · fixed by the merge of 1234abcd\n');
+        const all = laneRun(l, ['status', '--all']);
+        expect(all.stdout.trimEnd().split('\n')[1].split(/\s+/).slice(0, 3)).toEqual([ID, 'exited', 'resolved']);
+    });
+});
+
 // ── wait ─────────────────────────────────────────────────────────────────────
 
 const ID2 = 'P-2026-09-26-1641';
@@ -1335,11 +1405,14 @@ const tierPrompt = (lane: string, dove: string | null, extraHeader = '') =>
     `# Prompt: tier\n\nPrompt-ID: ${ID}\nChat: C-2026-09-25-1353\nLane: ${lane}\nStatus: da eseguire\n${extraHeader}\n## COSA\n\nThe thing.\n` +
     (dove === null ? '' : `\n## DOVE\n\n${dove}\n`) + '\n## COME\n\nDo it.\n';
 
+// RC-45 draws the tier of an eligible lane until 2026-11-08; the RC-32 table reads the rule as it applies outside the draw.
+const AFTER_WINDOW = '2026-11-09T09:00';
+
 /** Starts a lane on the prompt and runs it to its exit; the call claude received and the lane's tier.txt. */
 function startTier(prompt: string, args: string[] = [], env: Record<string, string> = { LANE_RUN_LIGHT_MODEL: LIGHT }) {
     const l = lab();
     writeFileSync(join(l.worktree, 'tier.md'), prompt);
-    const r = laneRun(l, ['start', l.worktree, 'tier.md', ...args], { env });
+    const r = laneRun(l, ['start', l.worktree, 'tier.md', ...args], { env: { LANE_RUN_NOW: AFTER_WINDOW, ...env } });
     const ran = r.status === 0 && waitFor(join(laneDir(l), 'exit.txt'));
     const tierFile = join(laneDir(l), 'tier.txt');
     return { l, r, ran, call: calls(l)[0], tier: existsSync(tierFile) ? readFileSync(tierFile, 'utf8').trim() : null };
@@ -1432,6 +1505,330 @@ describe('lane-run start, the model tier (RC-32)', () => {
         expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toContain('lane tier heavy (a merge that falls back to a session)');
         expect(calls(l)[0].args).not.toContain('--model');
         expect(r.stdout).toContain('tier: heavy (settings pin): a merge that falls back to a session');
+    });
+});
+
+// ── the tier draw (RC-45) ────────────────────────────────────────────────────
+
+const IN_WINDOW = '2026-10-12T10:00';
+const DRAW_LINE = /^(heavy|light) \((settings pin|claude-light-test)\): drawn \(RC-45\), (\d+)\/40$/;
+const ledgerFile = (l: Lab) => join(l.lanes, 'rc45-draws.jsonl');
+type Draw = { promptId: string; tier: string; at: string; by: string; n: number };
+const ledger = (l: Lab): Draw[] =>
+    existsSync(ledgerFile(l)) ? readFileSync(ledgerFile(l), 'utf8').split('\n').filter((x) => x.trim() !== '').map((x) => JSON.parse(x)) : [];
+
+/** The ledger before a start: `n` draws of other lanes, then `extra`. */
+function seedLedger(l: Lab, n: number, extra: Array<Partial<Draw>> = []) {
+    mkdirSync(l.lanes, { recursive: true });
+    const rows = Array.from({ length: n }, (_, i) => ({ promptId: `P-2026-10-01-${1000 + i}`, tier: i % 2 ? 'light' : 'heavy', at: '2026-10-01T10:00:00+0200', by: 'seed', n: i + 1 }));
+    writeFileSync(ledgerFile(l), [...rows, ...extra].map((x) => JSON.stringify(x) + '\n').join(''));
+}
+
+/** A prompt the draw takes by default: `Lane: fast`, a DOVE writing code. */
+const drawPrompt = (id: string, o: { lane?: string; dove?: string | null; body?: string } = {}) =>
+    `# Prompt: a drawn lane\n\nPrompt-ID: ${id}\nChat: C-2026-10-10-1512\nLane: ${o.lane ?? 'fast (one file)'}\nStatus: da eseguire\n\n## COSA\n\nThe thing.\n${o.body ?? ''}` +
+    (o.dove === null ? '' : `\n## DOVE\n\n${o.dove ?? '`frontend/src/a.ts` and its test'}\n`) + '\n## COME\n\nDo it.\n';
+
+const pid = (hhmm: number) => `P-2026-10-10-${String(hhmm).padStart(4, '0')}`;
+
+/** Starts `id` on `prompt` in the lab, in the draw window with a light model set, and runs it to its exit. */
+function drawStart(l: Lab, id: string, prompt: string, args: string[] = [], env: Record<string, string> = {}) {
+    const file = id + '.md';
+    writeFileSync(join(l.worktree, file), prompt);
+    const before = calls(l).length;
+    const r = laneRun(l, ['start', l.worktree, file, ...args], { env: { LANE_RUN_LIGHT_MODEL: LIGHT, LANE_RUN_NOW: IN_WINDOW, ...env } });
+    const ran = r.status === 0 && waitFor(join(laneDir(l, id), 'exit.txt'));
+    const tierFile = join(laneDir(l, id), 'tier.txt');
+    return {
+        r, ran, call: calls(l)[before],
+        tier: existsSync(tierFile) ? readFileSync(tierFile, 'utf8').trim() : null,
+        draw: r.stdout.split('\n').find((x) => x.startsWith('draw: ')) ?? '',
+    };
+}
+
+/** The drawn tier of a start, its tier.txt read whole: the model passed matches it and `n` is the expected count. */
+function drawnTier(s: ReturnType<typeof drawStart>, n: number): 'heavy' | 'light' {
+    const m = DRAW_LINE.exec(s.tier ?? '');
+    expect(m, String(s.tier) + ' ' + s.r.stderr).not.toBeNull();
+    const tier = m![1] as 'heavy' | 'light';
+    expect(m![2]).toBe(tier === 'light' ? LIGHT : 'settings pin');
+    expect(Number(m![3])).toBe(n);
+    if (tier === 'light') expect(s.call.args.slice(-2)).toEqual(['--model', LIGHT]);
+    else expect(s.call.args).not.toContain('--model');
+    return tier;
+}
+
+describe('lane-run start, the tier draw (RC-45)', () => {
+    test('kills "no draw", "the ledger not written", "n not the count after the append", "tier.txt without the draw", "the model not the drawn tier": an eligible lane appends one ledger line and runs the tier it drew', () => {
+        const l = lab();
+        seedLedger(l, 2);
+        const id = pid(2001);
+        const s = drawStart(l, id, drawPrompt(id));
+        expect(s.r.status, s.r.stderr).toBe(0);
+        expect(s.ran).toBe(true);
+        const tier = drawnTier(s, 3);
+        const rows = ledger(l);
+        expect(rows).toHaveLength(3);
+        expect(rows[2]).toEqual({ promptId: id, tier, at: expect.stringMatching(/^2026-10-12T10:00:00[+-]\d{4}$/), by: 'lane-run', n: 3 });
+        expect(s.r.stdout).toContain('tier: ' + s.tier);
+        expect(s.draw).toContain('drawn (RC-45)');
+    });
+
+    test('kills "always heavy", "always light": over fresh Prompt-IDs both tiers come out, each lane on the tier it drew', () => {
+        const l = lab();
+        const seen = new Set<string>();
+        for (let i = 0; i < 30 && seen.size < 2; i++) {
+            const s = drawStart(l, pid(2100 + i), drawPrompt(pid(2100 + i)));
+            expect(s.r.status, s.r.stderr).toBe(0);
+            seen.add(drawnTier(s, i + 1));
+            expect(ledger(l)[i].tier).toBe(s.tier!.split(' ')[0]);
+        }
+        expect([...seen].sort()).toEqual(['heavy', 'light']);
+    }, 60000);
+
+    test('kills "full drawn", "another Lane word drawn", "discovery drawn", "docs-only drawn", "no DOVE drawn", "critical zone drawn", "governance drawn", "go-ahead drawn": a lane outside the draw runs by the rule and writes no ledger line', () => {
+        const l = lab();
+        const cases: Array<[string, { lane?: string; dove?: string | null }, string[], string]> = [
+            ['Lane: full', { lane: 'full (more than 3 files)' }, [], 'heavy (settings pin): Lane: full'],
+            ['Lane: two-phase', { lane: 'two-phase (discovery, then the fix)' }, [], 'heavy (settings pin): in doubt: Lane: two-phase, DOVE writes outside docs/'],
+            ['discovery that writes code', { lane: 'discovery (read-only)' }, [], 'heavy (settings pin): Lane: discovery writes outside docs/'],
+            ['discovery, the report only', { lane: 'discovery (read-only)', dove: '`docs/discovery/discovery_x.md`' }, [], `light (${LIGHT}): Lane: discovery, DOVE writes docs only`],
+            ['fast, docs only', { dove: '`docs/HARNESS-DOCS.md`' }, [], `light (${LIGHT}): Lane: fast, DOVE writes docs only`],
+            ['fast, no DOVE', { dove: null }, [], 'heavy (settings pin): in doubt: Lane: fast, no DOVE'],
+            ['critical zone', { dove: '`frontend/src/a.ts`; it reads `useJjomSync.ts`' }, [], 'heavy (settings pin): names useJjomSync.ts'],
+            ['governance', { dove: '`frontend/src/a.ts` and `CLAUDE.md`' }, [], 'heavy (settings pin): DOVE writes CLAUDE.md'],
+            ['go-ahead', {}, ['--critical-zone-goahead', pid(2209)], 'heavy (settings pin): --critical-zone-goahead'],
+        ];
+        // The draw line names why, where the tier line cannot tell it.
+        const why: Record<string, string> = { 'Lane: two-phase': 'Lane: two-phase', 'fast, docs only': 'DOVE writes docs only', 'fast, no DOVE': 'no DOVE', 'critical zone': 'forces heavy' };
+        cases.forEach(([name, o, args, line], i) => {
+            const id = pid(2201 + i);
+            const s = drawStart(l, id, drawPrompt(id, o), args);
+            expect(s.r.status, name + ': ' + s.r.stderr).toBe(0);
+            expect(s.tier, name).toBe(line);
+            expect(s.draw, name).toMatch(/^draw: not eligible/);
+            if (why[name]) expect(s.draw, name).toContain(why[name]);
+        });
+        expect(ledger(l)).toEqual([]);
+    }, 60000);
+
+    test('kills "the count window ignored", "the date window ignored", "a window off by one": the 40th draw and 2026-11-08 still draw; after 40 draws or on 2026-11-09 the rule applies', () => {
+        const a = lab();
+        seedLedger(a, 39);
+        const s40 = drawStart(a, pid(2301), drawPrompt(pid(2301)));
+        drawnTier(s40, 40);
+        const s41 = drawStart(a, pid(2302), drawPrompt(pid(2302)));
+        expect(s41.r.status, s41.r.stderr).toBe(0);
+        expect(s41.tier).toBe('heavy (settings pin): in doubt: Lane: fast, DOVE writes outside docs/');
+        expect(s41.draw).toContain('window');
+        expect(ledger(a)).toHaveLength(40);
+
+        const b = lab();
+        const last = drawStart(b, pid(2303), drawPrompt(pid(2303)), [], { LANE_RUN_NOW: '2026-11-08T23:59' });
+        drawnTier(last, 1);
+        const after = drawStart(b, pid(2304), drawPrompt(pid(2304)), [], { LANE_RUN_NOW: AFTER_WINDOW });
+        expect(after.r.status, after.r.stderr).toBe(0);
+        expect(after.tier).toBe('heavy (settings pin): in doubt: Lane: fast, DOVE writes outside docs/');
+        expect(after.draw).toContain('window');
+        expect(ledger(b)).toHaveLength(1);
+    }, 60000);
+
+    test('kills "--tier accepted on an eligible lane", "the refusal without the way out", "a refused start draws": --tier heavy and --tier light are refused before anything runs, naming RC-45 and --no-draw', () => {
+        const l = lab();
+        for (const [i, t] of ['heavy', 'light'].entries()) {
+            const id = pid(2401 + i);
+            const s = drawStart(l, id, drawPrompt(id), ['--tier', t]);
+            expect(s.r.status, t).toBe(2);
+            expect(s.r.stderr, t).toContain('RC-45');
+            expect(s.r.stderr, t).toContain('--no-draw');
+            expect(s.call, t).toBeUndefined();
+            expect(existsSync(laneDir(l, id)), t).toBe(false);
+        }
+        expect(ledger(l)).toEqual([]);
+    });
+
+    test('kills "--no-draw not recorded", "--no-draw drawing anyway", "--tier ignored after --no-draw", "an empty reason accepted": the draw is skipped, tier.txt says why, the rule or --tier applies', () => {
+        const l = lab();
+        const a = drawStart(l, pid(2501), drawPrompt(pid(2501)), ['--no-draw', 'changes the MODELS demo']);
+        expect(a.r.status, a.r.stderr).toBe(0);
+        expect(a.tier).toBe('heavy (settings pin): in doubt: Lane: fast, DOVE writes outside docs/; not drawn (RC-45): changes the MODELS demo');
+        expect(a.draw).toContain('--no-draw');
+        const b = drawStart(l, pid(2502), drawPrompt(pid(2502)), ['--no-draw', 'a re-run of a light lane', '--tier', 'light']);
+        expect(b.r.status, b.r.stderr).toBe(0);
+        expect(b.tier).toBe(`light (${LIGHT}): --tier light (the rule: in doubt: Lane: fast, DOVE writes outside docs/); not drawn (RC-45): a re-run of a light lane`);
+        expect(b.call.args.slice(-2)).toEqual(['--model', LIGHT]);
+        for (const bad of [['--no-draw'], ['--no-draw', ''], ['--no-draw', '   ']]) {
+            const s = drawStart(l, pid(2503), drawPrompt(pid(2503)), bad);
+            expect(s.r.status, bad.join(' ')).toBe(2);
+            expect(s.call, bad.join(' ')).toBeUndefined();
+        }
+        const full = drawStart(l, pid(2504), drawPrompt(pid(2504), { lane: 'full (more than 3 files)' }), ['--no-draw', 'nothing to skip']);
+        expect(full.r.status, full.r.stderr).toBe(0);
+        expect(full.tier).toBe('heavy (settings pin): Lane: full');
+        expect(ledger(l)).toEqual([]);
+    });
+
+    test('kills "a second start draws again": a start that failed after its draw is started again on the same tier, the ledger unchanged', () => {
+        const l = lab();
+        const id = pid(2601);
+        const first = drawStart(l, id, drawPrompt(id), [], { FAKE_MODE: 'noid' });
+        expect(first.r.status).toBe(1);
+        const drawn = (/^(heavy|light) /.exec(first.tier ?? '') || [])[1];
+        expect(drawn).toBeDefined();
+        expect(ledger(l)).toHaveLength(1);
+        const second = drawStart(l, id, drawPrompt(id));
+        expect(second.r.status, second.r.stderr).toBe(0);
+        expect(drawnTier(second, 1)).toBe(drawn);
+        expect(ledger(l)).toHaveLength(1);
+        expect(second.draw).toContain('ledger');
+    });
+
+    test('kills "header and ledger disagreeing accepted", "a Lane line naming no tier accepted": both are refused before anything runs, naming both sides', () => {
+        const l = lab();
+        const id = pid(2701);
+        seedLedger(l, 0, [{ promptId: id, tier: 'heavy', at: '2026-10-10T17:00:00+0200', by: 'chat', n: 1 }]);
+        const s = drawStart(l, id, drawPrompt(id, { lane: 'fast (one file; tier drawn (RC-45): light)' }));
+        expect(s.r.status).toBe(2);
+        expect(s.r.stderr).toContain('ledger');
+        expect(s.r.stderr).toContain('Lane line');
+        expect(s.r.stderr).toMatch(/heavy[\s\S]*light|light[\s\S]*heavy/);
+        expect(s.call).toBeUndefined();
+        expect(ledger(l)).toHaveLength(1);
+        const bare = drawStart(l, pid(2702), drawPrompt(pid(2702), { lane: 'fast (one file; tier drawn (RC-45))' }));
+        expect(bare.r.status).toBe(2);
+        expect(bare.r.stderr).toContain('tier drawn (RC-45)');
+        expect(bare.call).toBeUndefined();
+    });
+
+    test('kills "the header draw ignored", "the header draw drawn again", "a header draw left out of the count", "--tier against a draw accepted": a Lane-line draw runs its tier, the ledger entry reused or recorded once', () => {
+        const l = lab();
+        // P-2026-10-10-1756's shape: a Lane-line draw, no DOVE the rule can read, its draw in the ledger.
+        const id = pid(2801);
+        seedLedger(l, 1, [{ promptId: id, tier: 'light', at: '2026-10-10T17:52:42+0200', by: 'chat', n: 2 }]);
+        const held = drawStart(l, id, drawPrompt(id, { lane: 'fast (two lookups; tier drawn (RC-45): light)', dove: null }));
+        expect(held.r.status, held.r.stderr).toBe(0);
+        expect(drawnTier(held, 2)).toBe('light');
+        expect(ledger(l)).toHaveLength(2);
+
+        const id2 = pid(2802);
+        const recorded = drawStart(l, id2, drawPrompt(id2, { lane: 'fast (one file; tier drawn (RC-45): heavy)' }), ['--tier', 'heavy'], { LANE_RUN_NOW: AFTER_WINDOW });
+        expect(recorded.r.status, recorded.r.stderr).toBe(0);
+        expect(drawnTier(recorded, 3)).toBe('heavy');
+        const rows = ledger(l);
+        expect(rows).toHaveLength(3);
+        expect(rows[2]).toMatchObject({ promptId: id2, tier: 'heavy', n: 3 });
+        expect(rows[2].by).toContain('Lane line');
+
+        const id3 = pid(2803);
+        const against = drawStart(l, id3, drawPrompt(id3, { lane: 'fast (one file; tier drawn (RC-45): light)' }), ['--tier', 'heavy']);
+        expect(against.r.status).toBe(2);
+        expect(against.r.stderr).toContain('RC-45');
+        expect(against.call).toBeUndefined();
+        const undo = drawStart(l, id3, drawPrompt(id3, { lane: 'fast (one file; tier drawn (RC-45): light)' }), ['--no-draw', 'rescue it']);
+        expect(undo.r.status).toBe(2);
+        expect(undo.r.stderr).toContain('--no-draw cannot undo a draw');
+        expect(undo.call).toBeUndefined();
+        expect(ledger(l)).toHaveLength(3);
+    });
+
+    test('kills "a light draw falls back to heavy with no light model", "a refused light draw redrawn": the start is refused after the draw is recorded, and stays refused', () => {
+        const l = lab();
+        let light = '';
+        let heavy = 0;
+        for (let i = 0; i < 30 && (!light || !heavy); i++) {
+            const id = pid(2900 + i);
+            const s = drawStart(l, id, drawPrompt(id), [], { LANE_RUN_LIGHT_MODEL: '' });
+            const row = ledger(l).find((x) => x.promptId === id);
+            expect(row, id).toBeDefined();
+            if (row!.tier === 'light') {
+                light = id;
+                expect(s.r.status).toBe(2);
+                expect(s.r.stderr).toContain('no light model');
+                expect(s.call).toBeUndefined();
+            } else {
+                heavy++;
+                expect(s.r.status, s.r.stderr).toBe(0);
+                expect(s.call.args).not.toContain('--model');
+            }
+        }
+        expect(light).not.toBe('');
+        expect(heavy).toBeGreaterThan(0);
+        const n = ledger(l).length;
+        const again = drawStart(l, light, drawPrompt(light), [], { LANE_RUN_LIGHT_MODEL: '' });
+        expect(again.r.status).toBe(2);
+        expect(again.r.stderr).toContain('no light model');
+        expect(ledger(l)).toHaveLength(n);
+    }, 60000);
+
+    test('kills "a light draw run where the rule forces heavy": a ledger light on a lane the rule forces heavy is refused', () => {
+        const l = lab();
+        const id = pid(3001);
+        seedLedger(l, 0, [{ promptId: id, tier: 'light', at: '2026-10-10T17:00:00+0200', by: 'chat', n: 1 }]);
+        const s = drawStart(l, id, drawPrompt(id, { lane: 'full (more than 3 files)' }));
+        expect(s.r.status).toBe(2);
+        expect(s.r.stderr).toContain('forces heavy');
+        expect(s.call).toBeUndefined();
+    });
+
+    test('kills "the inline DOVE line not read", "the inline paragraph read past its blank line", "an inline line read over ## DOVE": a `DOVE:` paragraph is the DOVE of a prompt without `## DOVE`', () => {
+        const l = lab();
+        const next = '\nAnother paragraph names `frontend/src/z.ts`.\n';
+        const inline = drawStart(l, pid(3101), drawPrompt(pid(3101), { dove: null, body: '\nDOVE: `frontend/src/a.ts`, and one test\nfile beside it.\n' }));
+        expect(inline.r.status, inline.r.stderr).toBe(0);
+        drawnTier(inline, 1);
+        const docs = drawStart(l, pid(3102), drawPrompt(pid(3102), { dove: null, body: '\n**DOVE**: `docs/x.md`, one entry.\n' + next }));
+        expect(docs.tier).toBe(`light (${LIGHT}): Lane: fast, DOVE writes docs only`);
+        const section = drawStart(l, pid(3103), drawPrompt(pid(3103), { dove: '`docs/x.md`', body: '\nDOVE: `frontend/src/a.ts`\n' }));
+        expect(section.tier).toBe(`light (${LIGHT}): Lane: fast, DOVE writes docs only`);
+        expect(ledger(l)).toHaveLength(1);
+    });
+
+    test('kills "chain --tier accepted on an eligible lane", "a chained lane not drawn", "chain --no-draw not passed on": the chain refuses --tier before writing anything; without it the lane draws at its start; --no-draw reaches the start', () => {
+        const l = lab();
+        const repo = join(dirname(l.home), 'chain-repo');
+        mkdirSync(repo, { recursive: true });
+        gitIn(l, repo, ['init', '-q', '-b', 'trunk']);
+        commitFiles(l, repo, 'base', { 'README.md': 'x\n' });
+        const id = pid(3201);
+        const p1 = join(l.home, 'p1.md');
+        writeFileSync(p1, drawPrompt(id));
+        const env = { ...GIT_ENV, LANE_RUN_LIGHT_MODEL: LIGHT, LANE_RUN_NOW: IN_WINDOW };
+        const refused = laneRun(l, ['chain', repo, p1, '--tier', 'light'], { env });
+        expect(refused.status).toBe(2);
+        expect(refused.stderr).toContain('RC-45');
+        expect(existsSync(join(l.lanes, 'chain-' + id))).toBe(false);
+        expect(ledger(l)).toEqual([]);
+        const r = laneRun(l, ['chain', repo, p1], { env });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l, id), 'exit.txt'), 15000)).toBe(true);
+        expect(readFileSync(join(laneDir(l, id), 'tier.txt'), 'utf8').trim()).toMatch(DRAW_LINE);
+        expect(ledger(l)).toHaveLength(1);
+        expect(gitIn(l, repo, ['log', '-1', '--format=%b'])).toContain('lane tier drawn at its start (RC-45)');
+
+        const id2 = pid(3202);
+        const p2 = join(l.home, 'p2.md');
+        writeFileSync(p2, drawPrompt(id2));
+        const skipped = laneRun(l, ['chain', repo, p2, '--no-draw', 'a chained re-run'], { env });
+        expect(skipped.status, skipped.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l, id2), 'exit.txt'), 15000)).toBe(true);
+        expect(readFileSync(join(laneDir(l, id2), 'tier.txt'), 'utf8').trim()).toBe('heavy (settings pin): in doubt: Lane: fast, DOVE writes outside docs/; not drawn (RC-45): a chained re-run');
+        expect(ledger(l)).toHaveLength(1);
+    });
+
+    test('kills "a merge session drawn", "a ledger line that does not parse read as no draw", "a merge blocked by the ledger": a broken ledger refuses a start, naming its line, and a merge, which never reads it, runs heavy', () => {
+        const { l, repo } = repoLab();
+        seedLedger(l, 1);
+        writeFileSync(ledgerFile(l), readFileSync(ledgerFile(l), 'utf8') + '{"promptId": "P-2026-10-01-1001", tier: light}\n');
+        const id = pid(3301);
+        const s = drawStart(l, id, drawPrompt(id));
+        expect(s.r.status).toBe(2);
+        expect(s.r.stderr).toContain(ledgerFile(l) + ':2 ');
+        expect(s.call).toBeUndefined();
+        const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--launch'], { cwd: repo, env: { ...MERGE_ENV, LANE_RUN_LIGHT_MODEL: LIGHT } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(l.lanes, NEW_ID, 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(l.lanes, NEW_ID, 'tier.txt'), 'utf8').trim()).toBe('heavy (settings pin): a merge that falls back to a session');
+        expect(readFileSync(ledgerFile(l), 'utf8').split('\n').filter(Boolean)).toHaveLength(2);
     });
 });
 
@@ -1693,5 +2090,218 @@ describe('lane-run start --auto (RC-36)', () => {
         expect(c.ghtoken).toBe('tok-1');
         expect(c.ghconfig).toBe('/somewhere/with/credentials');
         expect(existsSync(join(laneDir(l), 'auto.json'))).toBe(false);
+    });
+});
+
+// ── track: the lane's card on GitHub (RC-44) ─────────────────────────────────
+
+const FAKE_GH = resolve(HERE, 'fixtures', 'fake-gh.cjs');
+const TRACK_ID = 'P-2026-10-11-1600';
+const TRACK_WRITES = /^(issue (create|edit|close|reopen)|project item-(add|edit)|api -X PATCH)/;
+const ISSUE_1 = 'https://github.com/jjodel-modeling/jjodel-lanes/issues/1';
+
+/** A prompt in the front rule's scope: `front`, the header lines naming its front; `title`, its first line. */
+const trackPrompt = (front: string[] = ['Front: harness'], title = '# Prompt: a tracked lane') =>
+    `${title}\n\nPrompt-ID: ${TRACK_ID}\nChat: C-2026-10-10-1256\nRequest: none (a test lane)\nLane: fast\nDepends: none\n${front.join('\n')}\nStatus: da eseguire\n\n` +
+    'Worktree: `~/jjodel-w-tracked`, branch `tracked`.\n\n## COSA\n\nDo the thing.\n';
+
+/** Tracking on: the enable switch of the lab's HOME. */
+function trackOn(l: Lab) {
+    mkdirSync(join(l.lanes, '_tracking'), { recursive: true });
+    writeFileSync(join(l.lanes, '_tracking', 'config.json'), '{}\n');
+}
+
+/** A lab whose prompt.md is in the front rule's scope, with the fake gh as LANE_TRACK_GH; tracking on unless `on` is false. */
+function trackLab(o: { on?: boolean; mode?: string; prompt?: string } = {}): Lab {
+    const l = lab();
+    writeFileSync(join(l.worktree, 'prompt.md'), o.prompt ?? trackPrompt());
+    const gh = join(l.state, 'gh');
+    writeFileSync(gh, `#!/bin/sh\nexec '${process.execPath}' '${FAKE_GH}' "$@"\n`);
+    chmodSync(gh, 0o755);
+    l.env.LANE_TRACK_GH = gh;
+    l.env.FAKE_GH_STATE = l.state;
+    if (o.mode) l.env.FAKE_GH_MODE = o.mode;
+    if (o.on !== false) trackOn(l);
+    return l;
+}
+
+const ghCalls = (l: Lab): string[][] => {
+    const file = join(l.state, 'gh-calls.jsonl');
+    return existsSync(file) ? readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((x) => JSON.parse(x)) : [];
+};
+const ghWrites = (l: Lab, verb?: string) => ghCalls(l).filter((a) => TRACK_WRITES.test(a.join(' ')) && (!verb || a.slice(0, 2).join(' ') === verb));
+const ghState = (l: Lab) => JSON.parse(readFileSync(join(l.state, 'gh.json'), 'utf8'));
+const ghColumn = (l: Lab) => {
+    const s = ghState(l);
+    return String(s.status[s.items[s.issues[0].url]] || '').replace(/^opt-/, '');
+};
+const ghLabels = (l: Lab) => ghState(l).issues[0].labels.map((x: { name: string }) => x.name);
+const cardOf = (out: string) => out.split('\n').find((x) => x.startsWith('card: ')) ?? '';
+const trackExit = (l: Lab) => join(laneDir(l, TRACK_ID), 'exit.txt');
+
+describe('lane-run track (RC-44)', () => {
+    test('start refuses a prompt in the front rule\'s scope with no Front: line or an unknown front, before anything runs (start refusal dropped)', () => {
+        const l = trackLab({ prompt: trackPrompt([]) });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain('no `Front:` line in the header');
+        expect(r.stderr).toContain('(P13, RC-44)');
+        writeFileSync(join(l.worktree, 'prompt.md'), trackPrompt(['Front: nope']));
+        const u = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(u.status).toBe(2);
+        expect(u.stderr).toContain('unknown front "nope"');
+        expect(calls(l)).toEqual([]);
+        expect(ghCalls(l)).toEqual([]);
+        expect(existsSync(laneDir(l, TRACK_ID))).toBe(false);
+    });
+
+    test('a prompt before FRONT_FROM needs no Front: line; with tracking off, start and status each print one card line saying so (enable switch dropped)', () => {
+        const l = trackLab({ on: false, prompt: PROMPT });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(cardOf(r.stdout)).toBe('card: tracking off (no ' + join(l.lanes, '_tracking', 'config.json') + ')');
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+        expect(cardOf(laneRun(l, ['status', ID]).stdout)).toContain('card: tracking off');
+        expect(ghCalls(l)).toEqual([]);
+    });
+
+    test('start puts the card In progress on its front\'s milestone, the body without the prompt\'s text, and the lane runs (start not tracked)', () => {
+        const l = trackLab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('session: ' + SESSION);
+        expect(cardOf(r.stdout)).toBe('card: ' + ISSUE_1 + ' · In progress');
+        const [issue] = ghState(l).issues;
+        expect(issue.title).toBe(TRACK_ID + ' · Prompt: a tracked lane');
+        expect(issue.milestone).toEqual({ number: 2, title: 'harness' });
+        expect(issue.body).toContain('- Branch: tracked');
+        expect(issue.body).toContain('- Worktree: worktree');
+        expect(issue.body).not.toContain('Do the thing');
+        expect(ghColumn(l)).toBe('In progress');
+        expect(waitFor(trackExit(l))).toBe(true);
+    });
+
+    test('start, the exit seen by status, a resume and status again: one issue create and one item, the card following the lane (card file not read)', () => {
+        const l = trackLab();
+        const events = join(l.state, 'events.jsonl');
+        writeFileSync(events, assistant('A question.\nOutcome: question') + '\n');
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env: { FAKE_EVENTS: events } }).status).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        expect(cardOf(laneRun(l, ['status', TRACK_ID]).stdout)).toBe('card: ' + ISSUE_1 + ' · In progress (waiting:question)');
+        expect(ghLabels(l)).toEqual(['waiting:question']);
+        const hold = join(l.state, 'release');
+        const r = laneRun(l, ['resume', TRACK_ID, '--text', '[' + TRACK_ID + '] Answer: yes.'], { env: { FAKE_HOLD: hold } });
+        expect(r.status, r.stderr).toBe(0);
+        expect(cardOf(r.stdout)).toBe('card: ' + ISSUE_1 + ' · In progress');
+        expect(ghLabels(l)).toEqual([]);
+        expect(cardOf(laneRun(l, ['status', TRACK_ID]).stdout)).toBe('card: ' + ISSUE_1 + ' · In progress');
+        writeFileSync(hold, '');
+        expect(waitFor(trackExit(l))).toBe(true);
+        expect(ghWrites(l, 'issue create')).toHaveLength(1);
+        expect(ghWrites(l, 'project item-add')).toHaveLength(1);
+        expect(ghState(l).issues).toHaveLength(1);
+    });
+
+    test('a lost card file is healed by the search on the title, not by a second create (title search dropped)', () => {
+        const l = trackLab();
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        unlinkSync(join(l.lanes, '_tracking', TRACK_ID + '.json'));
+        const r = laneRun(l, ['status', TRACK_ID]);
+        expect(cardOf(r.stdout)).toBe('card: ' + ISSUE_1 + ' · In progress (outcome:unparsed)');
+        expect(ghWrites(l, 'issue create')).toHaveLength(1);
+        expect(ghState(l).issues).toHaveLength(1);
+    });
+
+    test('gh exits 1: the lane runs, and the card line and the card file say why (fail open dropped)', () => {
+        const l = trackLab({ mode: 'fail' });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('session: ' + SESSION);
+        expect(cardOf(r.stdout)).toBe('card: tracking skipped: gh project view: error connecting to api.github.com');
+        expect(JSON.parse(readFileSync(join(l.lanes, '_tracking', TRACK_ID + '.json'), 'utf8')).error).toBe('gh project view: error connecting to api.github.com');
+        expect(waitFor(trackExit(l))).toBe(true);
+        const s = laneRun(l, ['status', TRACK_ID]);
+        expect(s.status).toBe(0);
+        expect(s.stdout).toContain('state: exited');
+        expect(cardOf(s.stdout)).toBe('card: tracking skipped: gh project view: error connecting to api.github.com');
+    });
+
+    test('a token without the project scope: `tracking skipped: missing project scope`, nothing written, the lane runs', () => {
+        const l = trackLab({ mode: 'noscope' });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(cardOf(r.stdout)).toBe('card: tracking skipped: missing project scope');
+        expect(calls(l)).toHaveLength(1);
+        expect(ghWrites(l)).toEqual([]);
+        expect(waitFor(trackExit(l))).toBe(true);
+    });
+
+    test('a discovery\'s hard stop waits for Phase 2; after the GO the next hard stop waits for the visual check (GO not read)', () => {
+        const l = trackLab({ prompt: trackPrompt(['Front: harness'], '# Prompt: a lane, Phase 1 discovery') });
+        const events = join(l.state, 'events.jsonl');
+        writeFileSync(events, assistant('Report written.\nOutcome: hard-stop') + '\n');
+        const env = { FAKE_EVENTS: events };
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md'], { env }).status).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        expect(cardOf(laneRun(l, ['status', TRACK_ID]).stdout)).toBe('card: ' + ISSUE_1 + ' · In review (waiting:phase-2)');
+        const g = laneRun(l, ['go', TRACK_ID, '--smoke', 'the chat read the report'], { env });
+        expect(g.status, g.stderr).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        expect(cardOf(laneRun(l, ['status', TRACK_ID]).stdout)).toBe('card: ' + ISSUE_1 + ' · In review (waiting:visual)');
+        expect(ghLabels(l)).toEqual(['waiting:visual']);
+    });
+
+    test('two track calls at once create one issue: the second waits on the lock and reads the card file (lock dropped)', async () => {
+        const l = trackLab({ on: false });
+        expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
+        expect(waitFor(trackExit(l))).toBe(true);
+        trackOn(l);
+        const env = { ...l.env, FAKE_GH_CREATE_MS: '1500' };
+        const run = () =>
+            new Promise<string>((done) => {
+                const c = spawn(process.execPath, [SCRIPT, 'track', TRACK_ID], { cwd: l.home, env });
+                let out = '';
+                c.stdout.on('data', (d) => (out += d));
+                c.on('close', () => done(out));
+            });
+        const outs = await Promise.all([run(), run()]);
+        expect(ghWrites(l, 'issue create')).toHaveLength(1);
+        for (const out of outs) expect(cardOf(out)).toBe('card: ' + ISSUE_1 + ' · In progress (outcome:unparsed)');
+    }, 30000);
+
+    test('--sync on a repo with one prompt not started: the dry run writes nothing, the sync creates its Ready card, a second sync writes nothing (Ready row dropped)', () => {
+        const l = trackLab();
+        const repo = join(l.home, 'repo');
+        mkdirSync(repo);
+        gitIn(l, repo, ['init', '-q', '-b', 'trunk']);
+        commitFiles(l, repo, 'docs: two prompts', {
+            'docs/prompts/claude_2026-10-11_1600_prompt_tracked.md': trackPrompt(),
+            'docs/prompts/claude_2026-10-10_2359_prompt_older.md': PROMPT.replace(ID, 'P-2026-10-10-2359'),
+        });
+        const dry = laneRun(l, ['track', '--sync', '--dry-run'], { cwd: repo });
+        expect(dry.status, dry.stderr).toBe(0);
+        expect(dry.stdout).toContain('card ' + TRACK_ID + ': dry run: gh issue create');
+        expect(dry.stdout).not.toContain('P-2026-10-10-2359');
+        expect(ghWrites(l)).toEqual([]);
+        const r = laneRun(l, ['track', '--sync'], { cwd: repo });
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout.trim()).toBe('card ' + TRACK_ID + ': ' + ISSUE_1 + ' · Ready');
+        expect(ghColumn(l)).toBe('Ready');
+        const n = ghWrites(l).length;
+        const again = laneRun(l, ['track', '--sync'], { cwd: repo });
+        expect(again.stdout.trim()).toBe(r.stdout.trim());
+        expect(ghWrites(l)).toHaveLength(n);
+    });
+
+    test('--sync outside a worktree is refused; with tracking off it says so and calls no gh', () => {
+        const l = trackLab({ on: false });
+        expect(laneRun(l, ['track', '--sync']).status).toBe(2);
+        const repo = join(l.home, 'repo');
+        mkdirSync(repo);
+        gitIn(l, repo, ['init', '-q', '-b', 'trunk']);
+        const r = laneRun(l, ['track', '--sync'], { cwd: repo });
+        expect(r.stdout.trim()).toBe('sync: tracking off (no ' + join(l.lanes, '_tracking', 'config.json') + ')');
+        expect(ghCalls(l)).toEqual([]);
     });
 });

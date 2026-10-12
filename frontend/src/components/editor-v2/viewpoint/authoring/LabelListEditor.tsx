@@ -15,6 +15,8 @@ export interface LabelListEditorProps {
     classNames: string[];
     /** Forwarded to each entry's ConditionalEditor; omitted = conditional allowed. */
     allowConditional?: boolean;
+    /** Forwarded to each entry: offer the header band position (R-GV-5). Omitted = not offered. */
+    allowHeader?: boolean;
     onChange: (labels: LabelSpec[]) => void;
 }
 
@@ -30,6 +32,7 @@ export const LabelListEditor: React.FC<LabelListEditorProps> = ({
     featuresHint,
     classNames,
     allowConditional,
+    allowHeader,
     onChange,
 }) => {
     const replace = (index: number, label: LabelSpec) => {
@@ -66,6 +69,7 @@ export const LabelListEditor: React.FC<LabelListEditorProps> = ({
                     featuresHint={featuresHint}
                     classNames={classNames}
                     allowConditional={allowConditional}
+                    allowHeader={allowHeader}
                     onChange={(l) => replace(index, l)}
                 />
             )}

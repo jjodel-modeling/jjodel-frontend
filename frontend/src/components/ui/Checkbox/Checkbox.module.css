@@ -57,9 +57,3 @@
   cursor: pointer;
   user-select: none;
 }
-
-html[data-theme="dark"] {
-  .box {
-    background-color: var(--color-bg-secondary);
-  }
-}

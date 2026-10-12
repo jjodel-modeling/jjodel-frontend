@@ -568,6 +568,12 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // Q3 (P-2026-10-03-1304): a bar that declares a thickness keeps its square box and paints its ink T px across,
     // upright or lying, centred in the box. The ink is this element, so the selection ring and the run's outline,
     // drawn on it, follow the bar; irStyle.ts gives the pointer to the ink alone.
+    // Header band (R-GV-5, spec addendum §2.3): a graphVertex whose `containment.layout` declares one draws it on its
+    // side with its `header` labels inside, vertical when they say so; a `header` label with no band draws as `top`.
+    // `ir-layout` marks every container that declares a layout: its box is a frame under the edges (irContainment
+    // applyContainerLayout), so it drops the card shadow. Both absent on every view without the R-GV keys.
+    const containerLayout = compiled.kind === 'graphVertex' ? compiled.containment?.layout : undefined;
+    const headerBand = containerLayout?.header ?? null;
     const barThickness = form === 'bar' ? (compiled.ir as VertexViewIR).shape?.barThickness : undefined;
     const barInk = typeof barThickness === 'number' && Number.isFinite(barThickness) && barThickness > 0;
     if (barInk) {
@@ -580,7 +586,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     return (
         <div
             ref={contentRef}
-            className={`ir-node-content ir-shape--${form}${padClass}${barInk ? ' ir-bar-ink' : ''}`}
+            className={`ir-node-content ir-shape--${form}${padClass}${barInk ? ' ir-bar-ink' : ''}${containerLayout ? ' ir-layout' : ''}`}
             style={inlineStyle}
         >
             {svgPainter && (
@@ -662,7 +668,32 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     <i className={`bi ${collapsedBadge.icon}`} />
                 </span>
             )}
+            {headerBand && (
+                <div
+                    className={`ir-header-band ir-header-band--${headerBand.side}`}
+                    style={{
+                        ...(headerBand.side === 'w' ? { width: headerBand.size } : { height: headerBand.size }),
+                        ...(outlineColor ? { borderColor: outlineColor } : undefined),
+                    }}
+                >
+                    {compiled.labels.map((l, i) => {
+                        if (l.position !== 'header' || !l.visible(readCtx, objectId)) return null;
+                        const raw = l.text(readCtx, objectId);
+                        return (
+                            <span
+                                key={`hlabel_${i}`}
+                                className={`ir-label ir-label--header${l.orientation === 'vertical' ? ' ir-label--vertical' : ''}`}
+                                style={overText(resolveTextStyle(l.style, readCtx, objectId), 'header')}
+                            >
+                                {raw == null ? '' : String(raw)}
+                            </span>
+                        );
+                    })}
+                </div>
+            )}
             {compiled.labels.map((l, i) => {
+                // A header label is drawn in the band above; with no band it falls back to `top` (spec addendum §2.3).
+                if (l.position === 'header' && headerBand) return null;
                 if (!l.visible(readCtx, objectId)) return null;
                 const raw = l.text(readCtx, objectId);
                 const text = raw == null ? '' : String(raw);
@@ -673,7 +704,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                 const anchor = moved && LABEL_ANCHORS.has(moved) ? moved : l.anchor;
                 const anchorClass = anchor ? ` ir-label--anchor-${anchor}` : '';
                 // Q9a: with no row left under 'hide', a name on top is centred (`noRowsLeft`).
-                const position = noRowsLeft && l.position === 'top' ? 'center' : l.position;
+                const declared = l.position === 'header' ? 'top' : l.position;
+                const position = noRowsLeft && declared === 'top' ? 'center' : declared;
                 // Editable: intrinsic name/qualifiedName labels edit the element
                 // name unless the IR opts out (spec v1.2 sez. 5); a one-step path
                 // label that opts in edits its attribute (R-IRN-41).

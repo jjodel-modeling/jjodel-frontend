@@ -247,6 +247,26 @@ const BASE_CSS = `
    pointer-events inline on its node. Appended after every other rule, so the rules above stay byte-identical. */
 .react-flow__node:has(.ir-node-content.ir-bar-ink) { pointer-events: none !important; }
 .ir-node-content.ir-bar-ink { pointer-events: auto; }
+/* Header band (R-GV-5, spec addendum 2026-10-10 §2.3): a graphVertex's band on its declared side, out of the flow,
+   its labels centred in it; a vertical label reads bottom to top. The rule line takes the border colour (inline when
+   authored). A container that declares a layout is a frame under the edges and drops the card shadow. A partition
+   after the first drops its leading border (irContainment PARTITION_NEXT_CLASS), so two lanes share one line; the
+   inline authored border would win without !important. Appended after every other rule, so the rules above stay
+   byte-identical. */
+.ir-node-content .ir-header-band { position: absolute; top: 0; left: 0; z-index: 1; box-sizing: border-box; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 0 solid var(--border-default); pointer-events: none; }
+.ir-node-content .ir-header-band--w { bottom: 0; border-right-width: 1px; }
+.ir-node-content .ir-header-band--n { right: 0; border-bottom-width: 1px; }
+.ir-node-content .ir-header-band .ir-label--header { font-weight: 600; padding: var(--ir-pad-y); max-width: 100%; max-height: 100%; }
+.ir-node-content .ir-header-band .ir-label--vertical { writing-mode: vertical-rl; transform: rotate(180deg); }
+.ir-node-content.ir-layout { box-shadow: none; }
+.react-flow__node.ir-partition-next-v .ir-node-content { border-top-color: transparent !important; }
+.react-flow__node.ir-partition-next-h .ir-node-content { border-left-color: transparent !important; }
+/* Partition separator (S2b, spec addendum 2026-10-10 §11): with \`separator: 'dashed'\` every partition before the
+   last draws its trailing border, the line it shares with the next, dashed and 1px whatever the view's own border
+   (irContainment PARTITION_DASHED_CLASS): UML orthogonal regions. Appended after every other rule, so the rules
+   above stay byte-identical. */
+.react-flow__node.ir-partition-sep-dashed-v .ir-node-content { border-bottom: 1px dashed var(--border-default) !important; }
+.react-flow__node.ir-partition-sep-dashed-h .ir-node-content { border-right: 1px dashed var(--border-default) !important; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

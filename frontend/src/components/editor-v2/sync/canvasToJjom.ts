@@ -95,18 +95,26 @@ export function syncPositionToJjom(vertexId: string, x: number, y: number): void
 }
 
 /**
- * Write multiple vertex positions at once (e.g. multi-select drag).
+ * Write multiple vertex positions at once (e.g. multi-select drag). An update that also carries `w` and `h` writes the
+ * vertex's box as sized by hand (`isResized`), in the same record: two writes of one vertex in one batch would each
+ * read the record as the store holds it and the later would take back the earlier's half (P-2026-10-11-1156).
  */
-export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; y: number }>): void {
+export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; y: number; w?: number; h?: number }>): void {
     if (updates.length === 0) return;
     markCanvasUpdatedBatch(updates.map(u => u.id));
     const layoutKey = getActiveLayoutKey();
     TRANSACTION('EditorV2 drag batch', () => {
-        for (const { id, x, y } of updates) {
-            const write = resolveLayoutWriteFor(id, { x, y }, layoutKey);
+        for (const { id, x, y, w, h } of updates) {
+            const sized = w !== undefined && h !== undefined;
+            const write = resolveLayoutWriteFor(id, sized ? { x, y, w, h, isResized: true } : { x, y }, layoutKey);
             if (write.target === 'dictionary') { writeLayoutDictionary(id, write); continue; }
             SetFieldAction.new(id as any, 'x' as any, x, undefined, false);
             SetFieldAction.new(id as any, 'y' as any, y, undefined, false);
+            if (sized) {
+                SetFieldAction.new(id as any, 'w' as any, w, undefined, false);
+                SetFieldAction.new(id as any, 'h' as any, h, undefined, false);
+                SetFieldAction.new(id as any, 'isResized' as any, true, undefined, false);
+            }
         }
     });
 }

@@ -7,7 +7,7 @@ import {
     labelEditable, labelEditableDefault, labelEditBlock, labelPathFeature,
     type LabelEditBlock, type LabelFeatureInfo,
 } from '../ir/irLabelEdit';
-import type { LabelSpec, LabelPosition, LabelAnchor, TextSource, TextStyle } from '../ir/irTypes';
+import type { LabelSpec, LabelPosition, LabelAnchor, LabelOrientation, TextSource, TextStyle } from '../ir/irTypes';
 
 const POSITION_OPTIONS = [
     { value: 'top', label: 'Top' },
@@ -33,6 +33,18 @@ const POSITION_OPTION_GROUPS = [
     { label: 'Outside', options: OUTSIDE_POSITION_OPTIONS },
 ];
 
+/**
+ * The header band of a graphVertex (R-GV-5, spec addendum 2026-10-10 §2.3): offered only by a host that has one to
+ * offer (`allowHeader`), today the graphVertex panel. `validateIR` refuses it where no band is declared.
+ */
+const HEADER_POSITION_OPTION_GROUP = { label: 'Header band', options: [{ value: 'header', label: 'In the header band' }] };
+
+/** Text direction of a header label. Horizontal is the default and is never written. */
+const ORIENTATION_OPTIONS = [
+    { value: 'horizontal', label: 'Horizontal' },
+    { value: 'vertical', label: 'Vertical (bottom to top)' },
+];
+
 const OUTSIDE_VALUE_PREFIX = 'outside:';
 
 /** The select value of a label: its position, or `outside:<anchor>` with the anchor resolved
@@ -47,10 +59,21 @@ export function labelPositionValue(label: LabelSpec): string {
  * so «Below» saves as `position: 'outside'` alone. Every other key keeps its place.
  */
 export function applyLabelPositionValue(label: LabelSpec, value: string): LabelSpec {
-    const { anchor: _anchor, ...rest } = label;
+    const { anchor: _anchor, orientation, ...rest } = label;
+    // `orientation` belongs to the header position alone (R-GV-5): it stays on a header label and leaves with it.
+    if (value === 'header') return orientation === undefined ? { ...rest, position: 'header' } : { ...rest, position: 'header', orientation };
     if (!value.startsWith(OUTSIDE_VALUE_PREFIX)) return { ...rest, position: value as LabelPosition };
     const anchor: LabelAnchor = resolveLabelAnchor(value.slice(OUTSIDE_VALUE_PREFIX.length));
     return anchor === 's' ? { ...rest, position: 'outside' } : { ...rest, position: 'outside', anchor };
+}
+
+/**
+ * The label after a choice of text direction (R-GV-5). Horizontal is the default: the key is removed, so a header
+ * label set back to horizontal round-trips byte-identical to one that never carried it.
+ */
+export function applyLabelOrientation(label: LabelSpec, value: string): LabelSpec {
+    const { orientation: _orientation, ...rest } = label;
+    return value === 'vertical' ? { ...rest, orientation: value as LabelOrientation } : rest;
 }
 
 /**
@@ -94,6 +117,8 @@ export interface LabelEntryEditorProps {
     classNames: string[];
     /** Forwarded to the `visible` ConditionalEditor; omitted = conditional allowed. */
     allowConditional?: boolean;
+    /** Offer the header band position and its text direction (R-GV-5). Omitted = not offered, as before. */
+    allowHeader?: boolean;
     onChange: (label: LabelSpec) => void;
 }
 
@@ -111,6 +136,7 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
     featuresHint,
     classNames,
     allowConditional,
+    allowHeader,
     onChange,
 }) => {
     const editable = label.editable;
@@ -123,11 +149,22 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
             <div className="jj-field">
                 <label className="jj-field-label">Position</label>
                 <Select
-                    options={POSITION_OPTION_GROUPS}
+                    options={allowHeader ? [...POSITION_OPTION_GROUPS, HEADER_POSITION_OPTION_GROUP] : POSITION_OPTION_GROUPS}
                     value={labelPositionValue(label)}
                     onChange={(e) => onChange(applyLabelPositionValue(label, e.target.value))}
                 />
             </div>
+
+            {allowHeader && label.position === 'header' && (
+                <div className="jj-field">
+                    <label className="jj-field-label">Text direction</label>
+                    <Select
+                        options={ORIENTATION_OPTIONS}
+                        value={label.orientation ?? 'horizontal'}
+                        onChange={(e) => onChange(applyLabelOrientation(label, e.target.value))}
+                    />
+                </div>
+            )}
 
             <div className="jj-field">
                 <label className="jj-field-label">Source</label>

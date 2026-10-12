@@ -7,11 +7,13 @@ import { fileURLToPath } from 'node:url';
 
 // check-docs.ts and rotate-log.ts derive the repo root from their own location, so
 // they run here on a throwaway tree: the three gate files copied under
-// <tmp>/frontend/scripts/gates, and the documents they read written under <tmp>.
+// <tmp>/frontend/scripts/gates, lane-tracking.mjs (Check E's rule) under
+// <tmp>/frontend/scripts, and the documents they read written under <tmp>.
 // The scripts run are the committed ones, or one line of them mutated.
 
 const GATES = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const GATE_FILES = ['check-docs.ts', 'log-tools.ts', 'rotate-log.ts'];
+const LANE_TRACKING = resolve(GATES, '..', 'lane-tracking.mjs');
 
 const BLOCK = '## YYYY-MM-DD — type: short description\n**Prompt**: summary\n**Prompt document name**: YYYY-MM-DD HH:mm\n';
 const LOG_HEADER = '# Log\n\nNewest first.\n\n';
@@ -41,7 +43,16 @@ interface Tree {
     active: string;
     archive?: string;
     inboxes?: Record<string, string>;
+    /** docs/prompts/<name>: text. */
+    prompts?: Record<string, string>;
+    /** docs/harness/fronts.json; null: not written. */
+    fronts?: string | null;
 }
+
+const FRONTS_JSON = JSON.stringify({ v: 1, fronts: [{ slug: 'harness', title: 'Harness', exit: 'none', state: 'open', openedOn: '2026-10-10', milestone: 2 }] });
+
+/** A prompt file whose header carries `lines` after Prompt-ID. */
+const promptFile = (id: string, lines: string[]): string => `# Prompt: a lane\n\nPrompt-ID: ${id}\n${lines.join('\n')}\nStatus: da eseguire\n\n## COSA\n\nDo it.\n`;
 
 interface Mutation {
     file: string;
@@ -68,6 +79,9 @@ function run(tree: Tree, script: 'check-docs.ts' | 'rotate-log.ts', args: string
     const gates = join(dir, 'frontend', 'scripts', 'gates');
     mkdirSync(gates, { recursive: true });
     mkdirSync(join(dir, 'docs', 'log-inbox'), { recursive: true });
+    mkdirSync(join(dir, 'docs', 'prompts'), { recursive: true });
+    mkdirSync(join(dir, 'docs', 'harness'), { recursive: true });
+    writeFileSync(join(dir, 'frontend', 'scripts', 'lane-tracking.mjs'), readFileSync(LANE_TRACKING, 'utf8'));
 
     for (const f of GATE_FILES) {
         let text = readFileSync(join(GATES, f), 'utf8');
@@ -83,6 +97,8 @@ function run(tree: Tree, script: 'check-docs.ts' | 'rotate-log.ts', args: string
     writeFileSync(join(dir, 'docs', 'claude-code-log.md'), tree.active);
     writeFileSync(join(dir, 'docs', 'claude-code-log-archive.md'), tree.archive ?? '# Archive\n\n');
     for (const [lane, text] of Object.entries(tree.inboxes ?? {})) writeFileSync(join(dir, 'docs', 'log-inbox', `${lane}.md`), text);
+    for (const [name, text] of Object.entries(tree.prompts ?? {})) writeFileSync(join(dir, 'docs', 'prompts', name), text);
+    if (tree.fronts !== null) writeFileSync(join(dir, 'docs', 'harness', 'fronts.json'), tree.fronts ?? FRONTS_JSON);
 
     const r = spawnSync(
         process.execPath,
@@ -124,7 +140,7 @@ const scenarios = {
     /** Control 2: a valid ticket needs no Corregge and no Causa. */
     validTicketPasses: (m?: Mutation) => {
         const r = run({ active: LOG_HEADER + TICKET() + task('2026-09-24'), inboxes: { probe: INBOX_HEADER + TICKET('2026-09-26') } }, 'check-docs.ts', [], m);
-        return r.status === 0 && r.out.includes('4/4 check(s) passed');
+        return r.status === 0 && r.out.includes('5/5 check(s) passed');
     },
     /** An invalid ticket is judged by the ticket rules and named. */
     invalidTicketFails: (m?: Mutation) => {
@@ -146,6 +162,34 @@ const scenarios = {
             m,
         );
         return r.status === 0 && !r.out.includes('matches no');
+    },
+    /** Check E: a prompt at the cut-off with no `Front:` line fails, one line naming the file; older and merge prompts pass. */
+    promptWithoutFrontFails: (m?: Mutation) => {
+        const r = run(
+            {
+                active: GREEN_LOG,
+                prompts: {
+                    'claude_2026-10-11_0000_prompt_a.md': promptFile('P-2026-10-11-0000', ['Lane: fast']),
+                    'claude_2026-10-10_2359_prompt_old.md': promptFile('P-2026-10-10-2359', ['Lane: fast']),
+                    'claude_2026-10-11_0100_prompt_merge_b.md': promptFile('P-2026-10-11-0100', ['Lane: full (merge; zero conflicts measured)']),
+                },
+            },
+            'check-docs.ts',
+            [],
+            m,
+        );
+        const errors = r.out.split('\n').filter((l) => l.includes('ERROR  docs/prompts/'));
+        return (
+            r.status === 1 &&
+            r.out.includes('FAIL  Check E') &&
+            errors.length === 1 &&
+            errors[0].includes('docs/prompts/claude_2026-10-11_0000_prompt_a.md (P-2026-10-11-0000): no `Front:` line')
+        );
+    },
+    /** Check E fails closed: no registry is a failure, not a pass. */
+    noRegistryFails: (m?: Mutation) => {
+        const r = run({ active: GREEN_LOG, fronts: null }, 'check-docs.ts', [], m);
+        return r.status === 1 && r.out.includes('FAIL  Check E') && r.out.includes('cannot read docs/harness/fronts.json');
     },
     /** The fold refuses, exit 1, when an inbox entry would fail the gate. */
     foldRefuses: (m?: Mutation) => {
@@ -178,7 +222,7 @@ describe('check-docs on a throwaway tree', { timeout: 60_000 }, () => {
     test('a valid tree with no inbox is 4/4, exit 0', () => {
         const r = run({ active: GREEN_LOG }, 'check-docs.ts');
         expect(r.status).toBe(0);
-        expect(r.out).toContain('4/4 check(s) passed');
+        expect(r.out).toContain('5/5 check(s) passed');
     });
 
     test('control 1: an invalid inbox entry turns Check B red, naming the inbox file and the entry line', () => {
@@ -219,6 +263,39 @@ describe('check-docs on a throwaway tree', { timeout: 60_000 }, () => {
     test('a `**Ticket** (` paragraph inside a task entry stays inert', () => {
         const text = task('2026-09-25').replace(/\n$/, '') + '**Ticket** (opened, not implemented here). A paragraph.\n\n';
         expect(run({ active: LOG_HEADER + text }, 'check-docs.ts').status).toBe(0);
+    });
+
+    test('Check E: a prompt at the cut-off naming an open front passes; a header Prompt-ID wins over the file name', () => {
+        const r = run(
+            {
+                active: GREEN_LOG,
+                prompts: {
+                    'claude_2026-10-11_0000_prompt_a.md': promptFile('P-2026-10-11-0000', ['Lane: fast', 'Front: harness']),
+                    'claude_2026-10-11_0100_fase2_old.md': promptFile('P-2026-10-10-1400', ['Lane: fast']),
+                },
+            },
+            'check-docs.ts',
+        );
+        expect(r.status).toBe(0);
+        expect(r.out).toContain('PASS  Check E');
+        expect(r.out).toContain('1 of 2 prompt file(s) under docs/prompts at or after P-2026-10-11-0000');
+    });
+
+    test('Check E: a prompt with no Front line fails, one line per offending prompt; older and merge prompts are not checked', () => {
+        expect(scenarios.promptWithoutFrontFails()).toBe(true);
+    });
+
+    test('Check E: a prompt with no header Prompt-ID is dated by its file name; an unknown front fails', () => {
+        const r = run(
+            { active: GREEN_LOG, prompts: { 'claude_2026-10-11_0900_prompt_c.md': '# Prompt\n\nLane: fast\nFront: nope\n\n## COSA\n' } },
+            'check-docs.ts',
+        );
+        expect(r.status).toBe(1);
+        expect(r.out).toContain('ERROR  docs/prompts/claude_2026-10-11_0900_prompt_c.md (P-2026-10-11-0900): unknown front "nope"');
+    });
+
+    test('Check E fails closed when docs/harness/fronts.json is missing', () => {
+        expect(scenarios.noRegistryFails()).toBe(true);
     });
 
     test('a Corregge that names an entry waiting in a sibling inbox resolves; an unknown one is a warning, not an error', () => {
@@ -312,6 +389,21 @@ const MUTANTS: Array<{ name: string; mutation: Mutation; scenario: keyof typeof 
         name: 'the ticket Priority is not checked — killed by the invalid-ticket case',
         mutation: { file: 'log-tools.ts', from: '    else if (!TICKET_PRIORITIES.includes(priority)) {', to: '    else if (false) {' },
         scenario: 'invalidTicketFails',
+    },
+    {
+        name: 'check-docs runs no Check E — killed by the missing-Front case',
+        mutation: { file: 'check-docs.ts', from: '    outcomes.push(checkFronts());', to: '' },
+        scenario: 'promptWithoutFrontFails',
+    },
+    {
+        name: 'Check E reports no offending prompt — killed by the missing-Front case',
+        mutation: { file: 'check-docs.ts', from: '        if (why) offending.push(', to: '        if (false) offending.push(' },
+        scenario: 'promptWithoutFrontFails',
+    },
+    {
+        name: 'Check E passes on an unreadable registry — killed by the fail-closed case',
+        mutation: { file: 'check-docs.ts', from: '        out.ok = false;\n        out.lines.push(`    ERROR  ${err', to: '        out.lines.push(`    ERROR  ${err' },
+        scenario: 'noRegistryFails',
     },
     {
         name: 'the fold does not refuse — killed by control 3',

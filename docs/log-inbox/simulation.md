@@ -705,3 +705,113 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — chat, unattended: console-only fix: no rendering change; probe of the lane 40 pages E1 0/20, E2 0, opens identical 20/20; M1 ecore JSON incompleteness pre-existing, ticketed
 **Notes**: Rollback tag `pre-console-errors-fix` on `0eb09ad8f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-05-2253/result.json`.
 **Prompt document name**: 2026-10-05 22:53
+
+## 2026-10-10 — discovery: event attributes read by guards and actions (P-2026-10-10-1630)
+**Prompt**: `claude_2026-10-10_1630_prompt_sim_event_attributes_discovery.md`, full lane, read-only on `~/jjodel-w-eventattrs`, branch `sim-event-attrs`: what `event.f` does today in guards, actions, entry and exit; name resolution; what Reset knows; core types; unset attributes; usage census; nuXmv row; grammar fragment; guard-error impact map; slice plan and the R-SIM-144 draft.
+**Files touched**: probes `413f0096d`: `frontend/scripts/probe/sim-event-attrs.ts`, `frontend/scripts/probe/sim-event-attrs-browser.ts`. This commit: `docs/discovery/discovery_2026-10-10_sim_event_attributes.md`, `docs/discovery/assets/sim-event-attrs/` (node-probe-run.txt, browser-probe-run.txt, browser-probe-out.json), this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (no file under `frontend/src`; check:scripts PASS)
+**Out-of-scope changes**: no — 7 files, all in the prompt's DOVE: two probes, the report, three assets, this inbox
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Node probe ALL GREEN: event.amount already reads in guards, arc actions, entry and exit on triggered arcs, fused and Petri transitions (Custom profile only); unset reads make a guard false, an action halt. Browser probe on 3097 ALL GREEN: buildEvalContext differs from the stand-in on enum, default, mandatory unset (0), text int. No demo guard fails dynamically with its declarations. Status line not flipped (prompt). Report §0, §12.
+**Prompt document name**: 2026-10-10 16:30
+
+**Ticket** (low): a trigger on a fork's out edge, or on a join's in edge, is dropped by `compileControlFlow` without a defect; the event press reads «no transition accepted it». Report §3.4 and open question 2.
+
+## 2026-10-10 — merge: sim-event-attrs into alfonso-frontend-jjtl (P-2026-10-10-1718)
+**Prompt**: `claude_2026-10-10_1718_prompt_merge_sim-event-attrs.md`, a direct merge by `lane-run merge --direct`, no session: `sim-event-attrs` at `01f833e32` into `alfonso-frontend-jjtl`, merge base `f13f6f489`, 3 commits on the branch side.
+**Files touched**: merge `bf252c036`: 8 files from the branch side (`docs/discovery/assets/sim-event-attrs/browser-probe-out.json`, `docs/discovery/assets/sim-event-attrs/browser-probe-run.txt`, `docs/discovery/assets/sim-event-attrs/node-probe-run.txt`, `docs/discovery/discovery_2026-10-10_sim_event_attributes.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-10_1630_prompt_sim_event_attributes_discovery.md`, `frontend/scripts/probe/sim-event-attrs-browser.ts`, `frontend/scripts/probe/sim-event-attrs.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bf252c036` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7795 tests in 318 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs and probe only, all gates green; no app change to check
+**Notes**: Rollback tag `pre-sim-event-attrs` on `7dec869e8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1718/result.json`.
+**Prompt document name**: 2026-10-10 17:18
+
+## 2026-10-10 — feat: board editor arrows move, Shift and an arrow select, old CSS removed (P-2026-10-10-1645)
+**Prompt**: `claude_2026-10-10_1645_prompt_sim_board_editor_keys_css.md`, fast lane, Phase 2 visual on `~/jjodel-w-boardkeys`, branch `sim-board-keys`, R-SIM-146 (1)-(3): the `TODO: cleanup` rules of `SimBoardEditor.scss` deleted after a per-class search, arrows move the selected device and Shift with an arrow selects the neighbour, runtime colours of the preview unchanged.
+**Files touched**: test `6e1dd0ddd`: `frontend/src/components/editor-v2/sim/__tests__/simBoardEditorLayout.test.ts`; refactor `22596e50b`: `sim/SimBoardEditor.scss` (263 lines out); feat `8a7d60355`: `sim/simBoardEditorLayout.ts`, `sim/SimBoardEditor.tsx` (the preview's aria-description only), the test file (two titles); probe `0f724e1c5`: `frontend/scripts/probe/sim-board-editor-keys.ts` (new); this commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 14, the §17 set by file and code; vitest 7731 tests in 317 files, 9 red at import (the known set), sim/ 779/779; build exit 0, chunk-size warning only; check:docs, check:addonly, check:scripts, typecheck:scripts clean; layout tests 30, 4 red at the base, bench 9/9; computed styles base against after 0 differences over 3559 element states, 1456 properties each.
+**Out-of-scope changes**: no. Six files in all, the six the prompt's DOVE names: the five of the code and this inbox.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3084, 1600×1000: Microwave Oven board at 8 columns and a DemoESM board at 4, 16 states, arrows move, Shift and an arrow select, a refused move and a field change nothing; crops in `~/.jjodel-lanes/P-2026-10-10-1645/crops/`; RC-23 by the owner chat: the four base and after crops byte-identical (md5), `editor_moved` shows Add one cell down with its selection ring)
+**Notes**: Reverses the key map the 0100 prompt asked for, as delivered (R-SIM-146 (2)). Bench 9/9 killed. Left: the header «-- the binding inspector» above live rules, the unused SCSS variable $sim-board-cell-height, icon-current (kept, in no snapshot). R-SIM-146 (3): no change, runtime colours stay. First after-run of the probe failed on custom-property order, a probe bug fixed by comparing by name. Probe on 3084, log in ~/.jjodel-lanes/P-2026-10-10-1645.
+**Prompt document name**: 2026-10-10 16:45
+
+**Class search** (P-2026-10-10-1645): 47 class names of the block, searched in every `.tsx`, `.ts` and `.scss` under `frontend/src/` (outside the block's own lines), BSD grep with a word end after the name. No hit, deleted (26): palette, palette-item, group, center, grid, look, tile, tile--input, tile--output, tile--selected, tile--flagged, tile-head, tile-name, tile-flag, tile-caption, table, table-wrap, table-empty, row--flagged, inspector, inspector-head, inspector-title, cell-text, status, status--ok, status--flagged. With hits, kept (21), all in `SimBoardEditor.tsx` unless said: cell 1, check 2, empty 2 (and a rule of `SimBoardEditor.scss` outside the block), field 9, field-label 8, hint 9 (8 and a rule outside the block), icon 1, icon-choice 2, icon-choices 1, icon-current 1, icons 1, key 1, key-digit 1, keys 1, mono 4 (3 and a rule outside the block), pair 1, style 1, swatch 2, swatch--auto 1, swatches 2 (1 and a rule outside the block), expr 1: each is a class the Options form or the menus still render. Compiled CSS 173 rules to 136, none added; every rule out is one of the deleted selectors.
+
+## 2026-10-10 — merge: sim-board-keys into alfonso-frontend-jjtl (P-2026-10-10-1726)
+**Prompt**: `claude_2026-10-10_1726_prompt_merge_sim-board-keys.md`, a direct merge by `lane-run merge --direct`, no session: `sim-board-keys` at `88f6093a4` into `alfonso-frontend-jjtl`, merge base `3bf8d201a`, 6 commits on the branch side.
+**Files touched**: merge `bd97bae49`: 7 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-10_1645_prompt_sim_board_editor_keys_css.md`, `frontend/scripts/probe/sim-board-editor-keys.ts`, `frontend/src/components/editor-v2/sim/SimBoardEditor.scss`, `frontend/src/components/editor-v2/sim/SimBoardEditor.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBoardEditorLayout.test.ts`, `frontend/src/components/editor-v2/sim/simBoardEditorLayout.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bd97bae49` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7798 tests in 318 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 already passed on the lane crops (P-2026-10-10-1645); all merge gates green
+**Notes**: Rollback tag `pre-sim-board-keys` on `ae50f7459` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1726/result.json`.
+**Prompt document name**: 2026-10-10 17:26
+
+## 2026-10-10 — feat: fixed-width Coverage switch, Clear sees the live marking (P-2026-10-10-1646)
+**Prompt**: `claude_2026-10-10_1646_prompt_sim_coverage_polish.md`, fast lane, Phase 2 only, `~/jjodel-w-covpolish` on `sim-coverage-polish`: R-SIM-146 points 4 and 5. The Coverage switch of the canvas layer becomes an icon of fixed width with its summary in the title, Clear keeps a reserved slot; `simClearCoverage(modelId, run?)` counts the places the live configuration marks once, as visits, after emptying. Tests first, mutation bench, probe on 3088, hard stop for the visual check (RC-23), then this closure.
+**Files touched**: `69ff1c4ef`: `frontend/src/components/editor-v2/sim/__tests__/simCoverage.test.ts`. `14382ed70`: `frontend/src/components/editor-v2/sim/simCoverage.ts`, `frontend/src/components/editor-v2/sim/SimCanvasLayer.tsx`, `frontend/src/components/editor-v2/sim/simNodeRunState.scss`, `frontend/src/components/editor-v2/sim/__tests__/simCoverage.test.ts`. `f515ae45d`: `frontend/scripts/probe/sim-coverage-polish.ts` (new). This commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-06 01:15 (`claude_2026-10-06_0115_prompt_sim_coverage.md`, its measured switch width of 77 px and the veil on a marked place after a Clear)
+**Causa**: (a)
+**Regressions**: no. Typecheck 14 errors, the §17 set, none in `sim/`; typecheck:scripts exit 0; vitest 7736 tests in 308 files, the 9 known reds at import; build exit 0; check:docs 4/4; check:scripts pass; check:addonly clean. The four scenes with coverage off: 0 differing paths against the base but the switch and Clear's hidden slot.
+**Out-of-scope changes**: no (six files over the lane, above five: the five of the prompt's DOVE and this entry, which the DOVE names; rule 19 taken as confirmed by the list). New classes `sim-canvas-layer__toggle--icon` and `sim-canvas-layer__coverage-clear--hidden`, free by global search; `.sim-canvas-layer__coverage` kept with `// TODO: cleanup`.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (lane probe on 3088, 1600×1000, light, base then after: controls 10/10, Clear 12/12 after and 7/7 base, scenes diff 10/10; crops in `~/.jjodel-lanes/P-2026-10-10-1646/crops/`; RC-23 passed by the chat on the crops, GO of 2026-10-10)
+**Notes**: Mutation bench 42/43 killed; the survivor, the layer handing the run to Clear, is not executable in static markup and is covered by the probe (Clear 12/12). Controls: base 333.9 px off, 527 on; after 312.6 both. Probe artefact: after a file swap Vite served the app's simCoverage.ts under an HMR query, a plain-URL import read an empty second instance; Vite restarted. Unreachable edge: Clear with a run not yet observed recounts its initial marking. Output: ~/.jjodel-lanes/P-2026-10-10-1646/.
+**Prompt document name**: 2026-10-10 16:46
+
+## 2026-10-10 — merge: sim-coverage-polish into alfonso-frontend-jjtl (P-2026-10-10-1737)
+**Prompt**: `claude_2026-10-10_1737_prompt_merge_sim-coverage-polish.md`, a direct merge by `lane-run merge --direct`, no session: `sim-coverage-polish` at `7e630c632` into `alfonso-frontend-jjtl`, merge base `3bf8d201a`, 5 commits on the branch side.
+**Files touched**: merge `a0289af13`: 7 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-10_1646_prompt_sim_coverage_polish.md`, `frontend/scripts/probe/sim-coverage-polish.ts`, `frontend/src/components/editor-v2/sim/SimCanvasLayer.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simCoverage.test.ts`, `frontend/src/components/editor-v2/sim/simCoverage.ts`, `frontend/src/components/editor-v2/sim/simNodeRunState.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a0289af13` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7806 tests in 318 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 already passed on the lane crops (P-2026-10-10-1646); all merge gates green
+**Notes**: Rollback tag `pre-sim-coverage-polish` on `a2e854587` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1737/result.json`.
+**Prompt document name**: 2026-10-10 17:37
+
+## 2026-10-10 — feat: event reads checked at Reset, the unset warning, R-SIM-144 (P-2026-10-10-1630)
+**Prompt**: Phase 2 GO of `claude_2026-10-10_1630_prompt_sim_event_attributes_discovery.md` (unattended, «vai in auto»), full lane on `~/jjodel-w-eventattrs`, branch `sim-event-attrs`: the Reset checks P3 and P4 of R-SIM-144, the unset event attributes on the run warning line, tests red first, parity on the four demo scenes.
+**Files touched**: test `b7405daa2`: `frontend/src/model/simulation/__tests__/stcChecks.test.ts`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`. feat `8141fa8a3`: `frontend/src/model/simulation/stcChecks.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx` (and one optional chain in stcChecks.test.ts). probe `ce1a3465f`: `frontend/scripts/probe/sim-event-attrs.ts`, `frontend/scripts/probe/sim-event-attrs-visual.ts`. This entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (simulation suites 47 files, 1473 tests, 1461 + 12 new; the demo scenes' Reset defects, warnings and Last step lines byte-identical; typecheck 14; build exit 0)
+**Out-of-scope changes**: no — 7 files, all in the prompt's DOVE
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 5/5 (defect line, problems registry, warning line, Step's top 873 in the three cases, four demo scenes clean); lane probe on 3098, 13/13
+**Notes**: Mutation bench 14/14 killed on the two checks and the warning. Step's top 873 with the defect line, the warning line and neither. Visual probe retry 1: a [] write through the L proxy leaves the slot as it was, so the trigger was cleared with [null]. problems_600.png is 538 px wide, clipped at the viewport edge. init_dash console error on every page, seen in Phase 1 too.
+**Prompt document name**: 2026-10-10 16:30
+
+**Ticket** (low, R-SIM-144 settled it as a ticket): a trigger on a fork's out edge, or on a join's in edge, is dropped by `compileControlFlow` without a defect; the event press reads «no transition accepted it». Discovery report §3.4.
+
+## 2026-10-10 — merge: sim-event-attrs into alfonso-frontend-jjtl (P-2026-10-10-1753)
+**Prompt**: `claude_2026-10-10_1753_prompt_merge_sim-event-attrs.md`, a direct merge by `lane-run merge --direct`, no session: `sim-event-attrs` at `039ed6f62` into `alfonso-frontend-jjtl`, merge base `ae50f7459`, 5 commits on the branch side.
+**Files touched**: merge `45ad56bd6`: 9 files from the branch side (`docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-10_1630_fase2_sim_event_attributes.md`, `frontend/scripts/probe/sim-event-attrs-visual.ts`, `frontend/scripts/probe/sim-event-attrs.ts`, `frontend/src/components/editor-v2/sim/SimulationPanel.tsx`, `frontend/src/components/editor-v2/sim/__tests__/simBridge.test.ts`, `frontend/src/components/editor-v2/sim/simBridge.ts`, `frontend/src/model/simulation/__tests__/stcChecks.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `45ad56bd6` in the worker: typecheck 14 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 7897 tests in 324 files, 9 red at import, hooks 487; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 passed on the lane crops (P-2026-10-10-1630 Phase 2); all merge gates green
+**Notes**: Rollback tag `pre-sim-event-attrs-P-2026-10-10-1753` on `c43001de4` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-10-1753/result.json`.
+**Prompt document name**: 2026-10-10 17:53

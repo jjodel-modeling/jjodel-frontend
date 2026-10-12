@@ -1,0 +1,311 @@
+{
+  "url": "http://localhost:3071",
+  "tag": "after",
+  "at": "2026-10-10T13:15:47.224Z",
+  "s3": {
+    "tag": "after",
+    "ids": {
+      "collab": {
+        "obj": "Pointer1791638241881_USER_104",
+        "vertex": "Pointer1791638241884_USER_109"
+      },
+      "shopProc": {
+        "obj": "Pointer1791638242139_USER_110",
+        "vertex": "Pointer1791638242140_USER_115"
+      },
+      "custProc": {
+        "obj": "Pointer1791638242395_USER_116",
+        "vertex": "Pointer1791638242395_USER_121"
+      },
+      "laneSet": {
+        "obj": "Pointer1791638242683_USER_122",
+        "vertex": "Pointer1791638242684_USER_126"
+      },
+      "shop": {
+        "obj": "Pointer1791638242983_USER_127",
+        "vertex": "Pointer1791638242984_USER_131"
+      },
+      "customer": {
+        "obj": "Pointer1791638243267_USER_132",
+        "vertex": "Pointer1791638243268_USER_136"
+      },
+      "supplier": {
+        "obj": "Pointer1791638243567_USER_137",
+        "vertex": "Pointer1791638243568_USER_141"
+      },
+      "sales": {
+        "obj": "Pointer1791638243890_USER_142",
+        "vertex": "Pointer1791638243891_USER_147"
+      },
+      "warehouse": {
+        "obj": "Pointer1791638244173_USER_148",
+        "vertex": "Pointer1791638244174_USER_153"
+      },
+      "start": {
+        "obj": "Pointer1791638244475_USER_154",
+        "vertex": "Pointer1791638244476_USER_157"
+      },
+      "check": {
+        "obj": "Pointer1791638244800_USER_158",
+        "vertex": "Pointer1791638244800_USER_161"
+      },
+      "gw": {
+        "obj": "Pointer1791638245081_USER_162",
+        "vertex": "Pointer1791638245081_USER_166"
+      },
+      "ship": {
+        "obj": "Pointer1791638245404_USER_167",
+        "vertex": "Pointer1791638245405_USER_170"
+      },
+      "end": {
+        "obj": "Pointer1791638245689_USER_171",
+        "vertex": "Pointer1791638245689_USER_174"
+      },
+      "place": {
+        "obj": "Pointer1791638246015_USER_175",
+        "vertex": "Pointer1791638246016_USER_178"
+      },
+      "receive": {
+        "obj": "Pointer1791638246299_USER_179",
+        "vertex": "Pointer1791638246300_USER_182"
+      },
+      "sf1": {
+        "obj": "Pointer1791638246607_USER_183",
+        "vertex": "Pointer1791638246608_USER_188"
+      },
+      "sf2": {
+        "obj": "Pointer1791638246937_USER_189",
+        "vertex": "Pointer1791638246937_USER_194"
+      },
+      "sf3": {
+        "obj": "Pointer1791638247229_USER_195",
+        "vertex": "Pointer1791638247229_USER_200"
+      },
+      "sf4": {
+        "obj": "Pointer1791638247526_USER_201",
+        "vertex": "Pointer1791638247526_USER_206"
+      },
+      "mf1": {
+        "obj": "Pointer1791638247834_USER_207",
+        "vertex": "Pointer1791638247835_USER_212"
+      }
+    },
+    "zoom": 1,
+    "move": {
+      "before1": {
+        "sales": [
+          "Pointer1791638244475_USER_154",
+          "Pointer1791638244800_USER_158",
+          "Pointer1791638245081_USER_162"
+        ],
+        "warehouse": [
+          "Pointer1791638245404_USER_167",
+          "Pointer1791638245689_USER_171"
+        ]
+      },
+      "after1": {
+        "sales": [
+          "Pointer1791638244475_USER_154",
+          "Pointer1791638244800_USER_158",
+          "Pointer1791638245081_USER_162",
+          "Pointer1791638245404_USER_167"
+        ],
+        "warehouse": [
+          "Pointer1791638245689_USER_171"
+        ]
+      },
+      "undone": {
+        "sales": [
+          "Pointer1791638244475_USER_154",
+          "Pointer1791638244800_USER_158",
+          "Pointer1791638245081_USER_162"
+        ],
+        "warehouse": [
+          "Pointer1791638245404_USER_167",
+          "Pointer1791638245689_USER_171"
+        ]
+      },
+      "laneEdges1": 0,
+      "shipRec0": {
+        "x": 500,
+        "y": 340,
+        "w": 140,
+        "h": 60
+      },
+      "shipRecU": {
+        "x": 500,
+        "y": 340,
+        "w": 140,
+        "h": 60
+      }
+    },
+    "backAndForth": {
+      "final2": {
+        "sales": [
+          "Pointer1791638244475_USER_154",
+          "Pointer1791638244800_USER_158",
+          "Pointer1791638245081_USER_162"
+        ],
+        "warehouse": [
+          "Pointer1791638245689_USER_171",
+          "Pointer1791638245404_USER_167"
+        ]
+      },
+      "pairEdges": 1
+    },
+    "paletteDrop": {
+      "newTasks": [
+        "Pointer1791638305032_USER_357"
+      ]
+    },
+    "connect": {
+      "handles": [
+        true,
+        true
+      ],
+      "picked": true,
+      "newFlows": [
+        "Pointer1791638309682_USER_363"
+      ]
+    },
+    "errors": []
+  },
+  "s3hull": {
+    "ids": {
+      "r1": {
+        "obj": "Pointer1791638370065_USER_29",
+        "vertex": "Pointer1791638370067_USER_33"
+      },
+      "r2": {
+        "obj": "Pointer1791638370321_USER_34",
+        "vertex": "Pointer1791638370322_USER_38"
+      },
+      "a": {
+        "obj": "Pointer1791638370614_USER_39",
+        "vertex": "Pointer1791638370615_USER_42"
+      },
+      "b": {
+        "obj": "Pointer1791638370908_USER_43",
+        "vertex": "Pointer1791638370910_USER_46"
+      },
+      "d": {
+        "obj": "Pointer1791638371213_USER_47",
+        "vertex": "Pointer1791638371214_USER_50"
+      }
+    },
+    "rec0": {
+      "r1": {
+        "x": 100,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "r2": {
+        "x": 700,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "a": {
+        "x": 120,
+        "y": 260,
+        "w": 200,
+        "h": 80
+      },
+      "b": {
+        "x": 380,
+        "y": 260,
+        "w": 200,
+        "h": 80
+      },
+      "d": {
+        "x": 720,
+        "y": 300,
+        "w": 200,
+        "h": 80
+      }
+    },
+    "rec1": {
+      "r1": {
+        "x": 100,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "r2": {
+        "x": 700,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "a": {
+        "x": 672,
+        "y": 368,
+        "w": 200,
+        "h": 80
+      },
+      "b": {
+        "x": 380,
+        "y": 260,
+        "w": 200,
+        "h": 80
+      },
+      "d": {
+        "x": 720,
+        "y": 300,
+        "w": 200,
+        "h": 80
+      }
+    },
+    "rec2": {
+      "r1": {
+        "x": 100,
+        "y": 100,
+        "w": 200,
+        "h": 80
+      },
+      "r2": {
+        "x": 784,
+        "y": 144,
+        "w": 200,
+        "h": 80
+      },
+      "a": {
+        "x": 672,
+        "y": 368,
+        "w": 200,
+        "h": 80
+      },
+      "b": {
+        "x": 380,
+        "y": 260,
+        "w": 200,
+        "h": 80
+      },
+      "d": {
+        "x": 720,
+        "y": 300,
+        "w": 200,
+        "h": 80
+      }
+    },
+    "r1Before": [
+      "Pointer1791638370614_USER_39",
+      "Pointer1791638370908_USER_43"
+    ],
+    "r1After": [
+      "Pointer1791638370614_USER_39",
+      "Pointer1791638370908_USER_43"
+    ],
+    "r2Before": [
+      "Pointer1791638371213_USER_47"
+    ],
+    "r2After": [
+      "Pointer1791638371213_USER_47"
+    ]
+  },
+  "checks": {
+    "pass": 13,
+    "fail": 0
+  }
+}

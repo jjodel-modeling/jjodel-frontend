@@ -196,30 +196,3 @@
     transform: translateX(-50%);
   }
 }
-
-// Dark. `--color-panel-border` and `--color-canvas-accent` already follow the theme;
-// the slate grades are raw palette and do not, so the pill is restated here. Cyan-600
-// goes muddy on a dark panel - same reason as `--color-inode-ref-fg` in the tokens.
-html[data-theme="dark"] {
-  .resize-handle {
-    &::after { background: var(--color-slate-600); }
-
-    &:hover {
-      background: var(--color-bg-hover);
-
-      &::before { background: var(--color-slate-600); }
-      &::after { background: var(--color-slate-400); }
-    }
-
-    // No `outline-color` here any more: `--color-border-focus` lifts to slate-400 on
-    // its own in this theme. Only the pill needs restating.
-    &:focus-visible::after { background: var(--color-slate-400); }
-
-    &.dragging {
-      background: var(--color-bg-hover);
-
-      &::before { background: var(--color-canvas-accent); }
-      &::after { background: var(--color-cyan-400); }
-    }
-  }
-}

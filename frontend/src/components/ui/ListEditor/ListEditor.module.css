@@ -123,22 +123,3 @@
   background-color: #e0f2fe;
   color: #0284c7;
 }
-
-/* Dark counterparts for the hardcoded light surfaces above. */
-html[data-theme="dark"] .entry {
-  background-color: #0f1012;
-  border-color: #334155;
-}
-
-html[data-theme="dark"] .entryHeader {
-  border-bottom-color: #334155;
-}
-
-html[data-theme="dark"] .iconBtn:hover:not(:disabled) {
-  background-color: #1e293b;
-}
-
-html[data-theme="dark"] .addBtn {
-  border-color: #334155;
-  color: #38bdf8;
-}

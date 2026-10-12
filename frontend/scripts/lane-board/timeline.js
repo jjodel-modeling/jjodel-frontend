@@ -23,10 +23,23 @@
   const dhm = (t) => new Date(t).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   const dur = (ms) => { const m = Math.round(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
   const short = (wt) => (wt || 'unknown').replace(/^~\//, '').replace(/^\/Users\/[^/]+\//, '');
-  const OUT = { done: 'var(--ok)', 'hard-stop': 'var(--warn)', question: 'var(--q)', blocked: 'var(--bad)', failed: 'var(--bad)' };
+  // What each outcome means, shown as a tooltip on every outcome legend (insights.js reads it too).
+  window.LANE_OUTCOME_TIPS = {
+    done: 'Done: the lane finished its prompt and committed; nothing is waiting on you.',
+    resolved: 'Resolved: the lane exited blocked and was put right afterwards (lane-run resolve wrote resolved.txt). Its last turn is drawn in the done colour; Insights first-shot still counts the run as blocked.',
+    'hard-stop': 'Hard-stop: a planned pause, not a failure. The lane stopped where the protocol says it must (end of discovery, before a visual check, after a merge) and waits for your GO.',
+    question: 'Question: the lane hit a decision outside its perimeter and asks before going on; it resumes once answered.',
+    blocked: 'Blocked / failed: something went wrong (a red gate, a missing precondition, a crash). This is the one that needs a look.',
+    running: 'Running: the lane process is still alive.',
+    '': 'No outcome: the log has no Outcome line (old lanes, or a lane cut off before its closing message).'
+  };
+  const OTIP = (o) => (window.LANE_OUTCOME_TIPS[o] || '').replace(/"/g, '&quot;');
+  const OUT = { done: 'var(--ok)', resolved: 'var(--ok)', 'hard-stop': 'var(--hs)', question: 'var(--q)', blocked: 'var(--bad)', failed: 'var(--bad)' };
   const LNAME = { chat: 'Chat (claude.ai)', 'claude-code': 'Claude Code, local session', harness: 'lane-run (merge prompts)', chain: 'Chain (after its first lane)', manual: 'By hand', unknown: 'Unknown' };
   const LCOL = { chat: 'var(--run)', 'claude-code': 'var(--warn)', harness: 'var(--neutral)', chain: 'var(--q)', manual: 'var(--ok)', unknown: 'var(--track)' };
-  const turnColor = (lane, t, last) => (last && lane.live ? 'var(--run)' : OUT[t.o] || 'var(--neutral)');
+  // resolved (P-2026-10-05-1720): a lane that exited blocked and was resolved afterwards paints its last turn in the ok colour.
+  // /api/timeline keeps the raw outcome for the exports and flags the lane beside it (lane.resolved).
+  const turnColor = (lane, t, last) => (last && lane.live ? 'var(--run)' : last && lane.resolved ? 'var(--ok)' : OUT[t.o] || 'var(--neutral)');
 
   const css = `
   :root{--q:#7c3aed;--neutral:#94a3b8;--track:#cbd5e1}
@@ -36,6 +49,7 @@
   .seg button{border:0;margin:0;border-right:1px solid var(--line)}.seg button:last-child{border-right:0}
   .seg button.on{background:var(--accent);color:#fff;font-weight:600}
   .tl-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);align-items:center}
+  .tl-legend span[title]{cursor:help;border-bottom:1px dotted var(--muted)}
   .tl-legend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
   .tl-wrap{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .tl-wrap svg{display:block;font:10px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
@@ -48,6 +62,7 @@
   .tl-live .tl-turn:last-of-type{animation:tlp 1.6s ease-in-out infinite}@keyframes tlp{50%{opacity:.45}}
   .tl-detail{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
   .tl-detail h3{margin:0 0 4px;font-size:14px}.tl-detail .meta{margin-bottom:8px}
+  .tl-detail blockquote{margin:4px 0 8px;padding:6px 8px;border-left:3px solid var(--accent);background:var(--bg);white-space:pre-wrap;max-height:260px;overflow:auto}
   .tl-detail table{min-width:0}.tl-detail td{padding:4px 8px}.tl-detail a{color:var(--accent);cursor:pointer;text-decoration:none}
   .tl-empty{padding:24px;color:var(--muted)}
   .tl-ov,.tl-link,.tl-bk{cursor:help}.tl-bk:hover{fill:var(--fg);fill-opacity:.06}.tl-link:hover path:first-child,.tl-link.pin path:first-child{stroke-width:3}.tl-ov:hover>rect:first-child{stroke-width:2}
@@ -66,7 +81,7 @@
       '<span class="meta">Zoom</span>' + seg('zoom', [['1', 'Fit'], ['2', '2×'], ['4', '4×'], ['8', '8×'], ['16', '16×']], zoom) +
       '<span class="meta">Colour by</span>' + seg('colorBy', [['outcome', 'Outcome'], ['deps', 'Dependencies'], ['heat', 'Heat']], colorBy) +
       '<span class="seg" data-name="fold"><button data-v="open">Expand all</button><button data-v="close">Collapse all</button></span>' +
-      '<span class="tl-legend"><span><i style="background:var(--ok)"></i>done</span><span><i style="background:var(--warn)"></i>hard-stop</span><span><i style="background:var(--q)"></i>question</span><span><i style="background:var(--bad)"></i>blocked</span><span><i style="background:var(--run)"></i>running</span>' +
+      '<span class="tl-legend"><span title="' + OTIP('done') + '"><i style="background:var(--ok)"></i>done</span><span title="' + OTIP('resolved') + '"><i style="background:var(--ok)"></i>resolved</span><span title="' + OTIP('hard-stop') + '"><i style="background:var(--hs)"></i>hard-stop</span><span title="' + OTIP('question') + '"><i style="background:var(--q)"></i>question</span><span title="' + OTIP('blocked') + '"><i style="background:var(--bad)"></i>blocked</span><span title="' + OTIP('running') + '"><i style="background:var(--run)"></i>running</span>' +
       '<span><svg width="10" height="10"><path d="M5 0L10 5L5 10L0 5Z" fill="var(--accent)"/></svg> decision</span>' +
       '<span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--track)" stroke-dasharray="3 2"/></svg> waiting</span>' +
       (group === 'worktree' ? '<span><i style="border:1.5px dashed var(--bad);background:repeating-linear-gradient(45deg,transparent 0 2px,color-mix(in srgb,var(--bad) 40%,transparent) 2px 4px)"></i>overlap in one tree (solid: both working)</span>' : '<span><i style="border:1.5px dashed var(--q);background:repeating-linear-gradient(45deg,transparent 0 2px,color-mix(in srgb,var(--q) 40%,transparent) 2px 4px)"></i>parallel lanes in one row (solid: both working)</span>') + '<span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--fg)" stroke-width="1.5"/></svg> chain</span><span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--accent)" stroke-width="2.25"/></svg> declared dependency</span><span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/></svg> citation</span>' + '</span></div>';
@@ -88,8 +103,12 @@
     if (!lanes.length) { box.innerHTML = html + '<div class="tl-wrap"><div class="tl-empty">No lanes in this range.</div></div>'; wire(box); return; }
 
     const keyOf = (l) => (group === 'chat' ? l.chat || 'no chat recorded' : group === 'launcher' ? LNAME[(l.launcher || {}).by] || 'unknown' : short(l.worktree));
+    const byStart = (p, q) => p.a - q.a || (p.id < q.id ? -1 : p.id > q.id ? 1 : 0);
     const groups = new Map();
-    lanes.sort((x, y) => x.a - y.a).forEach((l) => { const k = keyOf(l); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); });
+    lanes.sort(byStart).forEach((l) => { const k = keyOf(l); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); });
+    // Newest first: the groups by their most recent lane, descending. Inside a group the lanes stay
+    // oldest first for packing, overlaps and labels; only their row numbers are reversed (below).
+    const order = [...groups].sort(([, p], [, q]) => byStart(q[q.length - 1], p[p.length - 1]));
     const isOpen = (k, n) => (k in expanded ? expanded[k] : n <= 8);
 
     // Geometry: a fixed label column and a plot that zooms and scrolls horizontally.
@@ -117,14 +136,18 @@
     const lab = [], bg = [], ov = [], rows = [];
     const pos = new Map();
     let gi = 0;
-    for (const [k, ls] of groups) {
+    for (const [k, ls] of order) {
       const open = isOpen(k, ls.length);
-      // Row of each lane: one per lane when open, packed when collapsed.
+      // Row of each lane: one per lane when open, packed when collapsed; newest on top either way.
       let nRows;
-      if (open) { ls.forEach((l, i) => { l.row = i; }); nRows = ls.length; }
+      if (open) { ls.forEach((l, i) => { l.row = ls.length - 1 - i; }); nRows = ls.length; }
       else {
         const sub = [];
         ls.forEach((l) => { let r = sub.findIndex((end) => end + 60e3 < l.a); if (r === -1) { r = sub.length; sub.push(0); } sub[r] = l.b; l.row = r; });
+        // Same packing as before; the packed rows are then numbered by their newest lane, descending.
+        const rank = new Map();
+        for (let i = ls.length - 1; i >= 0; i--) if (!rank.has(ls[i].row)) rank.set(ls[i].row, rank.size);
+        ls.forEach((l) => { l.row = rank.get(l.row); });
         nRows = sub.length;
       }
       const ROW = open ? ROWE : ROWC;
@@ -168,7 +191,7 @@
         g += '<line x1="' + x(l.a) + '" y1="' + (ly + 5) + '" x2="' + x(l.b) + '" y2="' + (ly + 5) + '" stroke="var(--track)" stroke-dasharray="3 2"/>';
         l.turns.forEach((t, i) => {
           const last = i === l.turns.length - 1;
-          g += '<rect class="tl-turn" x="' + x(t.s) + '" y="' + ly + '" width="' + Math.max(x(t.e) - x(t.s), 2) + '" height="10" rx="2" fill="' + turnColor(l, t, last) + '"><title>' + esc(l.id + ' · turn ' + (i + 1) + '\n' + dhm(t.s) + ' to ' + hm(t.e) + ' (' + dur(t.e - t.s) + ')' + (t.o ? '\nOutcome: ' + t.o : '')) + '</title></rect>';
+          g += '<rect class="tl-turn" x="' + x(t.s) + '" y="' + ly + '" width="' + Math.max(x(t.e) - x(t.s), 2) + '" height="10" rx="2" fill="' + turnColor(l, t, last) + '"><title>' + esc(l.id + ' · turn ' + (i + 1) + '\n' + dhm(t.s) + ' to ' + hm(t.e) + ' (' + dur(t.e - t.s) + ')' + (t.o ? '\nOutcome: ' + t.o + (last && l.resolved ? ', resolved' : '') : '')) + '</title></rect>';
           if (i > 0 && t.s >= t0) g += '<path d="M' + x(t.s) + ' ' + (ly - 2) + 'l5 7l-5 7l-5 -7z" fill="var(--accent)" stroke="var(--card)" stroke-width="1"><title>' + esc('Decision at ' + dhm(t.s) + ' after ' + dur(t.s - l.turns[i - 1].e) + ' of waiting\n' + (t.d || '')) + '</title></path>';
         });
         // Short label after the bar, only where it does not run into the next lane of the same row.
@@ -220,10 +243,10 @@
     };
     lanes.forEach((l) => { l.dep = depKind(l); });
     const CATS = {
-      outcome: [['done', 'var(--ok)', 'done'], ['hard-stop', 'var(--warn)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']],
+      outcome: [['done', 'var(--ok)', 'done'], ['resolved', 'var(--ok)', 'resolved'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']],
       deps: [['concurrent', 'var(--bad)', 'depends on a lane open at the same time'], ['sequential', 'var(--accent)', 'depends on an earlier lane'], ['none', 'var(--neutral)', 'no recorded dependency']],
     };
-    const catOf = (l, t, last) => colorBy === 'deps' ? l.dep : (last && l.live ? 'running' : t.o === 'failed' ? 'blocked' : (t.o in OUT || t.o === 'done') ? t.o : '');
+    const catOf = (l, t, last) => colorBy === 'deps' ? l.dep : (last && l.live ? 'running' : last && l.resolved ? 'resolved' : t.o === 'failed' ? 'blocked' : (t.o in OUT || t.o === 'done') ? t.o : '');
     const buckets = [];
     for (let i = 0; i < nb; i++) buckets.push({ s: t0 + i * bw, e: t0 + (i + 1) * bw, work: {}, total: 0, open: 0, dec: 0, ids: new Set() });
     const addSpan = (s, e, f) => {
@@ -264,12 +287,12 @@
     const pw = { max: Math.round(peakWork * 10) / 10 }, po = { max: Math.round(peakOpen * 10) / 10 };
     const legendRows = colorBy === 'heat' ? [['', 'linear-gradient(90deg,' + heat(0) + ',' + heat(peakWork / 2) + ',' + heat(peakWork) + ')', 'working lanes, few → many']] : CATS[colorBy];
     let lg = '';
-    legendRows.forEach(([, c, label], i) => {
+    legendRows.forEach(([k, c, label], i) => {
       const ly = STRIP_TOP + 36 + i * 13;
       if (ly > base + 6) return;
       lg += colorBy === 'heat'
         ? '<rect x="10" y="' + (ly - 8) + '" width="40" height="8" rx="2" fill="url(#tl-heat)"/><text x="56" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label) + '</text>'
-        : '<rect x="10" y="' + (ly - 8) + '" width="10" height="8" rx="2" fill="' + c + '"/><text x="26" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label.length > 36 ? label.slice(0, 35) + '…' : label) + '</text>';
+        : '<g' + (colorBy === 'outcome' ? ' style="cursor:help"><title>' + esc(window.LANE_OUTCOME_TIPS[k] || '') + '</title>' : '>') + '<rect x="10" y="' + (ly - 8) + '" width="10" height="8" rx="2" fill="' + c + '"/><text x="26" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label.length > 36 ? label.slice(0, 35) + '…' : label) + '</text></g>';
     });
     lab.unshift('<rect x="0" y="0" width="' + LABEL + '" height="' + TOP + '" fill="var(--card)"/>' +
       '<defs><linearGradient id="tl-heat"><stop offset="0" stop-color="' + heat(0) + '"/><stop offset=".5" stop-color="' + heat(peakWork / 2) + '"/><stop offset="1" stop-color="' + heat(peakWork) + '"/></linearGradient></defs>' +
@@ -304,14 +327,19 @@
     let rows = '';
     l.turns.forEach((t, i) => {
       if (i > 0) rows += '<tr><td class="meta">decision</td><td>' + dhm(t.s) + '</td><td class="meta">after ' + dur(t.s - l.turns[i - 1].e) + ' waiting</td><td>' + esc(t.d) + '</td></tr>';
-      rows += '<tr><td><b>turn ' + (i + 1) + '</b></td><td>' + dhm(t.s) + ' to ' + hm(t.e) + '</td><td>' + dur(t.e - t.s) + '</td><td>' + esc(t.o || (i === l.turns.length - 1 && l.live ? 'running' : '')) + '</td></tr>';
+      rows += '<tr><td><b>turn ' + (i + 1) + '</b></td><td>' + dhm(t.s) + ' to ' + hm(t.e) + '</td><td>' + dur(t.e - t.s) + '</td><td>' + esc((t.o || (i === l.turns.length - 1 && l.live ? 'running' : '')) + (t.o && i === l.turns.length - 1 && l.resolved ? ', resolved' : '')) + '</td></tr>';
     });
     const link = (id) => '<a data-go="' + id + '">' + id + '</a>';
     const ins = links.filter((k) => k[1] === l.id).map((k) => link(k[0]) + ' (' + k[2] + ')');
     const outs = links.filter((k) => k[0] === l.id).map((k) => link(k[1]) + ' (' + k[2] + ')');
+    // The request the lane answers (PROTOCOL P13, RC-43): Alfonso's words from request.md, then the URL of the Request: line.
+    const rq = l.request || {};
+    const url = rq.url ? (/^https?:\/\//i.test(rq.url) ? '<a href="' + esc(rq.url) + '" target="_blank" rel="noopener">' + esc(rq.url) + '</a>' : esc(rq.url)) : '';
+    const request = rq.text || rq.url ? '<div class="meta">Request</div>' + (rq.text ? '<blockquote>' + esc(rq.text) + '</blockquote>' : '') + (url ? '<div class="meta">' + url + '</div>' : '') : '<div class="meta">Request: not recorded</div>';
     return '<div class="tl-detail"><h3>' + esc(l.id) + (l.title ? ' · ' + esc(l.title) : '') + '</h3>' +
       '<div class="meta">' + [l.kind, l.tier, l.chat, short(l.worktree), l.state + (l.outcome && l.outcome !== 'none' ? ' · ' + l.outcome : '')].filter(Boolean).map(esc).join(' · ') + '</div>' +
       '<div class="meta">Launched by <b style="color:' + (LCOL[(l.launcher || {}).by] || 'inherit') + '">' + esc(LNAME[(l.launcher || {}).by] || 'unknown') + '</b>' + ((l.launcher || {}).detail ? ' · ' + esc(l.launcher.detail) : '') + ((l.launcher || {}).file ? ' · <code>' + esc(l.launcher.file) + '</code>' : '') + '</div>' +
+      request +
       '<table><tbody>' + rows + '</tbody></table>' +
       '<div class="meta" style="margin-top:8px">Depends on: ' + (ins.join(', ') || 'none recorded') + '<br>Followed by: ' + (outs.join(', ') || 'none recorded') + '</div></div>';
   }

@@ -75,5 +75,19 @@
     "softgoal": "SG-1",
     "evidence": "inferred",
     "why": "R-VP-27 keeps colour by metaclass off and its controls hidden; with it on, R-VP-39 lets one override move other classes' colours: «overriding Activity changed five other node classes» in DemoFlowB."
+  },
+  {
+    "a": "R-SIM-53",
+    "b": "R-SIM-82",
+    "softgoal": "SG-9",
+    "evidence": "read",
+    "why": "R-SIM-53 adds an activity final distinct from the flow final; R-SIM-82's Decision E keeps the demo flowchart on FinalNode and an explicit complement, «R-SIM-53 e else verso Fork/Join dopo MODELS» (SG-3 over SG-9)."
+  },
+  {
+    "a": "R-SIM-91",
+    "b": "R-SIM-93",
+    "softgoal": "SG-9",
+    "evidence": "read",
+    "why": "R-SIM-91 makes the engine read Accepting; R-SIM-93 records the keys as read by the engine (R-SIM-91, R-SIM-92) yet «I quattro preset nascosti (DFA, NFA, Moore, Mealy) restano nascosti», shown «dopo MODELS (decisione H)» (SG-3 over SG-9)."
   }
 ]
