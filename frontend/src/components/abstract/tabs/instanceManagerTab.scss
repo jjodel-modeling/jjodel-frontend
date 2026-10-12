@@ -2128,6 +2128,142 @@
         color: var(--color-form-section);
     }
 
+    /* ── A reference is on screen once (#172, R-REF-1) ────────────────────────────
+       The section is the reference's one rendering, so it carries what the form's
+       field carried: the marks of the heading, a menu per row, a foot that links an
+       existing target. Flat BEM rules: the menu is a portal on `document.body` (the
+       pane cuts it otherwise, measured 2026-10-12), and a rule descending from
+       `.instance-manager` would not reach it, as the Columns panel already notes. */
+
+    /* The marks of the heading, with the form's own tokens and sizes
+       (`irFormStyle.scss`): required is the 4px dot, never a red asterisk; modified
+       is the 6px dot with its halo. Inline, after the label of the eyebrow. */
+    &__ref-required, &__ref-dirty {
+        display: inline-block;
+        margin-left: 6px;
+        vertical-align: middle;
+        border-radius: var(--radius-full);
+        background: var(--color-marker-required);
+    }
+    &__ref-required { width: 4px; height: 4px; }
+    &__ref-dirty { width: 6px; height: 6px; box-shadow: 0 0 0 2px var(--color-form-dirty-halo); }
+
+    /* `.bi` in the selector: a global rule paints `i.bi` on the element itself
+       (`styles/style.scss:790`) and beats a single class. The finding of `&__add`. */
+    &__ref-lock.bi, &__ref-lock.bi:hover {
+        margin-left: 6px;
+        font-size: 9px;
+        color: var(--color-form-muted);
+    }
+
+    /* «derived», in the chip's register: lower case, not shouting. */
+    &__ref-derived {
+        margin-left: 6px;
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    /* The host's refusal of the last write, or the feature's first diagnostic: the
+       field's message, under the heading it belongs to. */
+    &__ref-diag {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0;
+        font-size: var(--text-xs);
+
+        i.bi, i.bi:hover { font-size: 9px; color: inherit; }
+    }
+    &__ref-diag--error { color: var(--color-error-text); }
+    &__ref-diag--warning { color: var(--color-warning-text); }
+
+    /* A row: the card, which opens the target as it always did, and the button of
+       its menu. The card gives up the full width `&__inline-link` declares. */
+    &__ref-row {
+        display: flex;
+        align-items: stretch;
+        gap: 4px;
+
+        > .instance-manager__ref-link { flex: 1 1 auto; width: auto; min-width: 0; }
+    }
+
+    &__ref-menu-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 28px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        font-size: 12px;
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        i.bi, i.bi:hover { color: inherit; }
+
+        &:hover, &[aria-expanded='true'] { border-color: var(--color-accent); color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /* The menu: the popover card of `&__columns-panel` (radius, border and shadow by
+       token). Its place comes inline from `computeListStyle`; nothing positional here. */
+    &__ref-menu {
+        display: flex;
+        flex-direction: column;
+        min-width: 180px;
+        padding: 4px;
+        overflow-y: auto;
+        border: 1px solid var(--color-form-border);
+        border-radius: var(--radius-dropdown);
+        background: var(--color-bg-primary);
+        box-shadow: 0 4px 12px var(--color-node-shadow);
+    }
+
+    /* An item keeps every rule of `&__outline-menu-item`; this is its hook here, and
+       the glyph follows the item's colour. */
+    &__ref-menu-item {
+        white-space: nowrap;
+
+        i.bi, i.bi:hover { color: inherit; }
+    }
+
+    /* The foot: «Link existing» beside the create, both at the right, where the
+       create alone sat. Inside it the two existing classes give up their own push. */
+    &__ref-foot {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .instance-manager__add, .instance-manager__child-reason { margin-left: 0; }
+    }
+
+    /* Secondary: bordered like the card, so the create stays the one primary. */
+    &__ref-pick {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 24px;
+        padding: 0 10px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 8px;
+        background: var(--color-bg-primary);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--color-text-primary);
+        cursor: pointer;
+
+        i.bi, i.bi:hover { font-size: 11px; color: inherit; }
+
+        &:hover { border-color: var(--color-accent); color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+    }
+
     /* #157 — a target of a type the stand-alone profile hides: listed, because the
        form's own chips name it, but not a link. Same card, no pointer, muted. */
     &__ref-link--hidden {

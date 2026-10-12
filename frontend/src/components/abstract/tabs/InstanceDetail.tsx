@@ -34,13 +34,23 @@
  * `permissionOf`). Absent (the Data Manager), everything is `edit`.
  */
 
-import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
 import { computeIRSignature, getIRIndex, resolveIRView } from '../../editor-v2/viewpoint/ir/irResolveCore';
-import { makeDrawReadCtx } from '../../editor-v2/viewpoint/ir/irReadCtx';
-import { resolveFormSpec } from '../../editor-v2/viewpoint/ir/formHosts';
+import { findFeatureRaw, makeDrawReadCtx } from '../../editor-v2/viewpoint/ir/irReadCtx';
+import { orderFields, resolveFormSpec } from '../../editor-v2/viewpoint/ir/formHosts';
+import { appendValue, clearValue, setValue, type WriteResult } from '../../editor-v2/viewpoint/ir/formWrite';
+import { featureAccessIn, isLockedValue, offerForProfile, type ProfileReads } from '../../editor-v2/viewpoint/ir/formPermissions';
+import { collectFormDiagnostics, worstSeverity, type FieldDiagnostic } from '../../editor-v2/viewpoint/ir/formDiagnostics';
+import { groupTargets, type FormFieldOptionGroup } from '../../editor-v2/viewpoint/ir/useFormWidgets';
+import { assignableOptions } from '../../editor-v2/viewpoint/ir/slotValues';
+import ReferencePicker from '../../editor-v2/viewpoint/ir/widgets/ReferencePicker';
+import { computeListStyle } from '../../editor-v2/components/InlineObjectSelect';
+import { useNodeProblems } from '../../editor-v2/problems/useNodeProblems';
 import { makeShapeCtx } from '../../editor-v2/hooks/shapeAdapter';
+import { makeWriteCtx } from '../../editor-v2/hooks/writeCtxLproxy';
 import { childSlotCount } from '../../editor-v2/hooks/createAdapter';
 import { childrenIn, navStepOf, pathTo } from '../../editor-v2/hooks/multiDraw';
 import {
@@ -51,16 +61,20 @@ import {
     currentOf,
     depthOf,
     drillInto,
+    hasRowMenu,
+    multiplicity,
     navFor,
     newInstanceReason,
+    refSlotControls,
     rendersInline,
     survivorOf,
+    targetOptions,
     truncateTo,
 } from '../../../jjform';
-import { DATA_MANAGER_VIEWPOINT_ID } from '../../../joiner';
+import { DATA_MANAGER_VIEWPOINT_ID, store, U } from '../../../joiner';
 import { instanceCountsByClass } from './instanceManagerModel';
 import { referenceSummary, tableRow, type SummaryItem } from './instanceTable';
-import type { ClassShape, Crumb, NavState, RefShape } from '../../../jjform';
+import type { ClassShape, Crumb, NavState, RefRowAction, RefShape, RefSlotControls, RefSlotRow } from '../../../jjform';
 
 /** A type's permission for the viewer: the three values of `EnvPermission` (#157),
  *  restated so this component does not depend on the environment module. */
@@ -89,22 +103,233 @@ export interface InstanceDetailProps {
     permissionOf?: (classId: string) => DetailPermission;
 }
 
-/** One non-containment reference slot of an instance, as the form's reference
- *  section lists it (#142): what it points at, and why «New … & link» is not offered
- *  when it is not. */
+/** One non-containment reference slot of an instance, as the detail lists it (#142, and
+ *  since #172 the reference's one rendering, R-REF-1): its rows with their gestures, what
+ *  its foot may link, and why «New … & link» is not offered when it is not. */
 type RefSlot = {
     ref: RefShape;
-    targets: string[];
+    /** What the heading prints: the view's label for the feature, else its name. */
+    label: string;
+    /** The rows and the foot's link, by the rule of `jjform/refSlot` (R-REF-3, R-REF-4). */
+    controls: RefSlotControls;
     count: number;
     createReason: string | null;
+    /** R-REF-6: hidden by the view author. It keeps the section it had before #172:
+     *  rows that open, «New … & link», no other gesture and no diagnostic. */
+    authorHidden: boolean;
     /** #158 P4 — the key fields of each target, by target id (`referenceSummary`). */
     summaries: Record<string, SummaryItem[]>;
+};
+
+/** Shown when the host refuses a write without saying why, as `IRFormField` words it. */
+const UNSTATED_REFUSAL = 'The model refused this change';
+
+/** How long the box of a row's menu stays as a shield after an item acts (R-REF-6). */
+const MENU_SHIELD_MS = 300;
+
+/** The items of a row's menu (R-REF-3), in the words and with the glyphs they are drawn with. */
+const ROW_ACTION: Record<RefRowAction, { text: string; icon: string }> = {
+    open: { text: 'Open', icon: 'bi-box-arrow-in-right' },
+    change: { text: 'Change…', icon: 'bi-arrow-left-right' },
+    remove: { text: 'Remove from the list', icon: 'bi-x' },
+};
+
+/** The raw `values` of a reference slot, holes included (R-FORM-7), off a D lookup. */
+function rawRefValues(idlookup: Record<string, any> | null | undefined, objectId: string, key: string): unknown[] {
+    const values = idlookup ? findFeatureRaw(idlookup, objectId, key)?.values : null;
+    return Array.isArray(values) ? values : [];
+}
+
+/**
+ * The rule of `jjform/refSlot` asked of a D lookup: at render, and again by every handler
+ * at its click, on the store as it is then (R-REF-4). A value is locked as the form locked
+ * it (#157 step B): an element of a non-`edit` class held in a slot that re-fathers.
+ */
+function ruleRefSlot(
+    idlookup: Record<string, any> | null | undefined,
+    objectId: string,
+    ref: RefShape,
+    sourceEditable: boolean,
+    profileReads: ProfileReads | undefined,
+): RefSlotControls {
+    const access = profileReads ? featureAccessIn(idlookup, objectId, ref.key) : undefined;
+    return refSlotControls(ref, rawRefValues(idlookup, objectId, ref.key), {
+        resolves: id => idlookup?.[id]?.className === 'DObject',
+        sourceEditable,
+        isLocked: profileReads ? id => isLockedValue(id, access, profileReads) : undefined,
+    });
+}
+
+/**
+ * The menu of one row of a reference section (R-REF-3): Open, and Change or Remove from
+ * the list by the kind of the slot. Opened by the row's button and by nothing else.
+ *
+ * A portal on `document.body`, as `ReferencePicker` is and for the reason measured on
+ * 2026-10-12: inside the pane a menu under the last row is cut where the section ends a
+ * scrolled pane (61 of 96 px). The vertical axis, the flip and the stacking are
+ * `computeListStyle`'s, imported and not re-derived; the horizontal one is the button's
+ * right edge, because that function clamps `left` against a width narrower than this menu.
+ *
+ * It closes on a `mousedown` outside, on a scroll or a resize (its place is computed
+ * once), on Escape and on Tab, which give the focus back to the button.
+ */
+function RefRowMenu({ id, label, anchor, opener, actions, onAct, onClose }: {
+    id: string;
+    label: string;
+    /** The rect of the button that opened it. */
+    anchor: DOMRect;
+    /** That button: a `mousedown` on it is its own toggle, not an outside click. */
+    opener: HTMLElement;
+    actions: RefRowAction[];
+    /** An item was chosen; `box` is where the menu stood (the shield takes its place). */
+    onAct: (action: RefRowAction, box: DOMRect) => void;
+    /** Closed without a choice; `refocus` when the keyboard closed it. */
+    onClose: (refocus: boolean) => void;
+}) {
+    const boxRef = useRef<HTMLDivElement>(null);
+    const items = () => Array.from(boxRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+    // The listeners below are mounted once per menu; they call the close of the last render.
+    const closeRef = useRef(onClose);
+    closeRef.current = onClose;
+
+    useLayoutEffect(() => { items()[0]?.focus(); }, []);
+
+    useEffect(() => {
+        const inside = (t: EventTarget | null) => !!boxRef.current?.contains(t as Node);
+        const onDown = (e: MouseEvent) => {
+            if (inside(e.target) || opener.contains(e.target as Node)) return;
+            closeRef.current(false);
+        };
+        const onScroll = (e: Event) => { if (!inside(e.target)) closeRef.current(false); };
+        const onResize = () => closeRef.current(false);
+        // `mousedown` in capture, as `ReferencePicker` listens: before anything under it acts.
+        document.addEventListener('mousedown', onDown, true);
+        window.addEventListener('resize', onResize);
+        // The scroll listener starts one frame late. A scroll that happened BEFORE the menu
+        // opened is announced with the frame that paints the menu, and is no reason to close
+        // it: measured 2026-10-12, a menu opened right after its button had been scrolled
+        // into view was added and removed in the same frame.
+        const frame = requestAnimationFrame(() => window.addEventListener('scroll', onScroll, true));
+        return () => {
+            cancelAnimationFrame(frame);
+            document.removeEventListener('mousedown', onDown, true);
+            window.removeEventListener('scroll', onScroll, true);
+            window.removeEventListener('resize', onResize);
+        };
+    }, [opener]);
+
+    const onKeyDown = (e: React.KeyboardEvent) => {
+        const all = items();
+        const at = all.indexOf(document.activeElement as HTMLElement);
+        switch (e.key) {
+            case 'ArrowDown': e.preventDefault(); all[(at + 1) % all.length]?.focus(); break;
+            case 'ArrowUp': e.preventDefault(); all[(at - 1 + all.length) % all.length]?.focus(); break;
+            case 'Escape':
+            case 'Tab': e.preventDefault(); onClose(true); break;
+            default: break;
+        }
+    };
+
+    return createPortal(
+        <div
+            ref={boxRef}
+            id={id}
+            className="instance-manager__ref-menu"
+            role="menu"
+            aria-label={label}
+            style={{ ...computeListStyle(anchor), left: 'auto', right: Math.max(8, window.innerWidth - anchor.right) }}
+            onKeyDown={onKeyDown}
+        >
+            {actions.map(action => (
+                <button
+                    type="button"
+                    role="menuitem"
+                    tabIndex={-1}
+                    className="instance-manager__outline-menu-item instance-manager__ref-menu-item"
+                    key={action}
+                    onClick={() => { if (boxRef.current) onAct(action, boxRef.current.getBoundingClientRect()); }}
+                >
+                    <i className={`bi ${ROW_ACTION[action].icon}`} aria-hidden="true" />
+                    {ROW_ACTION[action].text}
+                </button>
+            ))}
+        </div>,
+        document.body,
+    );
+}
+
+/**
+ * What stays where a row's menu stood, for `MENU_SHIELD_MS` after one of its items acted
+ * (R-REF-6). An item closes the menu before it acts, so the second click of a double
+ * click would reach what is under it, and under the last row of a section that is
+ * «New … & link», which the stand-alone creates at once. The shield takes that click.
+ *
+ * The `mousedown` is stopped at the window, in capture: the picker «Change…» has just
+ * opened listens on the document, and would read the same click as one outside itself.
+ */
+function MenuShield({ rect, onDone }: { rect: DOMRect; onDone: () => void }) {
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const swallow = (e: Event) => {
+            if (e.target !== ref.current) return;
+            e.stopPropagation();
+            e.preventDefault();
+        };
+        window.addEventListener('mousedown', swallow, true);
+        const timer = window.setTimeout(onDone, MENU_SHIELD_MS);
+        return () => {
+            window.removeEventListener('mousedown', swallow, true);
+            window.clearTimeout(timer);
+        };
+        // Mounted once per shield: the timer is not restarted by a render of the section.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    return createPortal(
+        <div
+            ref={ref}
+            aria-hidden="true"
+            style={{ position: 'fixed', left: rect.left, top: rect.top, width: rect.width, height: rect.height, zIndex: 10001 }}
+        />,
+        document.body,
+    );
+}
+
+/** The row whose menu is open: what it showed when it opened, and where. */
+type OpenMenu = {
+    slot: RefSlot;
+    index: number;
+    value: string;
+    name: string;
+    actions: RefRowAction[];
+    anchor: DOMRect;
+    /** The row's rect: the picker of «Change…» opens against the card it changes. */
+    rowRect: DOMRect;
+    button: HTMLElement;
+};
+
+/** The open picker: a row's «Change…» (`at` is its raw index) or the foot's «Link existing». */
+type OpenPicker = {
+    slot: RefSlot;
+    at: number | 'link';
+    value: string;
+    anchor: DOMRect;
+    options: FormFieldOptionGroup[];
+    allowNone: boolean;
+    returnTo: HTMLElement;
 };
 
 /**
  * The reference sections of ONE form (#142), extracted by #158 P3 so the subject and
  * each inline child render the same thing: the same markup, the same drill-in, the same
  * create-and-link. Two copies would be two sections that drift at the first change.
+ *
+ * Since #172 the section is the reference's ONE rendering (R-REF-1), and it does what the
+ * form field did. A row opens its target on a click, as before, and carries its other
+ * gestures in a menu (R-REF-3). The foot links an existing target and creates a new one.
+ * The heading says what the field's label said: required, read-only, derived, modified,
+ * and under it the host's refusal of the last write or the feature's first diagnostic.
+ * Every write goes through `formWrite` at the row's RAW index, after the slot has been
+ * read again from the store (`liveOf`, R-REF-4).
  *
  * `nested` is the inline child's variant: it sits inside the child's frame, under the
  * child's own form, so it drops the band (rule and padding) that separates the
@@ -115,7 +340,9 @@ type RefSlot = {
  * (`IRForm` takes `permissionOf`), and neither does this section. `onCreate` absent: no
  * create control at all.
  */
-function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate, isHidden }: {
+function RefSlotsSection({ objectId, slots, idlookup, nested, onOpen, onCreate, isHidden, liveOf, offerOf }: {
+    /** The instance these slots belong to: the address of every write of the section. */
+    objectId: string;
     slots: RefSlot[];
     idlookup: Record<string, any>;
     nested?: boolean;
@@ -124,30 +351,204 @@ function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate, isHidden }
     /** «New <Target> & link» on this form's instance. */
     onCreate?: (targetCls: string, refKey: string) => void;
     isHidden?: (targetId: string) => boolean;
+    /** The slot as the store holds it at the moment it is asked. */
+    liveOf: (ref: RefShape) => RefSlotControls;
+    /** The candidates of a reference, asked when a picker opens (S5). */
+    offerOf: (refKey: string) => FormFieldOptionGroup[];
 }) {
+    const menuId = useId();
+    const problems = useNodeProblems(objectId);
+    const diagnostics = useMemo(
+        () => collectFormDiagnostics(problems, new Set(slots.filter(s => !s.authorHidden).map(s => s.ref.key))),
+        [problems, slots],
+    );
+
+    const [menu, setMenu] = useState<OpenMenu | null>(null);
+    const [shield, setShield] = useState<DOMRect | null>(null);
+    const [picker, setPicker] = useState<OpenPicker | null>(null);
+    /** The host's refusal of the last write, by reference key; cleared by the next accepted one. */
+    const [refusals, setRefusals] = useState<Record<string, string>>({});
+    /** The references written since the last save, as `IRForm` keeps its dirty fields. */
+    const [dirty, setDirty] = useState<Set<string>>(() => new Set());
+    const projectModified = (U as any).isProjectModified;
+    useEffect(() => {
+        if (!projectModified) setDirty(prev => (prev.size ? new Set() : prev));
+    }, [projectModified]);
+    // Another instance: what was open, refused or modified belonged to the previous one.
+    useEffect(() => {
+        setMenu(null);
+        setShield(null);
+        setPicker(null);
+        setRefusals({});
+        setDirty(new Set());
+    }, [objectId]);
+
     if (slots.length === 0) return null;
+
+    /** One verdict, read in one place: `ok` decides the message, `changed` the dirty mark. */
+    const consume = (key: string, r: WriteResult) => {
+        setRefusals(prev => {
+            if (!r.ok) return { ...prev, [key]: r.reason ?? UNSTATED_REFUSAL };
+            if (!(key in prev)) return prev;
+            const next = { ...prev };
+            delete next[key];
+            return next;
+        });
+        if (r.changed) setDirty(prev => (prev.has(key) ? prev : new Set(prev).add(key)));
+    };
+
+    const toggleMenu = (slot: RefSlot, row: RefSlotRow, name: string, button: HTMLElement) => {
+        if (menu && menu.slot.ref.key === slot.ref.key && menu.index === row.index) {
+            setMenu(null);
+            return;
+        }
+        setPicker(null);
+        setMenu({
+            slot, index: row.index, value: row.value, name, actions: row.actions,
+            anchor: button.getBoundingClientRect(),
+            rowRect: (button.closest('.instance-manager__ref-row') ?? button).getBoundingClientRect(),
+            button,
+        });
+    };
+
+    /** An item of the open menu. The menu closes first; the row is read again from the
+     *  store, and a gesture it no longer offers there does nothing. */
+    const act = (action: RefRowAction, box: DOMRect) => {
+        const m = menu;
+        if (!m) return;
+        setMenu(null);
+        setShield(box);
+        const key = m.slot.ref.key;
+        const live = liveOf(m.slot.ref);
+        const row = live.rows.find(r => r.index === m.index && r.value === m.value);
+        if (!row?.actions.includes(action)) return;
+        if (action === 'open') onOpen(m.value, key);
+        else if (action === 'remove') consume(key, clearValue(objectId, key, m.index, true));
+        else {
+            setPicker({
+                slot: m.slot, at: m.index, value: m.value, anchor: m.rowRect,
+                options: offerOf(key), allowNone: live.allowNone, returnTo: m.button,
+            });
+        }
+    };
+
+    /** «Link existing <Type>». On a list the targets it already holds are not offered: a
+     *  multi-valued reference is a set (`assignableOptions`, the rule of `ListWidget`). */
+    const openLink = (slot: RefSlot, button: HTMLElement) => {
+        const live = liveOf(slot.ref);
+        if (live.link === null) return;
+        const offered = offerOf(slot.ref.key);
+        setMenu(null);
+        setPicker({
+            slot, at: 'link', value: '', anchor: button.getBoundingClientRect(),
+            options: live.link === 'append' ? assignableOptions(offered, live.rows.map(r => r.value)) : offered,
+            allowNone: false, returnTo: button,
+        });
+    };
+
+    const pick = (id: string) => {
+        const p = picker;
+        if (!p) return;
+        const key = p.slot.ref.key;
+        const live = liveOf(p.slot.ref);
+        if (p.at === 'link') {
+            if (live.link === 'append') {
+                if (!live.rows.some(r => r.value === id)) consume(key, appendValue(objectId, key, id, true));
+            } else if (live.link !== null) {
+                consume(key, setValue(objectId, key, live.link, id, true));
+            }
+            return;
+        }
+        const row = live.rows.find(r => r.index === p.at && r.value === p.value);
+        if (row?.actions.includes('change')) consume(key, setValue(objectId, key, p.at, id, true));
+    };
+
+    /** «(none)» of the picker of «Change…»: the write of Remove, at the same index. */
+    const pickNone = () => {
+        const p = picker;
+        if (!p || p.at === 'link') return;
+        const key = p.slot.ref.key;
+        const row = liveOf(p.slot.ref).rows.find(r => r.index === p.at && r.value === p.value);
+        if (row?.actions.includes('remove')) consume(key, clearValue(objectId, key, p.at, true));
+    };
+
+    const closePicker = () => {
+        const p = picker;
+        setPicker(null);
+        if (p?.returnTo.isConnected) p.returnTo.focus();
+    };
+
     return (
         <div className={'instance-manager__inline instance-manager__refs'
             + (nested ? ' instance-manager__refs--nested' : '')}>
-            {slots.map(slot => (
-                <div className="instance-manager__inline-slot" key={slot.ref.key}>
+            {slots.map(slot => {
+                const key = slot.ref.key;
+                const refusal = refusals[key];
+                const found: FieldDiagnostic[] = slot.authorHidden ? [] : (diagnostics.byField.get(key) ?? []);
+                // The refusal goes first, as in a field: it is about the edit just made.
+                const shown: FieldDiagnostic[] = refusal ? [{ severity: 'error', message: refusal }, ...found] : found;
+                const worst = worstSeverity(shown);
+                return (
+                <div className="instance-manager__inline-slot" key={key} data-ref={key}>
                     <h3 className="instance-manager__eyebrow">
-                        {slot.ref.key}
-                        <span className="instance-manager__draft-card">
+                        {slot.label}
+                        {slot.ref.required && (
+                            <span className="instance-manager__ref-required" title="Required" aria-hidden="true" />
+                        )}
+                        {slot.ref.readOnly && (
+                            <i className="bi bi-lock-fill instance-manager__ref-lock" title="Read-only" aria-hidden="true" />
+                        )}
+                        {dirty.has(key) && (
+                            <span className="instance-manager__ref-dirty" title="Modified, not saved" aria-hidden="true" />
+                        )}
+                        {/* R-REF-6: the multiplicity is the chip's tooltip, not a printed label. */}
+                        <span className="instance-manager__draft-card" title={multiplicity(slot.ref)}>
                             {slot.ref.of} [{slot.count}/{slot.ref.upper === -1 ? '*' : slot.ref.upper}]
                         </span>
+                        {slot.ref.derived && <span className="instance-manager__ref-derived">derived</span>}
                     </h3>
-                    {slot.targets.map(targetId => {
-                        const label = crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null });
+                    {worst && (
+                        <p
+                            className={`instance-manager__ref-diag instance-manager__ref-diag--${worst}`}
+                            role="alert"
+                            data-severity={worst}
+                        >
+                            <i
+                                className={`bi ${worst === 'error' ? 'bi-x-circle-fill' : 'bi-exclamation-triangle-fill'}`}
+                                aria-hidden="true"
+                            />
+                            {shown[0].message}
+                        </p>
+                    )}
+                    {slot.controls.rows.map(row => {
                         // #157 step B: not named at all, see the comment above.
-                        if (isHidden?.(targetId)) return null;
+                        if (!row.broken && isHidden?.(row.value)) return null;
+                        const targetId = row.value;
+                        const label = row.broken
+                            ? targetId
+                            : crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null });
                         const summary = slot.summaries[targetId] ?? [];
                         const summaryText = summary.map(s => `${s.label}: ${s.text}`).join(' · ');
+                        const menuOpen = !!menu && menu.slot.ref.key === key && menu.index === row.index;
                         return (
+                            /* Keyed by the RAW index: a slot may hold the same target twice. */
+                            <div className="instance-manager__ref-row" key={row.index}>
+                                {row.broken ? (
+                                    /* A pointer that does not resolve: the card, and not a link
+                                       (the look of `&__ref-link--hidden`: no pointer, muted). */
+                                    <span
+                                        className="instance-manager__inline-link instance-manager__ref-link instance-manager__ref-link--hidden"
+                                        title={`Dangling pointer: ${targetId}`}
+                                    >
+                                        <span className="instance-manager__ref-text">
+                                            <span className="instance-manager__ref-name">{label}</span>
+                                        </span>
+                                        <i className="bi bi-exclamation-triangle" aria-hidden="true" />
+                                    </span>
+                                ) : (
                             <button
                                 type="button"
                                 className="instance-manager__inline-link instance-manager__ref-link"
-                                key={targetId}
                                 title={'Open the referenced element — edits the shared instance'
                                     + (summaryText ? '\n' + summaryText : '')}
                                 onClick={() => onOpen(targetId, slot.ref.key)}
@@ -171,11 +572,42 @@ function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate, isHidden }
                                 </span>
                                 <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
                             </button>
+                                )}
+                                {/* R-REF-3: the row's other gestures. Absent on a row that can
+                                    only be opened: no button that opens a one-item menu. */}
+                                {hasRowMenu(row) && (
+                                    <button
+                                        type="button"
+                                        className="instance-manager__ref-menu-btn"
+                                        aria-haspopup="menu"
+                                        aria-expanded={menuOpen}
+                                        aria-controls={menuOpen ? menuId : undefined}
+                                        aria-label={`Actions for ${label}`}
+                                        title="Actions"
+                                        onClick={e => toggleMenu(slot, row, label, e.currentTarget)}
+                                    >
+                                        <i className="bi bi-three-dots-vertical" aria-hidden="true" />
+                                    </button>
+                                )}
+                            </div>
                         );
                     })}
-                    {slot.targets.length === 0 && (
+                    {slot.controls.rows.length === 0 && (
                         <p className="instance-manager__note">No {slot.ref.of} linked yet.</p>
                     )}
+                    {(slot.controls.link !== null || onCreate) && (
+                        <div className="instance-manager__ref-foot">
+                            {slot.controls.link !== null && (
+                                <button
+                                    type="button"
+                                    className="instance-manager__ref-pick"
+                                    aria-label={`Link existing ${slot.ref.of} to ${slot.label}`}
+                                    onClick={e => openLink(slot, e.currentTarget)}
+                                >
+                                    <i className="bi bi-link-45deg" aria-hidden="true" />
+                                    Link existing {slot.ref.of}
+                                </button>
+                            )}
                     {onCreate && (slot.createReason ? (
                         <span className="instance-manager__child-reason" title={slot.createReason}>
                             {slot.createReason}
@@ -190,8 +622,39 @@ function RefSlotsSection({ slots, idlookup, nested, onOpen, onCreate, isHidden }
                             New {slot.ref.of} &amp; link
                         </button>
                     ))}
+                        </div>
+                    )}
                 </div>
-            ))}
+                );
+            })}
+            {menu && (
+                <RefRowMenu
+                    id={menuId}
+                    label={`${menu.slot.label}: ${menu.name}`}
+                    anchor={menu.anchor}
+                    opener={menu.button}
+                    actions={menu.actions}
+                    onAct={act}
+                    onClose={refocus => {
+                        const button = menu.button;
+                        setMenu(null);
+                        if (refocus && button.isConnected) button.focus();
+                    }}
+                />
+            )}
+            {shield && <MenuShield rect={shield} onDone={() => setShield(null)} />}
+            {picker && (
+                <ReferencePicker
+                    anchor={picker.anchor}
+                    options={picker.options}
+                    value={picker.value}
+                    allowNone={picker.allowNone}
+                    typeName={picker.slot.ref.of}
+                    onPick={pick}
+                    onClear={pickNone}
+                    onClose={closePicker}
+                />
+            )}
         </div>
     );
 }
@@ -243,6 +706,43 @@ export function InstanceDetail({
         permOfClass(id ? idlookup?.[id]?.instanceof : null);
     const permOfClassName = (name: string): DetailPermission =>
         permOfClass(shapeCtx.shape().classes[name]?.id);
+
+    /** The profile's reads for the reference sections (#157 step B), built as `IRForm`
+     *  builds its own and asked of the store at the moment of use: which class an
+     *  instance has, and whether it sits at the model's root. Undefined without a profile. */
+    const profileReads: ProfileReads | undefined = useMemo(() => {
+        if (!permissionOf) return undefined;
+        const lookup = () => (store.getState() as any)?.idlookup ?? {};
+        return {
+            permissionOf,
+            classOf: (id: string) => lookup()[id]?.instanceof ?? null,
+            isBound: (id: string) => {
+                const l = lookup();
+                const father = l[id]?.father;
+                return !father || l[father]?.className !== 'DModel';
+            },
+        };
+    }, [permissionOf]);
+
+    /** The host's write contract, for its OFFER only (S5): the sections write through
+     *  `formWrite` by `(instance, feature)`, as the form's fields do. */
+    const writeCtx = useMemo(() => makeWriteCtx(), []);
+
+    /** R-REF-4: a reference slot as the store holds it NOW. Every handler of a section
+     *  asks it at its click; the render's own answer may be a store update behind. */
+    const liveSlot = (objectId: string, ref: RefShape): RefSlotControls => {
+        const lookup = (store.getState() as any)?.idlookup ?? {};
+        return ruleRefSlot(lookup, objectId, ref, permOfClass(lookup[objectId]?.instanceof) === 'edit', profileReads);
+    };
+
+    /** The candidates of a reference, asked when its picker opens and filtered for the
+     *  profile exactly as the form filtered its own (`offerForProfile`). */
+    const offerFor = (objectId: string, key: string): FormFieldOptionGroup[] => {
+        const offered = targetOptions(writeCtx, objectId, key);
+        if (!profileReads) return groupTargets(offered);
+        const access = featureAccessIn((store.getState() as any)?.idlookup, objectId, key);
+        return groupTargets(offerForProfile(offered, access, profileReads));
+    };
 
     // ── Drill-in (12c) ─────────────────────────────────────────────────────────
 
@@ -428,14 +928,21 @@ export function InstanceDetail({
      * — the «reference selects» half of the shape — never `shape.children`, which
      * `inlineChildren` and `childSlots` already own.
      *
-     * `targets` are the pointer values the slot holds, read with the same
-     * `childrenIn` the containment side uses: it filters holes and dangling
-     * pointers, so a link is never mounted on a phantom. `createReason` gates the
-     * «New & link» button exactly as `childSlots`'s `reason` gates «Add»: a
-     * read-only or derived reference, a full slot, or a target that cannot be
-     * instantiated at root (`newInstanceReason`) leaves the reason and drops the
-     * button. A slot is shown when it has targets to navigate to OR a create is
-     * offered — an empty, uncreatable reference is noise, like an empty child slot.
+     * R-REF-1 (#172): EVERY reference the profile does not hide is listed, empty or
+     * not, writable or not, because the section is the reference's one rendering: an
+     * empty reference whose target cannot be created from here used to be reachable
+     * from the form's field alone. The rows and what the foot links come from the rule
+     * of `jjform/refSlot`, on the slot's RAW values. The order and the labels are the
+     * form's (`FormSpec.order`, `labels`, through the Data Manager's view of the class).
+     *
+     * `createReason` gates the «New & link» button exactly as `childSlots`'s `reason`
+     * gates «Add»: a read-only or derived reference, a full slot, or a target that
+     * cannot be instantiated at root (`newInstanceReason`) leaves the reason and drops
+     * the button.
+     *
+     * R-REF-6: a reference the view author HIDES keeps the section it had before
+     * #172, listed only with targets or with a create offered, its rows opening and
+     * nothing else.
      *
      * #158 P3 — the body is `refSlotsOf(id)`, for ANY instance, because the form shows
      * more than one: its subject and, at the inline level, each contained child with a
@@ -448,9 +955,20 @@ export function InstanceDetail({
         const shape = clsName ? shapeAll.classes[clsName] : null;
         if (!shape) return [];
         const sourceEditable = permOfInstance(objectId) === 'edit';
-        return shape.refs.map(ref => {
-            const targets = childrenIn(idlookup, objectId, ref.key);
-            const count = targets.length;
+        // The form spec of THIS instance, resolved as `summaryOf` resolves a target's.
+        const compiled = irIndex ? resolveIRView(objectId, shape.id, irIndex, summaryReadCtx, idlookup) : null;
+        const form = resolveFormSpec(compiled?.formSpec ?? undefined, 'manager');
+        const slots = shape.refs.map(ref => {
+            const authorHidden = !!form?.hidden?.includes(ref.key) || form?.features?.[ref.key] === 'hidden';
+            const ruled = ruleRefSlot(idlookup, objectId, ref, sourceEditable, profileReads);
+            const controls: RefSlotControls = authorHidden
+                ? {
+                    ...ruled,
+                    rows: ruled.rows.filter(r => !r.broken).map(r => ({ ...r, actions: ['open'] as RefRowAction[] })),
+                    link: null,
+                }
+                : ruled;
+            const count = controls.rows.length;
             const full = ref.upper !== -1 && count >= ref.upper;
             let createReason: string | null;
             if (ref.readOnly || ref.derived) createReason = 'Read-only reference';
@@ -458,12 +976,13 @@ export function InstanceDetail({
             else if (!sourceEditable || permOfClassName(ref.of) !== 'edit') createReason = NOT_EDITABLE;
             else createReason = newInstanceReason(shapeAll.classes[ref.of], countsByName[ref.of] ?? 0);
             const summaries: Record<string, SummaryItem[]> = {};
-            for (const t of targets) summaries[t] = summaryOf(t);
-            return { ref, targets, count, createReason, summaries };
+            for (const row of controls.rows) if (!row.broken) summaries[row.value] = summaryOf(row.value);
+            return { ref, label: form?.labels?.[ref.key] ?? ref.key, controls, count, createReason, authorHidden, summaries };
         })
-            .filter(s => s.targets.length > 0 || s.createReason === null)
+            .filter(s => !s.authorHidden || s.controls.rows.length > 0 || s.createReason === null)
             // #157 step B: a reference typed by a hidden class is no section at all.
             .filter(s => permOfClassName(s.ref.of) !== 'hidden');
+        return orderFields(slots.map(slot => ({ name: slot.ref.key, slot })), form).map(x => x.slot);
     };
 
     const refSlots = useMemo(
@@ -625,10 +1144,13 @@ export function InstanceDetail({
                                             frame is what says so. Opening a target
                                             goes THROUGH the child (`via`). */}
                                         <RefSlotsSection
+                                            objectId={childId}
                                             slots={inlineRefSlots[childId] ?? []}
                                             idlookup={idlookup}
                                             nested
                                             isHidden={isHidden}
+                                            liveOf={ref => liveSlot(childId, ref)}
+                                            offerOf={refKey => offerFor(childId, refKey)}
                                             onOpen={(targetId, refKey) => drillTo(targetId, refKey, { id: childId, key: slot.key })}
                                             onCreate={onCreateAndLink
                                                 ? (targetCls, refKey) => onCreateAndLink(targetCls, childId, refKey)
@@ -667,9 +1189,12 @@ export function InstanceDetail({
                 a contained child. A referenced target is SHARED: editing it edits
                 the one instance everything points at, said in the link title. */}
             <RefSlotsSection
+                objectId={formSubjectId ?? subjectId}
                 slots={refSlots}
                 idlookup={idlookup}
                 isHidden={isHidden}
+                liveOf={ref => liveSlot(formSubjectId ?? subjectId, ref)}
+                offerOf={refKey => offerFor(formSubjectId ?? subjectId, refKey)}
                 onOpen={(targetId, refKey) => drillTo(targetId, refKey)}
                 onCreate={onCreateAndLink
                     ? (targetCls, refKey) => { if (formSubjectId) onCreateAndLink(targetCls, formSubjectId, refKey); }
