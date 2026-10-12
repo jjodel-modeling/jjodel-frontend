@@ -6,7 +6,7 @@ Lane: fast (one file, two lines, both measured by the chat; one browser probe fo
 Depends: P-2026-10-12-2000
 Front: maintenance
 Request: none (no URL: Juri asked in a local Claude Code session on 2026-10-12; his words are `request.md` in the lane folder, RC-43)
-Status: da eseguire
+Status: eseguito 2026-10-12 · lane fix/typecheck-baseline-zero · 315c62715
 Limite: 60 minuti
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
