@@ -6,7 +6,7 @@ Front: release-3-2
 Lane: full (release commit on the merged trunk; gates on the combined tree)
 Depends: P-2026-10-12-0010, P-2026-10-12-0011, P-2026-10-12-0012
 Request: none (Alfonso, 2026-10-12 00:06, "ok alle raccomandazioni, procedi in lane auto"; L4 and D4 of the 1812 report)
-Status: da eseguire
+Status: eseguito 2026-10-12 · lane rel31-version · 4c681e535 · hard-stop, gates at baseline on the combined tree, 15 crops; merged 839f0d801 (visual GO pending: D-A1 differs from control, Petri p1 dots)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply.
 
