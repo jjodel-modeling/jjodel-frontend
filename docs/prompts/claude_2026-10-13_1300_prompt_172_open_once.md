@@ -6,7 +6,7 @@ Lane: fast (one code file outside the critical zone, the line already read by th
 Depends: P-2026-10-10-1545
 Front: standalone-editor
 Request: none (no URL: Juri asked in a local Claude Code session on 2026-10-13; his words are `request.md` in the lane folder, RC-43)
-Status: da eseguire
+Status: eseguito 2026-10-13 · lane fix/172-open-once · 4288e509c · verifica visiva passata 2026-10-13
 Limite: 45 minuti
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
