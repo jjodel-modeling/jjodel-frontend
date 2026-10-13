@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-10-13-1920
 Chat: C-2026-10-13-1920
-Status: da eseguire
+Status: superseded by P-2026-10-13-1930 (wrong branch, do not run)
 
 ## COSA
 
