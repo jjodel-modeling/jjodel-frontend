@@ -5915,7 +5915,7 @@ Change opens anchored on the row, the menu on its button (addendum A2). The two 
 on the form field (two targets in a 0..1 slot, the chip picker linking a target twice) are ticketed at the closure
 and not fixed at their source.
 
-**R-REF-7** (2026-10-13, provisional, unattended (RC-25), evidence: measured, verified: none, reversible: trunk) —
+**R-REF-7** (2026-10-13, ratified by Juri 2026-10-13, evidence: measured, verified: none, reversible: trunk) —
 **A row of a reference section shows Open once.** A row with a menu draws no Open glyph in its card: Open is the
 first item of the menu, and a click on the card still opens the target (R-REF-3, unchanged). A row that can only be
 opened has no menu and keeps the glyph. Decided by the chat `C-2026-10-13-1256` on @tmaog's test of 2026-10-13 in
