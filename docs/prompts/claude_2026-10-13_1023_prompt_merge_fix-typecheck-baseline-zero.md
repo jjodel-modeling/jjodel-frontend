@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-13-1023
 Chat: C-2026-10-12-1955
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-13 · lane merge · e4421dc62 · verifica visiva passata 2026-10-13 (chat, unattended; Juri in the digest)
 
 Worktree: `/Users/juridirocco/development/jjodel`, branch `staging`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/juridirocco/development/jjodel` on `staging`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-13-1023 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
