@@ -6,7 +6,7 @@ Lane: full (more than 3 files; governance files). One phase: every edit is a sen
 Depends: P-2026-10-12-2000, P-2026-10-12-2001
 Front: harness
 Request: none (no URL: Juri asked in a local Claude Code session on 2026-10-12; his words are `request.md` in the lane folder, RC-43)
-Status: da eseguire
+Status: eseguito 2026-10-13 · lane fix/typecheck-baseline-zero · 8a8575ec0
 Limite: 60 minuti
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
