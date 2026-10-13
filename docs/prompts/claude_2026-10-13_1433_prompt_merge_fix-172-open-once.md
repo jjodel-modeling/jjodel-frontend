@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-13-1433
 Chat: C-2026-10-13-1256
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-13 · lane merge · 0780366c3 · verifica visiva passata 2026-10-13 (passato: chat, unattended: the chat's independent probe (172b_independent.mts) rerun on the merged tree 0780366c3 on port 3190, 12/12, no page error: glyph + menu button = 1 on all 8 rows of the subject in the Data Manager, on the 2 of the inline child and on the 8 of the Configurator, no icon in a card whose row has a menu, the read-only row keeps one painted arrow, a click and Enter on the card and the menu's Open open the target; Juri's visual GO of 2026-10-13 was given on the lane tree)
 
 Worktree: `/Users/juridirocco/development/jjodel`, branch `staging`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/juridirocco/development/jjodel` on `staging`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-13-1433 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

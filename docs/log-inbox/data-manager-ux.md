@@ -19,3 +19,15 @@ order** (RC-12) and empties this file. The active log is not touched by this lan
 **Notes**: Decision R-REF-7 (provisional, RC-25). No unit test and no source-text test: the section does not import under node (declared by P-2026-10-10-1545); the probe is the measure (P11). The doubling passed the corrected lane because none of its 92 probe arms reads the card's glyph (second cause: (a), R-REF-3 did not say what becomes of the glyph once Open is in the menu). Probe logs and the BEFORE table: `~/.jjodel-lanes/P-2026-10-13-1300/`.
 **Prompt document name**: 2026-10-13 13:00
 
+## 2026-10-13 — merge: fix/172-open-once into staging (P-2026-10-13-1433)
+**Prompt**: `claude_2026-10-13_1433_prompt_merge_fix-172-open-once.md`, a direct merge by `lane-run merge --direct`, no session: `fix/172-open-once` at `abb74f276` into `staging`, merge base `7e774497c`, 4 commits on the branch side.
+**Files touched**: merge `0780366c3`: 4 files from the branch side (`docs/decisions.md`, `docs/log-inbox/data-manager-ux.md`, `docs/prompts/claude_2026-10-13_1300_prompt_172_open_once.md`, `frontend/src/components/abstract/tabs/InstanceDetail.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0780366c3` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9037 tests in 370 files, 9 red at import, hooks 681; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato: chat, unattended: the chat's independent probe (172b_independent.mts) rerun on the merged tree 0780366c3 on port 3190, 12/12, no page error: glyph + menu button = 1 on all 8 rows of the subject in the Data Manager, on the 2 of the inline child and on the 8 of the Configurator, no icon in a card whose row has a menu, the read-only row keeps one painted arrow, a click and Enter on the card and the menu's Open open the target; Juri's visual GO of 2026-10-13 was given on the lane tree
+**Notes**: Rollback tag `pre-fix/172-open-once` on `7e774497c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-13-1433/result.json`.
+**Prompt document name**: 2026-10-13 14:33
