@@ -224,7 +224,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 const next = typeof updater === 'function'
                     ? (updater as (p: JjtlTransformation[]) => JjtlTransformation[])(prev)
                     : updater;
-                SetFieldAction.new(project.id, 'transformations', next, '', false);
+                SetFieldAction.new(project.id, 'transformations', next as any, '', false);
                 return next;
             });
         },
