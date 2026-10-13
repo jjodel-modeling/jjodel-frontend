@@ -579,7 +579,9 @@ function RefSlotsSection({ objectId, slots, idlookup, nested, onOpen, onCreate, 
                                         </span>
                                     )}
                                 </span>
-                                <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                                {/* R-REF-7: Open is on the row once. Absent on a row that has
+                                    a menu, where it is the first item: the card still opens. */}
+                                {!hasRowMenu(row) && <i className="bi bi-box-arrow-in-right" aria-hidden="true" />}
                             </button>
                                 )}
                                 {/* R-REF-3: the row's other gestures. Absent on a row that can
