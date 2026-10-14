@@ -29,6 +29,7 @@ import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
+import EndpointsSection, { revealEndpointsSection } from './EndpointsSection';
 import { EcoreService, XMIService, JsonModelService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
 import { NewViewpointDialog } from './NewViewpointDialog';
@@ -421,12 +422,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         return () => window.removeEventListener(EnvGenEvents.CONFIG_CHANGED, handler);
     }, []);
 
-    // Environment Generation: listen for open-wizard event from Navbar
+    // Environment Generation: the open-wizard event (the left bar's «Configure environment», the
+    // Navbar's Tools › «Configure Environment...») leads to the Endpoints section, the one place
+    // where the environment is configured (R-CFG-4, #186). The wizard stays mounted below, unreached.
+    // TODO: cleanup — setEditingEnvGenId and the opening of the wizard have no caller left.
     useEffect(() => {
-        const handler = () => {
-            setEditingEnvGenId(undefined);
-            setShowEnvGenWizard(true);
-        };
+        const handler = () => revealEndpointsSection();
         window.addEventListener(EnvGenEvents.OPEN_WIZARD, handler);
         return () => window.removeEventListener(EnvGenEvents.OPEN_WIZARD, handler);
     }, []);
@@ -2952,6 +2953,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     </div>
                 )}
             </div>
+
+            {/* Endpoints Section (#186): the stand-alone environment, developer only */}
+            <EndpointsSection />
 
             {/* Documentation Section */}
             <div id="section-documentation">
