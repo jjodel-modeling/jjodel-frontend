@@ -7,7 +7,7 @@
  * created lazily). A stand-alone viewer opens `#/project?id=...&profile=<id>` and the Configurator
  * applies that profile's permissions.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
     DState,
@@ -40,10 +40,8 @@ export const ProfilesStep: React.FC = () => {
 
     const projectId = (U.getProjectID_URL() || '') as string;
 
-    useEffect(() => {
-        if (projectId) DEnvironmentConfig.getOrCreate(projectId);
-    }, [projectId]);
-
+    // #186 (P-2026-10-14-1101): no config is created at mount, as in MetaclassesStep; the first
+    // write that needs one, «Add role», creates it.
     const config: any = findEnvironmentConfig(idlookup, projectId);
     const topLevel: string[] = config && Array.isArray(config.topLevelTypes) ? config.topLevelTypes : [];
     // classId → `metamodel:metaclass`, so the permission rows read like the metaclasses step.
@@ -81,10 +79,11 @@ export const ProfilesStep: React.FC = () => {
     const markUnsaved = () => { U.isProjectModified = true; };
 
     const addProfile = () => {
-        if (!config) return;
-        const name = newProfileName.trim() || 'New profile';
-        const profile = DProfile.new(config.id, name);
-        SetFieldAction.new(config.id, 'profiles', [...profileIdsOf(config), profile.id], '', true);
+        const cfg: any = config || (projectId ? DEnvironmentConfig.getOrCreate(projectId) : null);
+        if (!cfg) return;
+        const name = newProfileName.trim() || 'New role';
+        const profile = DProfile.new(cfg.id, name);
+        SetFieldAction.new(cfg.id, 'profiles', [...profileIdsOf(cfg), profile.id], '', true);
         markUnsaved();
         setNewProfileName('');
         setSelectedProfileId(profile.id);
@@ -119,10 +118,10 @@ export const ProfilesStep: React.FC = () => {
     return (
         <div>
             <div className="envgen-section-header">
-                <h3 className="envgen-section-title">Profiles</h3>
+                <h3 className="envgen-section-title">Roles</h3>
                 <p className="envgen-section-description">
-                    A profile restricts what a stand-alone user can see and edit. Share the environment as
-                    <code> #/project?id=…&profile=&lt;id&gt;</code>. Changes are part of the project: «Done» saves it, as Ctrl+S does.
+                    A role restricts what a stand-alone user can see and edit. Share the environment as
+                    <code> #/project?id=…&profile=&lt;id&gt;</code>. Changes are part of the project: save it with Save or Ctrl+S.
                 </p>
             </div>
 
@@ -130,15 +129,15 @@ export const ProfilesStep: React.FC = () => {
                 <Input
                     value={newProfileName}
                     onChange={(e) => setNewProfileName((e.target as HTMLInputElement).value)}
-                    placeholder="New profile name"
+                    placeholder="New role name"
                 />
-                <button className="envgen-btn envgen-btn--secondary" onClick={addProfile} disabled={!config}>
-                    <i className="bi bi-plus-lg" /> Add profile
+                <button className="envgen-btn envgen-btn--secondary" onClick={addProfile} disabled={!projectId}>
+                    <i className="bi bi-plus-lg" /> Add role
                 </button>
             </div>
 
             {profiles.length === 0 ? (
-                <p className="envgen-empty-hint">No profiles yet.</p>
+                <p className="envgen-empty-hint">No roles yet.</p>
             ) : (
                 <div className="envgen-profiles">
                     <ul className="envgen-profile-list">
@@ -152,7 +151,7 @@ export const ProfilesStep: React.FC = () => {
                                 <button
                                     className="envgen-icon-btn"
                                     onClick={(e) => { e.stopPropagation(); deleteProfile(p.id); }}
-                                    aria-label="Delete profile"
+                                    aria-label="Delete role"
                                 >
                                     <i className="bi bi-trash" />
                                 </button>
@@ -174,12 +173,12 @@ export const ProfilesStep: React.FC = () => {
                                     className="envgen-btn envgen-btn--secondary"
                                     onClick={() => copyStandaloneLink(selectedProfile.id)}
                                     disabled={!projectId}
-                                    title="Copy the URL that opens this environment restricted to this profile"
+                                    title="Copy the URL that opens this environment restricted to this role"
                                 >
                                     <i className="bi bi-link-45deg" /> {linkCopied ? 'Copied!' : 'Copy stand-alone link'}
                                 </button>
                                 <p className="envgen-empty-hint">
-                                    The link opens the project as last saved: save it («Done» or Ctrl+S) before sharing.
+                                    The link opens the project as last saved: save it (Save or Ctrl+S) before sharing.
                                 </p>
                             </div>
                             <div className="envgen-field-label" style={{ marginTop: 12 }}>Permissions per top-level type</div>

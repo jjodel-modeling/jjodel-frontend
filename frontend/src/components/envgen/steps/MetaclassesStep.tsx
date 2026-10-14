@@ -6,20 +6,22 @@
  * created lazily), so what the developer marks here travels with the project and is what
  * a stand-alone `?profile=` viewer sees. Not the wizard's localStorage config.
  */
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { DState, U, LProject, DEnvironmentConfig, SetFieldAction, findEnvironmentConfig } from '../../../joiner';
 import { topLevelReason } from '../../../joiner/environmentConfig';
 import { Checkbox } from '../../ui/Checkbox/Checkbox';
+import { splitSelectable, foldToggleLabel } from '../../project/endpointsModel';
 
 export const MetaclassesStep: React.FC = () => {
     const idlookup = useSelector((s: DState) => s.idlookup);
     const projectId = (U.getProjectID_URL() || '') as string;
+    // #186: the metamodel groups whose not selectable classes are shown (folded by default).
+    const [unfolded, setUnfolded] = useState<Record<string, boolean>>({});
 
-    useEffect(() => {
-        if (projectId) DEnvironmentConfig.getOrCreate(projectId);
-    }, [projectId]);
-
+    // #186 (P-2026-10-14-1101): no config is created at mount. The project page mounts this step
+    // for every developer, and a project opened without an environment must not get one; the
+    // config is created by the first write, in `toggle`.
     const config: any = findEnvironmentConfig(idlookup, projectId);
     const project = LProject.getProject();
     // R6 (#157): one group per metamodel, with the metamodel name carried by the group heading
@@ -40,11 +42,15 @@ export const MetaclassesStep: React.FC = () => {
     }
     const totalClasses = groups.reduce((n, g) => n + g.items.length, 0);
     const topLevel: string[] = config && Array.isArray(config.topLevelTypes) ? config.topLevelTypes : [];
+    // #186 (task 3): the classes that cannot be offered were most of a large metamodel's rows. Per
+    // group they are folded away behind one button; a marked one stays visible, so it can be removed.
+    const folds = groups.map((g) => ({ ...g, ...splitSelectable(g.items, topLevel) }));
 
     const toggle = (classId: string, on: boolean) => {
-        if (!config) return;
+        const cfg: any = config || (projectId ? DEnvironmentConfig.getOrCreate(projectId) : null);
+        if (!cfg) return;
         const next = on ? [...topLevel, classId] : topLevel.filter((x) => x !== classId);
-        SetFieldAction.new(config.id, 'topLevelTypes', next, '', true);
+        SetFieldAction.new(cfg.id, 'topLevelTypes', next, '', true);
         // R1 (#157): the config travels with the project, so a change here is an unsaved change
         // of the project — the flag behind «Unsaved» and the leave prompt. No write here set it.
         U.isProjectModified = true;
@@ -58,7 +64,7 @@ export const MetaclassesStep: React.FC = () => {
                     The metaclasses promoted here become the Configurator's top-level entry points for
                     stand-alone users. Only metaclasses that can be created on their own are offered: not
                     abstract ones, nor those that only live inside another. Changes are part of the
-                    project: «Done» saves it, as Ctrl+S does.
+                    project: save it with Save or Ctrl+S.
                 </p>
             </div>
 
@@ -67,11 +73,11 @@ export const MetaclassesStep: React.FC = () => {
                     This project has no metaclasses yet. Define a metamodel first.
                 </p>
             ) : (
-                groups.map((g) => (
+                folds.map((g) => (
                     <div className="envgen-mm-group" key={g.mmId}>
                         <div className="envgen-mm-group__title">{g.mmName}</div>
                         <ul className="envgen-checklist">
-                            {g.items.map((it) => {
+                            {(unfolded[g.mmId] ? g.items : g.shown).map((it) => {
                                 const marked = topLevel.includes(it.id);
                                 return (
                                     <li key={it.id}>
@@ -94,6 +100,17 @@ export const MetaclassesStep: React.FC = () => {
                                 );
                             })}
                         </ul>
+                        {g.folded.length > 0 && (
+                            <button
+                                type="button"
+                                className="btn btn--ghost btn--xs"
+                                style={{ marginTop: 6 }}
+                                aria-expanded={!!unfolded[g.mmId]}
+                                onClick={() => setUnfolded((u) => ({ ...u, [g.mmId]: !u[g.mmId] }))}
+                            >
+                                {foldToggleLabel(g.folded.length, !!unfolded[g.mmId])}
+                            </button>
+                        )}
                     </div>
                 ))
             )}
