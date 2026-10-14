@@ -364,18 +364,22 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
     const windowBody = (
             <div className={`configurator${isPage ? ' configurator--page' : ''}`}>
                 <div className="configurator__header">
-                    <div className="configurator__title"><i className="bi bi-grid-1x2" /> Configurator</div>
-                    <div className="configurator__header-right">
+                    {/* #187 task 3: the role beside the label, so it is the first thing read. In the
+                        UI the profile is called «Role» (R-CFG-4); the `?profile=` parameter keeps its name. */}
+                    <div className="configurator__title-group">
+                        <div className="configurator__title"><i className="bi bi-grid-1x2" /> Configurator</div>
                         <span
                             className={`configurator__profile-chip${profile ? '' : ' configurator__profile-chip--none'}`}
-                            title={profile ? 'Active profile from the ?profile= URL parameter' : 'No ?profile= in the URL — full access (developer)'}
+                            title={profile ? `Role: ${profile.name || 'unnamed'}, from the ?profile= URL parameter` : 'No role in the URL (?profile=): full access (developer)'}
                         >
                             {profile ? (
-                                <><i className="bi bi-person-badge" /> {profile.name || 'profile'}</>
+                                <><i className="bi bi-person-badge" /> {profile.name || 'role'}</>
                             ) : (
-                                <><i className="bi bi-unlock" /> No profile — full access</>
+                                <><i className="bi bi-unlock" /> No role — full access</>
                             )}
                         </span>
+                    </div>
+                    <div className="configurator__header-right">
                         {/* R5: the page is where the consumer lands, not a window to close. */}
                         {!isPage && (
                             <button className="configurator__close" onClick={onClose} aria-label="Close">
