@@ -5922,6 +5922,35 @@ opened has no menu and keeps the glyph. Decided by the chat `C-2026-10-13-1256` 
 #172, taking the second of his two proposals; the first (the actions as icons in the card, no menu) would amend
 R-REF-3 and is not taken.
 
+## R-CFG — the Configurator round of #166 (#186, #187, #188; decisions 2026-10-14)
+
+Evidence: `docs/discovery/discovery_2026-10-14_166_configurator_usability_plan.md` (`da72802e7`). Memo:
+`docs/ratifiche/claude_2026-10-14_memo_166_configurator.md`. Decided by Juri in chat `C-2026-10-14-1020`, four
+answers to the report's §8.
+
+**R-CFG-1** (2026-10-14, ratified by Juri 2026-10-14, evidence: read, verified: none, reversible: trunk) —
+**The round runs through the lane harness.** One lane per step of the report's §6: #187 (steps 1 and 2) and #186
+Endpoints (step 3) in parallel on their own worktrees, merged into `staging` in that order; #186 «Customize element»
+(step 4) after both. Juri directs every lane; the chat writes the prompts and the GOs.
+
+**R-CFG-2** (2026-10-14, ratified by Juri 2026-10-14, evidence: read, verified: none, reversible: trunk) —
+**The Configurator gets a panel of its own; the Data Manager keeps `InstanceDetail` as it is.** A new component
+under `components/environment/configurator/` replaces `InstanceDetail` in `ConfiguratorTab` (page and developer
+overlay). It reuses the exported pure functions and widgets and edits no critical-zone file. Supersedes, for the
+Configurator only, the choice of 2026-09-28 that the two hosts share one panel (`InstanceDetail.tsx:6-11`).
+R-REF-1..7 keep binding the Data Manager; the Configurator's references follow #187, with R-REF-3's semantics
+(remove unlinks, never deletes) and R-REF-4's writes (raw index, slot re-read at the click).
+
+**R-CFG-3** (2026-10-14, ratified by Juri 2026-10-14, evidence: read, verified: none, reversible: trunk) —
+**The per-role presentation is an optional field of `DProfile`.** `typePresentation`, keyed by metaclass id,
+created at first use, absent read as empty: no migration. Its widget vocabulary is the role's own, not the IR's
+`WidgetKind` (R-B9). Touches `joiner/classes.ts` (D-layer): Layer Impact Report before the diff.
+
+**R-CFG-4** (2026-10-14, ratified by Juri 2026-10-14, evidence: read, verified: none, reversible: trunk) —
+**The project page's Endpoints section is the one place where the environment is configured.** The left-bar entry
+«Configure environment» leads to it; `EnvGenWizardModal` stays in the code, unreached (rule 9). In the UI the
+profile is called «Role»; identifiers, `DProfile` and the `?profile=` parameter keep their names (rule 2).
+
 ## R-GEN: model-to-text code generation, the pilot (ratifications 2026-10-10)
 
 Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
