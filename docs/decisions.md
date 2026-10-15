@@ -5951,6 +5951,15 @@ created at first use, absent read as empty: no migration. Its widget vocabulary 
 «Configure environment» leads to it; `EnvGenWizardModal` stays in the code, unreached (rule 9). In the UI the
 profile is called «Role»; identifiers, `DProfile` and the `?profile=` parameter keep their names (rule 2).
 
+**R-CFG-5** (2026-10-15, ratified by Juri 2026-10-15, evidence: measured, verified: none, reversible: trunk) —
+**The environment is configured in a dedicated window, opened from an «Endpoints» menu of the top app bar.** The
+menu's items «Editable metaclasses» and «Roles» open the window on that tab; the left-bar entry «Configure
+environment» and Tools › «Configure Environment...» open the same window. Not a section of the project page.
+Developer only: no menu and no window in consumer mode. Amends the placement of R-CFG-4 (one place, the wizard
+unreached, «Role» in the UI all stand). Decided by Juri in chat `C-2026-10-14-1020` after the visual check of
+`P-2026-10-14-1101`: «non voglio gli endpoint a livello di dashboard. deve stare in un menu dedicato», then the top
+bar among three options.
+
 ## R-GEN: model-to-text code generation, the pilot (ratifications 2026-10-10)
 
 Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
