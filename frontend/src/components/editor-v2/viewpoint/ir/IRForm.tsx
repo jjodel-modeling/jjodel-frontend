@@ -93,6 +93,15 @@ export interface IRFormProps {
      * (`formPermissions.ts`). Absent: no profile, and the form is the one without it.
      */
     permissionOf?: PermissionOf;
+    /**
+     * #172: the host lists the non-containment references itself, next to this form (the
+     * reference sections of `InstanceDetail`), so the form renders no field for them and a
+     * reference is on screen once. Their diagnostics stay counted in the summary (the residue
+     * of `formDiagnostics`), and a summary chip that finds no field of its severity in the
+     * form asks the host to show its own (`focusFirst`). Compositions are not concerned: the
+     * CHILDREN fields stay. Absent: every reference is a field, as before.
+     */
+    hostReferences?: { focusFirst: (severity: 'error' | 'warning') => void };
 }
 
 /**
@@ -200,7 +209,7 @@ function viewpointOfHost(host: FormHost): string | undefined {
     return host === 'manager' ? DATA_MANAGER_VIEWPOINT_ID : undefined;
 }
 
-export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail', permissionOf }: IRFormProps) {
+export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail', permissionOf, hostReferences }: IRFormProps) {
     const resolution = useIRFormView(objectId, viewpointOfHost(host));
 
     // The L-proxy is read inside the render on purpose: `useIRFormView`'s signature
@@ -377,12 +386,17 @@ export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail', permis
         [slots, spec, resolution, offer, annotationSignature],
     );
 
+    // #172: the references the host lists itself are not fields of this form. After the memo
+    // above and not inside it: `fields` keeps answering `hasNameSlot` on everything the
+    // object has, and `slots` is a new array on every render, so the memo saves nothing here.
+    const listed = hostReferences ? fields.filter(f => !f.isReference) : fields;
+
     // `order` is applied HERE, on the visible fields and before `buildFormSections`,
     // never inside `describeSlots`: the section partition keeps incoming order, so the
     // ordering lands inside each section (R-VP-13), and `layoutAnnotations` /
     // `focusFirstOf` below inherit it deliberately rather than by accident.
     const visible = orderFields(
-        mode === 'advanced' ? fields : fields.filter(f => isBasicField(f, spec)),
+        mode === 'advanced' ? listed : listed.filter(f => isBasicField(f, spec)),
         spec,
     );
 
@@ -456,7 +470,9 @@ export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail', permis
             (el.querySelector('input, select, textarea, button') as HTMLElement | null)?.focus();
             return;
         }
-    }, [visible, diagnostics]);
+        // #172: no field of this form carries it; a reference the host lists may.
+        hostReferences?.focusFirst(severity);
+    }, [visible, diagnostics, hostReferences]);
     const sections = buildFormSections(visible, resolution?.compiled?.fieldCompartments ?? [])
         .filter(s => s.fields.length > 0);   // an empty section renders nothing
 
@@ -698,7 +714,7 @@ export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail', permis
                     );
                 })}
 
-                {sections.length === 0 && hasNameSlot === false && (
+                {sections.length === 0 && hasNameSlot === false && listed.length === fields.length && (
                     <div className="ir-form__placeholder">No fields to show</div>
                 )}
                 {sections.length === 0 && hasNameSlot && (
