@@ -3353,7 +3353,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     label: 'Add reference',
                     icon: 'bi-link-45deg',
                     onClick: () => {
-                        const lClass: any = LPointerTargetable.fromPointer(node.id)?.model;
+                        const lClass: any = (LPointerTargetable.fromPointer(node.id) as any)?.model;
                         if (!lClass || typeof lClass.addReference !== 'function') return;
                         // Unique name among the class's existing references
                         // (mirror canvasToJjom.ts uniqueName via raw store lookup).

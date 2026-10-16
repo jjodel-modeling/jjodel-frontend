@@ -43,7 +43,6 @@ import {
 
 import ActivityLogger from '../services/ActivityLogger';
 import { ActivityType } from '../types/activity';
-import {i} from "vite/dist/node/chunks/moduleRunnerTransport";
 
 /** Ids whose delete was issued in this macrotask (#174): the cascade reaches an owned child that the
  *  plan, or the model's own children list, already deleted. Cleared at the next macrotask. */

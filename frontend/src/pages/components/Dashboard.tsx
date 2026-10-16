@@ -596,7 +596,7 @@ function ProjectDashboard(props: DashProps): any {
             const { editorType } = (e as CustomEvent).detail;
             try {
                 const layout = DockManager.dock?.getLayout();
-                const activeId = layout?.dockbox?.children?.[0]?.activeId;
+                const activeId = (layout?.dockbox?.children?.[0] as { activeId?: string } | undefined)?.activeId;
                 if (activeId) tabTypeMapRef.current.set(activeId, editorType);
             } catch { /* dock not ready */ }
             setHideLeftBar(isEditorTab(editorType));

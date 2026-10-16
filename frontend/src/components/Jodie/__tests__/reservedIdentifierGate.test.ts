@@ -175,6 +175,7 @@ describe('Jjodie system prompt, rule 8', () => {
         expect(rule8).not.toContain('case-insensitive');
     });
 
+    // Two lines each wrote a v6 (the #178 join on staging, rule 8 here): the merge of 2026-10-12 joins them as v7.
     it('bumps the chat prompt to version 7 with a changelog line', () => {
         const chatVersion = DEFAULT_PROMPT_VERSIONS.chat;
         expect(chatVersion.version).toBe(7);

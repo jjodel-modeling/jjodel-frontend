@@ -37,8 +37,8 @@ import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { consoleLanguageRegistry } from './console/languageRegistry';
 import type { ConsoleContext } from './console/types';
-import { gateReply } from './reservedIdentifierGate';
 import { consumerHelpText } from './consumerVoice';
+import { gateReply } from './reservedIdentifierGate';
 import './JodieWindow.css';
 
 // Generate unique message ID

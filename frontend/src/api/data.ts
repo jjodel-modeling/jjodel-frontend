@@ -23,6 +23,7 @@ import {
     DClassifier,
     DClass,
     LClass,
+    DDataType,
     DParameter,
     DOperation,
     DPackage,
@@ -1160,7 +1161,7 @@ export class EcoreParser{
     private static getMultiPackageChildren(json: Json): Json[] | null {
         const val = json[ECoreRoot.ecoreEPackage]; // "ecore:EPackage"
         if (val === undefined || val === null) return null;
-        return Array.isArray(val) ? val : [val];
+        return (Array.isArray(val) ? val : [val]) as Json[];
     }
 
     // A package is "primitive-only" when every classifier inside is an ecore:EDataType.

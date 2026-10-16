@@ -268,7 +268,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             this.childmode(e.target, e, evtkind, ui);
         }
     }
-    makeEvent(options: GObject<DraggableOptions>, type: string, evtkey: keyof typeof jquievent) {
+    makeEvent(options: GObject<DraggableOptions>, type: string, evtkey: EventLetter) {
         let eventmap = {
             's':    {'draggable': 'onDragStart',    'rotatable': 'onRotateStart',   'resizable': 'onResizeStart'},
             'ing':  {'draggable': 'whileDragging',  'rotatable': 'whileRotating',   'resizable': 'whileResizing'},

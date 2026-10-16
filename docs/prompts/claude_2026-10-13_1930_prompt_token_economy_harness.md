@@ -2,6 +2,7 @@
 
 Prompt-ID: P-2026-10-13-1930
 Chat: C-2026-10-13-1930
+Front: harness
 Status: da eseguire
 Supersedes: P-2026-10-13-1920 (written against `validation-skeleton` by mistake; never run it)
 
