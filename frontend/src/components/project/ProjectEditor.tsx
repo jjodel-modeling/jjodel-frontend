@@ -29,7 +29,7 @@ import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
-import EndpointsSection, { revealEndpointsSection } from './EndpointsSection';
+import EndpointsWindow, { type EndpointsTab } from './EndpointsWindow';
 import { EcoreService, XMIService, JsonModelService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
 import { NewViewpointDialog } from './NewViewpointDialog';
@@ -282,6 +282,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [showEnvGenWizard, setShowEnvGenWizard] = useState(false);
     const [envGenConfigs, setEnvGenConfigs] = useState<EnvGenConfigSummary[]>([]);
     const [editingEnvGenId, setEditingEnvGenId] = useState<string | undefined>(undefined);
+    // #186 (R-CFG-5): the Endpoints window's tab, or null while it is closed.
+    const [endpointsTab, setEndpointsTab] = useState<EndpointsTab | null>(null);
 
     // Unsaved changes tracking
     const [isDirty, setIsDirty] = useState(false);
@@ -422,12 +424,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         return () => window.removeEventListener(EnvGenEvents.CONFIG_CHANGED, handler);
     }, []);
 
-    // Environment Generation: the open-wizard event (the left bar's «Configure environment», the
-    // Navbar's Tools › «Configure Environment...») leads to the Endpoints section, the one place
-    // where the environment is configured (R-CFG-4, #186). The wizard stays mounted below, unreached.
+    // Environment Generation: the open-wizard event (the Navbar's «Endpoints» menu, the left bar's
+    // «Configure environment», Tools › «Configure Environment...») opens the Endpoints window, the one
+    // place where the environment is configured, on the tab its detail names, «Editable metaclasses»
+    // by default (R-CFG-4, R-CFG-5, #186). The wizard stays mounted below, unreached.
     // TODO: cleanup — setEditingEnvGenId and the opening of the wizard have no caller left.
     useEffect(() => {
-        const handler = () => revealEndpointsSection();
+        const handler = (e: Event) =>
+            setEndpointsTab((e as CustomEvent).detail?.tab === 'roles' ? 'roles' : 'metaclasses');
         window.addEventListener(EnvGenEvents.OPEN_WIZARD, handler);
         return () => window.removeEventListener(EnvGenEvents.OPEN_WIZARD, handler);
     }, []);
@@ -2954,9 +2958,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
-            {/* Endpoints Section (#186): the stand-alone environment, developer only */}
-            <EndpointsSection />
-
             {/* Documentation Section */}
             <div id="section-documentation">
                 <DocumentationSection project={project} />
@@ -3141,6 +3142,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
                 existingConfigId={editingEnvGenId}
                 onConfigSaved={() => setEnvGenConfigs(EnvGenPersistence.getAll())}
+            />
+
+            {/* Endpoints window (#186, R-CFG-5): the stand-alone environment, developer only */}
+            <EndpointsWindow
+                tab={endpointsTab}
+                onTabChange={setEndpointsTab}
+                onClose={() => setEndpointsTab(null)}
             />
 
             {/* Unsaved Changes Dialog */}

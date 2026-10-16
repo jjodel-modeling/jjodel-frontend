@@ -1,10 +1,17 @@
 // ============================================
-// ENDPOINTS SECTION (#186) — the stand-alone environment on the project page
+// ENDPOINTS WINDOW (#186, R-CFG-5) — the stand-alone environment's dedicated window
 // ============================================
-// The header is the neighbours' (`project-section-header`, project-editor.scss); the steps
-// inside keep their own global `envgen-*` rules (EnvGenWizardModal.scss).
+// The frame is the wizard's (`envgen-backdrop`, `envgen-modal`, header, content, footer:
+// EnvGenWizardModal.scss, global); the steps inside keep their own `envgen-*` rules. Only what the
+// window adds lives here.
 
-.endpoints-section {
+// No sidebar here: narrower than the wizard. Two classes, so it wins over `.envgen-modal` alone.
+.envgen-modal.endpoints-window {
+  width: min(1000px, calc(100vw - 80px));
+  min-width: 0;
+}
+
+.endpoints-window {
   &__tabs {
     display: inline-flex;
     gap: var(--space-1);
