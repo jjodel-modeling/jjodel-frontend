@@ -121,7 +121,7 @@ export const ProfilesStep: React.FC = () => {
                 <h3 className="envgen-section-title">Roles</h3>
                 <p className="envgen-section-description">
                     A role restricts what a stand-alone user can see and edit. Share the environment as
-                    <code> #/project?id=…&profile=&lt;id&gt;</code>. Changes are part of the project: save it with Save or Ctrl+S.
+                    <code> #/project?id=…&profile=&lt;id&gt;</code>. Changes are part of the project: «Done» saves it, as Ctrl+S does.
                 </p>
             </div>
 
@@ -178,7 +178,7 @@ export const ProfilesStep: React.FC = () => {
                                     <i className="bi bi-link-45deg" /> {linkCopied ? 'Copied!' : 'Copy stand-alone link'}
                                 </button>
                                 <p className="envgen-empty-hint">
-                                    The link opens the project as last saved: save it (Save or Ctrl+S) before sharing.
+                                    The link opens the project as last saved: save it («Done» or Ctrl+S) before sharing.
                                 </p>
                             </div>
                             <div className="envgen-field-label" style={{ marginTop: 12 }}>Permissions per top-level type</div>

@@ -64,7 +64,7 @@ export const MetaclassesStep: React.FC = () => {
                     The metaclasses promoted here become the Configurator's top-level entry points for
                     stand-alone users. Only metaclasses that can be created on their own are offered: not
                     abstract ones, nor those that only live inside another. Changes are part of the
-                    project: save it with Save or Ctrl+S.
+                    project: «Done» saves it, as Ctrl+S does.
                 </p>
             </div>
 
