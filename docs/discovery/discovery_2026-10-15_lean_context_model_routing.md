@@ -594,3 +594,156 @@ This needs no extra decision.
     - Recommended: a subagent with `evidence.json`, behind `check:docs` and the Outcome check (AM-4).
 11. Do `frontend/package.json` script entries (no dependency) fall under rule 4?
     - Recommended: no, treat script entries as allowed; confirm.
+
+## 7. Ratification (Alfonso, 2026-10-16)
+
+Source: Alfonso's RC-26 ratification. His text is dated 2026-10-15 and reached the lane in the ACK of 2026-10-16 09:37. It is recorded as RC-49 in `docs/decisions.md`; RC-48 is taken on `origin/staging` (`8a8575ec0`), so 49 is the next free number on every branch, measured with `git show <ref>:docs/decisions.md` over all local and remote refs. Sections 0 to 6 above are unchanged.
+
+New input: `docs/archivio/claude_2026-10-15_nota_concentrazione_costi_sessioni.md` (`ba192edb0`), hereafter "the note". Its figures come from 185 Claude Code sessions with more than two turns over the 14 days to 2026-10-15, with D = 3.97B tokens. This report's figures come from 20 closed lanes, with D = 452.5M. The two samples are cited separately and never summed.
+
+### 7.1 Decisions
+
+| Status | Item |
+|---|---|
+| Approved now | B0 first (closure of P-2026-10-13-1930's leftovers) |
+| Approved now | AM-1: the model IDs in one place |
+| Approved now | AM-5: targeted reads of decisions and log |
+| Approved now | AM-7: effort per tier |
+| Approved now | The read-only subagents `Explore` and `explorer` run on Sonnet 5.5 |
+| Approved with a condition | `general-purpose` on Sonnet, after the B1 measurement |
+| Approved with a condition | AM-2 and AM-3, after RC-45 closes, subject to Alfonso's veto on the RC-45 report |
+| Approved with a condition | AM-6 and B5, only after B4 and a passing `check:triggers` |
+| Deferred | AM-4 (Haiku reporter) and the benchmark of §5.7, to be reconsidered after B1 |
+| New, accepted in principle | AM-8, a context ceiling per session (threshold and text to be ratified, §7.3) |
+| New, accepted in principle | AM-9, one slice per session (text to be ratified, §7.4) |
+
+This row records approval. It does not apply anything: the text of AM-1, AM-5 and AM-7 enters the normative documents only in the batch §7.5 assigns it to.
+
+### 7.2 The criterion: plan usage, not dollars
+
+The harness stays on the subscription, so Phase 2 is governed by usage against the plan limits. The dollar figures of §3.4 and §3.5 stay only as relative weights between cost lines. They are not a target.
+
+Recorded today, and usable as a proxy for plan usage (measured in §3.1 and §3.4):
+- `rate_limit_event.rate_limit_info.unifiedWindows.five_hour.utilization`;
+- `seven_day.utilization`, with `resetsAt`;
+- `status`, `isUsingOverage` and `overageStatus`.
+
+These fields are in every lane `log.jsonl`. `auto-intake.mjs` already parses them (`toReading`, `:639-651`, read (agent)). Two limits:
+- They are window-level. A lane's share is the change between its first and last reading, and that change is valid only when no other session ran in the same interval.
+- The resolution observed is two decimals of the window. In the sample, 0.77 to 1.0 over 4 days.
+
+Recorded today, and not a proxy:
+- `total_cost_usd` and `modelUsage.costUSD`, which carry `costBasis: list` (measured): they are list-price dollars.
+- Token totals by class, whose weights in the plan, by model and by class (cache read, cache write, output), are not published and not observed.
+
+B1 must record, per launch:
+1. The first and the last rate-limit reading, all fields above.
+2. The overlap with other lanes and sessions in the same interval (lane folders' `started.txt`/`exit.txt`; interactive sessions are not visible to `lane-run` and must be stated as a gap).
+3. Tokens per model and per class.
+4. The per-call main context series that AM-8 needs.
+
+From launches that ran alone, a regression of utilization change on token class and model estimates the plan weights. Until then, every saving is reported in tokens per class, not in dollars.
+
+The note's price claim (Sonnet 5.5 cache read at $0.10 from 2026-10-07) is not verified here. The `claude-api` reference read in this lane was cached on 2026-10-06. Under this criterion the claim changes only the relative weights of §3.5.
+
+### 7.3 AM-8 (new): context ceiling per session
+
+The data:
+- **The note:** first-turn context median 48k, about 19% of its D; last-turn context median 264k, p90 467k, max 863k; median 72 turns per session (findings 3 and 4). A 150k cap gives at most −25% on its 14-day Opus figure, as an upper bound, because it truncates instead of restarting (finding 5).
+- **This report:**
+  - Median first-call context 48,232 tokens.
+  - Resumed sessions restarted at 70,937 to 248,094 tokens (§3.3).
+  - 86 main calls per lane at the median.
+  - 0 compactions.
+
+Restart cost (estimated):
+- A fresh session starts at the base of about 48k. It adds `handoff.md`, at most 8k when the diff is cited by path and stat, not inlined, and a re-read of the working files, about 20 to 40k.
+- So it rebuilds roughly 80 to 100k, which is written to cache once.
+
+Break-even, with the API weights as the only available proxy (cache write 1.25x input, Opus 5.5 cache read 0.05x input), for a session growing linearly from 48k at about 2.5k per call:
+
+| Threshold | Median session (86 calls, ends near 264k) | p90-like session (about 170 calls) |
+|---|---|---|
+| 150k | crossing at call 41; 45 calls left; net saving about +22k input-equivalents | net saving about +275k |
+| 200k | crossing at call 61; 25 calls left; net saving about +25k input-equivalents | net saving about +487k |
+| 250k | crossing at call 81; 5 calls left; net saving about −72k (loss) | — |
+
+The gain is in the tail, which is where the note's ten most expensive sessions are. The arithmetic is rough; B1 recalibrates it on real per-call series.
+
+**Proposed thresholds**, on the main-session context of one call, meaning `input_tokens + cache_read_input_tokens + cache_creation_input_tokens` of the latest main `assistant` event:
+- **Soft: 200,000 tokens.** The session finishes the current step, writes `handoff.md` in the lane folder, and exits with `Outcome: hard-stop`. The file has these sections: task, scope (DOVE), decisions taken, evidence (commands with exit codes, gate results), current diff (`git diff --stat` against the cut sha plus the path of a full diff file), remaining checks.
+- **Hard: 250,000 tokens.** The stop is immediate: every tool is denied except writing `handoff.md` and running `git status`/`git diff`, and the session exits with `Outcome: hard-stop`.
+- If the model fails to write `handoff.md`, `lane-run` writes a mechanical one from the prompt, the DOVE, `git diff --stat` and the gate lines of the log, and marks it `mechanical`.
+- Alternative: 150k / 200k, more aggressive and closer to the note's simulation. It costs more restarts on median sessions for the same tail gain.
+
+**Where the context size can be read.**
+- **After an invocation:** `lane-run` can read it from `log.jsonl`. Each `assistant` event carries `message.usage`; measured in §3.1, where the per-call sums equal D to the token. `result.usage` does not give it, because it is a per-invocation total.
+- **During a run:** `lane-run` itself is not running. `start` returns once it has the session id (`lane-run.mjs:925-931`), and the session runs detached (`launch`, `:471-490`, `detached: true`). The log is written live by the wrapper, and a running lane's log was read mid-run by a subagent of this session (§2.4).
+- **The closest supported mechanism is therefore an in-session `PreToolUse` hook,** `frontend/scripts/hooks/context-ceiling.mjs`, matcher `*`. On each tool call it reads the tail of the lane's `log.jsonl`, whose path `launch` exports as `JJODEL_LANE_LOG` beside `JJODEL_CRITICAL_ZONE_GOAHEAD` (`lane-run.mjs:475-477`).
+  - At the soft threshold it denies once, with the handoff instruction as the reason.
+  - At the hard threshold it denies everything except the handoff writes.
+  - It fails open like the other hooks, and the RC-20 90-minute limit stays the backstop.
+- Interactive sessions have no lane log. The hook input field `transcript_path` is documented by Claude Code but used nowhere in this repo and not measured here, so it is a candidate for those sessions only.
+
+**`lane-run resume --fresh <Prompt-ID>`** starts a new `claude -p` session, without `--resume`, in the same lane folder and under the same Prompt-ID.
+- **Input:** `handoff.md`, the prompt's DOVE, and the closing input of `closingInput` (`:473`).
+- **Validation:** it refuses when `handoff.md` lacks one of the six sections.
+- **Session file:** it overwrites `session.txt` only after recording the old session in `runs.jsonl`. `start` refuses a second session today (`:897`), so `--fresh` is the one sanctioned way.
+- **Plain resume:** a plain `resume` of a session whose last main context is at or above the soft threshold is refused, with `--fresh` named.
+
+**How it composes:**
+- **RC-20:** a ceiling stop is an ordinary `Outcome: hard-stop`, which the chat reads from the line. A `--fresh` session is new by construction ("A session without `--resume` is new by construction"), and the 90-minute limit applies per launch.
+- **AM-3** (deferred until RC-45 closes): an escalation whose last context is at or above the soft threshold goes through `--fresh --model <heavy>` from `handoff.md`, instead of resuming a large context into a cold Opus cache. It still counts as the one escalation.
+- **RC-45:** a drawn lane keeps its tier and model across `--fresh`, read from the ledger and `tier.txt`. A ceiling stop is neither a failure nor a relaunch on the other tier. `runs.jsonl` counts sessions per lane so that the RC-45 report can show them.
+
+Proposed text: "**RC-xx (AM-8): every lane session has a context ceiling.** At a main-session context of 200,000 tokens (input plus cache read plus cache write of the latest main call) the session finishes its step, writes `handoff.md` (task, scope, decisions, evidence, current diff, remaining checks) in the lane folder and ends with `Outcome: hard-stop`; at 250,000 the `context-ceiling` hook stops it at once, leaving only the handoff writes. Work resumes with `lane-run resume --fresh`, never by resuming the full transcript. The thresholds are recalibrated on the B1 measurements and changed only by a ratified row. A drawn lane (RC-45) keeps its tier; RC-20's time limit stays."
+
+### 7.4 AM-9 (new): one slice per session
+
+Proposed text: "**RC-xx (AM-9): one slice per session.** A prompt that declares several slices (`## Slice <n>` sections, or a `Slices:` header) runs each in its own session: `lane-run start` runs slice 1, and `lane-run next <Prompt-ID>` starts slice n+1 as a `--fresh` session from the prompt's slice section and the committed result of slice n (its commit shas, `git diff --stat` against the cut, its log or inbox entry, its report path), never from its transcript. `start` refuses a prompt with several slices and no slice selection. A `resume` stays for answering a question and for the GO of the same slice."
+
+To be ratified with it, as an option: Phase 2 after a Phase 1 hard stop, and a rework after a failed visual GO, are new slices and start fresh from the committed report or Phase 2 prompt. This amends RC-20 for those two cases.
+- Recommended: yes. The note's ten most expensive sessions are discovery plus fix in one session (finding 4).
+- `lane-run chain` already runs separate prompts one per session and is unchanged.
+
+### 7.5 Effect on the batches
+
+Every batch has at most five files.
+
+| Batch | Change | Files |
+|---|---|---|
+| B0 | Unchanged and first. It may also carry the read-only subagents on Sonnet, since it is already an interactive `.claude/` session, once the mechanism for the built-in `Explore` is verified in the official documentation (agent override, per-call `model`, or an environment variable). Otherwise this moves to B7. | — |
+| B1 | Gains the plan-usage recording of §7.2 and the per-call context series of §7.3 | its files, unchanged |
+| B3a | Reduced to AM-1 and AM-7 | — |
+| B3c (new) | AM-2 and AM-3, after RC-45 closes and the veto window | `lane-run.mjs`, `laneRun.test.ts`, `laneRunDirect.test.ts` |
+| B2b (new, governance, heavy) | Normative text of AM-1, AM-5 and AM-7. Includes `CLAUDE.md` line 62 ("one line per decision", stale for a 643 KB register, note finding 6), `decisions.md:4` and P9 `:105` | `CLAUDE.md`, `AGENTS.md`, `docs/PROTOCOL.md`, `docs/decisions.md` (header line 4 only) |
+| B8a (new, AM-8/AM-9 runner) | `--fresh`, `next`, slice refusal, `JJODEL_LANE_LOG`, mechanical handoff | `lane-run.mjs`, `laneRun.test.ts`, `laneRunDirect.test.ts`, `frontend/scripts/lane-templates/handoff.md` (new) |
+| B8b (new, AM-8 hook) | — | `frontend/scripts/hooks/context-ceiling.mjs` (new), `frontend/scripts/hooks/__tests__/contextCeiling.test.ts` (new) |
+| B7 (interactive) | Gains the registration of `context-ceiling.mjs` | `.claude/settings.json`, `.claude/agents/explorer.md`, plus `.claude/agents/` for `Explore` if not done in B0 |
+| B8c (after ratification) | Text of AM-8 and AM-9 | `docs/PROTOCOL.md` (P13, P16), `docs/decisions.md` (their rows) |
+| Deferred | B6 (AM-4) and the benchmark | — |
+
+Updated order:
+1. B0
+2. B1
+3. B2
+4. B3a
+5. B3b
+6. B2b
+7. B8a
+8. B8b
+9. B4
+10. B4b
+11. B7
+12. B8c
+13. Then B5a, B5b and B5c, only after B4 and a passing `check:triggers`
+
+Waiting: B3c, after RC-45. Deferred: B6 and the benchmark, after B1. `general-purpose` on Sonnet: a settings change after B1, in B7 or a later interactive batch.
+
+Tests added to §5.7:
+- **T-C1:** the hook denies once at the soft threshold and allows the handoff writes at the hard threshold, on fixture logs.
+- **T-C2:** it never fires below the soft threshold (negative).
+- **T-C3:** `--fresh` refuses an incomplete `handoff.md`, keeps the tier of a drawn lane, and records the old session.
+- **T-C4:** a plain `resume` above the soft threshold is refused.
+- **T-S1:** `start` refuses a multi-slice prompt without a selection.
+- **T-S2:** `next` starts from the committed result: its input contains the shas and no transcript text.

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-15-1725
 Chat: C-2026-10-15-1724
 Front: harness
 Lane: full (RC-3: normative documents, interfaces consumed by board and tests, more than three files in Phase 2)
-Status: da eseguire
+Status: eseguito 2026-10-16 · lane harness · 0dd7ed3b5 · hard-stop, Phase 1 report; RC-26 ratification in §7 and RC-49
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
