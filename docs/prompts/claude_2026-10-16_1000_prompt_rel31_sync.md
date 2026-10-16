@@ -6,7 +6,7 @@ Front: release-3-2
 Lane: full (critical zone: VersionFixer and the staging merge; three merges, one data fix, release checklist)
 Depends: P-2026-10-12-0115, P-2026-10-15-1710
 Request: none (Alfonso, 2026-10-16 09:59, "Ok alle raccomandazioni": rel31-sync lane, D-A1 closed as pre-existing, predicate fix)
-Status: da eseguire
+Status: eseguito 2026-10-16 · lane rel31-sync · 87b9cbac2 · hard-stop, gates green (typecheck 0, check:docs 5/5), saves 2.228-2.230 load; merged f9dcffe2c and pushed by Alfonso (visual GO pending: DA-3..DA-6)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply.
 
