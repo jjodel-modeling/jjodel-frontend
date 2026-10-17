@@ -6,7 +6,7 @@ Lane: full (more than three files; a visual check)
 Depends: none
 Front: standalone-editor
 Request: https://github.com/jjodel-modeling/jjodel-frontend/issues/186 (Juri's words in chat are `request.md` in the lane folder, RC-43)
-Status: da eseguire
+Status: eseguito 2026-10-16 · lane endpoints · 3b84117d7 · verifica visiva passata 2026-10-17 (Juri, port 3186, ScenarioMM fixture; chat probe chat_186b_independent.mts 9/9)
 Limite: 45 minuti per la Fase 1, 90 minuti per la Fase 2
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
