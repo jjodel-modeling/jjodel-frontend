@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-17-1945
 Chat: C-2026-10-17-1757
 Front: harness
 Lane: full (RC-3: normative CLAUDE.md, four files); Phase 1 is the 2026-10-15 report §2.6, no new discovery (rework rule of RC-20)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane harness · 6e910eb68
 Depends: P-2026-10-15-1725
 Request: none (chat decision under RC-25; Alfonso delegated on 2026-10-17 19:39)
 Corregge: 2026-10-13 19:30

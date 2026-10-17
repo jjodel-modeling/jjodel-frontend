@@ -93,11 +93,21 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P16); see §1.
 The model is named in one place only: `model` in `.claude/settings.json`. Run `claude update` if a session opens on another model, or if the installed Claude Code does not know the pinned ID. The `Model:` trailer of a commit records the model the session banner shows, not this file (`docs/PROTOCOL.md` P6).
 
 Effort is set with `/effort` and persists across sessions:
-- **Default: xhigh** — the working level for all real tasks, including the critical zone (§3) and visual-bug diagnosis (§5).
-- Step down to **high / medium** only for trivial, out-of-critical-zone work (a CSS tweak, a doc fix, a single `str_replace`).
+- **Default: high** — the working level for real tasks (`effortLevel` in `.claude/settings.json`).
+- **xhigh** for critical-zone work (§3) and visual-bug diagnosis (§5): set it with `/effort xhigh` at the start of such a task, and lower it back to `high` afterwards.
+- **medium** for trivial work outside the critical zone (a CSS tweak, a doc fix, a single `str_replace`).
 - **Never max** unless the prompt explicitly asks for it.
 
-Note: switching model can reset effort to the model's default (high). If a session opens at high, set `/effort xhigh` before working.
+Note: switching model can reset effort to the model's default (high), which is also the project default; a critical-zone or visual-bug task still sets `/effort xhigh` before working.
+
+### 0.1 Output discipline
+
+Tool output is context, and context is most of a session's cost (token audit 2026-09-07 to 2026-10-12, P-2026-10-13-1930).
+- Read code with the Read tool and `offset`/`limit`, never `cat` or a wide `sed -n`. Keep searches bounded: `grep -r` with `-l`, `-c` or `-m N`, or piped into `head -n N`.
+- Run builds, tests and type-checks through the quiet runner: `node scripts/run-quiet.mjs LABEL -- npm run build` from `frontend/`. It keeps the whole log in `.agent-logs/` at the repo root and prints the exit code, the error lines and the tail; read the log with Read and `offset`/`limit`.
+- The hook `frontend/scripts/hooks/output-budget.mjs` denies the unbounded forms: `cat`/`less`/`more` on a file; `sed -n` without a range or over 120 lines; recursive `grep` or `rg` without `-l`, `-c` or `-m N` (N ≤ 50); `git show` and `git diff` without `--stat`, `--name-only` or a path; `git log` without `-n N` (N ≤ 30); builds, tests and type-checks outside the runner. A later `| head -n N` or `| tail -n N` (N ≤ 80), `| wc` or `| grep -c` bounds the first four, and so does stdout sent to a file.
+- `# allow-large-output` in a command lets it through and is logged in `.agent-logs/guard-overrides.log`. It is for exceptional cases, and the reply says why it was needed.
+- For broad searches and long logs prefer the `explorer` subagent (`.claude/agents/explorer.md`): it returns conclusions with `file:line`, not file contents.
 
 ---
 

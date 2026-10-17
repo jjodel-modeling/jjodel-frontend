@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-13-1930
 Chat: C-2026-10-13-1930
 Front: harness
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane harness · 6e910eb68 · closed by P-2026-10-17-1945
 Supersedes: P-2026-10-13-1920 (written against `validation-skeleton` by mistake; never run it)
 
 ## COSA

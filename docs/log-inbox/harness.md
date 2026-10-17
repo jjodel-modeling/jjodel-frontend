@@ -34,3 +34,25 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-15 17:25
 
 **Ticket** (P-2026-10-15-1725): `output-budget.mjs` is committed but not registered in `.claude/settings.json`, so it denies nothing. The uncommitted CLAUDE.md §0.1 says otherwise. Covered by B0. RC-46 and RC-47 are not implemented on this branch.
+
+## 2026-10-18 — chore(harness): B0, output-budget registered, effort high, Explore on Sonnet (P-2026-10-17-1945)
+**Prompt**: `claude_2026-10-17_1945_prompt_b0_token_economy_leftovers.md`, `Lane: full`, interactive, Phase 1 = report 2026-10-15 §2.6: close the leftovers of P-2026-10-13-1930 (hook registration, runner allow, effort, ledger exemptions, Explore on Sonnet, CLAUDE.md §0/§0.1, measurement).
+**Files touched**: `6e910eb68`: `.claude/settings.json`, `frontend/scripts/hooks/output-budget.mjs`, `frontend/scripts/hooks/__tests__/outputBudget.test.ts`, `.claude/agents/Explore.md` (new). This commit: `CLAUDE.md` (§0/§0.1), this inbox, the Status lines of P-2026-10-13-1930 and P-2026-10-17-1945.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-13 19:30
+**Causa**: (g)
+**Regressions**: no — `outputBudget.test.ts` 85/85, `scripts/hooks` 13 files 766 tests, typecheck exit 0, check:agents PASS (9 of 9 aligned), check:scripts PASS, all through `run-quiet.mjs`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — P8 derogated by the prompt, no UI touched.
+**Notes**: Causa g: the leftovers are scope left undone, not a wrong analysis; today the same `.claude/settings.json` allow edit and `gen:agents` were refused by the auto-mode classifier ([Self-Modification]), and Alfonso's chat added the two runner allow lines. `gen:agents` not run: check:agents regenerates all 9 into a temp tree, all aligned. CLAUDE.md moved from commit 1 to this commit: bash-guard denies docs and code together (P13). Item 5 applied, not deferred to B7.
+**Prompt document name**: 2026-10-17 19:45
+
+Measurement (item 7), nested `claude -p --model claude-haiku-5-5` in `~/jjodel-release` with the registration in place, session `66ed91c4-7ede-456c-950e-6e928c3703c6`:
+- `cat CLAUDE.md` → denied: `output-budget: cat on a file puts the whole file in the context: use the Read tool with offset and limit, or bound it with | head -n N (N <= 80).`
+- `cat CLAUDE.md | head -n 20` → ran, first line `# CLAUDE.md — Jjodel Project Reference`.
+- Same run, one `Explore` call: `modelUsage` shows `claude-sonnet-5-5` beside the main `claude-haiku-5-5`, so the project override `.claude/agents/Explore.md` (`model: sonnet`, `omitClaudeMd: true`) is the agent that ran. Source: code.claude.com/docs/en/sub-agents, «A user or project subagent named `Explore` overrides the built-in and keeps its own `model` field».
+
+Exemptions (item 4, report §6.1 risk 7). Search: `grep -n -E "spawn|execFile|execSync|exec\("` over `lane-run.mjs` and `grep -l -r` over `gates/` and `smoke/`: every hit is a node child process (`spawn`/`spawnSync` of git, npm, npx, sh, lsof), never a Bash tool call, so the hook cannot see them. Wider check over `.claude/commands/`, `.claude/skills/` and `frontend/scripts/lane-templates/`: the skills inject with `awk` (not classified); `.claude/commands/lane.md:11` runs `cat ~/.jjodel-lanes/<id>/worktree.txt` and `session.txt`, denied by rule a, now exempt for those two names only (other ledger `.txt` files reach 2 KB and more); the templates' `git log -1`, `git diff --name-only` and `git show <tree>:<path> | grep -c -F` pass. Mutation bench in the message of `6e910eb68`.
+
+**Ticket** (P-2026-10-17-1945): `frontend/scripts/lane-templates/merge-into-trunk.md:42` and `trunk-into-branch.md:39` name `npx vitest run --reporter=dot` and `npx vitest run scripts/hooks`; with the hook registered, rule e denies each once and names `run-quiet.mjs`. No exemption made: rule e exists for these outputs. The templates should name the runner; outside this lane's scope.
