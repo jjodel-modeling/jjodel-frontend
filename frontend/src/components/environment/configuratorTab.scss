@@ -48,6 +48,14 @@
         flex: none;
     }
 
+    // #187 — the label and the role chip, together on the left.
+    &__title-group {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3, 12px);
+        min-width: 0;
+    }
+
     &__title {
         font-size: 15px;
         font-weight: 600;
