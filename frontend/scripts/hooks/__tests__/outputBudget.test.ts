@@ -100,6 +100,17 @@ describe('output-budget: a. cat, less, more on a file', () => {
     test('kills "shell payload not read": bash -c "cat src/a.ts" is denied', () => {
         expect(denied('bash -c "cat src/a.ts"')).toBe(true);
     });
+
+    test('kills "ledger exemption removed": cat of the two values .claude/commands/lane.md reads passes', () => {
+        expect(denied('cat ~/.jjodel-lanes/P-2026-10-17-1945/worktree.txt')).toBe(false);
+        expect(denied('cat "$HOME/.jjodel-lanes/P-2026-10-17-1945/session.txt"')).toBe(false);
+    });
+
+    test('kills "ledger exemption too wide": the transcript, the merge message and a session.txt elsewhere are denied', () => {
+        expect(denied('cat ~/.jjodel-lanes/P-2026-10-17-1945/log.jsonl')).toBe(true);
+        expect(denied('cat ~/.jjodel-lanes/P-2026-10-17-1945/merge-message.txt')).toBe(true);
+        expect(denied('cat notes/session.txt')).toBe(true);
+    });
 });
 
 describe('output-budget: what bounds a command', () => {
