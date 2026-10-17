@@ -90,3 +90,6 @@ docs/mde-intelligence-2026/paper/_build/*
 # research material, kept out of the tree (2026-09-27)
 docs/discovery/*-dataset/
 docs/analysis/harness-attribution*
+
+# quiet runner logs and output-budget overrides (P-2026-10-13-1930)
+.agent-logs/

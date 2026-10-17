@@ -77,7 +77,7 @@ export const BPMN_VIEWS: Array<[string, Record<string, unknown>]> = [
         containment: { children: '$flowNodeRefs.values', childFilter: isKind('FlowNode'), layout: { mode: 'free', header: band },
             membership: { mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } }, edges: 'hide', collapsible: false } }],
     ['Lane', { kind: 'graphVertex', metaclasses: ['Lane'], label: 'Lane with sub-lanes', priority: 1, resizable: true,
-        predicate: { op: 'exists', path: '$childLaneSet.value' },
+        predicate: { op: 'not', arg: { op: 'empty', path: '$childLaneSet.value.$lanes.values' } },
         shape: { form: 'rect', fill: '#ffffff', border: { width: 1 }, labels: [headerLabel] },
         containment: { children: '$childLaneSet.value.$lanes.values', childFilter: isKind('Lane'),
             layout: { mode: 'partitions', axis: 'vertical', header: band }, membership: { mode: 'forbid' }, edges: 'hide', collapsible: false } }],

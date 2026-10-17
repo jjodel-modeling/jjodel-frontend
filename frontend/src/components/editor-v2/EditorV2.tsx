@@ -410,7 +410,13 @@ class CanvasErrorBoundary extends React.Component<{ children: React.ReactNode },
 
 // Code generation (P-2026-10-10-1825, R-GEN-2): the one way into src/codegen/ beyond setting.ts. The lazy gate
 // (scripts/gates/check-codegen-lazy.ts) fails on any static import of the generator from the entry.
-const CodePanel = React.lazy(() => import('../../codegen/ui/CodePanel'));
+// Only under the build flag (P-2026-10-12-0012): without `VITE_CODEGEN=true` Vite turns the literal below into
+// `undefined === 'true'`, and Rollup drops the dynamic import and the panel's chunk; the runner worker file is still
+// emitted by Vite, named by no chunk, so never fetched (the gate's off mode). The bare text `import.meta.env.X` is the
+// form Vite replaces; tsconfig has no vite/client types (vite-env.d.ts), hence the ts-ignore.
+// @ts-ignore
+const CODEGEN_BUILD: boolean = import.meta.env.VITE_CODEGEN === 'true';
+const CodePanel = CODEGEN_BUILD ? React.lazy(() => import('../../codegen/ui/CodePanel')) : null;
 
 /** The Simulation pill's own slot (simulation-panel.scss `.sim-panel`), for the Code pill when there is no Simulation pill. */
 const SIM_SLOT_LEFT = 'calc(200px + 16px + 48px + 16px)';
@@ -446,7 +452,7 @@ function CodegenSlot({ modelid }: { modelid: string }) {
     const place = left === null ? SIM_SLOT_LEFT : `${left}px`;
     return (
         <div ref={anchor} style={{ display: 'contents' }}>
-            {open ? (
+            {open && CodePanel ? (
                 <React.Suspense fallback={null}>
                     <CodePanel modelid={modelid} left={place} onClose={() => setOpen(false)} />
                 </React.Suspense>
@@ -4997,7 +5003,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
                 {/* Gated (R-SIM-97, R-SIM-99): unmounting clears the run of this model (SimulationPanel's cleanup). */}
                 {modelid && simPill && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
-                {modelid && codePill && <CodegenSlot modelid={modelid} />}
+                {CODEGEN_BUILD && modelid && codePill && <CodegenSlot modelid={modelid} />}
 
             </div>
         </EditorContext.Provider>

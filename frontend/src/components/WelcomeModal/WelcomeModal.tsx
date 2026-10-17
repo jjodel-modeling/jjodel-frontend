@@ -1,13 +1,23 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './WelcomeModal.scss';
 
-const STORAGE_KEY = 'jjodel_welcome_3_seen';
+// 3.1 screen: a new key, so a user who dismissed the 3.0 screen sees this one.
+// The 3.0 key (jjodel_welcome_3_seen) is neither read nor deleted.
+const STORAGE_KEY = 'jjodel_welcome_3_1_seen';
+
+// Static illustration of the featured block: a three-place Petri net at step 2
+// of a run (3 tokens in `ready` at start; one `start` and one `finish` fired).
+const PETRI_NODES: { kind: 'place' | 'trans'; label: string; tokens?: number; enabled?: boolean }[] = [
+  { kind: 'place', label: 'ready', tokens: 2 },
+  { kind: 'trans', label: 'start', enabled: true },
+  { kind: 'place', label: 'busy', tokens: 0 },
+  { kind: 'trans', label: 'finish', enabled: false },
+  { kind: 'place', label: 'done', tokens: 1 },
+];
 
 const WelcomeModal: React.FC = () => {
   const [visible, setVisible] = useState(false);
   const [dontShow, setDontShow] = useState(false);
-  const codeScrollRef = useRef<HTMLDivElement>(null);
-  const lineNumsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (localStorage.getItem(STORAGE_KEY)) return;   // dismissed forever
@@ -15,15 +25,6 @@ const WelcomeModal: React.FC = () => {
     const t = setTimeout(() => setVisible(true), 1500);
     return () => clearTimeout(t);
   }, []);
-
-  useEffect(() => {
-    const scroll = codeScrollRef.current;
-    const lines = lineNumsRef.current;
-    if (!scroll || !lines) return;
-    const handler = () => { lines.scrollTop = scroll.scrollTop; };
-    scroll.addEventListener('scroll', handler);
-    return () => scroll.removeEventListener('scroll', handler);
-  }, [visible]);
 
   function close() {
     sessionStorage.setItem(STORAGE_KEY, '1');          // block for this session
@@ -49,146 +50,106 @@ const WelcomeModal: React.FC = () => {
           <button className="wm-close-btn" onClick={close} aria-label="Close">✕</button>
           <div className="wm-hero-content">
             <div className="wm-hero-label">What's new</div>
-            <div className="wm-hero-title" id="wm-title">Jjodel 3.0</div>
+            <div className="wm-hero-title" id="wm-title">Jjodel 3.1</div>
             <div className="wm-hero-sub">
-              A completely redesigned metamodeling experience. New transformation engine, new expression language, new UI.
+              Simulation, derived viewpoints, containers and validation.
             </div>
           </div>
         </div>
 
         <div className="wm-body">
 
-          <a
-            className="wm-featured"
-            href="https://docs.jjodel.io/languages/jjtl"
-            target="_blank"
-            rel="noreferrer"
-          >
+          <div className="wm-featured wm-featured--static">
             <div className="wm-featured-top">
               <div className="wm-tags">
-                <span className="wm-tag wm-tag--jjtl">JjTL</span>
-                <span className="wm-tag wm-tag--new">New language</span>
+                <span className="wm-tag wm-tag--sim">Simulation</span>
+                <span className="wm-tag wm-tag--new">New</span>
               </div>
-              <span className="wm-featured-arrow">→</span>
             </div>
-            <div className="wm-featured-title">Model-to-Model Transformation Language</div>
+            <div className="wm-featured-title">Run your models</div>
             <div className="wm-featured-desc">
-              Write declarative transformations between metamodels. The AI suggests mappings, arrows visualize them live on the canvas, and two-pass execution handles cross-type references correctly.
+              Automata, Petri nets, Moore and Mealy machines and statecharts run step by step, with events, guards and actions. Step back, replay a run as a scenario, see coverage on the canvas, and drive the model from an I/O board with buttons, LEDs and a clock.
             </div>
             <div className="wm-code-wrap">
-              <div className="wm-code-titlebar">
-                <span className="wm-code-filename">state_machines_to_petri_nets.jjtl</span>
-              </div>
               <div className="wm-code-body">
-                <div className="wm-line-numbers" ref={lineNumsRef}>
-                  {Array.from({ length: 13 }, (_, i) => <span key={i}>{i + 1}</span>)}
-                </div>
-                <div className="wm-code-scroll" ref={codeScrollRef}>
-                  <div className="wm-code-lines">
-                    <span className="wm-kw">transformation</span>{' '}
-                    <span className="wm-cls">StateMachines_to_PetriNets</span>{'\n'}
-                    <span className="wm-kw">from</span>{' statemachines '}
-                    <span className="wm-kw">to</span>{' petrinets\n\n'}
-                    <span className="wm-cls">State</span>{' → '}
-                    <span className="wm-cls">Place</span>{' '}
-                    <span className="wm-op">{'{'}</span>{'\n'}
-                    {'    name   '}<span className="wm-op">:=</span>{' name\n'}
-                    {'    tokens '}<span className="wm-op">:=</span>{' '}
-                    <span className="wm-kw">if</span>{' isInitial '}
-                    <span className="wm-kw">then</span>{' '}
-                    <span className="wm-lit">1</span>{' '}
-                    <span className="wm-kw">else</span>{' '}
-                    <span className="wm-lit">0</span>{'\n'}
-                    <span className="wm-op">{'}'}</span>{'\n\n'}
-                    <span className="wm-cls">Transition</span>{' → '}
-                    <span className="wm-cls">Transition</span>{' '}
-                    <span className="wm-op">{'{'}</span>{'\n'}
-                    {'    name        '}<span className="wm-op">:=</span>{' name\n'}
-                    {'    inputPlace  '}<span className="wm-op">:=</span>{' parent\n'}
-                    {'    outputPlace '}<span className="wm-op">:=</span>{' nextState\n'}
-                    <span className="wm-op">{'}'}</span>
-                  </div>
+                <div
+                  className="wm-petri"
+                  role="img"
+                  aria-label="A Petri net at step 2 of a run: place ready holds two tokens, busy none, done one; transition start is enabled."
+                >
+                  {PETRI_NODES.map((n, i) => (
+                    <React.Fragment key={n.label}>
+                      {i > 0 && <span className="wm-petri-arc" />}
+                      {n.kind === 'place' ? (
+                        <span className="wm-petri-place">
+                          {Array.from({ length: n.tokens ?? 0 }, (_, k) => <span key={k} className="wm-petri-token" />)}
+                          <span className="wm-petri-label">{n.label}</span>
+                        </span>
+                      ) : (
+                        <span className={`wm-petri-trans${n.enabled ? ' wm-petri-trans--enabled' : ''}`}>
+                          <span className="wm-petri-label">{n.label}</span>
+                        </span>
+                      )}
+                    </React.Fragment>
+                  ))}
+                  <span className="wm-petri-state">Running · step 2</span>
                 </div>
               </div>
             </div>
             <div className="wm-pills">
-              {['AI-suggested mappings', 'match arrows', 'two-pass execution', 'cross-type resolve'].map(p => (
+              {['Step / Play', 'Scenarios', 'Coverage', 'I/O board'].map(p => (
                 <span key={p} className="wm-pill">{p}</span>
               ))}
             </div>
-          </a>
+          </div>
 
           <div className="wm-section-label">Also new</div>
-          <div className="wm-grid">
-
-            <a
-              className="wm-card"
-              href="https://docs.jjodel.io/user-guide/transformation-editor"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <div className="wm-card-top">
-                <span className="wm-card-tag wm-card-tag--sky">Editor</span>
-                <span className="wm-card-arrow">→</span>
-              </div>
-              <div className="wm-card-title">Transformation Editor</div>
-              <div className="wm-card-desc">
-                Dual-canvas environment with source and target metamodels side by side, AI mapping panel, and live match arrows on the canvas.
-              </div>
-            </a>
+          <div className="wm-grid wm-grid--three">
 
             <div className="wm-card wm-card--static">
               <div className="wm-card-top">
-                <span className="wm-card-tag wm-card-tag--slate">Languages</span>
+                <span className="wm-card-tag wm-card-tag--sky">Viewpoints</span>
               </div>
-              <div className="wm-card-title">A family of Jj-languages</div>
-              <div className="wm-lang-list">
-                {[
-                  { tag: 'JjTL', mod: 'blue', desc: 'Model-to-model transformations' },
-                  { tag: 'JjEL', mod: 'cyan', desc: 'Expressions, guards & bindings' },
-                  { tag: 'JjScript', mod: 'violet', desc: 'Slash-driven metamodel scripting' },
-                  { tag: 'JjModal', mod: 'indigo', desc: 'Inline dialogs for JjTL & JjScript' },
-                ].map(({ tag, mod, desc }) => (
-                  <div key={tag} className="wm-lang-row">
-                    <span className={`wm-lang-tag wm-lang-tag--${mod}`}>{tag}</span>
-                    <span className="wm-lang-desc">{desc}</span>
-                  </div>
-                ))}
+              <div className="wm-card-title">Derive viewpoint</div>
+              <div className="wm-card-desc">
+                A full viewpoint from a metamodel in one click, in your notation: statechart, Petri net, flowchart, UML activity, ER (Chen) and more.
               </div>
             </div>
 
-            <a
-              className="wm-card"
-              href="https://docs.jjodel.io/user-guide/documentation"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <div className="wm-card wm-card--static">
               <div className="wm-card-top">
-                <span className="wm-card-tag wm-card-tag--amber">Docs</span>
-                <span className="wm-card-arrow">→</span>
+                <span className="wm-card-tag wm-card-tag--rose">Canvas</span>
               </div>
-              <div className="wm-card-title">Documentation Generation</div>
+              <div className="wm-card-title">Containers and Auto layout</div>
               <div className="wm-card-desc">
-                Generate structured documentation from your metamodels and models automatically.
+                Containers drawn as frames and partitions. Auto layout in the toolbar arranges the whole graph.
               </div>
-            </a>
+            </div>
 
-            <a
-              className="wm-card"
-              href="https://docs.jjodel.io/user-guide/metamodel-editor"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <div className="wm-card wm-card--static">
               <div className="wm-card-top">
-                <span className="wm-card-tag wm-card-tag--rose">Editor</span>
-                <span className="wm-card-arrow">→</span>
+                <span className="wm-card-tag wm-card-tag--amber">Rules</span>
               </div>
-              <div className="wm-card-title">Canvas Editor v2</div>
+              <div className="wm-card-title">Validation</div>
               <div className="wm-card-desc">
-                React Flow canvas with edge jump markers and A*-grid obstacle-aware path routing.
+                Your own rules, the Validate command, and violation dots on the instances.
               </div>
-            </a>
+            </div>
 
+          </div>
+
+          <div className="wm-recall">
+            <div className="wm-recall-label">New in 3.0</div>
+            <div className="wm-recall-items">
+              {[
+                'JjTL model-to-model transformations',
+                'Transformation Editor',
+                'Jj-languages: JjTL, JjEL, JjScript, JjModal',
+                'Documentation generation',
+              ].map(item => (
+                <span key={item} className="wm-recall-item">{item}</span>
+              ))}
+            </div>
           </div>
         </div>
 

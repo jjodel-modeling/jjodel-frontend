@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useNodes } from '@xyflow/react';
+import { useStoreApi } from '@xyflow/react';
 import type { AnchorConfig, AnchorSide } from '../types';
 import { MAX_HANDLES_PER_SIDE, sideCapacity } from '../utils/portDistribution';
 import { chooseEdgeSides, type SidePair } from '../utils/edgeRouting';
@@ -565,7 +565,10 @@ function computeGeometricAnchorsForAllEdges(
  * @returns A function that takes source and target node IDs and returns optimal handles
  */
 export function useAutoAnchor() {
-    const nodes = useNodes();
+    // Read the nodes at call time instead of subscribing with useNodes(): both consumers call these in event
+    // handlers, and the subscription re-rendered the host on every React Flow nodes push, the amplifier of the
+    // 2026-10-10 drag loop (discovery_2026-10-10_petri_classic_drag_loop.md, Fix A).
+    const store = useStoreApi();
 
     const getOptimalAnchors = useCallback(
         (
@@ -574,6 +577,7 @@ export function useAutoAnchor() {
             edgeType?: 'inheritance' | 'reference',
             existingEdges?: EdgeContext[],
         ): { sourceHandle: string; targetHandle: string } => {
+            const nodes = store.getState().nodes;
             const sourceNode = nodes.find((n) => n.id === sourceId);
             const targetNode = nodes.find((n) => n.id === targetId);
 
@@ -594,7 +598,7 @@ export function useAutoAnchor() {
             // Fallback: geometry-only (no context)
             return computeBestAnchors(sourceRect, targetRect, sourceId === targetId, edgeType);
         },
-        [nodes]
+        [store]
     );
 
     /**
@@ -609,12 +613,12 @@ export function useAutoAnchor() {
             // Build node rects map from the live node list, then delegate to the
             // pure geometry-only core (shared with the auto-layout recalc path).
             const nodeRects = new Map<string, NodeRect>();
-            for (const node of nodes) {
+            for (const node of store.getState().nodes) {
                 nodeRects.set(node.id, getNodeRect(node));
             }
             return computeGeometricAnchorsForAllEdges(edges, nodeRects);
         },
-        [nodes]
+        [store]
     );
 
     return { getOptimalAnchors, getOptimalAnchorsForAllEdges };
