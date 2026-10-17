@@ -5,8 +5,8 @@
  * role in the URL) replaces the metaclass rail: pick a type → its instances → open one in
  * `IRForm` → create a new one. Reuses the Data Manager engine WITHOUT touching it:
  *   - `instancesOfClass` (pure, instanceManagerModel) for the list;
- *   - `InstanceDetail` for the detail/edit — the Data Manager's own panel (2026-09-28), so
- *     an element shows and navigates the same in both; it replaced a bare `IRForm`;
+ *   - `ConfiguratorPanel` for the detail/edit (#187, R-CFG-2): the Configurator's own panel,
+ *     which replaced the Data Manager's `InstanceDetail` here (that one stays the Data Manager's);
  *   - `applyCreate` + `newDraft` + `makeShapeCtx` (the same chain InstanceManagerTab commits
  *     through) for "New" — called bare, never wrapped in a TRANSACTION (editor-v2 §3.3).
  *
@@ -34,8 +34,9 @@ import { instancesOfClass, modelIdOfObject } from '../abstract/tabs/instanceMana
 import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
 import { applyCreate, childSlotCount } from '../editor-v2/hooks/createAdapter';
 import { applyDelete, deletePlan, preflightFor } from '../editor-v2/hooks/deleteAdapter';
-import { appendValue } from '../editor-v2/viewpoint/ir/formWrite';
-import InstanceDetail, { type DetailPermission } from '../abstract/tabs/InstanceDetail';
+import { appendValue, setValue } from '../editor-v2/viewpoint/ir/formWrite';
+import { type DetailPermission } from '../abstract/tabs/InstanceDetail';
+import ConfiguratorPanel from './configurator/ConfiguratorPanel';
 import { DeleteDialog } from '../abstract/tabs/InstanceManagerTab';
 import { createM1 } from '../../pages/components/Navbar';
 import { EnvGenEvents } from '../../events/registry';
@@ -162,11 +163,10 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
      *  `typeModelIds` and not necessarily the first. */
     const modelId: string | null = selectedInstanceId ? modelIdOfObject(idlookup, selectedInstanceId) : null;
 
-    // ── The detail: the Data Manager's panel (`InstanceDetail`) ────────────────
-    // The same header, breadcrumb and Back, form, inline children and reference sections
-    // the Data Manager shows, so an element reads and navigates the same in both places.
-    // What this host adds is what `InstanceDetail` leaves to its hosts: the navigation
-    // state, the scroll container, the create and delete gestures, and the profile.
+    // ── The detail: the Configurator's panel (`ConfiguratorPanel`, #187) ───────
+    // Until #187 this was the Data Manager's `InstanceDetail`; the panel took its props, so
+    // what this host adds is unchanged: the navigation state, the scroll container, the
+    // create and delete gestures, and the profile.
 
     /** Where the detail has drilled to. Cleared when another instance is picked, as the
      *  Data Manager clears it from its selection gestures. */
@@ -306,13 +306,19 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
     };
 
     /** «New <Target> & link»: the target at model root, then the pointer appended to the
-     *  source slot — the same two steps the Data Manager's commit makes (#142). */
-    const createAndLink = (targetCls: string, sourceId: string, refKey: string) => {
+     *  source slot — the same two steps the Data Manager's commit makes (#142).
+     *
+     *  #187: with `at`, the pointer is SET at that raw index of the slot instead (R-REF-4): the
+     *  index an empty single-valued slot links at, or the row of a filled one, whose old target
+     *  is unlinked and never deleted. Appending there gave a 0..1 slot a second target. */
+    const createAndLink = (targetCls: string, sourceId: string, refKey: string, at?: number) => {
         const mid = modelIdOfObject(idlookup, sourceId) || modelId;
         if (!mid) return;
         const shape = makeShapeCtx(mid).shape();
         const id = applyCreate(mid, shape, newDraft(shape, targetCls, null, null));
-        if (id) appendValue(sourceId, refKey, id, true);
+        if (!id) return;
+        if (typeof at === 'number') setValue(sourceId, refKey, at, id, true);
+        else appendValue(sourceId, refKey, id, true);
     };
 
     if (!open) return null;
@@ -364,18 +370,22 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
     const windowBody = (
             <div className={`configurator${isPage ? ' configurator--page' : ''}`}>
                 <div className="configurator__header">
-                    <div className="configurator__title"><i className="bi bi-grid-1x2" /> Configurator</div>
-                    <div className="configurator__header-right">
+                    {/* #187 task 3: the role beside the label, so it is the first thing read. In the
+                        UI the profile is called «Role» (R-CFG-4); the `?profile=` parameter keeps its name. */}
+                    <div className="configurator__title-group">
+                        <div className="configurator__title"><i className="bi bi-grid-1x2" /> Configurator</div>
                         <span
                             className={`configurator__profile-chip${profile ? '' : ' configurator__profile-chip--none'}`}
-                            title={profile ? 'Active profile from the ?profile= URL parameter' : 'No ?profile= in the URL — full access (developer)'}
+                            title={profile ? `Role: ${profile.name || 'unnamed'}, from the ?profile= URL parameter` : 'No role in the URL (?profile=): full access (developer)'}
                         >
                             {profile ? (
-                                <><i className="bi bi-person-badge" /> {profile.name || 'profile'}</>
+                                <><i className="bi bi-person-badge" /> {profile.name || 'role'}</>
                             ) : (
-                                <><i className="bi bi-unlock" /> No profile — full access</>
+                                <><i className="bi bi-unlock" /> No role — full access</>
                             )}
                         </span>
+                    </div>
+                    <div className="configurator__header-right">
                         {/* R5: the page is where the consumer lands, not a window to close. */}
                         {!isPage && (
                             <button className="configurator__close" onClick={onClose} aria-label="Close">
@@ -517,15 +527,15 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
 
                             <div className="configurator__detail" ref={detailRef}>
                                 {selectedInstanceId && modelId ? (
-                                    /* The Data Manager's detail, not a second one: header,
-                                       breadcrumb and Back, the form (host `manager`, so the
-                                       Data Manager's view applies here too), inline children,
-                                       reference sections with their summaries, «Add».
-                                       Wrapped in the manager's root class for its palette and
-                                       tokens; `configuratorTab.scss` undoes the root's layout. */
+                                    /* #187: the Configurator's own panel (R-CFG-2) — header band
+                                       with Save and the issues, breadcrumb and Back, Identity /
+                                       Attributes / Components; the Data Manager's view still
+                                       applies (host `manager`). Still wrapped in the manager's
+                                       root class for its palette and tokens, and in its inner
+                                       frame; `configuratorTab.scss` undoes the root's layout. */
                                     <div className="instance-manager configurator__dm" data-palette={palette}>
                                         <div className="instance-manager__form-inner">
-                                            <InstanceDetail
+                                            <ConfiguratorPanel
                                                 modelid={modelId}
                                                 subjectId={selectedInstanceId}
                                                 nav={nav}
