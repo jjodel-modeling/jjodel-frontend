@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-10-18-0045
 Chat: C-2026-10-18-0035
-Front: jjodie
+Front: release-3-2
 Lane: full (more than three files, changes an exported interface of the provider layer)
 Status: da eseguire
 
