@@ -33,3 +33,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended, 21/21 on `348deae2a` (this branch's vite on port 3186): `chat_186b_independent.mts` 9/9 (Endpoints menu, window, tabs and keyboard, Escape, Done saves, left-bar door, fold, stand-alone link) and `chat_187_independent.mts` 12/12 (the trunk side's Configurator panel, developer overlay and role Edu), no page error; the yes to merge is Juri's, 2026-10-17.
 **Notes**: merge-tree zero conflicts; union: none (`decisions.md` on the branch side only, each inbox on one side). Step 5: `Navbar.tsx` read whole, the two sides in disjoint regions (the Endpoints menu entry, the `!consumer` gates of the right header), no duplicate. The prompt expected check:docs 4/4: the gate has five checks since `73af7bbac` (Check E), and the trunk tip gives 5/5 too.
 **Prompt document name**: 2026-10-17 10:32
+
+## 2026-10-17 — merge: feat/186-endpoints into staging (P-2026-10-17-1047)
+**Prompt**: `claude_2026-10-17_1047_prompt_merge_feat-186-endpoints.md`, a direct merge by `lane-run merge --direct`, no session: `feat/186-endpoints` at `b39397d2e` into `staging`, merge base `f7d0d1d7c`, 12 commits on the branch side.
+**Files touched**: merge `df67afbf5`: 13 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-14_186_endpoints.md`, `docs/log-inbox/endpoints.md`, `docs/prompts/claude_2026-10-14_1101_prompt_186_endpoints.md`, `docs/prompts/claude_2026-10-17_1032_prompt_feat-186-endpoints_take_trunk.md`, `frontend/src/components/envgen/steps/MetaclassesStep.tsx`, `frontend/src/components/envgen/steps/ProfilesStep.tsx`, `frontend/src/components/project/EndpointsWindow.scss`, and 5 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `df67afbf5` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9072 tests in 372 files, 9 red at import, hooks 681; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended, 21/21: the merged tree differs from 348deae2a only by docs (git diff --name-only b39397d2e staging: the merge prompt and the closure docs), where the chat ran chat_186b_independent.mts 9/9 and chat_187_independent.mts 12/12 on port 3186, no page error; Juri's visual GOs of 2026-10-17 were given on the two lane trees
+**Notes**: Rollback tag `pre-feat/186-endpoints` on `f7d0d1d7c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-17-1047/result.json`.
+**Prompt document name**: 2026-10-17 10:47
