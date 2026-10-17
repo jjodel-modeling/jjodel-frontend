@@ -288,6 +288,11 @@ describe('output-budget: e. builds, tests and type-checks', () => {
         expect(denied(command)).toBe(true);
     });
 
+    test('kills "an absolute runner path not recognised": the merge templates\' vitest lines pass, the old ones are denied (P-2026-10-18-0100)', () => {
+        expect(['npx vitest run --reporter=dot', 'npx vitest run scripts/hooks'].map(denied)).toEqual([true, true]);
+        expect(['cd /w/b/frontend && node /w/t/frontend/scripts/run-quiet.mjs vitest-branch -- npx vitest run --reporter=dot', 'node scripts/run-quiet.mjs vitest-hooks -- npx vitest run scripts/hooks'].map(denied)).toEqual([false, false]);
+    });
+
     test('kills "a bound lifts rule e": a build piped into tail is still denied', () => {
         expect(denied('npm run build 2>&1 | tail -n 5')).toBe(true);
     });
