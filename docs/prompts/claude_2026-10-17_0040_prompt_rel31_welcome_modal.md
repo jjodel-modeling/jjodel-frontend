@@ -6,7 +6,7 @@ Front: release-3-2
 Lane: full (user-facing UI copy and layout in one component; visual GO required before the 3.1 PR is merged)
 Depends: P-2026-10-16-1000
 Request: none (Alfonso, 2026-10-17 00:35 "SI" to a 3.1 welcome screen, 00:38 "puoi anche mettere un richiamo a cosa era nuovo nella 3.0"; the chat's content choice stands)
-Status: da eseguire
+Status: eseguito 2026-10-17 · lane rel31-welcome · 17486a557 · hard-stop, typecheck 0, build 0, smoke GREEN 12/0/3 after the seed fix 7a42da813; merged 4b4391e0a; visual GO by Alfonso 2026-10-17 10:48
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply.
 
