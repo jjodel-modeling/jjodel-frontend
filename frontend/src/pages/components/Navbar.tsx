@@ -1558,6 +1558,25 @@ function NavbarComponent(props: AllProps) {
             ]
         },
 
+        /* Endpoints (#186, R-CFG-5) - the stand-alone environment's window, opened on a tab through the
+           event ProjectEditor listens to; hidden on dashboard and in consumer mode, shown in Basic and Advanced */
+        (isDashboard || consumer) ? null : {name: 'Endpoints',
+            subItems: [
+                {name: 'Editable metaclasses',
+                    function: () => {
+                        window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD, { detail: { tab: 'metaclasses' } }));
+                    },
+                    icon: <i className="bi bi-grid-1x2" />
+                },
+                {name: 'Roles',
+                    function: () => {
+                        window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD, { detail: { tab: 'roles' } }));
+                    },
+                    icon: <i className="bi bi-people" />
+                },
+            ]
+        },
+
         /* Analyze - Live Validation/Validate are permanent stubs; advanced items hidden on dashboard;
            hidden entirely in consumer mode (#157 F3b: validation is a developer concern) */
         consumer ? null : {name: 'Analyze',
