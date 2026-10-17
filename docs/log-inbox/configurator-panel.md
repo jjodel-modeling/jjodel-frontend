@@ -20,3 +20,16 @@ order** (RC-12) and empties this file. The active log is not touched by this lan
 **Prompt document name**: 2026-10-14 11:00
 
 **Ticket** (found by the probe, not fixed here): with the developer's Configurator overlay open over the Data Manager, both render the same field ids (`ir-field-<slotId>`, two per field measured), so a title's `<label for>` resolves to the Data Manager's control first; every input keeps its own `aria-label`, and the stand-alone page measures unique ids. The same duplication existed before (two `IRForm`s). Also: the delete confirmation (`DeleteDialog`, the host's) still says «profile», where R-CFG-4 says «Role» in the UI.
+
+## 2026-10-17 — merge: feat/187-configurator-panel into staging (P-2026-10-17-0950)
+**Prompt**: `claude_2026-10-17_0950_prompt_merge_feat-187-configurator-panel.md`, a direct merge by `lane-run merge --direct`, no session: `feat/187-configurator-panel` at `ce402506c` into `staging`, merge base `358a91da3`, 7 commits on the branch side.
+**Files touched**: merge `5bf91bf01`: 13 files from the branch side (`docs/discovery/discovery_2026-10-14_187_configurator_panel.md`, `docs/log-inbox/configurator-panel.md`, `docs/prompts/claude_2026-10-14_1100_prompt_187_configurator_panel.md`, `frontend/src/components/environment/ConfiguratorTab.tsx`, `frontend/src/components/environment/configurator/ComponentPicker.tsx`, `frontend/src/components/environment/configurator/ConfiguratorPanel.tsx`, `frontend/src/components/environment/configurator/PanelComponents.tsx`, `frontend/src/components/environment/configurator/PanelFields.tsx`, and 5 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5bf91bf01` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9064 tests in 371 files, 9 red at import, hooks 681; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended, 12/12: the chat's independent probe chat_187_merged.mts rerun on the merged tree (main tree vite on port 3190, MM172 fixture, developer overlay and role Edu), no page error; Juri's visual GO of 2026-10-17 was given on the lane tree (port 3187)
+**Notes**: Rollback tag `pre-feat/187-configurator-panel` on `358a91da3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-17-0950/result.json`.
+**Prompt document name**: 2026-10-17 09:50
