@@ -20,3 +20,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-14 11:01
 
 **Ticket** (P-2026-10-14-1101, measured): `components/ui/Checkbox/Checkbox.tsx:54-68` renders `<label htmlFor={id}>` with `id` undefined when no `id` is passed, so the checkbox button has no accessible name and a click on the label does not toggle it. Every row of «Editable metaclasses» is such a checkbox; the probe had to find the box by its row's label text. Not fixed here (outside DOVE).
+
+## 2026-10-17 — merge: feat/186-endpoints takes staging (P-2026-10-17-1032)
+**Prompt**: `claude_2026-10-17_1032_prompt_feat-186-endpoints_take_trunk.md`, trunk into branch rendered by `lane-run merge --trunk-into`, session `7c0a6cce`: `staging` at `f7d0d1d7c` into `feat/186-endpoints` at `cd8f34c68` (pre-merge tip `790cf6ad0`), merge base `358a91da3`, 10 commits on the trunk side (#187 Configurator panel and its merge), 9 on the branch side, before the trunk takes the branch (RC-14).
+**Files touched**: merge `348deae2a`: 14 files from the trunk side (`docs/discovery/discovery_2026-10-14_187_configurator_panel.md`, `docs/log-inbox/configurator-panel.md`, the two #187 prompts, `frontend/src/components/environment/ConfiguratorTab.tsx`, `configuratorTab.scss`, seven files under `components/environment/configurator/`, and `frontend/src/pages/components/Navbar.tsx`, auto-merged); nothing by hand. This commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `348deae2a`: typecheck exit 0, no `error TS`; typecheck:scripts exit 0; vitest 9072 passed in 372 files (the trunk's 9064, measured read-only in the main tree, plus the 8 of `endpointsModel.test.ts`), 0 failed, the same 9 files red at import; hooks 681 (trunk 681, branch 0 new); build exit 0; check:docs 5/5; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 21/21 on `348deae2a` (this branch's vite on port 3186): `chat_186b_independent.mts` 9/9 (Endpoints menu, window, tabs and keyboard, Escape, Done saves, left-bar door, fold, stand-alone link) and `chat_187_independent.mts` 12/12 (the trunk side's Configurator panel, developer overlay and role Edu), no page error; the yes to merge is Juri's, 2026-10-17.
+**Notes**: merge-tree zero conflicts; union: none (`decisions.md` on the branch side only, each inbox on one side). Step 5: `Navbar.tsx` read whole, the two sides in disjoint regions (the Endpoints menu entry, the `!consumer` gates of the right header), no duplicate. The prompt expected check:docs 4/4: the gate has five checks since `73af7bbac` (Check E), and the trunk tip gives 5/5 too.
+**Prompt document name**: 2026-10-17 10:32

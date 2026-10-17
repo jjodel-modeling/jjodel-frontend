@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-17-1032
 Chat: C-2026-10-14-1020
 Lane: full (merge of the trunk into the branch; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-17 · lane feat/186-endpoints · 348deae2a · verifica visiva passata 2026-10-17 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/juridirocco/development/jjodel-186`, branch `feat/186-endpoints`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/juridirocco/development/jjodel-186`, branch `feat/186-endpoints`, `git log -1` is the commit that adds this file (its parent `790cf6ad0`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-17-1032 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
