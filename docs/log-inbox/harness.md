@@ -56,3 +56,41 @@ Measurement (item 7), nested `claude -p --model claude-haiku-5-5` in `~/jjodel-r
 Exemptions (item 4, report §6.1 risk 7). Search: `grep -n -E "spawn|execFile|execSync|exec\("` over `lane-run.mjs` and `grep -l -r` over `gates/` and `smoke/`: every hit is a node child process (`spawn`/`spawnSync` of git, npm, npx, sh, lsof), never a Bash tool call, so the hook cannot see them. Wider check over `.claude/commands/`, `.claude/skills/` and `frontend/scripts/lane-templates/`: the skills inject with `awk` (not classified); `.claude/commands/lane.md:11` runs `cat ~/.jjodel-lanes/<id>/worktree.txt` and `session.txt`, denied by rule a, now exempt for those two names only (other ledger `.txt` files reach 2 KB and more); the templates' `git log -1`, `git diff --name-only` and `git show <tree>:<path> | grep -c -F` pass. Mutation bench in the message of `6e910eb68`.
 
 **Ticket** (P-2026-10-17-1945): `frontend/scripts/lane-templates/merge-into-trunk.md:42` and `trunk-into-branch.md:39` name `npx vitest run --reporter=dot` and `npx vitest run scripts/hooks`; with the hook registered, rule e denies each once and names `run-quiet.mjs`. No exemption made: rule e exists for these outputs. The templates should name the runner; outside this lane's scope.
+
+## 2026-10-18 — feat(harness): B1, lane-usage.mjs measures plan usage and per-call context; merge templates through the runner (P-2026-10-18-0100)
+**Prompt**: `claude_2026-10-18_0100_prompt_b1_lane_usage_measurement.md`, `Lane: fast`, tier heavy, unattended, worktree `~/jjodel-w-usage` on `lane-usage`: a read-only lane usage script with tests, the merge templates through `run-quiet.mjs`, `docs/harness/gates.md`, the `lane:usage` npm script.
+**Files touched**: `1c3002939`: `frontend/scripts/lane-usage.mjs` (new), `frontend/scripts/hooks/__tests__/laneUsage.test.ts` (new), `frontend/scripts/hooks/__tests__/fixtures/lane-usage/` (new, three lanes), `frontend/package.json`, `frontend/scripts/hooks/__tests__/outputBudget.test.ts` (one case). `08f99ec8a`: `frontend/scripts/lane-templates/merge-into-trunk.md`, `trunk-into-branch.md`. This commit: `docs/harness/gates.md` (new), this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-17 19:45
+**Causa**: (c)
+**Regressions**: no — through `run-quiet.mjs`: `laneUsage.test.ts` 14/14, `outputBudget.test.ts` 86/86, `scripts/hooks` 14 files 781 tests, `typecheck:scripts` exit 0, `check:scripts` PASS (91 files); `check:docs` on this commit. Mutation bench: 16 mutations, 16 killed (commit message of `1c3002939`).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — P8 derogated by the prompt, no UI touched.
+**Notes**: Corregge/Causa c: item 3 closes the B0 ticket, the hook was registered without measuring the templates it would deny. The log differs from the report in two places, followed per item 1d: assistant events repeat per content block (calls deduped by `message.id`), and per-call `output_tokens` is the stream-start count, so the output total is also read from the last `modelUsage`. Rate-limit field paths match the report. Env var `JJODEL_LANES` (lane-board.mjs).
+**Prompt document name**: 2026-10-18 01:00
+
+First measured numbers (first two lines of each output, 2026-10-18 01:1x):
+- `lane-usage.mjs P-2026-10-16-1000`:
+  `P-2026-10-16-1000  tier heavy  model claude-opus-5-5  runs 2  session 687966e7-7bc4-4073-ac68-146a268849c1`
+  `main  claude-opus-5-5  calls 178  input 356  cache_read 42610045  cache_creation 807979  output 2703`
+  Further down: context per call max 432174, median 239804, 112 calls at or above 200k, 83 at or above 250k; output from `modelUsage` 129271; rate limit 9 readings, 7d delta -1 (first reading `rejected` at 1 on overage, last `allowed` at 0 after the weekly reset), 5h delta 0.02; not alone (`P-2026-09-29-1017`).
+- `lane-usage.mjs --all`:
+  `id                 tier   model              runs  calls  ctx max  input  cache_read  cache_creation  output*  7d delta  alone`
+  `P-2026-10-18-0105  heavy  claude-opus-5-5    1     13     90196    26     845842      77677           7414     0         false`
+  Over the 504 lane folders with a log: 354 carry per-call usage; of those, 216 reach a main context of 200k at least once and 178 reach 250k; 55 lanes ran alone, 449 overlapped another lane (a lower bound); 0 malformed lines.
+- Per-call input classes against `modelUsage` on P-2026-10-16-1000: cache_read 42610045 against 42212624 (+0.9%), cache_creation 807979 against 806620, input 356 against 354. Not explained in this lane.
+
+Template verdicts (item 3, output-budget.mjs run on each line): `npx vitest run --reporter=dot` and `npx vitest run scripts/hooks` deny; the four runner lines pass, the absolute-path form `cd <other>/frontend && node <this tree>/frontend/scripts/run-quiet.mjs ...` included. The prompt counted three invocations; there are four, two per template, all rewritten. Added as one case in `outputBudget.test.ts`.
+
+Decisions taken (unattended):
+- Commit 1 subject shortened to `feat(harness): lane-usage.mjs measures plan usage and context per lane`: the prompt's subject is 79 characters without the suffix and bash-guard denies it (§6.2).
+- Lanes root variable `JJODEL_LANES`, the one `lane-board.mjs:34` defines, not `JJODEL_LANES_DIR` (the prompt: reuse an existing name).
+- The read-only vitest count in the other worktree calls this tree's runner by absolute path, so the runner's log stays out of the tree that must not be written.
+- Output total added from `modelUsage` (`resultOutput`, and the `output*` column of `--all`) beside the per-call sum the prompt asked for, which the log shows to be unreliable.
+- `tier` is the first word of `tier.txt`; the whole line is kept as `tierLine`. `--all --write` is a usage error (exit 2). `--all` leaves out lane folders without `log.jsonl` and says how many.
+- `npm run typecheck` (the main project) not run: no file under `frontend/src` changes.
+
+Decisions awaiting Alfonso: none.
+
+**Ticket** (P-2026-10-18-0100): `started.txt` is rewritten on every resume (P-2026-10-16-1000: written 16:04, first init 10:01), so the overlap interval of a resumed lane starts at its last run and `alone` can read true for a lane that overlapped in an earlier run. Followed as specified; a fix would take the first event time or have `lane-run.mjs` keep the first start.

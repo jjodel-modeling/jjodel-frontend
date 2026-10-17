@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-0100
 Chat: C-2026-10-17-1757
 Front: harness
 Lane: fast (new read-only script with tests, two template lines, one new doc; outside the critical zone; tier drawn (RC-45): heavy)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane harness · 1c3002939
 Depends: P-2026-10-17-1945
 Request: none (Alfonso, 2026-10-18 00:56, «lancia B1 adesso», in chat C-2026-10-17-1757; his words kept locally in the lane folder's request.md, RC-43)
 
