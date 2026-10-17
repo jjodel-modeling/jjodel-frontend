@@ -1,6 +1,6 @@
 # lane-run: resume budget (run count and cumulative cost, refusal past the threshold)
 
-Prompt-ID: P-2026-10-18-0100
+Prompt-ID: P-2026-10-18-0105
 Chat: C-2026-10-18-0035
 Front: harness
 Lane: fast (one script and its tests; no UI, no normative file)
@@ -13,7 +13,7 @@ Deroga: P8 (visual check) does not apply, no UI is touched. P4 (discovery report
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`. Before anything else: `pwd`, branch, `git log -1` and `git status`. If the branch differs or the tree is not clean, stop with `Outcome: blocked`. The lane P-2026-10-18-0045 runs in `~/jjodel-w-aiproviders`: do not touch that worktree or its lane folder.
 
 ## Lane discipline
-Every reply of this session opens with `[P-2026-10-18-0100 · session <id>]`.
+Every reply of this session opens with `[P-2026-10-18-0105 · session <id>]`.
 Every final message ends with one line: `Outcome: done | hard-stop | question | blocked`.
 Every question that has a recommendation carries it in one line: `Recommended: <one line>`.
 
