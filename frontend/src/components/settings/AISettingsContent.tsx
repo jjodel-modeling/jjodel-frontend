@@ -8,6 +8,7 @@ import {U} from "../../joiner";
 import { OpenAIIcon } from '../icons/ProviderIcons';
 import { AIProviderService } from '../../services/AIProviderService';
 import { AIEvents } from '../../events/registry';
+import type { CatalogFailure } from '../../services/aiModelCatalog';
 
 import groqLogo from '../../static/img/groq.webp';
 import kimiLogo from '../../static/img/kimi.svg';
@@ -53,6 +54,14 @@ const SETTINGS_TO_PROVIDER: Record<string, AIProvider> = {
 };
 
 const nbsp = String.fromCharCode(160); // "&nbsp;"
+// Tooltip of a provider row whose last connection test failed, by kind of failure.
+const FAILURE_TITLES: Record<CatalogFailure, string> = {
+    auth: 'Invalid key',
+    rate: 'Rate limited',
+    network: 'Provider unreachable',
+    server: 'Provider error',
+    other: 'Connection test failed',
+};
 // Component to show model capability badges
 function ModelCapabilitiesBadges({ model }: { model: AIVersion | undefined }): JSX.Element | null {
     if (!model) return null;
@@ -152,8 +161,8 @@ export function AISettingsContent({
     };
 
     // Test provider connection against the real provider endpoint (shared AIProviderService).
-    // Persist the outcome on config (lastTested + lastTestOk, plus enabled) so the status pill can
-    // show Connected / Invalid key across both settings UIs; on failure keep the error message.
+    // Persist the outcome on config (lastTested + lastTestOk + lastTestFailure, plus enabled) so the
+    // row dot and its tooltip survive a reload; on failure keep the error message.
     // The transient button result auto-reverts to idle via scheduleRevert (success and failure alike).
     const handleTestConnection = async (provider: TAIProvider) => {
         clearRevertTimer(provider); // cancel a pending revert from a previous test before starting a new one
@@ -168,6 +177,7 @@ export function AISettingsContent({
             if (result.success) {
                 config.lastTested = Date.now();
                 config.lastTestOk = true;
+                config.lastTestFailure = undefined;
                 config.enabled = true;
                 // The current model answered: the notice about the retired one has served (#179).
                 config.replacedModel = undefined;
@@ -177,6 +187,7 @@ export function AISettingsContent({
             } else {
                 config.lastTested = Date.now();
                 config.lastTestOk = false;
+                config.lastTestFailure = result.failure ?? 'other';
                 // Only a rejected key disables the provider (rate limit, network and outage do not).
                 if (AIProviderService.failureDisablesProvider(result)) config.enabled = false;
                 config.save();
@@ -187,6 +198,7 @@ export function AISettingsContent({
             const config = AIConfig.get(provider);
             config.lastTested = Date.now();
             config.lastTestOk = false;
+            config.lastTestFailure = 'network';
             config.enabled = false;
             config.save();
             setTestError(prev => ({ ...prev, [provider]: (err as Error).message || 'Connection failed' }));
@@ -206,18 +218,6 @@ export function AISettingsContent({
         return name === AIProvider.Custom ? (liveKey !== '' || baseUrlConfigured)
             : llm.requiresKey ? liveKey !== ''
             : baseUrlConfigured;
-    };
-
-    // Inline model list shown next to the provider name: first 3 non-deprecated models from the
-    // registry, truncated with "…". Source of truth for models is this registry — the Settings
-    // panel no longer selects per-provider model; the app-level picker chooses per-feature.
-    // Custom has a single placeholder version ('Custom'), which says nothing: name the shape of
-    // the endpoint instead.
-    const modelsSummary = (name: TAIProvider): string => {
-        if (name === AIProvider.Custom) return 'OpenAI-compatible endpoint';
-        const nonLegacyVersions = Object.values(AI[name].versions).filter(v => !v.deprecated);
-        const summary = nonLegacyVersions.slice(0, 3).map(e => e.label).join(', ') + (nonLegacyVersions.length > 3 ? "…" : "");
-        return summary || 'OpenAI-compatible endpoint';
     };
 
     // Label of the model this provider currently points at, shown only on configured rows: the
@@ -251,16 +251,17 @@ export function AISettingsContent({
         const isExpanded = expandedProvider === name;
         const config = AIConfig.get(name);
         let llm = AI[name];
-        let description: string = modelsSummary(name);
         const isConfigured: boolean = isProviderConfigured(name);
 
         // Row state — the persistent at-a-glance status (the transient test button complements it):
-        //   no key → "Set up" (muted) · last test failed → red dot + "Invalid key" ·
-        //   otherwise → green dot + the active model. The "Not configured" chip is gone: eleven
-        //   identical chips carried no information (mockup 5a).
+        //   no key → "Set up" (muted) · configured → the active model, always, behind a dot that
+        //   carries the status: red when the last test failed, green otherwise (passed or untested).
+        //   A red dot names the kind of failure in the tooltip (lastTestFailure). The "Not
+        //   configured" chip is gone: eleven identical chips carried no information (mockup 5a).
         // Reactive: recomputes on key changes (apiKeyByProvider) and on test completion
-        // (config.lastTested/Ok).
+        // (config.lastTested/Ok/Failure).
         const keyInvalid = isConfigured && config.lastTested != null && config.lastTestOk === false;
+        const failureTitle = keyInvalid ? FAILURE_TITLES[config.lastTestFailure ?? 'other'] : undefined;
 
         const status = testStatus[name] || 'idle';
 
@@ -324,15 +325,16 @@ export function AISettingsContent({
                     </span>
 
                     <span className="ai-provider-row__name">{name}</span>
-                    <span className="ai-provider-row__models">{description}</span>
 
+                    {/* The models summary that filled the middle went: the state keeps the right edge. */}
                     {isConfigured ? (
-                        <span className={`ai-provider-row__state ai-provider-row__state--active ${keyInvalid ? 'ai-provider-row__state--error' : ''}`}>
-                            <span className="ai-provider-row__dot" />
-                            {keyInvalid ? 'Invalid key' : activeModelLabel(name)}
+                        <span className="ai-provider-row__state ai-provider-row__state--active" style={{ marginLeft: 'auto' }} title={failureTitle}>
+                            {/* The error class on the dot only: it paints the dot red, the model keeps its colour. */}
+                            <span className={`ai-provider-row__dot ${keyInvalid ? 'ai-provider-row__state--error' : ''}`} />
+                            {activeModelLabel(name)}
                         </span>
                     ) : (
-                        <span className="ai-provider-row__state">Set up</span>
+                        <span className="ai-provider-row__state" style={{ marginLeft: 'auto' }}>Set up</span>
                     )}
 
                     <i className="bi bi-chevron-down ai-provider-row__chevron" />
@@ -377,6 +379,7 @@ export function AISettingsContent({
                                             // Any credential edit invalidates a prior test result → untested.
                                             config.lastTested = undefined;
                                             config.lastTestOk = undefined;
+                                            config.lastTestFailure = undefined;
                                             config.save();
                                             // Re-render for non-key edits (baseUrl/model); the apiKey
                                             // case already re-renders via setApiKeyByProvider above.

@@ -5,7 +5,7 @@
 
 import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveCurrentModelId, isForeignModel, getAICompany, applyModelCatalog, getProxyBase} from '../types/jodie';
 import {AIEvents} from '../events/registry';
-import {CATALOG_PROVIDERS, fetchCatalog, needsRefresh, writeCatalogCache} from './aiModelCatalog';
+import {CATALOG_PROVIDERS, failureFromStatus, fetchCatalog, needsRefresh, writeCatalogCache} from './aiModelCatalog';
 import type {CatalogFailure, CatalogFetchResult, CatalogProvider} from './aiModelCatalog';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
@@ -882,6 +882,8 @@ export class AIProviderService {
      * Kimi, Ollama, Custom). POSTs a minimal "Hi" probe and treats any 2xx as success. Per-provider
      * differences are passed as options: an optional key-prefix format check, and 401/404/network
      * hint overrides. Body shape varies via `bodyExtras` ({max_tokens:10} vs {stream:false}).
+     * Every failure carries its kind, classified by HTTP status as the catalog does; a fetch that
+     * rejects (DNS, CORS, connection refused) is 'network'.
      */
     private static async testOpenAICompatible(
         endpoint: string,
@@ -895,11 +897,13 @@ export class AIProviderService {
             notFoundHint?: string;
             networkErrorHint?: string;
         }
-    ): Promise<{ success: boolean; error?: string }> {
+    ): Promise<ConnectionTestResult> {
+        let response: Response | undefined;
         try {
             if (opts?.expectedKeyPrefix && !apiKey.startsWith(opts.expectedKeyPrefix)) {
                 return {
                     success: false,
+                    failure: 'auth',
                     error: `Invalid API key format. Keys should start with "${opts.expectedKeyPrefix}"`,
                 };
             }
@@ -907,7 +911,7 @@ export class AIProviderService {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             if (authScheme === 'bearer') headers['Authorization'] = `Bearer ${apiKey}`;
 
-            const response = await fetch(endpoint, {
+            response = await fetch(endpoint, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Hi' }], ...bodyExtras }),
@@ -927,17 +931,20 @@ export class AIProviderService {
                 if (response.status === 401 && opts?.invalidKeyHint) errorMsg = opts.invalidKeyHint;
                 if (response.status === 404 && opts?.notFoundHint) errorMsg = opts.notFoundHint;
 
-                return { success: false, error: errorMsg };
+                return { success: false, failure: failureFromStatus(response.status, errorText), error: errorMsg };
             }
 
             await response.json();
             return { success: true };
         } catch (error) {
             const errorMessage = (error as Error).message;
+            // No response yet: fetch itself rejected, so the provider was not reached. After an
+            // answer (an unreadable body), the provider was reached and the kind is unknown.
+            const failure: CatalogFailure = response ? 'other' : 'network';
             if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-                return { success: false, error: opts?.networkErrorHint || 'Network error. Check your internet connection.' };
+                return { success: false, failure, error: opts?.networkErrorHint || 'Network error. Check your internet connection.' };
             }
-            return { success: false, error: `Connection error: ${errorMessage}` };
+            return { success: false, failure, error: `Connection error: ${errorMessage}` };
         }
     }
 
