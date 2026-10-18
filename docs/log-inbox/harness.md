@@ -290,3 +290,16 @@ Decisions awaiting Alfonso: the registration of `rule-trigger.mjs` in `.claude/s
 **Ticket**: The first trigger of report `docs/discovery/discovery_2026-10-15_lean_context_model_routing.md` §5.1 C: `lane-run start` should append a «Rules in scope» block to the lane input, naming the docs of every `docs/harness/rule-triggers.json` entry whose glob matches a DOVE path, with test T-D3. It is in no batch of §5.6 and touches `lane-run.mjs`: a later heavy lane.
 **Priority**: medium
 **Found in**: P-2026-10-18-1420
+
+## 2026-10-18 — merge: rule-triggers into alfonso-frontend-jjtl (P-2026-10-18-1502)
+**Prompt**: `claude_2026-10-18_1502_prompt_merge_rule-triggers.md`, a direct merge by `lane-run merge --direct`, no session: `rule-triggers` at `bf2d67848` into `alfonso-frontend-jjtl`, merge base `ce534749c`, 2 commits on the branch side.
+**Files touched**: merge `8b58b9323`: 9 files from the branch side (`docs/harness/gates.md`, `docs/harness/rule-triggers.json`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1420_prompt_b4_rule_triggers.md`, `frontend/package.json`, `frontend/scripts/gates/check-triggers.ts`, `frontend/scripts/hooks/__tests__/checkTriggers.test.ts`, `frontend/scripts/hooks/__tests__/ruleTrigger.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `8b58b9323` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9319 tests in 381 files, 9 red at import, hooks 847; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Direct merge 8b58b9323: all eight gates green in result.json; no UI change (hook, gate and map only, hook not registered).
+**Notes**: Rollback tag `pre-rule-triggers` on `87feac64a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1502/result.json`.
+**Prompt document name**: 2026-10-18 15:02
