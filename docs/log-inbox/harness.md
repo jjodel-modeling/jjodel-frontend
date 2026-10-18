@@ -143,3 +143,20 @@ Decisions awaiting Alfonso: none.
 **Smoke visivo**: passato — chat, unattended: no UI change: parser, tests and docs only (0 files under frontend/src between 3d55ae11d and the merge); decided by chat C-2026-10-17-1757 under RC-25
 **Notes**: Rollback tag `pre-digest-tolerant` on `3d55ae11d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1033/result.json`.
 **Prompt document name**: 2026-10-18 10:33
+
+## 2026-10-18 — feat(harness): B3b, lane board shows tokens in, out, total and context max per lane (P-2026-10-18-1045)
+**Prompt**: `claude_2026-10-18_1045_prompt_b3b_board_tokens.md`, fast lane, tier heavy: export `laneUsage` from `lane-usage.mjs`; In, Out, Total, Ctx max in the Lanes tab and on `/api`; an Insights Tokens block; a per-lane usage cache keyed by `log.jsonl` size and mtime; README; tests.
+**Files touched**: `65f5f9236`: `frontend/scripts/lane-usage.mjs`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`; README commit (bash-guard P13 keeps it apart from docs/): `frontend/scripts/lane-board/README.md`; docs commit: `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1045_prompt_b3b_board_tokens.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneBoard 73/73 (6 new), laneUsage 14/14 unchanged, scripts/hooks 787/787 in 14 files, typecheck:scripts exit 0, check:scripts PASS 91 files.
+**Out-of-scope changes**: no (7 files, all named by the prompt, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (the chat checks the board in the built-in browser, P8 RC-23; the page script, run in a node vm against the live `/api` on 4710, rendered the new columns)
+**Notes**: Cold 2569 ms over 509 lane folders, warm 8 ms (506 hits), in-process; the 2 s hard stop did not apply. First data row on 4710 (running, P-2026-10-18-1045 itself): In 5.3M (5292206), Out n/a (no result event yet), Total 5.3M, Ctx max 172.8k (172844); first closed row with usage, P-2026-10-18-1030: 3320078, 33195, 3353273, 122438. Mutation bench: commit message of `65f5f9236`.
+**Prompt document name**: 2026-10-18 10:45
+
+Decisions taken (unattended): (1) the four 72 px columns do not fit 1248 px by trimming Worktree and Launched by alone (live 1100 px fixed today, closed 1080, Phase and Outcome take the rest): Worktree 144 to 112 and the Lanes tab's page widened 1280 to 1536 px (`main.wide`, toggled by `showTab`), `table.lfx` min-width 1200 to 1456, so Phase (148) and Outcome (168) keep today's room and the other tabs keep 1280. (2) `overlap` exported too: `alone` is recomputed from the intervals on every read, never cached. (3) The CLI of `lane-usage.mjs` runs behind a realpath guard so that the board can import it. (4) "Per tier and per model" read as two tables, by tier and by model; tier is the first word of `tier.txt` as lane-usage reads it (`standard` included). (5) A lane without main calls reads n/a in all four cells, Out included; Total is In while no result event has an output. (6) `tokensSub` sums the four classes of the subagent calls, their per-call output included. (7) The existing `/api` key-list test now lists the five new fields.
+
+Decisions awaiting Alfonso: the width in (1). Alternatives: keep 1280 and narrow Lane, Elapsed and Span as well, or widen every tab (Insights would reflow to three columns at 1536).

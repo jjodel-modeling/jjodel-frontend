@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1045
 Chat: C-2026-10-17-1757
 Front: harness
 Lane: fast (lane board and its test, one export in lane-usage.mjs; outside the critical zone; tier drawn (RC-45): heavy)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane harness · 65f5f9236
 Depends: P-2026-10-18-0100
 Request: none (Alfonso, 2026-10-18 10:38, «in /lane monitor per ogni lane possiamo mettere anche il consumo di token in in e in out, e quello complessivo?»; his words kept in the lane folder's request.md, RC-43)
 
