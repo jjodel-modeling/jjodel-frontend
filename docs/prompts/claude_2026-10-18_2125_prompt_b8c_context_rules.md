@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-2125
 Chat: C-2026-10-18-2125
 Front: harness
 Lane: full (governance: `docs/decisions.md`, `docs/PROTOCOL.md` and a test under `frontend/scripts/hooks/`, RC-36; heavy by rule, not drawn)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane context-rules · b571ea5cc
 Depends: P-2026-10-18-2056
 Corregge: the sentinel `check:docs` accepts (RC-45 (2)); this lane corrects no earlier lane
 Request: none (Alfonso, 2026-10-18 21:22, in the project chat: open the harness front as heir of C-2026-10-18-1750, next step B8c, Lane full, tier heavy)

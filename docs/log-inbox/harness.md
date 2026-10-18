@@ -461,3 +461,25 @@ Decisions awaiting Alfonso: B8c, the ratification of the thresholds 200000/25000
 **Smoke visivo**: non applicabile — waived by the chat's GO: no file under frontend/src (settings.json, three agent files, docs), nothing renders differently; 3001 was not listening at the hard stop
 **Notes**: Union: `docs/log-inbox/harness.md`, trunk block first, pure additions against both parents (+33/+52). Governance file `.claude/settings.json` under Alfonso's go-ahead (2026-10-18 20:56). Probes 18/18 once, R-LIB-7 none. No lane-board file changed, no restart. check:docs now runs 5 checks, the prompt expected 4.
 **Prompt document name**: 2026-10-18 20:56
+
+## 2026-10-18 — test(harness): B8c, RC-51 and RC-52 rows for AM-8 and AM-9, the AM-1 agent-model test (P-2026-10-18-2125)
+**Prompt**: `claude_2026-10-18_2125_prompt_b8c_context_rules.md`, lane session `23608b95-c01e-4451-918a-949d556b512e`: rows RC-51 (AM-8) and RC-52 (AM-9) after RC-50, P13 and P16 bullets, the AM-1 test `agentModels.test.ts` with negative cases and a mutation bench, the threshold sentence of the `context-ceiling.mjs` header, `gates.md`.
+**Files touched**: code `b571ea5cc`: `frontend/scripts/hooks/__tests__/agentModels.test.ts` (new), `frontend/scripts/hooks/context-ceiling.mjs` (header comment); this commit: `docs/decisions.md` (two rows), `docs/PROTOCOL.md` (P13, P16), `docs/harness/gates.md`, this entry and one ticket, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. agentModels 15/15; scripts/hooks 917 in 19 files (902 + 15, contextCeiling unchanged and green); typecheck:scripts exit 0; check:scripts PASS 103 files; check:triggers PASS (8 entries); `npm run decisions -- RC-51 RC-52` parses both rows, RC-52 `amends: RC-20`.
+**Out-of-scope changes**: no. Seven files, all in DOVE.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: Real check on this worktree's `.claude/`: 3 agents and 3 skills scanned; covered `Explore.md`, `explorer.md`, `general-purpose.md`, the skills name no model. Mutation bench: 21 mutants (set membership 4, read-only rule 5, parser 5, settings IDs 4, messages 2, skills scan 1), all killed, unmutated copy green; list in the body of `b571ea5cc`. RC-51 and RC-52 measured free on all 268 local and remote refs (RC-50 found on 12, positive control).
+**Prompt document name**: 2026-10-18 21:25
+
+Decisions taken (unattended): (1) RC-51, until B8a: the chat continues a ceiling-stopped lane as a new lane, with a new Prompt-ID whose prompt cites the stopped lane's `handoff.md` and declares `Depends:` on it, never by a plain `resume` (decided by the chat under RC-25, written `provisional, unattended` in the row). (2) RC-52's base text is marked as adopted by the chat under RC-25 (memo 2026-10-17 §2): Alfonso accepted AM-9 in principle in RC-49 (5), not its text; RC-51 carries his 15:26 ratification of the thresholds only. (3) The row headers write «item 5 of RC-49», not «RC-49 (5)»: `decisions-query` ends the header at the first `)` and refused both rows with the nested form (measured). (4) The `docs/PROTOCOL.md` version line is not bumped: line 4 says it tracks the set of clauses, not the wording, and P1..P16 are unchanged. (5) The read-only rule also fails an `Explore`, `explorer` or `general-purpose` file that is missing or has no `model:` line (it would run on the parent's model). (6) The checker lives in the test file, the only code file of DOVE; the bench mutates copies of it, so the tests use their own copy of the read-only names. (7) Commit 1's subject reads `..., AM-1 (P-2026-10-18-2125)`: the prompt's `(AM-1, P-…)` suffix is not the form CLAUDE.md §6.2 exempts and `bash-guard` counted 85 characters. (8) `gates.md`: the AM-1 line sits under «Verification gates before commit», and the stale «No test yet compares...» sentence of the AM-1 section now names the test.
+
+Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase 1 hard stop, and a rework after a failed visual GO, new slices started fresh from the committed report or Phase 2 prompt: it amends RC-20, which he ratified (RC-26); until his yes RC-20 holds for those two cases.
+
+## 2026-10-18 — ticket: decisions-query ends a row header at its first closing parenthesis
+**Ticket**: `npm run decisions` refuses a row whose header parenthesis contains a nested one, e.g. `(2026-10-18, text from RC-49 (5) and ...)`, with «the separator after the parenthesis is not `:`, `.` or ` —`» (measured on RC-51 and RC-52 before their headers were rewritten). The text after the header may nest freely. Either the parser balances parentheses or P9/`decisions.md:4` states the limit; until then a row header names an item as «item 5 of RC-49».
+**Priority**: low
+**Found in**: P-2026-10-18-2125
