@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1750
 Chat: C-2026-10-18-1750
 Front: harness
 Lane: fast (one module of the lane board, its README and its test; no critical zone, no exported interface)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane lane-cost · code 3a015d9ea · scripts/hooks suite 896 green, typecheck:scripts 0, check:scripts PASS, mutation bench 6/6 killed · Cost column after Arch, /api spendByDay, day totals in Earlier summaries and meta · visual check by Alfonso on 4711 (20:03), GO 2026-10-18
 Request: Alfonso, 2026-10-18 17:40, through the lane status chat: «costo in dollari per lane nella tab Lanes e spesa totale per giorno»
 Depends: P-2026-10-18-1428 (merged)
 Corregge: —
