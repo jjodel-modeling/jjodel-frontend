@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-19-0033
 Chat: C-2026-10-18-2225
 Front: harness
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane menubar-disc · fc08fe4ea · verifica visiva passata 2026-10-19 (chat, 00:48: macOS permission alert for Lane Monitor and tray at 2 with tooltip; one post per entering lane, seed silent, survives rebuilds; permission left pending)
 Lane: phase2 (slice S3 of 5 of the plan in the P-2026-10-18-2255 report; one slice per session, RC-52)
 Depends: P-2026-10-19-0000
 Corregge: —

@@ -546,3 +546,16 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 **Smoke visivo**: passato — chat, captures checked at 00:27 (tray 1, fixture 6!, dash unreachable; popover design, more link, stale line, running rows, error box)
 **Notes**: tauri-cli 2.12.3; tauri 2.12.4. Bundle 4.4M, adhoc, no quarantine. Mutation bench 3/3. Found live: a 3 s timeout read a slow board (3.6 s measured) as unreachable, now 2 s connect, 15 s read, `no answer` as error; `[hidden]` lost to `.more{display:block}`, fixed. Unattended: right-click tray menu with Quit, row click opens `/#lane=<id>`, bundle id `io.jjodel.lane-monitor`. Commit subject shortened from the prompt's (74 > 72, bash-guard).
 **Prompt document name**: 2026-10-19 00:00
+
+## 2026-10-19 — feat(lane-monitor-app): notify when a lane starts waiting (P-2026-10-19-0033)
+**Prompt**: `claude_2026-10-19_0033_prompt_lane_monitor_s3_notifications.md`, slice S3 of the P-2026-10-18-2255 plan: tests first on a pure transition over two `/api/attention` snapshots, wire `tauri-plugin-notification` into the poll loop, live check on 4712 with a fake `lane-run`, rebuild and reopen for the permission state.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, src/main.rs, src/notify.rs}`); code commit `fc08fe4ea`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 27/27; S2 behaviour unchanged on 4712; board and 4700 untouched)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, 00:48 (permission alert for Lane Monitor, tray 2 with tooltip; one post per entering lane)
+**Notes**: Plugin 2.7.0 (desktop `tap` via `on_action`). Mutation bench 6/6. Live: seed silent, one post per entering id; macOS showed its permission alert and stored each post without a banner (pending); rebuilds, same or new CDHash, not asked again. Click-through and granted-permission persistence not measured. Unattended, accepted: `capabilities/default.json` unchanged (Rust-only use); app-side 72 h guard; `board: error` 200 as a failed poll. `log` is a zsh builtin: use `/usr/bin/log`.
+**Prompt document name**: 2026-10-19 00:33
