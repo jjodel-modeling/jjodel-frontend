@@ -75,3 +75,11 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 - The measurement source for what a lane spent against the plan limits is
   `node frontend/scripts/lane-usage.mjs <Prompt-ID>` (`npm run lane:usage`), which reads the
   lane folder in `~/.jjodel-lanes/`.
+
+## What `lane-run` records and injects (AM-5, AM-7)
+
+- `~/.jjodel-lanes/<Prompt-ID>/runs.jsonl`, one JSON line per launch, appended at launch: `at`, `kind` (`start`, `resume`, `merge`, `chain`), `session` (null at a start), `tier`, `requestedModel` (the settings pin for heavy, the light model for light, null for a resume), `effort`, `reason`, `injectedBytes` (starts only), `logFrom` (the byte offset of the run in `log.jsonl`).
+- `lane-run status <id>` (and `--all`, each lane once) completes the last line after the run exits, written back once: `effectiveModel` (the first `init` event of the run), `outcome` (`done`, `hard-stop`, `question`, `blocked`, `unparsed`, `none`) and `exit`. A lane without the file prints `runs: none`; `tier.txt` is unchanged.
+- The effort passed as `claude -p --effort <level>`: heavy `xhigh` for `--critical-zone-goahead`, a CLAUDE.md §3.2 file in DOVE or `visual bug` on the Lane line, else `high`; light `high`; `--effort` overrides it; a resume reuses the last line's.
+- `## Decisions in scope (injected by lane-run, AM-5)`, appended by `start` and `merge --launch` to `stdin.md` after the prompt and before the closing reminder: `npm run decisions -- <IDs> --no-related`, the related rows at depth one, the IDs `not found`. The IDs are the prompt's tokens the worktree's register has, and its series' `<SERIES>-<n>` tokens it lacks.
+- `## Log entries in scope (injected by lane-run, AM-5)`: the headers of `npm run log:find -- --prompt <Depends> --front <Front> --limit 10`, then the `Depends:` entries `--full`, dropped above 40,000 characters (`injected: trimmed to headers`). A CLI failure other than an ID not found refuses the start.

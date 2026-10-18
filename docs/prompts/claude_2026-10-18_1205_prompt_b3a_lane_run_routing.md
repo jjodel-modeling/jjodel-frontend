@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1205
 Chat: C-2026-10-17-1757
 Front: harness
 Lane: full (governance file `lane-run.mjs`, RC-36; heavy by rule, not drawn)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane lane-run-routing · code 111376b99 · tests 800 green in scripts/hooks (laneRunRouting 13 new), typecheck:scripts 0, check:scripts PASS, mutation bench 14/14 killed · claude --effort per launch, runs.jsonl, AM-5 injection · AM-1 settings keys wait for B7 · no visual check
 Depends: P-2026-10-18-0945
 Request: none (Alfonso, 2026-10-18 11:44, «applica tutto il più possibile in automatico»; RC-49 (2) approved AM-1, AM-5 and AM-7; words kept in the lane folder's request.md, RC-43)
 
