@@ -63,3 +63,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile — P8 in its RC-23 form derogated by the prompt; the widget's look does not change.
 **Notes**: Step 2: `command grep -rn -m 5 "alfonso-pierantonio.workers.dev" frontend/src frontend/public` found only the widget line (exit 0, positive control on `workers.dev` in `types/jodie.ts:231` found), so no other hit. Step 3, `curl -sS -o /dev/null -w '%{http_code}'`: `https://jjodel-notifications.alfonso99.workers.dev` and `.../` both 200, body `{"posts":[...]}` as the widget expects; the old host gives 000 (no DNS). The widget fetches the bare `API_URL` (line 81), no other path.
 **Prompt document name**: 2026-10-18 11:45
+
+## 2026-10-18 — merge: notif-url into alfonso-frontend-jjtl (P-2026-10-18-1158)
+**Prompt**: `claude_2026-10-18_1158_prompt_merge_notif-url.md`, a direct merge by `lane-run merge --direct`, no session: `notif-url` at `048b86a61` into `alfonso-frontend-jjtl`, merge base `1e9e616fa`, 2 commits on the branch side.
+**Files touched**: merge `6268a9073`: 3 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-10-18_1145_prompt_notifications_worker_host.md`, `frontend/src/components/NotificationWidget/NotificationWidget.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6268a9073` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9225 tests in 376 files, 9 red at import, hooks 787; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no visible UI change: API_URL host only; new host answers 200 (curl by chat C-2026-10-17-1518 at 11:58); decided by the chat under RC-25
+**Notes**: Rollback tag `pre-notif-url` on `3163b7557` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1158/result.json`.
+**Prompt document name**: 2026-10-18 11:58
