@@ -34,3 +34,259 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-15 17:25
 
 **Ticket** (P-2026-10-15-1725): `output-budget.mjs` is committed but not registered in `.claude/settings.json`, so it denies nothing. The uncommitted CLAUDE.md §0.1 says otherwise. Covered by B0. RC-46 and RC-47 are not implemented on this branch.
+
+## 2026-10-18 — chore(harness): B0, output-budget registered, effort high, Explore on Sonnet (P-2026-10-17-1945)
+**Prompt**: `claude_2026-10-17_1945_prompt_b0_token_economy_leftovers.md`, `Lane: full`, interactive, Phase 1 = report 2026-10-15 §2.6: close the leftovers of P-2026-10-13-1930 (hook registration, runner allow, effort, ledger exemptions, Explore on Sonnet, CLAUDE.md §0/§0.1, measurement).
+**Files touched**: `6e910eb68`: `.claude/settings.json`, `frontend/scripts/hooks/output-budget.mjs`, `frontend/scripts/hooks/__tests__/outputBudget.test.ts`, `.claude/agents/Explore.md` (new). This commit: `CLAUDE.md` (§0/§0.1), this inbox, the Status lines of P-2026-10-13-1930 and P-2026-10-17-1945.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-13 19:30
+**Causa**: (g)
+**Regressions**: no — `outputBudget.test.ts` 85/85, `scripts/hooks` 13 files 766 tests, typecheck exit 0, check:agents PASS (9 of 9 aligned), check:scripts PASS, all through `run-quiet.mjs`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — P8 derogated by the prompt, no UI touched.
+**Notes**: Causa g: the leftovers are scope left undone, not a wrong analysis; today the same `.claude/settings.json` allow edit and `gen:agents` were refused by the auto-mode classifier ([Self-Modification]), and Alfonso's chat added the two runner allow lines. `gen:agents` not run: check:agents regenerates all 9 into a temp tree, all aligned. CLAUDE.md moved from commit 1 to this commit: bash-guard denies docs and code together (P13). Item 5 applied, not deferred to B7.
+**Prompt document name**: 2026-10-17 19:45
+
+Measurement (item 7), nested `claude -p --model claude-haiku-5-5` in `~/jjodel-release` with the registration in place, session `66ed91c4-7ede-456c-950e-6e928c3703c6`:
+- `cat CLAUDE.md` → denied: `output-budget: cat on a file puts the whole file in the context: use the Read tool with offset and limit, or bound it with | head -n N (N <= 80).`
+- `cat CLAUDE.md | head -n 20` → ran, first line `# CLAUDE.md — Jjodel Project Reference`.
+- Same run, one `Explore` call: `modelUsage` shows `claude-sonnet-5-5` beside the main `claude-haiku-5-5`, so the project override `.claude/agents/Explore.md` (`model: sonnet`, `omitClaudeMd: true`) is the agent that ran. Source: code.claude.com/docs/en/sub-agents, «A user or project subagent named `Explore` overrides the built-in and keeps its own `model` field».
+
+Exemptions (item 4, report §6.1 risk 7). Search: `grep -n -E "spawn|execFile|execSync|exec\("` over `lane-run.mjs` and `grep -l -r` over `gates/` and `smoke/`: every hit is a node child process (`spawn`/`spawnSync` of git, npm, npx, sh, lsof), never a Bash tool call, so the hook cannot see them. Wider check over `.claude/commands/`, `.claude/skills/` and `frontend/scripts/lane-templates/`: the skills inject with `awk` (not classified); `.claude/commands/lane.md:11` runs `cat ~/.jjodel-lanes/<id>/worktree.txt` and `session.txt`, denied by rule a, now exempt for those two names only (other ledger `.txt` files reach 2 KB and more); the templates' `git log -1`, `git diff --name-only` and `git show <tree>:<path> | grep -c -F` pass. Mutation bench in the message of `6e910eb68`.
+
+**Ticket** (P-2026-10-17-1945): `frontend/scripts/lane-templates/merge-into-trunk.md:42` and `trunk-into-branch.md:39` name `npx vitest run --reporter=dot` and `npx vitest run scripts/hooks`; with the hook registered, rule e denies each once and names `run-quiet.mjs`. No exemption made: rule e exists for these outputs. The templates should name the runner; outside this lane's scope.
+
+## 2026-10-18 — feat(harness): B1, lane-usage.mjs measures plan usage and per-call context; merge templates through the runner (P-2026-10-18-0100)
+**Prompt**: `claude_2026-10-18_0100_prompt_b1_lane_usage_measurement.md`, `Lane: fast`, tier heavy, unattended, worktree `~/jjodel-w-usage` on `lane-usage`: a read-only lane usage script with tests, the merge templates through `run-quiet.mjs`, `docs/harness/gates.md`, the `lane:usage` npm script.
+**Files touched**: `1c3002939`: `frontend/scripts/lane-usage.mjs` (new), `frontend/scripts/hooks/__tests__/laneUsage.test.ts` (new), `frontend/scripts/hooks/__tests__/fixtures/lane-usage/` (new, three lanes), `frontend/package.json`, `frontend/scripts/hooks/__tests__/outputBudget.test.ts` (one case). `08f99ec8a`: `frontend/scripts/lane-templates/merge-into-trunk.md`, `trunk-into-branch.md`. This commit: `docs/harness/gates.md` (new), this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-17 19:45
+**Causa**: (c)
+**Regressions**: no — through `run-quiet.mjs`: `laneUsage.test.ts` 14/14, `outputBudget.test.ts` 86/86, `scripts/hooks` 14 files 781 tests, `typecheck:scripts` exit 0, `check:scripts` PASS (91 files); `check:docs` on this commit. Mutation bench: 16 mutations, 16 killed (commit message of `1c3002939`).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — P8 derogated by the prompt, no UI touched.
+**Notes**: Corregge/Causa c: item 3 closes the B0 ticket, the hook was registered without measuring the templates it would deny. The log differs from the report in two places, followed per item 1d: assistant events repeat per content block (calls deduped by `message.id`), and per-call `output_tokens` is the stream-start count, so the output total is also read from the last `modelUsage`. Rate-limit field paths match the report. Env var `JJODEL_LANES` (lane-board.mjs).
+**Prompt document name**: 2026-10-18 01:00
+
+First measured numbers (first two lines of each output, 2026-10-18 01:1x):
+- `lane-usage.mjs P-2026-10-16-1000`:
+  `P-2026-10-16-1000  tier heavy  model claude-opus-5-5  runs 2  session 687966e7-7bc4-4073-ac68-146a268849c1`
+  `main  claude-opus-5-5  calls 178  input 356  cache_read 42610045  cache_creation 807979  output 2703`
+  Further down: context per call max 432174, median 239804, 112 calls at or above 200k, 83 at or above 250k; output from `modelUsage` 129271; rate limit 9 readings, 7d delta -1 (first reading `rejected` at 1 on overage, last `allowed` at 0 after the weekly reset), 5h delta 0.02; not alone (`P-2026-09-29-1017`).
+- `lane-usage.mjs --all`:
+  `id                 tier   model              runs  calls  ctx max  input  cache_read  cache_creation  output*  7d delta  alone`
+  `P-2026-10-18-0105  heavy  claude-opus-5-5    1     13     90196    26     845842      77677           7414     0         false`
+  Over the 504 lane folders with a log: 354 carry per-call usage; of those, 216 reach a main context of 200k at least once and 178 reach 250k; 55 lanes ran alone, 449 overlapped another lane (a lower bound); 0 malformed lines.
+- Per-call input classes against `modelUsage` on P-2026-10-16-1000: cache_read 42610045 against 42212624 (+0.9%), cache_creation 807979 against 806620, input 356 against 354. Not explained in this lane.
+
+Template verdicts (item 3, output-budget.mjs run on each line): `npx vitest run --reporter=dot` and `npx vitest run scripts/hooks` deny; the four runner lines pass, the absolute-path form `cd <other>/frontend && node <this tree>/frontend/scripts/run-quiet.mjs ...` included. The prompt counted three invocations; there are four, two per template, all rewritten. Added as one case in `outputBudget.test.ts`.
+
+Decisions taken (unattended):
+- Commit 1 subject shortened to `feat(harness): lane-usage.mjs measures plan usage and context per lane`: the prompt's subject is 79 characters without the suffix and bash-guard denies it (§6.2).
+- Lanes root variable `JJODEL_LANES`, the one `lane-board.mjs:34` defines, not `JJODEL_LANES_DIR` (the prompt: reuse an existing name).
+- The read-only vitest count in the other worktree calls this tree's runner by absolute path, so the runner's log stays out of the tree that must not be written.
+- Output total added from `modelUsage` (`resultOutput`, and the `output*` column of `--all`) beside the per-call sum the prompt asked for, which the log shows to be unreliable.
+- `tier` is the first word of `tier.txt`; the whole line is kept as `tierLine`. `--all --write` is a usage error (exit 2). `--all` leaves out lane folders without `log.jsonl` and says how many.
+- `npm run typecheck` (the main project) not run: no file under `frontend/src` changes.
+
+Decisions awaiting Alfonso: none.
+
+**Ticket** (P-2026-10-18-0100): `started.txt` is rewritten on every resume (P-2026-10-16-1000: written 16:04, first init 10:01), so the overlap interval of a resumed lane starts at its last run and `alone` can read true for a lane that overlapped in an earlier run. Followed as specified; a fix would take the first event time or have `lane-run.mjs` keep the first start.
+
+## 2026-10-18 — merge: lane-usage into alfonso-frontend-jjtl (P-2026-10-18-0153)
+**Prompt**: `claude_2026-10-18_0153_prompt_merge_lane-usage.md`, a direct merge by `lane-run merge --direct`, no session: `lane-usage` at `51f53235f` into `alfonso-frontend-jjtl`, merge base `c59885807`, 3 commits on the branch side.
+**Files touched**: merge `dcd85da10`: 15 files from the branch side (`docs/harness/gates.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_0100_prompt_b1_lane_usage_measurement.md`, `frontend/package.json`, `frontend/scripts/hooks/__tests__/fixtures/lane-usage/P-2026-01-01-1000/log.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-usage/P-2026-01-01-1000/session.txt`, `frontend/scripts/hooks/__tests__/fixtures/lane-usage/P-2026-01-01-1000/tier.txt`, `frontend/scripts/hooks/__tests__/fixtures/lane-usage/P-2026-01-01-1100/log.jsonl`, and 7 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `dcd85da10` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9151 tests in 374 files, 9 red at import, hooks 781; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change: the merge touches frontend/scripts, docs and package.json only (git diff --name-only c6b594705 dcd85da10: 0 files under frontend/src); visual check not applicable, decided by chat C-2026-10-17-1757 under RC-25
+**Notes**: Rollback tag `pre-lane-usage` on `c6b594705` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-0153/result.json`.
+**Prompt document name**: 2026-10-18 01:53
+
+## 2026-10-18 — fix: parseRows reads the whole live register (P-2026-10-18-1030)
+**Prompt**: `claude_2026-10-18_1030_prompt_b2pre_digest_tolerant.md`, B2-pre: make `parseRows` in `docs-digest.ts` read wrapped headers, `verified: probe` and every ID series of `docs/decisions.md`, without changing the 407 rows it already parsed; the register is not edited.
+**Files touched**: `a7d889248`: `frontend/scripts/gates/docs-digest.ts`, `frontend/scripts/gates/__tests__/docsDigest.test.ts`, `frontend/scripts/gates/__tests__/traceIndex.test.ts` (one fixture line), `frontend/scripts/gates/__tests__/fixtures/docsDigest.golden.md` (new); docs commit: this entry, Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs-digest tests 60/60; `frontend/scripts/gates/__tests__/` 314/314 in 7 files; `typecheck:scripts` exit 0; `check:scripts` PASS (91 files). The 407 old rows compared field by field on the live register: 0 changed; golden of the old grammar on the test fixture byte-identical.
+**Out-of-scope changes**: yes, `traceIndex.test.ts`: its near-miss example `R-A` is a row under item 1c, replaced by `R-E/E-1`, still outside the grammar (same three mutations killed).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe reproduced: 407 rows, 67 skipped = 64 column-0 `- **` lines + 3 indented. Now 439 rows (+32: 31 the prompt named, plus R-B12 with a qualifier). `docs:digest -- --all` exit 0, 41 dates. Near misses 20: lines 20, 394 (old shape), 1649, 1731, 1777, 1841, 1846, 1884, 1969, 1971, 2035, 2041, 2054, 4147, 4151, 4157, 4235, 4240, 4310, 4330 (bold prose under `## Serie`). trace-index on the live register: rows 407 to 439, misses 41 to 51.
+**Prompt document name**: 2026-10-18 10:30
+
+Decisions taken (unattended):
+- `verified: probe` reads as `agent` in `confidence()`: a probe is a check the agent ran; the existing logic distinguishes only checked from unchecked.
+- A qualifier inside the bold (`**D-4-5, emendata**`, `**U-6 / Q3 = opzione (b)**`, `**H-B falsificata, agli atti**`) makes a row only when the header parenthesis follows; the ID is the row's `id`, the rest goes in the new optional `Row.qualifier`, not rendered. Prose bold that starts with an ID is therefore never a row.
+- A first field `2026-08-08 mattina` / `pomeriggio` (the two U-5 rows): the date is the date, the words an annotation. Needed for item 1c; not named in the prompt.
+- The dated form `**ID (YYYY-MM-DD)**` sets `Row.idDate` (optional); with no parenthesis after the bold it stands for it. No row of the register uses it today (0 matches).
+- `nearMisses` = the old shape (`R…-…** (`) plus every bold list item under a `## Serie` h2 that is not a row. The 18 new ones are bold prose (Ticket, Esclusi, notes), not IDs: listed, not recovered.
+- The `traceIndex.test.ts` fixture line, above (scope expansion outside RC-26).
+
+Decisions awaiting Alfonso: none.
+
+## 2026-10-18 — merge: digest-tolerant into alfonso-frontend-jjtl (P-2026-10-18-1033)
+**Prompt**: `claude_2026-10-18_1033_prompt_merge_digest-tolerant.md`, a direct merge by `lane-run merge --direct`, no session: `digest-tolerant` at `73b1f9823` into `alfonso-frontend-jjtl`, merge base `3d55ae11d`, 2 commits on the branch side.
+**Files touched**: merge `3bd0a8fc3`: 6 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1030_prompt_b2pre_digest_tolerant.md`, `frontend/scripts/gates/__tests__/docsDigest.test.ts`, `frontend/scripts/gates/__tests__/fixtures/docsDigest.golden.md`, `frontend/scripts/gates/__tests__/traceIndex.test.ts`, `frontend/scripts/gates/docs-digest.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3bd0a8fc3` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9170 tests in 374 files, 9 red at import, hooks 781; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change: parser, tests and docs only (0 files under frontend/src between 3d55ae11d and the merge); decided by chat C-2026-10-17-1757 under RC-25
+**Notes**: Rollback tag `pre-digest-tolerant` on `3d55ae11d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1033/result.json`.
+**Prompt document name**: 2026-10-18 10:33
+
+## 2026-10-18 — feat(harness): B2, decisions and log:find read the register and the log by ID (P-2026-10-18-0945)
+**Prompt**: `claude_2026-10-18_0945_prompt_b2_selective_reads.md`, `Lane: fast`, tier light (`claude-sonnet-5-5`, RC-45), worktree `~/jjodel-w-selread` on `selective-reads`; item 1 `npm run decisions`, item 2 `npm run log:find`, items 3 and 4 tests and script entries. First run stopped with `Outcome: question` (hard stop: `parseRows` could not read the live register); resumed on the chat's word after P-2026-10-18-1030 merged.
+**Files touched**: `7d0be0298`: `frontend/scripts/gates/decisions-query.ts` (new), `frontend/scripts/gates/log-find.ts` (new), `frontend/scripts/gates/__tests__/decisionsQuery.test.ts` (new), `frontend/scripts/gates/__tests__/logFind.test.ts` (new), `frontend/package.json` (two script entries). This commit: this inbox, the Status line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `scripts/gates/__tests__/` 9 files, 363 tests green (exit 0); `typecheck:scripts` exit 0; `check:scripts` PASS (95 files). `typecheck` and `build` not run: no file under `frontend/src` or the bundle's inputs changes.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Two read-only CLIs, 49 tests (25 + 24). Both take a `--root <dir>` the prompt did not name, so the tests run on throwaway trees. Mutation bench on the behavioural tests: 12 mutants, 2 survived the first draft (self-edge guard, bold-closed clause cut), tests added, all 12 die.
+**Prompt document name**: 2026-10-18 09:45
+
+Measured (numbers of the entry, taken on the live files at `7d0be0298`):
+- Rows. `parseRows` on the unmodified register reads 439 rows; 169 lines are paragraph rows (`**R-VP-1** (2026-09-03) — ...` at column 0, no dash: R-VP, R-VAL, R-LAY, R-FORM, ...) that it does not read, so `npm run decisions -- R-VP-1` would have been «not found». `decisions-query.ts` gives those lines the dash `parseRows` asks for (line numbers do not move) and reads 590 rows through the unchanged `parseRows`.
+- Relation markers. The grep total is 185 lines (`amends|emend|supersed|sostituisc|superata|renumber|amended by`, case-insensitive). The recogniser matches 185 of 185 by form; that number is nearly circular, because its stems are a superset of the grep's. The numbers that carry information: 173 of the 185 sit inside the extent of a row or of a Superate item, 76 produced at least one edge (81 edges), 109 produced no edge: markers with no row after them (`Emendata il DATE`, `emendamento spec §N`, `renumbered by P-...`, a protocol clause, a negation). The recogniser's own forms are listed in the header comment of `decisions-query.ts`.
+- Precision. I read the context of the first 86 edges and corrected five false families (an ID after `.**`, `as amended by`, `nothing`, `non emenda`, `RC-13-bis` read as `RC-13`); after those fixes I re-read only the lines that had changed. One known wrong edge remains: `R-IRN-37 amends R-GV-6` (line 6052: «the collapse fields of §8, amended by R-IRN-37» is about a spec section, not about R-GV-6). The edges are a pointer; the canonical row text printed is the authority.
+- Speed. Fifty IDs of the RC, R-SIM, R-VP and R-IRN series, in one call: 646 ms wall (node start included, 69 KB printed); parsing the register and building the edges is 27 ms.
+- Live runs. `npm run decisions -- RC-49 RC-45 RC-16`, first two lines: `== RC-49  [active]  series RC  section: Decisione 2026-10-03: issue-driven unattended lanes (RC-35..RC-39)` and `- **RC-49** (2026-10-16, ratified by Alfonso under RC-26, his text dated 2026-10-15 and delivered to lane P-2026-10-15-1725 on 2026-10-16 09:37, evidence: measured, verified: none, reversible: trunk):` (the section is the nearest heading `parseRows` records, which here is a `###` of another decision). `npm run log:find -- --front harness --limit 5`, first two lines: `docs/log-inbox/harness.md:134 ## 2026-10-18 — merge: digest-tolerant into alfonso-frontend-jjtl (P-2026-10-18-1033)` and `docs/log-inbox/harness.md:111 ## 2026-10-18 — fix: parseRows reads the whole live register (P-2026-10-18-1030)`.
+
+**Ticket** (P-2026-10-18-0945): `check-docs.ts` Check E keeps `promptIdOf` private; `log-find.ts` carries a copy of its eight lines (the file is outside this lane's DOVE). Exporting it from `check-docs.ts` or moving it to `lane-tracking.mjs` removes the copy. The ticket for `parseRows` has its own entry below.
+
+Decisions taken (unattended):
+- The hard stop was re-checked after P-2026-10-18-1030 and found to hold in a narrower form: 169 paragraph-form rows are still invisible to `parseRows`. The chat said to proceed, so the module normalises the text (dash prefix, same line numbers) and calls `parseRows` unchanged, instead of stopping a second time or re-implementing the row grammar. `docs-digest.ts` is untouched.
+- A paragraph row whose header `parseRows` still rejects (the live `R-REF-6`, line 5910: `unattended (RC-25)`, a parenthesis inside the parenthesis) is kept as a row with the fields the header line states plainly (id, date, provisional, unattended); a list item that fails still exits 2 with the line printed, as `docs:digest` does.
+- A row's markers are read over its own text plus the paragraphs after a blank line, up to the next list item, paragraph row or heading (the live register puts «Amends X» in such a trailing paragraph). The row text printed stays the item's own lines, unchanged.
+- Status `superseded` when the row sits under `## Superate`, when a Superate item points at it (`- R-RAIL-44 ... — superata da D-UI-15`), or when its own text says «superata da» or «superseded by». A row that another row only «sostituisce» keeps `active`; that relation is printed, the status is not changed by it.
+- `- **D3** (...)` under Superate is not a row of any grammar `parseRows` reads, so `npm run decisions -- D3` prints `not found: D3`.
+- `--id` is a synonym of `--prompt`. `--front` matches by Prompt-ID and by prompt file name found in the heading or the `Prompt` field; the front of a prompt is `parseFrontLine` of `lane-tracking.mjs`, its Prompt-ID the header line or the file-name stamp (the Check E rule).
+- Exit codes: `decisions` 1 on a missing ID and on a usage error, 2 on an unreadable header; `log:find` 0 with hits, 1 with none, 2 on a usage error (so «none» and «usage» do not share a code). Output goes out with `process.exitCode`, not `process.exit`, so a pipe is not cut.
+- Within an inbox the later entry sorts as the newer one at equal date (inboxes are appended to; the active log is prepended).
+
+Decisions awaiting Alfonso: none.
+
+## 2026-10-18 — ticket: parseRows does not read paragraph-form rows of the register
+**Ticket**: `docs-digest.ts` `parseRows` reads list items (`- **ID** (...)`) only. 169 lines of `docs/decisions.md` are rows written as paragraphs (`**R-VP-1** (2026-09-03) — ...` at column 0: R-VP, R-VAL, R-LAY, R-FORM, R-SGL, R-DEAD, R-STR, ...), so `npm run docs:digest` leaves them out of every digest and `nearMisses` does not list them. `decisions-query.ts` works around it by prefixing the dash on its own copy of the text. One of those lines, `R-REF-6` (line 5910), has a nested parenthesis in its header (`unattended (RC-25)`) that `parseRows` would reject if it read it. The fix is in `parseRows` (accept the paragraph form, close the header at the matching parenthesis); then `readRows` in `decisions-query.ts` loses its workaround.
+**Priority**: medium
+**Found in**: P-2026-10-18-0945
+
+## 2026-10-18 — merge: selective-reads into alfonso-frontend-jjtl (P-2026-10-18-1108)
+**Prompt**: `claude_2026-10-18_1108_prompt_merge_selective-reads.md`, a direct merge by `lane-run merge --direct`, no session: `selective-reads` at `663c0944d` into `alfonso-frontend-jjtl`, merge base `b2d7481b0`, 2 commits on the branch side.
+**Files touched**: merge `c5dd7b416`: 7 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_0945_prompt_b2_selective_reads.md`, `frontend/package.json`, `frontend/scripts/gates/__tests__/decisionsQuery.test.ts`, `frontend/scripts/gates/__tests__/logFind.test.ts`, `frontend/scripts/gates/decisions-query.ts`, `frontend/scripts/gates/log-find.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c5dd7b416` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9219 tests in 376 files, 9 red at import, hooks 781; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change: gates CLIs, tests, package.json and docs only (0 files under frontend/src); decided by chat C-2026-10-17-1757 under RC-25
+**Notes**: Rollback tag `pre-selective-reads` on `95291946a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1108/result.json`.
+**Prompt document name**: 2026-10-18 11:08
+
+## 2026-10-18 — feat(harness): B3b, lane board shows tokens in, out, total and context max per lane (P-2026-10-18-1045)
+**Prompt**: `claude_2026-10-18_1045_prompt_b3b_board_tokens.md`, fast lane, tier heavy: export `laneUsage` from `lane-usage.mjs`; In, Out, Total, Ctx max in the Lanes tab and on `/api`; an Insights Tokens block; a per-lane usage cache keyed by `log.jsonl` size and mtime; README; tests.
+**Files touched**: `65f5f9236`: `frontend/scripts/lane-usage.mjs`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`; README commit (bash-guard P13 keeps it apart from docs/): `frontend/scripts/lane-board/README.md`; docs commit: `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1045_prompt_b3b_board_tokens.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneBoard 73/73 (6 new), laneUsage 14/14 unchanged, scripts/hooks 787/787 in 14 files, typecheck:scripts exit 0, check:scripts PASS 91 files.
+**Out-of-scope changes**: no (7 files, all named by the prompt, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (the chat checks the board in the built-in browser, P8 RC-23; the page script, run in a node vm against the live `/api` on 4710, rendered the new columns)
+**Notes**: Cold 2569 ms over 509 lane folders, warm 8 ms (506 hits), in-process; the 2 s hard stop did not apply. First data row on 4710 (running, P-2026-10-18-1045 itself): In 5.3M (5292206), Out n/a (no result event yet), Total 5.3M, Ctx max 172.8k (172844); first closed row with usage, P-2026-10-18-1030: 3320078, 33195, 3353273, 122438. Mutation bench: commit message of `65f5f9236`.
+**Prompt document name**: 2026-10-18 10:45
+
+Decisions taken (unattended): (1) the four 72 px columns do not fit 1248 px by trimming Worktree and Launched by alone (live 1100 px fixed today, closed 1080, Phase and Outcome take the rest): Worktree 144 to 112 and the Lanes tab's page widened 1280 to 1536 px (`main.wide`, toggled by `showTab`), `table.lfx` min-width 1200 to 1456, so Phase (148) and Outcome (168) keep today's room and the other tabs keep 1280. (2) `overlap` exported too: `alone` is recomputed from the intervals on every read, never cached. (3) The CLI of `lane-usage.mjs` runs behind a realpath guard so that the board can import it. (4) "Per tier and per model" read as two tables, by tier and by model; tier is the first word of `tier.txt` as lane-usage reads it (`standard` included). (5) A lane without main calls reads n/a in all four cells, Out included; Total is In while no result event has an output. (6) `tokensSub` sums the four classes of the subagent calls, their per-call output included. (7) The existing `/api` key-list test now lists the five new fields.
+
+Decisions awaiting Alfonso: the width in (1). Alternatives: keep 1280 and narrow Lane, Elapsed and Span as well, or widen every tab (Insights would reflow to three columns at 1536).
+
+## 2026-10-18 — merge: lane-board-tokens into alfonso-frontend-jjtl (P-2026-10-18-1116)
+**Prompt**: `claude_2026-10-18_1116_prompt_merge_lane-board-tokens.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board-tokens` at `90b483944` into `alfonso-frontend-jjtl`, merge base `95291946a`, 3 commits on the branch side.
+**Files touched**: merge `f9373461c`: 7 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1045_prompt_b3b_board_tokens.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-usage.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f9373461c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9225 tests in 376 files, 9 red at import, hooks 787; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change in the app: lane board scripts, tests and docs only (0 files under frontend/src); board checked after the launchd restart via /api fields; decided by chat C-2026-10-17-1757 under RC-25
+**Notes**: Rollback tag `pre-lane-board-tokens` on `9c6859ecc` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1116/result.json`.
+**Prompt document name**: 2026-10-18 11:16
+
+## 2026-10-18 — feat(harness): Arch column, the lane board and lane-usage show the architect's tokens per lane (P-2026-10-18-1155)
+**Prompt**: `claude_2026-10-18_1155_prompt_arch_column.md`, fast lane, tier light: read `architect.json` (schema 1) in `lane-usage.mjs`; an Arch column after Total in both Lanes tables and its `/api` fields; Arch sum, median and ratio in the Insights Tokens block; README; tests and fixtures.
+**Files touched**: `e10902120`: `frontend/scripts/lane-usage.mjs`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/hooks/__tests__/laneUsage.test.ts`, the two fixtures `fixtures/lane-usage/P-2026-01-01-1000/architect.json` (closed) and `P-2026-01-01-1100/architect.json` (open); `743ceedf3`: `frontend/scripts/lane-board/README.md`; docs commit: `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1155_prompt_arch_column.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneUsage 20/20 (6 new), laneBoard 75/75 (2 new, 4 existing assertions widened for the Arch cell and the Arch fields), scripts/hooks 795/795 in 14 files, typecheck:scripts exit 0, check:scripts PASS 95 files.
+**Out-of-scope changes**: no (9 files, all named by the prompt, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (the chat checks `/api` after the launchd restart, P8 RC-23; a board on 4710, stopped afterwards, served 514 rows: P-2026-10-18-1116 archIn 1075436, archOut 818, archTotal 1076254, archOpen false; P-2026-10-18-1155 and -1205 archOpen true; 10 lanes with `arch` in /api/insights)
+**Notes**: Real run `lane-usage.mjs P-2026-10-18-0945`: `architect  calls 38  in 17073234  out 58831  (chat C-2026-10-17-1757)`. Choices: architect.json read uncached (a few hundred bytes); in `--all` the `arch` column is the raw integer, like the other columns there (the board abbreviates); an open lane is `architect: {chat, model, delta: null}` with `architectOpen: true`; `architectUnreadable` added to the JSON. No mutation bench was run; test names state the mutation.
+**Prompt document name**: 2026-10-18 11:55
+
+## 2026-10-18 — feat(harness): B3a, lane-run records effort and model per launch, injects cited decisions and log entries (P-2026-10-18-1205)
+**Prompt**: `claude_2026-10-18_1205_prompt_b3a_lane_run_routing.md`: AM-7 effort per launch (`claude -p --effort`), AM-1 light model from settings env with the constant as fallback, `runs.jsonl` per lane completed by status, AM-5 decisions and log entries injected into the lane input, fail closed, 40k cap.
+**Files touched**: code `111376b99`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts` (8 assertions: `--effort high`, the injected blocks), `frontend/scripts/hooks/__tests__/laneRunRouting.test.ts` (new, 13 tests); this commit: `docs/harness/gates.md`, this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks 800/800 in 15 files (laneRun 121, laneRunDirect 32, laneRunRouting 13), typecheck:scripts exit 0, check:scripts PASS 96 files; `lane-run status P-2026-10-18-0945` prints `runs: none` and writes no file.
+**Out-of-scope changes**: no (6 files, all named by the prompt, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; no real lane started, fake-claude fixtures only)
+**Notes**: Measured on this prompt without launching: 13 IDs cited, decision rows 15373 bytes, rows with related 31631, log headers 1317, Depends bodies 6739, against a register of 651086 bytes. Mutation bench 14/14 killed: commit message of `111376b99`. The subject the prompt gave is 84 characters, over 72: shortened.
+**Prompt document name**: 2026-10-18 12:05
+
+Decisions taken (unattended): (1) IDs are recognised by `findRows` and `seriesOf`, imported from `decisions-query.ts`: it exports no ID regex (its `idRe` is private and built from the register's IDs), so lane-run scans capitalised hyphenated tokens and lets the register decide; a `<SERIES>-<n>` token of a known series that the register lacks is `not found` (`AM-5`, `P-...` are ignored). (2) xhigh for the six CLAUDE.md 3.2 files only, as the prompt says; `DV.tsx` and `defaultViewTemplate.ts` (rule 14) still force the heavy tier but run high. (3) Model settings are read from the worktree's `.claude/settings.json`, where the session runs; `LANE_RUN_LIGHT_MODEL` stays first (the tests). (4) A worktree without `docs/decisions.md`, or a prompt with no `Depends:` and no `Front:`, gets its block with a `none:` line and starts: there is nothing to read, so no CLI fails. Both blocks are always written. (5) The injection runs before the RC-45 draw, so a refused start takes no draw. When the prompt ends with the reminder, the reminder moves below the blocks and appears once. (6) `runs.jsonl` adds `logFrom`, so a line is completed from its own part of the log; the previous line is completed at the next launch too. A resume records `requestedModel: null`, and its effort is the last line's, else the rule. (7) A related row is printed once and never repeats a cited one. (8) `LANE_RUN_GATES` points the two CLIs elsewhere for the broken-CLI test. (9) No `escalate` (NON FARE), so it has no `--effort` either.
+
+Decisions awaiting Alfonso: AM-1's settings keys `env.JJODEL_LIGHT_MODEL` and `env.JJODEL_REPORT_MODEL` in `.claude/settings.json` wait for B7; until then a light start prints `light model: constant (settings env not set, B7)`, and lane-run does not read `JJODEL_REPORT_MODEL`, because no lane-run launch is a report. Also the scope of xhigh in (2): only the 3.2 files, or the whole critical zone of CLAUDE.md 3.1.
+
+## 2026-10-18 — merge: lane-run-routing into alfonso-frontend-jjtl (P-2026-10-18-1305)
+**Prompt**: `claude_2026-10-18_1305_prompt_merge_lane-run-routing.md`, a direct merge by `lane-run merge --direct`, no session: `lane-run-routing` at `6ac82be35` into `alfonso-frontend-jjtl`, merge base `3163b7557`, 2 commits on the branch side.
+**Files touched**: merge `c991ce637`: 6 files from the branch side (`docs/harness/gates.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1205_prompt_b3a_lane_run_routing.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/hooks/__tests__/laneRunRouting.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c991ce637` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9250 tests in 378 files, 9 red at import, hooks 808; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change: lane-run, tests and docs only (0 files under frontend/src); decided by chat C-2026-10-17-1757 under RC-25
+**Notes**: Rollback tag `pre-lane-run-routing` on `6a1e96adf` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1305/result.json`.
+**Prompt document name**: 2026-10-18 13:05
+
+## 2026-10-18 — feat(harness): B4, rule-trigger hook, trigger map and check:triggers (P-2026-10-18-1420)
+**Prompt**: `claude_2026-10-18_1420_prompt_b4_rule_triggers.md`: the glob-to-doc map `docs/harness/rule-triggers.json` (schema 1, one entry per nested `CLAUDE.md`), the PreToolUse hook `rule-trigger.mjs` that denies the first write of a session under an entry's glob naming its docs, the gate `npm run check:triggers`, their tests and a mutation bench. Not registered (B7).
+**Files touched**: code `71a932b8f`: `frontend/scripts/hooks/rule-trigger.mjs`, `frontend/scripts/gates/check-triggers.ts`, `frontend/scripts/hooks/__tests__/ruleTrigger.test.ts` (24 tests), `frontend/scripts/hooks/__tests__/checkTriggers.test.ts` (15 tests), `frontend/package.json` (one script line); this commit: `docs/harness/rule-triggers.json`, `docs/harness/gates.md`, this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks 847/847 in 17 files, typecheck:scripts exit 0, check:scripts PASS 100 files, check:triggers PASS (8 entries) on the live tree. `lib.mjs` untouched: it had no glob matcher, and the hook's is imported by the gate.
+**Out-of-scope changes**: no (the map moved from the code commit to the docs commit; same file set as the prompt's two commits)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: Real check, unregistered: the same PreToolUse JSON (Edit of `frontend/src/jjtl/lexer/lexer.ts`, `session_id` `probe-b4-manual-1`, `bypassPermissions`) piped twice into `node frontend/scripts/hooks/rule-trigger.mjs`. First answer: `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny",...}}` naming `frontend/src/jjtl/CLAUDE.md`; second: no output, exit 0 (allowed). Bench 18/18: commit message of `71a932b8f`.
+**Prompt document name**: 2026-10-18 14:20
+
+Decisions taken (unattended): (1) `docs/harness/rule-triggers.json` lands in the docs commit, not in commit 1: `bash-guard` refused the mixed pathspec (P13, docs and code never in one commit), measured; so `71a932b8f` alone fails the live-repository test of checkTriggers until the docs commit, and the two travel together. (2) The glob matcher lives in `rule-trigger.mjs` (exported `globToRegExp`, `matchGlob`, `validEntries`), and `check-triggers.ts` imports it, so hook and gate cannot disagree; `lib.mjs` is not touched. (3) Check (c) reads "covers its own directory" as: the entry's glob matches the nested `CLAUDE.md`'s own path and the entry lists it as a doc. (4) A missing map is exit 2, like a map that is not JSON; a usage error is exit 1, as in `decisions-query.ts`. (5) The marker is written before the denial; if it cannot be written the hook does not deny (it would deny every retry). A corrupt marker counts as empty and is rewritten. (6) A `session_id` with characters outside `[A-Za-z0-9_-]` fails open, since it names a file. (7) A relative `file_path` resolves against the project dir; a path outside it after `realpath` of the project dir is allowed with no marker. (8) `runHook`'s stderr line on an internal error is kept (the convention of the other hooks): no decision is written.
+
+Decisions awaiting Alfonso: the registration of `rule-trigger.mjs` in `.claude/settings.json` (PreToolUse, matcher `Edit|Write|NotebookEdit`), in the interactive B7, after B8b.
+
+## 2026-10-18 — ticket: lane-run start does not yet append a «Rules in scope» block from the DOVE globs
+**Ticket**: The first trigger of report `docs/discovery/discovery_2026-10-15_lean_context_model_routing.md` §5.1 C: `lane-run start` should append a «Rules in scope» block to the lane input, naming the docs of every `docs/harness/rule-triggers.json` entry whose glob matches a DOVE path, with test T-D3. It is in no batch of §5.6 and touches `lane-run.mjs`: a later heavy lane.
+**Priority**: medium
+**Found in**: P-2026-10-18-1420

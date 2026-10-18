@@ -19,7 +19,8 @@ interface QuickTipsState {
   pauseUntil: number | null;
 }
 
-const API_URL = 'https://jjodel-notifications.alfonso-pierantonio.workers.dev';
+// The host depends on the Cloudflare account's workers.dev subdomain and must change with it (the AI proxy in types/jodie.ts lives on the same subdomain).
+const API_URL = 'https://jjodel-notifications.alfonso99.workers.dev';
 
 const TIP_HIDE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 

@@ -100,6 +100,17 @@ describe('output-budget: a. cat, less, more on a file', () => {
     test('kills "shell payload not read": bash -c "cat src/a.ts" is denied', () => {
         expect(denied('bash -c "cat src/a.ts"')).toBe(true);
     });
+
+    test('kills "ledger exemption removed": cat of the two values .claude/commands/lane.md reads passes', () => {
+        expect(denied('cat ~/.jjodel-lanes/P-2026-10-17-1945/worktree.txt')).toBe(false);
+        expect(denied('cat "$HOME/.jjodel-lanes/P-2026-10-17-1945/session.txt"')).toBe(false);
+    });
+
+    test('kills "ledger exemption too wide": the transcript, the merge message and a session.txt elsewhere are denied', () => {
+        expect(denied('cat ~/.jjodel-lanes/P-2026-10-17-1945/log.jsonl')).toBe(true);
+        expect(denied('cat ~/.jjodel-lanes/P-2026-10-17-1945/merge-message.txt')).toBe(true);
+        expect(denied('cat notes/session.txt')).toBe(true);
+    });
 });
 
 describe('output-budget: what bounds a command', () => {
@@ -275,6 +286,11 @@ describe('output-budget: e. builds, tests and type-checks', () => {
         'npm exec vitest run',
     ])('kills "npm options not skipped" (the --prefix case): %s is denied', (command) => {
         expect(denied(command)).toBe(true);
+    });
+
+    test('kills "an absolute runner path not recognised": the merge templates\' vitest lines pass, the old ones are denied (P-2026-10-18-0100)', () => {
+        expect(['npx vitest run --reporter=dot', 'npx vitest run scripts/hooks'].map(denied)).toEqual([true, true]);
+        expect(['cd /w/b/frontend && node /w/t/frontend/scripts/run-quiet.mjs vitest-branch -- npx vitest run --reporter=dot', 'node scripts/run-quiet.mjs vitest-hooks -- npx vitest run scripts/hooks'].map(denied)).toEqual([false, false]);
     });
 
     test('kills "a bound lifts rule e": a build piped into tail is still denied', () => {

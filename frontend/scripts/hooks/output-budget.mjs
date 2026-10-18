@@ -10,6 +10,8 @@
  * goal is to stop the expensive common cases, not to sandbox the shell.
  *
  *   a. cat, less, more on a file            -> Read with offset and limit
+ *      Exempt: lane-run's one-line ledger values ~/.jjodel-lanes/<id>/worktree.txt
+ *      and session.txt, which .claude/commands/lane.md reads with cat (P-2026-10-17-1945).
  *   b. sed -n on a file, without a line range or over 120 lines -> Read
  *   c. grep -r / -R, rg, unbounded          -> -l, -c, -m N (N <= 50)
  *   d. git show <rev> and git diff without --stat, --name-only or a path;
@@ -62,6 +64,7 @@ const NPX_VALUE_OPTIONS = new Set(['-p', '--package']);
 const NPM_TEST = new Set(['test', 't', 'tst']);
 const NPM_RUN = new Set(['run', 'run-script', 'rum', 'urn']);
 const TEST_TOOLS = new Set(['vitest', 'tsc', 'playwright']);
+const LANE_LEDGER_VALUE = /(^|\/)\.jjodel-lanes\/[^/]+\/(worktree|session)\.txt$/;
 
 const BOUND_HINT = 'or bound it with | head -n N (N <= ' + BOUND_MAX_LINES + ').';
 
@@ -199,6 +202,7 @@ function pagerRule(name, args) {
             afterDD = true;
             return false;
         }
+        if (LANE_LEDGER_VALUE.test(a.text)) return false; // one line, read by .claude/commands/lane.md
         if (a.opaque) return true;
         if (!afterDD && (a.text.startsWith('-') || a.text.startsWith('+'))) return false;
         return a.text !== '-' && !a.text.startsWith('/dev/');

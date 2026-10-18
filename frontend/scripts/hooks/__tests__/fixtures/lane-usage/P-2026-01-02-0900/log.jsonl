@@ -1,0 +1,2 @@
+{"type":"system","subtype":"init","model":"claude-haiku-5-5","session_id":"s-c"}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"msg_c1","model":"claude-haiku-5-5","usage":{"input_tokens":1,"cache_read_input_tokens":20000,"cache_creation_input_tokens":3000,"output_tokens":2}}}

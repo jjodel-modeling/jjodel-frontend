@@ -1,0 +1,15 @@
+{"type":"system","subtype":"init","model":"claude-opus-5-5","session_id":"s-a"}
+{"type":"rate_limit_event","rate_limit_info":{"status":"allowed","isUsingOverage":false,"overageStatus":"rejected","unifiedWindows":{"five_hour":{"utilization":0.1,"resetsAt":1767261600},"seven_day":{"utilization":0.3,"resetsAt":1767700000}}}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"msg_a1","model":"claude-opus-5-5","usage":{"input_tokens":2,"cache_read_input_tokens":100000,"cache_creation_input_tokens":5000,"output_tokens":10}}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"msg_a1","model":"claude-opus-5-5","usage":{"input_tokens":2,"cache_read_input_tokens":100000,"cache_creation_input_tokens":5000,"output_tokens":10}}}
+{"type":"assistant","parent_tool_use_id":"toolu_1","message":{"id":"msg_s1","model":"claude-sonnet-5-5","usage":{"input_tokens":5,"cache_read_input_tokens":1000,"cache_creation_input_tokens":500,"output_tokens":7}}}
+{not json
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"msg_a2","model":"claude-opus-5-5","usage":{"input_tokens":0,"cache_read_input_tokens":190000,"cache_creation_input_tokens":10000,"output_tokens":20}}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"msg_x","model":"<synthetic>","usage":{"input_tokens":0,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens":0}}}
+{"type":"rate_limit_event","rate_limit_info":{"status":"allowed","isUsingOverage":false,"overageStatus":"rejected","unifiedWindows":{"five_hour":{"utilization":0.2,"resetsAt":1767261600},"seven_day":{"utilization":0.32,"resetsAt":1767700000}}}}
+{"type":"result","subtype":"success","modelUsage":{"claude-opus-5-5":{"outputTokens":900},"claude-sonnet-5-5":{"outputTokens":70}}}
+{"type":"system","subtype":"init","model":"claude-sonnet-5-5","session_id":"s-a"}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"msg_a3","model":"claude-sonnet-5-5","usage":{"input_tokens":3,"cache_read_input_tokens":240000,"cache_creation_input_tokens":15000,"output_tokens":30}}}
+{"type":"assistant","parent_tool_use_id":"toolu_2","message":{"id":"msg_s2","model":"claude-haiku-5-5","usage":{"input_tokens":1,"cache_read_input_tokens":2000,"cache_creation_input_tokens":0,"output_tokens":3}}}
+{"type":"rate_limit_event","rate_limit_info":{"status":"allowed_warning","isUsingOverage":true,"overageStatus":"allowed","unifiedWindows":{"five_hour":{"utilization":0.25,"resetsAt":1767265200},"seven_day":{"utilization":0.35,"resetsAt":1767700000}}}}
+{"type":"result","subtype":"success","modelUsage":{"claude-opus-5-5":{"outputTokens":900},"claude-sonnet-5-5":{"outputTokens":400},"claude-haiku-5-5":{"outputTokens":50}}}
