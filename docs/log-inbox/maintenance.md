@@ -128,3 +128,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — probe `_tmp_models_picker.ts` via lane-run probe on port 3197, fixture catalog, no key, 0 provider calls: 11/11; crops `~/.jjodel-lanes/P-2026-10-18-1146/models_picker_{collapsed,expanded}.png`, measures in `models_picker_measures.json`
 **Notes**: Commit `2a9ff5f02` says aiModelCatalog.test.ts 30/30: the count is 28/28 (AIProviderService 18/18). First probe run hit :3000 through `states.ts` BASE_URL (SMOKE_URL unset); rerun with SMOKE_URL on 3197, fresh browser context, nothing persisted on 3000. Unavailable badge and static marker covered by tests, not by a crop.
 **Prompt document name**: 2026-10-18 11:46
+
+## 2026-10-18 — feat(auth): editorial layout for sign in, register and password reset (P-2026-10-18-1500)
+**Prompt**: `claude_2026-10-18_1500_prompt_login_redesign.md`, full lane, two phases in cascade, worktree `jjodel-w-login` on `login-redesign`: design D2 for the auth page (header, intro column + form card, dark footer), behaviour of the three views unchanged.
+**Files touched**: `b8a12dc99` and fix `a42694244` (chat's visual check): `frontend/src/pages/Auth.tsx`, `frontend/src/pages/auth.scss`. Closure commit: `docs/discovery/discovery_2026-10-18_auth_page_redesign.md`, this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck exit 0, build exit 0, no test touches the auth page; full vitest 12 files red, the nine of §17 plus laneRun, laneRunDirect, laneRunRouting (`Unknown file extension ".ts"` on `scripts/gates/decisions-query.ts`), red on the tip `87feac64a` too. Login, register and reset submits not exercised against the API.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: OK — chat, RC-23, 2026-10-18 16:20, built-in browser on :3010, 1440x900 login/register/reset and 390x844 register: layout as D2, intro and card top-aligned, labels match titles; lane's own headless probe on port 3010, 3 views × 4 sizes, no horizontal scroll, 0 page errors (report, Phase 2 results)
+**Notes**: Header logo is `logo-light-150.png` (Navbar's dark wordmark): `jjodel.png` is white and was invisible on the new header, prompt context item 2 does not hold. Register lead line «Fields marked * are required» omitted: the `*` appears only after a failed submit. Fix `a42694244`: grid top-aligned, buttons Sign in/Create account/Send reset link (chat overrode decision 3).
+**Prompt document name**: 2026-10-18 15:00
