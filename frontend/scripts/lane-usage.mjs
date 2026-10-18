@@ -16,12 +16,15 @@
  * per-lane summaries without the series).
  *
  * JJODEL_LANES overrides the root, as in lane-board.mjs. Plain ES module,
- * nothing outside node:*.
+ * nothing outside node:*. The lane board imports laneUsage, summary,
+ * allIntervals and overlap (P-2026-10-18-1045); the CLI runs only when the
+ * file is the script, not when it is imported.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.JJODEL_LANES || join(homedir(), '.jjodel-lanes');
 const PROMPT_ID = /^P-\d{4}-\d{2}-\d{2}-\d{4}$/;
@@ -133,7 +136,7 @@ function laneIds() {
 }
 
 /** The interval of every lane folder, read once per invocation. */
-function allIntervals() {
+export function allIntervals() {
     const out = new Map();
     for (const id of laneIds()) {
         const iv = laneInterval(join(ROOT, id));
@@ -142,7 +145,7 @@ function allIntervals() {
     return out;
 }
 
-function overlap(id, intervals) {
+export function overlap(id, intervals) {
     const own = intervals.get(id);
     if (!own) return { lanes: null, alone: null, note: OVERLAP_NOTE };
     const lanes = [...intervals]
@@ -152,7 +155,7 @@ function overlap(id, intervals) {
 }
 
 /** The usage of one lane folder; throws an Error with a one-line message when the lane or its log is missing. */
-function laneUsage(id, intervals) {
+export function laneUsage(id, intervals) {
     const dir = join(ROOT, id);
     if (!PROMPT_ID.test(id) || !existsSync(dir)) throw new Error('no lane folder ' + id + ' in ' + ROOT);
     const logPath = join(dir, 'log.jsonl');
@@ -248,7 +251,7 @@ function laneText(u) {
     return lines.join('\n') + '\n';
 }
 
-function summary(u) {
+export function summary(u) {
     const { series, ...context } = u.context;
     return { ...u, context };
 }
@@ -318,4 +321,6 @@ function main(argv) {
     process.stdout.write(flags.has('--json') ? json : laneText(u));
 }
 
-main(process.argv.slice(2));
+// Also through a symlinked path; never when the board imports this file.
+const MAIN = (() => { try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); } catch { return false; } })();
+if (MAIN) main(process.argv.slice(2));
