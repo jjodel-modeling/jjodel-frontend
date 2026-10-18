@@ -94,3 +94,16 @@ Decisions taken (unattended):
 Decisions awaiting Alfonso: none.
 
 **Ticket** (P-2026-10-18-0100): `started.txt` is rewritten on every resume (P-2026-10-16-1000: written 16:04, first init 10:01), so the overlap interval of a resumed lane starts at its last run and `alone` can read true for a lane that overlapped in an earlier run. Followed as specified; a fix would take the first event time or have `lane-run.mjs` keep the first start.
+
+## 2026-10-18 — merge: lane-usage into alfonso-frontend-jjtl (P-2026-10-18-0153)
+**Prompt**: `claude_2026-10-18_0153_prompt_merge_lane-usage.md`, a direct merge by `lane-run merge --direct`, no session: `lane-usage` at `51f53235f` into `alfonso-frontend-jjtl`, merge base `c59885807`, 3 commits on the branch side.
+**Files touched**: merge `dcd85da10`: 15 files from the branch side (`docs/harness/gates.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_0100_prompt_b1_lane_usage_measurement.md`, `frontend/package.json`, `frontend/scripts/hooks/__tests__/fixtures/lane-usage/P-2026-01-01-1000/log.jsonl`, `frontend/scripts/hooks/__tests__/fixtures/lane-usage/P-2026-01-01-1000/session.txt`, `frontend/scripts/hooks/__tests__/fixtures/lane-usage/P-2026-01-01-1000/tier.txt`, `frontend/scripts/hooks/__tests__/fixtures/lane-usage/P-2026-01-01-1100/log.jsonl`, and 7 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `dcd85da10` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9151 tests in 374 files, 9 red at import, hooks 781; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change: the merge touches frontend/scripts, docs and package.json only (git diff --name-only c6b594705 dcd85da10: 0 files under frontend/src); visual check not applicable, decided by chat C-2026-10-17-1757 under RC-25
+**Notes**: Rollback tag `pre-lane-usage` on `c6b594705` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-0153/result.json`.
+**Prompt document name**: 2026-10-18 01:53
