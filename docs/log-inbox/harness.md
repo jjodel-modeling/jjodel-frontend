@@ -143,3 +143,42 @@ Decisions awaiting Alfonso: none.
 **Smoke visivo**: passato — chat, unattended: no UI change: parser, tests and docs only (0 files under frontend/src between 3d55ae11d and the merge); decided by chat C-2026-10-17-1757 under RC-25
 **Notes**: Rollback tag `pre-digest-tolerant` on `3d55ae11d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1033/result.json`.
 **Prompt document name**: 2026-10-18 10:33
+
+## 2026-10-18 — feat(harness): B2, decisions and log:find read the register and the log by ID (P-2026-10-18-0945)
+**Prompt**: `claude_2026-10-18_0945_prompt_b2_selective_reads.md`, `Lane: fast`, tier light (`claude-sonnet-5-5`, RC-45), worktree `~/jjodel-w-selread` on `selective-reads`; item 1 `npm run decisions`, item 2 `npm run log:find`, items 3 and 4 tests and script entries. First run stopped with `Outcome: question` (hard stop: `parseRows` could not read the live register); resumed on the chat's word after P-2026-10-18-1030 merged.
+**Files touched**: `7d0be0298`: `frontend/scripts/gates/decisions-query.ts` (new), `frontend/scripts/gates/log-find.ts` (new), `frontend/scripts/gates/__tests__/decisionsQuery.test.ts` (new), `frontend/scripts/gates/__tests__/logFind.test.ts` (new), `frontend/package.json` (two script entries). This commit: this inbox, the Status line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `scripts/gates/__tests__/` 9 files, 363 tests green (exit 0); `typecheck:scripts` exit 0; `check:scripts` PASS (95 files). `typecheck` and `build` not run: no file under `frontend/src` or the bundle's inputs changes.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Two read-only CLIs, 49 tests (25 + 24). Both take a `--root <dir>` the prompt did not name, so the tests run on throwaway trees. Mutation bench on the behavioural tests: 12 mutants, 2 survived the first draft (self-edge guard, bold-closed clause cut), tests added, all 12 die.
+**Prompt document name**: 2026-10-18 09:45
+
+Measured (numbers of the entry, taken on the live files at `7d0be0298`):
+- Rows. `parseRows` on the unmodified register reads 439 rows; 169 lines are paragraph rows (`**R-VP-1** (2026-09-03) — ...` at column 0, no dash: R-VP, R-VAL, R-LAY, R-FORM, ...) that it does not read, so `npm run decisions -- R-VP-1` would have been «not found». `decisions-query.ts` gives those lines the dash `parseRows` asks for (line numbers do not move) and reads 590 rows through the unchanged `parseRows`.
+- Relation markers. The grep total is 185 lines (`amends|emend|supersed|sostituisc|superata|renumber|amended by`, case-insensitive). The recogniser matches 185 of 185 by form; that number is nearly circular, because its stems are a superset of the grep's. The numbers that carry information: 173 of the 185 sit inside the extent of a row or of a Superate item, 76 produced at least one edge (81 edges), 109 produced no edge: markers with no row after them (`Emendata il DATE`, `emendamento spec §N`, `renumbered by P-...`, a protocol clause, a negation). The recogniser's own forms are listed in the header comment of `decisions-query.ts`.
+- Precision. I read the context of the first 86 edges and corrected five false families (an ID after `.**`, `as amended by`, `nothing`, `non emenda`, `RC-13-bis` read as `RC-13`); after those fixes I re-read only the lines that had changed. One known wrong edge remains: `R-IRN-37 amends R-GV-6` (line 6052: «the collapse fields of §8, amended by R-IRN-37» is about a spec section, not about R-GV-6). The edges are a pointer; the canonical row text printed is the authority.
+- Speed. Fifty IDs of the RC, R-SIM, R-VP and R-IRN series, in one call: 646 ms wall (node start included, 69 KB printed); parsing the register and building the edges is 27 ms.
+- Live runs. `npm run decisions -- RC-49 RC-45 RC-16`, first two lines: `== RC-49  [active]  series RC  section: Decisione 2026-10-03: issue-driven unattended lanes (RC-35..RC-39)` and `- **RC-49** (2026-10-16, ratified by Alfonso under RC-26, his text dated 2026-10-15 and delivered to lane P-2026-10-15-1725 on 2026-10-16 09:37, evidence: measured, verified: none, reversible: trunk):` (the section is the nearest heading `parseRows` records, which here is a `###` of another decision). `npm run log:find -- --front harness --limit 5`, first two lines: `docs/log-inbox/harness.md:134 ## 2026-10-18 — merge: digest-tolerant into alfonso-frontend-jjtl (P-2026-10-18-1033)` and `docs/log-inbox/harness.md:111 ## 2026-10-18 — fix: parseRows reads the whole live register (P-2026-10-18-1030)`.
+
+**Ticket** (P-2026-10-18-0945): `check-docs.ts` Check E keeps `promptIdOf` private; `log-find.ts` carries a copy of its eight lines (the file is outside this lane's DOVE). Exporting it from `check-docs.ts` or moving it to `lane-tracking.mjs` removes the copy. The ticket for `parseRows` has its own entry below.
+
+Decisions taken (unattended):
+- The hard stop was re-checked after P-2026-10-18-1030 and found to hold in a narrower form: 169 paragraph-form rows are still invisible to `parseRows`. The chat said to proceed, so the module normalises the text (dash prefix, same line numbers) and calls `parseRows` unchanged, instead of stopping a second time or re-implementing the row grammar. `docs-digest.ts` is untouched.
+- A paragraph row whose header `parseRows` still rejects (the live `R-REF-6`, line 5910: `unattended (RC-25)`, a parenthesis inside the parenthesis) is kept as a row with the fields the header line states plainly (id, date, provisional, unattended); a list item that fails still exits 2 with the line printed, as `docs:digest` does.
+- A row's markers are read over its own text plus the paragraphs after a blank line, up to the next list item, paragraph row or heading (the live register puts «Amends X» in such a trailing paragraph). The row text printed stays the item's own lines, unchanged.
+- Status `superseded` when the row sits under `## Superate`, when a Superate item points at it (`- R-RAIL-44 ... — superata da D-UI-15`), or when its own text says «superata da» or «superseded by». A row that another row only «sostituisce» keeps `active`; that relation is printed, the status is not changed by it.
+- `- **D3** (...)` under Superate is not a row of any grammar `parseRows` reads, so `npm run decisions -- D3` prints `not found: D3`.
+- `--id` is a synonym of `--prompt`. `--front` matches by Prompt-ID and by prompt file name found in the heading or the `Prompt` field; the front of a prompt is `parseFrontLine` of `lane-tracking.mjs`, its Prompt-ID the header line or the file-name stamp (the Check E rule).
+- Exit codes: `decisions` 1 on a missing ID and on a usage error, 2 on an unreadable header; `log:find` 0 with hits, 1 with none, 2 on a usage error (so «none» and «usage» do not share a code). Output goes out with `process.exitCode`, not `process.exit`, so a pipe is not cut.
+- Within an inbox the later entry sorts as the newer one at equal date (inboxes are appended to; the active log is prepended).
+
+Decisions awaiting Alfonso: none.
+
+## 2026-10-18 — ticket: parseRows does not read paragraph-form rows of the register
+**Ticket**: `docs-digest.ts` `parseRows` reads list items (`- **ID** (...)`) only. 169 lines of `docs/decisions.md` are rows written as paragraphs (`**R-VP-1** (2026-09-03) — ...` at column 0: R-VP, R-VAL, R-LAY, R-FORM, R-SGL, R-DEAD, R-STR, ...), so `npm run docs:digest` leaves them out of every digest and `nearMisses` does not list them. `decisions-query.ts` works around it by prefixing the dash on its own copy of the text. One of those lines, `R-REF-6` (line 5910), has a nested parenthesis in its header (`unattended (RC-25)`) that `parseRows` would reject if it read it. The fix is in `parseRows` (accept the paragraph form, close the header at the matching parenthesis); then `readRows` in `decisions-query.ts` loses its workaround.
+**Priority**: medium
+**Found in**: P-2026-10-18-0945

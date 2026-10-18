@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-0945
 Chat: C-2026-10-17-1757
 Front: harness
 Lane: fast (two new read-only CLIs under `frontend/scripts/gates/` with tests, two script entries; outside the critical zone; tier drawn (RC-45): light)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane selective-reads · code 7d0be0298 · tests 363 green in scripts/gates/__tests__ (decisionsQuery 25, logFind 24), typecheck:scripts 0, check:scripts PASS, mutation bench 12/12 killed · hard stop on parseRows (paragraph rows) cleared by P-2026-10-18-1030, 169 paragraph rows still read through a dash prefix in decisions-query.ts (ticket) · no visual check
 Depends: P-2026-10-18-0100
 Request: none (chat decision under RC-25 on the approved plan of RC-49 (2), AM-5; Alfonso's 09:33 «c'è qualcosa da fare qui?» answered with this launch)
 
