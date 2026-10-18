@@ -222,9 +222,12 @@ describe('parseRows reads the whole live register (P-2026-10-18-1030)', () => {
 const LIVE = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', 'docs', 'decisions.md');
 
 describe.skipIf(!existsSync(LIVE))('integration: parseRows on the live register', () => {
-    test('439 rows (407 + 32 recovered) and no HeaderParseError', () => {
+    // The register is append-only (check:addonly), so the live count only grows:
+    // 439 when P-2026-10-18-1030 measured it (407 + 32 recovered). A floor, not an
+    // exact count, or every new decision row turns this test red.
+    test('at least 439 rows (407 + 32 recovered) and no HeaderParseError', () => {
         const rows = parseRows(readFileSync(LIVE, 'utf8'));
-        expect(rows).toHaveLength(439);
+        expect(rows.length).toBeGreaterThanOrEqual(439);
     });
 });
 
