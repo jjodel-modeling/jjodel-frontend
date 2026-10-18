@@ -6155,9 +6155,9 @@ Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked
   attribute of each entry, today always `jjodel`.
 - **R-LIB-4** (2026-10-18, ratified by Alfonso 2026-10-18, evidence: read, verified: none, reversible: trunk).
   **The first sealed notations:** State machine (UML statechart), Petri net, Flowchart (ISO 5807), Activity (UML),
-  BPMN, ER (Chen), UML class diagram, Mind map, Goal model, Conceptual model; CDN later. Each needs a canonical
-  metamodel written for it: today the repo has derived notations and symbol presets, no sealed package. Open: which
-  goal language and which conceptual-modeling notation, and the expansion of CDN.
+  BPMN, ER (Chen), UML class diagram, Mind map, Goal model (i*, as in OpenOME); DCN (Dynamic Classification
+  Notation) later. Each needs a canonical metamodel written for it: today the repo has derived notations and symbol
+  presets, no sealed package. Conceptual modeling is left out for now and may be added later (2026-10-18).
 - **R-LIB-5** (2026-10-18, ratified by Alfonso 2026-10-18, evidence: read, verified: none, reversible: trunk).
   **The first gallery projects are the classic Ecore examples:** Library, Families and Persons, StateMachine,
   Graph, Shapes, built from the XMI/Ecore fixtures. The MODELS demo scenes, the codegen examples and the graphVertex
