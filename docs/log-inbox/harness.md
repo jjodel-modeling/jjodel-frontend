@@ -559,3 +559,16 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 **Smoke visivo**: passato — chat, 00:48 (permission alert for Lane Monitor, tray 2 with tooltip; one post per entering lane)
 **Notes**: Plugin 2.7.0 (desktop `tap` via `on_action`). Mutation bench 6/6. Live: seed silent, one post per entering id; macOS showed its permission alert and stored each post without a banner (pending); rebuilds, same or new CDHash, not asked again. Click-through and granted-permission persistence not measured. Unattended, accepted: `capabilities/default.json` unchanged (Rust-only use); app-side 72 h guard; `board: error` 200 as a failed poll. `log` is a zsh builtin: use `/usr/bin/log`.
 **Prompt document name**: 2026-10-19 00:33
+
+## 2026-10-19 — feat(lane-monitor-app): jjodel-lanes:// links and the global shortcut (P-2026-10-19-0054)
+**Prompt**: `claude_2026-10-19_0054_prompt_lane_monitor_s4_links_shortcut.md`, slice S4 of the P-2026-10-18-2255 plan: tests first on the deep-link parser and the shortcut config parse, `tauri-plugin-deep-link` and `tauri-plugin-global-shortcut`, bundle installed in `~/Applications`, `lsregister` and `open jjodel-lanes://…` checks against 4712, shortcut registration.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, tauri.conf.json, src/main.rs, src/links.rs}`, `ui/popover.{html,css,js}`); code commit `e76383e8d`; this inbox and the prompt's Status line. Outside the repo: `~/Applications/Lane Monitor.app`, and `~/Library/Application Support/io.jjodel.lane-monitor/config.json` (board 4712, kept until S5).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 34/34; S2 and S3 paths unchanged except the window opener, now off the main thread; board and 4700 untouched)
+**Out-of-scope changes**: yes (`ui/popover.{html,css,js}` for the footer note, outside DOVE; the config file outside the repo; nine files in the code commit)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, 01:10 and 01:21 (lsregister 14, cold and warm links, refusals, shortcut toggles the popover, footer error, /l/ fallback after 1.5 s; off-thread opener)
+**Notes**: Plugins: deep-link 2.6.2, global-shortcut 2.4.1. Mutation bench 6/6. Found live: building the window inside the link's Apple event hung the main thread; link, tray menu and notification tap now open it off-thread. A second process registers the same chord with no error (§Q4 wrong). Tray-menu window stays behind Edge with synthetic clicks, as before the fix: real-click and five-app press tests left to Alfonso. Unattended, accepted: footer note in ui/, config.json format.
+**Prompt document name**: 2026-10-19 00:54

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-19-0054
 Chat: C-2026-10-18-2225
 Front: harness
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane menubar-disc · e76383e8d · verifica visiva passata 2026-10-19 (chat, 01:10 and 01:21: lsregister lists jjodel-lanes, cold and warm links open the monitor on the lane, refusals logged, shortcut toggles the popover, footer error, /l/ fallback after 1.5 s; window opener off the main thread)
 Lane: phase2 (slice S4 of 5 of the plan in the P-2026-10-18-2255 report; one slice per session, RC-52)
 Depends: P-2026-10-19-0033
 Corregge: —
