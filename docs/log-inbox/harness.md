@@ -363,3 +363,36 @@ Decisions awaiting Alfonso: the registration of `context-ceiling.mjs` in `.claud
 **Ticket**: `frontend/scripts/hooks/context-ceiling.mjs` is built and tested but not registered; B7, interactive, adds it to `.claude/settings.json` as a PreToolUse hook with matcher `*` (with `rule-trigger.mjs` on `Edit|Write|NotebookEdit`). Nothing changes for any session until then.
 **Priority**: medium
 **Found in**: P-2026-10-18-1530
+
+## 2026-10-18 — chore(harness): B7, rule-trigger and context-ceiling registered, AM-1 env, agents on Sonnet (P-2026-10-18-1655)
+**Prompt**: `claude_2026-10-18_1655_prompt_b7_hook_registration.md`, interactive session `8592622e-ae61-42c7-9040-92ca921074f5`: register `rule-trigger.mjs` and `context-ceiling.mjs` in `.claude/settings.json`, add the AM-1 `env` keys, name `claude-sonnet-5-5` in the agent files, add `general-purpose.md` on Sonnet after the B1 «before», check the registration from the settings alone.
+**Files touched**: code `aa22070fd`: `.claude/settings.json`, `.claude/agents/explorer.md`, `.claude/agents/Explore.md`, `.claude/agents/general-purpose.md` (new); this commit: `docs/harness/gates.md`, this entry and two tickets, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks 885/885 in 18 files (laneRunRouting included), the B8b baseline; typecheck:scripts exit 0; check:scripts PASS 102 files; check:triggers PASS (8 entries); settings JSON parses; registration check 3/3 as expected.
+**Out-of-scope changes**: no. Seven files, all named in DOVE: the four of `aa22070fd` and the three of this commit (RC-11).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: `lane-run` has no dry form of `start`: the «settings env not set» line prints only at a real launch, so the env read is proven by the routing suite and by `lightModelChoice()` reading `env.JJODEL_LIGHT_MODEL` (`lane-run.mjs:725`); none added. Proof scripts and markers of these sessions removed; `/tmp/jjodel-rule-trigger-probe-b4-manual-1.json` is B4's and stays.
+**Prompt document name**: 2026-10-18 16:55
+
+Proofs run by the chat (2026-10-18 17:00 to 17:03, `claude` 2.1.302, hooks loaded only through `claude -p --settings /tmp/b7proof/settings2.json`): soft without lane folder (`7bb59722-f1ef-4e8c-bc21-0f30c31e46b6`, soft 20000), call 1 allowed, call 2 denied «context-ceiling: this session's context is 42103 tokens, at or above the soft ceiling of 20000 (AM-8). Start no new work...», marker written; hard with a fake lane folder (`7b143af0-a4fd-402c-a557-5cf7708b77a3`, 20000/30000), `git log` allowed, lone `git status` allowed, Read denied «...46775 tokens, at or above the hard ceiling of 30000 (AM-8). Every tool is denied except Read, Write or Edit of .../handoff.md...»; rule-trigger (`0ff84010-0167-4696-9aa7-f269c1d87872`), Write of `frontend/src/styles/_b7_probe.scss` denied naming `frontend/src/styles/CLAUDE.md`, no file; negative (`cd7fab95-295a-4d21-9345-9de7370d6b50`), no denial; subagents `Explore` (project override) and `general-purpose` (via `--agents`, `"model": "claude-sonnet-5-5"`) both ran `message.model` `claude-sonnet-5-5`.
+
+Registration check (item 5, 2026-10-18 20:08 to 20:09, `run3.sh`: `claude -p` in `~/jjodel-w-b7`, no `--settings`, no probe hook, hooks from `.claude/settings.json` at the uncommitted state of `aa22070fd`): (A) lane hard run `1dcdee30-ec47-4e92-a4d4-bca338c9ec33`, `JJODEL_LANES_DIR` fake folder, 20000/30000, three sequential calls: `git log -1 --oneline` allowed, `git status --short` allowed (handoff exception), Read of `frontend/package.json` denied «context-ceiling: this session's context is 46496 tokens, at or above the hard ceiling of 30000 (AM-8). Every tool is denied except Read, Write or Edit of /tmp/b7proof/lanes/P-B7-PROOF3/handoff.md or /tmp/b7proof/lanes/P-B7-PROOF3/handoff.diff, and one `git status` or `git diff` with nothing chained...». (B) `126cf73e-571a-4990-8cb8-af970c610076`: Write of `frontend/src/styles/_b7_probe.scss` denied «rule-trigger: frontend/src/styles/_b7_probe.scss falls under rules kept outside the root CLAUDE.md (docs/harness/rule-triggers.json): - frontend/src/styles/**: frontend/src/styles/CLAUDE.md (design system and tokens) Read that doc now, then retry the same write. This fires once per session for each entry.»; no file created. (C) `ec1ad232-b8f9-41e2-89c5-37533dedea5e`, no thresholds: one `Agent` call with `general-purpose`, no denial; the sidechain's `Read` and `SubagentHandback` ran on `claude-sonnet-5-5`, the main session on `claude-opus-5-5`.
+
+The «before» of item 4 (`npm run lane:usage -- --all --json`, 537 lanes; the 18 with runs that ended after the B1 merge `dcd85da10`, 2026-10-18 01:55:37 +0200, P-2026-10-18-0945 to P-2026-10-18-1801): `lane-usage` reports `subagents` per model apart from `main`. Subagents: `claude-sonnet-5-5` only, 150 calls, input 300, cacheRead 9608687, cacheCreation 494991, output 5065, in two lanes (P-2026-10-18-1735: 124 calls; P-2026-10-18-1146: 26 calls); no subagent call on `claude-opus-5-5`. Main sessions over the same lanes: `claude-opus-5-5` 752 calls, cacheRead 108537911, cacheCreation 2380724, output 20575; `claude-sonnet-5-5` 161 calls, cacheRead 16676626, cacheCreation 732416, output 5949.
+
+Decisions taken (unattended): (1) The condition of RC-49 (3) on `general-purpose` («after the B1 measurement») read as: B1 is merged and `lane-usage.mjs` reports subagent tokens per model apart from the main session, so the switch is measurable before and after. Decision of the chat under RC-25, vetoable by Alfonso. (2) The docs commit carries `gates.md`, this inbox and the Status flip together, as the prompt's COME says, rather than the inbox alone as the log-entry skill says; all three are docs (P13 holds).
+
+Decisions awaiting Alfonso: B8c, the ratification of the thresholds 200000/250000 and of the text of AM-8 and AM-9; the AM-1 test that compares the agent files' `model` with the settings `env` keys.
+
+## 2026-10-18 — ticket: context-ceiling lags one call under claude -p; B8a measures JJODEL_LANE_LOG
+**Ticket**: Under `claude -p` `context-ceiling.mjs` measures with a lag of one call: at the first PreToolUse of a fresh session the transcript file does not exist yet (fail open), and at call n the transcript holds the `assistant` events of calls 1..n-1 only (chat proof, `hookin.log`: 0, 1, 2 lines at calls 1, 2, 3). This contradicts the B8b entry, measured on an interactive transcript. Effects: the first call of a session is never stopped; parallel calls in one message are all measured on the previous call; overshoot about one call (~2.5k tokens). B8a measures whether `JJODEL_LANE_LOG`, the stream-json log written live by the wrapper, is free of the lag. Hook code not changed in B7.
+**Priority**: medium
+**Found in**: P-2026-10-18-1655
+
+## 2026-10-18 — ticket: B8c writes the AM-1 test comparing agent models with the settings env
+**Ticket**: `.claude/agents/explorer.md`, `Explore.md` and `general-purpose.md` name `model: claude-sonnet-5-5`, equal by hand to `env.JJODEL_LIGHT_MODEL` of `.claude/settings.json`. No test compares them: B8c writes it, so a change of the light model in one place fails the gate until the other follows.
+**Priority**: low
+**Found in**: P-2026-10-18-1655
