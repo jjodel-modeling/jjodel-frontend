@@ -3,7 +3,10 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveCurrentModelId, isForeignModel, getAICompany} from '../types/jodie';
+import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveCurrentModelId, isForeignModel, getAICompany, applyModelCatalog, getProxyBase} from '../types/jodie';
+import {AIEvents} from '../events/registry';
+import {CATALOG_PROVIDERS, fetchAnthropicCatalog, needsRefresh, writeCatalogCache} from './aiModelCatalog';
+import type {CatalogFailure, CatalogFetchResult, CatalogProvider} from './aiModelCatalog';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
 
@@ -16,6 +19,17 @@ import { PromptContext } from '../types/prompts';
  * the connection-test calls).
  */
 const CHAT_MAX_OUTPUT_TOKENS = 8192;
+
+/**
+ * Outcome of a connection test. `failure` says what kind of failure it was ('auth' disables the
+ * provider in Settings, the others do not); `warning` qualifies a passing test.
+ */
+export interface ConnectionTestResult {
+    success: boolean;
+    error?: string;
+    failure?: CatalogFailure;
+    warning?: string;
+}
 
 export class AIProviderService {
     /**
@@ -696,7 +710,7 @@ export class AIProviderService {
      * Test if a provider's API key is valid, with the model the chat calls it with (#179):
      * key and effective model together, so the test and the chat cannot disagree.
      */
-    static async testConnection(provider: TAIProvider): Promise<{ success: boolean; error?: string }> {
+    static async testConnection(provider: TAIProvider): Promise<ConnectionTestResult> {
         try {
             const config = AIConfig.get(provider);
             const llm = AI[provider];
@@ -762,79 +776,78 @@ export class AIProviderService {
     }
 
     /**
-     * Test Claude API connection
+     * Test Claude API connection: list the key's models (`GET /v1/models`, no fixed model id). A
+     * success also refreshes the live catalog; a selected model the key is not offered is a
+     * warning on a passing test, never a swap.
      */
-    private static async testClaude(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            // Validate API key format
-            if (!apiKey.startsWith('sk-ant-')) {
-                return {
-                    success: false,
-                    error: 'Invalid API key format. Claude API keys should start with "sk-ant-"',
-                };
-            }
+    private static async testClaude(apiKey: string, model: string): Promise<ConnectionTestResult> {
+        // Validate API key format
+        if (!apiKey.startsWith('sk-ant-')) {
+            return {
+                success: false,
+                failure: 'auth',
+                error: 'Invalid API key format. Claude API keys should start with "sk-ant-"',
+            };
+        }
 
-            // Use proxy endpoint to avoid CORS issues
-            const proxyUrl = AI.Claude.getEndpoint();
+        const result = await this.loadCatalog(AIProvider.Claude, apiKey);
+        if (!result.ok) return { success: false, failure: result.failure, error: this.catalogErrorMessage('Anthropic', 'api.anthropic.com', result) };
+        if (model && !result.models.some(m => m.id === model)) {
+            return { success: true, warning: `Key OK, but the selected model "${model}" is not offered to this key. Pick another Claude model.` };
+        }
+        return { success: true };
+    }
 
-            const response = await fetch(proxyUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                },
-                body: JSON.stringify({
-                    model,
-                    max_tokens: 10,
-                    messages: [{ role: 'user', content: 'Hi' }],
-                }),
-            });
+    // ── Live model catalogs (services/aiModelCatalog.ts) ─────────────────────────
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMsg = `API Error (${response.status})`;
+    private static inFlight: Partial<Record<CatalogProvider, Promise<CatalogFetchResult>>> = {};
 
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    if (errorJson.error?.message) {
-                        errorMsg = errorJson.error.message;
-                    } else if (errorJson.message) {
-                        errorMsg = errorJson.message;
-                    } else if (errorJson.error) {
-                        errorMsg = typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error);
-                    }
-                } catch {
-                    errorMsg += `: ${errorText.substring(0, 150)}`;
+    /**
+     * Fetch `provider`'s catalog for `apiKey`, cache it, merge it into the registry and dispatch
+     * AIEvents.MODELS_UPDATED. Concurrent calls for the same provider share one request.
+     */
+    private static loadCatalog(provider: CatalogProvider, apiKey: string): Promise<CatalogFetchResult> {
+        const pending = this.inFlight[provider];
+        if (pending) return pending;
+        const run = (async (): Promise<CatalogFetchResult> => {
+            const result = await fetchAnthropicCatalog(apiKey, getProxyBase());
+            if (result.ok && result.models.length) {
+                writeCatalogCache(provider, apiKey, result.models);
+                applyModelCatalog(provider, result.models);
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent(AIEvents.MODELS_UPDATED, { detail: { provider } }));
                 }
-
-                // Helpful hints based on status code
-                if (response.status === 401) {
-                    errorMsg = 'Invalid API key. Please check your key in the Anthropic Console.';
-                } else if (response.status === 429) {
-                    errorMsg = 'Rate limit exceeded. Please try again in a moment.';
-                } else if (response.status === 400) {
-                    errorMsg = 'Bad request. The model may be incorrect or unavailable.';
-                } else if (response.status === 403) {
-                    errorMsg = 'Access denied. Origin not allowed by proxy.';
-                }
-
-                return { success: false, error: errorMsg };
             }
+            return result;
+        })();
+        this.inFlight[provider] = run;
+        return run.finally(() => { delete this.inFlight[provider]; });
+    }
 
-            await response.json();
-            return { success: true };
-        } catch (error) {
-            const errorMessage = (error as Error).message;
+    /**
+     * Refresh `provider`'s live catalog when it is missing, for another key, or older than 24 h
+     * (`force` skips the check). Resolves to null when there is nothing to do: not a catalog
+     * provider, no key, or a fresh cache.
+     */
+    static async refreshModels(provider: TAIProvider, force: boolean = false): Promise<CatalogFetchResult | null> {
+        if (!(CATALOG_PROVIDERS as string[]).includes(provider)) return null;
+        const apiKey = AIConfig.get(provider)?.apiKey;
+        if (!apiKey) return null;
+        if (!force && !needsRefresh(provider as CatalogProvider, apiKey)) return null;
+        return this.loadCatalog(provider as CatalogProvider, apiKey);
+    }
 
-            if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-                return {
-                    success: false,
-                    error: 'Network error. The proxy service may be unavailable.',
-                };
-            }
-
-            return { success: false, error: `Connection error: ${errorMessage}` };
+    /** The message a failed catalog fetch shows, by kind of failure. */
+    private static catalogErrorMessage(company: string, host: string, result: Extract<CatalogFetchResult, { ok: false }>): string {
+        switch (result.failure) {
+            case 'auth':
+                return result.status === 403
+                    ? `This key is not allowed to list models (403). Check its permissions in the ${company} Console.`
+                    : `Invalid API key. Please check your key in the ${company} Console.`;
+            case 'rate': return 'Rate limit exceeded. Please try again in a moment.';
+            case 'network': return `Cannot reach ${host} or the Jjodel proxy (network or CORS).`;
+            case 'server': return `${company} error (${result.status}). Please try again later.`;
+            default: return `API Error (${result.status})${result.message ? ': ' + result.message : ''}`;
         }
     }
 

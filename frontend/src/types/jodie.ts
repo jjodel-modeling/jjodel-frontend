@@ -9,6 +9,8 @@ import {
     U
 } from "../joiner";
 import { AIEvents } from '../events/registry';
+import { CATALOG_PROVIDERS, cachedModelsFor, capabilitiesFor } from '../services/aiModelCatalog';
+import type { CatalogModel } from '../services/aiModelCatalog';
 
 // Provider logo imports
 import openaiLogo from '../assets/icons/providers/openai.svg';
@@ -161,6 +163,18 @@ export function isForeignModel(provider: TAIProvider, modelId: string | undefine
     return ALL_AI_PROVIDERS.some(p => p !== provider && !!AI[p]?.versions?.[modelId]);
 }
 
+/**
+ * Base URL of the Jjodel AI proxy Worker (source: cloudflare-worker/). The production Worker in
+ * every mode; VITE_AI_PROXY_URL overrides it, e.g. http://localhost:8787 in
+ * frontend/.env.development.local for a local `wrangler dev`.
+ */
+export function getProxyBase(): string {
+    const PROXY_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
+    // @ts-ignore -- `env` is not on ImportMeta for tsc here (vite-env.d.ts), as in codegen/setting.ts.
+    const override: string | undefined = import.meta.env?.VITE_AI_PROXY_URL;
+    return override ? override.trim().replace(/\/+$/, '') : PROXY_URL;
+}
+
 @RuntimeAccessible('AI')
 export class AI{
     static cname = 'AI';
@@ -188,6 +202,8 @@ export class AI{
     keyUrl: string;
     storageKey: string;
     versions: Dictionary<string, AIVersion> = {};
+    /** The static `.add(...)` seed, kept aside when a live catalog replaces `versions` (applyModelCatalog). */
+    staticVersions?: Dictionary<string, AIVersion>;
     // version?: string;
     endpoint!: string;
     proxy?: string;
@@ -226,19 +242,13 @@ export class AI{
         return this;
     }
     getEndpoint(): string {
-        // Proxy endpoints for providers that don't support CORS (source: cloudflare-worker/).
-        // The production Worker in every mode; VITE_AI_PROXY_URL overrides it, e.g.
-        // http://localhost:8787 in frontend/.env.development.local for a local `wrangler dev`.
-        const PROXY_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
         if (!this.proxy) return this.endpoint;
         /*switch (this.name) {
             case AIProvider.Claude:
             case AIProvider.Gemini:
             default: return '';
         }*/
-        // @ts-ignore -- `env` is not on ImportMeta for tsc here (vite-env.d.ts), as in codegen/setting.ts.
-        const override: string | undefined = import.meta.env?.VITE_AI_PROXY_URL;
-        return (override ? override.trim().replace(/\/+$/, '') : PROXY_URL) + this.proxy;
+        return getProxyBase() + this.proxy;
     }
     hasVision(version?: string): boolean{
         let model = version && this.versions[version];
@@ -273,6 +283,13 @@ export class AIVersion {
      * provider-dependent. Used by UI to surface capability badges.
      */
     contextWindow?: number;
+    /** Live catalog only: family key ('opus', 'sonnet', ...) and rank within it, higher is newer. */
+    family?: string;
+    rank?: number;
+    /** 'live' from the provider's models endpoint, 'static' from the `.add(...)` seed; unset = static, no live list. */
+    source?: 'live' | 'static';
+    /** A static entry the live catalog does not list: kept so a saved selection on it is flagged, not swapped. */
+    unavailable?: boolean;
     constructor(label: string, pdf: boolean = false, vision: boolean = false, deprecated: boolean = false, contextWindow?: number) {
         this.label = label;
         this.capabilities = {pdf, vision};
@@ -421,6 +438,57 @@ AI.Custom.authScheme   = 'bearer';
 AI.Claude.authScheme   = 'x-api-key';
 AI.Gemini.authScheme   = 'query-key';
 AI.Ollama.authScheme   = 'none';
+
+/**
+ * Replace `provider`'s registry with a live catalog (services/aiModelCatalog.ts). Live models come
+ * first, in catalog order (the newest of each family first, so the first key stays a current
+ * model); a static entry the catalog does not list is kept and flagged `unavailable`, never
+ * dropped, so a saved selection on it is shown to the user instead of being swapped. Static
+ * capability flags win over the prefix table for an id present in both. Re-applying replaces the
+ * previous live list: the static seed is kept aside on the first call.
+ */
+export function applyModelCatalog(provider: TAIProvider, models: CatalogModel[]): void {
+    const llm = AI[provider];
+    if (!llm) return;
+    if (!llm.staticVersions) llm.staticVersions = llm.versions;
+    const statics = llm.staticVersions;
+    const next: Dictionary<string, AIVersion> = {};
+    for (const m of models) {
+        const seed = statics[m.id];
+        const caps = capabilitiesFor(m.id);
+        const v = new AIVersion(m.label, seed ? seed.capabilities.pdf : caps.pdf, seed ? seed.capabilities.vision : caps.vision,
+            false, m.contextWindow ?? seed?.contextWindow ?? caps.contextWindow);
+        v.family = m.family;
+        v.rank = m.rank;
+        v.source = 'live';
+        next[m.id] = v;
+    }
+    for (const id of Object.keys(statics)) {
+        if (next[id]) continue;
+        const s = statics[id];
+        const v = new AIVersion(s.label, s.capabilities.pdf, s.capabilities.vision, s.deprecated, s.contextWindow);
+        v.source = 'static';
+        v.unavailable = true;
+        next[id] = v;
+    }
+    llm.versions = next;
+}
+
+/** True when `provider`'s registry comes from a live catalog, false on the static fallback. */
+export function hasLiveCatalog(provider: TAIProvider): boolean {
+    return Object.values(AI[provider]?.versions ?? {}).some(v => v.source === 'live');
+}
+
+// Sync merge at module load: a cached catalog for the saved key replaces the static list before
+// JodieConfig and its migrations read `versions`. The key is read raw, AIConfig is not defined yet.
+for (const provider of CATALOG_PROVIDERS) {
+    try {
+        const raw = localStorage.getItem(AI[provider].storageKey);
+        const apiKey: string | undefined = raw ? JSON.parse(raw)?.apiKey : undefined;
+        const cached = cachedModelsFor(provider, apiKey);
+        if (cached && cached.models.length) applyModelCatalog(provider, cached.models);
+    } catch { /* no storage or malformed config: keep the static list */ }
+}
 
 AI.GPT.bi_icon = 'openai'; // chat-dots bubble speech generic candidate
 AI.Claude.bi_icon = 'claude';
