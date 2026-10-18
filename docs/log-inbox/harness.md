@@ -376,3 +376,16 @@ Decisions awaiting Alfonso: the registration of `context-ceiling.mjs` in `.claud
 **Smoke visivo**: non applicabile (no UI; P8 derogated)
 **Notes**: `board` is null when the diff misses the board or a gate is red; otherwise restarted (seconds), not-running-here (script), no-agent or failed (stderr line), never failing the merge. Pre-merge tip read as `<merge>^1`. Real agent untouched: every lab puts a fake launchctl in PATH and `LANE_RUN_LAUNCHCTL`. Bench of 5 mutants, each killed: commit message of `e4eaba0f1`.
 **Prompt document name**: 2026-10-18 17:52
+
+## 2026-10-18 — merge: board-kickstart into alfonso-frontend-jjtl (P-2026-10-18-1859)
+**Prompt**: `claude_2026-10-18_1859_prompt_merge_board-kickstart.md`, a direct merge by `lane-run merge --direct`, no session: `board-kickstart` at `0357e7360` into `alfonso-frontend-jjtl`, merge base `062a05434`, 2 commits on the branch side.
+**Files touched**: merge `0c7d850ba`: 5 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1752_prompt_board_kickstart.md`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/merge-into-trunk.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0c7d850ba` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9370 tests in 382 files, 9 red at import, hooks 891; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge (lane-run.mjs, merge template, laneRunDirect tests): no file under frontend/src, nothing renders differently, no visual check needed; gates green on 0c7d850ba (hooks 891)
+**Notes**: Rollback tag `pre-board-kickstart` on `56b54365e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1859/result.json`.
+**Prompt document name**: 2026-10-18 18:59
