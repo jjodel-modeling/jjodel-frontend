@@ -188,7 +188,14 @@ export function Jodie(): JSX.Element {
     // using state just for caching, so user/userName are not re-computed.
     const user = useMemo(()=> (L.fromPointer(DUser.current) as LUser), []);
     const userName = useMemo(() => `${user.name || ''} ${user.surname || ''}`.trim(), []);
-    const activeVersion = useMemo(() => AI.getActiveVersion(activeProvider), [activeProvider]);
+    // Re-read the active model's capabilities when a live catalog lands (AIProviderService.refreshModels).
+    const [modelsTick, setModelsTick] = useState(0);
+    useEffect(() => {
+        const onModels = () => setModelsTick(t => t + 1);
+        window.addEventListener(AIEvents.MODELS_UPDATED, onModels);
+        return () => window.removeEventListener(AIEvents.MODELS_UPDATED, onModels);
+    }, []);
+    const activeVersion = useMemo(() => AI.getActiveVersion(activeProvider), [activeProvider, modelsTick]);
     const state = store.getState();
 
     // Counter bumped on EDITOR_TYPE_CHANGE — drives projectContext re-evaluation

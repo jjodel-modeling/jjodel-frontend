@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     CATALOG_TTL_MS, capabilitiesFor, catalogStorageKey, claudeFamily, fetchAnthropicCatalog, hashKey,
-    needsRefresh, newestPerFamily, orderCatalog, parseAnthropicModels, writeCatalogCache,
+    needsRefresh, newestPerFamily, orderCatalog, parseAnthropicModels, splitModelList, writeCatalogCache,
 } from '../aiModelCatalog';
 
 vi.mock('../../joiner', () => ({
@@ -211,5 +211,52 @@ describe('testConnection for Claude lists the models, with no fixed model id', (
         expect(await AIProviderService.refreshModels('Claude')).toMatchObject({ ok: true });
         expect(fetch).toHaveBeenCalledTimes(2);
         expect(await AIProviderService.refreshModels('GPT')).toBeNull();
+    });
+});
+
+describe('splitModelList: what the model picker shows (ProviderModelSelector)', () => {
+    async function liveEntries() {
+        storage.set('jjodie_provider_claude', JSON.stringify({ name: 'Claude', apiKey: 'sk-ant-a', model: 'claude-opus-4-7' }));
+        writeCatalogCache('Claude', 'sk-ant-a', orderCatalog(parseAnthropicModels(ANTHROPIC_PAGE)));
+        const { AI } = await import('../../types/jodie');
+        return Object.keys(AI.Claude.versions).map(id => ({ id, version: AI.Claude.versions[id] }));
+    }
+
+    it('shows the newest of each family by default, every other live model as older, no unavailable entry', async () => {
+        const { main, older } = splitModelList(await liveEntries(), true, 'claude-opus-4-7');
+        expect(main.map(e => e.id)).toEqual(['claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001']);
+        expect(older.map(e => e.id)).toEqual(['claude-opus-4-6', 'claude-sonnet-4-5-20250929', 'claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307']);
+        expect([...main, ...older].some(e => e.version.unavailable)).toBe(false);
+    });
+
+    it('keeps the selection in view: an older model leaves the older list, an unavailable one shows flagged', async () => {
+        const entries = await liveEntries();
+        const a = splitModelList(entries, true, 'claude-opus-4-6');
+        expect(a.main.map(e => e.id)).toContain('claude-opus-4-6');
+        expect(a.older.map(e => e.id)).not.toContain('claude-opus-4-6');
+        const b = splitModelList(entries, true, 'claude-3-opus-latest');
+        expect(b.main.find(e => e.id === 'claude-3-opus-latest')?.version.unavailable).toBe(true);
+    });
+
+    it('without a live catalog splits on deprecated, as before', async () => {
+        const { AI } = await import('../../types/jodie');
+        const entries = Object.keys(AI.Claude.versions).map(id => ({ id, version: AI.Claude.versions[id] }));
+        const { main, older } = splitModelList(entries, false);
+        expect(main.every(e => !e.version.deprecated)).toBe(true);
+        expect(older.map(e => e.id)).toEqual(Object.keys(AI.Claude.versions).filter(id => AI.Claude.versions[id].deprecated));
+        expect(older.length).toBeGreaterThan(0);
+    });
+});
+
+describe('Settings: which failed test disables the provider', () => {
+    it('disables on a rejected key or an unclassified failure, never on rate, network or server', async () => {
+        const { AIProviderService } = await import('../AIProviderService');
+        const d = (r: Parameters<typeof AIProviderService.failureDisablesProvider>[0]) => AIProviderService.failureDisablesProvider(r);
+        expect(d({ success: false, failure: 'auth' })).toBe(true);
+        expect(d({ success: false })).toBe(true);
+        expect(d({ success: false, failure: 'rate' })).toBe(false);
+        expect(d({ success: false, failure: 'network' })).toBe(false);
+        expect(d({ success: false, failure: 'server' })).toBe(false);
+        expect(d({ success: true, warning: 'x' })).toBe(false);
     });
 });

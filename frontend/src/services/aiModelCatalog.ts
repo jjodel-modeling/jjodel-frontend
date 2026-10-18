@@ -139,6 +139,28 @@ export function orderCatalog(models: CatalogModel[]): CatalogModel[] {
     ];
 }
 
+/** The fields of a registry entry (AIVersion) the picker split reads. */
+export interface PickerEntry {
+    id: string;
+    version: { deprecated: boolean; source?: 'live' | 'static'; family?: string; rank?: number; unavailable?: boolean };
+}
+
+/**
+ * The picker's two lists. With a live catalog: the newest model of each family, plus the selection
+ * wherever it is (an older or an unavailable model stays in view, flagged by the caller); every
+ * other live model is «older»; an unavailable entry that is not selected is not shown. Without
+ * one: current entries, and deprecated ones as «older». Registry order is kept in both lists.
+ */
+export function splitModelList<T extends PickerEntry>(entries: T[], isLive: boolean, selectedId?: string): { main: T[]; older: T[] } {
+    if (!isLive) {
+        return { main: entries.filter(e => !e.version.deprecated), older: entries.filter(e => e.version.deprecated) };
+    }
+    const live = entries.filter(e => e.version.source === 'live');
+    const heads = newestPerFamily(live.map(e => ({ id: e.id, family: e.version.family, rank: e.version.rank })));
+    const main = entries.filter(e => heads.has(e.id) || e.id === selectedId);
+    return { main, older: live.filter(e => !main.includes(e)) };
+}
+
 // ── Response parsing ────────────────────────────────────────────────────────
 
 /** Anthropic `GET /v1/models` page: `{data:[{type, id, display_name, created_at}], has_more, last_id}`. */

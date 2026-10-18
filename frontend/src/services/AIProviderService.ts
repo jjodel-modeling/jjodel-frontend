@@ -837,6 +837,15 @@ export class AIProviderService {
         return this.loadCatalog(provider as CatalogProvider, apiKey);
     }
 
+    /**
+     * Whether a failed connection test disables the provider in Settings: only a rejected key
+     * does. A rate limit, a network or CORS failure or a provider outage says nothing about the
+     * key; a test that does not classify its failure keeps the old behaviour (disable).
+     */
+    static failureDisablesProvider(result: ConnectionTestResult): boolean {
+        return !result.success && (!result.failure || result.failure === 'auth');
+    }
+
     /** The message a failed catalog fetch shows, by kind of failure. */
     private static catalogErrorMessage(company: string, host: string, result: Extract<CatalogFetchResult, { ok: false }>): string {
         switch (result.failure) {
