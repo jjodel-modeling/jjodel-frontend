@@ -334,3 +334,32 @@ Decisions awaiting Alfonso: the registration of `rule-trigger.mjs` in `.claude/s
 **Smoke visivo**: passato — chat, unattended: Visual check of P-2026-10-18-1428 on :4701 passed before the merge: Kind badge on every Kind cell at 124 px, hover, click pins the overlay, Esc closes it, console clean, direct merges read hard-stop at the merge, closed by <sha>. Merge 87351c0bf, all eight gates green.
 **Notes**: Rollback tag `pre-lane-board-kind` on `3444cc265` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1516/result.json`.
 **Prompt document name**: 2026-10-18 15:16
+
+## 2026-10-18 — feat(harness): B8b, context-ceiling hook for AM-8 (P-2026-10-18-1530)
+**Prompt**: `claude_2026-10-18_1530_prompt_b8b_context_ceiling.md`: the PreToolUse hook `context-ceiling.mjs` for every tool (soft 200000 once per session with the handoff named, hard 250000 with only the handoff writes and an unchained `git status`/`git diff` allowed, interactive variant without hard stop), its tests T-C1 and T-C2 and a mutation bench. Not registered (B7).
+**Files touched**: code `1293f152d`: `frontend/scripts/hooks/context-ceiling.mjs`, `frontend/scripts/hooks/__tests__/contextCeiling.test.ts` (30 tests); this commit: `docs/harness/gates.md`, this entry and two tickets, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. contextCeiling 30/30; scripts/hooks 885/885 in 18 files; typecheck:scripts exit 0; check:scripts PASS 102 files; check:triggers PASS (8 entries). `lib.mjs` untouched.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: Real check on a copy of the transcript of P-2026-10-18-1420 (`c3e0a376`, 1.16 MB), measure 122138, equal to an independent full parse. Defaults, `probe-b8b-real-1` twice: no output, exit 0 both times (below soft). Lowered 50000/100000, `probe-b8b-real-2`: deny «context is 122138 tokens, at or above the soft ceiling of 50000 (AM-8). Start no new work: tell the user...»; again: no output. Bench 23/23: commit message of `1293f152d`.
+**Prompt document name**: 2026-10-18 15:30
+
+Measured (item 1a and 1g): the `tool_use` event of the call that requests the tool is on disk before PreToolUse runs, in the transcript and in the lane `log.jsonl` alike: the registered `output-budget` hook logged 13:29:30.252Z for a call whose `tool_use` line carries 13:29:30.189Z, and that line was the transcript's last assistant line when the command ran. So the hook measures the current call's context, not the previous one's. Wall time on the largest transcript under `~/.claude/projects/` (17,265,918 bytes, measure 863334), median of 10: 26.0 ms below soft against 23.0 ms for a bare `node -e ""`; 35.1 ms at or above soft, lane lookup over the 688 real lane folders and marker included. Lane variant on the same copy, lanes root in a temp dir: at 50000/100000 a Bash `ls` is denied at hard naming `handoff.md`, `handoff.diff` and the Outcome line, `git diff --stat` passes; at 100000/200000 the soft denial names the six sections and `Outcome: hard-stop`.
+
+Decisions taken (unattended): (1) The hook measures from `transcript_path`, and from `JJODEL_LANE_LOG` only when it is set and readable, instead of the report's `JJODEL_LANE_LOG` alone: B8a is not done and `lane-run` exports only `JJODEL_CRITICAL_ZONE_GOAHEAD`; decided by the chat (RC-25), so B8b no longer depends on B8a. (2) A subagent event is one with `isSidechain` true (transcript) or a non-empty `parent_tool_use_id` (the stream-json lane log has no `isSidechain`; measured on `log.jsonl` of this lane). (3) An assistant event whose three fields sum to 0 (a synthetic message) is not a measure and is skipped. (4) The lines of one `message.id` are not grouped: the scan from the end takes the latest qualifying line, which is the latest line of the latest message. (5) The lane folder is looked up only at or above soft, so a call below soft costs one tail read; `dirname(JJODEL_LANE_LOG)` is tried first, then the root's folders newest name first. (6) The hard stop keeps no state and does not need the soft marker: a session that jumps past hard is stopped at once; an unwritable temp dir fails open for the soft denial only. (7) The hard Bash allowlist is a regex over the whole command: `git [--no-pager] status|diff`, unquoted arguments, at most one `>` to the lane's `handoff.diff`; it refuses `;`, `&`, `|`, backtick, `$`, `<`, parentheses, quotes in arguments, a newline (which the first draft let through; T-C1 caught it), `>>` and `--output`. (8) No cut sha is recorded in the lane folder, so the reasons write `<cut sha>`; the prompt names the base commit. (9) A `session_id` outside `[A-Za-z0-9_-]` fails open, as in `rule-trigger.mjs`, since it names a file.
+
+Decisions awaiting Alfonso: the registration of `context-ceiling.mjs` in `.claude/settings.json` (PreToolUse, matcher `*`), in the interactive B7; the ratification of the thresholds 200000/250000 and of the normative text in B8c.
+
+## 2026-10-18 — ticket: B8a keeps --fresh, next, the slice refusal and the mechanical handoff; JJODEL_LANE_LOG becomes optional
+**Ticket**: B8a (`lane-run`) still owes `--fresh`, `next`, the refusal of a second slice per session (AM-9) and the mechanical `handoff.md` when the model fails to write one (report §7.3). The export of `JJODEL_LANE_LOG` from `lane-run launch` becomes optional: `context-ceiling.mjs` measures from `transcript_path` when it is not set, and prefers it when it is.
+**Priority**: medium
+**Found in**: P-2026-10-18-1530
+
+## 2026-10-18 — ticket: B7 registers context-ceiling.mjs with matcher `*`
+**Ticket**: `frontend/scripts/hooks/context-ceiling.mjs` is built and tested but not registered; B7, interactive, adds it to `.claude/settings.json` as a PreToolUse hook with matcher `*` (with `rule-trigger.mjs` on `Edit|Write|NotebookEdit`). Nothing changes for any session until then.
+**Priority**: medium
+**Found in**: P-2026-10-18-1530
