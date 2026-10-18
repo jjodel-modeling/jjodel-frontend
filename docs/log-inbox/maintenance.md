@@ -50,3 +50,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat `C-2026-10-12-1955`, unattended, on the merged tree `e4421dc62` through `lane-run probe` on port 3190 (nothing listened on 3001): the Ecore-import probe of P-2026-10-12-2001 (`_tmp_tc0_probe.ts`, MODE=after against the BEFORE state measured on the untouched code) 6/6 PASS, EXIT=0; the committed smoke `scripts/smoke/run.ts` 12 passed, 0 failed, 3 declared skips, VERDICT GREEN. Logs `probe-_tmp_tc0_probe.log` and `probe-_tmp_172_smoke.log` in `~/.jjodel-lanes/P-2026-10-13-1023/`.
 **Notes**: Director of this line: Juri. The governance go-ahead was his (2026-10-13, his launch with `--governance-goahead` in chat `C-2026-10-12-1955`); the tool's fixed text names Alfonso. Rollback tag `pre-fix/typecheck-baseline-zero` on `ed96d563c` (RC-31), created by the chat. Union: none. Read against the Findings, confirmed by the chat: step 6 «typecheck 14» (0 is the pass), step 2 «must be empty» (the two files of the go-ahead). `8a8575ec0` is still owed to `alfonso-frontend-jjtl` (P15).
 **Prompt document name**: 2026-10-13 10:23
+
+## 2026-10-18 — discovery: AI proxy Worker back in the trunk, configurable proxy URL, dynamic model lists (P-2026-10-18-1146)
+**Prompt**: `claude_2026-10-18_1146_prompt_discovery_ai_proxy_dynamic_models.md`, full lane, Phase 1 only (read-only), chat `C-2026-10-17-1518`, unattended (RC-21, RC-25), worktree `~/jjodel-w-aimodels` on `ai-models-discovery` at `1e9e616fa`.
+**Files touched**: `docs/discovery/discovery_2026-10-18_ai_proxy_dynamic_models.md` (new), this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no file under `frontend/` written; `~/jjodel-proxy` only read; network calls keyless only (CORS preflights and unauthenticated GETs to the three providers' models endpoints, and to the deployed Worker).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (discovery, no code change)
+**Notes**: Measured: only `testClaude` uses the Worker (Claude chat and Gemini go direct, `9220e286a`); all three `/models` endpoints are CORS-readable from the browser; the Worker accepts any origin containing `localhost` and hides its 403 behind CORS. Two decisions await Alfonso (direct vs Worker first for GET models; redeploy). Issue #54 unread: `gh` not authenticated. Detail in the report.
+**Prompt document name**: 2026-10-18 11:46
