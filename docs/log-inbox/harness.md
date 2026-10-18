@@ -130,3 +130,16 @@ Decisions taken (unattended):
 - The `traceIndex.test.ts` fixture line, above (scope expansion outside RC-26).
 
 Decisions awaiting Alfonso: none.
+
+## 2026-10-18 — merge: digest-tolerant into alfonso-frontend-jjtl (P-2026-10-18-1033)
+**Prompt**: `claude_2026-10-18_1033_prompt_merge_digest-tolerant.md`, a direct merge by `lane-run merge --direct`, no session: `digest-tolerant` at `73b1f9823` into `alfonso-frontend-jjtl`, merge base `3d55ae11d`, 2 commits on the branch side.
+**Files touched**: merge `3bd0a8fc3`: 6 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1030_prompt_b2pre_digest_tolerant.md`, `frontend/scripts/gates/__tests__/docsDigest.test.ts`, `frontend/scripts/gates/__tests__/fixtures/docsDigest.golden.md`, `frontend/scripts/gates/__tests__/traceIndex.test.ts`, `frontend/scripts/gates/docs-digest.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3bd0a8fc3` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9170 tests in 374 files, 9 red at import, hooks 781; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change: parser, tests and docs only (0 files under frontend/src between 3d55ae11d and the merge); decided by chat C-2026-10-17-1757 under RC-25
+**Notes**: Rollback tag `pre-digest-tolerant` on `3d55ae11d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1033/result.json`.
+**Prompt document name**: 2026-10-18 10:33

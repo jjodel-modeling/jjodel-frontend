@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-18-1033
 Chat: C-2026-10-17-1757
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane merge · 3bd0a8fc3 · verifica visiva passata 2026-10-18 (no UI change: parser, tests and docs only (0 files under frontend/src between 3d55ae11d and the merge); decided by chat C-2026-10-17-1757 under RC-25)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-18-1033 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
