@@ -258,3 +258,46 @@ Lane kinds as in P16. "CZ" means critical zone.
 - `docs/decisions.md` (6133-6170), `docs/library/catalog.json`, `docs/spec/parcheggiate/spec_parcheggiata_templates_featured_projects.md` (15-89), `docs/PROTOCOL.md` (304-317), `docs/claude-code-log.md` (1-30).
 - `frontend/src/utils/deriveViewpoint.ts` (50-99), `frontend/src/components/editor-v2/viewpoint/derive/notations.ts` (exports, 47-125), `frontend/src/components/editor-v2/viewpoint/ir/notationCatalog.ts` (1-25), `frontend/src/codegen/engine/templateCodec.ts` (heads), `frontend/src/codegen/setting.ts` (1-30), `frontend/src/model/simulation/*Codec.ts` (heads), `frontend/src/components/environment/consumerMode.ts`, `frontend/src/jjscript/executor/permissionGuard.ts` (1-30), `frontend/src/components/Jodie/consumerVoice.ts` (1-25), `frontend/src/joiner/classes.ts` (1470-1480, 2098-2125), `frontend/src/joiner/proxy.ts` (452-465), `frontend/src/redux/reducer/reducer.ts` (505-552), `frontend/src/api/persistance/projects.ts` (255-299).
 - Through explorer subagents, conclusions with `file:line` cited above: `common/Defaults.ts`, `common/U.tsx`, `components/topbar/SaveManager.ts`, `pages/components/Project.tsx`, `pages/Templates.tsx`, `pages/components/Navbar.tsx`, `pages/components/LeftBar.tsx`, `components/project/ProjectEditor.tsx`, `redux/action/action.ts`, `redux/createStore.ts`, `redux/store.tsx`, `model/logicWrapper/LModelElement.tsx`, `services/export/EcoreService.ts`, `services/export/XMIService.ts`, `codegen/examples/__tests__/importable.test.ts`, `scripts/examples/build-codegen-examples.ts`, `scripts/probe/bpmn-lanes-fixture.ts`, `scripts/probe/statechart-fixture.ts`, `jjscript/executor/executor.ts`, `joiner/environmentConfig.ts`, `components/collaborative/Collaborative.ts`.
+
+## Gallery S1+S2 (P-2026-10-18-1800)
+
+Tree `~/jjodel-w-gallery`, branch `library-gallery`, base `56b54365e`. Executor Claude Opus 5.5 (`claude-opus-5-5`), effort high. Everything below is **measured** (probe logs under `~/.jjodel-lanes/P-2026-10-18-1800/`).
+
+### S1 — the build (`ca6dc27fe`, catalog `e2f47ea6e`)
+- Sources in `frontend/scripts/library/gallery/`: the fixtures `Graph.ecore`, `Shapes.ecore`, `StateMachine.ecore`, `sample-Families.xmi`, `sample-Persons.xmi`, `sample-StateMachine.xmi` copied; `Families.ecore` (classic, 4 containments with their 4 `eOpposite`) and `Persons.ecore` (abstract `Person`, `Male`, `Female`) without nsURI, so the XMIs resolve by EPackage name; `Library.ecore` is the fixture extended with `Writer`, `Library.writers` and `Book.authors` (the fixture has no writers); sample models for Library (1 library, 3 books, 1 magazine, 2 writers, 2 members, `authors` and `borrowedBy` set), Graph (4 nodes, 5 edges, 6 targets) and Shapes (1 canvas, 2 circles, 1 square).
+- `build-gallery.ts` (port 3097): New Project named as the label, `.ecore` then `.xmi` through the project page's file inputs, each model's editor opened once, File → Download Project. ALL GREEN, no page error. Objects per model: Library 9; Families 11, Persons 9; StateMachine 10; Graph 10; Shapes 4; each editor shows one node per object. Models keep the importer's names (`sample-<Name>`).
+- `gallery.test.ts`: 31 green (30 at S1, plus the catalog copy check in S2). Bench: `graph.jjodel` copied over `shapes.jjodel` kills 4 tests; restored byte-identical.
+- The five packages carry `megamodel.edges: []`.
+
+### S2 — the clone (`d8ed13f1c`, catalog `86eea439f`)
+- Catalog delivery: **copied and fetched**, not imported. `searchForWorkspaceRoot(frontend)` resolves to `frontend/` (measured), so `docs/` is outside `server.fs.allow` and the dev server would refuse the import; `vite.config.ts` stays untouched. `scripts/library/copy-catalog.mjs` runs as `prebuild`, the copy `public/library/catalog.json` is committed (a `lane-run probe` server starts vite without npm), and the test fails when it drifts.
+- Counts on the cards are read from each package's top-level `metamodels` and `models`; the fetched text is kept and reused by the clone.
+- `importFromText(content, name, date, clone?)`: with `clone`, the name given, unique by ` (1)`, ` (2)` against the store and the stored list, `_clonedFrom` on the DProject entry of the blob, and the call awaits the transaction and returns the new id. Without it, behaviour is unchanged: `AllProjects.tsx:72` passes the dropped file's name (`x.jjodel`), so honouring `name` for every caller would have renamed dropped projects.
+- Probe `scripts/probe/library-gallery-clone.ts` (port 3098, 1440×900, one context): 53 checks at `d8ed13f1c` (the closing report said 54, a miscount), ALL GREEN, no page error. For each entry: modal prefilled with the label (Graph typed «My Graph»), new id ≠ file id, name in store and stored record, `_clonedFrom` = catalog id before and after explicit save + reopen, metamodels/models/objects equal to the file's, before and after reopen, one node per object in each default editor. A second Library clone is «Library (1)».
+- Megamodel (open question 2): **confirmed loss**. A package with one user-defined edge, cloned: `getSerializedMegamodel(newId) = undefined`, `getSerializedMegamodel(oldId)` = 1 edge. Not a one-line fix (the edges hold artifact ids the import renews), so ticket in the inbox, not fixed here. No gallery clone loses anything today (`edges: []`).
+- A probe pitfall, recorded: an `evaluate` started while «Clone & open» reloads the page can hang past the poll deadline; the probe races each evaluate against 5 s and waits for the URL first.
+- Screenshots: `assets/library-gallery/templates-page.png`, `templates-modal.png`, `cloned-familiesPersons.png`, and `projects-page.png` as the reference (retaken after the visual check, below).
+
+### Visual check fixes (`3fa4b921a`)
+The chat's check on the three screenshots, three items, each measured:
+1. **Modal.** Not a styling defect. At rest the dialog measures opacity `1`, z-index `1001` over the overlay's `1000`, background `rgb(255, 255, 255)`, and it is the element on top at its centre (`elementFromPoint`). The old screenshot was taken during its 200 ms `slideUp` (`create-project-dialog.scss`). The probe now waits until the dialog's and the overlay's animations have finished, then checks those four values and the prefilled name before the screenshot.
+2. **Page shell.** `Dashboard` gives every page except `active === 'All'` the `.dash-content.user` panel: white, padding 40px, `margin: auto 20px`, so vertically centred (Templates title at y=249, panel at y=185). Templates now passes `style={'projects-view'}` (appended to the shell's classes; `.dash-content.projects-view` overrides `.user` by source order, `dashboard.scss:518` after `:462`) and uses the Projects page's `dashboard-main-content` and `dashboard-cta-row`/`dashboard-page-title`, with the one-line subtitle in the row's right slot. Measured on both pages: title at (264, 74), content at (264, 136), main padding 24px. `Dashboard.tsx` is untouched and no wrapper was added; the page's own header styles were removed.
+3. **Popups.** The probe closes the Quick Tip and the donation banner before every screenshot, three passes, because the banner shows 30 s after load (`useDonationBanner.ts`). It uses a DOM click: in the project editor the banner sits under the right properties panel, where a pointer click cannot reach its close button. This is an existing overlap, not touched here.
+
+Probe after the fix: 55 checks, ALL GREEN (the 53, plus the shell check and the dialog check).
+
+Found while checking, not fixed (ticket in the inbox): the app-bar Basic|Advanced control shows Basic on Templates while `localStorage` holds `advanced`. Redux `state.advanced` drops to false on any navigation from All Projects to another dashboard page, Explore included, with no reload: 4 of 4 runs, true for 20 s and then false from the first sample. The Templates screenshot therefore shows Basic; the cloned project shows Advanced.
+
+### Decisions taken (unattended)
+1. `Library.ecore` extended with writers (a copy in the gallery sources; the fixture is untouched): the prompt asks for 2 writers, the fixture has none.
+2. Catalog `source` of the five entries points at the gallery copies; Library's stale note replaced.
+3. P13 hook refuses docs and code in one commit: each slice is a code commit plus a catalog docs commit (4 commits instead of 2).
+4. Commit 2 subject shortened to «feat(library): clone gallery projects (S2, …)» (§6.2, 72 characters).
+5. `name` honoured only with the new `clone` argument (see above), and the clone resolves with the new id.
+6. Catalog copied at prebuild and committed, with a byte-for-byte test; `package.json` gains `prebuild`.
+7. Commit 2 touches 8 files (> 5, rule 19): taken as recommended under RC-21/RC-25.
+8. The probe file is committed in `scripts/probe/` with S2.
+9. Visual fixes: the Projects shell is reached through `Dashboard`'s existing `style` prop, not by editing `Dashboard.tsx`; the mode-toggle defect is ticketed, not fixed (out of the lane's files).
+
+### Decisions awaiting Alfonso
+None of the RC-26 list. The Templates page now shows the gallery (decision 3 of §0, already recommended yes).
