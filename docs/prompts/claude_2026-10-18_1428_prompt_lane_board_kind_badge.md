@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1428
 Chat: C-2026-10-18-1428
 Front: harness
 Lane: fast (one module of the lane board and its test, no critical zone, no exported interface)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane lane-board-kind · code 11c16393d, fix e3dd6e8b6 · board suites 131 green, typecheck:scripts 0, check:scripts and check:docs PASS, mutation bench 12/12 killed · Kind badge with overlay, kindDetails · visual check passed (chat, 6/6) after e3dd6e8b6, GO 2026-10-18
 Depends: none
 Corregge: —
 Request: none (Alfonso, 2026-10-18 14:28, in chat: highlight the kind of every lane and explain its details in a tooltip or overlay on hover or click; asked after reading why merge lanes show n/a tokens)

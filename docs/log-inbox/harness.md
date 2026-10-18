@@ -268,3 +268,21 @@ Decisions awaiting Alfonso: AM-1's settings keys `env.JJODEL_LIGHT_MODEL` and `e
 **Smoke visivo**: passato — chat, unattended: no UI change: lane-run, tests and docs only (0 files under frontend/src); decided by chat C-2026-10-17-1757 under RC-25
 **Notes**: Rollback tag `pre-lane-run-routing` on `6a1e96adf` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1305/result.json`.
 **Prompt document name**: 2026-10-18 13:05
+
+## 2026-10-18 — feat(harness): lane board Kind badge, an overlay explains kind, run and n/a tokens (P-2026-10-18-1428)
+**Prompt**: `claude_2026-10-18_1428_prompt_lane_board_kind_badge.md`, fast lane in `~/jjodel-w-kindbadge` on `lane-board-kind`: the Kind cell as a fixed-width badge per kind, `direct` and the tier after it; hover, focus or click (pinned) overlay built server side by the exported `kindDetails(row, kindFacts(dir))`.
+**Files touched**: code `11c16393d`: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`; fix `e3dd6e8b6` after the visual check (Result line names the closure sha of a direct merge): `lane-board.mjs`, `laneBoard.test.ts`; this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Board suites 131/131 (laneBoard, Strip, Insights, Requirements); typecheck:scripts, check:scripts, check:docs exit 0; mutation bench 12/12 killed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 6/6 (on :4701 after the fix e3dd6e8b6; GO by Alfonso)
+**Notes**: Unattended (RC-21): badge colours fg/ok/warn/run, dashed muted for unknown and a `chain` badge for chain rows; own overlay, insights.js data-tip is per-box mousemove only; listeners on document.body; session lane without runs.jsonl takes the model from log.jsonl via lane-usage so 1205 shows tier and model; direct.json parsed only before result.json.
+**Prompt document name**: 2026-10-18 14:28
+
+## 2026-10-18 — ticket: lane board Outcome column clips its pill at 48 px
+**Ticket**: On the Lanes tab the Outcome column of the exited tables is 48 px wide and clips its pill on every row; the trunk board does the same, so it predates the Kind badge lane. Not touched there (out of scope).
+**Priority**: low
+**Found in**: P-2026-10-18-1428
