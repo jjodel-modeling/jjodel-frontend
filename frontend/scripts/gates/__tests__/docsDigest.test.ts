@@ -9,7 +9,9 @@ import {
     MANUAL_MARKER,
     MANUAL_STUB,
     confidence,
+    datesOf,
     manualSection,
+    nearMisses,
     parseRows,
     render,
 } from '../docs-digest.ts';
@@ -48,7 +50,7 @@ const REGISTER = [
     '- **R-RAIL-34** (2026-08-12, «D9» nel prompt) — **Il segmento del metamodel cade sempre nel',
     '  rail.** Anche a sinistra.',
     '- **Rinviato** — la casa degli scenari: nel quinto passo sono documenti JSON.',
-    '- **R-B9-bis** (2026-08-03) — outside the ID grammar, never a row.',
+    '- **R-B9-bis** (2026-08-03) — a suffixed ID, a row since P-2026-10-18-1030.',
     '',
 ].join('\n');
 
@@ -74,7 +76,7 @@ describe('parseRows on the header shapes of the register', () => {
 
     test('only lines with an ID of the grammar and a parenthesis are rows, in file order', () => {
         expect(rows.map((r) => r.id)).toEqual([
-            'RC-3', 'RC-25', 'RC-29', 'RC-30', 'R-SIM-57', 'R-SIM-67', 'R-SIM-73', 'R-SIM-76', 'R-RAIL-34',
+            'RC-3', 'RC-25', 'RC-29', 'RC-30', 'R-SIM-57', 'R-SIM-67', 'R-SIM-73', 'R-SIM-76', 'R-RAIL-34', 'R-B9-bis',
         ]);
     });
 
@@ -130,6 +132,102 @@ describe('parseRows on the header shapes of the register', () => {
     });
 });
 
+describe('parseRows reads the whole live register (P-2026-10-18-1030)', () => {
+    test('the digest of the dates parsed before is byte-identical to the golden of the old grammar', () => {
+        const golden = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'docsDigest.golden.md'), 'utf8');
+        const rows = parseRows(REGISTER);
+        const before = datesOf(rows).filter((d) => d !== '2026-08-03');
+        expect(before).toEqual(['2026-08-05', '2026-08-12', '2026-09-26', '2026-09-27']);
+        expect(before.map((d) => render(rows, d, null, 'abc1234')).join('\n')).toBe(golden);
+    });
+
+    // R-GV-17 at docs/decisions.md:6104, shortened: the parenthesis closes on the next line.
+    const WRAPPED = [
+        '## R-GV — graphVertex containment',
+        '',
+        '- **R-GV-17** (2026-10-11, decided by the chat on Alfonso\'s ok 2026-10-11 11:54 and by Alfonso 2026-10-11 14:23, evidence:',
+        '  measured, verified: probe, reversible: branch).',
+        '  **A framing container follows a dragged child on all four sides, and a size set by hand is its floor, never its',
+        '  ceiling** (P-2026-10-11-1156, spec addendum §12).',
+        '- **R-GV-18** (2026-10-11): **Next.** Text.',
+        '',
+    ].join('\n');
+
+    test('a header that wraps is joined until its parenthesis closes, and keeps the line it starts on', () => {
+        const [r, next] = parseRows(WRAPPED);
+        expect(r).toMatchObject({
+            id: 'R-GV-17', line: 3, date: '2026-10-11', provisional: false,
+            evidence: 'measured', verified: 'probe', reversible: 'branch',
+            annotations: ["decided by the chat on Alfonso's ok 2026-10-11 11:54 and by Alfonso 2026-10-11 14:23"],
+        });
+        expect(r.title).toBe('A framing container follows a dragged child on all four sides, and a size set by hand is its floor, never its ceiling');
+        expect(next).toMatchObject({ id: 'R-GV-18', line: 7, title: 'Next.' });
+    });
+
+    test('verified: probe reads as agent', () => {
+        const [r] = parseRows('## S\n\n- **RC-1** (2026-10-18, provisional, unattended, evidence: measured, verified: probe, reversible: branch). **T.**\n');
+        expect(r.verified).toBe('probe');
+        expect(confidence(r)).toBe('high');
+        expect(confidence({ ...r, evidence: 'read' })).toBe('medium');
+    });
+
+    test('a parenthesis that never closes is still refused', () => {
+        expect(() => parseRows('## S\n\n- **RC-1** (2026-10-18, evidence:\n  measured\n\n')).toThrow(HeaderParseError);
+    });
+
+    test.each([
+        ['- **D-UI-10** (2026-08-20) — **I token di tema.** Testo.', { id: 'D-UI-10', date: '2026-08-20' }],
+        ['- **D-4-1** (2026-08-07) — Il viewpoint di appartenenza.', { id: 'D-4-1', date: '2026-08-07' }],
+        ['- **D-4-5, emendata** (2026-08-07) — `ViewProperties.tsx` non si tocca.', { id: 'D-4-5', qualifier: ', emendata' }],
+        ['- **D-5-2** (2026-08-09) — `InfoTooltip` adotta la grafica.', { id: 'D-5-2', date: '2026-08-09' }],
+        ['- **U-6 / Q3 = opzione (b)** (2026-08-08) — Il toggle.', { id: 'U-6', qualifier: ' / Q3 = opzione (b)' }],
+        ['- **U-5 riformulato** (2026-08-08 mattina) — Il design.', { id: 'U-5', date: '2026-08-08', annotations: ['mattina'] }],
+        ['- **R-A** (2026-08-05) — Strada B per la barra.', { id: 'R-A', date: '2026-08-05' }],
+        ['- **R-H** (2026-08-06) — Per le view IR.', { id: 'R-H', date: '2026-08-06' }],
+        ['- **R-D, emendamento a R-1 di E-obj** (2026-08-05) — Scrittura atomica.', { id: 'R-D', qualifier: ', emendamento a R-1 di E-obj' }],
+        ['- **R-B9-bis** (2026-08-09, dalla chiusura irValidate) — Le regole.', { id: 'R-B9-bis', annotations: ['dalla chiusura irValidate'] }],
+        ['- **H-B falsificata, agli atti** (2026-08-08) — `NumberInput`.', { id: 'H-B', qualifier: ' falsificata, agli atti' }],
+    ] as Array<[string, Partial<Row>]>)('%s', (line, expected) => {
+        const rows = parseRows(`## S\n\n${line}\n`);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({ line: 3, ...expected });
+    });
+
+    test('the dated form: the date inside the bold disambiguates, and stands for a missing parenthesis', () => {
+        const [a, b] = parseRows('## S\n\n- **R-B-3 (2026-08-05)** — Il ramo.\n- **R-B-3 (2026-08-03)** (2026-08-04): Altro.\n');
+        expect(a).toMatchObject({ id: 'R-B-3', idDate: '2026-08-05', date: '2026-08-05', title: 'Il ramo.' });
+        expect(b).toMatchObject({ id: 'R-B-3', idDate: '2026-08-03', date: '2026-08-04', title: 'Altro.' });
+        expect(a.qualifier).toBeUndefined();
+    });
+
+    test('prose in bold is not a row, and under a `## Serie` heading it is a near miss', () => {
+        const text = [
+            '## Serie R-S1 — una regola',
+            '',
+            '- **RC-12 is the rule here**, and this is prose.',
+            '- **L\'ambiguita\' e\' raggiungibile solo sul ramo di fallback.** Testo.',
+            '- **RC-40** (2026-08-30): **Una regola.**',
+            '- **R-E/E-1** (2026-08-05) — fuori grammatica.',
+            '',
+            '## Processo',
+            '',
+            '- **Rinviato** — la casa degli scenari.',
+            '',
+        ].join('\n');
+        expect(parseRows(text).map((r) => r.id)).toEqual(['RC-40']);
+        expect(nearMisses(text)).toEqual([3, 4, 6]);
+    });
+});
+
+const LIVE = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', 'docs', 'decisions.md');
+
+describe.skipIf(!existsSync(LIVE))('integration: parseRows on the live register', () => {
+    test('439 rows (407 + 32 recovered) and no HeaderParseError', () => {
+        const rows = parseRows(readFileSync(LIVE, 'utf8'));
+        expect(rows).toHaveLength(439);
+    });
+});
+
 describe('parseRows refuses a header it cannot parse', () => {
     const failures = (text: string): Array<{ line: number; reason: string }> => {
         try {
@@ -148,6 +246,7 @@ describe('parseRows refuses a header it cannot parse', () => {
         ['no date first', '- **RC-1** (provisional, 2026-09-27). **T.**', /date/],
         ['a separator that is not `:`, `.` or ` —`', '- **RC-1** (2026-09-27) **T.**', /separator/],
         ['an ID of the grammar without a parenthesis', '- **RC-1**: **T.**', /parenthesis/],
+        ['a verified value outside agent|none|probe', '- **RC-1** (2026-09-27, provisional, unattended, evidence: measured, verified: guessed, reversible: branch). **T.**', /verified/],
     ])('%s', (_name, line, reason) => {
         const f = failures(`## S\n\n${line}\n`);
         expect(f).toHaveLength(1);
