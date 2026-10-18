@@ -679,7 +679,7 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
                     By proceeding you accept the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="auth-terms-link">terms and conditions</a>.
                 </p>
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
-                    Create
+                    Create account
                 </button>
             </>}
 
@@ -713,7 +713,7 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
                 </div>
                 <div className="login-buttons">
                     <button className={'btn btn-primary login-button'} type={'submit'} onClick={()=>setDirty(true)}>
-                        Login
+                        Sign in
                     </button>
                     {(window.location.host.includes('localhost') || window.location.href.indexOf('http') !== 0) &&
                         <button className={'btn login-button login-button--secondary'} type='button' onClick={(e) => offline()}>Offline mode</button>
@@ -736,7 +736,7 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
                 </label>
 
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
-                    Retrieve
+                    Send reset link
                 </button>
             </>}
 
