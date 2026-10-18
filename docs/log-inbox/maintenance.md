@@ -128,3 +128,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — probe `_tmp_models_picker.ts` via lane-run probe on port 3197, fixture catalog, no key, 0 provider calls: 11/11; crops `~/.jjodel-lanes/P-2026-10-18-1146/models_picker_{collapsed,expanded}.png`, measures in `models_picker_measures.json`
 **Notes**: Commit `2a9ff5f02` says aiModelCatalog.test.ts 30/30: the count is 28/28 (AIProviderService 18/18). First probe run hit :3000 through `states.ts` BASE_URL (SMOKE_URL unset); rerun with SMOKE_URL on 3197, fresh browser context, nothing persisted on 3000. Unavailable badge and static marker covered by tests, not by a crop.
 **Prompt document name**: 2026-10-18 11:46
+
+## 2026-10-18 — merge: ai-models-dynamic into alfonso-frontend-jjtl (P-2026-10-18-1457)
+**Prompt**: `claude_2026-10-18_1457_prompt_merge_ai-models-dynamic.md`, a direct merge by `lane-run merge --direct`, no session: `ai-models-dynamic` at `abcff0f69` into `alfonso-frontend-jjtl`, merge base `a3ec93534`, 4 commits on the branch side.
+**Files touched**: merge `fd9da9bef`: 12 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-10-18_1146_prompt_discovery_ai_proxy_dynamic_models.md`, `frontend/src/components/Jodie/Jodie.tsx`, `frontend/src/components/common/ProviderModelSelector.scss`, `frontend/src/components/common/ProviderModelSelector.tsx`, `frontend/src/components/settings/AISettingsContent.tsx`, `frontend/src/events/registry.ts`, `frontend/src/services/AIProviderService.ts`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fd9da9bef` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9280 tests in 379 files, 9 red at import, hooks 808; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Settings model picker: Alfonso checked the collapsed and expanded crops (2026-10-18 15:03, OK); DOM measures: main list and Show older row fixed, only the popover footer moves
+**Notes**: Rollback tag `pre-ai-models-dynamic` on `a3ec93534` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1457/result.json`.
+**Prompt document name**: 2026-10-18 14:57
