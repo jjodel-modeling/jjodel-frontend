@@ -11,7 +11,7 @@
          name="City Library">
 
   <writers xmi:id="w_austen" name="Jane Austen"/>
-  <writers xmi:id="w_tolkien" name="J. R. R. Tolkien"/>
+  <writers xmi:id="w_tolkien" name="JRR Tolkien"/>
 
   <members xmi:id="m_anna" name="Anna"/>
   <members xmi:id="m_luca" name="Luca"/>

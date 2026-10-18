@@ -286,13 +286,16 @@ function criteria(id: string, model: string, d: any): void {
     check(`${tag}: two arcs between the same vertices run at least 16 px apart`, close.length === 0, close);
     const problems = d.nodes.filter((n: any) => n.problem).map((n: any) => `${n.text}: ${n.problem}`);
     if (problems.length) meas(`${tag}: problem dots`, problems);
+    // A template opens with no problem badge; the one exception is state-machine's Broken, its deliberate error.
+    const badges = d.nodes.filter((n: any) => n.problem && !(id === 'state-machine' && n.text.startsWith('Broken') && /node-problem-dot--error/.test(n.problem)));
+    check(`${tag}: no conformance badge drawn (state-machine's deliberate Broken excepted)`, badges.length === 0, badges.map((n: any) => `${n.text}: ${n.problem}`));
     const arcs = (ns: any) => sorted(drawn.map((e: any) => `${d.names[e.src] ?? e.src}>${d.names[e.tgt] ?? e.tgt}`));
     if (id === 'graph') {
         check(`${tag}: 4 Node vertices labelled by name, the Graph not drawn`, d.nodes.length === 4 && JSON.stringify(texts(of('Node'))) === '["A","B","C","D"]', texts(d.nodes));
         check(`${tag}: one open-arrow arc per (Edge, target), node to node`, JSON.stringify(arcs(d)) === JSON.stringify(sorted(['A>B', 'B>C', 'C>D', 'D>A', 'A>C', 'A>D'])) && drawn.every((e: any) => /url\(/.test(e.marker)), { arcs: arcs(d), markers: [...new Set(drawn.map((e: any) => e.marker))] });
     } else if (id === 'library') {
         check(`${tag}: Book, Magazine, Writer and Member vertices, the Library not drawn`, of('Book').length === 3 && of('Magazine').length === 1 && of('Writer').length === 2 && of('Member').length === 2 && d.nodes.length === 8, texts(d.nodes));
-        const want = sorted(['Pride and Prejudice>Jane Austen', 'Emma>Jane Austen', 'The Hobbit>J. R. R. Tolkien', 'Pride and Prejudice>Anna', 'The Hobbit>Luca']);
+        const want = sorted(['Pride and Prejudice>Jane Austen', 'Emma>Jane Austen', 'The Hobbit>JRR Tolkien', 'Pride and Prejudice>Anna', 'The Hobbit>Luca']);
         check(`${tag}: one arc per authors value and per borrowedBy value`, JSON.stringify(arcs(d).map((a: string) => a.replace(/author$|borrowed by$/, ''))) === JSON.stringify(want), arcs(d));
     } else if (id === 'state-machine') {
         const st = (name: string) => d.nodes.find((n: any) => n.cls === 'State' && n.text.startsWith(name));

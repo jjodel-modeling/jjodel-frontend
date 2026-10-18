@@ -160,7 +160,7 @@ const PLACES: Record<string, Record<string, { viewpoint?: string; at: Record<str
     library: { 'sample-Library': { at: {
         Anna: [20, 0], 'Literary Review': [180, 0], Luca: [380, 0],
         'Pride and Prejudice': [0, 130], Emma: [180, 130], 'The Hobbit': [360, 130],
-        'Jane Austen': [90, 270], 'J. R. R. Tolkien': [360, 270],
+        'Jane Austen': [90, 270], 'JRR Tolkien': [360, 270],
     } } },
     // Idle left of Running, the two targets of Running below it.
     'state-machine': { 'sample-StateMachine': { at: {
