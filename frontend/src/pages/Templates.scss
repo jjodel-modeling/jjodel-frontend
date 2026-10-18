@@ -96,3 +96,28 @@
         margin-right: 8px;
     }
 }
+
+/* Two tiers (R-LIB-9, P-2026-10-18-2300): «Templates» then «Examples», each a titled grid. */
+.templates-section {
+    margin-bottom: 32px;
+}
+
+.templates-section__title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    margin: 0 0 16px;
+}
+
+.templates-page__notice {
+    font-size: 11px;
+    color: var(--color-text-tertiary, #475569);
+    margin: 0 0 16px;
+}
+
+.templates-card__ref {
+    margin-left: auto;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--color-text-tertiary, #475569);
+}

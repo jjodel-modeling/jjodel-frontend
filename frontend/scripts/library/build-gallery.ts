@@ -1,6 +1,7 @@
 /**
  * build-gallery (P-2026-10-18-1800, slice S1): builds the five gallery projects of R-LIB-5 in a running app and saves
- * them as the project files the Templates page clones, frontend/public/library/gallery/<id>.jjodel.
+ * them as the project files the Templates page clones, frontend/public/library/gallery/<id>/<n>.jjodel, `n` the
+ * entry's current version (R-LIB-9, P-2026-10-18-2300).
  *
  * The files are written by the app's own importers and export, not by hand. For each catalog entry of kind
  * `galleryProject` (docs/library/catalog.json), in a fresh browser context (so the store holds that project alone):
@@ -12,37 +13,57 @@
  *   - Navbar's File → «Download Project» is clicked, and the browser's download is the file.
  * No viewpoint is added: the projects render with the default syntax (R-IRN-15).
  *
- * Sources: frontend/scripts/library/gallery/ (the fixtures of src/__tests__/fixtures/xmi-m1/ copied, plus the
+ * Sources: frontend/scripts/library/gallery/<id>/ (the fixtures of src/__tests__/fixtures/xmi-m1/ copied, plus the
  * Families, Persons and Library metamodels and the Library, Graph and Shapes sample models written for the gallery).
+ * The tier `template` is built; the tier `example` is a byte copy of its first `source` (a codegen example of
+ * frontend/public/examples/codegen/, which stays where it is).
+ *
+ * A published version is never rewritten (R-LIB-9): when the file of the current version exists, the build refuses it
+ * unless GAL_REWRITE names it (`<id>@<n>`, comma separated). A fix is a new version in the catalog.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/library/build-gallery.ts \
  *         --port 3097 --id P-2026-10-18-1800
- * Env:  GAL_ID   one catalog id (default: every galleryProject)
- *       GAL_DIR  the output folder (default frontend/public/library/gallery)
+ * Env:  GAL_ID       one catalog id (default: every galleryProject)
+ *       GAL_DIR      the output folder (default frontend/public/library/gallery)
+ *       GAL_REWRITE  the existing versions the build may overwrite, `<id>@<n>` comma separated
  */
 import { chromium, type Browser, type Page } from '@playwright/test';
-import { mkdirSync, readFileSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { seed } from '../smoke/states.ts';
 
 const URL = (process.env.PROBE_URL || 'http://localhost:3097/').replace(/\/$/, '');
 if (/:(3000|3001|3003)$/.test(URL)) throw new Error('never 3000, 3001 or 3003');
 const DIR = process.env.GAL_DIR || new globalThis.URL('../../public/library/gallery', import.meta.url).pathname;
-const SRC = (file: string) => new globalThis.URL(`./gallery/${file}`, import.meta.url).pathname;
+const SRC = (id: string, file: string) => new globalThis.URL(`./gallery/${id}/${file}`, import.meta.url).pathname;
+const REPO = (path: string) => new globalThis.URL(`../../../${path}`, import.meta.url).pathname;
 mkdirSync(DIR, { recursive: true });
 
-interface Entry { id: string; kind: string; label: string }
+interface Entry { id: string; kind: string; label: string; tier?: string; version?: number; source?: string[] }
 const catalog = JSON.parse(readFileSync(new globalThis.URL('../../../docs/library/catalog.json', import.meta.url), 'utf8')) as { entries: Entry[] };
 const GALLERY = catalog.entries.filter(e => e.kind === 'galleryProject');
 
 /** The sources of each project, in import order: metamodels first, then the models that instantiate them. */
 const SOURCES: Record<string, { ecore: string[]; xmi: string[] }> = {
     library: { ecore: ['Library.ecore'], xmi: ['sample-Library.xmi'] },
-    familiesPersons: { ecore: ['Families.ecore', 'Persons.ecore'], xmi: ['sample-Families.xmi', 'sample-Persons.xmi'] },
-    stateMachineEcore: { ecore: ['StateMachine.ecore'], xmi: ['sample-StateMachine.xmi'] },
+    'families-persons': { ecore: ['Families.ecore', 'Persons.ecore'], xmi: ['sample-Families.xmi', 'sample-Persons.xmi'] },
+    'state-machine': { ecore: ['StateMachine.ecore'], xmi: ['sample-StateMachine.xmi'] },
     graph: { ecore: ['Graph.ecore'], xmi: ['sample-Graph.xmi'] },
     shapes: { ecore: ['Shapes.ecore'], xmi: ['sample-Shapes.xmi'] },
 };
 const IDS = process.env.GAL_ID ? [process.env.GAL_ID] : GALLERY.map(e => e.id);
+const REWRITE = new Set((process.env.GAL_REWRITE || '').split(',').filter(Boolean));
+
+/** The file of the entry's current version; null, after a FAIL, when it exists and GAL_REWRITE does not name it. */
+function target(entry: Entry): string | null {
+    const ref = `${entry.id}@${entry.version}`;
+    const out = `${DIR}/${entry.id}/${entry.version}.jjodel`;
+    if (!entry.version) { check(`${entry.id}: has a current version`, false, ''); return null; }
+    if (existsSync(out) && !REWRITE.has(ref)) { check(`${ref}: is not rewritten (published; GAL_REWRITE=${ref} to overwrite)`, false, out); return null; }
+    mkdirSync(`${DIR}/${entry.id}`, { recursive: true });
+    return out;
+}
+const sha256 = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 
 let failures = 0;
 const check = (label: string, ok: boolean, detail: unknown) => {
@@ -91,6 +112,8 @@ const DOWNLOAD_ENTRY = String.raw`(() => {
 async function build(browser: Browser, entry: Entry): Promise<void> {
     const src = SOURCES[entry.id];
     if (!src) { check(`${entry.id}: has sources`, false, 'no SOURCES row'); return; }
+    const out = target(entry);
+    if (!out) return;
     const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 }, acceptDownloads: true });
     await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
     await seed(ctx, true);
@@ -115,14 +138,14 @@ async function build(browser: Browser, entry: Entry): Promise<void> {
         await wait(page, 3000);
 
         for (const [i, file] of src.ecore.entries()) {
-            await page.locator('input[type="file"][accept=".ecore"]').setInputFiles(SRC(file));
+            await page.locator('input[type="file"][accept=".ecore"]').setInputFiles(SRC(entry.id, file));
             const got = await poll(page, `(async () => { const i = await ${INFO}; return i && i.metamodels.length >= ${i + 1} ? i : null; })()`, 30000);
             check(`${entry.id}: the metamodel ${file} is imported`, !!got, got ? (got as any).metamodels.map((m: any) => m.name) : '');
             await page.keyboard.press('Escape');
             await wait(page, 1500);
         }
         for (const [i, file] of src.xmi.entries()) {
-            await page.locator('input[type="file"][accept=".xmi,.xml"]').setInputFiles(SRC(file));
+            await page.locator('input[type="file"][accept=".xmi,.xml"]').setInputFiles(SRC(entry.id, file));
             const got = await poll(page, `(async () => { const i = await ${INFO}; return i && i.models.length >= ${i + 1} ? i : null; })()`, 30000);
             check(`${entry.id}: the model ${file} is imported`, !!got, got ? (got as any).models : '');
             await page.keyboard.press('Escape');
@@ -148,13 +171,12 @@ async function build(browser: Browser, entry: Entry): Promise<void> {
         check(`${entry.id}: the Download Project entry of the File menu is clicked`, clicked, '');
         if (!clicked) return;
         const file = await download;
-        const out = `${DIR}/${entry.id}.jjodel`;
         await file.saveAs(out);
         let parsed: Record<string, any> | null = null;
         try { parsed = JSON.parse(readFileSync(out, 'utf8')); } catch { parsed = null; }
         check(`${entry.id}: the download, ${file.suggestedFilename()}, is a project file`,
             !!parsed && typeof parsed.state === 'string' && parsed.state.length > 0 && parsed.name === entry.label,
-            `${out} ${statSync(out).size} bytes`);
+            `${out} ${statSync(out).size} bytes sha256 ${sha256(out)}`);
         console.log(`MEAS  ${entry.id}  ${JSON.stringify({ metamodels: info.metamodels.map((m: any) => m.name), models: info.models.map((m: any) => `${m.name}:${m.objects}`) })}`);
         check(`${entry.id}: no page error`, errors.length === 0, errors.slice(0, 3));
     } finally {
@@ -166,6 +188,14 @@ const browser = await chromium.launch();
 for (const id of IDS) {
     const entry = GALLERY.find(e => e.id === id);
     if (!entry) { check(`${id}: is a galleryProject of the catalog`, false, ''); continue; }
+    if (entry.tier === 'example') {
+        const out = target(entry);
+        const from = entry.source?.[0];
+        if (!out || !from) continue;
+        copyFileSync(REPO(from), out);
+        check(`${entry.id}@${entry.version}: copied from ${from}`, sha256(out) === sha256(REPO(from)), `${out} sha256 ${sha256(out)}`);
+        continue;
+    }
     await build(browser, entry);
 }
 await browser.close();

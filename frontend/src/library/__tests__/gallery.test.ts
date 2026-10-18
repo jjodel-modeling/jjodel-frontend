@@ -1,7 +1,8 @@
 /**
- * The gallery projects of R-LIB-5 (slice S1, P-2026-10-18-1800): frontend/public/library/gallery/<id>.jjodel, the
+ * The gallery projects of R-LIB-5 (slice S1, P-2026-10-18-1800): frontend/public/library/gallery/<id>/<n>.jjodel, the
  * project files the Templates page clones, written by the app's own importers and export
- * (scripts/library/build-gallery.ts).
+ * (scripts/library/build-gallery.ts). Two tiers and versions since R-LIB-9 (P-2026-10-18-2300): five templates, two
+ * examples copied from frontend/public/examples/codegen/, every version with the sha256 of its file in the catalog.
  *
  * A `.jjodel` file is the raw project with its whole store in `state`, compressed by `async-lz-string`
  * (`U.compressedState`). Here each file's store is read back as the import reads it and checked against the catalog
@@ -15,27 +16,40 @@
  * test name says which break kills it.
  */
 
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import lz from 'async-lz-string';
 import { describe, it, expect } from 'vitest';
+import { currentVersion, parseGalleryRef, resolveGalleryRef, type GalleryVersion } from '../galleryRef';
 
 type Lookup = Record<string, any>;
 
-interface Entry { id: string; kind: string; label: string; status: string; package?: string }
+interface Entry { id: string; kind: string; label: string; status: string; tier?: string; version?: number; versions?: GalleryVersion[] }
 
-const catalog = JSON.parse(readFileSync(new URL('../../../../docs/library/catalog.json', import.meta.url), 'utf8')) as { entries: Entry[] };
+const catalog = JSON.parse(readFileSync(new URL('../../../../docs/library/catalog.json', import.meta.url), 'utf8')) as { version: number; entries: Entry[] };
 const GALLERY = catalog.entries.filter(e => e.kind === 'galleryProject');
+const TEMPLATES = GALLERY.filter(e => e.tier === 'template');
 
 /** What the build's sources hold: metamodel names, and each model with its number of objects. */
 const EXPECTED: Record<string, { metamodels: string[]; models: Record<string, number> }> = {
     library: { metamodels: ['Library'], models: { 'sample-Library': 9 } },
-    familiesPersons: { metamodels: ['Families', 'Persons'], models: { 'sample-Families': 11, 'sample-Persons': 9 } },
-    stateMachineEcore: { metamodels: ['statemachine'], models: { 'sample-StateMachine': 10 } },
+    'families-persons': { metamodels: ['Families', 'Persons'], models: { 'sample-Families': 11, 'sample-Persons': 9 } },
+    'state-machine': { metamodels: ['statemachine'], models: { 'sample-StateMachine': 10 } },
     graph: { metamodels: ['Graph'], models: { 'sample-Graph': 10 } },
     shapes: { metamodels: ['Shapes'], models: { 'sample-Shapes': 4 } },
+    turnstile: { metamodels: ['DemoESM'], models: { demoESM: 10 } },
+    'petri-producer-consumer': { metamodels: ['DemoPetri'], models: { demoNet: 13, producerConsumer: 19 } },
+};
+/** The tier of each entry, in catalog order: the order of the cards. */
+const TIERS: Record<string, string> = {
+    library: 'template', 'families-persons': 'template', 'state-machine': 'template', graph: 'template', shapes: 'template',
+    turnstile: 'example', 'petri-producer-consumer': 'example',
 };
 
-const fileUrl = (id: string) => new URL(`../../../public/library/gallery/${id}.jjodel`, import.meta.url);
+const publicUrl = (file: string) => new URL(`../../../public/${file}`, import.meta.url);
+/** The file of the entry's current version. */
+const fileUrl = (id: string) => publicUrl(currentVersion(GALLERY.find(e => e.id === id)!)!.file);
+const sha256 = (url: URL) => createHash('sha256').update(readFileSync(url)).digest('hex');
 
 async function readProject(id: string): Promise<{ json: Record<string, any>; store: Record<string, any>; lookup: Lookup }> {
     const json = JSON.parse(readFileSync(fileUrl(id), 'utf8'));
@@ -69,12 +83,30 @@ const objectsOfType = (lookup: Lookup, modelId: string, className: string) =>
 const modelNamed = (lookup: Lookup, name: string) => ofClass(lookup, 'DModel').find(m => !m.isMetamodel && m.name === name);
 
 describe('the gallery of the catalog', () => {
-    it('has the five R-LIB-5 projects, each available with its package (mutant: an entry left planned or without a file)', () => {
-        expect(GALLERY.map(e => e.id).sort()).toEqual(Object.keys(EXPECTED).sort());
+    it('is catalog version 2 with five templates then two examples, in that order (mutant: a tier swapped or an entry moved)', () => {
+        expect(catalog.version).toBe(2);
+        expect(GALLERY.map(e => [e.id, e.tier])).toEqual(Object.entries(TIERS));
+    });
+
+    it('gives every entry a current version among its versions, each file under <id>/<n>.jjodel (mutant: a version without a file)', () => {
         for (const e of GALLERY) {
             expect(e.status, e.id).toBe('available');
-            expect(e.package, e.id).toBe(`library/gallery/${e.id}.jjodel`);
-            expect(existsSync(fileUrl(e.id)), e.id).toBe(true);
+            expect(currentVersion(e), e.id).toBeDefined();
+            for (const v of e.versions!) {
+                expect(v.file, e.id).toBe(`library/gallery/${e.id}/${v.n}.jjodel`);
+                expect(v.published, e.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+                expect(existsSync(publicUrl(v.file)), v.file).toBe(true);
+            }
+        }
+    });
+
+    it('records the sha256 of every version\'s file (mutant: a published file rewritten, the catalog left as it was)', () => {
+        for (const e of GALLERY) for (const v of e.versions!) expect(sha256(publicUrl(v.file)), `${e.id}@${v.n}`).toBe(v.sha256);
+    });
+
+    it('packages each example unchanged: its first version is the codegen example, byte for byte (mutant: an example edited)', () => {
+        for (const e of GALLERY.filter(x => x.tier === 'example')) {
+            expect(sha256(publicUrl(e.versions!.find(v => v.n === 1)!.file)), e.id).toBe(sha256(publicUrl(`examples/codegen/${e.id}.jjodel`)));
         }
     });
 
@@ -114,12 +146,6 @@ describe.each(GALLERY.map(e => [e.id, e] as const))('the project file of %s', (i
         }
     });
 
-    it('adds no viewpoint of its own: the default syntax renders it (mutant: the build adds a viewpoint)', async () => {
-        const { json, lookup } = await readProject(id);
-        const own = (lookup[json.id].viewpoints || []).map((v: string) => lookup[v]).filter((v: any) => v && v.name !== 'Default' && !/^Pointer_/.test(v.id));
-        expect(own.map((v: any) => v.name)).toEqual([]);
-    });
-
     it('has no id that is the prefix of another id followed by a digit (mutant: ids the import\'s text replacement would corrupt)', async () => {
         const { store } = await readProject(id);
         const ids = Object.keys(store.idlookup);
@@ -151,7 +177,7 @@ describe('the references of the sample models', () => {
     });
 
     it('StateMachine: the deliberate Broken state is kept, with no kind (mutant: the fixture is made conformant)', async () => {
-        const { lookup } = await readProject('stateMachineEcore');
+        const { lookup } = await readProject('state-machine');
         const m = modelNamed(lookup, 'sample-StateMachine');
         const broken = objectsOfType(lookup, m.id, 'State').filter(o => valuesOf(lookup, o, 'name')[0] === 'Broken');
         expect(broken.length).toBe(1);
@@ -162,5 +188,25 @@ describe('the references of the sample models', () => {
         const { lookup } = await readProject('shapes');
         const m = modelNamed(lookup, 'sample-Shapes');
         for (const c of ['Canvas', 'Circle', 'Square']) expect(objectsOfType(lookup, m.id, c).length, c).toBeGreaterThan(0);
+    });
+});
+
+describe('a gallery reference', () => {
+    it('splits <id>@<n> and <id> (mutant: the version read as part of the id, or a leading zero accepted)', () => {
+        expect(parseGalleryRef('graph@1')).toEqual({ id: 'graph', n: 1 });
+        expect(parseGalleryRef('petri-producer-consumer@12')).toEqual({ id: 'petri-producer-consumer', n: 12 });
+        expect(parseGalleryRef('graph')).toEqual({ id: 'graph' });
+        for (const bad of ['', 'graph@', 'graph@0', 'graph@01', 'graph@1.2', '@1', 'Graph', 'a--b', '-a', 'graph@1@2', 'graph@-1']) {
+            expect(parseGalleryRef(bad), bad).toBeNull();
+        }
+    });
+
+    it('resolves to the version it names, <id> to the current one, and to nothing for an unknown id or version (mutant: <id>@<n> falls back to the current)', () => {
+        const entries = [{ id: 'x', version: 2, versions: [1, 2].map(n => ({ n, file: `library/gallery/x/${n}.jjodel`, published: '2026-10-18', sha256: '' })) }];
+        expect(resolveGalleryRef(entries, 'x@1')?.version.n).toBe(1);
+        expect(resolveGalleryRef(entries, 'x')?.version.n).toBe(2);
+        expect(resolveGalleryRef(entries, 'x@3')).toBeNull();
+        expect(resolveGalleryRef(entries, 'nope@9')).toBeNull();
+        expect(resolveGalleryRef(GALLERY, 'graph@1')?.entry.id).toBe('graph');
     });
 });

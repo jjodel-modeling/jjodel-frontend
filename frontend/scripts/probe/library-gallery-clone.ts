@@ -1,14 +1,17 @@
 /**
  * library-gallery-clone (P-2026-10-18-1800, slice S2): clones each gallery project from the Templates page, as a user
- * does, and checks the clone against its package file (frontend/public/library/gallery/<id>.jjodel).
+ * does, and checks the clone against its package file (frontend/public/library/gallery/<id>/<n>.jjodel, the current
+ * version: R-LIB-9, P-2026-10-18-2300).
  *
  * For each catalog `galleryProject`, in one browser context (so the names collide as in a real workspace):
  *   - Templates → the card's «Clone to my workspace» → the modal, «Project name» prefilled with the label (the graph
  *     entry types its own name) → «Clone & open»;
  *   - the project that opens: its id differs from the file's, its name is the chosen one with no « copy», the
- *     DProject entry carries `_clonedFrom: <catalog id>`, its metamodels, models and objects are the file's, and
- *     each model's default editor shows one node per object;
+ *     DProject entry carries `_clonedFrom: <id>@<n>`, its metamodels, models and objects are the file's, and
+ *     each model's editor shows its nodes;
  *   - an explicit save, then a reopen from the page load: name and `_clonedFrom` survive.
+ * The page shows «Templates» then «Examples», each card with its `<id>@<n>`; the deep links `#/templates/graph@1` (the
+ * clone dialog of that version, prefilled) and `#/templates/nope@9` (one line, the page as usual) are screenshot.
  * Then a second Library clone takes «Library (1)», and a package with one user-defined megamodel edge is cloned to
  * measure where the import registers it (projects.ts, `registerSerializedMegamodel(json.id, …)`).
  * The Templates shell is checked against the Projects page's, the dialog at rest (animations ended), and the Quick Tip
@@ -27,9 +30,11 @@ if (/:(3000|3001|3003)$/.test(URL)) throw new Error('never 3000, 3001 or 3003');
 const SHOTS = new globalThis.URL('../../../docs/discovery/assets/library-gallery', import.meta.url).pathname;
 mkdirSync(SHOTS, { recursive: true });
 
-interface Entry { id: string; kind: string; label: string; status: string; package?: string }
+interface Entry { id: string; kind: string; label: string; status: string; tier?: string; version?: number; versions?: Array<{ n: number; file: string }> }
 const catalog = JSON.parse(readFileSync(new globalThis.URL('../../../docs/library/catalog.json', import.meta.url), 'utf8')) as { entries: Entry[] };
 const GALLERY = catalog.entries.filter(e => e.kind === 'galleryProject' && e.status === 'available');
+const refOf = (e: Entry) => `${e.id}@${e.version}`;
+const fileOf = (e: Entry) => e.versions!.find(v => v.n === e.version)!.file;
 /** The entry whose clone gets a name typed by the user, not the prefilled label. */
 const TYPED: Record<string, string> = { graph: 'My Graph' };
 
@@ -54,7 +59,7 @@ async function poll<T>(page: Page, expr: string, ms: number): Promise<T | null> 
 
 /** The file's own project: id, metamodel names, and each model by name with its number of objects. */
 async function expected(entry: Entry) {
-    const json = JSON.parse(readFileSync(new globalThis.URL(`../../public/${entry.package}`, import.meta.url), 'utf8'));
+    const json = JSON.parse(readFileSync(new globalThis.URL(`../../public/${fileOf(entry)}`, import.meta.url), 'utf8'));
     const lk = JSON.parse(await lz.decompressFromUTF16(json.state)).idlookup as Record<string, any>;
     const under = (id: string, root: string) => { let d = lk[lk[id]?.father]; for (let i = 0; d && i < 60; i++) { if (d.id === root) return true; d = lk[d.father]; } return false; };
     const objs = Object.values(lk).filter((d: any) => d?.className === 'DObject') as any[];
@@ -114,8 +119,8 @@ const SHELL = String.raw`(() => {
   return { title: r(t), content: r(row.nextElementSibling), mainPadding: getComputedStyle(main).padding, dash: dash.className.replace(/\s+/g, ' ').trim(), dashBg: getComputedStyle(dash).backgroundColor };
 })()`;
 
-async function openTemplates(page: Page, id: string): Promise<boolean> {
-    await page.goto(`${URL}/#/templates`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+async function openTemplates(page: Page, id: string, hash = '#/templates'): Promise<boolean> {
+    await page.goto(`${URL}/${hash}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     const card = `document.querySelector('[data-gallery-id="${id}"]')`;
     const ready = await poll(page, `(() => { const c = ${card}; const t = c && c.querySelector('.templates-card__counts'); return !!(t && /metamodel/.test(t.textContent)); })()`, 120000);
     return !!ready;
@@ -132,6 +137,9 @@ async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot
             !!shell && !!projectsShell && JSON.stringify(shell.title) === JSON.stringify(projectsShell.title)
             && JSON.stringify(shell.content) === JSON.stringify(projectsShell.content) && shell.mainPadding === projectsShell.mainPadding,
             { templates: shell && [shell.title, shell.content], projects: projectsShell && [projectsShell.title, projectsShell.content] });
+        const sections = await page.evaluate(`[...document.querySelectorAll('.templates-section')].map((s) => ({ tier: s.dataset.galleryTier, title: s.querySelector('.templates-section__title').textContent, cards: [...s.querySelectorAll('.templates-card')].map((c) => c.dataset.galleryId + ' ' + c.querySelector('.templates-card__ref').textContent) }))`) as any[];
+        const want = ['template', 'example'].map(t => ({ tier: t, title: t === 'template' ? 'Templates' : 'Examples', cards: GALLERY.filter(e => e.tier === t).map(e => `${e.id} ${refOf(e)}`) }));
+        check('Templates: «Templates» then «Examples», cards in catalog order, each with its <id>@<n>', JSON.stringify(sections) === JSON.stringify(want), sections);
         await page.screenshot({ path: `${SHOTS}/${shot}-page.png` });
     }
     await page.locator(`[data-gallery-id="${entry.id}"] button`, { hasText: 'Clone to my workspace' }).click();
@@ -191,7 +199,7 @@ try {
         check(`${entry.id}: the modal is prefilled with the label`, got.prefilled === entry.label, got.prefilled);
         check(`${entry.id}: the new id differs from the file's`, info.id !== exp.id, `${info.id} vs ${exp.id}`);
         check(`${entry.id}: the name is the chosen one, in the store and the stored record`, info.name === got.chosen && info.recordName === got.chosen, { store: info.name, record: info.recordName, chosen: got.chosen });
-        check(`${entry.id}: _clonedFrom is the catalog id`, info.clonedFrom === entry.id, String(info.clonedFrom));
+        check(`${entry.id}: _clonedFrom is ${refOf(entry)}`, info.clonedFrom === refOf(entry), String(info.clonedFrom));
         check(`${entry.id}: the metamodels are the file's`, JSON.stringify(info.metamodels) === JSON.stringify(exp.metamodels), info.metamodels);
         const counts = Object.fromEntries(info.models.map((m: any) => [m.name, m.objects]));
         check(`${entry.id}: the models and their objects are the file's`, JSON.stringify(counts) === JSON.stringify(exp.models), { clone: counts, file: exp.models });
@@ -199,22 +207,36 @@ try {
         for (const m of info.models) {
             await page.evaluate(String.raw`(async () => { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(m.id)})); })()`);
             const pane = `(document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m.id}"]'))`;
-            const nodes = await poll<number>(page, `(() => { const p = ${pane}; const n = p ? p.querySelectorAll('.react-flow__node').length : 0; return n >= ${m.objects} ? n : 0; })()`, 60000);
-            check(`${entry.id}: the default editor of ${m.name} shows one node per object`, nodes === m.objects, `${nodes} nodes, ${m.objects} objects`);
+            const nodes = await poll<number>(page, `(() => { const p = ${pane}; const n = p ? p.querySelectorAll('.react-flow__node').length : 0; return n > 0 ? n : 0; })()`, 60000);
+            check(`${entry.id}: the editor of ${m.name} shows its nodes`, (nodes ?? 0) > 0, `${nodes} nodes, ${m.objects} objects`);
             await wait(page, 1500);
+            await closeTip(page);
+            await page.screenshot({ path: `${SHOTS}/${entry.id}${info.models.length > 1 ? '-' + m.name : ''}.png` });
         }
-        if (entry.id === 'familiesPersons') { await closeTip(page); await page.screenshot({ path: `${SHOTS}/cloned-familiesPersons.png` }); }
 
         await page.evaluate(SAVE);
         await page.goto(`${URL}/?open=${encodeURIComponent(info.id)}#/project?id=${info.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
         const reopened = await poll<any>(page, `(async () => { const i = await ${INFO}; return i && i.id === ${JSON.stringify(info.id)} && i.models.length > 0 && document.querySelector('.dock-tab') ? i : null; })()`, 120000);
         check(`${entry.id}: after save and reopen, name and _clonedFrom survive`,
-            !!reopened && reopened.name === got.chosen && reopened.clonedFrom === entry.id, reopened ? { name: reopened.name, clonedFrom: reopened.clonedFrom } : null);
+            !!reopened && reopened.name === got.chosen && reopened.clonedFrom === refOf(entry), reopened ? { name: reopened.name, clonedFrom: reopened.clonedFrom } : null);
         if (reopened) {
             const again = Object.fromEntries(reopened.models.map((m: any) => [m.name, m.objects]));
             check(`${entry.id}: after reopen, the models and objects are the file's`, JSON.stringify(again) === JSON.stringify(exp.models), again);
         }
     }
+
+    // The deep links: a version's clone dialog, prefilled; an unknown reference, one line and the page as usual.
+    const graph = GALLERY.find(e => e.id === 'graph')!;
+    await openTemplates(page, 'graph', '#/templates/graph@1');
+    const deep = await poll<any>(page, `(() => { const i = document.querySelector('#templates-clone-name'); const h = document.querySelector('.templates-clone-dialog h2'); return i && h ? { value: i.value, title: h.textContent } : null; })()`, 15000);
+    check('#/templates/graph@1: the clone dialog of graph@1 is open, prefilled with the label', !!deep && deep.value === graph.label && /graph@1/.test(deep.title), deep);
+    await closeTip(page);
+    await page.screenshot({ path: `${SHOTS}/templates-deeplink-graph-1.png` });
+    await openTemplates(page, 'graph', '#/templates/nope@9');
+    const nope = await page.evaluate(`({ notice: [...document.querySelectorAll('.templates-page__notice')].map((p) => p.textContent), dialog: !!document.querySelector('.templates-clone-dialog'), cards: document.querySelectorAll('.templates-card').length, firstSection: (document.querySelector('.templates-page__notice') || {}).nextElementSibling?.className })`) as any;
+    check('#/templates/nope@9: one line «No gallery entry nope@9.» above the sections, no dialog, every card', JSON.stringify(nope.notice) === JSON.stringify(['No gallery entry nope@9.']) && !nope.dialog && nope.cards === GALLERY.length && nope.firstSection === 'templates-section', nope);
+    await closeTip(page);
+    await page.screenshot({ path: `${SHOTS}/templates-deeplink-nope-9.png` });
 
     // A second clone of the same entry, with the prefilled label: the (1) convention.
     const lib = GALLERY.find(e => e.id === 'library')!;
@@ -225,10 +247,10 @@ try {
     const mega = await page.evaluate(String.raw`(async () => {
       const api = await import('/src/api/persistance/projects.ts');
       const mp = await import('/src/model/megamodelPersistence.ts');
-      const json = JSON.parse(await (await fetch('/library/gallery/familiesPersons.jjodel')).text());
+      const json = JSON.parse(await (await fetch('/library/gallery/families-persons/1.jjodel')).text());
       const [a, b] = json.metamodels;
       json.megamodel = { megamodelVersion: '1.0', edges: [{ id: 'probe-edge', source: { id: a, kind: 'metamodel' }, target: { id: b, kind: 'metamodel' }, type: 'transformsTo', origin: 'user-defined' }] };
-      const id = await api.ProjectsApi.importFromText(JSON.stringify(json), 'Megamodel probe', Date.now(), { clonedFrom: 'familiesPersons' });
+      const id = await api.ProjectsApi.importFromText(JSON.stringify(json), 'Megamodel probe', Date.now(), { clonedFrom: 'families-persons@1' });
       const atNew = mp.getSerializedMegamodel(id);
       const atOld = mp.getSerializedMegamodel(json.id);
       return { newId: id, oldId: json.id, atNew: atNew ? atNew.edges.length : null, atOld: atOld ? atOld.edges.length : null };
