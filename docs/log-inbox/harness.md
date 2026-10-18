@@ -448,3 +448,16 @@ Decisions awaiting Alfonso: B8c, the ratification of the thresholds 200000/25000
 **Ticket**: `.claude/agents/explorer.md`, `Explore.md` and `general-purpose.md` name `model: claude-sonnet-5-5`, equal by hand to `env.JJODEL_LIGHT_MODEL` of `.claude/settings.json`. No test compares them: B8c writes it, so a change of the light model in one place fails the gate until the other follows.
 **Priority**: low
 **Found in**: P-2026-10-18-1655
+
+## 2026-10-18 — merge: hook-registration into alfonso-frontend-jjtl (P-2026-10-18-2056)
+**Prompt**: `claude_2026-10-18_2056_prompt_merge_hook-registration.md`, a merge session started by `lane-run merge`: `hook-registration` at `a7d859787` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `18ac90fcd`, 2 commits on the branch side.
+**Files touched**: merge `b93c3fd46`: 7 files from the branch side (`.claude/agents/Explore.md`, `.claude/agents/explorer.md`, `.claude/agents/general-purpose.md`, `.claude/settings.json`, `docs/harness/gates.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1655_prompt_b7_hook_registration.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b93c3fd46`: typecheck exit 0, no error; typecheck:scripts exit 0; vitest 9381 tests in 382 files, 0 failed, the 9 known files red at import (expected 9381 + 0, the branch adds no test); hooks 902 in 18 files (902 + 0); build exit 0; check:docs 5/5; check:agents, check:scripts (134 files), check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — waived by the chat's GO: no file under frontend/src (settings.json, three agent files, docs), nothing renders differently; 3001 was not listening at the hard stop
+**Notes**: Union: `docs/log-inbox/harness.md`, trunk block first, pure additions against both parents (+33/+52). Governance file `.claude/settings.json` under Alfonso's go-ahead (2026-10-18 20:56). Probes 18/18 once, R-LIB-7 none. No lane-board file changed, no restart. check:docs now runs 5 checks, the prompt expected 4.
+**Prompt document name**: 2026-10-18 20:56
