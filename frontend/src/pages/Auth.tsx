@@ -264,6 +264,7 @@ function AuthPage(): JSX.Element {
         registerRequest.Nickname = nickname;
         registerRequest.Email = email;
         registerRequest.Password = password;
+        registerRequest.NewsletterEnabled = false; // opt-in removed from the form; sent explicitly so the backend contract is unchanged
         // console.log(registerRequest);
         const response: GObject = await AuthApi.register(registerRequest);
 
