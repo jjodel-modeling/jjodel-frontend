@@ -212,3 +212,16 @@ Decisions awaiting Alfonso: none.
 Decisions taken (unattended): (1) the four 72 px columns do not fit 1248 px by trimming Worktree and Launched by alone (live 1100 px fixed today, closed 1080, Phase and Outcome take the rest): Worktree 144 to 112 and the Lanes tab's page widened 1280 to 1536 px (`main.wide`, toggled by `showTab`), `table.lfx` min-width 1200 to 1456, so Phase (148) and Outcome (168) keep today's room and the other tabs keep 1280. (2) `overlap` exported too: `alone` is recomputed from the intervals on every read, never cached. (3) The CLI of `lane-usage.mjs` runs behind a realpath guard so that the board can import it. (4) "Per tier and per model" read as two tables, by tier and by model; tier is the first word of `tier.txt` as lane-usage reads it (`standard` included). (5) A lane without main calls reads n/a in all four cells, Out included; Total is In while no result event has an output. (6) `tokensSub` sums the four classes of the subagent calls, their per-call output included. (7) The existing `/api` key-list test now lists the five new fields.
 
 Decisions awaiting Alfonso: the width in (1). Alternatives: keep 1280 and narrow Lane, Elapsed and Span as well, or widen every tab (Insights would reflow to three columns at 1536).
+
+## 2026-10-18 — merge: lane-board-tokens into alfonso-frontend-jjtl (P-2026-10-18-1116)
+**Prompt**: `claude_2026-10-18_1116_prompt_merge_lane-board-tokens.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board-tokens` at `90b483944` into `alfonso-frontend-jjtl`, merge base `95291946a`, 3 commits on the branch side.
+**Files touched**: merge `f9373461c`: 7 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1045_prompt_b3b_board_tokens.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-usage.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f9373461c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9225 tests in 376 files, 9 red at import, hooks 787; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change in the app: lane board scripts, tests and docs only (0 files under frontend/src); board checked after the launchd restart via /api fields; decided by chat C-2026-10-17-1757 under RC-25
+**Notes**: Rollback tag `pre-lane-board-tokens` on `9c6859ecc` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1116/result.json`.
+**Prompt document name**: 2026-10-18 11:16
