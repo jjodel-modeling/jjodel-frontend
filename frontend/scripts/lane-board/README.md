@@ -18,7 +18,7 @@ read again); `req-trace.mjs` keeps its own cache in the system temp folder (belo
 **Lanes.** A table of the running and blocked lanes: state, kind (from the `Lane:`
 line of the prompt) and tier, elapsed time, an estimate of the time left, the current
 phase (the last tool description in the lane's `log.jsonl`), the worktree and who
-launched it, and four token columns after Span (Tokens, below). The Phase cell draws the lane's progress on its first line and the phase
+launched it, and five token columns after Span (Tokens, below). The Phase cell draws the lane's progress on its first line and the phase
 text, cut, on its second (next section). The estimate is a heuristic, not a promise: a
 measured median per kind, minus the elapsed time, corrected by the phase and the load
 average. Below it, the earlier lanes grouped by day, with their outcome.
@@ -81,14 +81,15 @@ pull a softgoal both ways, grouped by declared conflict. See
 | In | `tokensIn` | The main session's input + cache_read + cache_creation, summed over its calls (deduplicated by `message.id`). |
 | Out | `tokensOut` | The output of the last `modelUsage`, all models of the lane; the per-call output is the count at stream start. |
 | Total | `tokensTotal` | In + Out (In alone while no result event has an output). |
+| Arch | `archIn`, `archOut`, `archTotal`, `archChat`, `archOpen` | The architect's tokens over the lane, from `architect.json` (Arch, below). Between Total and Ctx max. |
 | Ctx max | `ctxMax` | The largest main context of one call. |
 | (title of In) | `tokensSub` | The four classes of the subagent calls, kept out of In: `subagents: <n> tokens`. |
 
 The cells are abbreviated (`12.3k`, `3.1M`, en-US, one decimal) with the exact integer in
 the title, and read `n/a` when the lane has no per-call usage (a direct merge, a lane folder
-without `log.jsonl`); the fields are integers or `null`. The four columns are 72 px each in
+without `log.jsonl`); the fields are integers or `null`. The five columns are 72 px each in
 both variants; to keep Phase and Outcome their room, Worktree went from 144 to 112 px and
-the Lanes tab's page is 256 px wider than the other tabs (1536 px, `main.wide`).
+the Lanes tab's page is 328 px wider than the other tabs (1608 px, `main.wide`).
 
 The Insights **Tokens** section groups the closed lanes of the range by tier (the first word
 of `tier.txt`) and by model (the first `init`): lane count, median and sum of Total, median
@@ -96,7 +97,33 @@ Ctx max, the lanes with at least one call at or above 200k and 250k, and the sev
 utilization delta summed over the lanes that ran alone, with their count beside it: a lower
 bound, since interactive sessions are not visible to `lane-run`. The page groups with
 `tokenGroups` and writes the numbers with `abbr`, the functions the server exports, embedded
-as written. `/api/insights` carries the raw numbers per lane in `tokens`.
+as written. `/api/insights` carries the raw numbers per lane in `tokens` and, for the architect, in `arch`.
+Per tier and per model the block adds the sum and the median of Arch over the closed lanes that
+carry it, and Arch / exec: the sum of Arch over the sum of Total, with the number of lanes that
+carry both beside it (`archSum`, `archMedian`, `archRatio`, `archLanes`).
+
+### Arch (P-2026-10-18-1155)
+
+The architect is the project chat that writes the prompts and drives the lanes. It is a session of
+its own that `lane-run` cannot see, so the chat writes, in each lane folder,
+`~/.jjodel-lanes/<Prompt-ID>/architect.json` with its own cumulative counters at launch and at
+close. The board and `lane-usage.mjs` only read it; neither ever writes it. Schema 1:
+
+```json
+{ "schema": 1, "chat": "C-2026-10-17-1757", "model": "claude-fable-5-1", "source": "<free text>",
+  "launch": { "at": <epoch seconds>, "calls": n, "input": n, "cacheRead": n, "cacheCreation": n, "output": n, "totalIn": n, "ctxMax": n, "ctxLast": n },
+  "close":  { same fields, or absent while the lane is open },
+  "delta":  { "calls": n, "input": n, "cacheRead": n, "cacheCreation": n, "output": n, "totalIn": n } }
+```
+
+`launch` and `close` are cumulative since the chat session started; `delta` is `close` minus
+`launch` and is what the lane cost the architect (read from `close` minus `launch` when a closed
+file has no `delta`). The Arch cell is `totalIn + output` of the delta, abbreviated, with
+`in`, `out`, `total` and the chat id in the title; `open` while `close` is absent (the delta is not
+known); `n/a` without the file or when it is not schema 1 (`lane-usage.mjs` says `architect:
+unreadable`). `lane-usage.mjs` prints an `architect` line, adds `architect`, `architectOpen` and
+`architectUnreadable` to its JSON, and an `arch` column to `--all`. The file is read on every
+request, uncached: it is a few hundred bytes and the chat rewrites it at close.
 
 The usage of a lane is cached in `usage-cache.json`, beside the Timeline cache, keyed by the
 size and mtime of its `log.jsonl`: a refresh recomputes only the lanes whose log changed.

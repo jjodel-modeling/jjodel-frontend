@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1155
 Chat: C-2026-10-17-1757
 Front: harness
 Lane: fast (lane board, lane-usage and their tests; outside the critical zone; tier drawn (RC-45): light)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane harness · e10902120
 Depends: P-2026-10-18-1045
 Request: none (Alfonso, 2026-10-18 11:34 «c'è un modo per stimare anche l'architetto?» and 11:44 «applica tutto il più possibile in automatico»; words kept in the lane folder's request.md, RC-43)
 

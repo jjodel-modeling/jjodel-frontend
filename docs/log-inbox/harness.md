@@ -225,3 +225,16 @@ Decisions awaiting Alfonso: the width in (1). Alternatives: keep 1280 and narrow
 **Smoke visivo**: passato — chat, unattended: no UI change in the app: lane board scripts, tests and docs only (0 files under frontend/src); board checked after the launchd restart via /api fields; decided by chat C-2026-10-17-1757 under RC-25
 **Notes**: Rollback tag `pre-lane-board-tokens` on `9c6859ecc` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1116/result.json`.
 **Prompt document name**: 2026-10-18 11:16
+
+## 2026-10-18 — feat(harness): Arch column, the lane board and lane-usage show the architect's tokens per lane (P-2026-10-18-1155)
+**Prompt**: `claude_2026-10-18_1155_prompt_arch_column.md`, fast lane, tier light: read `architect.json` (schema 1) in `lane-usage.mjs`; an Arch column after Total in both Lanes tables and its `/api` fields; Arch sum, median and ratio in the Insights Tokens block; README; tests and fixtures.
+**Files touched**: `e10902120`: `frontend/scripts/lane-usage.mjs`, `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/insights.js`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/hooks/__tests__/laneUsage.test.ts`, the two fixtures `fixtures/lane-usage/P-2026-01-01-1000/architect.json` (closed) and `P-2026-01-01-1100/architect.json` (open); `743ceedf3`: `frontend/scripts/lane-board/README.md`; docs commit: `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1155_prompt_arch_column.md`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneUsage 20/20 (6 new), laneBoard 75/75 (2 new, 4 existing assertions widened for the Arch cell and the Arch fields), scripts/hooks 795/795 in 14 files, typecheck:scripts exit 0, check:scripts PASS 95 files.
+**Out-of-scope changes**: no (9 files, all named by the prompt, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (the chat checks `/api` after the launchd restart, P8 RC-23; a board on 4710, stopped afterwards, served 514 rows: P-2026-10-18-1116 archIn 1075436, archOut 818, archTotal 1076254, archOpen false; P-2026-10-18-1155 and -1205 archOpen true; 10 lanes with `arch` in /api/insights)
+**Notes**: Real run `lane-usage.mjs P-2026-10-18-0945`: `architect  calls 38  in 17073234  out 58831  (chat C-2026-10-17-1757)`. Choices: architect.json read uncached (a few hundred bytes); in `--all` the `arch` column is the raw integer, like the other columns there (the board abbreviates); an open lane is `architect: {chat, model, delta: null}` with `architectOpen: true`; `architectUnreadable` added to the JSON. No mutation bench was run; test names state the mutation.
+**Prompt document name**: 2026-10-18 11:55
