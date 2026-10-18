@@ -363,3 +363,16 @@ Decisions awaiting Alfonso: the registration of `context-ceiling.mjs` in `.claud
 **Ticket**: `frontend/scripts/hooks/context-ceiling.mjs` is built and tested but not registered; B7, interactive, adds it to `.claude/settings.json` as a PreToolUse hook with matcher `*` (with `rule-trigger.mjs` on `Edit|Write|NotebookEdit`). Nothing changes for any session until then.
 **Priority**: medium
 **Found in**: P-2026-10-18-1530
+
+## 2026-10-18 — feat(harness): merges into trunk restart the lane board (P-2026-10-18-1752)
+**Prompt**: `claude_2026-10-18_1752_prompt_board_kickstart.md`: a direct merge whose commit changes `frontend/scripts/lane-board/` restarts the launchd agent `io.jjodel.lane-board` when its plist runs this tree, waits up to 30 s for 4700/api, records `board` in `result.json`; the session template says the same at step 7.
+**Files touched**: code `e4eaba0f1`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/merge-into-trunk.md`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts` (6 tests); this commit: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks 891/891 in 18 files (885 + 6); typecheck:scripts exit 0; check:scripts PASS; check:triggers PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: `board` is null when the diff misses the board or a gate is red; otherwise restarted (seconds), not-running-here (script), no-agent or failed (stderr line), never failing the merge. Pre-merge tip read as `<merge>^1`. Real agent untouched: every lab puts a fake launchctl in PATH and `LANE_RUN_LAUNCHCTL`. Bench of 5 mutants, each killed: commit message of `e4eaba0f1`.
+**Prompt document name**: 2026-10-18 17:52

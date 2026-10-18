@@ -1,6 +1,6 @@
 import { describe, test, expect, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, realpathSync, rmSync, appendFileSync, lstatSync, readlinkSync, symlinkSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -108,6 +108,15 @@ if (script === 'test') {
 process.exit(red.includes(script) ? 1 : 0);
 `;
 
+// The fake launchctl: every call recorded in launchctl.txt; FAKE_LAUNCHCTL_FAIL
+// makes it print that text on stderr and exit 1. Every lab puts it first on the
+// PATH and names it in LANE_RUN_LAUNCHCTL, so no test reaches the real agent.
+const FAKE_LAUNCHCTL = `#!/bin/sh
+echo "$*" >> "$FAKE_STATE/launchctl.txt"
+if [ -n "$FAKE_LAUNCHCTL_FAIL" ]; then echo "$FAKE_LAUNCHCTL_FAIL" >&2; exit 1; fi
+exit 0
+`;
+
 const dirs: string[] = [];
 afterAll(() => {
     for (const d of dirs) rmSync(d, { recursive: true, force: true });
@@ -133,8 +142,10 @@ function lab(): Lab {
     for (const d of [home, bin, state, fake]) mkdirSync(d, { recursive: true });
     writeFileSync(join(bin, 'claude'), FAKE_CLAUDE);
     writeFileSync(join(bin, 'npm'), fakeNpm());
+    writeFileSync(join(bin, 'launchctl'), FAKE_LAUNCHCTL);
     chmodSync(join(bin, 'claude'), 0o755);
     chmodSync(join(bin, 'npm'), 0o755);
+    chmodSync(join(bin, 'launchctl'), 0o755);
     const env: Record<string, string> = {
         HOME: home,
         PATH: `${bin}:/usr/bin:/bin:/usr/sbin`,
@@ -142,6 +153,7 @@ function lab(): Lab {
         FAKE_SESSION: SESSION,
         FAKE_DIR: fake,
         LANE_RUN_NPM: join(bin, 'npm'),
+        LANE_RUN_LAUNCHCTL: join(bin, 'launchctl'),
         LANE_RUN_NOW: NOW,
         ...GIT_ENV,
     };
@@ -233,6 +245,7 @@ interface RepoOpts {
     failedTest?: boolean;
     dirtyWorktree?: boolean;
     twoInboxes?: boolean;
+    board?: boolean;
 }
 
 interface RepoLab {
@@ -255,7 +268,8 @@ interface RepoLab {
  * appended (unionEdit), R-X-2 added on both sides (probeClash), a type error on
  * the branch (tscError), a failing test on the branch (failedTest), a tracked
  * change in the branch worktree (dirtyWorktree), an entry in a second inbox on
- * the branch (twoInboxes).
+ * the branch (twoInboxes), a file under frontend/scripts/lane-board/ on the
+ * branch (board).
  */
 function repoLab(o: RepoOpts = {}): RepoLab {
     const l = lab();
@@ -283,6 +297,7 @@ function repoLab(o: RepoOpts = {}): RepoLab {
     if (o.conflict) code['frontend/src/a.ts'] = TEN.replace('l5', 'FEAT');
     if (o.bothCode) code['frontend/src/a.ts'] = TEN.replace('l1\n', 'FEAT1\n');
     if (o.tscError) code['frontend/tsc-errors.txt'] = TSC + 'src/b.ts(1,1): error TS2322: Type y.\n';
+    if (o.board) code['frontend/scripts/lane-board/lane-board.mjs'] = '// the board\n';
     commitFiles(l, repo, 'feat: the code', code);
     if (o.governance) commitFiles(l, repo, 'docs: a rule on the branch', { 'CLAUDE.md': '# rules\n\nA branch rule.\n' });
     const branchTip = commitFiles(l, repo, 'docs: the feat rows', {
@@ -588,6 +603,112 @@ describe('lane-run merge --direct, the node_modules link (P14)', { timeout: 6000
         expect(nmCalls(r.l).filter((x) => x.includes(' none'))).toEqual([]);
         expect(lstatOf(link)).toBe(null);
         expect(result(r.l).nodeModules).toEqual([{ tree: r.wt, state: 'created', target: shared, removed: true }]);
+    });
+});
+
+// ── merge --direct, the lane board restart ───────────────────────────────────
+
+const KICKSTART = `kickstart -k gui/${process.getuid?.() ?? 0}/io.jjodel.lane-board`;
+const launchctlCalls = (l: Lab) => (existsSync(join(l.state, 'launchctl.txt')) ? readFileSync(join(l.state, 'launchctl.txt'), 'utf8').trim().split('\n') : []);
+
+/** A plist in the shape of ~/Library/LaunchAgents/io.jjodel.lane-board.plist, running `script`; its path. */
+function boardPlist(l: Lab, script: string): string {
+    const path = join(l.root, 'io.jjodel.lane-board.plist');
+    writeFileSync(path, '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0"><dict>\n<key>Label</key><string>io.jjodel.lane-board</string>\n' +
+        `<key>ProgramArguments</key><array><string>/opt/homebrew/bin/node</string><string>${script}</string><string>--refresh</string><string>30</string></array>\n` +
+        '<key>RunAtLoad</key><true/><key>KeepAlive</key><true/>\n</dict></plist>\n');
+    return path;
+}
+
+/** A server in a process of its own (the suite blocks while it waits), answering 200 on /api; its url and its process. */
+function boardServer(l: Lab) {
+    const portFile = join(l.state, 'board-port.txt');
+    const child = spawn(process.execPath, ['-e', `const s = require('http').createServer((q, r) => { r.statusCode = q.url === '/api' ? 200 : 404; r.end('{}'); });
+s.listen(0, '127.0.0.1', () => require('fs').writeFileSync(${JSON.stringify(portFile)}, String(s.address().port)));`], { stdio: 'ignore' });
+    if (!waitFor(portFile, 10000)) throw new Error('the board server did not start');
+    return { url: `http://127.0.0.1:${readFileSync(portFile, 'utf8').trim()}/api`, child };
+}
+
+/** A direct merge of feat into trunk run to the end of its worker; its result.json. */
+function boardMerge(r: RepoLab, env: Record<string, string> = {}) {
+    const out = directMerge(r, env);
+    expect(out.status, out.stderr).toBe(0);
+    expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+    return result(r.l);
+}
+
+const repoBoard = (r: RepoLab) => join(r.repo, 'frontend', 'scripts', 'lane-board', 'lane-board.mjs');
+const summaryText = (l: Lab) => readFileSync(join(laneDir(l), 'log.jsonl'), 'utf8');
+
+describe('lane-run merge --direct, the lane board restart (P-2026-10-18-1752)', { timeout: 60000 }, () => {
+    test('kills "the diff not read", "the restart before the gates pass": a merge that leaves frontend/scripts/lane-board/ alone, and a board merge with a red gate, never call launchctl', () => {
+        const r = repoLab();
+        const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, repoBoard(r)) });
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.board).toBe(null);
+        expect(launchctlCalls(r.l)).toEqual([]);
+        expect(summaryText(r.l)).not.toContain('board: ');
+
+        const red = repoLab({ board: true });
+        const redRes = boardMerge(red, { LANE_RUN_BOARD_PLIST: boardPlist(red.l, repoBoard(red)), FAKE_RED: 'build' });
+        expect(redRes.outcome).toBe('blocked');
+        expect(redRes.board).toBe(null);
+        expect(launchctlCalls(red.l)).toEqual([]);
+    });
+
+    test('kills "no kickstart", "the wrong service target", "no wait for /api", "restarted not recorded", "no summary line": a board merge whose plist runs this tree kickstarts the agent and records restarted with the seconds', () => {
+        const r = repoLab({ board: true });
+        const server = boardServer(r.l);
+        try {
+            const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, repoBoard(r)), LANE_RUN_BOARD_URL: server.url });
+            expect(res.outcome).toBe('hard-stop');
+            expect(launchctlCalls(r.l)).toEqual([KICKSTART]);
+            expect(res.board.state).toBe('restarted');
+            expect(res.board.script).toBe(repoBoard(r));
+            expect(typeof res.board.seconds).toBe('number');
+            expect(res.board.seconds).toBeLessThan(30);
+            expect(summaryText(r.l)).toContain('board: restarted io.jjodel.lane-board');
+        } finally {
+            server.child.kill();
+        }
+    });
+
+    test('kills "any plist restarted", "the other checkout not named": a board merge whose plist runs another checkout records not-running-here with that script and calls nothing', () => {
+        const r = repoLab({ board: true });
+        const elsewhere = join(r.l.root, 'other', 'frontend', 'scripts', 'lane-board', 'lane-board.mjs');
+        const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, elsewhere) });
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.board).toEqual({ state: 'not-running-here', script: elsewhere });
+        expect(launchctlCalls(r.l)).toEqual([]);
+        expect(summaryText(r.l)).toContain(elsewhere);
+    });
+
+    test('kills "the plist path outside HOME", "a missing plist read as a failure": with no plist under ~/Library/LaunchAgents the board merge records no-agent and calls nothing', () => {
+        const r = repoLab({ board: true });
+        const res = boardMerge(r);
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.board.state).toBe('no-agent');
+        expect(res.board.detail).toContain(join(r.l.home, 'Library', 'LaunchAgents', 'io.jjodel.lane-board.plist'));
+        expect(launchctlCalls(r.l)).toEqual([]);
+    });
+
+    test('kills "a failed kickstart fails the merge", "the stderr line dropped", "a silent board": a kickstart that exits 1 records failed with its stderr line, the merge stays hard-stop', () => {
+        const r = repoLab({ board: true });
+        const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, repoBoard(r)), FAKE_LAUNCHCTL_FAIL: 'Could not find service in domain' });
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.ok).toBe(true);
+        expect(launchctlCalls(r.l)).toEqual([KICKSTART]);
+        expect(res.board).toEqual({ state: 'failed', script: repoBoard(r), detail: 'Could not find service in domain' });
+        expect(summaryText(r.l)).toContain('board: restart failed: Could not find service in domain');
+    });
+
+    test('kills "restarted without an answer": a kickstart after which /api never answers 200 within the wait records failed, the merge stays hard-stop', () => {
+        const r = repoLab({ board: true });
+        const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, repoBoard(r)), LANE_RUN_BOARD_URL: 'http://127.0.0.1:1/api', LANE_RUN_BOARD_WAIT_MS: '300' });
+        expect(res.outcome).toBe('hard-stop');
+        expect(launchctlCalls(r.l)).toEqual([KICKSTART]);
+        expect(res.board.state).toBe('failed');
+        expect(res.board.detail).toContain('http://127.0.0.1:1/api did not answer 200');
     });
 });
 
