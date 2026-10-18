@@ -3,8 +3,7 @@
  *
  * AM-8 of report docs/discovery/discovery_2026-10-15_lean_context_model_routing.md §7.3
  * (batch B8b, P-2026-10-18-1530): a context ceiling per session. The thresholds below,
- * soft 200,000 and hard 250,000 tokens, are the PROPOSAL accepted in principle by RC-49 (5),
- * not ratified; batch B8c fixes them and the normative text. JJODEL_CONTEXT_SOFT and
+ * soft 200,000 and hard 250,000 tokens, are ratified by RC-51 (2026-10-18). JJODEL_CONTEXT_SOFT and
  * JJODEL_CONTEXT_HARD override them when both are positive integers and soft < hard;
  * otherwise the defaults hold.
  *
