@@ -50,3 +50,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat `C-2026-10-12-1955`, unattended, on the merged tree `e4421dc62` through `lane-run probe` on port 3190 (nothing listened on 3001): the Ecore-import probe of P-2026-10-12-2001 (`_tmp_tc0_probe.ts`, MODE=after against the BEFORE state measured on the untouched code) 6/6 PASS, EXIT=0; the committed smoke `scripts/smoke/run.ts` 12 passed, 0 failed, 3 declared skips, VERDICT GREEN. Logs `probe-_tmp_tc0_probe.log` and `probe-_tmp_172_smoke.log` in `~/.jjodel-lanes/P-2026-10-13-1023/`.
 **Notes**: Director of this line: Juri. The governance go-ahead was his (2026-10-13, his launch with `--governance-goahead` in chat `C-2026-10-12-1955`); the tool's fixed text names Alfonso. Rollback tag `pre-fix/typecheck-baseline-zero` on `ed96d563c` (RC-31), created by the chat. Union: none. Read against the Findings, confirmed by the chat: step 6 «typecheck 14» (0 is the pass), step 2 «must be empty» (the two files of the go-ahead). `8a8575ec0` is still owed to `alfonso-frontend-jjtl` (P15).
 **Prompt document name**: 2026-10-13 10:23
+
+## 2026-10-18 — fix(notifications): API_URL points at the renamed workers.dev host (P-2026-10-18-1145)
+**Prompt**: `claude_2026-10-18_1145_prompt_notifications_worker_host.md`, fast lane (light tier), chat `C-2026-10-17-1518`, worktree `jjodel-w-notifurl` on `notif-url`: change the host of `API_URL` in the notifications widget after the Cloudflare workers.dev subdomain rename `alfonso-pierantonio` to `alfonso99`.
+**Files touched**: `4e8bdbcc7`: `frontend/src/components/NotificationWidget/NotificationWidget.tsx` (line 22 host; one comment line above it). This commit: this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0 with no `error TS` (the prompt says «baseline 14»; CLAUDE.md §17 has had the baseline at zero since 2026-10-12, so 0 is the figure met), build exit 0 (only the chunk-size warning), no vitest file imports `NotificationWidget` (`grep -rl NotificationWidget src` finds `App.tsx` and the widget itself), none run.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — P8 in its RC-23 form derogated by the prompt; the widget's look does not change.
+**Notes**: Step 2: `command grep -rn -m 5 "alfonso-pierantonio.workers.dev" frontend/src frontend/public` found only the widget line (exit 0, positive control on `workers.dev` in `types/jodie.ts:231` found), so no other hit. Step 3, `curl -sS -o /dev/null -w '%{http_code}'`: `https://jjodel-notifications.alfonso99.workers.dev` and `.../` both 200, body `{"posts":[...]}` as the widget expects; the old host gives 000 (no DNS). The widget fetches the bare `API_URL` (line 81), no other path.
+**Prompt document name**: 2026-10-18 11:45
