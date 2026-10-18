@@ -182,6 +182,12 @@
  *                own link, else the main worktree's) and the link removed after
  *                the gates (P14); a directory or a link elsewhere is left alone;
  *                both are named in result.json and the merge commit body.
+ *                Every gate green and the merge commit changing
+ *                frontend/scripts/lane-board/, the worker restarts the launchd
+ *                agent io.jjodel.lane-board when its plist runs this tree's board
+ *                (launchctl kickstart -k, then up to 30 s for 4700/api to answer
+ *                200) and records `board` in result.json: restarted, not-running-here,
+ *                no-agent or failed; never a reason to fail the merge.
  *                A failed precondition falls back, saying why: the
  *                rendered prompt is launched with --launch, parked without.
  *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] [--no-draw "<reason>"] [--request <file>] [--effort <level>]
@@ -299,7 +305,9 @@
  * LANE_RUN_NOW=YYYY-MM-DDTHH:mm stands in for the clock (the tests), and
  * LANE_RUN_NPM for the npm of the gates (else the one beside this node), and
  * LANE_RUN_LIGHT_MODEL for LIGHT_MODEL (empty or `null`: no light model), and
- * LANE_RUN_GATES for the gates/ folder of the two CLIs of the injection. The
+ * LANE_RUN_GATES for the gates/ folder of the two CLIs of the injection, and
+ * LANE_RUN_BOARD_PLIST, LANE_RUN_LAUNCHCTL, LANE_RUN_BOARD_URL and
+ * LANE_RUN_BOARD_WAIT_MS for the lane board's agent after a direct merge. The
  * light model is otherwise env.JJODEL_LIGHT_MODEL of the worktree's
  * .claude/settings.json (AM-1), else LIGHT_MODEL, which a light start names in
  * one line; the requested model of a heavy run is that file's `model`.
@@ -2458,6 +2466,89 @@ function withModules(message, records) {
     return message.slice(0, at) + '\n' + lines.join('\n') + message.slice(at);
 }
 
+// The shared lane board, the launchd agent io.jjodel.lane-board, keeps the module
+// it loaded until restarted (P-2026-10-18-1752: a Kind badge merged at 15:16 did
+// not show on 4700 until a hand restart at 17:38).
+const BOARD_LABEL = 'io.jjodel.lane-board';
+const BOARD_DIR = 'frontend/scripts/lane-board/';
+const BOARD_POLL_MS = 500;
+
+/** The status code of GET <url>, 0 when nothing answers. */
+function urlStatus(url) {
+    return new Promise((res) => {
+        const req = httpGet(url, { timeout: 2000 }, (r) => {
+            r.resume();
+            res(r.statusCode || 0);
+        });
+        req.on('timeout', () => req.destroy());
+        req.on('error', () => res(0));
+    });
+}
+
+/** The script path among the ProgramArguments of a launchd plist: the lane-board.mjs one, else the first .mjs; null when none. */
+function plistScript(text) {
+    const m = /<key>\s*ProgramArguments\s*<\/key>\s*<array>([\s\S]*?)<\/array>/.exec(text);
+    if (!m) return null;
+    const args = [...m[1].matchAll(/<string>([\s\S]*?)<\/string>/g)].map((x) => x[1].trim());
+    return args.find((a) => a.endsWith('/lane-board.mjs')) ?? args.find((a) => a.endsWith('.mjs')) ?? null;
+}
+
+/**
+ * The agent's plist, the launchctl call and the /api probe, injectable:
+ * LANE_RUN_BOARD_PLIST, LANE_RUN_LAUNCHCTL, LANE_RUN_BOARD_URL and
+ * LANE_RUN_BOARD_WAIT_MS stand in for them (the tests never touch the real agent).
+ */
+function boardDeps() {
+    const env = process.env;
+    const url = env.LANE_RUN_BOARD_URL || 'http://localhost:4700/api';
+    return {
+        plist: env.LANE_RUN_BOARD_PLIST || join(homedir(), 'Library', 'LaunchAgents', BOARD_LABEL + '.plist'),
+        url,
+        waitMs: Number(env.LANE_RUN_BOARD_WAIT_MS) || 30000,
+        kickstart: () => {
+            const bin = env.LANE_RUN_LAUNCHCTL || onPath('launchctl', ['/bin/launchctl']);
+            if (!bin) return { code: 1, stderr: 'launchctl is neither on the PATH nor in /bin' };
+            const r = spawnSync(bin, ['kickstart', '-k', 'gui/' + process.getuid() + '/' + BOARD_LABEL], { encoding: 'utf8', timeout: 15000 });
+            return { code: r.error || r.status === null ? 1 : r.status, stderr: r.stderr || (r.error ? r.error.message : '') };
+        },
+        probe: () => urlStatus(url),
+    };
+}
+
+/**
+ * The board after a merge commit that changes frontend/scripts/lane-board/:
+ * restarted when the plist runs the board of `top`, then /api waited for.
+ * Never throws; the state goes to result.json and one summary line.
+ */
+async function restartBoard(top, deps = boardDeps()) {
+    try {
+        if (!existsSync(deps.plist)) return { state: 'no-agent', detail: 'no ' + deps.plist };
+        const script = plistScript(readFileSync(deps.plist, 'utf8'));
+        if (!script) return { state: 'failed', detail: 'no script path in the ProgramArguments of ' + deps.plist };
+        const real = (p) => (existsSync(p) ? realpathSync(p) : resolve(p));
+        const rel = relative(real(top), real(script));
+        if (rel === '' || rel.startsWith('..') || rel.startsWith('/')) return { state: 'not-running-here', script };
+        const started = Date.now();
+        const k = deps.kickstart();
+        if (k.code !== 0) return { state: 'failed', script, detail: nonEmpty(k.stderr)[0] || 'launchctl kickstart exit ' + k.code };
+        while (Date.now() - started < deps.waitMs) {
+            if ((await deps.probe()) === 200) return { state: 'restarted', script, seconds: Math.round((Date.now() - started) / 100) / 10 };
+            await sleep(BOARD_POLL_MS);
+        }
+        return { state: 'failed', script, detail: deps.url + ' did not answer 200 within ' + deps.waitMs / 1000 + ' s of the kickstart' };
+    } catch (err) {
+        return { state: 'failed', detail: err && err.message ? err.message : String(err) };
+    }
+}
+
+/** The one line the board leaves in the summary. */
+function boardLine(b) {
+    if (b.state === 'restarted') return 'board: restarted ' + BOARD_LABEL + ' (' + b.script + '), /api answered 200 after ' + b.seconds + ' s.';
+    if (b.state === 'not-running-here') return 'board: not restarted, the agent runs ' + b.script + ', not this tree.';
+    if (b.state === 'no-agent') return 'board: not restarted, no launchd agent here (' + b.detail + ').';
+    return 'board: restart failed: ' + b.detail;
+}
+
 /**
  * The detached worker of a direct merge: the template's steps 4 to 7 without a
  * session. Its stdout is the lane's log.jsonl, so it prints events only.
@@ -2469,7 +2560,7 @@ async function directRun(idArg) {
     const res = {
         kind: 'direct', mode: plan.mode, promptId: id, branch: plan.branch, trunk: plan.trunk, tree: plan.top, tag: plan.tag,
         promptCommit: plan.promptCommit, merge: null, union: Object.keys(plan.union), gates: [], ok: false, outcome: 'blocked',
-        reason: null, port3001: null, closure: null, nodeModules: [],
+        reason: null, port3001: null, closure: null, nodeModules: [], board: null,
     };
     console.log(JSON.stringify({ type: 'system', subtype: 'direct', prompt_id: id }));
     try {
@@ -2578,6 +2669,10 @@ async function directRun(idArg) {
             res.ok = res.gates.every((g) => g.ok);
             res.outcome = res.ok ? 'hard-stop' : 'blocked';
             if (!res.ok) res.reason = 'red gates: ' + res.gates.filter((g) => !g.ok).map((g) => g.name).join(', ') + '; the merge commit stays';
+            // Every gate green: a merge that changes the board restarts it, never failing the merge (P-2026-10-18-1752).
+            if (res.ok && nonEmpty(git(plan.top, ['diff', '--name-only', res.merge + '^1', res.merge, '--', BOARD_DIR]).out).length) {
+                res.board = await restartBoard(plan.top);
+            }
         }
     } catch (err) {
         res.reason = err && err.message ? err.message : String(err);
@@ -2600,6 +2695,7 @@ async function directRun(idArg) {
             (res.merge ? ': merge ' + res.merge.slice(0, 9) : ': no merge commit') + (res.tag ? ', rollback tag ' + res.tag : '') + '.',
         ...res.gates.map((g) => '- ' + g.name + ': ' + (g.ok ? 'ok' : 'RED') + ', ' + g.detail),
         ...res.nodeModules.filter((x) => x.state !== 'present').map(modulesLine),
+        ...(res.board ? [boardLine(res.board)] : []),
         res.reason ? 'Reason: ' + res.reason : 'Every gate green. 3001 is ' + res.port3001 + '; the chat runs the visual check, then `lane-run go ' + id + ' --smoke "..."`.',
         'Outcome: ' + res.outcome,
     ];
