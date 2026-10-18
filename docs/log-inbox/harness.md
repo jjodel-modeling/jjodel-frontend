@@ -572,3 +572,21 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 **Smoke visivo**: passato — chat, 01:10 and 01:21 (lsregister 14, cold and warm links, refusals, shortcut toggles the popover, footer error, /l/ fallback after 1.5 s; off-thread opener)
 **Notes**: Plugins: deep-link 2.6.2, global-shortcut 2.4.1. Mutation bench 6/6. Found live: building the window inside the link's Apple event hung the main thread; link, tray menu and notification tap now open it off-thread. A second process registers the same chord with no error (§Q4 wrong). Tray-menu window stays behind Edge with synthetic clicks, as before the fix: real-click and five-app press tests left to Alfonso. Unattended, accepted: footer note in ui/, config.json format.
 **Prompt document name**: 2026-10-19 00:54
+
+## 2026-10-19 — feat(lane-monitor-app): start at login and restart the board (P-2026-10-19-0129)
+**Prompt**: `claude_2026-10-19_0129_prompt_lane_monitor_s5_login_restart.md`, slice S5 (the last) of the P-2026-10-18-2255 plan: tests first on the restart command builder and the toggle mapping, «Start at login» through `tauri-plugin-autostart` (LaunchAgent), «Restart board» only on 4700, README «Install and first run», installed app pointed back to 4700.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, src/main.rs, src/restart.rs}`, `ui/popover.{html,js}`); code commit `c3775d3b3`; this inbox and the prompt's Status line. Outside the repo: `~/Applications/Lane Monitor.app`, `~/Library/LaunchAgents/io.jjodel.lane-monitor.plist` (written and removed), `config.json` set to 4700.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 43/43; S2-S4 paths unchanged; board plist shasum identical before and after, no kickstart run)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, 01:43 (toggle writes and removes the app agent, plutil; board plist shasum unchanged; Restart disabled with reason off 4700; end state on 4700, toggle off)
+**Notes**: Plugin autostart 2.7.0 (auto-launch 0.6.0). Mutation bench 8/8. Live: BTM registered a legacy agent and posted «Background item added»; the plist names the installed binary. Found: pre-S1 4700 answers /api/attention with a 200 HTML page, so the popover shows bad JSON, not «too old» (ticket below; transient per chat). Unattended: reason under the footer via `.more`, toggle re-read on focus, aria-label on the checkbox.
+**Prompt document name**: 2026-10-19 01:29
+
+## 2026-10-19 — ticket: the app reads a pre-S1 board as bad JSON, not «too old»
+**Ticket**: a board whose tree predates S1 answers `/api/attention` (any path) with its HTML page and a 200, so `poll.rs` classifies it as `error` («Board error: bad JSON: expected value at line 1 column 1») instead of `too-old`, which it reserves for a 404. Measured on 4700 at 01:37. Fix: read a 200 with `content-type: text/html` as `too-old`. Transient: gone once the release tree carries S1 and the board is restarted.
+**Priority**: low
+**Found in**: P-2026-10-19-0129
