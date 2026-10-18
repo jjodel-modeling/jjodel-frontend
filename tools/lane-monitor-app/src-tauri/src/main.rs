@@ -3,8 +3,11 @@
 //! The tray shows the `waiting` count as its title beside a monochrome template icon; a left
 //! click toggles the popover, a borderless always-on-top 400 px webview placed under the icon
 //! and hidden when it loses focus. The poller runs on its own thread every 30 s (and at once
-//! when the popover opens) and pushes each snapshot to the tray and to the popover.
+//! when the popover opens) and pushes each snapshot to the tray and to the popover. A lane
+//! that starts waiting posts a system notification (`notify.rs`); a click on it opens the
+//! monitor on that lane.
 
+mod notify;
 mod poll;
 
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
@@ -18,6 +21,8 @@ use tauri::{
     AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, Rect, RunEvent, State, Url,
     WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
+
+use tauri_plugin_notification::NotificationExt;
 
 use poll::Snapshot;
 
@@ -36,6 +41,8 @@ struct Shared {
     snapshot: Mutex<Snapshot>,
     poke: Mutex<Sender<()>>,
     hidden_at: Mutex<Option<Instant>>,
+    /// The lane ids of the last good snapshot, for `notify::step`.
+    seen: Mutex<notify::Seen>,
 }
 
 impl Shared {
@@ -168,6 +175,21 @@ fn toggle(app: &AppHandle, rect: Rect) {
     }
 }
 
+/// Posts one notification and logs it on stderr; the lane id rides in `extra` for the click.
+fn post(app: &AppHandle, n: notify::Notice) {
+    let result = app
+        .notification()
+        .builder()
+        .title(&n.title)
+        .body(&n.body)
+        .extra("lane", &n.lane)
+        .show();
+    match result {
+        Ok(()) => eprintln!("[lane-monitor] notification posted: {} | {} | {}", n.lane, n.title, n.body),
+        Err(e) => eprintln!("[lane-monitor] notification failed: {}: {e}", n.lane),
+    }
+}
+
 fn start_poller(app: AppHandle, rx: Receiver<()>) {
     thread::spawn(move || loop {
         let shared = app.state::<Shared>();
@@ -184,6 +206,15 @@ fn start_poller(app: AppHandle, rx: Receiver<()>) {
         }
         *shared.snapshot.lock().unwrap() = snap.clone();
         let _ = app.emit_to(POPOVER, "attention", &snap);
+        let notices = {
+            let mut seen = shared.seen.lock().unwrap();
+            let (next, notices) = notify::step(&seen, &snap);
+            *seen = next;
+            notices
+        };
+        for n in notices {
+            post(&app, n);
+        }
         if let Err(RecvTimeoutError::Disconnected) = rx.recv_timeout(POLL_EVERY) {
             break;
         }
@@ -206,7 +237,9 @@ fn main() {
             pinned,
             poke: Mutex::new(tx),
             hidden_at: Mutex::new(None),
+            seen: Mutex::new(None),
         })
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![current, refresh, fit_popover, hide_popover, open_monitor])
         .setup(move |app| {
             #[cfg(target_os = "macos")]
@@ -270,6 +303,21 @@ fn main() {
                     }
                 })
                 .build(app)?;
+
+            // A click on a notification (`tap`) opens the monitor on its lane. Registered
+            // before the first poll: notifications shown with no handler report nothing.
+            let handle = app.handle().clone();
+            app.notification().on_action(move |performed| {
+                let lane = performed
+                    .notification()
+                    .and_then(|n| n.extra().get("lane"))
+                    .and_then(|v| v.as_str())
+                    .map(str::to_string);
+                eprintln!("[lane-monitor] notification action: {} on {lane:?}", performed.action_id());
+                if performed.action_id() == "tap" {
+                    let _ = open_monitor_window(&handle, lane.as_deref());
+                }
+            })?;
 
             start_poller(app.handle().clone(), rx);
 

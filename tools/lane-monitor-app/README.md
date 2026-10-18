@@ -6,19 +6,20 @@ first, and the running ones; «Open monitor» opens the board in an app window.
 
 Tauri 2 (system WKWebView), Rust only: no npm package, no HTTP crate. Specification: the
 P-2026-10-18-2255 report, `docs/discovery/discovery_2026-10-18_lane_monitor_menubar_app.md`
-§Q4, §Q6, §Q7. Slice S2 (this shell) is P-2026-10-19-0000; notifications (S3), the
-`jjodel-lanes://` deep link and the global shortcut (S4), the login item and «Restart board»
-(S5) come later.
+§Q4, §Q6, §Q7. Slice S2 (the shell) is P-2026-10-19-0000, S3 (notifications) is
+P-2026-10-19-0033; the `jjodel-lanes://` deep link and the global shortcut (S4), the login
+item and «Restart board» (S5) come later.
 
 ## Build
 
 Toolchain measured on 2026-10-19: `rustc 1.94.1`, `cargo 1.94.1`, `tauri-cli 2.12.3`
 (installed with `cargo install tauri-cli --version "^2" --locked`). The app's crates are
-pinned by `src-tauri/Cargo.lock` (`tauri` 2.12.4, `tauri-build` 2.7.3).
+pinned by `src-tauri/Cargo.lock` (`tauri` 2.12.4, `tauri-build` 2.7.3,
+`tauri-plugin-notification` 2.7.0).
 
 ```bash
 cd tools/lane-monitor-app/src-tauri
-cargo test                       # HTTP parse, payload, title formatter
+cargo test                       # HTTP parse, payload, title formatter, notification transitions
 cargo tauri build --bundles app  # target/release/bundle/macos/Lane Monitor.app
 open "target/release/bundle/macos/Lane Monitor.app"
 ```
@@ -69,6 +70,22 @@ LANE_MONITOR_BOARD=http://127.0.0.1:4712 \
   which is what 4700 answers until the release tree is updated); `error` (no answer within 15 s, another
   status, or a body that is not the expected JSON). The tooltip and the popover carry the
   error detail.
+- **Notifications.** A system notification when a lane **enters** the waiting list: a
+  `question`, a `blocked`, or a `hard-stop` the board still counts as waiting. Title «Lane
+  waiting for you» («Lane blocked» for a blocked lane), body `<id> · <kind>: <firstLine>`;
+  a click opens the monitor window on `/#lane=<id>`. Never on every poll: the first good
+  answer after launch only seeds the set of waiting ids (the lanes already waiting at launch
+  do not notify); a lane that stays does not notify again, one that leaves and comes back
+  does; a failed poll (board unreachable, an HTTP error, a 200 whose `board` reads `error:`)
+  leaves the set as it was; a lane waiting for more than 72 hours (the board's
+  `ATTENTION_STALE_H`) never notifies. Each one posted is logged on stderr as
+  `[lane-monitor] notification posted: <id> | <title> | <body>`, a click as
+  `[lane-monitor] notification action: tap on Some("<id>")`. The plugin is called from Rust
+  only, so the popover's capability does not grow. Measured on 2026-10-19 (unified log,
+  `/usr/bin/log`: in zsh, `log` is a builtin): the first notification posted makes macOS show
+  its permission alert («Notifiche di "Lane Monitor"») and store the notification in
+  Notification Center without a banner until the alert is answered; a rebuilt bundle, with
+  the same CDHash or a different one, is not asked again.
 - **Monitor window.** The board page in an app window, 1280×860, with no Tauri capability (a
   remote URL); closing it does not quit the app.
 
@@ -78,6 +95,7 @@ LANE_MONITOR_BOARD=http://127.0.0.1:4712 \
 |---|---|
 | `src-tauri/src/main.rs` | tray, popover window, monitor window, commands, poll thread |
 | `src-tauri/src/poll.rs` | HTTP GET and response parse, payload types, snapshot, title formatter, tests |
+| `src-tauri/src/notify.rs` | which lanes just started waiting, between two snapshots; notification text; tests |
 | `src-tauri/tauri.conf.json` | bundle (ad-hoc signing, icons), `frontendDist: "../ui"`, CSP |
 | `src-tauri/capabilities/default.json` | `core:default` for the popover only |
 | `src-tauri/icons/` | tray template pair and the app icon set (`cargo tauri icon` from a 1024 px source) |
