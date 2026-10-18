@@ -76,3 +76,29 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: no visible UI change: API_URL host only; new host answers 200 (curl by chat C-2026-10-17-1518 at 11:58); decided by the chat under RC-25
 **Notes**: Rollback tag `pre-notif-url` on `3163b7557` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1158/result.json`.
 **Prompt document name**: 2026-10-18 11:58
+
+## 2026-10-18 — discovery: AI proxy Worker back in the trunk, configurable proxy URL, dynamic model lists (P-2026-10-18-1146)
+**Prompt**: `claude_2026-10-18_1146_prompt_discovery_ai_proxy_dynamic_models.md`, full lane, Phase 1 only (read-only), chat `C-2026-10-17-1518`, unattended (RC-21, RC-25), worktree `~/jjodel-w-aimodels` on `ai-models-discovery` at `1e9e616fa`.
+**Files touched**: `docs/discovery/discovery_2026-10-18_ai_proxy_dynamic_models.md` (new), this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no file under `frontend/` written; `~/jjodel-proxy` only read; network calls keyless only (CORS preflights and unauthenticated GETs to the three providers' models endpoints, and to the deployed Worker).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (discovery, no code change)
+**Notes**: Measured: only `testClaude` uses the Worker (Claude chat and Gemini go direct, `9220e286a`); all three `/models` endpoints are CORS-readable from the browser; the Worker accepts any origin containing `localhost` and hides its 403 behind CORS. Two decisions await Alfonso (direct vs Worker first for GET models; redeploy). Issue #54 unread: `gh` not authenticated. Detail in the report.
+**Prompt document name**: 2026-10-18 11:46
+
+## 2026-10-18 — feat: AI proxy Worker in the trunk with the origin fix and models routes; proxy URL from VITE_AI_PROXY_URL (P-2026-10-18-1146)
+**Prompt**: Phase 2 of `claude_2026-10-18_1146_prompt_discovery_ai_proxy_dynamic_models.md`, slices (a) and (b) only, GO from chat `C-2026-10-17-1518` on Alfonso's «Ok alle raccomandazioni» (2026-10-18 12:10), same worktree and branch.
+**Files touched**: `cfc266eac`: `cloudflare-worker/{.gitignore, README.md, package.json, package-lock.json, tsconfig.json, wrangler.toml, src/index.ts}` (new). `7d233651e`: `frontend/src/types/jodie.ts` (`getEndpoint`), `frontend/src/types/__tests__/aiProxyEndpoint.test.ts` (new), `cloudflare-worker/README.md`. This commit: `docs/CODEBASE-MAP.md`, this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — Worker: `tsc --noEmit` exit 0 (index.ts in `--listFiles`), `wrangler deploy --dry-run` exit 0, Node bench on the dry-run bundle with stubbed fetch 16/16, two mutations caught. Frontend: typecheck exit 0, build exit 0, vitest `aiProxyEndpoint.test.ts` 4/4 and `AIProviderService.test.ts` 16/16, two mutations caught; a build with the variable set inlines it. Deployed Worker not changed: redeploy is Alfonso's.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI change; dev now calls the production Worker for Claude's test, not exercised in a browser)
+**Notes**: Twelve files, above five: the ones the GO names (rule 19). `docs/CODEBASE-MAP.md` moved from commit 1 to this docs commit, so docs and code stay apart (P13). The bench lived in /tmp, not committed: the Worker folder has no test runner. Gemini POST keeps forwarding `?key=` upstream as before; the new models route forwards `x-goog-api-key`. Slices (c), (d) open.
+**Prompt document name**: 2026-10-18 11:46

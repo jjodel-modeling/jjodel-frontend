@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1146
 Chat: C-2026-10-17-1518
 Front: maintenance
 Lane: full (discovery, read-only; heavy, not drawn: discoveries are outside RC-45)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane ai-models-discovery · cfc266eac, 7d233651e
 Request: Alfonso, 2026-10-18 11:43, «la lista dei modelli è statica, è possibile renderla dinamica con tutti i modelli disponibili e quelli legacy su richiesta ?» then «confermo, usa /lane auto»
 Corregge: —
 
