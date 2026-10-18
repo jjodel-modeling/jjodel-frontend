@@ -54,13 +54,13 @@ const SETTINGS_TO_PROVIDER: Record<string, AIProvider> = {
 };
 
 const nbsp = String.fromCharCode(160); // "&nbsp;"
-// Tooltip of a provider row whose last connection test failed, by kind of failure.
-const FAILURE_TITLES: Record<CatalogFailure, string> = {
+// State text of a provider row whose last connection test failed, by kind of failure.
+const FAILURE_LABELS: Record<CatalogFailure, string> = {
     auth: 'Invalid key',
     rate: 'Rate limited',
-    network: 'Provider unreachable',
+    network: 'Unreachable',
     server: 'Provider error',
-    other: 'Connection test failed',
+    other: 'Test failed',
 };
 // Component to show model capability badges
 function ModelCapabilitiesBadges({ model }: { model: AIVersion | undefined }): JSX.Element | null {
@@ -253,15 +253,21 @@ export function AISettingsContent({
         let llm = AI[name];
         const isConfigured: boolean = isProviderConfigured(name);
 
-        // Row state — the persistent at-a-glance status (the transient test button complements it):
-        //   no key → "Set up" (muted) · configured → the active model, always, behind a dot that
-        //   carries the status: red when the last test failed, green otherwise (passed or untested).
-        //   A red dot names the kind of failure in the tooltip (lastTestFailure). The "Not
-        //   configured" chip is gone: eleven identical chips carried no information (mockup 5a).
+        // Row state — the persistent at-a-glance status (the transient test button complements it),
+        // the connection only, never a model: the model is chosen per feature, so one name on the
+        // provider row would mislead.
+        //   no key → "Set up" (muted) · never tested → muted dot + "Not tested" ·
+        //   last test failed → red dot + the kind in words (lastTestFailure, "Test failed" when
+        //   none is stored) · otherwise → green dot + "Connected". The "Not configured" chip is
+        //   gone: eleven identical chips carried no information (mockup 5a).
         // Reactive: recomputes on key changes (apiKeyByProvider) and on test completion
         // (config.lastTested/Ok/Failure).
-        const keyInvalid = isConfigured && config.lastTested != null && config.lastTestOk === false;
-        const failureTitle = keyInvalid ? FAILURE_TITLES[config.lastTestFailure ?? 'other'] : undefined;
+        const untested = config.lastTested == null;
+        const keyInvalid = isConfigured && !untested && config.lastTestOk === false;
+        const stateClass = untested ? '' : keyInvalid ? 'ai-provider-row__state--error' : 'ai-provider-row__state--active';
+        const stateLabel = untested ? 'Not tested'
+            : keyInvalid ? FAILURE_LABELS[config.lastTestFailure ?? 'other']
+            : 'Connected';
 
         const status = testStatus[name] || 'idle';
 
@@ -328,10 +334,9 @@ export function AISettingsContent({
 
                     {/* The models summary that filled the middle went: the state keeps the right edge. */}
                     {isConfigured ? (
-                        <span className="ai-provider-row__state ai-provider-row__state--active" style={{ marginLeft: 'auto' }} title={failureTitle}>
-                            {/* The error class on the dot only: it paints the dot red, the model keeps its colour. */}
-                            <span className={`ai-provider-row__dot ${keyInvalid ? 'ai-provider-row__state--error' : ''}`} />
-                            {activeModelLabel(name)}
+                        <span className={`ai-provider-row__state ${stateClass}`} style={{ marginLeft: 'auto' }}>
+                            <span className="ai-provider-row__dot" />
+                            {stateLabel}
                         </span>
                     ) : (
                         <span className="ai-provider-row__state" style={{ marginLeft: 'auto' }}>Set up</span>
