@@ -45,6 +45,20 @@ npm run deploy            # = wrangler deploy
 Only the account owner deploys. `node_modules/` and `.wrangler/` are gitignored and must never be
 committed.
 
+## Which Worker the frontend calls
+
+`AI.getEndpoint()` in `frontend/src/types/jodie.ts` uses the production Worker in every mode,
+development included, so `npm start` needs no local Worker. To test changes to this folder
+against a local Worker instead:
+
+```bash
+cd cloudflare-worker && npm run dev          # wrangler dev on http://localhost:8787
+echo 'VITE_AI_PROXY_URL=http://localhost:8787' >> ../frontend/.env.development.local
+```
+
+`frontend/.env.development.local` is gitignored. Restart the Vite dev server after changing it,
+and remove the line to go back to the production Worker.
+
 ## Checks after a deploy
 
 ```bash

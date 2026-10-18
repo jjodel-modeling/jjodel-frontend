@@ -226,17 +226,19 @@ export class AI{
         return this;
     }
     getEndpoint(): string {
-        // Proxy endpoints for providers that don't support CORS
-        // Update the subdomain after deploying the Cloudflare Worker
+        // Proxy endpoints for providers that don't support CORS (source: cloudflare-worker/).
+        // The production Worker in every mode; VITE_AI_PROXY_URL overrides it, e.g.
+        // http://localhost:8787 in frontend/.env.development.local for a local `wrangler dev`.
         const PROXY_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
-        const PROXY_LOCAL_URL = 'http://localhost:8787';
         if (!this.proxy) return this.endpoint;
         /*switch (this.name) {
             case AIProvider.Claude:
             case AIProvider.Gemini:
             default: return '';
         }*/
-        return (window.location.hostname === 'localhost' ? PROXY_LOCAL_URL : PROXY_URL) + this.proxy;
+        // @ts-ignore -- `env` is not on ImportMeta for tsc here (vite-env.d.ts), as in codegen/setting.ts.
+        const override: string | undefined = import.meta.env?.VITE_AI_PROXY_URL;
+        return (override ? override.trim().replace(/\/+$/, '') : PROXY_URL) + this.proxy;
     }
     hasVision(version?: string): boolean{
         let model = version && this.versions[version];
