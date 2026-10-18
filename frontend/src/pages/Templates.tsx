@@ -1,5 +1,5 @@
 import React, {JSX, ReactElement, ReactNode, useEffect, useRef, useState} from 'react';
-import {R, Try} from '../joiner';
+import {R, Try, U} from '../joiner';
 import {Dashboard} from './components';
 import {ProjectsApi} from '../api/persistance';
 import {Button} from '../components/common/Button';
@@ -18,11 +18,20 @@ export interface GalleryEntry {
     description?: string;
 }
 
-/** What a package file says of itself: its metamodels and models, read from the project record at the top. */
+/** What a package file says of itself: its metamodels and models, read from the project record at the top, and its
+ *  derived viewpoints, the listed ones whose `_state` in the store names a `derivedFrom` (S1b, P-2026-10-18-2150). */
 interface PackageInfo {
     text: string;
     metamodels: number;
     models: number;
+    viewpoints: number;
+}
+
+async function packageInfo(text: string): Promise<PackageInfo> {
+    const json = JSON.parse(text);
+    const lookup = JSON.parse(await U.decompressState(json.state)).idlookup || {};
+    const viewpoints = (json.viewpoints || []).filter((id: string) => !!lookup[id]?._state?.derivedFrom).length;
+    return {text, metamodels: (json.metamodels || []).length, models: (json.models || []).length, viewpoints};
 }
 
 /* The catalog is the public copy of docs/library/catalog.json (scripts/library/copy-catalog.mjs): Vite serves only
@@ -102,9 +111,7 @@ function TemplatesComponent(_props: OwnProps): JSX.Element {
                 if (!live) return;
                 setEntries(gallery);
                 for (const e of gallery) {
-                    fetch('/' + e.package).then(r => r.text()).then(text => {
-                        const json = JSON.parse(text);
-                        const info = {text, metamodels: (json.metamodels || []).length, models: (json.models || []).length};
+                    fetch('/' + e.package).then(r => r.text()).then(packageInfo).then(info => {
                         if (live) setInfos(prev => ({...prev, [e.id]: info}));
                     }).catch(() => undefined);
                 }
@@ -139,7 +146,7 @@ function TemplatesComponent(_props: OwnProps): JSX.Element {
                                     <h3 className="templates-card__label">{e.label}</h3>
                                 </div>
                                 <p className="templates-card__counts">
-                                    {info ? `${plural(info.metamodels, 'metamodel')} · ${plural(info.models, 'model')}` : ' '}
+                                    {info ? `${plural(info.metamodels, 'metamodel')} · ${plural(info.models, 'model')} · ${plural(info.viewpoints, 'viewpoint')}` : ' '}
                                 </p>
                                 <p className="templates-card__description">{e.description || ' '}</p>
                                 <div className="templates-card__actions">
