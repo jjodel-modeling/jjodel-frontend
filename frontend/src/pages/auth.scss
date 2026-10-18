@@ -34,13 +34,27 @@
    HEADER
    ============================================ */
 
+/* One centered content box shared by header, main grid and footer, so their
+   contents line up on the same left and right edges; header border and
+   footer gradient stay full-bleed. */
+.auth-page__container {
+  width: 100%;
+  max-width: calc(1200px + 160px);
+  margin: 0 auto;
+  padding: 0 80px;
+  box-sizing: border-box;
+}
+
 .auth-page__header {
   flex: 0 0 72px;
   display: flex;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.auth-page__header-inner {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 80px;
-  border-bottom: 1px solid #e2e8f0;
 }
 
 .auth-page__logo {
@@ -117,13 +131,18 @@
 
 .auth-page__main {
   flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.auth-page__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px;
-  column-gap: 120px;
+  column-gap: 96px;
   row-gap: 48px;
   align-items: start;
-  align-content: center;
-  padding: 48px 80px;
 }
 
 /* ============================================
@@ -135,6 +154,7 @@
   flex-direction: column;
   gap: 28px;
   min-width: 0;
+  max-width: 640px;
 }
 
 .auth-page__eyebrow {
@@ -652,11 +672,14 @@
   flex: 0 0 auto;
   min-height: 104px;
   display: flex;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.auth-page__footer-inner {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 0 80px;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
 }
 
 .auth-page__partners {
@@ -709,11 +732,12 @@
 /* One column, form card first */
 @media (max-width: 1099px) {
   .auth-page__main {
+    justify-content: flex-start;
+  }
+
+  .auth-page__grid {
     grid-template-columns: minmax(0, 1fr);
-    width: 100%;
     max-width: calc(560px + 160px);
-    margin: 0 auto;
-    align-content: start;
   }
 
   .auth-page .auth-card {
@@ -727,7 +751,8 @@
 }
 
 @media (max-width: 639px) {
-  .auth-page__header {
+  .auth-page__container {
+    max-width: calc(1200px + 40px);
     padding: 0 20px;
   }
 
@@ -740,8 +765,11 @@
   }
 
   .auth-page__main {
+    padding: 24px 0 40px;
+  }
+
+  .auth-page__grid {
     max-width: calc(560px + 40px);
-    padding: 24px 20px 40px;
   }
 
   .auth-page .auth-card {
@@ -760,9 +788,10 @@
     }
   }
 
-  .auth-page__footer {
+  .auth-page__footer-inner {
     flex-wrap: wrap;
-    padding: 24px 20px;
+    padding-top: 24px;
+    padding-bottom: 24px;
   }
 
   .auth-page__partners {

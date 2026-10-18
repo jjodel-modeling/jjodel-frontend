@@ -77,6 +77,7 @@ const AuthIntro = () => (
 
 const AuthFooter = () => (
     <footer className="auth-page__footer">
+        <div className="auth-page__container auth-page__footer-inner">
         <div className="auth-page__partners">
             <img className="auth-page__partner auth-page__partner--univaq" src={logoUnivaq} alt="Università degli Studi dell'Aquila" />
             <img className="auth-page__partner" src={logoMdu} alt="Mälardalens universitet" />
@@ -85,6 +86,7 @@ const AuthFooter = () => (
         <div className="auth-page__meta">
             <a className="auth-page__terms" href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms</a>
             <span className="auth-page__version">v{APP_VERSION}</span>
+        </div>
         </div>
     </footer>
 );
@@ -290,6 +292,7 @@ const offline = () => {
 return(<section className={`auth-page ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
 
     <header className="auth-page__header">
+        <div className="auth-page__container auth-page__header-inner">
         <img className="auth-page__logo" src={logo} alt="Jjodel" />
         <nav className="auth-page__nav">
             <a className="auth-page__nav-link" href="https://docs.jjodel.io" target="_blank" rel="noopener noreferrer">Documentation</a>
@@ -300,9 +303,11 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
                 ? <button className="auth-page__switch" type="button" onClick={() => setAction('register')}>Register</button>
                 : <button className="auth-page__switch" type="button" onClick={() => setAction('login')}>Sign in</button>}
         </nav>
+        </div>
     </header>
 
     <main className="auth-page__main">
+        <div className="auth-page__container auth-page__grid">
         <AuthIntro />
 
         <form className={'auth-form auth-card'} onSubmit={onSubmit}>
@@ -747,6 +752,7 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
                     : <>Already have an account? <button className="auth-card__link" type="button" onClick={e => {setAction('login')}}>Sign in</button></>}
             </div>
         </form>
+        </div>
     </main>
 
     <AuthFooter />
