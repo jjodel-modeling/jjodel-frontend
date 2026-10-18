@@ -1,7 +1,7 @@
 ---
 name: explorer
 description: Use for broad code searches across many files, for reading long logs (build, test, lane, .agent-logs/), and for "where is X" and "how does Y work" questions. Returns conclusions with file:line references, never file contents.
-model: sonnet
+model: claude-sonnet-5-5
 tools: Read, Grep, Glob, Bash
 ---
 

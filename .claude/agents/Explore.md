@@ -1,7 +1,7 @@
 ---
 name: Explore
 description: Fast read-only agent for file discovery, code search and codebase exploration. Overrides the built-in Explore only to run it on Sonnet (RC-49 (2), P-2026-10-17-1945); the caller states the search breadth.
-model: sonnet
+model: claude-sonnet-5-5
 disallowedTools: Agent, Edit, Write, NotebookEdit
 omitClaudeMd: true
 ---
