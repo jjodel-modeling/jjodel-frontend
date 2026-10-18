@@ -9,6 +9,11 @@
  *   - the project that opens: its id differs from the file's, its name is the chosen one with no « copy», the
  *     DProject entry carries `_clonedFrom: <id>@<n>`, its metamodels, models and objects are the file's, and
  *     each model's editor shows its nodes;
+ *   - a template opens on its hand-written viewpoint (R-LIB-9: the first one, named after its metamodel), and each model
+ *     is measured from the DOM against the criteria of P-2026-10-18-2300 (vertex, arc and row counts, labels, forms,
+ *     frames holding their children, no arc between a container and its children, every vertex inside the viewport
+ *     clear of the minimap after fit), then screenshot as <id>.png (<id>-<model>.png when there are more); an example
+ *     is screenshot on each of its viewpoints, its rendering recorded, not asserted;
  *   - an explicit save, then a reopen from the page load: name and `_clonedFrom` survive.
  * The page shows «Templates» then «Examples», each card with its `<id>@<n>`; the deep links `#/templates/graph@1` (the
  * clone dialog of that version, prefilled) and `#/templates/nope@9` (one line, the page as usual) are screenshot.
@@ -19,6 +24,7 @@
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/library-gallery-clone.ts \
  *         --port 3098 --id P-2026-10-18-1800
+ * Env:  CLONE_ONLY  comma list of catalog ids to clone (default: every entry)
  */
 import { chromium, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -32,6 +38,7 @@ mkdirSync(SHOTS, { recursive: true });
 
 interface Entry { id: string; kind: string; label: string; status: string; tier?: string; version?: number; versions?: Array<{ n: number; file: string }> }
 const catalog = JSON.parse(readFileSync(new globalThis.URL('../../../docs/library/catalog.json', import.meta.url), 'utf8')) as { entries: Entry[] };
+const ONLY = (process.env.CLONE_ONLY || '').split(',').filter(Boolean);
 const GALLERY = catalog.entries.filter(e => e.kind === 'galleryProject' && e.status === 'available');
 const refOf = (e: Entry) => `${e.id}@${e.version}`;
 const fileOf = (e: Entry) => e.versions!.find(v => v.n === e.version)!.file;
@@ -83,6 +90,8 @@ const INFO = String.raw`(async () => {
     const rec = JSON.parse(localStorage.getItem('projects') || '[]').find((r) => r.id === p.id);
     return {
       id: p.id, name: p.name, clonedFrom: (lk[p.id] || {})._clonedFrom ?? null, recordName: rec ? rec.name : null,
+      active: (lk[(lk[p.id] || {}).activeViewpoint] || {}).name ?? null, root: (lk[window.windoww.store.getState().viewpoint] || {}).name ?? null,
+      viewpoints: ((lk[p.id] || {}).viewpoints || []).map((v) => lk[v]).filter((v) => v && !/^Pointer_/.test(v.id)).map((v) => v.name),
       metamodels: (p.metamodels || []).map((m) => m.name).sort(),
       models: (p.models || []).filter((m) => !m.isMetamodel).map((m) => ({ id: m.id, name: m.name, objects: objs.filter((o) => under(o.id, m.id)).length })),
     };
@@ -172,6 +181,110 @@ async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot
     return info ? { prefilled, chosen, info } : null;
 }
 
+// ── The criteria of the template viewpoints (P-2026-10-18-2300), measured from the DOM ──────────────────────────
+
+/** The viewpoints of each template, in order; the first is active on open, the model named here is drawn by the other. */
+const VIEWPOINTS: Record<string, string[]> = {
+    library: ['Library'], 'families-persons': ['Families', 'Persons'], 'state-machine': ['StateMachine'], graph: ['Graph'], shapes: ['Shapes'],
+};
+const PICK: Record<string, string> = { 'sample-Persons': 'Persons' };
+
+/** The model's pane, fitted: every drawn vertex (object, class, text, form, header, border), every arc (its two
+ *  objects, drawn or clear), the rows, the pane and the minimap boxes, the edge label texts. */
+const MEASURE = (modelId: string) => String.raw`(() => {
+  const pane = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${modelId}"] .react-flow');
+  if (!pane) return null;
+  const lk = window.windoww.store.getState().idlookup;
+  const cls = (o) => (lk[(lk[o] || {}).instanceof] || {}).name || '';
+  const box = (e) => { const b = e.getBoundingClientRect(); return { x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height) }; };
+  const nodes = [...pane.querySelectorAll('.react-flow__node')].map((n) => {
+    const obj = (lk[n.dataset.id] || {}).model || null;
+    const c = n.querySelector('.ir-node-content');
+    const header = n.querySelector('.ir-header-band');
+    return { vid: n.dataset.id, obj, cls: cls(obj), text: (n.textContent || '').trim(), form: c ? ([...c.classList].find((k) => k.startsWith('ir-shape--')) || '').slice(10) : '',
+      header: header ? header.textContent.trim() : null, border: c ? getComputedStyle(c).borderTopStyle : '', box: box(n) };
+  });
+  const objOf = Object.fromEntries(nodes.map((n) => [n.vid, n.obj]));
+  const edges = [...pane.querySelectorAll('.react-flow__edge')].map((g) => {
+    const m = (g.getAttribute('aria-label') || '').match(/^Edge from (\S+) to (\S+)$/);
+    // An edge draws transparent hit paths too: it is clear when none of its strokes shows.
+    const inked = [...g.querySelectorAll('path, line, polyline')].filter((p) => { const cs = getComputedStyle(p); return !/^(none|transparent|rgba\(0, 0, 0, 0\))$/.test(cs.stroke) && parseFloat(cs.strokeWidth) > 0 && cs.opacity !== '0'; });
+    return { id: g.dataset.id || '', src: m ? objOf[m[1]] || m[1] : '', tgt: m ? objOf[m[2]] || m[2] : '', clear: inked.length === 0,
+      marker: inked.map((p) => p.getAttribute('marker-end') || '').filter(Boolean).join(' ') };
+  });
+  const isChild = (a, b) => { const f = (lk[b] || {}).father; return f === a || (lk[f] || {}).father === a; };
+  const mini = pane.querySelector('.react-flow__minimap');
+  return { nodes, edges, rows: pane.querySelectorAll('.ir-row').length, pane: box(pane), minimap: mini ? box(mini) : null,
+    labels: [...pane.querySelectorAll('.edge-label__text')].map((e) => e.textContent.trim()).filter(Boolean),
+    containmentArcs: edges.filter((e) => isChild(e.src, e.tgt) || isChild(e.tgt, e.src)).length,
+    names: Object.fromEntries(nodes.map((n) => [n.obj, n.text])) };
+})()`;
+
+const inside = (b: any, f: any) => b.x >= f.x && b.y >= f.y && b.x + b.w <= f.x + f.w && b.y + b.h <= f.y + f.h;
+const overlaps = (a: any, b: any) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+const sorted = (a: string[]) => [...a].sort();
+
+/** The criteria of one model of a template; `d` is the MEASURE of its fitted pane. */
+function criteria(id: string, model: string, d: any): void {
+    const drawn = d.edges.filter((e: any) => !e.clear);
+    const of = (c: string) => d.nodes.filter((n: any) => n.cls === c);
+    const texts = (ns: any[]) => sorted(ns.map((n: any) => n.text));
+    const tag = `${id} ${model}`;
+    check(`${tag}: 0 rows, 0 containment arcs`, d.rows === 0 && d.containmentArcs === 0, { rows: d.rows, containmentArcs: d.containmentArcs });
+    check(`${tag}: every vertex inside the viewport and clear of the minimap after fit`,
+        d.nodes.every((n: any) => inside(n.box, d.pane) && !(d.minimap && overlaps(n.box, d.minimap))),
+        d.nodes.filter((n: any) => !inside(n.box, d.pane) || (d.minimap && overlaps(n.box, d.minimap))).map((n: any) => n.text));
+    const arcs = (ns: any) => sorted(drawn.map((e: any) => `${d.names[e.src] ?? e.src}>${d.names[e.tgt] ?? e.tgt}`));
+    if (id === 'graph') {
+        check(`${tag}: 4 Node vertices labelled by name, the Graph not drawn`, d.nodes.length === 4 && JSON.stringify(texts(of('Node'))) === '["A","B","C","D"]', texts(d.nodes));
+        check(`${tag}: one open-arrow arc per (Edge, target), node to node`, JSON.stringify(arcs(d)) === JSON.stringify(sorted(['A>B', 'B>C', 'C>D', 'D>A', 'A>C', 'A>D'])) && drawn.every((e: any) => /url\(/.test(e.marker)), { arcs: arcs(d), markers: [...new Set(drawn.map((e: any) => e.marker))] });
+    } else if (id === 'library') {
+        check(`${tag}: Book, Magazine, Writer and Member vertices, the Library not drawn`, of('Book').length === 3 && of('Magazine').length === 1 && of('Writer').length === 2 && of('Member').length === 2 && d.nodes.length === 8, texts(d.nodes));
+        const want = sorted(['Pride and Prejudice>Jane Austen', 'Emma>Jane Austen', 'The Hobbit>J. R. R. Tolkien', 'Pride and Prejudice>Anna', 'The Hobbit>Luca']);
+        check(`${tag}: one arc per authors value and per borrowedBy value`, JSON.stringify(arcs(d).map((a: string) => a.replace(/author$|borrowed by$/, ''))) === JSON.stringify(want), arcs(d));
+    } else if (id === 'state-machine') {
+        const st = (name: string) => d.nodes.find((n: any) => n.cls === 'State' && n.text.startsWith(name));
+        check(`${tag}: one vertex per State, the StateMachine not drawn`, of('State').length === 6 && d.nodes.length === 6, texts(d.nodes));
+        check(`${tag}: initial states a filled dot, the final one a double circle`, st('Idle')?.form === 'circle' && st('Warmup')?.form === 'circle' && st('Off')?.form === 'circle' && st('Off')?.border === 'double' && st('Broken')?.form === 'rounded',
+            ['Idle', 'Warmup', 'Off', 'Broken', 'Steady'].map(n => `${n}:${st(n)?.form}:${st(n)?.border}`));
+        const running = st('Running');
+        check(`${tag}: Running a frame headed by its name, holding Warmup and Steady`, !!running && running.header === 'Running' && inside(st('Warmup').box, running.box) && inside(st('Steady').box, running.box), running && { header: running.header, box: running.box });
+        check(`${tag}: one arc per Transition, labelled trigger [guard]`, drawn.length === 3 && JSON.stringify(sorted(d.labels)) === JSON.stringify(sorted(['power', 'power [temp > 60]'])), { arcs: arcs(d), labels: d.labels });
+    } else if (id === 'families-persons' && model === 'sample-Families') {
+        const fams = of('Family');
+        check(`${tag}: each Family a frame headed by lastName`, JSON.stringify(sorted(fams.map((f: any) => f.header))) === '["March","Sailor"]', fams.map((f: any) => f.header));
+        const members = of('Member');
+        const holds = fams.every((f: any) => members.filter((m: any) => inside(m.box, f.box)).length === (f.header === 'March' ? 4 : 5));
+        check(`${tag}: its Members inside it, labelled by firstName`, members.length === 9 && holds && texts(members).includes('Brandon'), texts(members));
+        check(`${tag}: no arc drawn`, drawn.length === 0, arcs(d));
+    } else if (id === 'families-persons') {
+        const male = of('Male'), female = of('Female');
+        check(`${tag}: Male and Female vertices by fullName`, male.length === 5 && female.length === 4 && texts(male).includes('Jim March') && texts(female).includes('Kelly Sailor'), texts(d.nodes));
+        check(`${tag}: Male and Female told apart by shape`, new Set(male.map((n: any) => n.form)).size === 1 && new Set(female.map((n: any) => n.form)).size === 1 && male[0].form !== female[0].form, { male: male[0]?.form, female: female[0]?.form });
+        check(`${tag}: no arc drawn`, drawn.length === 0, arcs(d));
+    } else if (id === 'shapes') {
+        const canvas = of('Canvas')[0];
+        check(`${tag}: the Canvas a frame headed by its name, holding the shapes`, !!canvas && canvas.header === 'Sketch' && [...of('Circle'), ...of('Square')].every((n: any) => inside(n.box, canvas.box)), canvas && canvas.header);
+        check(`${tag}: Circle a circle, Square a square, each labelled`, of('Circle').every((n: any) => n.form === 'circle') && of('Square').every((n: any) => n.form === 'rect' && Math.abs(n.box.w - n.box.h) <= 1)
+            && JSON.stringify(texts([...of('Circle'), ...of('Square')])) === '["house","sun","wheel"]', d.nodes.map((n: any) => `${n.cls}:${n.form}:${n.text}:${n.box.w}x${n.box.h}`));
+    }
+}
+
+/** The level button runs the fit (Toolbar.tsx: `handleResetZoom`, `fitView({padding, maxZoom: 1})`). */
+async function fit(page: Page): Promise<void> {
+    const button = page.locator('.toolbar-commands__level').filter({ visible: true });
+    const before = await button.first().textContent().catch(() => null);
+    if (await button.count()) { await button.first().click(); await wait(page, 1500); }
+    meas('fit', { buttons: await button.count(), before, after: await button.first().textContent().catch(() => null) });
+}
+
+async function pickViewpoint(page: Page, name: string): Promise<void> {
+    await page.locator('.toolbar-viewpoint-trigger:not([disabled]):visible').first().click();
+    await wait(page, 400);
+    await page.locator('.toolbar-viewpoint-menu__option', { hasText: name }).first().click();
+    await wait(page, 4000);
+}
+
 let projectsShell: any = null;
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -190,6 +303,7 @@ try {
     await page.screenshot({ path: `${SHOTS}/projects-page.png` });
 
     for (const entry of GALLERY) {
+        if (ONLY.length && !ONLY.includes(entry.id)) continue;
         const exp = await expected(entry);
         const shot = entry.id === 'library' ? 'templates' : undefined;
         const got = await cloneFromTemplates(page, entry, TYPED[entry.id], shot);
@@ -203,6 +317,10 @@ try {
         check(`${entry.id}: the metamodels are the file's`, JSON.stringify(info.metamodels) === JSON.stringify(exp.metamodels), info.metamodels);
         const counts = Object.fromEntries(info.models.map((m: any) => [m.name, m.objects]));
         check(`${entry.id}: the models and their objects are the file's`, JSON.stringify(counts) === JSON.stringify(exp.models), { clone: counts, file: exp.models });
+        if (entry.tier === 'template') {
+            check(`${entry.id}: its viewpoints, the first active on open`, JSON.stringify(info.viewpoints) === JSON.stringify(VIEWPOINTS[entry.id])
+                && info.active === VIEWPOINTS[entry.id][0] && info.root === VIEWPOINTS[entry.id][0], { viewpoints: info.viewpoints, active: info.active, root: info.root });
+        } else meas(`${entry.id}: viewpoints`, { viewpoints: info.viewpoints, active: info.active, root: info.root });
 
         for (const m of info.models) {
             await page.evaluate(String.raw`(async () => { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(m.id)})); })()`);
@@ -210,7 +328,12 @@ try {
             const nodes = await poll<number>(page, `(() => { const p = ${pane}; const n = p ? p.querySelectorAll('.react-flow__node').length : 0; return n > 0 ? n : 0; })()`, 60000);
             check(`${entry.id}: the editor of ${m.name} shows its nodes`, (nodes ?? 0) > 0, `${nodes} nodes, ${m.objects} objects`);
             await wait(page, 1500);
+            if (entry.tier === 'template' && PICK[m.name]) await pickViewpoint(page, PICK[m.name]);
             await closeTip(page);
+            await fit(page);
+            const d = await page.evaluate(MEASURE(m.id)) as any;
+            meas(`${entry.id} ${m.name}`, d && { nodes: d.nodes.map((n: any) => `${n.cls}:${n.form}:${n.text}`), edges: d.edges.map((e: any) => `${d.names[e.src] ?? e.src}>${d.names[e.tgt] ?? e.tgt}${e.clear ? ' (clear)' : ''}`), labels: d.labels, rows: d.rows, containmentArcs: d.containmentArcs });
+            if (entry.tier === 'template' && d) criteria(entry.id, m.name, d);
             await page.screenshot({ path: `${SHOTS}/${entry.id}${info.models.length > 1 ? '-' + m.name : ''}.png` });
         }
 
@@ -240,8 +363,10 @@ try {
 
     // A second clone of the same entry, with the prefilled label: the (1) convention.
     const lib = GALLERY.find(e => e.id === 'library')!;
-    const second = await cloneFromTemplates(page, lib);
-    check('library again: the second clone is named «Library (1)»', !!second && second.info.name === 'Library (1)' && second.info.recordName === 'Library (1)', second ? second.info.name : null);
+    if (!ONLY.length || ONLY.includes('library')) {
+        const second = await cloneFromTemplates(page, lib);
+        check('library again: the second clone is named «Library (1)»', !!second && second.info.name === 'Library (1)' && second.info.recordName === 'Library (1)', second ? second.info.name : null);
+    }
 
     // The megamodel registration of the import (projects.ts, before duplicateProject): one user-defined edge.
     const mega = await page.evaluate(String.raw`(async () => {

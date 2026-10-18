@@ -28,11 +28,13 @@ export interface GalleryEntry {
 /** The page's two sections, in this order. */
 const TIERS: Array<{tier: string, title: string}> = [{tier: 'template', title: 'Templates'}, {tier: 'example', title: 'Examples'}];
 
-/** What a package file says of itself: its metamodels and models, read from the project record at the top. */
+/** What a package file says of itself: its metamodels, models and viewpoints, read from the project record at the top. */
 interface PackageInfo {
     text: string;
     metamodels: number;
     models: number;
+    /** The viewpoints other than Default (the built-in ones have `Pointer_` ids). */
+    viewpoints: number;
 }
 
 /* The catalog is the public copy of docs/library/catalog.json (scripts/library/copy-catalog.mjs): Vite serves only
@@ -123,7 +125,8 @@ function TemplatesComponent(_props: OwnProps): JSX.Element {
                 for (const e of gallery) {
                     fetch('/' + currentVersion(e)!.file).then(r => r.text()).then(text => {
                         const json = JSON.parse(text);
-                        const info = {text, metamodels: (json.metamodels || []).length, models: (json.models || []).length};
+                        const info = {text, metamodels: (json.metamodels || []).length, models: (json.models || []).length,
+                            viewpoints: (json.viewpoints || []).filter((v: string) => !/^Pointer_/.test(v)).length};
                         if (live) setInfos(prev => ({...prev, [e.id]: info}));
                     }).catch(() => undefined);
                 }
@@ -152,7 +155,7 @@ function TemplatesComponent(_props: OwnProps): JSX.Element {
                     <span className="templates-card__ref">{galleryRefOf(e.id, version.n)}</span>
                 </div>
                 <p className="templates-card__counts">
-                    {info ? `${plural(info.metamodels, 'metamodel')} · ${plural(info.models, 'model')}` : ' '}
+                    {info ? `${plural(info.metamodels, 'metamodel')} · ${plural(info.models, 'model')} · ${plural(info.viewpoints, 'viewpoint')}` : ' '}
                 </p>
                 <p className="templates-card__description">{e.description || ' '}</p>
                 <div className="templates-card__actions">

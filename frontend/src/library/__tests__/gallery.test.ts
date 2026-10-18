@@ -35,7 +35,7 @@ const EXPECTED: Record<string, { metamodels: string[]; models: Record<string, nu
     library: { metamodels: ['Library'], models: { 'sample-Library': 9 } },
     'families-persons': { metamodels: ['Families', 'Persons'], models: { 'sample-Families': 11, 'sample-Persons': 9 } },
     'state-machine': { metamodels: ['statemachine'], models: { 'sample-StateMachine': 10 } },
-    graph: { metamodels: ['Graph'], models: { 'sample-Graph': 10 } },
+    graph: { metamodels: ['Graph'], models: { 'sample-Graph': 11 } },
     shapes: { metamodels: ['Shapes'], models: { 'sample-Shapes': 4 } },
     turnstile: { metamodels: ['DemoESM'], models: { demoESM: 10 } },
     'petri-producer-consumer': { metamodels: ['DemoPetri'], models: { demoNet: 13, producerConsumer: 19 } },
@@ -44,6 +44,19 @@ const EXPECTED: Record<string, { metamodels: string[]; models: Record<string, nu
 const TIERS: Record<string, string> = {
     library: 'template', 'families-persons': 'template', 'state-machine': 'template', graph: 'template', shapes: 'template',
     turnstile: 'example', 'petri-producer-consumer': 'example',
+};
+
+/** The hand-written viewpoints of each template (R-LIB-9), in order, the first active on open; each with the view
+ *  kinds it holds, sorted, as `<metaclass>:<kind>`. */
+const VIEWPOINTS: Record<string, Record<string, string[]>> = {
+    library: { Library: ['Book:edge', 'Book:vertex', 'Library:vertex', 'LibraryItem:edge', 'Magazine:vertex', 'Member:vertex', 'Writer:vertex'] },
+    'families-persons': {
+        Families: ['Family:graphVertex', 'Member:edge', 'Member:edge', 'Member:edge', 'Member:edge', 'Member:vertex'],
+        Persons: ['Female:vertex', 'Male:vertex'],
+    },
+    'state-machine': { StateMachine: ['State:edge', 'State:graphVertex', 'State:vertex', 'State:vertex', 'State:vertex', 'StateMachine:vertex', 'Transition:edge', 'Transition:edge'] },
+    graph: { Graph: ['Edge:edge', 'Graph:vertex', 'Node:vertex'] },
+    shapes: { Shapes: ['Canvas:graphVertex', 'Circle:vertex', 'Square:vertex'] },
 };
 
 const publicUrl = (file: string) => new URL(`../../../public/${file}`, import.meta.url);
@@ -154,6 +167,35 @@ describe.each(GALLERY.map(e => [e.id, e] as const))('the project file of %s', (i
     });
 });
 
+describe.each(TEMPLATES.map(e => [e.id] as const))('the viewpoints of the template %s', (id) => {
+    /** The project's own viewpoints (not the built-in `Pointer_` ones), each with its views' `<metaclass>:<kind>`. */
+    async function own() {
+        const { json, store, lookup } = await readProject(id);
+        const vps = (lookup[json.id].viewpoints || []).map((v: string) => lookup[v]).filter((v: any) => v && !/^Pointer_/.test(v.id));
+        const views = (vp: any) => (store.viewelements || []).map((v: string) => lookup[v]).filter((v: any) => v?.viewpoint === vp.id && v.ir)
+            .map((v: any) => `${v.ir.metaclasses?.[0]}:${v.ir.kind}`).sort();
+        return { json, store, lookup, vps, views };
+    }
+
+    it('has one hand-written viewpoint per metamodel, named after it, with the expected view kinds (mutant: a viewpoint left Default, or derived)', async () => {
+        const { vps, views } = await own();
+        expect(Object.fromEntries(vps.map((v: any) => [v.name, views(v)]))).toEqual(VIEWPOINTS[id]);
+        for (const v of vps) {
+            expect(v._state?.derivedFrom, v.name).toBeUndefined();
+            expect(views(v).length, v.name).toBeGreaterThan(0);
+        }
+    });
+
+    it('opens on its first viewpoint: the record, the project and the root agree (mutant: the viewpoint built, not activated)', async () => {
+        const { json, store, lookup, vps } = await own();
+        const first = vps.find((v: any) => v.name === Object.keys(VIEWPOINTS[id])[0]);
+        expect(first).toBeDefined();
+        expect(json.activeViewpoint).toBe(first.id);
+        expect(lookup[json.id].activeViewpoint).toBe(first.id);
+        expect(store.viewpoint).toBe(first.id);
+    });
+});
+
 describe('the references of the sample models', () => {
     it('Library: every book has its author, two items are borrowed (mutant: the XMI references are not resolved)', async () => {
         const { lookup } = await readProject('library');
@@ -166,14 +208,16 @@ describe('the references of the sample models', () => {
         expect(borrowed.length).toBe(2);
     });
 
-    it('Graph: five edges, each with its source, six targets in all (mutant: a multi-valued target loses an entry)', async () => {
+    it('Graph: six edges, each with one source and one target (mutant: the fixture\'s two-target edge kept, which no arc can draw)', async () => {
         const { lookup } = await readProject('graph');
         const m = modelNamed(lookup, 'sample-Graph');
         const edges = objectsOfType(lookup, m.id, 'Edge');
-        expect(edges.length).toBe(5);
+        expect(edges.length).toBe(6);
         expect(objectsOfType(lookup, m.id, 'Node').length).toBe(4);
-        for (const e of edges) expect(valuesOf(lookup, e, 'source').length).toBe(1);
-        expect(edges.reduce((n, e) => n + valuesOf(lookup, e, 'target').length, 0)).toBe(6);
+        for (const e of edges) {
+            expect(valuesOf(lookup, e, 'source').length).toBe(1);
+            expect(valuesOf(lookup, e, 'target').length).toBe(1);
+        }
     });
 
     it('StateMachine: the deliberate Broken state is kept, with no kind (mutant: the fixture is made conformant)', async () => {
