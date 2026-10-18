@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1720
 Chat: C-2026-10-17-1530
 Front: maintenance
 Lane: fast (two files already reshaped by P-2026-10-18-1500; layout and copy only)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane register-compact · 1d17792d9 · verifica visiva chat da fare (dev server :3011) · verifica visiva chat OK 2026-10-18 (1440x900 register no scroll, legal links, no newsletter)
 Request: Alfonso, 2026-10-18 16:58, «è possibile ristrutturare la pagina di registrazione in modo che non si sviluppi in verticale e costringa allo scrolling?» and the Terms link that leads to a 404; 17:08 newsletter checkbox to be removed
 Depends: P-2026-10-18-1500 (merged, f73a2274c)
 Corregge: —
