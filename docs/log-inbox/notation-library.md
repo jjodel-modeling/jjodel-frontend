@@ -54,3 +54,16 @@ empties this file. The active log is not touched by this lane.
 **Ticket**: Leaving All Projects for another dashboard page resets the Redux `advanced` flag to false while `localStorage['jjodel.interfaceMode']` stays `advanced`, so the app-bar Basic|Advanced control (Navbar.tsx:2020 reads `props.advanced`) shows Basic. Measured 2026-10-18 (P-2026-10-18-1800), fresh context seeded advanced, `state.advanced` sampled every 2 s: true for 20 s on `#/allProjects`, false from the first sample after `#/explore` or `#/templates`, no page reload (`load` fired once), 4 of 4 runs. Explore is the untouched placeholder, so the Templates page is not the cause. The Navbar's restore effect runs once per mount and only on its first render.
 **Priority**: low
 **Found in**: P-2026-10-18-1800
+
+## 2026-10-18 — feat: derived viewpoints in the five gallery projects, S1b (P-2026-10-18-2150)
+**Prompt**: each gallery project gets derived viewpoints through createDerivedViewpoint in the build (statechart and Generic for StateMachine, Generic elsewhere, one per metamodel for Families and Persons), the first one active; test, Templates count line, clone probe with viewpoint screenshots
+**Files touched**: `2925b96d8` scripts/library/build-gallery.ts, public/library/gallery/*.jjodel (5), src/library/__tests__/gallery.test.ts, src/pages/Templates.tsx, scripts/probe/library-gallery-clone.ts. Closure: discovery report section, assets/library-gallery/ (6 new png, 3 retaken), this inbox, prompt Status
+**Outcome**: ❌ problems
+**Corregge**: 2026-10-18 18:00 (`claude_2026-10-18_1800_prompt_library_gallery.md`: its S1 step 2 said «add no viewpoint»)
+**Causa**: (f)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito — rejected at the chat's visual check, superseded by R-LIB-9 (P-2026-10-18-2300)
+**Notes**: Out of scope: the clone probe. Code commit 9 files (>5). Gates: typecheck 0, build 0, check:scripts 0, typecheck:scripts 0, gallery.test 42 (bench: old graph.jjodel, 3 red), build ALL GREEN, clone probe 76/76. Statechart prefill from signals, State=node, Transition=transition, fallback unused. Active viewpoint via activateViewpoint (project.activeViewpoint + root). Gap: Graph Generic draws Edge objects as compartment rows, not arcs. Details: report §«Gallery viewpoints S1b».
+**Prompt document name**: 2026-10-18 21:50

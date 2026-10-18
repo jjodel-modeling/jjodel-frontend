@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-2150
 Chat: C-2026-10-18-0110
 Front: notation-library
 Lane: full (more than 3 files: build script, five packages, test, Templates card)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane notation-library · 2925b96d8 · held without GO, superseded by R-LIB-9 (P-2026-10-18-2300)
 Request: Alfonso, 2026-10-18 21:49, «non ci sono i viewpoint, possiamo aggiungerli ?» while looking at the gallery on the S1+S2 branch
 Depends: P-2026-10-18-1800 (gallery S1+S2, branch `library-gallery`, closure 04b9d9a48)
 Corregge: P-2026-10-18-1800 (its S1 step 2 said «add no viewpoint»)

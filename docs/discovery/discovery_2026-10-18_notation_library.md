@@ -301,3 +301,38 @@ Found while checking, not fixed (ticket in the inbox): the app-bar Basic|Advance
 
 ### Decisions awaiting Alfonso
 None of the RC-26 list. The Templates page now shows the gallery (decision 3 of §0, already recommended yes).
+
+## Gallery viewpoints S1b (P-2026-10-18-2150)
+
+Tree `~/jjodel-w-gallery`, branch `library-gallery`, on `cc0b9af61`. Executor Claude Opus 5.5 (`claude-opus-5-5`), effort high. Code commit `2925b96d8`. Everything below is **measured** (probe logs under `~/.jjodel-lanes/P-2026-10-18-2150/`).
+
+### The derive path in the build
+- `build-gallery.ts`, after the M1 imports and before the editors open: for each row of `DERIVE`, a `page.evaluate` imports `utils/deriveViewpoint.ts` and `derive/notations.ts`, takes the dialog's table (`dialogPrefill` with `projectViewpointIds()`), checks `canDerive`, and calls `createDerivedViewpoint(metamodelId, { notation, classRoles })`. No IR is written by the build; `deriveViewpoint.ts`, `notations.ts` and the editors are untouched.
+- Derived (names by the existing `<metamodel> / <notation label>` rule): Library `Library / Generic`; Families and Persons `Families / Generic`, `Persons / Generic`; StateMachine `statemachine / State machine (UML statechart)` then `statemachine / Generic`; Graph `Graph / Generic`; Shapes `Shapes / Generic`. ALL GREEN, no page error.
+- **Statechart table.** `canDerive` accepts the prefill: `from: 'signals'` (the binder over names and structure, no stored binding), `State → node`, `Transition → transition`. Initial and final are values of the `StateKind` enum on `State.kind`, not classes, so no class takes those roles. The fallback the build declares (`State: node`, `Transition: transition`) was not used (`completed: false`).
+- **Active viewpoint.** The project format records one: `activateViewpoint(<first derived id>)` (`utils/lastViewpoint.ts`) writes `project.activeViewpoint` and the root `viewpoint`, both in the exported store; the top-level record carries `activeViewpoint` too. The project-wide active viewpoint is the first derived one: the statechart for StateMachine, `Families / Generic` for Families and Persons. The clone (text replacement of ids) keeps it: on open, the root `viewpoint` is the clone's copy of the first derived viewpoint, 5 of 5.
+
+### Test, card, probe
+- `gallery.test.ts`: 42 green (31 before; the «no viewpoint» test replaced by the expected names, plus `derivedFrom` = the metamodel's id and `derivedNotation` in each `_state` with `ir.generated.notation` on every view, the first one active in record, project and root, and the statechart table). Bench: the pre-S1b `graph.jjodel` restored gives 3 red (the three Graph viewpoint tests); restored.
+- Templates card: «N metamodels · N models · N viewpoints». The viewpoints counted are the record's `viewpoints` whose `_state.derivedFrom` is set in the package store (decompressed with `U.decompressState`), so only derived ones count. Measured: Library 1, Families and Persons 2, StateMachine 2, Graph 1, Shapes 1.
+- Clone probe (port 3098, 1440×900, light): 76 checks, ALL GREEN, no page error. Added: the derived viewpoints equal the file's, the clone opens on the first, the card's count line; per model, the toolbar's viewpoint picker (`.toolbar-viewpoint-trigger`, then the option by name) switches to the derived viewpoint of its metamodel, the trigger reads its name and nodes render; screenshots `assets/library-gallery/viewpoint-<id>.png` (Persons as `viewpoint-familiesPersons-Persons.png`), `templates-page.png` and `templates-modal.png` retaken.
+- Nodes under the derived viewpoint (objects in brackets): Library 5 (9), Families 2 (11), Persons 9 (9), StateMachine 7 (10), Graph 5 (10), Shapes 1 (4). Generic draws a contained object as a row of its container's compartment, so the default editor's «one node per object» no longer holds; the probe checks `nodes > 0` and records the counts.
+
+### Observed, not changed (derive code out of scope)
+1. **Graph, «edges as edges» not met.** `Graph / Generic` draws the five `Edge` objects as rows of `Graph_0`'s compartment; the arcs drawn are the `nodes` containment from Graph to the four Nodes. Drawing `Edge` as an arc needs a role notation (e.g. a statechart with `Node = node`, `Edge = transition`); `Edge.target` is multi-valued.
+2. **Families rows.** The compartment rows of the two Family nodes read `Member_0`, `Member_1`, not the members' names: the row label of the Generic derivation for a class without a `name` attribute.
+3. **StateMachine layout.** The `Heater` container is drawn as a node with arcs to its states; at 1440×900 the `Broken` state sits under the minimap.
+4. `cloned-familiesPersons.png` is not retaken: the probe step that took it (the default editor) is replaced by the viewpoint screenshots. The file stays as S2 left it.
+
+### Decisions taken (unattended)
+1. Active viewpoint set with `activateViewpoint` before the editors open, so the exported layout is the active viewpoint's.
+2. Families and Persons: the project-wide active viewpoint is `Families / Generic` (first metamodel); the probe switches Persons by the picker.
+3. StateMachine: statechart derived first (active), Generic second.
+4. Graph stays on `generic`, as the prompt names it, with the gap of observation 1 recorded rather than closed by a second notation.
+5. The card counts derived viewpoints from the package store, not from the record's `viewpoints` length.
+6. The clone probe (`scripts/probe/library-gallery-clone.ts`, outside the DOVE list) is extended in the code commit; its «one node per object» check is replaced as above.
+7. Code commit of 9 files (> 5, rule 19), as the prompt's DOVE list plus the probe.
+8. Commit subject «…, S1b (P-2026-10-18-2150)»: the hook counts the suffix only in the ` (P-…)` form.
+
+### Decisions awaiting Alfonso
+None of the RC-26 list. Observation 1 (Graph edges as arcs) is a design choice for a later slice: a role notation on Graph, or a Generic that draws reference-holding classes as arcs.
