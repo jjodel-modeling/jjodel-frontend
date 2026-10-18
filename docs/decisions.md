@@ -6130,6 +6130,44 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   `docs/discovery/discovery_2026-10-11_release_3_1_scope.md` (D1, D3, D4), the lanes that carried it out
   (P-2026-10-12-0010 staging absorbed, P-2026-10-12-0012 the build flag) and the version commit (P-2026-10-12-0115).
 
+## R-LIB — the notation library and the project gallery (decisions 2026-10-18)
+
+Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked specs
+`docs/spec/parcheggiate/spec_parcheggiata_templates_featured_projects.md` and
+`spec_parcheggiata_templates_explore.md`, and `docs/library/catalog.json`.
+
+- **R-LIB-1** (2026-10-18, ratified by Alfonso 2026-10-18, evidence: read, verified: none, reversible: trunk).
+  **Jjodel shares two different things.** A *sealed notation* (case 1) is a complete language (ERD, UML class
+  diagram, statechart, BPMN, ...) that the user only models with: model editor, concrete syntax and, when ready,
+  code generation; its metamodel, viewpoints, validation, simulation profile and templates are never opened or
+  edited. A *gallery project* (case 2) is a project the user clones into the workspace and then owns entirely; the
+  original is never modified. Deriving a concrete syntax for one's own metamodel with Jjodie («Derive viewpoint») is
+  a third, independent thing and is not part of the library.
+- **R-LIB-2** (2026-10-18, ratified by Alfonso 2026-10-18, evidence: read, verified: none, reversible: trunk).
+  **A sealed notation enters a project as a sealed copy whose components are present but hidden, as the default
+  syntax is.** The project stays self-contained (export works as today) and carries the notation's id and version
+  as provenance; updating to a newer version is an explicit action with its migration. Built-in notations evolve
+  additively. The seal is enforced on the write path to M2 (editor, JjScript, Jjodie, JjTL, import), not only in the
+  UI: in a sealed project Jjodie helps at M1 and refuses at M2. The seal is a product guarantee, not a security one.
+- **R-LIB-3** (2026-10-18, ratified by Alfonso 2026-10-18, evidence: read, verified: none, reversible: trunk).
+  **No exit from case 1 to case 2:** a sealed notation is never unlocked into an editable project. Publishing to
+  the gallery by people other than the Jjodel team (a teacher for a course) is deferred; the publisher is an
+  attribute of each entry, today always `jjodel`.
+- **R-LIB-4** (2026-10-18, ratified by Alfonso 2026-10-18, evidence: read, verified: none, reversible: trunk).
+  **The first sealed notations:** State machine (UML statechart), Petri net, Flowchart (ISO 5807), Activity (UML),
+  BPMN, ER (Chen), UML class diagram, Mind map, Goal model, Conceptual model; CDN later. Each needs a canonical
+  metamodel written for it: today the repo has derived notations and symbol presets, no sealed package. Open: which
+  goal language and which conceptual-modeling notation, and the expansion of CDN.
+- **R-LIB-5** (2026-10-18, ratified by Alfonso 2026-10-18, evidence: read, verified: none, reversible: trunk).
+  **The first gallery projects are the classic Ecore examples:** Library, Families and Persons, StateMachine,
+  Graph, Shapes, built from the XMI/Ecore fixtures. The MODELS demo scenes, the codegen examples and the graphVertex
+  benchmarks are not in the gallery for now.
+- **R-LIB-6** (2026-10-18, ratified by Alfonso 2026-10-18, evidence: read, verified: none, reversible: trunk).
+  **What is shared is decided in `docs/library/catalog.json`, committed to the trunk, until an administration
+  service replaces it with the same schema.** Curating is a commit. Amends, until that service exists, the parked
+  specs' server-side `featured` flag and `curator` role; their clone semantics (deep copy, new ids, passive
+  `_clonedFrom`) and read-only opening stand for case 2.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
