@@ -6176,6 +6176,17 @@ Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked
   row. Evidence: `docs/discovery/discovery_2026-10-18_notation_library.md` §«Gallery S1+S2» (gallery test 31,
   clone probe 55/55, the chat's visual check).
 
+- **R-LIB-8** (2026-10-18, ratified by Alfonso 2026-10-18 «ok via libera», evidence: read, verified: none, reversible: trunk).
+  **Critical-zone go-ahead for slice S6: the seal guard in the `CompositeActionReducer` loop of
+  `redux/reducer/reducer.ts`, in two steps.** First a report-only mode that refuses nothing and records every action
+  it would refuse, run on a sealed project through the full M1 scenario (create, link, move, resize, simulate,
+  generate) until it records zero; then an enforcing mode, proved by a battery (JjScript create/set/delete on M2,
+  proxy set, Jodie, collaboration replay, undo, redo) that leaves the structural hash of the sealed M2 unchanged.
+  The guard asks the S3 predicate (`model/librarySeal.ts`) and allowlists the bookkeeping fields M1 work writes on
+  M2. `LoadAction` stays outside the guard and undo/redo get no check of their own (discovery §3.3). A project with
+  no seal behaves exactly as before. Each step carries a Layer Impact Report (CLAUDE.md §3.2) in `docs/lir/`. The
+  work runs on a branch now; it reaches the trunk after the 3.2 release (R-LIB-7 keeps S6 out of 3.2).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
