@@ -103,3 +103,20 @@ None from the RC-26 list.
 - `npm run typecheck` exit 0; `npm run build` exit 0, only the chunk-size warning. Tests not re-run: the fix changes three text nodes and one CSS value, and no test touches the page (H4).
 - Headless probe, same 12 states, port 3010: no horizontal scroll, 0 page errors. Two-column states, card top = intro top: 1440 login 171/171, register 120/120, retrieve 171/171; 1280 login, register, retrieve 120/120. One-column states unchanged (card first at y=96). Submit labels read «Sign in» / «Create account» / «Send reset link» in all four sizes.
 - Dev server still on 3010.
+
+### Wide-screen follow-up after merge `60db4fad7` (2026-10-18)
+
+- Reported by Alfonso on a 27-inch display and a MacBook Air: intro on the left edge, card on the right edge, large empty gap. Cause: the spec fixed 80px side padding and no max width.
+- Fix commit `7af2695b3`, same two files. One container `.auth-page__container` (max-width 1200px + 80px side padding, 20px below 640px, `margin: 0 auto`) wraps the header contents (`.auth-page__header-inner`), the main grid (`.auth-page__grid`) and the footer contents (`.auth-page__footer-inner`); header border and footer gradient stay full-bleed. Grid `minmax(0, 1fr) 420px`, column gap 96px, intro `max-width: 640px`. Below 1100px the grid keeps its 560px content width (720px with padding, 600px below 640px), card first. New names grepped against `frontend/src` before use: all under the `auth-page__` prefix, which had no match outside this page in Phase 1.
+- `npm run typecheck` exit 0; `npm run build` exit 0, only the chunk-size warning.
+- Headless probe, port 3010, login and register views; x in CSS px of the viewport (same values in both views):
+
+| Viewport | logo x | intro x (width) | card x → right edge | gap intro→card | switch right | footer logos x | Terms/version right | intro top = card top |
+|---|---|---|---|---|---|---|---|---|
+| 1440×900 | 120 | 120 (640) | 900 → 1320 | 140 | 1320 | 120 | 1320 | 171 = 171 login, 120 = 120 register |
+| 1920×1080 | 360 | 360 (640) | 1140 → 1560 | 140 | 1560 | 360 | 1560 | 261 = 261, 120 = 120 |
+| 2560×1440 | 680 | 680 (640) | 1460 → 1880 | 140 | 1880 | 680 | 1880 | 441 = 441, 198 = 198 |
+| 390×844 | 20 | 20 (350) | 20 → 370 | — (one column) | 370 | 20 | 370 | card 96, intro 555 login / 1240 register |
+
+- Header and footer are full viewport width at every size; no horizontal scroll; 0 page errors. The 390 values match the previous round exactly (card y=96, intro y=555 / 1240). The gap is 140 rather than 96 because the intro stops at 640px: 1200 − 640 − 420 = 140, with 96 as the floor when the content box narrows.
+- Dev server still on 3010.
