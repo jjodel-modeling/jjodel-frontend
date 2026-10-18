@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-    CATALOG_TTL_MS, capabilitiesFor, catalogStorageKey, claudeFamily, fetchAnthropicCatalog, hashKey,
+    CATALOG_TTL_MS, capabilitiesFor, catalogStorageKey, claudeFamily, fetchAnthropicCatalog, fetchCatalog, geminiFamilyRank, hashKey,
+    openaiFamily, parseGeminiModels, parseOpenAIModels,
     needsRefresh, newestPerFamily, orderCatalog, parseAnthropicModels, splitModelList, writeCatalogCache,
 } from '../aiModelCatalog';
 
@@ -258,5 +259,128 @@ describe('Settings: which failed test disables the provider', () => {
         expect(d({ success: false, failure: 'network' })).toBe(false);
         expect(d({ success: false, failure: 'server' })).toBe(false);
         expect(d({ success: true, warning: 'x' })).toBe(false);
+    });
+});
+
+/** Shape of OpenAI `GET /v1/models` (documented; not a recorded response). created in seconds. */
+const OPENAI_LIST = { object: 'list', data: [
+    { id: 'gpt-5',                    object: 'model', created: 1754500000, owned_by: 'system' },
+    { id: 'gpt-5-2025-08-07',         object: 'model', created: 1754500001, owned_by: 'system' },
+    { id: 'gpt-5-mini',               object: 'model', created: 1754500000, owned_by: 'system' },
+    { id: 'gpt-4.1',                  object: 'model', created: 1744300000, owned_by: 'system' },
+    { id: 'gpt-4o',                   object: 'model', created: 1715300000, owned_by: 'system' },
+    { id: 'gpt-4o-mini',              object: 'model', created: 1721100000, owned_by: 'system' },
+    { id: 'o3',                       object: 'model', created: 1744800000, owned_by: 'system' },
+    { id: 'o4-mini',                  object: 'model', created: 1744800000, owned_by: 'system' },
+    { id: 'o3-mini',                  object: 'model', created: 1738000000, owned_by: 'system' },
+    { id: 'gpt-5-pro',                object: 'model', created: 1759000000, owned_by: 'system' },
+    { id: 'gpt-5-codex',              object: 'model', created: 1758000000, owned_by: 'system' },
+    { id: 'gpt-4o-audio-preview',     object: 'model', created: 1727000000, owned_by: 'system' },
+    { id: 'gpt-image-1',              object: 'model', created: 1745000000, owned_by: 'system' },
+    { id: 'text-embedding-3-large',   object: 'model', created: 1705000000, owned_by: 'system' },
+    { id: 'whisper-1',                object: 'model', created: 1677000000, owned_by: 'system' },
+    { id: 'o4-mini-deep-research',    object: 'model', created: 1750000000, owned_by: 'system' },
+] };
+
+/** Shape of Gemini `GET /v1beta/models` (documented; not a recorded response). */
+const gm = (id: string, methods = ['generateContent', 'countTokens'], inputTokenLimit = 1_048_576) =>
+    ({ name: `models/${id}`, displayName: id.replace('gemini-', 'Gemini '), inputTokenLimit, supportedGenerationMethods: methods });
+const GEMINI_LIST = { models: [
+    gm('gemini-2.5-pro'), gm('gemini-2.5-flash'), gm('gemini-2.5-flash-lite'),
+    gm('gemini-2.0-flash'), gm('gemini-2.0-flash-001'), gm('gemini-2.0-flash-lite'),
+    gm('gemini-3-pro-preview'), gm('gemini-flash-latest'),
+    gm('gemini-2.5-flash-preview-tts'), gm('gemini-2.0-flash-live-001'), gm('gemini-2.5-flash-image'),
+    gm('gemini-embedding-001', ['embedContent']), gm('gemma-3-27b-it'), gm('imagen-4.0-generate-001', ['predict']),
+] };
+
+describe('(d) OpenAI rule', () => {
+    it('groups by line and tier; snapshots join their alias', () => {
+        expect(openaiFamily('gpt-5')).toBe('gpt:base');
+        expect(openaiFamily('gpt-4.1')).toBe('gpt:base');
+        expect(openaiFamily('gpt-5-mini')).toBe('gpt:mini');
+        expect(openaiFamily('gpt-5-2025-08-07')).toBe('gpt:base');
+        expect(openaiFamily('o4-mini')).toBe('o:mini');
+        expect(openaiFamily('o3')).toBe('o:base');
+        expect(openaiFamily('chatgpt-4o-latest')).toBe('chatgpt:base');
+    });
+
+    it('keeps chat models only and heads each family with its newest alias, never a snapshot', () => {
+        const models = orderCatalog(parseOpenAIModels(OPENAI_LIST));
+        const ids = models.map(m => m.id);
+        for (const gone of ['gpt-5-pro', 'gpt-5-codex', 'gpt-4o-audio-preview', 'gpt-image-1', 'text-embedding-3-large', 'whisper-1', 'o4-mini-deep-research']) {
+            expect(ids).not.toContain(gone);
+        }
+        expect([...newestPerFamily(models)].sort()).toEqual(['gpt-5', 'gpt-5-mini', 'o3', 'o4-mini']);
+        expect(ids[0]).toBe('gpt-5');
+        expect(ids[ids.length - 1]).toBe('gpt-5-2025-08-07');
+    });
+});
+
+describe('(d) Gemini rule', () => {
+    it('reads family and rank from the id: version, then stable over preview over pin over alias', () => {
+        expect(geminiFamilyRank('gemini-2.5-flash-lite').family).toBe('flash-lite');
+        expect(geminiFamilyRank('gemini-3-pro-preview')).toEqual({ family: 'pro', rank: 302 });
+        expect(geminiFamilyRank('gemini-2.0-flash-001')).toEqual({ family: 'flash', rank: 201 });
+        expect(geminiFamilyRank('gemini-2.0-flash').rank).toBeGreaterThan(geminiFamilyRank('gemini-2.0-flash-001').rank);
+        expect(geminiFamilyRank('gemini-flash-latest')).toEqual({ family: 'flash', rank: 0 });
+    });
+
+    it('keeps gemini- generateContent models, takes the context window, heads each family with the newest', () => {
+        const models = orderCatalog(parseGeminiModels(GEMINI_LIST));
+        const ids = models.map(m => m.id);
+        for (const gone of ['gemini-2.5-flash-preview-tts', 'gemini-2.0-flash-live-001', 'gemini-2.5-flash-image', 'gemini-embedding-001', 'gemma-3-27b-it', 'imagen-4.0-generate-001']) {
+            expect(ids).not.toContain(gone);
+        }
+        expect([...newestPerFamily(models)].sort()).toEqual(['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3-pro-preview']);
+        expect(models.find(m => m.id === 'gemini-2.5-pro')).toMatchObject({ label: 'Gemini 2.5-pro', contextWindow: 1_048_576 });
+    });
+});
+
+describe('(d) fetchCatalog for OpenAI and Gemini', () => {
+    it('OpenAI: direct with a bearer key, no Worker route, so a network failure stays network', async () => {
+        const f = vi.fn().mockResolvedValueOnce(ok(OPENAI_LIST));
+        expect(await fetchCatalog('GPT', 'sk-k', 'https://proxy.example', f)).toMatchObject({ ok: true, via: 'direct' });
+        expect(f.mock.calls[0][0]).toBe('https://api.openai.com/v1/models');
+        expect(f.mock.calls[0][1].headers).toEqual({ Authorization: 'Bearer sk-k' });
+        const g = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+        expect(await fetchCatalog('GPT', 'sk-k', 'https://proxy.example', g)).toMatchObject({ ok: false, failure: 'network' });
+        expect(g).toHaveBeenCalledTimes(1);
+    });
+
+    it('Gemini: follows nextPageToken, falls back to the Worker route on a rejected fetch', async () => {
+        const f = vi.fn()
+            .mockResolvedValueOnce(ok({ models: GEMINI_LIST.models.slice(0, 3), nextPageToken: 'p2' }))
+            .mockResolvedValueOnce(ok({ models: GEMINI_LIST.models.slice(3) }));
+        const r = await fetchCatalog('Gemini', 'AIza-k', 'https://proxy.example', f);
+        expect(r.ok && r.models.length).toBe(8);
+        expect(f.mock.calls[1][0]).toBe('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&pageToken=p2');
+        const g = vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce(ok(GEMINI_LIST));
+        expect(await fetchCatalog('Gemini', 'AIza-k', 'https://proxy.example', g)).toMatchObject({ ok: true, via: 'proxy' });
+        expect(g.mock.calls[1][0]).toBe('https://proxy.example/v1/gemini/models?pageSize=1000');
+        expect(g.mock.calls[1][1].headers).toEqual({ 'x-goog-api-key': 'AIza-k' });
+    });
+
+    it('Gemini: 400 API_KEY_INVALID is a rejected key; another 400 is not', async () => {
+        const f = vi.fn().mockResolvedValueOnce(fail(400, 'API key not valid. Please pass a valid API key.'));
+        expect(await fetchCatalog('Gemini', 'AIza-k', 'https://proxy.example', f)).toMatchObject({ ok: false, failure: 'auth' });
+        const g = vi.fn().mockResolvedValueOnce(fail(400, 'Invalid pageSize'));
+        expect(await fetchCatalog('Gemini', 'AIza-k', 'https://proxy.example', g)).toMatchObject({ ok: false, failure: 'other' });
+    });
+});
+
+describe('(d) testConnection for GPT lists the models', () => {
+    it('passes on a list and makes the GPT registry live; refuses a key without sk- before any call', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ok(OPENAI_LIST)));
+        storage.set('jjodie_provider_gpt', JSON.stringify({ name: 'GPT', apiKey: 'sk-a', model: 'gpt-5', enabled: true }));
+        const { AI, hasLiveCatalog } = await import('../../types/jodie');
+        const { AIProviderService } = await import('../AIProviderService');
+        expect(await AIProviderService.testConnection('GPT')).toEqual({ success: true });
+        expect(vi.mocked(fetch).mock.calls[0][0]).toBe('https://api.openai.com/v1/models');
+        expect(hasLiveCatalog('GPT')).toBe(true);
+        expect(Object.keys(AI.GPT.versions)[0]).toBe('gpt-5');
+        storage.set('jjodie_provider_gpt', JSON.stringify({ name: 'GPT', apiKey: 'xx-a', model: 'gpt-5', enabled: true }));
+        vi.mocked(fetch).mockClear();
+        expect(await AIProviderService.testConnection('GPT')).toMatchObject({ success: false, failure: 'auth' });
+        expect(fetch).not.toHaveBeenCalled();
     });
 });

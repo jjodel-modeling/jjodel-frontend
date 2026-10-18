@@ -123,7 +123,8 @@ export function resolveLegacyModelId(provider: TAIProvider, modelId: string | un
 }
 
 /**
- * Providers whose registry lists every model their endpoint still serves (#179). For them a
+ * Providers whose static registry lists every model their endpoint still serves (#179); retirement
+ * stops once a live catalog exists (hasLiveCatalog). For them a
  * deprecated entry, or an id no longer in the list, is a retired model: Google answers 404 for
  * `gemini-2.0-flash-exp`, the default that every Gemini configuration saved before 2026-08-05
  * still carries. The other providers keep unlisted ids (user-pulled Ollama tags, Custom
@@ -138,7 +139,8 @@ const RETIRING_PROVIDERS: TAIProvider[] = ['Gemini'];
  */
 export function resolveCurrentModelId(provider: TAIProvider, modelId: string | undefined): string | undefined {
     const id = resolveLegacyModelId(provider, modelId);
-    if (!id || !RETIRING_PROVIDERS.includes(provider)) return id;
+    // A live catalog lists what the key can use: a missing model is flagged and kept, never swapped.
+    if (!id || !RETIRING_PROVIDERS.includes(provider) || hasLiveCatalog(provider)) return id;
     const versions = AI[provider]?.versions ?? {};
     if (versions[id] && !versions[id].deprecated) return id;
     return Object.keys(versions).find(k => !versions[k].deprecated) ?? id;

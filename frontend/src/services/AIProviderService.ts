@@ -5,7 +5,7 @@
 
 import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveCurrentModelId, isForeignModel, getAICompany, applyModelCatalog, getProxyBase} from '../types/jodie';
 import {AIEvents} from '../events/registry';
-import {CATALOG_PROVIDERS, fetchAnthropicCatalog, needsRefresh, writeCatalogCache} from './aiModelCatalog';
+import {CATALOG_PROVIDERS, fetchCatalog, needsRefresh, writeCatalogCache} from './aiModelCatalog';
 import type {CatalogFailure, CatalogFetchResult, CatalogProvider} from './aiModelCatalog';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
@@ -731,10 +731,10 @@ export class AIProviderService {
                 case AIProvider.Gemini:
                     return await this.testGemini(config.apiKey, model);
                 case AIProvider.GPT:
-                    return await this.testOpenAICompatible(AI.GPT.getEndpoint(), AI.GPT.authScheme, config.apiKey, model, { max_tokens: 10 }, {
-                        expectedKeyPrefix: 'sk-',
-                        invalidKeyHint: 'Invalid API key. Please check your key in the OpenAI Dashboard.',
-                    });
+                    if (!config.apiKey.startsWith('sk-')) {
+                        return { success: false, failure: 'auth', error: 'Invalid API key format. Keys should start with "sk-"' };
+                    }
+                    return await this.testWithCatalog(AIProvider.GPT, 'OpenAI', 'api.openai.com', config.apiKey, model);
                 case AIProvider.DeepSeek:
                     return await this.testOpenAICompatible(AI.DeepSeek.getEndpoint(), AI.DeepSeek.authScheme, config.apiKey, model, { max_tokens: 10 });
                 case AIProvider.Mistral:
@@ -790,10 +790,18 @@ export class AIProviderService {
             };
         }
 
-        const result = await this.loadCatalog(AIProvider.Claude, apiKey);
-        if (!result.ok) return { success: false, failure: result.failure, error: this.catalogErrorMessage('Anthropic', 'api.anthropic.com', result) };
+        return this.testWithCatalog(AIProvider.Claude, 'Anthropic', 'api.anthropic.com', apiKey, model);
+    }
+
+    /**
+     * Connection test by catalog: list the key's models (no fixed model id), refresh the live
+     * catalog on success, and warn, never swap, when the selected model is not in the list.
+     */
+    private static async testWithCatalog(provider: CatalogProvider, company: string, host: string, apiKey: string, model: string): Promise<ConnectionTestResult> {
+        const result = await this.loadCatalog(provider, apiKey);
+        if (!result.ok) return { success: false, failure: result.failure, error: this.catalogErrorMessage(company, host, result) };
         if (model && !result.models.some(m => m.id === model)) {
-            return { success: true, warning: `Key OK, but the selected model "${model}" is not offered to this key. Pick another Claude model.` };
+            return { success: true, warning: `Key OK, but the selected model "${model}" is not offered to this key. Pick another ${provider} model.` };
         }
         return { success: true };
     }
@@ -810,7 +818,7 @@ export class AIProviderService {
         const pending = this.inFlight[provider];
         if (pending) return pending;
         const run = (async (): Promise<CatalogFetchResult> => {
-            const result = await fetchAnthropicCatalog(apiKey, getProxyBase());
+            const result = await fetchCatalog(provider, apiKey, getProxyBase());
             if (result.ok && result.models.length) {
                 writeCatalogCache(provider, apiKey, result.models);
                 applyModelCatalog(provider, result.models);
@@ -850,6 +858,7 @@ export class AIProviderService {
     private static catalogErrorMessage(company: string, host: string, result: Extract<CatalogFetchResult, { ok: false }>): string {
         switch (result.failure) {
             case 'auth':
+                if (company === 'Google') return 'Invalid API key or key not allowed. Check your key in Google AI Studio.';
                 return result.status === 403
                     ? `This key is not allowed to list models (403). Check its permissions in the ${company} Console.`
                     : `Invalid API key. Please check your key in the ${company} Console.`;
@@ -861,53 +870,11 @@ export class AIProviderService {
     }
 
     /**
-     * Test Gemini API connection (via proxy)
+     * Test Gemini API connection: list the key's models (`GET /v1beta/models`, key in the
+     * x-goog-api-key header), with the Worker route as fallback on a network or CORS failure.
      */
-    private static async testGemini(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            // Use proxy endpoint to avoid CORS issues
-            const proxyUrl = `${AI.Gemini.getEndpoint()}/${model}:generateContent?key=${apiKey}`;
-            const response = await fetch(proxyUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: 'Hi' }] }],
-                    generationConfig: { maxOutputTokens: 10 },
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMsg = `API Error (${response.status})`;
-
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
-                } catch {
-                    errorMsg += `: ${errorText.substring(0, 150)}`;
-                }
-
-                if (response.status === 400 || response.status === 403) {
-                    errorMsg = 'Invalid API key or model. Check your key in Google AI Studio.';
-                } else if (response.status === 404) {
-                    // The key passed; the model did not (#179). Name it instead of the API's JSON.
-                    errorMsg = `Gemini does not serve the model "${model}". Pick another Gemini model in Jodie's model menu and test again.`;
-                }
-
-                return { success: false, error: errorMsg };
-            }
-
-            await response.json();
-            return { success: true };
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            if (errorMessage.includes('Failed to fetch')) {
-                return { success: false, error: 'Network error. The proxy service may be unavailable.' };
-            }
-            return { success: false, error: `Connection error: ${errorMessage}` };
-        }
+    private static async testGemini(apiKey: string, model: string): Promise<ConnectionTestResult> {
+        return this.testWithCatalog(AIProvider.Gemini, 'Google', 'generativelanguage.googleapis.com', apiKey, model);
     }
 
     /**

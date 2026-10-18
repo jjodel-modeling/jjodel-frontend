@@ -15,15 +15,18 @@
  */
 
 /** Providers with a live catalog. */
-export type CatalogProvider = 'Claude';
-export const CATALOG_PROVIDERS: CatalogProvider[] = ['Claude'];
+export type CatalogProvider = 'Claude' | 'GPT' | 'Gemini';
+export const CATALOG_PROVIDERS: CatalogProvider[] = ['Claude', 'GPT', 'Gemini'];
 
 export interface CatalogModel {
     id: string;
     label: string;
-    /** Grouping key within the provider, e.g. 'opus', 'sonnet', 'haiku'. */
+    /** Grouping key within the provider, e.g. 'opus', 'sonnet', 'haiku'; 'gpt:mini'; 'flash-lite'. */
     family: string;
-    /** Ordering within a family, higher is newer (Anthropic: created_at in ms). */
+    /**
+     * Ordering within a family, higher is newer. Anthropic: created_at in ms. OpenAI: created in ms,
+     * a dated snapshot pushed below every alias. Gemini (no date in the API): version and stability.
+     */
     rank: number;
     contextWindow?: number;
 }
@@ -161,6 +164,42 @@ export function splitModelList<T extends PickerEntry>(entries: T[], isLive: bool
     return { main, older: live.filter(e => !main.includes(e)) };
 }
 
+/**
+ * OpenAI family: `line:tier`. line = gpt | chatgpt | o (o1, o3, o4...); tier = the trailing
+ * mini | nano token, else base. A dated snapshot (`-YYYY-MM-DD`) is grouped with its alias.
+ * `gpt-5` and `gpt-4.1` are both gpt:base; `gpt-5-mini` is gpt:mini; `o4-mini` is o:mini.
+ */
+export function openaiFamily(id: string): string {
+    const base = id.replace(/-\d{4}-\d{2}-\d{2}$/, '');
+    const line = base.startsWith('chatgpt-') ? 'chatgpt' : /^o\d/.test(base) ? 'o' : 'gpt';
+    const last = base.split('-').pop() ?? '';
+    const tier = last === 'mini' || last === 'nano' ? last : 'base';
+    return `${line}:${tier}`;
+}
+
+const OPENAI_SNAPSHOT = /-\d{4}-\d{2}-\d{2}$/;
+/** Models the chat-completions path cannot use (audio, image, search, Responses-only...): data, not code. */
+const OPENAI_DENY = /audio|realtime|transcribe|tts|image|search|embedding|moderation|instruct|whisper|dall-e|codex|deep-research|-pro(-|$)/;
+
+/**
+ * Gemini family and rank from the id, since the API gives no date:
+ * `gemini-<ver>-<tier>[-preview…|-exp…|-NNN|-latest]` → family = tier ('pro', 'flash', 'flash-lite').
+ * Rank = version, then stable (3) over preview/exp (2) over a -NNN pin (1) over an alias (0).
+ * An id with no version (`gemini-flash-latest`) ranks below every versioned one.
+ */
+export function geminiFamilyRank(id: string): { family: string; rank: number } {
+    const m = /^gemini-(\d+(?:\.\d+)?)-(.+)$/.exec(id);
+    const ver = m ? parseFloat(m[1]) : 0;
+    let rest = m ? m[2] : id.replace(/^gemini-/, '');
+    let stability = 3;
+    if (/-latest$/.test(rest)) { rest = rest.replace(/-latest$/, ''); stability = 0; }
+    else if (/-(preview|exp)(-.*)?$/.test(rest)) { rest = rest.replace(/-(preview|exp)(-.*)?$/, ''); stability = 2; }
+    else if (/-\d{3}$/.test(rest)) { rest = rest.replace(/-\d{3}$/, ''); stability = 1; }
+    return { family: rest || 'other', rank: ver * 100 + stability };
+}
+
+const GEMINI_DENY = /embedding|aqa|imagen|veo|tts|image|live|audio|robotics|computer-use/;
+
 // ── Response parsing ────────────────────────────────────────────────────────
 
 /** Anthropic `GET /v1/models` page: `{data:[{type, id, display_name, created_at}], has_more, last_id}`. */
@@ -176,12 +215,45 @@ export function parseAnthropicModels(json: any): CatalogModel[] {
         }));
 }
 
+/** OpenAI `GET /v1/models`: `{object:'list', data:[{id, object, created, owned_by}]}`, unpaginated. */
+export function parseOpenAIModels(json: any): CatalogModel[] {
+    const data: any[] = Array.isArray(json?.data) ? json.data : [];
+    return data
+        .filter(m => typeof m?.id === 'string' && /^(gpt-|chatgpt-|o\d)/.test(m.id) && !OPENAI_DENY.test(m.id))
+        .map(m => {
+            const created = (typeof m.created === 'number' ? m.created : 0) * 1000;
+            return { id: m.id, label: m.id, family: openaiFamily(m.id), rank: OPENAI_SNAPSHOT.test(m.id) ? created - 1e13 : created };
+        });
+}
+
+/**
+ * Gemini `GET /v1beta/models`: `{models:[{name:'models/<id>', displayName, inputTokenLimit,
+ * supportedGenerationMethods}], nextPageToken}`. Only `gemini-` models that generate content.
+ */
+export function parseGeminiModels(json: any): CatalogModel[] {
+    const models: any[] = Array.isArray(json?.models) ? json.models : [];
+    return models
+        .filter(m => typeof m?.name === 'string' && Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+        .map(m => ({ ...m, id: m.name.replace(/^models\//, '') }))
+        .filter(m => m.id.startsWith('gemini-') && !GEMINI_DENY.test(m.id))
+        .map(m => ({
+            id: m.id,
+            label: typeof m.displayName === 'string' && m.displayName ? m.displayName : m.id,
+            ...geminiFamilyRank(m.id),
+            ...(typeof m.inputTokenLimit === 'number' ? { contextWindow: m.inputTokenLimit } : {}),
+        }));
+}
+
 // ── Capabilities ────────────────────────────────────────────────────────────
 
 /** What the `models` endpoints do not report. Longest matching prefix wins. */
 const CAPABILITY_TABLE: { prefix: string; pdf: boolean; vision: boolean; contextWindow?: number }[] = [
     { prefix: 'claude-',          pdf: true,  vision: true,  contextWindow: 200_000 },
     { prefix: 'claude-3-haiku',   pdf: false, vision: true,  contextWindow: 200_000 },
+    { prefix: 'gpt-4o',           pdf: true,  vision: true  },
+    { prefix: 'gpt-4.1',          pdf: true,  vision: true  },
+    { prefix: 'gpt-5',            pdf: true,  vision: true  },
+    { prefix: 'gemini-',          pdf: true,  vision: true  },
 ];
 
 /** Conservative default: an unknown model loses attachments, it is never sent a PDF it rejects. */
@@ -195,8 +267,10 @@ export function capabilitiesFor(id: string): { pdf: boolean; vision: boolean; co
 
 // ── Fetch ───────────────────────────────────────────────────────────────────
 
-function failureFromStatus(status: number): CatalogFailure {
+function failureFromStatus(status: number, message: string = ''): CatalogFailure {
     if (status === 401 || status === 403) return 'auth';
+    // Gemini answers a bad key with 400 API_KEY_INVALID («API key not valid»).
+    if (status === 400 && /api[ _]?key/i.test(message)) return 'auth';
     if (status === 429) return 'rate';
     if (status >= 500) return 'server';
     return 'other';
@@ -216,43 +290,85 @@ async function errorMessage(response: Response): Promise<string> {
     }
 }
 
-const ANTHROPIC_MODELS_URL = 'https://api.anthropic.com/v1/models';
+interface CatalogSource {
+    /** Direct endpoint, and the Worker route under the proxy base (none for OpenAI). */
+    directUrl: string;
+    proxyPath?: string;
+    headers: (apiKey: string, direct: boolean) => Record<string, string>;
+    /** Query params of the first page, and of the page after `json` (null when it is the last). */
+    firstPage: Record<string, string>;
+    nextPage: (json: any) => Record<string, string> | null;
+    parse: (json: any) => CatalogModel[];
+}
+
+const SOURCES: Record<CatalogProvider, CatalogSource> = {
+    Claude: {
+        directUrl: 'https://api.anthropic.com/v1/models',
+        proxyPath: '/v1/anthropic/models',
+        // The browser-access header only on the direct call: the Worker does not allow it.
+        headers: (apiKey, direct) => ({ 'x-api-key': apiKey, 'anthropic-version': '2023-06-01',
+            ...(direct ? { 'anthropic-dangerous-direct-browser-access': 'true' } : {}) }),
+        firstPage: { limit: '1000' },
+        nextPage: json => (json?.has_more && json?.last_id ? { limit: '1000', after_id: json.last_id } : null),
+        parse: parseAnthropicModels,
+    },
+    GPT: {
+        directUrl: 'https://api.openai.com/v1/models',
+        headers: apiKey => ({ Authorization: `Bearer ${apiKey}` }),
+        firstPage: {},
+        nextPage: () => null,
+        parse: parseOpenAIModels,
+    },
+    Gemini: {
+        directUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
+        proxyPath: '/v1/gemini/models',
+        headers: apiKey => ({ 'x-goog-api-key': apiKey }),
+        firstPage: { pageSize: '1000' },
+        nextPage: json => (json?.nextPageToken ? { pageSize: '1000', pageToken: json.nextPageToken } : null),
+        parse: parseGeminiModels,
+    },
+};
+
 const MAX_PAGES = 10;
 
 /**
- * All Anthropic models the key can use. Direct call with the browser-access header (as the chat
- * does); on a network or CORS failure (fetch rejects) the same request goes through the Worker
- * route `<proxyBase>/v1/anthropic/models`, without that header (the Worker does not allow it).
+ * All the models `apiKey` can use on `provider`. Direct call first; on a network or CORS failure
+ * (fetch rejects) the same request goes through the Worker route `<proxyBase><proxyPath>` when the
+ * provider has one. An HTTP error is an answer, not a reason to fall back.
  */
-export async function fetchAnthropicCatalog(apiKey: string, proxyBase: string, fetchImpl: typeof fetch = fetch): Promise<CatalogFetchResult> {
+export async function fetchCatalog(provider: CatalogProvider, apiKey: string, proxyBase: string, fetchImpl: typeof fetch = fetch): Promise<CatalogFetchResult> {
+    const source = SOURCES[provider];
     const attempt = async (base: string, direct: boolean): Promise<CatalogFetchResult> => {
         const models: CatalogModel[] = [];
-        let afterId: string | undefined;
-        for (let page = 0; page < MAX_PAGES; page++) {
+        let params: Record<string, string> | null = source.firstPage;
+        for (let page = 0; page < MAX_PAGES && params; page++) {
             const url = new URL(base);
-            url.searchParams.set('limit', '1000');
-            if (afterId) url.searchParams.set('after_id', afterId);
-            const headers: Record<string, string> = { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' };
-            if (direct) headers['anthropic-dangerous-direct-browser-access'] = 'true';
-            const response = await fetchImpl(url.toString(), { method: 'GET', headers });
+            for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+            const response = await fetchImpl(url.toString(), { method: 'GET', headers: source.headers(apiKey, direct) });
             if (!response.ok) {
-                return { ok: false, failure: failureFromStatus(response.status), status: response.status, message: await errorMessage(response) };
+                const message = await errorMessage(response);
+                return { ok: false, failure: failureFromStatus(response.status, message), status: response.status, message };
             }
             const json = await response.json();
-            models.push(...parseAnthropicModels(json));
-            if (!json?.has_more || !json?.last_id) break;
-            afterId = json.last_id;
+            models.push(...source.parse(json));
+            params = source.nextPage(json);
         }
         return { ok: true, models: orderCatalog(models), via: direct ? 'direct' : 'proxy' };
     };
 
     try {
-        return await attempt(ANTHROPIC_MODELS_URL, true);
-    } catch {
+        return await attempt(source.directUrl, true);
+    } catch (error) {
+        if (!source.proxyPath) return { ok: false, failure: 'network', message: (error as Error)?.message || 'Failed to fetch' };
         try {
-            return await attempt(`${proxyBase.replace(/\/+$/, '')}/v1/anthropic/models`, false);
-        } catch (error) {
-            return { ok: false, failure: 'network', message: (error as Error)?.message || 'Failed to fetch' };
+            return await attempt(`${proxyBase.replace(/\/+$/, '')}${source.proxyPath}`, false);
+        } catch (error2) {
+            return { ok: false, failure: 'network', message: (error2 as Error)?.message || 'Failed to fetch' };
         }
     }
+}
+
+/** Anthropic's catalog: `fetchCatalog('Claude', ...)`. */
+export function fetchAnthropicCatalog(apiKey: string, proxyBase: string, fetchImpl: typeof fetch = fetch): Promise<CatalogFetchResult> {
+    return fetchCatalog('Claude', apiKey, proxyBase, fetchImpl);
 }
