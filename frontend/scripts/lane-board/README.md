@@ -8,17 +8,17 @@ It reads `lane-run status --all`, the lane folders of `~/.jjodel-lanes/`,
 `git log --all` of the repository, and the log entries and `docs/decisions.md` of the
 trunk ref; for the Requirements tab it runs `../req-trace.mjs` on its own checkout. It
 never launches, resumes, merges
-or kills a lane and never writes in a worktree. The only file it writes is its own
-cache, `~/.jjodel-lanes/board/timeline-cache.json` (best effort: if the directory is
-missing the write is skipped and finished lanes are read again); `req-trace.mjs` keeps
-its own cache in the system temp folder (below).
+or kills a lane and never writes in a worktree. The only files it writes are its own
+caches, `~/.jjodel-lanes/board/timeline-cache.json` and, beside it, `usage-cache.json`
+(best effort: if the directory is missing the write is skipped and finished lanes are
+read again); `req-trace.mjs` keeps its own cache in the system temp folder (below).
 
 ## The four tabs
 
 **Lanes.** A table of the running and blocked lanes: state, kind (from the `Lane:`
 line of the prompt) and tier, elapsed time, an estimate of the time left, the current
 phase (the last tool description in the lane's `log.jsonl`), the worktree and who
-launched it. The Phase cell draws the lane's progress on its first line and the phase
+launched it, and four token columns after Span (Tokens, below). The Phase cell draws the lane's progress on its first line and the phase
 text, cut, on its second (next section). The estimate is a heuristic, not a promise: a
 measured median per kind, minus the elapsed time, corrected by the phase and the load
 average. Below it, the earlier lanes grouped by day, with their outcome.
@@ -60,8 +60,8 @@ the lanes working at once.
 work (lane-hours per hour of the day), how long they wait for a decision and the
 longest waits, lanes per day by outcome, outcome by kind of lane, and who launches
 the lanes. It also offers the two exports below, and can open the trace directly in
-ui.perfetto.dev. Below these, three sections read `/api/insights` (next section):
-code areas, model by area and by size, and first-shot success over time.
+ui.perfetto.dev. Below these, four sections read `/api/insights` (next section):
+code areas, model by area and by size, first-shot success over time, and Tokens.
 
 **Requirements.** Every R- row of `docs/decisions.md`, grouped by co-citation cluster and,
 inside a cluster, by milestone, with whether a commit on the trunk realized it and its
@@ -70,6 +70,38 @@ softgoal balance (one diverging bar per softgoal, under its macro goal), the clu
 macro goal matrix, the side effects between softgoals, and the pairs of realized rows that
 pull a softgoal both ways, grouped by declared conflict. See
 "The Requirements tab" below.
+
+## Tokens
+
+`../lane-usage.mjs` (P-2026-10-18-0100) is the single source: the board imports its
+`laneUsage`, `allIntervals` and `overlap` and never parses `message.usage` itself. Per lane:
+
+| Column | `/api` field | What it is |
+|--------|--------------|------------|
+| In | `tokensIn` | The main session's input + cache_read + cache_creation, summed over its calls (deduplicated by `message.id`). |
+| Out | `tokensOut` | The output of the last `modelUsage`, all models of the lane; the per-call output is the count at stream start. |
+| Total | `tokensTotal` | In + Out (In alone while no result event has an output). |
+| Ctx max | `ctxMax` | The largest main context of one call. |
+| (title of In) | `tokensSub` | The four classes of the subagent calls, kept out of In: `subagents: <n> tokens`. |
+
+The cells are abbreviated (`12.3k`, `3.1M`, en-US, one decimal) with the exact integer in
+the title, and read `n/a` when the lane has no per-call usage (a direct merge, a lane folder
+without `log.jsonl`); the fields are integers or `null`. The four columns are 72 px each in
+both variants; to keep Phase and Outcome their room, Worktree went from 144 to 112 px and
+the Lanes tab's page is 256 px wider than the other tabs (1536 px, `main.wide`).
+
+The Insights **Tokens** section groups the closed lanes of the range by tier (the first word
+of `tier.txt`) and by model (the first `init`): lane count, median and sum of Total, median
+Ctx max, the lanes with at least one call at or above 200k and 250k, and the seven-day
+utilization delta summed over the lanes that ran alone, with their count beside it: a lower
+bound, since interactive sessions are not visible to `lane-run`. The page groups with
+`tokenGroups` and writes the numbers with `abbr`, the functions the server exports, embedded
+as written. `/api/insights` carries the raw numbers per lane in `tokens`.
+
+The usage of a lane is cached in `usage-cache.json`, beside the Timeline cache, keyed by the
+size and mtime of its `log.jsonl`: a refresh recomputes only the lanes whose log changed.
+`alone` is not cached; it is recomputed from the lane intervals on every read. Measured on
+509 lane folders (2026-10-18): 2.6 s cold, 8 ms warm.
 
 ## Progress, the estimate and `resolved`
 
@@ -243,7 +275,8 @@ board never competes with them.
 | `LANE_RUN` | `../lane-run.mjs` beside the board when it exists, else `~/jjodel-release/frontend/scripts/lane-run.mjs` | The `lane-run` script asked for `status --all`. |
 | `JJODEL_REPO` | `~/jjodel` | Repository whose `git log --all` classifies the launcher and links lanes to commits. Any worktree serves: the board reads refs, never its working files. |
 | `JJODEL_TRUNK` | `alfonso-frontend-jjtl` | Trunk ref whose log entries, `docs/decisions.md` and prompts the Insights sections read. |
-| `LANE_BOARD_CACHE` | `$JJODEL_LANES/board/timeline-cache.json` | Cache of the finished lanes' timelines. |
+| `LANE_BOARD_CACHE` | `$JJODEL_LANES/board/timeline-cache.json` | Cache of the finished lanes' timelines; `usage-cache.json` sits in the same directory. |
+| `LANE_USAGE` | `../lane-usage.mjs` beside the board when it exists, else `~/jjodel-release/frontend/scripts/lane-usage.mjs` | The script the token columns come from; without it they read `n/a`. |
 | `REQ_TRACE_REPO` | the board's own checkout, three levels above `lane-board.mjs` | Checkout whose working tree the Requirements tab traces. |
 | `REQ_TRACE_TRUNK` | `alfonso-frontend-jjtl` | Trunk ref whose history decides which rows are realized. |
 | `LANE_BOARD_PORT` | `4700` | Port, overridden by `--port`. |
