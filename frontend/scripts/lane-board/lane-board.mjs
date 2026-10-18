@@ -21,7 +21,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, openSync, readSync, fstatSync, closeSync, realpathSync } from 'node:fs';
 import { homedir, loadavg } from 'node:os';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -34,6 +34,9 @@ const REFRESH_S = Number(arg('--refresh', process.env.LANE_BOARD_REFRESH || 30))
 const ROOT = process.env.JJODEL_LANES || join(homedir(), '.jjodel-lanes');
 // In the repo the board sits in frontend/scripts/lane-board/, beside lane-run.mjs; outside it, the trunk's copy.
 const LANE_RUN = process.env.LANE_RUN || (existsSync(join(HERE, '..', 'lane-run.mjs')) ? join(HERE, '..', 'lane-run.mjs') : join(homedir(), 'jjodel-release/frontend/scripts/lane-run.mjs'));
+// The tokens of a lane come from lane-usage.mjs, beside lane-run.mjs as above; without it the token cells read n/a.
+const LANE_USAGE = process.env.LANE_USAGE || (existsSync(join(HERE, '..', 'lane-usage.mjs')) ? join(HERE, '..', 'lane-usage.mjs') : join(homedir(), 'jjodel-release/frontend/scripts/lane-usage.mjs'));
+const LU = await import(pathToFileURL(LANE_USAGE).href).catch(() => null);
 const RECENT_H = 24;
 const CACHE_MS = 10_000;
 
@@ -487,6 +490,9 @@ function snapshot(r) {
         row.recent = recent;
         row.day = t ? new Date(t - new Date(t).getTimezoneOffset() * 60000).toISOString().slice(0, 10) : 'unknown';
         if (!isChain) Object.assign(row, laneSpan(id, now));
+        // The Lanes tab's token columns (P-2026-10-18-1045): integers, null when the lane has no per-call usage.
+        const tk = isChain ? null : laneTokens(id);
+        Object.assign(row, { tokensIn: tk ? tk.tokensIn : null, tokensOut: tk ? tk.tokensOut : null, tokensTotal: tk ? tk.tokensTotal : null, ctxMax: tk ? tk.ctxMax : null, tokensSub: tk ? tk.tokensSub : null });
         rows.push(row);
     }
     for (const log of evCache.keys()) if (!logs.has(log)) evCache.delete(log);
@@ -514,6 +520,7 @@ function snapshot(r) {
         try { writeFileSync(TL_CACHE_FILE + '.tmp', JSON.stringify(tlCache)); renameSync(TL_CACHE_FILE + '.tmp', TL_CACHE_FILE); } catch { /* best effort */ }
         tlDirty = false;
     }
+    saveTokens();
     const data = { now: Date.now(), load: load.map((x) => x.toFixed(2)), error, stale: false, rows };
     if (r.ok) lastGood = data;
     cache = { at: Date.now(), data };
@@ -580,6 +587,54 @@ let tlDirty = false;
 
 const mtime = (p) => { try { return statSync(p).mtimeMs; } catch { return 0; } };
 const size = (p) => { try { return statSync(p).size; } catch { return -1; } };
+
+// ── tokens ──────────────────────────────────────────────────────────────────
+// Per lane, from lane-usage.mjs: the board never reads message.usage itself. Cached by the size and mtime of
+// log.jsonl in usage-cache.json beside the Timeline cache, so a refresh recomputes only the lanes whose log changed.
+// `alone` is not cached: it depends on the other lanes' intervals, and is recomputed from them on every read.
+const US_CACHE_FILE = join(dirname(TL_CACHE_FILE), 'usage-cache.json');
+let usCache = {};
+try { usCache = JSON.parse(readFileSync(US_CACHE_FILE, 'utf8')); } catch { usCache = {}; }
+let usDirty = false;
+let ivMem = { at: 0, v: new Map() };
+const intervals = () => { if (Date.now() - ivMem.at > CACHE_MS) ivMem = { at: Date.now(), v: LU.allIntervals() }; return ivMem.v; };
+
+/** The numbers the board shows from one laneUsage() result. In: input, cache_read and cache_creation of the main calls;
+ *  Out: the output of the last modelUsage, all models (the per-call output is the count at stream start); null throughout
+ *  when the lane has no main call. Sub: the four classes of the subagent calls, kept out of In. */
+export function tokensOf(u) {
+    const sum = (block, out) => Object.values(block).reduce((a, c) => a + c.input + c.cacheRead + c.cacheCreation + (out ? c.output : 0), 0);
+    const calls = u.context.calls > 0;
+    const tokensIn = calls ? sum(u.main, false) : null;
+    const tokensOut = calls && u.resultOutput ? Object.values(u.resultOutput).reduce((a, v) => a + (v || 0), 0) : null;
+    return {
+        tokensIn, tokensOut, tokensTotal: calls ? tokensIn + (tokensOut || 0) : null, ctxMax: calls ? u.context.max : null,
+        tokensSub: sum(u.subagents, true), at200k: u.context.atOrAbove200k, at250k: u.context.atOrAbove250k,
+        sevenDayDelta: u.rateLimit.delta ? u.rateLimit.delta.sevenDay : null, tier: u.tier, model: u.model.first,
+    };
+}
+
+/** The tokens of a lane folder with `alone` beside them; null without lane-usage.mjs or a log.jsonl. */
+function laneTokens(id) {
+    if (!LU) return null;
+    let st;
+    try { st = statSync(join(ROOT, id, 'log.jsonl')); } catch { return null; }
+    const key = ['v1', st.size, st.mtimeMs].join('/');
+    const hit = usCache[id];
+    let v = hit && hit.key === key ? hit.v : null;
+    if (!v) {
+        try { v = tokensOf(LU.laneUsage(id, intervals())); } catch { return null; }
+        usCache[id] = { key, v };
+        usDirty = true;
+    }
+    return { ...v, alone: LU.overlap(id, intervals()).alone };
+}
+
+function saveTokens() {
+    if (!usDirty) return;
+    try { writeFileSync(US_CACHE_FILE + '.tmp', JSON.stringify(usCache)); renameSync(US_CACHE_FILE + '.tmp', US_CACHE_FILE); } catch { /* best effort */ }
+    usDirty = false;
+}
 
 /** The `result` events of a log (its bytes, or null): duration and the last Outcome line of each turn. */
 function results(buf) {
@@ -1113,6 +1168,8 @@ function insightLane(id, dir, t, g, corr, own, now, draws = new Map()) {
         causa: [...new Set([...corr, own].filter(Boolean))].map((e) => e.causa).filter(Boolean),
         selfAssessment: own ? { outcome: own.outcome, regressions: own.regressions, causa: own.causa, corregge: own.cPid, smoke: own.smoke } : null,
         ageDays: live ? 0 : Math.round(((now - end) / 864e5) * 10) / 10,
+        // The raw numbers of the Tokens block (tokenGroups): laneTokens(), null without a log.
+        tokens: laneTokens(id),
     };
 }
 
@@ -1145,6 +1202,7 @@ function insights() {
         }
         const draws = rc45Draws();
         const lanes = rows.map(({ id, dir, t }) => insightLane(id, dir, t, g, corr.get(id) || [], own.get(id), now, draws));
+        saveTokens();
         const data = {
             v: 1, now, trunk: g.trunk.slice(0, 9),
             sources: { lanes: lanes.length, sessions: lanes.filter((l) => l.model).length, commitsScanned: g.seen.size, logEntries: g.entries.length, since: ids.length ? ids[0].slice(2, 12) : '' },
@@ -1312,6 +1370,38 @@ export function stripKey(r) {
     return o === 'question' || o === 'hard-stop' || o === 'blocked' || o === 'resolved' ? o : null;
 }
 
+/** A token count as the board writes it: en-US, one decimal, k, M or B; the integer as it is below 1000; n/a for null. */
+export function abbr(n) {
+    if (n === null || n === undefined) return 'n/a';
+    if (Math.abs(n) < 1000) return String(n);
+    const units = ['k', 'M', 'B'];
+    let v = n / 1000, i = 0;
+    while (Math.abs(Number(v.toFixed(1))) >= 1000 && i < units.length - 1) { v /= 1000; i++; }
+    return v.toFixed(1) + units[i];
+}
+
+/** The rows of the Insights Tokens block: the lanes with usage (l.tokens, laneTokens) grouped by `by`, 'tier' or 'model'.
+ *  The 7-day delta is summed over the lanes alone with a delta, counted beside it: a lower bound (lane-usage OVERLAP_NOTE). */
+export function tokenGroups(lanes, by) {
+    const med = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
+    const groups = new Map();
+    for (const l of lanes) {
+        const t = l.tokens;
+        if (!t || t.tokensTotal === null) continue;
+        const k = t[by] || '';
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(t);
+    }
+    return [...groups].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([key, ts]) => {
+        const alone = ts.filter((t) => t.alone === true && typeof t.sevenDayDelta === 'number');
+        return {
+            key, lanes: ts.length, totalMedian: med(ts.map((t) => t.tokensTotal)), totalSum: ts.reduce((a, t) => a + t.tokensTotal, 0),
+            ctxMaxMedian: med(ts.map((t) => t.ctxMax)), at200k: ts.filter((t) => t.at200k > 0).length, at250k: ts.filter((t) => t.at250k > 0).length,
+            aloneDelta7d: Math.round(alone.reduce((a, t) => a + t.sevenDayDelta, 0) * 1e6) / 1e6, aloneLanes: alone.length,
+        };
+    });
+}
+
 export function stripCounts(rows) {
     const n = Object.fromEntries(STRIP.map(([k]) => [k, 0]));
     for (const r of rows) {
@@ -1328,7 +1418,7 @@ const PAGE = `<!doctype html>
 :root{--bg:#f8fafc;--fg:#0f172a;--muted:#64748b;--line:#e2e8f0;--card:#fff;--accent:#0ea5e9;--run:#0284c7;--ok:#15803d;--warn:#b45309;--hs:#74b98a;--bad:#b91c1c}
 @media (prefers-color-scheme:dark){:root{--bg:#0b1220;--fg:#e2e8f0;--muted:#94a3b8;--line:#1e293b;--card:#111a2e;--run:#38bdf8;--ok:#4ade80;--warn:#fbbf24;--hs:#2f7d4f;--bad:#f87171}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
-main{max-width:1280px;margin:0 auto;padding:16px}
+main{max-width:1280px;margin:0 auto;padding:16px}main.wide{max-width:1536px}
 header{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;margin-bottom:16px}
 h1{font-size:16px;margin:0}h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:24px 0 8px}
 .meta{color:var(--muted);font-size:12px}.meta b{color:var(--fg);font-weight:600}
@@ -1343,7 +1433,7 @@ td.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap
 .spin{display:inline-block;width:10px;height:10px;margin-left:-16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;align-self:center}.spin[hidden]{display:none}@keyframes spin{to{transform:rotate(360deg)}}
 td.phase .prow{display:flex;align-items:center;gap:6px;height:18px;overflow:hidden}td.phase .ptext{display:block;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}td.phase .n{flex:none;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
 .segs{display:flex;gap:2px;min-width:0}.segs .seg{display:block;flex:0 1 10px;min-width:3px;height:8px;border-radius:2px;border:1px solid var(--muted);background:transparent}.segs .seg.reached{background:var(--run);border-color:var(--run)}.segs .seg.skipped{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,transparent 1px 3px)}
-table.lfx{table-layout:fixed;width:100%;min-width:1200px}table.lfx th,table.lfx td{padding:8px;overflow:hidden;overflow-wrap:anywhere}table.lfx .pill{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
+table.lfx{table-layout:fixed;width:100%;min-width:1456px}table.lfx th,table.lfx td{padding:8px;overflow:hidden;overflow-wrap:anywhere}table.lfx .pill{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
 td.lfx-num{white-space:nowrap;font-variant-numeric:tabular-nums}td.lfx-cut{white-space:nowrap;text-overflow:ellipsis}
 a.chat{color:var(--run);text-decoration:none}a.chat:hover{text-decoration:underline}
 .load-hi{color:var(--bad);font-weight:600}
@@ -1369,6 +1459,8 @@ details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-ite
 </main><script src="/timeline.js"></script><script src="/insights.js"></script><script src="/requirements.js"></script><script>
 const REFRESH=${REFRESH_S}*1000;
 const stripKey=${stripKey.toString()};
+const abbr=${abbr.toString()};
+const tokenGroups=${tokenGroups.toString()};
 const STRIP=${JSON.stringify(STRIP)};
 let laneFilter='',lastRows=[];
 // The spinner beside "updated at": on while a request to /api or /api/* is in flight, from any tab (fetch is
@@ -1416,10 +1508,14 @@ const when=(ms,day)=>{if(!ms)return '<td class="when"></td>';const d=new Date(ms
 const work=r=>'<td class="lfx-num">'+(r.start?dur(Math.floor(r.work/60000)):'')+'</td>';
 // Span is the start to the end, waits for decisions included: to now while the lane runs; empty when an end is unknown.
 const span=r=>{const e=r.live?Date.now():r.end;return '<td class="lfx-num">'+(r.start&&e?dur(Math.floor((e-r.start)/60000)):'')+'</td>'};
-const tips={Elapsed:"Working time: the sum of the lane's turns",Span:'From start to end, waits for decisions included'};
+const tips={Elapsed:"Working time: the sum of the lane's turns",Span:'From start to end, waits for decisions included',In:'Main session: input, cache read and cache creation tokens',Out:'Output tokens, from the last modelUsage (all models of the lane)',Total:'In + Out','Ctx max':'The largest main context of one call'};
+// In, Out, Total and Ctx max (P-2026-10-18-1045): abbreviated, the exact integer in the title; n/a without per-call usage.
+const tnum=(v,more)=>'<td class="lfx-num" title="'+esc(v===null||v===undefined?'':String(v)+(more||''))+'">'+abbr(v)+'</td>';
+const tokens=r=>tnum(r.tokensIn,' · subagents: '+(r.tokensSub||0)+' tokens')+tnum(r.tokensIn===null?null:r.tokensOut)+tnum(r.tokensTotal)+tnum(r.ctxMax);
 // One width per column name, shared by every Lanes-tab table so a column keeps its width wherever it appears.
 // Phase (Running) and Outcome (exited) have none: they take the room the others leave.
-const COL_W={Lane:200,State:92,Kind:124,Started:96,Ended:96,Elapsed:100,Span:100,Left:116,Worktree:144,'Launched by':128};
+// The four token columns widen the Lanes tab's page by 256 px (main.wide): 288 for them, less 32 from Worktree.
+const COL_W={Lane:200,State:92,Kind:124,Started:96,Ended:96,Elapsed:100,Span:100,In:72,Out:72,Total:72,'Ctx max':72,Left:116,Worktree:112,'Launched by':128};
 // Phase (Running): the milestone segments (reached, skipped, pending) and n/m on one line, the phase text cut below,
 // whole in the title. Both lines are drawn with or without progress, so a row keeps its height as the lane advances.
 function phaseCell(r){
@@ -1435,15 +1531,15 @@ function phaseCell(r){
 function table(rows,live,day){
   day=day||ymd(new Date());
   if(!rows.length)return '<div class="empty">'+(live?(loaded?'No lane is running.':'Loading lanes…'):'No lanes in this period.')+'</div>';
-  const cols=live?['Lane','State','Kind','Started','Elapsed','Span','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Span','Worktree','Launched by'];
+  const cols=live?['Lane','State','Kind','Started','Elapsed','Span','In','Out','Total','Ctx max','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Span','In','Out','Total','Ctx max','Worktree','Launched by'];
   let h='<table class="lfx"><colgroup>'+cols.map(c=>'<col'+(COL_W[c]?' style="width:'+COL_W[c]+'px"':'')+'>').join('')+'</colgroup><thead><tr>'+cols.map(c=>'<th'+(tips[c]?' title="'+esc(tips[c])+'"':'')+'>'+c+'</th>').join('')+'</tr></thead><tbody>';
   for(const r of rows){
     const id='<td class="id">'+esc(r.id)+(r.title?'<span class="title">'+esc(r.title)+'</span>':'')+'</td>';
     const kind='<td>'+esc(r.kind||r.lane.split(/[ .(]/)[0]||'')+(r.tier?' · '+esc(r.tier):'')+'</td>';
     const oc=r.outcome==='none'?'':r.outcome;
     const wt='<td class="lfx-cut" title="'+esc(r.worktree)+'">'+esc(r.worktree)+'</td>';
-    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+span(r)+'<td class="lfx-num">'+esc(r.left)+'</td>'+phaseCell(r)+wt+'<td>'+launch(r)+'</td></tr>';
-    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,day)+when(r.end,day)+work(r)+span(r)+wt+'<td>'+launch(r)+'</td></tr>';
+    if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+span(r)+tokens(r)+'<td class="lfx-num">'+esc(r.left)+'</td>'+phaseCell(r)+wt+'<td>'+launch(r)+'</td></tr>';
+    else h+='<tr>'+id+'<td>'+pill(r.state)+'</td><td>'+pill(oc,oc==='blocked'?'blocked-o':oc)+'</td>'+kind+when(r.start,day)+when(r.end,day)+work(r)+span(r)+tokens(r)+wt+'<td>'+launch(r)+'</td></tr>';
   }
   return h+'</tbody></table>';
 }
@@ -1480,7 +1576,7 @@ function renderOlder(rows){
 let openDays=new Set();
 try{openDays=new Set(JSON.parse(localStorage.getItem('laneBoardOpenDays')||'[]'))}catch(e){}
 function saveOpen(){try{localStorage.setItem('laneBoardOpenDays',JSON.stringify([...openDays]))}catch(e){}}
-function showTab(t){if(!document.getElementById('tab-'+t))t='table';document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['table','timeline','insights','requirements'].forEach(k=>{document.getElementById('tab-'+k).hidden=t!==k});try{localStorage.setItem('laneBoardTab',t)}catch(e){}if(t==='timeline'&&window.TL)TL.refresh();if(t==='insights'&&window.INS)INS.refresh();if(t==='requirements'&&window.REQ)REQ.refresh()}
+function showTab(t){if(!document.getElementById('tab-'+t))t='table';document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));document.querySelector('main').classList.toggle('wide',t==='table');['table','timeline','insights','requirements'].forEach(k=>{document.getElementById('tab-'+k).hidden=t!==k});try{localStorage.setItem('laneBoardTab',t)}catch(e){}if(t==='timeline'&&window.TL)TL.refresh();if(t==='insights'&&window.INS)INS.refresh();if(t==='requirements'&&window.REQ)REQ.refresh()}
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 let tab0='table';try{tab0=localStorage.getItem('laneBoardTab')||'table'}catch(e){}
 showTab(tab0);
