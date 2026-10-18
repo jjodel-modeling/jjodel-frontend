@@ -268,3 +268,25 @@ Decisions awaiting Alfonso: AM-1's settings keys `env.JJODEL_LIGHT_MODEL` and `e
 **Smoke visivo**: passato — chat, unattended: no UI change: lane-run, tests and docs only (0 files under frontend/src); decided by chat C-2026-10-17-1757 under RC-25
 **Notes**: Rollback tag `pre-lane-run-routing` on `6a1e96adf` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1305/result.json`.
 **Prompt document name**: 2026-10-18 13:05
+
+## 2026-10-18 — feat(harness): B4, rule-trigger hook, trigger map and check:triggers (P-2026-10-18-1420)
+**Prompt**: `claude_2026-10-18_1420_prompt_b4_rule_triggers.md`: the glob-to-doc map `docs/harness/rule-triggers.json` (schema 1, one entry per nested `CLAUDE.md`), the PreToolUse hook `rule-trigger.mjs` that denies the first write of a session under an entry's glob naming its docs, the gate `npm run check:triggers`, their tests and a mutation bench. Not registered (B7).
+**Files touched**: code `71a932b8f`: `frontend/scripts/hooks/rule-trigger.mjs`, `frontend/scripts/gates/check-triggers.ts`, `frontend/scripts/hooks/__tests__/ruleTrigger.test.ts` (24 tests), `frontend/scripts/hooks/__tests__/checkTriggers.test.ts` (15 tests), `frontend/package.json` (one script line); this commit: `docs/harness/rule-triggers.json`, `docs/harness/gates.md`, this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks 847/847 in 17 files, typecheck:scripts exit 0, check:scripts PASS 100 files, check:triggers PASS (8 entries) on the live tree. `lib.mjs` untouched: it had no glob matcher, and the hook's is imported by the gate.
+**Out-of-scope changes**: no (the map moved from the code commit to the docs commit; same file set as the prompt's two commits)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: Real check, unregistered: the same PreToolUse JSON (Edit of `frontend/src/jjtl/lexer/lexer.ts`, `session_id` `probe-b4-manual-1`, `bypassPermissions`) piped twice into `node frontend/scripts/hooks/rule-trigger.mjs`. First answer: `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny",...}}` naming `frontend/src/jjtl/CLAUDE.md`; second: no output, exit 0 (allowed). Bench 18/18: commit message of `71a932b8f`.
+**Prompt document name**: 2026-10-18 14:20
+
+Decisions taken (unattended): (1) `docs/harness/rule-triggers.json` lands in the docs commit, not in commit 1: `bash-guard` refused the mixed pathspec (P13, docs and code never in one commit), measured; so `71a932b8f` alone fails the live-repository test of checkTriggers until the docs commit, and the two travel together. (2) The glob matcher lives in `rule-trigger.mjs` (exported `globToRegExp`, `matchGlob`, `validEntries`), and `check-triggers.ts` imports it, so hook and gate cannot disagree; `lib.mjs` is not touched. (3) Check (c) reads "covers its own directory" as: the entry's glob matches the nested `CLAUDE.md`'s own path and the entry lists it as a doc. (4) A missing map is exit 2, like a map that is not JSON; a usage error is exit 1, as in `decisions-query.ts`. (5) The marker is written before the denial; if it cannot be written the hook does not deny (it would deny every retry). A corrupt marker counts as empty and is rewritten. (6) A `session_id` with characters outside `[A-Za-z0-9_-]` fails open, since it names a file. (7) A relative `file_path` resolves against the project dir; a path outside it after `realpath` of the project dir is allowed with no marker. (8) `runHook`'s stderr line on an internal error is kept (the convention of the other hooks): no decision is written.
+
+Decisions awaiting Alfonso: the registration of `rule-trigger.mjs` in `.claude/settings.json` (PreToolUse, matcher `Edit|Write|NotebookEdit`), in the interactive B7, after B8b.
+
+## 2026-10-18 — ticket: lane-run start does not yet append a «Rules in scope» block from the DOVE globs
+**Ticket**: The first trigger of report `docs/discovery/discovery_2026-10-15_lean_context_model_routing.md` §5.1 C: `lane-run start` should append a «Rules in scope» block to the lane input, naming the docs of every `docs/harness/rule-triggers.json` entry whose glob matches a DOVE path, with test T-D3. It is in no batch of §5.6 and touches `lane-run.mjs`: a later heavy lane.
+**Priority**: medium
+**Found in**: P-2026-10-18-1420

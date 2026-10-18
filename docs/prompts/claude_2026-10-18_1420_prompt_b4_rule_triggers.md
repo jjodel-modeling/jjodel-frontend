@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1420
 Chat: C-2026-10-18-1414
 Front: harness
 Lane: full (new hook under `frontend/scripts/hooks/`, governance per RC-36; heavy by rule, not drawn)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane rule-triggers · code 71a932b8f · tests 39 new (ruleTrigger 24, checkTriggers 15), scripts/hooks 847 green in 17 files, typecheck:scripts 0, check:scripts PASS, check:triggers PASS (8 entries), mutation bench 18/18 killed · map in the docs commit (P13 guard) · hook not registered, B7 · no visual check
 Depends: P-2026-10-18-1205
 Corregge: the sentinel `check:docs` accepts (RC-45 (2)); this lane corrects no earlier lane
 Request: none (Alfonso, 2026-10-18 14:15, «via sulla raccomandazione»: B4 and B8b before a single interactive B7; RC-49 (2) and (3) approved the plan of the report below)

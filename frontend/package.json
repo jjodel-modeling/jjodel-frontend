@@ -106,6 +106,7 @@
     "check:scripts": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-scripts.ts",
     "check:addonly": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-addonly.ts",
     "check:codegen-lazy": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-codegen-lazy.ts",
+    "check:triggers": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-triggers.ts",
     "log:rotate": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/rotate-log.ts",
     "smoke": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/run.ts",
     "lane-board": "node scripts/lane-board/lane-board.mjs",
