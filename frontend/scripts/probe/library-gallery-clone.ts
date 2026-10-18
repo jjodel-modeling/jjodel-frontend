@@ -11,9 +11,6 @@
  *   - an explicit save, then a reopen from the page load: name and `_clonedFrom` survive.
  * Then a second Library clone takes «Library (1)», and a package with one user-defined megamodel edge is cloned to
  * measure where the import registers it (projects.ts, `registerSerializedMegamodel(json.id, …)`).
- * S1b (P-2026-10-18-2150): the clone opens on the file's first derived viewpoint, the card's count line names the
- * derived viewpoints, and each model is switched, through the toolbar's viewpoint picker, to the derived viewpoint of its
- * metamodel and screenshotted as viewpoint-<id>.png (a second model as viewpoint-<id>-<model>.png).
  * The Templates shell is checked against the Projects page's, the dialog at rest (animations ended), and the Quick Tip
  * and the donation banner are closed before each screenshot. Screenshots at 1440×900, light theme, into docs/discovery/assets/library-gallery/.
  *
@@ -43,7 +40,6 @@ const check = (label: string, ok: boolean, detail: unknown) => {
 };
 const meas = (label: string, detail: unknown) => console.log(`MEAS  ${label}  ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
 const wait = (page: Page, ms: number) => page.waitForTimeout(ms);
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 async function poll<T>(page: Page, expr: string, ms: number): Promise<T | null> {
     const end = Date.now() + ms;
@@ -66,8 +62,6 @@ async function expected(entry: Entry) {
         id: json.id as string,
         metamodels: (json.metamodels as string[]).map(i => lk[i].name).sort(),
         models: Object.fromEntries((json.models as string[]).map(i => [lk[i].name, objs.filter(o => under(o.id, i)).length])) as Record<string, number>,
-        // S1b: the derived viewpoints, in the project's order, with the name of the metamodel each was derived from.
-        viewpoints: (json.viewpoints as string[]).filter(i => lk[i]?._state?.derivedFrom).map(i => ({ name: lk[i].name as string, metamodel: lk[lk[i]._state.derivedFrom]?.name as string })),
     };
 }
 
@@ -85,9 +79,7 @@ const INFO = String.raw`(async () => {
     return {
       id: p.id, name: p.name, clonedFrom: (lk[p.id] || {})._clonedFrom ?? null, recordName: rec ? rec.name : null,
       metamodels: (p.metamodels || []).map((m) => m.name).sort(),
-      models: (p.models || []).filter((m) => !m.isMetamodel).map((m) => ({ id: m.id, name: m.name, metamodel: lk[lk[m.id].instanceof] ? lk[lk[m.id].instanceof].name : null, objects: objs.filter((o) => under(o.id, m.id)).length })),
-      viewpoints: (lk[p.id].viewpoints || []).map((v) => lk[v]).filter((v) => v && v._state && v._state.derivedFrom).map((v) => ({ id: v.id, name: v.name })),
-      active: window.windoww.store.getState().viewpoint || null,
+      models: (p.models || []).filter((m) => !m.isMetamodel).map((m) => ({ id: m.id, name: m.name, objects: objs.filter((o) => under(o.id, m.id)).length })),
     };
   } catch (e) { return null; }
 })()`;
@@ -125,12 +117,12 @@ const SHELL = String.raw`(() => {
 async function openTemplates(page: Page, id: string): Promise<boolean> {
     await page.goto(`${URL}/#/templates`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     const card = `document.querySelector('[data-gallery-id="${id}"]')`;
-    const ready = await poll(page, `(() => { const c = ${card}; const t = c && c.querySelector('.templates-card__counts'); return !!(t && /viewpoint/.test(t.textContent)); })()`, 120000);
+    const ready = await poll(page, `(() => { const c = ${card}; const t = c && c.querySelector('.templates-card__counts'); return !!(t && /metamodel/.test(t.textContent)); })()`, 120000);
     return !!ready;
 }
 
 /** Templates → card → modal → «Clone & open»; returns the name in the modal and the id of the project that opens. */
-async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot?: string): Promise<{ prefilled: string; chosen: string; counts: string; info: any } | null> {
+async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot?: string): Promise<{ prefilled: string; chosen: string; info: any } | null> {
     if (!(await openTemplates(page, entry.id))) { check(`${entry.id}: the Templates card shows its counts`, false, ''); return null; }
     if (shot) {
         await closeTip(page);
@@ -142,7 +134,6 @@ async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot
             { templates: shell && [shell.title, shell.content], projects: projectsShell && [projectsShell.title, projectsShell.content] });
         await page.screenshot({ path: `${SHOTS}/${shot}-page.png` });
     }
-    const counts = await page.evaluate(`(document.querySelector('[data-gallery-id="${entry.id}"] .templates-card__counts') || {}).textContent || ''`) as string;
     await page.locator(`[data-gallery-id="${entry.id}"] button`, { hasText: 'Clone to my workspace' }).click();
     const input = page.locator('#templates-clone-name');
     await input.waitFor({ timeout: 10000 });
@@ -170,7 +161,7 @@ async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot
     await page.waitForLoadState('domcontentloaded');
     await wait(page, 3000);
     const info = await poll<any>(page, `(async () => { if (!location.hash.includes('project?id=')) return null; const i = await ${INFO}; return i && !${JSON.stringify(before)}.includes(i.id) && i.models.length > 0 && document.querySelector('.dock-tab') ? i : null; })()`, 120000);
-    return info ? { prefilled, chosen, counts, info } : null;
+    return info ? { prefilled, chosen, info } : null;
 }
 
 let projectsShell: any = null;
@@ -204,29 +195,15 @@ try {
         check(`${entry.id}: the metamodels are the file's`, JSON.stringify(info.metamodels) === JSON.stringify(exp.metamodels), info.metamodels);
         const counts = Object.fromEntries(info.models.map((m: any) => [m.name, m.objects]));
         check(`${entry.id}: the models and their objects are the file's`, JSON.stringify(counts) === JSON.stringify(exp.models), { clone: counts, file: exp.models });
-        check(`${entry.id}: the derived viewpoints are the file's`, JSON.stringify(info.viewpoints.map((v: any) => v.name)) === JSON.stringify(exp.viewpoints.map(v => v.name)), info.viewpoints.map((v: any) => v.name));
-        const activeName = info.viewpoints.find((v: any) => v.id === info.active)?.name ?? null;
-        check(`${entry.id}: the clone opens on «${exp.viewpoints[0]?.name}»`, activeName === exp.viewpoints[0]?.name, String(activeName));
-        check(`${entry.id}: the card's count line names the derived viewpoints`, got.counts === `${plural(exp.metamodels.length, 'metamodel')} · ${plural(Object.keys(exp.models).length, 'model')} · ${plural(exp.viewpoints.length, 'viewpoint')}`, got.counts);
 
         for (const m of info.models) {
             await page.evaluate(String.raw`(async () => { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(m.id)})); })()`);
             const pane = `(document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m.id}"]'))`;
-            await poll(page, `(() => { const p = ${pane}; return !!(p && p.querySelector('.toolbar-viewpoint-trigger')); })()`, 60000);
-            // The toolbar's picker, as a user switches: the derived viewpoint of this model's metamodel.
-            const want = info.viewpoints.find((v: any) => exp.viewpoints.some(e => e.name === v.name && e.metamodel === m.metamodel));
-            check(`${entry.id}: ${m.name} has a derived viewpoint of its metamodel`, !!want, String(m.metamodel));
-            if (!want) continue;
-            await page.locator(`[role="tabpanel"][aria-labelledby$="-tab-${m.id}"] .toolbar-viewpoint-trigger`).click();
-            await page.locator('.toolbar-viewpoint-menu [role="option"]', { hasText: want.name }).first().click();
-            const switched = await poll<any>(page, `(() => { const p = ${pane}; const t = p && p.querySelector('.toolbar-viewpoint-trigger__label'); const n = p ? p.querySelectorAll('.react-flow__node').length : 0; return window.windoww.store.getState().viewpoint === ${JSON.stringify(want.id)} && t && t.textContent.trim() === ${JSON.stringify(want.name)} && n > 0 ? { label: t.textContent.trim(), nodes: n } : null; })()`, 60000);
-            check(`${entry.id}: ${m.name} is switched to «${want.name}» and shows nodes`, !!switched, switched);
-            meas(`${entry.id}: ${m.name} under «${want.name}»`, { ...switched, objects: m.objects });
-            await wait(page, 2500);
-            await closeTip(page);
-            const suffix = m === info.models[0] ? '' : `-${m.name.replace(/^sample-/, '')}`;
-            await page.screenshot({ path: `${SHOTS}/viewpoint-${entry.id}${suffix}.png` });
+            const nodes = await poll<number>(page, `(() => { const p = ${pane}; const n = p ? p.querySelectorAll('.react-flow__node').length : 0; return n >= ${m.objects} ? n : 0; })()`, 60000);
+            check(`${entry.id}: the default editor of ${m.name} shows one node per object`, nodes === m.objects, `${nodes} nodes, ${m.objects} objects`);
+            await wait(page, 1500);
         }
+        if (entry.id === 'familiesPersons') { await closeTip(page); await page.screenshot({ path: `${SHOTS}/cloned-familiesPersons.png` }); }
 
         await page.evaluate(SAVE);
         await page.goto(`${URL}/?open=${encodeURIComponent(info.id)}#/project?id=${info.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });

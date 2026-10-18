@@ -7,8 +7,7 @@
  * (`U.compressedState`). Here each file's store is read back as the import reads it and checked against the catalog
  * (docs/library/catalog.json) and against the sources of the build (scripts/library/gallery/): one project per
  * catalog `galleryProject`, named as its label, with the metamodels and the models of its sources and the number of
- * objects each sample model holds, and its derived viewpoints (slice S1b, P-2026-10-18-2150): made by the app's «Derive
- * viewpoint», each with its provenance in `_state`, the first one active.
+ * objects each sample model holds.
  *
  * The import half of the round trip (`ProjectsApi.importFromText`, `duplicateProject`) does not load in node (the
  * joiner writes on `window`); it is the probe's. What the import needs from the file is checked here: its renewal of
@@ -34,21 +33,6 @@ const EXPECTED: Record<string, { metamodels: string[]; models: Record<string, nu
     stateMachineEcore: { metamodels: ['statemachine'], models: { 'sample-StateMachine': 10 } },
     graph: { metamodels: ['Graph'], models: { 'sample-Graph': 10 } },
     shapes: { metamodels: ['Shapes'], models: { 'sample-Shapes': 4 } },
-};
-
-/** The derived viewpoints of each project, in its order, as `<metamodel> / <notation label>`; the first is active. */
-const VIEWPOINTS: Record<string, { name: string; metamodel: string; notation: string }[]> = {
-    library: [{ name: 'Library / Generic', metamodel: 'Library', notation: 'generic' }],
-    familiesPersons: [
-        { name: 'Families / Generic', metamodel: 'Families', notation: 'generic' },
-        { name: 'Persons / Generic', metamodel: 'Persons', notation: 'generic' },
-    ],
-    stateMachineEcore: [
-        { name: 'statemachine / State machine (UML statechart)', metamodel: 'statemachine', notation: 'statechart' },
-        { name: 'statemachine / Generic', metamodel: 'statemachine', notation: 'generic' },
-    ],
-    graph: [{ name: 'Graph / Generic', metamodel: 'Graph', notation: 'generic' }],
-    shapes: [{ name: 'Shapes / Generic', metamodel: 'Shapes', notation: 'generic' }],
 };
 
 const fileUrl = (id: string) => new URL(`../../../public/library/gallery/${id}.jjodel`, import.meta.url);
@@ -130,35 +114,11 @@ describe.each(GALLERY.map(e => [e.id, e] as const))('the project file of %s', (i
         }
     });
 
-    it('has its derived viewpoints and no other, in the record and the store (mutant: the build skips or adds a viewpoint)', async () => {
+    it('adds no viewpoint of its own: the default syntax renders it (mutant: the build adds a viewpoint)', async () => {
         const { json, lookup } = await readProject(id);
         const own = (lookup[json.id].viewpoints || []).map((v: string) => lookup[v]).filter((v: any) => v && v.name !== 'Default' && !/^Pointer_/.test(v.id));
-        expect(own.map((v: any) => v.name)).toEqual(VIEWPOINTS[id].map(v => v.name));
-        expect(json.viewpoints).toEqual(own.map((v: any) => v.id));
+        expect(own.map((v: any) => v.name)).toEqual([]);
     });
-
-    it('carries derivedFrom and derivedNotation in each viewpoint\'s _state (mutant: a hand-written viewpoint)', async () => {
-        const { json, lookup } = await readProject(id);
-        const metamodelId = (name: string) => ofClass(lookup, 'DModel').find(m => m.isMetamodel && m.name === name)?.id;
-        for (const [i, want] of VIEWPOINTS[id].entries()) {
-            const vp = lookup[json.viewpoints[i]];
-            expect(vp?._state?.derivedFrom, want.name).toBe(metamodelId(want.metamodel));
-            expect(vp?._state?.derivedNotation, want.name).toBe(want.notation);
-            const views = ofClass(lookup, 'DViewElement').filter(v => v.father === vp.id);
-            expect(views.length, want.name).toBeGreaterThan(0);
-            for (const v of views) expect(v.ir?.generated?.notation, `${want.name}: ${v.name}`).toBe(want.notation);
-        }
-    });
-
-    it('opens on its first derived viewpoint (mutant: the build leaves the default syntax active)', async () => {
-        const { json, store, lookup } = await readProject(id);
-        const first = json.viewpoints[0];
-        expect(lookup[first]?.name).toBe(VIEWPOINTS[id][0].name);
-        expect(json.activeViewpoint).toBe(first);
-        expect(lookup[json.id].activeViewpoint).toBe(first);
-        expect(store.viewpoint).toBe(first);
-    });
-
 
     it('has no id that is the prefix of another id followed by a digit (mutant: ids the import\'s text replacement would corrupt)', async () => {
         const { store } = await readProject(id);
@@ -169,13 +129,6 @@ describe.each(GALLERY.map(e => [e.id, e] as const))('the project file of %s', (i
 });
 
 describe('the references of the sample models', () => {
-    it('StateMachine: the statechart table binds State and Transition to State and Transition (mutant: the derivation drops a class role)', async () => {
-        const { json, lookup } = await readProject('stateMachineEcore');
-        const state = lookup[json.viewpoints[0]]._state;
-        const roles = Object.fromEntries(Object.entries(state).filter(([k]) => k.startsWith('derivedRole_')).map(([k, v]) => [lookup[k.slice('derivedRole_'.length)]?.name, v]));
-        expect(roles).toEqual({ State: 'node', Transition: 'transition' });
-    });
-
     it('Library: every book has its author, two items are borrowed (mutant: the XMI references are not resolved)', async () => {
         const { lookup } = await readProject('library');
         const m = modelNamed(lookup, 'sample-Library');
