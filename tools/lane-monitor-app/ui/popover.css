@@ -123,6 +123,7 @@ button.more:hover { color: #EDEEF0; text-decoration: underline; }
   padding: 10px 14px 12px;
   border-top: 1px solid #1F2126;
 }
+.foot-note { margin: -4px 14px 10px; color: #FF6B63; font-size: 12px; }
 .btn {
   padding: 5px 12px;
   border: 1px solid #2A2C33;

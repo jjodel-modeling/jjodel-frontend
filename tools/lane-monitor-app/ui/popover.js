@@ -159,6 +159,13 @@ document.addEventListener('keydown', (e) => {
 });
 
 listen('attention', (e) => render(e.payload));
+// A config or shortcut problem the app found at launch (registration failure included).
+invoke('footer_note').then((note) => {
+  if (!note) return;
+  $('foot-note').textContent = note;
+  $('foot-note').hidden = false;
+  fit();
+});
 invoke('current').then(render);
 // Ages are relative to now: refresh them while the popover is open.
 setInterval(() => { if (!document.hidden) invoke('current').then(render); }, 60000);

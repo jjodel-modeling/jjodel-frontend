@@ -7,19 +7,21 @@ first, and the running ones; «Open monitor» opens the board in an app window.
 Tauri 2 (system WKWebView), Rust only: no npm package, no HTTP crate. Specification: the
 P-2026-10-18-2255 report, `docs/discovery/discovery_2026-10-18_lane_monitor_menubar_app.md`
 §Q4, §Q6, §Q7. Slice S2 (the shell) is P-2026-10-19-0000, S3 (notifications) is
-P-2026-10-19-0033; the `jjodel-lanes://` deep link and the global shortcut (S4), the login
-item and «Restart board» (S5) come later.
+P-2026-10-19-0033, the `jjodel-lanes://` deep link and the global shortcut (S4) is
+P-2026-10-19-0054; the login item and «Restart board» (S5) come later.
 
 ## Build
 
 Toolchain measured on 2026-10-19: `rustc 1.94.1`, `cargo 1.94.1`, `tauri-cli 2.12.3`
 (installed with `cargo install tauri-cli --version "^2" --locked`). The app's crates are
 pinned by `src-tauri/Cargo.lock` (`tauri` 2.12.4, `tauri-build` 2.7.3,
-`tauri-plugin-notification` 2.7.0).
+`tauri-plugin-notification` 2.7.0, `tauri-plugin-deep-link` 2.6.2,
+`tauri-plugin-global-shortcut` 2.4.1 on `global-hotkey` 0.8.0).
 
 ```bash
 cd tools/lane-monitor-app/src-tauri
-cargo test                       # HTTP parse, payload, title formatter, notification transitions
+cargo test                       # HTTP parse, payload, title formatter, notification transitions,
+                                 # deep-link parser, config and shortcut parse
 cargo tauri build --bundles app  # target/release/bundle/macos/Lane Monitor.app
 open "target/release/bundle/macos/Lane Monitor.app"
 ```
@@ -32,6 +34,27 @@ Gatekeeper dialog. Measured on the S2 build (2026-10-19): `du -sh` 4.4M (`cargo 
 same bundle lists `com.apple.provenance`); `codesign -dv`: `Signature=adhoc`.
 
 ## Configuration
+
+The bundled app, opened from Finder, the Dock or LaunchServices (a `jjodel-lanes://` link),
+gets no shell environment: it reads `~/Library/Application Support/io.jjodel.lane-monitor/config.json`
+(the bundle identifier's directory). Both fields are optional; an unknown field, or a file that
+is not JSON, is reported in the popover footer and the defaults apply.
+
+```json
+{
+  "board": "http://127.0.0.1:4712",
+  "shortcut": "Ctrl+Alt+Cmd+L"
+}
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `board` | `http://127.0.0.1:4700` | Board URL, as `LANE_MONITOR_BOARD` below, which wins over it. |
+| `shortcut` | `Ctrl+Alt+Cmd+L` (⌃⌥⌘L) | The global shortcut that toggles the popover, in `global-hotkey` notation: modifiers `Ctrl`, `Alt` (or `Option`), `Shift`, `Cmd` (or `Super`), then a key (`L`, `KeyL`, `J`, `1`, ...). `""` registers none. The fallback of report §Q5 is `Ctrl+Alt+Cmd+J`. Read at launch: quit and reopen after a change. |
+
+At launch the app logs `[lane-monitor] board <url> (from LANE_MONITOR_BOARD | config.json | default)`
+on stderr. To read stderr of an app launched through LaunchServices:
+`open --stderr /tmp/lane-monitor.log ~/Applications/Lane\ Monitor.app`.
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -86,6 +109,24 @@ LANE_MONITOR_BOARD=http://127.0.0.1:4712 \
   its permission alert («Notifiche di "Lane Monitor"») and store the notification in
   Notification Center without a banner until the alert is answered; a rebuilt bundle, with
   the same CDHash or a different one, is not asked again.
+- **Deep link.** `jjodel-lanes://P-YYYY-MM-DD-HHmm` (one trailing `/` allowed) opens the
+  monitor window on `<board>/#lane=<id>`, whether the app is running or launched by the link;
+  anything else (another id form, a path, a query) is refused and logged, never opened:
+  `[lane-monitor] deep link: opening <id>` or `[lane-monitor] deep link refused: "<url>": <why>`.
+  The board's `/l/<id>` page hands off to this link and falls back to `/#lane=<id>` after 1.5 s.
+  The scheme sits in the bundle's `CFBundleURLTypes` (`plugins.deep-link` in
+  `tauri.conf.json`); macOS registers it only for a bundle opened once from `/Applications` or
+  `~/Applications`, so install with
+  `cp -R "target/release/bundle/macos/Lane Monitor.app" ~/Applications/` and open it once.
+  Check: `lsregister -dump | grep -c jjodel-lanes` ≥ 1 (`lsregister` is under
+  `/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/`).
+- **Global shortcut.** The chord of `config.json` (default ⌃⌥⌘L) toggles the popover from
+  any app, under the tray icon. Registered at launch through Carbon `RegisterEventHotKey`:
+  `[lane-monitor] shortcut ⌃⌥⌘L registered`, or `... not registered: <error>` and the same
+  line in red in the popover footer, as is a chord that does not parse. A clash is mostly not
+  reported: another app's menu key equivalent loses to the global hot key, and a second
+  process registering the same chord succeeds too (measured 2026-10-19, two instances, both
+  `registered`). The press was measured with a synthesised key (`osascript`, System Events).
 - **Monitor window.** The board page in an app window, 1280×860, with no Tauri capability (a
   remote URL); closing it does not quit the app.
 
@@ -95,8 +136,9 @@ LANE_MONITOR_BOARD=http://127.0.0.1:4712 \
 |---|---|
 | `src-tauri/src/main.rs` | tray, popover window, monitor window, commands, poll thread |
 | `src-tauri/src/poll.rs` | HTTP GET and response parse, payload types, snapshot, title formatter, tests |
+| `src-tauri/src/links.rs` | the `jjodel-lanes://` parser, `config.json`, the shortcut parse and label; tests |
 | `src-tauri/src/notify.rs` | which lanes just started waiting, between two snapshots; notification text; tests |
-| `src-tauri/tauri.conf.json` | bundle (ad-hoc signing, icons), `frontendDist: "../ui"`, CSP |
+| `src-tauri/tauri.conf.json` | bundle (ad-hoc signing, icons), `frontendDist: "../ui"`, CSP, the `jjodel-lanes` scheme |
 | `src-tauri/capabilities/default.json` | `core:default` for the popover only |
 | `src-tauri/icons/` | tray template pair and the app icon set (`cargo tauri icon` from a 1024 px source) |
 | `ui/` | the popover: static HTML, CSS and JS, system fonts, no network |

@@ -13,6 +13,13 @@
       "csp": "default-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost"
     }
   },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["jjodel-lanes"]
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["app"],
