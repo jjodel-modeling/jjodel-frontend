@@ -81,6 +81,49 @@ describe('AIProviderService Custom model selection', () => {
     });
 });
 
+// The OpenAI-compatible connection test names its failure as the catalog does (P-2026-10-18-1525),
+// so Settings can tell a rejected key from a rate limit, an outage or an unreachable server.
+describe('testOpenAICompatible failure kinds', () => {
+    beforeEach(() => {
+        vi.resetModules();
+        const storage = new Map<string, string>();
+        vi.stubGlobal('localStorage', {
+            getItem: (key: string) => storage.get(key) ?? null,
+            setItem: (key: string, value: string) => storage.set(key, value),
+        });
+        vi.stubGlobal('fetch', vi.fn());
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    async function testDeepSeek() {
+        const { AI, AIProvider } = await import('../../types/jodie');
+        const { AIProviderService } = await import('../AIProviderService');
+        localStorage.setItem(AI.DeepSeek.storageKey, JSON.stringify({
+            name: AIProvider.DeepSeek, apiKey: 'sk-test', model: 'deepseek-chat', enabled: true,
+        }));
+        const result = await AIProviderService.testConnection(AIProvider.DeepSeek);
+        return { result, disables: AIProviderService.failureDisablesProvider(result) };
+    }
+
+    it.each([
+        [401, 'auth', true], [403, 'auth', true], [429, 'rate', false],
+        [500, 'server', false], [529, 'server', false], [404, 'other', false],
+    ])('reads HTTP %i as %s', async (status, failure, disables) => {
+        vi.mocked(fetch).mockResolvedValueOnce({
+            ok: false, status, text: async () => JSON.stringify({ error: { message: 'nope' } }),
+        } as Response);
+        expect(await testDeepSeek()).toEqual({ result: { success: false, failure, error: 'nope' }, disables });
+    });
+
+    it('reads a rejected fetch as network', async () => {
+        vi.mocked(fetch).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        const { result, disables } = await testDeepSeek();
+        expect(result).toMatchObject({ success: false, failure: 'network' });
+        expect(disables).toBe(false);
+    });
+});
+
 // #179: a Gemini configuration saved before 2026-08-05 carries `gemini-2.0-flash-exp`, which
 // Google answers with 404. Storage is seeded either before the import, when JodieConfig.load runs
 // the load-time migration, or after it, to exercise the read-time resolution on its own.
