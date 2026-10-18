@@ -483,3 +483,21 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 **Ticket**: `npm run decisions` refuses a row whose header parenthesis contains a nested one, e.g. `(2026-10-18, text from RC-49 (5) and ...)`, with «the separator after the parenthesis is not `:`, `.` or ` —`» (measured on RC-51 and RC-52 before their headers were rewritten). The text after the header may nest freely. Either the parser balances parentheses or P9/`decisions.md:4` states the limit; until then a row header names an item as «item 5 of RC-49».
 **Priority**: low
 **Found in**: P-2026-10-18-2125
+
+## 2026-10-18 — merge: context-rules into alfonso-frontend-jjtl (P-2026-10-18-2207)
+**Prompt**: `claude_2026-10-18_2207_prompt_merge_context-rules.md`, a merge session started by `lane-run merge`: `context-rules` at `bac924a41` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `1904076ef`, 3 commits on the branch side.
+**Files touched**: merge `fe8cc637d`: 7 files from the branch side (`docs/PROTOCOL.md`, `docs/decisions.md`, `docs/harness/gates.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_2125_prompt_b8c_context_rules.md`, `frontend/scripts/hooks/__tests__/agentModels.test.ts`, `frontend/scripts/hooks/context-ceiling.mjs`); this commit: this entry, one ticket and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fe8cc637d`: typecheck exit 0, no error; typecheck:scripts exit 0; vitest 9396 tests in 383 files, 0 failed, the same 9 files red at import as on the trunk tip (expected 9381 + 15 from `agentModels.test.ts`); hooks 917 in 19 files (902 + 15); build exit 0; check:docs 5/5; check:agents, check:scripts (135 files), check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — waived by the chat's GO: no file under frontend/src (docs, PROTOCOL.md, two hook-script files), nothing renders differently; 3001 was not listening at the hard stop
+**Notes**: Zero conflicts; merge-tree `36f62362e` equal to the index, `docs/decisions.md` auto-merged, no union. Governance file `docs/PROTOCOL.md` under Alfonso's go-ahead (2026-10-18 22:07); step 2's «must be empty» was red on it by construction. Probes RC-51, RC-52, R-LIB-8 and the two inbox headings once each, R-LIB-9 none. No lane-board file changed, no restart. check:docs runs 5 checks, the prompt expected 4.
+**Prompt document name**: 2026-10-18 22:07
+
+## 2026-10-18 — ticket: the merge template names the wrong pre-merge tip for the check:addonly reset
+**Ticket**: Step 6 of `claude_2026-10-18_2207_prompt_merge_context-rules.md` (rendered from `frontend/scripts/lane-templates/merge-into-trunk.md`) prescribes `git reset --hard fc8dbb93a` on a `check:addonly` violation and calls it «the pre-merge tip», but the pre-merge tip was `7e9c8e36f`, the commit that adds the prompt itself (parent `fc8dbb93a`). Executed, the reset would drop the merge's own prompt commit. Not triggered here (check:addonly PASS). The template should name the tip measured at launch plus the prompt commit, or the first parent of the merge (`HEAD^1`).
+**Priority**: medium
+**Found in**: P-2026-10-18-2207
