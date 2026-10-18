@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1500
 Chat: C-2026-10-17-1530
 Front: maintenance
 Lane: full (user-facing page every user goes through; two phases in cascade)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane login-redesign · b8a12dc99, a42694244 · verifica visiva chat OK 2026-10-18 (1440x900 login/register/reset, 390x844)
 Request: Alfonso, 2026-10-18 14:58, «macmaster ha approvato, metti online la D2» (design D2 chosen in this chat on 2026-10-17/18 from four mockups)
 Depends: none
 Corregge: —

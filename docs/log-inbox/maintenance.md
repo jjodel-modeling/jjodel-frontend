@@ -141,3 +141,15 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Settings model picker: Alfonso checked the collapsed and expanded crops (2026-10-18 15:03, OK); DOM measures: main list and Show older row fixed, only the popover footer moves
 **Notes**: Rollback tag `pre-ai-models-dynamic` on `a3ec93534` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1457/result.json`.
 **Prompt document name**: 2026-10-18 14:57
+## 2026-10-18 — feat(auth): editorial layout for sign in, register and password reset (P-2026-10-18-1500)
+**Prompt**: `claude_2026-10-18_1500_prompt_login_redesign.md`, full lane, two phases in cascade, worktree `jjodel-w-login` on `login-redesign`: design D2 for the auth page (header, intro column + form card, dark footer), behaviour of the three views unchanged.
+**Files touched**: `b8a12dc99` and fix `a42694244` (chat's visual check): `frontend/src/pages/Auth.tsx`, `frontend/src/pages/auth.scss`. Closure commit: `docs/discovery/discovery_2026-10-18_auth_page_redesign.md`, this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck exit 0, build exit 0, no test touches the auth page; full vitest 12 files red, the nine of §17 plus laneRun, laneRunDirect, laneRunRouting (`Unknown file extension ".ts"` on `scripts/gates/decisions-query.ts`), red on the tip `87feac64a` too. Login, register and reset submits not exercised against the API.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: OK — chat, RC-23, 2026-10-18 16:20, built-in browser on :3010, 1440x900 login/register/reset and 390x844 register: layout as D2, intro and card top-aligned, labels match titles; lane's own headless probe on port 3010, 3 views × 4 sizes, no horizontal scroll, 0 page errors (report, Phase 2 results)
+**Notes**: Header logo is `logo-light-150.png` (Navbar's dark wordmark): `jjodel.png` is white and was invisible on the new header, prompt context item 2 does not hold. Register lead line «Fields marked * are required» omitted: the `*` appears only after a failed submit. Fix `a42694244`: grid top-aligned, buttons Sign in/Create account/Send reset link (chat overrode decision 3).
+**Prompt document name**: 2026-10-18 15:00
