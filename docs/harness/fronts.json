@@ -61,6 +61,14 @@
       "state": "open",
       "openedOn": "2026-10-10",
       "milestone": 7
+    },
+    {
+      "slug": "notation-library",
+      "title": "Notation library and project gallery (R-LIB)",
+      "exit": "docs/library/catalog.json marks every R-LIB-5 gallery project and at least one R-LIB-4 sealed notation as available, and both flows (clone from the gallery, new model from a sealed notation) pass their probe on alfonso-frontend-jjtl",
+      "state": "open",
+      "openedOn": "2026-10-18",
+      "milestone": 8
     }
   ]
 }
