@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-0000
 Chat: C-2026-10-18-2225
 Front: harness
 Lane: phase2 (slice S2 of 5 of the plan in the P-2026-10-18-2255 report; one slice per session, RC-52; new tree `tools/lane-monitor-app/`, outside `frontend/`; no critical zone)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane menubar-disc · c5eadb816 · verifica visiva passata 2026-10-19 (chat, captures at 00:27: tray 1 on 4712, 6! on a blocked fixture, dash when unreachable; popover per the agreed design)
 Depends: P-2026-10-18-2320
 Corregge: —
 Request: Alfonso, 2026-10-18 23:00: «Tauri va bene», «procedi nella maniera più automatica possibile con /lane auto e non ti fermare, procedi con l'implementazione».

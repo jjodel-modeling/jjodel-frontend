@@ -533,3 +533,16 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 **Priority**: low
 **Found in**: P-2026-10-18-2320
 **Detail**: ~/.jjodel-lanes/P-2026-10-18-2320/handoff.md
+
+## 2026-10-19 — feat(lane-monitor-app): Tauri 2 menu bar shell, tray count and popover (P-2026-10-19-0000)
+**Prompt**: `claude_2026-10-19_0000_prompt_lane_monitor_s2_app_shell.md`, slice S2 of the P-2026-10-18-2255 plan: install `tauri-cli` 2, tests first on the HTTP parse and the title formatter, the Tauri 2 shell in `tools/lane-monitor-app/` (tray title, popover, polling from Rust over `std::net`), `cargo tauri build --bundles app`, live run on 4712 with captures.
+**Files touched**: `.gitignore` (two lines of §Q6), `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, build.rs, tauri.conf.json, capabilities/default.json, src/main.rs, src/poll.rs, icons/*}`, `ui/popover.{html,css,js}`); code commit `c5eadb816`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (new tree outside `frontend/`; `cargo test` 18/18; board and 4700 untouched)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, captures checked at 00:27 (tray 1, fixture 6!, dash unreachable; popover design, more link, stale line, running rows, error box)
+**Notes**: tauri-cli 2.12.3; tauri 2.12.4. Bundle 4.4M, adhoc, no quarantine. Mutation bench 3/3. Found live: a 3 s timeout read a slow board (3.6 s measured) as unreachable, now 2 s connect, 15 s read, `no answer` as error; `[hidden]` lost to `.more{display:block}`, fixed. Unattended: right-click tray menu with Quit, row click opens `/#lane=<id>`, bundle id `io.jjodel.lane-monitor`. Commit subject shortened from the prompt's (74 > 72, bash-guard).
+**Prompt document name**: 2026-10-19 00:00
