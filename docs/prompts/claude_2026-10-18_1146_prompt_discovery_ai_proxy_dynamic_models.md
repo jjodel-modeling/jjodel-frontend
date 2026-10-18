@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1146
 Chat: C-2026-10-17-1518
 Front: maintenance
 Lane: full (discovery, read-only; heavy, not drawn: discoveries are outside RC-45)
-Status: eseguito 2026-10-18 · lane discovery ai-models-discovery · measured on 1e9e616fa; the report is in the commit that carries this line (a commit cannot name its own sha) · Outcome: hard-stop
+Status: eseguito 2026-10-18 · lane ai-models-discovery · cfc266eac, 7d233651e
 Request: Alfonso, 2026-10-18 11:43, «la lista dei modelli è statica, è possibile renderla dinamica con tutti i modelli disponibili e quelli legacy su richiesta ?» then «confermo, usa /lane auto»
 Corregge: —
 
