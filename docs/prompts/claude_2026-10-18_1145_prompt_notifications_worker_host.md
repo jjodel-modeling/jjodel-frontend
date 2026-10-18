@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1145
 Chat: C-2026-10-17-1518
 Front: maintenance
 Lane: fast (one constant in one file, outside the critical zone; tier drawn (RC-45): light)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane notif-url · code 4e8bdbcc7 · typecheck 0, build exit 0, no test imports the widget · new host answers 200 · no visual check (P8 derogated)
 Request: Alfonso, 2026-10-18 11:43, «confermo, usa /lane auto» (the chat found this breakage while preparing the AI-provider discovery, P-2026-10-18-1146)
 Corregge: —
 
