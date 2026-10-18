@@ -11,7 +11,8 @@
  *   - an explicit save, then a reopen from the page load: name and `_clonedFrom` survive.
  * Then a second Library clone takes «Library (1)», and a package with one user-defined megamodel edge is cloned to
  * measure where the import registers it (projects.ts, `registerSerializedMegamodel(json.id, …)`).
- * Screenshots at 1440×900, light theme, into docs/discovery/assets/library-gallery/.
+ * The Templates shell is checked against the Projects page's, the dialog at rest (animations ended), and the Quick Tip
+ * and the donation banner are closed before each screenshot. Screenshots at 1440×900, light theme, into docs/discovery/assets/library-gallery/.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/library-gallery-clone.ts \
  *         --port 3098 --id P-2026-10-18-1800
@@ -91,6 +92,28 @@ const SAVE = String.raw`(async () => {
   return true;
 })()`;
 
+/** The Quick Tip and the donation banner cover the page: closed (their own close buttons) before every screenshot,
+ *  then the page's animations are let finish, so no popup is caught sliding in. */
+async function closeTip(page: Page): Promise<void> {
+    // The banner shows 30 s after load (useDonationBanner.ts), so it can arrive after a first pass: three passes.
+    for (let pass = 0; pass < 3; pass++) {
+        await wait(page, 1500);
+        // A DOM click: in the editor the banner sits under the right panel, where a pointer click cannot reach it.
+        await page.evaluate(`document.querySelectorAll('.notification-widget.is-tip .notification-close, .donation-banner__close').forEach((b) => b.click())`);
+        await poll(page, `!document.querySelector('.notification-widget.is-tip') && !document.querySelector('.donation-banner')`, 5000);
+        await poll(page, `document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity)`, 5000);
+    }
+    meas('before the screenshot', await page.evaluate(`({ mode: localStorage.getItem('jjodel.interfaceMode'), toggle: [...document.querySelectorAll('button')].filter((b) => /^(Basic|Advanced)$/.test((b.textContent || '').trim())).map((b) => b.textContent.trim() + ':' + b.className + ':' + b.getAttribute('aria-pressed')).join(' | '), popups: document.querySelectorAll('.notification-widget.is-tip, .donation-banner').length })`));
+}
+
+/** Where the title row and the content below it start, and the shell's padding: the Projects page is the reference. */
+const SHELL = String.raw`(() => {
+  const t = document.querySelector('.dashboard-page-title'), row = document.querySelector('.dashboard-cta-row'), main = document.querySelector('.dashboard-main-content'), dash = document.querySelector('.dash-content');
+  if (!t || !row || !main || !dash || !row.nextElementSibling) return null;
+  const r = (e) => { const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top)]; };
+  return { title: r(t), content: r(row.nextElementSibling), mainPadding: getComputedStyle(main).padding, dash: dash.className.replace(/\s+/g, ' ').trim(), dashBg: getComputedStyle(dash).backgroundColor };
+})()`;
+
 async function openTemplates(page: Page, id: string): Promise<boolean> {
     await page.goto(`${URL}/#/templates`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     const card = `document.querySelector('[data-gallery-id="${id}"]')`;
@@ -101,14 +124,37 @@ async function openTemplates(page: Page, id: string): Promise<boolean> {
 /** Templates → card → modal → «Clone & open»; returns the name in the modal and the id of the project that opens. */
 async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot?: string): Promise<{ prefilled: string; chosen: string; info: any } | null> {
     if (!(await openTemplates(page, entry.id))) { check(`${entry.id}: the Templates card shows its counts`, false, ''); return null; }
-    if (shot) await page.screenshot({ path: `${SHOTS}/${shot}-page.png` });
+    if (shot) {
+        await closeTip(page);
+        const shell = await page.evaluate(SHELL) as any;
+        meas('Templates shell', shell);
+        check('Templates: title and content start where the Projects page\'s do, same padding',
+            !!shell && !!projectsShell && JSON.stringify(shell.title) === JSON.stringify(projectsShell.title)
+            && JSON.stringify(shell.content) === JSON.stringify(projectsShell.content) && shell.mainPadding === projectsShell.mainPadding,
+            { templates: shell && [shell.title, shell.content], projects: projectsShell && [projectsShell.title, projectsShell.content] });
+        await page.screenshot({ path: `${SHOTS}/${shot}-page.png` });
+    }
     await page.locator(`[data-gallery-id="${entry.id}"] button`, { hasText: 'Clone to my workspace' }).click();
     const input = page.locator('#templates-clone-name');
     await input.waitFor({ timeout: 10000 });
     const prefilled = await input.inputValue();
     if (typed) await input.fill(typed);
     const chosen = typed ?? prefilled;
-    if (shot) await page.screenshot({ path: `${SHOTS}/${shot}-modal.png` });
+    if (shot) {
+        await closeTip(page);
+        // The dialog slides up in 200 ms (create-project-dialog.scss): the screenshot waits for its animations to end.
+        const dlg = await poll<any>(page, String.raw`(() => {
+          const d = document.querySelector('.templates-clone-dialog'), o = document.querySelector('.dialog-overlay');
+          if (!d || !o || ![...d.getAnimations(), ...o.getAnimations()].every((a) => a.playState === 'finished')) return null;
+          const cs = getComputedStyle(d), b = d.getBoundingClientRect();
+          const top = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+          return { opacity: cs.opacity, zIndex: cs.zIndex, background: cs.backgroundColor, overlayZ: getComputedStyle(o).zIndex, onTop: !!top && d.contains(top), value: document.querySelector('#templates-clone-name').value };
+        })()`, 10000);
+        meas('clone dialog at rest', dlg);
+        check('the clone dialog is opaque, white, above the overlay, prefilled', !!dlg && dlg.opacity === '1' && dlg.background === 'rgb(255, 255, 255)'
+            && Number(dlg.zIndex) > Number(dlg.overlayZ) && dlg.onTop && dlg.value === chosen, dlg);
+        await page.screenshot({ path: `${SHOTS}/${shot}-modal.png` });
+    }
     const before = await page.evaluate(`JSON.parse(localStorage.getItem('projects') || '[]').map((r) => r.id)`) as string[];
     await page.locator('.templates-clone-dialog button[type="submit"]').click();
     await page.waitForURL(/project\?id=/, { timeout: 60000 }).catch(() => undefined);
@@ -118,6 +164,7 @@ async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot
     return info ? { prefilled, chosen, info } : null;
 }
 
+let projectsShell: any = null;
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
@@ -129,6 +176,10 @@ try {
     await page.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     await poll(page, `!!(window.windoww && window.windoww.store && window.LPointerTargetable)`, 120000);
     await wait(page, 2000);
+    projectsShell = await poll<any>(page, SHELL, 30000);
+    meas('Projects shell (reference)', projectsShell);
+    await closeTip(page);
+    await page.screenshot({ path: `${SHOTS}/projects-page.png` });
 
     for (const entry of GALLERY) {
         const exp = await expected(entry);
@@ -152,7 +203,7 @@ try {
             check(`${entry.id}: the default editor of ${m.name} shows one node per object`, nodes === m.objects, `${nodes} nodes, ${m.objects} objects`);
             await wait(page, 1500);
         }
-        if (entry.id === 'familiesPersons') await page.screenshot({ path: `${SHOTS}/cloned-familiesPersons.png` });
+        if (entry.id === 'familiesPersons') { await closeTip(page); await page.screenshot({ path: `${SHOTS}/cloned-familiesPersons.png` }); }
 
         await page.evaluate(SAVE);
         await page.goto(`${URL}/?open=${encodeURIComponent(info.id)}#/project?id=${info.id}`, { waitUntil: 'domcontentloaded', timeout: 300000 });

@@ -1,22 +1,7 @@
 /* ============================================
    TEMPLATES - the gallery of R-LIB-5 (P-2026-10-18-1800)
-   Card grid on the 8px grid; secondary text 11px.
+   The Projects page's shell (dashboard.scss); card grid on the 8px grid; secondary text 11px.
    ============================================ */
-
-.templates-page {
-    padding: 24px;
-}
-
-.templates-page__header {
-    margin-bottom: 24px;
-}
-
-.templates-page__title {
-    font-size: 18px;
-    font-weight: 500;
-    color: var(--color-text-primary);
-    margin: 0 0 8px;
-}
 
 .templates-page__sub {
     font-size: 11px;

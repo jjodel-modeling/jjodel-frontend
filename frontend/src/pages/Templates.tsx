@@ -116,11 +116,17 @@ function TemplatesComponent(_props: OwnProps): JSX.Element {
     }, []);
 
     return (<Try>
-        <Dashboard active={'Templates'}><>
-            <div className="templates-page">
-                <div className="templates-page__header">
-                    <h2 className="templates-page__title">Templates</h2>
-                    <p className="templates-page__sub">Starter projects you can clone into your workspace. The clone is yours: the original is never changed.</p>
+        {/* The Projects page's shell: `projects-view` (dashboard.scss) in place of the centred `user` panel, and its
+            main content and title row (AllProjects.tsx). */}
+        <Dashboard active={'Templates'} style={'projects-view'}><>
+            <div className="dashboard-main-content">
+                <div className="dashboard-cta-row">
+                    <div className="dashboard-cta-left">
+                        <h1 className="dashboard-page-title">Templates</h1>
+                    </div>
+                    <div className="dashboard-cta-right">
+                        <p className="templates-page__sub">Starter projects you clone into your workspace. The clone is yours: the original never changes.</p>
+                    </div>
                 </div>
                 {failed && <p className="templates-page__sub">The gallery could not be loaded.</p>}
                 <div className="templates-grid">
