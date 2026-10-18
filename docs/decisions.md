@@ -6168,6 +6168,14 @@ Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked
   specs' server-side `featured` flag and `curator` role; their clone semantics (deep copy, new ids, passive
   `_clonedFrom`) and read-only opening stand for case 2.
 
+- **R-LIB-7** (2026-10-18, ratified by Alfonso 2026-10-18 «le template e galleria sono parte di 3-2», evidence: measured, verified: none, reversible: trunk).
+  **The project gallery and the Templates page (slices S1 and S2, branch `library-gallery`, P-2026-10-18-1800) ship
+  in 3.2.** They reach the trunk after the 3.1.0 tag, so that 3.1 is not affected. In 3.2 a gallery project is cloned
+  without a read-only opening (slice S7 comes later, on the reducer guard), which is the clone-first reading of
+  R-LIB-6. The sealed notations (S4 onwards), the S3 seal predicate and the S6 reducer guard are not part of this
+  row. Evidence: `docs/discovery/discovery_2026-10-18_notation_library.md` §«Gallery S1+S2» (gallery test 31,
+  clone probe 55/55, the chat's visual check).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
