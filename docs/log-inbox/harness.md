@@ -402,3 +402,16 @@ Decisions awaiting Alfonso: the registration of `context-ceiling.mjs` in `.claud
 **Smoke visivo**: passato — Alfonso on :4711 (20:03), GO; today $64.43 over 535 lanes, P-2026-10-18-1735 $4.89 = its log's 4.8875
 **Notes**: Unattended (RC-21), accepted by the GO: Cost directly after Arch, three existing assertions and tokenCells adjusted; main.wide 1608 to 1672 px; cost events cached as `cost:<id>` in usage-cache.json, token key not bumped. Subagents ARE in total_cost_usd (modelUsage lists the Sonnet subagent model, per-model costs sum to the total): the tip says so.
 **Prompt document name**: 2026-10-18 17:50
+
+## 2026-10-18 — merge: lane-cost into alfonso-frontend-jjtl (P-2026-10-18-2010)
+**Prompt**: `claude_2026-10-18_2010_prompt_merge_lane-cost.md`, a direct merge by `lane-run merge --direct`, no session: `lane-cost` at `2a0a78ebf` into `alfonso-frontend-jjtl`, merge base `062a05434`, 2 commits on the branch side.
+**Files touched**: merge `93a62b806`: 5 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1750_prompt_lane_board_cost.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `93a62b806` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9381 tests in 382 files, 9 red at import, hooks 902; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge (lane-board.mjs, its README and test); Alfonso checked the Cost column and the day totals on the 4711 board of the lane at 20:03 and approved; after the merge restartBoard restarted io.jjodel.lane-board in 8.1 s and 4700/api serves spendByDay (today 71.56)
+**Notes**: Rollback tag `pre-lane-cost` on `8f68dcbb5` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-2010/result.json`.
+**Prompt document name**: 2026-10-18 20:10
