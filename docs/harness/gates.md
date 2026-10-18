@@ -43,6 +43,7 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
   - `src/utils/__tests__/UDComparator.test.ts`
 
   Do not treat any other red as pre-existing without checking.
+- `scripts/hooks/__tests__/agentModels.test.ts` (AM-1, B8c, P-2026-10-18-2125), when you touch `.claude/settings.json`, `.claude/agents/` or a skill's frontmatter: the three IDs of the settings are present and well formed, every `model:` of an agent or skill frontmatter is one of them, and `Explore`, `explorer` and `general-purpose` name `env.JJODEL_LIGHT_MODEL`. It reads the `.claude/` of the tree it runs in.
 
 ## The `check:*` scripts
 
@@ -90,13 +91,13 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 - `frontend/scripts/hooks/rule-trigger.mjs`, PreToolUse on `Edit|Write|NotebookEdit`: the first write of a session under an entry's glob is denied with the entry's docs named (read them, retry the same write), once per session and entry (marker `jjodel-rule-trigger-<session_id>.json` in `os.tmpdir()`); fails open. Registered in `.claude/settings.json` by B7 (P-2026-10-18-1655), after `critical-zone.mjs` in the `Edit|Write|NotebookEdit` entry.
 - `npm run check:triggers`, when you touch the map or add a nested `CLAUDE.md`: fails on a missing doc or `#fragment`, a glob matching no tracked file, a nested `CLAUDE.md` no entry covers, a duplicate glob; exit 2 on a map that is not JSON or not schema 1.
 
-## Context ceiling (B8b, P-2026-10-18-1530)
+## Context ceiling (B8b, P-2026-10-18-1530; RC-51)
 
-- `frontend/scripts/hooks/context-ceiling.mjs`, PreToolUse on every tool (AM-8, report §7.3). Source: `JJODEL_LANE_LOG` when set and readable, else the hook input's `transcript_path`; the measure is input + cache_read + cache_creation of the latest main `assistant` event, read from a 512 KB tail. Thresholds soft 200000, hard 250000, the RC-49 (5) proposal, overridable by `JJODEL_CONTEXT_SOFT`/`JJODEL_CONTEXT_HARD`; B8c ratifies them.
-- Lane session (lane folder by `session.txt` under `~/.jjodel-lanes/`, or `JJODEL_LANES_DIR`): at soft, once per session (marker `jjodel-context-ceiling-<session_id>.json` in `os.tmpdir()`), deny naming `handoff.md`, `handoff.diff` and `Outcome: hard-stop`; at hard, deny all but the handoff writes and one unchained `git status`/`git diff`. Interactive session: once at soft, no hard stop. Fails open. Registered in `.claude/settings.json` by B7 (P-2026-10-18-1655), its own PreToolUse entry with matcher `*`.
+- `frontend/scripts/hooks/context-ceiling.mjs`, PreToolUse on every tool (AM-8, report §7.3). Source: `JJODEL_LANE_LOG` when set and readable, else the hook input's `transcript_path`; the measure is input + cache_read + cache_creation of the latest main `assistant` event, read from a 512 KB tail. Thresholds soft 200000, hard 250000, ratified by RC-51 (2026-10-18, B8c), overridable by `JJODEL_CONTEXT_SOFT`/`JJODEL_CONTEXT_HARD`; a change of the defaults needs a ratified row.
+- Lane session (lane folder by `session.txt` under `~/.jjodel-lanes/`, or `JJODEL_LANES_DIR`): at soft, once per session (marker `jjodel-context-ceiling-<session_id>.json` in `os.tmpdir()`), deny naming `handoff.md`, `handoff.diff` and `Outcome: hard-stop`; at hard, deny all but the handoff writes and one unchained `git status`/`git diff`. Interactive session: once at soft, no hard stop. Fails open. Registered by B7 (P-2026-10-18-1655, merge `b93c3fd46`) in `.claude/settings.json`, its own PreToolUse entry with matcher `*`.
 - Under `claude -p` the measure lags one call: at the first PreToolUse of a fresh session the transcript does not exist yet (fail open), and at call n the transcript holds the `assistant` events of calls 1..n-1 only. The first call of a session is never stopped, and calls issued in parallel in one message are all measured on the previous call (B7; ticket for B8a).
 
 ## Settings env and agent models (AM-1, B7, P-2026-10-18-1655)
 
 - `.claude/settings.json` `env`: `JJODEL_LIGHT_MODEL` `claude-sonnet-5-5` (read by `lane-run` for the light tier, which otherwise falls back to the constant with `light model: constant (settings env not set, B7)`) and `JJODEL_REPORT_MODEL` `claude-haiku-5-5`. Never `JJODEL_CONTEXT_*`: those belong to a launch, not to the project.
-- `.claude/agents/`: `explorer.md`, `Explore.md` (overrides the built-in) and `general-purpose.md` (overrides the built-in, every tool kept) all name `model: claude-sonnet-5-5`, the full ID, equal to `JJODEL_LIGHT_MODEL`. The agent `model` field accepts the full ID, and a project agent with a built-in's name overrides it (measured in B7). No test yet compares the agent files with the settings keys (B8c).
+- `.claude/agents/`: `explorer.md`, `Explore.md` (overrides the built-in) and `general-purpose.md` (overrides the built-in, every tool kept) all name `model: claude-sonnet-5-5`, the full ID, equal to `JJODEL_LIGHT_MODEL`. The agent `model` field accepts the full ID, and a project agent with a built-in's name overrides it (measured in B7). `agentModels.test.ts` compares the agent and skill files with the settings keys (B8c).
