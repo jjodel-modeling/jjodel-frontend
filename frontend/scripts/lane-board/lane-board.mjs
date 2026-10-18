@@ -143,7 +143,9 @@ export function kindDetails(row, f, usage = true) {
         const gates = Array.isArray(r.gates) ? r.gates : [];
         if (gates.length) out.push('Gates: ' + gates.map((g) => g.name + (g.ok ? ' ok' : ' red' + (g.detail ? ' (' + g.detail + ')' : ''))).join(' · '));
         else out.push('Gates: no result.json yet');
-        if (r.outcome) out.push('Result: ' + r.outcome + (r.reason ? ', ' + r.reason : ''));
+        // result.json's outcome is the stop before the GO; a closure sha means the chat closed the merge after it.
+        if (r.outcome && r.closure) out.push('Result: ' + r.outcome + ' at the merge' + (r.reason ? ', ' + r.reason : '') + ', closed by ' + String(r.closure).slice(0, 9));
+        else if (r.outcome) out.push('Result: ' + r.outcome + (r.reason ? ', ' + r.reason : ''));
         if (f.resolved) out.push('Resolved: ' + f.resolved);
         out.push('In, Out, Total, Ctx max: n/a, no model ran');
         out.push(f.architect ? 'Arch: from architect.json' : 'Arch: n/a, the chat records it only for session lanes');

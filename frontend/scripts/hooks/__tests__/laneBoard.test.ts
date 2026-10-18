@@ -1005,6 +1005,15 @@ describe('the Kind badge: kindDetails and the Lanes tab', () => {
         expect(lines).toContain(NO_MODEL);
     });
 
+    test('a direct merge closed after its stop: the outcome at the merge and the closure sha; without closure the outcome alone (closure ignored, or printed without it)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const result = { branch: 'lane-run-routing', trunk: 'alfonso-frontend-jjtl', gates: gates(true), outcome: 'hard-stop', reason: null };
+        const closed = kindFacts(folder({ 'direct.json': {}, 'result.json': { ...result, closure: '6f21730ac6a4daa1187582e4799793135e46d26f' } }));
+        expect(kindDetails(row(), closed)[5]).toBe('Result: hard-stop at the merge, closed by 6f21730ac');
+        const open = kindFacts(folder({ 'direct.json': {}, 'result.json': { ...result, closure: null } }));
+        expect(kindDetails(row(), open)[5]).toBe('Result: hard-stop');
+    });
+
     test('a session lane with runs.jsonl: tier, model and effort of its last line, the session id, tokens and Arch from their files (last line or effective model ignored)', async () => {
         const { kindDetails, kindFacts } = await load();
         const d = folder({
