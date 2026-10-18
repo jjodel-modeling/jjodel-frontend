@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1525
 Chat: C-2026-10-18-0035
 Front: release-3-2
 Lane: fast (three files: AISettingsContent.tsx, AIProviderService.ts, types/jodie.ts; no critical zone)
-Status: da eseguire
+Status: eseguito 2026-10-18 · branch ai-row-label · edaccffb0
 Request: "nei settings vengono indicati i nomi di modelli, perché" (Alfonso, 2026-10-18 15:20), then "vai" (15:21) to the proposal below
 
 Protocollo: docs/PROTOCOL.md: clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
