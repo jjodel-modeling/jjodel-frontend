@@ -83,3 +83,9 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 - The effort passed as `claude -p --effort <level>`: heavy `xhigh` for `--critical-zone-goahead`, a CLAUDE.md §3.2 file in DOVE or `visual bug` on the Lane line, else `high`; light `high`; `--effort` overrides it; a resume reuses the last line's.
 - `## Decisions in scope (injected by lane-run, AM-5)`, appended by `start` and `merge --launch` to `stdin.md` after the prompt and before the closing reminder: `npm run decisions -- <IDs> --no-related`, the related rows at depth one, the IDs `not found`. The IDs are the prompt's tokens the worktree's register has, and its series' `<SERIES>-<n>` tokens it lacks.
 - `## Log entries in scope (injected by lane-run, AM-5)`: the headers of `npm run log:find -- --prompt <Depends> --front <Front> --limit 10`, then the `Depends:` entries `--full`, dropped above 40,000 characters (`injected: trimmed to headers`). A CLI failure other than an ID not found refuses the start.
+
+## Rule triggers (B4, P-2026-10-18-1420)
+
+- `docs/harness/rule-triggers.json`, schema 1: entries `{ glob, docs, why }`, a doc being `<repo path>[#<heading fragment>]`; one entry per nested `CLAUDE.md`, glob `<its directory>/**`. The root `CLAUDE.md` has none (it loads by itself).
+- `frontend/scripts/hooks/rule-trigger.mjs`, PreToolUse on `Edit|Write|NotebookEdit`: the first write of a session under an entry's glob is denied with the entry's docs named (read them, retry the same write), once per session and entry (marker `jjodel-rule-trigger-<session_id>.json` in `os.tmpdir()`); fails open. Not registered in `.claude/settings.json` until B7.
+- `npm run check:triggers`, when you touch the map or add a nested `CLAUDE.md`: fails on a missing doc or `#fragment`, a glob matching no tracked file, a nested `CLAUDE.md` no entry covers, a duplicate glob; exit 2 on a map that is not JSON or not schema 1.
