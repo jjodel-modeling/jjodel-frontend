@@ -493,6 +493,7 @@ function snapshot(r) {
         // The Lanes tab's token columns (P-2026-10-18-1045): integers, null when the lane has no per-call usage.
         const tk = isChain ? null : laneTokens(id);
         Object.assign(row, { tokensIn: tk ? tk.tokensIn : null, tokensOut: tk ? tk.tokensOut : null, tokensTotal: tk ? tk.tokensTotal : null, ctxMax: tk ? tk.ctxMax : null, tokensSub: tk ? tk.tokensSub : null });
+        Object.assign(row, isChain ? archFields(null) : archFields(laneArchitect(id)));
         rows.push(row);
     }
     for (const log of evCache.keys()) if (!logs.has(log)) evCache.delete(log);
@@ -611,6 +612,25 @@ export function tokensOf(u) {
         tokensIn, tokensOut, tokensTotal: calls ? tokensIn + (tokensOut || 0) : null, ctxMax: calls ? u.context.max : null,
         tokensSub: sum(u.subagents, true), at200k: u.context.atOrAbove200k, at250k: u.context.atOrAbove250k,
         sevenDayDelta: u.rateLimit.delta ? u.rateLimit.delta.sevenDay : null, tier: u.tier, model: u.model.first,
+    };
+}
+
+/** The architect's share of a lane (P-2026-10-18-1155), from architect.json through lane-usage.mjs. Read on every call, uncached:
+ *  the file is a few hundred bytes and the chat rewrites it when it closes the lane. null without lane-usage.mjs, without the file, or when unreadable. */
+function laneArchitect(id) {
+    if (!LU || !LU.architectOf) return null;
+    const a = LU.architectOf(id);
+    if (a.state === 'open') return { open: true, chat: a.chat, model: a.model, delta: null };
+    if (a.state !== 'ok') return null;
+    return { open: false, chat: a.chat, model: a.model, delta: a.delta };
+}
+
+/** The /api fields of the Arch column: integers, null while open or without the file. */
+export function archFields(a) {
+    const d = a && a.delta;
+    return {
+        archIn: d ? d.totalIn : null, archOut: d ? d.output : null, archTotal: d ? d.totalIn + d.output : null,
+        archChat: a ? a.chat : null, archOpen: Boolean(a && a.open),
     };
 }
 
@@ -1170,6 +1190,7 @@ function insightLane(id, dir, t, g, corr, own, now, draws = new Map()) {
         ageDays: live ? 0 : Math.round(((now - end) / 864e5) * 10) / 10,
         // The raw numbers of the Tokens block (tokenGroups): laneTokens(), null without a log.
         tokens: laneTokens(id),
+        arch: (() => { const a = laneArchitect(id); return a ? { ...archFields(a), model: a.model } : null; })(),
     };
 }
 
@@ -1390,14 +1411,18 @@ export function tokenGroups(lanes, by) {
         if (!t || t.tokensTotal === null) continue;
         const k = t[by] || '';
         if (!groups.has(k)) groups.set(k, []);
-        groups.get(k).push(t);
+        // The architect's total rides beside the executor's: only a closed lane carries one (archOpen or n/a leave it null).
+        groups.get(k).push({ ...t, arch: l.arch && !l.arch.archOpen && typeof l.arch.archTotal === 'number' ? l.arch.archTotal : null });
     }
     return [...groups].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([key, ts]) => {
         const alone = ts.filter((t) => t.alone === true && typeof t.sevenDayDelta === 'number');
+        const arch = ts.filter((t) => t.arch !== null);
+        const archSum = arch.reduce((a, t) => a + t.arch, 0), execSum = arch.reduce((a, t) => a + t.tokensTotal, 0);
         return {
             key, lanes: ts.length, totalMedian: med(ts.map((t) => t.tokensTotal)), totalSum: ts.reduce((a, t) => a + t.tokensTotal, 0),
             ctxMaxMedian: med(ts.map((t) => t.ctxMax)), at200k: ts.filter((t) => t.at200k > 0).length, at250k: ts.filter((t) => t.at250k > 0).length,
             aloneDelta7d: Math.round(alone.reduce((a, t) => a + t.sevenDayDelta, 0) * 1e6) / 1e6, aloneLanes: alone.length,
+            archLanes: arch.length, archSum, archMedian: med(arch.map((t) => t.arch)), archRatio: arch.length && execSum > 0 ? archSum / execSum : null,
         };
     });
 }
@@ -1418,7 +1443,7 @@ const PAGE = `<!doctype html>
 :root{--bg:#f8fafc;--fg:#0f172a;--muted:#64748b;--line:#e2e8f0;--card:#fff;--accent:#0ea5e9;--run:#0284c7;--ok:#15803d;--warn:#b45309;--hs:#74b98a;--bad:#b91c1c}
 @media (prefers-color-scheme:dark){:root{--bg:#0b1220;--fg:#e2e8f0;--muted:#94a3b8;--line:#1e293b;--card:#111a2e;--run:#38bdf8;--ok:#4ade80;--warn:#fbbf24;--hs:#2f7d4f;--bad:#f87171}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
-main{max-width:1280px;margin:0 auto;padding:16px}main.wide{max-width:1536px}
+main{max-width:1280px;margin:0 auto;padding:16px}main.wide{max-width:1608px}
 header{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;margin-bottom:16px}
 h1{font-size:16px;margin:0}h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:24px 0 8px}
 .meta{color:var(--muted);font-size:12px}.meta b{color:var(--fg);font-weight:600}
@@ -1508,14 +1533,16 @@ const when=(ms,day)=>{if(!ms)return '<td class="when"></td>';const d=new Date(ms
 const work=r=>'<td class="lfx-num">'+(r.start?dur(Math.floor(r.work/60000)):'')+'</td>';
 // Span is the start to the end, waits for decisions included: to now while the lane runs; empty when an end is unknown.
 const span=r=>{const e=r.live?Date.now():r.end;return '<td class="lfx-num">'+(r.start&&e?dur(Math.floor((e-r.start)/60000)):'')+'</td>'};
-const tips={Elapsed:"Working time: the sum of the lane's turns",Span:'From start to end, waits for decisions included',In:'Main session: input, cache read and cache creation tokens',Out:'Output tokens, from the last modelUsage (all models of the lane)',Total:'In + Out','Ctx max':'The largest main context of one call'};
+const tips={Elapsed:"Working time: the sum of the lane's turns",Span:'From start to end, waits for decisions included',In:'Main session: input, cache read and cache creation tokens',Out:'Output tokens, from the last modelUsage (all models of the lane)',Total:'In + Out',Arch:"The architect's tokens over the lane (input + output), from architect.json: open until the chat closes the lane, n/a without the file",'Ctx max':'The largest main context of one call'};
 // In, Out, Total and Ctx max (P-2026-10-18-1045): abbreviated, the exact integer in the title; n/a without per-call usage.
 const tnum=(v,more)=>'<td class="lfx-num" title="'+esc(v===null||v===undefined?'':String(v)+(more||''))+'">'+abbr(v)+'</td>';
-const tokens=r=>tnum(r.tokensIn,' · subagents: '+(r.tokensSub||0)+' tokens')+tnum(r.tokensIn===null?null:r.tokensOut)+tnum(r.tokensTotal)+tnum(r.ctxMax);
+// Arch (P-2026-10-18-1155): the architect's totalIn + output from the lane's architect.json; open while the chat has not closed it.
+const arch=r=>{const none=r.archTotal===null||r.archTotal===undefined;const chat=r.archChat?' · chat '+r.archChat:'';return '<td class="lfx-num" title="'+esc(r.archOpen?'open'+chat:none?'':'in '+r.archIn+' · out '+r.archOut+' · total '+r.archTotal+chat)+'">'+(r.archOpen?'open':abbr(none?null:r.archTotal))+'</td>'};
+const tokens=r=>tnum(r.tokensIn,' · subagents: '+(r.tokensSub||0)+' tokens')+tnum(r.tokensIn===null?null:r.tokensOut)+tnum(r.tokensTotal)+arch(r)+tnum(r.ctxMax);
 // One width per column name, shared by every Lanes-tab table so a column keeps its width wherever it appears.
 // Phase (Running) and Outcome (exited) have none: they take the room the others leave.
-// The four token columns widen the Lanes tab's page by 256 px (main.wide): 288 for them, less 32 from Worktree.
-const COL_W={Lane:200,State:92,Kind:124,Started:96,Ended:96,Elapsed:100,Span:100,In:72,Out:72,Total:72,'Ctx max':72,Left:116,Worktree:112,'Launched by':128};
+// The five token columns widen the Lanes tab's page by 328 px (main.wide): 360 for them, less 32 from Worktree.
+const COL_W={Lane:200,State:92,Kind:124,Started:96,Ended:96,Elapsed:100,Span:100,In:72,Out:72,Total:72,Arch:72,'Ctx max':72,Left:116,Worktree:112,'Launched by':128};
 // Phase (Running): the milestone segments (reached, skipped, pending) and n/m on one line, the phase text cut below,
 // whole in the title. Both lines are drawn with or without progress, so a row keeps its height as the lane advances.
 function phaseCell(r){
@@ -1531,7 +1558,7 @@ function phaseCell(r){
 function table(rows,live,day){
   day=day||ymd(new Date());
   if(!rows.length)return '<div class="empty">'+(live?(loaded?'No lane is running.':'Loading lanes…'):'No lanes in this period.')+'</div>';
-  const cols=live?['Lane','State','Kind','Started','Elapsed','Span','In','Out','Total','Ctx max','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Span','In','Out','Total','Ctx max','Worktree','Launched by'];
+  const cols=live?['Lane','State','Kind','Started','Elapsed','Span','In','Out','Total','Arch','Ctx max','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Span','In','Out','Total','Arch','Ctx max','Worktree','Launched by'];
   let h='<table class="lfx"><colgroup>'+cols.map(c=>'<col'+(COL_W[c]?' style="width:'+COL_W[c]+'px"':'')+'>').join('')+'</colgroup><thead><tr>'+cols.map(c=>'<th'+(tips[c]?' title="'+esc(tips[c])+'"':'')+'>'+c+'</th>').join('')+'</tr></thead><tbody>';
   for(const r of rows){
     const id='<td class="id">'+esc(r.id)+(r.title?'<span class="title">'+esc(r.title)+'</span>':'')+'</td>';

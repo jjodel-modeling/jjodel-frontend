@@ -154,6 +154,33 @@ export function overlap(id, intervals) {
     return { lanes, alone: lanes.length === 0, note: OVERLAP_NOTE };
 }
 
+/**
+ * The architect's share of a lane, from architect.json in the lane folder (schema 1, written by the project chat,
+ * never by this script or the board; P-2026-10-18-1155). state: 'none' (no file), 'unreadable' (not JSON or not
+ * schema 1), 'open' (no close yet: the delta is not known), 'ok'. delta falls back to close minus launch when absent.
+ */
+export function architectOf(id) {
+    const path = join(ROOT, id, 'architect.json');
+    if (!existsSync(path)) return { state: 'none', chat: null, model: null, delta: null };
+    try {
+        const a = JSON.parse(readFileSync(path, 'utf8'));
+        if (!a || a.schema !== 1 || !a.launch || typeof a.launch !== 'object') throw new Error('schema');
+        const chat = typeof a.chat === 'string' ? a.chat : null;
+        const model = typeof a.model === 'string' ? a.model : null;
+        if (!a.close) return { state: 'open', chat, model, delta: null };
+        const num = (v) => typeof v === 'number' && Number.isFinite(v);
+        const keys = ['calls', 'input', 'cacheRead', 'cacheCreation', 'output', 'totalIn'];
+        let d = a.delta;
+        if (!d || !num(d.totalIn) || !num(d.output)) {
+            if (!keys.every((k) => num(a.close[k]) && num(a.launch[k]))) throw new Error('delta');
+            d = Object.fromEntries(keys.map((k) => [k, a.close[k] - a.launch[k]]));
+        }
+        return { state: 'ok', chat, model, delta: d };
+    } catch {
+        return { state: 'unreadable', chat: null, model: null, delta: null };
+    }
+}
+
 /** The usage of one lane folder; throws an Error with a one-line message when the lane or its log is missing. */
 export function laneUsage(id, intervals) {
     const dir = join(ROOT, id);
@@ -180,6 +207,7 @@ export function laneUsage(id, intervals) {
     const last = readings.length > 1 ? readings[readings.length - 1] : null;
 
     const iv = intervals.get(id) || null;
+    const arch = architectOf(id);
     return {
         id,
         tier: tierLine ? tierLine.split(/\s+/)[0] : null,
@@ -210,6 +238,9 @@ export function laneUsage(id, intervals) {
             note: readings.length < 2 ? 'fewer than two readings: no delta' : null,
         },
         overlap: overlap(id, intervals),
+        architect: arch.state === 'ok' || arch.state === 'open' ? { chat: arch.chat, model: arch.model, delta: arch.delta } : null,
+        architectOpen: arch.state === 'open',
+        architectUnreadable: arch.state === 'unreadable',
         skippedLines,
     };
 }
@@ -247,6 +278,10 @@ function laneText(u) {
     const o = u.overlap;
     lines.push(o.lanes === null ? 'overlap  n/a (no started.txt)' : `overlap  alone ${o.alone}${o.lanes.length ? '  with ' + o.lanes.join(', ') : ''}`);
     lines.push(o.note);
+    if (u.architectUnreadable) lines.push('architect  unreadable');
+    else if (u.architectOpen) lines.push('architect  open');
+    else if (u.architect) lines.push(`architect  calls ${n(u.architect.delta.calls)}  in ${u.architect.delta.totalIn}  out ${u.architect.delta.output}  (chat ${n(u.architect.chat)})`);
+    else lines.push('architect  none');
     lines.push(`skipped lines ${u.skippedLines}`);
     return lines.join('\n') + '\n';
 }
@@ -257,7 +292,7 @@ export function summary(u) {
 }
 
 function allText(list, missing) {
-    const rows = [['id', 'tier', 'model', 'runs', 'calls', 'ctx max', 'input', 'cache_read', 'cache_creation', 'output*', '7d delta', 'alone']];
+    const rows = [['id', 'tier', 'model', 'runs', 'calls', 'ctx max', 'input', 'cache_read', 'cache_creation', 'output*', '7d delta', 'alone', 'arch']];
     for (const u of list) {
         const t = total(u.main);
         rows.push([
@@ -273,12 +308,14 @@ function allText(list, missing) {
             u.resultOutput ? String(Object.values(u.resultOutput).reduce((a, v) => a + (v || 0), 0)) : 'n/a',
             u.rateLimit.delta ? n(u.rateLimit.delta.sevenDay) : 'n/a',
             n(u.overlap.alone),
+            u.architectOpen ? 'open' : u.architect ? String(u.architect.delta.totalIn + u.architect.delta.output) : 'n/a',
         ]);
     }
     const widths = rows[0].map((_, c) => Math.max(...rows.map((r) => r[c].length)));
     const out = rows.map((r) => r.map((v, c) => v.padEnd(widths[c])).join('  ').trimEnd());
     if (missing) out.push(`${missing} lane folders without log.jsonl left out`);
     out.push('output*: modelUsage of the last result event, all models of the lane; the other classes: main calls only');
+    out.push('arch: the architect\'s totalIn + output over the lane (architect.json), open while the chat has not closed it, n/a without the file');
     out.push(OVERLAP_NOTE);
     return out.join('\n') + '\n';
 }

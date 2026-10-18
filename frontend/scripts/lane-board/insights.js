@@ -274,16 +274,17 @@
   // ── tokens (P-2026-10-18-1045): lane-usage.mjs through /api/insights, grouped by the page's tokenGroups() ──
   function tokensCard(c) {
     const ls = insLanes(c);
-    const head = '<div class="in-card in-wide"><h3>Tokens</h3><div class="sub">Closed lanes in this range with per-call usage, from lane-usage.mjs. Total: the main session\'s input, cache read and cache creation, plus the output of the last modelUsage. Ctx max: the largest main context of one call. ≥200k, ≥250k: lanes with at least one call there. 7d Δ alone: the seven-day utilization delta summed over the lanes that ran alone, a lower bound (interactive sessions are not visible to lane-run).</div>';
+    const head = '<div class="in-card in-wide"><h3>Tokens</h3><div class="sub">Closed lanes in this range with per-call usage, from lane-usage.mjs. Total: the main session\'s input, cache read and cache creation, plus the output of the last modelUsage. Ctx max: the largest main context of one call. ≥200k, ≥250k: lanes with at least one call there. 7d Δ alone: the seven-day utilization delta summed over the lanes that ran alone, a lower bound (interactive sessions are not visible to lane-run). Arch: the architect\'s input + output over the lane from architect.json, summed and as a median over the closed lanes that carry it; Arch / exec: the sum of Arch over the sum of Total, on the lanes that carry both.</div>';
     if (typeof tokenGroups !== 'function' || typeof abbr !== 'function') return head + '<div class="in-empty">This page has no token helpers.</div></div>';
     const num = (v) => '<td class="in-c" title="' + esc(v === null ? '' : String(v)) + '">' + esc(abbr(v)) + '</td>';
     const pp = (v) => Math.round(v * 1000) / 10 + ' pp';
     const table = (by, label, name) => {
       const rows = tokenGroups(ls, by);
       if (!rows.length) return '';
-      return '<h4>' + label + '</h4><table class="in-tokens" data-by="' + by + '"><thead><tr><th>' + (by === 'tier' ? 'Tier' : 'Model') + '</th><th class="in-c">Lanes</th><th class="in-c">Median total</th><th class="in-c">Sum total</th><th class="in-c">Median ctx max</th><th class="in-c">≥200k</th><th class="in-c">≥250k</th><th class="in-c">7d Δ alone</th></tr></thead><tbody>' +
+      return '<h4>' + label + '</h4><table class="in-tokens" data-by="' + by + '"><thead><tr><th>' + (by === 'tier' ? 'Tier' : 'Model') + '</th><th class="in-c">Lanes</th><th class="in-c">Median total</th><th class="in-c">Sum total</th><th class="in-c">Median ctx max</th><th class="in-c">≥200k</th><th class="in-c">≥250k</th><th class="in-c">7d Δ alone</th><th class="in-c">Sum arch</th><th class="in-c">Median arch</th><th class="in-c">Arch / exec</th></tr></thead><tbody>' +
         rows.map((r) => '<tr><td>' + esc(name(r.key)) + '</td><td class="in-c">' + r.lanes + '</td>' + num(r.totalMedian) + num(r.totalSum) + num(r.ctxMaxMedian) + '<td class="in-c">' + r.at200k + '</td><td class="in-c">' + r.at250k + '</td>' +
-          '<td class="in-c" title="' + esc(String(r.aloneDelta7d)) + '">' + (r.aloneLanes ? pp(r.aloneDelta7d) : '·') + ' <span class="in-k">' + r.aloneLanes + ' alone</span></td></tr>').join('') + '</tbody></table>';
+          '<td class="in-c" title="' + esc(String(r.aloneDelta7d)) + '">' + (r.aloneLanes ? pp(r.aloneDelta7d) : '·') + ' <span class="in-k">' + r.aloneLanes + ' alone</span></td>' +
+          num(r.archLanes ? r.archSum : null) + num(r.archMedian) + '<td class="in-c" title="' + esc(r.archRatio === null ? '' : String(r.archRatio)) + '">' + (r.archRatio === null ? '·' : r.archRatio.toFixed(2)) + ' <span class="in-k">' + r.archLanes + ' lanes</span></td></tr>').join('') + '</tbody></table>';
     };
     const body = table('tier', 'By tier', (k) => k || 'not recorded') + table('model', 'By model', (k) => modelName(k) || 'unknown');
     return head + (body || '<div class="in-empty">No closed lane with per-call usage in this range.</div>') + '</div>';

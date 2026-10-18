@@ -704,6 +704,7 @@ describe('the board: /api and the page', () => {
         expect(live.left).toBe(Number(d.load[0]) > 20 ? 'about 34 min' : 'about 23 min');
         expect('progress' in old).toBe(false);
         expect(Object.keys(old).sort()).toEqual([
+            'archChat', 'archIn', 'archOpen', 'archOut', 'archTotal',
             'chain', 'chat', 'chatUrl', 'chatUrlFrom', 'chatUrlVia', 'ctxMax', 'day', 'end', 'id', 'kind', 'lane', 'launcher', 'left',
             'live', 'minutes', 'outcome', 'phase', 'recent', 'start', 'state', 't', 'tier', 'title', 'tokensIn', 'tokensOut', 'tokensSub',
             'tokensTotal', 'work', 'worktree',
@@ -829,13 +830,13 @@ function pageContext(page: string) {
     return ctx;
 }
 
-/** The header texts and, for one lane, the four token cells of a table() rendering. */
+/** The header texts and, for one lane, the five token cells of a table() rendering. */
 function tokenCells(html: string, id: string) {
     const heads = [...html.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
     const row = html.split('<tr>').find((r) => r.includes('<td class="id">' + id))!;
     const cells = [...row.matchAll(/<td[^>]*>.*?<\/td>/g)].map((m) => m[0]);
     const at = heads.indexOf('In');
-    return { heads, cells: cells.slice(at, at + 4) };
+    return { heads, cells: cells.slice(at, at + 5) };
 }
 
 describe('tokens: abbr and tokenGroups', () => {
@@ -853,10 +854,24 @@ describe('tokens: abbr and tokenGroups', () => {
         const lanes = [t('heavy', 100, 10, 1, 0, 0.02, true), t('heavy', 300, 30, 0, 0, 0.5, false), t('heavy', 200, 20, 2, 1, 0.01, true),
             t('heavy', 400, 40, 0, 0, null, true), t('light', 50, 5, 0, 0, null, null), { tokens: null }, { tokens: { tier: 'light', tokensTotal: null } }];
         expect(tokenGroups(lanes, 'tier')).toEqual([
-            { key: 'heavy', lanes: 4, totalMedian: 250, totalSum: 1000, ctxMaxMedian: 25, at200k: 2, at250k: 1, aloneDelta7d: 0.03, aloneLanes: 2 },
-            { key: 'light', lanes: 1, totalMedian: 50, totalSum: 50, ctxMaxMedian: 5, at200k: 0, at250k: 0, aloneDelta7d: 0, aloneLanes: 0 },
+            { key: 'heavy', lanes: 4, totalMedian: 250, totalSum: 1000, ctxMaxMedian: 25, at200k: 2, at250k: 1, aloneDelta7d: 0.03, aloneLanes: 2, archLanes: 0, archSum: 0, archMedian: null, archRatio: null },
+            { key: 'light', lanes: 1, totalMedian: 50, totalSum: 50, ctxMaxMedian: 5, at200k: 0, at250k: 0, aloneDelta7d: 0, aloneLanes: 0, archLanes: 0, archSum: 0, archMedian: null, archRatio: null },
         ]);
         expect(tokenGroups(lanes, 'model').map((g: Ev) => [g.key, g.lanes])).toEqual([['claude-opus-5-5', 5]]);
+    });
+
+    test('tokenGroups: Arch sum and median over the closed lanes that carry it, the ratio over the lanes that carry both (open counted nowhere, ratio over all lanes, median dropped)', async () => {
+        const { tokenGroups } = await load();
+        const a = (total: number, arch: number | null, open = false) =>
+            ({ tokens: { tier: 'heavy', model: 'm', tokensTotal: total, ctxMax: 1, at200k: 0, at250k: 0, sevenDayDelta: null, alone: null },
+                arch: arch === null && !open ? null : { archIn: null, archOut: null, archTotal: arch, archChat: 'C-x', archOpen: open } });
+        // Carrying both: 1000 -> 100, 3000 -> 500, 2000 -> 200 (even count of three: median 200). The open lane and the lane without a file carry no Arch.
+        const lanes = [a(1000, 100), a(3000, 500), a(2000, 200), a(9000, null, true), a(8000, null)];
+        const [g] = tokenGroups(lanes, 'tier');
+        expect(g).toMatchObject({ lanes: 5, archLanes: 3, archSum: 800, archMedian: 200 });
+        expect(g.archRatio).toBeCloseTo(800 / 6000, 10);
+        const four = tokenGroups([...lanes.slice(0, 3), a(4000, 400)], 'tier')[0];
+        expect(four).toMatchObject({ archLanes: 4, archSum: 1200, archMedian: 300 });
     });
 });
 
@@ -880,12 +895,25 @@ describe('tokens: /api, the Lanes tab and /api/insights', () => {
         const closed = render(false), running = render(true);
         const cell = (title: string, text: string) => '<td class="lfx-num" title="' + title + '">' + text + '</td>';
         const a = tokenCells(closed, UA);
-        expect(a.heads.slice(a.heads.indexOf('Span'), a.heads.indexOf('Span') + 6)).toEqual(['Span', 'In', 'Out', 'Total', 'Ctx max', 'Worktree']);
-        expect(a.cells).toEqual([cell('560005 · subagents: 3516 tokens', '560.0k'), cell('1350', '1.4k'), cell('561355', '561.4k'), cell('255003', '255.0k')]);
-        expect(tokenCells(closed, 'P-2026-10-05-0800').cells).toEqual([cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a')]);
+        expect(a.heads.slice(a.heads.indexOf('Span'), a.heads.indexOf('Span') + 7)).toEqual(['Span', 'In', 'Out', 'Total', 'Arch', 'Ctx max', 'Worktree']);
+        // A: architect.json closed, delta totalIn 3006 + output 200; the title carries the exact integers and the chat.
+        expect(a.cells).toEqual([cell('560005 · subagents: 3516 tokens', '560.0k'), cell('1350', '1.4k'), cell('561355', '561.4k'), cell('in 3006 · out 200 · total 3206 · chat C-2026-01-01-0900', '3.2k'), cell('255003', '255.0k')]);
+        expect(tokenCells(closed, 'P-2026-10-05-0800').cells).toEqual([cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a')]);
+        // B: architect.json without close.
+        expect(tokenCells(closed, UB).cells[3]).toBe(cell('open · chat C-2026-01-01-0900', 'open'));
         const c = tokenCells(running, UC);
-        expect(c.heads.slice(c.heads.indexOf('Span'), c.heads.indexOf('Span') + 6)).toEqual(['Span', 'In', 'Out', 'Total', 'Ctx max', 'Left']);
-        expect(c.cells).toEqual([cell('23001 · subagents: 0 tokens', '23.0k'), cell('', 'n/a'), cell('23001', '23.0k'), cell('23001', '23.0k')]);
+        expect(c.heads.slice(c.heads.indexOf('Span'), c.heads.indexOf('Span') + 7)).toEqual(['Span', 'In', 'Out', 'Total', 'Arch', 'Ctx max', 'Left']);
+        // C: no architect.json.
+        expect(c.cells).toEqual([cell('23001 · subagents: 0 tokens', '23.0k'), cell('', 'n/a'), cell('23001', '23.0k'), cell('', 'n/a'), cell('23001', '23.0k')]);
+    });
+
+    test('/api carries archIn, archOut, archTotal, archChat and archOpen: integers for a closed file, open without close, null without the file (fields or open flag dropped)', async () => {
+        const { port } = await usageBoard();
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const ar = (id: string) => { const r = d.rows.find((x: Ev) => x.id === id); return [r.archIn, r.archOut, r.archTotal, r.archChat, r.archOpen]; };
+        expect(ar(UA)).toEqual([3006, 200, 3206, 'C-2026-01-01-0900', false]);
+        expect(ar(UB)).toEqual([null, null, null, 'C-2026-01-01-0900', true]);
+        expect(ar(UC)).toEqual([null, null, null, null, false]);
     });
 
     test('/api/insights: per lane the raw tokens with alone, and tokenGroups over the closed lanes gives two tiers (tokens or alone left out of insights)', async () => {
@@ -893,11 +921,16 @@ describe('tokens: /api, the Lanes tab and /api/insights', () => {
         const ins = await (await fetch('http://127.0.0.1:' + port + '/api/insights')).json();
         const a = ins.lanes.find((l: Ev) => l.id === UA).tokens;
         expect(a).toMatchObject({ tokensTotal: 561355, ctxMax: 255003, at200k: 2, at250k: 1, sevenDayDelta: 0.05, alone: true, tier: 'heavy', model: 'claude-opus-5-5' });
+        expect(a).toMatchObject({ tokensTotal: 561355 });
+        expect(ins.lanes.find((l: Ev) => l.id === UA).arch).toMatchObject({ archIn: 3006, archOut: 200, archTotal: 3206, archChat: 'C-2026-01-01-0900', archOpen: false });
+        expect(ins.lanes.find((l: Ev) => l.id === UB).arch).toMatchObject({ archTotal: null, archOpen: true });
+        expect(ins.lanes.find((l: Ev) => l.id === UC).arch).toBeNull();
         const { tokenGroups } = await load();
         const closed = ins.lanes.filter((l: Ev) => [UA, UB].includes(l.id));
         expect(tokenGroups(closed, 'tier')).toEqual([
-            { key: 'heavy', lanes: 1, totalMedian: 561355, totalSum: 561355, ctxMaxMedian: 255003, at200k: 1, at250k: 1, aloneDelta7d: 0.05, aloneLanes: 1 },
-            { key: 'standard', lanes: 1, totalMedian: 52064, totalSum: 52064, ctxMaxMedian: 52004, at200k: 0, at250k: 0, aloneDelta7d: 0, aloneLanes: 0 },
+            { key: 'heavy', lanes: 1, totalMedian: 561355, totalSum: 561355, ctxMaxMedian: 255003, at200k: 1, at250k: 1, aloneDelta7d: 0.05, aloneLanes: 1, archLanes: 1, archSum: 3206, archMedian: 3206, archRatio: 3206 / 561355 },
+            // B is open: it carries no Arch figure.
+            { key: 'standard', lanes: 1, totalMedian: 52064, totalSum: 52064, ctxMaxMedian: 52004, at200k: 0, at250k: 0, aloneDelta7d: 0, aloneLanes: 0, archLanes: 0, archSum: 0, archMedian: null, archRatio: null },
         ]);
         const page = await (await fetch('http://127.0.0.1:' + port + '/')).text();
         expect(page).toContain('const tokenGroups=function tokenGroups(');

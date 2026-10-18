@@ -1,0 +1,17 @@
+{
+ "schema": 1,
+ "chat": "C-2026-01-01-0900",
+ "model": "claude-fable-5-1",
+ "source": "fixture",
+ "launch": {
+  "at": 1767300000,
+  "calls": 10,
+  "input": 10,
+  "cacheRead": 1000,
+  "cacheCreation": 500,
+  "output": 100,
+  "totalIn": 1510,
+  "ctxMax": 100000,
+  "ctxLast": 100000
+ }
+}

@@ -156,14 +156,71 @@ describe('lane-usage: one lane', () => {
     });
 });
 
+describe('lane-usage: the architect (architect.json)', () => {
+    test('kills "close ignored" and "delta not read": a closed file gives the delta, the chat and the text line', () => {
+        const u = usage(A);
+        expect(u.architect).toEqual({ chat: 'C-2026-01-01-0900', model: 'claude-fable-5-1', delta: { calls: 4, input: 6, cacheRead: 2000, cacheCreation: 1000, output: 200, totalIn: 3006 } });
+        expect(u.architectOpen).toBe(false);
+        expect(u.architectUnreadable).toBe(false);
+        expect(run(A).stdout).toContain('architect  calls 4  in 3006  out 200  (chat C-2026-01-01-0900)');
+    });
+
+    test('kills "open read as closed": no close means open, no delta, the text says open', () => {
+        const u = usage(B);
+        expect(u.architect).toEqual({ chat: 'C-2026-01-01-0900', model: 'claude-fable-5-1', delta: null });
+        expect(u.architectOpen).toBe(true);
+        expect(run(B).stdout).toContain('architect  open');
+    });
+
+    test('kills "absent is an error": no file is null, not open, text none', () => {
+        const u = usage(C);
+        expect(u.architect).toBeNull();
+        expect(u.architectOpen).toBe(false);
+        expect(u.architectUnreadable).toBe(false);
+        expect(run(C).stdout).toContain('architect  none');
+    });
+
+    test('kills "any JSON is accepted": a file that is not JSON, or not schema 1, is unreadable and ignored', () => {
+        const file = join(root, C, 'architect.json');
+        for (const body of ['{not json', JSON.stringify({ schema: 2, launch: {}, close: {} }), JSON.stringify({ schema: 1, launch: {}, close: { at: 1 } })]) {
+            writeFileSync(file, body);
+            const u = usage(C);
+            expect(u.architect).toBeNull();
+            expect(u.architectOpen).toBe(false);
+            expect(u.architectUnreadable).toBe(true);
+            expect(run(C).stdout).toContain('architect  unreadable');
+            expect(run(C).status).toBe(0);
+        }
+        rmSync(file);
+    });
+
+    test('kills "delta required": a closed file without delta gets close minus launch', () => {
+        const file = join(root, C, 'architect.json');
+        const side = (n: number) => ({ calls: n, input: n, cacheRead: n * 10, cacheCreation: n * 2, output: n * 3, totalIn: n * 13 });
+        writeFileSync(file, JSON.stringify({ schema: 1, chat: 'C-x', model: 'm', launch: side(1), close: side(3) }));
+        expect(usage(C).architect.delta).toEqual({ calls: 2, input: 2, cacheRead: 20, cacheCreation: 4, output: 6, totalIn: 26 });
+        rmSync(file);
+    });
+
+    test('kills "the board file is written": the script never creates or changes architect.json', () => {
+        const file = join(root, C, 'architect.json');
+        run(C);
+        run(C, '--write');
+        expect(existsSync(file)).toBe(false);
+        rmSync(join(root, C, 'usage.json'), { force: true });
+    });
+});
+
 describe('lane-usage: --all', () => {
     test('kills "oldest first": one row per lane, newest first, delta n/a without two readings', () => {
         const lines = run('--all').stdout.split('\n');
         expect(lines[0]).toMatch(/^id\s+tier\s+model\s+runs\s+calls\s+ctx max/);
         expect(lines.slice(1, 4).map((l) => l.split(/\s+/)[0])).toEqual([C, B, A]);
-        expect(lines[1].split(/\s+/).slice(-2)).toEqual(['n/a', 'true']);
+        expect(lines[0].split(/\s+/).slice(-3)).toEqual(['delta', 'alone', 'arch']);
+        expect(lines[1].split(/\s+/).slice(-3)).toEqual(['n/a', 'true', 'n/a']);
+        expect(lines[2].split(/\s+/).slice(-1)).toEqual(['open']);
         expect(lines[3]).toContain('claude-opus-5-5>claude-sonnet-5-5');
-        expect(lines[3].split(/\s+/).slice(-2)).toEqual(['0.05', 'false']);
+        expect(lines[3].split(/\s+/).slice(-3)).toEqual(['0.05', 'false', '3206']);
     });
 
     test('kills "the series in the array": --json is the per-lane summaries without the series', () => {
@@ -171,5 +228,8 @@ describe('lane-usage: --all', () => {
         expect(list.map((u: { id: string }) => u.id)).toEqual([C, B, A]);
         expect(list[2].context).toEqual({ calls: 3, max: 255003, last: 255003, median: 200000, atOrAbove200k: 2, atOrAbove250k: 1 });
         expect(list[2].main).toEqual(usage(A).main);
+        expect(list.map((u: { architectOpen: boolean }) => u.architectOpen)).toEqual([false, true, false]);
+        expect(list[2].architect.delta.totalIn).toBe(3006);
+        expect(list[0].architect).toBeNull();
     });
 });
