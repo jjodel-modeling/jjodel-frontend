@@ -363,3 +363,16 @@ Decisions awaiting Alfonso: the registration of `context-ceiling.mjs` in `.claud
 **Ticket**: `frontend/scripts/hooks/context-ceiling.mjs` is built and tested but not registered; B7, interactive, adds it to `.claude/settings.json` as a PreToolUse hook with matcher `*` (with `rule-trigger.mjs` on `Edit|Write|NotebookEdit`). Nothing changes for any session until then.
 **Priority**: medium
 **Found in**: P-2026-10-18-1530
+
+## 2026-10-18 — feat(harness): lane board Cost column and spend per day by turn (P-2026-10-18-1750)
+**Prompt**: `claude_2026-10-18_1750_prompt_lane_board_cost.md`, fast lane in `~/jjodel-w-lanecost` on `lane-cost`: a Cost column after Arch in both Lanes tables, `spendByDay` in /api (per-event deltas on the local day each turn ended), the day total in each Earlier-lanes summary and `today` in the meta line.
+**Files touched**: code `3a015d9ea`: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`; this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks suite 896/896 (10 new tests); typecheck:scripts, check:scripts exit 0; mutation bench on the new code 6/6 killed (no reset, turn start, notification on next turn, no clamp, size out of the key, UTC day).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso on :4711 (20:03), GO; today $64.43 over 535 lanes, P-2026-10-18-1735 $4.89 = its log's 4.8875
+**Notes**: Unattended (RC-21), accepted by the GO: Cost directly after Arch, three existing assertions and tokenCells adjusted; main.wide 1608 to 1672 px; cost events cached as `cost:<id>` in usage-cache.json, token key not bumped. Subagents ARE in total_cost_usd (modelUsage lists the Sonnet subagent model, per-model costs sum to the total): the tip says so.
+**Prompt document name**: 2026-10-18 17:50
