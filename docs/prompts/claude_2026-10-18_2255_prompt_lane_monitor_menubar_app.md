@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-2255
 Chat: C-2026-10-18-2225
 Front: harness
 Lane: full (discovery, read-only on product, board and governance; Phase 2 written by the chat after the report)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane menubar-disc · hard-stop, report docs/discovery/discovery_2026-10-18_lane_monitor_menubar_app.md
 Depends: —
 Corregge: —
 Request: Alfonso, 2026-10-18 22:24-22:55, in the design chat of the lane monitor: the board should feel like a professional standalone tool; of the options discussed he wants four: a menu bar badge with the number of pending decisions, start at login, a global shortcut that opens the decision queue, deep links such as `jjodel-lanes://P-2026-10-18-2215` clickable from the chats; «scrivi il prompt» at 22:55

@@ -501,3 +501,16 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 **Ticket**: Step 6 of `claude_2026-10-18_2207_prompt_merge_context-rules.md` (rendered from `frontend/scripts/lane-templates/merge-into-trunk.md`) prescribes `git reset --hard fc8dbb93a` on a `check:addonly` violation and calls it «the pre-merge tip», but the pre-merge tip was `7e9c8e36f`, the commit that adds the prompt itself (parent `fc8dbb93a`). Executed, the reset would drop the merge's own prompt commit. Not triggered here (check:addonly PASS). The template should name the tip measured at launch plus the prompt commit, or the first parent of the merge (`HEAD^1`).
 **Priority**: medium
 **Found in**: P-2026-10-18-2207
+
+## 2026-10-18 — discovery: lane monitor as a menu bar app, Phase 1 (P-2026-10-18-2255)
+**Prompt**: `claude_2026-10-18_2255_prompt_lane_monitor_menubar_app.md`, read-only Phase 1 of the Tauri 2 menu bar app over the board on 4700: Q1 what «pending» means, Q2 `/api/attention` and `/l/<id>`, Q3 the question's first line, Q4 the stack measured, Q5 the shortcut, Q6 the path, Q7 the Phase 2 slices.
+**Files touched**: `docs/discovery/discovery_2026-10-18_lane_monitor_menubar_app.md` (new), this inbox, the prompt's Status line; one docs commit. Probes under `/tmp/menubar/` only.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (docs only; no board, plist or agent touched, 4700 read by GET only)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Of today's 10 question / 175 hard-stop / 1 blocked, the rule (trunk Status flipped, later Depends/Corregge, later trunk commit, 72 h) keeps 1 waiting (P-2026-10-18-2220) and 12 stale. Tauri 2 workable: Rust 1.94.1, Xcode 26.6, tauri 2.10.3 cached; no tauri-cli, no signing identity (ad-hoc). Shortcut ⌃⌥⌘L: ⌥⌘L is Edge Downloads and IntelliJ Reformat (measured). Path `tools/lane-monitor-app/`. No decision awaits Alfonso.
+**Prompt document name**: 2026-10-18 22:55
