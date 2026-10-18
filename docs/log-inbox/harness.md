@@ -107,3 +107,26 @@ Decisions awaiting Alfonso: none.
 **Smoke visivo**: passato — chat, unattended: no UI change: the merge touches frontend/scripts, docs and package.json only (git diff --name-only c6b594705 dcd85da10: 0 files under frontend/src); visual check not applicable, decided by chat C-2026-10-17-1757 under RC-25
 **Notes**: Rollback tag `pre-lane-usage` on `c6b594705` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-0153/result.json`.
 **Prompt document name**: 2026-10-18 01:53
+
+## 2026-10-18 — fix: parseRows reads the whole live register (P-2026-10-18-1030)
+**Prompt**: `claude_2026-10-18_1030_prompt_b2pre_digest_tolerant.md`, B2-pre: make `parseRows` in `docs-digest.ts` read wrapped headers, `verified: probe` and every ID series of `docs/decisions.md`, without changing the 407 rows it already parsed; the register is not edited.
+**Files touched**: `a7d889248`: `frontend/scripts/gates/docs-digest.ts`, `frontend/scripts/gates/__tests__/docsDigest.test.ts`, `frontend/scripts/gates/__tests__/traceIndex.test.ts` (one fixture line), `frontend/scripts/gates/__tests__/fixtures/docsDigest.golden.md` (new); docs commit: this entry, Status of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs-digest tests 60/60; `frontend/scripts/gates/__tests__/` 314/314 in 7 files; `typecheck:scripts` exit 0; `check:scripts` PASS (91 files). The 407 old rows compared field by field on the live register: 0 changed; golden of the old grammar on the test fixture byte-identical.
+**Out-of-scope changes**: yes, `traceIndex.test.ts`: its near-miss example `R-A` is a row under item 1c, replaced by `R-E/E-1`, still outside the grammar (same three mutations killed).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe reproduced: 407 rows, 67 skipped = 64 column-0 `- **` lines + 3 indented. Now 439 rows (+32: 31 the prompt named, plus R-B12 with a qualifier). `docs:digest -- --all` exit 0, 41 dates. Near misses 20: lines 20, 394 (old shape), 1649, 1731, 1777, 1841, 1846, 1884, 1969, 1971, 2035, 2041, 2054, 4147, 4151, 4157, 4235, 4240, 4310, 4330 (bold prose under `## Serie`). trace-index on the live register: rows 407 to 439, misses 41 to 51.
+**Prompt document name**: 2026-10-18 10:30
+
+Decisions taken (unattended):
+- `verified: probe` reads as `agent` in `confidence()`: a probe is a check the agent ran; the existing logic distinguishes only checked from unchecked.
+- A qualifier inside the bold (`**D-4-5, emendata**`, `**U-6 / Q3 = opzione (b)**`, `**H-B falsificata, agli atti**`) makes a row only when the header parenthesis follows; the ID is the row's `id`, the rest goes in the new optional `Row.qualifier`, not rendered. Prose bold that starts with an ID is therefore never a row.
+- A first field `2026-08-08 mattina` / `pomeriggio` (the two U-5 rows): the date is the date, the words an annotation. Needed for item 1c; not named in the prompt.
+- The dated form `**ID (YYYY-MM-DD)**` sets `Row.idDate` (optional); with no parenthesis after the bold it stands for it. No row of the register uses it today (0 matches).
+- `nearMisses` = the old shape (`R…-…** (`) plus every bold list item under a `## Serie` h2 that is not a row. The 18 new ones are bold prose (Ticket, Esclusi, notes), not IDs: listed, not recovered.
+- The `traceIndex.test.ts` fixture line, above (scope expansion outside RC-26).
+
+Decisions awaiting Alfonso: none.

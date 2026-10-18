@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1030
 Chat: C-2026-10-17-1757
 Front: harness
 Lane: fast (one gate module and its test, outside the critical zone; tier drawn (RC-45): heavy)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane harness · a7d889248
 Depends: P-2026-10-18-0945
 Request: none (chat decision under RC-25 after the hard stop of P-2026-10-18-0945, 2026-10-18 10:23; the register is not edited, the parser is)
 
