@@ -91,19 +91,20 @@ const VIEWPOINTS: Record<string, Viewpoint[]> = {
     graph: [{ metamodel: 'Graph', name: 'Graph', views: [
         hidden('Graph'),
         vertex('Node', 'circle', [64, 64], I('name'), { width: 1.5 }),
+        // `curve: 'arc'` (R-VP-22): straight, and bowed apart when two edges join the same nodes both ways (A>D, D>A).
         ['Edge', { kind: 'edge', metaclasses: ['Edge'], label: 'Edge (an arc)',
-            edge: { source: '$source.value', target: '$target.value', line: { width: 1.5 }, terminations: arrow } }],
+            edge: { source: '$source.value', target: '$target.value', line: { width: 1.5 }, terminations: arrow, curve: 'arc' } }],
     ] }],
     library: [{ metamodel: 'Library', name: 'Library', views: [
         hidden('Library'),
-        vertex('Book', 'rounded', [180, 56], P('$title.value')),
-        vertex('Magazine', 'rect', [180, 56], P('$title.value'), { width: 1, style: 'dashed' }),
-        vertex('Writer', 'ellipse', [170, 56], I('name')),
+        vertex('Book', 'rounded', [160, 56], P('$title.value')),
+        vertex('Magazine', 'rect', [160, 56], P('$title.value'), { width: 1, style: 'dashed' }),
+        vertex('Writer', 'ellipse', [160, 56], I('name')),
         vertex('Member', 'stadium', [120, 40], I('name')),
         ['Book', { kind: 'edge', metaclasses: ['Book'], reference: 'authors', label: 'Book.authors',
-            edge: { line: { width: 1.5 }, terminations: arrow, labels: { center: L('author') } } }],
+            edge: { line: { width: 1.5 }, terminations: arrow, routing: 'straight', labels: { center: L('author') } } }],
         ['LibraryItem', { kind: 'edge', metaclasses: ['LibraryItem'], reference: 'borrowedBy', label: 'LibraryItem.borrowedBy',
-            edge: { line: { width: 1, style: 'dashed' }, terminations: arrow, labels: { center: L('borrowed by') } } }],
+            edge: { line: { width: 1, style: 'dashed' }, terminations: arrow, routing: 'straight', labels: { center: L('borrowed by') } } }],
     ] }],
     'state-machine': [{ metamodel: 'statemachine', name: 'StateMachine', views: [
         hidden('StateMachine'),
@@ -112,14 +113,16 @@ const VIEWPOINTS: Record<string, Viewpoint[]> = {
         ['State', { kind: 'vertex', metaclasses: ['State'], label: 'Initial state', priority: 1, predicate: kindIs('initial'),
             defaultSize: { width: 24, height: 24 },
             shape: { form: 'circle', fill: '#1f2937', border: { width: 0 }, labels: [{ position: 'outside', anchor: 's', source: I('name') }] } }],
+        // The UML final state: a ring around a filled dot (the marker registry's `dot-large`).
         ['State', { kind: 'vertex', metaclasses: ['State'], label: 'Final state', priority: 1, predicate: kindIs('final'),
-            defaultSize: { width: 32, height: 32 },
-            shape: { form: 'circle', fill: '#ffffff', border: { width: 4, style: 'double' }, labels: [{ position: 'outside', anchor: 's', source: I('name') }] } }],
+            defaultSize: { width: 28, height: 28 },
+            shape: { form: 'circle', fill: '#ffffff', border: { width: 1.5, color: '#1f2937' }, marker: 'dot-large', labels: [{ position: 'outside', anchor: 's', source: I('name') }] } }],
         ['State', { kind: 'graphVertex', metaclasses: ['State'], label: 'Composite state', priority: 2,
             predicate: { op: 'exists', path: '$substates.values[0]' },
             shape: { form: 'rounded', fill: '#ffffff', border: { width: 1 }, labels: [{ position: 'header', source: I('name') }] },
             containment: { children: '$substates.values', childFilter: isKind('State'),
-                layout: { mode: 'free', frame: 'self', header: BAND, padding: 16 }, edges: 'hide', collapsible: false } }],
+                // 24: the outside label of an initial substate clears the bottom edge.
+                layout: { mode: 'free', frame: 'self', header: BAND, padding: 24 }, edges: 'hide', collapsible: false } }],
         ['Transition', { kind: 'edge', metaclasses: ['Transition'], label: 'Transition',
             edge: { source: '$source.value', target: '$target.value', line: { width: 1 }, terminations: arrow, labels: { center: P('$trigger.value') } } }],
         ['Transition', { kind: 'edge', metaclasses: ['Transition'], label: 'Transition (guard)', priority: 1, predicate: { op: 'exists', path: '$guard.value' },
@@ -148,25 +151,31 @@ const VIEWPOINTS: Record<string, Viewpoint[]> = {
 /**
  * Where each vertex of a template sits (flow px, top left), by model and by the object's label; the viewpoint that
  * draws the model when it is not the first. A frame (`frame: 'self'`) is the box of its children and is not placed.
- * Every layout is at most ~330 px tall: at the fit's maxZoom 1 the 1440×900 canvas keeps the minimap's band empty.
+ * The fit centres on the React Flow pane, which runs on under the properties panel: at 1440×900 a layout stays in the
+ * visible canvas when it is at most ~560 px wide, and clear of the minimap when at most ~420 px tall. All are ≤ 520 × 410.
  */
 const PLACES: Record<string, Record<string, { viewpoint?: string; at: Record<string, [number, number]> }>> = {
-    graph: { 'sample-Graph': { at: { A: [0, 140], B: [260, 0], C: [520, 140], D: [260, 280] } } },
+    graph: { 'sample-Graph': { at: { A: [0, 120], B: [200, 0], C: [400, 120], D: [200, 240] } } },
+    // Members and the magazine above the books, writers below: borrowedBy arcs go up, authors arcs go down.
     library: { 'sample-Library': { at: {
-        'Pride and Prejudice': [0, 0], Emma: [240, 0], 'The Hobbit': [480, 0], 'Literary Review': [720, 0],
-        'Jane Austen': [125, 150], 'J. R. R. Tolkien': [485, 150], Anna: [30, 290], Luca: [510, 290],
+        Anna: [20, 0], 'Literary Review': [180, 0], Luca: [380, 0],
+        'Pride and Prejudice': [0, 130], Emma: [180, 130], 'The Hobbit': [360, 130],
+        'Jane Austen': [90, 270], 'J. R. R. Tolkien': [360, 270],
     } } },
+    // Idle left of Running, the two targets of Running below it.
     'state-machine': { 'sample-StateMachine': { at: {
-        Idle: [0, 112], Warmup: [200, 112], Steady: [280, 100], Off: [620, 40], Broken: [600, 180],
+        Idle: [0, 194], Warmup: [110, 194], Steady: [180, 182], Off: [110, 360], Broken: [250, 350],
     } } },
     'families-persons': {
+        // The two families one above the other.
         'sample-Families': { at: {
-            Jim: [0, 0], Cindy: [130, 0], Brandon: [0, 56], Brenda: [130, 56],
-            Peter: [330, 0], Jackie: [460, 0], Kelly: [590, 0], David: [330, 56], Dylan: [460, 56],
+            Jim: [0, 0], Cindy: [130, 0], Brandon: [0, 52], Brenda: [130, 52],
+            Peter: [0, 200], Jackie: [130, 200], Kelly: [260, 200], David: [0, 252], Dylan: [130, 252],
         } },
+        // Males then females, rows of at most three.
         'sample-Persons': { viewpoint: 'Persons', at: {
-            'Jim March': [0, 0], 'Brandon March': [180, 0], 'Peter Sailor': [360, 0], 'David Sailor': [540, 0], 'Dylan Sailor': [720, 0],
-            'Cindy March': [90, 100], 'Brenda March': [270, 100], 'Jackie Sailor': [450, 100], 'Kelly Sailor': [630, 100],
+            'Jim March': [0, 0], 'Brandon March': [170, 0], 'Peter Sailor': [340, 0], 'David Sailor': [0, 56], 'Dylan Sailor': [170, 56],
+            'Cindy March': [0, 150], 'Brenda March': [170, 150], 'Jackie Sailor': [0, 206], 'Kelly Sailor': [170, 206],
         } },
     },
     shapes: { 'sample-Shapes': { at: { sun: [0, 0], wheel: [120, 0], house: [240, 0] } } },

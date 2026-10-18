@@ -54,11 +54,22 @@
     }
 }
 
+/* The title and, on its own line under it, the citable `<id>@<n>`: one line each, cut with an ellipsis, never wrapped. */
+.templates-card__titles {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .templates-card__label {
     font-size: 14px;
     font-weight: 500;
     color: var(--color-text-primary);
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Fixed line boxes: the counts arrive after the packages, and the card does not move when they do. */
@@ -116,8 +127,12 @@
 }
 
 .templates-card__ref {
-    margin-left: auto;
+    display: block;
     font-family: var(--font-mono, monospace);
     font-size: 11px;
+    line-height: 16px;
     color: var(--color-text-tertiary, #475569);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

@@ -151,8 +151,10 @@ function TemplatesComponent(_props: OwnProps): JSX.Element {
             <div className="templates-card" key={e.id} data-gallery-id={e.id}>
                 <div className="templates-card__head">
                     <div className="templates-card__icon"><i className="bi bi-diagram-3" aria-hidden="true" /></div>
-                    <h3 className="templates-card__label">{e.label}</h3>
-                    <span className="templates-card__ref">{galleryRefOf(e.id, version.n)}</span>
+                    <div className="templates-card__titles">
+                        <h3 className="templates-card__label" title={e.label}>{e.label}</h3>
+                        <span className="templates-card__ref" title={galleryRefOf(e.id, version.n)}>{galleryRefOf(e.id, version.n)}</span>
+                    </div>
                 </div>
                 <p className="templates-card__counts">
                     {info ? `${plural(info.metamodels, 'metamodel')} · ${plural(info.models, 'model')} · ${plural(info.viewpoints, 'viewpoint')}` : ' '}

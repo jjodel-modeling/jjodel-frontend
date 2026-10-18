@@ -11,8 +11,9 @@
  *     each model's editor shows its nodes;
  *   - a template opens on its hand-written viewpoint (R-LIB-9: the first one, named after its metamodel), and each model
  *     is measured from the DOM against the criteria of P-2026-10-18-2300 (vertex, arc and row counts, labels, forms,
- *     frames holding their children, no arc between a container and its children, every vertex inside the viewport
- *     clear of the minimap after fit), then screenshot as <id>.png (<id>-<model>.png when there are more); an example
+ *     frames holding their children, no arc between a container and its children, every vertex visible after fit: its
+ *     four corners hit it and its box lies in the canvas left of the properties panel, clear of the minimap; arc labels
+ *     overlap no label and no vertex, each arc touches its source, two arcs between the same vertices run apart), then screenshot as <id>.png (<id>-<model>.png when there are more); an example
  *     is screenshot on each of its viewpoints, its rendering recorded, not asserted;
  *   - an explicit save, then a reopen from the page load: name and `_clonedFrom` survive.
  * The page shows «Templates» then «Examples», each card with its `<id>@<n>`; the deep links `#/templates/graph@1` (the
@@ -149,6 +150,15 @@ async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot
         const sections = await page.evaluate(`[...document.querySelectorAll('.templates-section')].map((s) => ({ tier: s.dataset.galleryTier, title: s.querySelector('.templates-section__title').textContent, cards: [...s.querySelectorAll('.templates-card')].map((c) => c.dataset.galleryId + ' ' + c.querySelector('.templates-card__ref').textContent) }))`) as any[];
         const want = ['template', 'example'].map(t => ({ tier: t, title: t === 'template' ? 'Templates' : 'Examples', cards: GALLERY.filter(e => e.tier === t).map(e => `${e.id} ${refOf(e)}`) }));
         check('Templates: «Templates» then «Examples», cards in catalog order, each with its <id>@<n>', JSON.stringify(sections) === JSON.stringify(want), sections);
+        // Each card: the title on one line, the id on its own line under it, one line, not cut.
+        const cards = await page.evaluate(`[...document.querySelectorAll('.templates-card')].map((c) => {
+          const t = c.querySelector('.templates-card__label'), r = c.querySelector('.templates-card__ref');
+          const lh = (e) => parseFloat(getComputedStyle(e).lineHeight) || 20;
+          return { id: c.dataset.galleryId, titleLines: Math.round(t.getBoundingClientRect().height / lh(t)), refLines: Math.round(r.getBoundingClientRect().height / lh(r)),
+            below: r.getBoundingClientRect().top >= t.getBoundingClientRect().bottom - 1, cut: r.scrollWidth > r.clientWidth || t.scrollWidth > t.clientWidth, mono: getComputedStyle(r).fontFamily };
+        })`) as any[];
+        check('Templates: every card has its title on one line and its <id>@<n> on its own line below, unwrapped, not cut',
+            cards.length === GALLERY.length && cards.every((c: any) => c.titleLines === 1 && c.refLines === 1 && c.below && !c.cut), cards);
         await page.screenshot({ path: `${SHOTS}/${shot}-page.png` });
     }
     await page.locator(`[data-gallery-id="${entry.id}"] button`, { hasText: 'Clone to my workspace' }).click();
@@ -201,21 +211,39 @@ const MEASURE = (modelId: string) => String.raw`(() => {
     const obj = (lk[n.dataset.id] || {}).model || null;
     const c = n.querySelector('.ir-node-content');
     const header = n.querySelector('.ir-header-band');
+    const b = n.getBoundingClientRect();
+    // Visible: the element under each corner, inset 2 px, is this node (the panel, the minimap or another node is not).
+    const corners = [[b.left + 2, b.top + 2], [b.right - 2, b.top + 2], [b.left + 2, b.bottom - 2], [b.right - 2, b.bottom - 2]]
+      .map(([x, y]) => { const e = document.elementFromPoint(x, y); return !!e && n.contains(e); });
+    const dot = n.querySelector('.node-problem-dot');
+    const outside = n.querySelector('.ir-label--outside');
     return { vid: n.dataset.id, obj, cls: cls(obj), text: (n.textContent || '').trim(), form: c ? ([...c.classList].find((k) => k.startsWith('ir-shape--')) || '').slice(10) : '',
-      header: header ? header.textContent.trim() : null, border: c ? getComputedStyle(c).borderTopStyle : '', box: box(n) };
+      header: header ? header.textContent.trim() : null, border: c ? getComputedStyle(c).borderTopStyle : '', box: box(n), content: c ? box(c) : box(n),
+      corners, marker: !!(c && c.querySelector('.ir-marker-svg')), problem: dot ? dot.className.replace('node-problem-dot ', '') + ' | ' + dot.title : null,
+      outsideLabel: outside ? box(outside) : null };
   });
+  // The canvas the user sees ends where the properties panel begins: the first x, along the middle row, whose element
+  // is not inside the pane (the pane itself runs on under the panel).
+  const pb = pane.getBoundingClientRect();
+  let right = pb.right;
+  for (let x = pb.left + 10; x < pb.right; x += 4) { const e = document.elementFromPoint(x, pb.top + pb.height / 2); if (!e || !pane.contains(e)) { right = x; break; } }
+  const canvas = { x: Math.round(pb.left), y: Math.round(pb.top), w: Math.round(right - pb.left), h: Math.round(pb.height) };
   const objOf = Object.fromEntries(nodes.map((n) => [n.vid, n.obj]));
   const edges = [...pane.querySelectorAll('.react-flow__edge')].map((g) => {
     const m = (g.getAttribute('aria-label') || '').match(/^Edge from (\S+) to (\S+)$/);
     // An edge draws transparent hit paths too: it is clear when none of its strokes shows.
     const inked = [...g.querySelectorAll('path, line, polyline')].filter((p) => { const cs = getComputedStyle(p); return !/^(none|transparent|rgba\(0, 0, 0, 0\))$/.test(cs.stroke) && parseFloat(cs.strokeWidth) > 0 && cs.opacity !== '0'; });
+    // The longest inked path is the line; its ends and middle in screen px.
+    const line = inked.filter((p) => p.getTotalLength).sort((a, b) => b.getTotalLength() - a.getTotalLength())[0];
+    const at = (t) => { if (!line) return null; const L = line.getTotalLength(); const q = line.getPointAtLength(L * t); const k = line.getScreenCTM(); const r = new DOMPoint(q.x, q.y).matrixTransform(k); return [Math.round(r.x), Math.round(r.y)]; };
     return { id: g.dataset.id || '', src: m ? objOf[m[1]] || m[1] : '', tgt: m ? objOf[m[2]] || m[2] : '', clear: inked.length === 0,
-      marker: inked.map((p) => p.getAttribute('marker-end') || '').filter(Boolean).join(' ') };
+      marker: inked.map((p) => p.getAttribute('marker-end') || '').filter(Boolean).join(' '), ends: [at(0), at(1)], mid: at(0.5) };
   });
   const isChild = (a, b) => { const f = (lk[b] || {}).father; return f === a || (lk[f] || {}).father === a; };
   const mini = pane.querySelector('.react-flow__minimap');
-  return { nodes, edges, rows: pane.querySelectorAll('.ir-row').length, pane: box(pane), minimap: mini ? box(mini) : null,
+  return { nodes, edges, rows: pane.querySelectorAll('.ir-row').length, pane: box(pane), canvas, minimap: mini ? box(mini) : null,
     labels: [...pane.querySelectorAll('.edge-label__text')].map((e) => e.textContent.trim()).filter(Boolean),
+    labelBoxes: [...pane.querySelectorAll('.edge-label__text')].filter((e) => e.textContent.trim() && e.getBoundingClientRect().width > 0).map((e) => ({ text: e.textContent.trim(), box: box(e) })),
     containmentArcs: edges.filter((e) => isChild(e.src, e.tgt) || isChild(e.tgt, e.src)).length,
     names: Object.fromEntries(nodes.map((n) => [n.obj, n.text])) };
 })()`;
@@ -223,6 +251,12 @@ const MEASURE = (modelId: string) => String.raw`(() => {
 const inside = (b: any, f: any) => b.x >= f.x && b.y >= f.y && b.x + b.w <= f.x + f.w && b.y + b.h <= f.y + f.h;
 const overlaps = (a: any, b: any) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const sorted = (a: string[]) => [...a].sort();
+/** Distance from a point to the border of a box: 0 on it, positive off it on either side. */
+const toBorder = ([x, y]: number[], b: any) => {
+    const dx = Math.max(b.x - x, 0, x - (b.x + b.w)), dy = Math.max(b.y - y, 0, y - (b.y + b.h));
+    if (dx > 0 || dy > 0) return Math.hypot(dx, dy);
+    return Math.min(x - b.x, b.x + b.w - x, y - b.y, b.y + b.h - y);
+};
 
 /** The criteria of one model of a template; `d` is the MEASURE of its fitted pane. */
 function criteria(id: string, model: string, d: any): void {
@@ -231,9 +265,27 @@ function criteria(id: string, model: string, d: any): void {
     const texts = (ns: any[]) => sorted(ns.map((n: any) => n.text));
     const tag = `${id} ${model}`;
     check(`${tag}: 0 rows, 0 containment arcs`, d.rows === 0 && d.containmentArcs === 0, { rows: d.rows, containmentArcs: d.containmentArcs });
-    check(`${tag}: every vertex inside the viewport and clear of the minimap after fit`,
-        d.nodes.every((n: any) => inside(n.box, d.pane) && !(d.minimap && overlaps(n.box, d.minimap))),
-        d.nodes.filter((n: any) => !inside(n.box, d.pane) || (d.minimap && overlaps(n.box, d.minimap))).map((n: any) => n.text));
+    const hidden = d.nodes.filter((n: any) => !n.corners.every(Boolean) || !inside(n.box, d.canvas) || (d.minimap && overlaps(n.box, d.minimap)));
+    check(`${tag}: every vertex visible after fit: four corners hit, inside the canvas left of the panel, clear of the minimap`, hidden.length === 0,
+        { hidden: hidden.map((n: any) => `${n.text}:${n.corners.map((c: boolean) => c ? 1 : 0).join('')}:${JSON.stringify(n.box)}`), canvas: d.canvas });
+    const lb = d.labelBoxes;
+    const clash = [
+        ...lb.flatMap((a: any, i: number) => lb.slice(i + 1).filter((b: any) => overlaps(a.box, b.box)).map((b: any) => `${a.text}~${b.text}`)),
+        ...lb.flatMap((a: any) => d.nodes.filter((n: any) => !n.header && overlaps(a.box, n.content)).map((n: any) => `${a.text}~${n.text}`)),
+    ];
+    check(`${tag}: no arc label overlaps another label or a vertex`, clash.length === 0, clash);
+    // The canvas ends every edge at the outer edge of its 8 px handle, centred on the border (.mm-anchor): ~5 px off the
+    // ink on every arc of every syntax. Measured per arc; the check fails beyond that offset, i.e. on a wrong source.
+    const gaps = drawn.map((e: any) => { const s = d.nodes.find((n: any) => n.obj === e.src); return s && e.ends[0] ? Math.round(Math.min(...e.ends.map((p: number[]) => toBorder(p, s.content)))) : -1; });
+    if (gaps.length) meas(`${tag}: px between each arc and its source's border`, gaps);
+    const detached = drawn.filter((e: any, i: number) => gaps[i] < 0 || gaps[i] > 6);
+    check(`${tag}: every arc leaves from its source (within the canvas's 6 px handle offset)`, detached.length === 0,
+        detached.map((e: any) => { const s = d.nodes.find((n: any) => n.obj === e.src); return `${d.names[e.src]}>${d.names[e.tgt]} ends ${JSON.stringify(e.ends)} source ${JSON.stringify(s?.content)} node ${JSON.stringify(s?.box)}`; }));
+    const close = drawn.flatMap((a: any, i: number) => drawn.slice(i + 1).filter((b: any) => [a.src, a.tgt].sort().join() === [b.src, b.tgt].sort().join()
+        && a.mid && b.mid && Math.hypot(a.mid[0] - b.mid[0], a.mid[1] - b.mid[1]) < 16).map((b: any) => `${d.names[a.src]}>${d.names[a.tgt]} ~ ${d.names[b.src]}>${d.names[b.tgt]}`));
+    check(`${tag}: two arcs between the same vertices run at least 16 px apart`, close.length === 0, close);
+    const problems = d.nodes.filter((n: any) => n.problem).map((n: any) => `${n.text}: ${n.problem}`);
+    if (problems.length) meas(`${tag}: problem dots`, problems);
     const arcs = (ns: any) => sorted(drawn.map((e: any) => `${d.names[e.src] ?? e.src}>${d.names[e.tgt] ?? e.tgt}`));
     if (id === 'graph') {
         check(`${tag}: 4 Node vertices labelled by name, the Graph not drawn`, d.nodes.length === 4 && JSON.stringify(texts(of('Node'))) === '["A","B","C","D"]', texts(d.nodes));
@@ -245,8 +297,12 @@ function criteria(id: string, model: string, d: any): void {
     } else if (id === 'state-machine') {
         const st = (name: string) => d.nodes.find((n: any) => n.cls === 'State' && n.text.startsWith(name));
         check(`${tag}: one vertex per State, the StateMachine not drawn`, of('State').length === 6 && d.nodes.length === 6, texts(d.nodes));
-        check(`${tag}: initial states a filled dot, the final one a double circle`, st('Idle')?.form === 'circle' && st('Warmup')?.form === 'circle' && st('Off')?.form === 'circle' && st('Off')?.border === 'double' && st('Broken')?.form === 'rounded',
-            ['Idle', 'Warmup', 'Off', 'Broken', 'Steady'].map(n => `${n}:${st(n)?.form}:${st(n)?.border}`));
+        check(`${tag}: initial states a filled dot, the final one a bullseye (circle with an inner dot, about 28 px)`, st('Idle')?.form === 'circle' && !st('Idle')?.marker && st('Warmup')?.form === 'circle'
+            && st('Off')?.form === 'circle' && st('Off')?.marker && Math.abs(st('Off').content.w - 28) <= 2 && st('Broken')?.form === 'rounded',
+            ['Idle', 'Warmup', 'Off', 'Broken', 'Steady'].map(n => `${n}:${st(n)?.form}:${st(n)?.marker ? 'marker' : ''}:${st(n)?.content.w}`));
+        const warm = st('Warmup'), frameBox = st('Running')?.content;
+        check(`${tag}: Warmup's label clears Running's bottom edge by at least 8 px`, !!warm?.outsideLabel && !!frameBox && frameBox.y + frameBox.h - (warm.outsideLabel.y + warm.outsideLabel.h) >= 8,
+            { label: warm?.outsideLabel, frame: frameBox });
         const running = st('Running');
         check(`${tag}: Running a frame headed by its name, holding Warmup and Steady`, !!running && running.header === 'Running' && inside(st('Warmup').box, running.box) && inside(st('Steady').box, running.box), running && { header: running.header, box: running.box });
         check(`${tag}: one arc per Transition, labelled trigger [guard]`, drawn.length === 3 && JSON.stringify(sorted(d.labels)) === JSON.stringify(sorted(['power', 'power [temp > 60]'])), { arcs: arcs(d), labels: d.labels });
@@ -334,6 +390,11 @@ try {
             const d = await page.evaluate(MEASURE(m.id)) as any;
             meas(`${entry.id} ${m.name}`, d && { nodes: d.nodes.map((n: any) => `${n.cls}:${n.form}:${n.text}`), edges: d.edges.map((e: any) => `${d.names[e.src] ?? e.src}>${d.names[e.tgt] ?? e.tgt}${e.clear ? ' (clear)' : ''}`), labels: d.labels, rows: d.rows, containmentArcs: d.containmentArcs });
             if (entry.tier === 'template' && d) criteria(entry.id, m.name, d);
+            // What a problem dot says: the registry's problems of that vertex (or its object), with their violations.
+            for (const n of (d?.nodes ?? []).filter((x: any) => x.problem)) {
+                meas(`${entry.id} ${m.name}: problems of ${n.text}`, await page.evaluate(String.raw`(async () => { const r = await import('/src/components/editor-v2/problems/registry.ts');
+                  return [${JSON.stringify(n.vid)}, ${JSON.stringify(n.obj)}].flatMap((k) => r.getNodeProblemsSnapshot(k)).map((p) => ({ title: p.title, kind: p.kind, conformance: p.conformance })); })()`));
+            }
             await page.screenshot({ path: `${SHOTS}/${entry.id}${info.models.length > 1 ? '-' + m.name : ''}.png` });
         }
 
