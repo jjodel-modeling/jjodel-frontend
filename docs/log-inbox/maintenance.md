@@ -153,3 +153,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: OK — chat, RC-23, 2026-10-18 16:20, built-in browser on :3010, 1440x900 login/register/reset and 390x844 register: layout as D2, intro and card top-aligned, labels match titles; lane's own headless probe on port 3010, 3 views × 4 sizes, no horizontal scroll, 0 page errors (report, Phase 2 results)
 **Notes**: Header logo is `logo-light-150.png` (Navbar's dark wordmark): `jjodel.png` is white and was invisible on the new header, prompt context item 2 does not hold. Register lead line «Fields marked * are required» omitted: the `*` appears only after a failed submit. Fix `a42694244`: grid top-aligned, buttons Sign in/Create account/Send reset link (chat overrode decision 3). Addendum: fix `7af2695b3` after merge `60db4fad7`, one centered 1200px box for header, grid and footer (report).
 **Prompt document name**: 2026-10-18 15:00
+
+## 2026-10-18 — feat(auth): compact register view, legal links, no newsletter opt-in (P-2026-10-18-1720)
+**Prompt**: `claude_2026-10-18_1720_prompt_register_compact.md`, fast lane, worktree `jjodel-w-register` on `register-compact`: register view in two columns without page scroll at 1440x900, Terms and Privacy links, newsletter opt-in removed.
+**Files touched**: `1d17792d9`: `frontend/src/pages/Auth.tsx`, `frontend/src/pages/auth.scss`. Left uncommitted for the chat's closure commit: `docs/discovery/discovery_2026-10-18_auth_page_redesign.md` (section «Register compact»), this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck exit 0, build exit 0; no test touches the auth page; register/login/reset submits not exercised against the API, and `NewsletterEnabled` is now absent from the register payload instead of `false`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — lane probe only (headless, port 3011): register fits at 1440x900, 1280x800, 1920x1080 (scrollHeight = viewport), no horizontal scroll, 0 page errors on 12 loads; chat's visual check pending, dev server left on 3011
+**Notes**: Grid column is `minmax(280px, 1fr)` rather than `1fr` (intro would be 124px at 1100px); identical to the spec from 1256px up. Session ran on Sonnet 5.5 (banner), not the Opus 5.5 pin; the commit trailer says so.
+**Prompt document name**: 2026-10-18 17:20
