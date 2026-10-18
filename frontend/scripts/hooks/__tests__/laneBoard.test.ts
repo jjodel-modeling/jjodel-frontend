@@ -705,7 +705,7 @@ describe('the board: /api and the page', () => {
         expect('progress' in old).toBe(false);
         expect(Object.keys(old).sort()).toEqual([
             'archChat', 'archIn', 'archOpen', 'archOut', 'archTotal',
-            'chain', 'chat', 'chatUrl', 'chatUrlFrom', 'chatUrlVia', 'ctxMax', 'day', 'end', 'id', 'kind', 'lane', 'launcher', 'left',
+            'chain', 'chat', 'chatUrl', 'chatUrlFrom', 'chatUrlVia', 'ctxMax', 'day', 'direct', 'end', 'id', 'kind', 'kindInfo', 'lane', 'launcher', 'left',
             'live', 'minutes', 'outcome', 'phase', 'recent', 'start', 'state', 't', 'tier', 'title', 'tokensIn', 'tokensOut', 'tokensSub',
             'tokensTotal', 'work', 'worktree',
         ]);
@@ -822,7 +822,7 @@ function pageContext(page: string) {
     const el = (): Ev => ({ innerHTML: '', textContent: '', hidden: false, title: '', className: '', dataset: {}, style: {},
         classList: { toggle() {} }, addEventListener() {}, querySelector: () => el(), querySelectorAll: () => [] });
     const ctx = createContext({
-        document: { getElementById: () => el(), querySelector: () => el(), querySelectorAll: () => [], title: '' }, window: {},
+        document: { getElementById: () => el(), querySelector: () => el(), querySelectorAll: () => [], body: el(), title: '' }, window: {},
         localStorage: { getItem: () => null, setItem() {} }, fetch: () => new Promise(() => {}), setInterval: () => 0, setTimeout: () => 0, clearTimeout() {},
         location: { href: 'http://127.0.0.1/' }, URL,
     });
@@ -951,5 +951,142 @@ describe('tokens: /api, the Lanes tab and /api/insights', () => {
         utimesSync(join(root, UA, 'log.jsonl'), t, t);
         expect(await tokensIn(await listen(root, repo))).toBe(560005);
         expect(JSON.parse(readFileSync(file, 'utf8'))[UA].v.tokensIn).toBe(560005);
+    });
+});
+
+// ── the Kind badge (P-2026-10-18-1428): kindDetails on lane folders, and the badge in the Lanes tab ──
+describe('the Kind badge: kindDetails and the Lanes tab', () => {
+    const MERGE_LANE = 'full (merge; direct, lane-run merge --direct)';
+    /** A lane folder holding `files` (name to content, objects as JSON). */
+    const folder = (files: Record<string, unknown>) => {
+        const d = tmp();
+        for (const [k, v] of Object.entries(files)) writeFileSync(join(d, k), typeof v === 'string' ? v : JSON.stringify(v));
+        return d;
+    };
+    const row = (o: Ev = {}): Ev => ({ kind: 'merge', lane: MERGE_LANE, chain: false, tier: '', tokensIn: null, archTotal: null, archOpen: false, ...o });
+    const gates = (vitestOk: boolean) => [
+        { name: 'typecheck', ok: true, detail: '0 errors' },
+        { name: 'vitest', ok: vitestOk, detail: vitestOk ? '9250 tests' : '9237 tests, 1 failed' },
+        { name: 'build', ok: true, detail: 'exit 0' },
+    ];
+    const NO_MODEL = 'In, Out, Total, Ctx max: n/a, no model ran';
+
+    test('a direct merge: scripted, branch into trunk, the gates of result.json, n/a explained for tokens and Arch (direct branch, gates or the n/a lines dropped)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const d = folder({
+            'direct.json': { kind: 'direct', branch: 'ignored-when-result', trunk: 'x' }, 'log.jsonl': '{}\n',
+            'result.json': { kind: 'direct', branch: 'lane-run-routing', trunk: 'alfonso-frontend-jjtl', gates: gates(true), ok: true, outcome: 'hard-stop', reason: null },
+        });
+        expect(kindDetails(row(), kindFacts(d))).toEqual([
+            'merge: brings a lane branch into the trunk',
+            'Lane: ' + MERGE_LANE,
+            'How it ran: scripted: git merge and gates, no model session',
+            'lane-run-routing into alfonso-frontend-jjtl',
+            'Gates: typecheck ok · vitest ok · build ok',
+            'Result: hard-stop',
+            NO_MODEL,
+            'Arch: n/a, the chat records it only for session lanes',
+        ]);
+        // Running, before result.json: branch and trunk from direct.json, the gates not yet there.
+        const run = folder({ 'direct.json': { branch: 'lane-board-kind', trunk: 'alfonso-frontend-jjtl' } });
+        expect(kindDetails(row(), kindFacts(run)).slice(3, 5)).toEqual(['lane-board-kind into alfonso-frontend-jjtl', 'Gates: no result.json yet']);
+    });
+
+    test('a resolved direct merge: the red gate with its detail, the reason, and the text of resolved.txt (resolved.txt or the red detail dropped)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const d = folder({
+            'direct.json': {}, 'resolved.txt': '2026-10-18 13:05 · C-2026-10-17-1757 · vitest red was pre-existing on the trunk\n',
+            'result.json': { branch: 'lane-board-arch', trunk: 'alfonso-frontend-jjtl', gates: gates(false), outcome: 'blocked', reason: 'red gates: vitest; the merge commit stays' },
+        });
+        const lines = kindDetails(row(), kindFacts(d));
+        expect(lines).toContain('Gates: typecheck ok · vitest red (9237 tests, 1 failed) · build ok');
+        expect(lines).toContain('Result: blocked, red gates: vitest; the merge commit stays');
+        expect(lines).toContain('Resolved: 2026-10-18 13:05 · C-2026-10-17-1757 · vitest red was pre-existing on the trunk');
+        expect(lines).toContain(NO_MODEL);
+    });
+
+    test('a session lane with runs.jsonl: tier, model and effort of its last line, the session id, tokens and Arch from their files (last line or effective model ignored)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const d = folder({
+            'runs.jsonl': JSON.stringify({ kind: 'start', tier: 'light', requestedModel: 'claude-sonnet-5-5', effort: 'medium' }) + '\n' +
+                JSON.stringify({ kind: 'resume', session: 'abc-123', tier: 'heavy', requestedModel: 'claude-opus-5-5', effectiveModel: 'claude-opus-5-5[1m]', effort: 'high' }) + '\n',
+            'tier.txt': 'heavy (settings pin): --tier heavy\n', 'architect.json': '{}', 'log.jsonl': '{}\n',
+        });
+        expect(kindDetails(row({ kind: 'fast', lane: 'fast', tier: 'heavy', tokensIn: 1200, archTotal: 300 }), kindFacts(d))).toEqual([
+            'fast: one module, one phase, closed by one docs commit (RC-17)',
+            'Lane: fast',
+            'How it ran: a Claude Code session started by lane-run',
+            'Tier heavy · model claude-opus-5-5[1m] · effort high (runs.jsonl, 2 launches)',
+            'Session: abc-123',
+            'In, Out, Total, Ctx max: the main session, from log.jsonl',
+            'Arch: from architect.json',
+        ]);
+    });
+
+    test('a session lane without runs.jsonl: the tier.txt line, the model of the log, session.txt, and the missing file named for tokens and Arch (missing-file lines collapsed to bare n/a, log model ignored)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const d = folder({ 'tier.txt': 'heavy (settings pin): --tier heavy\n', 'session.txt': '29b9f83e\n', 'log.jsonl': '{}\n' });
+        const r = row({ kind: 'phase2', lane: 'full (harness)', tier: 'heavy' });
+        expect(kindDetails(r, kindFacts(d)).slice(2)).toEqual([
+            'How it ran: a Claude Code session started by lane-run',
+            'Tier: heavy (settings pin): --tier heavy; no runs.jsonl, so model and effort are not recorded',
+            'Session: 29b9f83e',
+            'In, Out, Total, Ctx max: n/a, log.jsonl holds no call with message.usage yet',
+            'Arch: n/a, no architect.json in the lane folder',
+        ]);
+        const bare = kindFacts(folder({}));
+        expect(kindDetails(r, bare).slice(4)).toEqual(['Session: no session.txt', 'In, Out, Total, Ctx max: n/a, no log.jsonl in the lane folder', 'Arch: n/a, no architect.json in the lane folder']);
+        // The model of the log, when the board has one, stands in for the runs.jsonl line.
+        expect(kindDetails({ ...r, model: 'claude-opus-5-5' }, kindFacts(d))[3]).toBe('Tier: heavy (settings pin): --tier heavy · model claude-opus-5-5 (log.jsonl); no runs.jsonl, so effort is not recorded');
+        expect(kindDetails(r, kindFacts(d), false)[5]).toBe('In, Out, Total, Ctx max: n/a, lane-usage.mjs not found beside the board');
+        expect(kindDetails(row({ kind: 'phase2', archOpen: true }), kindFacts(d))[6]).toBe('Arch: open, architect.json not closed by the chat yet');
+    });
+
+    test('an empty kind reads unknown, with the Lane line or its absence; a chain says its lanes carry the kind (unknown fallback dropped)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const f = kindFacts(folder({}));
+        expect(kindDetails(row({ kind: '', lane: 'standard' }), f).slice(0, 2)).toEqual(['unknown: the Lane line matches no kind', 'Lane: standard']);
+        expect(kindDetails(row({ kind: '', lane: '' }), f)[1]).toBe('Lane: no Lane line in the prompt');
+        expect(kindDetails(row({ kind: '', lane: '', chain: true }), f)).toEqual(['chain: lanes run one after the other; each lane has its own kind', 'Lane: none, a chain has no prompt']);
+    });
+
+    test('negative: a session lane never gets the "no model ran" line, a merge run as a session included (the direct test widened to the merge kind)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const facts = [kindFacts(folder({})), kindFacts(folder({ 'log.jsonl': '{}\n', 'result.json': { gates: gates(true) } })), kindFacts(folder({ 'runs.jsonl': '{"tier":"heavy"}\n' }))];
+        for (const kind of ['merge', 'fast', 'discovery', 'phase2', '']) for (const f of facts) {
+            const lines = kindDetails(row({ kind }), f);
+            expect(lines).not.toContain(NO_MODEL);
+            expect(lines.join('\n')).not.toMatch(/no model ran|scripted/);
+        }
+    });
+
+    test('/api: direct and kindInfo per row; the Lanes tab draws a badge in every Kind cell, direct and the tier after it, the lines in data-kd, Kind 124 px (badge, suffix or width dropped)', async () => {
+        const { port } = await board();
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const by = (id: string) => d.rows.find((r: Ev) => r.id === id);
+        expect(by('P-2026-10-05-1000').direct).toBe(true);
+        expect(by('P-2026-10-05-1000').kindInfo).toContain(NO_MODEL);
+        expect(by('P-2026-10-05-0900').direct).toBe(false);
+        expect(by('P-2026-10-05-0900').kindInfo).not.toContain(NO_MODEL);
+        const page = await (await fetch('http://127.0.0.1:' + port + '/')).text();
+        expect(page).toContain('<div id="kd" role="tooltip" hidden></div>');
+        const ctx = pageContext(page);
+        for (const live of [true, false]) {
+            const html = runInContext('table(' + JSON.stringify(d.rows.filter((r: Ev) => r.live === live)) + ',' + live + ')', ctx) as string;
+            const heads = [...html.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
+            const widths = [...html.matchAll(/<col( style="width:(\d+)px")?>/g)].map((m) => m[2]);
+            expect(widths[heads.indexOf('Kind')]).toBe('124');
+            for (const tr of html.split('<tr>').slice(2)) {
+                const kindTd = [...tr.matchAll(/<td[^>]*>.*?<\/td>/g)].map((m) => m[0])[heads.indexOf('Kind')];
+                expect(kindTd).toMatch(/^<td class="lfx-cut"><button type="button" class="pill kb k-(merge|fast|discovery|phase2|unknown|chain)" data-id="[^"]+" data-kd="[^"]+" aria-describedby="kd">/);
+            }
+        }
+        const live = runInContext('table(' + JSON.stringify(d.rows.filter((r: Ev) => r.live)) + ',true)', ctx) as string;
+        const direct = live.split('<tr>').find((t) => t.includes('P-2026-10-05-1000'))!;
+        expect(direct).toContain('class="pill kb k-merge"');
+        expect(direct).toContain('<span class="ksx"> · direct</span>');
+        expect(direct).toContain('data-kd="merge: brings a lane branch into the trunk&#10;Lane: full (merge; direct)&#10;How it ran: scripted');
+        expect(live.split('<tr>').find((t) => t.includes('P-2026-10-05-0900'))).toContain('class="pill kb k-phase2"');
+        expect(live.split('<tr>').find((t) => t.includes('P-2026-10-05-0900'))).toContain('<span class="ksx"> · heavy</span>');
     });
 });
