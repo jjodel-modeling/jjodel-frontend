@@ -18,7 +18,7 @@ read again); `req-trace.mjs` keeps its own cache in the system temp folder (belo
 **Lanes.** A table of the running and blocked lanes: state, kind (from the `Lane:`
 line of the prompt) and tier, elapsed time, an estimate of the time left, the current
 phase (the last tool description in the lane's `log.jsonl`), the worktree and who
-launched it, and five token columns after Span (Tokens, below). The Phase cell draws the lane's progress on its first line and the phase
+launched it, five token columns after Span and a Cost column after Arch (Tokens, below). The Phase cell draws the lane's progress on its first line and the phase
 text, cut, on its second (next section). The estimate is a heuristic, not a promise: a
 measured median per kind, minus the elapsed time, corrected by the phase and the load
 average. Below it, the earlier lanes grouped by day, with their outcome.
@@ -100,7 +100,27 @@ The cells are abbreviated (`12.3k`, `3.1M`, en-US, one decimal) with the exact i
 the title, and read `n/a` when the lane has no per-call usage (a direct merge, a lane folder
 without `log.jsonl`); the fields are integers or `null`. The five columns are 72 px each in
 both variants; to keep Phase and Outcome their room, Worktree went from 144 to 112 px and
-the Lanes tab's page is 328 px wider than the other tabs (1608 px, `main.wide`).
+the Lanes tab's page is 328 px wider than the other tabs (1608 px, `main.wide`; 1672 px with Cost, below).
+
+### Cost and the day totals (P-2026-10-18-1750)
+
+The **Cost** column sits after Arch (64 px, so the Lanes tab's page is 1672 px). It is the largest
+`total_cost_usd` of the lane's `result` events (`costUSD` in `/api`; Claude Code reports it
+cumulative over the session and a resume restores it), at API list price, not what the
+subscription costs. The per-model costs of `modelUsage` add up to it, subagent model included, so
+subagents are in. The architect chat is not. The cell reads `$` and two decimals, `<$0.01` below a
+cent, empty when the lane has no `result` with a cost (chains included); the title carries the full
+value and the number of sessions (`init` events, `sessions` in `/api`).
+
+`/api` also carries `spendByDay`, `{ 'YYYY-MM-DD': usd }` summed over all lanes. The delta of each
+cost event is its increase over the previous event of the same log (a decrease is a new session and
+the delta is the value itself), and it lands on the local day of the end of the turn the event
+closes; an event that closes no turn (a task notification) lands on the end of the preceding turn,
+and a lane without input files has one turn. Each Earlier-lanes summary appends the spend of its
+day, which is not the sum of the rows under it (a lane started the day before can add to it), and
+the meta line appends `today`. The cost events of a log are cached in `usage-cache.json` under
+`cost:<Prompt-ID>`, keyed by the size and mtime of `log.jsonl`; the days are worked out from them
+and the lane's turns on every read.
 
 The Insights **Tokens** section groups the closed lanes of the range by tier (the first word
 of `tier.txt`) and by model (the first `init`): lane count, median and sum of Total, median

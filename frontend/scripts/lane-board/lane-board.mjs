@@ -524,6 +524,7 @@ function snapshot(r) {
     }
     const error = r.ok ? '' : r.error;
     const rows = [];
+    const spend = {};
     const logs = new Set();
     for (const line of (r.ok ? r.stdout : '').split('\n').slice(1)) {
         if (!line.trim()) continue;
@@ -569,6 +570,12 @@ function snapshot(r) {
         const tk = isChain ? null : laneTokens(id);
         Object.assign(row, { tokensIn: tk ? tk.tokensIn : null, tokensOut: tk ? tk.tokensOut : null, tokensTotal: tk ? tk.tokensTotal : null, ctxMax: tk ? tk.ctxMax : null, tokensSub: tk ? tk.tokensSub : null });
         Object.assign(row, isChain ? archFields(null) : archFields(laneArchitect(id)));
+        // The Cost column and the day totals (P-2026-10-18-1750): costUSD null without a result that carries a cost.
+        const co = isChain ? null : laneCost(id);
+        Object.assign(row, { costUSD: co ? co.max : null, sessions: co && co.max !== null ? co.sessions : null });
+        if (co && co.events.length) {
+            try { for (const [d, usd] of Object.entries(spendByDay(co.events, laneTimeline(id, now).turns))) spend[d] = (spend[d] || 0) + usd; } catch { /* no turns */ }
+        }
         // The Kind badge (P-2026-10-18-1428): direct from direct.json, and the overlay's lines.
         const kf = isChain ? NO_FACTS : kindFacts(dir);
         row.direct = Boolean(kf.direct);
@@ -601,7 +608,7 @@ function snapshot(r) {
         tlDirty = false;
     }
     saveTokens();
-    const data = { now: Date.now(), load: load.map((x) => x.toFixed(2)), error, stale: false, rows };
+    const data = { now: Date.now(), load: load.map((x) => x.toFixed(2)), error, stale: false, rows, spendByDay: spend };
     if (r.ok) lastGood = data;
     cache = { at: Date.now(), data };
     return data;
@@ -733,6 +740,71 @@ function saveTokens() {
     if (!usDirty) return;
     try { writeFileSync(US_CACHE_FILE + '.tmp', JSON.stringify(usCache)); renameSync(US_CACHE_FILE + '.tmp', US_CACHE_FILE); } catch { /* best effort */ }
     usDirty = false;
+}
+
+// ── cost (P-2026-10-18-1750) ────────────────────────────────────────────────
+// total_cost_usd of a `result` event is cumulative over the session and restored by a resume, so the lane's cost is the
+// largest and the spend of a turn is the increase over the previous event. The cost events of a log are cached beside the
+// token columns (usage-cache.json, key 'cost:<id>', by the size and mtime of log.jsonl); the days are worked out from them
+// and the lane's turns on every read, so a turn that moves does not outlive a stale cache.
+
+/** The local day (YYYY-MM-DD) of an epoch ms: the rule of row.day. */
+export function localDay(ms) { return new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+
+/** What the cost columns read from a log (its bytes, or null): `events` are the `result` events that carry total_cost_usd,
+ *  each as { usd, turn }: `turn` is the index of the turn it closes, counted as results() counts them, and an event that
+ *  closes no turn (a task notification) takes the index of the preceding turn. max: the lane's cost, null without an event. */
+export function costEvents(buf) {
+    const out = { events: [], max: null, sessions: 0 };
+    if (!buf) return out;
+    eachLine(buf, '"subtype":"init"', (raw) => {
+        const e = parseLine(raw);
+        if (e && e.type === 'system' && e.subtype === 'init') out.sessions++;
+    });
+    let seen = 0;
+    eachLine(buf, '"type":"result"', (raw) => {
+        const e = parseLine(raw);
+        if (!e || e.type !== 'result') return;
+        const notTurn = (e.origin && e.origin.kind === 'task-notification') || (e.num_turns === 0 && !e.result); // as in results()
+        const turn = notTurn ? Math.max(0, seen - 1) : seen;
+        if (!notTurn) seen++;
+        if (typeof e.total_cost_usd !== 'number') return;
+        out.events.push({ usd: e.total_cost_usd, turn });
+        out.max = out.max === null ? e.total_cost_usd : Math.max(out.max, e.total_cost_usd);
+    });
+    return out;
+}
+
+/** { 'YYYY-MM-DD': usd } for one lane: the delta of each cost event (the increase over the previous event of the log; a
+ *  decrease is a new session and the delta is the value itself) on the local day of the end of the turn it lands on.
+ *  A lane with fewer turns than events (no input files) lands the rest on its last turn. */
+export function spendByDay(events, turns) {
+    const out = {};
+    if (!turns || !turns.length) return out;
+    let prev = 0;
+    for (const ev of events) {
+        const delta = ev.usd >= prev ? ev.usd - prev : ev.usd;
+        prev = ev.usd;
+        if (!delta) continue;
+        const day = localDay(turns[Math.min(ev.turn, turns.length - 1)].e);
+        out[day] = (out[day] || 0) + delta;
+    }
+    return out;
+}
+
+/** The cost events of a lane folder, cached; null without a log.jsonl. */
+function laneCost(id) {
+    let st;
+    try { st = statSync(join(ROOT, id, 'log.jsonl')); } catch { return null; }
+    const key = ['c1', st.size, st.mtimeMs].join('/');
+    const hit = usCache['cost:' + id];
+    let v = hit && hit.key === key ? hit.v : null;
+    if (!v) {
+        try { v = costEvents(readFileSync(join(ROOT, id, 'log.jsonl'))); } catch { return null; }
+        usCache['cost:' + id] = { key, v };
+        usDirty = true;
+    }
+    return v;
 }
 
 /** The `result` events of a log (its bytes, or null): duration and the last Outcome line of each turn. */
@@ -1522,7 +1594,7 @@ const PAGE = `<!doctype html>
 :root{--bg:#f8fafc;--fg:#0f172a;--muted:#64748b;--line:#e2e8f0;--card:#fff;--accent:#0ea5e9;--run:#0284c7;--ok:#15803d;--warn:#b45309;--hs:#74b98a;--bad:#b91c1c}
 @media (prefers-color-scheme:dark){:root{--bg:#0b1220;--fg:#e2e8f0;--muted:#94a3b8;--line:#1e293b;--card:#111a2e;--run:#38bdf8;--ok:#4ade80;--warn:#fbbf24;--hs:#2f7d4f;--bad:#f87171}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
-main{max-width:1280px;margin:0 auto;padding:16px}main.wide{max-width:1608px}
+main{max-width:1280px;margin:0 auto;padding:16px}main.wide{max-width:1672px}
 header{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;margin-bottom:16px}
 h1{font-size:16px;margin:0}h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:24px 0 8px}
 .meta{color:var(--muted);font-size:12px}.meta b{color:var(--fg);font-weight:600}
@@ -1617,16 +1689,23 @@ const when=(ms,day)=>{if(!ms)return '<td class="when"></td>';const d=new Date(ms
 const work=r=>'<td class="lfx-num">'+(r.start?dur(Math.floor(r.work/60000)):'')+'</td>';
 // Span is the start to the end, waits for decisions included: to now while the lane runs; empty when an end is unknown.
 const span=r=>{const e=r.live?Date.now():r.end;return '<td class="lfx-num">'+(r.start&&e?dur(Math.floor((e-r.start)/60000)):'')+'</td>'};
-const tips={Elapsed:"Working time: the sum of the lane's turns",Span:'From start to end, waits for decisions included',In:'Main session: input, cache read and cache creation tokens',Out:'Output tokens, from the last modelUsage (all models of the lane)',Total:'In + Out',Arch:"The architect's tokens over the lane (input + output), from architect.json: open until the chat closes the lane, n/a without the file",'Ctx max':'The largest main context of one call'};
+const tips={Elapsed:"Working time: the sum of the lane's turns",Span:'From start to end, waits for decisions included',In:'Main session: input, cache read and cache creation tokens',Out:'Output tokens, from the last modelUsage (all models of the lane)',Total:'In + Out',Arch:"The architect's tokens over the lane (input + output), from architect.json: open until the chat closes the lane, n/a without the file",'Ctx max':'The largest main context of one call',Cost:"List price at API rates: total_cost_usd as Claude Code reports it, cumulative over the lane's sessions. Not what the subscription costs. The architect chat is not included. Subagents included."};
 // In, Out, Total and Ctx max (P-2026-10-18-1045): abbreviated, the exact integer in the title; n/a without per-call usage.
 const tnum=(v,more)=>'<td class="lfx-num" title="'+esc(v===null||v===undefined?'':String(v)+(more||''))+'">'+abbr(v)+'</td>';
 // Arch (P-2026-10-18-1155): the architect's totalIn + output from the lane's architect.json; open while the chat has not closed it.
 const arch=r=>{const none=r.archTotal===null||r.archTotal===undefined;const chat=r.archChat?' · chat '+r.archChat:'';return '<td class="lfx-num" title="'+esc(r.archOpen?'open'+chat:none?'':'in '+r.archIn+' · out '+r.archOut+' · total '+r.archTotal+chat)+'">'+(r.archOpen?'open':abbr(none?null:r.archTotal))+'</td>'};
-const tokens=r=>tnum(r.tokensIn,' · subagents: '+(r.tokensSub||0)+' tokens')+tnum(r.tokensIn===null?null:r.tokensOut)+tnum(r.tokensTotal)+arch(r)+tnum(r.ctxMax);
+// Cost (P-2026-10-18-1750): list price of the lane at API rates, $ and two decimals; empty without a result that carries a cost.
+const usd=v=>v>0&&v<0.01?'<$0.01':'$'+v.toFixed(2);
+const cost=r=>{const none=r.costUSD===null||r.costUSD===undefined;return '<td class="lfx-num" title="'+esc(none?'':'$'+Number(r.costUSD.toFixed(6))+' · '+r.sessions+' session'+(r.sessions===1?'':'s'))+'">'+(none?'':esc(usd(r.costUSD)))+'</td>'};
+// The spend of a day, from /api spendByDay (each turn on the day it ended); empty when the day has none.
+let spendByDay={};
+const SPEND_TIP='Spend on this day at API list price, each turn counted on the day it ended. The architect chat is not included.';
+const daySpend=day=>typeof spendByDay[day]==='number'?usd(spendByDay[day]):'';
+const tokens=r=>tnum(r.tokensIn,' · subagents: '+(r.tokensSub||0)+' tokens')+tnum(r.tokensIn===null?null:r.tokensOut)+tnum(r.tokensTotal)+arch(r)+cost(r)+tnum(r.ctxMax);
 // One width per column name, shared by every Lanes-tab table so a column keeps its width wherever it appears.
 // Phase (Running) and Outcome (exited) have none: they take the room the others leave.
-// The five token columns widen the Lanes tab's page by 328 px (main.wide): 360 for them, less 32 from Worktree.
-const COL_W={Lane:200,State:92,Kind:124,Started:96,Ended:96,Elapsed:100,Span:100,In:72,Out:72,Total:72,Arch:72,'Ctx max':72,Left:116,Worktree:112,'Launched by':128};
+// The five token columns widen the Lanes tab's page by 328 px (main.wide): 360 for them, less 32 from Worktree; Cost adds 64 more.
+const COL_W={Lane:200,State:92,Kind:124,Started:96,Ended:96,Elapsed:100,Span:100,In:72,Out:72,Total:72,Arch:72,Cost:64,'Ctx max':72,Left:116,Worktree:112,'Launched by':128};
 // Phase (Running): the milestone segments (reached, skipped, pending) and n/m on one line, the phase text cut below,
 // whole in the title. Both lines are drawn with or without progress, so a row keeps its height as the lane advances.
 function phaseCell(r){
@@ -1669,7 +1748,7 @@ document.body.addEventListener('scroll',()=>{if(kd.hidden)return;const b=kdPin&&
 function table(rows,live,day){
   day=day||ymd(new Date());
   if(!rows.length)return '<div class="empty">'+(live?(loaded?'No lane is running.':'Loading lanes…'):'No lanes in this period.')+'</div>';
-  const cols=live?['Lane','State','Kind','Started','Elapsed','Span','In','Out','Total','Arch','Ctx max','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Span','In','Out','Total','Arch','Ctx max','Worktree','Launched by'];
+  const cols=live?['Lane','State','Kind','Started','Elapsed','Span','In','Out','Total','Arch','Cost','Ctx max','Left','Phase','Worktree','Launched by']:['Lane','State','Outcome','Kind','Started','Ended','Elapsed','Span','In','Out','Total','Arch','Cost','Ctx max','Worktree','Launched by'];
   let h='<table class="lfx"><colgroup>'+cols.map(c=>'<col'+(COL_W[c]?' style="width:'+COL_W[c]+'px"':'')+'>').join('')+'</colgroup><thead><tr>'+cols.map(c=>'<th'+(tips[c]?' title="'+esc(tips[c])+'"':'')+'>'+c+'</th>').join('')+'</tr></thead><tbody>';
   for(const r of rows){
     const id='<td class="id">'+esc(r.id)+(r.title?'<span class="title">'+esc(r.title)+'</span>':'')+'</td>';
@@ -1684,9 +1763,10 @@ function table(rows,live,day){
 async function tick(){
   try{
     const d=await (await fetch('/api',{cache:'no-store'})).json();
+    spendByDay=d.spendByDay||{};
     const t=new Date(d.now).toLocaleTimeString('en-GB');
     const hi=Number(d.load[0])>20;
-    document.getElementById('meta').innerHTML='updated at <b>'+t+'</b> · refresh every '+(REFRESH/1000)+' s · load <span class="'+(hi?'load-hi':'')+'">'+d.load.join(' ')+'</span>';
+    document.getElementById('meta').innerHTML='updated at <b>'+t+'</b> · refresh every '+(REFRESH/1000)+' s · load <span class="'+(hi?'load-hi':'')+'">'+d.load.join(' ')+'</span>'+(d.spendByDay?' · <span title="'+esc(SPEND_TIP)+'">today '+esc(daySpend(ymd(new Date()))||'$0.00')+'</span>':'');
     // Stale rows (a status run that failed after a success) are drawn and counted, under an amber line.
     const err=document.getElementById('err');
     err.className=d.stale?'err stale':'err';
@@ -1707,7 +1787,7 @@ function renderOlder(rows){
     const rs=rows.filter(r=>r.day===day).sort((a,b)=>b.t-a.t||(a.id<b.id?1:a.id>b.id?-1:0));
     const tally={};rs.forEach(r=>{const o=(r.chain||r.outcome==='none')?r.state:r.outcome.split(' ')[0];tally[o]=(tally[o]||0)+1});
     const sum=Object.entries(tally).map(([k,v])=>v+' '+k).join(' · ');
-    return '<details data-day="'+day+'"'+(openDays.has(day)?' open':'')+'><summary><b>'+day+'</b><span class="meta">'+rs.length+' lane'+(rs.length>1?'s':'')+' · '+esc(sum)+'</span></summary><div class="wrap">'+table(rs,false,day)+'</div></details>';
+    return '<details data-day="'+day+'"'+(openDays.has(day)?' open':'')+'><summary><b>'+day+'</b><span class="meta">'+rs.length+' lane'+(rs.length>1?'s':'')+' · '+esc(sum)+(daySpend(day)?' · <span title="'+esc(SPEND_TIP)+'">'+esc(daySpend(day))+'</span>':'')+'</span></summary><div class="wrap">'+table(rs,false,day)+'</div></details>';
   }).join('');
   box.querySelectorAll('details').forEach(el=>el.addEventListener('toggle',()=>{el.open?openDays.add(el.dataset.day):openDays.delete(el.dataset.day);saveOpen()}));
 }
