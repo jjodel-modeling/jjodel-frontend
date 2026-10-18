@@ -182,3 +182,16 @@ Decisions awaiting Alfonso: none.
 **Ticket**: `docs-digest.ts` `parseRows` reads list items (`- **ID** (...)`) only. 169 lines of `docs/decisions.md` are rows written as paragraphs (`**R-VP-1** (2026-09-03) — ...` at column 0: R-VP, R-VAL, R-LAY, R-FORM, R-SGL, R-DEAD, R-STR, ...), so `npm run docs:digest` leaves them out of every digest and `nearMisses` does not list them. `decisions-query.ts` works around it by prefixing the dash on its own copy of the text. One of those lines, `R-REF-6` (line 5910), has a nested parenthesis in its header (`unattended (RC-25)`) that `parseRows` would reject if it read it. The fix is in `parseRows` (accept the paragraph form, close the header at the matching parenthesis); then `readRows` in `decisions-query.ts` loses its workaround.
 **Priority**: medium
 **Found in**: P-2026-10-18-0945
+
+## 2026-10-18 — merge: selective-reads into alfonso-frontend-jjtl (P-2026-10-18-1108)
+**Prompt**: `claude_2026-10-18_1108_prompt_merge_selective-reads.md`, a direct merge by `lane-run merge --direct`, no session: `selective-reads` at `663c0944d` into `alfonso-frontend-jjtl`, merge base `b2d7481b0`, 2 commits on the branch side.
+**Files touched**: merge `c5dd7b416`: 7 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_0945_prompt_b2_selective_reads.md`, `frontend/package.json`, `frontend/scripts/gates/__tests__/decisionsQuery.test.ts`, `frontend/scripts/gates/__tests__/logFind.test.ts`, `frontend/scripts/gates/decisions-query.ts`, `frontend/scripts/gates/log-find.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c5dd7b416` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9219 tests in 376 files, 9 red at import, hooks 781; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change: gates CLIs, tests, package.json and docs only (0 files under frontend/src); decided by chat C-2026-10-17-1757 under RC-25
+**Notes**: Rollback tag `pre-selective-reads` on `95291946a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1108/result.json`.
+**Prompt document name**: 2026-10-18 11:08
