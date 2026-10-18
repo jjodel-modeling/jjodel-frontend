@@ -90,6 +90,8 @@ export function AISettingsContent({
 }: AISettingsContentProps) {
     const [testStatus, setTestStatus] = useState<Dictionary<string, 'idle' | 'testing' | 'success' | 'error'>>({});
     const [testError, setTestError] = useState<Dictionary<string, string>>({});
+    // A passing test can still qualify the result (e.g. the selected model is not offered to the key).
+    const [testWarning, setTestWarning] = useState<Dictionary<string, string>>({});
     const [expandedProvider, setExpandedProvider] = useState<TAIProvider | null>(null);
     // Section the expanded row belonged to when it was opened. A row is grouped by its
     // configured state, which flips on the first character typed in the API key field: without
@@ -157,6 +159,7 @@ export function AISettingsContent({
         clearRevertTimer(provider); // cancel a pending revert from a previous test before starting a new one
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
         setTestError(prev => ({ ...prev, [provider]: '' }));
+        setTestWarning(prev => ({ ...prev, [provider]: '' }));
 
         try {
             const result = await AIProviderService.testConnection(provider);
@@ -169,11 +172,13 @@ export function AISettingsContent({
                 // The current model answered: the notice about the retired one has served (#179).
                 config.replacedModel = undefined;
                 config.save();
+                setTestWarning(prev => ({ ...prev, [provider]: result.warning || '' }));
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
             } else {
                 config.lastTested = Date.now();
                 config.lastTestOk = false;
-                config.enabled = false;
+                // Only a rejected key disables the provider (rate limit, network and outage do not).
+                if (AIProviderService.failureDisablesProvider(result)) config.enabled = false;
                 config.save();
                 setTestError(prev => ({ ...prev, [provider]: result.error || 'Connection failed' }));
                 setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
@@ -382,6 +387,12 @@ export function AISettingsContent({
                                 )}
                             </div>
                         ))}
+
+                        {testWarning[name] && (
+                            <p className="provider-notice">
+                                <i className="bi bi-exclamation-triangle" /> {testWarning[name]}
+                            </p>
+                        )}
 
                         {replacedModelNotice(name) && (
                             <p className="provider-notice">
