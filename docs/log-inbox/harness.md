@@ -225,3 +225,20 @@ Decisions awaiting Alfonso: the width in (1). Alternatives: keep 1280 and narrow
 **Smoke visivo**: passato — chat, unattended: no UI change in the app: lane board scripts, tests and docs only (0 files under frontend/src); board checked after the launchd restart via /api fields; decided by chat C-2026-10-17-1757 under RC-25
 **Notes**: Rollback tag `pre-lane-board-tokens` on `9c6859ecc` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1116/result.json`.
 **Prompt document name**: 2026-10-18 11:16
+
+## 2026-10-18 — feat(harness): B3a, lane-run records effort and model per launch, injects cited decisions and log entries (P-2026-10-18-1205)
+**Prompt**: `claude_2026-10-18_1205_prompt_b3a_lane_run_routing.md`: AM-7 effort per launch (`claude -p --effort`), AM-1 light model from settings env with the constant as fallback, `runs.jsonl` per lane completed by status, AM-5 decisions and log entries injected into the lane input, fail closed, 40k cap.
+**Files touched**: code `111376b99`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts` (8 assertions: `--effort high`, the injected blocks), `frontend/scripts/hooks/__tests__/laneRunRouting.test.ts` (new, 13 tests); this commit: `docs/harness/gates.md`, this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks 800/800 in 15 files (laneRun 121, laneRunDirect 32, laneRunRouting 13), typecheck:scripts exit 0, check:scripts PASS 96 files; `lane-run status P-2026-10-18-0945` prints `runs: none` and writes no file.
+**Out-of-scope changes**: no (6 files, all named by the prompt, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; no real lane started, fake-claude fixtures only)
+**Notes**: Measured on this prompt without launching: 13 IDs cited, decision rows 15373 bytes, rows with related 31631, log headers 1317, Depends bodies 6739, against a register of 651086 bytes. Mutation bench 14/14 killed: commit message of `111376b99`. The subject the prompt gave is 84 characters, over 72: shortened.
+**Prompt document name**: 2026-10-18 12:05
+
+Decisions taken (unattended): (1) IDs are recognised by `findRows` and `seriesOf`, imported from `decisions-query.ts`: it exports no ID regex (its `idRe` is private and built from the register's IDs), so lane-run scans capitalised hyphenated tokens and lets the register decide; a `<SERIES>-<n>` token of a known series that the register lacks is `not found` (`AM-5`, `P-...` are ignored). (2) xhigh for the six CLAUDE.md 3.2 files only, as the prompt says; `DV.tsx` and `defaultViewTemplate.ts` (rule 14) still force the heavy tier but run high. (3) Model settings are read from the worktree's `.claude/settings.json`, where the session runs; `LANE_RUN_LIGHT_MODEL` stays first (the tests). (4) A worktree without `docs/decisions.md`, or a prompt with no `Depends:` and no `Front:`, gets its block with a `none:` line and starts: there is nothing to read, so no CLI fails. Both blocks are always written. (5) The injection runs before the RC-45 draw, so a refused start takes no draw. When the prompt ends with the reminder, the reminder moves below the blocks and appears once. (6) `runs.jsonl` adds `logFrom`, so a line is completed from its own part of the log; the previous line is completed at the next launch too. A resume records `requestedModel: null`, and its effort is the last line's, else the rule. (7) A related row is printed once and never repeats a cited one. (8) `LANE_RUN_GATES` points the two CLIs elsewhere for the broken-CLI test. (9) No `escalate` (NON FARE), so it has no `--effort` either.
+
+Decisions awaiting Alfonso: AM-1's settings keys `env.JJODEL_LIGHT_MODEL` and `env.JJODEL_REPORT_MODEL` in `.claude/settings.json` wait for B7; until then a light start prints `light model: constant (settings env not set, B7)`, and lane-run does not read `JJODEL_REPORT_MODEL`, because no lane-run launch is a report. Also the scope of xhigh in (2): only the 3.2 files, or the whole critical zone of CLAUDE.md 3.1.
