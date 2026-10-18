@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-18-1648
 Chat: C-2026-10-18-0035
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane merge · e74903e21 · verifica visiva passata 2026-10-18 (Visual GO by Alfonso at 16:48 on the ai-row-label worktree (localhost:3005), same tree as the merge: rows show Connected / failure kind / Not tested / Set up, no model name. Trunk 3001 down, not re-checked.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-18-1648 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
