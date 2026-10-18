@@ -321,3 +321,16 @@ Decisions awaiting Alfonso: the registration of `rule-trigger.mjs` in `.claude/s
 **Ticket**: On the Lanes tab the Outcome column of the exited tables is 48 px wide and clips its pill on every row; the trunk board does the same, so it predates the Kind badge lane. Not touched there (out of scope).
 **Priority**: low
 **Found in**: P-2026-10-18-1428
+
+## 2026-10-18 — merge: lane-board-kind into alfonso-frontend-jjtl (P-2026-10-18-1516)
+**Prompt**: `claude_2026-10-18_1516_prompt_merge_lane-board-kind.md`, a direct merge by `lane-run merge --direct`, no session: `lane-board-kind` at `c82a72ca3` into `alfonso-frontend-jjtl`, merge base `a3ec93534`, 3 commits on the branch side.
+**Files touched**: merge `87351c0bf`: 5 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1428_prompt_lane_board_kind_badge.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `87351c0bf` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9327 tests in 381 files, 9 red at import, hooks 855; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Visual check of P-2026-10-18-1428 on :4701 passed before the merge: Kind badge on every Kind cell at 124 px, hover, click pins the overlay, Esc closes it, console clean, direct merges read hard-stop at the merge, closed by <sha>. Merge 87351c0bf, all eight gates green.
+**Notes**: Rollback tag `pre-lane-board-kind` on `3444cc265` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1516/result.json`.
+**Prompt document name**: 2026-10-18 15:16
