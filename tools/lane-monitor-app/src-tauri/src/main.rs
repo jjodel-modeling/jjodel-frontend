@@ -6,11 +6,13 @@
 //! when the popover opens) and pushes each snapshot to the tray and to the popover. A lane
 //! that starts waiting posts a system notification (`notify.rs`); a click on it opens the
 //! monitor on that lane. A `jjodel-lanes://<Prompt-ID>` link opens the monitor on that lane,
-//! and a global shortcut (default ⌃⌥⌘L) toggles the popover (`links.rs`).
+//! and a global shortcut (default ⌃⌥⌘L) toggles the popover (`links.rs`). The popover footer
+//! carries «Start at login» (the app's own LaunchAgent) and «Restart board» (`restart.rs`).
 
 mod links;
 mod notify;
 mod poll;
+mod restart;
 
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::Mutex;
@@ -24,6 +26,7 @@ use tauri::{
     WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
 
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use tauri_plugin_notification::NotificationExt;
@@ -70,6 +73,59 @@ fn refresh(shared: State<'_, Shared>) {
 #[tauri::command]
 fn footer_note(shared: State<'_, Shared>) -> Option<String> {
     shared.footer.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn login_state(app: AppHandle) -> restart::Control {
+    restart::login_view(app.autolaunch().is_enabled().map_err(|e| e.to_string()))
+}
+
+/// Writes or removes `~/Library/LaunchAgents/<LOGIN_LABEL>.plist`, then reads the state back.
+#[tauri::command]
+fn set_login(app: AppHandle, on: bool) -> Result<restart::Control, String> {
+    let manager = app.autolaunch();
+    let done = if on { manager.enable() } else { manager.disable() };
+    match &done {
+        Ok(()) => eprintln!("[lane-monitor] login item {}", if on { "on" } else { "off" }),
+        Err(e) => eprintln!("[lane-monitor] login item {}: {e}", if on { "on failed" } else { "off failed" }),
+    }
+    done.map_err(|e| e.to_string())?;
+    Ok(login_state(app))
+}
+
+#[tauri::command]
+fn restart_state(shared: State<'_, Shared>) -> restart::Control {
+    restart::restart_view(&shared.board, uid())
+}
+
+/// `launchctl kickstart -k gui/<uid>/io.jjodel.lane-board`, only for the board on 4700
+/// (`restart::restart_command` refuses any other); the next poll follows a few seconds later.
+#[tauri::command]
+async fn restart_board(app: AppHandle) -> Result<(), String> {
+    let argv = restart::restart_command(&app.state::<Shared>().board, uid())?;
+    eprintln!("[lane-monitor] restart board: {}", argv.join(" "));
+    let out = std::process::Command::new(&argv[0])
+        .args(&argv[1..])
+        .output()
+        .map_err(|e| format!("{}: {e}", argv[0]))?;
+    if !out.status.success() {
+        let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        eprintln!("[lane-monitor] restart board failed: {}: {err}", out.status);
+        return Err(format!("launchctl {}: {err}", out.status));
+    }
+    thread::spawn(move || {
+        thread::sleep(Duration::from_secs(3));
+        app.state::<Shared>().poll_now();
+    });
+    Ok(())
+}
+
+fn uid() -> u32 {
+    extern "C" {
+        fn getuid() -> u32;
+    }
+    // SAFETY: getuid(2) takes no argument, cannot fail and touches no memory of ours.
+    unsafe { getuid() }
 }
 
 #[tauri::command]
@@ -292,6 +348,12 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .macos_launcher(MacosLauncher::LaunchAgent)
+                .app_name(restart::LOGIN_LABEL)
+                .build(),
+        )
+        .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _, event| {
                     if event.state == ShortcutState::Pressed {
@@ -305,6 +367,10 @@ fn main() {
             current,
             refresh,
             footer_note,
+            login_state,
+            set_login,
+            restart_state,
+            restart_board,
             fit_popover,
             hide_popover,
             open_monitor

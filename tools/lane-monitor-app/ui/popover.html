@@ -39,8 +39,10 @@
 
     <footer class="foot">
       <button type="button" class="btn btn-primary" id="open">Open monitor</button>
-      <button type="button" class="btn" id="restart" disabled title="Not available yet">Restart board</button>
+      <button type="button" class="btn" id="restart" disabled aria-describedby="restart-why">Restart board</button>
+      <label class="btn" id="login-label"><input type="checkbox" id="login" aria-label="Start at login" disabled> Start at login</label>
     </footer>
+    <p class="more" id="restart-why" hidden></p>
     <p class="foot-note" id="foot-note" hidden></p>
   </main>
   <script src="popover.js"></script>

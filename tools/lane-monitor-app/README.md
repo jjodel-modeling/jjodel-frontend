@@ -8,7 +8,7 @@ Tauri 2 (system WKWebView), Rust only: no npm package, no HTTP crate. Specificat
 P-2026-10-18-2255 report, `docs/discovery/discovery_2026-10-18_lane_monitor_menubar_app.md`
 §Q4, §Q6, §Q7. Slice S2 (the shell) is P-2026-10-19-0000, S3 (notifications) is
 P-2026-10-19-0033, the `jjodel-lanes://` deep link and the global shortcut (S4) is
-P-2026-10-19-0054; the login item and «Restart board» (S5) come later.
+P-2026-10-19-0054, the login item and «Restart board» (S5) is P-2026-10-19-0129.
 
 ## Build
 
@@ -16,12 +16,14 @@ Toolchain measured on 2026-10-19: `rustc 1.94.1`, `cargo 1.94.1`, `tauri-cli 2.1
 (installed with `cargo install tauri-cli --version "^2" --locked`). The app's crates are
 pinned by `src-tauri/Cargo.lock` (`tauri` 2.12.4, `tauri-build` 2.7.3,
 `tauri-plugin-notification` 2.7.0, `tauri-plugin-deep-link` 2.6.2,
-`tauri-plugin-global-shortcut` 2.4.1 on `global-hotkey` 0.8.0).
+`tauri-plugin-global-shortcut` 2.4.1 on `global-hotkey` 0.8.0, `tauri-plugin-autostart` 2.7.0
+on `auto-launch` 0.6.0).
 
 ```bash
 cd tools/lane-monitor-app/src-tauri
 cargo test                       # HTTP parse, payload, title formatter, notification transitions,
-                                 # deep-link parser, config and shortcut parse
+                                 # deep-link parser, config and shortcut parse, restart command
+                                 # and footer controls
 cargo tauri build --bundles app  # target/release/bundle/macos/Lane Monitor.app
 open "target/release/bundle/macos/Lane Monitor.app"
 ```
@@ -87,12 +89,13 @@ LANE_MONITOR_BOARD=http://127.0.0.1:4712 \
   oldest first», at most 4 rows (id, kind, first line, age; the title and the recommendation
   on hover; a click opens the monitor on `/#lane=<id>`) then «N more in the monitor»; «N stale,
   oldest D d» when `staleCount > 0`; «Running» (id, lane kind, phase, time left); «Open
-  monitor» and a disabled «Restart board» (S5).
+  monitor», «Restart board» and «Start at login» (below).
 - **States.** `ok`; `unreachable` (no TCP connection: «Board unreachable»); `too-old` (404 on
-  `/api/attention`, the board's tree predates S1: «Board too old: update the release tree»,
-  which is what 4700 answers until the release tree is updated); `error` (no answer within 15 s, another
+  `/api/attention`: «Board too old: update the release tree»); `error` (no answer within 15 s, another
   status, or a body that is not the expected JSON). The tooltip and the popover carry the
-  error detail.
+  error detail. Measured on 2026-10-19 against 4700: a board whose tree predates S1 answers
+  `/api/attention` (any path) with its HTML page and a 200, not a 404, so the app shows
+  «Board error: bad JSON: expected value at line 1 column 1», not «too old».
 - **Notifications.** A system notification when a lane **enters** the waiting list: a
   `question`, a `blocked`, or a `hard-stop` the board still counts as waiting. Title «Lane
   waiting for you» («Lane blocked» for a blocked lane), body `<id> · <kind>: <firstLine>`;
@@ -127,6 +130,22 @@ LANE_MONITOR_BOARD=http://127.0.0.1:4712 \
   reported: another app's menu key equivalent loses to the global hot key, and a second
   process registering the same chord succeeds too (measured 2026-10-19, two instances, both
   `registered`). The press was measured with a synthesised key (`osascript`, System Events).
+- **Start at login.** A checkbox in the popover footer, through `tauri-plugin-autostart` with
+  `MacosLauncher::LaunchAgent`, called from Rust only (the capability does not grow). On, it
+  writes `~/Library/LaunchAgents/io.jjodel.lane-monitor.plist` (label = the bundle identifier,
+  `ProgramArguments` = the running binary, `RunAtLoad`); off, it removes the file; its state is
+  whether the file exists, read again each time the popover shows. A second agent, distinct
+  from the board's `io.jjodel.lane-board`, which the app never writes. Logged as
+  `[lane-monitor] login item on|off`. Measured on 2026-10-19: macOS's background-task manager
+  registers the plist as a «legacy agent» and posts its «Background item added» notice, which
+  names `lane-monitor` (the executable: the plugin writes no `AssociatedBundleIdentifiers`).
+  Turn it on from the copy in `~/Applications`, not from `target/`: the plist names the binary
+  that was running.
+- **Restart board.** Runs `/bin/launchctl kickstart -k gui/<uid>/io.jjodel.lane-board` and polls
+  again 3 s later, only when the board URL is `http://127.0.0.1:4700` (one trailing `/`
+  allowed): `localhost`, another port or a path are a check or a second board, never the
+  agent's. In any other run the button is disabled and the reason is written under the footer
+  (a disabled button shows no tooltip). Logged as `[lane-monitor] restart board: <argv>`.
 - **Monitor window.** The board page in an app window, 1280×860, with no Tauri capability (a
   remote URL); closing it does not quit the app.
 
@@ -137,8 +156,40 @@ LANE_MONITOR_BOARD=http://127.0.0.1:4712 \
 | `src-tauri/src/main.rs` | tray, popover window, monitor window, commands, poll thread |
 | `src-tauri/src/poll.rs` | HTTP GET and response parse, payload types, snapshot, title formatter, tests |
 | `src-tauri/src/links.rs` | the `jjodel-lanes://` parser, `config.json`, the shortcut parse and label; tests |
+| `src-tauri/src/restart.rs` | the `launchctl kickstart` argv and the 4700-only rule, the footer controls' state; tests |
 | `src-tauri/src/notify.rs` | which lanes just started waiting, between two snapshots; notification text; tests |
 | `src-tauri/tauri.conf.json` | bundle (ad-hoc signing, icons), `frontendDist: "../ui"`, CSP, the `jjodel-lanes` scheme |
 | `src-tauri/capabilities/default.json` | `core:default` for the popover only |
 | `src-tauri/icons/` | tray template pair and the app icon set (`cargo tauri icon` from a 1024 px source) |
 | `ui/` | the popover: static HTML, CSS and JS, system fonts, no network |
+
+## Install and first run
+
+1. Build: `cd tools/lane-monitor-app/src-tauri && cargo tauri build --bundles app`.
+2. Copy to `~/Applications` (the deep link registers only from there or `/Applications`):
+   `ditto "target/release/bundle/macos/Lane Monitor.app" ~/Applications/"Lane Monitor.app"`, then
+   open it once from Finder or with `open ~/Applications/"Lane Monitor.app"`.
+3. Three one-time clicks:
+   - **Notifications.** The first lane that starts waiting makes macOS ask whether Lane Monitor
+     may notify: Allow. Until answered, notifications go to Notification Center without a
+     banner. A second alert may appear for the `~/Applications` copy even if a build under
+     `target/` was already allowed (seen in S4).
+   - **Login Items.** Tick «Start at login» in the popover footer. macOS posts «Background item
+     added» (measured); per report §Q4 the item is then listed in System Settings › General ›
+     Login Items & Extensions, under «Allow in the Background», where it must stay allowed.
+   - **Edge.** The first `jjodel-lanes://` link opened from the board's `/l/<id>` page asks
+     whether `localhost:4700` may open Lane Monitor: tick «Always allow» and Open.
+4. Config file: `~/Library/Application Support/io.jjodel.lane-monitor/config.json`, fields in
+   «Configuration» above; with no file the app reads the board on `http://127.0.0.1:4700`.
+5. To switch the board URL, write `{"board":"http://127.0.0.1:4712"}` (or another URL) to that
+   file, quit Lane Monitor from the tray menu and reopen it; `{"board":"http://127.0.0.1:4700"}`,
+   or no `board` field, points it back to the real board. «Restart board» is enabled only on
+   4700.
+6. The board on 4700 runs from the release tree (`~/jjodel-release`). It answers
+   `/api/attention` only after that tree carries S1 (P-2026-10-18-2320) and its agent is
+   restarted; until then the popover says «Board error: bad JSON: expected value at line 1
+   column 1» (the old board answers the path with its HTML page) and the tray shows `–`. That is
+   expected, not a fault of the app.
+
+Known with synthetic clicks only (S4), to be confirmed by a real click: a window opened from
+the tray menu may stay behind the frontmost app.

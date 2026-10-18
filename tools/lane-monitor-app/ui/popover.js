@@ -152,6 +152,53 @@ function openMonitor(lane) {
   });
 }
 
+function showError(e) {
+  $('notice').hidden = false;
+  $('notice').className = 'notice error';
+  $('notice').textContent = String(e);
+  fit();
+}
+
+// The footer controls: state and reasons come from Rust (restart.rs), never decided here.
+function renderLogin(c) {
+  $('login').checked = c.on;
+  $('login').disabled = !c.enabled;
+  $('login-label').title = c.detail;
+}
+
+function renderRestart(c) {
+  $('restart').disabled = !c.enabled;
+  $('restart').title = c.detail;
+  // Disabled, the reason is written out: a disabled button shows no tooltip on hover.
+  $('restart-why').hidden = c.enabled;
+  $('restart-why').textContent = c.enabled ? '' : c.detail;
+  fit();
+}
+
+$('login').addEventListener('change', () => {
+  const want = $('login').checked;
+  $('login').disabled = true;
+  invoke('set_login', { on: want })
+    .then(renderLogin)
+    .catch((e) => {
+      showError('Start at login: ' + e);
+      invoke('login_state').then(renderLogin);
+    });
+});
+
+$('restart').addEventListener('click', () => {
+  $('restart').disabled = true;
+  invoke('restart_board')
+    .then(() => {
+      $('synced').textContent = 'board restarting';
+      setTimeout(() => invoke('restart_state').then(renderRestart), 3000);
+    })
+    .catch((e) => {
+      showError('Restart board: ' + e);
+      invoke('restart_state').then(renderRestart);
+    });
+});
+
 $('open').addEventListener('click', () => openMonitor(null));
 $('more').addEventListener('click', () => openMonitor(null));
 document.addEventListener('keydown', (e) => {
@@ -166,6 +213,10 @@ invoke('footer_note').then((note) => {
   $('foot-note').hidden = false;
   fit();
 });
+invoke('login_state').then(renderLogin);
+// The agent's plist can change outside the app (removed by hand): read it again on each show.
+window.addEventListener('focus', () => invoke('login_state').then(renderLogin));
+invoke('restart_state').then(renderRestart);
 invoke('current').then(render);
 // Ages are relative to now: refresh them while the popover is open.
 setInterval(() => { if (!document.hidden) invoke('current').then(render); }, 60000);
