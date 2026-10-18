@@ -501,3 +501,92 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 **Ticket**: Step 6 of `claude_2026-10-18_2207_prompt_merge_context-rules.md` (rendered from `frontend/scripts/lane-templates/merge-into-trunk.md`) prescribes `git reset --hard fc8dbb93a` on a `check:addonly` violation and calls it «the pre-merge tip», but the pre-merge tip was `7e9c8e36f`, the commit that adds the prompt itself (parent `fc8dbb93a`). Executed, the reset would drop the merge's own prompt commit. Not triggered here (check:addonly PASS). The template should name the tip measured at launch plus the prompt commit, or the first parent of the merge (`HEAD^1`).
 **Priority**: medium
 **Found in**: P-2026-10-18-2207
+
+## 2026-10-18 — discovery: lane monitor as a menu bar app, Phase 1 (P-2026-10-18-2255)
+**Prompt**: `claude_2026-10-18_2255_prompt_lane_monitor_menubar_app.md`, read-only Phase 1 of the Tauri 2 menu bar app over the board on 4700: Q1 what «pending» means, Q2 `/api/attention` and `/l/<id>`, Q3 the question's first line, Q4 the stack measured, Q5 the shortcut, Q6 the path, Q7 the Phase 2 slices.
+**Files touched**: `docs/discovery/discovery_2026-10-18_lane_monitor_menubar_app.md` (new), this inbox, the prompt's Status line; one docs commit. Probes under `/tmp/menubar/` only.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (docs only; no board, plist or agent touched, 4700 read by GET only)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Of today's 10 question / 175 hard-stop / 1 blocked, the rule (trunk Status flipped, later Depends/Corregge, later trunk commit, 72 h) keeps 1 waiting (P-2026-10-18-2220) and 12 stale. Tauri 2 workable: Rust 1.94.1, Xcode 26.6, tauri 2.10.3 cached; no tauri-cli, no signing identity (ad-hoc). Shortcut ⌃⌥⌘L: ⌥⌘L is Edge Downloads and IntelliJ Reformat (measured). Path `tools/lane-monitor-app/`. No decision awaits Alfonso.
+**Prompt document name**: 2026-10-18 22:55
+
+## 2026-10-18 — feat(lane-board): /api/attention and /l/<id> for the menu bar app (P-2026-10-18-2320)
+**Prompt**: `claude_2026-10-18_2320_prompt_lane_monitor_s1_board_attention.md`, slice S1 of the P-2026-10-18-2255 plan: `GET /api/attention` (waiting/stale rule, 72 h), `GET /l/<Prompt-ID>` hand-off page, `#lane=<id>` mark in the Lanes tab, `Corregge:` parsed in `header()`, tests and README.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoardAttention.test.ts` (new); code commit `4e81cf36e`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (laneBoard* 161/161; scripts/hooks 911 passed, the 25 red laneRun* tests identical on HEAD: `.ts` extension under node v23.3.0)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 4/4 (4712 at 23:52)
+**Notes**: 4712 at 23:33: waiting 1 (P-2026-10-18-2220), staleCount 12, same as the report's probe re-run. Unattended: row found by the Kind badge's data-id (data-id on `<tr>` broke laneBoard.test.ts, outside DOVE); live blocked since = start + 90 min; chains not in running. Mutation bench 24/24. The −142 px scroll seen at the first check did not recur at 23:52 on the same code; fix not applied (RC-51 soft ceiling, handoff.md in the lane folder).
+**Prompt document name**: 2026-10-18 23:20
+
+## 2026-10-18 — ticket: the #lane= scroll runs once and may be undone by a later render
+**Ticket**: `markLane()` in lane-board.mjs clears `laneScroll` after its first `scrollIntoView`; the chat measured the marked row at top −142 px 3.5 s after landing once, then at 342 of 768 on a later check of the same code. Fix ready in the lane's handoff: keep the scroll on every render until the first wheel, touch, key or mouse press, with a vm test.
+**Priority**: low
+**Found in**: P-2026-10-18-2320
+**Detail**: ~/.jjodel-lanes/P-2026-10-18-2320/handoff.md
+
+## 2026-10-19 — feat(lane-monitor-app): Tauri 2 menu bar shell, tray count and popover (P-2026-10-19-0000)
+**Prompt**: `claude_2026-10-19_0000_prompt_lane_monitor_s2_app_shell.md`, slice S2 of the P-2026-10-18-2255 plan: install `tauri-cli` 2, tests first on the HTTP parse and the title formatter, the Tauri 2 shell in `tools/lane-monitor-app/` (tray title, popover, polling from Rust over `std::net`), `cargo tauri build --bundles app`, live run on 4712 with captures.
+**Files touched**: `.gitignore` (two lines of §Q6), `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, build.rs, tauri.conf.json, capabilities/default.json, src/main.rs, src/poll.rs, icons/*}`, `ui/popover.{html,css,js}`); code commit `c5eadb816`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (new tree outside `frontend/`; `cargo test` 18/18; board and 4700 untouched)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, captures checked at 00:27 (tray 1, fixture 6!, dash unreachable; popover design, more link, stale line, running rows, error box)
+**Notes**: tauri-cli 2.12.3; tauri 2.12.4. Bundle 4.4M, adhoc, no quarantine. Mutation bench 3/3. Found live: a 3 s timeout read a slow board (3.6 s measured) as unreachable, now 2 s connect, 15 s read, `no answer` as error; `[hidden]` lost to `.more{display:block}`, fixed. Unattended: right-click tray menu with Quit, row click opens `/#lane=<id>`, bundle id `io.jjodel.lane-monitor`. Commit subject shortened from the prompt's (74 > 72, bash-guard).
+**Prompt document name**: 2026-10-19 00:00
+
+## 2026-10-19 — feat(lane-monitor-app): notify when a lane starts waiting (P-2026-10-19-0033)
+**Prompt**: `claude_2026-10-19_0033_prompt_lane_monitor_s3_notifications.md`, slice S3 of the P-2026-10-18-2255 plan: tests first on a pure transition over two `/api/attention` snapshots, wire `tauri-plugin-notification` into the poll loop, live check on 4712 with a fake `lane-run`, rebuild and reopen for the permission state.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, src/main.rs, src/notify.rs}`); code commit `fc08fe4ea`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 27/27; S2 behaviour unchanged on 4712; board and 4700 untouched)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, 00:48 (permission alert for Lane Monitor, tray 2 with tooltip; one post per entering lane)
+**Notes**: Plugin 2.7.0 (desktop `tap` via `on_action`). Mutation bench 6/6. Live: seed silent, one post per entering id; macOS showed its permission alert and stored each post without a banner (pending); rebuilds, same or new CDHash, not asked again. Click-through and granted-permission persistence not measured. Unattended, accepted: `capabilities/default.json` unchanged (Rust-only use); app-side 72 h guard; `board: error` 200 as a failed poll. `log` is a zsh builtin: use `/usr/bin/log`.
+**Prompt document name**: 2026-10-19 00:33
+
+## 2026-10-19 — feat(lane-monitor-app): jjodel-lanes:// links and the global shortcut (P-2026-10-19-0054)
+**Prompt**: `claude_2026-10-19_0054_prompt_lane_monitor_s4_links_shortcut.md`, slice S4 of the P-2026-10-18-2255 plan: tests first on the deep-link parser and the shortcut config parse, `tauri-plugin-deep-link` and `tauri-plugin-global-shortcut`, bundle installed in `~/Applications`, `lsregister` and `open jjodel-lanes://…` checks against 4712, shortcut registration.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, tauri.conf.json, src/main.rs, src/links.rs}`, `ui/popover.{html,css,js}`); code commit `e76383e8d`; this inbox and the prompt's Status line. Outside the repo: `~/Applications/Lane Monitor.app`, and `~/Library/Application Support/io.jjodel.lane-monitor/config.json` (board 4712, kept until S5).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 34/34; S2 and S3 paths unchanged except the window opener, now off the main thread; board and 4700 untouched)
+**Out-of-scope changes**: yes (`ui/popover.{html,css,js}` for the footer note, outside DOVE; the config file outside the repo; nine files in the code commit)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, 01:10 and 01:21 (lsregister 14, cold and warm links, refusals, shortcut toggles the popover, footer error, /l/ fallback after 1.5 s; off-thread opener)
+**Notes**: Plugins: deep-link 2.6.2, global-shortcut 2.4.1. Mutation bench 6/6. Found live: building the window inside the link's Apple event hung the main thread; link, tray menu and notification tap now open it off-thread. A second process registers the same chord with no error (§Q4 wrong). Tray-menu window stays behind Edge with synthetic clicks, as before the fix: real-click and five-app press tests left to Alfonso. Unattended, accepted: footer note in ui/, config.json format.
+**Prompt document name**: 2026-10-19 00:54
+
+## 2026-10-19 — feat(lane-monitor-app): start at login and restart the board (P-2026-10-19-0129)
+**Prompt**: `claude_2026-10-19_0129_prompt_lane_monitor_s5_login_restart.md`, slice S5 (the last) of the P-2026-10-18-2255 plan: tests first on the restart command builder and the toggle mapping, «Start at login» through `tauri-plugin-autostart` (LaunchAgent), «Restart board» only on 4700, README «Install and first run», installed app pointed back to 4700.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, src/main.rs, src/restart.rs}`, `ui/popover.{html,js}`); code commit `c3775d3b3`; this inbox and the prompt's Status line. Outside the repo: `~/Applications/Lane Monitor.app`, `~/Library/LaunchAgents/io.jjodel.lane-monitor.plist` (written and removed), `config.json` set to 4700.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 43/43; S2-S4 paths unchanged; board plist shasum identical before and after, no kickstart run)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, 01:43 (toggle writes and removes the app agent, plutil; board plist shasum unchanged; Restart disabled with reason off 4700; end state on 4700, toggle off)
+**Notes**: Plugin autostart 2.7.0 (auto-launch 0.6.0). Mutation bench 8/8. Live: BTM registered a legacy agent and posted «Background item added»; the plist names the installed binary. Found: pre-S1 4700 answers /api/attention with a 200 HTML page, so the popover shows bad JSON, not «too old» (ticket below; transient per chat). Unattended: reason under the footer via `.more`, toggle re-read on focus, aria-label on the checkbox.
+**Prompt document name**: 2026-10-19 01:29
+
+## 2026-10-19 — ticket: the app reads a pre-S1 board as bad JSON, not «too old»
+**Ticket**: a board whose tree predates S1 answers `/api/attention` (any path) with its HTML page and a 200, so `poll.rs` classifies it as `error` («Board error: bad JSON: expected value at line 1 column 1») instead of `too-old`, which it reserves for a 404. Measured on 4700 at 01:37. Fix: read a 200 with `content-type: text/html` as `too-old`. Transient: gone once the release tree carries S1 and the board is restarted.
+**Priority**: low
+**Found in**: P-2026-10-19-0129

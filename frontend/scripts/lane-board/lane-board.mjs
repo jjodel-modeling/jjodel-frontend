@@ -12,6 +12,8 @@
 // its Phase cell; an exited blocked lane holding resolved.txt reads `resolved` in the Lanes tab, and
 // Timeline and Insights paint it in the ok colour from a flag beside its raw outcome. A strip of six
 // pills ends the tab bar, counted from the /api rows (stripKey, below); a click filters the Lanes tab.
+// /api/attention and /l/<Prompt-ID> serve the menu bar app (attentionOf, below; tools/lane-monitor-app/), and
+// /#lane=<Prompt-ID> marks a lane's row in the Lanes tab.
 // It listens when run as a script, not when imported (the tests import its functions).
 // Usage: node ~/.jjodel-lanes/board/lane-board.mjs [--port 4700] [--refresh 30]
 
@@ -79,7 +81,9 @@ function header(dir) {
     const title = (text.match(/^#\s+(.*)$/m) || [])[1] || '';
     // The Request: line (RC-43) of the header block, before the first `## ` section: its first word, a URL or `none`.
     const request = (text.split(/\n## /)[0].match(/^Request:[ \t]*(\S*)/m) || [])[1] || '';
-    const h = { lane: line('Lane'), chat: line('Chat'), title, file, request };
+    // The lanes this one declares (P13 `Depends:`) and corrects (`Corregge:`, a Prompt-ID or the prompt's `YYYY-MM-DD HH:mm`), for /api/attention.
+    const ids = (s) => [...new Set([...(s.match(/P-\d{4}-\d{2}-\d{2}-\d{4}/g) || []), ...[...s.matchAll(/\b(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})\b/g)].map((m) => 'P-' + m[1] + '-' + m[2] + m[3])])];
+    const h = { lane: line('Lane'), chat: line('Chat'), title, file, request, depends: ids(line('Depends')), corregge: ids(line('Corregge')) };
     if (text || existsSync(join(dir, 'exit.txt'))) headMem.set(dir, h);
     return h;
 }
@@ -1157,6 +1161,80 @@ function gitAsync(args, input = '') {
     });
 }
 
+// The facts of /api/attention (attentionOf, below), memoised: a trunk Status for 60 s, a closed verdict for the process
+// lifetime, the trunk's commits for 60 s over the window asked, a final message's first line by the size of its log.
+const attnClosed = new Set();
+const statusMem = new Map();
+const textMem = new Map();
+let commitsMem = { at: 0, since: 0, list: [] };
+const ATTN_MS = 60_000;
+
+function trunkStatus(id) {
+    const hit = statusMem.get(id);
+    if (hit && Date.now() - hit.at < ATTN_MS) return hit.s;
+    const dir = join(ROOT, id);
+    const s = (trunkPrompt(id, existsSync(dir) ? header(dir).file : '').match(/^Status:[ \t]*(.*)$/m) || [])[1] || '';
+    statusMem.set(id, { at: Date.now(), s });
+    return s;
+}
+
+/** firstLineOf the lane's final message: the last `result` event of its log that is a turn. */
+function finalText(id) {
+    const log = join(ROOT, id, 'log.jsonl');
+    const sz = size(log);
+    const hit = textMem.get(id);
+    if (hit && hit.size === sz) return hit.v;
+    const buf = tail(log);
+    const key = '"type":"result"';
+    let v = { firstLine: '', recommended: '' };
+    for (let at = buf.lastIndexOf(key); at !== -1;) {
+        const s0 = buf.lastIndexOf('\n', at) + 1;
+        let s1 = buf.indexOf('\n', at);
+        if (s1 === -1) s1 = buf.length;
+        try {
+            const e = JSON.parse(buf.slice(s0, s1));
+            if (e.type === 'result' && e.result && !(e.origin && e.origin.kind === 'task-notification')) { v = firstLineOf(e.result); break; }
+        } catch { /* a half-written line, or the cut at the start of the tail */ }
+        at = s0 ? buf.lastIndexOf(key, s0 - 1) : -1;
+    }
+    textMem.set(id, { size: sz, v });
+    return v;
+}
+
+/** The trunk's commits since `since` (epoch ms): [{ at, subject, body }]. */
+async function trunkCommits(since) {
+    if (Date.now() - commitsMem.at < ATTN_MS && commitsMem.since <= since) return commitsMem.list;
+    const out = await gitAsync(['log', TRUNK, '--since=' + new Date(since).toISOString(), '--format=%x1e%ct%x1f%s%x1f%b']);
+    const list = out === null ? [] : out.split('\x1e').map((rec) => rec.split('\x1f')).filter((f) => f.length >= 3).map(([ct, subject, ...body]) => ({ at: Number(ct) * 1000, subject, body: body.join('\x1f') }));
+    commitsMem = { at: Date.now(), since, list };
+    return list;
+}
+
+/** /api/attention: the /api snapshot through attentionOf. */
+async function attention() {
+    const d = await apiStatus();
+    const rows = d.rows || [];
+    // Closure (b): the lanes that name an earlier one in their Depends: or Corregge: line.
+    const named = new Map();
+    for (const r of rows) {
+        if (r.chain || !existsSync(join(ROOT, r.id))) continue;
+        const h = header(join(ROOT, r.id));
+        for (const x of new Set([...(h.depends || []), ...(h.corregge || [])])) if (x < r.id) named.set(x, [...(named.get(x) || []), r.id]);
+    }
+    const facts = { closed: attnClosed, status: trunkStatus, namedBy: (id) => named.get(id) || [], commits: [], text: finalText };
+    // Closure (c) reads the trunk's log from the oldest candidate that (a) and (b) leave open.
+    let since = Infinity;
+    for (const r of rows) {
+        const k = stripKey(r);
+        if (r.chain || attnClosed.has(r.id) || (k !== 'question' && k !== 'blocked' && k !== 'hard-stop')) continue;
+        const s = attentionSince(r);
+        if (!closureOf(r, s, facts)) since = Math.min(since, s);
+    }
+    if (since !== Infinity) facts.commits = await trunkCommits(since);
+    const board = d.error ? 'error: ' + String(d.error).replace(/\s+/g, ' ').trim() : d.refreshing ? 'refreshing' : 'ok';
+    return { v: 1, now: d.now, stale: !!d.stale, board, ...attentionOf(rows, facts, d.now) };
+}
+
 /** Brings gitFacts up to date when a ref moved, in two passes run as child processes, in parallel with the
  *  caller's log parsing: every commit's subject and body (0.1 s), then --numstat outside docs/ for the
  *  new commits that carry a Prompt-ID only (0.6 s on the first scan, measured 2026-10-10). */
@@ -1587,6 +1665,102 @@ export function stripCounts(rows) {
     return n;
 }
 
+// ── /api/attention (P-2026-10-18-2320, discovery P-2026-10-18-2255 §Q1-§Q3) ─────
+// What the menu bar app shows: the lanes that wait for the operator. A row whose pill is question, blocked or hard-stop
+// is a candidate; it is closed when (a) its trunk prompt's Status no longer reads `da eseguire`, (b) a later lane names it
+// in `Depends:` or `Corregge:`, or (c) a trunk commit after its end names it, `docs: add prompt` commits excepted.
+// An open candidate is waiting up to ATTENTION_STALE_H hours after `since`, stale after.
+export const ATTENTION_STALE_H = 72;
+export const LIVE_LIMIT_MIN = 90;
+
+/** When a candidate began to wait: the end of its last turn; a live lane over its limit, its start plus LIVE_LIMIT_MIN; else the Prompt-ID's time. */
+export function attentionSince(r) {
+    if (r.state === 'blocked') return r.start ? r.start + LIVE_LIMIT_MIN * 60e3 : r.t || 0;
+    return r.end || r.t || 0;
+}
+
+/** Which closure holds for candidate r waiting since `since`: 'a', 'b', 'c' or ''. facts: status(id) the trunk Status line ('' without a
+ *  trunk prompt), namedBy(id) the later lanes naming it, commits [{ at, subject, body }] of the trunk. */
+export function closureOf(r, since, facts) {
+    const s = String(facts.status(r.id) || '').trim();
+    if (s && !/^da eseguire\b/i.test(s)) return 'a';
+    if ((facts.namedBy(r.id) || []).length) return 'b';
+    if ((facts.commits || []).some((c) => c.at > since && !/^docs: add prompt\b/.test(c.subject) && (c.subject + '\n' + c.body).includes(r.id))) return 'c';
+    return '';
+}
+
+const hhmm = (ms) => { const d = new Date(ms); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
+/** The /api/attention body, without v/now/stale/board, from the /api rows. facts as closureOf, plus text(id) → { firstLine, recommended }
+ *  of an exited lane's final message, and an optional `closed` Set that remembers the closed ids across calls (a closed lane does not reopen). */
+export function attentionOf(rows, facts, now) {
+    const items = [], runningItems = [];
+    let staleCount = 0, staleOldest = null;
+    for (const r of rows) {
+        if (r.chain) continue;
+        const k = stripKey(r);
+        if (k === 'running') { runningItems.push({ id: r.id, laneKind: r.kind || '', title: r.title || '', phase: r.phase || '', left: r.left || '', since: r.start || 0 }); continue; }
+        if (k !== 'question' && k !== 'blocked' && k !== 'hard-stop') continue;
+        const since = attentionSince(r);
+        if (facts.closed && facts.closed.has(r.id)) continue;
+        if (closureOf(r, since, facts)) { if (facts.closed) facts.closed.add(r.id); continue; }
+        if (now - since > ATTENTION_STALE_H * 3600e3) { staleCount++; if (staleOldest === null || since < staleOldest) staleOldest = since; continue; }
+        const tx = r.state === 'blocked' ? { firstLine: 'over its limit since ' + hhmm(since), recommended: '' } : facts.text(r.id) || { firstLine: '', recommended: '' };
+        items.push({ id: r.id, kind: k, laneKind: r.kind || '', title: r.title || '', chat: r.chat || '', chatUrl: r.chatUrl || '', firstLine: tx.firstLine, recommended: tx.recommended, since });
+    }
+    items.sort((a, b) => a.since - b.since || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    runningItems.sort((a, b) => a.since - b.since);
+    return { waiting: items.length, blocked: items.filter((i) => i.kind === 'blocked').length, running: runningItems.length, staleCount, staleOldest, items, runningItems };
+}
+
+/** A line cut to 60 characters at its last space after character 30, trailing punctuation trimmed, with an ellipsis; shorter lines as they are. */
+function cut60(s) {
+    s = s.replace(/\s+/g, ' ').trim();
+    if (s.length <= 60) return s;
+    const sp = s.lastIndexOf(' ', 60);
+    return s.slice(0, sp > 30 ? sp : 60).replace(/[\s.,;:!?…—–-]+$/, '') + '…';
+}
+
+/** The first line of a lane's final message (§Q3) and its last `Recommended:` line, each at most 60 characters and an ellipsis. */
+export function firstLineOf(text) {
+    const t = String(text || '').replace(/^\s*\[P-[^\]\n]*\]\s*/, '');
+    const plain = (s) => s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\*\*|`/g, '').replace(/^#+\s+/, '').trim();
+    const recs = t.split('\n').map((l) => l.trim()).filter((l) => /^(\*\*)?Recommended:/.test(l));
+    const recommended = recs.length ? cut60(plain(recs[recs.length - 1]).replace(/^Recommended:\s*/, '')) : '';
+    const ask = t.split('\n').map((l) => l.trim()).find((l) => /^\*\*(Decision|Question) for (you|Alfonso):\*\*/i.test(l));
+    if (ask) return { firstLine: cut60(plain(ask.replace(/^\*\*[^*]+\*\*/, ''))), recommended };
+    const para = t.split(/\n\s*\n/).map((p) => p.trim()).find((p) => p && !/^(\*\*)?(Outcome|Recommended):/.test(p)) || '';
+    const line = plain(para.split('\n')[0]);
+    const sentence = (s, colon) => (s.match(colon ? /^.*?[.?!:](?=\s|$)/ : /^.*?[.?!](?=\s|$)/) || [s])[0];
+    let first = sentence(line, true);
+    if (first.endsWith(':')) {
+        const after = line.slice(first.length).trim();
+        if (after) first = sentence(after, false);
+    }
+    return { firstLine: cut60(first), recommended };
+}
+
+/** The Prompt-ID of a /l/<Prompt-ID> path, or null: the id alone, exact, nothing after it. */
+export function laneLinkId(pathname) {
+    const m = /^\/l\/(P-\d{4}-\d{2}-\d{2}-\d{4})$/.exec(pathname);
+    return m ? m[1] : null;
+}
+
+/** The hand-off page of /l/<id>: asks the OS for jjodel-lanes://<id> (the menu bar app), and lands on the board's
+ *  /#lane=<id> after 1.5 s unless the page lost focus or visibility first (the app took the link). */
+export function laneLinkPage(id, onBoard) {
+    return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>${id} · Jjodel lanes</title>
+<style>body{margin:0;padding:24px;font:13px/1.45 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:#0f172a;background:#f8fafc}a{color:#0284c7}</style></head><body>
+<p>Opening <b>${id}</b> in Lane Monitor… <a href="/#lane=${id}">open it on the board</a></p>
+${onBoard ? '' : '<p>' + id + ' is not on the board yet: the lane may not have started.</p>\n'}<script>
+let gone=false;const off=()=>{gone=true};
+window.addEventListener('blur',off);document.addEventListener('visibilitychange',()=>{if(document.hidden)off()});
+location.href='jjodel-lanes://${id}';
+setTimeout(()=>{if(!gone)location.replace('/#lane=${id}')},1500);
+</script></body></html>`;
+}
+
 const PAGE = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Jjodel Harness Lane Management</title>
@@ -1621,10 +1795,13 @@ button.kb{width:64px;padding:1px 4px;text-align:center;background:none;font-fami
 .k-merge{color:var(--fg)}.k-fast{color:var(--ok)}.k-discovery{color:var(--warn)}.k-phase2{color:var(--run)}.k-unknown,.k-chain{color:var(--muted)}button.kb.k-unknown,button.kb.k-chain{border-style:dashed}.ksx{color:var(--muted);font-size:11px}
 #kd{position:absolute;z-index:20;max-width:460px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 16px rgba(15,23,42,.18);pointer-events:none;overflow-wrap:anywhere}#kd.pin{pointer-events:auto}#kd div{margin-top:2px}
 body{min-height:100vh}details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:8px 8px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 8px 8px}
+/* #lane=<id> (P-2026-10-18-2320): the row the link names, until the next click. */
+tr.mark>td{background:color-mix(in srgb,var(--run) 12%,transparent)}tr.mark>td:first-child{box-shadow:inset 3px 0 0 var(--run)}
 </style></head><body><main>
 <header><h1>Jjodel Harness Lane Management</h1><span class="meta" id="meta">loading…</span><span class="spin" id="spin" role="status" aria-label="Loading" hidden></span></header>
 <nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button><button data-tab="requirements">Requirements</button><div class="strip" id="strip" aria-label="Lanes by state">${STRIP.map(([k, label, cls]) => '<a href="#" role="button" class="pill sp ' + cls + ' zero" data-k="' + k + '" title="Show the ' + label + ' lanes"><b>0</b>' + label + '</a>').join('')}</div></nav>
 <div class="err" id="err"></div>
+<div class="meta" id="lanenote" hidden></div>
 <section id="tab-table">
 <div id="lanes-filt" hidden></div>
 <div id="lanes-all">
@@ -1774,7 +1951,7 @@ async function tick(){
     err.textContent=d.stale?(/timed out/.test(d.error)?'Status timed out':'Status failed')+' at load '+d.load[0]+'; showing data from '+new Date(d.staleSince).toLocaleTimeString('en-GB')+'.':d.error||'';
     // Empty rows read "no lane" only when a status run gave them; before any success they read "loading".
     loaded=!d.error||!!d.stale;
-    lastRows=d.rows;renderStrip(d.rows);renderLanes(d.rows);
+    lastRows=d.rows;renderStrip(d.rows);renderLanes(d.rows);markLane();
     const n=d.rows.filter(r=>r.live).length;document.title=(n?'('+n+') ':'')+'Jjodel Harness Lane Management';
     refreshing=!!d.refreshing;spin();clearTimeout(again);if(refreshing)again=setTimeout(tick,2000);
   }catch(e){const err=document.getElementById('err');err.className='err';err.title='';err.textContent='lane-board unreachable: '+e.message;refreshing=false;spin()}
@@ -1797,7 +1974,26 @@ function saveOpen(){try{localStorage.setItem('laneBoardOpenDays',JSON.stringify(
 function showTab(t){if(!document.getElementById('tab-'+t))t='table';document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));document.querySelector('main').classList.toggle('wide',t==='table');['table','timeline','insights','requirements'].forEach(k=>{document.getElementById('tab-'+k).hidden=t!==k});try{localStorage.setItem('laneBoardTab',t)}catch(e){}if(t==='timeline'&&window.TL)TL.refresh();if(t==='insights'&&window.INS)INS.refresh();if(t==='requirements'&&window.REQ)REQ.refresh()}
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 let tab0='table';try{tab0=localStorage.getItem('laneBoardTab')||'table'}catch(e){}
+// #lane=<id> (P-2026-10-18-2320, the /l/<id> fallback): the Lanes tab, no filter, the row scrolled to and marked
+// until the next click; a lane not in the table says so in one line. The mark survives the refresh, the scroll does not repeat.
+// The row is found by its Kind badge's data-id: the <tr> stays bare, as the tests that split the table on it expect.
+let laneMark='',laneScroll=false;
+const laneHash=()=>{const m=/^#lane=(P-\\d{4}-\\d{2}-\\d{2}-\\d{4})$/.exec((window.location||{}).hash||'');return m?m[1]:''};
+function markLane(){
+  const note=document.getElementById('lanenote');
+  if(!laneMark){note.hidden=true;return}
+  const b=document.querySelector('button.kb[data-id="'+laneMark+'"]'),tr=b&&b.closest('tr');
+  note.hidden=!!tr||!loaded||!!laneFilter;note.textContent=laneMark+' is not in the lanes table.';
+  if(!tr)return;
+  const det=tr.closest('details');if(det&&!det.open)det.open=true;
+  tr.classList.add('mark');
+  if(laneScroll){laneScroll=false;tr.scrollIntoView({block:'center'})}
+}
+function toLane(){laneMark=laneHash();if(!laneMark)return;laneScroll=true;showTab('table');setFilter('');markLane()}
+window.onhashchange=toLane;
+document.body.addEventListener('click',()=>{if(!laneMark)return;laneMark='';document.querySelectorAll('tr.mark').forEach(t=>t.classList.remove('mark'));markLane();try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}});
 showTab(tab0);
+toLane();
 tick();setInterval(()=>{tick();if(!document.getElementById('tab-timeline').hidden&&window.TL)TL.refresh();if(!document.getElementById('tab-insights').hidden&&window.INS)INS.refresh();if(!document.getElementById('tab-requirements').hidden&&window.REQ)REQ.refresh()},REFRESH);
 </script></body></html>`;
 
@@ -1848,6 +2044,23 @@ const server = createServer((req, res) => {
         insights().then((d) => JSON.stringify(d), (e) => JSON.stringify({ v: 1, now: Date.now(), lanes: [], error: String(e) })).then((body) => {
             res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
             res.end(body);
+        });
+        return;
+    }
+    // The menu bar app's two routes (P-2026-10-18-2320), on the pathname: a query string changes nothing.
+    if (url.pathname === '/api/attention') {
+        attention().then((d) => JSON.stringify(d), (e) => JSON.stringify({ v: 1, now: Date.now(), stale: false, board: 'error: ' + String(e).replace(/\s+/g, ' ').trim(), waiting: 0, blocked: 0, running: 0, staleCount: 0, staleOldest: null, items: [], runningItems: [] })).then((body) => {
+            res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+            res.end(body);
+        });
+        return;
+    }
+    if (url.pathname.startsWith('/l/')) {
+        const id = laneLinkId(url.pathname);
+        if (!id) { res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }); return res.end('not a lane link: /l/<Prompt-ID>\n'); }
+        apiStatus().then((d) => (d.rows || []).some((r) => r.id === id), () => false).then((onBoard) => {
+            res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+            res.end(laneLinkPage(id, onBoard));
         });
         return;
     }

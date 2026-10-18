@@ -305,6 +305,65 @@ override them.
   and the lists have fixed widths too, and a bar row a fixed height: an opened list or cell
   adds content below and never moves a bar, an axis or a matrix column.
 
+## The menu bar app's routes (P-2026-10-18-2320)
+
+Two routes serve the Lane Monitor menu bar app (`tools/lane-monitor-app/`, slices S2 to S5
+of discovery P-2026-10-18-2255), which is their client. Both are matched on the path, so a
+query string changes nothing, and neither sends a CORS header: the app polls from Rust, not
+from a web page.
+
+**`GET /api/attention`** answers which lanes wait for the operator, in under 2 KB, from the
+same snapshot as `/api` (no second `lane-run status` run). The app polls it, never `/api`.
+
+```json
+{
+  "v": 1, "now": 1792300000000, "stale": false, "board": "ok | refreshing | error: <one line>",
+  "waiting": 1, "blocked": 0, "running": 2, "staleCount": 12, "staleOldest": 1790960000000,
+  "items": [{ "id": "P-…", "kind": "hard-stop", "laneKind": "discovery", "title": "…", "chat": "C-…",
+              "chatUrl": "https://claude.ai/…", "firstLine": "…", "recommended": "…", "since": 1792298000000 }],
+  "runningItems": [{ "id": "P-…", "laneKind": "phase2", "title": "…", "phase": "…", "left": "about 20 min", "since": 1792299000000 }]
+}
+```
+
+The rule (`attentionOf`, exported and tested on rows):
+
+- A lane is a candidate when its strip pill is `question`, `blocked` or `hard-stop`
+  (`stripKey`); `resolved`, `done` and chains never are. A live lane over its limit is
+  `kind: "blocked"`.
+- A candidate is **closed** when (a) the `Status:` line of its prompt on the trunk ref
+  (`JJODEL_TRUNK`) no longer starts with `da eseguire`; or (b) a later lane (a higher
+  Prompt-ID) names it in the `Depends:` or `Corregge:` line of its header (`Corregge:` as a
+  Prompt-ID or as the prompt's `YYYY-MM-DD HH:mm`); or (c) a trunk commit later than its end
+  names it in its subject or body, `docs: add prompt` commits excepted. A closed verdict is
+  kept for the life of the process.
+- An open candidate is **waiting** up to `ATTENTION_STALE_H = 72` hours after `since`, and
+  **stale** after: stale lanes are only counted (`staleCount`, `staleOldest`), never listed.
+  `since` is the end of the lane's last turn; for a live lane over its limit, its start plus 90
+  minutes (`LIVE_LIMIT_MIN`), not the limit a prompt may declare.
+- `items` are ordered oldest first; `waiting`, `blocked` and `running` are the lengths of
+  `items`, of its `blocked` items and of `runningItems` (lanes only, not chains).
+- `firstLine` and `recommended` come from the lane's final message, the last `result` of its
+  `log.jsonl` (`firstLineOf`): the `[P-… · session …]` tag dropped; a `**Decision for you:**` or
+  `**Question for you:**` line when there is one; else the first sentence of the first paragraph
+  that is not `Outcome:` or `Recommended:`, or the clause after it when it ends on a colon; cut to
+  60 characters at a space with an ellipsis. `recommended` is the last `Recommended:` line, cut
+  the same way. A live lane over its limit reads `over its limit since <hh:mm>`.
+
+Cost: the trunk `Status:` of an open candidate is read at most once a minute, the trunk's
+`git log` once a minute from the oldest open candidate, a final message once per log size. The
+first call after a start reads the trunk prompt of every candidate (one `git show` each).
+
+**`GET /l/<Prompt-ID>`** is the link a chat posts: a small page that asks the OS for
+`jjodel-lanes://<Prompt-ID>` (the app takes it) and, if the page has neither lost focus nor
+been hidden after 1.5 s, replaces itself with the board's `/#lane=<Prompt-ID>`. A valid id that
+is not on the board still gets the page, which says so. Anything else under `/l/` (a short or
+long id, a trailing path, an encoded character) is `404`, `text/plain`.
+
+**`/#lane=<Prompt-ID>`** on the board's page selects the Lanes tab, clears the strip filter,
+opens the lane's day if it sits in Earlier lanes, scrolls its row into view and marks it until the
+next click. The row is found by its Kind badge's `data-id`. A lane that is not in the table
+reads one line saying so.
+
 ## Running it
 
 From the repository root:
