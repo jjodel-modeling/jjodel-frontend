@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1530
 Chat: C-2026-10-18-1526
 Front: harness
 Lane: full (new hook under `frontend/scripts/hooks/`, governance per RC-36; heavy by rule, not drawn)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane context-ceiling · code 1293f152d · tests 30 new (contextCeiling), scripts/hooks 885 green in 18 files, typecheck:scripts 0, check:scripts PASS, check:triggers PASS (8 entries), mutation bench 23/23 killed · measures from transcript_path, JJODEL_LANE_LOG when set (B8a not needed) · hook not registered, B7 · no visual check
 Depends: P-2026-10-18-1420
 Corregge: the sentinel `check:docs` accepts (RC-45 (2)); this lane corrects no earlier lane
 Request: none (Alfonso, 2026-10-18 15:26, «si» to this chat taking the harness front and launching B8b; RC-49 (5) accepted AM-8 in principle)
