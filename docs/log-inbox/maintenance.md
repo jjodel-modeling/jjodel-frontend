@@ -102,3 +102,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (no UI change; dev now calls the production Worker for Claude's test, not exercised in a browser)
 **Notes**: Twelve files, above five: the ones the GO names (rule 19). `docs/CODEBASE-MAP.md` moved from commit 1 to this docs commit, so docs and code stay apart (P13). The bench lived in /tmp, not committed: the Worker folder has no test runner. Gemini POST keeps forwarding `?key=` upstream as before; the new models route forwards `x-goog-api-key`. Slices (c), (d) open.
 **Prompt document name**: 2026-10-18 11:46
+
+## 2026-10-18 — merge: ai-models-discovery into alfonso-frontend-jjtl (P-2026-10-18-1226)
+**Prompt**: `claude_2026-10-18_1226_prompt_merge_ai-models-discovery.md`, a direct merge by `lane-run merge --direct`, no session: `ai-models-discovery` at `c54fa14c5` into `alfonso-frontend-jjtl`, merge base `1e9e616fa`, 4 commits on the branch side.
+**Files touched**: merge `67320b999`: 13 files from the branch side (`cloudflare-worker/.gitignore`, `cloudflare-worker/README.md`, `cloudflare-worker/package-lock.json`, `cloudflare-worker/package.json`, `cloudflare-worker/src/index.ts`, `cloudflare-worker/tsconfig.json`, `cloudflare-worker/wrangler.toml`, `docs/CODEBASE-MAP.md`, and 5 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `67320b999` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9229 tests in 377 files, 9 red at import, hooks 787; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no visible UI change: Worker source in cloudflare-worker/ (7 files, no node_modules) and getEndpoint now defaults to the production Worker in every mode; checked by chat C-2026-10-17-1518 under RC-25
+**Notes**: Rollback tag `pre-ai-models-discovery` on `6d648354a` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1226/result.json`.
+**Prompt document name**: 2026-10-18 12:26

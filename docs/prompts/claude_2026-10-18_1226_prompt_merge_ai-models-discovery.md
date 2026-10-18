@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-18-1226
 Chat: —
 Lane: full (merge; 1 conflict: `docs/log-inbox/maintenance.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane merge · 67320b999 · verifica visiva passata 2026-10-18 (no visible UI change: Worker source in cloudflare-worker/ (7 files, no node_modules) and getEndpoint now defaults to the production Worker in every mode; checked by chat C-2026-10-17-1518 under RC-25)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-18-1226 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
