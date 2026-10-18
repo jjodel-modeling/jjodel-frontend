@@ -99,6 +99,8 @@
     "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
     "check:docs": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-docs.ts",
     "docs:digest": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/docs-digest.ts",
+    "decisions": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/decisions-query.ts",
+    "log:find": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/log-find.ts",
     "trace:index": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/trace-index.ts",
     "check:agents": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-agents.ts",
     "check:scripts": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-scripts.ts",
