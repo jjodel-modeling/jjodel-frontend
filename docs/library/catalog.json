@@ -24,7 +24,7 @@
       "notes": "Decided for a later round." },
 
     { "id": "library", "kind": "galleryProject", "tier": "template", "label": "Library", "status": "available", "publisher": "jjodel",
-      "version": 1, "versions": [{ "n": 1, "file": "library/gallery/library/1.jjodel", "published": "2026-10-18", "sha256": "2961c5fb9b2dea58815c8482fe6821653f877b7e1630a42253e285dc91c16d3c", "notes": "First version, with its hand-written viewpoint." }],
+      "version": 1, "versions": [{ "n": 1, "file": "library/gallery/library/1.jjodel", "published": "2026-10-18", "sha256": "1a1b35f9ed95da63a53cfc8d75ce78e0b52585ab38dcccedf41dafaaeec0314e", "notes": "First version, with its hand-written viewpoint." }],
       "description": "Libraries, books, writers and members: containment, inheritance and cross references.",
       "source": ["frontend/scripts/library/gallery/library/Library.ecore", "frontend/scripts/library/gallery/library/sample-Library.xmi"], "notes": "The fixture Library.ecore extended with writers (Library.writers, Book.authors), and a sample model." },
     { "id": "families-persons", "kind": "galleryProject", "tier": "template", "label": "Families and Persons", "status": "available", "publisher": "jjodel",
