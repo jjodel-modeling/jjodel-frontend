@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-0105
 Chat: C-2026-10-18-0035
 Front: harness
 Lane: fast (one script and its tests; no UI, no normative file)
-Status: da eseguire
+Status: abbandonato 2026-10-18 · no code: the cost figures were sums of cumulative values and the 36 runs were not resumes (lane question); measurement left to B1 (P-2026-10-18-0100)
 Request: "solo se tutto cio rende la gestione dell'harness piu economica" (Alfonso, 2026-10-18 00:58), then "si" to the resume budget (01:00)
 
 Protocollo: docs/PROTOCOL.md: clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).

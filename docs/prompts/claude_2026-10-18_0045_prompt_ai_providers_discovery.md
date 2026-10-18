@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-0045
 Chat: C-2026-10-18-0035
 Front: release-3-2
 Lane: full (more than three files, changes an exported interface of the provider layer)
-Status: da eseguire
+Status: chiuso 2026-10-18 · discovery only, report on the trunk f891af6ed · Phase 2 handed to the chat of P-2026-10-18-1146
 
 Protocollo: docs/PROTOCOL.md: clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
