@@ -115,3 +115,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: no visible UI change: Worker source in cloudflare-worker/ (7 files, no node_modules) and getEndpoint now defaults to the production Worker in every mode; checked by chat C-2026-10-17-1518 under RC-25
 **Notes**: Rollback tag `pre-ai-models-discovery` on `6d648354a` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1226/result.json`.
 **Prompt document name**: 2026-10-18 12:26
+
+## 2026-10-18 — feat: dynamic model lists for Anthropic, OpenAI and Gemini; connection test as GET models (P-2026-10-18-1146)
+**Prompt**: Phase 2 of `claude_2026-10-18_1146_prompt_discovery_ai_proxy_dynamic_models.md`, slices (c1), (c2) and (d), GO from chat `C-2026-10-17-1518` on Alfonso's «si procedi» (2026-10-18 14:35), worktree `~/jjodel-w-aimodels` on `ai-models-dynamic` at `a3ec93534`.
+**Files touched**: `b8b2724de` (c1): `services/aiModelCatalog.ts` (new), `services/__tests__/aiModelCatalog.test.ts` (new), `types/jodie.ts`, `services/AIProviderService.ts`, `events/registry.ts`. `7044b6812` (c2): `common/ProviderModelSelector.tsx`, `common/ProviderModelSelector.scss`, `settings/AISettingsContent.tsx`, `Jodie/Jodie.tsx`, `services/AIProviderService.ts`, `services/aiModelCatalog.ts`, its test. `2a9ff5f02` (d): `aiModelCatalog.ts`, `AIProviderService.ts`, `types/jodie.ts`, both service tests. This commit: this inbox, the prompt's Status line. All under `frontend/src/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — after each slice typecheck exit 0, build exit 0, touched vitest green; at the end the full suite 9280 tests green in 370 files, red only the nine import-time files of CLAUDE.md §17. Mutation benches: 4 + 4 mutations caught (c1, d). Not measured: a real key against the three providers (none available to the lane).
+**Out-of-scope changes**: yes — `events/registry.ts` (c1, the `MODELS_UPDATED` key the dispatch needs), `Jodie/Jodie.tsx` (c2, the capability re-read), named in the report §3.2 but not in the GO's slice lists.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe `_tmp_models_picker.ts` via lane-run probe on port 3197, fixture catalog, no key, 0 provider calls: 11/11; crops `~/.jjodel-lanes/P-2026-10-18-1146/models_picker_{collapsed,expanded}.png`, measures in `models_picker_measures.json`
+**Notes**: Commit `2a9ff5f02` says aiModelCatalog.test.ts 30/30: the count is 28/28 (AIProviderService 18/18). First probe run hit :3000 through `states.ts` BASE_URL (SMOKE_URL unset); rerun with SMOKE_URL on 3197, fresh browser context, nothing persisted on 3000. Unavailable badge and static marker covered by tests, not by a crop.
+**Prompt document name**: 2026-10-18 11:46
