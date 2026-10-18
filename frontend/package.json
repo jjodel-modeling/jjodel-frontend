@@ -89,6 +89,7 @@
     "serve": "vite preview",
     "ii": "npm i",
     "______________________________________deploy________________________________": "",
+    "prebuild": "node scripts/library/copy-catalog.mjs",
     "build": "vite build",
     "postbuild": "",
     "dev": "docker-compose -f docker-compose.dev.yml up",

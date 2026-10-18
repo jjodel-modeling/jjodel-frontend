@@ -1,0 +1,113 @@
+/* ============================================
+   TEMPLATES - the gallery of R-LIB-5 (P-2026-10-18-1800)
+   Card grid on the 8px grid; secondary text 11px.
+   ============================================ */
+
+.templates-page {
+    padding: 24px;
+}
+
+.templates-page__header {
+    margin-bottom: 24px;
+}
+
+.templates-page__title {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    margin: 0 0 8px;
+}
+
+.templates-page__sub {
+    font-size: 11px;
+    color: var(--color-text-tertiary, #475569);
+    margin: 0;
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.templates-card {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    background: var(--color-bg-secondary, #ffffff);
+    border: 1px solid var(--color-border-secondary, #e2e8f0);
+    border-radius: var(--radius-md, 8px);
+    transition: border-color 0.15s ease;
+
+    &:hover {
+        border-color: var(--color-border-hover, #94a3b8);
+    }
+}
+
+.templates-card__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.templates-card__icon {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-bg-primary, #f8fafc);
+    border: 1px solid var(--color-border-secondary, #e2e8f0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-tertiary, #475569);
+
+    i {
+        font-size: 16px;
+        line-height: 1;
+    }
+}
+
+.templates-card__label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+/* Fixed line boxes: the counts arrive after the packages, and the card does not move when they do. */
+.templates-card__counts,
+.templates-card__description {
+    font-size: 11px;
+    line-height: 16px;
+    color: var(--color-text-tertiary, #475569);
+    margin: 0 0 8px;
+}
+
+.templates-card__counts {
+    height: 16px;
+}
+
+.templates-card__description {
+    min-height: 32px;
+}
+
+.templates-card__actions {
+    margin-top: auto;
+    padding-top: 8px;
+    display: flex;
+    justify-content: flex-end;
+
+    .bi {
+        margin-right: 8px;
+    }
+}
+
+.templates-clone-dialog {
+    max-width: 440px;
+
+    .dialog-footer .bi {
+        margin-right: 8px;
+    }
+}

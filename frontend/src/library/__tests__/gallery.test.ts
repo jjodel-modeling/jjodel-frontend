@@ -77,6 +77,12 @@ describe('the gallery of the catalog', () => {
             expect(existsSync(fileUrl(e.id)), e.id).toBe(true);
         }
     });
+
+    it('is served as the public copy the Templates page fetches, byte for byte (mutant: the docs catalog edited, not copied)', () => {
+        const docs = readFileSync(new URL('../../../../docs/library/catalog.json', import.meta.url), 'utf8');
+        const served = readFileSync(new URL('../../../public/library/catalog.json', import.meta.url), 'utf8');
+        expect(served).toBe(docs);
+    });
 });
 
 describe.each(GALLERY.map(e => [e.id, e] as const))('the project file of %s', (id, entry) => {

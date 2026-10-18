@@ -35,6 +35,7 @@ import {
 } from '../../model/megamodelPersistence';
 import {VersionFixer} from "../../redux/VersionFixer";
 import { markProjectSaved } from "../../common/libraries/lastSaved";
+import {compressToUTF16} from "async-lz-string";
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
@@ -254,7 +255,12 @@ class ProjectsApi {
     }
 
 
-    static async importFromText(content: string, name: string = '', date: number = Date.now()) {
+    /**
+     * `clone` makes the import a gallery clone (P-2026-10-18-1800): the project takes `name` as it is, without the
+     * import's « copy» suffix, and the call resolves once the project is stored, with its new id. Without it, `name`
+     * stays unused, as the file drop that passes the file's name expects.
+     */
+    static async importFromText(content: string, name: string = '', date: number = Date.now(), clone?: { clonedFrom: string }): Promise<DProject['id']> {
         const json = JSON.parse(content) as Record<string, unknown>;
 
         // Extract and register the megamodel (user-defined edges) for this project.
@@ -271,7 +277,7 @@ class ProjectsApi {
         let resp_replace = 'Replace';
         let resp_dup = 'Duplicate';
         let response: string = resp_dup;
-        TRANSACTION('import project', async ()=>{
+        const done = TRANSACTION('import project', async ()=>{
             // console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
             let dialogDuplicate: boolean = false;
             if (dialogDuplicate && state.projects.includes(project.id)) {
@@ -284,6 +290,7 @@ class ProjectsApi {
             if (response === resp_dup) {
                 let ret = duplicateProject(project);
                 project = await ret;
+                if (clone) project = await asClone(project, name, clone.clonedFrom);
             }
             if (response === resp_replace){
                 let old = L.from(project.id);
@@ -296,6 +303,8 @@ class ProjectsApi {
             else await Online.import(project);
             CreateElementAction.new(project);
             })
+        if (clone) await done;
+        return project.id;
         }
 
 
@@ -321,6 +330,29 @@ class ProjectsApi {
 
 
 
+}
+
+/* Gallery clone (P-2026-10-18-1800). The chosen name replaces the « copy» one duplicateProject gave, made unique
+ * with (1), (2) against the workspace; the catalog id goes on the DProject entry inside the state blob, because the
+ * online DTO drops the unknown top-level fields. */
+async function asClone(project: DProject, name: string, clonedFrom: string): Promise<DProject> {
+    const state = store.getState();
+    const taken = new Set<string>([
+        ...state.projects.map(p => (state.idlookup[p] as DProject | undefined)?.name || ''),
+        ...(Storage.read<DProject[]>('projects') || []).map(p => p.name || ''),
+    ]);
+    const base = name.trim() || project.name;
+    let unique = base;
+    for (let i = 1; taken.has(unique); i++) unique = `${base} (${i})`;
+    const blob = JSON.parse(await U.decompressState(project.state));
+    const entry = blob.idlookup[project.id];
+    if (entry) {
+        entry.name = unique;
+        entry._clonedFrom = clonedFrom;
+    }
+    project.name = unique;
+    project.state = await compressToUTF16(JSON.stringify(blob));
+    return project;
 }
 
 /* Empty-state guard (P-2026-09-30-1540). Every saved state holds the project's own entry with `state: ''`
