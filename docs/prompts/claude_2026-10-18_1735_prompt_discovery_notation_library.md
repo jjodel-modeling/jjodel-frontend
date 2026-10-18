@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1735
 Chat: C-2026-10-18-0110
 Front: notation-library
 Lane: full (discovery, read-only; heavy)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane notation-library · Phase 1 report, docs commit carrying this line · hard-stop, no Phase 2 without GO
 Request: Alfonso, 2026-10-18 17:28, «adesso procedi in autonomia fino all'implementazione», after ratifying R-LIB-1..6 (`docs/decisions.md`, series R-LIB) and the catalog `docs/library/catalog.json`
 Depends: —
 Corregge: —
