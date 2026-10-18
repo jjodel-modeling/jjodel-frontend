@@ -6189,6 +6189,22 @@ Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked
   no seal behaves exactly as before. Each step carries a Layer Impact Report (CLAUDE.md §3.2) in `docs/lir/`. The
   work runs on a branch now; it reaches the trunk after the 3.2 release (R-LIB-7 keeps S6 out of 3.2).
 
+- **R-LIB-9** (2026-10-18, ratified by Alfonso 2026-10-18 22:51 «va bene» on the chat's four points, evidence: read, verified: none, reversible: trunk).
+  **The gallery holds two tiers, templates and examples.** A *template* is a small didactic project that teaches one
+  concept, is cloned as a starting point and may be cited by the book or the documentation: metamodel, a sample
+  model and one clear viewpoint written by hand with the IR authoring surface (derived viewpoints are not used for
+  curated material: P-2026-10-18-2150 showed Graph edges as rows, Library books nested, containment arcs over the
+  statechart transitions). An *example* is a complete, realistic case of a whole language (standard-faithful
+  metamodel, several viewpoints, validation, simulation scenario, code generation where it applies) held to the
+  commercial-quality requirement of 2026-10-01 and checked visually by Alfonso. Citability: every entry has a
+  stable id and explicit versions; a published version is never rewritten (a fix is a new version); the deep link
+  is `/templates/<id>@<n>`, resolved by the catalog. On disk one folder per id holds its versions
+  (`frontend/public/library/gallery/<id>/<n>.jjodel`, sources under `frontend/scripts/library/gallery/<id>/`); the
+  tier is a catalog field (`tier: template | example`), not a folder, so a change of tier breaks no citation. The
+  Templates page shows the two tiers as two sections. In 3.2: the five R-LIB-5 projects as templates, and
+  `turnstile` and `petri-producer-consumer` as examples; BPMN and the hierarchical statechart as examples after 3.2.
+  Amends R-LIB-5 (adds the examples tier) and the layout of P-2026-10-18-1800.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
