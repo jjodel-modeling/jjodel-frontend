@@ -514,3 +514,22 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 **Smoke visivo**: non applicabile
 **Notes**: Of today's 10 question / 175 hard-stop / 1 blocked, the rule (trunk Status flipped, later Depends/Corregge, later trunk commit, 72 h) keeps 1 waiting (P-2026-10-18-2220) and 12 stale. Tauri 2 workable: Rust 1.94.1, Xcode 26.6, tauri 2.10.3 cached; no tauri-cli, no signing identity (ad-hoc). Shortcut ⌃⌥⌘L: ⌥⌘L is Edge Downloads and IntelliJ Reformat (measured). Path `tools/lane-monitor-app/`. No decision awaits Alfonso.
 **Prompt document name**: 2026-10-18 22:55
+
+## 2026-10-18 — feat(lane-board): /api/attention and /l/<id> for the menu bar app (P-2026-10-18-2320)
+**Prompt**: `claude_2026-10-18_2320_prompt_lane_monitor_s1_board_attention.md`, slice S1 of the P-2026-10-18-2255 plan: `GET /api/attention` (waiting/stale rule, 72 h), `GET /l/<Prompt-ID>` hand-off page, `#lane=<id>` mark in the Lanes tab, `Corregge:` parsed in `header()`, tests and README.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoardAttention.test.ts` (new); code commit `4e81cf36e`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (laneBoard* 161/161; scripts/hooks 911 passed, the 25 red laneRun* tests identical on HEAD: `.ts` extension under node v23.3.0)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 4/4 (4712 at 23:52)
+**Notes**: 4712 at 23:33: waiting 1 (P-2026-10-18-2220), staleCount 12, same as the report's probe re-run. Unattended: row found by the Kind badge's data-id (data-id on `<tr>` broke laneBoard.test.ts, outside DOVE); live blocked since = start + 90 min; chains not in running. Mutation bench 24/24. The −142 px scroll seen at the first check did not recur at 23:52 on the same code; fix not applied (RC-51 soft ceiling, handoff.md in the lane folder).
+**Prompt document name**: 2026-10-18 23:20
+
+## 2026-10-18 — ticket: the #lane= scroll runs once and may be undone by a later render
+**Ticket**: `markLane()` in lane-board.mjs clears `laneScroll` after its first `scrollIntoView`; the chat measured the marked row at top −142 px 3.5 s after landing once, then at 342 of 768 on a later check of the same code. Fix ready in the lane's handoff: keep the scroll on every render until the first wheel, touch, key or mouse press, with a vm test.
+**Priority**: low
+**Found in**: P-2026-10-18-2320
+**Detail**: ~/.jjodel-lanes/P-2026-10-18-2320/handoff.md
