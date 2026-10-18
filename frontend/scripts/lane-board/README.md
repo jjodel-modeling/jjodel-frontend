@@ -23,6 +23,17 @@ text, cut, on its second (next section). The estimate is a heuristic, not a prom
 measured median per kind, minus the elapsed time, corrected by the phase and the load
 average. Below it, the earlier lanes grouped by day, with their outcome.
 
+**Kind badge (P-2026-10-18-1428).** The Kind cell is a fixed-width pill per kind (`merge`,
+`fast`, `discovery`, `phase2`, a dashed `unknown` for an empty kind, a dashed `chain`), then
+`direct` for a `lane-run merge --direct` lane (its folder holds `direct.json`) and the tier.
+Hover or keyboard focus shows an overlay; a click pins it until Esc, a click outside or a click
+on another badge. Its lines come from `kindDetails(row, kindFacts(dir))`, built server side
+into the row's `kindInfo`: what the kind means and the prompt's `Lane:` line verbatim; how the
+lane ran (a direct merge: scripted, branch into trunk, the gates and outcome of `result.json`,
+`resolved.txt`; a session lane: tier, model and effort from the last line of `runs.jsonl`, or
+the `tier.txt` line without it, and the session id); and why a token cell reads n/a: no model
+ran for a direct merge, otherwise the missing file (`log.jsonl`, `architect.json`) named.
+
 **When the status is slow.** `/api`, the data of the Lanes tab and the strip, runs
 `lane-run status --all` as a child process, one run at a time, killed after 15 s, and keeps
 the answer 10 s. A request that arrives while a run is in flight gets the last answer at once

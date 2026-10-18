@@ -95,6 +95,81 @@ function kindOf(laneLine, file = '') {
     return '';
 }
 
+const readJson = (p) => {
+    try { const v = JSON.parse(readFileSync(p, 'utf8')); return v && typeof v === 'object' ? v : null; } catch { return null; }
+};
+
+/** What a lane folder says about how the lane ran, for kindDetails: direct.json (null when absent) and result.json (null when
+ *  absent or unreadable) parsed, resolved.txt, the last line of runs.jsonl parsed and the count of its lines, session.txt, tier.txt, and
+ *  whether architect.json and log.jsonl are there. Reads only; a missing folder gives the empty facts. */
+export function kindFacts(dir) {
+    const runLines = readTrim(join(dir, 'runs.jsonl')).split('\n').filter((l) => l.trim());
+    let lastRun = null;
+    try { lastRun = runLines.length ? JSON.parse(runLines[runLines.length - 1]) : null; } catch { lastRun = null; }
+    const result = readJson(join(dir, 'result.json'));
+    // direct.json carries the union files whole: parsed only for branch and trunk while result.json is not there yet.
+    const direct = existsSync(join(dir, 'direct.json')) ? (result ? {} : readJson(join(dir, 'direct.json')) || {}) : null;
+    return {
+        direct, result, resolved: readTrim(join(dir, 'resolved.txt')),
+        runs: runLines.length, lastRun: lastRun && typeof lastRun === 'object' ? lastRun : null,
+        session: readTrim(join(dir, 'session.txt')), tierLine: readTrim(join(dir, 'tier.txt')),
+        architect: existsSync(join(dir, 'architect.json')), log: existsSync(join(dir, 'log.jsonl')),
+    };
+}
+
+const NO_FACTS = { direct: null, result: null, resolved: '', runs: 0, lastRun: null, session: '', tierLine: '', architect: false, log: false };
+
+const KIND_MEANING = {
+    merge: 'merge: brings a lane branch into the trunk',
+    fast: 'fast: one module, one phase, closed by one docs commit (RC-17)',
+    discovery: 'discovery: a read-only Phase 1 that ends with a report',
+    phase2: 'phase2: a full lane that changes code (Phase 2, or two phases in one session)',
+    chain: 'chain: lanes run one after the other; each lane has its own kind',
+    unknown: 'unknown: the Lane line matches no kind',
+};
+
+/** The overlay of the Kind badge (P-2026-10-18-1428), plain text lines: what the kind means and the Lane line it came from,
+ *  how the lane ran, and what the token columns mean for this row. Pure: `row` is an /api row (kind, lane, chain, tier,
+ *  tokensIn, archTotal, archOpen) with `model`, the first model of its log.jsonl when known, `f` the kindFacts of its folder, `usage` false when lane-usage.mjs is missing. */
+export function kindDetails(row, f, usage = true) {
+    const kind = row.chain ? 'chain' : row.kind || 'unknown';
+    const out = [KIND_MEANING[kind], row.lane ? 'Lane: ' + row.lane : row.chain ? 'Lane: none, a chain has no prompt' : 'Lane: no Lane line in the prompt'];
+    if (row.chain) return out;
+    if (f.direct) {
+        const r = f.result || {};
+        const branch = r.branch || f.direct.branch, trunk = r.trunk || f.direct.trunk;
+        out.push('How it ran: scripted: git merge and gates, no model session');
+        if (branch || trunk) out.push((branch || '?') + ' into ' + (trunk || '?'));
+        const gates = Array.isArray(r.gates) ? r.gates : [];
+        if (gates.length) out.push('Gates: ' + gates.map((g) => g.name + (g.ok ? ' ok' : ' red' + (g.detail ? ' (' + g.detail + ')' : ''))).join(' · '));
+        else out.push('Gates: no result.json yet');
+        // result.json's outcome is the stop before the GO; a closure sha means the chat closed the merge after it.
+        if (r.outcome && r.closure) out.push('Result: ' + r.outcome + ' at the merge' + (r.reason ? ', ' + r.reason : '') + ', closed by ' + String(r.closure).slice(0, 9));
+        else if (r.outcome) out.push('Result: ' + r.outcome + (r.reason ? ', ' + r.reason : ''));
+        if (f.resolved) out.push('Resolved: ' + f.resolved);
+        out.push('In, Out, Total, Ctx max: n/a, no model ran');
+        out.push(f.architect ? 'Arch: from architect.json' : 'Arch: n/a, the chat records it only for session lanes');
+        return out;
+    }
+    out.push('How it ran: a Claude Code session started by lane-run');
+    const run = f.lastRun;
+    if (run) {
+        const model = run.effectiveModel || run.requestedModel;
+        out.push('Tier ' + (run.tier || '?') + ' · model ' + (model || '?') + ' · effort ' + (run.effort || '?') + ' (runs.jsonl, ' + f.runs + ' launch' + (f.runs === 1 ? '' : 'es') + ')');
+    } else if (row.model) out.push('Tier: ' + (f.tierLine || row.tier || 'not recorded') + ' · model ' + row.model + ' (log.jsonl); no runs.jsonl, so effort is not recorded');
+    else out.push('Tier: ' + (f.tierLine || row.tier || 'not recorded') + '; no runs.jsonl, so model and effort are not recorded');
+    const session = f.session || (run && run.session) || '';
+    out.push(session ? 'Session: ' + session : 'Session: no session.txt');
+    if (row.tokensIn !== null && row.tokensIn !== undefined) out.push('In, Out, Total, Ctx max: the main session, from log.jsonl');
+    else if (!f.log) out.push('In, Out, Total, Ctx max: n/a, no log.jsonl in the lane folder');
+    else if (!usage) out.push('In, Out, Total, Ctx max: n/a, lane-usage.mjs not found beside the board');
+    else out.push('In, Out, Total, Ctx max: n/a, log.jsonl holds no call with message.usage yet');
+    if (row.archOpen) out.push('Arch: open, architect.json not closed by the chat yet');
+    else if (row.archTotal !== null && row.archTotal !== undefined) out.push('Arch: from architect.json');
+    else out.push(f.architect ? 'Arch: n/a, architect.json is unreadable' : 'Arch: n/a, no architect.json in the lane folder');
+    return out;
+}
+
 function phaseOf(dir) {
     const m = [...tail(join(dir, 'log.jsonl')).matchAll(/"description":"((?:[^"\\]|\\.)*)"/g)];
     return m.length ? m[m.length - 1][1].replace(/\\(.)/g, '$1') : '';
@@ -494,6 +569,10 @@ function snapshot(r) {
         const tk = isChain ? null : laneTokens(id);
         Object.assign(row, { tokensIn: tk ? tk.tokensIn : null, tokensOut: tk ? tk.tokensOut : null, tokensTotal: tk ? tk.tokensTotal : null, ctxMax: tk ? tk.ctxMax : null, tokensSub: tk ? tk.tokensSub : null });
         Object.assign(row, isChain ? archFields(null) : archFields(laneArchitect(id)));
+        // The Kind badge (P-2026-10-18-1428): direct from direct.json, and the overlay's lines.
+        const kf = isChain ? NO_FACTS : kindFacts(dir);
+        row.direct = Boolean(kf.direct);
+        row.kindInfo = kindDetails({ ...row, model: tk ? tk.model : null }, kf, Boolean(LU));
         rows.push(row);
     }
     for (const log of evCache.keys()) if (!logs.has(log)) evCache.delete(log);
@@ -1465,7 +1544,11 @@ a.chat{color:var(--run);text-decoration:none}a.chat:hover{text-decoration:underl
 .tabs{display:flex;gap:4px;margin:0 0 8px;border-bottom:1px solid var(--line)}.tabs button,.seg button{font:inherit;font-size:12px;background:none;border:0;color:var(--muted);padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}.tabs button.on{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
 .strip{margin-left:auto;display:flex;gap:4px;align-items:center;flex:none;padding:4px 0}.strip .sp{text-decoration:none;white-space:nowrap;cursor:pointer;background:var(--card)}.strip .sp b{display:inline-block;min-width:3ch;text-align:right;font-variant-numeric:tabular-nums;margin-right:3px}.strip .sp.zero{opacity:.35}.strip .sp.on{box-shadow:0 0 0 2px currentColor}
 .filt{display:flex;gap:12px;align-items:baseline}.filt a{color:var(--accent);font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer}
-details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:8px 8px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 8px 8px}
+/* The Kind badge and its overlay (P-2026-10-18-1428): one width for every kind, so no row moves between states. */
+button.kb{width:64px;padding:1px 4px;text-align:center;background:none;font-family:inherit;line-height:inherit;cursor:pointer}button.kb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}button.kb.on{box-shadow:0 0 0 2px currentColor}
+.k-merge{color:var(--fg)}.k-fast{color:var(--ok)}.k-discovery{color:var(--warn)}.k-phase2{color:var(--run)}.k-unknown,.k-chain{color:var(--muted)}button.kb.k-unknown,button.kb.k-chain{border-style:dashed}.ksx{color:var(--muted);font-size:11px}
+#kd{position:absolute;z-index:20;max-width:460px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 16px rgba(15,23,42,.18);pointer-events:none;overflow-wrap:anywhere}#kd.pin{pointer-events:auto}#kd div{margin-top:2px}
+body{min-height:100vh}details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:8px 8px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 8px 8px}
 </style></head><body><main>
 <header><h1>Jjodel Harness Lane Management</h1><span class="meta" id="meta">loading…</span><span class="spin" id="spin" role="status" aria-label="Loading" hidden></span></header>
 <nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button><button data-tab="requirements">Requirements</button><div class="strip" id="strip" aria-label="Lanes by state">${STRIP.map(([k, label, cls]) => '<a href="#" role="button" class="pill sp ' + cls + ' zero" data-k="' + k + '" title="Show the ' + label + ' lanes"><b>0</b>' + label + '</a>').join('')}</div></nav>
@@ -1481,6 +1564,7 @@ details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-ite
 <section id="tab-timeline" hidden><div id="tl"></div></section>
 <section id="tab-insights" hidden><div id="ins"></div></section>
 <section id="tab-requirements" hidden><div id="req"></div></section>
+<div id="kd" role="tooltip" hidden></div>
 </main><script src="/timeline.js"></script><script src="/insights.js"></script><script src="/requirements.js"></script><script>
 const REFRESH=${REFRESH_S}*1000;
 const stripKey=${stripKey.toString()};
@@ -1554,6 +1638,33 @@ function phaseCell(r){
   }
   return '<td class="phase" title="'+esc(r.phase)+'"><span class="prow">'+line+'</span><span class="ptext">'+esc(r.phase)+'</span></td>';
 }
+// Kind (P-2026-10-18-1428): a fixed-width badge per kind, then direct and the tier; the overlay's lines ride in data-kd.
+// Hover or focus shows the overlay, a click pins it until Esc, a click outside or a click on another badge.
+let kdPin='';
+const kindCell=r=>{const k=r.chain?'chain':r.kind||'unknown';const sx=[r.direct?'direct':'',r.tier].filter(Boolean).join(' · ');return '<td class="lfx-cut"><button type="button" class="pill kb k-'+esc(k)+(kdPin===r.id?' on':'')+'" data-id="'+esc(r.id)+'" data-kd="'+esc((r.kindInfo||[]).join('\\n')).replace(/\\n/g,'&#10;')+'" aria-describedby="kd">'+esc(k)+'</button>'+(sx?'<span class="ksx"> · '+esc(sx)+'</span>':'')+'</td>'};
+const kd=document.getElementById('kd');
+function kdShow(b){
+  kd.innerHTML=(b.getAttribute('data-kd')||'').split('\\n').map((l,i)=>i?'<div>'+esc(l)+'</div>':'<b>'+esc(l)+'</b>').join('');
+  kd.hidden=false;
+  const r=b.getBoundingClientRect(),o=kd.getBoundingClientRect();
+  let y=r.bottom+6;if(y+o.height>innerHeight-8)y=Math.max(8,r.top-o.height-6);
+  // Placed in the viewport, written in page coordinates: a scroll of the window carries it with its badge.
+  kd.style.left=scrollX+Math.max(8,Math.min(r.left,innerWidth-o.width-8))+'px';kd.style.top=scrollY+y+'px';
+}
+function kdHide(){kd.hidden=true;kd.classList.remove('pin');kdPin='';document.querySelectorAll('button.kb.on').forEach(b=>b.classList.remove('on'))}
+const kbOf=e=>e.target&&e.target.closest?e.target.closest('button.kb'):null;
+document.body.addEventListener('mouseover',e=>{const b=kbOf(e);if(b&&!kdPin)kdShow(b)});
+document.body.addEventListener('focusin',e=>{const b=kbOf(e);if(b&&!kdPin)kdShow(b)});
+document.body.addEventListener('mouseout',e=>{const b=kbOf(e);if(b&&!kdPin&&!b.contains(e.relatedTarget))kd.hidden=true});
+document.body.addEventListener('focusout',e=>{if(kbOf(e)&&!kdPin)kd.hidden=true});
+document.body.addEventListener('click',e=>{
+  const b=kbOf(e);
+  if(b){const same=kdPin===b.dataset.id;kdHide();if(same)return;kdPin=b.dataset.id;b.classList.add('on');kd.classList.add('pin');kdShow(b);return}
+  if(kdPin&&!kd.contains(e.target))kdHide();
+});
+document.body.addEventListener('keydown',e=>{if(e.key==='Escape'&&!kd.hidden)kdHide()});
+// A table scrolled sideways moves the badge: a pinned overlay follows it, a hover one closes.
+document.body.addEventListener('scroll',()=>{if(kd.hidden)return;const b=kdPin&&document.querySelector('button.kb[data-id="'+kdPin+'"]');if(b)kdShow(b);else kdHide()},true);
 // day: the reference day of Started and Ended, today unless given (an Earlier lanes group passes its own).
 function table(rows,live,day){
   day=day||ymd(new Date());
@@ -1562,7 +1673,7 @@ function table(rows,live,day){
   let h='<table class="lfx"><colgroup>'+cols.map(c=>'<col'+(COL_W[c]?' style="width:'+COL_W[c]+'px"':'')+'>').join('')+'</colgroup><thead><tr>'+cols.map(c=>'<th'+(tips[c]?' title="'+esc(tips[c])+'"':'')+'>'+c+'</th>').join('')+'</tr></thead><tbody>';
   for(const r of rows){
     const id='<td class="id">'+esc(r.id)+(r.title?'<span class="title">'+esc(r.title)+'</span>':'')+'</td>';
-    const kind='<td>'+esc(r.kind||r.lane.split(/[ .(]/)[0]||'')+(r.tier?' · '+esc(r.tier):'')+'</td>';
+    const kind=kindCell(r);
     const oc=r.outcome==='none'?'':r.outcome;
     const wt='<td class="lfx-cut" title="'+esc(r.worktree)+'">'+esc(r.worktree)+'</td>';
     if(live)h+='<tr>'+id+'<td>'+pill(r.state)+'</td>'+kind+when(r.start,day)+work(r)+span(r)+tokens(r)+'<td class="lfx-num">'+esc(r.left)+'</td>'+phaseCell(r)+wt+'<td>'+launch(r)+'</td></tr>';
