@@ -179,3 +179,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile — chat's RC-23 checklist pending on dev server 3112 (PID 79798 in `~/.jjodel-lanes/P-2026-10-19-1745/dev.pid`)
 **Notes**: Decisions taken (unattended): guard in EditorV2's OPEN_POLYMETRIC handler, metamodel target only (model target renders objects, no metaclass count); count via new `countPolymetricMetaclasses` mirroring `extractMetamodelMetrics`' `lModel.classes`; reuses `ConfirmDialog`, variant info. Help: only Video Tutorials removed, 8 remaining URLs 200 at 17:48. dev.pid holds the listener, not the npm wrapper.
 **Prompt document name**: 2026-10-19 17:45
+
+## 2026-10-19 — merge: menu-cleanup into alfonso-frontend-jjtl (P-2026-10-19-1806)
+**Prompt**: `claude_2026-10-19_1806_prompt_merge_menu-cleanup.md`, a direct merge by `lane-run merge --direct`, no session: `menu-cleanup` at `ae0c814c9` into `alfonso-frontend-jjtl`, merge base `19a52a30a`, 2 commits on the branch side.
+**Files touched**: merge `5a082c73a`: 5 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-10-19_1745_prompt_main_menu_cleanup.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/polymetric/polymetricMetrics.ts`, `frontend/src/pages/components/Navbar.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5a082c73a` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9415 tests in 384 files, 9 red at import, hooks 936; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: RC-23 by the chat on the branch dev server 3112 (offline project, empty metamodel, Advanced): View without Debug Mode, Tools opens on Configure Environment with no leading divisor, Polymetric View without beta, Analyze without Debug loops, Help without Video Tutorials; Small metamodel ConfirmDialog shown, Open anyway opens the view, Cancel closes both; console only the pre-existing init_dash. Merge gates all green.
+**Notes**: Rollback tag `pre-menu-cleanup` on `36f94e3fb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1806/result.json`.
+**Prompt document name**: 2026-10-19 18:06

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-19-1806
 Chat: —
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane merge · 5a082c73a · verifica visiva passata 2026-10-19 (RC-23 by the chat on the branch dev server 3112 (offline project, empty metamodel, Advanced): View without Debug Mode, Tools opens on Configure Environment with no leading divisor, Polymetric View without beta, Analyze without Debug loops, Help without Video Tutorials; Small metamodel ConfirmDialog shown, Open anyway opens the view, Cancel closes both; console only the pre-existing init_dash. Merge gates all green.)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-19-1806 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
