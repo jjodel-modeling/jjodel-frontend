@@ -172,3 +172,28 @@ test('GET /api/lanes on a board: the payload of the state, and a malformed repos
   assert.deepEqual([body.state, typeof body.updatedMs], ['empty', 'number']);
   assert.equal((await fetch(`${b.url}api/lanes?repo=zz`)).status, 400);
 });
+
+const commitId = (db, sha, id, ms) => {
+  commit(db, sha, 'P-2026-01-08-9999', ms);
+  db.prepare('INSERT INTO commit_ids (repo_key, sha, prompt_id) VALUES (?, ?, ?)').run(REPO, sha, id);
+};
+
+test('closure: a commit naming the Prompt-ID outside the unit slot closes the lane, but only after it ended', (t) => {
+  const { db, laneRoot } = world(t);
+  lane(db, 'P-2026-01-08-0800', { last_outcome: 'question', end_ms: NOW - 3 * H });
+  lane(db, 'P-2026-01-08-0810', { last_outcome: 'question', end_ms: NOW - 3 * H });
+  commitId(db, 'c1', 'P-2026-01-08-0800', NOW - H);   // named by a commit whose unit is another id
+  commitId(db, 'c2', 'P-2026-01-08-0810', NOW - 4 * H); // named before the lane ended
+  assert.deepEqual(ids(api(db, laneRoot).attention.waiting), ['P-2026-01-08-0810']);
+});
+
+test('closure: a prompt Status starting eseguito or done closes the lane; da eseguire and no status do not', (t) => {
+  const { db, laneRoot } = world(t);
+  const set = (id, st) => db.prepare('UPDATE lanes SET prompt_status = ? WHERE id = ?').run(st, id);
+  for (const id of ['P-2026-01-08-0801', 'P-2026-01-08-0802', 'P-2026-01-08-0803', 'P-2026-01-08-0804']) lane(db, id, { last_outcome: 'question' });
+  set('P-2026-01-08-0801', 'eseguito');
+  set('P-2026-01-08-0802', 'done');
+  set('P-2026-01-08-0803', 'da');
+  assert.deepEqual(ids(api(db, laneRoot).attention.waiting), ['P-2026-01-08-0803', 'P-2026-01-08-0804']);
+  assert.match(api(db, laneRoot).closure, /Status:.*eseguito or done/);
+});

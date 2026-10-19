@@ -1,5 +1,5 @@
 // The one place Tack runs git. Read-only commands only (rev-parse, rev-list, log, for-each-ref,
-// worktree list, remote get-url), never one that writes in a scanned repository, and every call
+// worktree list, remote get-url, show), never one that writes in a scanned repository, and every call
 // with GIT_OPTIONAL_LOCKS=0 so no optional lock or index refresh is taken.
 import { spawnSync } from 'node:child_process';
 

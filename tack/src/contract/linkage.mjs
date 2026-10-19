@@ -15,6 +15,13 @@ export function unitLinkFromCommit(message) {
   return suffix ? { unit: suffix[1], form: 'suffix' } : null;
 }
 
+const ANY_ID = new RegExp(`(?<![A-Za-z0-9-])${ID}(?![A-Za-z0-9])`, 'g');
+
+/** Every distinct Prompt-ID a commit message names, anywhere in its subject or body. */
+export function promptIdsOf(message) {
+  return [...new Set(message.match(ANY_ID) ?? [])];
+}
+
 /** Returns the unit id a commit message links to, or null. The trailer wins over the suffix. */
 export function unitFromCommit(message) {
   return unitLinkFromCommit(message)?.unit ?? null;

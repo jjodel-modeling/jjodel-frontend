@@ -7,15 +7,18 @@
 // Schema 5 adds: the outcome of the last turn, the log's mtime, the critical-zone flag (tier.txt reason or
 // goahead.txt), the Front: and Chat: header lines of the prompt file prompt.txt names (read in memory, the path
 // and the text are not kept), and the state of a direct merge from result.json (ok, merge sha, gates).
+// Schema 7 adds: the first word of the Status: header line of the prompt file as the repository's HEAD holds it
+// (refreshPromptStatus; the path is re-read from prompt.txt and not kept).
 // Schema 6 adds: the kind and the title line of the same header, the work time (the sum of the turns), the
 // worktree path, resolved.txt, and the item count of the closing message's «Decisions taken (unattended)».
 //
 // The turn and cost rules restate those of Jjodel's lane board (frontend/scripts/lane-board/lane-board.mjs:
 // laneTimeline :926, results :815, costEvents :761, spendByDay :785, logFacts :855, inputClass :895), so that
 // `tack parity jjodel` can hold Tack to them.
+import { git } from '../git/run.mjs';
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, join, sep } from 'node:path';
+import { basename, join, relative, sep } from 'node:path';
 
 export const LANE_ID = /^P-\d{4}-\d{2}-\d{2}-\d{4}$/;
 
@@ -33,6 +36,7 @@ export const LANE_COLUMN_SOURCES = {
     kind: 'Lane: header line of the same file, or its file name (enum)', title: 'first # line of the same header (capped)',
     work_ms: 'sum of the turns (input mtime to result duration)', worktree: 'worktree.txt', resolved: 'resolved.txt exists (boolean)',
     adoptions: 'Decisions taken (unattended) items of the last result event (count)',
+    prompt_status: 'first word of the Status: header line of the prompt file at the repository HEAD (git show), lowercased',
   },
   lane_spend: {
     lane_id: 'folder name', seq: 'cost event order', at_ms: 'end of the turn the event closes', usd: 'result total_cost_usd delta',
@@ -207,6 +211,63 @@ export function promptHeader(path) {
   };
 }
 
+const STATUS = /^Status:[ \t]*([\p{L}\p{N}_]+)/imu;
+
+/** The first word, lowercased, of the Status: header line of a prompt file's text (before its first `## `), or null. */
+export function promptStatusOf(text) {
+  let head = String(text).slice(0, 8192);
+  const cut = head.search(/^## /m);
+  if (cut !== -1) head = head.slice(0, cut);
+  return STATUS.exec(head)?.[1].toLowerCase().slice(0, 40) ?? null;
+}
+
+const REFRESH_EVERY_MS = 60e3;
+const REFRESH_DAYS = 7;
+const lastRefresh = new WeakMap();
+const unreadable = new WeakMap(); // lanes whose prompt could not be read: tried once per process
+
+/**
+ * Sets lanes.prompt_status for every exited lane whose status is not yet a closing word, from the prompt file as
+ * the repository's HEAD holds it (`git show HEAD:<path>` in the checkout the path of prompt.txt lies in, then in
+ * the first common dir; a closing word read from either wins). Runs at most once a minute per store;
+ * a lane that ended more than 7 days ago is read once, and one whose prompt cannot be read is not retried.
+ */
+export function refreshPromptStatus(db, root, now = Date.now(), force = false) {
+  if (!force && now - (lastRefresh.get(db) ?? -Infinity) < REFRESH_EVERY_MS) return 0;
+  lastRefresh.set(db, now);
+  const repos = new Map(db.prepare('SELECT key, common_dirs, toplevels FROM repos').all().map((r) => [r.key, r]));
+  const set = db.prepare('UPDATE lanes SET prompt_status = ? WHERE id = ? AND prompt_status IS NOT ?');
+  let n = 0;
+  const gone = unreadable.get(db) ?? unreadable.set(db, new Set()).get(db);
+  const rows = db.prepare(`SELECT id, repo_key FROM lanes WHERE end_ms IS NOT NULL
+    AND (prompt_status IS NULL OR prompt_status NOT IN ('eseguito', 'done')) AND (prompt_status IS NULL OR end_ms > ?) ORDER BY id`)
+    .all(now - REFRESH_DAYS * 24 * 3600e3);
+  for (const l of rows) {
+    if (gone.has(l.id)) continue;
+    const repo = repos.get(l.repo_key);
+    const file = readTrim(join(root, l.id, 'prompt.txt'));
+    if (!repo || !file) { gone.add(l.id); continue; }
+    const dirs = JSON.parse(repo.common_dirs);
+    const tops = JSON.parse(repo.toplevels).filter((t) => file.startsWith(t + sep));
+    // The checkout the prompt path lies in (the trunk, for a prompt the chat wrote), then the first common dir.
+    const reads = [
+      ...tops.map((t) => ({ cwd: t, rel: relative(t, file) })),
+      ...dirs.slice(0, 1).map((d) => ({ dir: d, rel: tops.length ? relative(tops[0], file) : join('docs', 'prompts', basename(file)) })),
+    ];
+    let status = null;
+    for (const { cwd, dir, rel } of reads) {
+      let r;
+      try { r = git(cwd ? ['show', `HEAD:${rel}`] : ['--git-dir', dir, 'show', `HEAD:${rel}`], { cwd }); } catch { continue; } // a deleted checkout
+      const w = r.ok ? promptStatusOf(r.out) : null;
+      if (w !== null && status === null) status = w;
+      if (w === 'eseguito' || w === 'done') { status = w; break; }
+    }
+    if (status === null) gone.add(l.id);
+    n += Number(set.run(status, l.id, status).changes);
+  }
+  return n;
+}
+
 /** The state of a direct merge from result.json: merged (ok with a merge commit), red (a gate not ok), blocked; null without one. */
 export function mergeState(path) {
   let r;
@@ -359,5 +420,6 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opt
     db.exec('ROLLBACK');
     throw err;
   }
+  st.statusSet = refreshPromptStatus(db, root, now);
   return st;
 }

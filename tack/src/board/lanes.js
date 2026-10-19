@@ -47,8 +47,8 @@
     '<span class="ln-t">' + esc(c.title || '') + '</span><span class="dim">' + esc(ago(c.end ?? c.started, now)) + '</span></li>';
 
   function lastRow(c, now) {
-    return '<tr data-id="' + esc(c.id) + '"><td class="c">' + esc(c.id) + '</td><td>' + (c.kind ? esc(c.kind) : '<span class="dim">–</span>') + '</td><td title="' + esc(c.title || '') + '">' + esc(c.title || '') +
-      '</td><td>' + outcome(c.lastOutcome) + (c.resolved ? ' <span class="tag">resolved</span>' : '') + '</td><td class="n">' + esc(clock(c.started)) + '–' + esc(clock(c.end)) +
+    return '<tr data-id="' + esc(c.id) + '"><td class="c ln-id">' + esc(c.id) + '</td><td>' + (c.kind ? esc(c.kind) : '<span class="dim">–</span>') + '</td><td class="ln-ti" title="' + esc(c.title || '') + '"><div class="ln-clamp">' + esc(c.title || '') +
+      '</div></td><td>' + outcome(c.lastOutcome) + (c.resolved ? ' <span class="tag">resolved</span>' : '') + '</td><td class="n">' + esc(clock(c.started)) + '–' + esc(clock(c.end)) +
       '</td><td class="n r">' + esc(mins(c.workMs)) + '</td><td class="n r">' + esc(mins(c.spanMs)) + '</td><td class="n r">' + esc(k(c.tokensIn)) +
       '</td><td class="n r">' + (c.cost === null ? '<span class="dim">–</span>' : B.usd(c.cost)) + '</td><td class="n r">' + esc(k(c.contextPeak)) +
       '</td><td>' + disabled('–', ARCH_REASON) + '</td><td>' + launcher(c) + '</td></tr>';

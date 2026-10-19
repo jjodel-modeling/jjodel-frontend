@@ -121,3 +121,14 @@ test('the view is registered even when starting the poller throws', () => {
   assert.throws(() => vm.runInContext(src('lanes.js'), ctx, { filename: 'lanes.js' }), /boom/);
   assert.equal(typeof ctx.TackViews.lanes.render, 'function');
 });
+
+test('the Last 24 hours table renders the whole Prompt-ID and keeps the full title in title=', () => {
+  const id = 'P-2026-01-08-0900-abcdef12';
+  const title = 'A long title that the table may wrap to two lines but whose full text stays in the attribute '.repeat(2).trim();
+  const h = L.html(ok({ last24: [card({ id, title, live: false, end: NOW - 3600e3, lastOutcome: 'done' })] }), NOW);
+  assert.ok(h.includes('<td class="c ln-id">' + id + '</td>'), 'the id cell holds the whole id');
+  assert.ok(h.includes('<td class="ln-ti" title="' + title + '"><div class="ln-clamp">' + title + '</div></td>'));
+  const css = readFileSync(new URL('../src/board/board.css', import.meta.url), 'utf8');
+  assert.match(css, /\.ln-tab td\.ln-id\{[^}]*overflow:visible[^}]*\}/, 'the id column never ellipsizes');
+  assert.match(css, /\.ln-clamp\{[^}]*-webkit-line-clamp:2/, 'the title clamps at two lines');
+});
