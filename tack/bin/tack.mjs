@@ -12,9 +12,11 @@ const USAGE = `usage: tack <command>
 
 commands:
   check [file]                          validate a JSON Lines log against contract v1 (default: .tack/log.jsonl)
-  scan [--root <dir>] [--store <file>]  ingest Claude Code transcripts (default root: ~/.claude/projects)
+  scan [--root <dir>] [--store <file>]  ingest Claude Code transcripts (default root: ~/.claude/projects),
+                                        then resolve each session cwd to a repository and read its git history
   sessions [--cwd <prefix>] [--json] [--store <file>]
                                         one row per session, main-thread calls only
+  repos [--json] [--store <file>]       one row per repository, then the session cwds without one
 
 The store defaults to ~/.tack/store.db, or TACK_STORE when set.
 `;
@@ -62,6 +64,8 @@ async function scanCmd(args) {
   if (!flags) return usage();
   const { openStore, storePath } = await import('../src/store/open.mjs');
   const { scan, defaultRoot } = await import('../src/collectors/claude-code/collect.mjs');
+  const { identify } = await import('../src/collectors/git/identity.mjs');
+  const { collectGit } = await import('../src/collectors/git/collect.mjs');
   const path = storePath(flags.store);
   const root = flags.root ?? defaultRoot();
   const db = openStore(path);
@@ -76,6 +80,12 @@ async function scanCmd(args) {
     w(`records skipped by type: ${tally(st.skipped)}`);
     w(`rows added: sessions ${st.sessionsAdded}, calls ${st.callsAdded}`);
     w(`rows changed: calls updated ${st.callsUpdated}, calls removed by re-read ${st.callsRemoved}, duplicate message ids ${st.duplicates}`);
+    const id = identify(db);
+    w(`identity: cwds ${id.cwds}; sessions in a repository ${id.inRepo}, missing: ${tally(id.missing)}`);
+    w(`identity: repositories ${id.repos} (clones ${id.clones}), gone ${id.reposGone}; rows added: repos ${id.reposAdded}, links ${id.linksAdded}; links changed ${id.linksChanged}`);
+    const g = collectGit(db);
+    w(`git: repositories ${g.repos} (unchanged ${g.skipped}, incremental ${g.incremental}, full ${g.full}, errors ${g.errors})`);
+    w(`git: rows added: commits ${g.commitsAdded}; commits removed by re-read ${g.commitsRemoved}`);
   } finally {
     db.close();
   }
@@ -98,14 +108,49 @@ async function sessionsCmd(args) {
     process.stdout.write(JSON.stringify(rows, null, 2) + '\n');
     return 0;
   }
-  const table = [['cwd', 'day', 'calls', 'cost', 'ctx peak', 'span min', 'models']];
+  const table = [['cwd', 'day', 'calls', 'cost', 'ctx peak', 'span min', 'models', 'commit within hour']];
   for (const r of rows) {
     table.push([r.cwd ?? '-', r.day ?? '-', String(r.calls), r.cost_usd === null ? '-' : r.cost_usd.toFixed(2),
-      String(r.context_peak), r.span_min === null ? '-' : String(r.span_min), r.models.join(',') || '-']);
+      String(r.context_peak), r.span_min === null ? '-' : String(r.span_min), r.models.join(',') || '-', r.commit_within_hour]);
   }
+  printTable(table);
+  process.stdout.write(`${rows.length} sessions\n`);
+  return 0;
+}
+
+function printTable(table) {
   const widths = table[0].map((_, i) => Math.max(...table.map((row) => row[i].length)));
   for (const row of table) process.stdout.write(row.map((c, i) => c.padEnd(widths[i])).join('  ').trimEnd() + '\n');
-  process.stdout.write(`${rows.length} sessions\n`);
+}
+
+async function reposCmd(args) {
+  const flags = parseFlags(args, ['store'], ['json']);
+  if (!flags) return usage();
+  const { openStore, storePath } = await import('../src/store/open.mjs');
+  const { listRepos } = await import('../src/store/repos.mjs');
+  const db = openStore(storePath(flags.store));
+  let out;
+  try {
+    out = listRepos(db);
+  } finally {
+    db.close();
+  }
+  if (flags.json) {
+    process.stdout.write(JSON.stringify(out, null, 2) + '\n');
+    return 0;
+  }
+  const table = [['repo', 'state', 'toplevels', 'remote', 'commits', 'unit trailer', 'unit suffix', 'claude co-authored', 'sessions', 'commit within hour']];
+  for (const r of out.repos) {
+    table.push([r.key.slice(0, 12), r.state, r.toplevels.join(','), r.remote_host, String(r.commits), String(r.unit_trailer),
+      String(r.unit_suffix), String(r.claude_coauthored), String(r.sessions), String(r.sessions_commit_within_hour)]);
+  }
+  printTable(table);
+  process.stdout.write(`${out.repos.length} repositories\n`);
+  for (const m of out.missing) {
+    const n = m.cwds.reduce((a, c) => a + c.sessions, 0);
+    process.stdout.write(`\nmissing, ${m.reason}: ${m.cwds.length} cwds, ${n} sessions\n`);
+    for (const c of m.cwds) process.stdout.write(`  ${c.cwd}  ${c.sessions}\n`);
+  }
   return 0;
 }
 
@@ -113,4 +158,5 @@ const [command, ...rest] = process.argv.slice(2);
 if (command === 'check') process.exitCode = check(rest);
 else if (command === 'scan') process.exitCode = await scanCmd(rest);
 else if (command === 'sessions') process.exitCode = await sessionsCmd(rest);
+else if (command === 'repos') process.exitCode = await reposCmd(rest);
 else process.exitCode = usage();
