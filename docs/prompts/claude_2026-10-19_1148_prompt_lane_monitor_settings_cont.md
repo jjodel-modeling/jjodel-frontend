@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1148
 Chat: C-2026-10-18-2225
 Front: harness
 Lane: phase2 (continuation of P-2026-10-19-1125 under RC-51; same worktree, uncommitted diff in place; menu bar app only)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane menubar-settings · dcb1b3dcb · verifica visiva passata 2026-10-19 (chat: captures 11-14, rounded popover, Quit in the footer dark and light, Settings view; Quit and Cmd+Q accepted)
 Depends: P-2026-10-19-1125
 Corregge: —
 Request: Alfonso, 2026-10-19 11:22 (rounded popover, settings, light and dark) and 11:29 («aggiungi una voce per uscire»), «procediamo» at 11:46. P-2026-10-19-1125 reached the context ceiling at 11:46 with its handoff written.

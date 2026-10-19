@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1125
 Chat: C-2026-10-18-2225
 Front: harness
 Lane: phase2 (one slice, the menu bar app only; no board change, no critical zone)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane menubar-settings · dcb1b3dcb · verifica visiva passata 2026-10-19 (chat: captures 11-14, rounded popover, Quit in the footer dark and light, Settings view; Quit and Cmd+Q accepted)
 Depends: P-2026-10-19-0129
 Corregge: —
 Request: Alfonso, 2026-10-19 11:22, in chat C-2026-10-18-2225, with a screenshot of the popover: «arrotonda i bordi ed aggiungi una voce settings con i vari settaggi, inoltre consenti la scelta del tema (light, dark)».

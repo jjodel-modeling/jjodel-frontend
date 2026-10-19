@@ -659,3 +659,29 @@ Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of rep
 **Smoke visivo**: passato — chat, unattended: chat: direct merge gates all green on node v26 (vitest 9415 tests, the 9 known import reds only)
 **Notes**: Rollback tag `pre-lanerun-tests` on `643f60350` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1045/result.json`.
 **Prompt document name**: 2026-10-19 10:45
+
+## 2026-10-19 — feat(lane-monitor-app): rounded popover, settings view, light and dark theme (P-2026-10-19-1125)
+**Prompt**: `claude_2026-10-19_1125_prompt_lane_monitor_settings_theme.md`: rounded 12 px popover on a transparent window, a gear opening a Settings view (theme, board URL, shortcut, Start at login, notifications) saved atomically to `config.json` and applied without a restart, a light palette at 4.5:1, tests first on the config and the board URL rule.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/src/{config.rs (new), links.rs, main.rs}`, `ui/popover.{html,css,js}`); code commit `dcb1b3dcb`; this inbox and the prompt's Status line. `tauri.conf.json`, `Cargo.toml`, `Cargo.lock`, `capabilities/default.json` unchanged.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 53/53, the 43 of S2-S5 among them; release build exit 0, no warning)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: captures 11-14 and round 1 checked, Quit and Cmd+Q accepted
+**Notes**: Transparency needs no `macos-private-api` since Tauri 2.12.1 (crate docs: no-op). Mutation bench 7/7. Live on 4712, scratch HOME: dark and light popover, Settings by click, theme and notifications saved atomically, Save, Back. Settings and error states rendered from `ui/` in headless Edge with a stubbed bridge: synthesized keys while Alfonso used the Mac were unsafe. Unattended: light text tokens darker where the given hues read below 4.5:1; reopen on lanes view. System follow-live not measured.
+**Prompt document name**: 2026-10-19 11:25
+
+## 2026-10-19 — feat(lane-monitor-app): Quit in the popover, Cmd+Q, settings spacing and path line (P-2026-10-19-1148)
+**Prompt**: `claude_2026-10-19_1148_prompt_lane_monitor_settings_cont.md`: continuation of P-2026-10-19-1125 after its RC-51 ceiling: read the round-2 build, capture the footer with Quit and the Settings view in dark and light on 4712 with the scratch HOME, test Quit by button and Cmd+Q on the test pid only, README, entries.
+**Files touched**: `tools/lane-monitor-app/README.md`; this inbox; the Status lines of P-2026-10-19-1125 and P-2026-10-19-1148. Code commit shared with P-2026-10-19-1125: `dcb1b3dcb`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (round-2 release build exit 0, no warning; `cargo test` 53/53; no source newer than the build)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: captures 11-14 checked, Quit and Cmd+Q accepted
+**Notes**: Captures 11-14 in `/tmp/menubar/settings/`. Quit button and Cmd+Q (CGEventPostToPid to the test pid) both exit with `quit from the popover`; 46611 untouched. At 11:47 the pinned test popover was clicked by hand (theme, Start at login, Open monitor): the scratch LaunchAgent sits in `/tmp`, Alfonso's is untouched. Scratch notifications turned off so the test instance posts no duplicates.
+**Prompt document name**: 2026-10-19 11:48
