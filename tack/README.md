@@ -6,7 +6,7 @@ It keeps metadata only, never message text, and needs no dependency beyond Node 
 `node:sqlite`; on an older Node every command exits 2).
 
 Status: slice 6 of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
-identity, the git collector, the metrics of all three layers (`tack metrics`), the board with its Sessions,
+identity, the git collector, the metrics of all three layers (`tack metrics`), the board with its Lanes, Sessions,
 Timeline and Insights views (`tack board`), the Jjodel log importer (`tack import jjodel-log`), the lane-run
 adapter and the parity check against Jjodel's lane board (`tack parity jjodel`) exist.
 
@@ -219,9 +219,20 @@ elsewhere it shows all repositories. The selection lives in the URL (`?repo=<key
 nothing is written in the repository, only the store is.
 
 The page is static files served from memory (`src/board/page.html`, `board.css`, `board.js`, `charts.js`,
-`timeline.js`, `insights.js`), no build step, no CDN, no web font, no chart library; light and dark follow
+`timeline.js`, `insights.js`, `lanes.js`), no build step, no CDN, no web font, no chart library; light and dark follow
 `prefers-color-scheme`.
 
+- **Lanes** is the first and default tab, drawn from `/api/lanes`. It answers one of four states, in order:
+  lanes turned off for the selected repository (`harness.laneRun = off`), no lane-run folder on this machine,
+  no lane of the selection, or the page; the first three show their sentence alone, no tile and no zero. The
+  page has six tiles (running, waiting on a question or hard-stop, blocked now, done and resolved in 24 h,
+  spend today), the lanes that need attention, a card per running lane (kind, tier, title, work against the
+  median work of its kind over the done lanes of 30 days, shown only with five or more; tokens in, context
+  peak, worktree, the chat of the prompt's `Chat:` line or «—»), the last 24 hours, the lanes by state, and
+  the lanes whose closing message reported «Decisions taken (unattended)», with the count only. A waiting
+  lane closes only on a commit naming its Prompt-ID after it ended (the tooltip says so); past 72 h it is
+  counted, not listed. Phase progress and architect-chat tokens are shown disabled with their reason: not
+  tracked in v0. The page refreshes every 20 s while it is shown and the browser tab is visible.
 - **Sessions** lists one row per session, newest first, with a summary strip and filters. The column
   «Unit / branch» shows the session's unit (layer 2, above), the branch otherwise.
 - **Timeline** draws one lane per repository (per branch when one repository is selected) on a Day or Week
@@ -250,6 +261,7 @@ JSON API, all GET except the rescan:
 | `/api/sessions?repo=&since=&until=` | one row per session: local day, start, duration, repository, branch, unit and its source (layer 2), link method, main-thread calls, context peak, cost (null when unknown, never 0), models, commit within the hour |
 | `/api/metrics?repo=&since=&until=` | every declared metric with its layer and state (`computed` with its value, or `not-adopted`); cost per day also by model family |
 | `/api/timeline?repo=&since=&until=` | per session, in epoch ms: start, end, main model family, first call at or above 200k, commit times within the hour |
+| `/api/lanes?repo=` | `state` and `reason`; with `ok`, the tiles, `attention` (`waiting`, `blocked`, `staleCount`), `running`, `last24`, `byState`, `adoptions`, `medianByKind`; `updatedMs` and the `closure` rule always |
 | `/api/health` | store path, schema version, last scan (time, duration, rows added), row counts |
 | `POST /api/rescan` | runs the incremental scan again and returns the new last scan |
 
@@ -322,11 +334,25 @@ ended. `GET /api/load` serves the samples. `appearance.loadNormalised` divides t
 count; the threshold stays raw. The process holding the notify lease also stores one sample per minute
 in `host_load`.
 
+### Collect on read
+
+`/api/lanes` reads the lane folders itself when no notifier holds a fresh lease (`TACK_NOTIFY=off`, say),
+at most once every 20 s; with a notifier running it only reads the store. `updatedMs` is the latest
+collection, the board's or the notifier's heartbeat.
+
 ### Store schema 5
 
 Schema 5 adds `notify_events`, `notify_baseline`, `notify_lease` and `host_load`. Like every table,
 their columns are listed with their sources in `NOTIFY_COLUMN_SOURCES` and `HOST_COLUMN_SOURCES`, and
 `test/privacy.test.mjs` checks them.
+
+### Store schema 6
+
+Schema 6 adds six `lanes` columns for the Lanes page: `kind` (the prompt's `Lane:` line, or its file name
+for a merge), `title` (its first `# ` line, at most 200 characters), `work_ms` (the sum of the turns),
+`worktree`, `resolved` (`resolved.txt` exists) and `adoptions` (the items of the «Decisions taken
+(unattended)» section of the last closing message; the text is not kept). The migration marks every lane
+for one re-read.
 
 ## Tests
 

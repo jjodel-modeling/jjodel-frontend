@@ -1,5 +1,5 @@
 // Tack board, page script: no build step, no dependency. The selection lives in the URL
-// (?repo=<key>|all&since=&until=, #<tab>); the page writes nothing anywhere else. The helpers above
+// (?repo=<key>|all&since=&until=, #<tab>; Lanes is the first and default tab); the page writes nothing anywhere else. The helpers above
 // the DOM guard are pure (test/board.test.mjs runs them in a vm); timeline.js and insights.js
 // register their views in TackViews and read the data loaded here.
 'use strict';
@@ -48,8 +48,8 @@
   if (typeof document === 'undefined') return;
 
   const $ = (id) => document.getElementById(id);
-  const TABS = ['sessions', 'timeline', 'insights', 'settings'];
-  const state = B.state = { repos: [], preselected: null, data: null, metrics: null, timeline: null, threshold: 200000, tab: 'sessions', selected: null };
+  const TABS = ['lanes', 'sessions', 'timeline', 'insights', 'settings'];
+  const state = B.state = { repos: [], preselected: null, data: null, metrics: null, timeline: null, threshold: 200000, tab: 'lanes', selected: null };
 
   async function get(path) {
     const r = await fetch(path, { cache: 'no-store' });
@@ -75,14 +75,14 @@
   /** Draws a registered view into its section when it is the visible tab and its data are in. */
   function renderView(t) {
     const v = root.TackViews[t];
-    // The settings view loads its own data: it draws before the sessions arrive.
-    if (!v || t !== state.tab || (!state.data && t !== 'settings')) return;
+    // The lanes and settings views load their own data: they draw before the sessions arrive.
+    if (!v || t !== state.tab || (!state.data && t !== 'settings' && t !== 'lanes')) return;
     v.render(state, $('tab-' + t));
     if (t === 'insights' && B.drawnMs === undefined) B.drawnMs = Math.round(performance.now());
   }
 
   function showTab(t) {
-    if (!TABS.includes(t)) t = 'sessions';
+    if (!TABS.includes(t)) t = 'lanes';
     state.tab = t;
     for (const x of TABS) { $('tab-' + x).hidden = x !== t; document.querySelector('nav.tabs>button[data-tab=' + x + ']').classList.toggle('on', x === t); }
     $('vt').textContent = t[0].toUpperCase() + t.slice(1);

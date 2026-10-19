@@ -200,13 +200,15 @@ export const MEDIAN_MIN_N = 5;
 export const LANE_CLOSURE = 'A waiting lane closes when a commit names its Prompt-ID after the lane ended. '
   + 'The prompt\'s Status: line and later lanes naming it in Depends: or Corregge: are not read.';
 
+// Grouped joins, not correlated subqueries: sessions.unit has no index (measured on the real store: 4 s per
+// correlated column against 15 ms grouped).
 const LANES = `
-SELECT l.*,
-  EXISTS (SELECT 1 FROM commits c WHERE c.unit = l.id AND l.end_ms IS NOT NULL AND c.commit_time * 1000 > l.end_ms) AS closed,
-  (SELECT SUM(c.input + c.cache_read + c.cache_creation) FROM calls c JOIN sessions s ON s.id = c.session_id
-    WHERE s.unit = l.id AND c.sidechain = 0) AS tokens_in,
-  (SELECT MAX(c.context) FROM calls c JOIN sessions s ON s.id = c.session_id WHERE s.unit = l.id AND c.sidechain = 0) AS context_peak
-FROM lanes l
+WITH tok AS (SELECT s.unit, SUM(c.input + c.cache_read + c.cache_creation) AS tokens_in, MAX(c.context) AS context_peak
+    FROM sessions s JOIN calls c ON c.session_id = s.id AND c.sidechain = 0 WHERE s.unit IS NOT NULL GROUP BY s.unit),
+  com AS (SELECT unit, MAX(commit_time) AS last_commit FROM commits WHERE unit IS NOT NULL GROUP BY unit)
+SELECT l.*, tok.tokens_in, tok.context_peak,
+  (l.end_ms IS NOT NULL AND com.last_commit IS NOT NULL AND com.last_commit * 1000 > l.end_ms) AS closed
+FROM lanes l LEFT JOIN tok ON tok.unit = l.id LEFT JOIN com ON com.unit = l.id
 WHERE (? IS NULL OR l.repo_key = ?)
 ORDER BY l.started_ms DESC, l.id DESC`;
 

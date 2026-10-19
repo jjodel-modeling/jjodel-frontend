@@ -31,6 +31,7 @@ const ASSETS = {
   '/board.js': ['text/javascript; charset=utf-8', asset('board.js')],
   '/timeline.js': ['text/javascript; charset=utf-8', asset('timeline.js')],
   '/insights.js': ['text/javascript; charset=utf-8', asset('insights.js')],
+  '/lanes.js': ['text/javascript; charset=utf-8', asset('lanes.js')],
   '/settings.js': ['text/javascript; charset=utf-8', asset('settings.js')],
   '/loadmeter.js': ['text/javascript; charset=utf-8', asset('loadmeter.js')],
 };
