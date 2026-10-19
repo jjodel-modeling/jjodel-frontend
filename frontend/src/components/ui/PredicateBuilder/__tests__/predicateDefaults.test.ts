@@ -51,11 +51,16 @@ describe('forPredicateKind', () => {
         expect(forPredicateKind('literal')).toEqual({ op: 'literal', value: true });
     });
 
+    it('simActive seeds the bare node, offered in the list', () => {
+        expect(forPredicateKind('simActive')).toEqual({ op: 'simActive' });
+        expect(PREDICATE_KIND_OPTIONS.find(o => o.value === 'simActive')?.label).toBe('Sim active (run in progress)');
+    });
+
     it('produces a node for every option in PREDICATE_KIND_OPTIONS', () => {
         for (const opt of PREDICATE_KIND_OPTIONS) {
             expect(forPredicateKind(opt.value).op).toBe(opt.value);
         }
-        expect(PREDICATE_KIND_OPTIONS).toHaveLength(13);
+        expect(PREDICATE_KIND_OPTIONS).toHaveLength(14);
     });
 });
 

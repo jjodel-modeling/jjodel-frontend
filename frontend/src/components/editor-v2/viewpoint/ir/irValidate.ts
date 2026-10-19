@@ -118,7 +118,7 @@ export const VALID_LABEL_POSITIONS: Record<LabelPosition, true> = {
 export const VALID_PREDICATE_OPS: Record<Predicate['op'], true> = {
     and: true, or: true, not: true,
     eq: true, neq: true, lt: true, lte: true, gt: true, gte: true,
-    exists: true, empty: true, isKind: true, marked: true, literal: true,
+    exists: true, empty: true, isKind: true, marked: true, simActive: true, literal: true,
 };
 
 /**

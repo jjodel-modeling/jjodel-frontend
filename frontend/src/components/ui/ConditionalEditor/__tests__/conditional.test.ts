@@ -196,6 +196,11 @@ describe('formatPredicate', () => {
         expect(formatPredicate({ op: 'marked' })).toBe('marked');
         expect(formatPredicate({ op: 'marked', path: '$source.value' })).toBe('marked on source');
     });
+    it('simActive, alone, under not, and untouched by the subject', () => {
+        expect(formatPredicate({ op: 'simActive' })).toBe('sim active');
+        expect(formatPredicate({ op: 'not', arg: { op: 'simActive' } })).toBe('not (sim active)');
+        expect(formatPredicate({ op: 'simActive' }, { subject: 'state' })).toBe('sim active');
+    });
     it('not', () => {
         expect(formatPredicate({ op: 'not', arg: { op: 'exists', path: '$name.value' } })).toBe('not (exists name)');
     });
