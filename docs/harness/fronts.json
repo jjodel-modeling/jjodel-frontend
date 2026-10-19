@@ -69,6 +69,13 @@
       "state": "open",
       "openedOn": "2026-10-18",
       "milestone": 8
+    },
+    {
+      "slug": "tack",
+      "title": "Tack: the lane board extracted into a project-agnostic harness monitor (v0 discovery first)",
+      "exit": "the Tack v0 slices are planned and the extraction moves to its own repository, recorded by a decision row",
+      "state": "open",
+      "openedOn": "2026-10-19"
     }
   ]
 }
