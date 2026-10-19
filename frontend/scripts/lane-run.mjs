@@ -47,7 +47,7 @@
  *                runs high; --effort (start, resume, merge --launch, chain)
  *                overrides it. runs.jsonl in the lane folder gets one line per
  *                launch, {at, kind: start|resume|merge|chain, session, tier,
- *                requestedModel, effort, reason, injectedBytes, logFrom}, which
+ *                requestedModel, effort, reason, injectedBytes, logFrom, errFrom}, which
  *                status completes once with effectiveModel (the `init` of its
  *                part of the log), outcome and exit (docs/harness/gates.md).
  *                Injection (AM-5): before the draw and before anything is
@@ -86,7 +86,12 @@
  *                by default); the exit code; the last `Outcome:` line of the
  *                assistant text in the log, a suffix after the word tolerated,
  *                `unparsed: <line>` when that line names no outcome, `none` while
- *                the lane runs (the line belongs to an earlier turn); the elapsed
+ *                the lane runs (the line belongs to an earlier turn); the line is
+ *                read from the latest run's part of the log only (logFrom of the
+ *                last runs.jsonl line), and an exited latest run without one reads
+ *                `limit` when its last result or its stderr tail carries the
+ *                usage-limit message, `died` on any other non-zero exit, else
+ *                `none` (issue #181); the elapsed
  *                time of the last run; the runs.jsonl lines (`runs: none`
  *                without the file): its count, the effort and the requested and
  *                effective models of the last run, completed first. Once the lane has exited, a warning line
@@ -361,6 +366,8 @@ const POLL_MS = 100;
 const PROMPT_ID = /^P-\d{4}-\d{2}-\d{2}-\d{4}$/;
 const HEADER_PROMPT_ID = /^Prompt-ID: (P-\d{4}-\d{2}-\d{2}-\d{4})\s*$/;
 const OUTCOME = /^Outcome:\s*(done|hard-stop|question|blocked)\b/;
+// A run that ended on the account's usage limit (issue #181): «You've hit your session limit», «… weekly limit».
+const USAGE_LIMIT = /hit your [\w -]*limit|usage limit reached/i;
 const FLAGS = ['--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions'];
 // RC-36: what --auto adds to every run of an automatic lane, start and resume alike.
 const AUTO_FLAGS = ['--disallowedTools', 'WebFetch,WebSearch', '--strict-mcp-config'];
@@ -1260,6 +1267,7 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     if (request) copyFileSync(request, f.request);
     closeSync(openSync(f.log, 'a'));
     const from = statSync(f.log).size;
+    const errFrom = existsSync(f.err) ? statSync(f.err).size : 0;
 
     if (goAhead) writeFileSync(f.goahead, goAhead + '\n');
     writeFileSync(f.tier, tier.line + '\n');
@@ -1275,7 +1283,7 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     launch(f, claude, worktree, promptFile, args, goAhead, autoRun, injected.text);
     appendRun(f, {
         at: ledgerTime(clock()), kind: ctx.merge ? 'merge' : ctx.kind === 'chain' ? 'chain' : 'start', session: null, tier: tier.tier,
-        requestedModel: tier.model || pinModel(), effort, reason: tier.reason + '; effort: ' + effortWhy, injectedBytes: injected.bytes, logFrom: from,
+        requestedModel: tier.model || pinModel(), effort, reason: tier.reason + '; effort: ' + effortWhy, injectedBytes: injected.bytes, logFrom: from, errFrom,
     });
     console.log('prompt: ' + promptFile);
     console.log('tier: ' + tier.line);
@@ -1372,10 +1380,11 @@ function resume(idArg, rest) {
     const autoRun = readAuto(f);
     const goAhead = !autoRun && existsSync(f.goahead) ? readTrim(f.goahead) : null;
     const from = existsSync(f.log) ? statSync(f.log).size : 0;
+    const errFrom = existsSync(f.err) ? statSync(f.err).size : 0;
     launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS, ...(autoRun ? AUTO_FLAGS : []), '--effort', effort], goAhead || null, autoRun);
     appendRun(f, {
         at: ledgerTime(clock()), kind: 'resume', session, tier: TIERS.includes(tierName) ? tierName : null,
-        requestedModel: null, effort, reason: 'resume passes no --model, the session keeps its own; effort: ' + effortWhy, logFrom: from,
+        requestedModel: null, effort, reason: 'resume passes no --model, the session keeps its own; effort: ' + effortWhy, logFrom: from, errFrom,
     });
     console.log('effort: ' + effort + ' (' + effortWhy + ')');
     console.log('log: ' + f.log);
@@ -1399,6 +1408,41 @@ function lastOutcome(path, from = 0) {
     return last;
 }
 
+/**
+ * Where the latest run starts in log.jsonl and stderr.log: the offsets of the
+ * last runs.jsonl line, else the whole files (a lane without the ledger, or a
+ * run recorded before errFrom). A resume appends to both files (issue #181).
+ */
+function latestRunFrom(f) {
+    let last = null;
+    try {
+        const runs = readRuns(f);
+        last = runs ? runs.last : null;
+    } catch {
+        last = null;
+    }
+    return {
+        log: last && Number.isInteger(last.logFrom) ? last.logFrom : 0,
+        err: last && Number.isInteger(last.errFrom) ? last.errFrom : 0,
+    };
+}
+
+/**
+ * How an exited run with no `Outcome:` line ended (issue #181): `limit` when its
+ * last result event, or its part of stderr.log, carries the usage-limit message,
+ * whatever the exit code; `died` on any other non-zero exit; null otherwise.
+ */
+function runFate(f, from) {
+    if (!existsSync(f.exit)) return null;
+    const results = events(f.log, from.log).filter((e) => e && e.type === 'result');
+    const last = results.length ? results[results.length - 1] : null;
+    if (last && typeof last.result === 'string' && USAGE_LIMIT.test(last.result)) return 'limit';
+    const err = existsSync(f.err) ? readFileSync(f.err).subarray(from.err).toString('utf8') : '';
+    if (err.split('\n').slice(-20).some((line) => USAGE_LIMIT.test(line))) return 'limit';
+    const code = readTrim(f.exit);
+    return code !== '' && code !== '0' ? 'died' : null;
+}
+
 function limitOption(rest) {
     const at = rest.indexOf('--limit');
     if (at === -1) return DEFAULT_LIMIT_MINUTES;
@@ -1416,11 +1460,15 @@ function laneState(f, limit) {
     let state = running ? 'running' : 'exited';
     if (running && elapsedMs > limit * 60000) state = 'blocked';
     // An Outcome line is the result of a turn: while a turn runs, the last one belongs to an earlier turn.
-    const outcome = running ? null : lastOutcome(f.log);
+    // It belongs to the latest run only: a resume that dies writes none and inherits none (issue #181).
+    const from = latestRunFrom(f);
+    const outcome = running ? null : lastOutcome(f.log, from.log);
+    // limit or died: an exited latest run with no Outcome line (issue #181).
+    const fate = outcome === null && !running ? runFate(f, from) : null;
     // resolved (P-2026-10-05-1720): a lane that exited blocked and was resolved afterwards, resolved.txt in its folder.
     const closed = outcome === null ? null : OUTCOME.exec(outcome);
     const resolved = closed && closed[1] === 'blocked' && existsSync(f.resolved) ? readTrim(f.resolved) : null;
-    return { state, exited, outcome, resolved, minutes: Math.floor(elapsedMs / 60000) };
+    return { state, exited, outcome, fate, resolved, minutes: Math.floor(elapsedMs / 60000) };
 }
 
 function status(idArg, rest) {
@@ -1440,7 +1488,7 @@ function status(idArg, rest) {
         console.log('recorded: ' + s.outcome);
         console.log('resolved: ' + s.resolved);
     } else {
-        console.log('outcome: ' + (s.outcome === null ? 'none' : OUTCOME.test(s.outcome) ? s.outcome : 'unparsed: ' + s.outcome));
+        console.log('outcome: ' + (s.outcome === null ? s.fate || 'none' : OUTCOME.test(s.outcome) ? s.outcome : 'unparsed: ' + s.outcome));
     }
     console.log('elapsed: ' + s.minutes + ' min, limit ' + limit + ' min');
     console.log('session: ' + (readTrim(f.session) || '-'));
@@ -1532,7 +1580,7 @@ function statusAll(rest) {
         runLines(laneFiles(id));
         const s = laneState(laneFiles(id), limit);
         const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
-        rows.push([id, s.state, s.outcome === null ? 'none' : s.resolved !== null ? 'resolved' : m ? m[1] : 'unparsed', s.minutes + ' min']);
+        rows.push([id, s.state, s.outcome === null ? s.fate || 'none' : s.resolved !== null ? 'resolved' : m ? m[1] : 'unparsed', s.minutes + ' min']);
     }
     for (const c of chains.sort((a, b) => (a.id < b.id ? 1 : -1))) {
         rows.push([c.id, chainState(c), chainPosition(c), Math.floor((Date.now() - c.created) / 60000) + ' min']);
@@ -1559,7 +1607,7 @@ function resolve_(idArg, rest) {
     const s = laneState(f, DEFAULT_LIMIT_MINUTES);
     if (s.state !== 'exited') refuse(id + ' is ' + s.state + ', not exited: only a lane that exited blocked can be resolved');
     const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
-    if (!m || m[1] !== 'blocked') refuse(id + ' is not blocked (outcome: ' + (s.outcome === null ? 'none' : s.outcome) + '): only a lane that exited blocked can be resolved');
+    if (!m || m[1] !== 'blocked') refuse(id + ' is not blocked (outcome: ' + (s.outcome === null ? s.fate || 'none' : s.outcome) + '): only a lane that exited blocked can be resolved');
     const d = clock();
     const { date } = stamp(d);
     const line = date + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' · ' + by + ' · ' + why;
