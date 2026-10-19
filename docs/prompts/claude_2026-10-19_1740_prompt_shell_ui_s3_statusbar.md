@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1740
 Chat: C-2026-10-19-1610
 Front: shell-ui
 Lane: fast (two style sheets, status bar only)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane shell-ui · code b9d279e96, docs commit carrying this line · verifica visiva OK (chat, 3013 at 1600x1000)
 Depends: P-2026-10-19-1725
 Request: Alfonso, 2026-10-19 17:05: «si, procedi in automatico con /lane auto anche per l'implementazione».
 

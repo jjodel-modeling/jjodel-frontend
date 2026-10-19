@@ -31,3 +31,16 @@ not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Gates: typecheck exit 0, vitest 5 files 66 passed (lastSaved plus four that mention Navbar), build exit 0 (13 `--shell-*` names and the advanced rule in the CSS bundle), smoke GREEN 12/0/3; smoke reports a baseline line improved 2 -> 0 (navbar project setup), baseline not edited here. Commit type `feat` not given by the prompt (P6): ratified as recommended, unattended. Dev server 3011, npm PID 91386 in dev.pid, listener node 91399.
 **Prompt document name**: 2026-10-19 17:25
+
+## 2026-10-19 — feat: status bar on shell tokens, Inter, 24px targets (S3)
+**Prompt**: P-2026-10-19-1740, slice S3 of the shell front: the app status bar in Inter via `--font-sans`, text colours and neutral borders from `--shell-*`, no text under 11px, jjodie and bell 24x24 with negative margins, the dark JjTL variant unchanged.
+**Files touched**: frontend/src/components/StatusBar.scss, frontend/src/components/StatusBarRightZone.scss (b9d279e96); docs/log-inbox/shell-ui.md, docs/prompts/claude_2026-10-19_1740_prompt_shell_ui_s3_statusbar.md (Status line)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, 3013 at 1600x1000: bar 0,968,1600,32; Inter Variable, version 11px; jjodie and bell 24x24; no fixed element over the bar; console init_dash only; 3.4px bell shift accepted per R-SHELL-5)
+**Notes**: Before->after, 1600x1000: bar 0,968,1600,32 both; Inter 0/16->16/16 text nodes; min text 10->11px (injected badge 9->11); jjodie 20x20->24x24, bell 15x18->24x24, bell top 975.5 kept, right 1506.77->1503.36 from the 3.41px wider version; dark mirror identical; console init_dash only, both. Gates: typecheck 0, vitest 11/11, build 0, smoke GREEN 12/0/3, A3 PASS. Unattended: colour role map, bell grows left/down, badge 11px, type feat. Dev 3013.
+**Prompt document name**: 2026-10-19 17:40
