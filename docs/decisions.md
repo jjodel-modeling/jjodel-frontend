@@ -6279,7 +6279,7 @@ Alfonso's answers in the project chat of 2026-10-19 («ok alle raccomandazioni»
   #475569, #64748b); `#94a3b8` stays only inside disabled controls (D-UI-13 Em. 6). No shell text under 11 px,
   shell hit targets at least 24 px without moving the layout, action icons muted only in Advanced. Source: pilot report after_v2.
 
-- **R-LIB-12** (2026-10-19, ratified by Alfonso 2026-10-19 20:49 «ok», evidence: read, verified: none, reversible: trunk).
+- **R-LIB-21** (2026-10-19, ratified by Alfonso 2026-10-19 20:49 «ok», evidence: read, verified: none, reversible: trunk).
   **Two chats share the front `notation-library`, each with its own scope.** C-2026-10-18-2254 (heir of
   C-2026-10-18-0110) owns the gallery content (catalog, packages, template and example viewpoints, `simActive`) and the
   merge of `library-gallery` into the trunk after the 3.1.0 tag, with the current Templates page. C-2026-10-19-1501 owns
