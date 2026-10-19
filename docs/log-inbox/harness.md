@@ -646,3 +646,16 @@ Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of rep
 **Smoke visivo**: non applicabile (no UI; P8 derogated)
 **Notes**: Cause in lane-run, not the tests: `citedDecisions` imported a `.ts` in-process, so it needed its own node to strip types; the tests spawn it with a replaced env, so NODE_OPTIONS never reaches it. Now a child node with the flag, like `gateCli`. Second cause, in the test: its wrapper lacked `--disable-warning`, and the warning read as a broken CLI. What differed in P-2026-10-19-0907: node v26.8.1 (`~/.local/bin`); pre-fix routing file 13/13 there.
 **Prompt document name**: 2026-10-19 10:20
+
+## 2026-10-19 — merge: lanerun-tests into alfonso-frontend-jjtl (P-2026-10-19-1045)
+**Prompt**: `claude_2026-10-19_1045_prompt_merge_lanerun-tests.md`, a direct merge by `lane-run merge --direct`, no session: `lanerun-tests` at `824e66b27` into `alfonso-frontend-jjtl`, merge base `6b3c265d4`, 2 commits on the branch side.
+**Files touched**: merge `6b544c8f4`: 5 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-19_0150_prompt_merge_menubar-disc.md`, `docs/prompts/claude_2026-10-19_1020_prompt_lanerun_tests.md`, `frontend/scripts/hooks/__tests__/laneRunRouting.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6b544c8f4` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9415 tests in 384 files, 9 red at import, hooks 936; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat: direct merge gates all green on node v26 (vitest 9415 tests, the 9 known import reds only)
+**Notes**: Rollback tag `pre-lanerun-tests` on `643f60350` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1045/result.json`.
+**Prompt document name**: 2026-10-19 10:45
