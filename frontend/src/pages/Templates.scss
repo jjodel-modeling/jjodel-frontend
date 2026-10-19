@@ -1,6 +1,8 @@
 /* ============================================
    TEMPLATES - the gallery of R-LIB-5 (P-2026-10-18-1800)
    The Projects page's shell (dashboard.scss); card grid on the 8px grid; secondary text 11px.
+   Redesign of the handoff §2.2, §2.3, §7 (P-2026-10-19-1615): header with search, «Start here», concept and level
+   chips, Starters and Worked examples, cards with a preview. New elements carry the page prefix `tpl-`.
    ============================================ */
 
 .templates-page__sub {
@@ -9,26 +11,343 @@
     margin: 0;
 }
 
-.templates-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+/* 1200px of content (handoff §2.2), inside the 1440px main content of the dashboard. */
+.dashboard-main-content.tpl-page {
+    max-width: 1200px;
+
+    button:focus-visible,
+    input:focus-visible,
+    .templates-card:focus-visible {
+        outline: 2px solid var(--color-border-focus);
+        outline-offset: 2px;
+    }
 }
 
+/* --- Header --- */
+
+.tpl-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.tpl-header__text {
+    min-width: 0;
+}
+
+.dashboard-page-title.tpl-header__title {
+    font-size: 30px;
+    line-height: 36px;
+    font-weight: var(--font-bold, 700);
+}
+
+.tpl-header__lead {
+    font-size: 16px;
+    line-height: 24px;
+    color: var(--color-slate-600);
+    margin: 8px 0 0;
+}
+
+.tpl-search {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 0 0 280px;
+}
+
+.tpl-search__label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.tpl-search__field {
+    position: relative;
+
+    .bi {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 14px;
+        color: var(--color-slate-500);
+        pointer-events: none;
+    }
+}
+
+.tpl-search__input {
+    width: 100%;
+    height: 36px;
+    padding: 0 12px 0 36px;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    background: var(--color-bg-secondary, #ffffff);
+    border: 1px solid var(--color-slate-300);
+    border-radius: var(--radius-md, 8px);
+
+    &::placeholder {
+        color: var(--color-slate-500);
+    }
+}
+
+/* --- Start here --- */
+
+.tpl-start {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    background: var(--color-slate-50);
+    border: 1px solid var(--color-slate-200);
+    border-radius: var(--radius-md, 8px);
+}
+
+.tpl-start__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.tpl-start__path {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.tpl-start__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    font-size: 14px;
+    color: var(--color-slate-700);
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--color-slate-100);
+        text-decoration: underline;
+    }
+}
+
+.tpl-start__step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-slate-700);
+    background: var(--color-bg-secondary, #ffffff);
+    border: 1px solid var(--color-slate-300);
+    border-radius: 50%;
+}
+
+/* --- Filters --- */
+
+.tpl-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.tpl-filters__row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tpl-filters__eyebrow {
+    width: 72px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-slate-500);
+}
+
+.tpl-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--color-slate-700);
+    background: var(--color-bg-secondary, #ffffff);
+    border: 1px solid var(--color-slate-300);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+        border-color: var(--color-slate-500);
+    }
+}
+
+.tpl-chip--pressed {
+    color: var(--color-text-inverse);
+    background: var(--color-slate-700);
+    border-color: var(--color-slate-700);
+
+    &:hover {
+        border-color: var(--color-slate-700);
+    }
+
+    .tpl-chip__count {
+        color: var(--color-slate-200);
+    }
+}
+
+/* A chip that would leave no entry under the other filter (R-LIB-17). */
+.tpl-chip--empty:not(.tpl-chip--pressed) {
+    color: var(--color-slate-500);
+    background: transparent;
+    border-style: dashed;
+}
+
+.tpl-chip__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.tpl-chip__count {
+    font-size: 12px;
+    color: var(--color-slate-500);
+    font-variant-numeric: tabular-nums;
+}
+
+.tpl-filters__clear {
+    margin-left: 8px;
+}
+
+.tpl-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.tpl-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 48px 16px;
+    margin-bottom: 32px;
+    border: 1px dashed var(--color-slate-300);
+    border-radius: var(--radius-md, 8px);
+}
+
+.tpl-empty__text {
+    font-size: 14px;
+    color: var(--color-slate-600);
+    margin: 0;
+}
+
+/* --- Level colours: the chip dot, the badge (tokens.css, `--color-level-*`) --- */
+
+.tpl-chip__dot.tpl-level--beginner { background: var(--color-level-beginner-fg); }
+.tpl-chip__dot.tpl-level--intermediate { background: var(--color-level-intermediate-fg); }
+.tpl-chip__dot.tpl-level--advanced { background: var(--color-level-advanced-fg); }
+
+.tpl-level-badge {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    border-radius: 10px;
+
+    &.tpl-level--beginner { color: var(--color-level-beginner-fg); background: var(--color-level-beginner-bg); }
+    &.tpl-level--intermediate { color: var(--color-level-intermediate-fg); background: var(--color-level-intermediate-bg); }
+    &.tpl-level--advanced { color: var(--color-level-advanced-fg); background: var(--color-level-advanced-bg); }
+}
+
+/* --- Sections and grid --- */
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* The preview runs edge to edge at the top; the body keeps the 16px padding. */
 .templates-card {
     display: flex;
     flex-direction: column;
-    padding: 16px;
-    background: var(--color-bg-secondary, #ffffff);
+    overflow: hidden;
+    background: var(--color-bg-primary, #ffffff);
     border: 1px solid var(--color-border-secondary, #e2e8f0);
     border-radius: var(--radius-md, 8px);
     transition: border-color 0.15s ease;
+    scroll-margin-top: 16px;
 
     &:hover {
         border-color: var(--color-border-hover, #94a3b8);
     }
 }
 
+/* Variant D's canvas: a 12px dot grid on white (handoff §3), the snapshot PNG fitted on top once loaded. */
+.tpl-card__preview {
+    position: relative;
+    flex: 0 0 136px;
+    height: 136px;
+    background-color: var(--color-bg-primary, #ffffff);
+    background-image: radial-gradient(var(--color-slate-200) 1px, transparent 1px);
+    background-size: 12px 12px;
+    border-bottom: 1px solid var(--color-slate-200);
+}
+
+.tpl-card__preview-img {
+    position: absolute;
+    inset: 8px;
+    width: calc(100% - 16px);
+    height: calc(100% - 16px);
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.tpl-card__preview-img--loaded {
+    opacity: 1;
+}
+
+.tpl-card__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    padding: 16px;
+}
+
+.tpl-card__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* TODO: cleanup - the card head, icon and titles of 3.1 (P-2026-10-18-1800), no longer rendered since P-2026-10-19-1615. */
 .templates-card__head {
     display: flex;
     align-items: center;
@@ -63,41 +382,105 @@
 }
 
 .templates-card__label {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
     color: var(--color-text-primary);
     margin: 0;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 /* Fixed line boxes: the counts arrive after the packages, and the card does not move when they do. */
-.templates-card__counts,
-.templates-card__description {
-    font-size: 11px;
-    line-height: 16px;
+.templates-card__counts {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 20px;
+    font-size: 12px;
+    line-height: 20px;
     color: var(--color-text-tertiary, #475569);
     margin: 0 0 8px;
 }
 
-.templates-card__counts {
-    height: 16px;
+.tpl-card__count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
 }
 
 .templates-card__description {
-    min-height: 32px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--color-text-secondary);
+    margin: 0 0 12px;
+    min-height: 40px;
+}
+
+/* Intentional content (R-LIB-19): the amber pair of the warning tokens. */
+.tpl-card__callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--color-warning-text);
+    background: var(--color-warning-bg);
+    border: 1px solid var(--color-warning-muted);
+    border-radius: var(--radius-sm, 4px);
+
+    .bi {
+        line-height: 18px;
+    }
+}
+
+.tpl-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+}
+
+.tpl-tag {
+    padding: 2px 8px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--color-slate-700);
+    background: var(--color-slate-100);
+    border-radius: var(--radius-sm, 4px);
 }
 
 .templates-card__actions {
     margin-top: auto;
     padding-top: 8px;
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: 8px;
 
     .bi {
         margin-right: 8px;
     }
+}
+
+/* The citable `<id>@<n>`, Advanced mode only: one line, cut with an ellipsis, never wrapped. */
+.tpl-card__id {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--color-text-tertiary, #475569);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .templates-clone-dialog {
@@ -108,15 +491,21 @@
     }
 }
 
-/* Two tiers (R-LIB-9, P-2026-10-18-2300): «Templates» then «Examples», each a titled grid. */
+/* Two tiers (R-LIB-9, P-2026-10-18-2300; R-LIB-13): «Starters» then «Worked examples», each a titled grid. */
 .templates-section {
     margin-bottom: 32px;
 }
 
 .templates-section__title {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 18px;
+    font-weight: 600;
     color: var(--color-text-primary);
+    margin: 0 0 4px;
+}
+
+.tpl-section__contract {
+    font-size: 14px;
+    color: var(--color-slate-600);
     margin: 0 0 16px;
 }
 
@@ -135,4 +524,15 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+@media (max-width: 760px) {
+    .tpl-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tpl-search {
+        flex-basis: auto;
+    }
 }
