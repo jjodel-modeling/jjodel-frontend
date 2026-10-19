@@ -35,7 +35,12 @@
  *                folder as request.md before the session starts, refused, naming
  *                the path, when the file is missing or empty. A prompt whose
  *                header has no `Request:` line, started without --request, gets
- *                one warning line and runs; a merge prompt gets none.
+ *                one warning line and runs; a merge prompt gets none. A
+ *                `Request:` line that is neither an https:// URL nor `none (…)`,
+ *                without --request and without a claude.ai `Claude-Session:`
+ *                trailer on the commit that added the prompt, is refused before
+ *                anything is written: the lane board could not link the lane to
+ *                its chat (P-2026-10-19-2105).
  *                Effort (AM-7): every run passes `--effort <level>`; heavy runs
  *                xhigh with --critical-zone-goahead, a CLAUDE.md 3.2 file named
  *                in DOVE, or `visual bug` on its Lane line, high otherwise; light
@@ -592,6 +597,22 @@ function requestOption(rest) {
     if (!existsSync(path) || !statSync(path).isFile()) refuse('--request: no request file: ' + path);
     if (readFileSync(path, 'utf8').trim() === '') refuse('--request: the request file is empty: ' + path);
     return path;
+}
+
+/** The `Claude-Session:` trailer of the commit that added the prompt file (the oldest adding commit, as the lane board reads it); '' outside a repo or without one. */
+function addedSession(promptFile) {
+    const r = git(dirname(promptFile), ['log', '--all', '--diff-filter=A', '--format=%x1e%B', '--', basename(promptFile)], [0, 128]);
+    if (r.status !== 0) return '';
+    const added = r.out.split('\x1e').filter((x) => x.trim() !== '').pop() || '';
+    return (added.match(/^Claude-Session:[ \t]*(\S+)/m) || [])[1] || '';
+}
+
+/** P13, RC-43: the lane board links a lane to its chat through a URL Request:, --request, or the prompt commit's claude.ai Claude-Session: trailer; `Request: none (…)` declares there is none. */
+function chatLinked(header, request, promptFile) {
+    if (request) return true;
+    const value = (/^Request:[ \t]*(\S.*)$/m.exec(header) || [])[1] || '';
+    if (/^https:\/\//.test(value) || /^none\b/.test(value)) return true;
+    return /^https:\/\/claude\.ai\//.test(addedSession(promptFile));
 }
 
 // ── the model tier (RC-32) ───────────────────────────────────────────────────
@@ -1200,7 +1221,10 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     const request = requestOption(rest);
     // RC-43: a prompt names its request; the merge prompts lane-run renders are exempt (their Lane line, also on a launch by hand).
     const { header } = promptParts(text);
-    const unnamed = !request && !/^Request:[ \t]*\S/m.test(header) && !ctx.merge && !/^Lane:\s*full \(merge\b/m.test(header);
+    const exempt = ctx.merge || /^Lane:\s*full \(merge\b/m.test(header);
+    const unnamed = !request && !/^Request:[ \t]*\S/m.test(header) && !exempt;
+    // A prompt with a Request: line the board cannot follow back to its chat is refused; one without the line keeps the warning above.
+    if (!exempt && !unnamed && !chatLinked(header, request, promptFile)) refuse(promptFile + ': the lane cannot be linked to its chat: start the Request: line with the chat URL, or commit the prompt with the Claude-Session: trailer (P13, RC-43)');
     // RC-44: a prompt in the front rule's scope names an open front of the registry; Check E is the backstop.
     if (!ctx.merge && inFrontScope(text, id)) {
         let fronts;
