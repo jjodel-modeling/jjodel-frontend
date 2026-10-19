@@ -132,3 +132,16 @@ not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: Chat: frontend tree at 792969efa identical to the shell-ui-s8 tip 41b25c723 checked on 3018 (rows 26/24, outer borders both 1px #e2e8f0, jj-section-title 11px/500/#64748b, rects unchanged, console init_dash only).
 **Notes**: Rollback tag `pre-shell-ui-s8` on `4f560e9a8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2019/result.json`.
 **Prompt document name**: 2026-10-19 20:19
+
+## 2026-10-19 — merge: shell-ui-s3 into alfonso-frontend-jjtl (P-2026-10-19-1816)
+**Prompt**: `claude_2026-10-19_1816_prompt_merge_shell-ui-s3.md`, a direct merge by `lane-run merge --direct`, no session: `shell-ui-s3` at `ff01668cf` into `alfonso-frontend-jjtl`, merge base `0a6195258`, 2 commits on the branch side.
+**Files touched**: merge `bf259570f`: 4 files from the branch side (`docs/log-inbox/shell-ui.md`, `docs/prompts/claude_2026-10-19_1740_prompt_shell_ui_s3_statusbar.md`, `frontend/src/components/StatusBar.scss`, `frontend/src/components/StatusBarRightZone.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bf259570f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9415 tests in 384 files, 9 red at import, hooks 936; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Alfonso checked the status bar on 3001 after hard refresh (Inter font, shell text colours, 11 px minimum, 24 px hit targets on Jjodie and bell, bar height and notification anchor unchanged, dark JjTL bar unchanged): ok, 2026-10-19 20:46
+**Notes**: Rollback tag `pre-shell-ui-s3` on `5a082c73a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1816/result.json`.
+**Prompt document name**: 2026-10-19 18:16
