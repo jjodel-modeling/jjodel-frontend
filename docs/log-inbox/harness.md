@@ -590,3 +590,20 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 **Ticket**: a board whose tree predates S1 answers `/api/attention` (any path) with its HTML page and a 200, so `poll.rs` classifies it as `error` («Board error: bad JSON: expected value at line 1 column 1») instead of `too-old`, which it reserves for a 404. Measured on 4700 at 01:37. Fix: read a 200 with `content-type: text/html` as `too-old`. Transient: gone once the release tree carries S1 and the board is restarted.
 **Priority**: low
 **Found in**: P-2026-10-19-0129
+
+## 2026-10-18 — docs(harness): health signals catalogue and retrospective backtest, Phase 1 (P-2026-10-18-2220)
+**Prompt**: `claude_2026-10-18_2220_prompt_harness_health_retrospective.md`, lane session `ef8b1efd-8d14-4898-968b-02c352db940e`: freeze the harness incidents, inventory the data, compute S1 to S6 weekly and rolling 4 weeks, backtest with a tuning/evaluation split, report and catalogue; Phase 1 only.
+**Files touched**: `10ac68007`: `docs/discovery/discovery_2026-10-18_harness_health_retrospective.md` (§1 only, 22 incidents frozen); `e1bc1ace7`: `docs/discovery/harness/harness-health-retro.mjs` (new), `docs/discovery/harness/harness-health-retro/` (11 CSV, 98 KB); this commit: the full report, this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only on product and governance; check:docs 5/5; the script gives identical bytes on two runs and from a clean checkout of `e1bc1ace7` (combined sha256 `cee3fd3d449f9ebe`), tree left clean.
+**Out-of-scope changes**: no. Only DOVE paths.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: No signal had a quiet week in 08-01..09-30, so no false-alarm rate is measurable; lane data starts 09-26, leaving lane signals untunable. Kept as invariant breaks: S2t (RC-20), S4a (P9), S4d (P13), S5 (RC-33); state at the cutoff red, set by S4d (6 stale prompts). S1a works only on tuning, not proposed. Addendum A1 to A4 (found by the signals, not scored). Session stopped at the RC-51 soft ceiling after this commit. Report §3, §4.
+**Prompt document name**: 2026-10-18 22:20
+
+Decisions taken (unattended): (1) windows: 21-day lead and pre-incident margin, 7-day post-notice margin, rolling 4 weeks; (2) thresholds from ratified rules where one exists (RC-20 90 min, RC-33, RC-51 200k, P9 20 then 40, P13), else the max over quiet tuning weeks, falling back to the 75th percentile of the tuning weeks; (3) S5b window = median same-chat cadence on a front, 0.65 h; (4) I01/I02 split from one seed, I20 noticed = date of this prompt, A1 to A4 kept out of the scoring.
+
+Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of report §6.1 are proposals for the chat under RC-25.

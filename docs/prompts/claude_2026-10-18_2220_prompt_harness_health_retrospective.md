@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-2220
 Chat: C-2026-10-18-2220
 Front: harness
 Lane: full (discovery, read-only on product and governance; heavy by rule, not drawn)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane health-disc · hard-stop, Phase 1 report
 Depends: P-2026-10-18-2207
 Corregge: —
 Request: Alfonso, 2026-10-18 21:58-22:15, in the project chat: an indicator of the harness's instantaneous health and its trend over time, able to warn before problems like past ones; a retrospective analysis; «lancialo pure» at 22:15
