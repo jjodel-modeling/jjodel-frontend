@@ -15,8 +15,9 @@ export const COLUMN_SOURCES = {
   sessions: {
     id: 'sessionId', file_id: 'ingest.id', cwd: 'cwd', first_ts: 'timestamp', last_ts: 'timestamp',
     models: 'message.model', cli_version: 'version', cost_usd: 'totalCostUSD', cost_known: 'totalCostUSD',
-    cost_unknown_model: 'hasUnknownModelCost',
+    cost_unknown_model: 'hasUnknownModelCost', git_branch: 'gitBranch',
   },
+  session_models: { session_id: 'sessionId', model: 'cost-state.modelUsage key', cost_usd: 'cost-state.modelUsage.costUSD' },
   calls: {
     message_id: 'message.id', session_id: 'sessionId', file_id: 'ingest.id', ts: 'timestamp', model: 'message.model',
     sidechain: 'isSidechain', input: 'message.usage.input_tokens', output: 'message.usage.output_tokens',
@@ -65,6 +66,7 @@ export function scan(db, root = defaultRoot()) {
   const st = {
     files: 0, read: 0, reread: 0, unchanged: 0, gone: 0, bytes: 0, records: 0, malformed: 0,
     used: {}, skipped: {}, sessionsAdded: 0, callsAdded: 0, callsUpdated: 0, callsRemoved: 0, duplicates: 0,
+    modelCostsAdded: 0, modelCostsUpdated: 0,
   };
   const q = prepare(db);
   const files = listTranscripts(root);
@@ -88,6 +90,7 @@ export function scan(db, root = defaultRoot()) {
       } else if (truncated) {
         st.reread++;
         st.callsRemoved += Number(q.delCallsOfFile.run(cur.id).changes);
+        q.delModelsOfFile.run(cur.id);
         q.delSessionsOfFile.run(cur.id);
         cur = { ...cur, offset: 0 };
       }
@@ -126,7 +129,8 @@ function readFrom(path, offset, size) {
 
 function ingestChunk(q, f, fileId, buf, end, st) {
   const calls = new Map();
-  const sess = { cwd: null, first: null, last: null, version: null, cost: null, unknownCost: false };
+  const sess = { cwd: null, first: null, last: null, version: null, cost: null, unknownCost: false, branch: null };
+  const modelCost = new Map();
   let start = 0;
   while (start < end) {
     const nl = buf.indexOf(0x0a, start);
@@ -153,6 +157,7 @@ function ingestChunk(q, f, fileId, buf, end, st) {
     }
     if (typeof r.cwd === 'string' && !sess.cwd) sess.cwd = r.cwd;
     if (typeof r.version === 'string') sess.version = r.version;
+    if (!sess.branch && typeof r.gitBranch === 'string' && r.gitBranch !== '' && r.gitBranch !== 'HEAD') sess.branch = r.gitBranch;
 
     let used = false;
     const m = r.message;
@@ -173,6 +178,12 @@ function ingestChunk(q, f, fileId, buf, end, st) {
     } else if (type === 'cost-state' && Number.isFinite(r.totalCostUSD)) {
       sess.cost = Math.max(sess.cost ?? 0, r.totalCostUSD);
       if (r.hasUnknownModelCost === true) sess.unknownCost = true;
+      const mu = r.modelUsage;
+      if (mu && typeof mu === 'object' && !Array.isArray(mu)) {
+        for (const [model, v] of Object.entries(mu)) {
+          if (v && Number.isFinite(v.costUSD)) modelCost.set(model, Math.max(modelCost.get(model) ?? 0, v.costUSD));
+        }
+      }
       used = true;
     }
     const tally = used ? st.used : st.skipped;
@@ -194,11 +205,15 @@ function ingestChunk(q, f, fileId, buf, end, st) {
   }
 
   if (f.kind !== 'main') return;
+  for (const [model, usd] of modelCost) {
+    if (Number(q.insModel.run(sessionId, model, usd).changes) > 0) st.modelCostsAdded++;
+    else if (Number(q.updModel.run(usd, sessionId, model, usd).changes) > 0) st.modelCostsUpdated++;
+  }
   const models = new Set(calls.size ? [...calls.values()].map((c) => c.model).filter(Boolean) : []);
   const ex = q.getSession.get(sessionId);
   if (!ex) {
     q.insSession.run(sessionId, fileId, sess.cwd, sess.first, sess.last, JSON.stringify([...models].sort()), sess.version,
-      sess.cost, sess.cost === null ? 0 : 1, sess.unknownCost ? 1 : 0);
+      sess.cost, sess.cost === null ? 0 : 1, sess.unknownCost ? 1 : 0, sess.branch);
     st.sessionsAdded++;
     return;
   }
@@ -214,6 +229,7 @@ function ingestChunk(q, f, fileId, buf, end, st) {
     sess.cost === null ? ex.cost_usd : Math.max(ex.cost_usd ?? 0, sess.cost),
     ex.cost_known || sess.cost !== null ? 1 : 0,
     ex.cost_unknown_model || sess.unknownCost ? 1 : 0,
+    ex.git_branch ?? sess.branch,
     sessionId,
   );
 }
@@ -226,6 +242,9 @@ function prepare(db) {
     updIngest: db.prepare('UPDATE ingest SET size = ?, mtime_ms = ?, offset = ? WHERE id = ?'),
     delCallsOfFile: db.prepare('DELETE FROM calls WHERE file_id = ?'),
     delSessionsOfFile: db.prepare('DELETE FROM sessions WHERE file_id = ?'),
+    delModelsOfFile: db.prepare('DELETE FROM session_models WHERE session_id IN (SELECT id FROM sessions WHERE file_id = ?)'),
+    insModel: db.prepare('INSERT OR IGNORE INTO session_models (session_id, model, cost_usd) VALUES (?, ?, ?)'),
+    updModel: db.prepare('UPDATE session_models SET cost_usd = ? WHERE session_id = ? AND model = ? AND cost_usd < ?'),
     getCall: db.prepare('SELECT file_id FROM calls WHERE message_id = ?'),
     insCall: db.prepare(`INSERT INTO calls (message_id, session_id, file_id, ts, sidechain, model, input, output, cache_read,
       cache_creation, context) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
@@ -233,9 +252,9 @@ function prepare(db) {
       WHERE message_id = ? AND NOT (model IS ? AND input = ? AND output = ? AND cache_read = ? AND cache_creation = ? AND context = ?)`),
     getSession: db.prepare('SELECT * FROM sessions WHERE id = ?'),
     insSession: db.prepare(`INSERT INTO sessions (id, file_id, cwd, first_ts, last_ts, models, cli_version, cost_usd, cost_known,
-      cost_unknown_model) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+      cost_unknown_model, git_branch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
     updSession: db.prepare(`UPDATE sessions SET cwd = ?, first_ts = ?, last_ts = ?, models = ?, cli_version = ?, cost_usd = ?,
-      cost_known = ?, cost_unknown_model = ? WHERE id = ?`),
+      cost_known = ?, cost_unknown_model = ?, git_branch = ? WHERE id = ?`),
   };
 }
 

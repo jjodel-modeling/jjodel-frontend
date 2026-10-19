@@ -161,6 +161,28 @@ test('commits: both linkage forms, co-author detection and numstat totals; no me
   assert.deepEqual([repo.commits, repo.unit_trailer, repo.unit_suffix, repo.claude_coauthored], [6, 2, 1, 2]);
 });
 
+test('commits: a rename is stored as a deletion and an addition, even when the git config turns renames on', (t) => {
+  const { dir, db } = world(t);
+  const a = initRepo(join(dir, 'a'));
+  commit(a, { sec: T0, file: 'old.txt', content: 'l1\nl2\nl3\n' });
+  g(a, ['mv', 'old.txt', 'new.txt']);
+  g(a, ['commit', '-q', '-m', 'rename'], { sec: T0 + 60 });
+  const mv = g(a, ['rev-parse', 'HEAD']);
+  // Positive control: with rename detection on, git itself reports one row with no line changed.
+  assert.match(g(a, ['-c', 'diff.renames=true', 'log', '-1', '--numstat', '--format=', mv]), /^0\t0\t/);
+  // The collector inherits the environment: turn rename detection on there too.
+  const saved = { ...process.env };
+  Object.assign(process.env, { GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'diff.renames', GIT_CONFIG_VALUE_0: 'copies' });
+  t.after(() => {
+    for (const k of ['GIT_CONFIG_COUNT', 'GIT_CONFIG_KEY_0', 'GIT_CONFIG_VALUE_0']) if (!(k in saved)) delete process.env[k];
+  });
+  addSession(db, 's', a, T0, T0);
+  identify(db);
+  collectGit(db);
+  const c = commitRow(db, mv);
+  assert.deepEqual([c.files, c.insertions, c.deletions], [2, 3, 3]);
+});
+
 test('parseLog: a merge has no numstat rows and counts its parents', () => {
   const out = '\x00aaa\x00p1 p2\x00100\x00200\x00Merge x (P-2026-01-05-1000)\n\x00\n\x00bbb\x00p1\x00100\x00200\x00m\n\x00\n\n3\t1\tf\n-\t-\tbin\n';
   assert.deepEqual(parseLog(out).map((c) => [c.sha, c.parents, c.files, c.ins, c.del, c.unit, c.form]),
@@ -219,7 +241,8 @@ test('proximity: yes inside [first event, last event + 1h], no outside, unknown 
   addSession(db, 'inside', a, T0 + 2 * 3600 - 60, T0 + 2 * 3600 - 30);
   addSession(db, 'before', a, T0 + 2 * 3600 + 1, T0 + 3 * 3600); // commit 1 s before the first event
   addSession(db, 'late', a, T0 - 3600, T0 + 3600 - 1); // commit 1 s after last + 1h
-  addSession(db, 'gone', join(dir, 'nope'), T0, T0 + 7200);
+  mkdirSync(join(dir, 'void')); // no present work tree beside the missing path: no sibling inference
+  addSession(db, 'gone', join(dir, 'void', 'nope'), T0, T0 + 7200);
   identify(db);
   collectGit(db);
   assert.equal(proximity(db, 'edge'), 'yes');
@@ -261,7 +284,8 @@ test('CLI: scan runs the three stages, a second scan adds 0 rows; repos and sess
   commit(a, { sec: T0 + 600, message: 'feat (P-2026-01-05-1000)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n' });
   const root = join(dir, 'projects');
   addTranscript(root, 's-in', a, T0, T0 + 60);
-  addTranscript(root, 's-gone', join(dir, 'deleted-clone'), T0, T0 + 60);
+  mkdirSync(join(dir, 'void'));
+  addTranscript(root, 's-gone', join(dir, 'void', 'deleted-clone'), T0, T0 + 60);
   const store = join(dir, 'cli.db');
   const run = (...args) => spawnSync(process.execPath, [TACK, ...args], { encoding: 'utf8', env: { ...process.env, TACK_STORE: '' } });
   const s1 = run('scan', '--root', root, '--store', store);
@@ -277,11 +301,12 @@ test('CLI: scan runs the three stages, a second scan adds 0 rows; repos and sess
   const j = JSON.parse(run('repos', '--store', store, '--json').stdout);
   assert.deepEqual(j.repos.map((r) => [r.commits, r.unit_suffix, r.claude_coauthored, r.sessions, r.sessions_commit_within_hour, r.remote_host]),
     [[1, 1, 1, 1, 1, '-']]);
-  assert.deepEqual(j.missing, [{ reason: 'path-gone', cwds: [{ cwd: join(dir, 'deleted-clone'), sessions: 1 }] }]);
+  assert.deepEqual(j.missing, [{ reason: 'path-gone', cwds: [{ cwd: join(dir, 'void', 'deleted-clone'), sessions: 1 }] }]);
   const txt = run('repos', '--store', store);
   assert.match(txt.stdout, /missing, path-gone: 1 cwds, 1 sessions/);
   const ses = run('sessions', '--store', store);
   assert.match(ses.stdout, /commit within hour/);
-  assert.match(ses.stdout, /claude-fixture-3\s+yes\n/);
-  assert.match(ses.stdout, /claude-fixture-3\s+unknown\n/);
+  assert.match(ses.stdout, /\blink\s+commit within hour\n/);
+  assert.match(ses.stdout, /claude-fixture-3\s+direct\s+yes\n/);
+  assert.match(ses.stdout, /claude-fixture-3\s+none\s+unknown\n/);
 });
