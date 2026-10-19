@@ -1515,15 +1515,6 @@ function NavbarComponent(props: AllProps) {
                     icon: <i className="bi bi-highlighter" />,
                     disabled: isDashboard
                 },
-                /* Advanced-only: diagnostic toggle */
-                !props.advanced ? null : {name: 'divisor', function: placeholder},
-                !props.advanced ? null : {name: props.debug ? 'Debug Mode  \u2713' : 'Debug Mode',
-                    function: () => {
-                        TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
-                        U.debug = !props.debug;
-                    },
-                    icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
-                },
             ]
         },
 
@@ -1533,19 +1524,9 @@ function NavbarComponent(props: AllProps) {
             subItems: [
                 ...(metamodels.length === 0 ? [
                     {name: 'No metamodel tools', disabled: true, icon: <i className="bi bi-tools" />}
-                ] : [
-                    {name: 'Metamodel Tools', icon: <i className="bi bi-tools" />, disabled: true,
-                        subItems: metamodels.map((m2, i) => ({
-                            name: mmNamesArray[i] || 'Unnamed',
-                            icon: <i className="bi bi-diagram-3" />,
-                            disabled: true
-                        }))
-                    },
-                    {name: 'Custom Tools', icon: <i className="bi bi-gear" />, disabled: true}
-                ]),
+                ] : []),
                 // Environment Generation - hidden when no metamodels
                 ...(metamodels.length === 0 ? [] : [
-                    {name: 'divisor'},
                     {name: 'Configure Environment...',
                         function: () => {
                             window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD));
@@ -1554,7 +1535,6 @@ function NavbarComponent(props: AllProps) {
                     },
                     {name: 'divisor'},
                     {name: 'Polymetric View',
-                        jsx: <span>Polymetric View <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px', fontWeight: 400 }}>(beta)</span></span>,
                         function: () => {
                             window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_POLYMETRIC));
                         },
@@ -1574,7 +1554,6 @@ function NavbarComponent(props: AllProps) {
                 ...(props.advanced ? [
                     isDashboard ? null : {name: 'divisor', function: placeholder},
                     (isDashboard || metamodels.length === 0) ? null : {name: 'M2 Analytics', function: openM2Analytics, icon: <i className="bi bi-graph-up" />},
-                    isDashboard ? null : {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: <i className={`bi ${debuggerr ? 'bi-eye-slash' : 'bi-eye'}`} />},
                     isDashboard ? null : {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: <i className="bi bi-tools" />},
                 ] : []),
             ]
@@ -1605,7 +1584,6 @@ function NavbarComponent(props: AllProps) {
         {name: 'divisor'},
         {name: 'Learn Jjodel', function: ()=> open("https://docs.jjodel.io/getting-started/"), icon: <i className="bi bi-infinity" />},
         {name: 'Getting Started', function: ()=> open("https://docs.jjodel.io/getting-started/"), icon: <i className="bi bi-rocket-takeoff" />},
-        {name: 'Video Tutorials', function: ()=> open("https://docs.jjodel.io/video-pills/"), icon: <i className="bi bi-play-circle" />},
         {name: 'User Guide', function: ()=> open('https://docs.jjodel.io/user-guide/dashboard/'), icon: <i className="bi bi-journal-text" />},
         {name: 'Glossary', function: ()=> open('https://docs.jjodel.io/concepts/glossary/'), icon: <i className="bi bi-book" />},
         {name: 'FAQ', function: ()=> open('https://docs.jjodel.io/faq/'), icon: <i className="bi bi-chat-left-dots" />},
