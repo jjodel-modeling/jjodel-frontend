@@ -226,3 +226,18 @@ Parity, `tack parity jjodel --days 14 --store /tmp/tack-s6/real.db --repo ~/jjod
 Importer on the trunk `alfonso-frontend-jjtl`: 1,980 entries read, 1,177 converted (pass `tack check`), rejected 803: unit-required 740 (entries before the `Prompt document name` field), corrects-unresolved 25, field-required 21, cause-required 7, cause-forbidden 6, regressions-enum 4; an `--out` inside the repository is refused (exit 2). Real scan: units by prompt 424, by reachable commit 97, none 85; 584 lane folders; 1,177 log entries. Jjodel since 2026-10-06 in `tack metrics`: first-shot 210 of 240 (87.5%), regression rate 1.4%, out-of-scope rate 12.1%.
 
 Run on this Mac: the 5b board (PID 29050, a `tack` node process) stopped; `tack board --no-open --port 4710 --store /tmp/tack-s6/real.db` started from `~/jjodel-release` with the code of this worktree and `TACK_IMPORTS=/tmp/tack-s6/imports`, left running, PID in `/tmp/tack-s6/board.pid`; `git status --porcelain` of `~/jjodel-release` empty. `/api/sessions` for Jjodel: 537 sessions, all with the branch, 506 with a unit (409 prompt, 97 commit); the `tack-s4` session of 13:34 now shows P-2026-10-19-1335 (by prompt), not P-2026-10-19-1331. `/api/metrics`: all 8 layer-2/3 metrics `computed`; Insights renders 14 svg in a vm, no NaN.
+
+## 2026-10-19 — feat: Tack slice 7, settings, notifications and host load strip (closure)
+**Prompt**: Close Phase 2 of P-2026-10-19-1800 after two context-ceiling stops (P-2026-10-19-1800, P-2026-10-19-2140): two red tests, full suite, README, report §0, board on 4710, commits, Status flips
+**Files touched**: tack/** (30 files, code commit e0fd6d286); docs/discovery/discovery_2026-10-19_tack_settings_notifications.md (§0 only), docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1800_prompt_tack_s7_settings_notifications.md (Status), docs/prompts/claude_2026-10-19_2140_prompt_tack_s7_phase2_continuation.md and claude_2026-10-19_2225_prompt_tack_s7_closure_session.md (added from the trunk, Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (every file under `tack/**` or listed in DOVE)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, board left running on 4710)
+**Notes**: Full tack/test suite: 185 tests, 185 pass, 0 fail (TAP counts, slice 6: 160). The twelve unattended decisions are report §6; none awaits Alfonso (§7). Report §0 sits above the existing «0. Hypotheses under test», which was not renumbered (scope §0 only). The 2140 and 2225 prompts were added from the trunk to flip their Status, as slice 4 did.
+**Prompt document name**: 2026-10-19 22:25
+
+Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board`) stopped; `/tmp/tack-s6/real.db` copied to `/tmp/tack-s7/real.db`; started from `~/jjodel-w-tack-s7/tack/bin/tack.mjs board --no-open --port 4710 --store /tmp/tack-s7/real.db` with `TACK_IMPORTS=/tmp/tack-s6/imports` and `TACK_NOTIFY=off`, PID in `/tmp/tack-s7/board.pid`. From this worktree because the slice 7 code exists only on `tack-s7` until the merge. `TACK_NOTIFY=off` (unattended, RC-25) so the board sends no real desktop notification before the merge; the load strip still works from the in-process sampler. `curl`: `/` 200, `/settings` 200, `/api/settings` 200 (9527 B JSON), `/api/load` 200 (samples, threshold 20, 8 cores). `tack check`: the three settings fixtures pass, the invalid one exits 1 with three violations, `valid.jsonl` passes.

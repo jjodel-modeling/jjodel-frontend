@@ -11,6 +11,14 @@
 2026-10-19 18:20-18:30, against a copy of the slice 6 store (`/tmp/tack-s6/real.db` copied to
 `/tmp/tack-s7-probe/store.db`; nothing written anywhere else).
 
+## 0. Answer in brief
+
+- Settings: one schema (`tack/contract/v1/settings.json`), three files (user, project `tack.json`, local `tack.local.json`), default < user < project < local, one key one merge unit, credentials only in the user file.
+- Notifications: rules over the store, no lane-run hook; each occurrence claimed once in `notify_events` (rising edge, baseline, suppressed, stale, quiet-hours digest); desktop and ntfy channels, ntfy off by default; one notifier per store by lease.
+- Load strip: 5 s samples of `os.loadavg()` served at `/api/load`, one stored sample per minute in `host_load`; store schema 5 adds four tables.
+- Phase 2 landed across P-2026-10-19-1800, P-2026-10-19-2140 and P-2026-10-19-2225 (two context-ceiling stops): full `tack/test` suite 185 tests, 185 pass, 0 fail (slice 6: 160).
+- The twelve unattended decisions are in §6; none waits for Alfonso (§7).
+
 ## 0. Hypotheses under test
 
 | # | Hypothesis | Verdict |

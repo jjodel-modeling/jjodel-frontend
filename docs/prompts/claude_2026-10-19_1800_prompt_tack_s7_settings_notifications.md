@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1800
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (new subsystem: settings contract on three levels, notifier on the event store, settings page and host load meter in the board; store schema bump)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s7 · completed by P-2026-10-19-2225 · e0fd6d286 · visual check by the chat after exit (board on 4710 from ~/jjodel-w-tack-s7)
 Corregge: —
 Request: Alfonso, 2026-10-19 17:50 and 17:55, in the project chat: settings for Tack (theme, a list of events with a toggle each for notifications, anything else useful); settings both global and per repository; the chat's four recommendations accepted (three files, desktop macOS plus ntfy in v0, notifier usable without the UI, this chat owns the `tack` front from now on). Alfonso, 2026-10-19 18:03 and 18:05: a visual host load indicator in Tack; «si a tutto» to the chat's three recommendations (scrolling bars in the top bar with threshold and lane ticks, samples stored once a minute, inside this slice).
 
