@@ -186,3 +186,16 @@ not touched by this lane.
 **Prompt document name**: 2026-10-19 23:25
 
 **Ticket** (P-2026-10-19-2325): the user-menu `div.menu-trigger` (52x44) keeps `border-radius: 6px` (`$menu-item-radius`, menu block, painted on hover/open only): to S5 with the rest of the menu block.
+
+## 2026-10-19 — merge: shell-ui-s2 into alfonso-frontend-jjtl (P-2026-10-19-2345)
+**Prompt**: `claude_2026-10-19_2345_prompt_merge_shell-ui-s2.md`, a direct merge by `lane-run merge --direct`, no session: `shell-ui-s2` at `52eb9470a` into `alfonso-frontend-jjtl`, merge base `664e0817c`, 2 commits on the branch side.
+**Files touched**: merge `15f3c6c0a`: 3 files from the branch side (`docs/log-inbox/shell-ui.md`, `docs/prompts/claude_2026-10-19_2325_prompt_shell_ui_s2_topbar.md`, `frontend/src/pages/components/navbar.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `15f3c6c0a` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9431 tests in 384 files, 9 red at import, hooks 952; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat: navbar.scss at 15f3c6c0a identical to the shell-ui-s2 tip 52eb9470a checked on 3020 (nav 0,0,1600,50, switch options 24px, topbar text <11px 0, + icon #64748b in Advanced, rects unchanged, console init_dash only).
+**Notes**: Rollback tag `pre-shell-ui-s2` on `6b1e11de1` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2345/result.json`.
+**Prompt document name**: 2026-10-19 23:45
