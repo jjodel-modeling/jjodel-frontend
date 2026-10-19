@@ -6,11 +6,16 @@ const ID = UNIT_PATTERN.source.slice(1, -1);
 const TRAILER = new RegExp(`^Unit:[ \\t]*(${ID})[ \\t]*$`, 'm');
 const SUBJECT_SUFFIX = new RegExp(`\\((${ID})\\)[ \\t]*$`);
 
-/** Returns the unit id a commit message links to, or null. The trailer wins over the suffix. */
-export function unitFromCommit(message) {
+/** The unit id a commit message links to and the form that matched ('trailer' or 'suffix'), or null. */
+export function unitLinkFromCommit(message) {
   const trailer = TRAILER.exec(message);
-  if (trailer) return trailer[1];
+  if (trailer) return { unit: trailer[1], form: 'trailer' };
   const subject = message.split('\n', 1)[0];
   const suffix = SUBJECT_SUFFIX.exec(subject);
-  return suffix ? suffix[1] : null;
+  return suffix ? { unit: suffix[1], form: 'suffix' } : null;
+}
+
+/** Returns the unit id a commit message links to, or null. The trailer wins over the suffix. */
+export function unitFromCommit(message) {
+  return unitLinkFromCommit(message)?.unit ?? null;
 }
