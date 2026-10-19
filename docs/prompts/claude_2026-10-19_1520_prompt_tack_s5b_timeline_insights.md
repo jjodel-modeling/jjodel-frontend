@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1520
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: full (two board views over the metrics module, plus fixes from the chat's visual check of 5a)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s5b · completed by P-2026-10-19-1555 · 90d64d594 · verifica visiva della chat dopo l’uscita (RC-23)
 Depends: P-2026-10-19-1440
 Corregge: P-2026-10-19-1440 (visual check by the chat, 2026-10-19 15:17, three defects listed in COSA 1)
 Request: Alfonso, 2026-10-19 14:35, in the project chat: «Procedi» (slice 5, second lane)
