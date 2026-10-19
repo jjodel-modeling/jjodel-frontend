@@ -3130,4 +3130,37 @@ describe('R-SIM-144: event reads checked at Reset, the unset warning (P-2026-10-
         expect(clean.runWarnings).toBeUndefined();
         expect(clean.compileDefects).toEqual([]);
     });
+
+    /** R-SIM-147: the roles above with Join on too, its class a State as Fork's. */
+    function fused(objects: Record<string, Obj>): Lookup {
+        const lookup = typed(buildLookup({ ...V_ROLES, simJoin: 'C_Join' }, { C10: { cls: 'C_Coin' }, C50: { cls: 'C_Big' }, CXx: { cls: 'C_Coin' }, ...objects }));
+        lookup.C_Join = { className: 'DClass', id: 'C_Join', name: 'Join', extends: ['C_State'], attributes: [], references: [] };
+        return lookup;
+    }
+
+    it('R-SIM-147: a trigger on an out edge of a fork is the defect trigger-position, named by the edge, the run unchanged (P-2026-10-20-0031; mutants: no check; the choice edge reported)', () => {
+        // In0 -e1 (ε)-> F, F -e2 (coin10)-> A, F -e3-> B: the fused F takes e1's trigger, none.
+        const lookup = fused({
+            In0: { cls: 'C_Init', slots: { R_out: ['e1'] } }, F: { cls: 'C_Fork', slots: { R_out: ['e2', 'e3'] } }, A: { cls: 'C_State' }, B: { cls: 'C_State' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['F'] } }, e2: { cls: 'C_Trans', slots: { R_next: ['A'], R_trig: ['C10'] } }, e3: { cls: 'C_Trans', slots: { R_next: ['B'] } },
+        });
+        const r = reset(lookup);
+        expect(r.run.net.transitions.map(t => [t.id, t.triggers])).toEqual([['F', []]]);
+        expect(r.compileDefects?.map(d => [d.element, d.role, d.reason, d.detail])).toEqual([
+            ['e2', 'guard', 'trigger-position', 'its trigger is ignored: fork F takes the trigger of its choice edge, e1, the edge into it'],
+        ]);
+        expect(defectsLine(r.run.net, lookup, r.compileDefects)).toBe('1 defect: e2 trigger (trigger ignored by fork F).');
+        // the run is the same: the fused transition still fires on ε
+        expect(pressInput('M', null, undefined, lookup, 'ε').lastStep).not.toMatch(/nothing to fire/);
+    });
+
+    it('R-SIM-147: a trigger on an in edge of a join is the defect trigger-position; on the choice edge, none (mutants: join read as fork; choice edge reported)', () => {
+        // A -e1 (coin10)-> J, B -e2-> J, J -e3-> C: the fused J takes e3's trigger.
+        const join = (e1: string[], e3: string[]) => reset(fused({
+            A: { cls: 'C_Init', slots: { R_out: ['e1'] } }, B: { cls: 'C_Init', slots: { R_out: ['e2'] } }, J: { cls: 'C_Join', slots: { R_out: ['e3'] } }, C: { cls: 'C_State' },
+            e1: { cls: 'C_Trans', slots: { R_next: ['J'], R_trig: e1 } }, e2: { cls: 'C_Trans', slots: { R_next: ['J'] } }, e3: { cls: 'C_Trans', slots: { R_next: ['C'], R_trig: e3 } },
+        })).compileDefects?.map(d => [d.element, d.role, d.reason, d.detail]);
+        expect(join(['C10'], [])).toEqual([['e1', 'guard', 'trigger-position', 'its trigger is ignored: join J takes the trigger of its choice edge, e3, the edge out of it']]);
+        expect(join([], ['C10'])).toEqual([]);
+    });
 });
