@@ -776,3 +776,17 @@ S4d finding. The rule in `docs/discovery/harness/harness-health-retro.mjs:335-34
 Decisions taken (unattended): P-2026-10-15-1710 counts as done though it is a discovery: its deliverable is the report, which is on the trunk, and the fix belongs to the later prompt that cites it. The four branch-only prompts are parked, not done, even where the lane's own message says «fixed» or «committed»: nothing reached the trunk. Both under RC-21 and RC-25, provisional, unattended.
 
 Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-33): the harness ones are P-2026-10-11-1830 (GO for Phase 2) and P-2026-10-11-2235 (visual GO, then merge); the others are listed in the table.
+
+## 2026-10-19 — merge: s4d-sweep into alfonso-frontend-jjtl (P-2026-10-19-1716)
+
+**Prompt**: `claude_2026-10-19_1716_prompt_merge_s4d-sweep.md`: merge of `s4d-sweep` at `0b2fe67f2` (P-2026-10-19-1022, stale prompts sweep), in a session after `lane-run merge --direct` fell back on the `R-LIB-11` probe.
+**Files touched**: merge commit `124e479c6` (union of `docs/log-inbox/harness.md`, the trunk's block first, byte-checked); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed (closed by the chat over a red vitest gate)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest 9414/9415 and hook tests 935/936, identical to the receiving tip: 1 failed in `laneTracking.test.ts` (ticketed), the same 9 files red at import. `irSelectionRing.test.ts` timed out in `afterAll` in the loaded full run only, 5/5 alone. typecheck, typecheck:scripts, build, check:docs 5/5, check:agents, check:scripts, check:addonly green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — docs-only merge, no UI change (chat GO 2026-10-19; 3001 was not listening)
+**Notes**: Probes 30/31: `- **R-LIB-11**` counts 2 on the merge and on the tip `b90416442`, two distinct trunk rows (provisional `ec898ef06`, active `db1f606cb`) share the id; the branch does not touch `docs/decisions.md`. The id collision is left to the owning chat. Lane board not restarted: no file under `frontend/scripts/lane-board/` changed.
+**Prompt document name**: 2026-10-19 17:16
