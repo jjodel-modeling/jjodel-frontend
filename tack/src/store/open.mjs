@@ -3,10 +3,10 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 // Schema file per version: a store at version n is brought forward by the files above n.
-const SCHEMA_FILES = { 1: './schema.sql', 2: './schema-2.sql', 3: './schema-3.sql', 4: './schema-4.sql' };
+const SCHEMA_FILES = { 1: './schema.sql', 2: './schema-2.sql', 3: './schema-3.sql', 4: './schema-4.sql', 5: './schema-5.sql' };
 
 /** One store per user, outside every scanned repository: --store, then TACK_STORE, then ~/.tack/store.db. */
 export function storePath(flag) {
@@ -16,6 +16,8 @@ export function storePath(flag) {
 export function openStore(path) {
   mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
+  // A board and `tack notify --watch` may share the store: a writer waits for the other instead of failing.
+  db.exec('PRAGMA busy_timeout = 5000');
   const version = db.prepare('PRAGMA user_version').get().user_version;
   if (version > SCHEMA_VERSION) {
     db.close();

@@ -302,7 +302,7 @@ test('tack board --no-open writes nothing inside the work tree it is started fro
   const store = join(dir, 'cli-store.db');
   const beforeRepo = status(repo);
   const beforeWt = status(wt);
-  const child = spawn(process.execPath, [TACK, 'board', '--no-open', '--port', '0', '--store', store, '--root', projects], { cwd: wt, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, [TACK, 'board', '--no-open', '--port', '0', '--store', store, '--root', projects], { cwd: wt, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, TACK_NOTIFY: 'off', TACK_SETTINGS: join(dir, 'user-settings.json') } });
   t.after(() => child.kill('SIGKILL'));
   let out = '';
   const url = await new Promise((resolve, reject) => {

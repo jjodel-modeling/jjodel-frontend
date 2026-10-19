@@ -4,10 +4,17 @@ import { linkUnits } from './units.mjs';
 import { collectLanes, defaultLaneRoot } from './lane-run/collect.mjs';
 import { collectLogs } from './log/collect.mjs';
 import { importsRoot } from '../importers/jjodel-log.mjs';
+import { settingsResolver } from '../settings/settings.mjs';
 
-export function collectLayers(db, { lanes = defaultLaneRoot(), imports = importsRoot(), now = Date.now() } = {}) {
+/** The lane time limit of a repository: limits.laneMinutes of its tack.json, 90 minutes by default. */
+export function laneLimit(db) {
+  const settingsFor = settingsResolver(db);
+  return (repo) => settingsFor(repo).value('limits.laneMinutes') * 60e3;
+}
+
+export function collectLayers(db, { lanes = defaultLaneRoot(), imports = importsRoot(), now = Date.now(), limitMs = laneLimit(db) } = {}) {
   const units = linkUnits(db);
-  const lane = collectLanes(db, lanes, now);
+  const lane = collectLanes(db, lanes, now, { limitMs });
   const logs = collectLogs(db, { imports });
   return { units, lanes: lane, logs };
 }

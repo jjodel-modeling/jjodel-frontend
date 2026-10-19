@@ -11,6 +11,8 @@ import { COLUMN_SOURCES } from '../src/collectors/claude-code/collect.mjs';
 import { GIT_COLUMN_SOURCES } from '../src/collectors/git/collect.mjs';
 import { LANE_COLUMN_SOURCES } from '../src/collectors/lane-run/collect.mjs';
 import { LOG_COLUMN_SOURCES } from '../src/collectors/log/collect.mjs';
+import { NOTIFY_COLUMN_SOURCES } from '../src/notify/notifier.mjs';
+import { HOST_COLUMN_SOURCES } from '../src/host/load.mjs';
 import { T0, addTranscript, commit, g, initRepo } from './helpers/git-repo.mjs';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
@@ -66,7 +68,7 @@ test('every column of every table has a declared source, and no source is messag
   const db = openStore(join(dir, 'store.db'));
   t.after(() => db.close());
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all().map((r) => r.name);
-  const sources = { ...COLUMN_SOURCES, ...GIT_COLUMN_SOURCES, ...LANE_COLUMN_SOURCES, ...LOG_COLUMN_SOURCES };
+  const sources = { ...COLUMN_SOURCES, ...GIT_COLUMN_SOURCES, ...LANE_COLUMN_SOURCES, ...LOG_COLUMN_SOURCES, ...NOTIFY_COLUMN_SOURCES, ...HOST_COLUMN_SOURCES };
   assert.deepEqual(tables, Object.keys(sources).sort());
   for (const table of tables) {
     const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name).sort();

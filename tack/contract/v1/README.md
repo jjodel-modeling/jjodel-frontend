@@ -7,6 +7,9 @@ Two JSON Schema 2020-12 documents describe the two records an adopting repositor
 - `entry.json`: the **self-assessment layer**, one line of `.tack/log.jsonl`. This is what
   `tack check` validates.
 
+A third document, `settings.json`, is the schema of the Tack settings files (user, project, local);
+see the Settings section of `tack/README.md`.
+
 The log is append-only JSON Lines, one object per line, blank lines ignored. Entries are never
 amended; a correction is a new entry whose `corrects` names the earlier unit.
 

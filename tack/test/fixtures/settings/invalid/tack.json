@@ -1,0 +1,8 @@
+{
+  "appearance": { "theme": "dark" },
+  "channels": { "ntfy": { "enabled": true, "topic": "leaked" } },
+  "limits": { "laneMinutes": 0, "unknown": 1 },
+  "load": { "threshold": "high" },
+  "harness": { "laneRun": "sometimes" },
+  "notes": "see https://ntfy.sh/my-secret-topic"
+}
