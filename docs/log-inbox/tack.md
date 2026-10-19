@@ -6,6 +6,51 @@ empties this file. The active log is not touched by this lane.
 
 ---
 
+## 2026-10-19 — feat: Tack slice 4, layer-1 metrics, deleted-worktree links, rename fix
+**Prompt**: P-2026-10-19-1335 (code, stopped at the context ceiling RC-51 with tests green and nothing committed) and P-2026-10-19-1405 (cost cross-check, README, commits); `tack metrics`, link inference for path-gone cwds, numstat immune to `diff.renames`, schema 3
+**Files touched**: tack/** (code commit 384348c49), docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1335_prompt_tack_s4_metrics.md (Status), docs/prompts/claude_2026-10-19_1405_prompt_tack_s4_continuation.md (added from the trunk, Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Tests 86/86 (was 64); mutation bench in the code commit, all killed. Five unattended decisions (1 schema 3 and migration; 2 inference for path-gone only, ambiguity left unlinked; 3 local days, UTC via API; 4 waits over all calls, gap > 5 min; 5 subagent cost split by price-weighted tokens) plus layer 2/3 stubs and the `link` column. The 1405 prompt file is not on this branch's base: its Status flip will conflict on merge (add/add, one line).
+**Prompt document name**: 2026-10-19 14:05
+
+Link resolution on this Mac (store /tmp/tack-s4-acc/real.db, scan 1: 756 files, 593 sessions, 280 cwds, 6761 commits), sessions by method and reason:
+
+| link | reason | sessions |
+|---|---|---|
+| direct | — | 386 |
+| branch | — | 142 (all Jjodel) |
+| sibling | — | 0 |
+| none | no-candidate | 28 (8 sprotty clones under /private/tmp, 20 other /private/tmp probes) |
+| none | branch-ambiguous | 21 (/private/tmp sessions on `main`, which exists in 3 repositories) |
+| none | sibling-ambiguous | 5 (home-dir lanes whose branch is gone unmerged; the home dir holds work trees of 3 repositories) |
+| none | not-a-git-work-tree (not inferred) | 11 |
+
+Scan 2: 0 rows added, 2.3 s.
+
+Cross-check 1, Tack cost per day vs the lane board's `spendByDay`, Jjodel, 2026-10-13..19, local days (TZ=Europe/Rome), after a rescan of a copy of the store:
+
+| day | Tack lanes | board | diff | cause |
+|---|---|---|---|---|
+| 10-14 | 5.29 | 5.29 | 0% | — |
+| 10-15 | 16.32 | 12.65 | +29% | one lane crossing midnight: Tack books it whole on its first day (+3.67), the board splits by turn end |
+| 10-16 | 16.43 | 20.10 | -18% | the same 3.67 on the other side; 10-15 + 10-16 equal at 32.75 |
+| 10-17 | 6.33 | 6.33 | 0% | — |
+| 10-18 | 120.25 | 116.40 | +3.3% | a second midnight-crossing lane (+3.85) |
+| 10-19 | 69.55 | 73.40 | -5.2% | the same 3.85 |
+| total | 234.17 | 234.17 | 0.0% | — |
+
+Tack also counts 16.08 USD of non-lane sessions (10-13, 10-17, 10-18) that the board does not see. Before the rescan 10-19 read 64.52 (-12.1%): the store had been scanned while this slice's own session was running, so its cost was still unknown (cost null, counted as unknown, never as 0); the rescan filled 5.03 and the lane total matched the board to the cent.
+
+Cross-check 2, context peak vs discovery §4.2: tracer-scaffold 167,897 = slice 2 entry = §4.2; harness-book 47,216 = §4.2.
+
+Jjodel `tack metrics`: 524 sessions, 3,588.89 USD known, 2 unknown; context peak median 204,723, 253 of 500 at or above 200k; subagent share calls 11.6%, cost 8.0%; commit proximity 517 yes, 7 no.
+
 ## 2026-10-19 — feat: Tack slice 3, git collector and repository identity
 **Prompt**: P-2026-10-19-1305, repository identity per session cwd (root commit key, common dir, missing with reason), metadata-only git collector with incremental tips, commit-within-hour proximity, `tack repos`, acceptance on this Mac
 **Files touched**: tack/** (code commit 68ac2ccdd), docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1305_prompt_tack_s3_git_collector.md (Status)
