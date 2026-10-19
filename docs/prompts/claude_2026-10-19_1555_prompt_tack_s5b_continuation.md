@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1555
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: fast (closure of P-2026-10-19-1520: run the board, measure, README, commits; code and tests already written)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s5b · 90d64d594, 7a9d474ce · merged 93f701326 · visual check by the chat 16:15, passed
 Depends: P-2026-10-19-1520
 Corregge: none (continuation under RC-51, not a repair)
 Request: Alfonso, 2026-10-19 14:35, in the project chat: «Procedi» (same request as P-2026-10-19-1520)
