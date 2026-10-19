@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2320
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (discovery first; new board page on the existing store, one collector extension at most)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s8 · Phase 1 report, docs commit carrying this line · hard-stop, Phase 2 as a new lane
 Corregge: none
 Request: Alfonso, 2026-10-19 22:43 («non capisco, questa è la pagina sessions su 4710 nella quale non vedo lanes») and 23:15 («decidi tu» on the chat's proposal, ratified as R-TACK-2 and R-TACK-3)
 
