@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1655
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: full (second half of P-2026-10-19-1620: CLI, API, Insights, chart fix, tests, parity run, closure)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s6 · 6f0353e74, 35ae04d0c · merged 1aa42cc25 · parity re-run by the chat 17:15, ok · visual check passed
 Depends: P-2026-10-19-1620
 Corregge: none (continuation under RC-51, not a repair)
 Request: Alfonso, 2026-10-19 16:15, in the project chat: «si» to slice 6 (same request as P-2026-10-19-1620)
