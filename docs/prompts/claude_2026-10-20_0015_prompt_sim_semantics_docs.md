@@ -1,6 +1,6 @@
 # Simulation and semantics documentation
 
-Prompt-ID: P-2026-10-20-0010
+Prompt-ID: P-2026-10-20-0015
 Chat: C-2026-10-20-0004
 Front: simulator
 Lane: full (more than three files; synthesis across spec, decisions and code)
@@ -14,7 +14,7 @@ Deroga: the two-phase hard stop (P4/P16) does not apply: the lane writes documen
 Worktree: `~/jjodel-w-simdocs`, branch `sim-docs`, cut from trunk `425187033`. Before anything else: `pwd`, branch, `git log -1` and `git status` are as stated here. Otherwise stop.
 
 ## Lane discipline
-Every reply of this session opens with `[P-2026-10-20-0010 · session <id>]`.
+Every reply of this session opens with `[P-2026-10-20-0015 · session <id>]`.
 Every final message ends with one line: `Outcome: done | hard-stop | question | blocked`.
 Every question that has a recommendation carries it in one line: `Recommended: <one line>`.
 
