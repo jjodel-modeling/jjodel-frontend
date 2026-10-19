@@ -13,7 +13,8 @@
  *     with a slate-300 hairline and an 8px radius, names in 600, slate-500 edges. No source file changes;
  *   - CanvasExportService.renderTarget fits the React Flow viewport to the diagram (no background, no dot grid, no
  *     minimap) and html-to-image writes a PNG at pixelRatio 2 with a transparent background: the card paints the dot
- *     grid itself.
+ *     grid itself. A template is cropped instead (CROP, P-2026-10-19-1651): the whole metamodel at 300×136 lands at
+ *     16-23 % and no name reads, so the frame shows the root class and its neighbours at 45 % or more.
  * The package is never touched: the preview of a published version sits beside it and does not change its bytes.
  *
  * A written preview is not overwritten: when <id>/<n>.preview.png exists the run refuses it (a FAIL line, exit 1)
@@ -124,14 +125,84 @@ const STORE = (text: string) => String.raw`(() => {
 
 const PANE = (id: string) => `document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${id}"]')`;
 
+/** The crop of a template preview (P-2026-10-19-1651): a frame with the card's aspect, shown at the card's 300×136 at
+ *  a scale of at least MIN_SCALE and at most 1, around the root class (the class that owns the most containment
+ *  references; tie: the first class) and its direct neighbours (the types of its references, the classes whose
+ *  references target it, its superclasses and subclasses). Every node name lies wholly inside or wholly outside the
+ *  frame; among the frames that keep the root whole, the one with the most whole neighbours, then the most whole nodes,
+ *  then the nearest to the centre of root and neighbours. Coordinates at zoom 1, in the `.react-flow__viewport`. */
+const MIN_SCALE = 0.45;
+const CROP = (id: string, mmId: string) => String.raw`(async () => {
+  const pane = ${PANE(id)};
+  const vp = pane && pane.querySelector('.react-flow__viewport');
+  if (!vp) return { error: 'no viewport' };
+  const mm = window.LPointerTargetable.fromPointer(${JSON.stringify(mmId)});
+  let classes = [];
+  try { classes = Array.from(mm.classes || []); } catch (e) {}
+  if (!classes.length) try { classes = (mm.packages || []).flatMap((p) => Array.from(p.classes || [])); } catch (e) {}
+  if (!classes.length) return { error: 'no classes' };
+  const refs = (c) => { try { return Array.from(c.references || []); } catch (e) { return []; } };
+  const owned = (c) => refs(c).filter((r) => r.containment).length;
+  let root = classes[0];
+  for (const c of classes) if (owned(c) > owned(root)) root = c;
+  const near = new Set();
+  for (const r of refs(root)) { try { r.type && near.add(r.type.name); } catch (e) {} }
+  for (const c of classes) for (const r of refs(c)) { try { if (r.type && r.type.id === root.id) near.add(c.name); } catch (e) {} }
+  try { for (const s of root.extends || []) near.add(s.name); } catch (e) {}
+  try { for (const s of root.extendedBy || []) near.add(s.name); } catch (e) {}
+  near.delete(root.name);
+
+  const screen = vp.getBoundingClientRect();
+  const zoom = screen.width / vp.offsetWidth;
+  const box = (r) => ({ x: (r.left - screen.left) / zoom, y: (r.top - screen.top) / zoom, w: r.width / zoom, h: r.height / zoom });
+  const nodes = Array.from(vp.querySelectorAll('.react-flow__node')).map((el) => {
+    const n = el.querySelector('.mm-node__name');
+    const name = n ? (n.value || n.textContent || '').trim() : '';
+    return { name, box: box(el.getBoundingClientRect()), label: n ? box(n.getBoundingClientRect()) : null };
+  }).filter((n) => n.box.w > 0 && n.box.h > 0);
+  const r0 = nodes.find((n) => n.name === root.name);
+  if (!r0) return { error: 'root ' + root.name + ' has no node' };
+  const group = [r0, ...nodes.filter((n) => near.has(n.name))];
+  const M = 16;
+  const gx = Math.min(...group.map((n) => n.box.x)) - M, gy = Math.min(...group.map((n) => n.box.y)) - M;
+  const gw = Math.max(...group.map((n) => n.box.x + n.box.w)) + M - gx, gh = Math.max(...group.map((n) => n.box.y + n.box.h)) + M - gy;
+  const W = ${BOX.width}, H = ${BOX.height};
+  const k = Math.max(${MIN_SCALE}, Math.min(1, W / gw, H / gh));
+  const cw = W / k, ch = H / k;
+  const cx0 = gx + gw / 2, cy0 = gy + gh / 2;
+  const inside = (b, x, y) => b.x >= x && b.y >= y && b.x + b.w <= x + cw && b.y + b.h <= y + ch;
+  const outside = (b, x, y) => b.x + b.w <= x || b.y + b.h <= y || b.x >= x + cw || b.y >= y + ch;
+  let best = null;
+  const lo = (a, b) => Math.min(a, b), hi = (a, b) => Math.max(a, b);
+  const xs = [lo(r0.box.x + r0.box.w - cw, r0.box.x), hi(r0.box.x + r0.box.w - cw, r0.box.x)];
+  const ys = [lo(r0.box.y + r0.box.h - ch, r0.box.y), hi(r0.box.y + r0.box.h - ch, r0.box.y)];
+  for (let x = xs[0] - M; x <= xs[1] + M; x += 4) for (let y = ys[0] - M; y <= ys[1] + M; y += 4) {
+    if (!inside(r0.box, x, y)) continue;
+    if (nodes.some((n) => n.label && !inside(n.label, x, y) && !outside(n.label, x, y))) continue;
+    const whole = nodes.filter((n) => inside(n.box, x, y));
+    const score = whole.filter((n) => near.has(n.name)).length * 1e6 + whole.length * 1e3 - Math.hypot(x + cw / 2 - cx0, y + ch / 2 - cy0);
+    if (!best || score > best.score) best = { x, y, score, whole: whole.map((n) => n.name) };
+  }
+  if (!best) return { error: 'no frame keeps every name whole', root: root.name };
+  const font = parseFloat(getComputedStyle(pane.querySelector('.mm-node__name')).fontSize);
+  return { root: root.name, owned: owned(root), near: [...near], x: Math.round(best.x), y: Math.round(best.y),
+    width: Math.round(cw), height: Math.round(ch), scale: k, whole: best.whole, font, namePx: Math.round(font * k * 10) / 10 };
+})()`;
+
+interface Crop { x: number; y: number; width: number; height: number }
+
 /** The diagram of one editor pane as a PNG data URL, with its size at zoom 1 and what the PNG holds: its pixel size
- *  and the alpha of its four corners (0 when the background is transparent). */
-const SNAP = (id: string) => String.raw`(async () => {
+ *  and the alpha of its four corners (0 when the background is transparent). With a crop, the frame of the crop at
+ *  zoom 1 instead of the whole diagram. */
+const SNAP = (id: string, crop?: Crop) => String.raw`(async () => {
   const pane = ${PANE(id)};
   if (!pane) return { error: 'no pane' };
   const S = (await import('/src/services/CanvasExportService.ts')).CanvasExportService;
   const t0 = performance.now();
   const t = S.renderTarget(pane, { type: 'png', pixelRatio: ${PIXEL_RATIO}, quality: 1 });
+  const crop = ${JSON.stringify(crop ?? null)};
+  if (crop) t.options = { ...t.options, width: crop.width, height: crop.height,
+    style: { width: crop.width + 'px', height: crop.height + 'px', transform: 'translate(' + (-crop.x) + 'px, ' + (-crop.y) + 'px) scale(1)' } };
   let url;
   try { url = await S.generateDataUrl(t.node, t.options); } finally { t.restore(); }
   const ms = Math.round(performance.now() - t0);
@@ -199,7 +270,13 @@ async function snap(browser: Browser, entry: Entry): Promise<void> {
                 applied.header === 'rgb(255, 255, 255)' && (applied.edge === null || applied.edge === 'rgb(100, 116, 139)'), applied);
         }
 
-        const got = await page.evaluate(SNAP(diagram.id)).catch((e: unknown) => ({ error: String(e).slice(0, 300) })) as any;
+        let crop: any = null;
+        if (!example) {
+            crop = await page.evaluate(CROP(diagram.id, diagram.id)).catch((e: unknown) => ({ error: String(e).slice(0, 300) }));
+            check(`${ref}: the crop frames the root class at ${MIN_SCALE * 100} % or more, no name cut`, !!crop && !crop.error && crop.scale >= MIN_SCALE, crop);
+            if (!crop || crop.error) return;
+        }
+        const got = await page.evaluate(SNAP(diagram.id, crop ?? undefined)).catch((e: unknown) => ({ error: String(e).slice(0, 300) })) as any;
         if (!got || got.error || !got.url) { check(`${ref}: the diagram is rendered`, false, got?.error ?? 'no data'); return; }
         const bytes = Buffer.from(got.url.slice(got.url.indexOf(',') + 1), 'base64');
         writeFileSync(where.out, bytes);
