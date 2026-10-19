@@ -790,3 +790,21 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: non applicabile — docs-only merge, no UI change (chat GO 2026-10-19; 3001 was not listening)
 **Notes**: Probes 30/31: `- **R-LIB-11**` counts 2 on the merge and on the tip `b90416442`, two distinct trunk rows (provisional `ec898ef06`, active `db1f606cb`) share the id; the branch does not touch `docs/decisions.md`. The id collision is left to the owning chat. Lane board not restarted: no file under `frontend/scripts/lane-board/` changed.
 **Prompt document name**: 2026-10-19 17:16
+
+## 2026-10-19 — fix(harness): lane-run start refuses a lane with no link to its chat, Tack Request URLs (P-2026-10-19-2105)
+**Prompt**: `claude_2026-10-19_2105_prompt_request_url_gate.md`, fast lane in `jjodel-w-requrl` on `requrl`, chat `C-2026-10-19-1747`: a refusal in `lane-run start` for a lane the board cannot link to its chat, its tests, a `Request:` backfill of the Tack prompts, one P13 sentence, a board check on 4701.
+**Files touched**: `f05b10358`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`. This commit: 12 prompts of `C-2026-10-19-0001` and `C-2026-10-19-1748` (the `Request:` line only), `docs/PROTOCOL.md` (P13), this inbox, the prompt's Status line.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — laneRun, laneRunDirect, laneRunRouting 180 green; autoIntake, laneTracking 147 green; typecheck exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — P8 derogated by the prompt.
+**Notes**: COSA 5 fails: the board reads a lane's header from `~/.jjodel-lanes/<id>/input-1.md` (`lane-board.mjs:77`), not from `docs/prompts/`, so the backfill cannot reach the 12 Tack rows. Board on 4701, before and after: 602 rows, 266 without `chatUrl`, the 12 Tack rows among them. P-2026-10-19-2100 (chat 0001, added after the count of 12) already has a `Claude-Session:` trailer and was left as is (ratified as recommended, unattended). The commit subject was shortened to stay within 72 characters.
+**Prompt document name**: 2026-10-19 21:05
+
+## 2026-10-19 — ticket: the lane board reads Request: from the lane's input copy, never the prompt in the repo
+**Ticket**: `header()` in `lane-board.mjs` (line 77) takes the header from `input-1.md` in the lane folder, falling back to `prompt.txt` and then to the trunk copy. A `Request:` line fixed in `docs/prompts/` after launch never reaches the board's `chatUrl`, so the 12 Tack lanes of `C-2026-10-19-0001` and `C-2026-10-19-1748` stay unlinked even after the backfill. Fix in a lane of its own: when the input copy's `Request:` is not a URL, read the trunk prompt's `Request:` before the commit trailer.
+**Priority**: medium
+**Found in**: P-2026-10-19-2105

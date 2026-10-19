@@ -7,7 +7,7 @@ Lane: fast (new isolated folder `tack/`, no existing file touched outside the DO
 Status: eseguito 2026-10-19 · lane tack-s1 · code commit b47906cf6, docs commit carrying this line
 Depends: P-2026-10-19-1100
 Corregge: none
-Request: Alfonso, 2026-10-19 11:54, in the project chat: «ok alle raccomandazioni», after the Tack v0 discovery
+Request: https://claude.ai/chat/1b373b77-3e1f-4c66-b75e-9eec8a5ba215 (Alfonso, 2026-10-19 11:54, in the project chat: «ok alle raccomandazioni», after the Tack v0 discovery)
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 does not apply (the discovery is `docs/discovery/discovery_2026-10-19_tack_v0_extraction.md`, §5, §6 and §11). P8 does not apply (no UI).

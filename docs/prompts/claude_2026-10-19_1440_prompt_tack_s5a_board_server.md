@@ -7,7 +7,7 @@ Lane: full (first UI of Tack: local HTTP server and page; discovery done in P-20
 Status: eseguito 2026-10-19 · lane tack-s5a · db39b5880 · verifica visiva della chat dopo l’uscita (RC-23)
 Depends: P-2026-10-19-1405
 Corregge: none
-Request: Alfonso, 2026-10-19 14:35, in the project chat: «Procedi» (slice 5, split in two lanes)
+Request: https://claude.ai/chat/1b373b77-3e1f-4c66-b75e-9eec8a5ba215 (Alfonso, 2026-10-19 14:35, in the project chat: «Procedi» (slice 5, split in two lanes))
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 does not apply as a separate phase (the discovery is `docs/discovery/discovery_2026-10-19_tack_v0_extraction.md` §2.3, §6.2, §6.3); no Phase 1 hard stop. P8 is replaced: the page is not part of Jjodel, so the visual check is done by the chat in the built-in browser after the lane exits (RC-23), on the port given below; the lane does not wait for it.

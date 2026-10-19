@@ -6,7 +6,7 @@ Front: tack
 Lane: full (new subsystem: settings contract on three levels, notifier on the event store, settings page and host load meter in the board; store schema bump)
 Status: da eseguire
 Corregge: —
-Request: Alfonso, 2026-10-19 17:50 and 17:55, in the project chat: settings for Tack (theme, a list of events with a toggle each for notifications, anything else useful); settings both global and per repository; the chat's four recommendations accepted (three files, desktop macOS plus ntfy in v0, notifier usable without the UI, this chat owns the `tack` front from now on). Alfonso, 2026-10-19 18:03 and 18:05: a visual host load indicator in Tack; «si a tutto» to the chat's three recommendations (scrolling bars in the top bar with threshold and lane ticks, samples stored once a minute, inside this slice).
+Request: https://claude.ai/chat/f96ef649-86b6-4a81-9ceb-08b0bfb9fd4c (Alfonso, 2026-10-19 17:50 and 17:55, in the project chat: settings for Tack (theme, a list of events with a toggle each for notifications, anything else useful); settings both global and per repository; the chat's four recommendations accepted (three files, desktop macOS plus ntfy in v0, notifier usable without the UI, this chat owns the `tack` front from now on). Alfonso, 2026-10-19 18:03 and 18:05: a visual host load indicator in Tack; «si a tutto» to the chat's three recommendations (scrolling bars in the top bar with threshold and lane ticks, samples stored once a minute, inside this slice).)
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P8 replaced as in the earlier Tack slices: the chat checks the board after exit (RC-23).

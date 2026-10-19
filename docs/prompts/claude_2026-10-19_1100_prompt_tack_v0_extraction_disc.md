@@ -7,7 +7,7 @@ Lane: full (discovery for a new product outside the Jjodel codebase; Phase 1 rea
 Status: eseguito 2026-10-19 · lane tack-disc · Phase 1 report, docs commit carrying this line · hard-stop, no Phase 2 without GO
 Depends: none
 Corregge: none (new front)
-Request: Alfonso, 2026-10-19 10:41, in the project chat: «andiamo avanti», after ratifying the six Tack decisions of the vision document
+Request: https://claude.ai/chat/1b373b77-3e1f-4c66-b75e-9eec8a5ba215 (Alfonso, 2026-10-19 10:41, in the project chat: «andiamo avanti», after ratifying the six Tack decisions of the vision document)
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P8 does not apply, no UI change.
