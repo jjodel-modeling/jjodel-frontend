@@ -2,6 +2,9 @@
  * StatusBarRightZone Styles
  * Shared right-zone for app StatusBar (light) and JjTL status bar (dark).
  * Prefix: sb-rz
+ *
+ * Colours read the --shell-* tokens, which only .app-statusbar declares
+ * (styles/tokens/_shell.scss); the dark variant overrides every one of them.
  */
 
 .sb-rz {
@@ -16,7 +19,7 @@
         display: inline-block;
         width: 1px;
         height: 16px;
-        background: #e2e8f0;
+        background: var(--shell-border);
         margin: 0 8px;
         flex-shrink: 0;
     }
@@ -71,7 +74,7 @@
 
         i {
             font-size: 17px;
-            color: #334155;
+            color: var(--shell-text-1);
             transition: color 150ms ease;
         }
 
@@ -123,12 +126,12 @@
 
         i {
             font-size: 15px;
-            color: #94a3b8;
+            color: var(--shell-text-3);
             transition: color 150ms ease;
         }
 
         &:hover i {
-            color: #334155;
+            color: var(--shell-text-1);
         }
     }
 
@@ -164,8 +167,49 @@
 
     &__version {
         font-size: 10px;
-        color: #94a3b8;
+        color: var(--shell-text-3);
         white-space: nowrap;
+    }
+
+    // ══════════════════════════════════════════
+    // Light variant (app status bar)
+    // Sizes scoped to .app-statusbar, so the dark variant keeps its own.
+    // ══════════════════════════════════════════
+
+    .app-statusbar & {
+        // 24px hit target from the 20px icon box; the negative margin keeps the layout box.
+        .sb-rz__jjodie {
+            width: var(--shell-hit);
+            height: var(--shell-hit);
+            margin: -2px;
+        }
+
+        // Grows left and down only: NotificationCenter anchors on the bell's top and right
+        // (NotificationCenter.tsx:88) and the badge sits on the same corner, so neither moves.
+        .sb-rz__bell {
+            width: var(--shell-hit);
+            height: var(--shell-hit);
+            margin: 0 0 -6px -9px;
+            align-items: flex-start;
+            justify-content: flex-end;
+
+            i {
+                line-height: 18px; // glyph box height before the bar switched to Inter
+            }
+        }
+
+        .sb-rz__bell-badge {
+            font-size: var(--shell-font-size-min);
+        }
+
+        // Cutout ring on the coloured dot: the colour stays the bar surface, the width aligns to 1px.
+        .sb-rz__dot {
+            border-width: 1px;
+        }
+
+        .sb-rz__version {
+            font-size: var(--shell-font-size-min);
+        }
     }
 
     // ══════════════════════════════════════════
