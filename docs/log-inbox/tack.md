@@ -6,6 +6,35 @@ empties this file. The active log is not touched by this lane.
 
 ---
 
+## 2026-10-19 — feat: Tack slice 2, event store and Claude Code collector
+**Prompt**: P-2026-10-19-1225, node:sqlite store (sessions, calls, ingest), incremental metadata-only Claude Code collector, `tack scan` and `tack sessions`, privacy gate, reproduction of report §4.2
+**Files touched**: tack/** (code commit 2c0d567f3), docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1225_prompt_tack_s2_store_cc_collector.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Node used: ~/.local/bin/node v26.8.1; tests 49/49; gate exits 2 on v16/18/22/23. Privacy bench: 3 mutations killed. Also reads `<session>/subagents/*.jsonl` (all sidechain calls live there, 0 in main files): unattended. §4.2 reproduced exactly, table below; all 10 transcripts still on disk. Scan 2: 754 unchanged, 0 rows.
+**Prompt document name**: 2026-10-19 12:25
+
+§4.2 (report) vs `tack scan` + `tack sessions --cwd` (store /tmp/tack-s2/real.db):
+
+| Metric | tracer-scaffold r / t | sprotty (8 dirs) r / t | harness-book r / t |
+|---|---|---|---|
+| Sessions | 1 / 1 | 8 / 8 | 1 / 1 |
+| Per day | 09-17: 1 / 1 | 09-29: 4, 09-30: 4 / same | 10-07: 1 / 1 |
+| Cost USD | 7.79 / 7.79 | 0.76 / 0.7568 | 0.29 / 0.29 |
+| Context peak | 167897 / 167897 | max 29295 med 24068 / same | 47216 / 47216 |
+| Main-thread calls | 66 / 66 | 57 / 57 | 7 / 7 |
+| Span min | 118 / 118 | 0-1 / 0-1 | 1 / 1 |
+| Models | claude-opus-5 / same | claude-sonnet-5-5 / same | claude-opus-5-5 / same |
+
+Scan 1: 754 files, 324494 records, 0 malformed, 591 sessions, 42007 calls. Scan 2: 754 unchanged, 0 rows added.
+
+---
+
 ## 2026-10-19 — feat: Tack slice 1, skeleton, contract v1 and tack check
 **Prompt**: P-2026-10-19-1200, create tack/ with package skeleton, contract v1 schemas (unit, entry) and a dependency-free `tack check` with structural and referential rules
 **Files touched**: tack/** (33 new files), docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1200_prompt_tack_s1_skeleton_contract.md (Status)

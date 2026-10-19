@@ -2,17 +2,42 @@
 import { readFileSync } from 'node:fs';
 import { validateText } from '../src/contract/validate.mjs';
 
+const NODE_MAJOR = Number(process.versions.node.split('.')[0]);
+if (NODE_MAJOR < 24) {
+  process.stderr.write(`tack: requires Node >= 24 (node:sqlite), this is ${process.version}\n`);
+  process.exit(2);
+}
+
 const USAGE = `usage: tack <command>
 
 commands:
-  check [file]   validate a JSON Lines log against contract v1 (default: .tack/log.jsonl)
+  check [file]                          validate a JSON Lines log against contract v1 (default: .tack/log.jsonl)
+  scan [--root <dir>] [--store <file>]  ingest Claude Code transcripts (default root: ~/.claude/projects)
+  sessions [--cwd <prefix>] [--json] [--store <file>]
+                                        one row per session, main-thread calls only
+
+The store defaults to ~/.tack/store.db, or TACK_STORE when set.
 `;
 
-function check(args) {
-  if (args.length > 1) {
-    process.stderr.write(USAGE);
-    return 2;
+function usage() {
+  process.stderr.write(USAGE);
+  return 2;
+}
+
+/** Flags of the form --name value or --name (booleans); null on an unknown flag or a stray argument. */
+function parseFlags(args, valued, booleans = []) {
+  const out = {};
+  for (let i = 0; i < args.length; i++) {
+    const name = args[i].startsWith('--') ? args[i].slice(2) : null;
+    if (valued.includes(name) && i + 1 < args.length) out[name] = args[++i];
+    else if (booleans.includes(name)) out[name] = true;
+    else return null;
   }
+  return out;
+}
+
+function check(args) {
+  if (args.length > 1) return usage();
   const file = args[0] ?? '.tack/log.jsonl';
   let text;
   try {
@@ -30,10 +55,62 @@ function check(args) {
   return 1;
 }
 
-const [command, ...rest] = process.argv.slice(2);
-if (command === 'check') {
-  process.exitCode = check(rest);
-} else {
-  process.stderr.write(USAGE);
-  process.exitCode = 2;
+const tally = (o) => Object.entries(o).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k, v]) => `${k} ${v}`).join(', ') || 'none';
+
+async function scanCmd(args) {
+  const flags = parseFlags(args, ['root', 'store']);
+  if (!flags) return usage();
+  const { openStore, storePath } = await import('../src/store/open.mjs');
+  const { scan, defaultRoot } = await import('../src/collectors/claude-code/collect.mjs');
+  const path = storePath(flags.store);
+  const root = flags.root ?? defaultRoot();
+  const db = openStore(path);
+  try {
+    const st = scan(db, root);
+    const w = (s) => process.stdout.write(s + '\n');
+    w(`store ${path}`);
+    w(`root ${root}`);
+    w(`files ${st.files} (read ${st.read}, re-read from 0 ${st.reread}, unchanged ${st.unchanged}; gone from disk, rows kept ${st.gone})`);
+    w(`records seen ${st.records}, malformed ${st.malformed}`);
+    w(`records used: ${tally(st.used)}`);
+    w(`records skipped by type: ${tally(st.skipped)}`);
+    w(`rows added: sessions ${st.sessionsAdded}, calls ${st.callsAdded}`);
+    w(`rows changed: calls updated ${st.callsUpdated}, calls removed by re-read ${st.callsRemoved}, duplicate message ids ${st.duplicates}`);
+  } finally {
+    db.close();
+  }
+  return 0;
 }
+
+async function sessionsCmd(args) {
+  const flags = parseFlags(args, ['cwd', 'store'], ['json']);
+  if (!flags) return usage();
+  const { openStore, storePath } = await import('../src/store/open.mjs');
+  const { listSessions } = await import('../src/store/sessions.mjs');
+  const db = openStore(storePath(flags.store));
+  let rows;
+  try {
+    rows = listSessions(db, { cwd: flags.cwd ?? null });
+  } finally {
+    db.close();
+  }
+  if (flags.json) {
+    process.stdout.write(JSON.stringify(rows, null, 2) + '\n');
+    return 0;
+  }
+  const table = [['cwd', 'day', 'calls', 'cost', 'ctx peak', 'span min', 'models']];
+  for (const r of rows) {
+    table.push([r.cwd ?? '-', r.day ?? '-', String(r.calls), r.cost_usd === null ? '-' : r.cost_usd.toFixed(2),
+      String(r.context_peak), r.span_min === null ? '-' : String(r.span_min), r.models.join(',') || '-']);
+  }
+  const widths = table[0].map((_, i) => Math.max(...table.map((row) => row[i].length)));
+  for (const row of table) process.stdout.write(row.map((c, i) => c.padEnd(widths[i])).join('  ').trimEnd() + '\n');
+  process.stdout.write(`${rows.length} sessions\n`);
+  return 0;
+}
+
+const [command, ...rest] = process.argv.slice(2);
+if (command === 'check') process.exitCode = check(rest);
+else if (command === 'scan') process.exitCode = await scanCmd(rest);
+else if (command === 'sessions') process.exitCode = await sessionsCmd(rest);
+else process.exitCode = usage();
