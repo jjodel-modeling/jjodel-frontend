@@ -5,15 +5,16 @@ process.env.TZ = 'Europe/Rome';
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openStore } from '../src/store/open.mjs';
-import { collectLanes, costEvents, inputClass, laneOutcome, readLane, results } from '../src/collectors/lane-run/collect.mjs';
+import { DatabaseSync } from 'node:sqlite';
+import { SCHEMA_VERSION, openStore } from '../src/store/open.mjs';
+import { adoptionsOf, collectLanes, costEvents, inputClass, kindOf, laneOutcome, promptHeader, readLane, results } from '../src/collectors/lane-run/collect.mjs';
 import { collectLogs } from '../src/collectors/log/collect.mjs';
 import { computeAll, loadSelection } from '../src/metrics/index.mjs';
 import { laneFirstShot } from '../src/metrics/layer3.mjs';
-import { NOW, assistantText, fixtureLanes, resultEvent, snapshot } from './helpers/layers-fixture.mjs';
+import { NOW, assistantText, fixtureLanes, initEvent, resultEvent, snapshot, writeLane } from './helpers/layers-fixture.mjs';
 
 const Z = (s) => Date.parse(s);
 const MIN = 60_000;
@@ -246,4 +247,139 @@ test('without lanes and without a log, the layer 3 metrics answer not-adopted', 
   const { db } = world(t);
   const m = computeAll(loadSelection(db, {}));
   for (const k of ['outcome', 'first_shot', 'cause_tally', 'regression_rate', 'out_of_scope_rate']) assert.equal(m[k], 'not-adopted', k);
+});
+
+// Schema 6 (slice 8): kind, title, work_ms, worktree, resolved, adoptions.
+
+test('kindOf: the four kinds from the Lane: line, with the merge file-name fallback', () => {
+  assert.equal(kindOf('fast'), 'fast');
+  assert.equal(kindOf('full (implementation of the plan)'), 'phase2');
+  assert.equal(kindOf('Phase 2'), 'phase2');
+  assert.equal(kindOf('discovery'), 'discovery');
+  assert.equal(kindOf('full (discovery, read-only)'), 'discovery');
+  assert.equal(kindOf('full (phase 1 only, read-only)'), 'discovery');
+  assert.equal(kindOf('full (Phase 1, read-only, two-phase)'), 'phase2', 'a two-phase lane is not a discovery');
+  assert.equal(kindOf('merge'), 'merge');
+  assert.equal(kindOf('full (merge; trunk)'), 'merge');
+  assert.equal(kindOf('full (two merges and a status flip)'), 'merge');
+  assert.equal(kindOf('', 'claude_2026-10-19_2248_prompt_merge_tack_s7.md'), 'merge', 'file-name fallback');
+  assert.equal(kindOf('full', 'x_take_trunk.md'), 'merge');
+  assert.equal(kindOf(''), null);
+  assert.equal(kindOf('something else'), null);
+});
+
+test('promptHeader: kind and title from the header, the title capped at 200 characters', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'tack-head-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const p = join(dir, 'claude_2026-01-01_0000_prompt_x.md');
+  writeFileSync(p, '# Slice 8, Phase 2: the Lanes page\n\nPrompt-ID: P-2026-01-01-0000\nChat: C-2026-01-01-0000\nFront: tack\nLane: full (implementation)\n\n## COSA\n# not a title\nLane: fast\n');
+  assert.deepEqual(promptHeader(p), { front: 'tack', chat: 'C-2026-01-01-0000', kind: 'phase2', title: 'Slice 8, Phase 2: the Lanes page' });
+  writeFileSync(p, `# ${'x'.repeat(300)}\nLane: fast\n`);
+  const h = promptHeader(p);
+  assert.equal(h.title.length, 200);
+  assert.equal(h.kind, 'fast');
+  const m = join(dir, 'claude_2026-01-01_0000_prompt_merge_y.md');
+  writeFileSync(m, '# Merge\nLane: full\n');
+  assert.equal(promptHeader(m).kind, 'merge', 'the file name of the prompt says merge');
+  assert.deepEqual(promptHeader(null), { front: null, chat: null, kind: null, title: null });
+  assert.deepEqual(promptHeader(join(dir, 'missing.md')), { front: null, chat: null, kind: null, title: null });
+});
+
+test('adoptionsOf: the items of the Decisions taken (unattended) section; null without the section, 0 for none', () => {
+  const three = 'Done.\n\n## Decisions taken (unattended)\n1. First, provisional.\n   continued line\n2. Second.\n3. Third.\n\n## Decisions awaiting Alfonso\n- one\n\nOutcome: done';
+  assert.equal(adoptionsOf(three), 3);
+  assert.equal(adoptionsOf('**Decisions taken (unattended)**\n- a\n- b\n\nAll green.\n- not an item of the section\nOutcome: done'), 2);
+  assert.equal(adoptionsOf('Decisions taken (unattended): none.\n\nOutcome: done'), 0);
+  assert.equal(adoptionsOf('### Decisions taken (unattended)\nNone.\nOutcome: done'), 0);
+  assert.equal(adoptionsOf('No such section. Recommended answers adopted, unattended.\nOutcome: done'), null);
+  assert.equal(adoptionsOf(''), null);
+  assert.equal(adoptionsOf(null), null);
+});
+
+function s6Lane(root, id, { started, inputs, events, prompt = null, extra = {} }) {
+  const dir = writeLane(root, id, { started, exitAt: started + 60 * MIN, worktree: '/r/W', inputs, events });
+  if (prompt) {
+    const p = join(root, `..`, `claude_${id}_prompt.md`);
+    writeFileSync(p, prompt);
+    writeFileSync(join(dir, 'prompt.txt'), `${p}\n`);
+  }
+  for (const [f, text] of Object.entries(extra)) writeFileSync(join(dir, f), text);
+  return dir;
+}
+
+test('readLane, schema 6: work is the sum of the turns (a wait between them excluded), worktree, resolved, adoptions', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'tack-s6-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const root = join(dir, 'lanes');
+  mkdirSync(root);
+  const s = Z('2026-01-07T09:00:00Z');
+  const d = s6Lane(root, 'P-2026-01-07-0900', {
+    started: s,
+    inputs: [{ at: s, text: 'Do the task.\n' }, { at: s + 30 * MIN, text: 'Answers: Q1 yes.\n' }],
+    events: [initEvent(), resultEvent({ ms: 10 * MIN, usd: 1, text: '## Decisions taken (unattended)\n1. a\n2. b\nOutcome: question' }),
+      resultEvent({ ms: 5 * MIN, usd: 2, text: 'Decisions taken (unattended)\n- only one\n\nOutcome: done' })],
+    prompt: '# Two turns\nLane: fast\n',
+  });
+  const l = readLane(d, NOW);
+  assert.equal(l.workMs, 15 * MIN, '10 + 5 minutes; the 20-minute wait is not work');
+  assert.equal(l.worktree, '/r/W');
+  assert.equal(l.resolved, false);
+  assert.equal(l.adoptions, 1, 'the last result event wins');
+  assert.equal(l.kind, 'fast');
+  assert.equal(l.title, 'Two turns');
+  writeFileSync(join(d, 'resolved.txt'), 'resolved\n');
+  assert.equal(readLane(d, NOW).resolved, true);
+});
+
+test('collectLanes, schema 6: the six columns, resolved.txt invalidates the cache, the marker in input-1.md alone is no adoption', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'tack-s6c-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const db = openStore(join(dir, 'store.db'));
+  t.after(() => db.isOpen && db.close());
+  const root = join(dir, 'lanes');
+  mkdirSync(root);
+  const s = Z('2026-01-07T09:00:00Z');
+  const a = 'P-2026-01-07-0900';
+  const b = 'P-2026-01-07-1000';
+  const da = s6Lane(root, a, {
+    started: s, inputs: [{ at: s, text: 'Go.\n' }],
+    events: [initEvent(), resultEvent({ ms: 12 * MIN, usd: 1, text: 'Decisions taken (unattended)\n1. x\n2. y\n3. z\n\nOutcome: blocked' })],
+    prompt: '# Lane A\nChat: C-2026-01-07-0800\nLane: discovery\n',
+  });
+  s6Lane(root, b, {
+    started: s + 60 * MIN,
+    inputs: [{ at: s + 60 * MIN, text: 'Quote: ## Decisions taken (unattended)\n1. ratified as recommended, unattended\n' }],
+    events: [initEvent(), resultEvent({ ms: 3 * MIN, usd: 1, text: 'Outcome: done' })],
+  });
+  const st = collectLanes(db, root, NOW);
+  assert.equal(st.read, 2);
+  const ra = laneRow(db, a);
+  assert.deepEqual([ra.kind, ra.title, ra.work_ms, ra.worktree, ra.resolved, ra.adoptions], ['discovery', 'Lane A', 12 * MIN, '/r/W', 0, 3]);
+  const rb = laneRow(db, b);
+  assert.deepEqual([rb.kind, rb.title, rb.adoptions, rb.resolved], [null, null, null, 0], 'the marker only in input-1.md is not read');
+  assert.equal(collectLanes(db, root, NOW).unchanged, 2);
+  writeFileSync(join(da, 'resolved.txt'), 'ok\n');
+  const st2 = collectLanes(db, root, NOW);
+  assert.deepEqual([st2.read, st2.unchanged], [1, 1], 'resolved.txt is in the cache key');
+  assert.equal(laneRow(db, a).resolved, 1);
+  writeFileSync(join(da, 'direct.json'), '{}');
+  assert.equal(collectLanes(db, root, NOW).read, 1, 'direct.json is in the cache key');
+});
+
+test('schema 5 to 6: the lanes rows kept, the new columns null, every lane marked for one re-read', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'tack-s56-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const path = join(dir, 'store.db');
+  const v5 = new DatabaseSync(path);
+  for (const f of ['schema.sql', 'schema-2.sql', 'schema-3.sql', 'schema-4.sql', 'schema-5.sql']) v5.exec(readFileSync(new URL(`../src/store/${f}`, import.meta.url), 'utf8'));
+  v5.exec('PRAGMA user_version = 5');
+  v5.prepare("INSERT INTO lanes (id, live, runs, outcome, blocked_run, over_time, corrective, cache_key, last_outcome) VALUES ('P-2026-01-01-0000', 0, 1, 'done', 0, 0, 0, 'k', 'done')").run();
+  v5.close();
+  const db = openStore(path);
+  t.after(() => db.close());
+  assert.equal(SCHEMA_VERSION, 6);
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 6);
+  const r = { ...db.prepare('SELECT * FROM lanes').get() };
+  assert.deepEqual([r.id, r.last_outcome, r.cache_key, r.kind, r.title, r.work_ms, r.worktree, r.resolved, r.adoptions],
+    ['P-2026-01-01-0000', 'done', '', null, null, null, null, null, null]);
 });
