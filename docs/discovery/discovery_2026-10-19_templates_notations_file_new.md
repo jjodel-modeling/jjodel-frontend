@@ -250,3 +250,40 @@ Overlap matrix (✗ = shared file):
 4. **Handoff Q4, Collections**: no finding changes it. Recommended: out of 3.2 (handoff §8 already defers it).
 
 Items 2–4 are the handoff's own closed list (§10), reported here with the evidence; item 1 is the only conflict with a ratified row. No conflict was found with R-LIB-1..6, R-LIB-8..10 or D-UI-15 (the handoff excludes the dark theme, §1).
+
+## P-2026-10-19-1618
+
+Lane L-D, branch `tpl-d`, code commit `6d70d38c1`. The New model dialog with the «Metamodel in this project» panel only (R-LIB-20).
+
+### What was done
+
+- `components/NewModelDialog/NewModelDialog.tsx` and `.scss` (new): `role=dialog`, `aria-modal`, `aria-labelledby` on «New model», `aria-describedby` on «Choose what the model conforms to.», close button «Close»; the project's metamodels as radio cards (`.radio-group`/`.radio-card` of `create-project-dialog.scss`) inside a `role=radiogroup`, each with its model count; «Model name»; Cancel (`Button` secondary) and Create model (`Button` primary). Selected card: 2px slate-700 border (1px plus an inset shadow, no shift) and a 3px slate-200 ring (handoff §5). Width 520 px (`max-width`), 391 to 511 px tall. Escape and the overlay close it. New class prefix `tpl-nmd` (0 hits before).
+- `createM1(project, metamodel, open = true, name0?)` (`Navbar.tsx:104`): `name0` trimmed, kept when unique among `metamodel.models`, else the existing ending-number rule.
+- `JjodelEvents.OPEN_NEW_MODEL_DIALOG = 'jjodel:open-new-model-dialog'`, detail optional `{ metamodelId?: string }` (0 hits before).
+- `ProjectEditor.tsx`: `handleNewModelClick` and the `CREATE_MODEL` listener open the dialog, preselecting when there is exactly one metamodel; a listener for the new event; `handleNewModelSubmit` calls `createM1(project, mm, true, name)`. The old picker (`showMetamodelMenu`) no longer opens: its JSX, `handleCreateModel` and `metamodelCountRef` stay with a `// TODO: cleanup` (rule 9).
+
+### Measurements
+
+- **`metamodel.models` is empty on cloned gallery projects** (Families and Persons: `models: []`, `__raw.models: []`, while `instanceof` finds `sample-Families` and `sample-Persons`). The cards therefore count by `instanceof`, and the clash check inside `createM1` reads an empty list on such projects.
+- **The rule that actually keeps names unique is `DModel.new`'s** (`LModelElement.tsx:5024`, `uniqueModelName` over every DModel, suffix ` (n)`): a second «People» on Persons became «People (1)», not `increaseEndingNumber`'s «People2». The dialog's default name is computed over the same pool (every model and metamodel name of the project), so the name shown is the name the model gets.
+- Typecheck exit 0 (twice, after the last edit too); build exit 0; no unit test names `createM1` (`command grep -rl createM1 src --include='*.test.ts*'` exit 1, control `createM2\|DModel` exit 0).
+- Browser smoke, port 3104, probe `frontend/scripts/smoke/_tmp_tpl_d_nmd.ts` (gitignored, not committed), log `.agent-logs/tpl-d-nmd-8.log`: **20/20 PASS**, no page error (three `console.error('init_dash')`, `redux/store.tsx:240`, are not from this lane). Library (one metamodel): rail `+` opens the dialog, Library preselected, name `model_1`, «My Library Model» created on Library and opened; the section's «+ New» opens it too; Escape closes. Families and Persons (two): cards «1 model» each, none preselected, Create disabled until Persons is chosen; «People» created on Persons; `OPEN_NEW_MODEL_DIALOG` with Persons' id preselects it. A new empty project: «This project has no metamodel yet.», name field and Create disabled.
+- Screenshots (light theme, 1440×900): `docs/discovery/assets/tpl-d/nmd-one-metamodel.png`, `nmd-one-metamodel-created.png`, `nmd-two-metamodels.png`, `nmd-two-metamodels-selected.png`, `nmd-no-metamodel.png`.
+- The critical-zone hook let the `createM1` edit through without asking; no Layer Impact Report was written (`docs/lir/` untouched).
+
+### Decisions taken (unattended)
+
+1. A typed name that clashes is not refused in the dialog: `createM1` and `DModel.new` suffix it, as the prompt's «else the existing suffix rule» reads; the field's hint says so. An empty field creates the auto name.
+2. The default name is computed over every model and metamodel name of the project, not over `metamodel.models` (measured empty above): the literal «auto name `createM1` would give» would show `model_1` and then produce `model_1 (1)` when a `model_1` exists elsewhere.
+3. Model counts by `instanceof`, not `metamodel.models`.
+4. Radio cards reuse `.radio-card` (CreateProjectDialog) rather than `aria-pressed` buttons: native radio keyboard behaviour; a `:focus-visible` outline on `--color-border-focus` is added because the shared input is invisible.
+5. The rail listener no longer scrolls to `#section-models`: the scroll existed for the inline picker, which the dialog replaces.
+
+### Left for later
+
+- The models section's «+ New» still draws a chevron with two or more metamodels (`ProjectEditor.tsx`, `showMetamodelMenu`), now pointing at a dialog, not a dropdown. Removing it touches the dead picker block; left to a cleanup lane.
+- `metamodel.models` empty on cloned projects is a forward-link gap (model/CLAUDE.md §3.6); `createM1`'s own clash check is inert there, `DModel.new`'s is what holds.
+
+### How to see it
+
+`npm start -- --port <p>`, open any project with a metamodel, then click the rail's «+ New model» or the Models section's «+ New»; or in the console `window.dispatchEvent(new CustomEvent('jjodel:open-new-model-dialog', { detail: { metamodelId } }))`.
