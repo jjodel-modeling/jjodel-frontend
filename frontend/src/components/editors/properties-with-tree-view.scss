@@ -2490,3 +2490,25 @@ html[data-mode="advanced"] .properties-tree-overlay .properties-with-tree-view--
         color: var(--shell-text-1);
     }
 }
+
+// ─── Shell S9: rail tickets (P-2026-10-19-2050) ──────────────────────────────
+// Rail-only, under the S6/S7/S8 anchor and after it (D-UI-11: never in the sidebar sheet).
+// Source: discovery_2026-10-19_shell_rail_tickets.md §4.
+.properties-tree-overlay .properties-with-tree-view--floating {
+
+    // React-select's own input sits inside `.jj-select__control`, which draws the field.
+    // The B4 rule (:1750) and the panel rule (:598) also match it and gave it a 30px box
+    // with a 1px `!important` border, a small box left of the value. (0,6,1): ties B4's
+    // focus rule and wins by source order. Font size stays, so the value line does not move.
+    .jj-field .jj-select .jj-select__input-container > input.jj-select__input {
+        height: auto;
+        padding: 0;
+        border: 0 !important;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    // Section headers on the row height (R-SHELL-2): at 23px two header toggles' 24px
+    // boxes overlapped by 1px. Already a centred flex row, so the label stays centred.
+    .tree-section__header { min-height: var(--shell-row-height); }
+}

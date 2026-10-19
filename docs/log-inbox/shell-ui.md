@@ -145,3 +145,16 @@ not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: Alfonso checked the status bar on 3001 after hard refresh (Inter font, shell text colours, 11 px minimum, 24 px hit targets on Jjodie and bell, bar height and notification anchor unchanged, dark JjTL bar unchanged): ok, 2026-10-19 20:46
 **Notes**: Rollback tag `pre-shell-ui-s3` on `5a082c73a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1816/result.json`.
 **Prompt document name**: 2026-10-19 18:16
+
+## 2026-10-19 — fix: rail select input, 11px anchor labels, row-height headers (S9)
+**Prompt**: P-2026-10-19-2050, shell S9: the three rail tickets of this inbox (P-2026-10-19-1742, -1830, -1930). React-select inner input box in the Type field; 9px anchor labels in NodeEditor's NODE section (R-SHELL-5); 23px section headers to `--shell-row-height` (R-SHELL-2), with `.jj-contents-add` and the first toggle under `.tree-search`.
+**Files touched**: frontend/src/components/editors/properties-with-tree-view.scss, frontend/src/components/editors/node-editor-redesign.scss (de05729ed); docs/discovery/discovery_2026-10-19_shell_rail_tickets.md (758ec2f34); docs/log-inbox/shell-ui.md, docs/prompts/claude_2026-10-19_2050_prompt_shell_ui_s9_tickets.md (Status line)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 19:30
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO on 3019 (ShellCheck, metamodel, Basic, 1600x1000): rects unchanged, headers 26px, text <11px 0, select input border 0, console init_dash only; residual corner misses on half-pixel rows and props header/vsplit accepted
+**Notes**: DemoPetri 1600x1000, 4 states x2: rects same; select input border 1px/30px -> 0/auto(16), control 1309,304,277,30 same; headers 23 -> 26/24; labels <11px 17 -> 0, no collisions; toggle misses B 72 -> 24 cells (filter row left), add 0/576 before and after (no change). Report split from the code commit by bash-guard P13. Gates: typecheck 0, vitest 33/33, build 0, smoke GREEN 12/0/3. Detail in the discovery report §4, §8.
+**Prompt document name**: 2026-10-19 20:50

@@ -535,7 +535,7 @@ $font-mono: 'IBM Plex Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
 }
 
 .anchor-viz__point-label {
-    font-size: 9px;
+    font-size: var(--shell-font-size-min);
     font-weight: 600;
     color: $color-text-secondary;
     text-transform: lowercase;
