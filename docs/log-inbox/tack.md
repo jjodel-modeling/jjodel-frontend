@@ -272,8 +272,8 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Prompt**: P-2026-10-20-0018: the Lanes page stayed on «Loading the lanes…» in a browser (`Illegal invocation` at lanes.js:96); default poller timers called setInterval as a method, and the throw preceded the registration of TackViews.lanes
 **Files touched**: tack/src/board/lanes.js, tack/test/lanes-view.test.mjs (03d22d7c7), docs/prompts/claude_2026-10-20_0018_prompt_tack_s8_lanes_view_fix.md (Status, copied from the trunk), docs/log-inbox/tack.md
 **Outcome**: ✅ completed
-**Corregge**: P-2026-10-19-2330
-**Causa**: (c) a wrong assumption about existing code: Node accepts `obj.setInterval(...)` on a plain object, a browser does not, and the suite runs in Node
+**Corregge**: 2026-10-19 23:30
+**Causa**: (c)
 **Regressions**: no
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
