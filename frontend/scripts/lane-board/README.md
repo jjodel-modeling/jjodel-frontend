@@ -13,6 +13,29 @@ caches, `~/.jjodel-lanes/board/timeline-cache.json` and, beside it, `usage-cache
 (best effort: if the directory is missing the write is skipped and finished lanes are
 read again); `req-trace.mjs` keeps its own cache in the system temp folder (below).
 
+## Look and theme (P-2026-10-19-1130)
+
+The page follows the design agreed on 2026-10-18 («Lane Monitor Desktop»), which takes Linear
+as its reference for principles only. The ground is near-black in dark mode, borders are quiet
+1 px lines, type is a compact 13 px, numbers are monospace with tabular figures, and a single
+indigo accent marks what is live. Colour is kept for state: done green, waiting amber, blocked
+red, hard-stop a dashed grey ring, running indigo. There are no gradients, no emoji and no
+webfont (the system stacks only, so the board works offline). A 232 px sidebar holds the product
+block with the trunk name, the four views (Lanes with the running count, Requirements with the
+register's row count), the six-pill strip as «By state», «Needs attention» from
+`/api/attention` (waiting and blocked filter the Lanes tab, stale is a count), and a footer with
+spend today, the load average, the port, the last sync and the theme control. Below 900 px the
+sidebar becomes a top bar. The Lanes tab opens with six KPI cells, each with its window: the five
+lane cells filter the tab as a pill does, and spend is a plain figure. An amber banner appears
+while lanes wait for a reply. The running lanes show as cards. The 24 h and earlier tables have ten
+columns that fit 1160 px: Window (Started → Ended), Elapsed over Span, Total over In / Out, Ctx max over Arch, Cost, the
+cut Worktree and Launched by, with State in the Outcome cell's title. Each value is in its row or its cell's title,
+and below 1100 px the table scrolls. A filter's view keeps the full table, `table()`. The theme is System by default (`prefers-color-scheme`). Light and Dark set
+`data-theme` on `<html>`, and the choice is kept in `localStorage` (`laneBoardTheme`). The tokens are the
+`--t-*` properties at the top of the style block; the old names (`--bg`, `--fg`, `--muted`,
+`--line`, `--card`, `--accent`, `--run`, `--ok`, `--warn`, `--hs`, `--bad`) alias them, so
+Timeline, Insights and Requirements follow the theme until their own restyle.
+
 ## The four tabs
 
 **Lanes.** A table of the running and blocked lanes: state, kind (from the `Lane:`

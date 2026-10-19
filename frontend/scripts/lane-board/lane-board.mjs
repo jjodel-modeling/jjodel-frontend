@@ -1761,60 +1761,163 @@ setTimeout(()=>{if(!gone)location.replace('/#lane=${id}')},1500);
 </script></body></html>`;
 }
 
+// The page's two themes (P-2026-10-19-1130, the «Lane Monitor Desktop» design): the same tokens, light and dark. The legacy
+// names (--bg, --fg, --muted, --line, --card, --accent, --run, --ok, --warn, --hs, --bad) alias them, so timeline.js,
+// insights.js and requirements.js follow the theme; --q, --neutral and --track are timeline.js's own, set here on a
+// stronger selector so a theme chosen against the system's still reaches them.
+const THEME_LIGHT = 'color-scheme:light;--t-side:#F7F7F8;--t-content:#FFFFFF;--t-panel:#FBFBFC;--t-panel2:#FFFFFF;--t-head:#F7F7F8;--t-line:#ECEDF0;--t-line2:#E5E6EA;--t-line3:#D9DAE0;' +
+    '--t-text:#16171B;--t-text2:#5D616B;--t-muted:#80848E;--t-accent:#5B63D6;--t-link:#4B53C6;--t-accent-dim:#C9CCF2;--t-done:#2E9E66;--t-res:#237A52;--t-wait:#B7791F;--t-block:#D64541;--t-hs:#80848E;' +
+    '--t-sel:#ECECEF;--t-hover:#F2F2F4;--t-tag:#EFEFF2;--t-k-fast:#2E9E66;--t-ban-bg:#FDF7EC;--t-ban-line:#F0DDB8;--t-ban-fg:#FFFFFF;--q:#7c3aed;--neutral:#94a3b8;--track:#cbd5e1';
+const THEME_DARK = 'color-scheme:dark;--t-side:#0C0D0F;--t-content:#0F1013;--t-panel:#121317;--t-panel2:#131418;--t-head:#101114;--t-line:#1C1E22;--t-line2:#1F2126;--t-line3:#2A2C33;' +
+    '--t-text:#EDEEF0;--t-text2:#A1A4AB;--t-muted:#7E828B;--t-accent:#8A93FF;--t-link:#A9B1FF;--t-accent-dim:#3B3F6E;--t-done:#4CC38A;--t-res:#2E8F62;--t-wait:#F2B04C;--t-block:#F2645A;--t-hs:#8B8F98;' +
+    '--t-sel:#1A1B20;--t-hover:#15161A;--t-tag:#1D1F25;--t-k-fast:#7FD3B0;--t-ban-bg:#17140E;--t-ban-line:#3A3020;--t-ban-fg:#17140E;--q:#a78bfa;--neutral:#64748b;--track:#334155';
+// The views' icons, drawn for the board (plain strokes), as CSS masks: the tab buttons keep their bare label.
+const icon = (body) => 'url("data:image/svg+xml,' + ("%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'%3E" + body + '%3C/svg%3E') + '")';
+const ICONS = {
+    table: icon("%3Crect x='2' y='3' width='12' height='3' rx='1'/%3E%3Crect x='2' y='10' width='12' height='3' rx='1'/%3E"),
+    timeline: icon("%3Cpath d='M2 4h6M5 8h8M3 12h5'/%3E"),
+    insights: icon("%3Cpath d='M3 13V8M8 13V3M13 13V6'/%3E"),
+    requirements: icon("%3Cpath d='M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01'/%3E"),
+};
+const MONO = 'ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace';
+
 const PAGE = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Jjodel Harness Lane Management</title>
+<script data-theme-boot>try{var th=localStorage.getItem('laneBoardTheme');if(th==='light'||th==='dark')document.documentElement.setAttribute('data-theme',th)}catch(e){}</script>
 <style>
-:root{--bg:#f8fafc;--fg:#0f172a;--muted:#64748b;--line:#e2e8f0;--card:#fff;--accent:#0ea5e9;--run:#0284c7;--ok:#15803d;--warn:#b45309;--hs:#74b98a;--bad:#b91c1c}
-@media (prefers-color-scheme:dark){:root{--bg:#0b1220;--fg:#e2e8f0;--muted:#94a3b8;--line:#1e293b;--card:#111a2e;--run:#38bdf8;--ok:#4ade80;--warn:#fbbf24;--hs:#2f7d4f;--bad:#f87171}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
-main{max-width:1280px;margin:0 auto;padding:16px}main.wide{max-width:1672px}
-header{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;margin-bottom:16px}
-h1{font-size:16px;margin:0}h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:24px 0 8px}
-.meta{color:var(--muted);font-size:12px}.meta b{color:var(--fg);font-weight:600}
-.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:8px}
-table{border-collapse:collapse;width:100%;min-width:900px}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}tr:last-child td{border-bottom:0}
-td.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}td.when{white-space:nowrap;font-variant-numeric:tabular-nums}
-.title{display:block;color:var(--muted);font-size:11px;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;max-width:320px;white-space:normal}
-.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid currentColor}
-.running{color:var(--run)}.blocked,.stopped{color:var(--warn)}.done,.resolved{color:var(--ok)}.question{color:var(--warn)}.hard-stop{color:var(--hs)}.blocked-o,.unparsed,.failed{color:var(--bad)}
-.phase{max-width:340px}.empty{padding:16px;color:var(--muted)}.err{color:var(--bad);margin:8px 0}.err.stale{color:var(--warn)}
-.spin{display:inline-block;width:10px;height:10px;margin-left:-16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;align-self:center}.spin[hidden]{display:none}@keyframes spin{to{transform:rotate(360deg)}}
-td.phase .prow{display:flex;align-items:center;gap:6px;height:18px;overflow:hidden}td.phase .ptext{display:block;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}td.phase .n{flex:none;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
-.segs{display:flex;gap:2px;min-width:0}.segs .seg{display:block;flex:0 1 10px;min-width:3px;height:8px;border-radius:2px;border:1px solid var(--muted);background:transparent}.segs .seg.reached{background:var(--run);border-color:var(--run)}.segs .seg.skipped{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,transparent 1px 3px)}
-table.lfx{table-layout:fixed;width:100%;min-width:1456px}table.lfx th,table.lfx td{padding:8px;overflow:hidden;overflow-wrap:anywhere}table.lfx .pill{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
-td.lfx-num{white-space:nowrap;font-variant-numeric:tabular-nums}td.lfx-cut{white-space:nowrap;text-overflow:ellipsis}
-a.chat{color:var(--run);text-decoration:none}a.chat:hover{text-decoration:underline}
+:root,:root[data-theme=light]{${THEME_LIGHT}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){${THEME_DARK}}}
+:root[data-theme=dark]{${THEME_DARK}}
+:root{--bg:var(--t-content);--fg:var(--t-text);--muted:var(--t-muted);--line:var(--t-line2);--card:var(--t-panel);--accent:var(--t-accent);--run:var(--t-accent);--ok:var(--t-done);--warn:var(--t-wait);--hs:var(--t-hs);--bad:var(--t-block)}
+*{box-sizing:border-box}body{margin:0;background:var(--t-content);color:var(--t-text);font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--t-link);text-decoration:none}a:hover{text-decoration:underline}.mono{font-family:${MONO}}
+/* The shell: a 232 px sidebar (product, views, lanes by state, needs attention, footer) and the view beside it. */
+.app{display:flex;min-height:100vh}
+.side{width:232px;flex:none;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;background:var(--t-side);border-right:1px solid var(--t-line)}
+.prod{display:flex;align-items:center;gap:10px;padding:16px 12px 14px 14px}.prod>div{min-width:0}
+.logo{width:26px;height:26px;flex:none;border-radius:7px;background:var(--t-panel2);border:1px solid var(--t-line3);display:flex;align-items:center;justify-content:center;color:var(--t-link)}
+.prod b{display:block;font-weight:600}.prod .mono{display:block;font-size:11px;color:var(--t-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+nav.tabs{display:flex;flex-direction:column;gap:1px;padding:0 8px}
+nav.tabs>button{height:30px;display:flex;align-items:center;gap:10px;padding:0 10px;border:0;border-radius:6px;background:none;color:var(--t-text2);font:inherit;text-align:left;cursor:pointer}
+nav.tabs>button:hover{background:var(--t-hover)}nav.tabs>button.on{background:var(--t-sel);color:var(--t-text)}
+nav.tabs>button:focus-visible,.side a:focus-visible,.kpi:focus-visible{outline:2px solid var(--t-accent);outline-offset:-2px}
+nav.tabs>button::before{content:'';width:15px;height:15px;flex:none;background:currentColor;-webkit-mask:var(--ic) center/15px no-repeat;mask:var(--ic) center/15px no-repeat}
+nav.tabs>button::after{margin-left:auto;font:11px ${MONO};color:var(--t-muted)}
+${Object.entries(ICONS).map(([t, u]) => 'nav.tabs>button[data-tab=' + t + ']{--ic:' + u + '}').join('')}
+nav.tabs>button[data-tab=table]::after{content:var(--lanes-n,'');color:var(--t-link)}nav.tabs>button[data-tab=requirements]::after{content:var(--req-n,'')}
+.grp,.strip::before{display:block;padding:18px 10px 6px;font-size:11px;font-weight:500;color:var(--t-muted);letter-spacing:.02em}.strip::before{content:'By state'}
+.strip{display:flex;flex-direction:column;gap:1px}
+.strip .sp,.attn a,.attn span.ar{height:28px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:6px;font-size:13px;font-weight:400;text-decoration:none;cursor:pointer}
+.strip .sp b{order:2;margin-left:auto;font:500 11px ${MONO};color:var(--t-muted)}.strip .sp.zero{opacity:.45}
+.strip .sp:hover,.attn a:hover{background:var(--t-hover);text-decoration:none}.strip .sp.on,.attn a.on{background:var(--t-sel)}
+.attn{display:flex;flex-direction:column;gap:1px;padding:0 8px}.attn a,.attn span.ar{color:var(--t-text2)}.attn span.ar{cursor:default}
+.attn .n{margin-left:auto;font:500 11px ${MONO};color:var(--t-muted)}.attn .w .n{color:var(--t-wait)}.attn .b .n{color:var(--t-block)}.attn .none{padding:4px 10px;font-size:12px;color:var(--t-muted)}
+.dot{width:8px;height:8px;flex:none;border-radius:50%;background:currentColor;margin:0 3px}.dot.w{background:var(--t-wait)}.dot.b{background:var(--t-block)}.dot.s{background:transparent;border:1.5px dashed var(--t-hs)}
+.foot{margin-top:auto;padding:14px 18px 16px;border-top:1px solid var(--t-line);display:flex;flex-direction:column;gap:10px}
+.fr{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--t-muted)}.fr>*{white-space:nowrap}.fr b{font:500 12px ${MONO};color:var(--t-text);font-variant-numeric:tabular-nums;white-space:nowrap}.fr b small{font-size:12px;font-weight:400;color:var(--t-text2)}
+.fr.fs{align-items:center;gap:6px;font-size:11px}.fr.fs .mono{margin-right:auto}.ok-dot{width:6px;height:6px;flex:none;border-radius:50%;background:var(--t-done)}.ok-dot.stale{background:var(--t-wait)}.ok-dot.down{background:var(--t-block)}
+.theme{display:flex;gap:2px;padding:2px;background:var(--t-hover);border:1px solid var(--t-line2);border-radius:7px}
+.theme button{flex:1;height:24px;border:0;border-radius:5px;background:transparent;color:var(--t-text2);font:inherit;font-size:12px;cursor:pointer}.theme button.on{background:var(--t-sel);color:var(--t-text);box-shadow:0 0 0 1px var(--t-line3)}
+main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--t-content)}
+.vh{height:52px;flex:none;position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:0 20px 0 24px;border-bottom:1px solid var(--t-line);background:var(--t-content)}
+.vh h1{margin:0;font-size:14px;font-weight:600}.live{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t-text2)}
+.pulse{width:7px;height:7px;flex:none;border-radius:50%;background:var(--t-accent);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--t-accent) 55%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+.view{padding:20px 24px 32px}
+h2{display:flex;align-items:baseline;gap:8px;margin:24px 0 10px;font-size:12.5px;font-weight:500;color:var(--t-text)}h2 .h2n{font:11px ${MONO};color:var(--t-muted)}
+.meta{color:var(--t-muted);font-size:12px}.meta b{color:var(--t-text);font-weight:600}
+.empty{padding:16px;color:var(--t-muted)}.err{color:var(--bad);margin:0 0 8px}.err:empty{display:none}.err.stale{color:var(--warn)}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--t-line3);border-top-color:var(--t-accent);border-radius:50%;animation:spin .8s linear infinite}.spin[hidden]{display:none}@keyframes spin{to{transform:rotate(360deg)}}
+/* The Lanes tab: KPI strip, the waiting banner, running cards, the tables. */
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--t-line2);border-radius:10px;background:var(--t-panel);overflow:hidden}
+.kpi{display:flex;flex-direction:column;gap:4px;padding:12px 16px;border:0;border-left:1px solid var(--t-line2);background:none;color:inherit;font:inherit;text-align:left}.kpi:first-child{border-left:0}
+button.kpi{cursor:pointer}button.kpi:hover{background:var(--t-hover)}button.kpi.on{background:var(--t-sel)}
+.kpi .kl{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t-text2)}.kpi .kl .dot{width:7px;height:7px;margin:0}
+.kpi .kv{display:flex;align-items:baseline;gap:8px}.kpi .kv b{font-size:22px;font-weight:500;letter-spacing:-.01em;font-variant-numeric:tabular-nums}.kpi .kv span{font-size:11px;color:var(--t-muted)}
+.banner{display:flex;align-items:center;gap:14px;margin-top:16px;padding:10px 12px 10px 16px;border:1px solid var(--t-ban-line);background:var(--t-ban-bg);border-radius:10px}.banner[hidden]{display:none}
+.banner svg{flex:none;color:var(--t-wait)}.banner .bt b{font-weight:500}.banner .bt span{color:var(--t-text2)}
+.banner a{margin-left:auto;flex:none;height:28px;display:flex;align-items:center;padding:0 12px;border-radius:7px;background:var(--t-wait);color:var(--t-ban-fg);font-weight:500;font-size:12.5px;cursor:pointer}.banner a:hover{text-decoration:none;filter:brightness(1.08)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}.cards>.empty{border:1px solid var(--t-line2);border-radius:10px;background:var(--t-panel)}
+.card{display:flex;flex-direction:column;gap:12px;min-width:0;padding:14px 16px;border:1px solid var(--t-line2);border-radius:10px;background:var(--t-panel2)}.card.c-run{border-color:var(--t-accent-dim)}.card.c-blk{border-color:color-mix(in srgb,var(--t-wait) 45%,var(--t-line2))}
+.card.mark{box-shadow:0 0 0 2px var(--t-accent)}
+.ch{display:flex;align-items:center;gap:10px;min-width:0}.ch .cid{font:500 12.5px ${MONO};white-space:nowrap}.ch .ct{margin-left:auto;font-size:12px;color:var(--t-text2);white-space:nowrap;font-variant-numeric:tabular-nums}.ch .ct b{font-weight:400;color:var(--t-text)}
+.ch .pulse.c-blk{background:var(--t-wait);animation:none}
+.ctitle{font-size:13.5px;line-height:1.4;min-height:38px;overflow-wrap:anywhere}
+.cprog{display:flex;flex-direction:column;gap:6px}.csteps{display:flex;gap:3px}.csteps i{flex:1;height:4px;border-radius:2px;background:var(--t-line3)}.csteps i.reached{background:var(--t-accent)}.csteps i.skipped{background:var(--t-accent-dim)}
+.cphase{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--t-muted)}.cphase span:last-child{font-family:${MONO};color:var(--t-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cfacts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding-top:10px;border-top:1px solid var(--t-line2)}.cfacts div{display:flex;flex-direction:column;gap:2px;min-width:0}.cfacts span{font-size:11px;color:var(--t-muted)}.cfacts b{font:400 12px ${MONO};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cby{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--t-muted);min-width:0}
+.wrap{overflow-x:auto;background:var(--t-panel);border:1px solid var(--t-line2);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:900px}th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--t-line);vertical-align:middle}
+th{height:34px;font-size:11.5px;font-weight:400;color:var(--t-muted);background:var(--t-head);white-space:nowrap;border-bottom-color:var(--t-line2)}tr:last-child td{border-bottom:0}tbody tr:hover>td{background:var(--t-hover)}
+td.id{font:12px ${MONO};color:var(--t-text);white-space:nowrap}td.when{white-space:nowrap;font:12px ${MONO};color:var(--t-text2);font-variant-numeric:tabular-nums}
+.title{display:block;color:var(--t-text2);font-size:11px;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;max-width:320px;white-space:normal}
+td.id .title{margin-top:1px;font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* State as a dot and a word (a dashed ring for hard-stop); the launcher as a quiet tag; the kind as a mono tag. */
+.pill{display:inline-flex;align-items:center;gap:7px;max-width:100%;font-size:12px;font-weight:400;white-space:nowrap}.pill::before{content:'';width:8px;height:8px;flex:none;border-radius:50%;background:currentColor}
+.pill.hard-stop::before{background:transparent;border:1.5px dashed currentColor}
+span[class=pill]{padding:1px 6px;border-radius:5px;background:var(--t-tag);font-size:11px;margin-right:6px}span[class=pill]::before{display:none}
+.exited{color:var(--t-text2)}.pill.exited::before{background:var(--t-muted)}.running{color:var(--run)}.blocked,.stopped{color:var(--warn)}.done,.resolved{color:var(--ok)}.question{color:var(--warn)}.hard-stop{color:var(--hs)}.blocked-o,.unparsed,.failed{color:var(--bad)}
+.phase{max-width:340px}
+td.phase .prow{display:flex;align-items:center;gap:6px;height:18px;overflow:hidden}td.phase .ptext{display:block;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t-text2)}td.phase .n{flex:none;color:var(--muted);font:11px ${MONO}}
+.segs{display:flex;gap:2px;min-width:0}.segs .seg{display:block;flex:0 1 10px;min-width:3px;height:4px;border-radius:2px;background:var(--t-line3)}.segs .seg.reached{background:var(--run)}.segs .seg.skipped{background:var(--t-accent-dim)}
+table.lfx{table-layout:fixed;width:100%;min-width:1640px}table.lfx th,table.lfx td{padding:8px;overflow:hidden;overflow-wrap:anywhere}table.lfx th:first-child,table.lfx td:first-child{padding-left:16px}table.lfx .pill{overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+table.cfx{table-layout:fixed;width:100%;min-width:1100px}table.cfx th,table.cfx td{padding:7px 8px;overflow:hidden}table.cfx th:first-child,table.cfx td:first-child{padding-left:16px}table.cfx .r{text-align:right}
+table.cfx td.r b{display:block;font-weight:400;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}table.cfx td.cn b{font:12px ${MONO}}table.cfx .sub{display:block;font:10.5px ${MONO};color:var(--t-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.cfx td.cw{font:12px ${MONO};color:var(--t-text2);font-variant-numeric:tabular-nums}table.cfx td.cwt{font:11.5px ${MONO};color:var(--t-text2)}table.cfx td.cby2{white-space:nowrap;text-overflow:ellipsis}table.cfx td.cby2 .title{display:inline;max-width:none;white-space:nowrap;font-size:10.5px}table.cfx td.cby2 span[class=pill]{margin-right:4px}table.cfx .pill{overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+td.lfx-num{white-space:nowrap;font:12px ${MONO};font-variant-numeric:tabular-nums}td.lfx-cut{white-space:nowrap;text-overflow:ellipsis}td.lfx-cut:not(:has(.kb)){font:12px ${MONO};color:var(--t-text2)}
+a.chat{color:var(--t-link);text-decoration:none;font:11px ${MONO};display:inline}a.chat:hover{text-decoration:underline}
 .load-hi{color:var(--bad);font-weight:600}
-.tabs{display:flex;gap:4px;margin:0 0 8px;border-bottom:1px solid var(--line)}.tabs button,.seg button{font:inherit;font-size:12px;background:none;border:0;color:var(--muted);padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}.tabs button.on{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
-.strip{margin-left:auto;display:flex;gap:4px;align-items:center;flex:none;padding:4px 0}.strip .sp{text-decoration:none;white-space:nowrap;cursor:pointer;background:var(--card)}.strip .sp b{display:inline-block;min-width:3ch;text-align:right;font-variant-numeric:tabular-nums;margin-right:3px}.strip .sp.zero{opacity:.35}.strip .sp.on{box-shadow:0 0 0 2px currentColor}
-.filt{display:flex;gap:12px;align-items:baseline}.filt a{color:var(--accent);font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer}
+.filt{display:flex;gap:12px;align-items:baseline}.filt a{color:var(--t-link);font-size:12px;font-weight:400;cursor:pointer}
 /* The Kind badge and its overlay (P-2026-10-18-1428): one width for every kind, so no row moves between states. */
-button.kb{width:64px;padding:1px 4px;text-align:center;background:none;font-family:inherit;line-height:inherit;cursor:pointer}button.kb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}button.kb.on{box-shadow:0 0 0 2px currentColor}
-.k-merge{color:var(--fg)}.k-fast{color:var(--ok)}.k-discovery{color:var(--warn)}.k-phase2{color:var(--run)}.k-unknown,.k-chain{color:var(--muted)}button.kb.k-unknown,button.kb.k-chain{border-style:dashed}.ksx{color:var(--muted);font-size:11px}
-#kd{position:absolute;z-index:20;max-width:460px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 16px rgba(15,23,42,.18);pointer-events:none;overflow-wrap:anywhere}#kd.pin{pointer-events:auto}#kd div{margin-top:2px}
-body{min-height:100vh}details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:8px 8px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 8px 8px}
+button.kb{width:64px;padding:1px 2px;justify-content:center;border:1px solid var(--t-line3);border-radius:5px;background:none;font:10.5px/1.45 ${MONO};cursor:pointer}button.kb::before{display:none}button.kb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}button.kb.on{box-shadow:0 0 0 2px currentColor}
+.k-merge{color:var(--t-text2)}.k-fast{color:var(--t-k-fast)}.k-discovery{color:var(--warn)}.k-phase2{color:var(--t-link)}.k-unknown,.k-chain{color:var(--muted)}button.kb.k-unknown,button.kb.k-chain{border-style:dashed}.ksx{color:var(--muted);font-size:11px;white-space:nowrap}
+#kd{position:absolute;z-index:20;max-width:460px;background:var(--t-panel2);color:var(--t-text);border:1px solid var(--t-line3);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.28);pointer-events:none;overflow-wrap:anywhere}#kd.pin{pointer-events:auto}#kd div{margin-top:2px;color:var(--t-text2)}
+details{margin-bottom:8px}summary{cursor:pointer;display:flex;gap:16px;align-items:baseline;padding:9px 16px;background:var(--t-panel);border:1px solid var(--t-line2);border-radius:10px;list-style:none}summary:hover{background:var(--t-hover)}summary b{font:500 12.5px ${MONO}}summary::-webkit-details-marker{display:none}summary::before{content:'\\25B8';color:var(--muted)}details[open] summary::before{content:'\\25BE'}details[open] summary{border-radius:10px 10px 0 0;border-bottom:0}details[open] .wrap{border-radius:0 0 10px 10px}
 /* #lane=<id> (P-2026-10-18-2320): the row the link names, until the next click. */
 tr.mark>td{background:color-mix(in srgb,var(--run) 12%,transparent)}tr.mark>td:first-child{box-shadow:inset 3px 0 0 var(--run)}
-</style></head><body><main>
-<header><h1>Jjodel Harness Lane Management</h1><span class="meta" id="meta">loading…</span><span class="spin" id="spin" role="status" aria-label="Loading" hidden></span></header>
+/* Below 900 px the sidebar folds into a top bar. */
+@media (max-width:899px){
+.app{flex-direction:column}.side{position:static;width:auto;height:auto;overflow:visible;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:6px 10px;border-right:0;border-bottom:1px solid var(--t-line)}
+.prod{padding:2px 6px 2px 0}.prod .mono{display:none}nav.tabs{flex-direction:row;flex-wrap:wrap;padding:0}nav.tabs>button{height:28px}
+.strip{flex-direction:row;flex-wrap:wrap;flex-basis:100%}.strip::before,.grp{display:none}.strip .sp,.attn a,.attn span.ar{height:26px;padding:0 8px;gap:6px;font-size:12px}.strip .sp b{order:0;margin-left:0}
+.attn{flex-direction:row;flex-wrap:wrap;padding:0}.foot{margin:0 0 0 auto;padding:2px 0;border-top:0;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 14px}.fr{gap:6px}.theme{width:180px}
+.vh{position:static}.view{padding:16px}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.kpi:nth-child(4){border-left:0}.kpi:nth-child(n+4){border-top:1px solid var(--t-line2)}.cards{grid-template-columns:minmax(0,1fr)}.cfacts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head><body><div class="app">
+<aside class="side" aria-label="Board">
+<div class="prod"><span class="logo" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M2 8h8M2 12h11"/></svg></span><div><b>Jjodel Harness</b><span class="mono" title="The trunk the board reads">${TRUNK}</span></div></div>
 <nav class="tabs"><button data-tab="table">Lanes</button><button data-tab="timeline">Timeline</button><button data-tab="insights">Insights</button><button data-tab="requirements">Requirements</button><div class="strip" id="strip" aria-label="Lanes by state">${STRIP.map(([k, label, cls]) => '<a href="#" role="button" class="pill sp ' + cls + ' zero" data-k="' + k + '" title="Show the ' + label + ' lanes"><b>0</b>' + label + '</a>').join('')}</div></nav>
+<div class="grp" id="attn-h">Needs attention</div><div class="attn" id="attn" aria-labelledby="attn-h"><span class="none">Loading…</span></div>
+<div class="foot">
+<div class="fr"><span>Spend today</span><b id="f-spend" title="Spend on this day at API list price, each turn counted on the day it ended. The architect chat is not included.">…</b></div>
+<div class="fr"><span>Load 1 · 5 · 15 min</span><b id="f-load">…</b></div>
+<div class="fr fs"><span class="ok-dot" id="f-dot"></span><span class="mono">localhost:${PORT}</span><span id="f-sync">…</span></div>
+<div class="theme" id="theme" role="group" aria-label="Theme"><button type="button" data-th="light">Light</button><button type="button" data-th="dark">Dark</button><button type="button" data-th="system">System</button></div>
+</div>
+</aside>
+<main>
+<header class="vh"><h1 id="vt">Lanes</h1><span class="spin" id="spin" role="status" aria-label="Loading" hidden></span><span class="live" id="meta"><span class="pulse" aria-hidden="true"></span>Live · every ${REFRESH_S} s</span></header>
+<div class="view">
 <div class="err" id="err"></div>
 <div class="meta" id="lanenote" hidden></div>
 <section id="tab-table">
+<div class="kpis" id="kpis" aria-label="Summary"></div>
+<div class="banner" id="banner" role="status" hidden></div>
 <div id="lanes-filt" hidden></div>
 <div id="lanes-all">
-<h2>Running</h2><div class="wrap" id="live"><div class="empty">Loading lanes…</div></div>
-<h2>Last ${RECENT_H} hours</h2><div class="wrap" id="recent"></div>
+<h2>Running<span class="h2n" id="n-live"></span></h2><div class="cards" id="live"><div class="empty">Loading lanes…</div></div>
+<h2>Last ${RECENT_H} hours<span class="h2n" id="n-recent"></span></h2><div class="wrap" id="recent"></div>
 <h2>Earlier lanes</h2><div id="older"></div>
 </div>
 </section>
 <section id="tab-timeline" hidden><div id="tl"></div></section>
 <section id="tab-insights" hidden><div id="ins"></div></section>
 <section id="tab-requirements" hidden><div id="req"></div></section>
+</div>
 <div id="kd" role="tooltip" hidden></div>
-</main><script src="/timeline.js"></script><script src="/insights.js"></script><script src="/requirements.js"></script><script>
+</main></div><script src="/timeline.js"></script><script src="/insights.js"></script><script src="/requirements.js"></script><script>
 const REFRESH=${REFRESH_S}*1000;
 const stripKey=${stripKey.toString()};
 const abbr=${abbr.toString()};
@@ -1830,27 +1933,91 @@ if(window.fetch){const f0=window.fetch.bind(window);window.fetch=function(u,o){c
 function renderStrip(rows){
   const n={};STRIP.forEach(([k])=>{n[k]=0});rows.forEach(r=>{const k=stripKey(r);if(k)n[k]++});
   STRIP.forEach(([k])=>{const el=document.querySelector('#strip [data-k="'+k+'"]');if(!el)return;el.querySelector('b').textContent=n[k];el.classList.toggle('zero',!n[k]);el.classList.toggle('on',laneFilter===k)});
+  renderKpis(rows);renderAttn();
 }
+// Beside the strip's keys, three filters of the shell (P-2026-10-19-1130): the lanes /api/attention lists as waiting for a
+// reply (question, hard-stop), the ones it lists as blocked, and the lanes resolved in the last 24 hours.
+const FILTERS={waiting:'waiting for a reply',blockednow:'blocked now',resolved24:'resolved, last 24 h'};
+let attn=null;
+const attnIds=b=>new Set(((attn&&attn.items)||[]).filter(i=>(i.kind==='blocked')===b).map(i=>i.id));
+function inFilter(k){
+  if(k==='waiting'||k==='blockednow'){const ids=attnIds(k==='blockednow');return r=>ids.has(r.id)}
+  if(k==='resolved24')return r=>stripKey(r)==='resolved'&&r.recent;
+  return r=>stripKey(r)===k;
+}
+const plural=(n,w)=>n+' '+w+(n===1?'':'s');
+// The KPI strip: six cells, each with its window; a cell with a filter behind it filters the Lanes tab as a pill does.
+function renderKpis(rows){
+  const box=document.getElementById('kpis');
+  const n=k=>rows.filter(inFilter(k)).length;
+  const sp=daySpend(ymd(new Date()));
+  const cells=[['running','Running',n('running'),'now','var(--t-accent)'],['waiting','Waiting',attn?attnIds(false).size:'–','now','var(--t-wait)'],['blockednow','Blocked',attn?attnIds(true).size:'–','now','var(--t-block)'],
+    ['done','Done',n('done'),'last 24 h','var(--t-done)'],['resolved24','Resolved',n('resolved24'),'last 24 h','var(--t-res)'],['','Spend',sp||(Object.keys(spendByDay).length?'$0.00':'–'),'today','var(--t-hs)']];
+  box.innerHTML=cells.map(([k,l,v,w,c])=>(k?'<button type="button" class="kpi'+(laneFilter===k?' on':'')+'" data-f="'+k+'" title="Show the lanes: '+esc(l.toLowerCase())+', '+w+'">':'<div class="kpi" title="'+esc(SPEND_TIP)+'">')+
+    '<span class="kl"><span class="dot" style="background:'+c+'"></span>'+l+'</span><span class="kv"><b>'+esc(v)+'</b><span>'+w+'</span></span>'+(k?'</button>':'</div>')).join('');
+  const root=document.documentElement;if(root&&root.style)root.style.setProperty('--lanes-n',n('running')?'"'+n('running')+'"':'""');
+}
+// Needs attention (sidebar) and the banner, from /api/attention: waiting and blocked filter the Lanes tab; stale is a count.
+function renderAttn(){
+  const box=document.getElementById('attn'),ban=document.getElementById('banner');
+  if(!attn){ban.hidden=true;return}
+  if(attn.board&&attn.board!=='ok'){box.innerHTML='<span class="none" title="'+esc(attn.board)+'">unavailable</span>';ban.hidden=true;return}
+  const w=attnIds(false).size,b=attnIds(true).size;
+  const row=(k,cls,label,n,tip)=>'<a href="#" role="button" class="'+cls+(laneFilter===k?' on':'')+'" data-f="'+k+'" title="'+esc(tip)+'"><span class="dot '+cls+'"></span>'+label+'<span class="n">'+n+'</span></a>';
+  box.innerHTML=row('waiting','w','Waiting',w,'Question or hard-stop, not yet closed, waiting less than '+${ATTENTION_STALE_H}+' h')+row('blockednow','b','Blocked',b,'Over the time limit while running, or exited blocked')+
+    '<span class="ar" title="Waiting more than '+${ATTENTION_STALE_H}+' h'+(attn.staleOldest?', the oldest since '+esc(new Date(attn.staleOldest).toLocaleString('en-GB'))+'':'')+': counted, not listed"><span class="dot s"></span>Stale<span class="n">'+attn.staleCount+'</span></span>';
+  ban.hidden=!attn.waiting;
+  if(!attn.waiting)return;
+  const lead=w?'<b>'+plural(w,'lane')+' '+(w===1?'is':'are')+' waiting for a GO, ACK or answer</b>'+(b?'<span>, and '+b+' '+(b===1?'is':'are')+' blocked.</span>':'<span>.</span>'):'<b>'+plural(b,'lane')+' '+(b===1?'is':'are')+' blocked</b><span>.</span>';
+  ban.innerHTML='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5M8 11h.01"/></svg><span class="bt">'+lead+'<span> Their agents are idle until you reply.</span></span><a href="#" role="button" data-f="'+(w?'waiting':'blockednow')+'">Show '+(w?'waiting':'blocked')+' lanes</a>';
+}
+async function attnTick(){try{attn=await (await fetch('/api/attention',{cache:'no-store'})).json();renderKpis(lastRows);renderAttn();if(laneFilter==='waiting'||laneFilter==='blockednow'){renderLanes(lastRows);markLane()}}catch(e){}}
 // A pill shows its lanes alone, through the same table(): the running ones first, then the exited.
 function renderLanes(rows){
   const f=document.getElementById('lanes-filt'),all=document.getElementById('lanes-all');
   f.hidden=!laneFilter;all.hidden=!!laneFilter;
   if(laneFilter){
-    const label=(STRIP.find(s=>s[0]===laneFilter)||[,laneFilter])[1];
-    const rs=rows.filter(r=>stripKey(r)===laneFilter),L=rs.filter(r=>r.live),E=rs.filter(r=>!r.live);
+    const label=(STRIP.find(s=>s[0]===laneFilter)||[,FILTERS[laneFilter]||laneFilter])[1];
+    const rs=rows.filter(inFilter(laneFilter)),L=rs.filter(r=>r.live),E=rs.filter(r=>!r.live);
     f.innerHTML='<h2 class="filt"><span>'+esc(label)+' · '+rs.length+' lane'+(rs.length===1?'':'s')+'</span><a id="clearf">show all lanes</a></h2>'+
       (rs.length?'':'<div class="wrap"><div class="empty">No lane in this state.</div></div>')+
       (L.length?'<div class="wrap">'+table(L,true)+'</div>':'')+(E.length?'<div class="wrap"'+(L.length?' style="margin-top:8px"':'')+'>'+table(E,false)+'</div>':'');
     document.getElementById('clearf').addEventListener('click',e=>{e.preventDefault();setFilter('')});
     return;
   }
-  document.getElementById('live').innerHTML=table(rows.filter(r=>r.live),true);
-  document.getElementById('recent').innerHTML=table(rows.filter(r=>!r.live&&r.recent),false);
+  const L=rows.filter(r=>r.live),R=rows.filter(r=>!r.live&&r.recent);
+  document.getElementById('live').innerHTML=cards(L);
+  document.getElementById('n-live').textContent=L.length?String(L.length):'';
+  document.getElementById('recent').innerHTML=compact(R);
+  const rd=R.filter(r=>stripKey(r)==='done').length,rr=R.filter(r=>stripKey(r)==='resolved').length;
+  document.getElementById('n-recent').textContent=R.length?R.length+' lanes · '+rd+' done · '+rr+' resolved':'';
   renderOlder(rows.filter(r=>!r.live&&!r.recent));
 }
 // A second click on the pill of the filter, or "show all lanes", clears it.
 function setFilter(k){laneFilter=k;renderStrip(lastRows);renderLanes(lastRows)}
 document.getElementById('strip').addEventListener('click',e=>{const a=e.target.closest('[data-k]');if(!a)return;e.preventDefault();showTab('table');setFilter(laneFilter===a.dataset.k?'':a.dataset.k)});
+// The KPI cells, Needs attention and the banner's link filter alike; a second click clears.
+['kpis','attn','banner'].forEach(id=>document.getElementById(id).addEventListener('click',e=>{const a=e.target.closest('[data-f]');if(!a)return;e.preventDefault();showTab('table');setFilter(laneFilter===a.dataset.f?'':a.dataset.f)}));
+// The running lanes as cards (Lanes tab, no filter): the same facts as the Running table, laid out as in the design; the
+// filtered view keeps table(). The Kind badge is the table's, so #lane=<id> and the overlay find the card as they find a row.
+function cards(rows){
+  if(!rows.length)return '<div class="empty">'+(loaded?'No lane is running.':'Loading lanes…')+'</div>';
+  return rows.map(r=>{
+    const p=r.progress,st=r.state==='blocked'?'c-blk':'c-run';
+    const left=!r.left||r.left==='?'?'':/^(about|under) /.test(r.left)?r.left+' left':r.left;
+    const el=r.start?dur(Math.floor(r.work/60000)):'';
+    const label=p?p.reached+' of '+p.total+' milestones reached'+(p.current?', last '+p.current:''):'';
+    const steps=p?'<span class="csteps" role="img" aria-label="'+esc(label)+'">'+p.steps.map(s=>'<i class="'+esc(s.state)+'" title="'+esc(s.name+': '+s.state)+'"></i>').join('')+'</span>':'';
+    const fact=(k,v,tip)=>'<div><span>'+k+'</span><b title="'+esc(tip||v)+'">'+(v===''?'–':esc(v))+'</b></div>';
+    const hm=r.start?pad(new Date(r.start).getHours())+':'+pad(new Date(r.start).getMinutes()):'';
+    return '<article class="card '+st+'" data-id="'+esc(r.id)+'"><div class="ch"><span class="pulse '+st+'" title="'+esc(r.state)+'"></span><span class="cid">'+esc(r.id)+'</span>'+kindBadge(r)+
+      '<span class="ct" title="'+esc(tips.Elapsed+'; the time left is an estimate')+'">'+esc(el)+(left?' · <b>'+esc(left)+'</b>':'')+'</span></div>'+
+      '<div class="ctitle">'+esc(r.title||r.id)+'</div>'+
+      '<div class="cprog">'+steps+'<div class="cphase"><span>'+esc(p?p.reached+'/'+p.total+(p.current?' · '+p.current:''):r.chain?'chain':'no progress read')+'</span><span title="'+esc(r.phase)+'">'+esc(r.phase)+'</span></div></div>'+
+      '<div class="cfacts">'+fact('Started',hm)+fact('Tokens in',abbr(r.tokensIn),tips.In+(r.tokensIn===null||r.tokensIn===undefined?'':': '+r.tokensIn))+fact('Context peak',abbr(r.ctxMax),tips['Ctx max']+(r.ctxMax===null||r.ctxMax===undefined?'':': '+r.ctxMax))+fact('Worktree',r.worktree||'')+'</div>'+
+      '<div class="cby"><span>Launched by</span>'+launch(r)+'</div></article>';
+  }).join('');
+}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pill=(t,cls)=>t?'<span class="pill '+esc(cls||t)+'">'+esc(t)+'</span>':'';
 // The chat id opens the lane's claude.ai conversation when one is known; a URL without a chat id reads "chat".
@@ -1897,7 +2064,8 @@ function phaseCell(r){
 // Kind (P-2026-10-18-1428): a fixed-width badge per kind, then direct and the tier; the overlay's lines ride in data-kd.
 // Hover or focus shows the overlay, a click pins it until Esc, a click outside or a click on another badge.
 let kdPin='';
-const kindCell=r=>{const k=r.chain?'chain':r.kind||'unknown';const sx=[r.direct?'direct':'',r.tier].filter(Boolean).join(' · ');return '<td class="lfx-cut"><button type="button" class="pill kb k-'+esc(k)+(kdPin===r.id?' on':'')+'" data-id="'+esc(r.id)+'" data-kd="'+esc((r.kindInfo||[]).join('\\n')).replace(/\\n/g,'&#10;')+'" aria-describedby="kd">'+esc(k)+'</button>'+(sx?'<span class="ksx"> · '+esc(sx)+'</span>':'')+'</td>'};
+const kindBadge=r=>{const k=r.chain?'chain':r.kind||'unknown';const sx=[r.direct?'direct':'',r.tier].filter(Boolean).join(' · ');return '<button type="button" class="pill kb k-'+esc(k)+(kdPin===r.id?' on':'')+'" data-id="'+esc(r.id)+'" data-kd="'+esc((r.kindInfo||[]).join('\\n')).replace(/\\n/g,'&#10;')+'" aria-describedby="kd">'+esc(k)+'</button>'+(sx?'<span class="ksx"> · '+esc(sx)+'</span>':'')};
+const kindCell=r=>'<td class="lfx-cut">'+kindBadge(r)+'</td>';
 const kd=document.getElementById('kd');
 function kdShow(b){
   kd.innerHTML=(b.getAttribute('data-kd')||'').split('\\n').map((l,i)=>i?'<div>'+esc(l)+'</div>':'<b>'+esc(l)+'</b>').join('');
@@ -1937,13 +2105,53 @@ function table(rows,live,day){
   }
   return h+'</tbody></table>';
 }
+// The 24 h and earlier tables (P-2026-10-19-1130, fix after the chat check): ten columns that fit 1160 px, as Main.dc.html.
+// Same rows, same order, same values as table(): Started and Ended as one Window cell, Elapsed over Span, Total over In / Out,
+// Ctx max over Arch, State beside the outcome; whatever a cell leaves out is in its title. table() stays as it is for
+// the Running table of a filter and for the tests that read its columns.
+const at=(ms,day)=>{if(!ms)return '';const d=new Date(ms);const hm=pad(d.getHours())+':'+pad(d.getMinutes());return ymd(d)===day?hm:pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+hm};
+const CW={Lane:0,Outcome:104,Kind:132,Window:112,'Work / span':96,Tokens:104,'Ctx / arch':76,Cost:64,Worktree:96,'Launched by':184};
+const ctips={Window:'Started → Ended',
+  'Work / span':tips.Elapsed+'; below, Span: '+tips.Span,Tokens:'Total (In + Out); below, In / Out. In: '+tips.In+'. Out: '+tips.Out,
+  'Ctx / arch':tips['Ctx max']+'; below, Arch: '+tips.Arch,Cost:tips.Cost};
+function compact(rows,day){
+  day=day||ymd(new Date());
+  if(!rows.length)return '<div class="empty">No lanes in this period.</div>';
+  const cols=Object.keys(CW),R=['Work / span','Tokens','Ctx / arch','Cost'];
+  let h='<table class="cfx"><colgroup>'+cols.map(c=>'<col'+(CW[c]?' style="width:'+CW[c]+'px"':'')+'>').join('')+'</colgroup><thead><tr>'+cols.map(c=>'<th'+(R.includes(c)?' class="r"':'')+(ctips[c]?' title="'+esc(ctips[c])+'"':'')+'>'+c+'</th>').join('')+'</tr></thead><tbody>';
+  const num=v=>v===null||v===undefined?'':String(v);
+  for(const r of rows){
+    const oc=r.outcome==='none'?'':r.outcome;
+    const out=oc?pill(oc,oc==='blocked'?'blocked-o':oc):pill(r.state);
+    const sp=r.live?Date.now():r.end;
+    const w=r.start?dur(Math.floor(r.work/60000)):'',s=r.start&&sp?dur(Math.floor((sp-r.start)/60000)):'';
+    const none=r.tokensIn===null||r.tokensIn===undefined;
+    const archT=r.archOpen?'open':abbr(r.archTotal===null||r.archTotal===undefined?null:r.archTotal);
+    const archTip=r.archOpen?'open'+(r.archChat?' · chat '+r.archChat:''):r.archTotal===null||r.archTotal===undefined?'n/a':'in '+r.archIn+' · out '+r.archOut+' · total '+r.archTotal+(r.archChat?' · chat '+r.archChat:'');
+    const costNone=r.costUSD===null||r.costUSD===undefined;
+    h+='<tr><td class="id">'+esc(r.id)+(r.title?'<span class="title">'+esc(r.title)+'</span>':'')+'</td>'+
+      '<td title="'+esc('State: '+r.state+(oc?' · outcome: '+oc:''))+'">'+out+'</td>'+kindCell(r)+
+      '<td class="cw" title="'+esc('Started '+(r.start?new Date(r.start).toLocaleString('en-GB'):'?')+' · Ended '+(r.end?new Date(r.end).toLocaleString('en-GB'):'?'))+'">'+esc(at(r.start,day))+(r.end?' → '+esc(at(r.end,day)):'')+'</td>'+
+      '<td class="r" title="'+esc('Elapsed '+(w||'?')+' · Span '+(s||'?'))+'"><b>'+esc(w)+'</b><span class="sub">'+(s?'span '+esc(s):'')+'</span></td>'+
+      '<td class="r cn" title="'+esc(none?'n/a':'In '+r.tokensIn+' · Out '+r.tokensOut+' · Total '+r.tokensTotal+' · subagents: '+(r.tokensSub||0)+' tokens')+'"><b>'+abbr(r.tokensTotal)+'</b><span class="sub">'+(none?'n/a':abbr(r.tokensIn)+' / '+abbr(r.tokensOut))+'</span></td>'+
+      '<td class="r cn" title="'+esc('Ctx max '+num(r.ctxMax===null||r.ctxMax===undefined?'n/a':r.ctxMax)+' · Arch '+archTip)+'"><b>'+abbr(r.ctxMax)+'</b><span class="sub">arch '+esc(archT)+'</span></td>'+
+      '<td class="r cn" title="'+esc(costNone?'':'$'+Number(r.costUSD.toFixed(6))+' · '+r.sessions+' session'+(r.sessions===1?'':'s'))+'">'+(costNone?'':esc(usd(r.costUSD)))+'</td>'+
+      '<td class="lfx-cut cwt" title="'+esc(r.worktree)+'">'+esc(r.worktree)+'</td><td class="cby2" title="'+esc([(r.launcher||{}).label,r.chat].filter(Boolean).join(' · '))+'">'+launch(r)+'</td></tr>';
+  }
+  return h+'</tbody></table>';
+}
 async function tick(){
   try{
     const d=await (await fetch('/api',{cache:'no-store'})).json();
     spendByDay=d.spendByDay||{};
     const t=new Date(d.now).toLocaleTimeString('en-GB');
     const hi=Number(d.load[0])>20;
-    document.getElementById('meta').innerHTML='updated at <b>'+t+'</b> · refresh every '+(REFRESH/1000)+' s · load <span class="'+(hi?'load-hi':'')+'">'+d.load.join(' ')+'</span>'+(d.spendByDay?' · <span title="'+esc(SPEND_TIP)+'">today '+esc(daySpend(ymd(new Date()))||'$0.00')+'</span>':'');
+    // The sidebar's footer (P-2026-10-19-1130): spend today, the load average, the time of the last /api answer.
+    document.getElementById('f-spend').textContent=d.spendByDay?daySpend(ymd(new Date()))||'$0.00':'n/a';
+    document.getElementById('f-load').innerHTML=(d.load||[]).length?'<span class="'+(hi?'load-hi':'')+'">'+esc(d.load[0])+'</span> <small>'+esc(d.load.slice(1).join(' '))+'</small>':'n/a';
+    document.getElementById('f-sync').textContent='synced '+t;
+    document.getElementById('f-dot').className='ok-dot'+(d.stale?' stale':d.error?' down':'');
+    attnTick();
     // Stale rows (a status run that failed after a success) are drawn and counted, under an amber line.
     const err=document.getElementById('err');
     err.className=d.stale?'err stale':'err';
@@ -1954,8 +2162,19 @@ async function tick(){
     lastRows=d.rows;renderStrip(d.rows);renderLanes(d.rows);markLane();
     const n=d.rows.filter(r=>r.live).length;document.title=(n?'('+n+') ':'')+'Jjodel Harness Lane Management';
     refreshing=!!d.refreshing;spin();clearTimeout(again);if(refreshing)again=setTimeout(tick,2000);
-  }catch(e){const err=document.getElementById('err');err.className='err';err.title='';err.textContent='lane-board unreachable: '+e.message;refreshing=false;spin()}
+  }catch(e){const err=document.getElementById('err');err.className='err';err.title='';err.textContent='lane-board unreachable: '+e.message;document.getElementById('f-dot').className='ok-dot down';refreshing=false;spin()}
 }
+// The Requirements count beside its view: the register's rows, read at load and every 20 refreshes (req-trace is not cheap).
+async function reqCount(){try{const d=await (await fetch('/api/requirements',{cache:'no-store'})).json();const root=document.documentElement;if(root&&root.style&&d.counts)root.style.setProperty('--req-n','"'+d.counts.rows+'"')}catch(e){}}
+// The theme: System follows prefers-color-scheme; Light and Dark set data-theme on <html>, remembered in localStorage.
+function setTheme(t){
+  const root=document.documentElement;
+  if(root&&root.setAttribute){if(t==='light'||t==='dark')root.setAttribute('data-theme',t);else root.removeAttribute('data-theme')}
+  document.querySelectorAll('#theme button').forEach(b=>{b.classList.toggle('on',b.dataset.th===t);b.setAttribute('aria-pressed',String(b.dataset.th===t))});
+}
+let theme0='system';try{const v=localStorage.getItem('laneBoardTheme');if(v==='light'||v==='dark')theme0=v}catch(e){}
+setTheme(theme0);
+document.getElementById('theme').addEventListener('click',e=>{const b=e.target.closest('[data-th]');if(!b)return;setTheme(b.dataset.th);try{localStorage.setItem('laneBoardTheme',b.dataset.th)}catch(e){}});
 function renderOlder(rows){
   const days=[...new Set(rows.map(r=>r.day))].sort().reverse();
   const box=document.getElementById('older');
@@ -1964,14 +2183,15 @@ function renderOlder(rows){
     const rs=rows.filter(r=>r.day===day).sort((a,b)=>b.t-a.t||(a.id<b.id?1:a.id>b.id?-1:0));
     const tally={};rs.forEach(r=>{const o=(r.chain||r.outcome==='none')?r.state:r.outcome.split(' ')[0];tally[o]=(tally[o]||0)+1});
     const sum=Object.entries(tally).map(([k,v])=>v+' '+k).join(' · ');
-    return '<details data-day="'+day+'"'+(openDays.has(day)?' open':'')+'><summary><b>'+day+'</b><span class="meta">'+rs.length+' lane'+(rs.length>1?'s':'')+' · '+esc(sum)+(daySpend(day)?' · <span title="'+esc(SPEND_TIP)+'">'+esc(daySpend(day))+'</span>':'')+'</span></summary><div class="wrap">'+table(rs,false,day)+'</div></details>';
+    return '<details data-day="'+day+'"'+(openDays.has(day)?' open':'')+'><summary><b>'+day+'</b><span class="meta">'+rs.length+' lane'+(rs.length>1?'s':'')+' · '+esc(sum)+(daySpend(day)?' · <span title="'+esc(SPEND_TIP)+'">'+esc(daySpend(day))+'</span>':'')+'</span></summary><div class="wrap">'+compact(rs,day)+'</div></details>';
   }).join('');
   box.querySelectorAll('details').forEach(el=>el.addEventListener('toggle',()=>{el.open?openDays.add(el.dataset.day):openDays.delete(el.dataset.day);saveOpen()}));
 }
 let openDays=new Set();
 try{openDays=new Set(JSON.parse(localStorage.getItem('laneBoardOpenDays')||'[]'))}catch(e){}
 function saveOpen(){try{localStorage.setItem('laneBoardOpenDays',JSON.stringify([...openDays]))}catch(e){}}
-function showTab(t){if(!document.getElementById('tab-'+t))t='table';document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));document.querySelector('main').classList.toggle('wide',t==='table');['table','timeline','insights','requirements'].forEach(k=>{document.getElementById('tab-'+k).hidden=t!==k});try{localStorage.setItem('laneBoardTab',t)}catch(e){}if(t==='timeline'&&window.TL)TL.refresh();if(t==='insights'&&window.INS)INS.refresh();if(t==='requirements'&&window.REQ)REQ.refresh()}
+const VIEWS={table:'Lanes',timeline:'Timeline',insights:'Insights',requirements:'Requirements'};
+function showTab(t){if(!document.getElementById('tab-'+t))t='table';document.getElementById('vt').textContent=VIEWS[t];document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));document.querySelector('main').classList.toggle('wide',t==='table');['table','timeline','insights','requirements'].forEach(k=>{document.getElementById('tab-'+k).hidden=t!==k});try{localStorage.setItem('laneBoardTab',t)}catch(e){}if(t==='timeline'&&window.TL)TL.refresh();if(t==='insights'&&window.INS)INS.refresh();if(t==='requirements'&&window.REQ)REQ.refresh()}
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 let tab0='table';try{tab0=localStorage.getItem('laneBoardTab')||'table'}catch(e){}
 // #lane=<id> (P-2026-10-18-2320, the /l/<id> fallback): the Lanes tab, no filter, the row scrolled to and marked
@@ -1982,7 +2202,8 @@ const laneHash=()=>{const m=/^#lane=(P-\\d{4}-\\d{2}-\\d{2}-\\d{4})$/.exec((wind
 function markLane(){
   const note=document.getElementById('lanenote');
   if(!laneMark){note.hidden=true;return}
-  const b=document.querySelector('button.kb[data-id="'+laneMark+'"]'),tr=b&&b.closest('tr');
+  // A running lane is a card in the Lanes tab: the badge's <article> is marked as a row is.
+  const b=document.querySelector('button.kb[data-id="'+laneMark+'"]'),tr=b&&(b.closest('tr')||b.closest('article'));
   note.hidden=!!tr||!loaded||!!laneFilter;note.textContent=laneMark+' is not in the lanes table.';
   if(!tr)return;
   const det=tr.closest('details');if(det&&!det.open)det.open=true;
@@ -1991,10 +2212,11 @@ function markLane(){
 }
 function toLane(){laneMark=laneHash();if(!laneMark)return;laneScroll=true;showTab('table');setFilter('');markLane()}
 window.onhashchange=toLane;
-document.body.addEventListener('click',()=>{if(!laneMark)return;laneMark='';document.querySelectorAll('tr.mark').forEach(t=>t.classList.remove('mark'));markLane();try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}});
+document.body.addEventListener('click',()=>{if(!laneMark)return;laneMark='';document.querySelectorAll('tr.mark').forEach(t=>t.classList.remove('mark'));document.querySelectorAll('article.mark').forEach(t=>t.classList.remove('mark'));markLane();try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}});
 showTab(tab0);
 toLane();
-tick();setInterval(()=>{tick();if(!document.getElementById('tab-timeline').hidden&&window.TL)TL.refresh();if(!document.getElementById('tab-insights').hidden&&window.INS)INS.refresh();if(!document.getElementById('tab-requirements').hidden&&window.REQ)REQ.refresh()},REFRESH);
+let ticks=0;
+tick();reqCount();setInterval(()=>{tick();if(++ticks%20===0)reqCount();if(!document.getElementById('tab-timeline').hidden&&window.TL)TL.refresh();if(!document.getElementById('tab-insights').hidden&&window.INS)INS.refresh();if(!document.getElementById('tab-requirements').hidden&&window.REQ)REQ.refresh()},REFRESH);
 </script></body></html>`;
 
 // Listens when run (launchd, node lane-board.mjs), also through a symlinked path, not when its tests import it.
