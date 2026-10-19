@@ -6,7 +6,6 @@ import {Dashboard} from './components';
 import {ProjectsApi} from '../api/persistance';
 import {Button} from '../components/common/Button';
 import {ElementBadge} from '../components/common/ElementBadge';
-import {isAdvancedMode} from '../hooks/useInterfaceMode';
 import {currentVersion, galleryRefOf, resolveGalleryRef, type GalleryVersion} from '../library/galleryRef';
 import '../components/CreateProjectDialog/create-project-dialog.scss';
 import './Templates.scss';
@@ -158,7 +157,7 @@ function TemplatesComponent(_props: OwnProps): JSX.Element {
     const [previews, setPreviews] = useState<Record<string, 'loaded' | 'failed'>>({});
     const [scrollTo, setScrollTo] = useState<string | null>(null);
     /* Redux re-renders on a Navbar toggle, localStorage survives the reset of the open ticket (report §1.6). */
-    const advanced = useSelector((s: DState) => s.advanced) || isAdvancedMode();
+    const advanced = !!useSelector((s: DState) => s.advanced); // same source as the app bar Basic/Advanced switch (Navbar props.advanced)
 
     useEffect(() => {
         let live = true;
