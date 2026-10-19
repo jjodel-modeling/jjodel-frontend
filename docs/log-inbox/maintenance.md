@@ -166,3 +166,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile — lane probe only (headless, port 3011): register fits at 1440x900, 1280x800, 1920x1080 (scrollHeight = viewport), no horizontal scroll, 0 page errors on 12 loads; chat's visual check pending, dev server left on 3011
 **Notes**: Grid column is `minmax(280px, 1fr)` rather than `1fr` (intro would be 124px at 1100px); identical to the spec from 1256px up. Session ran on Sonnet 5.5 (banner), not the Opus 5.5 pin; the commit trailer says so.
 **Prompt document name**: 2026-10-18 17:20
+
+## 2026-10-19 — fix(menu): debug and empty Tools entries out, small-metamodel guard on Polymetric View, Help 404 out (P-2026-10-19-1745)
+**Prompt**: `claude_2026-10-19_1745_prompt_main_menu_cleanup.md`, fast lane, worktree `jjodel-w-menuclean` on `menu-cleanup`: remove debug menu entries and the disabled Tools items, drop `(beta)` from Polymetric View and guard it below 10 metaclasses, remove dead Help links.
+**Files touched**: `2794a2537`: `frontend/src/pages/components/Navbar.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/polymetric/polymetricMetrics.ts`. Docs commit: this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck exit 0, build exit 0, smoke GREEN 12/0/3 skip, 5 Navbar-mentioning test files 66/66; menu and guard not exercised in a browser by the lane.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — chat's RC-23 checklist pending on dev server 3112 (PID 79798 in `~/.jjodel-lanes/P-2026-10-19-1745/dev.pid`)
+**Notes**: Decisions taken (unattended): guard in EditorV2's OPEN_POLYMETRIC handler, metamodel target only (model target renders objects, no metaclass count); count via new `countPolymetricMetaclasses` mirroring `extractMetamodelMetrics`' `lModel.classes`; reuses `ConfirmDialog`, variant info. Help: only Video Tutorials removed, 8 remaining URLs 200 at 17:48. dev.pid holds the listener, not the npm wrapper.
+**Prompt document name**: 2026-10-19 17:45
