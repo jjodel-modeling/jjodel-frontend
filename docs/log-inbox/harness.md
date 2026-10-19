@@ -607,3 +607,16 @@ Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase
 Decisions taken (unattended): (1) windows: 21-day lead and pre-incident margin, 7-day post-notice margin, rolling 4 weeks; (2) thresholds from ratified rules where one exists (RC-20 90 min, RC-33, RC-51 200k, P9 20 then 40, P13), else the max over quiet tuning weeks, falling back to the 75th percentile of the tuning weeks; (3) S5b window = median same-chat cadence on a front, 0.65 h; (4) I01/I02 split from one seed, I20 noticed = date of this prompt, A1 to A4 kept out of the scoring.
 
 Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of report §6.1 are proposals for the chat under RC-25.
+
+## 2026-10-19 — merge: health-disc into alfonso-frontend-jjtl (P-2026-10-19-0907)
+**Prompt**: `claude_2026-10-19_0907_prompt_merge_health-disc.md`, a direct merge by `lane-run merge --direct`, no session: `health-disc` at `df5a9eb0a` into `alfonso-frontend-jjtl`, merge base `e49ec777e`, 3 commits on the branch side.
+**Files touched**: merge `19e64f188`: 15 files from the branch side (`docs/discovery/discovery_2026-10-18_harness_health_retrospective.md`, `docs/discovery/harness/harness-health-retro.mjs`, `docs/discovery/harness/harness-health-retro/backtest.csv`, `docs/discovery/harness/harness-health-retro/catalogue.csv`, `docs/discovery/harness/harness-health-retro/daily.csv`, `docs/discovery/harness/harness-health-retro/incidents.csv`, `docs/discovery/harness/harness-health-retro/lanes.csv`, `docs/discovery/harness/harness-health-retro/lanes_by_week_kind_model.csv`, and 7 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `19e64f188` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9415 tests in 384 files, 9 red at import, hooks 936; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: visual check not needed: docs and discovery data only, nothing under frontend/src
+**Notes**: Rollback tag `pre-health-disc` on `0042621cd` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-0907/result.json`.
+**Prompt document name**: 2026-10-19 09:07
