@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-0031
 Chat: C-2026-10-20-0003
 Front: maintenance
 Lane: full (stcChecks, simBridge, their tests, decisions row)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane sim-trigger-position · c341ffbd3
 Request: https://claude.ai/code/session_01Mk7LmH7N6YcSQiKx7oNZP5 (Alfonso, 2026-10-20 00:03: «chiudi tutto quello che puoi chiudere, compresi i ticket, vai in /lane auto»; ticket from P-2026-10-10-1630, discovery §11 item 2, next step 2 of the simulator front in the 2026-10-10 session)
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Worktree: `~/jjodel-w-trigpos`, branch `sim-trigger-position`, created by the chat from the trunk; the commit that adds this prompt is on the branch. Before anything else: `pwd`, branch and `git log -1` match; otherwise stop with `Outcome: blocked`.
