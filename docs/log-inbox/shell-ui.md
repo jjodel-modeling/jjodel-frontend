@@ -91,3 +91,16 @@ not touched by this lane.
 **Ticket** (P-2026-10-19-1830): in Advanced with a node selected and NODE open, NodeEditor's `span.anchor-viz__point-label` renders at 9px (17 elements), under the R-SHELL-5 11px floor; present before S7, outside this lane's files.
 
 **Ticket** (P-2026-10-19-1830): `.jj-section-title` (Contents sub-lists CLASSES/ENUMERATORS/PACKAGES) is still 11px/600 uppercase #94a3b8, under R-SHELL-5; to S8.
+
+## 2026-10-19 — merge: shell-ui-s7 into alfonso-frontend-jjtl (P-2026-10-19-1926)
+**Prompt**: `claude_2026-10-19_1926_prompt_merge_shell-ui-s7.md`, a direct merge by `lane-run merge --direct`, no session: `shell-ui-s7` at `6422e7af1` into `alfonso-frontend-jjtl`, merge base `515ca7689`, 2 commits on the branch side.
+**Files touched**: merge `de63372dd`: 9 files from the branch side (`docs/decisions.md`, `docs/demo/models_2026_simulator_demo.md`, `docs/log-inbox/shell-ui.md`, `docs/prompts/claude_2026-10-19_1830_prompt_shell_ui_s7_rail_titles.md`, `frontend/src/components/editors/Info.tsx`, `frontend/src/components/editors/NodeEditor.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/info-improvements.scss`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `de63372dd` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9415 tests in 384 files, 9 red at import, hooks 936; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat: 3001 loads and opens a project, no regression seen; frontend tree at de63372dd identical to the shell-ui-s7 tip 6422e7af1 checked on 3017 (titles sentence case 12px/500, rail and canvas rects unchanged, console init_dash only).
+**Notes**: Rollback tag `pre-shell-ui-s7` on `515ca7689` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1926/result.json`.
+**Prompt document name**: 2026-10-19 19:26
