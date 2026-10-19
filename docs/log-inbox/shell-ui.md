@@ -104,3 +104,18 @@ not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: Chat: 3001 loads and opens a project, no regression seen; frontend tree at de63372dd identical to the shell-ui-s7 tip 6422e7af1 checked on 3017 (titles sentence case 12px/500, rail and canvas rects unchanged, console init_dash only).
 **Notes**: Rollback tag `pre-shell-ui-s7` on `515ca7689` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1926/result.json`.
 **Prompt document name**: 2026-10-19 19:26
+
+## 2026-10-19 — feat: rail density, 24px targets, muted icons, outer borders (S8)
+**Prompt**: P-2026-10-19-1930, slice S8 of the shell front (R-SHELL-2, R-SHELL-3, R-SHELL-5): rail tree rows on `--shell-row-height` (26 Basic, 24 Advanced); rail targets at least 24x24 by `elementFromPoint` without moving the layout; row-action and focus-bar icons muted in Advanced only; rail and palette outer borders to 1px `--shell-border` together; `.jj-section-title` in the rail to `--shell-text-3`, 500.
+**Files touched**: frontend/src/components/editors/properties-with-tree-view.scss, frontend/src/components/editor-v2/EditorV2.scss (05bfba8f3); docs/log-inbox/shell-ui.md, docs/prompts/claude_2026-10-19_1930_prompt_shell_ui_s8_rail_density.md (Status line)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: DemoPetri 1600x1000, 4 states x2 modes: rects unchanged; rows 26/26->26/24; corner-test misses B 8/10/3/9->1/1/0/1, A 9/10/3/9->2/2/0/2 (23px headers); borders rgba(0,0,0,.06)->rgb(226,232,240) both; Advanced icons #64748b; title 600/#94a3b8->500/#64748b; text<11px 0, clipped and console unchanged. Chat GO on 3018 (ShellCheck), misses on neighbours accepted. Unattended 1-6 in handoff.md. Gates: typecheck 0, vitest 85/85, build 0, smoke GREEN 12/0/3.
+**Prompt document name**: 2026-10-19 19:30
+
+**Ticket** (P-2026-10-19-1930): two hit-target overlaps left for a later lane. `.tree-section__header` is 23px, so neighbouring toggle boxes overlap by 1px; set its min-height to `--shell-row-height`, which moves the tree by 1-3px per header. The `.jj-contents-add` box also loses its top 2px to `.jj-contents-group-header`.
