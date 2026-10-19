@@ -250,3 +250,47 @@ Overlap matrix (✗ = shared file):
 4. **Handoff Q4, Collections**: no finding changes it. Recommended: out of 3.2 (handoff §8 already defers it).
 
 Items 2–4 are the handoff's own closed list (§10), reported here with the evidence; item 1 is the only conflict with a ratified row. No conflict was found with R-LIB-1..6, R-LIB-8..10 or D-UI-15 (the handoff excludes the dark theme, §1).
+
+## P-2026-10-19-1615
+
+Lane L-B1, Templates page, catalog fields and filters. Tree `~/jjodel-w-tpl-b1`, branch `tpl-b1`, base `86854b0e3`; commits `88f109b65` (code, with the public catalog copy) and `64e220112` (docs catalog). Session executed by Opus 5.5 (`claude-opus-5-5`).
+
+### What was done
+
+- **Catalog** (R-LIB-19, values of R-LIB-20): every gallery entry gains `level`, `concepts`, `preview` = `<id>/1.preview.png`; `state-machine` gains the `callout`; `families-persons` takes the handoff's description. No `kind`, no counts. The `$comment` documents the fields. `GalleryEntry` gains four optional fields.
+- **Page** (`Templates.tsx`, `Templates.scss`): header (H1 30px/700, lead 16px slate-600, labelled search on name, description and concept labels), «New to Jjodel? Start here» (Library, Shapes, StateMachine, Families and Persons, Turnstile; a link clears the filters when they hide its card, scrolls to it and focuses it), concept and level chips (`<button aria-pressed>`, rows `role="group"` with `aria-label`, one choice per row, AND, counts on the level chips, dashed grey at 0), «Clear filters», the empty state, «Starters» and «Worked examples» with their contracts, content max 1200px, grid `repeat(auto-fill, minmax(300px, 1fr))` gap 20px, a polite status line with the number shown.
+- **Card**: 136px preview, dot grid in CSS, PNG at `/library/gallery/<preview>` on top (`object-fit: contain`) once it loads, removed on error; title 16px/600 with the level badge; counts with `ElementBadge` (metamodel, model, and the viewpoint count the 3.1 card had); description 14px; amber callout; concept tags; footer with the id (`--font-mono` 12px, Advanced only) and «Clone» (secondary, `bi-copy`, `aria-label="Clone <label>"`).
+- **Tokens** (`tokens.css`): `--color-level-{beginner,intermediate,advanced}-{bg,fg}`, green and blue through the existing grades, violet-100 `#ede9fe` / violet-700 `#6d28d9` as level tokens only. Focus `2px solid var(--color-border-focus)`, offset 2px, on the page's buttons, input and cards.
+- **Test** (`gallery.test.ts`): four new cases (closed vocabularies, the R-LIB-20 values, the preview path, the callout and no written counts). Bench on the docs catalog: «transformation» on families-persons 3 red, graph preview at the package path 2 red, level «expert» 3 red; restored 62/62.
+
+### Measurements (headless Chromium 1440×900, dev server on 3101, seeded as `scripts/smoke/states.ts`, light theme; read from the DOM)
+
+- Sections: Starters 5 cards, Worked examples 2; contracts as R-LIB-13. Grid three columns of 370.7px, gap 20px; `.tpl-page` 1200px wide.
+- Chips at rest: concept counts All 7, Containment 5, Inheritance 3, References 3, Enumerations 1, Validation 1, Multiple metamodels 1, Simulation 2, Code generation 2; levels All 7, Beginner 3, Intermediate 3, Advanced 1.
+- Simulation: Worked examples only (2), Beginner 0 dashed (`border-style: dashed`, `rgb(100,116,139)` on transparent), Clear filters shown. Simulation + Beginner: no section, the empty-state sentence, Enumerations, Validation, Multiple metamodels and Code generation 0 dashed; its Clear filters brings back 7 cards.
+- Search «enum» → `state-machine` only. Start here «Turnstile» with Validation pressed → filters cleared, 7 cards, focus on `tpl-card-turnstile`.
+- Badges: beginner `rgb(21,128,61)` on `rgb(220,252,231)`, intermediate `rgb(29,78,216)` on `rgb(219,234,254)`, advanced `rgb(109,40,217)` on `rgb(237,233,254)`. Focus ring `2px solid rgb(71,85,105)`, offset 2px.
+- Ids: none in Basic, `<id>@1` on all seven in Advanced. Previews: no PNG exists yet (L-C), every card shows the dot grid alone, no broken image. Page errors 0 in both modes.
+
+### How to see it
+
+Dev server on the lane, `#/templates`; Basic and Advanced by the app-bar toggle. Screenshots in `docs/discovery/assets/tpl-b1/`: `templates_basic_1440x900.png`, `templates_advanced_1440x900.png`, `templates_basic_examples.png`, `templates_advanced_examples.png`, `templates_filter_simulation.png`, `templates_empty_state.png`. The quick tip is closed in them; it covers the third card otherwise (L-B2's).
+
+### Decisions taken (unattended)
+
+1. **No «Preview» button.** No read-only opening of a gallery entry exists on this branch (searched `frontend/src` for a gallery or template read-only path; only codegen template hits). R-LIB-14's companion waits for one; no new flow.
+2. **The level tokens sit in `styles/tokens.css`**, as the prompt's DOVE and COSA 4 say; `frontend/src/styles/CLAUDE.md` §7.2 puts new tokens in `_colors-light.scss`. The names are new in both files, so either state of the light theme resolves them.
+3. **`preview` is relative to `/library/gallery/`**, literally `<id>/<n>.preview.png` as the prompt and the test fix it; the page prepends the base. L-C writes the PNG at `frontend/public/library/gallery/<id>/<n>.preview.png`.
+4. **Counts keep the viewpoint count** of the 3.1 card, with its `ElementBadge` (rule 3), beside M and m.
+5. **Dashed zero applies to concept chips too** (R-LIB-17 says «a chip»); counts are shown on the level chips only, as the handoff draws them. A chip at 0 stays clickable and leads to the empty state.
+6. **A pressed chip clicked again returns its row to All.** The search counts as a filter for «Clear filters», which clears it too.
+7. **Existing class names kept** on the roles they had (`templates-card`, `templates-card__label`, `__counts`, `__description`, `__actions`, `templates-grid`, `templates-section`, `__title`); new elements use `tpl-`. The 3.1 head, icon and titles rules stay with a `TODO: cleanup` (rule 9).
+
+### Notes for the chat
+
+- `ElementBadge` uppercases its letter (`element-badge.scss`, `text-transform: uppercase`), so the model badge reads «M» in amber, not the handoff's «m». Out of DOVE; the colour pair is the handoff's.
+- The Jjodie floating button covers the footer of the first card of a column at 1440×900 when it is scrolled to the bottom (`templates_advanced_examples.png`, Turnstile id). Not this lane's element.
+
+### Decisions awaiting Alfonso
+
+None.
