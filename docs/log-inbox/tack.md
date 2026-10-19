@@ -241,3 +241,16 @@ Run on this Mac: the 5b board (PID 29050, a `tack` node process) stopped; `tack 
 **Prompt document name**: 2026-10-19 22:25
 
 Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board`) stopped; `/tmp/tack-s6/real.db` copied to `/tmp/tack-s7/real.db`; started from `~/jjodel-w-tack-s7/tack/bin/tack.mjs board --no-open --port 4710 --store /tmp/tack-s7/real.db` with `TACK_IMPORTS=/tmp/tack-s6/imports` and `TACK_NOTIFY=off`, PID in `/tmp/tack-s7/board.pid`. From this worktree because the slice 7 code exists only on `tack-s7` until the merge. `TACK_NOTIFY=off` (unattended, RC-25) so the board sends no real desktop notification before the merge; the load strip still works from the in-process sampler. `curl`: `/` 200, `/settings` 200, `/api/settings` 200 (9527 B JSON), `/api/load` 200 (samples, threshold 20, 8 cores). `tack check`: the three settings fixtures pass, the invalid one exits 1 with three violations, `valid.jsonl` passes.
+
+## 2026-10-19 — merge: tack-s7 into alfonso-frontend-jjtl (P-2026-10-19-2248)
+**Prompt**: `claude_2026-10-19_2248_prompt_merge_tack-s7.md`, a direct merge by `lane-run merge --direct`, no session: `tack-s7` at `022d7109f` into `alfonso-frontend-jjtl`, merge base `bf259570f`, 3 commits on the branch side.
+**Files touched**: merge `f694c9ac4`: 33 files from the branch side (`docs/discovery/discovery_2026-10-19_tack_settings_notifications.md`, `docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-19_1800_prompt_tack_s7_settings_notifications.md`, `tack/README.md`, `tack/bin/tack.mjs`, `tack/contract/v1/README.md`, `tack/contract/v1/settings.json`, `tack/src/board/board.css`, and 25 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f694c9ac4` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9423 tests in 384 files, 9 red at import, hooks 944; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Alfonso checked slice 7 on the 4710 board from the tack-s7 worktree (settings page, themes, load strip, desktop test notification delivered): ok fetta 7, 2026-10-19 22:45; tack code at the merge identical to the checked tip 022d7109f
+**Notes**: Rollback tag `pre-tack-s7` on `b3bcc7fba` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2248/result.json`.
+**Prompt document name**: 2026-10-19 22:48
