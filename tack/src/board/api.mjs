@@ -79,7 +79,7 @@ export function dayParam(name, value) {
 const hasColumn = (db, table, column) => db.prepare(`SELECT 1 FROM pragma_table_info('${table}') WHERE name = ?`).get(column) !== undefined;
 
 const SESSIONS = `
-SELECT s.id, s.first_ts, s.last_ts, s.cost_usd, s.cost_known, s.cost_unknown_model, s.git_branch,
+SELECT s.id, s.first_ts, s.last_ts, s.cost_usd, s.cost_known, s.cost_unknown_model, s.git_branch, s.unit, s.unit_source,
        sr.repo_key, sr.missing, sr.link_method,
        COUNT(c.message_id) AS calls, COALESCE(MAX(c.context), 0) AS context_peak,
        GROUP_CONCAT(DISTINCT c.model) AS models
@@ -105,19 +105,20 @@ export function unitNear(db, { repo_key, first_ts, last_ts }) {
   return hit ? hit.unit : null;
 }
 
+// TODO: cleanup (unitNear and unitRepos are no longer read by sessionsApi since schema 4: sessions.unit)
 /** Repository keys with at least one commit carrying a unit id. */
 const unitRepos = (db) => new Set(db.prepare('SELECT DISTINCT repo_key FROM commits WHERE unit IS NOT NULL').all().map((r) => r.repo_key));
 
 /**
  * Sessions of the selection, newest first, by the local day of their first event (since and until
  * inclusive; a session without a timestamp is kept only when no day bound is set). Main-thread calls
- * only; cost null when unknown, never 0. unit: see unitNear, null when the repository has no unit ids;
- * the page shows the unit, and the branch only when there is none.
+ * only; cost null when unknown, never 0. unit: sessions.unit (layer 2: the first user message's id, else a
+ * commit reachable from the session's branch), unit_source says which; the page shows the unit, and the
+ * branch (always returned) only when there is none.
  */
 export function sessionsApi(db, { repo = null, since = null, until = null } = {}) {
   const names = new Map(listBoardRepos(db).map((r) => [r.key, r.name]));
   const layer2 = hasColumn(db, 'sessions', 'unit');
-  const units = unitRepos(db);
   const rows = [];
   for (const r of db.prepare(SESSIONS).all(repo, repo)) {
     const first = r.first_ts ? Date.parse(r.first_ts) : null;
@@ -132,8 +133,9 @@ export function sessionsApi(db, { repo = null, since = null, until = null } = {}
       repo: r.repo_key ?? null,
       repo_name: r.repo_key ? names.get(r.repo_key) ?? r.repo_key.slice(0, 12) : null,
       missing: r.repo_key ? null : (r.missing ?? 'not-identified'),
-      branch: layer2 ? null : r.git_branch ?? null,
-      unit: units.has(r.repo_key) ? unitNear(db, r) : null,
+      branch: r.git_branch ?? null,
+      unit: r.unit ?? null,
+      unit_source: r.unit_source ?? null,
       link: r.link_method ?? 'none',
       calls: r.calls,
       context_peak: r.context_peak,
@@ -175,13 +177,13 @@ export function timelineApi(db, { repo = null, since = null, until = null } = {}
   return { repo, since, until, threshold: CONTEXT_THRESHOLD, sessions: rows };
 }
 
-/** Every declared metric with its layer and state: computed (layer 1, with its value), not-adopted, not-implemented. */
+/** Every declared metric with its layer and state: computed (with its value) or not-adopted. */
 export function metricsApi(db, { repo = null, since = null, until = null } = {}) {
   const sel = loadSelection(db, { repo, since, until });
   const values = computeAll(sel, { cost_per_day: { byFamily: true } });
   const metrics = METRICS.map((m) => {
     const v = values[m.name];
-    const state = m.layer === 1 ? 'computed' : v;
+    const state = typeof v === 'string' ? v : 'computed';
     return {
       name: m.name, layer: m.layer, definition: m.definition, state,
       ...(m.enabledBy ? { enabledBy: m.enabledBy } : {}), ...(state === 'computed' ? { value: v } : {}),

@@ -35,7 +35,7 @@ export function resolveRepo(db, arg) {
 export function loadSelection(db, { repo = null, since = null, until = null, utc = false } = {}) {
   const rows = db.prepare(`
     SELECT s.id, s.cwd, s.first_ts, s.last_ts, s.cost_usd, s.cost_known, s.cost_unknown_model,
-           sr.repo_key, sr.link_method
+           s.unit, s.unit_source, sr.repo_key, sr.link_method
     FROM sessions s LEFT JOIN session_repo sr ON sr.session_id = s.id
     WHERE (? IS NULL OR sr.repo_key = ?)
     ORDER BY s.first_ts, s.id`).all(repo, repo);
@@ -53,6 +53,8 @@ export function loadSelection(db, { repo = null, since = null, until = null, utc
       cwd: r.cwd,
       repo: r.repo_key ?? null,
       link: r.link_method ?? 'none',
+      unit: r.unit ?? null,
+      unitSource: r.unit_source ?? null,
       first,
       last: ms(r.last_ts),
       day,

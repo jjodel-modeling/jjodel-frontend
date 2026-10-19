@@ -1,3 +1,4 @@
+// TODO: cleanup. Superseded in slice 6 by layer2.mjs and layer3.mjs; no longer imported by index.mjs.
 // Layer 2 (identity) and layer 3 (self-assessment) metrics, declared only: each names the store
 // field that would enable it and returns 'not-adopted' while that data is absent. They are
 // implemented in slice 6; until then adopted data gives 'not-implemented', never a number.

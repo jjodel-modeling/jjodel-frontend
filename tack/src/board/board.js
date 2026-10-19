@@ -13,7 +13,7 @@
   const dur = (m) => (m === null ? '–' : m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0'));
   const median = (xs) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
-  /** What the Unit / branch column shows: the unit when the session has one (its repository has unit ids), else the branch. */
+  /** What the Unit / branch column shows: the unit when the session has one (layer 2), else the branch. */
   const unitOrBranch = (s) => (s.unit ? { kind: 'unit', text: s.unit } : s.branch ? { kind: 'branch', text: s.branch } : { kind: null, text: null });
   const modelsShort = (models) => [...new Set(models.map(C.modelShort))].join(', ');
 
@@ -24,7 +24,7 @@
       day: s.day ? esc(C.dayLabel(s.day, now)) : '–',
       start: s.start ? hhmm(s.start) : '–',
       repo: s.repo ? '<span title="' + esc(s.repo) + '">' + esc(s.repo_name) + '</span>' : '<span class="dim" title="No repository">– ' + esc(s.missing) + '</span>',
-      ub: ub.kind === 'unit' ? '<span class="unit" title="Unit of the nearest commit within the hour carrying one (proximity, not authorship)' + (s.branch ? '; branch ' + esc(s.branch) : '') + '">' + esc(ub.text) + '</span>'
+      ub: ub.kind === 'unit' ? '<span class="unit" title="' + (s.unit_source === 'prompt' ? 'Unit named by the first user message' : 'Unit of the nearest commit reachable from the session branch, within the hour (proximity, not authorship)') + (s.branch ? '; branch ' + esc(s.branch) : '') + '">' + esc(ub.text) + '</span>'
         : ub.kind === 'branch' ? '<span title="Branch ' + esc(ub.text) + '">' + esc(ub.text) + '</span>' : '<span class="dim">–</span>',
       link: '<span class="tag">' + esc(s.link) + '</span>',
       duration: dur(s.duration_min),
@@ -192,7 +192,7 @@
   document.querySelector('nav.tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) showTab(b.dataset.tab); });
   window.addEventListener('hashchange', () => showTab(location.hash.slice(1)));
   let resizing = 0;
-  window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { if (state.tab === 'timeline') renderView('timeline'); }, 150); });
+  window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { if (state.tab === 'timeline') renderView('timeline'); else if (state.tab === 'insights') C.fit($('tab-insights')); }, 150); });
   $('rescan').addEventListener('click', async () => {
     const b = $('rescan'); b.disabled = true; $('spin').hidden = false;
     try {

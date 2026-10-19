@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1620
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: full (identity and self-assessment layers, two adapters, parity check against the lane board; discovery done in P-2026-10-19-1100)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s6 · completed by P-2026-10-19-1655 · 6f0353e74 · verifica visiva della chat dopo l’uscita (RC-23)
 Depends: P-2026-10-19-1555
 Corregge: P-2026-10-19-1520 (unit id taken from any commit of the repository within the hour, not from the session's branch; SVG labels scaled up on wide charts), both found by the chat's visual check of 2026-10-19 16:15
 Request: Alfonso, 2026-10-19 16:15, in the project chat: «si» to slice 6

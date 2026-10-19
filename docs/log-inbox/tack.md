@@ -189,3 +189,40 @@ Run on this Mac: `tack board --no-open --port 4710 --store /tmp/tack-s5a/real.db
 | page, css, js | 200 | 4,592 / 9,674 / 9,623 | < 1 ms |
 
 Summary strip for Jjodel, all dates: 526 sessions (384 direct, 142 by branch); cost 3,594.55 USD known, 2 unknown; context peak median 204,723, max 966,483, 254 of 502 sessions with calls at or above 200k; commit within the hour 518 yes, 8 no, 0 unknown, share 98.5%. Privacy spot check on the saved responses: no `cwd` key, no transcript root, no path below a toplevel; the one `/Users/` path is the repository toplevel in `/api/repos` (positive control found it).
+
+## 2026-10-19 — feat: Tack slice 6, layers 2 and 3, Jjodel log importer, lane-run adapter, parity
+**Prompt**: P-2026-10-19-1620 (stopped at the 200k context ceiling, RC-51, nothing committed) and its continuation P-2026-10-19-1655: layer-2 identity with the corrected unit-id link, layer-3 metrics, `tack import jjodel-log`, lane-run adapter, chart label fix, `tack parity jjodel --days 14` against the lane board's rules, tests, board on 4710.
+**Files touched**: tack/README.md, tack/bin/tack.mjs, tack/src/board/{api,server}.mjs, tack/src/board/{board,charts,insights}.js, tack/src/collectors/{claude-code/collect,git/collect,lane-run/collect,log/collect,layers,units}.mjs, tack/src/importers/jjodel-log.mjs, tack/src/metrics/{index,layer2,layer3,select,stubs}.mjs, tack/src/parity/jjodel.mjs, tack/src/store/{open.mjs,schema-4.sql}, tack/test/{board,charts,importer,infer,lanes,metrics,parity,privacy,units}.test.mjs, tack/test/helpers/{board-parity,layers-fixture}.mjs (code commit 6f0353e74); docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1620_prompt_tack_s6_jjodel_parity.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 15:20 (P-2026-10-19-1520: unit id taken from any commit of the repository within the hour; SVG axis labels scaled up and cut on wide charts)
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no (35 files, all under `tack/**` or listed in DOVE; above five, listed in Files touched, RC-11)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (the visual check of the board on 4710 is done by the chat after exit, RC-23)
+**Notes**: Tests 160/160 (113 at the start of 1655, 6 red: 5 fixed in the test because schema 4 made the expectation wrong, board.test.mjs x3, infer.test.mjs, metrics.test.mjs stubs, plus the privacy test extended with the lane and log column sources; 1 CLI test kept by keeping its output wording). New tests written by a subagent found 2 src bugs, fixed: a missing --repo path threw ENOENT; the clamped last axis label could sit 47-55 px from the previous one. Decisions and parity: below.
+**Prompt document name**: 2026-10-19 16:55
+
+Unattended decisions (RC-21/RC-25), ordered by consequence. From 1620 (`~/.jjodel-lanes/P-2026-10-19-1620/handoff.md`): (1) the prompt-unit rule is widened to a `Prompt-ID: P-...` header line before the first `## ` besides the leading tag, because Jjodel lane prompts open with a title (421 sessions linked by prompt, 424 at the final scan); (2) duplicate units in the import get the contract's suffix `-2`, `-3` instead of `unit-duplicate` rejections, metrics compare by base unit; (3) the importer drops `files` and `notes`; (4) the commit link reads commits reachable from the session's branch ref, a remote ref of that name, or the second parent of a merge whose subject names it, nearest to the last event; no branch, no unit; (5) schema 4 (`sessions.unit/unit_source`, `commits.reverts`, `lanes`, `lane_spend`, `log_entries`), one re-read of main transcripts and repositories; (6) `stubs.mjs` kept with `// TODO: cleanup`. From 1655: (7) reverts counted only between non-merge commits, as the board reads `git log --no-merges`; (8) `sessionsApi` reads `sessions.unit` and always returns the branch, `unitNear` kept unused with `// TODO: cleanup`; (9) charts are drawn twice in the page, the second time by `fit()` at the pixel width of their container, so one viewBox unit is one CSS pixel (axis text 10 px from `board.css`), the last label clamped to W-18 and the labels kept 56 px apart; (10) the missing-path fix is a guard in the importer (`existsSync`), not a change of `git()`, whose throw other collectors may rely on; (11) emoji in the importer and its tests written as `\u` escapes (rule 26); (12) the Status line of P-2026-10-19-1655 is not flipped: its prompt file exists only on the trunk (`927e525e7`), not on `tack-s6`, as for 1555 in slice 5b.
+
+Parity, `tack parity jjodel --days 14 --store /tmp/tack-s6/real.db --repo ~/jjodel-w-tack-s6`, exit 0: spend equal to the cent on every day (tolerance 1%), first-shot 212 of 243 lanes on both sides (1 running), 0 mismatches. The difference the handoff feared on P-2026-10-13-1930 (its correction comes from P-2026-10-17-1945, whose entry the importer rejects as `corrects-unresolved`) cannot arise: neither id has a lane folder, so neither side counts it.
+
+| day | board | tack |
+|---|---|---|
+| 10-06 | $35.93 | $35.93 |
+| 10-07 to 10-09 | $0.00 | $0.00 |
+| 10-10 | $487.67 | $487.67 |
+| 10-11 | $397.86 | $397.86 |
+| 10-12 | $72.74 | $72.74 |
+| 10-13 | $0.00 | $0.00 |
+| 10-14 | $5.29 | $5.29 |
+| 10-15 | $12.65 | $12.65 |
+| 10-16 | $20.10 | $20.10 |
+| 10-17 | $6.33 | $6.33 |
+| 10-18 | $116.40 | $116.40 |
+| 10-19 | $113.87 | $113.87 |
+| total | $1,268.86 | $1,268.86 |
+
+Importer on the trunk `alfonso-frontend-jjtl`: 1,980 entries read, 1,177 converted (pass `tack check`), rejected 803: unit-required 740 (entries before the `Prompt document name` field), corrects-unresolved 25, field-required 21, cause-required 7, cause-forbidden 6, regressions-enum 4; an `--out` inside the repository is refused (exit 2). Real scan: units by prompt 424, by reachable commit 97, none 85; 584 lane folders; 1,177 log entries. Jjodel since 2026-10-06 in `tack metrics`: first-shot 210 of 240 (87.5%), regression rate 1.4%, out-of-scope rate 12.1%.
+
+Run on this Mac: the 5b board (PID 29050, a `tack` node process) stopped; `tack board --no-open --port 4710 --store /tmp/tack-s6/real.db` started from `~/jjodel-release` with the code of this worktree and `TACK_IMPORTS=/tmp/tack-s6/imports`, left running, PID in `/tmp/tack-s6/board.pid`; `git status --porcelain` of `~/jjodel-release` empty. `/api/sessions` for Jjodel: 537 sessions, all with the branch, 506 with a unit (409 prompt, 97 commit); the `tack-s4` session of 13:34 now shows P-2026-10-19-1335 (by prompt), not P-2026-10-19-1331. `/api/metrics`: all 8 layer-2/3 metrics `computed`; Insights renders 14 svg in a vm, no NaN.

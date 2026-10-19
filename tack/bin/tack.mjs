@@ -18,11 +18,17 @@ commands:
                                         one row per session, main-thread calls only
   repos [--json] [--store <file>]       one row per repository, then the session cwds without one
   metrics [--repo <key|path>] [--since <YYYY-MM-DD>] [--json] [--store <file>]
-                                        layer-1 metrics of the selection; layer 2 and 3 listed with
-                                        the field that would enable them
+                                        layer-1 metrics of the selection; layers 2 and 3 where the store
+                                        has the data, else the field that would enable them
   board [--port <n>] [--no-open] [--store <file>] [--root <dir>]
                                         scan, then serve the board on 127.0.0.1 (default port 4710) and open it;
                                         started in a git work tree it preselects that repository
+  import jjodel-log [--repo <path>] [--out <file>] [--trunk <ref>]
+                                        convert Jjodel's Markdown prompt log (read from the trunk with git show)
+                                        to contract v1 JSON Lines, by default ~/.tack/imports/<repo-key>/log.jsonl
+  parity jjodel [--days <n>] [--repo <path>] [--lanes <dir>] [--trunk <ref>] [--json] [--store <file>]
+                                        compare spend per day and first-shot lanes with Jjodel's lane board
+                                        rules over the last n days (default 14); exit 1 on any difference
 
 The store defaults to ~/.tack/store.db, or TACK_STORE when set.
 `;
@@ -72,6 +78,7 @@ async function scanCmd(args) {
   const { scan, defaultRoot } = await import('../src/collectors/claude-code/collect.mjs');
   const { identify } = await import('../src/collectors/git/identity.mjs');
   const { collectGit } = await import('../src/collectors/git/collect.mjs');
+  const { collectLayers } = await import('../src/collectors/layers.mjs');
   const path = storePath(flags.store);
   const root = flags.root ?? defaultRoot();
   const db = openStore(path);
@@ -93,6 +100,10 @@ async function scanCmd(args) {
     const g = collectGit(db);
     w(`git: repositories ${g.repos} (unchanged ${g.skipped}, incremental ${g.incremental}, full ${g.full}, errors ${g.errors})`);
     w(`git: rows added: commits ${g.commitsAdded}; commits removed by re-read ${g.commitsRemoved}`);
+    const ly = collectLayers(db);
+    w(`units: sessions by prompt ${ly.units.prompt}, by reachable commit ${ly.units.commit}, none ${ly.units.none} (commit in the window but no branch ${ly.units.noBranch})`);
+    w(ly.lanes.enabled ? `lanes: folders ${ly.lanes.lanes} (read ${ly.lanes.read}, unchanged ${ly.lanes.unchanged}, errors ${ly.lanes.errors})` : 'lanes: no lane-run folder, adapter off');
+    w(`logs: repository logs ${ly.logs.repoLogs}, imports ${ly.logs.imports}; entries ${ly.logs.entries}, lines failing contract v1 skipped ${ly.logs.rejected}`);
   } finally {
     db.close();
   }
@@ -237,10 +248,89 @@ async function metricsCmd(args) {
   w('');
   w('layers 2 and 3');
   for (const d of declared.filter((x) => x.layer > 1)) {
-    const v = m[d.name] === 'not-adopted' ? 'not adopted' : 'adopted, not implemented (slice 6)';
-    w(`  ${d.name.padEnd(18)} layer ${d.layer}  ${v.padEnd(34)} enabled by ${d.enabledBy}`);
+    const v = m[d.name];
+    w(`  ${d.name.padEnd(18)} layer ${d.layer}  ${typeof v === 'string' ? `${'not adopted'.padEnd(12)}enabled by ${d.enabledBy}` : layerLine(d.name, v)}`);
   }
   return 0;
+}
+
+const num = (x) => (x === null || x === undefined ? '-' : String(Math.round(x * 100) / 100));
+
+/** One line for a computed layer-2/3 metric. */
+function layerLine(name, v) {
+  switch (name) {
+    case 'commits_per_unit': return `${v.units} units, ${v.commits} commits; median ${num(v.median)}, max ${num(v.max)}`;
+    case 'cost_per_unit': return `${v.units} units over ${v.sessions} sessions (by prompt ${v.source.prompt}, by commit ${v.source.commit}; without unit ${v.sessionsWithoutUnit}); ${usd(v.usd)}, median ${v.median === null ? '-' : usd(v.median)}, max ${v.max === null ? '-' : usd(v.max)}`;
+    case 'resumes_per_unit': return `${v.units} units, ${v.resumes} resumes; median ${num(v.median)}, max ${num(v.max)}; 0: ${v.histogram[0]}, 1: ${v.histogram[1]}, 2+: ${v.histogram['2+']}`;
+    case 'outcome': return `log: completed ${v.log.completed}, partial ${v.log.partial}, problems ${v.log.problems} of ${v.log.entries}` +
+      (v.lanes ? `; lanes ${v.lanes.lanes}: ${['done', 'hard-stop', 'question', 'blocked', 'unparsed', 'none', 'running'].map((k) => `${k} ${v.lanes[k]}`).join(', ')}` : '');
+    case 'first_shot': return `${v.firstShot} of ${v.n} (${pct(v.share)}) by the ${v.rule} rule` + (v.rule === 'lanes' ? `; rework ${v.rework}, failed run ${v.failedRun}, running ${v.running}` : '');
+    case 'cause_tally': return `${v.total} entries with a cause: ${Object.entries(v.causes).map(([k, n]) => `${k} ${n}`).join(', ')}`;
+    default: return `yes ${v.yes}, no ${v.no}, unknown ${v.unknown}; share ${pct(v.share)}`;
+  }
+}
+
+async function importCmd(args) {
+  if (args[0] !== 'jjodel-log') return usage();
+  const flags = parseFlags(args.slice(1), ['repo', 'out', 'trunk']);
+  if (!flags) return usage();
+  const { importJjodelLog } = await import('../src/importers/jjodel-log.mjs');
+  const r = importJjodelLog({ repo: flags.repo ?? process.cwd(), out: flags.out ?? null, ...(flags.trunk ? { trunk: flags.trunk } : {}) });
+  if (r.error) {
+    process.stderr.write(`tack import: ${r.error}\n`);
+    return 2;
+  }
+  const w = (x) => process.stdout.write(x + '\n');
+  w(`out ${r.out}`);
+  w(`trunk ${r.trunk}, repository ${r.key.slice(0, 12)}`);
+  w(`entries read ${r.read}, converted ${r.converted}, rejected ${r.read - r.converted}: ${tally(r.rejected)}`);
+  return 0;
+}
+
+async function parityCmd(args) {
+  if (args[0] !== 'jjodel') return usage();
+  const flags = parseFlags(args.slice(1), ['days', 'repo', 'lanes', 'trunk', 'store'], ['json']);
+  if (!flags) return usage();
+  const days = flags.days === undefined ? 14 : Number(flags.days);
+  if (!Number.isInteger(days) || days < 1) {
+    process.stderr.write(`tack parity: --days takes a positive integer, got ${flags.days}\n`);
+    return 2;
+  }
+  const { openStore, storePath } = await import('../src/store/open.mjs');
+  const { defaultLaneRoot } = await import('../src/collectors/lane-run/collect.mjs');
+  const { importsRoot, DEFAULT_TRUNK } = await import('../src/importers/jjodel-log.mjs');
+  const { parityJjodel } = await import('../src/parity/jjodel.mjs');
+  const db = openStore(storePath(flags.store));
+  let r;
+  try {
+    r = parityJjodel(db, { root: flags.lanes ?? defaultLaneRoot(), repo: flags.repo ?? process.cwd(), trunk: flags.trunk ?? process.env.JJODEL_TRUNK ?? DEFAULT_TRUNK, days, imports: importsRoot() });
+  } finally {
+    db.close();
+  }
+  if (r.error) {
+    process.stderr.write(`tack parity: ${r.error}\n`);
+    return 2;
+  }
+  if (flags.json) {
+    process.stdout.write(JSON.stringify(r, (k, v) => (v === Infinity ? 'Infinity' : v), 2) + '\n');
+    return r.ok ? 0 : 1;
+  }
+  const w = (x) => process.stdout.write(x + '\n');
+  const relS = (x) => (x === Infinity ? 'inf' : `${(100 * x).toFixed(2)}%`);
+  w(`repository ${r.repo.slice(0, 12)}, last ${r.days.length} days (${r.days[0]} .. ${r.days.at(-1)}), tolerance ${relS(r.tolerance)}`);
+  w(`log import: read ${r.import.read}, converted ${r.import.converted}, rejected: ${tally(r.import.rejected)}`);
+  w('');
+  const table = [['day', 'board', 'tack', 'diff', 'rel', 'ok']];
+  for (const d of r.spend) table.push([d.day, usd(d.board), usd(d.tack), usd(d.diff), relS(d.rel), d.ok ? 'yes' : `NO (${d.cause})`]);
+  table.push(['total', usd(r.total.board), usd(r.total.tack), usd(r.total.diff), relS(r.total.rel), r.total.ok ? 'yes' : 'NO']);
+  printTable(table);
+  w('');
+  const fb = r.firstShot.board;
+  const ft = r.firstShot.tack;
+  w(`first-shot: board ${fb.firstShot} of ${fb.lanes} lanes (running ${fb.running}); tack ${ft.firstShot} of ${ft.lanes} lanes (running ${ft.running})`);
+  for (const x of r.firstShot.mismatches) w(`  ${x.id}  board ${x.board}  tack ${x.tack}  cause: ${x.cause}`);
+  w(r.ok ? 'parity: ok' : 'parity: FAILED');
+  return r.ok ? 0 : 1;
 }
 
 async function boardCmd(args) {
@@ -257,4 +347,6 @@ else if (command === 'sessions') process.exitCode = await sessionsCmd(rest);
 else if (command === 'repos') process.exitCode = await reposCmd(rest);
 else if (command === 'metrics') process.exitCode = await metricsCmd(rest);
 else if (command === 'board') process.exitCode = await boardCmd(rest);
+else if (command === 'import') process.exitCode = await importCmd(rest);
+else if (command === 'parity') process.exitCode = await parityCmd(rest);
 else process.exitCode = usage();

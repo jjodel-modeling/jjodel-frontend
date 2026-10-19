@@ -1,6 +1,6 @@
 // Tack board, Insights view: drawn from /api/metrics only. A KPI strip, then one card per layer-1 metric
-// (each names the metric and the layer it needs), then the layer-2/3 metrics as cards that say what
-// they need, never as empty charts. Adapted from Jjodel's lane-board insights.js (P-2026-10-19-1520):
+// (each names the metric and the layer it needs), then the layer-2/3 metrics: a card with figures where the
+// selection has the data, else a card that says what they need, never an empty chart. Adapted from Jjodel's lane-board insights.js (P-2026-10-19-1520):
 // the KPI strip, the card grid and the bar anatomy; none of its lane, outcome or launcher concepts.
 // html() is pure (test/board.test.mjs runs it in a vm).
 'use strict';
@@ -14,6 +14,47 @@
 
   const card = (name, layer, title, sub, body, wide) => '<section class="in-card' + (wide ? ' in-wide' : '') + '" aria-label="' + esc(title) + '"><h3>' + esc(title) +
     '<span class="in-layer" title="Needs layer ' + layer + ' data; metric ' + esc(name) + '">Layer ' + layer + ' · ' + esc(name) + '</span></h3><div class="sub">' + esc(sub) + '</div>' + body + '</section>';
+
+  const n0 = (x) => String(Math.round(x));
+  const med = (x) => (x === null || x === undefined ? '–' : String(Math.round(x * 10) / 10));
+  const counts = (pairs, label, empty, fmt = n0) => C.bars({ cats: pairs.map(([key]) => ({ key, label: key })), stacks: [{ name: 'Count', color: 'var(--t-accent)', values: pairs.map(([, n]) => n) }], fmt, label, empty });
+
+  /** A card for a computed layer-2/3 metric: its figures, and a bar chart or a meter where there is a distribution. */
+  function layerCard(x) {
+    const v = x.value;
+    const facts = (items) => '<div class="in-note">' + items.map(esc).join(' · ') + '</div>';
+    let body;
+    switch (x.name) {
+      case 'commits_per_unit':
+        body = facts([v.units + ' units', v.commits + ' commits', 'median ' + med(v.median), 'max ' + med(v.max)]);
+        break;
+      case 'cost_per_unit':
+        body = facts([B.usd(v.usd) + ' over ' + v.units + ' units', 'median ' + (v.median === null ? '–' : B.usd(v.median)), 'max ' + (v.max === null ? '–' : B.usd(v.max)),
+          v.sessions + ' sessions with a unit (prompt ' + v.source.prompt + ', commit ' + v.source.commit + ')', v.sessionsWithoutUnit + ' without']) +
+          counts(v.top.slice(0, 8).map((t) => [t.unit, t.usd]), 'Cost of the most expensive units', 'No unit.', usd0);
+        break;
+      case 'resumes_per_unit':
+        body = counts([['0', v.histogram[0]], ['1', v.histogram[1]], ['2+', v.histogram['2+']]], 'Units by resumes: ' + v.resumes + ' resumes over ' + v.units + ' units') +
+          facts(['median ' + med(v.median), 'max ' + med(v.max)]);
+        break;
+      case 'outcome': {
+        const keys = ['done', 'hard-stop', 'question', 'blocked', 'unparsed', 'none', 'running'];
+        body = (v.lanes ? counts(keys.map((k) => [k, v.lanes[k]]), 'Lanes by final Outcome line, ' + v.lanes.lanes + ' lanes') : '') +
+          facts(['log: completed ' + v.log.completed, 'partial ' + v.log.partial, 'problems ' + v.log.problems + ' of ' + v.log.entries + ' task entries']);
+        break;
+      }
+      case 'first_shot':
+        body = C.meters({ label: 'First-shot share ' + B.pct(v.share), parts: [{ label: 'First-shot', value: v.share, detail: v.firstShot + ' of ' + v.n + (v.rule === 'lanes' ? ' lanes' : ' units') }] }) +
+          (v.rule === 'lanes' ? facts(['rework ' + v.rework, 'failed run ' + v.failedRun, 'running ' + v.running]) : facts(['by the log: no later entry corrects the unit']));
+        break;
+      case 'cause_tally':
+        body = counts(Object.entries(v.causes), 'Entries by cause letter, ' + v.total + ' with a cause', 'No entry with a cause.');
+        break;
+      default:
+        body = C.meters({ label: x.name + ' ' + B.pct(v.share), parts: [{ label: 'Yes', value: v.share, detail: v.yes + ' of ' + (v.yes + v.no) + ' answering; ' + v.unknown + ' unknown' }] });
+    }
+    return card(x.name, x.layer, x.name.replace(/_/g, ' '), x.definition, body);
+  }
 
   /** The view as HTML from a /api/metrics response. */
   function html(m) {
@@ -80,13 +121,17 @@
     out += '<div class="in-grid">' + charts.join('') + '</div>';
 
     const up = m.metrics.filter((x) => x.layer > 1);
-    out += '<h2>Layers 2 and 3<span class="h2n">' + up.length + ' metrics</span></h2><div class="in-grid in-small">' + up.map((x) =>
+    const done = up.filter((x) => x.state === 'computed');
+    const rest = up.filter((x) => x.state !== 'computed');
+    out += '<h2>Layers 2 and 3<span class="h2n">' + done.length + ' of ' + up.length + ' metrics with data</span></h2>';
+    if (done.length) out += '<div class="in-grid">' + done.map(layerCard).join('') + '</div>';
+    if (rest.length) out += '<div class="in-grid in-small">' + rest.map((x) =>
       '<section class="in-card in-na" aria-label="' + esc(x.name) + '"><h3>' + esc(x.name) + '<span class="in-layer">Layer ' + x.layer + '</span></h3><div class="sub">' + esc(x.definition) + '</div>' +
-      '<div class="in-state"><span class="st' + (x.state === 'not-adopted' ? '' : ' ni') + '">' + (x.state === 'not-adopted' ? 'Not adopted: needs ' + esc(x.enabledBy) : 'Adopted, not implemented yet (slice 6)') + '</span></div></section>').join('') + '</div>';
+      '<div class="in-state"><span class="st">Not adopted: needs ' + esc(x.enabledBy) + '</span></div></section>').join('') + '</div>';
     return out;
   }
 
   root.TackInsights = { html };
   if (typeof document === 'undefined') return;
-  root.TackViews.insights = { render: (state, box) => { box.innerHTML = html(state.metrics); } };
+  root.TackViews.insights = { render: (state, box) => { box.innerHTML = html(state.metrics); C.fit(box); } };
 })(typeof window !== 'undefined' ? window : globalThis);
