@@ -267,3 +267,16 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board left running on 4710)
 **Notes**: Full tack/test suite: 208 tests, 208 pass, 0 fail (slice 7: 185). Eight unattended decisions in the lane handoff (~/.jjodel-lanes/P-2026-10-19-2330/handoff.md). The P-2026-10-19-2330 Status is not flipped: its prompt file is only on the trunk (c9b903250); the flip is owed by the merge or the chat. Session closed at the AM-8 soft ceiling.
 **Prompt document name**: 2026-10-19 23:30
+
+## 2026-10-20 — fix: Tack slice 8, the Lanes view registers and polls in a browser
+**Prompt**: P-2026-10-20-0018: the Lanes page stayed on «Loading the lanes…» in a browser (`Illegal invocation` at lanes.js:96); default poller timers called setInterval as a method, and the throw preceded the registration of TackViews.lanes
+**Files touched**: tack/src/board/lanes.js, tack/test/lanes-view.test.mjs (03d22d7c7), docs/prompts/claude_2026-10-20_0018_prompt_tack_s8_lanes_view_fix.md (Status, copied from the trunk), docs/log-inbox/tack.md
+**Outcome**: ✅ completed
+**Corregge**: P-2026-10-19-2330
+**Causa**: (c) a wrong assumption about existing code: Node accepts `obj.setInterval(...)` on a plain object, a browser does not, and the suite runs in Node
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-s8/board.pid, serving the fixed lanes.js)
+**Notes**: Full tack/test suite: 210 tests, 210 pass, 0 fail (208 plus two). Mutation bench: with the old lanes.js both new tests fail and the other six lanes-view tests stay green. The receiver test uses a strict stub that throws for any `this` other than undefined or globalThis. No unattended decisions.
+**Prompt document name**: 2026-10-20 00:18
