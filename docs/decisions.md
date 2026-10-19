@@ -6205,6 +6205,16 @@ Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked
   `turnstile` and `petri-producer-consumer` as examples; BPMN and the hierarchical statechart as examples after 3.2.
   Amends R-LIB-5 (adds the examples tier) and the layout of P-2026-10-18-1800.
 
+- **R-LIB-10** (2026-10-19, ratified by Alfonso 2026-10-19 02:58 «Aggiungi i viewpoint, il 23 ottobre non vale più», evidence: read, verified: none, reversible: trunk).
+  **The 3.2 freeze of 2026-10-23 no longer holds; the gallery examples get their viewpoints before the merge.** 3.1
+  ships from the trunk this week; 3.2 follows in about two to four weeks (Alfonso, 2026-10-18 23:33), its freeze date
+  to be set. The two 3.2 examples, `turnstile` and `petri-producer-consumer`, were packaged by P-2026-10-18-2300 with
+  the `Default` viewpoint only and open on abstract syntax, which does not meet the example tier of R-LIB-9: each gets
+  a hand-written viewpoint (statechart, Petri net) on `library-gallery` before that branch is merged
+  (P-2026-10-19-0300). Supersedes the 3.2 dates of R-GEN-1 (live by 2026-10-26, content freeze 2026-10-23); the
+  rows that name the 2026-10-23 freeze now refer to the 3.2 freeze still to be set. R-LIB-7 and R-LIB-8 are
+  unchanged (no sealed notation and no seal guard in 3.2).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
