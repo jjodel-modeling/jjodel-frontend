@@ -2385,3 +2385,25 @@ body[data-active-tab="manager"] .properties-tree-overlay {
 // The resize hint and readout render inside the overlay, beside the shell element.
 .properties-tree-overlay .resize-handle__hint,
 .properties-tree-overlay .resize-handle__readout { font-size: var(--shell-font-size-min); }
+
+// ─── Shell S7: rail section titles (P-2026-10-19-1830) ───────────────────────
+// Section titles are written in sentence case in the source (R-SHELL-4) and shown at
+// 12/500 without tracking, `--shell-text-2`. Rail-only, under the S6 anchor (0,2,0) and
+// after it, so equal-specificity rules above are decided by source order (D-UI-11: never
+// in the sidebar sheet). Not reached: `.props-header__kind`, the type badge, stays
+// uppercase; the left palette label lives outside the overlay. The NodeEditor titles are
+// the `<span>` of `.node-section__title`, whose icons keep their own size.
+// Source: discovery_2026-10-19_shell_visual_consolidation.md §3.4, §4 (S7).
+.properties-tree-overlay .properties-with-tree-view--floating {
+    .tree-section__label,
+    .props-section__title,
+    .properties-node-section__label,
+    .jj-flags__title,
+    .node-section__title > span {
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--shell-text-2);
+    }
+}

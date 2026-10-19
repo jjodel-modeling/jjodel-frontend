@@ -102,7 +102,7 @@ function InheritanceSection(props: {
     const { isAdvanced: globalAdvanced } = useInterfaceMode();
 
     return (
-        <CollapsibleSection title="INHERITANCE">
+        <CollapsibleSection title="Inheritance">
             <PropertiesToggle data={lclass} field={'abstract'} label="Abstract"
                 tooltip="Cannot be instantiated directly; must be subclassed" />
             <div className="jj-divider" />
@@ -511,17 +511,17 @@ class builder {
                 </div>
             )}
 
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
-            {l.isMetamodel && advanced && <CollapsibleSection title="SEMANTIC TYPE CLASS">
+            {l.isMetamodel && advanced && <CollapsibleSection title="Semantic type class">
                 <SimulationToggle modelId={l.id} />
             </CollapsibleSection>}
 
-            <CollapsibleSection title="DEPENDENCIES">
+            <CollapsibleSection title="Dependencies">
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Depends from models</b>
+                    <b className={'info-field-label'}>Depends from models</b>
                     <JjSelect
                         isMulti={true}
                         options={multiselectOptions as any}
@@ -535,7 +535,7 @@ class builder {
                 </label>
             </CollapsibleSection>
 
-            {l.isMetamodel && <CollapsibleSection title="CONTENTS">
+            {l.isMetamodel && <CollapsibleSection title="Contents">
                 <MetamodelContents data={l} onInternalNavigate={onInternalNavigate} />
             </CollapsibleSection>}
         </>);
@@ -543,7 +543,7 @@ class builder {
 
     static package(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
                 <div className="jj-field">
                     <div className="jj-field-label">Uri</div>
@@ -568,7 +568,7 @@ class builder {
         let hasDependencies = (lclass.model as any)?.__raw?.dependencies?.length > 0;
 
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
@@ -580,7 +580,7 @@ class builder {
     }
     static enum(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
                 {advanced && <PropertiesToggle data={data} field={'serializable'} label="Serializable" />}
             </CollapsibleSection>
@@ -590,11 +590,11 @@ class builder {
     static feature(data: LModelElement, advanced: boolean, skipTitle: boolean = false,
                    leadingFlags: FlagDef[] = [], trailingFlags: FlagDef[] = []): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
-            <CollapsibleSection title="TYPE &amp; BOUNDS">
+            <CollapsibleSection title="Type &amp; bounds">
                 <div className="jj-field">
                     <div className="jj-field-label">Type <span className="jj-field-required">*</span></div>
                     <TypeSelect data={data} />
@@ -621,7 +621,7 @@ class builder {
                 value, and a reference has none. They are metamodel facts — they
                 govern every instance of the class — so the surface is here and
                 not in the FormSpec authoring of the Form tab. */}
-            <CollapsibleSection title="DISPLAY" defaultOpen={false}>
+            <CollapsibleSection title="Display" defaultOpen={false}>
                 <DisplayAnnotations
                     featureId={(data as any)?.id ?? null}
                     typeName={getTypeName(data)}
@@ -642,11 +642,11 @@ class builder {
     }
     static operation(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
-            <CollapsibleSection title="RETURN">
+            <CollapsibleSection title="Return">
                 <div className="jj-field">
                     <div className="jj-field-label">Return type</div>
                     <TypeSelect data={data} />
@@ -656,11 +656,11 @@ class builder {
     }
     static literal(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
-            <CollapsibleSection title="VALUE">
+            <CollapsibleSection title="Value">
                 <div className="jj-field">
                     <div className="jj-field-label">Ordinal</div>
                     <PropertiesNumberInput data={data} field={'ordinal'} min={0} />
@@ -723,14 +723,14 @@ class builder {
             )}
 
             {/* Force Type section */}
-            {tab && <CollapsibleSection title="TYPE">
+            {tab && <CollapsibleSection title="Type">
                 {this.forceConform(object)}
             </CollapsibleSection>}
 
             {/* Slots section — attributes and containment. Non-containment references
                 moved to REFERENCES below (opzione Y), so they are listed once. */}
             {slotFeatures.length > 0 && (
-                <CollapsibleSection title="SLOTS">
+                <CollapsibleSection title="Slots">
                     {slotFeatures.map(f => <div id={`Object-${f.id}`} key={f.id}>
                         {this.value(f, topics, advanced, mode)}
                     </div>)}
@@ -738,7 +738,7 @@ class builder {
             )}
 
             {slotFeatures.length === 0 && object.features.length === 0 && tab && (
-                <CollapsibleSection title="SLOTS">
+                <CollapsibleSection title="Slots">
                     <div className="jj-slot-empty" style={{padding: '10px 16px'}}>No slots defined</div>
                 </CollapsibleSection>
             )}
@@ -815,7 +815,7 @@ class builder {
         };
 
         return (
-            <CollapsibleSection title="REFERENCES" defaultOpen={false}>
+            <CollapsibleSection title="References" defaultOpen={false}>
                 {slots.map(slot => {
                     const isRequiredSingle = slot.upper === 1 && slot.lower >= 1;
                     const belowUpper = slot.upper === -1 || slot.targets.length < slot.upper;
@@ -1154,7 +1154,7 @@ class builder {
             </label>
             {valueslist}
             {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <label className={'mt-2 input-container'}>
-                <b className={'me-2'}>Topic</b>
+                <b className={'info-field-label'}>Topic</b>
                 <select className={'my-auto ms-auto select'} defaultValue={value.topic} onChange={e => value.topic = e.target.value}>
                     <optgroup label={'topics'}>
                         <option value={''}>------</option>

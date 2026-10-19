@@ -74,3 +74,20 @@ not touched by this lane.
 **Prompt document name**: 2026-10-19 17:42
 
 **Ticket** (P-2026-10-19-1742): in the rail the B4 rule `.jj-field input:not([type=color]):not([type=checkbox])` (properties-with-tree-view.scss, Arco 3 passo A) also reaches react-select's inner `input.jj-select__input`, giving it 30px height and a 1px border: a small box visible left of the value in the Type field. Not fixed here (it moves geometry); the chat accepted the invisible 4x32 input at 6px.
+
+## 2026-10-19 — feat: rail section titles in sentence case (S7)
+**Prompt**: P-2026-10-19-1830, slice S7 of the shell front (R-SHELL-4): right-rail section titles in sentence case in the source, shown at 12px/500, no tracking, `--shell-text-2`; type badge and left palette label stay uppercase; `b.me-2` in Info.tsx replaced by the semantic class `info-field-label`; the MODELS demo script and the R-SIM-99 row quote `Semantic type class`.
+**Files touched**: frontend/src/components/editors/Info.tsx, NodeEditor.tsx, PropertiesWithTreeView.tsx, properties-with-tree-view.scss, info-improvements.scss (fbb1531f9); docs/demo/models_2026_simulator_demo.md, docs/decisions.md (R-SIM-99 label only), docs/log-inbox/shell-ui.md, docs/prompts/claude_2026-10-19_1830_prompt_shell_ui_s7_rail_titles.md (Status line)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: 9 files, all in DOVE or closure. Chat check on 3017 passed. 1600x1000 DemoPetri, model/attribute/class/class+node, Basic+Advanced: rail and canvas rects unchanged; 16 title kinds 12/500/none/#475569, sentence case; badge and palette uppercase; info-field-label computed style identical; clipped 0->0; text<11px only the pre-existing 9px anchor-viz labels. No acronym in titles. docs/redesign/rail/README.md left as historical spec. Gates: typecheck 0, vitest 33/33, build 0, smoke GREEN 12/0/3.
+**Prompt document name**: 2026-10-19 18:30
+
+**Ticket** (P-2026-10-19-1830): in Advanced with a node selected and NODE open, NodeEditor's `span.anchor-viz__point-label` renders at 9px (17 elements), under the R-SHELL-5 11px floor; present before S7, outside this lane's files.
+
+**Ticket** (P-2026-10-19-1830): `.jj-section-title` (Contents sub-lists CLASSES/ENUMERATORS/PACKAGES) is still 11px/600 uppercase #94a3b8, under R-SHELL-5; to S8.
