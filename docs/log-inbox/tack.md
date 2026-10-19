@@ -6,6 +6,30 @@ empties this file. The active log is not touched by this lane.
 
 ---
 
+## 2026-10-19 — feat: Tack slice 3, git collector and repository identity
+**Prompt**: P-2026-10-19-1305, repository identity per session cwd (root commit key, common dir, missing with reason), metadata-only git collector with incremental tips, commit-within-hour proximity, `tack repos`, acceptance on this Mac
+**Files touched**: tack/** (code commit 68ac2ccdd), docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1305_prompt_tack_s3_git_collector.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Node ~/.local/bin/node v26.8.1; tests 64/64. Unattended: clones sharing any root are one repo (key = lowest root); empty repo is missing `no-commits`; proximity computed at query time; schema 1 migrated to 2. Bench: message-in-store and dropped count check killed; --no-renames survives. Scan 1: 46 s, jjodel full log about 38 s.
+**Prompt document name**: 2026-10-19 13:05
+
+§4.2 (report) vs `tack scan` + `tack repos` (store /tmp/tack-s3-acc/real.db), r / t:
+
+| Metric | tracer-scaffold | harness-book | this repository (jjodel) | sprotty (8 dirs) |
+|---|---|---|---|---|
+| Commits, rev-list --all --count / stored | 13 / 13 | 33 / 33 | 6467 / 6467 | missing: path-gone 8 / 8 |
+| Unit ids (trailer, suffix) | 0 / 0, 0 | 0 / 0, 0 | — / 3, 1882 | — |
+| Claude co-authored | 9 / 9 | 27 / 27 | — / 3336 | — |
+| Sessions with commit within hour | 1 of 1 / 1 of 1 | 1 of 1 / 1 of 1 | — / 373 of 381 | unknown 8 / 8 |
+
+Scan 1: 755 files, 592 sessions, 279 cwds; 385 sessions in 5 repos, 196 path-gone, 11 not-a-git-work-tree; 6754 commits. Scan 2: 0 rows added (sessions 0, calls 0, repos 0, links 0, commits 0; 5 repos unchanged).
+
 ## 2026-10-19 — feat: Tack slice 2, event store and Claude Code collector
 **Prompt**: P-2026-10-19-1225, node:sqlite store (sessions, calls, ingest), incremental metadata-only Claude Code collector, `tack scan` and `tack sessions`, privacy gate, reproduction of report §4.2
 **Files touched**: tack/** (code commit 2c0d567f3), docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1225_prompt_tack_s2_store_cc_collector.md (Status)

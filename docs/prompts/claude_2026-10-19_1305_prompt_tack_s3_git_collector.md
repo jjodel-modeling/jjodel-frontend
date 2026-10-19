@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1305
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: full (new collector that runs git on every repository the user worked in; discovery done in P-2026-10-19-1100)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s3 · code commit 68ac2ccdd, docs commit carrying this line
 Depends: P-2026-10-19-1225
 Corregge: none
 Request: Alfonso, 2026-10-19 13:01, in the project chat: «via la fetta 3»
