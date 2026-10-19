@@ -294,3 +294,37 @@ Dev server on the lane, `#/templates`; Basic and Advanced by the app-bar toggle.
 ### Decisions awaiting Alfonso
 
 None.
+## P-2026-10-19-1616 — L-B2, dashboard sidebar and quick tip (executed)
+
+Branch `tpl-b2`, code commit `b25c41db8`. Handoff §2.4 within the R-LIB-20 cut: no Notations item, no Collections item.
+
+### What was done
+
+- `frontend/src/pages/components/LeftBar.tsx`: `Item` gains the local optional prop `current` (type not exported); when true the item gets class `active` and `aria-current="page"`. Passed by All projects (`active === 'All'` and no `filter` param), Templates (`active === 'Templates'`, so `#/templates/<ref>` too) and Explore (`active === 'Explore'`). The FILTERS `Menu` is not rendered when `active === 'Templates'`. The FILTERS items keep their own `active` (filter state), without `aria-current`.
+- `frontend/src/pages/dashboard.scss`: `.leftbar .item.active` is `--color-slate-100` fill, `--font-semibold` (600), `box-shadow: inset 3px 0 0 var(--color-slate-700)`, text `--color-text-primary`, icon `--color-slate-700`. The cyan `#0ea5e9` and the 0.5px border are gone.
+- `frontend/src/components/NotificationWidget/NotificationWidget.tsx`: `onTemplatesPage = /^\/templates(\/|$)/` on `useLocation().pathname`; the Quick tip branch and `hasTipToShow` (body flag `data-notification-visible`) both skip it. System notices still show on Templates; a skipped tip is not marked seen (same rule as the consumer case). The remote text source is unchanged.
+
+### Measurements (headless Chromium 1440×900, dev server 3102, `seed(ctx, true)`, the notifications worker stubbed with one tip «Right-click on elements for more options»; probe `frontend/scripts/smoke/_tmp_tpl_b2.ts`, gitignored, deleted)
+
+| route | menu headers | active item (`aria-current`) | Quick tip | body flag |
+|---|---|---|---|---|
+| `#/allProjects` | Filters, Favorites, Browse, Resources | All projects (`page`) | shown | `true` |
+| `#/templates` | Favorites, Browse, Resources | Templates (`page`) | absent | none |
+| `#/explore` | Filters, Favorites, Browse, Resources | Explore (`page`) | shown | `true` |
+| `#/allProjects?filter=private` | Filters, Favorites, Browse, Resources | Private (none) | shown | `true` |
+| All projects → sidebar Templates | Favorites, Browse, Resources | Templates (`page`) | absent | none |
+
+Computed style of the active item on every row: background `rgb(241, 245, 249)` (slate-100), weight `600`, box-shadow `rgb(51, 65, 85) 3px 0px 0px 0px inset` (slate-700). Typecheck exit 0 (`.agent-logs/typecheck-20261019-161632.log`).
+
+Pages the restyle changes (report §8.7): All projects, Explore and Templates gain a highlighted item they never had; the FILTERS items on `#/allProjects?filter=…` change from cyan to slate. Notes, Account, Settings, Profile, Updates, Archive, Community and the admin pages have no matching sidebar item and show none highlighted, as before. The project page sidebar (`psb-item`) is not affected.
+
+### Decisions taken (unattended)
+
+1. All projects is current only without a `filter` param; on a filtered view the filter item is the highlighted one, so one item is active at a time.
+2. `aria-current="page"` goes on the page items only; the filter items keep the active style without it (they are a view of All projects, not a page).
+3. The tip is suppressed for every Quick tip on Templates, not by matching the remote text, which the code does not own; system notices stay.
+4. Icon of the active item in slate-700 and text in `--color-text-primary`: the handoff names fill, weight and bar only.
+
+### How to see it
+
+`npm start -- --port 3102 --strictPort` on `tpl-b2`, open `#/allProjects` and `#/templates`. Screenshots: `docs/discovery/assets/tpl-b2/all-projects.png`, `docs/discovery/assets/tpl-b2/templates.png`. Perceptual note for the chat: the inset bar follows the item's `--radius-md`, so its ends are rounded. The Templates screenshot shows the app bar on Basic after leaving All projects: the open ticket `docs/log-inbox/notation-library.md:53`, not this lane.
