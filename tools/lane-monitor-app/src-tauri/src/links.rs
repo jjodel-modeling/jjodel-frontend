@@ -2,9 +2,9 @@
 //!
 //! Pure functions, tested here: `lane_of_link` decides whether a URL handed over by
 //! LaunchServices names a lane; `Config::parse` reads `config.json`; `shortcut_of` turns its
-//! `shortcut` field into the chord to register.
+//! `shortcut` field into the chord to register. The Settings view's write side is `config.rs`.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tauri_plugin_global_shortcut::{Modifiers, Shortcut};
 
 pub const SCHEME: &str = "jjodel-lanes";
@@ -51,14 +51,23 @@ pub fn monitor_url(board: &str, lane: Option<&str>) -> Result<String, String> {
     }
 }
 
-/// `config.json`. Both fields optional; unknown fields are refused so a typo is not silent.
-#[derive(Debug, Default, PartialEq, Deserialize)]
+/// `config.json`. Every field optional; unknown fields are refused so a typo is not silent.
+/// Written back by the Settings view (`config::to_json`) with only the fields that are set.
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     /// Board URL, `http://host:port`; `LANE_MONITOR_BOARD` wins over it.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub board: Option<String>,
     /// A chord such as `Ctrl+Alt+Cmd+J`; `""` registers none.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub shortcut: Option<String>,
+    /// `system` (the default), `light` or `dark`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub theme: Option<crate::config::Theme>,
+    /// Lane notifications on (the default) or off; off leaves the macOS permission alone.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notifications: Option<bool>,
 }
 
 impl Config {
