@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1510
 Chat: C-2026-10-19-1501
 Front: notation-library
 Lane: full (discovery across five areas of the UI and a build pipeline; Phase 1 read-only)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane templates-ui · Phase 1 report, docs commit carrying this line · hard-stop, Phase 2 written by the chat (RC-26)
 Depends: P-2026-10-19-0930 (branch `library-gallery`, HEAD `e1bb5db65`, not yet merged into the trunk)
 Corregge: none (new work)
 Request: Alfonso, 2026-10-19 15:01, in the project chat: commit the design handoff, run the read-only discovery lane L-A and propose the lanes
