@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1225
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: full (new code that reads private transcripts: the metadata-only rule must hold; discovery done in P-2026-10-19-1100)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s2 · code commit 2c0d567f3, docs commit carrying this line
 Depends: P-2026-10-19-1200
 Corregge: none
 Request: Alfonso, 2026-10-19 12:21, in the project chat: «OK» to `node:sqlite` with Node >= 24
