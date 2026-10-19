@@ -45,6 +45,8 @@ type ItemProps = {
     dot?: boolean;
     onClick?: MouseEventHandler;
     active?: boolean;
+    // The dashboard page this item leads to is the one shown: active style plus aria-current.
+    current?: boolean;
     count?: number;
     muted?: boolean;
     danger?: boolean;
@@ -59,13 +61,13 @@ const Item = (props: ItemProps) => {
     const cls = [
         'item',
         props.dot ? 'red-dot' : '',
-        props.active ? 'active' : '',
+        props.active || props.current ? 'active' : '',
         props.muted ? 'item--muted' : '',
         props.danger ? 'item--danger' : '',
     ].filter(Boolean).join(' ');
 
     return (
-        <div onClick={finalaction} className={cls}>
+        <div onClick={finalaction} className={cls} aria-current={props.current ? 'page' : undefined}>
             {props.icon && props.icon}&nbsp;<span>{props.children}</span>
             {props.count !== undefined && <span className="item-count">{props.count}</span>}
         </div>
@@ -520,11 +522,11 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* Main Navigation - Workspace */}
                 <Menu>
-                    <Item action={'allProjects'} icon={<i className="bi bi-folder" />}>All projects</Item>
+                    <Item action={'allProjects'} icon={<i className="bi bi-folder" />} current={active === 'All' && currentFilter === 'all'}>All projects</Item>
                 </Menu>
 
-                {/* Filters Section - Quick access to filtered views (synced with toolbar) */}
-                <Menu title={'Filters'} mode={'collapsable'}>
+                {/* Filters Section - Quick access to filtered views (synced with toolbar); not on Templates (handoff §2.4) */}
+                {active !== 'Templates' && <Menu title={'Filters'} mode={'collapsable'}>
                     <Item
                         action={() => handleFilterChange('private')}
                         icon={<i className="bi bi-lock" />}
@@ -540,7 +542,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         icon={<i className="bi bi-people" />}
                         active={currentFilter === 'collaborative'}
                     >Collaborative</Item>
-                </Menu>
+                </Menu>}
 
                 {/* Favorites Section */}
                 <Menu title={'Favorites'} mode={'collapsable'}>
@@ -555,8 +557,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* Browse Section - Templates & Explore (moved from navbar tabs) */}
                 <Menu title={'Browse'} mode={'collapsable'}>
-                    <Item action={'templates'} icon={<i className="bi bi-grid-3x3-gap" />}>Templates</Item>
-                    <Item action={'explore'} icon={<i className="bi bi-compass" />}>Explore</Item>
+                    <Item action={'templates'} icon={<i className="bi bi-grid-3x3-gap" />} current={active === 'Templates'}>Templates</Item>
+                    <Item action={'explore'} icon={<i className="bi bi-compass" />} current={active === 'Explore'}>Explore</Item>
                 </Menu>
 
                 {/* Recently Modified - ONLY show if projects exist */}
