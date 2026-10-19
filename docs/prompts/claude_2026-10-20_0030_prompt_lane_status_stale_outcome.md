@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-0030
 Chat: C-2026-10-20-0003
 Front: harness
 Lane: full (lane-run.mjs, its test, README line)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane status-stale · 966f16913 · status reads the latest run's Outcome; `limit` and `died` added; no UI change (P8 replaced by the gates)
 Request: https://claude.ai/code/session_01Mk7LmH7N6YcSQiKx7oNZP5 (Alfonso, 2026-10-20 00:03: «chiudi tutto quello che puoi chiudere, compresi i ticket, vai in /lane auto»)
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P8 replaced: no UI change; the gates and a replayed log are the check.

@@ -874,3 +874,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: passato — chat, unattended: chat verified merge f9f4e7f2d and the direct gates: typecheck, vitest 9431, build, check:docs all ok
 **Notes**: Rollback tag `pre-mergeurl` on `c9b903250` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2331/result.json`.
 **Prompt document name**: 2026-10-19 23:31
+
+## 2026-10-20 — fix(harness): lane-run status reads the Outcome of the latest run only (P-2026-10-20-0030)
+**Prompt**: issue #181: after a resume that dies on the usage limit, `lane-run status` and `status --all` showed the Outcome of the previous run. Read the latest run only; `limit` and `died` for an exited run with no Outcome; tests; one doc line; check board and Tack by rg only.
+**Files touched**: `966f16913`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`; this commit: `docs/harness/gates.md`, this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Offset from logFrom of the last runs.jsonl line; new additive errFrom for the stderr tail. `limit` regardless of exit code: a real weekly-limit run (P-2026-09-28-2332) exited 0. laneRun.test.ts 141 green, five new, mutation bench 3/1/1 killed. Board and lane-tracking take the value as is (no choke); Tack derives its own outcome from the whole log and keeps the stale read.
+**Prompt document name**: 2026-10-20 00:30
