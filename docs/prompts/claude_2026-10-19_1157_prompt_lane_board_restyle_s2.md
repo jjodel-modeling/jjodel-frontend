@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1157
 Chat: C-2026-10-18-2225
 Front: harness
 Lane: phase2 (slice 2 of 2; the board page only; no change to data, routes or `/api*` shapes; no critical zone)
-Status: da eseguire
+Status: eseguito 2026-10-19 via P-2026-10-19-1215 (stopped at the RC-51 context ceiling, code uncommitted; checked and committed by the continuation) · lane board-restyle · 696025936 · verifica visiva passata 2026-10-19 (chat: built-in browser on 4714, four tabs at 1440 dark, theme switched to Light without reload, 800 light 800/800 px)
 Depends: P-2026-10-19-1130
 Corregge: —
 Request: Alfonso, 2026-10-19 11:25, in chat C-2026-10-18-2225: the board must use the Linear-like design agreed on 2026-10-18 on the canvas «Lane Monitor Desktop». Slice 1 (P-2026-10-19-1130, commits `c40dee260` and `21a629b9f`) gave the shell and the Lanes tab; this slice does the other three tabs.
