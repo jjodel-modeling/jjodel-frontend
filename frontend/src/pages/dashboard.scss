@@ -872,12 +872,11 @@ project-card .tip {
       color: var(--color-text-primary);
     }
 
-    // Handoff §2.4 (P-2026-10-19-1616): slate-100 fill, 600 weight, 3px inset bar in slate-700.
+    // Handoff §2.4 (P-2026-10-19-1616): slate-100 fill, 600 weight; no left bar (Alfonso, 2026-10-19 16:56).
     &.active {
       background-color: var(--color-slate-100);
       color: var(--color-text-primary);
       font-weight: var(--font-semibold);
-      box-shadow: inset 3px 0 0 var(--color-slate-700);
 
       .bi {
         color: var(--color-slate-700);
