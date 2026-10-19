@@ -1302,6 +1302,86 @@ describe('lane-run status, the Outcome line', () => {
     });
 });
 
+// ── the Outcome of the latest run only (issue #181, P-2026-10-20-0030) ────────
+
+const LIMIT_TEXT = "You've hit your session limit · resets 3am (Europe/Rome)";
+
+/**
+ * A lane run twice, as start then resume write it: run 1 ends on `Outcome: hard-stop`;
+ * run 2, appended to log.jsonl and stderr.log, holds the given events and exits with `exit`.
+ */
+function resumedLane(l: Lab, id: string, o: { run2: string[]; exit: string; err1?: string; err2?: string }) {
+    fakeLane(l, id, { texts: ['Phase 1 report.\nOutcome: hard-stop'] });
+    const dir = laneDir(l, id);
+    const log = join(dir, 'log.jsonl');
+    const err = join(dir, 'stderr.log');
+    writeFileSync(err, o.err1 ?? '');
+    const logFrom = readFileSync(log).length;
+    const errFrom = readFileSync(err).length;
+    writeFileSync(log, readFileSync(log, 'utf8') + o.run2.map((x) => x + '\n').join(''));
+    writeFileSync(err, readFileSync(err, 'utf8') + (o.err2 ?? ''));
+    writeFileSync(join(dir, 'runs.jsonl'), [
+        { at: '2026-10-20 00:10', kind: 'start', session: 'sess-1', logFrom: 0, errFrom: 0, outcome: 'hard-stop', exit: '0' },
+        { at: '2026-10-20 00:40', kind: 'resume', session: 'sess-1', logFrom, errFrom },
+    ].map((r) => JSON.stringify(r)).join('\n') + '\n');
+    writeFileSync(join(dir, 'exit.txt'), o.exit + '\n');
+}
+
+const limitResult = (text: string) => JSON.stringify({ type: 'result', subtype: 'success', is_error: true, result: text });
+
+describe('lane-run status, the Outcome of the latest run (issue #181)', () => {
+    test('kills "the Outcome of the run before the resume inherited": run 2 dying on the usage limit reads limit, in status and status --all', () => {
+        const l = lab();
+        resumedLane(l, ID, { run2: [assistant(LIMIT_TEXT), limitResult(LIMIT_TEXT)], exit: '1' });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('outcome: limit');
+        expect(r.stdout).not.toContain('hard-stop');
+        const a = laneRun(l, ['status', '--all']);
+        expect(a.status, a.stderr).toBe(0);
+        expect(a.stdout.trimEnd().split('\n')[1].split(/\s+/)).toEqual([ID, 'exited', 'limit', '1', 'min']);
+    });
+
+    test('kills "limit read only on a non-zero exit", "the stderr tail ignored": the weekly limit with exit 0, and a limit only on stderr, read limit', () => {
+        const l = lab();
+        const weekly = "You've hit your weekly limit · resets Oct 2 at 3pm (Europe/Rome)";
+        resumedLane(l, ID, { run2: [assistant(weekly), limitResult(weekly)], exit: '0' });
+        expect(laneRun(l, ['status', ID]).stdout).toContain('outcome: limit');
+        const m = lab();
+        resumedLane(m, ID, { run2: [], exit: '1', err2: 'Error: ' + LIMIT_TEXT + '\n' });
+        expect(laneRun(m, ['status', ID]).stdout).toContain('outcome: limit');
+    });
+
+    test('kills "a plain death reported as none or limit", "the stderr of run 1 read for run 2": a non-zero exit with no Outcome reads died', () => {
+        const l = lab();
+        resumedLane(l, ID, { run2: [assistant('Working on step 2.')], exit: '143', err1: 'Error: ' + LIMIT_TEXT + '\n' });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('outcome: died');
+        const a = laneRun(l, ['status', '--all']);
+        expect(a.stdout.trimEnd().split('\n')[1].split(/\s+/)).toEqual([ID, 'exited', 'died', '1', 'min']);
+    });
+
+    test('kills "the latest run\'s own Outcome dropped": run 2 closing on `Outcome: done` reads done', () => {
+        const l = lab();
+        resumedLane(l, ID, { run2: [assistant('Closing report.\nOutcome: done')], exit: '0' });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.stdout).toContain('outcome: Outcome: done');
+        expect(laneRun(l, ['status', '--all']).stdout.trimEnd().split('\n')[1].split(/\s+/)).toEqual([ID, 'exited', 'done', '1', 'min']);
+    });
+
+    test('kills "a lane never resumed changed": one run, with or without runs.jsonl, keeps its Outcome; an exit 0 without one stays none', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: hard-stop'] });
+        expect(laneRun(l, ['status', ID]).stdout).toContain('outcome: Outcome: hard-stop');
+        writeFileSync(join(laneDir(l), 'runs.jsonl'), JSON.stringify({ at: '2026-10-20 00:10', kind: 'start', session: null, logFrom: 0 }) + '\n');
+        expect(laneRun(l, ['status', ID]).stdout).toContain('outcome: Outcome: hard-stop');
+        const m = lab();
+        fakeLane(m, ID, { texts: ['No closing line.'] });
+        expect(laneRun(m, ['status', ID]).stdout).toContain('outcome: none');
+    });
+});
+
 describe('lane-run status --all', () => {
     test('kills "a lane missing", "not newest first", "non-lane folders listed", "the outcome word not parsed", "the Outcome of an earlier turn shown while the lane runs": one table of every lane', () => {
         const l = lab();
