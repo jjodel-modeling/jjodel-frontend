@@ -6239,6 +6239,15 @@ Rows R-LIB-11..19 are **provisional**: their direction was approved by Alfonso i
 - **R-LIB-20** (2026-10-19, ratified by Alfonso 2026-10-19 16:09 «Si velocissimo» on the chat's recommendations after P-2026-10-19-1510, evidence: measured, verified: none, reversible: trunk).
   **The 3.2 cut of the templates handoff, and its Q3/Q4.** In 3.2: the Templates page (L-B1), the dashboard sidebar and quick tip (L-B2), PNG previews from headless snapshots (L-C), the New model dialog with the «Metamodel in this project» tab only (L-D), File › New without a Built-in section in Basic and Advanced (L-E). Out of 3.2, with the sealed notations S4/S5 (R-LIB-7): the Notations page and its BROWSE item, the Built-in tab, Model › <notation> and Browse notations…, handoff Q1 and Q2. Q4: Collections out of 3.2. Q3: levels and Start here as in the handoff §2.5; concepts as there except families-persons «transformation» → «multiple-metamodels», «simulation» added to turnstile and petri-producer-consumer, «containment» added to shapes and graph. Evidence: `docs/discovery/discovery_2026-10-19_templates_notations_file_new.md` §3.3, §4, §6, §7.
 
+- **R-LIB-11** (2026-10-19, ratified by Alfonso 2026-10-19 09:20 «ok con la prima», evidence: measured, verified: none, reversible: trunk).
+  **The IR gains the predicate `simActive`, true on an element while a simulation run is active on that element's
+  model.** It is an addition next to `marked`: no existing predicate changes. It declares the `'mark'` channel (Reset and
+  Stop already bump it), finds the model by walking `father` to the DModel, and reads `getSimRun(modelId)` through the
+  new optional ReadCtx method `isRunActive`; both backends implement it. The conditional editor offers it as «Sim active
+  (run in progress)». First use: the Place view of the `petri-producer-consumer` example draws its tokens under
+  `not simActive`, so a place a run has emptied no longer shows its initial marking. Evidence: P-2026-10-19-0930
+  (`50ab1d74c`, branch `library-gallery`), IR, UI and sim suites 2793/2793, 9/9 mutants killed, clone probe 178/178.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
