@@ -1,6 +1,7 @@
 // The board's JSON API over the store: repositories, sessions, metrics, health. Every response is
 // metadata: ids, counts, times, model ids, ref names and repository toplevels. No session cwd (it may
 // lie below a toplevel), no transcript path, no commit subject, author or changed-file path.
+import { existsSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 import { remoteHost, resolveCwd, cloneIdentity } from '../collectors/git/identity.mjs';
 import { SCHEMA_VERSION } from '../store/open.mjs';
@@ -190,6 +191,97 @@ export function metricsApi(db, { repo = null, since = null, until = null } = {})
     };
   });
   return { repo, since, until, days: `local (${timeZone()})`, sessions: sel.sessions.length, metrics };
+}
+
+const LANE_H = 3600e3;
+export const ATTENTION_STALE_MS = 72 * LANE_H;
+export const MEDIAN_DAYS = 30;
+export const MEDIAN_MIN_N = 5;
+export const LANE_CLOSURE = 'A waiting lane closes when a commit names its Prompt-ID after the lane ended. '
+  + 'The prompt\'s Status: line and later lanes naming it in Depends: or Corregge: are not read.';
+
+const LANES = `
+SELECT l.*,
+  EXISTS (SELECT 1 FROM commits c WHERE c.unit = l.id AND l.end_ms IS NOT NULL AND c.commit_time * 1000 > l.end_ms) AS closed,
+  (SELECT SUM(c.input + c.cache_read + c.cache_creation) FROM calls c JOIN sessions s ON s.id = c.session_id
+    WHERE s.unit = l.id AND c.sidechain = 0) AS tokens_in,
+  (SELECT MAX(c.context) FROM calls c JOIN sessions s ON s.id = c.session_id WHERE s.unit = l.id AND c.sidechain = 0) AS context_peak
+FROM lanes l
+WHERE (? IS NULL OR l.repo_key = ?)
+ORDER BY l.started_ms DESC, l.id DESC`;
+
+const median = (xs) => {
+  const v = [...xs].sort((a, b) => a - b);
+  const m = v.length >> 1;
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+};
+
+/**
+ * The Lanes page for a selection: one of four states, in order: off (harness.laneRun of the selected repository),
+ * no-root (no lane folder on this machine), empty (no lane of the selection), ok. Only ok carries the tiles, the
+ * attention lists, the running cards, the last 24 hours, the lists by state, the lanes that reported unattended
+ * decisions, and the median work per kind (done lanes of the last 30 days, at least five, else absent).
+ * settingsFor(repo).value(key) reads the settings; updatedMs is the time of the latest lane collection.
+ */
+export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settingsFor, updatedMs = null } = {}) {
+  const head = { repo, updatedMs, closure: LANE_CLOSURE };
+  if (repo && settingsFor(repo).value('harness.laneRun') === 'off') return { ...head, state: 'off', reason: 'Lanes are turned off for this repository (harness.laneRun)' };
+  if (!laneRoot || !existsSync(laneRoot)) return { ...head, state: 'no-root', reason: `No lane-run folder on this machine (${laneRoot})` };
+  const rows = db.prepare(LANES).all(repo, repo);
+  if (!rows.length) return { ...head, state: 'empty', reason: repo ? 'No lane-run lanes for this repository' : 'No lane-run lanes on this machine' };
+
+  const limit = (r) => settingsFor(r.repo_key).value('limits.laneMinutes') * 60e3;
+  const medians = {};
+  const byKind = {};
+  for (const r of rows) {
+    if (r.kind && r.last_outcome === 'done' && !r.live && r.work_ms !== null && r.started_ms >= now - MEDIAN_DAYS * 24 * LANE_H) (byKind[r.kind] ??= []).push(r.work_ms);
+  }
+  for (const [k, xs] of Object.entries(byKind)) if (xs.length >= MEDIAN_MIN_N) medians[k] = { ms: median(xs), n: xs.length };
+
+  const card = (r) => ({
+    id: r.id, kind: r.kind ?? null, title: r.title ?? null, tier: r.tier ?? null, front: r.front ?? null, chat: r.chat ?? null,
+    direct: r.kind === 'merge' && r.session_id === null, critical: r.critical === 1, live: r.live === 1,
+    started: r.started_ms, end: r.end_ms, workMs: r.work_ms ?? null, spanMs: r.end_ms !== null && r.started_ms !== null ? r.end_ms - r.started_ms : null,
+    medianMs: r.kind ? medians[r.kind]?.ms ?? null : null, overLimit: r.live === 1 && r.started_ms !== null && now - r.started_ms > limit(r),
+    tokensIn: r.tokens_in ?? null, contextPeak: r.context_peak ?? null, cost: r.cost_usd ?? null,
+    outcome: r.outcome, lastOutcome: r.last_outcome ?? null, resolved: r.resolved === 1, adoptions: r.adoptions ?? null,
+    worktree: r.worktree ?? null, mergeState: r.merge_state ?? null, closed: r.closed === 1,
+  });
+  const cards = rows.map(card);
+  const recent = (c) => c.started !== null && c.started >= now - 24 * LANE_H;
+  // Open: exited on a question, hard-stop or blocked turn, not resolved, not closed by a later commit.
+  const open = (c, outcomes) => !c.live && outcomes.includes(c.lastOutcome) && !c.resolved && !c.closed;
+  const fresh = (c) => c.end !== null && now - c.end <= ATTENTION_STALE_MS;
+  const waitingAll = cards.filter((c) => open(c, ['question', 'hard-stop']));
+  const blockedAll = cards.filter((c) => open(c, ['blocked']));
+  const waiting = waitingAll.filter(fresh);
+  const blocked = [...cards.filter((c) => c.overLimit), ...blockedAll.filter(fresh)];
+  const running = cards.filter((c) => c.live);
+  const done = cards.filter((c) => !c.live && c.lastOutcome === 'done' && recent(c));
+  const resolved = cards.filter((c) => !c.live && c.lastOutcome === 'blocked' && c.resolved && recent(c));
+  const listed = new Set([...running, ...waiting, ...blocked, ...done, ...resolved].map((c) => c.id));
+  const last24 = cards.filter((c) => !c.live && recent(c));
+
+  const day = new Date(now);
+  day.setHours(0, 0, 0, 0);
+  const spendToday = db.prepare(`SELECT COALESCE(SUM(s.usd), 0) AS usd FROM lane_spend s JOIN lanes l ON l.id = s.lane_id
+    WHERE s.at_ms >= ? AND s.at_ms <= ? AND (? IS NULL OR l.repo_key = ?)`).get(day.getTime(), now, repo, repo).usd;
+
+  const idsOf = (xs) => xs.map((c) => c.id);
+  return {
+    ...head, state: 'ok', reason: null,
+    tiles: { running: running.length, waiting: waiting.length, blocked: blocked.length, done24: done.length, resolved24: resolved.length, spendToday },
+    attention: { waiting, blocked, staleCount: waitingAll.length + blockedAll.length - waiting.length - blockedAll.filter(fresh).length },
+    running,
+    last24,
+    byState: {
+      running: idsOf(running), waiting: idsOf(waiting), blocked: idsOf(blocked), done: idsOf(done), resolved: idsOf(resolved),
+      other: idsOf(last24.filter((c) => !listed.has(c.id))),
+    },
+    adoptions: cards.filter((c) => c.adoptions > 0).sort((a, b) => (b.end ?? 0) - (a.end ?? 0))
+      .map((c) => ({ id: c.id, front: c.front, chat: c.chat, end: c.end, count: c.adoptions, lastOutcome: c.lastOutcome })),
+    medianByKind: medians,
+  };
 }
 
 export function healthApi(db, { store, lastScan }) {

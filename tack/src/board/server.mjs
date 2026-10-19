@@ -11,14 +11,15 @@ import { openStore, storePath } from '../store/open.mjs';
 import { scan, defaultRoot } from '../collectors/claude-code/collect.mjs';
 import { identify } from '../collectors/git/identity.mjs';
 import { collectGit } from '../collectors/git/collect.mjs';
-import { collectLayers } from '../collectors/layers.mjs';
-import { dayParam, healthApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi } from './api.mjs';
+import { collectLayers, laneLimit } from '../collectors/layers.mjs';
+import { collectLanes, defaultLaneRoot } from '../collectors/lane-run/collect.mjs';
+import { dayParam, healthApi, lanesApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi } from './api.mjs';
 import { htmlAttributes, loadApi, settingsApi, settingsWrite } from './settings-api.mjs';
 import { createSampler, runningLanes } from '../host/load.mjs';
-import { effectiveSettings, userSettingsPath } from '../settings/settings.mjs';
+import { effectiveSettings, settingsResolver, userSettingsPath } from '../settings/settings.mjs';
 import { testMessage } from '../notify/notifier.mjs';
 import { defaultTransports } from '../notify/transports.mjs';
-import { notifyDisabled, startWatcher } from '../notify/watch.mjs';
+import { TICK_MS, notifyDisabled, startWatcher } from '../notify/watch.mjs';
 
 export const DEFAULT_PORT = 4710;
 
@@ -33,6 +34,37 @@ const ASSETS = {
   '/settings.js': ['text/javascript; charset=utf-8', asset('settings.js')],
   '/loadmeter.js': ['text/javascript; charset=utf-8', asset('loadmeter.js')],
 };
+
+// A notifier lease whose heartbeat is younger than this has a watcher collecting the lanes (it ticks every TICK_MS).
+const LEASE_FRESH_MS = 3 * TICK_MS;
+
+/**
+ * Collect-on-read for /api/lanes: refresh() reads the lane folders when no notifier holds a fresh lease and the last
+ * collection of this board is at least TICK_MS old; it answers whether it collected. updatedMs(): the latest
+ * collection, this board's or the lease holder's heartbeat. collect is injected by tests.
+ */
+export function laneRefresher({ db, laneRoot, now = Date.now, user, collect = null }) {
+  let last = null;
+  const lease = db.prepare('SELECT heartbeat_ms FROM notify_lease WHERE id = 1');
+  const heartbeat = () => lease.get()?.heartbeat_ms ?? null;
+  const run = collect ?? ((t) => collectLanes(db, laneRoot, t, { limitMs: laneLimit(db, { user }) }));
+  return {
+    refresh() {
+      const t = now();
+      const hb = heartbeat();
+      if (hb !== null && t - hb < LEASE_FRESH_MS) return false;
+      if (last !== null && t - last < TICK_MS) return false;
+      run(t);
+      last = t;
+      return true;
+    },
+    updatedMs() {
+      const hb = heartbeat();
+      const watched = hb !== null && now() - hb < LEASE_FRESH_MS ? hb : null;
+      return last === null ? watched : watched === null ? last : Math.max(last, watched);
+    },
+  };
+}
 
 /** One incremental scan: transcripts, repository identity, git history. Counts only, never a path. */
 export function runScan(db, root) {
@@ -79,7 +111,7 @@ function readBody(req) {
  * by tests; sample: run the load sampler. Resolves to { url, port, preselected, server, close } once listening.
  */
 export async function startBoard({ store, root = defaultRoot(), cwd = process.cwd(), port = DEFAULT_PORT, scanOnStart = true,
-  user = userSettingsPath(), notify = false, transports = null, sample = true, sampler = null } = {}) {
+  user = userSettingsPath(), notify = false, transports = null, sample = true, sampler = null, laneRoot = defaultLaneRoot() } = {}) {
   const db = openStore(store);
   const userSettings = () => effectiveSettings({ user });
   const channels = transports ?? defaultTransports(userSettings);
@@ -87,6 +119,7 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
   let lastScan = scanOnStart ? runScan(db, root) : null;
   const preselected = preselect(db, cwd);
   let allowed = new Set();
+  const lanes = laneRefresher({ db, laneRoot, user });
 
   const server = createServer((req, res) => {
     // Bound to 127.0.0.1; the Host check also turns away a DNS-rebound page, the Origin check a cross-site POST.
@@ -126,6 +159,12 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
         const repo = repoParam(db, url.searchParams.get('repo'));
         if (repo.error) return json(res, 400, { error: repo.error });
         return json(res, 200, p === '/api/settings' ? settingsApi(db, { repo: repo.key, user }) : loadApi(db, meter, { repo: repo.key, user }));
+      }
+      if (p === '/api/lanes') {
+        const repo = repoParam(db, url.searchParams.get('repo'));
+        if (repo.error) return json(res, 400, { error: repo.error });
+        lanes.refresh();
+        return json(res, 200, lanesApi(db, { repo: repo.key, laneRoot, settingsFor: settingsResolver(db, { user }), updatedMs: lanes.updatedMs() }));
       }
       if (p === '/api/health') return json(res, 200, healthApi(db, { store, lastScan }));
       if (p === '/api/repos') return json(res, 200, { preselected, repos: listBoardRepos(db) });
