@@ -54,3 +54,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Probe on port 3096, 7/7 entries snapshotted headless: PNG 12-55 KB, html-to-image SVG 1.4-6.8 MB (unusable), 15-27 s per entry. No sealed package on any branch: Notations page, Built-in tab and Basic notation entries proposed out of 3.2 (R-LIB-7). families-persons has no transformation. 8 unattended decisions, 4 awaiting Alfonso (report §9, §10).
 **Prompt document name**: 2026-10-19 15:10
+## 2026-10-19 — fix: template previews cropped to the root class, lane L-C2 (P-2026-10-19-1651)
+**Prompt**: Templates only: crop the preview to a card-aspect frame at 45 % or more around the root class and its neighbours, no node name cut; rewrite the five template PNGs, examples untouched
+**Files touched**: frontend/scripts/library/snap-gallery.ts, frontend/public/library/gallery/{library,shapes,graph,state-machine,families-persons}/1.preview.png (f120bd3cf); docs/discovery/discovery_2026-10-19_templates_notations_file_new.md (section P-2026-10-19-1651), docs/log-inbox/templates-ui.md, docs/prompts/claude_2026-10-19_1651_prompt_gallery_snapshots_crop.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 16:17 claude_2026-10-19_1617_prompt_gallery_snapshots.md
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Nine files, all in DOVE. Five templates at 45 % (names 5.9 px), roots Library, Canvas, Graph, StateMachine, Family. Examples sha256 identical before and after. check:scripts PASS, negative control 7/7 refused exit 1. Regressions unknown: the card in the app not checked by the lane. Visual check owed to the chat (RC-23).
+**Prompt document name**: 2026-10-19 16:51
+**Ticket** (P-2026-10-19-1651): check:docs B is red on this inbox at the branch base `4d683d9c0`, before this lane: the L-B1 (line 9) and L-C (line 12) entries keep only `Prompt` and `Files touched`, cut in the merges into `tpl-int`; four errors (Corregge, Causa absent). Not repaired here: the entries belong to their lanes and the log is add-only; the merging lane restores them from `tpl-b1` and `tpl-c`.
