@@ -76,7 +76,9 @@
       "exit": "the Tack v0 slices are planned and the extraction moves to its own repository, recorded by a decision row",
       "state": "open",
       "openedOn": "2026-10-19",
-      "milestone": 9
+      "milestone": 9,
+      "ownerChat": "C-2026-10-19-1748",
+      "ownerSince": "2026-10-19"
     },
     {
       "slug": "shell-ui",

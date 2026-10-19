@@ -1,18 +1,18 @@
-# Tack slice 7: v0 closure on repositories that are not Jjodel
+# Tack slice 8: v0 closure on repositories that are not Jjodel
 
 Prompt-ID: P-2026-10-19-2100
-Chat: C-2026-10-19-0001
+Chat: C-2026-10-19-1748 (written by C-2026-10-19-0001; the tack front moved to C-2026-10-19-1748, Alfonso 2026-10-19 22:20)
 Front: tack
 Lane: full (small: one display fix, a first-run check on two foreign repositories, README; no new feature)
 Status: da eseguire
-Depends: P-2026-10-19-1655
+Depends: P-2026-10-19-1655, and the merge of slice 7 (P-2026-10-19-1800 and its continuations) on trunk
 Corregge: none (the `tack repos` column width defect was found by the chat on 2026-10-19 20:55 and is fixed here as item 1)
 Request: Alfonso, 2026-10-19 20:49, in the project chat: «decidi tu» on closing v0 now versus waiting for the Sprotty pilot
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 does not apply as a separate phase (the chat measured the inputs on 2026-10-19 20:55, see Context); no Phase 1 hard stop. P8 replaced as in slices 5-6: the chat checks the board after exit.
 
-Worktree: `~/jjodel-w-tack-s7`, branch `tack-s7`, created by the chat from the local `alfonso-frontend-jjtl` at the docs commit that added this prompt. Before anything else: `pwd`, branch and `git log -1` match; otherwise stop with `Outcome: blocked`.
+Worktree: `~/jjodel-w-tack-s8`, branch `tack-s8`, created by the chat from the local `alfonso-frontend-jjtl` after slice 7 is merged (slice 7 owns `~/jjodel-w-tack-s7`). Before anything else: `pwd`, branch and `git log -1` match; otherwise stop with `Outcome: blocked`.
 
 Model and tier: as `lane-run start` assigns.
 
