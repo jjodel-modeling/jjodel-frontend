@@ -135,8 +135,8 @@
  *                and exits with the probe's code. The default config is
  *                frontend/scripts/smoke/_tmp_lane_vite_<port>.config.ts, written
  *                when absent in the shape of the chat's _tmp_chat_vite configs.
- *   merge <branch> --into <trunk> [--at <rev>] [--chat <id>] [--launch [--governance-goahead]] [--effort <level>]
- *   merge --trunk-into <branch> [--from <trunk>] [--at <rev>] [--chat <id>] [--launch [--governance-goahead]] [--effort <level>]
+ *   merge <branch> --into <trunk> [--at <rev>] [--chat <id> [--chat-url <https url>]] [--launch [--governance-goahead]] [--effort <level>]
+ *   merge --trunk-into <branch> [--from <trunk>] [--at <rev>] [--chat <id> [--chat-url <https url>]] [--launch [--governance-goahead]] [--effort <level>]
  *                run from the worktree of the side that receives the merge (the
  *                trunk; the branch for --trunk-into, RC-14). Measures the merge
  *                base, `git merge-tree` conflicts, the files changed on each side
@@ -162,7 +162,12 @@
  *                --governance-goahead, Alfonso's yes (RC-26), lets --launch past a
  *                governance file changed on the branch and nothing else; the
  *                Findings and the commit body record it. Without --launch it
- *                reaches only the commit of the `by hand:` line.
+ *                reaches only the commit of the `by hand:` line. With --chat the
+ *                prompt's Request: starts with the chat's URL: --chat-url, else
+ *                the newest docs/prompts/ file with that Chat: and an https://
+ *                Request:, else the Claude-Session: trailer of the newest commit
+ *                that added such a prompt; else `Request: none (…)` and a
+ *                warning line. Never a reason to fail the merge.
  *   merge ... --direct [--launch]
  *                the same measurement, and when every precondition holds (no
  *                conflict outside the union files, each union hunk a pure
@@ -2021,6 +2026,38 @@ function render(name, values) {
     return text.replace(/\n{3,}/g, '\n\n');
 }
 
+/**
+ * RC-43: the chat URL a merge prompt carries in its Request: line, for --chat <id>. In
+ * order: --chat-url; the newest prompt of the receiving tree whose header has that Chat:
+ * and a Request: that starts with an https:// URL; the Claude-Session: trailer of the
+ * newest commit that added a prompt with that Chat:. '' when none gives one.
+ */
+function chatUrlFor(top, chat, given) {
+    if (given) return given;
+    if (!chat) return '';
+    const dir = join(top, 'docs', 'prompts');
+    const headerChat = (text) => (/^Chat:[ \t]*(\S+)/m.exec(promptParts(text).header) || [])[1] || '';
+    const names = existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith('.md')).sort().reverse() : [];
+    for (const n of names) {
+        const header = promptParts(readFileSync(join(dir, n), 'utf8')).header;
+        if (headerChat(header) !== chat) continue;
+        const url = (/^Request:[ \t]*(https:\/\/\S+)/m.exec(header) || [])[1];
+        if (url) return url;
+    }
+    const r = git(top, ['log', '--all', '--diff-filter=A', '--name-only', '--format=%x1e%H%x1f%B%x1f', '--', 'docs/prompts/'], [0, 128]);
+    if (r.status !== 0) return '';
+    for (const rec of r.out.split('\x1e').filter((x) => x.trim() !== '')) {
+        const [sha, body, files] = rec.split('\x1f');
+        const session = (/^Claude-Session:[ \t]*(https:\/\/\S+)/m.exec(body) || [])[1];
+        if (!session) continue;
+        for (const f of files.split('\n').filter((x) => x.trim() !== '')) {
+            const shown = git(top, ['show', sha + ':' + f], [0, 128]);
+            if (shown.status === 0 && headerChat(shown.out) === chat) return session;
+        }
+    }
+    return '';
+}
+
 function mergeValues(m, o, id, when, findings, goahead = null) {
     const into = o.mode === 'into';
     const where = (b) => {
@@ -2040,6 +2077,7 @@ function mergeValues(m, o, id, when, findings, goahead = null) {
     return {
         promptId: id,
         chat: o.chat || '—',
+        request: o.requestLine,
         branch: o.branch,
         trunk: o.trunk,
         laneNote: m.conflicts.length ? conflicts + ' measured' : 'zero conflicts measured',
@@ -2078,8 +2116,8 @@ function mergeValues(m, o, id, when, findings, goahead = null) {
 function parseMerge(rest) {
     const o = { launch: false, governanceGoahead: false, direct: false };
     const positional = [];
-    const valued = { '--into': 'into', '--trunk-into': 'trunkInto', '--from': 'from', '--at': 'at', '--chat': 'chat', '--tier': 'tier', '--effort': 'effort' };
-    const usage = 'usage: lane-run merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>], with [--at <rev>] [--chat <id>] [--direct] [--launch [--governance-goahead]] [--tier heavy] [--effort <level>]';
+    const valued = { '--into': 'into', '--trunk-into': 'trunkInto', '--from': 'from', '--at': 'at', '--chat': 'chat', '--chat-url': 'chatUrl', '--tier': 'tier', '--effort': 'effort' };
+    const usage = 'usage: lane-run merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>], with [--at <rev>] [--chat <id> [--chat-url <https url>]] [--direct] [--launch [--governance-goahead]] [--tier heavy] [--effort <level>]';
     for (let i = 0; i < rest.length; i++) {
         const a = rest[i];
         if (a === '--launch') o.launch = true;
@@ -2092,6 +2130,7 @@ function parseMerge(rest) {
         } else if (a.startsWith('--')) refuse('unknown option for merge: ' + a);
         else positional.push(a);
     }
+    if (o.chatUrl !== undefined && !/^https:\/\//.test(o.chatUrl)) refuse('--chat-url must start with https://: ' + o.chatUrl);
     if (o.tier !== undefined && o.tier !== 'heavy') refuse('--tier ' + o.tier + ': a merge session runs heavy (RC-32)');
     if (o.effort !== undefined && !EFFORTS.includes(o.effort)) refuse('--effort takes ' + EFFORTS.join(', ') + ': ' + o.effort);
     if (o.trunkInto) {
@@ -2142,6 +2181,11 @@ async function merge(rest) {
     const slug = o.branch.replace(/[^A-Za-z0-9._-]+/g, '-');
     const file = join(dir, 'claude_' + date + '_' + hhmm + (o.mode === 'into' ? '_prompt_merge_' + slug : '_prompt_' + slug + '_take_trunk') + '.md');
     const parked = join(pending, basename(file));
+    const url = chatUrlFor(o.top, o.chat, o.chatUrl);
+    o.requestLine = url
+        ? url + ' (merge of ' + o.branch + ' launched by chat ' + o.chat + ')'
+        : 'none (rendered by lane-run, no chat URL known for ' + (o.chat || 'no --chat') + ')';
+    if (!url) console.log('warning: no chat URL for ' + (o.chat ? 'chat ' + o.chat : '(no --chat)') + ': the merge prompt reads `Request: none` and the lane board shows it without a chat link (RC-43)');
     const values = mergeValues(m, o, id, when, findings, o.launch ? goahead : null);
     if (direct) {
         const note = goDirect

@@ -848,3 +848,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: passato — chat, unattended: merge b33ab2ba5 verified by the chat; lane-board.mjs changed, board restart checked
 **Notes**: Rollback tag `pre-boardurl` on `3525b9a56` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2300/result.json`.
 **Prompt document name**: 2026-10-19 23:00
+
+## 2026-10-19 — feat(harness): merge prompts name the chat that launches them (P-2026-10-19-2315)
+**Prompt**: `claude_2026-10-19_2315_prompt_merge_request_url.md`, fast lane in `jjodel-w-mergeurl` on `mergeurl`, chat `C-2026-10-19-1747`: `lane-run merge` writes `Chat: <id>` and a `Request:` line starting with the chat's URL in the prompt it renders, both directions.
+**Files touched**: `7174054d8`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-templates/merge-into-trunk.md`, `frontend/scripts/lane-templates/trunk-into-branch.md` (one `Request: {{request}}` line each). This commit: this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneRun 136/136 (7 new), laneRunDirect and laneRunRouting 51/51; check:scripts and typecheck:scripts exit 0.
+**Out-of-scope changes**: no. The lane templates are in DOVE on the condition that the header is rendered from them; it is.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — deroga P8: no UI change
+**Notes**: Sources in order: `--chat-url` (new, `^https://`), newest prompt in the receiving tree's `docs/prompts/` with that Chat: and an https Request:, `Claude-Session:` trailer of the newest commit adding such a prompt; else `Request: none (…)` and a `warning:` line, never a failed merge. Mutation bench: `if (url) return url;` in source (b) made `if (false && url)` turns the (b) test red, the other six stay green. `Chat:` already took `--chat`; the measured `Chat: —` came from merges run without it.
+**Prompt document name**: 2026-10-19 23:15
