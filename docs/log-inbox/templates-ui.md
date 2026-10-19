@@ -9,6 +9,9 @@ empties this file. The active log is not touched by this lane.
 ## 2026-10-19 — feat: templates page, catalog fields and filters, lane L-B1 (P-2026-10-19-1615)
 **Prompt**: Templates page of the handoff §2.2, §2.3, §2.5, §7 within R-LIB-13..17, R-LIB-19, R-LIB-20: catalog level, concepts, callout, preview; header, search, Start here, concept and level chips, sections, cards with preview; level tokens; gallery test
 **Files touched**: frontend/src/pages/Templates.tsx, frontend/src/pages/Templates.scss, frontend/src/styles/tokens.css, frontend/src/library/__tests__/gallery.test.ts, frontend/public/library/catalog.json, docs/library/catalog.json, docs/discovery/discovery_2026-10-19_templates_notations_file_new.md (section), docs/discovery/assets/tpl-b1/ (6 PNG), docs/prompts/claude_2026-10-19_1615_prompt_templates_page.md (Status)
+## 2026-10-19 — feat: gallery preview snapshots, lane L-C (P-2026-10-19-1617)
+**Prompt**: New snap-gallery.ts capturing one diagram per gallery entry headless (PNG, pixelRatio 2, transparent, variant D on metamodels), run once for the seven entries, legibility measured
+**Files touched**: frontend/scripts/library/snap-gallery.ts (new), frontend/public/library/gallery/<id>/1.preview.png ×7 (new), docs/discovery/discovery_2026-10-19_templates_notations_file_new.md (section P-2026-10-19-1617), docs/log-inbox/templates-ui.md, docs/prompts/claude_2026-10-19_1617_prompt_gallery_snapshots.md (Status)
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
@@ -30,6 +33,8 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato — lane probe on 3102, DOM read, 5/5 routes; chat check owed (RC-23)
 **Notes**: Typecheck exit 0. Probe with a stubbed tip: tip shown on All projects and Explore, absent on Templates (direct and via sidebar). Active fill rgb(241,245,249), weight 600, inset 3px rgb(51,65,85). Restyle changes All projects, Explore and the FILTERS items (cyan to slate). Regressions unknown: no tests cover the sidebar. Report section P-2026-10-19-1616.
 **Prompt document name**: 2026-10-19 16:16
+**Notes**: 7/7 PNGs, 47-148 KB, 10-15 s per entry warm (38 s cold). Variant D verified by computed style on 5/5 metamodels. Fit scale in 300x136: 16.4-23.1 % for four templates, 39-53 % for the rest; rule proposed (below 25 % render variant C). Negative control refused 7/7, exit 1. Visual check owed to the chat (RC-23). Report section P-2026-10-19-1617.
+**Prompt document name**: 2026-10-19 16:17
 
 ## 2026-10-19 — discovery: templates, notations, file new, lane L-A (P-2026-10-19-1510)
 **Prompt**: Phase 1 read-only discovery for the design handoff: Templates page, File menu, creation paths, offscreen viewpoint snapshot, tokens, catalog content against §2.5, lane split and 3.2 cut

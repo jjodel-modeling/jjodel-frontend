@@ -328,3 +328,71 @@ Pages the restyle changes (report §8.7): All projects, Explore and Templates ga
 ### How to see it
 
 `npm start -- --port 3102 --strictPort` on `tpl-b2`, open `#/allProjects` and `#/templates`. Screenshots: `docs/discovery/assets/tpl-b2/all-projects.png`, `docs/discovery/assets/tpl-b2/templates.png`. Perceptual note for the chat: the inset bar follows the item's `--radius-md`, so its ends are rounded. The Templates screenshot shows the app bar on Basic after leaving All projects: the open ticket `docs/log-inbox/notation-library.md:53`, not this lane.
+---
+
+## P-2026-10-19-1617 — L-C, gallery preview snapshots (lane `tpl-c`)
+
+### What was done
+
+- New `frontend/scripts/library/snap-gallery.ts` (commit `2e8cd5a7a`), sibling of `build-gallery.ts`: for each `galleryProject` of `docs/library/catalog.json` at its current version it stores `<id>/<n>.jjodel` as a saved project (`STORE`), opens it, opens one diagram with `DockManager.open2`, waits 4.5 s (the re-layout watcher), and writes `CanvasExportService.renderTarget` + `generateDataUrl` as PNG at pixelRatio 2, no background colour, to `frontend/public/library/gallery/<id>/<n>.preview.png`. It refuses an existing preview (a FAIL line, exit 1) unless `SNAP_REWRITE=<id>@<n>` names it. The packages are not touched (`git diff` over the gallery folder empty after the runs).
+- Diagram: templates their metamodel (`families-persons`: Families, the others their only one), examples their model in the notation (turnstile `demoESM`, petri `producerConsumer`).
+- Variant D on metamodels: a capture-only stylesheet injected with `page.addStyleTag` (white node and header, `#cbd5e1` hairline, 8 px radius, names 600, dashed border on abstract classes, the handoff's amber pair on enum headers, edges and markers `#64748b` through the editor's own `--edge-color` and `--edge-marker-stroke` on `.react-flow`, edge width 1.2). No source file changed. The script checks after injection that a class header computes `rgb(255, 255, 255)` and an edge `rgb(100, 116, 139)`, and FAILs otherwise: a rename of the editor's classes or tokens shows up as a red line, not as a silently plain preview. Held on 5/5 metamodels. The first try set `stroke` on `.react-flow__edge-path`, which the metamodel editor does not use (its paths are `.reference-edge`/`.inheritance-edge`): the edges stayed dark; read on the PNG, fixed by the tokens.
+
+### Measurements (run 2, the committed PNGs)
+
+| entry | diagram | size at zoom 1 | RF nodes/edges | PNG px | bytes | export ms | entry total s | scale in 300×136 | fitted |
+|---|---|---|---|---|---|---|---|---|---|
+| library@1 | M2 Library | 838×829 | 6/7 | 1676×1658 | 134 826 | 860 | 38.4 (cold Vite) | **16.4 %** | 137×136 |
+| families-persons@1 | M2 Families | 233×348 | 2/8 | 466×696 | 47 687 | 577 | 14.8 | 39.1 % | 91×136 |
+| state-machine@1 | M2 statemachine | 575×709 | 4/6 | 1150×1418 | 138 757 | 859 | 12.1 | **19.2 %** | 110×136 |
+| graph@1 | M2 Graph | 279×588 | 3/4 | 558×1176 | 48 644 | 411 | 11.8 | **23.1 %** | 65×136 |
+| shapes@1 | M2 Shapes | 468×588 | 4/3 | 936×1176 | 63 481 | 424 | 12.4 | **23.1 %** | 108×136 |
+| turnstile@1 | M1 demoESM | 554×323 | 3/4 | 1108×646 | 78 682 | 585 | 10.4 | 42.1 % | 233×136 |
+| petri-producer-consumer@1 | M1 producerConsumer | 568×255 | 9/10 | 1136×510 | 148 168 | 684 | 12.7 | 52.8 % | 300×135 |
+
+- Every PNG: signature `PNG`, pixel size exactly 2× the export size, four corner alphas 0 (transparent), zero page errors. Both example PNGs came out byte-identical across the two runs (78 682 and 148 168 bytes).
+- Gates: `npm run -s check:scripts` PASS (107 files). Negative control: a third run without `SNAP_REWRITE` refused 7/7 (`FAIL … the preview is not rewritten`), `7 FAILED`, exit 1, no browser context opened. `npm run typecheck` does not cover `frontend/scripts/` (`tsconfig.json` includes `src` only); the script ran under `tsx` three times. Port 3096 free after each run (`lsof`).
+
+### Legibility, and a proposed rule (not implemented)
+
+Four of the seven land below 25 % in the card's 300×136 box: library 16.4 %, state-machine 19.2 %, graph 23.1 %, shapes 23.1 % — four of the five templates, all because the metamodel editor lays them out taller than wide. At 25 % a 13 px class name is about 3.3 px: what the card shows below that is a silhouette, not text. The two examples and Families (39–53 %) carry readable shapes, the examples readable labels.
+
+Proposed rule for L-B1 or a later lane: **a preview whose fit scale `min(300 / w, 136 / h)` is below 25 % renders as variant C (the structure list) instead of the PNG**; the scale is computable from the PNG's own size, so the card needs no new catalog field. Applied today it would turn library, state-machine, graph and shapes into lists. The other way to raise the scale is a wide metamodel layout in the package, as `build-gallery.ts` already does for the models (`PLACES`), which is a new `@2` of each template (R-LIB-9) and outside this lane.
+
+### Visual notes
+
+- Families: the eight opposite references Family↔Member run parallel and their role labels overlap (`fa`, `mot`, `familyDaughter`…). That is how the metamodel editor routes them, so it is also what the clone shows; at 39 % the labels are not readable anyway.
+- Variant D items not reproduced: the «abstract» subtitle (the editor marks an abstract class with an italic name, kept, plus the dashed border) and the red error border (no metamodel of the seven has an error).
+
+### The seven previews
+
+library@1 ![library](../../frontend/public/library/gallery/library/1.preview.png)
+
+families-persons@1 ![families-persons](../../frontend/public/library/gallery/families-persons/1.preview.png)
+
+state-machine@1 ![state-machine](../../frontend/public/library/gallery/state-machine/1.preview.png)
+
+graph@1 ![graph](../../frontend/public/library/gallery/graph/1.preview.png)
+
+shapes@1 ![shapes](../../frontend/public/library/gallery/shapes/1.preview.png)
+
+turnstile@1 ![turnstile](../../frontend/public/library/gallery/turnstile/1.preview.png)
+
+petri-producer-consumer@1 ![petri-producer-consumer](../../frontend/public/library/gallery/petri-producer-consumer/1.preview.png)
+
+### How to see it
+
+Open the PNGs above (transparent background: a dark viewer shows the edges on black). To regenerate one: `SNAP_REWRITE=<id>@1 ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/library/snap-gallery.ts --port 3096 --id <Prompt-ID>`. In the app the previews appear once L-B1 writes `preview` in the catalog. Visual check owed to the chat (RC-23).
+
+### Decisions taken (unattended)
+
+1. A refused preview is a FAIL and exits 1, as `GAL_REWRITE` does in `build-gallery.ts`: the negative control reads as red.
+2. Variant D's edge colour goes through the editor's own tokens (`--edge-color`, `--edge-marker-stroke`) on `.react-flow`, not through per-path selectors; the enum header uses the handoff's amber pair as literal hex inside the capture-only sheet (no token added: the sheet is not a source file).
+3. The script verifies variant D by computed style and FAILs when it does not hold, so the brittleness R-LIB-16 accepted is loud. Kept, not dropped: 5/5 held.
+4. Templates without a `DIAGRAM` row show their first metamodel; an example without one is a FAIL.
+5. Examples are captured without restyle: their notation is the preview.
+6. The readability rule is proposed, not implemented (prompt item 5).
+
+### Decisions awaiting Alfonso (RC-26)
+
+None.
