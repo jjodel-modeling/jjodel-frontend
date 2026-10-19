@@ -17,3 +17,24 @@ Source: the harness front, 2026-10-19, recorded by the chat that owns the `tack`
 5. Every autonomous decision leaves a machine-readable trace. Lane-side adoptions (RC-21, RC-25) are already in the lane logs. Chat-side decisions (a continuation launched, a smoke reused, a register row renumbered) are not: they need a commit trailer such as `Autonomy: <category>` so Tack can count them.
 
 **Available before this.** A read-only view of the decisions taken unattended, from the lane logs, can ship with the Lanes page.
+
+**Refinement from the harness front, 2026-10-19 23:38.** The rule exists on the Jjodel harness front as RC-53 (not yet on trunk when recorded). For Tack:
+
+1. Categories are a closed list defined by the schema: `merge-scripts-docs`, `continuation`, `closure-go`. No free text.
+2. The RC-26 categories are never delegable at any level (user, project, local). A configuration that tries is rejected by `tack check` with an error, not ignored.
+3. The harness engine reads the rule, not the chat. Tack v0 decides nothing, so the key is not added before the engine exists.
+4. Decisions the chat takes under RC-53 are reported in chat, one line each. To be counted by Tack they also need a machine-readable form (commit trailer or log-inbox line); this is a prerequisite of the view below, to be agreed with the harness front.
+
+**View wanted before the engine:** unattended decisions per front, with how many were later corrected. Lane-side adoptions (RC-21) are counted per lane by slice 8. «Corrected» can only be measured per lane, not per decision: a lane counts as corrected when a later prompt names it in `Corregge:`.
+
+## After v0: phase ladder per project
+
+Source: Tack slice 8, the Lanes page (P-2026-10-19-2320 discovery §2, P-2026-10-19-2330), 2026-10-19.
+
+**Idea.** A ladder of phases defined in `tack.json` replaces the Jjodel-specific regexes of the 4700 board (`frontend/scripts/lane-board/lane-board.mjs`, milestones 210-215, matchers 217-246: tests first, gates, probe). Each project names its milestones and the tool-call pattern that marks each one reached; the Lanes page shows `k/n · <last milestone>` on a running card. Until then the page shows the phase cell disabled with the reason «Phase progress is not tracked in v0».
+
+**Constraints for the design slice.**
+
+1. The ladder is project level only (`tack.json`), one per lane kind, with no default ladder: without one the cell stays disabled.
+2. Matching reads the tool calls of `log.jsonl` in memory and stores only the milestone index reached, never the command text (the `readLane` rule: text is classed and dropped).
+3. `tack check` validates the patterns (compilable, bounded length) and rejects a ladder whose milestones cannot be told apart.
