@@ -17,7 +17,7 @@
   `trunk_readings_2026-09-29c` but for the §2.1 Undo line and, in the dialog, the focus on open (the dialog itself,
   no Continue click before it) [M].
 - The toggle (R-SIM-99, P-2026-09-29-1225) replaced the Semantic type: the pill shows in Advanced mode on a metamodel
-  whose `Simulation` toggle is on (Properties, section `SEMANTIC TYPE CLASS`), and the model kind is picked in the
+  whose `Simulation` toggle is on (Properties, section `Semantic type class`), and the model kind is picked in the
   dialog again. Re-measured by that lane's probe on 3052 (headless, light, 1600×1000, one fresh page per scene): the
   four scenes give the 71 readings of `trunk_readings_2026-09-29c`, the dialog's focus and the §2.1 Undo line
   included, but for the seven bag readings, which hold `simEnabled: true` besides [M].
@@ -32,7 +32,7 @@
 - **Screen.** Light theme. Viewport 1600×1000.
 - **Advanced mode.** Before the first scene, click `Advanced` in the app bar. The first time a browser enables it,
   the tutorial opens: click `Got it`. 2 clicks [M, P-2026-09-29-1106]. In Basic mode no editor shows the pill, and
-  the metamodel's Properties show no `SEMANTIC TYPE CLASS` section [M, P-2026-09-29-1225].
+  the metamodel's Properties show no `Semantic type class` section [M, P-2026-09-29-1225].
 - **Panel.** The `Simulation` chip shows once the metamodel's `Simulation` toggle is on (R-SIM-99), on the metamodel's
   tab and on its models' tabs [M, P-2026-09-29-1225]. It sits at the bottom left of the editor, on Jjodie's centre line, 16 px to its right:
   Jjodie (216, 903) 48×48, the chip (281, 911) 107×32 [M]. Each scene clicks the chip once in each of its two tabs.
@@ -106,7 +106,7 @@
 
 **Apply** (tab `DemoPEST`).
 1. Click an empty point of the canvas: the Properties show `DemoPEST`, `METAMODEL`, and after GENERAL the section
-   `SEMANTIC TYPE CLASS` with one toggle, `Simulation`, off [M, P-2026-09-29-1225]. Turn it on: the `Simulation` chip
+   `Semantic type class` with one toggle, `Simulation`, off [M, P-2026-09-29-1225]. Turn it on: the `Simulation` chip
    appears beside Jjodie [M].
    **Say** "I want to simulate the models of this metamodel."
 2. Click the chip: the M2 face reads `Custom · Not checkable` [M]. Click `Configure…`: the dialog `Simulation roles`
@@ -498,7 +498,7 @@ the panel's Profile and Apply, P-2026-09-27-1738 -->
 ## 4. Risks and what to say if they show
 
 - **No pill.** Basic mode, or a metamodel whose `Simulation` toggle is off (R-SIM-99). Click `Advanced` in the app bar,
-  then turn `Simulation` on in the metamodel's Properties, section `SEMANTIC TYPE CLASS` [M, P-2026-09-29-1225].
+  then turn `Simulation` on in the metamodel's Properties, section `Semantic type class` [M, P-2026-09-29-1225].
   Switching to Basic or turning the toggle off in the middle of a run clears the run: Reset again once the pill is
   back [M].
   **Say** "The simulator is an advanced tool: I turn it on for the metamodels I want to simulate."
