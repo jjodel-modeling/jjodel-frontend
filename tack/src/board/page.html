@@ -5,7 +5,7 @@
 </head><body><div class="app">
 <aside class="side" aria-label="Board">
 <div class="prod"><span class="logo" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M2 8h8M2 12h11"/></svg></span><div><b>Tack</b><span class="mono" id="p-repo">all repositories</span></div></div>
-<nav class="tabs" aria-label="Views"><button type="button" data-tab="sessions">Sessions</button><button type="button" data-tab="timeline">Timeline</button><button type="button" data-tab="insights">Insights</button><button type="button" data-tab="settings">Settings</button></nav>
+<nav class="tabs" aria-label="Views"><button type="button" data-tab="lanes">Lanes</button><button type="button" data-tab="sessions">Sessions</button><button type="button" data-tab="timeline">Timeline</button><button type="button" data-tab="insights">Insights</button><button type="button" data-tab="settings">Settings</button></nav>
 <div class="foot">
 <div class="fr"><span>Sessions in store</span><b id="f-sessions">…</b></div>
 <div class="fr"><span>Repositories</span><b id="f-repos">…</b></div>
@@ -14,7 +14,7 @@
 </div>
 </aside>
 <main>
-<header class="vh"><h1 id="vt">Sessions</h1>
+<header class="vh"><h1 id="vt">Lanes</h1>
 <label class="sel"><span class="vh-l">Repository</span><select id="repo" aria-label="Repository"><option value="all">All repositories</option></select></label>
 <span class="lm" id="lm" role="img" aria-label="Host load"></span>
 <span class="scan" id="scan" title="Last scan of the transcripts and git history">Last scan …</span>
@@ -22,7 +22,8 @@
 </header>
 <div class="view">
 <div class="err" id="err"></div>
-<section id="tab-sessions">
+<section id="tab-lanes"><div class="empty">Loading the lanes…</div></section>
+<section id="tab-sessions" hidden>
 <div class="kpis" id="kpis" aria-label="Summary">
 <div class="kpi"><span class="kl">Sessions</span><span class="kv"><b id="k-n">…</b><span id="k-n2"></span></span></div>
 <div class="kpi"><span class="kl">Cost, known</span><span class="kv"><b id="k-cost">…</b><span id="k-cost2"></span></span></div>
@@ -50,6 +51,7 @@
 <script src="/board.js"></script>
 <script src="/timeline.js"></script>
 <script src="/insights.js"></script>
+<script src="/lanes.js"></script>
 <script src="/settings.js"></script>
 <script src="/loadmeter.js"></script>
 </body></html>

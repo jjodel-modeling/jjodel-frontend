@@ -8,7 +8,7 @@
 // not reachable from the old tips are read, then the stored count is checked against
 // `git rev-list --all --count`: a mismatch means history was rewritten or a ref was deleted, and
 // the repository is re-read in full. A repository with several clones is always re-read in full.
-import { unitLinkFromCommit } from '../../contract/linkage.mjs';
+import { promptIdsOf, unitLinkFromCommit } from '../../contract/linkage.mjs';
 import { git } from './run.mjs';
 
 /** Every store column of schema 2 and the git field it is fed from. */
@@ -30,6 +30,9 @@ export const GIT_COLUMN_SOURCES = {
     unit: 'unit id parsed from the Unit trailer or the (P-...) suffix', unit_form: 'which linkage form matched',
     claude_coauthor: 'Co-Authored-By trailer names Claude (boolean)',
     reverts: 'sha named by a "This reverts commit <sha>" line',
+  },
+  commit_ids: {
+    repo_key: 'repos.key', sha: '%H', prompt_id: 'every Prompt-ID pattern match in the commit message (the id only)',
   },
 };
 
@@ -61,7 +64,7 @@ export function parseLog(out) {
     commits.push({
       sha: t[i], parents: t[i + 1].split(' ').filter(Boolean).length,
       authorTime: Number(t[i + 2]), commitTime: Number(t[i + 3]), files, ins, del,
-      unit: link?.unit ?? null, form: link?.form ?? null, claude: CLAUDE_COAUTHOR.test(message) ? 1 : 0,
+      ids: promptIdsOf(message), unit: link?.unit ?? null, form: link?.form ?? null, claude: CLAUDE_COAUTHOR.test(message) ? 1 : 0,
       reverts: REVERTS.exec(message)?.[1] ?? null,
     });
   }
@@ -98,6 +101,8 @@ export function collectGit(db) {
     ins: db.prepare(`INSERT INTO commits (repo_key, sha, parents, author_time, commit_time, files, insertions,
       deletions, unit, unit_form, claude_coauthor, reverts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT (repo_key, sha) DO UPDATE SET reverts = excluded.reverts WHERE reverts IS NOT excluded.reverts`),
+    ids: db.prepare('INSERT OR IGNORE INTO commit_ids (repo_key, sha, prompt_id) VALUES (?, ?, ?)'),
+    delIds: db.prepare('DELETE FROM commit_ids WHERE repo_key = ? AND sha = ?'),
     has: db.prepare('SELECT 1 FROM commits WHERE repo_key = ? AND sha = ?'),
     shas: db.prepare('SELECT sha FROM commits WHERE repo_key = ?'),
     del: db.prepare('DELETE FROM commits WHERE repo_key = ? AND sha = ?'),
@@ -109,6 +114,7 @@ export function collectGit(db) {
     for (const c of commits) {
       const known = q.has.get(key, c.sha) !== undefined;
       q.ins.run(key, c.sha, c.parents, c.authorTime, c.commitTime, c.files, c.ins, c.del, c.unit, c.form, c.claude, c.reverts);
+      for (const id of c.ids) q.ids.run(key, c.sha, id);
       if (!known) n++;
     }
     return n;
@@ -157,7 +163,10 @@ export function collectGit(db) {
         }
         st.commitsAdded += insert(repo.key, [...read.values()]);
         for (const { sha } of q.shas.all(repo.key)) {
-          if (!read.has(sha)) st.commitsRemoved += Number(q.del.run(repo.key, sha).changes);
+          if (!read.has(sha)) {
+            st.commitsRemoved += Number(q.del.run(repo.key, sha).changes);
+            q.delIds.run(repo.key, sha);
+          }
         }
         st.full++;
       }

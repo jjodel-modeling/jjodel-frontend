@@ -254,3 +254,42 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: passato — chat, unattended: Alfonso checked slice 7 on the 4710 board from the tack-s7 worktree (settings page, themes, load strip, desktop test notification delivered): ok fetta 7, 2026-10-19 22:45; tack code at the merge identical to the checked tip 022d7109f
 **Notes**: Rollback tag `pre-tack-s7` on `b3bcc7fba` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2248/result.json`.
 **Prompt document name**: 2026-10-19 22:48
+
+## 2026-10-19 — feat: Tack slice 8, the Lanes page (Phase 2)
+**Prompt**: Phase 2 of P-2026-10-19-2320: the three commits of report §6 (schema 6 and the collector, /api/lanes with the collect-on-read throttle, the Lanes page as first tab), the ROADMAP entry «Phase ladder per project», full suite, board on 4710, closure
+**Files touched**: tack/** (16 files: 923f7d4bf, 736e04b88, 5d2146df9; tack/ROADMAP.md in its own commit), docs/prompts/claude_2026-10-19_2320_prompt_tack_s8_lanes_page_disc.md (Status), docs/log-inbox/tack.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (above five files, every one under `tack/**` or listed in DOVE)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board left running on 4710)
+**Notes**: Full tack/test suite: 208 tests, 208 pass, 0 fail (slice 7: 185). Eight unattended decisions in the lane handoff (~/.jjodel-lanes/P-2026-10-19-2330/handoff.md). The P-2026-10-19-2330 Status is not flipped: its prompt file is only on the trunk (c9b903250); the flip is owed by the merge or the chat. Session closed at the AM-8 soft ceiling.
+**Prompt document name**: 2026-10-19 23:30
+
+## 2026-10-20 — fix: Tack slice 8, the Lanes view registers and polls in a browser
+**Prompt**: P-2026-10-20-0018: the Lanes page stayed on «Loading the lanes…» in a browser (`Illegal invocation` at lanes.js:96); default poller timers called setInterval as a method, and the throw preceded the registration of TackViews.lanes
+**Files touched**: tack/src/board/lanes.js, tack/test/lanes-view.test.mjs (03d22d7c7), docs/prompts/claude_2026-10-20_0018_prompt_tack_s8_lanes_view_fix.md (Status, copied from the trunk), docs/log-inbox/tack.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 23:30
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-s8/board.pid, serving the fixed lanes.js)
+**Notes**: Full tack/test suite: 210 tests, 210 pass, 0 fail (208 plus two). Mutation bench: with the old lanes.js both new tests fail and the other six lanes-view tests stay green. The receiver test uses a strict stub that throws for any `this` other than undefined or globalThis. No unattended decisions.
+**Prompt document name**: 2026-10-20 00:18
+
+## 2026-10-20 — fix: Tack slice 8, lane closure by any commit mention and prompt Status, whole ids in the table
+**Prompt**: P-2026-10-20-0040: the Lanes page listed 14 waiting lanes where the 4700 board showed 1, and the Last 24 hours table cut the Prompt-ID. Finding first: the git collector keeps ONE unit per commit (the Unit trailer or the final «(P-...)» suffix); e0fd6d286 has the suffix P-2026-10-19-2225, so P-2026-10-19-1800 and -2140, named unparenthesised in the same subject, were never stored and the closure join could not see them. Closure now has two sources: any Prompt-ID in a commit subject or body after the lane ended (schema 7 table commit_ids), and the Status: line of the lane's prompt at HEAD starting eseguito or done (lanes.prompt_status)
+**Files touched**: tack/src/store/schema-7.sql (new), tack/src/store/open.mjs, tack/src/contract/linkage.mjs, tack/src/collectors/git/collect.mjs, tack/src/collectors/git/run.mjs (comment), tack/src/collectors/lane-run/collect.mjs, tack/src/board/api.mjs, tack/src/board/lanes.js, tack/src/board/board.css, tack/test/lane-closure.test.mjs (new), tack/test/lanes-api.test.mjs, tack/test/lanes-view.test.mjs, tack/test/lanes.test.mjs (schema 7 assertion), docs/prompts/claude_2026-10-20_0040_prompt_tack_s8_lanes_fixes.md (Status, copied from the trunk), docs/log-inbox/tack.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 23:30
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-s8/board.pid)
+**Notes**: Causa (c): the Q2 rule was ratified without measuring it on the real store, where a commit names several ids and one reaches the unit slot. Out-of-scope: schema 7 and a new test file (under tack/**). 4710: Waiting 14 -> 1 (P-2026-10-20-0015, as 4700). Store kept, upgraded 6 -> 7 in place; first start re-reads git (41-49 s), first status pass about 8 s once, then 0.4 s a minute. A deleted checkout as git cwd threw; handled. 218 tests pass.
+**Prompt document name**: 2026-10-20 00:40

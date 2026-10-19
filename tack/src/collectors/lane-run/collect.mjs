@@ -7,13 +7,18 @@
 // Schema 5 adds: the outcome of the last turn, the log's mtime, the critical-zone flag (tier.txt reason or
 // goahead.txt), the Front: and Chat: header lines of the prompt file prompt.txt names (read in memory, the path
 // and the text are not kept), and the state of a direct merge from result.json (ok, merge sha, gates).
+// Schema 7 adds: the first word of the Status: header line of the prompt file as the repository's HEAD holds it
+// (refreshPromptStatus; the path is re-read from prompt.txt and not kept).
+// Schema 6 adds: the kind and the title line of the same header, the work time (the sum of the turns), the
+// worktree path, resolved.txt, and the item count of the closing message's «Decisions taken (unattended)».
 //
 // The turn and cost rules restate those of Jjodel's lane board (frontend/scripts/lane-board/lane-board.mjs:
 // laneTimeline :926, results :815, costEvents :761, spendByDay :785, logFacts :855, inputClass :895), so that
 // `tack parity jjodel` can hold Tack to them.
+import { git } from '../git/run.mjs';
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, sep } from 'node:path';
+import { basename, join, relative, sep } from 'node:path';
 
 export const LANE_ID = /^P-\d{4}-\d{2}-\d{2}-\d{4}$/;
 
@@ -28,6 +33,10 @@ export const LANE_COLUMN_SOURCES = {
     log_mtime_ms: 'log.jsonl mtime', critical: 'tier.txt reason or goahead.txt (boolean)',
     front: 'Front: header line of the file prompt.txt names (a front name)', chat: 'Chat: header line of the same file (a C- id)',
     merge_state: 'result.json ok, merge and gates (enum)', gates_red: 'result.json gates not ok (count)',
+    kind: 'Lane: header line of the same file, or its file name (enum)', title: 'first # line of the same header (capped)',
+    work_ms: 'sum of the turns (input mtime to result duration)', worktree: 'worktree.txt', resolved: 'resolved.txt exists (boolean)',
+    adoptions: 'Decisions taken (unattended) items of the last result event (count)',
+    prompt_status: 'first word of the Status: header line of the prompt file at the repository HEAD (git show), lowercased',
   },
   lane_spend: {
     lane_id: 'folder name', seq: 'cost event order', at_ms: 'end of the turn the event closes', usd: 'result total_cost_usd delta',
@@ -124,6 +133,42 @@ export function inputClass(text) {
   return 'other';
 }
 
+const ADOPTED = /decisions taken \(unattended\)/i;
+const ITEM = /^ ?(?:[-*]|\d+[.)])\s+\S/;
+const SECTION_END = /^(#{1,6}\s|\*\*[^*]+\*\*:?\s*$|Outcome:)/;
+
+/**
+ * The item count of the «Decisions taken (unattended)» section of a closing message (the last one when repeated):
+ * its top-level list items up to the next heading, bold line, Outcome: line, or paragraph after the list; 0 for a
+ * section without items (none); null without the section. The text is read here and dropped.
+ */
+export function adoptionsOf(text) {
+  if (!text) return null;
+  const lines = String(text).split('\n');
+  let at = -1;
+  lines.forEach((l, i) => { if (ADOPTED.test(l)) at = i; });
+  if (at === -1) return null;
+  let n = 0;
+  for (const l of lines.slice(at + 1)) {
+    if (SECTION_END.test(l.trim())) break;
+    if (ITEM.test(l)) n++;
+    else if (n && l.trim() && !/^\s/.test(l)) break;
+  }
+  return n;
+}
+
+/** The adoptions of the last turn-closing result event of a log (adoptionsOf of its text); null without one. */
+export function lastAdoptions(buf) {
+  let last = null;
+  if (buf) {
+    eachLine(buf, '"type":"result"', (raw) => {
+      const e = parse(raw.toString('utf8'));
+      if (e && e.type === 'result' && !notTurn(e)) last = e;
+    });
+  }
+  return last ? adoptionsOf(last.result) : null;
+}
+
 const OUTCOMES = ['done', 'hard-stop', 'question', 'blocked'];
 /** The outcome of a turn from the Outcome word of its result event: one of four words, unparsed, or none. */
 const turnOutcome = (w) => (!w ? 'none' : OUTCOMES.includes(w) ? w : 'unparsed');
@@ -133,15 +178,94 @@ const turnOutcome = (w) => (!w ? 'none' : OUTCOMES.includes(w) ? w : 'unparsed')
 const CRITICAL_REASON = /(^|: )(names \S|--critical-zone-goahead\b)/;
 const FRONT = /^Front:[ \t]*([A-Za-z0-9][A-Za-z0-9_-]{0,40})[ \t]*$/m;
 const CHAT = /^Chat:[ \t]*(C-\d{4}-\d{2}-\d{2}-\d{4})\b/m;
+const LANE = /^Lane:[ \t]*(.*)$/m;
+const TITLE = /^#[ \t]+(.*\S)[ \t]*$/m;
 
-/** Front and chat of a prompt file: header lines before the first `## `, read in memory; nulls when unreadable. */
+/**
+ * The kind of a lane from its prompt's Lane: line and file name: merge, fast, discovery, phase2, else null. The rules
+ * of Jjodel's lane board, verbatim (frontend/scripts/lane-board/lane-board.mjs, kindOf :92).
+ */
+export function kindOf(laneLine, file = '') {
+  const l = String(laneLine || '').toLowerCase();
+  if (/^merge|^full \((merge|take[- ]trunk|(one|two|three|four|five|six|seven|eight|nine|ten|\d+) merges?)\b/.test(l) || /_prompt_merge_|_take_trunk/.test(file)) return 'merge';
+  if (/^fast/.test(l)) return 'fast';
+  if (/^discovery|^phase 1 only|^full \(discovery\b/.test(l) || (/^full \(phase 1\b/.test(l) && /read-only/.test(l) && !/two-phase|same session|in cascade|after the chat'?s go/.test(l))) return 'discovery';
+  if (/^full|^phase|implementation/.test(l)) return 'phase2';
+  return null;
+}
+
+const NO_HEADER = { front: null, chat: null, kind: null, title: null };
+
+/** Front, chat, kind and title of a prompt file: header lines before the first `## `, read in memory; nulls when unreadable. */
 export function promptHeader(path) {
-  if (!path) return { front: null, chat: null };
+  if (!path) return { ...NO_HEADER };
   let head = '';
-  try { head = readFileSync(path, 'utf8').slice(0, 8192); } catch { return { front: null, chat: null }; }
+  try { head = readFileSync(path, 'utf8').slice(0, 8192); } catch { return { ...NO_HEADER }; }
   const cut = head.search(/^## /m);
   if (cut !== -1) head = head.slice(0, cut);
-  return { front: FRONT.exec(head)?.[1] ?? null, chat: CHAT.exec(head)?.[1] ?? null };
+  return {
+    front: FRONT.exec(head)?.[1] ?? null,
+    chat: CHAT.exec(head)?.[1] ?? null,
+    kind: kindOf(LANE.exec(head)?.[1] ?? '', basename(path)),
+    title: TITLE.exec(head)?.[1].slice(0, 200) ?? null,
+  };
+}
+
+const STATUS = /^Status:[ \t]*([\p{L}\p{N}_]+)/imu;
+
+/** The first word, lowercased, of the Status: header line of a prompt file's text (before its first `## `), or null. */
+export function promptStatusOf(text) {
+  let head = String(text).slice(0, 8192);
+  const cut = head.search(/^## /m);
+  if (cut !== -1) head = head.slice(0, cut);
+  return STATUS.exec(head)?.[1].toLowerCase().slice(0, 40) ?? null;
+}
+
+const REFRESH_EVERY_MS = 60e3;
+const REFRESH_DAYS = 7;
+const lastRefresh = new WeakMap();
+const unreadable = new WeakMap(); // lanes whose prompt could not be read: tried once per process
+
+/**
+ * Sets lanes.prompt_status for every exited lane whose status is not yet a closing word, from the prompt file as
+ * the repository's HEAD holds it (`git show HEAD:<path>` in the checkout the path of prompt.txt lies in, then in
+ * the first common dir; a closing word read from either wins). Runs at most once a minute per store;
+ * a lane that ended more than 7 days ago is read once, and one whose prompt cannot be read is not retried.
+ */
+export function refreshPromptStatus(db, root, now = Date.now(), force = false) {
+  if (!force && now - (lastRefresh.get(db) ?? -Infinity) < REFRESH_EVERY_MS) return 0;
+  lastRefresh.set(db, now);
+  const repos = new Map(db.prepare('SELECT key, common_dirs, toplevels FROM repos').all().map((r) => [r.key, r]));
+  const set = db.prepare('UPDATE lanes SET prompt_status = ? WHERE id = ? AND prompt_status IS NOT ?');
+  let n = 0;
+  const gone = unreadable.get(db) ?? unreadable.set(db, new Set()).get(db);
+  const rows = db.prepare(`SELECT id, repo_key FROM lanes WHERE end_ms IS NOT NULL
+    AND (prompt_status IS NULL OR prompt_status NOT IN ('eseguito', 'done')) AND (prompt_status IS NULL OR end_ms > ?) ORDER BY id`)
+    .all(now - REFRESH_DAYS * 24 * 3600e3);
+  for (const l of rows) {
+    if (gone.has(l.id)) continue;
+    const repo = repos.get(l.repo_key);
+    const file = readTrim(join(root, l.id, 'prompt.txt'));
+    if (!repo || !file) { gone.add(l.id); continue; }
+    const dirs = JSON.parse(repo.common_dirs);
+    const tops = JSON.parse(repo.toplevels).filter((t) => file.startsWith(t + sep));
+    // The checkout the prompt path lies in (the trunk, for a prompt the chat wrote), then the first common dir.
+    const reads = [
+      ...tops.map((t) => ({ cwd: t, rel: relative(t, file) })),
+      ...dirs.slice(0, 1).map((d) => ({ dir: d, rel: tops.length ? relative(tops[0], file) : join('docs', 'prompts', basename(file)) })),
+    ];
+    let status = null;
+    for (const { cwd, dir, rel } of reads) {
+      let r;
+      try { r = git(cwd ? ['show', `HEAD:${rel}`] : ['--git-dir', dir, 'show', `HEAD:${rel}`], { cwd }); } catch { continue; } // a deleted checkout
+      const w = r.ok ? promptStatusOf(r.out) : null;
+      if (w !== null && status === null) status = w;
+      if (w === 'eseguito' || w === 'done') { status = w; break; }
+    }
+    if (status === null) gone.add(l.id);
+    n += Number(set.run(status, l.id, status).changes);
+  }
+  return n;
 }
 
 /** The state of a direct merge from result.json: merged (ok with a merge commit), red (a gate not ok), blocked; null without one. */
@@ -159,7 +283,7 @@ const numbered = (names, re) => names.map((n) => re.exec(n)).filter(Boolean).map
 /** The cache key of a lane folder: every file read, by size and mtime. */
 export function laneKey(dir, names) {
   const files = ['log.jsonl', 'exit.txt', 'started.txt', 'pid.txt', 'tier.txt', 'session.txt', 'worktree.txt', 'runs.jsonl',
-    'result.json', 'prompt.txt', 'goahead.txt',
+    'result.json', 'prompt.txt', 'goahead.txt', 'resolved.txt', 'direct.json',
     ...names.filter((n) => /^(input|msg)-\d+\.md$/.test(n)).sort()];
   return files.map((f) => `${f}:${size(join(dir, f))}:${mtime(join(dir, f))}`).join('|');
 }
@@ -226,6 +350,9 @@ export function readLane(dir, now = Date.now()) {
     lastOutcome: res.length ? turnOutcome(res[res.length - 1].outcome) : 'none',
     logMtime: buf ? Math.round(mtime(join(dir, 'log.jsonl'))) || null : null,
     critical: CRITICAL_REASON.test(tierLine) || existsSync(join(dir, 'goahead.txt')),
+    workMs: Math.round(turns.reduce((a, t) => a + (t.e - t.s), 0)),
+    resolved: existsSync(join(dir, 'resolved.txt')),
+    adoptions: lastAdoptions(buf),
     ...promptHeader(readTrim(join(dir, 'prompt.txt')) || null),
     mergeState: merge.state,
     gatesRed: merge.gatesRed,
@@ -258,7 +385,8 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opt
   const getKey = db.prepare('SELECT cache_key, live, end_ms FROM lanes WHERE id = ?');
   const put = db.prepare(`INSERT OR REPLACE INTO lanes (id, repo_key, session_id, started_ms, end_ms, live, tier, runs, outcome,
     blocked_run, over_time, corrective, cost_usd, cache_key, turns, last_outcome, log_mtime_ms, critical, front, chat, merge_state,
-    gates_red) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    gates_red, kind, title, work_ms, worktree, resolved, adoptions)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const delSpend = db.prepare('DELETE FROM lane_spend WHERE lane_id = ?');
   const addSpend = db.prepare('INSERT INTO lane_spend (lane_id, seq, at_ms, usd) VALUES (?, ?, ?, ?)');
   db.exec('BEGIN');
@@ -280,7 +408,8 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opt
       const repo = repoOfPath(repos, l.worktree) ?? (l.session ? sessionRepo.get(l.session)?.repo_key ?? null : null);
       put.run(id, repo, l.session, l.started, l.end, l.live ? 1 : 0, l.tier, l.runs, l.outcome, l.blockedRun ? 1 : 0,
         l.maxRunMs > limitMs(repo) ? 1 : 0, l.corrective ? 1 : 0, l.cost, key, l.turns, l.lastOutcome, l.logMtime,
-        l.critical ? 1 : 0, l.front, l.chat, l.mergeState, l.gatesRed);
+        l.critical ? 1 : 0, l.front, l.chat, l.mergeState, l.gatesRed, l.kind, l.title, l.workMs, l.worktree, l.resolved ? 1 : 0,
+        l.adoptions);
       delSpend.run(id);
       for (const s of l.spend) addSpend.run(id, s.seq, s.at, s.usd);
       st.spendRows += l.spend.length;
@@ -291,5 +420,6 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opt
     db.exec('ROLLBACK');
     throw err;
   }
+  st.statusSet = refreshPromptStatus(db, root, now);
   return st;
 }

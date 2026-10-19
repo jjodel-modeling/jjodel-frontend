@@ -104,8 +104,8 @@ test('schema 4 to 5: additive, the lanes rows kept and marked for one re-read, t
   v4.close();
   const db = openStore(path);
   t.after(() => db.close());
-  assert.equal(SCHEMA_VERSION, 5);
-  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 5);
+  assert.ok(SCHEMA_VERSION >= 5);
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, SCHEMA_VERSION);
   const lane = db.prepare('SELECT * FROM lanes').get();
   assert.deepEqual([lane.id, lane.outcome, lane.cache_key, lane.turns, lane.front], ['P-2026-01-01-0000', 'done', '', null, null]);
   assert.equal(db.prepare('SELECT unpushed FROM repos').get().unpushed, null);
