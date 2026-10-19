@@ -48,7 +48,7 @@
       "description": "A turnstile state machine with its code generation templates, ready to generate.",
       "source": ["frontend/public/examples/codegen/turnstile.jjodel", "frontend/scripts/examples/build-codegen-examples.ts"], "notes": "The codegen example of P-2026-10-11-1415, with its ids, its templates and its scenario, and a hand-written viewpoint active on open (P-2026-10-19-0300)." },
     { "id": "petri-producer-consumer", "kind": "galleryProject", "tier": "example", "label": "Producer-consumer", "status": "available", "publisher": "jjodel",
-      "version": 1, "versions": [{ "n": 1, "file": "library/gallery/petri-producer-consumer/1.jjodel", "published": "2026-10-18", "sha256": "79baa79897639d1b9d03c7b04b0b37bb1b0185e7d26ca45d14053c6993597103", "notes": "First version: frontend/public/examples/codegen/petri-producer-consumer.jjodel with its hand-written viewpoint, Petri net." }],
+      "version": 1, "versions": [{ "n": 1, "file": "library/gallery/petri-producer-consumer/1.jjodel", "published": "2026-10-18", "sha256": "9cffa7bdc320355ea1d412d29a2402b439e2c3c6dfe9c40dfe00e9ff45bdab22", "notes": "First version: frontend/public/examples/codegen/petri-producer-consumer.jjodel with its hand-written viewpoint, Petri net." }],
       "description": "A Petri net of a producer and a consumer, two models of one metamodel, with its code generation templates.",
       "source": ["frontend/public/examples/codegen/petri-producer-consumer.jjodel", "frontend/scripts/examples/build-codegen-examples.ts"], "notes": "The codegen example of P-2026-10-11-1415, with its ids, its templates and its scenario, and a hand-written viewpoint active on open (P-2026-10-19-0300)." }
   ]

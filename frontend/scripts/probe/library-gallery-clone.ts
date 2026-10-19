@@ -15,7 +15,9 @@
  *     four corners hit it and its box lies in the canvas left of the properties panel, clear of the minimap; arc labels
  *     overlap no label and no vertex, each arc touches its source, two arcs between the same vertices run apart), then screenshot as <id>.png (<id>-<model>.png when there are more); an example
  *     likewise on its own viewpoint (R-LIB-10, P-2026-10-19-0300), then run in the simulation panel (Reset and its
- *     events or steps, SIM) and screenshot mid-run as <id>-sim.png, the drawn marking measured against the run's;
+ *     events or steps, SIM) and screenshot mid-run as <id>-sim.png, the drawn marking measured against the run's: the
+ *     Petri example's places show their initial tokens before the run, none during it beside the run's count on every
+ *     place, and the tokens again after Stop (<id>-stopped.png; `simActive`, P-2026-10-19-0930);
  *   - an explicit save, then a reopen from the page load: name and `_clonedFrom` survive.
  * The page shows «Templates» then «Examples», each card with its `<id>@<n>`; the deep links `#/templates/graph@1` (the
  * clone dialog of that version, prefilled) and `#/templates/nope@9` (one line, the page as usual) are screenshot.
@@ -396,6 +398,16 @@ async function simulate(page: Page, id: string, modelId: string, moves: string[]
         await wait(page, 900);
     }
     check(`${id}: the simulation panel opens`, (await page.locator('.sim-panel--open').filter({ visible: true }).count()) > 0, '');
+    const placesNow = async () => ((await page.evaluate(MEASURE(modelId)) as any)?.nodes ?? []).filter((n: any) => n.cls === 'Place');
+    // By object name: a vertex's text runs on into the run's pill (`ready0`).
+    const shown = (ps: any[]) => ps.map((n: any) => `${n.name}:${n.drawnMarker ? 'dots' : ''}:${n.run ?? ''}`);
+    /** The places that hold tokens in the model (the drawn marking with no run, criteria's `marked`). */
+    const INITIAL = '["idle","ready"]';
+    if (id === 'petri-producer-consumer') {
+        const before = await placesNow();
+        check(`${id}: before the run every place shows its initial tokens, and no run count`, before.length > 0
+            && JSON.stringify(sorted(before.filter((n: any) => n.drawnMarker).map((n: any) => n.name))) === INITIAL && before.every((n: any) => n.run === null), shown(before));
+    }
     await panel.locator('.sim-panel__btn[title="Reset"]').first().click();
     await wait(page, 900);
     const status = async () => page.evaluate(`[...document.querySelectorAll('.sim-panel--open .sim-panel__status-line')].filter((e) => e.offsetParent !== null).map((e) => (e.getAttribute('title') || e.textContent || '').trim())`);
@@ -419,15 +431,25 @@ async function simulate(page: Page, id: string, modelId: string, moves: string[]
     if (id === 'turnstile') {
         check(`${id}: after Reset, coin, coin, push the run is in unlocked`, JSON.stringify(active) === '["unlocked"]', active);
     } else {
-        // The run's own count is shown on every place; the drawn marking never beside it on a place the run marks.
+        // The run's own count is shown on every place, 0 included; the drawn tokens on none, `ready` (emptied) included.
         const places = (d?.nodes ?? []).filter((n: any) => n.cls === 'Place');
-        const doubled = places.filter((n: any) => n.drawnMarker && n.run !== null && n.run !== '0');
-        const stale = places.filter((n: any) => n.drawnMarker && n.run === '0');
-        check(`${id}: during the run no place shows the drawn marking beside a non-zero run count`, places.length > 0 && doubled.length === 0, doubled.map((n: any) => `${n.text}:${n.run}`));
-        meas(`${id}: places emptied by the run that still show the drawn (initial) marking`, stale.map((n: any) => `${n.text}:run ${n.run}`));
+        const off = places.filter((n: any) => n.drawnMarker || n.run === null);
+        check(`${id}: during the run no place shows drawn tokens, and every place shows the run's count, ready included`,
+            places.length > 0 && off.length === 0 && places.some((n: any) => n.name === 'ready' && n.run !== null), off.length ? shown(off) : shown(places));
     }
     await closeTip(page);
     await page.screenshot({ path: `${SHOTS}/${id}-sim.png` });
+    if (id === 'petri-producer-consumer') {
+        // Stop ends the run (simClear): the drawn tokens come back, the run's counts go.
+        await panel.locator('.sim-panel__btn[title="Stop"]').first().click();
+        await wait(page, 900);
+        const after = await placesNow();
+        check(`${id}: after Stop the initial tokens are back, and no run count`, after.length > 0
+            && JSON.stringify(sorted(after.filter((n: any) => n.drawnMarker).map((n: any) => n.name))) === INITIAL && after.every((n: any) => n.run === null), shown(after));
+        await closeTip(page);
+        await page.screenshot({ path: `${SHOTS}/${id}-stopped.png` });
+        return;
+    }
     await panel.locator('.sim-panel__btn[title="Reset"]').first().click().catch(() => undefined);
     await wait(page, 600);
 }

@@ -100,8 +100,8 @@ const transition = { source: 'container', target: '$nextState.value', line: { wi
 const EVENT = P('$event.value.$name.value');
 const arc = { source: '$src.value', target: '$tgt.value', line: { width: 1.5 }, curve: 'arc' };
 const tokensAre = (op: string, n: number, path = '$tokens.value') => ({ op, left: path, right: { kind: 'number', value: n } });
-/** The run's own marking of a place (R-MK-1): true while a run marks it. */
-const NOT_MARKED = { op: 'not', arg: { op: 'marked' } };
+/** No run on the place's model (P-2026-10-19-0930): `simActive` is true from Reset to Stop, whatever the run marks. */
+const NOT_SIM_ACTIVE = { op: 'not', arg: { op: 'simActive' } };
 
 const VIEWPOINTS: Record<string, Viewpoint[]> = {
     graph: [{ metamodel: 'Graph', name: 'Graph', views: [
@@ -182,13 +182,13 @@ const VIEWPOINTS: Record<string, Viewpoint[]> = {
     'petri-producer-consumer': [{ metamodel: 'DemoPetri', name: 'Petri net', views: [
         ['Place', { kind: 'vertex', metaclasses: ['Place'], label: 'Place', defaultSize: { width: 44, height: 44 },
             shape: { form: 'circle', fill: '#ffffff', border: { width: 1.5, color: '#1f2937' },
-                // The marking: up to four tokens as dots, more as a number. A run shows its own count on the place (the
-                // simulator's pill), so the drawn one steps aside on a place the run marks.
-                marker: { rules: [1, 2, 3, 4].map(n => ({ when: { op: 'and', args: [tokensAre('eq', n), NOT_MARKED] }, then: n === 1 ? 'dot' : `dots-${n}` })), default: '' },
+                // The marking: up to four tokens as dots, more as a number. A run shows its own count on every place (the
+                // simulator's pill, 0 included), so the drawn one steps aside while a run shows the model.
+                marker: { rules: [1, 2, 3, 4].map(n => ({ when: { op: 'and', args: [tokensAre('eq', n), NOT_SIM_ACTIVE] }, then: n === 1 ? 'dot' : `dots-${n}` })), default: '' },
                 labels: [
                     { position: 'outside', anchor: 's', source: I('name') },
                     { position: 'center', source: P('$tokens.value'), style: { fontSize: 14, fontWeight: 'semibold' },
-                        visible: { when: { op: 'and', args: [tokensAre('gt', 4), NOT_MARKED] }, then: true, else: false } },
+                        visible: { when: { op: 'and', args: [tokensAre('gt', 4), NOT_SIM_ACTIVE] }, then: true, else: false } },
                 ] } }],
         ['Transition', { kind: 'vertex', metaclasses: ['Transition'], label: 'Transition (a bar)', defaultSize: { width: 10, height: 40 },
             shape: { form: 'bar', fill: '#1f2937', border: { width: 0 }, labels: [
