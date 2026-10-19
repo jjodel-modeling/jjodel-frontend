@@ -54,3 +54,15 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Probe on port 3096, 7/7 entries snapshotted headless: PNG 12-55 KB, html-to-image SVG 1.4-6.8 MB (unusable), 15-27 s per entry. No sealed package on any branch: Notations page, Built-in tab and Basic notation entries proposed out of 3.2 (R-LIB-7). families-persons has no transformation. 8 unattended decisions, 4 awaiting Alfonso (report §9, §10).
 **Prompt document name**: 2026-10-19 15:10
+## 2026-10-19 — feat: File › New in the 3.2 structure, lane L-E (P-2026-10-19-1650)
+**Prompt**: File › New of handoff §6 cut to 3.2 by R-LIB-20: Basic Project… · Model › · From template…, Advanced adds Metamodel, Viewpoint, Transformation; CONFORMING TO section label, More… above five metamodels, disabled items outside a project
+**Files touched**: frontend/src/pages/components/Navbar.tsx, frontend/src/pages/components/navbar.scss, docs/discovery/discovery_2026-10-19_templates_notations_file_new.md (section P-2026-10-19-1650), docs/discovery/assets/tpl-e/ (7 PNG), docs/log-inbox/templates-ui.md, docs/prompts/claude_2026-10-19_1650_prompt_file_new_menu.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Typecheck 0. Headless 1440x900 on 3106, 28/28 PASS, 0 page errors (report section). NEW_PROJECT measured dead inside a project: Project… there now navigates to the dashboard and opens the create dialog. Finding: cloned gallery projects load advanced:true under a stored Basic mode. Visual check owed to the chat (RC-23). 6 unattended decisions.
+**Prompt document name**: 2026-10-19 16:50

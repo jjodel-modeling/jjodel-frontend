@@ -432,3 +432,46 @@ Lane L-D, branch `tpl-d`, code commit `6d70d38c1`. The New model dialog with the
 ### How to see it
 
 `npm start -- --port <p>`, open any project with a metamodel, then click the rail's «+ New model» or the Models section's «+ New»; or in the console `window.dispatchEvent(new CustomEvent('jjodel:open-new-model-dialog', { detail: { metamodelId } }))`.
+
+## P-2026-10-19-1650
+
+Lane L-E, branch `tpl-e`, code commit `1c3d9460e`. File › New in the 3.2 structure of R-LIB-18, cut by R-LIB-20 (no built-in notations, no Browse notations…).
+
+### What was done
+
+- `MenuEntry` (local to `Navbar.tsx`) gains `section?: boolean`; `makeEntry` renders it as `<li class="section-label" role="presentation">`, no `tabindex`, no click, no submenu. Styled in `navbar.scss` (the file that styles the Navbar's menu rows): `--text-xs`, `--font-semibold`, `--tracking-wide`, `--color-text-tertiary`, uppercase by CSS, so the DOM text stays «Conforming to».
+- File › New replaces the top-level `New Project` and the old `New ›`. Basic: Project… · divider · Model › · divider · From template…. Advanced: Project… · divider · Metamodel · Model › · Viewpoint · Transformation · divider · From template…. Model › opens with the CONFORMING TO label, then one entry per metamodel calling `createM1(project, m2)`; above `MODEL_MENU_LIMIT = 5`, the last five plus More…, which dispatches `OPEN_NEW_MODEL_DIALOG` with no detail. Viewpoint dispatches `CREATE_VIEWPOINT`, Transformation `OPEN_NEW_TRANSFORMATION_DIALOG`, both through `dispatchToProjectEditor` (project summary brought forward first, as LeftBar's `requestFromProjectEditor`); From template… navigates to `#/templates`. All other File items unchanged, in their order.
+- Project…: **`NEW_PROJECT` is dead inside a project (measured, below)**. On `#/allProjects` Project… dispatches it as before; elsewhere it writes a timestamped request in `sessionStorage['jjodel_file_new_project']` and navigates to `/allProjects` (a page reload). The Navbar mounted there waits until `.dashboard-page-title` has been in the DOM for two consecutive 200 ms polls, removes the request and dispatches `NEW_PROJECT`. A request older than 30 s is dropped (a navigation cancelled at the unsaved-changes prompt does not fire later). Measured on the way: one tick after the Navbar's mount is too early, the first attempt landed on the dashboard with no dialog.
+
+### Measurements (headless Chromium 1440×900, dev server 3106, `seed(ctx, advanced)`, light theme; probe `frontend/scripts/smoke/_tmp_tpl_e_filenew.ts`, gitignored, not committed; log `.agent-logs/tple-probe-3.log`)
+
+**28/28 PASS, 0 page errors** in both contexts. Rows read from the DOM:
+
+- Advanced, dashboard: `Project… | --- | Metamodel(off) | Model(off) | Viewpoint(off) | Transformation(off) | --- | From template…`. Project… opens «Create New Project»; From template… lands on `#/templates`.
+- Advanced, cloned Families and Persons: all enabled; Model › `[CONFORMING TO] | Families | Persons` (label: `text-transform: uppercase`, `role=presentation`, no `tabindex`, `cursor: default`). Model › Persons created `model_1` on Persons. Metamodel ×4 → six metamodels; Model › `[CONFORMING TO] | Persons | metamodel_1 | metamodel_2 | metamodel_3 | metamodel_4 | More…`; More… opens «New model» with 6 radios, 0 checked. Viewpoint opens «New Viewpoint», Transformation «New Transformation».
+- `NEW_PROJECT` dispatched inside the project: no dialog after 1.5 s (dead). Project… inside the project: lands on `#/allProjects` with «Create New Project» open; the request is consumed, a reload of the dashboard opens nothing. From template… inside the project lands on `#/templates`.
+- Basic, dashboard: `Project… | --- | Model(off) | --- | From template…`; Project… opens the dialog. Cloned Library: after the Basic switch, `Project… | --- | Model> | --- | From template…`, Model › `[CONFORMING TO] | Library`, Model › Library created `model_1` on Library.
+- Screenshots (`docs/discovery/assets/tpl-e/`): `fn-advanced-outside.png`, `fn-advanced-project-model.png`, `fn-advanced-six-metamodels.png`, `fn-more-dialog.png`, `fn-project-from-project.png`, `fn-basic-outside.png`, `fn-basic-project-model.png`.
+- Typecheck exit 0 (after the last edit). `check:docs` exit 1 with 4 errors, all on the tip before this lane (same 4 with the inbox at `HEAD`): the L-B1 and L-C entries of `docs/log-inbox/templates-ui.md` lost their tails (no `Corregge`, `Causa` and the rest) in the merge into `tpl-int`. This lane's entry adds none; the two entries are other lanes' and are left as they are, for the chat.
+
+### Findings
+
+- **A Basic user sees Advanced inside a cloned gallery project.** With the stored mode `basic`, the cloned Library loads with Redux `advanced: true` (`{"redux":true,"stored":"basic","tools":true}`): the project state carries it and the Navbar's restore effect never downgrades (`Navbar.tsx`, «Only the positive direction is restored»). File › New follows `props.advanced` like Tools and View, so it shows the Advanced items until the user presses Basic. Same family as the 2026-10-18 ticket on the app-bar mode control; not touched here.
+- Pre-existing, visible in the screenshots: menu entries without an icon draw the `bi bi-app hidden` placeholder as a visible square (the metamodel names under Model ›, as before this lane).
+
+### Decisions taken (unattended)
+
+1. Project… outside the dashboard navigates and opens the dialog (sessionStorage request, consumed by the Navbar), rather than being left dead: the change stays inside `Navbar.tsx`.
+2. «Most recent» metamodels = the tail of the project's metamodel list (creation order; metamodels carry no timestamp), shown in project order, the order of the New model dialog.
+3. Transformation is also disabled in a project with no metamodel, as in the app-bar New document menu (the dialog needs a source and a target).
+4. Consumer mode keeps today's trim: New › shows Model only (Project… and Metamodel were already hidden; Viewpoint, Transformation and From template… are of the same kind).
+5. New › is now shown on the dashboard too (it was hidden there), with only Project… and From template… enabled, as the prompt reads.
+6. The section label keeps sentence case in the DOM and is uppercased by CSS.
+
+### Decisions awaiting Alfonso (RC-26)
+
+None.
+
+### How to see it
+
+`npm start -- --port <p>`, File › New on the dashboard and in a project, in Basic and in Advanced; Model › with six metamodels shows More….
