@@ -36,6 +36,13 @@ and below 1100 px the table scrolls. A filter's view keeps the full table, `tabl
 `--line`, `--card`, `--accent`, `--run`, `--ok`, `--warn`, `--hs`, `--bad`) alias them, so
 Timeline, Insights and Requirements follow the theme until their own restyle.
 
+Timeline, Insights and Requirements are in the same design (P-2026-10-19-1157). Their colours are
+tokens only: every colour the three scripts write is a `var(--…)` or a
+`color-mix(in srgb,var(--accent) N%,var(--card))`, SVG attributes included, and none of them reads
+`prefers-color-scheme`. So all four tabs follow the board's theme choice, and switching it
+repaints them without a reload. `question` paints in amber (`--warn`) as waiting does; `--q` is
+kept for the parallel-lanes overlay and the chain launcher, in the link indigo.
+
 ## The four tabs
 
 **Lanes.** A table of the running and blocked lanes: state, kind (from the `Lane:`

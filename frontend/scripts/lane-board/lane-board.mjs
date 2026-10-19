@@ -1764,13 +1764,14 @@ setTimeout(()=>{if(!gone)location.replace('/#lane=${id}')},1500);
 // The page's two themes (P-2026-10-19-1130, the «Lane Monitor Desktop» design): the same tokens, light and dark. The legacy
 // names (--bg, --fg, --muted, --line, --card, --accent, --run, --ok, --warn, --hs, --bad) alias them, so timeline.js,
 // insights.js and requirements.js follow the theme; --q, --neutral and --track are timeline.js's own, set here on a
-// stronger selector so a theme chosen against the system's still reaches them.
+// stronger selector so a theme chosen against the system's still reaches them. Slice 2 (P-2026-10-19-1157) took the
+// design's neutrals for them and the link indigo for --q, so no purple is left; the question state paints in --warn.
 const THEME_LIGHT = 'color-scheme:light;--t-side:#F7F7F8;--t-content:#FFFFFF;--t-panel:#FBFBFC;--t-panel2:#FFFFFF;--t-head:#F7F7F8;--t-line:#ECEDF0;--t-line2:#E5E6EA;--t-line3:#D9DAE0;' +
     '--t-text:#16171B;--t-text2:#5D616B;--t-muted:#80848E;--t-accent:#5B63D6;--t-link:#4B53C6;--t-accent-dim:#C9CCF2;--t-done:#2E9E66;--t-res:#237A52;--t-wait:#B7791F;--t-block:#D64541;--t-hs:#80848E;' +
-    '--t-sel:#ECECEF;--t-hover:#F2F2F4;--t-tag:#EFEFF2;--t-k-fast:#2E9E66;--t-ban-bg:#FDF7EC;--t-ban-line:#F0DDB8;--t-ban-fg:#FFFFFF;--q:#7c3aed;--neutral:#94a3b8;--track:#cbd5e1';
+    '--t-sel:#ECECEF;--t-hover:#F2F2F4;--t-tag:#EFEFF2;--t-k-fast:#2E9E66;--t-ban-bg:#FDF7EC;--t-ban-line:#F0DDB8;--t-ban-fg:#FFFFFF;--q:#4B53C6;--neutral:#A3A6AE;--track:#E5E6EA';
 const THEME_DARK = 'color-scheme:dark;--t-side:#0C0D0F;--t-content:#0F1013;--t-panel:#121317;--t-panel2:#131418;--t-head:#101114;--t-line:#1C1E22;--t-line2:#1F2126;--t-line3:#2A2C33;' +
     '--t-text:#EDEEF0;--t-text2:#A1A4AB;--t-muted:#7E828B;--t-accent:#8A93FF;--t-link:#A9B1FF;--t-accent-dim:#3B3F6E;--t-done:#4CC38A;--t-res:#2E8F62;--t-wait:#F2B04C;--t-block:#F2645A;--t-hs:#8B8F98;' +
-    '--t-sel:#1A1B20;--t-hover:#15161A;--t-tag:#1D1F25;--t-k-fast:#7FD3B0;--t-ban-bg:#17140E;--t-ban-line:#3A3020;--t-ban-fg:#17140E;--q:#a78bfa;--neutral:#64748b;--track:#334155';
+    '--t-sel:#1A1B20;--t-hover:#15161A;--t-tag:#1D1F25;--t-k-fast:#7FD3B0;--t-ban-bg:#17140E;--t-ban-line:#3A3020;--t-ban-fg:#17140E;--q:#A9B1FF;--neutral:#5A5E66;--track:#2A2C33';
 // The views' icons, drawn for the board (plain strokes), as CSS masks: the tab buttons keep their bare label.
 const icon = (body) => 'url("data:image/svg+xml,' + ("%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'%3E" + body + '%3C/svg%3E') + '")';
 const ICONS = {
