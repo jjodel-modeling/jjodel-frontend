@@ -6287,6 +6287,21 @@ Alfonso's answers in the project chat of 2026-10-19 («ok alle raccomandazioni»
   redesign, Notations page, New model dialog, File › New); its lanes start from `library-gallery` at `03b9d4585` or from
   the trunk after the merge, and land before 3.2. Neither chat emits prompts in the other's scope.
 
+## R-TACK — Tack, the project-agnostic harness monitor (decisions 2026-10-19)
+
+Evidence: the project chat C-2026-10-19-1748 of 2026-10-19 (17:55 recommendations accepted, 22:20 «ti do l'ok», 23:15 «decidi tu»), `tack/ROADMAP.md`, `docs/harness/fronts.json`.
+
+- **R-TACK-1** (2026-10-19, ratified by Alfonso 2026-10-19 22:20, evidence: read, verified: none, reversible: trunk).
+  **The front `tack` is owned by the chat C-2026-10-19-1748**, recorded as `ownerChat` in `docs/harness/fronts.json`.
+  Other chats do not write Tack prompts; P-2026-10-19-2100, written by C-2026-10-19-0001, became a later slice of
+  this chat in its own worktree.
+- **R-TACK-2** (2026-10-19, ratified by Alfonso 2026-10-19 23:15, evidence: read, verified: none, reversible: trunk).
+  **The lane board of `lane-run monitor` (port 4700, `frontend/scripts/lane-board/`) is frozen**: bug fixes only, no new
+  feature. New monitoring features go into Tack, which is meant to replace it.
+- **R-TACK-3** (2026-10-19, ratified by Alfonso 2026-10-19 23:15, evidence: read, verified: none, reversible: trunk).
+  **Tack gets a Lanes page before v0 is closed**, so that v0 covers the view used most on the 4700 board. The v0
+  closure on foreign repositories (P-2026-10-19-2100) follows it.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.

@@ -1,4 +1,4 @@
-# Tack slice 8: v0 closure on repositories that are not Jjodel
+# Tack slice 9: v0 closure on repositories that are not Jjodel
 
 Prompt-ID: P-2026-10-19-2100
 Chat: C-2026-10-19-1748 (written by C-2026-10-19-0001; the tack front moved to C-2026-10-19-1748, Alfonso 2026-10-19 22:20)
@@ -12,7 +12,7 @@ Request: Alfonso, 2026-10-19 20:49, in the project chat: «decidi tu» on closin
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 does not apply as a separate phase (the chat measured the inputs on 2026-10-19 20:55, see Context); no Phase 1 hard stop. P8 replaced as in slices 5-6: the chat checks the board after exit.
 
-Worktree: `~/jjodel-w-tack-s8`, branch `tack-s8`, created by the chat from the local `alfonso-frontend-jjtl` after slice 7 is merged (slice 7 owns `~/jjodel-w-tack-s7`). Before anything else: `pwd`, branch and `git log -1` match; otherwise stop with `Outcome: blocked`.
+Worktree: `~/jjodel-w-tack-s9`, branch `tack-s9`, created by the chat from the local `alfonso-frontend-jjtl` after slice 8 (the Lanes page, R-TACK-3) is merged (slice 7 owns `~/jjodel-w-tack-s7`). Before anything else: `pwd`, branch and `git log -1` match; otherwise stop with `Outcome: blocked`.
 
 Model and tier: as `lane-run start` assigns.
 
