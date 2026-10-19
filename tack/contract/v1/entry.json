@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tack.dev/contract/v1/entry.json",
+  "title": "Tack log entry (self-assessment layer)",
+  "type": "object",
+  "required": ["contract", "type", "date", "title"],
+  "properties": {
+    "contract": { "const": 1 },
+    "type":  { "enum": ["task", "ticket"] },
+    "date":  { "type": "string", "format": "date" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "unit":  { "type": "string", "pattern": "^P-\\d{4}-\\d{2}-\\d{2}-\\d{4}(-[a-z0-9]{1,8})?$" },
+    "notes": { "type": "string", "maxLength": 500 }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "type": { "const": "task" },
+        "kind": { "type": "string" },
+        "summary": { "type": "string", "minLength": 1 },
+        "files": { "type": "array", "items": { "type": "string" } },
+        "outcome": { "enum": ["completed", "partial", "problems"] },
+        "corrects": { "oneOf": [ { "type": "null" }, { "$ref": "#/properties/unit" } ] },
+        "cause": { "enum": [null, "a", "b", "c", "d", "e", "f", "g"] },
+        "regressions": { "enum": ["yes", "no", "unknown"] },
+        "out_of_scope": { "type": "boolean" }
+      },
+      "required": ["unit", "summary", "outcome", "corrects", "cause", "regressions", "out_of_scope"],
+      "allOf": [
+        {
+          "if": { "anyOf": [
+            { "required": ["outcome"], "properties": { "outcome": { "enum": ["partial", "problems"] } } },
+            { "required": ["corrects"], "properties": { "corrects": { "type": "string" } } }
+          ] },
+          "then": { "properties": { "cause": { "enum": ["a", "b", "c", "d", "e", "f", "g"] } } },
+          "else": { "properties": { "cause": { "const": null } } }
+        }
+      ]
+    },
+    {
+      "properties": {
+        "type": { "const": "ticket" },
+        "finding": { "type": "string", "minLength": 1 },
+        "priority": { "enum": ["high", "medium", "low"] },
+        "found_in": { "type": "string", "pattern": "^[PC]-\\d{4}-\\d{2}-\\d{2}-\\d{4}" },
+        "detail": { "type": "string", "minLength": 1 }
+      },
+      "required": ["finding", "priority", "found_in"]
+    }
+  ]
+}

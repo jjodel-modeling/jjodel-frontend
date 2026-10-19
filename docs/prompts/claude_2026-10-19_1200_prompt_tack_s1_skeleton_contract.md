@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1200
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: fast (new isolated folder `tack/`, no existing file touched outside the DOVE; discovery done in P-2026-10-19-1100)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s1 · code commit b47906cf6, docs commit carrying this line
 Depends: P-2026-10-19-1100
 Corregge: none
 Request: Alfonso, 2026-10-19 11:54, in the project chat: «ok alle raccomandazioni», after the Tack v0 discovery
