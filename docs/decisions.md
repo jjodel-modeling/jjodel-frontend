@@ -6256,28 +6256,28 @@ Evidence: the CSS-overlay pilot of the project chat (`~/.jjodel-lanes/pilots/lin
 `docs/discovery/discovery_2026-10-19_shell_visual_consolidation.md` (P-2026-10-19-1710, §6 and §8), and
 Alfonso's answers in the project chat of 2026-10-19 («ok alle raccomandazioni», 16:51 and 17:45).
 
-- **R-SHELL-1** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: discovery §3.2-3.3, verified: chat DOM
-  check of P-2026-10-19-1725, reversible: trunk). **The shell reads its own token set.** Topbar, editor
+- **R-SHELL-1** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: agent,
+  reversible: trunk). **The shell reads its own token set.** Topbar, editor
   toolbar, left palette, properties rail, status bar and menus read `--shell-*`, declared once on the six
   surface roots in `styles/tokens/_shell.scss` as aliases of existing tokens; the canvas never reads it and
   no `:root` value changes for the shell. The interface mode reaches the DOM as `html[data-mode]`, written by
-  Navbar from Redux `advanced` (R-RAIL-13 holds).
-- **R-SHELL-2** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: pilot v2, discovery §8 A2, verified:
-  none, reversible: trunk). **Density belongs to Advanced.** In Advanced the tree row is 24 px and the menu
-  item 28 px; Basic keeps 26 px and 36 px. Amends R-RAIL-7 on «riga 26px», which now holds for Basic only.
-- **R-SHELL-3** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: discovery §8 A3, verified: none,
+  Navbar from Redux `advanced` (R-RAIL-13 holds). Sources: discovery §3.2-3.3; verified by the chat DOM check of P-2026-10-19-1725.
+- **R-SHELL-2** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: none,
+  reversible: trunk). **Density belongs to Advanced.** In Advanced the tree row is 24 px and the menu
+  item 28 px; Basic keeps 26 px and 36 px. Amends R-RAIL-7 on «riga 26px», which now holds for Basic only. Sources: pilot v2, discovery §8 A2.
+- **R-SHELL-3** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: none,
   reversible: trunk). **The outer borders of both rails move to `--shell-border` together** (palette right,
   rail left), keeping the coupling D-UI-11 asked for. Amends D-UI-11 on the outer border, which no longer
-  stays on `--border-subtle`.
-- **R-SHELL-4** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: discovery §3.4 and §8 A1, verified:
-  none, reversible: trunk). **Right-rail section titles are written in sentence case in the source**, shown
+  stays on `--border-subtle`. Source: discovery §8 A3.
+- **R-SHELL-4** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: none,
+  reversible: trunk). **Right-rail section titles are written in sentence case in the source**, shown
   at 12 px / 500 without tracking; the left palette keeps its uppercase category label and
   `.props-header__kind` stays uppercase. The MODELS demo script and the R-SIM row that quote
-  `SEMANTIC TYPE CLASS` follow the new label `Semantic type class`.
-- **R-SHELL-5** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: pilot report after_v2, verified: none,
+  `SEMANTIC TYPE CLASS` follow the new label `Semantic type class`. Sources: discovery §3.4 and §8 A1.
+- **R-SHELL-5** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: none,
   reversible: trunk). **Three text levels and a minimum.** Shell text uses `--shell-text-1/2/3` (#0f172a,
   #475569, #64748b); `#94a3b8` stays only inside disabled controls (D-UI-13 Em. 6). No shell text under 11 px,
-  shell hit targets at least 24 px without moving the layout, action icons muted only in Advanced.
+  shell hit targets at least 24 px without moving the layout, action icons muted only in Advanced. Source: pilot report after_v2.
 
 ## Superate
 
