@@ -475,3 +475,47 @@ None.
 ### How to see it
 
 `npm start -- --port <p>`, File › New on the dashboard and in a project, in Basic and in Advanced; Model › with six metamodels shows More….
+## P-2026-10-19-1651 — L-C2, template previews readable at card size (lane `tpl-c2`)
+
+### What was done
+
+- `frontend/scripts/library/snap-gallery.ts` (commit `f120bd3cf`): templates are cropped, examples captured as before. `CROP` reads the metamodel from the L-layer (`classes`, `references`, `containment`, `type`, `extends`, `extendedBy`), picks the root class (the most containment references; tie: the first class) and its direct neighbours (its reference types, the classes referencing it, its super- and subclasses), then searches, on a 4 px grid over the viewport's zoom-1 node rects, a frame of the card aspect that keeps the root whole and every `.mm-node__name` wholly inside or wholly outside. Ranking: whole neighbours, then whole nodes, then distance from the centre of root and neighbours. The frame's scale is `max(0.45, min(1, 300/w, 136/h))` over the bbox of root and neighbours (16 px margin): with these five metamodels it is 0.45 every time, the frame 667×302. `SNAP` takes the frame as the export's width, height and `translate`, over the same `renderTarget` (SVG paint inlined, no background).
+- Five PNGs rewritten under `SNAP_REWRITE=<id>@1`, one run per id, each exit 0, `ALL GREEN`, no page error, corners alpha 0. Turnstile and petri: sha256 before and after identical (`31eea861…`, `9e027e01…`); `diff` of the two sha lists: exactly the five templates differ.
+
+### Measurements
+
+| template | root (containments) | neighbours | scale | frame at zoom 1 | name size in card | classes wholly inside |
+|---|---|---|---|---|---|---|
+| library@1 | Library (3) | LibraryItem, Member, Writer | 45 % | 667×302 | 5.9 px | Library, LibraryItem |
+| shapes@1 | Canvas (1) | Shape | 45 % | 667×302 | 5.9 px | Canvas, Shape |
+| graph@1 | Graph (2) | Node, Edge | 45 % | 667×302 | 5.9 px | Graph, Edge |
+| state-machine@1 | StateMachine (2) | State, Transition | 45 % | 667×302 | 5.9 px | StateMachine, StateKind |
+| families-persons@1 | Family (4) | Member | 45 % | 667×302 | 5.9 px | Family, Member |
+
+Name size: the computed `font-size` of `.mm-node__name` (13 px) times the scale. Previously 16.4–39.1 %.
+
+- Gates: `check:scripts` PASS (106 files). Negative control without `SNAP_REWRITE`: 7/7 refused, `7 FAILED`, exit 1. Dev server on 3096 stopped at the end (`lsof` empty).
+- Not cut through a name, but cut: Transition's attribute row (state-machine), Edge's lower edge stubs (graph), the `members` edge label (library), Node and State outside the frame (graph, state-machine: the ranking could not keep them whole together with the root at 45 %).
+- Edge labels are not part of the no-cut rule, and their rendering is not deterministic between runs: library's trial run lacked the `borrowedBy` label that the committed run has (44 352 vs 48 261 bytes).
+
+### The five previews
+
+library@1 ![library](../../frontend/public/library/gallery/library/1.preview.png)
+
+shapes@1 ![shapes](../../frontend/public/library/gallery/shapes/1.preview.png)
+
+graph@1 ![graph](../../frontend/public/library/gallery/graph/1.preview.png)
+
+state-machine@1 ![state-machine](../../frontend/public/library/gallery/state-machine/1.preview.png)
+
+families-persons@1 ![families-persons](../../frontend/public/library/gallery/families-persons/1.preview.png)
+
+### Decisions taken (unattended)
+
+1. The scale is pinned at 45 % for all five, the floor: the root-and-neighbours bbox is taller than 302 px in every metamodel, so no frame above 45 % keeps them. A higher floor would cut more.
+2. Neighbours are read from the model (references and inheritance), not from the edges in the DOM; the frame keeps StateKind (an enum) in state-machine because it is a whole node at no cost, not because it is a neighbour.
+3. Edge labels may be cut; only node names are guarded (the prompt's criterion).
+
+### Decisions awaiting Alfonso (RC-26)
+
+None. Visual check owed to the chat (RC-23).

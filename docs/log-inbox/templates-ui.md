@@ -66,3 +66,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Typecheck 0. Headless 1440x900 on 3106, 28/28 PASS, 0 page errors (report section). NEW_PROJECT measured dead inside a project: Project… there now navigates to the dashboard and opens the create dialog. Finding: cloned gallery projects load advanced:true under a stored Basic mode. Visual check owed to the chat (RC-23). 6 unattended decisions.
 **Prompt document name**: 2026-10-19 16:50
+## 2026-10-19 — fix: template previews cropped to the root class, lane L-C2 (P-2026-10-19-1651)
+**Prompt**: Templates only: crop the preview to a card-aspect frame at 45 % or more around the root class and its neighbours, no node name cut; rewrite the five template PNGs, examples untouched
+**Files touched**: frontend/scripts/library/snap-gallery.ts, frontend/public/library/gallery/{library,shapes,graph,state-machine,families-persons}/1.preview.png (f120bd3cf); docs/discovery/discovery_2026-10-19_templates_notations_file_new.md (section P-2026-10-19-1651), docs/log-inbox/templates-ui.md, docs/prompts/claude_2026-10-19_1651_prompt_gallery_snapshots_crop.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 16:17 claude_2026-10-19_1617_prompt_gallery_snapshots.md
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Nine files, all in DOVE. Five templates at 45 % (names 5.9 px), roots Library, Canvas, Graph, StateMachine, Family. Examples sha256 identical before and after. check:scripts PASS, negative control 7/7 refused exit 1. Regressions unknown: the card in the app not checked by the lane. Visual check owed to the chat (RC-23).
+**Prompt document name**: 2026-10-19 16:51
+**Ticket** (P-2026-10-19-1651): check:docs B is red on this inbox at the branch base `4d683d9c0`, before this lane: the L-B1 (line 9) and L-C (line 12) entries keep only `Prompt` and `Files touched`, cut in the merges into `tpl-int`; four errors (Corregge, Causa absent). Not repaired here: the entries belong to their lanes and the log is add-only; the merging lane restores them from `tpl-b1` and `tpl-c`.
