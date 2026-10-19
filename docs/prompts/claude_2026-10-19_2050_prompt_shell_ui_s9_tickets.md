@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2050
 Chat: C-2026-10-19-1610
 Front: shell-ui
 Lane: full (rail sheet, one NodeEditor style rule)
-Status: da eseguire
+Status: eseguito 2026-10-19, lane P-2026-10-19-2050 (shell-ui-s9, de05729ed); visual check passed (chat, 3019, 1600x1000)
 Depends: P-2026-10-19-1930
 Request: Alfonso, 2026-10-19 20:48: «puoi sistemare i ticket in /lane auto ?» (the three tickets of `docs/log-inbox/shell-ui.md` from S6, S7 and S8).
 
