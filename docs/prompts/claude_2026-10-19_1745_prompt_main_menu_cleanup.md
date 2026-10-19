@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-10-19-1745
 Chat: C-2026-10-19-1722
-Front: main-menu
+Front: maintenance
 Lane: fast (two to three files, menu entries plus one guard modal)
 Status: da eseguire
 Depends: none
@@ -35,7 +35,7 @@ The chat read the menus from the DOM on localhost:3000 (dashboard and an open pr
 typecheck at baseline (CLAUDE.md §17), `npx vitest run` on any test touching `Navbar` or `polymetric`, `npm run build` exit 0, `npm run smoke`. Then start a dev server on port 3112 from this worktree (`npm start -- --port 3112 --strictPort`, detached), check it answers 200, write its PID to `~/.jjodel-lanes/P-2026-10-19-1745/dev.pid` and leave it running.
 
 ## Closure
-Code commit (pathspec, only the files touched). Then, in one docs commit: the log entry in `docs/log-inbox/main-menu.md` (P9) and the `Status:` flip of this prompt (P13). `npm run check:docs` green. Exit with `Outcome: done`.
+Code commit (pathspec, only the files touched). Then, in one docs commit: the log entry in `docs/log-inbox/maintenance.md` (P9) and the `Status:` flip of this prompt (P13). `npm run check:docs` green. Exit with `Outcome: done`.
 
 ## HARD STOP
 If the guard needs a change in a critical-zone file (CLAUDE.md §3.2), or if no reusable modal component exists, stop with `Outcome: question` and a `Recommended:` line.
