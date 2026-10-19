@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2315
 Chat: C-2026-10-19-1747
 Front: harness
 Lane: fast (rendered merge header in `lane-run.mjs`, its tests)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane mergeurl · 7174054d8 · laneRun 136/136, Request line from --chat-url, prompts or trailer, else none
 Depends: P-2026-10-19-2105, P-2026-10-19-2229
 Corregge: none
 Request: https://claude.ai/code/session_018RaPfFUZaHRjEo11BkNXZB (Alfonso, 2026-10-19 22:59: «confermo tutto», on the merge-prompt link)
