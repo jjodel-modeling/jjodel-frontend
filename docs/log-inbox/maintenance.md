@@ -205,3 +205,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile — P8 derogated by the prompt: no visible change, the gates and the empty grep are the check.
 **Notes**: Deletions only; every other statement and its order kept, the timers wrapped no real work. The first edit on `executor.ts` was blocked once by the rule-trigger hook until `frontend/src/jjscript/CLAUDE.md` was read, then retried unchanged. No unattended decisions taken. check:docs result in the closing report.
 **Prompt document name**: 2026-10-20 00:32
+
+## 2026-10-20 — merge: jjscript-timing-logs into alfonso-frontend-jjtl (P-2026-10-20-0046)
+**Prompt**: `claude_2026-10-20_0046_prompt_merge_jjscript-timing-logs.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-timing-logs` at `1d5975fbb` into `alfonso-frontend-jjtl`, merge base `b91d9bb1a`, 3 commits on the branch side.
+**Files touched**: merge `a5622549a`: 4 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-10-20_0032_prompt_jjscript_timing_logs.md`, `frontend/src/jjscript/components/ScriptBlock.tsx`, `frontend/src/jjscript/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a5622549a` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9436 tests in 384 files, 9 red at import, hooks 952; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates only, all green (typecheck 0, vitest 9436 with the 9 known import reds, build 0, checks 0); no UI change, temporary TEMP-DISCOVERY timing logs removed
+**Notes**: Rollback tag `pre-jjscript-timing-logs` on `84221a8fc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0046/result.json`.
+**Prompt document name**: 2026-10-20 00:46
