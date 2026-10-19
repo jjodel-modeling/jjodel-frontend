@@ -659,3 +659,21 @@ Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of rep
 **Smoke visivo**: passato — chat, unattended: chat: direct merge gates all green on node v26 (vitest 9415 tests, the 9 known import reds only)
 **Notes**: Rollback tag `pre-lanerun-tests` on `643f60350` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1045/result.json`.
 **Prompt document name**: 2026-10-19 10:45
+
+## 2026-10-19 — feat(lane-board): sidebar shell and Lanes tab in the agreed design (P-2026-10-19-1130)
+**Prompt**: `claude_2026-10-19_1130_prompt_*.md`, lane board restyle slice 1 of 2. The board page's shell and its Lanes tab follow `Main.dc.html`, light and dark, with no change to data, routes or `/api*` JSON.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md` (code `c40dee260`); this entry and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneBoard tests 161/161 with no test edited; scripts/hooks 935/936, the red one `laneTracking.test.ts:131` (the `tack` front's milestone, from committed data, already red on the tip; ticket below); typecheck:scripts 0; check:scripts PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: built-in browser on 4714, 1440 dark and 800 light, the 24 h table 1158/1160 px with no horizontal scroll, the theme kept as Light
+**Notes**: Board on 4714, not 4712, because the menu bar lane held 4712 (provisional, unattended). Decisions 1-6 were accepted by the chat at 11:45; then the fix of the 24 h table (`compact()`, ten columns). The prompt's commit subject was 82 characters, so it was shortened to fit the 72 of §6.2. Details: `~/.jjodel-lanes/P-2026-10-19-1130/handoff.md`. Slice 2 still owes the `matchMedia` theme checks in `timeline.js` and `insights.js`.
+**Prompt document name**: 2026-10-19 11:30
+
+## 2026-10-19 — ticket: laneTracking test red on the tack front's milestone
+**Ticket**: `scripts/hooks/__tests__/laneTracking.test.ts:131` fails with «tack: expected false to be true»: the front `tack`, added to the fronts registry by `e201c3985`, has no integer `milestone`. It is red on the tip, independent of the board.
+**Priority**: medium
+**Found in**: P-2026-10-19-1130

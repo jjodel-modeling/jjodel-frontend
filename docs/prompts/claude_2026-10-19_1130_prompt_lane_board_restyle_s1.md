@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1130
 Chat: C-2026-10-18-2225
 Front: harness
 Lane: phase2 (slice 1 of 2; the board page only; no change to data, routes or `/api*` shapes; no critical zone)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane board-restyle · c40dee260 · verifica visiva passata 2026-10-19 (chat: built-in browser on 4714, 1440 dark and 800 light, 24 h table 1158/1160 px with no horizontal scroll)
 Depends: P-2026-10-19-1045
 Corregge: —
 Request: Alfonso, 2026-10-19 11:25, in chat C-2026-10-18-2225: the board page still shows the old look, «non mi pare stia usando il tema linear come già discusso». The design was agreed on 2026-10-18 evening on the canvas «Lane Monitor Desktop» (four artboards: Lanes, Timeline, Insights, Requirements), with Alfonso choosing a dedicated look, desktop-app layout, Linear as the reference for principles (not a copy of Linear's interface, logo or icons).
