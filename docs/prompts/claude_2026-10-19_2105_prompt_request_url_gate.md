@@ -1,6 +1,6 @@
 # Every lane links its chat: Request URL gate and Tack backfill
 
-Prompt-ID: P-2026-10-19-2050
+Prompt-ID: P-2026-10-19-2105
 Chat: C-2026-10-19-1747
 Front: harness
 Lane: fast (one refusal in `lane-run start`, its tests, a header backfill in docs/prompts, one PROTOCOL line)
@@ -18,7 +18,7 @@ Model and tier: as `lane-run start` assigns.
 
 ## Lane discipline
 
-Every reply opens with `[P-2026-10-19-2050 · session <id>]`; every final message ends with `Outcome: done | hard-stop | question | blocked`; questions carry `Recommended: <one line>`; unattended (RC-21, RC-25) except the RC-26 list. Time limit: 45 minutes. Node: `~/.local/bin/node`. Read `docs/decisions.md`, the logs and every file above 500 lines with `offset`/`limit` or `rg`, never whole.
+Every reply opens with `[P-2026-10-19-2105 · session <id>]`; every final message ends with `Outcome: done | hard-stop | question | blocked`; questions carry `Recommended: <one line>`; unattended (RC-21, RC-25) except the RC-26 list. Time limit: 45 minutes. Node: `~/.local/bin/node`. Read `docs/decisions.md`, the logs and every file above 500 lines with `offset`/`limit` or `rg`, never whole.
 
 ## Context (measured by the chat, do not redo)
 
@@ -36,8 +36,8 @@ Known URLs: `C-2026-10-19-0001` is https://claude.ai/chat/1b373b77-3e1f-4c66-b75
 4. **PROTOCOL.** One sentence under P13 (where `Request:` is described): a chat that commits from the Mac shell starts `Request:` with its own URL or adds its `Claude-Session:` trailer to the commit; `lane-run start` refuses a prompt with neither.
 5. **Verify** with `curl -s localhost:4701/api` from a board started in the worktree on port 4701 (`node frontend/scripts/lane-board/lane-board.mjs --port 4701`, background with `nohup`, killed at the end): every row with `chat` `C-2026-10-19-0001` or `C-2026-10-19-1748` has a non-empty `chatUrl`. Record the before/after counts of rows without `chatUrl`.
 6. **Commit** (`git add` named files only):
-   1. `fix(harness): lane-run start refuses a lane its board cannot link to a chat (P-2026-10-19-2050)` with `lane-run.mjs` and its test. Trailer `Model:` (P6).
-   2. `docs: Request URLs for the Tack chats and the P13 sentence (P-2026-10-19-2050)` with the backfilled prompts, `docs/PROTOCOL.md`, the log-inbox entry (P9) and this prompt's `Status:` flip.
+   1. `fix(harness): lane-run start refuses a lane its board cannot link to a chat (P-2026-10-19-2105)` with `lane-run.mjs` and its test. Trailer `Model:` (P6).
+   2. `docs: Request URLs for the Tack chats and the P13 sentence (P-2026-10-19-2105)` with the backfilled prompts, `docs/PROTOCOL.md`, the log-inbox entry (P9) and this prompt's `Status:` flip.
 7. `check:docs` and `check:scripts` from `frontend/`.
 
 ## DOVE
