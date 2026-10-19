@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1745
 Chat: C-2026-10-19-1722
 Front: maintenance
 Lane: fast (two to three files, menu entries plus one guard modal)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane menu-cleanup · 2794a2537 · verifica visiva da eseguire (chat, dev server 3112)
 Depends: none
 Request: Alfonso, 2026-10-19 17:41, project chat (kept locally in `~/.jjodel-lanes/P-2026-10-19-1745/request.md`).
 
