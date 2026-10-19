@@ -685,3 +685,17 @@ Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of rep
 **Smoke visivo**: passato — chat: captures 11-14 checked, Quit and Cmd+Q accepted
 **Notes**: Captures 11-14 in `/tmp/menubar/settings/`. Quit button and Cmd+Q (CGEventPostToPid to the test pid) both exit with `quit from the popover`; 46611 untouched. At 11:47 the pinned test popover was clicked by hand (theme, Start at login, Open monitor): the scratch LaunchAgent sits in `/tmp`, Alfonso's is untouched. Scratch notifications turned off so the test instance posts no duplicates.
 **Prompt document name**: 2026-10-19 11:48
+
+## 2026-10-19 — merge: menubar-settings into alfonso-frontend-jjtl (P-2026-10-19-1213)
+
+**Prompt**: `claude_2026-10-19_1213_prompt_merge_menubar-settings.md`: direct merge of the lane monitor settings branch (P-2026-10-19-1125, P-2026-10-19-1148) with gates.
+**Files touched**: merge commit `ac0e174b9` (rollback tag `pre-menubar-settings` on `0c38a26d4`); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed (closed by the chat over a red vitest gate)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest is red identically before and after the merge: 1 failed test in `laneTracking.test.ts` (the `tack` front in the committed registry, ticketed) and 9 files red at import with `window is not defined`, all pre-existing on the receiving tip. typecheck, typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: popover captures 11-14 checked earlier; reinstalled app running from `~/Applications` (pid 83012)
+**Notes**: `lane-run go` refuses a closure over a blocked merge, so the chat wrote this closure by hand, as for P-2026-10-19-0150. The 9 import-time reds (`window is not defined`) deserve their own ticket.
+**Prompt document name**: 2026-10-19 12:13
