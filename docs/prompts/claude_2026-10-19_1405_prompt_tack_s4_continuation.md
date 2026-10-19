@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1405
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: fast (closure of P-2026-10-19-1335: one cross-check, README, commits; code and tests already written)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s4 · 384348c49
 Depends: P-2026-10-19-1335
 Corregge: none (continuation under RC-51, not a repair)
 Request: Alfonso, 2026-10-19 13:32, in the project chat: «procedi con la slice 4 ?» (same request as P-2026-10-19-1335)

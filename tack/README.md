@@ -5,8 +5,9 @@ leaves behind (transcripts, git history, a self-assessment log) and shows how th
 It keeps metadata only, never message text, and needs no dependency beyond Node >= 24 (for
 `node:sqlite`; on an older Node every command exits 2).
 
-Status: slice 3 of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
-identity and the git collector exist; metrics and board come in slices 4 and 5.
+Status: slice 4 of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
+identity, the git collector and the layer-1 metrics (`tack metrics`) exist; the board comes in slice 5,
+layers 2 and 3 in slice 6.
 
 ## Three data layers
 
@@ -44,7 +45,8 @@ history.
 
 `sessions` prints one row per session: cwd, UTC day, main-thread API calls (one per `message.id`,
 subagent calls excluded), cost (max `cost-state.totalCostUSD`), context peak, span in minutes,
-models, and commit within the hour (below).
+models, how the session was linked to a repository (`link`, below), and commit within the hour. Its day
+is the UTC day of the first event; `tack metrics` uses local days.
 
 ## Repository identity and the git collector
 
@@ -85,7 +87,69 @@ missing. `repos` prints, per repository: key (12 chars), toplevels, remote host,
 with a unit id per form, Claude co-authored commits, sessions, sessions with a commit within the
 hour; then the missing cwds grouped by reason.
 
-The store is at schema version 2; a version 1 store is migrated on open.
+### Linking a session whose directory is gone
+
+A `path-gone` cwd (a deleted worktree) is still linked when the evidence allows, and `link` says how.
+Nothing is inferred for the other missing reasons (`not-a-git-work-tree`, `no-cwd`, ...).
+
+| link | meaning |
+|---|---|
+| `direct` | the cwd exists and sits in a repository |
+| `branch` | the session's first `gitBranch` other than `HEAD` names a branch of exactly one known repository: a ref name (heads, and remotes with the remote prefix dropped) or a branch name parsed in memory from the merge subjects of `git log --all --merges` (git, GitHub, remote-tracking and `merge: X into ...` forms; nothing of the subject is stored) |
+| `sibling` | the nearest existing ancestor of the cwd holds the present work trees (`git worktree list`) of exactly one repository, and the branch, if it names any repository, names that one |
+| `none` | not linked; `link_reason` is `branch-conflicts-sibling`, `branch-ambiguous` (the branch exists in several repositories, e.g. `main`), `sibling-ambiguous` or `no-candidate` |
+
+A linked `path-gone` session keeps `missing = path-gone` and gets its `repo_key`. The method is
+evidence, not proof: a branch name can be reused across clones, which is why an ambiguous one is left
+unlinked rather than guessed.
+
+Numstat is computed with `--no-renames` even when the user's git config turns rename detection on
+(`diff.renames=copies`), so a rename counts as a delete plus an add on every machine.
+
+## `tack metrics`
+
+```
+node bin/tack.mjs metrics [--repo <key|path>] [--since <YYYY-MM-DD>] [--json] [--store <file>]
+```
+
+Reads the store only. `--repo` takes a repository key (or a prefix) or a path inside it; `--since`
+keeps the sessions whose first event is on or after that day. Layer 1 needs nothing from the
+repository:
+
+| metric | definition |
+|---|---|
+| `sessions_per_day` | sessions by the day of their first event; undated counted apart |
+| `cost_per_day` | known session cost (max `cost-state.totalCostUSD`) by the day of the first event; sessions with unknown cost counted apart, never as 0 |
+| `tokens_per_day` | input, output, cache read and cache write tokens of every call, subagents included, by the day of the call |
+| `context_peak` | largest main-thread context (input + cache read + cache write) per session, median, and sessions at or above 200,000 tokens |
+| `calls_per_session` | main-thread API calls per session, one per message id |
+| `waits` | gaps strictly above 5 minutes between consecutive calls of one session (subagent calls included), counted in full, per session and per day of the gap start |
+| `overlap` | most sessions of one repository active at one instant (first to last event, closed intervals), per day; a session spanning midnight counts on every day it spans |
+| `commit_proximity` | share of sessions with a commit of their repository within the window (default 1 h) after the session; proximity, not authorship; sessions without a repository kept apart as unknown |
+| `subagent_share` | subagent calls over all calls, and subagent cost over known cost (estimate, below) |
+
+Layer 2 (`commits_per_unit`, `cost_per_unit`, `resumes_per_unit`) and layer 3 (`outcome`,
+`first_shot`, `cause_tally`, `regression_rate`, `out_of_scope_rate`) are listed with the store field
+that would enable them and print `not adopted` while it is absent; when the field exists they print
+`adopted, not implemented` (slice 6), never a number.
+
+**Days are local**: the calendar day of the machine running `tack` (`TZ`), the day the person at the
+keyboard lived. The API (`loadSelection(db, { utc: true })`) switches every metric to UTC days; there is
+no command-line flag for it yet, and `tack sessions` keeps printing UTC days. Session-level metrics
+(sessions, cost) use the day of the first event, so a session that crosses midnight is booked whole on
+its first day; tokens use each call's day and waits the day the gap started. The tests pin
+`TZ=Europe/Rome`.
+
+**Subagent cost is an estimate.** The transcript gives one cost per model per session, not per call.
+For each model, its known cost is split between main-thread and subagent calls in proportion to
+price-weighted tokens (input 1, output 5, cache read 0.1, cache write 1.25, the same ratio for every
+Claude model). A billed model with no call in the transcript is reported as unattributed, and sessions
+with cost but no per-model cost are counted apart. The absolute cost always comes from the transcript;
+only the split is estimated.
+
+The store is at schema version 3 (`sessions.git_branch`, `session_repo.link_method` and
+`link_reason`, `session_models`); older stores are migrated on open, and the next `scan` re-reads main
+transcripts once to fill the branch and the per-model costs (rows are matched, none added).
 
 ## Tests
 

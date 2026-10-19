@@ -18,7 +18,11 @@ export const GIT_COLUMN_SOURCES = {
     toplevels: 'rev-parse --show-toplevel', remote: 'remote get-url origin (normalised)', state: 'file stat',
     tips: 'for-each-ref %(objectname) %(refname), worktree list HEAD',
   },
-  session_repo: { session_id: 'sessions.id', repo_key: 'repos.key', missing: 'file stat, rev-parse exit' },
+  session_repo: {
+    session_id: 'sessions.id', repo_key: 'repos.key', missing: 'file stat, rev-parse exit',
+    link_method: 'rev-parse, or inference: sessions.git_branch against ref names and merged branch names, worktree list (enum)',
+    link_reason: 'inference outcome',
+  },
   commits: {
     repo_key: 'repos.key', sha: '%H', parents: '%P (count)', author_time: '%at', commit_time: '%ct',
     files: 'numstat (row count)', insertions: 'numstat (added)', deletions: 'numstat (deleted)',

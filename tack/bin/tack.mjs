@@ -17,6 +17,9 @@ commands:
   sessions [--cwd <prefix>] [--json] [--store <file>]
                                         one row per session, main-thread calls only
   repos [--json] [--store <file>]       one row per repository, then the session cwds without one
+  metrics [--repo <key|path>] [--since <YYYY-MM-DD>] [--json] [--store <file>]
+                                        layer-1 metrics of the selection; layer 2 and 3 listed with
+                                        the field that would enable them
 
 The store defaults to ~/.tack/store.db, or TACK_STORE when set.
 `;
@@ -78,10 +81,11 @@ async function scanCmd(args) {
     w(`records seen ${st.records}, malformed ${st.malformed}`);
     w(`records used: ${tally(st.used)}`);
     w(`records skipped by type: ${tally(st.skipped)}`);
-    w(`rows added: sessions ${st.sessionsAdded}, calls ${st.callsAdded}`);
-    w(`rows changed: calls updated ${st.callsUpdated}, calls removed by re-read ${st.callsRemoved}, duplicate message ids ${st.duplicates}`);
+    w(`rows added: sessions ${st.sessionsAdded}, calls ${st.callsAdded}, model costs ${st.modelCostsAdded}`);
+    w(`rows changed: calls updated ${st.callsUpdated}, calls removed by re-read ${st.callsRemoved}, duplicate message ids ${st.duplicates}, model costs updated ${st.modelCostsUpdated}`);
     const id = identify(db);
     w(`identity: cwds ${id.cwds}; sessions in a repository ${id.inRepo}, missing: ${tally(id.missing)}`);
+    w(`identity: path-gone linked by branch ${id.inferred.branch}, by sibling ${id.inferred.sibling}; not linked: ${tally(id.unresolved)}`);
     w(`identity: repositories ${id.repos} (clones ${id.clones}), gone ${id.reposGone}; rows added: repos ${id.reposAdded}, links ${id.linksAdded}; links changed ${id.linksChanged}`);
     const g = collectGit(db);
     w(`git: repositories ${g.repos} (unchanged ${g.skipped}, incremental ${g.incremental}, full ${g.full}, errors ${g.errors})`);
@@ -108,10 +112,10 @@ async function sessionsCmd(args) {
     process.stdout.write(JSON.stringify(rows, null, 2) + '\n');
     return 0;
   }
-  const table = [['cwd', 'day', 'calls', 'cost', 'ctx peak', 'span min', 'models', 'commit within hour']];
+  const table = [['cwd', 'day', 'calls', 'cost', 'ctx peak', 'span min', 'models', 'link', 'commit within hour']];
   for (const r of rows) {
     table.push([r.cwd ?? '-', r.day ?? '-', String(r.calls), r.cost_usd === null ? '-' : r.cost_usd.toFixed(2),
-      String(r.context_peak), r.span_min === null ? '-' : String(r.span_min), r.models.join(',') || '-', r.commit_within_hour]);
+      String(r.context_peak), r.span_min === null ? '-' : String(r.span_min), r.models.join(',') || '-', r.link, r.commit_within_hour]);
   }
   printTable(table);
   process.stdout.write(`${rows.length} sessions\n`);
@@ -154,9 +158,92 @@ async function reposCmd(args) {
   return 0;
 }
 
+const int = (n) => Math.round(n).toLocaleString('en-US');
+const usd = (n) => '$' + n.toFixed(2);
+const pct = (x) => (x === null ? '-' : `${(100 * x).toFixed(1)}%`);
+
+async function metricsCmd(args) {
+  const flags = parseFlags(args, ['repo', 'since', 'store'], ['json']);
+  if (!flags) return usage();
+  if (flags.since && !/^\d{4}-\d{2}-\d{2}$/.test(flags.since)) {
+    process.stderr.write(`tack metrics: --since takes YYYY-MM-DD, got ${flags.since}\n`);
+    return 2;
+  }
+  const { openStore, storePath } = await import('../src/store/open.mjs');
+  const { METRICS, computeAll, loadSelection, resolveRepo } = await import('../src/metrics/index.mjs');
+  const db = openStore(storePath(flags.store));
+  let out;
+  let repo = null;
+  try {
+    if (flags.repo) {
+      const r = resolveRepo(db, flags.repo);
+      if (r.error) {
+        process.stderr.write(`tack metrics: ${r.error}\n`);
+        return 2;
+      }
+      repo = r.key;
+    }
+    const sel = loadSelection(db, { repo, since: flags.since ?? null });
+    out = { repo, since: flags.since ?? null, days: `local (${Intl.DateTimeFormat().resolvedOptions().timeZone})`, sessions: sel.sessions.length, metrics: computeAll(sel) };
+  } finally {
+    db.close();
+  }
+  const declared = METRICS.map((m) => ({ name: m.name, layer: m.layer, definition: m.definition, ...(m.enabledBy ? { enabledBy: m.enabledBy } : {}) }));
+  if (flags.json) {
+    process.stdout.write(JSON.stringify({ ...out, declared }, null, 2) + '\n');
+    return 0;
+  }
+  const m = out.metrics;
+  const w = (x) => process.stdout.write(x + '\n');
+  w(`selection: ${repo ? `repository ${repo.slice(0, 12)}` : 'all sessions'}, since ${out.since ?? 'the first session'}, ${out.sessions} sessions; days are ${out.days}`);
+  w('');
+  w('layer 1, per day');
+  const days = [...new Set([...Object.keys(m.sessions_per_day.days), ...Object.keys(m.tokens_per_day.days), ...Object.keys(m.waits.days)])].sort();
+  const table = [['day', 'sessions', 'cost', 'cost unknown', 'input', 'output', 'cache read', 'cache write', 'waits', 'wait min', 'overlap']];
+  const zero = { input: 0, output: 0, cache_read: 0, cache_creation: 0 };
+  for (const d of days) {
+    const c = m.cost_per_day.days[d] ?? { usd: 0, unknown: 0 };
+    const t = m.tokens_per_day.days[d] ?? zero;
+    const wt = m.waits.days[d] ?? { count: 0, ms: 0 };
+    table.push([d, String(m.sessions_per_day.days[d] ?? 0), usd(c.usd), String(c.unknown), int(t.input), int(t.output), int(t.cache_read),
+      int(t.cache_creation), String(wt.count), int(wt.ms / 60000), String(m.overlap.days[d] ?? 0)]);
+  }
+  const ct = m.cost_per_day.total;
+  const tt = m.tokens_per_day.total;
+  table.push(['total', String(m.sessions_per_day.total), usd(ct.usd), String(ct.unknown), int(tt.input), int(tt.output), int(tt.cache_read),
+    int(tt.cache_creation), String(m.waits.total.count), int(m.waits.total.ms / 60000), '-']);
+  printTable(table);
+  if (m.sessions_per_day.undated) w(`(${m.sessions_per_day.undated} sessions without a timestamp are in the total only)`);
+  w('');
+  w('layer 1, per session');
+  const cp = m.context_peak;
+  w(`  context_peak       median ${cp.median === null ? '-' : int(cp.median)}, max ${cp.max === null ? '-' : int(cp.max)}; at or above ${int(cp.threshold)}: ${cp.atOrAbove} of ${cp.n} (${cp.noCalls} sessions without a main-thread call)`);
+  const cs = m.calls_per_session;
+  w(`  calls_per_session  main thread: total ${int(cs.total)}, median ${cs.median ?? '-'}, max ${cs.max ?? '-'} over ${cs.n} sessions`);
+  w(`  waits              ${m.waits.total.count} gaps above ${m.waits.gapMs / 60000} min, ${int(m.waits.total.ms / 60000)} min in total, in ${m.waits.sessions.filter((x) => x.count).length} sessions`);
+  const pt = m.commit_proximity.total;
+  w(`  commit_proximity   commit within ${m.commit_proximity.windowSec / 3600} h (proximity, not authorship): yes ${pt.yes}, no ${pt.no}, share ${pct(pt.share)}; unknown ${pt.unknown}`);
+  if (!repo) for (const [k, r] of Object.entries(m.commit_proximity.repos)) w(`                     ${k.slice(0, 12)}  yes ${r.yes}, no ${r.no}, share ${pct(r.share)}, unknown ${r.unknown}`);
+  const sc = m.subagent_share;
+  w(`  subagent_share     calls ${int(sc.calls.subagent)} of ${int(sc.calls.total)} (${pct(sc.calls.share)}); cost ${usd(sc.cost.subagentUsd)} of ${usd(sc.cost.totalUsd)} (${pct(sc.cost.share)}), unattributed ${usd(sc.cost.unattributedUsd)}, sessions with cost but no model cost ${sc.cost.sessionsWithoutModelCost}`);
+  const ov = Object.entries(m.overlap.repos).map(([k, per]) => {
+    const [day, max] = Object.entries(per).reduce((a, b) => (b[1] > a[1] ? b : a), ['-', 0]);
+    return `${k.slice(0, 12)} max ${max} (first on ${day})`;
+  });
+  w(`  overlap            ${ov.join('; ') || '-'}${m.overlap.unlinked ? `; ${m.overlap.unlinked} sessions without a repository left out` : ''}`);
+  w('');
+  w('layers 2 and 3');
+  for (const d of declared.filter((x) => x.layer > 1)) {
+    const v = m[d.name] === 'not-adopted' ? 'not adopted' : 'adopted, not implemented (slice 6)';
+    w(`  ${d.name.padEnd(18)} layer ${d.layer}  ${v.padEnd(34)} enabled by ${d.enabledBy}`);
+  }
+  return 0;
+}
+
 const [command, ...rest] = process.argv.slice(2);
 if (command === 'check') process.exitCode = check(rest);
 else if (command === 'scan') process.exitCode = await scanCmd(rest);
 else if (command === 'sessions') process.exitCode = await sessionsCmd(rest);
 else if (command === 'repos') process.exitCode = await reposCmd(rest);
+else if (command === 'metrics') process.exitCode = await metricsCmd(rest);
 else process.exitCode = usage();

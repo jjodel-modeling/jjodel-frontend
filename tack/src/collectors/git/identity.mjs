@@ -4,6 +4,7 @@
 // with disjoint roots are two. A cwd that is gone or not in a work tree is "missing", never
 // "no commit".
 import { realpathSync, statSync } from 'node:fs';
+import { inferLink, inferenceContext } from './infer.mjs';
 import { git } from './run.mjs';
 
 export const MISSING_REASONS = ['no-cwd', 'path-gone', 'not-a-git-work-tree', 'no-commits', 'git-error'];
@@ -59,10 +60,15 @@ const union = (...lists) => [...new Set(lists.flat())].sort();
 /**
  * Resolves every distinct session cwd and rewrites repos and session_repo. Old repository rows
  * that share a root with a present repository are merged into it (a lower root moves the key);
- * the others are marked gone and keep their commits. Returns counts.
+ * the others are marked gone and keep their commits. A session whose cwd is gone is then linked by
+ * inference (infer.mjs) when one repository is the only candidate; `missing` keeps `path-gone`
+ * and `link_method` says how the link was made. Returns counts.
  */
 export function identify(db) {
-  const st = { cwds: 0, inRepo: 0, missing: {}, repos: 0, clones: 0, reposAdded: 0, reposGone: 0, linksAdded: 0, linksChanged: 0 };
+  const st = {
+    cwds: 0, inRepo: 0, missing: {}, repos: 0, clones: 0, reposAdded: 0, reposGone: 0, linksAdded: 0, linksChanged: 0,
+    inferred: { branch: 0, sibling: 0 }, unresolved: {},
+  };
   const cwds = db.prepare('SELECT DISTINCT cwd FROM sessions').all().map((r) => r.cwd);
   const byCwd = new Map();
   const clones = new Map(); // commonDir -> { toplevels, roots, remote } | { reason }
@@ -108,10 +114,10 @@ export function identify(db) {
     gone: db.prepare("UPDATE repos SET state = 'gone', common_dirs = '[]' WHERE key = ? AND state <> 'gone'"),
     del: db.prepare('DELETE FROM repos WHERE key = ?'),
     delCommits: db.prepare('DELETE FROM commits WHERE repo_key = ?'),
-    getLink: db.prepare('SELECT repo_key, missing FROM session_repo WHERE session_id = ?'),
-    insLink: db.prepare('INSERT INTO session_repo (session_id, repo_key, missing) VALUES (?, ?, ?)'),
-    updLink: db.prepare('UPDATE session_repo SET repo_key = ?, missing = ? WHERE session_id = ?'),
-    sessions: db.prepare('SELECT id, cwd FROM sessions'),
+    getLink: db.prepare('SELECT repo_key, missing, link_method, link_reason FROM session_repo WHERE session_id = ?'),
+    insLink: db.prepare('INSERT INTO session_repo (session_id, repo_key, missing, link_method, link_reason) VALUES (?, ?, ?, ?, ?)'),
+    updLink: db.prepare('UPDATE session_repo SET repo_key = ?, missing = ?, link_method = ?, link_reason = ? WHERE session_id = ?'),
+    sessions: db.prepare('SELECT id, cwd, git_branch FROM sessions'),
   };
 
   db.exec('BEGIN');
@@ -145,18 +151,29 @@ export function identify(db) {
     }
     for (const o of old) if (!matched.has(o.key)) st.reposGone += Number(q.gone.run(o.key).changes);
 
-    for (const s of q.sessions.all()) {
+    const sessions = q.sessions.all();
+    const gone = sessions.filter((s) => (byCwd.get(s.cwd) ?? {}).reason === 'path-gone');
+    const ctx = gone.length ? inferenceContext(db, { withBranches: gone.some((s) => s.git_branch) }) : null;
+    for (const s of sessions) {
       const r = byCwd.get(s.cwd) ?? { reason: 'no-cwd' };
-      const key = r.commonDir ? keyOfDir.get(r.commonDir) : null;
+      let key = r.commonDir ? keyOfDir.get(r.commonDir) : null;
       const missing = key ? null : r.reason;
+      let method = key ? 'direct' : 'none';
+      let reason = null;
       if (key) st.inRepo++;
       else st.missing[missing] = (st.missing[missing] ?? 0) + 1;
+      if (missing === 'path-gone') {
+        const inf = inferLink({ cwd: s.cwd, branch: s.git_branch }, ctx);
+        ({ key, method, reason } = inf);
+        if (key) st.inferred[method]++;
+        else st.unresolved[reason] = (st.unresolved[reason] ?? 0) + 1;
+      }
       const ex = q.getLink.get(s.id);
       if (!ex) {
-        q.insLink.run(s.id, key, missing);
+        q.insLink.run(s.id, key, missing, method, reason);
         st.linksAdded++;
-      } else if (ex.repo_key !== key || ex.missing !== missing) {
-        q.updLink.run(key, missing, s.id);
+      } else if (ex.repo_key !== key || ex.missing !== missing || ex.link_method !== method || ex.link_reason !== reason) {
+        q.updLink.run(key, missing, method, reason, s.id);
         st.linksChanged++;
       }
     }

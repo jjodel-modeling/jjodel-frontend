@@ -3,10 +3,10 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 // Schema file per version: a store at version n is brought forward by the files above n.
-const SCHEMA_FILES = { 1: './schema.sql', 2: './schema-2.sql' };
+const SCHEMA_FILES = { 1: './schema.sql', 2: './schema-2.sql', 3: './schema-3.sql' };
 
 /** One store per user, outside every scanned repository: --store, then TACK_STORE, then ~/.tack/store.db. */
 export function storePath(flag) {

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1335
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: full (metrics module over the store plus an identity fix in the collectors; discovery done in P-2026-10-19-1100)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s4 · code written by P-2026-10-19-1335 (context ceiling, RC-51), completed by P-2026-10-19-1405 · 384348c49
 Depends: P-2026-10-19-1305
 Corregge: P-2026-10-19-1305 (196 of 592 sessions left `path-gone`, mostly deleted Jjodel lane worktrees; `--no-renames` mutation survived)
 Request: Alfonso, 2026-10-19 13:32, in the project chat: «procedi con la slice 4 ?»
