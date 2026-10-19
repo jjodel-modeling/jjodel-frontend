@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-0052
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane merge · 56c66ea52 · verifica visiva passata 2026-10-20 (Chat checked the Lanes tab on 4710 from the tack-s8 worktree at e68c140bb (renders, Waiting 0 vs 14 before the fix, P-2026-10-19-1800 and 2140 not listed, Prompt-IDs whole, titles wrap, running and last-24h sections populated); tack code at the merge identical to the checked tip; decided under R-TACK-4)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-20-0052 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

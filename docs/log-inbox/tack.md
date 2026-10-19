@@ -293,3 +293,16 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-s8/board.pid)
 **Notes**: Causa (c): the Q2 rule was ratified without measuring it on the real store, where a commit names several ids and one reaches the unit slot. Out-of-scope: schema 7 and a new test file (under tack/**). 4710: Waiting 14 -> 1 (P-2026-10-20-0015, as 4700). Store kept, upgraded 6 -> 7 in place; first start re-reads git (41-49 s), first status pass about 8 s once, then 0.4 s a minute. A deleted checkout as git cwd threw; handled. 218 tests pass.
 **Prompt document name**: 2026-10-20 00:40
+
+## 2026-10-20 — merge: tack-s8 into alfonso-frontend-jjtl (P-2026-10-20-0052)
+**Prompt**: `claude_2026-10-20_0052_prompt_merge_tack-s8.md`, a direct merge by `lane-run merge --direct`, no session: `tack-s8` at `e68c140bb` into `alfonso-frontend-jjtl`, merge base `0a200b188`, 12 commits on the branch side.
+**Files touched**: merge `56c66ea52`: 23 files from the branch side (`docs/discovery/discovery_2026-10-19_tack_lanes_page.md`, `docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-19_2320_prompt_tack_s8_lanes_page_disc.md`, `tack/README.md`, `tack/src/board/api.mjs`, `tack/src/board/board.css`, `tack/src/board/board.js`, `tack/src/board/lanes.js`, and 15 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `56c66ea52` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9436 tests in 384 files, 9 red at import, hooks 952; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat checked the Lanes tab on 4710 from the tack-s8 worktree at e68c140bb (renders, Waiting 0 vs 14 before the fix, P-2026-10-19-1800 and 2140 not listed, Prompt-IDs whole, titles wrap, running and last-24h sections populated); tack code at the merge identical to the checked tip; decided under R-TACK-4
+**Notes**: Rollback tag `pre-tack-s8` on `87eba6097` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0052/result.json`.
+**Prompt document name**: 2026-10-20 00:52
