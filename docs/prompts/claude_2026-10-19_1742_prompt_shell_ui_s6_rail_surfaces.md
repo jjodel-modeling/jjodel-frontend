@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1742
 Chat: C-2026-10-19-1610
 Front: shell-ui
 Lane: full (rail sheets plus an additive prop on JjSelect)
-Status: da eseguire
+Status: eseguito 2026-10-19, lane P-2026-10-19-1742 (shell-ui-s6, 89f524305); visual check passed (chat, 3016, 1600x1000)
 Depends: P-2026-10-19-1725
 Request: Alfonso, 2026-10-19 17:05: «si, procedi in automatico con /lane auto anche per l'implementazione».
 
