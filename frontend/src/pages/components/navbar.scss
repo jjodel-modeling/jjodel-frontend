@@ -480,9 +480,9 @@
 
   &>ul{
     background-color: var(--color-bg-elevated);
-    box-shadow: var(--shadow-dropdown);
-    border: 1px solid var(--color-border-primary);
-    border-radius: var(--radius-lg);
+    box-shadow: var(--shell-menu-shadow);
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius-menu);
     padding: var(--space-2);
     list-style: none;
   }
@@ -509,7 +509,7 @@
   ul li hr {
     position: relative;
     border: none;
-    border-top: 1px solid var(--color-border-primary);
+    border-top: 1px solid var(--shell-border);
     width: calc(100% - var(--space-3));
     left: calc(var(--space-1) + var(--space-half));
     margin: var(--space-1) 0;
@@ -524,7 +524,7 @@
     width: calc(100% - var(--space-2));
     margin: 0 var(--space-1);
     padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-md);
+    border-radius: var(--shell-radius-control);
     transition: var(--transition-fast);
   }
 
@@ -582,7 +582,7 @@
 
   .highlight{
     /* Use consistent height */
-    min-height: 30px;
+    min-height: var(--shell-menu-item-height);
     display: flex;
     align-items: center;
 
@@ -615,7 +615,7 @@
 
     &:hover, &:focus-within{
       >label{
-        border-radius: var(--radius-md);
+        border-radius: var(--shell-radius-control);
         background-color: var(--color-accent);
         color: white;
 
@@ -644,14 +644,14 @@
       align-items: center;
 
       /* Use consistent padding with design tokens */
-      padding: var(--space-2) var(--space-3);
+      padding: 0 var(--space-3);
       width: 100%;
 
       /* Typography */
       font-family: var(--font-sans);
       font-size: var(--text-sm);
       font-weight: var(--font-normal);
-      color: var(--color-text-primary);
+      color: var(--shell-text-1);
 
       /* Transition */
       transition: var(--transition-fast);
@@ -690,7 +690,7 @@
           background: rgba(0, 0, 0, 0.06);
           border: 1px solid rgba(0, 0, 0, 0.1);
           border-radius: 4px;
-          color: #6b7280;
+          color: var(--shell-text-3);
           white-space: nowrap;
           line-height: 1.2;
           box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
@@ -853,7 +853,7 @@ $transition-menu: 150ms ease;
   color: $color-text-menu;
   background: transparent;
   border: none;
-  border-radius: $menu-item-radius;
+  border-radius: var(--shell-radius-control);
   cursor: pointer;
   transition: all $transition-menu;
 
@@ -1022,6 +1022,39 @@ $transition-menu: 150ms ease;
     transform: translateX(0);
     pointer-events: auto;
   }
+}
+
+// User menu panel on the shell menu treatment (S5). menu.scss paints it; the
+// portal puts it on document.body, outside every shell root, so each var() carries
+// the value the shell token aliases. `body >` outranks the (0,1,0)/(0,2,1) rules of
+// menu.scss whatever the load order. Density follows html[data-mode] (R-SHELL-2).
+body > .dropdown.dropdown--portal {
+  border: 1px solid var(--shell-border, var(--color-panel-border));
+  border-radius: var(--shell-radius-menu, var(--radius-md));
+  box-shadow: var(--shell-menu-shadow, 0 4px 12px rgba(15, 23, 42, 0.08));
+
+  > div.item {
+    height: var(--shell-menu-item-height, 36px);
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: var(--shell-radius-control, var(--radius-sm));
+  }
+
+  .user-header {
+    border-bottom-color: var(--shell-border, var(--color-panel-border));
+
+    .user-email {
+      color: var(--shell-text-3, var(--color-text-placeholder));
+    }
+  }
+
+  hr.divisor {
+    border-top-color: var(--shell-border, var(--color-panel-border));
+  }
+}
+
+html[data-mode="advanced"] body > .dropdown.dropdown--portal > div.item {
+  height: var(--shell-menu-item-height, 28px);
 }
 
 // Header Right Section
