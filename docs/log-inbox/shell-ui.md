@@ -158,3 +158,16 @@ not touched by this lane.
 **Smoke visivo**: passato — chat GO on 3019 (ShellCheck, metamodel, Basic, 1600x1000): rects unchanged, headers 26px, text <11px 0, select input border 0, console init_dash only; residual corner misses on half-pixel rows and props header/vsplit accepted
 **Notes**: DemoPetri 1600x1000, 4 states x2: rects same; select input border 1px/30px -> 0/auto(16), control 1309,304,277,30 same; headers 23 -> 26/24; labels <11px 17 -> 0, no collisions; toggle misses B 72 -> 24 cells (filter row left), add 0/576 before and after (no change). Report split from the code commit by bash-guard P13. Gates: typecheck 0, vitest 33/33, build 0, smoke GREEN 12/0/3. Detail in the discovery report §4, §8.
 **Prompt document name**: 2026-10-19 20:50
+
+## 2026-10-19 — merge: shell-ui-s9 into alfonso-frontend-jjtl (P-2026-10-19-2128)
+**Prompt**: `claude_2026-10-19_2128_prompt_merge_shell-ui-s9.md`, a direct merge by `lane-run merge --direct`, no session: `shell-ui-s9` at `7d70a7387` into `alfonso-frontend-jjtl`, merge base `4f562dc86`, 3 commits on the branch side.
+**Files touched**: merge `ab5225ccc`: 5 files from the branch side (`docs/discovery/discovery_2026-10-19_shell_rail_tickets.md`, `docs/log-inbox/shell-ui.md`, `docs/prompts/claude_2026-10-19_2050_prompt_shell_ui_s9_tickets.md`, `frontend/src/components/editors/node-editor-redesign.scss`, `frontend/src/components/editors/properties-with-tree-view.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ab5225ccc` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9415 tests in 384 files, 9 red at import, hooks 936; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat: S9 frontend changes at ab5225ccc identical to the shell-ui-s9 tip 7d70a7387 checked on 3019 (frontend diff empty; headers 26px, rail text <11px 0, select input border 0, rects unchanged, console init_dash only).
+**Notes**: Rollback tag `pre-shell-ui-s9` on `c72869d2e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2128/result.json`.
+**Prompt document name**: 2026-10-19 21:28
