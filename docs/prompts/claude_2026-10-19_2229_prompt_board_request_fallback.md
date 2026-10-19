@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2229
 Chat: C-2026-10-19-1747
 Front: harness
 Lane: fast (one fallback in `lane-board.mjs`, its test, README line)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane boardurl · df1803517 · board on 4701: 12 of 12 backfilled Tack rows carry a chatUrl from the trunk prompt (rows without one 268 -> 254)
 Depends: P-2026-10-19-2105
 Corregge: P-2026-10-19-2105 (step 5 failed: the backfilled `Request:` lines never reach the board)
 Request: https://claude.ai/code/session_018RaPfFUZaHRjEo11BkNXZB (Alfonso, 2026-10-19 22:26: «ok alle raccomandazioni», item 2)
