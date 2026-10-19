@@ -6,7 +6,7 @@ Front: simulator
 Lane: full (continuation of P-2026-10-20-0015 after the AM-8 context ceiling)
 Depends: P-2026-10-20-0015
 Request: none (continuation; the request is kept with P-2026-10-20-0015)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane sim-docs · 45b575dcf
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: same as P-2026-10-20-0015 (no two-phase hard stop; documentation only).

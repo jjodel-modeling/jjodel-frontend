@@ -6,7 +6,7 @@ Front: simulator
 Lane: full (more than three files; synthesis across spec, decisions and code)
 Depends: none
 Request: none (typed in the project chat; Alfonso's words kept locally in request.md)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane sim-docs · 45b575dcf
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: the two-phase hard stop (P4/P16) does not apply: the lane writes documentation only, on its own branch, and the discovery report below is still mandatory and comes first (motive: no code, no persisted data, fully reversible before merge).
