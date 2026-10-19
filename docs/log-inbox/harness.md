@@ -620,3 +620,29 @@ Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of rep
 **Smoke visivo**: passato — chat, unattended: visual check not needed: docs and discovery data only, nothing under frontend/src
 **Notes**: Rollback tag `pre-health-disc` on `0042621cd` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-0907/result.json`.
 **Prompt document name**: 2026-10-19 09:07
+
+## 2026-10-19 — merge: menubar-disc into alfonso-frontend-jjtl (P-2026-10-19-0150)
+**Prompt**: `claude_2026-10-19_0150_prompt_merge_menubar-disc.md`, a direct merge by `lane-run merge --direct`, no session: `menubar-disc` at `45a226b7e` into `alfonso-frontend-jjtl`, merge base `1c2f8efa4`, 16 commits on the branch side.
+**Files touched**: merge `590063d13`: 33 files from the branch side (`tools/lane-monitor-app/` (25), `frontend/scripts/lane-board/{lane-board.mjs, README.md}`, `frontend/scripts/hooks/__tests__/laneBoardAttention.test.ts`, `docs/discovery/discovery_2026-10-18_lane_monitor_menubar_app.md`, `.gitignore`, `docs/log-inbox/harness.md` and the S1 to S5 prompts); closure commit of P-2026-10-19-1020: this entry and the Status of the prompt file.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no. Gates on `590063d13` in the worker: typecheck 0 errors; typecheck:scripts exit 0; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 9415 tests, 9 red at import, hooks 936, 25 failed, the same 25 as on the receiving tip before the merge (`vitest-before.json` against `vitest-after.json`), 0 on the incoming branch.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (closed blocked on the vitest gate; no UI under frontend/src)
+**Notes**: Rollback tag `pre-menubar-disc` on `ad517212d` (RC-31). The 25 reds: `lane-run.mjs` imported `decisions-query.ts` in-process and the merge ran on node v23.3.0; fixed by P-2026-10-19-1020. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-0150/result.json`. Closed here, not by `go`, as P-2026-10-19-1020 asks.
+**Prompt document name**: 2026-10-19 01:50
+
+## 2026-10-19 — fix(lane-run): read the register in a child node with the flag (P-2026-10-19-1020)
+**Prompt**: `claude_2026-10-19_1020_prompt_lanerun_tests.md`, lane session `eeda8ca7-1ac6-4efa-a57b-e95e2179614f`: measure the 25 red lane-run tests, fix the cause where it lives, close the merge P-2026-10-19-0150.
+**Files touched**: `1af036abe`: `frontend/scripts/lane-run.mjs` (`citedDecisions`), `frontend/scripts/hooks/__tests__/laneRunRouting.test.ts` (one wrapper argv); this commit: this entry, the merge's entry, the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. The three files 172/172 with plain node v23.3.0 and with `NODE_OPTIONS=--experimental-strip-types` (before: 25 red both ways, measured on a temporary worktree at `6b3c265d4`); scripts/hooks 936/936; typecheck:scripts exit 0; check:scripts PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: Cause in lane-run, not the tests: `citedDecisions` imported a `.ts` in-process, so it needed its own node to strip types; the tests spawn it with a replaced env, so NODE_OPTIONS never reaches it. Now a child node with the flag, like `gateCli`. Second cause, in the test: its wrapper lacked `--disable-warning`, and the warning read as a broken CLI. What differed in P-2026-10-19-0907: node v26.8.1 (`~/.local/bin`); pre-fix routing file 13/13 there.
+**Prompt document name**: 2026-10-19 10:20

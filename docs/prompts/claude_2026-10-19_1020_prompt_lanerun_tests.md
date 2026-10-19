@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1020
 Chat: C-2026-10-18-2225
 Front: harness
 Lane: fast (three test files of lane-run and, if the cause is there, lane-run itself; then a docs-only closure; no critical zone)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane lanerun-tests · 1af036abe
 Depends: P-2026-10-19-0150
 Corregge: —
 Request: Alfonso, 2026-10-19 morning, in chat C-2026-10-18-2225: «procedi» on the recommendation «a small lane on the 25 red lane-run tests, then close the merge».

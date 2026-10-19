@@ -330,7 +330,7 @@ describe('lane-run start: the decisions and log entries injected (AM-5)', () => 
         expect(existsSync(laneDir(l))).toBe(false);
         // The log CLI alone broken: refused the same way.
         const real = resolve(HERE, '..', '..', 'gates', 'decisions-query.ts');
-        writeFileSync(join(broken, 'decisions-query.ts'), `import { spawnSync } from 'node:child_process';\nconst r = spawnSync(process.execPath, ['--experimental-strip-types', ${JSON.stringify(real)}, ...process.argv.slice(2)], { stdio: 'inherit' });\nprocess.exit(r.status ?? 1);\n`);
+        writeFileSync(join(broken, 'decisions-query.ts'), `import { spawnSync } from 'node:child_process';\nconst r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '--experimental-strip-types', ${JSON.stringify(real)}, ...process.argv.slice(2)], { stdio: 'inherit' });\nprocess.exit(r.status ?? 1);\n`);
         const r2 = laneRun(l, ['start', l.worktree, 'prompt.md'], { LANE_RUN_GATES: broken });
         expect(r2.status).toBe(2);
         expect(r2.stderr).toContain('npm run log:find exited 3: boom');

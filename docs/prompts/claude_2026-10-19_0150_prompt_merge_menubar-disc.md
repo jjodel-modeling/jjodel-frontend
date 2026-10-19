@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-19-0150
 Chat: C-2026-10-18-2225
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-19 · merge 590063d13 · gates green but vitest, whose 25 reds pre-existed on the receiving tip and are fixed by P-2026-10-19-1020
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-19-0150 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
