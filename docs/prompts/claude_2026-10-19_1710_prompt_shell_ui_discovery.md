@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1710
 Chat: C-2026-10-19-1610
 Front: shell-ui
 Lane: full (read-only discovery that plans a multi-lane implementation)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane shell-ui · Phase 1 report, docs commit carrying this line · hard-stop, Phase 2 written by the chat (RC-26)
 Request: Alfonso, 2026-10-19 17:05, in the project chat: «si, procedi in automatico con /lane auto anche per l'implementazione», after the Linear-style shell pilot and the chat's recommendation to turn it into a front.
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).

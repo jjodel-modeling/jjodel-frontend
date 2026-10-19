@@ -55,6 +55,10 @@
 /* 10. Layout - Altezze del chrome (app bar, toolbar, status bar) */
 @import './layout';
 
+/* 11. Shell - Chrome-scoped aliases (app bar, toolbar, palette, rail, status bar, menu).
+   AFTER the files it aliases. Never read by the canvas. */
+@import './shell';
+
 /* ============================================
    GLOBAL RESETS & BASE STYLES
    Apply design tokens to base elements
