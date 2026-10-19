@@ -887,3 +887,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: non applicabile
 **Notes**: Offset from logFrom of the last runs.jsonl line; new additive errFrom for the stderr tail. `limit` regardless of exit code: a real weekly-limit run (P-2026-09-28-2332) exited 0. laneRun.test.ts 141 green, five new, mutation bench 3/1/1 killed. Board and lane-tracking take the value as is (no choke); Tack derives its own outcome from the whole log and keeps the stale read.
 **Prompt document name**: 2026-10-20 00:30
+
+## 2026-10-20 — merge: lane-status-stale into alfonso-frontend-jjtl (P-2026-10-20-0102)
+**Prompt**: `claude_2026-10-20_0102_prompt_merge_lane-status-stale.md`, a direct merge by `lane-run merge --direct`, no session: `lane-status-stale` at `1a96ce5fd` into `alfonso-frontend-jjtl`, merge base `b91d9bb1a`, 3 commits on the branch side.
+**Files touched**: merge `bd583958c`: 5 files from the branch side (`docs/harness/gates.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-20_0030_prompt_lane_status_stale_outcome.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bd583958c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9441 tests in 384 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates only, all green (typecheck 0, vitest 9441 with the 9 known import reds, build 0, checks 0); scripts only, lane-run status reads the Outcome of the latest run
+**Notes**: Rollback tag `pre-lane-status-stale` on `8c2616a4a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0102/result.json`.
+**Prompt document name**: 2026-10-20 01:02
