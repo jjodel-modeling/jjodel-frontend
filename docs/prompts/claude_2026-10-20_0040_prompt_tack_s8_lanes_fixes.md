@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-0040
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: fast (two corrections found by the chat's visual check, on the slice 8 branch before its merge)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane tack-s8 · af237fdf9 · visual check by the chat on 4710 (RC-23) pending
 Depends: P-2026-10-20-0018
 Corregge: P-2026-10-19-2330
 Request: Alfonso, 2026-10-19 23:43, in the project chat: «gestisci il tuo in automatico» (R-TACK-4)
