@@ -6236,6 +6236,9 @@ Rows R-LIB-11..19 are **provisional**: their direction was approved by Alfonso i
 - **R-LIB-19** (2026-10-19, provisional, unattended, evidence: read, verified: none, reversible: trunk).
   **Catalog entries gain `level`, `concepts[]`, an optional `callout` and `preview`; metamodel and model counts are derived, never written.** The handoff's `kind` is not added: it is the `tier` field R-LIB-9 already ratified (`template | example`), so the catalog keeps one field (the chat's reading, recorded as unattended, RC-25).
 
+- **R-LIB-20** (2026-10-19, ratified by Alfonso 2026-10-19 16:09 «Si velocissimo» on the chat's recommendations after P-2026-10-19-1510, evidence: measured, verified: none, reversible: trunk).
+  **The 3.2 cut of the templates handoff, and its Q3/Q4.** In 3.2: the Templates page (L-B1), the dashboard sidebar and quick tip (L-B2), PNG previews from headless snapshots (L-C), the New model dialog with the «Metamodel in this project» tab only (L-D), File › New without a Built-in section in Basic and Advanced (L-E). Out of 3.2, with the sealed notations S4/S5 (R-LIB-7): the Notations page and its BROWSE item, the Built-in tab, Model › <notation> and Browse notations…, handoff Q1 and Q2. Q4: Collections out of 3.2. Q3: levels and Start here as in the handoff §2.5; concepts as there except families-persons «transformation» → «multiple-metamodels», «simulation» added to turnstile and petri-producer-consumer, «containment» added to shapes and graph. Evidence: `docs/discovery/discovery_2026-10-19_templates_notations_file_new.md` §3.3, §4, §6, §7.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
