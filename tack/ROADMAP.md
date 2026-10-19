@@ -26,3 +26,15 @@ Source: the harness front, 2026-10-19, recorded by the chat that owns the `tack`
 4. Decisions the chat takes under RC-53 are reported in chat, one line each. To be counted by Tack they also need a machine-readable form (commit trailer or log-inbox line); this is a prerequisite of the view below, to be agreed with the harness front.
 
 **View wanted before the engine:** unattended decisions per front, with how many were later corrected. Lane-side adoptions (RC-21) are counted per lane by slice 8. «Corrected» can only be measured per lane, not per decision: a lane counts as corrected when a later prompt names it in `Corregge:`.
+
+## After v0: phase ladder per project
+
+Source: Tack slice 8, the Lanes page (P-2026-10-19-2320 discovery §2, P-2026-10-19-2330), 2026-10-19.
+
+**Idea.** A ladder of phases defined in `tack.json` replaces the Jjodel-specific regexes of the 4700 board (`frontend/scripts/lane-board/lane-board.mjs`, milestones 210-215, matchers 217-246: tests first, gates, probe). Each project names its milestones and the tool-call pattern that marks each one reached; the Lanes page shows `k/n · <last milestone>` on a running card. Until then the page shows the phase cell disabled with the reason «Phase progress is not tracked in v0».
+
+**Constraints for the design slice.**
+
+1. The ladder is project level only (`tack.json`), one per lane kind, with no default ladder: without one the cell stays disabled.
+2. Matching reads the tool calls of `log.jsonl` in memory and stores only the milestone index reached, never the command text (the `readLane` rule: text is classed and dropped).
+3. `tack check` validates the patterns (compilable, bounded length) and rejects a ladder whose milestones cannot be told apart.
