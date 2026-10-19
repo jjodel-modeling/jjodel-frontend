@@ -1057,22 +1057,33 @@ function injectionFailed(what, detail) {
 async function citedDecisions(worktree, text) {
     const file = join(worktree, 'docs', 'decisions.md');
     if (!existsSync(file)) return null;
-    let q;
-    let reg;
+    // decisions-query.ts is TypeScript: it is loaded in a child node with the flag, as gateCli
+    // runs the gates, so the scan works whatever flags this script's own node was started with.
+    const scan = `import { readFileSync } from 'node:fs';
+const { url, file, text, re } = JSON.parse(readFileSync(0, 'utf8'));
+const q = await import(url);
+const reg = q.loadRegister(readFileSync(file, 'utf8'));
+const series = new Set(reg.rows.map((r) => q.seriesOf(r.id)));
+const ids = [];
+for (const [, id, date] of text.matchAll(new RegExp(re, 'g'))) {
+    const known = q.findRows(reg, id).length > 0;
+    if (!known && !(/-\\d+(?:-bis)?$/.test(id) && series.has(q.seriesOf(id)))) continue;
+    const arg = known && date ? id + ' (' + date + ')' : id;
+    if (!ids.includes(arg)) ids.push(arg);
+}
+process.stdout.write(JSON.stringify(ids));
+`;
+    const input = JSON.stringify({ url: pathToFileURL(join(dirname(SELF), 'gates', 'decisions-query.ts')).href, file, text, re: ID_TOKEN.source });
+    const r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '--experimental-strip-types', '--input-type=module', '-e', scan], {
+        input, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+    });
+    let ids = null;
     try {
-        q = await import(pathToFileURL(join(dirname(SELF), 'gates', 'decisions-query.ts')).href);
-        reg = q.loadRegister(readFileSync(file, 'utf8'));
-    } catch (err) {
-        injectionFailed('the register ' + file + ' was not read', err && err.message ? err.message : String(err));
+        ids = r.status === 0 ? JSON.parse(r.stdout) : null;
+    } catch {
+        ids = null;
     }
-    const series = new Set(reg.rows.map((r) => q.seriesOf(r.id)));
-    const ids = [];
-    for (const [, id, date] of text.matchAll(ID_TOKEN)) {
-        const known = q.findRows(reg, id).length > 0;
-        if (!known && !(/-\d+(?:-bis)?$/.test(id) && series.has(q.seriesOf(id)))) continue;
-        const arg = known && date ? id + ' (' + date + ')' : id;
-        if (!ids.includes(arg)) ids.push(arg);
-    }
+    if (!Array.isArray(ids)) injectionFailed('the register ' + file + ' was not read', (r.stderr || '') + (r.error ? r.error.message : '') || 'exit ' + r.status);
     return ids;
 }
 
