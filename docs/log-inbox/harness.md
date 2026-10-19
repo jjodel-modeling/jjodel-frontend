@@ -808,3 +808,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Ticket**: `header()` in `lane-board.mjs` (line 77) takes the header from `input-1.md` in the lane folder, falling back to `prompt.txt` and then to the trunk copy. A `Request:` line fixed in `docs/prompts/` after launch never reaches the board's `chatUrl`, so the 12 Tack lanes of `C-2026-10-19-0001` and `C-2026-10-19-1748` stay unlinked even after the backfill. Fix in a lane of its own: when the input copy's `Request:` is not a URL, read the trunk prompt's `Request:` before the commit trailer.
 **Priority**: medium
 **Found in**: P-2026-10-19-2105
+
+## 2026-10-19 — merge: requrl into alfonso-frontend-jjtl (P-2026-10-19-2227)
+**Prompt**: `claude_2026-10-19_2227_prompt_merge_requrl.md`: merge of `requrl` at `aa41865ae` (P-2026-10-19-2105, Request URL gate and Tack backfill), `--no-ff`, in a session; governance file `docs/PROTOCOL.md` on the branch, launch allowed by `--governance-goahead`.
+**Files touched**: merge commit `f6200c7a3` (17 files of the branch, no conflict, no union); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest 9423 passed = 9415 on the tip + 8 new on the branch, the same 9 files red at import; hook tests 944 = 936 + 8. `irCollapsedRender.test.ts` timed out in `afterAll` (Chromium close) in the first loaded run only, 13/13 alone, absent in the rerun. typecheck, typecheck:scripts, build, check:docs 5/5, check:agents, check:scripts, check:addonly green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO 2026-10-19 on 3001 (unattended; Alfonso in the morning digest)
+**Notes**: Merge-tree tree `e1f88ca47` equals the committed tree. Files changed since the base: 17 branch, 11 trunk, none on both sides. Probes 4/4 at 1. Lane board not restarted: no file under `frontend/scripts/lane-board/` changed. The merge body's measurement time reads `22:3x`, an imprecise timestamp; left as is.
+**Prompt document name**: 2026-10-19 22:27
