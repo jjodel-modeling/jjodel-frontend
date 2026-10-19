@@ -254,3 +254,16 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: passato — chat, unattended: Alfonso checked slice 7 on the 4710 board from the tack-s7 worktree (settings page, themes, load strip, desktop test notification delivered): ok fetta 7, 2026-10-19 22:45; tack code at the merge identical to the checked tip 022d7109f
 **Notes**: Rollback tag `pre-tack-s7` on `b3bcc7fba` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2248/result.json`.
 **Prompt document name**: 2026-10-19 22:48
+
+## 2026-10-19 — feat: Tack slice 8, the Lanes page (Phase 2)
+**Prompt**: Phase 2 of P-2026-10-19-2320: the three commits of report §6 (schema 6 and the collector, /api/lanes with the collect-on-read throttle, the Lanes page as first tab), the ROADMAP entry «Phase ladder per project», full suite, board on 4710, closure
+**Files touched**: tack/** (16 files: 923f7d4bf, 736e04b88, 5d2146df9; tack/ROADMAP.md in its own commit), docs/prompts/claude_2026-10-19_2320_prompt_tack_s8_lanes_page_disc.md (Status), docs/log-inbox/tack.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (above five files, every one under `tack/**` or listed in DOVE)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board left running on 4710)
+**Notes**: Full tack/test suite: 208 tests, 208 pass, 0 fail (slice 7: 185). Eight unattended decisions in the lane handoff (~/.jjodel-lanes/P-2026-10-19-2330/handoff.md). The P-2026-10-19-2330 Status is not flipped: its prompt file is only on the trunk (c9b903250); the flip is owed by the merge or the chat. Session closed at the AM-8 soft ceiling.
+**Prompt document name**: 2026-10-19 23:30
