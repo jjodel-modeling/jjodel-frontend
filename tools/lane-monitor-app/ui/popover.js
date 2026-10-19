@@ -199,13 +199,124 @@ $('restart').addEventListener('click', () => {
     });
 });
 
+// Settings view. Theme, notifications and the login item apply on change; board URL and
+// shortcut on Save. Validation, registration and the write are Rust's (config.rs, main.rs);
+// this page only shows the answer, field by field.
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme || 'system';
+}
+
+function renderSettings(v, fields) {
+  applyTheme(v.theme);
+  for (const r of document.querySelectorAll('input[name="theme"]')) r.checked = r.value === v.theme;
+  $('notifications').checked = v.notifications;
+  if (!fields) return;
+  $('board').value = v.board;
+  $('shortcut').value = v.shortcut;
+  $('board-note').hidden = !v.boardNote;
+  $('board-note').textContent = v.boardNote || '';
+  // Head and tail of the path; the tail is the last two segments, never cut.
+  const cut = v.configPath.lastIndexOf('/', v.configPath.lastIndexOf('/') - 1) + 1;
+  $('path-head').textContent = v.configPath.slice(0, cut);
+  $('path-tail').textContent = v.configPath.slice(cut);
+  $('path-line').title = v.configPath;
+}
+
+function fieldError(name, text) {
+  const node = $(name + '-err');
+  node.hidden = !text;
+  node.textContent = text || '';
+  const input = $(name);
+  if (input) input.setAttribute('aria-invalid', text ? 'true' : 'false');
+}
+
+function clearErrors() {
+  for (const name of ['board', 'shortcut', 'file']) fieldError(name, null);
+}
+
+// Resolves with the saved view, or shows each field's error and rejects.
+function save(patch) {
+  clearErrors();
+  $('saved').textContent = '';
+  return invoke('save_settings', { patch }).catch((e) => {
+    const errs = typeof e === 'object' && e ? e : { file: String(e) };
+    fieldError('board', errs.board);
+    fieldError('shortcut', errs.shortcut);
+    fieldError('file', errs.file);
+    fit();
+    throw e;
+  });
+}
+
+function showSettings() {
+  $('lanes-view').hidden = true;
+  $('status').hidden = true;
+  $('gear').hidden = true;
+  $('settings-view').hidden = false;
+  $('back').hidden = false;
+  $('title').textContent = 'Settings';
+  clearErrors();
+  $('saved').textContent = '';
+  invoke('settings').then((v) => { renderSettings(v, true); fit(); });
+  invoke('login_state').then(renderLogin);
+  fit();
+}
+
+function showLanes() {
+  $('settings-view').hidden = true;
+  $('back').hidden = true;
+  $('lanes-view').hidden = false;
+  $('status').hidden = false;
+  $('gear').hidden = false;
+  $('title').textContent = 'Lanes';
+  fit();
+}
+
+$('gear').addEventListener('click', showSettings);
+$('back').addEventListener('click', showLanes);
+
+for (const r of document.querySelectorAll('input[name="theme"]')) {
+  r.addEventListener('change', () => {
+    const before = document.documentElement.dataset.theme;
+    applyTheme(r.value);
+    save({ theme: r.value }).then((v) => renderSettings(v, false)).catch(() => applyTheme(before));
+  });
+}
+
+$('notifications').addEventListener('change', () => {
+  const want = $('notifications').checked;
+  save({ notifications: want }).then((v) => renderSettings(v, false)).catch(() => { $('notifications').checked = !want; });
+});
+
+$('settings-view').addEventListener('submit', (e) => {
+  e.preventDefault();
+  $('save').disabled = true;
+  save({ board: $('board').value, shortcut: $('shortcut').value })
+    .then((v) => {
+      renderSettings(v, true);
+      $('saved').textContent = 'Saved';
+      invoke('restart_state').then(renderRestart);
+    })
+    .catch(() => {})
+    .finally(() => { $('save').disabled = false; fit(); });
+});
+
 $('open').addEventListener('click', () => openMonitor(null));
+$('quit').addEventListener('click', () => invoke('quit'));
 $('more').addEventListener('click', () => openMonitor(null));
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') invoke('hide_popover');
+  // Cmd+Q, when the app menu's key equivalent does not take it first.
+  if (e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'q') {
+    e.preventDefault();
+    invoke('quit');
+  }
 });
 
 listen('attention', (e) => render(e.payload));
+// Each show from the tray or the shortcut opens on the lanes.
+listen('shown', () => { if (!$('settings-view').hidden) showLanes(); });
+invoke('settings').then((v) => renderSettings(v, false));
 // A config or shortcut problem the app found at launch (registration failure included).
 invoke('footer_note').then((note) => {
   if (!note) return;

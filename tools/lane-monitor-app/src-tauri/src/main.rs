@@ -7,8 +7,11 @@
 //! that starts waiting posts a system notification (`notify.rs`); a click on it opens the
 //! monitor on that lane. A `jjodel-lanes://<Prompt-ID>` link opens the monitor on that lane,
 //! and a global shortcut (default ⌃⌥⌘L) toggles the popover (`links.rs`). The popover footer
-//! carries «Start at login» (the app's own LaunchAgent) and «Restart board» (`restart.rs`).
+//! carries «Restart board» (`restart.rs`); the Settings view edits theme, board URL, shortcut,
+//! «Start at login» (the app's own LaunchAgent) and notifications, saved to `config.json`
+//! (`config.rs`) and applied without a restart.
 
+mod config;
 mod links;
 mod notify;
 mod poll;
@@ -28,7 +31,7 @@ use tauri::{
 
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_deep_link::DeepLinkExt;
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri_plugin_notification::NotificationExt;
 
 use poll::Snapshot;
@@ -42,7 +45,16 @@ const POLL_EVERY: Duration = Duration::from_secs(30);
 const REOPEN_GUARD: Duration = Duration::from_millis(300);
 
 struct Shared {
-    board: String,
+    /// The board this run reads; a save in Settings replaces it.
+    board: Mutex<String>,
+    /// `LANE_MONITOR_BOARD` at launch, for the Settings view's note.
+    env_board: Option<String>,
+    /// `config.json` as last read or written; held for the whole of a save.
+    config: Mutex<links::Config>,
+    /// `$HOME/<CONFIG_PATH>`, or why there is none.
+    config_path: Result<std::path::PathBuf, String>,
+    /// The chord registered now, if any.
+    shortcut: Mutex<Option<Shortcut>>,
     /// `LANE_MONITOR_OPEN_POPOVER=1`: the popover opens at launch and stays open on blur.
     pinned: bool,
     snapshot: Mutex<Snapshot>,
@@ -57,6 +69,10 @@ struct Shared {
 impl Shared {
     fn poll_now(&self) {
         let _ = self.poke.lock().unwrap().send(());
+    }
+
+    fn board(&self) -> String {
+        self.board.lock().unwrap().clone()
     }
 }
 
@@ -95,14 +111,14 @@ fn set_login(app: AppHandle, on: bool) -> Result<restart::Control, String> {
 
 #[tauri::command]
 fn restart_state(shared: State<'_, Shared>) -> restart::Control {
-    restart::restart_view(&shared.board, uid())
+    restart::restart_view(&shared.board(), uid())
 }
 
 /// `launchctl kickstart -k gui/<uid>/io.jjodel.lane-board`, only for the board on 4700
 /// (`restart::restart_command` refuses any other); the next poll follows a few seconds later.
 #[tauri::command]
 async fn restart_board(app: AppHandle) -> Result<(), String> {
-    let argv = restart::restart_command(&app.state::<Shared>().board, uid())?;
+    let argv = restart::restart_command(&app.state::<Shared>().board(), uid())?;
     eprintln!("[lane-monitor] restart board: {}", argv.join(" "));
     let out = std::process::Command::new(&argv[0])
         .args(&argv[1..])
@@ -120,6 +136,88 @@ async fn restart_board(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn settings(shared: State<'_, Shared>) -> config::View {
+    let config = shared.config.lock().unwrap();
+    config::view(&config, &shared.board(), shared.env_board.as_deref(), &config_label(&shared))
+}
+
+fn config_label(shared: &Shared) -> String {
+    match &shared.config_path {
+        Ok(p) => p.display().to_string(),
+        Err(e) => format!("no config file: {e}"),
+    }
+}
+
+/// Unregisters `from` and registers `to`; on failure `from` is registered again.
+fn swap_shortcut(app: &AppHandle, from: Option<Shortcut>, to: Option<Shortcut>) -> Result<(), String> {
+    let gs = app.global_shortcut();
+    if let Some(old) = from {
+        let _ = gs.unregister(old);
+    }
+    if let Some(new) = to {
+        if let Err(e) = gs.register(new) {
+            if let Some(old) = from {
+                let _ = gs.register(old);
+            }
+            return Err(format!("Shortcut {} not registered: {e}", links::label(&new)));
+        }
+    }
+    Ok(())
+}
+
+/// One save from the Settings view: validates the patch, re-registers the chord if it
+/// changed, writes `config.json` atomically, then switches the board if it changed. A field
+/// that fails leaves everything as it was. Async: the shortcut plugin blocks on the main thread.
+#[tauri::command]
+async fn save_settings(app: AppHandle, patch: config::Patch) -> Result<config::View, config::FieldErrors> {
+    let shared = app.state::<Shared>();
+    let mut current = shared.config.lock().unwrap();
+    let next = config::apply(&current, &patch)?;
+    let file_err = |e: String| config::FieldErrors { file: Some(e), ..config::FieldErrors::default() };
+    let path = shared.config_path.clone().map_err(file_err)?;
+
+    let old_chord = *shared.shortcut.lock().unwrap();
+    let new_chord = match &patch.shortcut {
+        Some(s) => config::parse_chord(s).expect("checked by config::apply"),
+        None => old_chord,
+    };
+    if new_chord != old_chord {
+        swap_shortcut(&app, old_chord, new_chord).map_err(|e| {
+            eprintln!("[lane-monitor] settings: {e}");
+            config::FieldErrors { shortcut: Some(e), ..config::FieldErrors::default() }
+        })?;
+    }
+    if let Err(e) = config::write_atomic(&path, &config::to_json(&next)) {
+        if new_chord != old_chord {
+            let _ = swap_shortcut(&app, new_chord, old_chord);
+        }
+        eprintln!("[lane-monitor] settings: config.json not written: {e}");
+        return Err(file_err(format!("config.json not written: {e}")));
+    }
+    if new_chord != old_chord {
+        *shared.shortcut.lock().unwrap() = new_chord;
+        match &new_chord {
+            Some(s) => eprintln!("[lane-monitor] shortcut {} registered", links::label(s)),
+            None => eprintln!("[lane-monitor] shortcut disabled by config.json"),
+        }
+    }
+    *current = next;
+    eprintln!("[lane-monitor] settings saved: {}", serde_json::to_string(&*current).unwrap_or_default());
+
+    if let Some(board) = current.board.clone().filter(|b| *b != shared.board()) {
+        eprintln!("[lane-monitor] board {board} (from settings)");
+        *shared.board.lock().unwrap() = board.clone();
+        // The new board's waiting lanes are not news: the next good poll seeds the set again.
+        *shared.seen.lock().unwrap() = None;
+        let snap = Snapshot::pending(&board);
+        *shared.snapshot.lock().unwrap() = snap.clone();
+        let _ = app.emit_to(POPOVER, "attention", &snap);
+        shared.poll_now();
+    }
+    Ok(config::view(&current, &shared.board(), shared.env_board.as_deref(), &config_label(&shared)))
+}
+
 fn uid() -> u32 {
     extern "C" {
         fn getuid() -> u32;
@@ -135,6 +233,14 @@ fn fit_popover(app: AppHandle, height: f64) {
     }
 }
 
+/// «Quit» in the popover footer, and Cmd+Q while the popover has focus. An exit code, so the
+/// `prevent_exit` in `run` lets it through, as the tray menu's Quit.
+#[tauri::command]
+fn quit(app: AppHandle) {
+    eprintln!("[lane-monitor] quit from the popover");
+    app.exit(0);
+}
+
 #[tauri::command]
 fn hide_popover(app: AppHandle) {
     hide(&app);
@@ -148,7 +254,7 @@ async fn open_monitor(app: AppHandle, lane: Option<String>) -> Result<(), String
 /// Opens the board in an app window (1280x860), or brings it back; with a lane id, on the
 /// board's `/#lane=<id>` mark.
 fn open_monitor_window(app: &AppHandle, lane: Option<&str>) -> Result<(), String> {
-    let url = links::monitor_url(&app.state::<Shared>().board, lane)?;
+    let url = links::monitor_url(&app.state::<Shared>().board(), lane)?;
     let url: Url = url.parse().map_err(|e| format!("{url}: {e}"))?;
     hide(app);
     if let Some(w) = app.get_webview_window(MONITOR) {
@@ -220,6 +326,8 @@ fn show(app: &AppHandle, rect: Option<Rect>) {
     place(&w, rect);
     let _ = w.show();
     let _ = w.set_focus();
+    // The page goes back to the lanes view if it was left on Settings.
+    let _ = app.emit_to(POPOVER, "shown", ());
     app.state::<Shared>().poll_now();
 }
 
@@ -259,9 +367,15 @@ fn open_link(app: &AppHandle, link: &str) {
     }
 }
 
+fn config_path() -> Result<std::path::PathBuf, String> {
+    std::env::var("HOME")
+        .map(|h| std::path::Path::new(&h).join(links::CONFIG_PATH))
+        .map_err(|e| format!("HOME: {e}"))
+}
+
 /// `$HOME/<CONFIG_PATH>`: no file is no config; a file that cannot be read is reported.
 fn read_config() -> (links::Config, Vec<String>) {
-    let path = std::env::var("HOME").map(|h| std::path::Path::new(&h).join(links::CONFIG_PATH));
+    let path = config_path();
     let text = match path.as_ref().map(std::fs::read_to_string) {
         Ok(Ok(t)) => Some(t),
         Ok(Err(e)) if e.kind() != std::io::ErrorKind::NotFound => {
@@ -293,7 +407,12 @@ fn start_poller(app: AppHandle, rx: Receiver<()>) {
     thread::spawn(move || loop {
         let shared = app.state::<Shared>();
         let prev = shared.snapshot.lock().unwrap().synced_at;
-        let snap = poll::poll_once(&shared.board, prev);
+        let board = shared.board();
+        let snap = poll::poll_once(&board, prev);
+        if board != shared.board() {
+            // The board changed in Settings during the request: this answer is the old one's.
+            continue;
+        }
         if let Some(tray) = app.tray_by_id(TRAY_ID) {
             let _ = tray.set_title(Some(poll::title_for(&snap)));
             let tip = match (&snap.attention, snap.state) {
@@ -311,8 +430,13 @@ fn start_poller(app: AppHandle, rx: Receiver<()>) {
             *seen = next;
             notices
         };
-        for n in notices {
-            post(&app, n);
+        // Off in Settings: the set of waiting lanes still moves, nothing is posted.
+        if shared.config.lock().unwrap().notifications.unwrap_or(true) {
+            for n in notices {
+                post(&app, n);
+            }
+        } else if !notices.is_empty() {
+            eprintln!("[lane-monitor] notifications off: {} not posted", notices.len());
         }
         if let Err(RecvTimeoutError::Disconnected) = rx.recv_timeout(POLL_EVERY) {
             break;
@@ -324,7 +448,8 @@ fn start_poller(app: AppHandle, rx: Receiver<()>) {
 fn main() {
     let (config, mut problems) = read_config();
     let nonempty = |s: &String| !s.trim().is_empty();
-    let (board, from) = match std::env::var("LANE_MONITOR_BOARD").ok().filter(nonempty) {
+    let env_board = std::env::var("LANE_MONITOR_BOARD").ok().filter(nonempty);
+    let (board, from) = match env_board.clone() {
         Some(b) => (b, "LANE_MONITOR_BOARD"),
         None => match config.board.clone().filter(nonempty) {
             Some(b) => (b, "config.json"),
@@ -338,7 +463,11 @@ fn main() {
     tauri::Builder::default()
         .manage(Shared {
             snapshot: Mutex::new(Snapshot::pending(&board)),
-            board,
+            board: Mutex::new(board),
+            env_board,
+            config: Mutex::new(config.clone()),
+            config_path: config_path(),
+            shortcut: Mutex::new(None),
             pinned,
             poke: Mutex::new(tx),
             hidden_at: Mutex::new(None),
@@ -371,7 +500,10 @@ fn main() {
             set_login,
             restart_state,
             restart_board,
+            settings,
+            save_settings,
             fit_popover,
+            quit,
             hide_popover,
             open_monitor
         ])
@@ -387,6 +519,9 @@ fn main() {
                 .always_on_top(true)
                 .skip_taskbar(true)
                 .visible_on_all_workspaces(true)
+                // Transparent outside the page's rounded box (radius in popover.css). Since
+                // Tauri 2.12.1 this needs no `macos-private-api` feature.
+                .transparent(true)
                 .visible(false)
                 .build()?;
             let handle = app.handle().clone();
@@ -470,7 +605,10 @@ fn main() {
 
             match links::shortcut_of(&config) {
                 Ok(Some(s)) => match app.global_shortcut().register(s) {
-                    Ok(()) => eprintln!("[lane-monitor] shortcut {} registered", links::label(&s)),
+                    Ok(()) => {
+                        eprintln!("[lane-monitor] shortcut {} registered", links::label(&s));
+                        *app.state::<Shared>().shortcut.lock().unwrap() = Some(s);
+                    }
                     Err(e) => {
                         eprintln!("[lane-monitor] shortcut {} not registered: {e}", links::label(&s));
                         problems.push(format!("Shortcut {} not registered: {e}", links::label(&s)));
