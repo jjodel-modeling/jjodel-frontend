@@ -30,7 +30,8 @@ import { recordOf } from '../../codegen/oracle/__tests__/exampleFixture';
 
 type Lookup = Record<string, any>;
 
-interface Entry { id: string; kind: string; label: string; status: string; tier?: string; version?: number; versions?: GalleryVersion[] }
+interface Entry { id: string; kind: string; label: string; status: string; tier?: string; version?: number; versions?: GalleryVersion[];
+    level?: string; concepts?: string[]; callout?: string; preview?: string }
 
 const catalog = JSON.parse(readFileSync(new URL('../../../../docs/library/catalog.json', import.meta.url), 'utf8')) as { version: number; entries: Entry[] };
 const GALLERY = catalog.entries.filter(e => e.kind === 'galleryProject');
@@ -50,6 +51,20 @@ const EXPECTED: Record<string, { metamodels: string[]; models: Record<string, nu
 const TIERS: Record<string, string> = {
     library: 'template', 'families-persons': 'template', 'state-machine': 'template', graph: 'template', shapes: 'template',
     turnstile: 'example', 'petri-producer-consumer': 'example',
+};
+
+/** The card fields of R-LIB-19 (P-2026-10-19-1615): the closed vocabularies the Templates page filters on, and the
+ *  values ratified in R-LIB-20, concepts in catalog order. */
+const LEVELS = ['beginner', 'intermediate', 'advanced'];
+const CONCEPTS = ['containment', 'inheritance', 'references', 'enumerations', 'validation', 'multiple-metamodels', 'simulation', 'code-generation'];
+const CARDS: Record<string, { level: string; concepts: string[] }> = {
+    library: { level: 'beginner', concepts: ['containment', 'inheritance', 'references'] },
+    'families-persons': { level: 'intermediate', concepts: ['multiple-metamodels', 'containment', 'inheritance'] },
+    'state-machine': { level: 'intermediate', concepts: ['enumerations', 'containment', 'validation'] },
+    graph: { level: 'beginner', concepts: ['references', 'containment'] },
+    shapes: { level: 'beginner', concepts: ['inheritance', 'containment'] },
+    turnstile: { level: 'intermediate', concepts: ['code-generation', 'simulation'] },
+    'petri-producer-consumer': { level: 'advanced', concepts: ['code-generation', 'references', 'simulation'] },
 };
 
 /** The hand-written viewpoints of each entry (R-LIB-9; the examples' since R-LIB-10, P-2026-10-19-0300), in order, the
@@ -125,6 +140,29 @@ describe('the gallery of the catalog', () => {
         for (const e of GALLERY) for (const v of e.versions!) expect(sha256(publicUrl(v.file)), `${e.id}@${v.n}`).toBe(v.sha256);
     });
 
+
+    it('gives every entry a level and non-empty concepts of the closed vocabularies, no slug twice (mutant: a concept label written for its slug, a level misspelt)', () => {
+        for (const e of GALLERY) {
+            expect(LEVELS, `${e.id} level`).toContain(e.level);
+            expect(e.concepts?.length, e.id).toBeGreaterThan(0);
+            for (const c of e.concepts!) expect(CONCEPTS, `${e.id} concept`).toContain(c);
+            expect(new Set(e.concepts).size, e.id).toBe(e.concepts!.length);
+        }
+    });
+
+    it('carries the levels and concepts ratified in R-LIB-20 (mutant: families-persons tagged transformation, simulation dropped from an example)', () => {
+        expect(Object.fromEntries(GALLERY.map(e => [e.id, { level: e.level, concepts: e.concepts }]))).toEqual(CARDS);
+    });
+
+    it('points every preview at <id>/<n>.preview.png of the current version (mutant: the package path, or a version other than the current)', () => {
+        for (const e of GALLERY) expect(e.preview, e.id).toBe(`${e.id}/${e.version}.preview.png`);
+    });
+
+    it('gives the callout to StateMachine only, as a non-empty sentence, and writes no counts (mutant: a callout on every card, a count written by hand)', () => {
+        expect(GALLERY.filter(e => e.callout !== undefined).map(e => e.id)).toEqual(['state-machine']);
+        expect(GALLERY.find(e => e.id === 'state-machine')!.callout).toBe('Contains one validation error on purpose. Find it and fix it.');
+        for (const e of GALLERY) for (const k of ['metamodels', 'models']) expect(Object.keys(e), e.id).not.toContain(k);
+    });
 
     it('is served as the public copy the Templates page fetches, byte for byte (mutant: the docs catalog edited, not copied)', () => {
         const docs = readFileSync(new URL('../../../../docs/library/catalog.json', import.meta.url), 'utf8');
