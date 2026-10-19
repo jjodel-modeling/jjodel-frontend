@@ -840,6 +840,43 @@ function tokenCells(html: string, id: string) {
     return { heads, cells: cells.slice(at, at + 6).filter((_, i) => i !== heads.indexOf('Cost') - at) };
 }
 
+describe('the chat link: the trunk prompt after the lane\'s own Request', () => {
+    test('a lane whose input-1.md has no URL takes the trunk prompt\'s, its own URL still wins, a foreign Prompt-ID gives none (third source dropped or unguarded)', async () => {
+        const root = tmp();
+        const repo = tmp();
+        spawnSync('git', ['init', '-q', '-b', 'alfonso-frontend-jjtl', repo]);
+        mkdirSync(join(repo, 'docs', 'prompts'), { recursive: true });
+        const lanes: [string, string, string][] = [
+            ['P-2026-10-06-0900', 'Request: none (written before the backfill)', 'Request: https://claude.ai/code/session_TRUNK1 (Alfonso)'],
+            ['P-2026-10-06-1000', 'Request: https://claude.ai/code/session_OWN', 'Request: https://claude.ai/code/session_TRUNK2'],
+            ['P-2026-10-06-1100', 'Request: none (x)', 'Request: https://claude.ai/code/session_TRUNK3'],
+        ];
+        for (const [id, own, trunk] of lanes) {
+            const file = 'claude_' + id.slice(2, 12) + '_' + id.slice(13) + '_lane.md';
+            // The last lane's trunk file carries another Prompt-ID: not the lane's prompt.
+            const pid = id.endsWith('1100') ? 'P-2026-10-06-1101' : id;
+            writeFileSync(join(repo, 'docs', 'prompts', file), '# Prompt: ' + id + '\n\nPrompt-ID: ' + pid + '\n' + trunk + '\nLane: fast\n\n## COSA\n\nRequest: https://claude.ai/code/session_BODY\n');
+            const dir = join(root, id);
+            mkdirSync(dir);
+            writeFileSync(join(dir, 'input-1.md'), '# Prompt: ' + id + '\n\nPrompt-ID: ' + id + '\n' + own + '\nLane: fast\n');
+            writeFileSync(join(dir, 'prompt.txt'), '/tmp/jjodel-w-gone/docs/prompts/' + file + '\n');
+            writeFileSync(join(dir, 'exit.txt'), '0\n');
+        }
+        spawnSync('git', ['-C', repo, 'add', 'docs']);
+        spawnSync('git', ['-C', repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'prompts']);
+        const table = ['id                  state    outcome  elapsed', ...lanes.map(([id]) => id + '   exited   done     5 min')];
+        writeFileSync(join(root, 'fake-lane-run.mjs'), table.map((l) => 'console.log(' + JSON.stringify(l) + ');').join('\n') + '\n');
+        const port = await listen(root, repo);
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const link = (id: string) => { const r = d.rows.find((x: Ev) => x.id === id); return [r.chatUrl, r.chatUrlFrom]; };
+        expect(link('P-2026-10-06-0900')).toEqual(['https://claude.ai/code/session_TRUNK1', 'prompt']);
+        expect(link('P-2026-10-06-1000')).toEqual(['https://claude.ai/code/session_OWN', 'request']);
+        expect(link('P-2026-10-06-1100')).toEqual(['', '']);
+        const page = await (await fetch('http://127.0.0.1:' + port + '/')).text();
+        expect(page).toContain("prompt:'from the prompt on the trunk'");
+    });
+});
+
 describe('tokens: abbr and tokenGroups', () => {
 
     test('abbr: n/a, the integer below 1000, one decimal with k, M, B, and a rounding that reaches the next unit moves to it (units or rounding dropped)', async () => {

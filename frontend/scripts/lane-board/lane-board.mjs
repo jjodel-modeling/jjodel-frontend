@@ -542,11 +542,11 @@ function snapshot(r) {
         const t = idTime(id) || (isChain ? idTime(id.slice(6)) : 0);
         const recent = Date.now() - t < RECENT_H * 3600_000;
         const row = { id, state, outcome, minutes, chain: isChain, t, worktree: '', kind: '', lane: '', chat: '', title: '', tier: '', phase: '', left: '', chatUrl: '', chatUrlFrom: '', chatUrlVia: '' };
-        let request = '';
+        let request = '', file = '';
         if (!isChain && existsSync(dir)) {
             row.worktree = readTrim(join(dir, 'worktree.txt')).replace(homedir(), '~');
             const h = header(dir);
-            row.lane = h.lane; row.chat = h.chat; row.title = h.title; request = h.request;
+            row.lane = h.lane; row.chat = h.chat; row.title = h.title; request = h.request; file = h.file;
             row.kind = kindOf(h.lane, h.file);
             row.tier = readTrim(join(dir, 'tier.txt')).split(/[\s:]/)[0];
             // resolved (P-2026-10-05-1720): exited blocked and resolved afterwards, whichever lane-run printed the table.
@@ -565,7 +565,7 @@ function snapshot(r) {
             }
         }
         if (!isChain) row.launcher = launcherOf(id, chainPosMem().get(id), row.chat);
-        if (!isChain) Object.assign(row, ownChatUrl(id, request));
+        if (!isChain) Object.assign(row, ownChatUrl(id, request, file));
         row.live = live;
         row.recent = recent;
         row.day = t ? new Date(t - new Date(t).getTimezoneOffset() * 60000).toISOString().slice(0, 10) : 'unknown';
@@ -1049,12 +1049,44 @@ function launcherOf(id, chainPos, chat) {
     return { ...base, by: 'manual', label: c.author || 'manual', detail: 'committed by hand (' + c.sha + ')' };
 }
 
-/** A lane's own claude.ai conversation (RC-43): the Request: header, else the Claude-Session: trailer of the commit that added its prompt. */
+// The Prompt-ID and Request: line of every prompt on the trunk, by file name (P-2026-10-19-2229): a lane's
+// input-1.md keeps the Request: it was given, the trunk's copy the one written since. One `git cat-file --batch`
+// every 5 minutes, for the blobs not read before.
+const reqByBlob = new Map();
+let trunkReqMem = { at: 0, map: new Map() };
+function trunkRequests() {
+    if (Date.now() - trunkReqMem.at < 5 * 60e3) return trunkReqMem.map;
+    const map = new Map();
+    const r = git(['ls-tree', TRUNK, 'docs/prompts/']);
+    const tree = r.status === 0 ? r.stdout.split('\n').map((l) => /^\S+ blob (\S+)\t(.*)$/.exec(l)).filter(Boolean) : [];
+    const fresh = tree.map((m) => m[1]).filter((b) => !reqByBlob.has(b));
+    if (fresh.length) {
+        const c = spawnSync('git', ['-C', REPO, 'cat-file', '--batch'], { input: fresh.join('\n') + '\n', timeout: 20_000, maxBuffer: 256 * 1024 * 1024 });
+        const buf = c.status === 0 ? c.stdout : Buffer.alloc(0);
+        for (let at = 0; at < buf.length;) {
+            const nl = buf.indexOf(10, at);
+            if (nl < 0) break;
+            const [sha, type, size] = buf.toString('utf8', at, nl).split(' ');
+            if (type === 'missing' || !size) { at = nl + 1; continue; }
+            const text = buf.toString('utf8', nl + 1, nl + 1 + Math.min(Number(size), 8000)).split(/\n## /)[0];
+            reqByBlob.set(sha, { id: (text.match(/^Prompt-ID:[ \t]*(\S+)/m) || [])[1] || '', request: (text.match(/^Request:[ \t]*(\S*)/m) || [])[1] || '' });
+            at = nl + 1 + Number(size) + 1;
+        }
+    }
+    for (const [, blob, path] of tree) if (reqByBlob.has(blob)) map.set(path.replace(/^.*\//, ''), reqByBlob.get(blob));
+    trunkReqMem = { at: Date.now(), map };
+    return map;
+}
+
+/** A lane's own claude.ai conversation (RC-43): the Request: header, else the Claude-Session: trailer of the commit that added its prompt,
+ *  else the Request: of the trunk's copy of the prompt named in prompt.txt, when its Prompt-ID is the lane's. */
 const CLAUDE_URL = /^https:\/\/claude\.ai\//;
-function ownChatUrl(id, request) {
+function ownChatUrl(id, request, file = '') {
     if (CLAUDE_URL.test(request)) return { chatUrl: request, chatUrlFrom: 'request' };
     const session = (promptCommits().get(id) || {}).session || '';
     if (CLAUDE_URL.test(session)) return { chatUrl: session, chatUrlFrom: 'commit' };
+    const t = file ? trunkRequests().get(file) : null;
+    if (t && t.id === id && CLAUDE_URL.test(t.request)) return { chatUrl: t.request, chatUrlFrom: 'prompt' };
     return { chatUrl: '', chatUrlFrom: '' };
 }
 
@@ -2022,7 +2054,7 @@ function cards(rows){
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pill=(t,cls)=>t?'<span class="pill '+esc(cls||t)+'">'+esc(t)+'</span>':'';
 // The chat id opens the lane's claude.ai conversation when one is known; a URL without a chat id reads "chat".
-const chatFrom=r=>({request:'from the Request header',commit:'from the commit that added the prompt','chat-id':'inferred from '+r.chatUrlVia+', same chat id'})[r.chatUrlFrom]||'';
+const chatFrom=r=>({request:'from the Request header',commit:'from the commit that added the prompt',prompt:'from the prompt on the trunk','chat-id':'inferred from '+r.chatUrlVia+', same chat id'})[r.chatUrlFrom]||'';
 const chatLink=r=>r.chatUrl?'<a class="title chat" href="'+esc(r.chatUrl)+'" target="_blank" rel="noopener" title="'+esc(chatFrom(r))+'">'+esc(/C-\\d{4}-\\d{2}-\\d{2}-\\d{4}/.test(r.chat)?r.chat:'chat')+'</a>':(r.chat?'<span class="title">'+esc(r.chat)+'</span>':'');
 const launch=r=>{const l=r.launcher||{};const c={chat:'var(--run)',harness:'var(--muted)',chain:'var(--muted)','claude-code':'var(--warn)',manual:'var(--ok)'}[l.by]||'var(--muted)';return (l.label?'<span class="pill" style="color:'+c+'" title="'+esc(l.detail||'')+'">'+esc(l.label)+'</span>':'')+chatLink(r)};
 const dur=m=>m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min';
