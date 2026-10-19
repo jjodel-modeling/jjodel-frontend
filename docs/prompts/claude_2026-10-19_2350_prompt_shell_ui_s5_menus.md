@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2350
 Chat: C-2026-10-19-1610
 Front: shell-ui
 Lane: full (menu blocks of two shared sheets, one component sheet)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane shell-ui · 40a3626a0 · verifica visiva passata 2026-10-20
 Depends: P-2026-10-19-2325
 Request: Alfonso, 2026-10-19 23:19: «Procedere ora» (run S2 and S5 before the tpl-e/tpl-int merges, stylesheets only).
 

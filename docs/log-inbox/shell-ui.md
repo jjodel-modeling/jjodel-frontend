@@ -199,3 +199,18 @@ not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: Chat: navbar.scss at 15f3c6c0a identical to the shell-ui-s2 tip 52eb9470a checked on 3020 (nav 0,0,1600,50, switch options 24px, topbar text <11px 0, + icon #64748b in Advanced, rects unchanged, console init_dash only).
 **Notes**: Rollback tag `pre-shell-ui-s2` on `6b1e11de1` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2345/result.json`.
 **Prompt document name**: 2026-10-19 23:45
+
+## 2026-10-20 — feat: menus on shell tokens, 8px panels, 36/28px items (S5)
+**Prompt**: P-2026-10-19-2350, slice S5 of the shell front (R-SHELL-2, R-SHELL-5): find by measure which `.context-menu` rule paints each menu, then put the topbar File/Edit/View/Help menus, the user menu and the canvas context menu on `--shell-radius-menu`, 1px `--shell-border`, one `--shell-menu-shadow`, items at `--shell-menu-item-height` (36 Basic, 28 Advanced), item radius 4, shortcuts on `--shell-text-3`; user-menu trigger 6 to 4px (S2 ticket); legacy dark menu decided by measure.
+**Files touched**: frontend/src/components/editor-v2/EditorV2.scss (lines 4047-4048, 4051, 4058, 4062, 4064, 4110, 4123, 4137, 4143), frontend/src/pages/components/navbar.scss (lines 483-485, 512, 527, 585, 618, 647, 654, 693, 856; block added 1027-1059) (40a3626a0); docs/log-inbox/shell-ui.md, docs/prompts/claude_2026-10-19_2350_prompt_shell_ui_s5_menus.md (Status line)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck exit 0, vitest 4 files 74 passed, build exit 0, smoke GREEN 12/0/3; nav 0,0,1600,50, toolbar 201,51,1398,40, rail 1200,91,400,877, canvas 201,91,1398,876 and menu anchors unchanged in B and A; console init_dash only)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, 3021, 1600x1000: File panel radius 8, border 1px #e2e8f0, one shadow, items 36 Basic and 28 Advanced, text<11px 0; trigger radius 4; nav, toolbar, rail unchanged; console init_dash only; canvas menu on the lane CSSOM measure, it opens on a node not on the empty pane; decisions 1-4 accepted)
+**Notes**: Painters by CSSOM: File/Help N `.nav-container .content > ul`; user menu menu.scss `.dropdown--portal` (outside DOVE: `body >` override in N); canvas E `.context-menu`, beats ContextMenu.scss by load order. Legacy dark menu unreachable (`ShowContextMenu` 0 callers), left. Before->after, B/A: radius 12/12/13/12->8; shadows 2/2/2/1->1; items 36/36/36/34->36 B, 28 A; item radius 8/8/8/6->4; trigger 6->4; kbd #6b7280, email #475569->#64748b; text<11 0; weights <=600.
+**Prompt document name**: 2026-10-19 23:50
+
+**Ticket** (P-2026-10-19-2350): the bare `.context-menu` change in EditorV2.scss (radius 12->8, `--shell-border`, `--shell-menu-shadow`, item 36/28px) also reaches the MegamodelView, InteractivePathCanvas and tree-view menus; not measured.
