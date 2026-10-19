@@ -98,9 +98,12 @@ export function createM2(project: LProject, name0?: string) {
 /** `open` (#157, 2026-10-01): false creates the model without opening its editor. The
  *  Configurator's «Create model» needs it: opening the editor hides the LeftBar, which hosts
  *  the Configurator, so the overlay closed under the user (measured by probe). Default true:
- *  every menu path is unchanged. */
-export function createM1(project: LProject, metamodel: LModel, open: boolean = true) {
-    let name = 'model_' + 1;
+ *  every menu path is unchanged.
+ *  `name0` (P-2026-10-19-1618): the name typed in the New model dialog. Kept when unique among
+ *  `metamodel.models`, otherwise the same ending-number rule as the auto name applies to it;
+ *  `DModel.new` then makes it unique among every model and metamodel (` (n)`, nameLookup.ts). */
+export function createM1(project: LProject, metamodel: LModel, open: boolean = true, name0?: string) {
+    let name = (name0 && name0.trim()) || 'model_' + 1;
     let modelNames: (string)[] = metamodel.models.map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
     const dModel: DModel = DModel.new(name, metamodel.id, false, true);
