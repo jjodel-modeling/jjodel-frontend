@@ -214,3 +214,16 @@ not touched by this lane.
 **Prompt document name**: 2026-10-19 23:50
 
 **Ticket** (P-2026-10-19-2350): the bare `.context-menu` change in EditorV2.scss (radius 12->8, `--shell-border`, `--shell-menu-shadow`, item 36/28px) also reaches the MegamodelView, InteractivePathCanvas and tree-view menus; not measured.
+
+## 2026-10-20 — merge: shell-ui-s5 into alfonso-frontend-jjtl (P-2026-10-20-0039)
+**Prompt**: `claude_2026-10-20_0039_prompt_merge_shell-ui-s5.md`, a direct merge by `lane-run merge --direct`, no session: `shell-ui-s5` at `f9917a3ee` into `alfonso-frontend-jjtl`, merge base `425187033`, 2 commits on the branch side.
+**Files touched**: merge `be73e2b2d`: 4 files from the branch side (`docs/log-inbox/shell-ui.md`, `docs/prompts/claude_2026-10-19_2350_prompt_shell_ui_s5_menus.md`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/pages/components/navbar.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `be73e2b2d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9436 tests in 384 files, 9 red at import, hooks 952; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat: S5 sheets at be73e2b2d identical to the shell-ui-s5 tip f9917a3ee checked on 3021 (File menu radius 8, 1px border, single shadow, items 36/28, trigger radius 4, rects unchanged, console init_dash only).
+**Notes**: Rollback tag `pre-shell-ui-s5` on `eaf3a9fcc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0039/result.json`.
+**Prompt document name**: 2026-10-20 00:39
