@@ -1076,6 +1076,87 @@ describe('lane-run start, the prompt path', () => {
     });
 });
 
+// ── the chat link (P13, RC-43, P-2026-10-19-2105) ────────────────────────────
+
+const SHELL_REQUEST = 'Request: Alfonso, 2026-10-19 12:00 (in chat)';
+const LINK_REFUSAL = 'the lane cannot be linked to its chat';
+
+/** The worktree as a repo whose one commit adds prompt.md with the given header line after Chat:, and the given commit body. */
+function linkLab(requestLine: string, body = 'Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>', lane = 'Lane: fast'): Lab {
+    const l = lab();
+    gitIn(l, l.worktree, ['init', '-q', '-b', 'main']);
+    const prompt = PROMPT.replace('Lane: fast', lane).replace('\nLane:', `\n${requestLine}\nLane:`);
+    commitFiles(l, l.worktree, 'docs: add prompt ' + ID + '\n\n' + body, { 'prompt.md': prompt });
+    return l;
+}
+
+describe('lane-run start, the chat link (P13, RC-43)', () => {
+    test('kills "the gate a warning", "the gate dropped": a non-URL Request: whose commit has no Claude-Session: trailer is refused before anything is written', () => {
+        const l = linkLab(SHELL_REQUEST);
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain(join(l.worktree, 'prompt.md') + ': ' + LINK_REFUSAL + ': start the Request: line with the chat URL, or commit the prompt with the Claude-Session: trailer (P13, RC-43)');
+        expect(existsSync(l.lanes)).toBe(false);
+        expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "a URL Request: refused": a Request: line that starts with a URL starts the lane', () => {
+        const l = linkLab('Request: https://claude.ai/chat/1b373b77-3e1f-4c66-b75e-9eec8a5ba215 (Alfonso, in chat)');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "the trailer branch dropped", "the last commit to touch the prompt read instead of the one that added it": a non-URL Request: starts when the commit that added the prompt carries a claude.ai Claude-Session: trailer', () => {
+        const l = linkLab(SHELL_REQUEST, 'Claude-Session: https://claude.ai/code/session_018RaPfFUZaHRjEo11BkNXZB');
+        // A later edit without the trailer does not unlink it: the adding commit counts.
+        commitFiles(l, l.worktree, 'docs: flip the status', { 'prompt.md': readFileSync(join(l.worktree, 'prompt.md'), 'utf8') + '\nEdited.\n' });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stderr).not.toContain(LINK_REFUSAL);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "a non-claude.ai trailer accepted": a Claude-Session: trailer that is not a claude.ai URL does not link the lane', () => {
+        const l = linkLab(SHELL_REQUEST, 'Claude-Session: local');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain(LINK_REFUSAL);
+    });
+
+    test('kills "`none (…)` refused": Request: none (<reason>) is declared and starts the lane', () => {
+        const l = linkLab('Request: none (a follow-up the chat derives from a report)');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "--request ignored by the gate": a non-URL Request: started with --request runs', () => {
+        const l = linkLab(SHELL_REQUEST);
+        const req = join(l.state, 'request.md');
+        writeFileSync(req, 'the words of the request\n');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md', '--request', req]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "a merge prompt gated": a merge prompt (Lane: full (merge …)) with a non-URL Request: and no trailer starts', () => {
+        const l = linkLab(SHELL_REQUEST, 'Model: chat via lane-run', 'Lane: full (merge of feat into trunk)');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.stderr).not.toContain(LINK_REFUSAL);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "the missing line refused": a prompt with no Request: line keeps the RC-43 warning and runs', () => {
+        const l = lab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('no `Request:` line in the header');
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+});
+
 // ── the Outcome line and status --all ────────────────────────────────────────
 
 /** A lane folder written by hand: exited with an exit code, or running on a live pid; its log holds the given assistant texts. */

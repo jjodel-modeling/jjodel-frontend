@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2105
 Chat: C-2026-10-19-1747
 Front: harness
 Lane: fast (one refusal in `lane-run start`, its tests, a header backfill in docs/prompts, one PROTOCOL line)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane requrl · f05b10358 · partial: gate, backfill and P13 done; the board still shows the 12 Tack rows without chatUrl (it reads input-1.md), ticket in the harness inbox
 Depends: none
 Corregge: none
 Request: https://claude.ai/code/session_018RaPfFUZaHRjEo11BkNXZB (Alfonso, 2026-10-19 17:47: «nelle lane cliccando non apre la chat corrispondente»; 20:48 «vai»)

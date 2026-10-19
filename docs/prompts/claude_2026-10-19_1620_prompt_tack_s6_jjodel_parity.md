@@ -7,7 +7,7 @@ Lane: full (identity and self-assessment layers, two adapters, parity check agai
 Status: eseguito 2026-10-19 · lane tack-s6 · completed by P-2026-10-19-1655 · 6f0353e74 · verifica visiva della chat dopo l’uscita (RC-23)
 Depends: P-2026-10-19-1555
 Corregge: P-2026-10-19-1520 (unit id taken from any commit of the repository within the hour, not from the session's branch; SVG labels scaled up on wide charts), both found by the chat's visual check of 2026-10-19 16:15
-Request: Alfonso, 2026-10-19 16:15, in the project chat: «si» to slice 6
+Request: https://claude.ai/chat/1b373b77-3e1f-4c66-b75e-9eec8a5ba215 (Alfonso, 2026-10-19 16:15, in the project chat: «si» to slice 6)
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 does not apply as a separate phase (discovery `docs/discovery/discovery_2026-10-19_tack_v0_extraction.md` §4.1, §5, §6.2, §6.3, §11); no Phase 1 hard stop. P8 is replaced as in 5a/5b: the chat checks the board in the built-in browser after exit; leave it running on port 4710 (stop the running one first: PID in `/tmp/tack-s5b/board.pid`, check with `ps` that it is a `tack` node process).

@@ -7,7 +7,7 @@ Lane: full (second half of P-2026-10-19-1620: CLI, API, Insights, chart fix, tes
 Status: eseguito 2026-10-19 · lane tack-s6 · 6f0353e74, 35ae04d0c · merged 1aa42cc25 · parity re-run by the chat 17:15, ok · visual check passed
 Depends: P-2026-10-19-1620
 Corregge: none (continuation under RC-51, not a repair)
-Request: Alfonso, 2026-10-19 16:15, in the project chat: «si» to slice 6 (same request as P-2026-10-19-1620)
+Request: https://claude.ai/chat/1b373b77-3e1f-4c66-b75e-9eec8a5ba215 (Alfonso, 2026-10-19 16:15, in the project chat: «si» to slice 6 (same request as P-2026-10-19-1620))
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 does not apply (continuation). P8 replaced as in P-2026-10-19-1620: the chat checks the board after exit.

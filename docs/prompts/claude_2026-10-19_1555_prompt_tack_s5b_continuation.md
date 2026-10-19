@@ -7,7 +7,7 @@ Lane: fast (closure of P-2026-10-19-1520: run the board, measure, README, commit
 Status: eseguito 2026-10-19 · lane tack-s5b · 90d64d594, 7a9d474ce · merged 93f701326 · visual check by the chat 16:15, passed
 Depends: P-2026-10-19-1520
 Corregge: none (continuation under RC-51, not a repair)
-Request: Alfonso, 2026-10-19 14:35, in the project chat: «Procedi» (same request as P-2026-10-19-1520)
+Request: https://claude.ai/chat/1b373b77-3e1f-4c66-b75e-9eec8a5ba215 (Alfonso, 2026-10-19 14:35, in the project chat: «Procedi» (same request as P-2026-10-19-1520))
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 does not apply (continuation). P8 replaced as in P-2026-10-19-1520: the chat does the visual check after exit.

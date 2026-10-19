@@ -7,7 +7,7 @@ Lane: full (new code that reads private transcripts: the metadata-only rule must
 Status: eseguito 2026-10-19 · lane tack-s2 · code commit 2c0d567f3, docs commit carrying this line
 Depends: P-2026-10-19-1200
 Corregge: none
-Request: Alfonso, 2026-10-19 12:21, in the project chat: «OK» to `node:sqlite` with Node >= 24
+Request: https://claude.ai/chat/1b373b77-3e1f-4c66-b75e-9eec8a5ba215 (Alfonso, 2026-10-19 12:21, in the project chat: «OK» to `node:sqlite` with Node >= 24)
 
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 does not apply as a separate phase (the discovery is `docs/discovery/discovery_2026-10-19_tack_v0_extraction.md` §2.1, §4, §6, §7, §11); no Phase 1 hard stop. P8 does not apply (no UI).

@@ -289,7 +289,9 @@ The rules below still bind every tree that hosts more than one session.
   launching chat passes them to `lane-run start --request <file>`, which keeps them as
   `~/.jjodel-lanes/<Prompt-ID>/request.md`. Merge prompts rendered by `lane-run` are exempt. The line is
   new from 2026-10-10; earlier prompts are not amended. The lane board shows the request first in a
-  lane's detail (`frontend/scripts/lane-board/`). Decided RC-43.
+  lane's detail (`frontend/scripts/lane-board/`). Decided RC-43. A chat that commits from the Mac shell
+  starts `Request:` with its own URL or adds its `Claude-Session:` trailer to the commit; `lane-run start`
+  refuses a prompt with neither (P-2026-10-19-2105).
 - **Every prompt names its front.** The header of a prompt in `docs/prompts/` carries `Front: <slug>`,
   the slug of a front of `docs/harness/fronts.json`. A front is a milestone-like unit of work with a
   verifiable exit; `maintenance` (work outside every other front) and `harness` are permanent. Merge
