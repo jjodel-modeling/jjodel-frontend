@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1100
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: full (discovery for a new product outside the Jjodel codebase; Phase 1 read-only)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-disc · Phase 1 report, docs commit carrying this line · hard-stop, no Phase 2 without GO
 Depends: none
 Corregge: none (new front)
 Request: Alfonso, 2026-10-19 10:41, in the project chat: «andiamo avanti», after ratifying the six Tack decisions of the vision document
