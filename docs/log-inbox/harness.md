@@ -744,3 +744,35 @@ Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of rep
 **Smoke visivo**: passato — chat, built-in browser on 4714: four tabs, both themes, 1440 and 800 px, before the merge; the 4700 board is restarted after this closure
 **Notes**: `lane-run go` refuses a closure over a blocked merge, so the chat wrote this closure by hand, as for P-2026-10-19-1213.
 **Prompt document name**: 2026-10-19 13:31
+
+## 2026-10-19 — chore(harness): S4d sweep, six stale prompts classified, one flipped (P-2026-10-19-1022)
+**Prompt**: `claude_2026-10-19_1022_prompt_s4d_stale_prompts_sweep.md`, fast lane, docs only: classify the six prompts of retrospective A4 from primary sources (git over all refs, lane folders, inbox entries, `Depends:`/`Corregge:`), flip `Status:` only for done and done elsewhere.
+**Files touched**: `docs/prompts/claude_2026-10-15_1710_prompt_da1_graphvertex_add_discovery.md` (Status flip), this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (docs only; `check:docs` run after the commit)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: S4d counts parked lanes as closed: 1 of 6 is done, 4 are parked and 1 failed. Four of the six have their code or report only on a branch that is not an ancestor of `alfonso-frontend-jjtl`, in a live worktree. Tables below.
+**Prompt document name**: 2026-10-19 10:22
+
+Classification (trunk = `alfonso-frontend-jjtl`; ancestry by `git merge-base --is-ancestor`, patch-equivalence by `git cherry`, both negative for the four branches):
+
+| Prompt-ID | Front | Class | Evidence | Needs |
+|---|---|---|---|---|
+| P-2026-10-15-1710 | release-3-2 | done (flipped) | report `71c07b6fd` and entry `e45998ecd` on the trunk; inbox `Outcome: completed`, `Smoke visivo: non applicabile` (read-only Phase 1); its fix is named in `P-2026-10-16-1000` (`Depends:`) | nothing |
+| P-2026-10-10-0830 | none declared (the Phase 1 file has no `Front:` line; chat `C-2026-10-10-0057`) | parked | Phase 1 report `6b13fbd8c`, S0 probe `0cea4fd7a`, D1 and D2 ratified `676c05ce2`, all only on branch `nested-vertices` (4 commits ahead, worktree `~/jjodel-w-nestedvtx`); S1..S4 never run, no later prompt carries them | a GO for S1, or a merge prompt for the reports; the owning chat decides |
+| P-2026-10-11-1830 | harness (chat `C-2026-10-11-1735`) | parked | Phase 1 report `7d6d3d39a` only on branch `mods-guard`; RC-46 is active but `CLAUDE_CODE_PLUGIN_DIRS` appears nowhere in `frontend/scripts` on the trunk, so the guard is not built | the Phase 2 prompt (or a merge of the report) from the harness chat |
+| P-2026-10-11-2235 | harness (chat `C-2026-10-10-1145`) | parked | S1 code `615a2cb08` only on branch `insights-s1` (1 commit ahead, `~/jjodel-w-insights1`); the lane stopped with a test board on 4703 waiting for the visual check, none recorded; `56af77b88` only names the prompt-add commit in a message | the visual GO, then a merge prompt |
+| P-2026-10-12-0120 | maintenance (chat `C-2026-10-12-0120`) | parked | fix `796839cc8` and discovery `e1605d9b0` only on branch `jjel-multivalued` (2 ahead, `~/jjodel-w-jjelmulti`); no merge prompt exists | a merge prompt (and a visual or console check, if the owning chat wants one) |
+| P-2026-10-14-1955 | maintenance | failed | lane exit 1, no `Outcome:` line; stderr: a scratch vite on 3086 was still running at the end and was killed; branch `uml-fixture` sits at the prompt commit, worktree clean, no fixture file anywhere on the trunk | a rework prompt, or an explicit abandonment |
+
+P-2026-10-10-0830 and the missing `Status:`: two files carry that ID. `claude_2026-10-10_0830_fase2_nested_vertices_s0.md` is a Phase 2 GO message, not a prompt: it opens with `[P-2026-10-10-0830] Phase 2 GO...`, has no `Status:` line by design, and its only match for «Status» is the bullet «Do not touch the `Status` line», which a `^Status` anchor cannot hit. The Phase 1 file `..._prompt_nested_object_vertices_discovery.md` has `Status: da eseguire` and no `Front:` line (the `?` in the chat's table). No Status was added to either: the work is parked.
+
+S4d finding. The rule in `docs/discovery/harness/harness-health-retro.mjs:335-345` counts a lane as closed when its `exit.txt` is older than a day (merge lanes excluded), whatever the `Outcome:` it ended on. On 10-18 it read 6; the sources give 1 done, 4 parked (a Phase 1 or slice hard stop, unmerged branch), 1 failed. 5 of 6 are false positives for «forgot to flip», and 4 of those 5 are the signal that matters more: finished work that is not on the trunk. Proposed rule, one sentence: stale = `exit.txt` older than 24 h with last `Outcome: done` and no Status flip; a separate yellow «parked» count for hard-stop, question, blocked or exit without an Outcome, older than 3 days, and a «branch not merged» count for lane branches whose tip is not an ancestor of the trunk. Proposal only; the script and the report are untouched.
+
+Decisions taken (unattended): P-2026-10-15-1710 counts as done though it is a discovery: its deliverable is the report, which is on the trunk, and the fix belongs to the later prompt that cites it. The four branch-only prompts are parked, not done, even where the lane's own message says «fixed» or «committed»: nothing reached the trunk. Both under RC-21 and RC-25, provisional, unattended.
+
+Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-33): the harness ones are P-2026-10-11-1830 (GO for Phase 2) and P-2026-10-11-2235 (visual GO, then merge); the others are listed in the table.

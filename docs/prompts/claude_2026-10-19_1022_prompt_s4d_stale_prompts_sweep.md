@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1022
 Chat: C-2026-10-18-2220
 Front: harness
 Lane: fast (docs only: Status lines of existing prompts and one inbox entry)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane s4d-sweep · docs only, 1 of 6 flipped (P-2026-10-15-1710), 4 parked, 1 failed · verifica visiva non applicabile
 Depends: P-2026-10-19-0907
 Corregge: none (hygiene sweep of signal S4d, report `docs/discovery/discovery_2026-10-18_harness_health_retrospective.md` §1.1 A4)
 Request: Alfonso, 2026-10-19 10:18, in the project chat: «vai» to the S4d cleanup lane proposed at 09:23
