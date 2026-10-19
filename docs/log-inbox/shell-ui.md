@@ -44,3 +44,18 @@ not touched by this lane.
 **Smoke visivo**: passato (chat, 3013 at 1600x1000: bar 0,968,1600,32; Inter Variable, version 11px; jjodie and bell 24x24; no fixed element over the bar; console init_dash only; 3.4px bell shift accepted per R-SHELL-5)
 **Notes**: Before->after, 1600x1000: bar 0,968,1600,32 both; Inter 0/16->16/16 text nodes; min text 10->11px (injected badge 9->11); jjodie 20x20->24x24, bell 15x18->24x24, bell top 975.5 kept, right 1506.77->1503.36 from the 3.41px wider version; dark mirror identical; console init_dash only, both. Gates: typecheck 0, vitest 11/11, build 0, smoke GREEN 12/0/3, A3 PASS. Unattended: colour role map, bell grows left/down, badge 11px, type feat. Dev 3013.
 **Prompt document name**: 2026-10-19 17:40
+
+## 2026-10-19 — feat: editor toolbar and left palette on shell tokens (S4)
+**Prompt**: P-2026-10-19-1741, slice S4 of the shell front: `.editor-v2-toolbar` and `aside.editor-v2-palette` in EditorV2.scss (lines 219-1579) onto `--shell-*`: radii 4/8, neutral borders 1px `--shell-border`, text >= 11px, weights <= 600, dim text to `--shell-text-3`, palette on #f8fafc with white items, muted toolbar icons in Advanced only. Shared classes overridden under `.editor-v2-toolbar`, outer palette border untouched.
+**Files touched**: frontend/src/components/editor-v2/EditorV2.scss (cefede853); docs/log-inbox/shell-ui.md, docs/prompts/claude_2026-10-19_1741_prompt_shell_ui_s4_editor_chrome.md (Status line)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: 1600x1000, Basic and Advanced, before->after: toolbar 201,51,1398,40, palette 1,51,200,916, canvas 201,91,1398,876 unchanged; text <11px 1->0 and 3->0; borders 1px only; radii 4/8 toolbar, 4 palette; max weight 700->600; palette bg #f8fafc, outer border rgba(0,0,0,.06) kept; Advanced icons #64748b, Basic dark, disabled/active excluded; `.toolbar-btn` outside identical. Chat GO on 3014, class selected. Gates: typecheck 0, vitest 52, build 0, smoke GREEN 12/0/3.
+**Prompt document name**: 2026-10-19 17:41
+
+**Ticket** (follow-up, not this lane): R-SHELL-3 (decision 7a9d1610e) moves the outer borders of both rails to `--shell-border` together; done in S8, not here. The palette outer border stays `--border-subtle` (D-UI-11).
