@@ -6301,6 +6301,12 @@ Evidence: the project chat C-2026-10-19-1748 of 2026-10-19 (17:55 recommendation
 - **R-TACK-3** (2026-10-19, ratified by Alfonso 2026-10-19 23:15, evidence: read, verified: none, reversible: trunk).
   **Tack gets a Lanes page before v0 is closed**, so that v0 covers the view used most on the 4700 board. The v0
   closure on foreign repositories (P-2026-10-19-2100) follows it.
+- **R-TACK-4** (2026-10-19, ratified by Alfonso 2026-10-19 23:43 «gestisci il tuo in automatico», evidence: read, verified: none, reversible: trunk).
+  **On the front `tack` the owning chat decides alone, as RC-53 does on the harness front:** continuation lanes of
+  approved work, GO on closures and the merge of `tack-*` branches into the trunk after its own check of the board
+  (RC-23, as every Tack slice already delegates to the chat). It still asks Alfonso for the RC-26 list and for any
+  slice that opens work he never asked for. Each such decision is reported to him in one line and carried by the
+  commit that enacts it as a trailer `Autonomy: continuation | closure-go | merge`, so Tack can count it.
 
 ## Superate
 
