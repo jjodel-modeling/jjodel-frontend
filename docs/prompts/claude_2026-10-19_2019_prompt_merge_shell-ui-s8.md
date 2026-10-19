@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-19-2019
 Chat: —
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane merge · 792969efa · verifica visiva passata 2026-10-19 (Chat: frontend tree at 792969efa identical to the shell-ui-s8 tip 41b25c723 checked on 3018 (rows 26/24, outer borders both 1px #e2e8f0, jj-section-title 11px/500/#64748b, rects unchanged, console init_dash only).)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-19-2019 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

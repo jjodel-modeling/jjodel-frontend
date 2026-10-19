@@ -119,3 +119,16 @@ not touched by this lane.
 **Prompt document name**: 2026-10-19 19:30
 
 **Ticket** (P-2026-10-19-1930): two hit-target overlaps left for a later lane. `.tree-section__header` is 23px, so neighbouring toggle boxes overlap by 1px; set its min-height to `--shell-row-height`, which moves the tree by 1-3px per header. The `.jj-contents-add` box also loses its top 2px to `.jj-contents-group-header`.
+
+## 2026-10-19 — merge: shell-ui-s8 into alfonso-frontend-jjtl (P-2026-10-19-2019)
+**Prompt**: `claude_2026-10-19_2019_prompt_merge_shell-ui-s8.md`, a direct merge by `lane-run merge --direct`, no session: `shell-ui-s8` at `41b25c723` into `alfonso-frontend-jjtl`, merge base `4f560e9a8`, 2 commits on the branch side.
+**Files touched**: merge `792969efa`: 4 files from the branch side (`docs/log-inbox/shell-ui.md`, `docs/prompts/claude_2026-10-19_1930_prompt_shell_ui_s8_rail_density.md`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editors/properties-with-tree-view.scss`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `792969efa` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9415 tests in 384 files, 9 red at import, hooks 936; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat: frontend tree at 792969efa identical to the shell-ui-s8 tip 41b25c723 checked on 3018 (rows 26/24, outer borders both 1px #e2e8f0, jj-section-title 11px/500/#64748b, rects unchanged, console init_dash only).
+**Notes**: Rollback tag `pre-shell-ui-s8` on `4f560e9a8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2019/result.json`.
+**Prompt document name**: 2026-10-19 20:19
