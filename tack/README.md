@@ -257,6 +257,77 @@ No response carries message text, a commit subject, an author, a session cwd bel
 or a transcript path; `test/board.test.mjs` checks it with the fixture markers. A request whose Host is
 not `127.0.0.1:<port>` or `localhost:<port>`, or whose Origin is another site, is refused.
 
+## Settings, notifications and the load strip
+
+### Settings
+
+One schema, `contract/v1/settings.json`, and three files:
+
+| Level | File | Kept in git | Holds |
+|-------|------|-------------|-------|
+| user | `~/.tack/settings.json` (or `TACK_SETTINGS`) | no | appearance, locale, channels, quiet hours, privacy, notification rows |
+| project | `<repo>/tack.json` | yes | `harness.laneRun`, `limits.laneMinutes`, `budget.dailyUsd`, `idle.silentMinutes`, `context.hardTokens`, `load.threshold`, `git.unpushedMax`, `history.windowDays` |
+| local | `<repo>/tack.local.json` | no (git-ignored) | personal overrides of the notification rows |
+
+Precedence is default < user < project < local. Each key is one merge unit: the later level replaces
+it whole, it is never merged field by field. Every key declares the levels it may appear at; a key at
+another level is a violation, and so is any credential-shaped string (an ntfy topic URL or token, a
+Slack or Discord webhook) in a project or local file. Channel credentials therefore live only in the
+user file.
+
+```
+tack check <settings file>     # validates a settings file at the level its name stands for
+tack settings [--repo <dir>]   # every key, its effective value and the level it comes from
+```
+
+`tack settings` masks the ntfy token. The board page `/settings` edits the user and local files
+(atomic write); it never writes `tack.json`, and a project-only key is refused with 403.
+
+### Notifications
+
+The notifier is a set of rules over what the collectors already store; nothing hooks into lane-run.
+The catalogue is `CATALOGUE` in `src/notify/notifier.mjs`. On by default: `lane_question`,
+`lane_hard_stop`, `lane_blocked`, `gate_red`, `context_hard`, `cz_ask`, `lane_silent`, `retention`.
+Off by default: `lane_done`, `lane_started`, `merge_completed`, `daily_spend`, `host_load`,
+`unpushed`. `merge_conflict` is listed but disabled in v0. Each row has `enabled`, a `scope` (`all`,
+`fronts` or `chats`) and its `channels`.
+
+An occurrence is sent once, on its rising edge: it is claimed in `notify_events`, so a poll never
+repeats it and a restart replays none. The first evaluation of a rule only records a baseline; an
+occurrence seen while its row is off is suppressed, so turning a row on never floods; an occurrence
+older than 24 h at first sight is stale and not sent.
+
+Channels: `desktop` (osascript, with the message passed as arguments, no shell) and `ntfy` (an HTTP
+POST; disabled by default, enabled in the user file together with its topic). In quiet hours (`quietHours`, default 22:00 to
+08:00 when enabled) only urgent events (`lane_question`, `lane_blocked`) go out; the rest are queued
+and sent as one digest when the quiet hours end.
+
+Privacy: a message carries kind, unit, front, repository name, outcome and a board link, and nothing
+else; `privacy.repoName` and `privacy.boardLink` drop the last two.
+
+```
+tack notify --watch                       # standalone notifier
+tack notify test <desktop|ntfy> [--dry-run]
+```
+
+`tack board` runs the notifier too. One store has one notifier: a lease in `notify_lease` decides
+which process sends, and the others wait for it to lapse. `TACK_NOTIFY=off` turns it off in both
+commands. Tests inject the transports and never send.
+
+### Load strip
+
+The board's top bar shows the host load: 60 bars, one per 5 s sample (5 minutes), the 1-minute load in
+figures, a dashed line at `load.threshold` (raw load, default 20), and a tick where a lane started or
+ended. `GET /api/load` serves the samples. `appearance.loadNormalised` divides the display by the core
+count; the threshold stays raw. The process holding the notify lease also stores one sample per minute
+in `host_load`.
+
+### Store schema 5
+
+Schema 5 adds `notify_events`, `notify_baseline`, `notify_lease` and `host_load`. Like every table,
+their columns are listed with their sources in `NOTIFY_COLUMN_SOURCES` and `HOST_COLUMN_SOURCES`, and
+`test/privacy.test.mjs` checks them.
+
 ## Tests
 
 ```

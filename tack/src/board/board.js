@@ -48,7 +48,7 @@
   if (typeof document === 'undefined') return;
 
   const $ = (id) => document.getElementById(id);
-  const TABS = ['sessions', 'timeline', 'insights'];
+  const TABS = ['sessions', 'timeline', 'insights', 'settings'];
   const state = B.state = { repos: [], preselected: null, data: null, metrics: null, timeline: null, threshold: 200000, tab: 'sessions', selected: null };
 
   async function get(path) {
@@ -75,7 +75,8 @@
   /** Draws a registered view into its section when it is the visible tab and its data are in. */
   function renderView(t) {
     const v = root.TackViews[t];
-    if (!v || !state.data || t !== state.tab) return;
+    // The settings view loads its own data: it draws before the sessions arrive.
+    if (!v || t !== state.tab || (!state.data && t !== 'settings')) return;
     v.render(state, $('tab-' + t));
     if (t === 'insights' && B.drawnMs === undefined) B.drawnMs = Math.round(performance.now());
   }
@@ -180,11 +181,11 @@
     if (!params().get('repo') && r.preselected) setParams({ repo: r.preselected });
     const p = params(); $('since').value = p.get('since') || ''; $('until').value = p.get('until') || '';
     renderRepos();
-    showTab(location.hash.slice(1));
+    showTab(location.hash.slice(1) || (location.pathname === '/settings' ? 'settings' : ''));
     await load();
   }
 
-  $('repo').addEventListener('change', (e) => { setParams({ repo: e.target.value }); renderRepos(); load(); });
+  $('repo').addEventListener('change', (e) => { setParams({ repo: e.target.value }); renderRepos(); load(); if (state.tab === 'settings') renderView('settings'); });
   for (const id of ['since', 'until']) $(id).addEventListener('change', (e) => { setParams({ [id]: e.target.value }); load(); });
   for (const id of ['only-hi', 'only-unk']) $(id).addEventListener('change', renderSessions);
   $('clear').addEventListener('click', (e) => { e.preventDefault(); $('since').value = $('until').value = ''; $('only-hi').checked = $('only-unk').checked = false; setParams({ since: '', until: '' }); load(); });

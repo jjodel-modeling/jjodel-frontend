@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tack.dev/contract/v1/settings.json",
+  "title": "Tack settings: ~/.tack/settings.json (user), <repo>/tack.json (project), <repo>/tack.local.json (local)",
+  "description": "One schema for the three files. A node carrying x-tack-levels is a key: one merge unit, replaced whole by a later level (user < project < local). A key at a level its x-tack-levels does not list is an error of tack check. x-tack-secret marks a credential: user level only, and a credential-shaped string is rejected in a project or local file under any key.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "theme": { "x-tack-levels": ["user"], "enum": ["light", "dark", "system", "high-contrast"], "default": "system" },
+        "density": { "x-tack-levels": ["user"], "enum": ["comfortable", "compact"], "default": "comfortable" },
+        "fontScale": { "x-tack-levels": ["user"], "type": "number", "minimum": 0.8, "maximum": 1.5, "default": 1 },
+        "reducedMotion": { "x-tack-levels": ["user"], "enum": ["system", "reduce", "no-preference"], "default": "system" },
+        "loadNormalised": { "x-tack-levels": ["user"], "type": "boolean", "default": false, "description": "Show host load divided by the core count; the threshold is raw load." }
+      }
+    },
+    "locale": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "timeZone": { "x-tack-levels": ["user"], "type": "string", "pattern": "^(system|[A-Za-z_]+(/[A-Za-z0-9_+-]+){0,2}|UTC)$", "default": "system" },
+        "dateFormat": { "x-tack-levels": ["user"], "enum": ["iso", "locale"], "default": "iso" }
+      }
+    },
+    "channels": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "desktop": {
+          "x-tack-levels": ["user"],
+          "type": "object", "additionalProperties": false, "required": ["enabled"],
+          "properties": { "enabled": { "type": "boolean" } },
+          "default": { "enabled": true }
+        },
+        "ntfy": {
+          "x-tack-levels": ["user"], "x-tack-secret": true,
+          "type": "object", "additionalProperties": false, "required": ["enabled"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "server": { "type": "string", "pattern": "^https?://[^\\s/]+(/[^\\s]*)?$" },
+            "topic": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+            "token": { "type": ["string", "null"], "pattern": "^\\S{1,200}$" }
+          },
+          "default": { "enabled": false, "server": "https://ntfy.sh", "topic": null, "token": null }
+        }
+      }
+    },
+    "quietHours": {
+      "x-tack-levels": ["user"],
+      "type": "object", "additionalProperties": false, "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "start": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+        "end": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" }
+      },
+      "default": { "enabled": false, "start": "22:00", "end": "08:00" }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repoName": { "x-tack-levels": ["user"], "type": "boolean", "default": true, "description": "Put the repository name in a notification." },
+        "boardLink": { "x-tack-levels": ["user"], "type": "boolean", "default": true, "description": "Put a board link in a notification." }
+      }
+    },
+    "harness": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "laneRun": { "x-tack-levels": ["project"], "enum": ["auto", "off"], "default": "auto", "description": "Read lane-run folders for this repository." }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "laneMinutes": { "x-tack-levels": ["project"], "type": "integer", "minimum": 1, "maximum": 1440, "default": 90, "description": "A lane turn longer than this is over time." }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dailyUsd": { "x-tack-levels": ["project"], "type": ["number", "null"], "minimum": 0, "default": null, "description": "Spend per day of this repository's sessions above which daily_spend fires; null: never." }
+      }
+    },
+    "idle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "silentMinutes": { "x-tack-levels": ["project"], "type": "integer", "minimum": 1, "maximum": 1440, "default": 15 }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hardTokens": { "x-tack-levels": ["project"], "type": "integer", "minimum": 1000, "maximum": 10000000, "default": 250000 }
+      }
+    },
+    "load": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "threshold": { "x-tack-levels": ["project"], "type": "number", "minimum": 0.1, "maximum": 1024, "default": 20, "description": "Raw 1-minute load at which a lane launch should wait." }
+      }
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unpushedMax": { "x-tack-levels": ["project"], "type": "integer", "minimum": 0, "maximum": 100000, "default": 10 }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "windowDays": { "x-tack-levels": ["project"], "type": "integer", "minimum": 1, "maximum": 3650, "default": 30, "description": "The window the board analyses; retention fires when Claude Code keeps transcripts for fewer days." }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "events": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lane_question": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "lane_hard_stop": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "lane_blocked": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "gate_red": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "context_hard": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "cz_ask": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "lane_silent": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "lane_done": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": false, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "lane_started": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": false, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "merge_completed": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": false, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "daily_spend": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": false, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "host_load": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": false, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "unpushed": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": false, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } },
+            "retention": { "x-tack-levels": ["user", "local"], "$ref": "#/$defs/eventRow", "default": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop", "ntfy"] } }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "eventRow": {
+      "type": "object", "additionalProperties": false, "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "scope": {
+          "type": "object", "additionalProperties": false, "required": ["kind"],
+          "description": "Lane events only: every lane, the lanes of the fronts named, or the lanes launched by the chats named.",
+          "properties": {
+            "kind": { "enum": ["all", "fronts", "chats"] },
+            "values": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,40}$" } }
+          }
+        },
+        "channels": { "type": "array", "items": { "enum": ["desktop", "ntfy"] } }
+      }
+    }
+  }
+}

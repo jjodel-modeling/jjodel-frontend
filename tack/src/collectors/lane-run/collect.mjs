@@ -4,6 +4,9 @@
 // pid.txt, tier.txt, session.txt, worktree.txt (resolved to a repository in memory, the path is not kept),
 // runs.jsonl (counted), input-<k>.md and msg-<k>.md (classed in memory, the text is not kept) and the
 // `result` and assistant `Outcome:` lines of log.jsonl. Only ids, enums, counts, times and costs are stored.
+// Schema 5 adds: the outcome of the last turn, the log's mtime, the critical-zone flag (tier.txt reason or
+// goahead.txt), the Front: and Chat: header lines of the prompt file prompt.txt names (read in memory, the path
+// and the text are not kept), and the state of a direct merge from result.json (ok, merge sha, gates).
 //
 // The turn and cost rules restate those of Jjodel's lane board (frontend/scripts/lane-board/lane-board.mjs:
 // laneTimeline :926, results :815, costEvents :761, spendByDay :785, logFacts :855, inputClass :895), so that
@@ -19,8 +22,12 @@ export const LANE_COLUMN_SOURCES = {
     id: 'folder name', repo_key: 'worktree.txt resolved against repos.toplevels, else session_repo of session.txt',
     session_id: 'session.txt', started_ms: 'started.txt', end_ms: 'exit.txt mtime', live: 'exit.txt absent and pid.txt alive',
     tier: 'tier.txt first word', runs: 'runs.jsonl line count', outcome: 'last assistant Outcome: line of log.jsonl (enum)',
-    blocked_run: 'result event Outcome blocked (boolean)', over_time: 'result event duration_ms above 90 min (boolean)',
+    blocked_run: 'result event Outcome blocked (boolean)', over_time: 'result event duration_ms above the lane time limit, tack.json limits.laneMinutes, default 90 (boolean)',
     corrective: 'resume input class (boolean)', cost_usd: 'max result total_cost_usd', cache_key: 'file sizes and mtimes',
+    turns: 'turn-closing result events (count)', last_outcome: 'Outcome word of the last turn-closing result event (enum)',
+    log_mtime_ms: 'log.jsonl mtime', critical: 'tier.txt reason or goahead.txt (boolean)',
+    front: 'Front: header line of the file prompt.txt names (a front name)', chat: 'Chat: header line of the same file (a C- id)',
+    merge_state: 'result.json ok, merge and gates (enum)', gates_red: 'result.json gates not ok (count)',
   },
   lane_spend: {
     lane_id: 'folder name', seq: 'cost event order', at_ms: 'end of the turn the event closes', usd: 'result total_cost_usd delta',
@@ -117,11 +124,42 @@ export function inputClass(text) {
   return 'other';
 }
 
+const OUTCOMES = ['done', 'hard-stop', 'question', 'blocked'];
+/** The outcome of a turn from the Outcome word of its result event: one of four words, unparsed, or none. */
+const turnOutcome = (w) => (!w ? 'none' : OUTCOMES.includes(w) ? w : 'unparsed');
+
+// lane-run's tier reasons that put a lane in the critical zone (lane-run.mjs, tierOf: `--critical-zone-goahead`,
+// `names <critical file>`).
+const CRITICAL_REASON = /(^|: )(names \S|--critical-zone-goahead\b)/;
+const FRONT = /^Front:[ \t]*([A-Za-z0-9][A-Za-z0-9_-]{0,40})[ \t]*$/m;
+const CHAT = /^Chat:[ \t]*(C-\d{4}-\d{2}-\d{2}-\d{4})\b/m;
+
+/** Front and chat of a prompt file: header lines before the first `## `, read in memory; nulls when unreadable. */
+export function promptHeader(path) {
+  if (!path) return { front: null, chat: null };
+  let head = '';
+  try { head = readFileSync(path, 'utf8').slice(0, 8192); } catch { return { front: null, chat: null }; }
+  const cut = head.search(/^## /m);
+  if (cut !== -1) head = head.slice(0, cut);
+  return { front: FRONT.exec(head)?.[1] ?? null, chat: CHAT.exec(head)?.[1] ?? null };
+}
+
+/** The state of a direct merge from result.json: merged (ok with a merge commit), red (a gate not ok), blocked; null without one. */
+export function mergeState(path) {
+  let r;
+  try { r = JSON.parse(readFileSync(path, 'utf8')); } catch { return { state: null, gatesRed: null }; }
+  if (!r || typeof r !== 'object') return { state: null, gatesRed: null };
+  const gatesRed = Array.isArray(r.gates) ? r.gates.filter((g) => g && g.ok === false).length : 0;
+  const state = r.ok === true && r.merge ? 'merged' : gatesRed ? 'red' : 'blocked';
+  return { state, gatesRed };
+}
+
 const numbered = (names, re) => names.map((n) => re.exec(n)).filter(Boolean).map((m) => Number(m[1])).sort((a, b) => a - b);
 
 /** The cache key of a lane folder: every file read, by size and mtime. */
 export function laneKey(dir, names) {
   const files = ['log.jsonl', 'exit.txt', 'started.txt', 'pid.txt', 'tier.txt', 'session.txt', 'worktree.txt', 'runs.jsonl',
+    'result.json', 'prompt.txt', 'goahead.txt',
     ...names.filter((n) => /^(input|msg)-\d+\.md$/.test(n)).sort()];
   return files.map((f) => `${f}:${size(join(dir, f))}:${mtime(join(dir, f))}`).join('|');
 }
@@ -169,6 +207,8 @@ export function readLane(dir, now = Date.now()) {
     spend.push({ seq, at: Math.round(turns[Math.min(ev.turn, turns.length - 1)].e), usd });
   });
   const pid = Number(readTrim(join(dir, 'pid.txt')));
+  const tierLine = readTrim(join(dir, 'tier.txt')).split('\n')[0];
+  const merge = mergeState(join(dir, 'result.json'));
   return {
     names,
     started,
@@ -181,6 +221,14 @@ export function readLane(dir, now = Date.now()) {
     outcome: laneOutcome(buf),
     blockedRun: res.some((r) => r.outcome === 'blocked'),
     overTime: res.some((r) => r.ms > 90 * 60e3),
+    maxRunMs: res.reduce((a, r) => Math.max(a, r.ms), 0),
+    turns: res.length,
+    lastOutcome: res.length ? turnOutcome(res[res.length - 1].outcome) : 'none',
+    logMtime: buf ? Math.round(mtime(join(dir, 'log.jsonl'))) || null : null,
+    critical: CRITICAL_REASON.test(tierLine) || existsSync(join(dir, 'goahead.txt')),
+    ...promptHeader(readTrim(join(dir, 'prompt.txt')) || null),
+    mergeState: merge.state,
+    gatesRed: merge.gatesRed,
     corrective: classes.includes('corrective'),
     cost: co.max,
     spend,
@@ -196,8 +244,12 @@ function repoOfPath(repos, p) {
   return hit.length === 1 ? hit[0].key : null;
 }
 
-/** Reads every lane folder under root into db; a folder whose files did not change and that has exited is skipped. */
-export function collectLanes(db, root = defaultLaneRoot(), now = Date.now()) {
+/**
+ * Reads every lane folder under root into db; a folder whose files did not change and that has exited is skipped.
+ * opts.limitMs(repoKey) gives the lane time limit of a repository (its tack.json), 90 minutes by default.
+ */
+export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opts = {}) {
+  const limitMs = opts.limitMs ?? (() => 90 * 60e3);
   const st = { enabled: false, lanes: 0, read: 0, unchanged: 0, errors: 0, spendRows: 0 };
   if (!existsSync(root)) return st;
   st.enabled = true;
@@ -205,7 +257,8 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now()) {
   const sessionRepo = db.prepare('SELECT repo_key FROM session_repo WHERE session_id = ?');
   const getKey = db.prepare('SELECT cache_key, live, end_ms FROM lanes WHERE id = ?');
   const put = db.prepare(`INSERT OR REPLACE INTO lanes (id, repo_key, session_id, started_ms, end_ms, live, tier, runs, outcome,
-    blocked_run, over_time, corrective, cost_usd, cache_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    blocked_run, over_time, corrective, cost_usd, cache_key, turns, last_outcome, log_mtime_ms, critical, front, chat, merge_state,
+    gates_red) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const delSpend = db.prepare('DELETE FROM lane_spend WHERE lane_id = ?');
   const addSpend = db.prepare('INSERT INTO lane_spend (lane_id, seq, at_ms, usd) VALUES (?, ?, ?, ?)');
   db.exec('BEGIN');
@@ -226,7 +279,8 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now()) {
       try { l = readLane(dir, now); } catch { st.errors++; continue; }
       const repo = repoOfPath(repos, l.worktree) ?? (l.session ? sessionRepo.get(l.session)?.repo_key ?? null : null);
       put.run(id, repo, l.session, l.started, l.end, l.live ? 1 : 0, l.tier, l.runs, l.outcome, l.blockedRun ? 1 : 0,
-        l.overTime ? 1 : 0, l.corrective ? 1 : 0, l.cost, key);
+        l.maxRunMs > limitMs(repo) ? 1 : 0, l.corrective ? 1 : 0, l.cost, key, l.turns, l.lastOutcome, l.logMtime,
+        l.critical ? 1 : 0, l.front, l.chat, l.mergeState, l.gatesRed);
       delSpend.run(id);
       for (const s of l.spend) addSpend.run(id, s.seq, s.at, s.usd);
       st.spendRows += l.spend.length;

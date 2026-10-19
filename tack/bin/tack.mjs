@@ -11,7 +11,14 @@ if (NODE_MAJOR < 24) {
 const USAGE = `usage: tack <command>
 
 commands:
-  check [file]                          validate a JSON Lines log against contract v1 (default: .tack/log.jsonl)
+  check [file] [--level user|project|local]
+                                        validate a JSON Lines log against contract v1 (default: .tack/log.jsonl);
+                                        settings.json, tack.json and tack.local.json against the settings schema
+  settings [--repo <dir>] [--json]      the effective value of every setting and the level it comes from
+  notify --watch [--store <file>] [--root <dir>]
+                                        collect, sample host load and notify without the board (one per store)
+  notify test <desktop|ntfy> [--dry-run]
+                                        send one test message on a channel; --dry-run prints it instead
   scan [--root <dir>] [--store <file>]  ingest Claude Code transcripts (default root: ~/.claude/projects),
                                         then resolve each session cwd to a repository and read its git history
   sessions [--cwd <prefix>] [--json] [--store <file>]
@@ -30,7 +37,7 @@ commands:
                                         compare spend per day and first-shot lanes with Jjodel's lane board
                                         rules over the last n days (default 14); exit 1 on any difference
 
-The store defaults to ~/.tack/store.db, or TACK_STORE when set.
+The store defaults to ~/.tack/store.db, or TACK_STORE when set; the user settings to ~/.tack/settings.json, or TACK_SETTINGS.
 `;
 
 function usage() {
@@ -50,9 +57,18 @@ function parseFlags(args, valued, booleans = []) {
   return out;
 }
 
-function check(args) {
-  if (args.length > 1) return usage();
-  const file = args[0] ?? '.tack/log.jsonl';
+async function check(args) {
+  const files = [];
+  let level = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--level' && i + 1 < args.length) level = args[++i];
+    else if (args[i].startsWith('--')) return usage();
+    else files.push(args[i]);
+  }
+  if (files.length > 1 || (level && !['user', 'project', 'local'].includes(level))) return usage();
+  const file = files[0] ?? '.tack/log.jsonl';
+  const { levelOfFile } = await import('../src/settings/settings.mjs');
+  if (level || levelOfFile(file)) return checkSettings(file, level ?? levelOfFile(file));
   let text;
   try {
     text = readFileSync(file, 'utf8');
@@ -67,6 +83,48 @@ function check(args) {
     return 0;
   }
   return 1;
+}
+
+/** tack check on a settings file: settings.json is the user level, tack.json project, tack.local.json local. */
+async function checkSettings(file, level) {
+  const { checkSettingsText } = await import('../src/settings/settings.mjs');
+  let text;
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch (err) {
+    process.stderr.write(`tack check: cannot read ${file}: ${err.code ?? err.message}\n`);
+    return 2;
+  }
+  const { violations } = checkSettingsText(text, level);
+  for (const v of violations) process.stdout.write(`${file}: ${v.key} ${v.rule}: ${v.message}\n`);
+  if (violations.length === 0) {
+    process.stdout.write(`${file}: ${level} settings, no violations\n`);
+    return 0;
+  }
+  return 1;
+}
+
+/** tack settings: the effective value of every key and the level it comes from. */
+async function settingsCmd(args) {
+  const flags = parseFlags(args, ['repo'], ['json']);
+  if (!flags) return usage();
+  const { effectiveSettings, repoSettingsPaths, userSettingsPath } = await import('../src/settings/settings.mjs');
+  const { git } = await import('../src/collectors/git/run.mjs');
+  const top = git(['rev-parse', '--show-toplevel'], { cwd: flags.repo ?? process.cwd() });
+  const toplevel = top.ok ? top.out.trim() : null;
+  const s = effectiveSettings({ user: userSettingsPath(), ...repoSettingsPaths(toplevel) });
+  if (flags.json) {
+    process.stdout.write(JSON.stringify({ files: s.files, entries: s.entries.map(({ key, value, source, levels }) => ({ key, value, source, levels })), violations: s.violations }, null, 2) + '\n');
+    return s.violations.length ? 1 : 0;
+  }
+  const w = (x) => process.stdout.write(x + '\n');
+  for (const l of ['user', 'project', 'local']) w(`${l.padEnd(8)}${s.files[l].path ?? '- (not in a git work tree)'}${s.files[l].path && !s.files[l].exists ? ' (absent)' : ''}`);
+  w('');
+  const table = [['key', 'value', 'source', 'levels']];
+  for (const e of s.entries) table.push([e.key, e.secret && e.value && e.value.token ? JSON.stringify({ ...e.value, token: '***' }) : JSON.stringify(e.value), e.source, e.levels.join('+')]);
+  printTable(table);
+  for (const v of s.violations) w(`${v.file}: ${v.key} ${v.rule}: ${v.message} (ignored)`);
+  return s.violations.length ? 1 : 0;
 }
 
 const tally = (o) => Object.entries(o).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k, v]) => `${k} ${v}`).join(', ') || 'none';
@@ -333,6 +391,61 @@ async function parityCmd(args) {
   return r.ok ? 0 : 1;
 }
 
+/** tack notify --watch | tack notify test <desktop|ntfy> [--dry-run]. */
+async function notifyCmd(args) {
+  const { effectiveSettings, userSettingsPath } = await import('../src/settings/settings.mjs');
+  const { testMessage } = await import('../src/notify/notifier.mjs');
+  const { defaultTransports, desktopArgs, ntfyRequest } = await import('../src/notify/transports.mjs');
+  const user = () => effectiveSettings({ user: userSettingsPath() });
+  if (args[0] === 'test') {
+    const channel = args[1];
+    const rest = args.slice(2);
+    if (!['desktop', 'ntfy'].includes(channel) || rest.some((a) => a !== '--dry-run')) return usage();
+    const m = testMessage();
+    if (rest.includes('--dry-run')) {
+      if (channel === 'desktop') process.stdout.write(JSON.stringify({ file: 'osascript', args: desktopArgs(m) }, null, 2) + '\n');
+      else {
+        const cfg = user().value('channels.ntfy');
+        const r = ntfyRequest(m, { ...cfg, topic: cfg.topic ?? '<topic>' });
+        if (r.init.headers.Authorization) r.init.headers.Authorization = 'Bearer ***';
+        process.stdout.write(JSON.stringify(r, null, 2) + '\n');
+      }
+      return 0;
+    }
+    try {
+      await defaultTransports(user)[channel].send(m);
+    } catch (err) {
+      process.stderr.write(`tack notify test: ${channel}: ${err.message}\n`);
+      return 1;
+    }
+    process.stdout.write(`tack notify test: ${channel}: sent\n`);
+    return 0;
+  }
+  const flags = parseFlags(args, ['store', 'root'], ['watch']);
+  if (!flags || !flags.watch) return usage();
+  const { notifyDisabled, startWatcher } = await import('../src/notify/watch.mjs');
+  if (notifyDisabled()) {
+    process.stderr.write('tack notify: TACK_NOTIFY=off\n');
+    return 2;
+  }
+  const { openStore, storePath } = await import('../src/store/open.mjs');
+  const { defaultRoot } = await import('../src/collectors/claude-code/collect.mjs');
+  const { createSampler, runningLanes } = await import('../src/host/load.mjs');
+  const path = storePath(flags.store);
+  const db = openStore(path);
+  const sampler = createSampler({ running: () => runningLanes(db) }).start();
+  const log = (x) => process.stderr.write(`${new Date().toISOString()} ${x}\n`);
+  const w = startWatcher({ db, root: flags.root ?? defaultRoot(), sampler, transports: defaultTransports(user), log });
+  process.stdout.write(`tack notify: watching ${path}\n`);
+  const first = await w.tick();
+  process.stdout.write(first.leader ? 'tack notify: this process notifies (lease held)\n' : 'tack notify: another process holds the lease; waiting for it to lapse\n');
+  const keep = setInterval(() => {}, 1 << 30);
+  const stop = () => { clearInterval(keep); w.stop(); sampler.stop(); db.close(); process.exit(0); };
+  process.once('SIGINT', stop);
+  process.once('SIGTERM', stop);
+  return undefined;
+}
+
 async function boardCmd(args) {
   const flags = parseFlags(args, ['port', 'store', 'root'], ['no-open']);
   if (!flags) return usage();
@@ -341,7 +454,9 @@ async function boardCmd(args) {
 }
 
 const [command, ...rest] = process.argv.slice(2);
-if (command === 'check') process.exitCode = check(rest);
+if (command === 'check') process.exitCode = await check(rest);
+else if (command === 'settings') process.exitCode = await settingsCmd(rest);
+else if (command === 'notify') process.exitCode = await notifyCmd(rest);
 else if (command === 'scan') process.exitCode = await scanCmd(rest);
 else if (command === 'sessions') process.exitCode = await sessionsCmd(rest);
 else if (command === 'repos') process.exitCode = await reposCmd(rest);

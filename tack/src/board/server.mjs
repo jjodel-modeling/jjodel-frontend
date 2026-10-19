@@ -1,7 +1,9 @@
 // tack board: a local page over the store, node:http only, bound to 127.0.0.1. On start it runs an
 // incremental scan (the collectors of slices 2-3), then serves the page and the JSON API of api.mjs;
 // POST /api/rescan repeats the scan. Nothing is written outside the store: the selection lives in
-// the URL, the last scan time in memory.
+// the URL, the last scan time in memory. Slice 7: /settings and the settings API (writes go to the user
+// file or tack.local.json only), the host load sampler and GET /api/load, and the notifier (notify: true, set
+// by the CLI, off under TACK_NOTIFY=off).
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -11,17 +13,25 @@ import { identify } from '../collectors/git/identity.mjs';
 import { collectGit } from '../collectors/git/collect.mjs';
 import { collectLayers } from '../collectors/layers.mjs';
 import { dayParam, healthApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi } from './api.mjs';
+import { htmlAttributes, loadApi, settingsApi, settingsWrite } from './settings-api.mjs';
+import { createSampler, runningLanes } from '../host/load.mjs';
+import { effectiveSettings, userSettingsPath } from '../settings/settings.mjs';
+import { testMessage } from '../notify/notifier.mjs';
+import { defaultTransports } from '../notify/transports.mjs';
+import { notifyDisabled, startWatcher } from '../notify/watch.mjs';
 
 export const DEFAULT_PORT = 4710;
 
 const asset = (name) => readFileSync(new URL(`./${name}`, import.meta.url), 'utf8');
+const PAGE = asset('page.html');
 const ASSETS = {
-  '/': ['text/html; charset=utf-8', asset('page.html')],
   '/board.css': ['text/css; charset=utf-8', asset('board.css')],
   '/charts.js': ['text/javascript; charset=utf-8', asset('charts.js')],
   '/board.js': ['text/javascript; charset=utf-8', asset('board.js')],
   '/timeline.js': ['text/javascript; charset=utf-8', asset('timeline.js')],
   '/insights.js': ['text/javascript; charset=utf-8', asset('insights.js')],
+  '/settings.js': ['text/javascript; charset=utf-8', asset('settings.js')],
+  '/loadmeter.js': ['text/javascript; charset=utf-8', asset('loadmeter.js')],
 };
 
 /** One incremental scan: transcripts, repository identity, git history. Counts only, never a path. */
@@ -51,13 +61,29 @@ function send(res, status, type, body) {
 }
 const json = (res, status, value) => send(res, status, 'application/json; charset=utf-8', JSON.stringify(value));
 
+/** The JSON body of a POST, at most 64 KiB; null when it is not JSON. */
+function readBody(req) {
+  return new Promise((resolve) => {
+    let n = 0;
+    const chunks = [];
+    req.on('data', (c) => { n += c.length; if (n <= 65536) chunks.push(c); });
+    req.on('end', () => { if (n > 65536) return resolve(null); try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { resolve(null); } });
+    req.on('error', () => resolve(null));
+  });
+}
+
 /**
  * Starts the board. store: the store file; root: the transcripts root; cwd: the start directory
- * that picks the preselected repository; port 0 picks a free one. Resolves to { url, port,
- * preselected, server, close } once listening.
+ * that picks the preselected repository; port 0 picks a free one; user: the user settings file;
+ * notify: run the notifier (the CLI sets it; tests leave it off); transports: the channels, injected
+ * by tests; sample: run the load sampler. Resolves to { url, port, preselected, server, close } once listening.
  */
-export async function startBoard({ store, root = defaultRoot(), cwd = process.cwd(), port = DEFAULT_PORT, scanOnStart = true } = {}) {
+export async function startBoard({ store, root = defaultRoot(), cwd = process.cwd(), port = DEFAULT_PORT, scanOnStart = true,
+  user = userSettingsPath(), notify = false, transports = null, sample = true, sampler = null } = {}) {
   const db = openStore(store);
+  const userSettings = () => effectiveSettings({ user });
+  const channels = transports ?? defaultTransports(userSettings);
+  const meter = sampler ?? (sample ? createSampler({ running: () => runningLanes(db) }).start() : null);
   let lastScan = scanOnStart ? runScan(db, root) : null;
   const preselected = preselect(db, cwd);
   let allowed = new Set();
@@ -70,13 +96,37 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
     const url = new URL(req.url, 'http://127.0.0.1');
     const p = url.pathname;
     try {
+      if (p === '/api/settings' && req.method === 'POST') {
+        return readBody(req).then((body) => {
+          if (!body) return json(res, 400, { error: 'a JSON body' });
+          const repo = repoParam(db, body.repo ?? 'all');
+          if (repo.error) return json(res, 400, { error: repo.error });
+          const r = settingsWrite(db, { ...body, repo: repo.key }, { user });
+          return json(res, r.status, r.body);
+        }).catch((err) => json(res, 500, { error: String(err.code ?? err.name ?? 'error') }));
+      }
+      if (p === '/api/notify-test') {
+        if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
+        return readBody(req).then(async (body) => {
+          const ch = body && body.channel;
+          if (!channels[ch]) return json(res, 400, { error: 'channel is desktop or ntfy' });
+          try { await channels[ch].send(testMessage(`http://${req.headers.host}/`)); } catch (err) { return json(res, 502, { error: err.message }); }
+          return json(res, 200, { sent: ch });
+        });
+      }
       if (p === '/api/rescan') {
         if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
         lastScan = runScan(db, root);
         return json(res, lastScan.ok ? 200 : 500, { lastScan });
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'GET only' });
+      if (p === '/' || p === '/settings') return send(res, 200, 'text/html; charset=utf-8', PAGE.replace('<html lang="en">', `<html lang="en" ${htmlAttributes(user)}>`));
       if (ASSETS[p]) return send(res, 200, ...ASSETS[p]);
+      if (p === '/api/settings' || p === '/api/load') {
+        const repo = repoParam(db, url.searchParams.get('repo'));
+        if (repo.error) return json(res, 400, { error: repo.error });
+        return json(res, 200, p === '/api/settings' ? settingsApi(db, { repo: repo.key, user }) : loadApi(db, meter, { repo: repo.key, user }));
+      }
       if (p === '/api/health') return json(res, 200, healthApi(db, { store, lastScan }));
       if (p === '/api/repos') return json(res, 200, { preselected, repos: listBoardRepos(db) });
       if (p === '/api/sessions' || p === '/api/metrics' || p === '/api/timeline') {
@@ -102,9 +152,14 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
   });
   const bound = server.address().port;
   allowed = new Set([`127.0.0.1:${bound}`, `localhost:${bound}`]);
+  const watcher = notify && !notifyDisabled()
+    ? startWatcher({ db, root, sampler: meter, transports: channels, boardUrl: `http://127.0.0.1:${bound}/`, baseRepo: preselected, user,
+      log: (x) => process.stderr.write(`tack board: ${x}\n`) })
+    : null;
+  if (watcher) watcher.tick();
   return {
-    url: `http://127.0.0.1:${bound}/`, port: bound, preselected, server, lastScan: () => lastScan,
-    close: () => new Promise((resolve) => server.close(() => { db.close(); resolve(); })),
+    url: `http://127.0.0.1:${bound}/`, port: bound, preselected, server, lastScan: () => lastScan, watcher, sampler: meter,
+    close: () => new Promise((resolve) => { watcher?.stop(); if (!sampler) meter?.stop(); server.close(() => { db.close(); resolve(); }); }),
   };
 }
 
@@ -130,7 +185,7 @@ export async function boardCmd(flags) {
   }
   let b;
   try {
-    b = await startBoard({ store: storePath(flags.store), root: flags.root ?? defaultRoot(), port });
+    b = await startBoard({ store: storePath(flags.store), root: flags.root ?? defaultRoot(), port, notify: true });
   } catch (err) {
     process.stderr.write(`tack board: ${err.code === 'EADDRINUSE' ? `port ${port} is in use (--port <n>)` : err.message}\n`);
     return 1;
@@ -139,6 +194,7 @@ export async function boardCmd(flags) {
   process.stdout.write(`tack board on ${b.url}\n`);
   process.stdout.write(`scan: ${s.ok ? `${s.durationMs} ms, rows added: sessions ${s.added.sessions}, calls ${s.added.calls}, commits ${s.added.commits}` : `failed (${s.error})`}\n`);
   process.stdout.write(`repository: ${b.preselected ? b.preselected.slice(0, 12) : 'none here, all repositories'}\n`);
+  process.stdout.write(`notifier: ${b.watcher ? 'on (one per store: the lease decides)' : 'off (TACK_NOTIFY=off)'}\n`);
   if (!flags['no-open']) openBrowser(b.preselected ? `${b.url}?repo=${b.preselected}` : b.url);
   const stop = () => b.close().then(() => process.exit(0));
   process.once('SIGINT', stop);

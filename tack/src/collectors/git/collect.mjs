@@ -17,6 +17,7 @@ export const GIT_COLUMN_SOURCES = {
     key: 'rev-list --max-parents=0 (lowest)', roots: 'rev-list --max-parents=0', common_dirs: 'rev-parse --git-common-dir',
     toplevels: 'rev-parse --show-toplevel', remote: 'remote get-url origin (normalised)', state: 'file stat',
     tips: 'for-each-ref %(objectname) %(refname), worktree list HEAD',
+    unpushed: 'rev-list --count --branches --not --remotes (max over clones; null without a remote-tracking ref)',
   },
   session_repo: {
     session_id: 'sessions.id', repo_key: 'repos.key', missing: 'file stat, rev-parse exit',
@@ -167,6 +168,33 @@ export function collectGit(db) {
       if (!/^git log failed/.test(err.message)) throw err;
       st.errors++;
     }
+  }
+  return st;
+}
+
+/**
+ * Commits on local branches that no remote-tracking ref has, per present repository: the largest count over its
+ * clones, null when no clone has a remote-tracking ref. Read-only (rev-list, for-each-ref), no fetch.
+ */
+export function collectUnpushed(db) {
+  const st = { repos: 0, counted: 0, errors: 0 };
+  const repos = db.prepare("SELECT key, common_dirs FROM repos WHERE state = 'present'").all();
+  const put = db.prepare('UPDATE repos SET unpushed = ? WHERE key = ?');
+  for (const r of repos) {
+    st.repos++;
+    let max = null;
+    for (const d of JSON.parse(r.common_dirs)) {
+      try {
+        const remotes = git(['--git-dir', d, 'for-each-ref', '--count=1', '--format=%(refname)', 'refs/remotes']);
+        if (!remotes.ok) { st.errors++; continue; }
+        if (!remotes.out.trim()) continue;
+        const n = git(['--git-dir', d, 'rev-list', '--count', '--branches', '--not', '--remotes']);
+        if (!n.ok) { st.errors++; continue; }
+        max = Math.max(max ?? 0, Number(n.out.trim()));
+      } catch { st.errors++; }
+    }
+    if (max !== null) st.counted++;
+    put.run(max, r.key);
   }
   return st;
 }
