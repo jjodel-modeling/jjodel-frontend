@@ -20,6 +20,9 @@ commands:
   metrics [--repo <key|path>] [--since <YYYY-MM-DD>] [--json] [--store <file>]
                                         layer-1 metrics of the selection; layer 2 and 3 listed with
                                         the field that would enable them
+  board [--port <n>] [--no-open] [--store <file>] [--root <dir>]
+                                        scan, then serve the board on 127.0.0.1 (default port 4710) and open it;
+                                        started in a git work tree it preselects that repository
 
 The store defaults to ~/.tack/store.db, or TACK_STORE when set.
 `;
@@ -240,10 +243,18 @@ async function metricsCmd(args) {
   return 0;
 }
 
+async function boardCmd(args) {
+  const flags = parseFlags(args, ['port', 'store', 'root'], ['no-open']);
+  if (!flags) return usage();
+  const { boardCmd: run } = await import('../src/board/server.mjs');
+  return run(flags);
+}
+
 const [command, ...rest] = process.argv.slice(2);
 if (command === 'check') process.exitCode = check(rest);
 else if (command === 'scan') process.exitCode = await scanCmd(rest);
 else if (command === 'sessions') process.exitCode = await sessionsCmd(rest);
 else if (command === 'repos') process.exitCode = await reposCmd(rest);
 else if (command === 'metrics') process.exitCode = await metricsCmd(rest);
+else if (command === 'board') process.exitCode = await boardCmd(rest);
 else process.exitCode = usage();
