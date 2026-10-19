@@ -3,6 +3,8 @@
 // and the 20 s poll paused while the tab is hidden.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 import { loadViews } from './helpers/views.mjs';
 
 const V = loadViews(['charts.js', 'board.js', 'lanes.js']);
@@ -87,4 +89,35 @@ test('the poll runs every 20 s and loads only while the page is visible and the 
   tab = 'sessions';
   fn();
   assert.equal(loads, 1, 'another tab: no load');
+});
+
+// A browser throws "Illegal invocation" when setInterval is called as a method of another object (the first
+// version defaulted to timers = { setInterval } and never registered the view). Node accepts that call, so the
+// stub here rejects any receiver other than undefined or globalThis.
+const unboundOnly = (calls) => function (fn, ms) {
+  if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation');
+  calls.push(ms);
+  return 1;
+};
+const src = (f) => readFileSync(new URL(`../src/board/${f}`, import.meta.url), 'utf8');
+const bootContext = (extra) => {
+  const ctx = vm.createContext({ ...extra });
+  for (const f of ['charts.js', 'board.js']) vm.runInContext(src(f), ctx, { filename: f });
+  return ctx;
+};
+
+test('the default timers call setInterval with no receiver, as a browser requires', () => {
+  const calls = [];
+  const ctx = bootContext({ setInterval: unboundOnly(calls) });
+  vm.runInContext(src('lanes.js'), ctx, { filename: 'lanes.js' });
+  ctx.TackLanes.poller({ load() {}, visible: () => true }).start();
+  assert.deepEqual(calls, [20_000]);
+});
+
+test('the view is registered even when starting the poller throws', () => {
+  const ctx = bootContext({});
+  ctx.document = { visibilityState: 'visible', addEventListener() {} };
+  ctx.setInterval = () => { throw new Error('boom'); };
+  assert.throws(() => vm.runInContext(src('lanes.js'), ctx, { filename: 'lanes.js' }), /boom/);
+  assert.equal(typeof ctx.TackViews.lanes.render, 'function');
 });

@@ -91,7 +91,7 @@
   }
 
   /** Calls load every 20 s, and when the page is shown again, only while it is visible and active() holds. */
-  function poller({ load, visible, active = () => true, every = EVERY_MS, timers = { setInterval } }) {
+  function poller({ load, visible, active = () => true, every = EVERY_MS, timers = { setInterval: (fn, ms) => setInterval(fn, ms) } }) {
     const tick = () => { if (!visible() || !active()) return false; load(); return true; };
     return { tick, start() { timers.setInterval(tick, every); return this; } };
   }
@@ -116,7 +116,7 @@
       busy = false;
     }
   }
+  root.TackViews.lanes = { render: (state, el) => { box = el; load(); } };
   const p = poller({ load, visible: () => document.visibilityState === 'visible', active: () => B.state && B.state.tab === 'lanes' }).start();
   document.addEventListener('visibilitychange', p.tick);
-  root.TackViews.lanes = { render: (state, el) => { box = el; load(); } };
 })(typeof window !== 'undefined' ? window : globalThis);
