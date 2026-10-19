@@ -520,3 +520,17 @@ ported to Tack by hand, not synchronised.
 None. This report changes no code, deletes nothing and touches no model, effort, cost or push. Two items will reach the
 list later: retiring Jjodel's board (a deletion, §6.4), and a new dependency if SQLite is not taken from node itself
 (risk 4, a `package.json` entry under rule 4).
+
+## 11. Resolutions (Alfonso, 2026-10-19 11:54, «ok alle raccomandazioni»)
+
+The five open questions of §8, closed with the chat's recommendations:
+
+1. **Log location.** One append-only file per adopting repository: `.tack/log.jsonl`.
+2. **Commit linkage.** Both forms are accepted; the trailer `Unit: <id>` is canonical, the subject suffix `(P-...)` used by Jjodel is read as an alias.
+3. **Commit proximity metric.** Kept, labelled «commit within the hour (proximity, not authorship)».
+4. **Store content.** Metadata only, no message text (confirms decision 7 of §9).
+5. **Second non-Jjodel repository for v0.** tracer-scaffold, which already has transcripts, plus a fresh eclipse-sprotty pilot started now so that its transcripts accumulate before slice 7.
+
+Note on risk 9 and §0 item 6: Check E was red only on the lane's branch, which was cut from the prompt commit `dbffd91ce`. The front `tack` was registered on the trunk in `e201c3985` before the merge, so the gate is green after `6023168f0`.
+
+The numbers of §4.2 are verified independently by the acceptance criterion of slice 2, which must reproduce them from a fresh scan.
