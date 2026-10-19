@@ -192,3 +192,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: RC-23 by the chat on the branch dev server 3112 (offline project, empty metamodel, Advanced): View without Debug Mode, Tools opens on Configure Environment with no leading divisor, Polymetric View without beta, Analyze without Debug loops, Help without Video Tutorials; Small metamodel ConfirmDialog shown, Open anyway opens the view, Cancel closes both; console only the pre-existing init_dash. Merge gates all green.
 **Notes**: Rollback tag `pre-menu-cleanup` on `36f94e3fb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1806/result.json`.
 **Prompt document name**: 2026-10-19 18:06
+
+## 2026-10-20 — chore(jjscript): remove TEMP-DISCOVERY timing logs (P-2026-10-20-0032)
+**Prompt**: `claude_2026-10-20_0032_prompt_jjscript_timing_logs.md`, fast lane, one phase, chat `C-2026-10-20-0003`, worktree `jjodel-w-timinglogs` on `jjscript-timing-logs`: remove the `TEMP-DISCOVERY` instrumentation (`performance.now()` timers, `(this as any)._t*` fields, two `[JjScript-TIMING]` console.log calls) from the executor and ScriptBlock, against CLAUDE.md §2.
+**Files touched**: `ee21998fd`: `frontend/src/jjscript/executor/executor.ts` (15 lines deleted), `frontend/src/jjscript/components/ScriptBlock.tsx` (3 lines deleted). This commit: this inbox, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0, no `error TS`; vitest on `src/jjscript` 734 tests green in 27 files, 1 file red at import (`context-binding.test.ts`, `window is not defined`, the known one of §17); build exit 0; `rg 'TEMP-DISCOVERY|JjScript-TIMING|_tParse|_tLast|_waitMs|_applyMs|_iterStart|_tTotal' frontend/src` exit 1, no match.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — P8 derogated by the prompt: no visible change, the gates and the empty grep are the check.
+**Notes**: Deletions only; every other statement and its order kept, the timers wrapped no real work. The first edit on `executor.ts` was blocked once by the rule-trigger hook until `frontend/src/jjscript/CLAUDE.md` was read, then retried unchanged. No unattended decisions taken. check:docs result in the closing report.
+**Prompt document name**: 2026-10-20 00:32

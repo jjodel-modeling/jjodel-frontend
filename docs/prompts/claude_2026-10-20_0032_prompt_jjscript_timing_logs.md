@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-0032
 Chat: C-2026-10-20-0003
 Front: maintenance
 Lane: fast (two files, temporary instrumentation only)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane maintenance · ee21998fd · verifica visiva non applicabile (P8 derogated: no visible change)
 Request: https://claude.ai/code/session_01Mk7LmH7N6YcSQiKx7oNZP5 (Alfonso, 2026-10-20 00:03: «chiudi tutto quello che puoi chiudere, compresi i ticket, vai in /lane auto»; harness ticket of the 2026-10-11 session of chat C-2026-10-10-0039)
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P8 replaced: no visible change; gates and an empty grep are the check.
