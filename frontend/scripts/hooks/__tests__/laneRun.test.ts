@@ -719,6 +719,97 @@ describe('lane-run merge', () => {
         expect(c.stdin).toContain('Chat: C-2026-09-26-1702');
     });
 
+    describe('the Request: line (RC-43)', () => {
+        const CHAT = 'C-2026-10-19-1747';
+        const URL_OLD = 'https://claude.ai/code/session_old';
+        const URL_NEW = 'https://claude.ai/code/session_new';
+        const URL_FLAG = 'https://claude.ai/code/session_flag';
+        const URL_TRAILER = 'https://claude.ai/code/session_trailer';
+        const withRequest = (chat: string, request: string) =>
+            `# Prompt: a lane\n\nPrompt-ID: P-2026-09-27-0300\nChat: ${chat}\nRequest: ${request}\nLane: fast\nStatus: eseguito 2026-09-27\n\n## COSA\n\nx\n`;
+        const parkedText = (l: Lab) => readFileSync(parked(l, MERGE_FILE), 'utf8');
+        const requestLine = (text: string) => (/^Request:.*$/m.exec(text) || [''])[0];
+
+        test('kills "--chat-url ignored", "the explicit URL loses to a prompt": --chat-url wins over the prompts and the trailers', () => {
+            const { l, repo } = repoLab();
+            commitFiles(l, repo, 'docs: add prompt', { 'docs/prompts/claude_2026-09-27_0300_prompt_old.md': withRequest(CHAT, URL_OLD) });
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT, '--chat-url', URL_FLAG], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            const text = parkedText(l);
+            expect(text).toContain(`\nChat: ${CHAT}\n`);
+            expect(requestLine(text)).toBe(`Request: ${URL_FLAG} (merge of feat launched by chat ${CHAT})`);
+            expect(r.stdout).not.toContain('warning:');
+        });
+
+        test('kills "--chat-url not checked": a --chat-url that is not https:// is refused', () => {
+            const { l, repo } = repoLab();
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT, '--chat-url', 'claude.ai/x'], { cwd: repo, env: MERGE_ENV });
+            expect(r.status).not.toBe(0);
+            expect(r.stderr).toContain('--chat-url must start with https://');
+        });
+
+        test('kills "the prompts source (b) dropped", "the oldest prompt read": the newest prompt with that Chat: and an https:// Request: gives the URL', () => {
+            const { l, repo } = repoLab();
+            commitFiles(l, repo, 'docs: add prompts', {
+                'docs/prompts/claude_2026-09-27_0300_prompt_old.md': withRequest(CHAT, URL_OLD),
+                'docs/prompts/claude_2026-09-27_0400_prompt_new.md': withRequest(CHAT, URL_NEW),
+                'docs/prompts/claude_2026-09-27_0500_prompt_other.md': withRequest('C-2026-10-19-9999', 'https://claude.ai/code/session_other'),
+                'docs/prompts/claude_2026-09-27_0600_prompt_text.md': withRequest(CHAT, 'Alfonso, in chat'),
+            });
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            expect(requestLine(parkedText(l))).toBe(`Request: ${URL_NEW} (merge of feat launched by chat ${CHAT})`);
+            expect(r.stdout).not.toContain('warning:');
+        });
+
+        test('kills "the trailer source (c) dropped": with no prompt URL, the Claude-Session: trailer of the newest commit that added a prompt with that Chat: gives it', () => {
+            const { l, repo } = repoLab();
+            commitFiles(l, repo, 'docs: add prompt\n\nClaude-Session: https://claude.ai/code/session_older', {
+                'docs/prompts/claude_2026-09-27_0300_prompt_old.md': withRequest(CHAT, 'Alfonso, in chat'),
+            });
+            commitFiles(l, repo, `docs: add prompt\n\nClaude-Session: ${URL_TRAILER}`, {
+                'docs/prompts/claude_2026-09-27_0400_prompt_new.md': withRequest(CHAT, 'Alfonso, in chat'),
+            });
+            commitFiles(l, repo, 'docs: add prompt\n\nClaude-Session: https://claude.ai/code/session_elsewhere', {
+                'docs/prompts/claude_2026-09-27_0500_prompt_other.md': withRequest('C-2026-10-19-9999', 'Alfonso, in chat'),
+            });
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            expect(requestLine(parkedText(l))).toBe(`Request: ${URL_TRAILER} (merge of feat launched by chat ${CHAT})`);
+            expect(r.stdout).not.toContain('warning:');
+        });
+
+        test('kills "the none fallback missing", "no warning", "the merge failed for want of a URL": no URL known for the chat renders Request: none, prints a warning, and the merge goes on', () => {
+            const { l, repo } = repoLab();
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            expect(requestLine(parkedText(l))).toBe(`Request: none (rendered by lane-run, no chat URL known for ${CHAT})`);
+            expect(r.stdout).toContain(`warning: no chat URL for chat ${CHAT}`);
+            expect(r.stdout).toContain('launch: not requested');
+        });
+
+        test('kills "no --chat reads a URL", "no --chat fails": without --chat the line is none, with the warning', () => {
+            const { l, repo } = repoLab();
+            commitFiles(l, repo, 'docs: add prompt', { 'docs/prompts/claude_2026-09-27_0300_prompt_old.md': withRequest(CHAT, URL_OLD) });
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk'], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            const text = parkedText(l);
+            expect(text).toContain('\nChat: —\n');
+            expect(requestLine(text)).toBe('Request: none (rendered by lane-run, no chat URL known for no --chat)');
+            expect(r.stdout).toContain('warning: no chat URL for (no --chat)');
+        });
+
+        test('kills "the mirror direction unrendered": --trunk-into carries the same Request: line', () => {
+            const { l, repo } = repoLab();
+            const wt = join(dirname(repo), 'wt-feat');
+            gitIn(l, repo, ['worktree', 'add', '-q', wt, 'feat']);
+            const r = laneRun(l, ['merge', '--trunk-into', 'feat', '--from', 'trunk', '--chat', CHAT, '--chat-url', URL_FLAG], { cwd: wt, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            const text = readFileSync(parked(l, TAKE_FILE), 'utf8');
+            expect(requestLine(text)).toBe(`Request: ${URL_FLAG} (merge of feat launched by chat ${CHAT})`);
+        });
+    });
+
     test('kills "JJODEL_MODEL_TRAILER ignored": the launch commit carries the trailer the variable names', () => {
         const { l, repo } = repoLab();
         const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--launch'], {

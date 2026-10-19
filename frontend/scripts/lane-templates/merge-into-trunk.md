@@ -2,6 +2,7 @@
 
 Prompt-ID: {{promptId}}
 Chat: {{chat}}
+Request: {{request}}
 Lane: full (merge; {{laneNote}})
 Status: da eseguire
 
