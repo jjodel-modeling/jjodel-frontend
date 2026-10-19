@@ -1,6 +1,7 @@
 // tack board: the JSON API over a store built from the synthetic fixtures of slices 2-3, the
-// repository preselection, the layer-2/3 states, an idempotent rescan, the privacy of every response
-// and a start that writes nothing in the work tree it is started from.
+// repository preselection, the layer-2/3 states, an idempotent rescan, the Sessions rules (unit or
+// branch, the name of a hash-named repository), the Timeline geometry, the privacy of every response
+// and of the HTML each tab renders, and a start that writes nothing in the work tree it is started from.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -10,6 +11,9 @@ import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { startBoard } from '../src/board/server.mjs';
+import { displayName, listBoardRepos, sessionsApi, timelineApi, unitNear } from '../src/board/api.mjs';
+import { openStore } from '../src/store/open.mjs';
+import { loadViews } from './helpers/views.mjs';
 import { T0, addTranscript, commit, g, initRepo } from './helpers/git-repo.mjs';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
@@ -181,17 +185,111 @@ test('a foreign Host or a cross-site Origin is refused', async () => {
   assert.equal(await raw({ host: `localhost:${board.port}` }), 405); // the Host is fine, the method is not
 });
 
-test('privacy: no fixture marker, session cwd below a toplevel or transcript path in any response', async () => {
-  const paths = ['/', '/board.css', '/board.js', '/api/repos', '/api/sessions', `/api/sessions?repo=${key}`, '/api/metrics',
-    `/api/metrics?repo=${key}`, '/api/health', '/api/nothing', '/api/sessions?repo=zz'];
+test('/api/timeline: per session the last event, the family, the threshold crossing and the commit ticks within the hour', async () => {
+  const { status, body } = await getJson(`/api/timeline?repo=${key}`);
+  assert.equal(status, 200);
+  assert.deepEqual(Object.keys(body).sort(), ['repo', 'sessions', 'since', 'threshold', 'until']);
+  const s1 = body.sessions.find((s) => s.id === 'sess-board-1');
+  assert.deepEqual(Object.keys(s1).sort(), ['commits', 'crossed', 'end', 'family', 'id', 'start']);
+  assert.deepEqual([s1.start, s1.end, s1.family, s1.crossed], [(T0 - 300) * 1000, (T0 + 60) * 1000, 'other', null]);
+  assert.deepEqual(s1.commits, [T0 * 1000, (T0 + 600) * 1000]);
+  assert.deepEqual(body.sessions.find((s) => s.id === 'sess-board-2').commits, [], 'no commit within the hour of the later session');
+  const all = await getJson('/api/timeline');
+  assert.deepEqual(all.body.sessions.find((s) => s.id === 'sess-board-3').commits, [], 'no repository, no tick');
+  const day2 = (await getJson(`/api/sessions?repo=${key}`)).body.sessions.find((s) => s.id === 'sess-board-2').day;
+  assert.deepEqual((await getJson(`/api/timeline?repo=${key}&since=${day2}&until=${day2}`)).body.sessions.map((s) => s.id), ['sess-board-2']);
+  assert.equal((await getJson('/api/timeline?until=19-10-2026')).status, 400);
+});
+
+test('/api/metrics honours until like /api/sessions, and splits the known cost by model family', async () => {
+  const rows = (await getJson(`/api/sessions?repo=${key}`)).body.sessions;
+  const day1 = rows.find((s) => s.id === 'sess-board-1').day;
+  const m = (await getJson(`/api/metrics?repo=${key}&until=${day1}`)).body;
+  assert.equal(m.until, day1);
+  assert.equal(m.sessions, rows.filter((s) => s.day <= day1).length);
+  const cost = m.metrics.find((x) => x.name === 'cost_per_day').value;
+  const fam = Object.values(cost.total.families ?? {}).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(fam - cost.total.usd) < 1e-9, 'the families add up to the known cost');
+});
+
+function sessionsStore(t) {
+  const d = mkdtempSync(join(tmpdir(), 'tack-units-'));
+  const db = openStore(join(d, 'store.db'));
+  t.after(() => { db.close(); rmSync(d, { recursive: true, force: true }); });
+  const repoRow = (k, toplevel) => db.prepare("INSERT INTO repos (key, roots, common_dirs, toplevels, remote, state) VALUES (?, ?, '[]', ?, NULL, 'present')").run(k, JSON.stringify([k]), JSON.stringify(toplevel ? [toplevel] : []));
+  const session = (id, k, first, last, branch) => {
+    db.prepare("INSERT INTO sessions (id, file_id, cwd, first_ts, last_ts, git_branch) VALUES (?, 0, '/cwd', ?, ?, ?)").run(id, new Date(first * 1000).toISOString(), new Date(last * 1000).toISOString(), branch);
+    db.prepare("INSERT INTO session_repo (session_id, repo_key, missing, link_method) VALUES (?, ?, NULL, 'direct')").run(id, k);
+  };
+  let n = 0;
+  const commitRow = (k, sec, unit = null) => db.prepare(`INSERT INTO commits (repo_key, sha, parents, author_time, commit_time, files, insertions, deletions, unit, unit_form, claude_coauthor)
+    VALUES (?, ?, 1, ?, ?, 0, 0, 0, ?, ?, 0)`).run(k, 'sha' + ++n, sec, sec, unit, unit ? 'suffix' : null);
+  return { db, repoRow, session, commitRow };
+}
+
+test('Sessions rules: with unit ids in the repository, the unit of the nearest commit within the hour; otherwise the branch', (t) => {
+  const { db, repoRow, session, commitRow } = sessionsStore(t);
+  const U = 'aaaa1111aaaa1111', P = 'bbbb2222bbbb2222', T = 1_767_000_000;
+  repoRow(U, '/w/withunits');
+  repoRow(P, '/w/plain');
+  session('u1', U, T, T + 600, 'lane-x');
+  commitRow(U, T + 300, 'P-2026-01-01-0900'); // 5 min before the last event
+  commitRow(U, T + 3000, 'P-2026-01-01-1000'); // 40 min after it: farther
+  commitRow(U, T + 600 + 7200, 'P-2026-01-01-1100'); // outside the hour
+  session('u2', U, T + 10_800, T + 11_100, 'lane-y');
+  commitRow(U, T + 10_900); // a commit, no unit
+  session('p1', P, T, T + 600, 'main');
+  commitRow(P, T + 300);
+  const rows = Object.fromEntries(sessionsApi(db).sessions.map((s) => [s.id, s]));
+  assert.deepEqual([rows.u1.unit, rows.u1.branch], ['P-2026-01-01-0900', 'lane-x']);
+  assert.deepEqual([rows.u2.unit, rows.u2.branch], [null, 'lane-y'], 'a repository with unit ids, a session without one nearby: the branch');
+  assert.deepEqual([rows.p1.unit, rows.p1.branch], [null, 'main']);
+  assert.equal(unitNear(db, { repo_key: U, first_ts: null, last_ts: null }), null);
+  // The page's rule, run as the page runs it.
+  const { TackBoard: B } = loadViews(['charts.js', 'board.js']);
+  assert.deepEqual({ ...B.unitOrBranch(rows.u1) }, { kind: 'unit', text: 'P-2026-01-01-0900' });
+  assert.deepEqual({ ...B.unitOrBranch(rows.u2) }, { kind: 'branch', text: 'lane-y' });
+  assert.deepEqual({ ...B.unitOrBranch({ unit: null, branch: null }) }, { kind: null, text: null });
+  const cell = (s) => /<td class="c">(.*?)<\/td>/.exec(B.sessionRow(s, 200000))[1];
+  assert.match(cell(rows.u1), /<span class="unit"[^>]*>P-2026-01-01-0900<\/span>/);
+  assert.match(cell(rows.p1), />main<\/span>/);
+});
+
+test('a repository named by a bare hash takes the folder that holds it, else (unnamed) and the short key', (t) => {
+  assert.equal(displayName('/Users/x/Projects/Jjodel Book/678e1c12660f5f6b2e85fe7b', 'b315626200de6d12'), 'Jjodel Book');
+  assert.equal(displayName('/r/jjodel', '5bc8862e428b2651'), 'jjodel');
+  assert.equal(displayName('/678e1c12660f5f6b2e85fe7b', 'b315626200de6d12'), '(unnamed) b3156262');
+  assert.equal(displayName('/a/0123456789abcdef/678e1c12660f5f6b2e85fe7b', 'b315626200de6d12'), '(unnamed) b3156262');
+  assert.equal(displayName(null, 'b315626200de6d12'), '(unnamed) b3156262');
+  const { db, repoRow } = sessionsStore(t);
+  repoRow('cccc3333cccc3333', '/w/Book/678e1c12660f5f6b2e85fe7b');
+  repoRow('dddd4444dddd4444', null);
+  assert.deepEqual(listBoardRepos(db).map((r) => r.name), ['Book', '(unnamed) dddd4444']);
+});
+
+test('privacy: no fixture marker, session cwd below a toplevel or transcript path in any response or in the HTML of any tab', async () => {
+  const paths = ['/', `/?repo=${key}`, '/board.css', '/charts.js', '/board.js', '/timeline.js', '/insights.js', '/api/repos', '/api/sessions', `/api/sessions?repo=${key}`, '/api/metrics',
+    `/api/metrics?repo=${key}`, '/api/timeline', `/api/timeline?repo=${key}`, '/api/health', '/api/nothing', '/api/sessions?repo=zz'];
   const bodies = await Promise.all(paths.map((p) => get(p).then((r) => r.text)));
   bodies.push((await get('/api/rescan', { method: 'POST' })).text);
+  // The HTML each tab draws from those responses, rendered by the page's own scripts.
+  const V = loadViews();
+  for (const q of ['', `?repo=${key}`]) {
+    const [sess, tl, met] = await Promise.all(['/api/sessions', '/api/timeline', '/api/metrics'].map((p) => getJson(p + q).then((r) => r.body)));
+    const t0 = Math.min(...tl.sessions.map((g) => g.start)) - 86400e3, t1 = Math.max(...tl.sessions.map((g) => g.end)) + 86400e3;
+    bodies.push(sess.sessions.map((s) => V.TackBoard.sessionRow(s, sess.threshold)).join(''));
+    bodies.push(V.TackTimeline.html({ rows: sess.sessions, geo: tl.sessions, zoom: 'week', t0, t1, byBranch: q !== '', threshold: tl.threshold }));
+    bodies.push(tl.sessions.map((g) => V.TackTimeline.popHtml(sess.sessions.find((s) => s.id === g.id), g, tl.threshold)).join(''));
+    bodies.push(V.TackInsights.html(met));
+  }
   const all = bodies.join('\n');
   for (const needle of [MARKER, GIT_MARKER, sub, '/fx/beta/sub_dir', '/fx/alpha', projects, 'Fixture Author', 'fixture@example.org']) {
     assert.ok(!all.includes(needle), `${needle} found in a response`);
   }
   // Positive control on the same text: values the API does return are found by the same search.
   for (const needle of ['sess-board-1', 'aaaaaaaa-0000-4000-8000-000000000001', key, repo, 'claude-fixture-3']) assert.ok(all.includes(needle), needle);
+  const views = bodies.slice(paths.length + 1).join('\n');
+  for (const needle of ['data-id="sess-board-1"', 'class="tl-s', 'Layer 1 · cost_per_day', 'Not adopted: needs', 'fixture-3']) assert.ok(views.includes(needle), needle);
 });
 
 const status = (cwd) => g(cwd, ['status', '--porcelain=v1', '--ignored', '--untracked-files=all']);
