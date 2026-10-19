@@ -730,3 +730,17 @@ Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of rep
 **Smoke visivo**: passato — chat: built-in browser on 4714, four tabs at 1440 dark, switched to Light without reload, 800 light 800/800 px; headless pass on both themes and widths, no console errors
 **Notes**: Covers 1157 too, which wrote no entry. color-mix() in SVG fill paints the computed colour (sampled pixels), fallback not needed. Two 800 px fixes: Insights tokens table +2 px (numeric headers wrap); Requirements 937 px, from the fixed 720 px balance track, not the table min-width as first reported: `.sb-mg` and a `.rq-mx-wrap` round the matrix scroll horizontally. Provisional, unattended (RC-25): the header wrap.
 **Prompt document name**: 2026-10-19 12:15
+
+## 2026-10-19 — merge: board-restyle into alfonso-frontend-jjtl (P-2026-10-19-1331)
+
+**Prompt**: `claude_2026-10-19_1331_prompt_merge_board-restyle.md`: direct merge of the lane board restyle (slice 1 P-2026-10-19-1130, slice 2 P-2026-10-19-1157 and P-2026-10-19-1215) with gates.
+**Files touched**: merge commit `d26e7f07e` (rollback tag `pre-board-restyle` on `5f2746e70`); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed (closed by the chat over a red vitest gate)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest is red identically before and after the merge: 1 failed test in `laneTracking.test.ts` (the `tack` front in the committed registry, ticketed) and the same 9 files red at import with `window is not defined`, pre-existing on the receiving tip. typecheck, typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4714: four tabs, both themes, 1440 and 800 px, before the merge; the 4700 board is restarted after this closure
+**Notes**: `lane-run go` refuses a closure over a blocked merge, so the chat wrote this closure by hand, as for P-2026-10-19-1213.
+**Prompt document name**: 2026-10-19 13:31
