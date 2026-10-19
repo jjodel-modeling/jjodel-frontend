@@ -28,6 +28,7 @@ export const GIT_COLUMN_SOURCES = {
     files: 'numstat (row count)', insertions: 'numstat (added)', deletions: 'numstat (deleted)',
     unit: 'unit id parsed from the Unit trailer or the (P-...) suffix', unit_form: 'which linkage form matched',
     claude_coauthor: 'Co-Authored-By trailer names Claude (boolean)',
+    reverts: 'sha named by a "This reverts commit <sha>" line',
   },
 };
 
@@ -36,6 +37,7 @@ const FORMAT = '--format=%x00%H%x00%P%x00%at%x00%ct%x00%B%x00';
 const LOG = ['log', '--all', '--numstat', '--no-renames', '--diff-merges=off', '--no-ext-diff', '--no-textconv',
   '--no-color', '--no-notes', '--no-show-signature', FORMAT];
 const CLAUDE_COAUTHOR = /^co-authored-by:[^\n]*\bclaude\b/im;
+const REVERTS = /This reverts commit ([0-9a-f]{40})/;
 const NUMSTAT = /^(\d+|-)\t(\d+|-)\t/;
 
 /** Parses the output of LOG into commit rows; messages are read here and not returned. */
@@ -59,6 +61,7 @@ export function parseLog(out) {
       sha: t[i], parents: t[i + 1].split(' ').filter(Boolean).length,
       authorTime: Number(t[i + 2]), commitTime: Number(t[i + 3]), files, ins, del,
       unit: link?.unit ?? null, form: link?.form ?? null, claude: CLAUDE_COAUTHOR.test(message) ? 1 : 0,
+      reverts: REVERTS.exec(message)?.[1] ?? null,
     });
   }
   return commits;
@@ -90,8 +93,11 @@ export function collectGit(db) {
   const st = { repos: 0, skipped: 0, full: 0, incremental: 0, errors: 0, commitsAdded: 0, commitsRemoved: 0 };
   const q = {
     repos: db.prepare("SELECT key, common_dirs, tips FROM repos WHERE state = 'present' ORDER BY key"),
-    ins: db.prepare(`INSERT OR IGNORE INTO commits (repo_key, sha, parents, author_time, commit_time, files, insertions,
-      deletions, unit, unit_form, claude_coauthor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+    // A stored commit is kept and only gains its reverts (schema 4 re-reads every repository once).
+    ins: db.prepare(`INSERT INTO commits (repo_key, sha, parents, author_time, commit_time, files, insertions,
+      deletions, unit, unit_form, claude_coauthor, reverts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (repo_key, sha) DO UPDATE SET reverts = excluded.reverts WHERE reverts IS NOT excluded.reverts`),
+    has: db.prepare('SELECT 1 FROM commits WHERE repo_key = ? AND sha = ?'),
     shas: db.prepare('SELECT sha FROM commits WHERE repo_key = ?'),
     del: db.prepare('DELETE FROM commits WHERE repo_key = ? AND sha = ?'),
     count: db.prepare('SELECT COUNT(*) AS n FROM commits WHERE repo_key = ?'),
@@ -100,7 +106,9 @@ export function collectGit(db) {
   const insert = (key, commits) => {
     let n = 0;
     for (const c of commits) {
-      n += Number(q.ins.run(key, c.sha, c.parents, c.authorTime, c.commitTime, c.files, c.ins, c.del, c.unit, c.form, c.claude).changes);
+      const known = q.has.get(key, c.sha) !== undefined;
+      q.ins.run(key, c.sha, c.parents, c.authorTime, c.commitTime, c.files, c.ins, c.del, c.unit, c.form, c.claude, c.reverts);
+      if (!known) n++;
     }
     return n;
   };

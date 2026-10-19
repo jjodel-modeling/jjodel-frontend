@@ -92,3 +92,88 @@ test('modelShort and family: short names; the page and the metrics agree on ever
   assert.deepEqual(ids.map(C.family), ids.map(modelFamily));
   assert.deepEqual(ids.map(C.family), ['opus', 'opus', 'opus', 'haiku', 'sonnet', 'other', 'other']);
 });
+
+// The viewBox is the container width in px (src/board/charts.js chartWidth), so the 10 px axis text keeps its size.
+const axisTexts = (svg) => [...svg.matchAll(/<text x="([\d.-]+)" y="([\d.-]+)"[^>]*>([^<]*)<\/text>/g)].map((m) => ({ x: Number(m[1]), y: Number(m[2]), text: m[3] }));
+const categoryLabels = (svg) => axisTexts(svg).filter((t) => t.y === 171); // the row under the baseline (180 - 24 + 15)
+const oneSeries = (n) => [{ name: 'Cost', color: 'var(--f-opus)', values: Array.from({ length: n }, (_, i) => i + 1) }];
+
+test('chartWidth: the pixel width rounded, never below 240; 520 when unknown', () => {
+  assert.equal(C.chartWidth(1126), 1126);
+  assert.equal(C.chartWidth(1126.4), 1126);
+  assert.equal(C.chartWidth(1126.6), 1127);
+  assert.equal(C.chartWidth(240), 240);
+  assert.equal(C.chartWidth(100), 240);
+  for (const unknown of [undefined, null, NaN, 0, -5, '700']) assert.equal(C.chartWidth(unknown), 520, String(unknown));
+});
+
+test('bars at width 1126: the viewBox is 0 0 1126 180, no axis text goes past W - 18, the last label is there', () => {
+  const s = C.bars({ cats: cats(30), stacks: oneSeries(30), width: 1126 });
+  assert.match(s, / viewBox="0 0 1126 180" /);
+  const texts = axisTexts(s);
+  assert.ok(texts.length > 4, 'control: the regex sees the axis texts');
+  for (const t of texts) assert.ok(t.x <= 1126 - 18, `text "${t.text}" at x ${t.x}`);
+  assert.ok(categoryLabels(s).some((t) => t.text === 'C29'), 'the last category label is drawn');
+  // The default width is the old one.
+  assert.match(C.bars({ cats: cats(3), stacks: oneSeries(3) }), / viewBox="0 0 520 180" /);
+});
+
+test('bars at width 300: the category labels are at least 56 apart and the last one is kept', () => {
+  const s = C.bars({ cats: cats(30), stacks: oneSeries(30), width: 300 });
+  assert.match(s, / viewBox="0 0 300 180" /);
+  const xs = categoryLabels(s).map((t) => t.x).sort((a, b) => a - b);
+  assert.ok(xs.length >= 3, 'control: several labels are drawn');
+  for (let i = 1; i < xs.length; i++) assert.ok(xs[i] - xs[i - 1] >= 56, `labels at ${xs[i - 1]} and ${xs[i]}`);
+  assert.ok(xs.at(-1) <= 300 - 18);
+  assert.ok(categoryLabels(s).some((t) => t.text === 'C29'));
+});
+
+test('bars: no axis text goes past W - 18 and the last label is drawn, for every width and category count tried', () => {
+  for (const w of [240, 300, 360, 520, 800, 1126]) {
+    for (const n of [1, 2, 3, 7, 14, 30, 31, 90]) {
+      const s = C.bars({ cats: cats(n), stacks: oneSeries(n), width: w });
+      for (const t of axisTexts(s)) assert.ok(t.x <= w - 18, `width ${w}, ${n} categories: "${t.text}" at ${t.x}`);
+      assert.ok(categoryLabels(s).some((t) => t.text === 'C' + (n - 1)), `width ${w}, ${n} categories: the last label`);
+    }
+  }
+});
+
+const spacingFailures = (widths, counts) => {
+  const out = [];
+  for (const w of widths) {
+    for (const n of counts) {
+      const xs = categoryLabels(C.bars({ cats: cats(n), stacks: oneSeries(n), width: w })).map((t) => t.x).sort((a, b) => a - b);
+      for (let i = 1; i < xs.length; i++) if (xs[i] - xs[i - 1] < 56) { out.push(`width ${w}, ${n} categories: labels at ${xs[i - 1]} and ${xs[i]}`); break; }
+    }
+  }
+  return out;
+};
+
+test('bars: labels are at least 56 apart for up to 14 categories at every width', () => {
+  assert.deepEqual(spacingFailures([240, 300, 360, 520, 800, 1126], [1, 2, 3, 7, 14]), []);
+});
+
+// Bug (src/board/charts.js xLabels + labelX): xLabels keeps labels 56 px apart by their bar centres, but labelX then
+// moves the LAST label left to W - 18, so the one before it can end up closer. Measured on the current code:
+// width 300 with 44, 48, 52, ... categories gives 49.2 px; width 240 with 30 categories gives 49.5 px;
+// also 520/49 (52.1), 800/40 (55.4), 1126/91 (54.9).
+test('bars: labels are at least 56 apart for 30 to 90 categories at the narrow widths', () => {
+  assert.deepEqual(spacingFailures([240, 300], [30, 31, 44, 90]), []);
+});
+
+test('line and meters take the same width option', () => {
+  assert.match(C.line({ cats: cats(30), values: Array.from({ length: 30 }, (_, i) => i), width: 700 }), / viewBox="0 0 700 /);
+  assert.match(C.meters({ parts: [{ label: 'Calls', value: 0.5, color: 'F' }], width: 700 }), / viewBox="0 0 700 /);
+  const s = C.line({ cats: cats(30), values: Array.from({ length: 30 }, (_, i) => i), width: 1126 });
+  for (const t of axisTexts(s)) assert.ok(t.x <= 1126 - 18, `"${t.text}" at ${t.x}`);
+});
+
+test('xLabels: the last label is always shown, the others are at least 56 apart in px', () => {
+  for (const [n, W] of [[30, 300], [7, 1126], [90, 520], [2, 240], [1, 240]]) {
+    const show = C.xLabels(n, W);
+    const idx = Array.from({ length: n }, (_, i) => i).filter(show);
+    assert.equal(idx.at(-1), n - 1, `${n} categories, width ${W}`);
+    const bw = (W - 44 - 8) / n;
+    for (let i = 1; i < idx.length; i++) assert.ok((idx[i] - idx[i - 1]) * bw >= 56 - 1e-9, `${n} categories, width ${W}: ${idx[i - 1]} and ${idx[i]}`);
+  }
+});

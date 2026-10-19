@@ -249,7 +249,7 @@ test('selection: --since by the first-event day, --repo by key prefix or by a pa
   assert.deepEqual(loadSelection(db, { repo: 'aaaa1111' }).sessions.map((s) => s.id), ['old', 'new']);
 });
 
-test('layer 2 and 3 stubs: not-adopted without their data; adopted data is not computed here', (t) => {
+test('layers 2 and 3: not-adopted without their data, computed with it', (t) => {
   const { db } = store(t);
   repo(db, 'r');
   session(db, 's', { first: Z('2026-01-05T09:00:00Z'), last: Z('2026-01-05T09:00:00Z'), repo: 'r' });
@@ -257,7 +257,7 @@ test('layer 2 and 3 stubs: not-adopted without their data; adopted data is not c
   db.prepare(`INSERT INTO commits (repo_key, sha, parents, author_time, commit_time, files, insertions, deletions, unit, unit_form, claude_coauthor)
     VALUES ('r', 'u1', 1, 0, 0, 0, 0, 0, 'P-2026-01-05-1000', 'trailer', 0)`).run();
   const m = all(db);
-  assert.equal(m.commits_per_unit, 'not-implemented');
+  assert.deepEqual(m.commits_per_unit, { units: 1, commits: 1, median: 1, max: 1 });
   assert.equal(m.first_shot, 'not-adopted');
   assert.equal(m.cost_per_unit, 'not-adopted');
 });

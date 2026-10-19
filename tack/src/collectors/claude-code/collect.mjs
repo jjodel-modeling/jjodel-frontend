@@ -1,6 +1,7 @@
 // Claude Code collector: ~/.claude/projects/<dir>/<session>.jsonl and
 // <dir>/<session>/subagents/*.jsonl -> sessions and calls. Reads metadata only: the record
-// paths in COLUMN_SOURCES are the only ones ever read, message content never is.
+// paths in COLUMN_SOURCES are the only ones ever read; message content is not, except the head of the first
+// user message, read in memory for its leading unit id (promptUnit), of which only the id is kept.
 // Adapted from frontend/scripts/lane-usage.mjs (apiCalls: one call per message.id, the last
 // record of a message carries its final usage, <synthetic> messages are not API calls).
 import { closeSync, existsSync, openSync, readSync, readdirSync, statSync } from 'node:fs';
@@ -16,6 +17,8 @@ export const COLUMN_SOURCES = {
     id: 'sessionId', file_id: 'ingest.id', cwd: 'cwd', first_ts: 'timestamp', last_ts: 'timestamp',
     models: 'message.model', cli_version: 'version', cost_usd: 'totalCostUSD', cost_known: 'totalCostUSD',
     cost_unknown_model: 'hasUnknownModelCost', git_branch: 'gitBranch',
+    unit: 'unit id tag leading the first user message (the id only), else a commit reachable from gitBranch',
+    unit_source: 'which of the two set the unit (enum)',
   },
   session_models: { session_id: 'sessionId', model: 'cost-state.modelUsage key', cost_usd: 'cost-state.modelUsage.costUSD' },
   calls: {
@@ -53,6 +56,31 @@ function isDir(p) {
   } catch {
     return false;
   }
+}
+
+// A unit id leading the first user message (`[P-...]`, `P-...`), or a `Prompt-ID: P-...` header line before the
+// first section of a prompt document. Only the id is kept; the message itself is never stored.
+const LEAD_UNIT = /^\[?(P-\d{4}-\d{2}-\d{2}-\d{4}(?:-[a-z0-9]{1,8})?)(?![\w-])/;
+const HEADER_UNIT = /^Prompt-ID:[ \t]*(P-\d{4}-\d{2}-\d{2}-\d{4}(?:-[a-z0-9]{1,8})?)[ \t]*$/m;
+
+/** The unit id of a first user message, or null. Reads the head of the text in memory and returns the id only. */
+export function promptUnit(text) {
+  if (typeof text !== 'string') return null;
+  const head = text.trimStart().slice(0, 4000);
+  const lead = LEAD_UNIT.exec(head);
+  if (lead) return lead[1];
+  const header = HEADER_UNIT.exec(head.split(/\n## /, 1)[0]);
+  return header ? header[1] : null;
+}
+
+/** The text of a user record that a person or a launcher typed (not a tool result, not a meta record), or null. */
+function userText(r) {
+  if (r.type !== 'user' || r.isMeta === true || r.isSidechain === true || !r.message) return null;
+  const c = r.message.content;
+  if (typeof c === 'string') return c;
+  if (!Array.isArray(c)) return null;
+  const t = c.filter((b) => b && b.type === 'text' && typeof b.text === 'string').map((b) => b.text);
+  return t.length ? t.join('\n') : null;
 }
 
 const tok = (v) => (Number.isFinite(v) && v > 0 ? Math.trunc(v) : 0);
@@ -97,7 +125,7 @@ export function scan(db, root = defaultRoot()) {
       const { buf, end } = readFrom(f.path, cur.offset, s.size);
       st.read++;
       st.bytes += end;
-      ingestChunk(q, f, cur.id, buf, end, st);
+      ingestChunk(q, f, cur.id, buf, end, st, cur.offset === 0);
       q.updIngest.run(s.size, s.mtimeMs, cur.offset + end, cur.id);
       db.exec('COMMIT');
     } catch (err) {
@@ -127,9 +155,10 @@ function readFrom(path, offset, size) {
   }
 }
 
-function ingestChunk(q, f, fileId, buf, end, st) {
+function ingestChunk(q, f, fileId, buf, end, st, fromStart) {
   const calls = new Map();
-  const sess = { cwd: null, first: null, last: null, version: null, cost: null, unknownCost: false, branch: null };
+  const sess = { cwd: null, first: null, last: null, version: null, cost: null, unknownCost: false, branch: null, unit: null };
+  let firstUser = !fromStart; // the first user message is looked for only in a read from byte 0
   const modelCost = new Map();
   let start = 0;
   while (start < end) {
@@ -159,6 +188,13 @@ function ingestChunk(q, f, fileId, buf, end, st) {
     if (typeof r.version === 'string') sess.version = r.version;
     if (!sess.branch && typeof r.gitBranch === 'string' && r.gitBranch !== '' && r.gitBranch !== 'HEAD') sess.branch = r.gitBranch;
 
+    if (!firstUser && f.kind === 'main') {
+      const t = userText(r);
+      if (t !== null) {
+        firstUser = true;
+        sess.unit = promptUnit(t);
+      }
+    }
     let used = false;
     const m = r.message;
     if (type === 'assistant' && m && typeof m === 'object' && m.usage && typeof m.usage === 'object' && m.model !== '<synthetic>') {
@@ -213,7 +249,7 @@ function ingestChunk(q, f, fileId, buf, end, st) {
   const ex = q.getSession.get(sessionId);
   if (!ex) {
     q.insSession.run(sessionId, fileId, sess.cwd, sess.first, sess.last, JSON.stringify([...models].sort()), sess.version,
-      sess.cost, sess.cost === null ? 0 : 1, sess.unknownCost ? 1 : 0, sess.branch);
+      sess.cost, sess.cost === null ? 0 : 1, sess.unknownCost ? 1 : 0, sess.branch, sess.unit, sess.unit ? 'prompt' : null);
     st.sessionsAdded++;
     return;
   }
@@ -230,6 +266,8 @@ function ingestChunk(q, f, fileId, buf, end, st) {
     ex.cost_known || sess.cost !== null ? 1 : 0,
     ex.cost_unknown_model || sess.unknownCost ? 1 : 0,
     ex.git_branch ?? sess.branch,
+    sess.unit ?? ex.unit ?? null,
+    sess.unit ? 'prompt' : ex.unit_source ?? null,
     sessionId,
   );
 }
@@ -252,9 +290,9 @@ function prepare(db) {
       WHERE message_id = ? AND NOT (model IS ? AND input = ? AND output = ? AND cache_read = ? AND cache_creation = ? AND context = ?)`),
     getSession: db.prepare('SELECT * FROM sessions WHERE id = ?'),
     insSession: db.prepare(`INSERT INTO sessions (id, file_id, cwd, first_ts, last_ts, models, cli_version, cost_usd, cost_known,
-      cost_unknown_model, git_branch) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+      cost_unknown_model, git_branch, unit, unit_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
     updSession: db.prepare(`UPDATE sessions SET cwd = ?, first_ts = ?, last_ts = ?, models = ?, cli_version = ?, cost_usd = ?,
-      cost_known = ?, cost_unknown_model = ?, git_branch = ? WHERE id = ?`),
+      cost_known = ?, cost_unknown_model = ?, git_branch = ?, unit = ?, unit_source = ? WHERE id = ?`),
   };
 }
 

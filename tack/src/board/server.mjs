@@ -9,6 +9,7 @@ import { openStore, storePath } from '../store/open.mjs';
 import { scan, defaultRoot } from '../collectors/claude-code/collect.mjs';
 import { identify } from '../collectors/git/identity.mjs';
 import { collectGit } from '../collectors/git/collect.mjs';
+import { collectLayers } from '../collectors/layers.mjs';
 import { dayParam, healthApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi } from './api.mjs';
 
 export const DEFAULT_PORT = 4710;
@@ -30,11 +31,13 @@ export function runScan(db, root) {
     const st = scan(db, root);
     const id = identify(db);
     const g = collectGit(db);
+    const ly = collectLayers(db);
     return {
       at: new Date().toISOString(), durationMs: Date.now() - t0, ok: true,
       added: { sessions: st.sessionsAdded, calls: st.callsAdded, modelCosts: st.modelCostsAdded, repos: id.reposAdded, links: id.linksAdded, commits: g.commitsAdded },
       changed: { calls: st.callsUpdated, links: id.linksChanged, commitsRemoved: g.commitsRemoved },
       files: st.files, gitErrors: g.errors,
+      layers: { unitsByPrompt: ly.units.prompt, unitsByCommit: ly.units.commit, lanes: ly.lanes.enabled ? ly.lanes.lanes : null, logEntries: ly.logs.entries },
     };
   } catch (err) {
     process.stderr.write(`tack board: scan failed: ${err.stack ?? err}\n`);

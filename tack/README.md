@@ -5,9 +5,10 @@ leaves behind (transcripts, git history, a self-assessment log) and shows how th
 It keeps metadata only, never message text, and needs no dependency beyond Node >= 24 (for
 `node:sqlite`; on an older Node every command exits 2).
 
-Status: slice 5b of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
-identity, the git collector, the layer-1 metrics (`tack metrics`) and the board with its Sessions, Timeline
-and Insights views (`tack board`) exist; layers 2 and 3 come in slice 6.
+Status: slice 6 of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
+identity, the git collector, the metrics of all three layers (`tack metrics`), the board with its Sessions,
+Timeline and Insights views (`tack board`), the Jjodel log importer (`tack import jjodel-log`), the lane-run
+adapter and the parity check against Jjodel's lane board (`tack parity jjodel`) exist.
 
 ## Three data layers
 
@@ -128,10 +129,35 @@ repository:
 | `commit_proximity` | share of sessions with a commit of their repository within the window (default 1 h) after the session; proximity, not authorship; sessions without a repository kept apart as unknown |
 | `subagent_share` | subagent calls over all calls, and subagent cost over known cost (estimate, below) |
 
-Layer 2 (`commits_per_unit`, `cost_per_unit`, `resumes_per_unit`) and layer 3 (`outcome`,
-`first_shot`, `cause_tally`, `regression_rate`, `out_of_scope_rate`) are listed with the store field
-that would enable them and print `not adopted` while it is absent; when the field exists they print
-`adopted, not implemented` (slice 6), never a number.
+Layer 2 and layer 3 print one line each with their figures where the selection has the data, else
+`not adopted` with the field that would enable them, never a number:
+
+| Metric | Layer | Definition |
+|---|---|---|
+| `commits_per_unit` | 2 | commits carrying a unit id, per unit, by the day of the commit |
+| `cost_per_unit` | 2 | known cost and tokens of the sessions of a unit, resumes included; the source of each session's unit |
+| `resumes_per_unit` | 2 | sessions per unit minus one |
+| `outcome` | 3 | task entries by self-assessed outcome; lanes by their final `Outcome:` line |
+| `first_shot` | 3 | lanes ending `done` or `hard-stop` with no rework signal and no failed run (the lane board's rule); without lanes, units no later entry corrects |
+| `cause_tally` | 3 | task entries by cause letter |
+| `regression_rate` | 3 | task entries reporting a regression, over those answering yes or no |
+| `out_of_scope_rate` | 3 | task entries reporting out-of-scope changes |
+
+**Session units (layer 2).** A session's unit is the id leading its first user message (`[P-...]`, `P-...`,
+or a `Prompt-ID: P-...` header line before the first `## `; the id is read in memory, the message is never
+stored), else the unit of the commit nearest to its last event, within its window plus one hour, among the
+commits **reachable from the session's branch**: the branch's ref, a remote ref of that name, or the second
+parent of a merge whose subject names it (so a merged and deleted branch still links). A session without a
+branch gets no unit, never another branch's. `sessions.unit_source` says which rule set it.
+
+**Logs and lanes (layer 3).** `tack scan` reads `<toplevel>/.tack/log.jsonl` of every repository and the
+imports under `~/.tack/imports/<repo-key>/log.jsonl` (`TACK_IMPORTS`), keeping only the contract's ids,
+enums and dates (never title, summary, finding, files, notes or detail); lines failing contract v1 are
+skipped and counted. When `~/.jjodel-lanes` (or `TACK_LANES`) exists, the lane-run adapter reads each lane
+folder read-only (`started.txt`, `exit.txt`, `runs.jsonl`, `tier.txt`, `worktree.txt`, `session.txt`, the
+`result` events and the final `Outcome:` line of `log.jsonl`) into `lanes` and `lane_spend`; an unchanged
+folder is skipped by sizes and mtimes. No path is stored: the lane's worktree is resolved to a repository key
+in memory.
 
 **Days are local**: the calendar day of the machine running `tack` (`TZ`), the day the person at the
 keyboard lived. The API (`loadSelection(db, { utc: true })`) switches every metric to UTC days; there is
@@ -147,9 +173,38 @@ Claude model). A billed model with no call in the transcript is reported as unat
 with cost but no per-model cost are counted apart. The absolute cost always comes from the transcript;
 only the split is estimated.
 
-The store is at schema version 3 (`sessions.git_branch`, `session_repo.link_method` and
-`link_reason`, `session_models`); older stores are migrated on open, and the next `scan` re-reads main
-transcripts once to fill the branch and the per-model costs (rows are matched, none added).
+The store is at schema version 4. Version 3 added `sessions.git_branch`, `session_repo.link_method` and
+`link_reason`, `session_models`; version 4 adds `sessions.unit` and `unit_source`, `commits.reverts`, and the
+tables `lanes`, `lane_spend` and `log_entries`. Older stores are migrated on open, and the next `scan`
+re-reads main transcripts and every repository once to fill the new columns (rows are matched, none added).
+
+## `tack import jjodel-log`
+
+```
+tack import jjodel-log [--repo <path>] [--out <file>] [--trunk <ref>]
+```
+
+Converts Jjodel's Markdown prompt log (`CLAUDE.md` §21.2 entries) to contract v1 JSON Lines. It reads the
+trunk's `docs/log-inbox/*.md`, `docs/claude-code-log.md` and `docs/claude-code-log-archive.md` with
+`git show <trunk>:<file>` (default trunk `alfonso-frontend-jjtl`, or `JJODEL_TRUNK`), splits and parses them
+with a copy of the rules of Jjodel's `log-tools.ts`, and maps the fields: `Prompt` to `summary`, `Outcome`
+emoji to `completed`/`partial`/`problems`, `Corregge` to `corrects`, `Causa` to `cause`, the heading's
+`(P-...)` or `Prompt document name` to `unit`; `Smoke visivo`, `Layer Impact Report`, `Files touched` and
+`Notes` are dropped. A unit with several task entries keeps its id on the oldest and gives the later ones the
+suffix `-2`, `-3`. Lines that fail `tack check` are dropped and counted by rule. The output goes to
+`~/.tack/imports/<repo-key>/log.jsonl` by default and is refused inside the repository.
+
+## `tack parity jjodel`
+
+```
+tack parity jjodel [--days <n>] [--repo <path>] [--lanes <dir>] [--trunk <ref>] [--json] [--store <file>]
+```
+
+Holds Tack to Jjodel's lane board on the same machine: re-imports the log, reads the lane folders, then runs
+a copy of the board's rules (`test/helpers/board-parity.mjs`: `spendByDay`, `logEntries`, the first-shot rule;
+copied, not imported) and compares, over the last n local days (default 14), spend per day of the
+repository's lanes (within 1%) and first-shot lane by lane (no difference). Each difference is listed with
+its cause; the exit code is 1 when any remains.
 
 ## `tack board`
 
@@ -168,8 +223,7 @@ The page is static files served from memory (`src/board/page.html`, `board.css`,
 `prefers-color-scheme`.
 
 - **Sessions** lists one row per session, newest first, with a summary strip and filters. The column
-  «Unit / branch» shows the unit id of the nearest commit carrying one (proximity, not authorship) in a
-  repository that has unit ids, the branch otherwise.
+  «Unit / branch» shows the session's unit (layer 2, above), the branch otherwise.
 - **Timeline** draws one lane per repository (per branch when one repository is selected) on a Day or Week
   window, with ‹ Latest › navigation. A bar runs from the first to the last event of a session; a marker
   shows the first call at or above the context threshold (200k) and ticks show commits within the hour. A
@@ -178,7 +232,9 @@ The page is static files served from memory (`src/board/page.html`, `board.css`,
   model family (a «?» marker counts sessions of unknown cost, never drawn as 0), sessions per day, the
   context-peak distribution, waits per day, overlap per day and the subagent share. The date range of the
   selection (`since`, `until`) applies to Insights as it does to Sessions. Layer-2 and layer-3 metrics
-  appear as dashed cards: `not adopted` with the field that would enable each, or `not implemented` (slice 6).
+  with data have their own cards (lanes by outcome, the first-shot share, causes, resumes, the costliest
+  units); the others stay dashed cards, `not adopted` with the field that would enable each. Charts are drawn
+  at the pixel width of their card, so axis text stays 10 px at any width and the last label is never cut.
 
 The chart helpers (`bars`, `line`, `meters`, `multiples`, `niceMax`, `dayRange`, `modelShort`) are pure
 functions returning SVG strings, also run by `node --test` in a vm. Model families have fixed colours:
@@ -191,8 +247,8 @@ JSON API, all GET except the rescan:
 | Endpoint | Returns |
 |---|---|
 | `/api/repos` | the preselected key and one row per repository: key, name, main toplevel, worktree count, remote host, state, sessions, commits |
-| `/api/sessions?repo=&since=&until=` | one row per session: local day, start, duration, repository, branch (the unit with layer 2), link method, main-thread calls, context peak, cost (null when unknown, never 0), models, commit within the hour |
-| `/api/metrics?repo=&since=&until=` | every declared metric with its layer and state (`computed` with its value, `not-adopted`, `not-implemented`); cost per day also by model family |
+| `/api/sessions?repo=&since=&until=` | one row per session: local day, start, duration, repository, branch, unit and its source (layer 2), link method, main-thread calls, context peak, cost (null when unknown, never 0), models, commit within the hour |
+| `/api/metrics?repo=&since=&until=` | every declared metric with its layer and state (`computed` with its value, or `not-adopted`); cost per day also by model family |
 | `/api/timeline?repo=&since=&until=` | per session, in epoch ms: start, end, main model family, first call at or above 200k, commit times within the hour |
 | `/api/health` | store path, schema version, last scan (time, duration, rows added), row counts |
 | `POST /api/rescan` | runs the incremental scan again and returns the new last scan |

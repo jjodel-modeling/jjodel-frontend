@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openStore } from '../src/store/open.mjs';
+import { SCHEMA_VERSION, openStore } from '../src/store/open.mjs';
 import { identify } from '../src/collectors/git/identity.mjs';
 import { inferLink, mergedBranch } from '../src/collectors/git/infer.mjs';
 import { scan } from '../src/collectors/claude-code/collect.mjs';
@@ -141,7 +141,7 @@ test('collector: the first gitBranch other than HEAD and the max cost per model 
   assert.deepEqual([s3.modelCostsAdded, s3.modelCostsUpdated, s3.sessionsAdded], [0, 0, 0]);
 });
 
-test('store: a schema 2 store is migrated to 3 and its main transcripts are read again once, adding no row', (t) => {
+test('store: a schema 2 store is migrated to the current schema and its main transcripts are read again once, adding no row', (t) => {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'tack-mig3-')));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const proj = join(dir, 'projects', '-x');
@@ -159,7 +159,7 @@ test('store: a schema 2 store is migrated to 3 and its main transcripts are read
   v2.close();
   const db = openStore(p);
   t.after(() => db.close());
-  assert.equal(db.prepare('PRAGMA user_version').get().user_version, 3);
+  assert.equal(db.prepare('PRAGMA user_version').get().user_version, SCHEMA_VERSION);
   const r = scan(db, join(dir, 'projects'));
   assert.deepEqual([r.read, r.sessionsAdded], [1, 0]);
   assert.equal(db.prepare('SELECT git_branch FROM sessions').get().git_branch, 'lane-1');

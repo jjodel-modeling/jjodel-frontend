@@ -12,7 +12,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { startBoard } from '../src/board/server.mjs';
 import { displayName, listBoardRepos, sessionsApi, timelineApi, unitNear } from '../src/board/api.mjs';
-import { openStore } from '../src/store/open.mjs';
+import { SCHEMA_VERSION, openStore } from '../src/store/open.mjs';
 import { loadViews } from './helpers/views.mjs';
 import { T0, addTranscript, commit, g, initRepo } from './helpers/git-repo.mjs';
 
@@ -92,14 +92,14 @@ test('/api/sessions: one row per session, newest first, with the declared fields
   const { status, body } = await getJson('/api/sessions');
   assert.equal(status, 200);
   assert.deepEqual(Object.keys(body).sort(), ['days', 'layer2', 'repo', 'sessions', 'since', 'threshold', 'until']);
-  assert.equal(body.layer2, false);
+  assert.equal(body.layer2, true); // schema 4: sessions.unit exists
   assert.equal(body.threshold, 200000);
   assert.equal(body.sessions.length, 5); // two fixture transcripts of slice 2, two in the repository, one outside git
   const starts = body.sessions.map((s) => s.start);
   assert.deepEqual(starts, [...starts].sort().reverse());
   const s1 = body.sessions.find((s) => s.id === 'sess-board-1');
   assert.deepEqual(Object.keys(s1).sort(), ['branch', 'calls', 'commit_within_hour', 'context_peak', 'cost_partial', 'cost_usd', 'day',
-    'duration_min', 'id', 'link', 'missing', 'models', 'repo', 'repo_name', 'start', 'unit']);
+    'duration_min', 'id', 'link', 'missing', 'models', 'repo', 'repo_name', 'start', 'unit', 'unit_source']);
   assert.deepEqual([s1.repo, s1.repo_name, s1.link, s1.calls, s1.context_peak, s1.duration_min, s1.cost_usd, s1.commit_within_hour, s1.unit],
     [key, 'repo', 'direct', 2, 1, 6, null, 'yes', null]);
   assert.deepEqual(s1.models, ['claude-fixture-3']);
@@ -155,7 +155,7 @@ test('/api/health: store, schema, last scan and counts', async () => {
   const { status, body } = await getJson('/api/health');
   assert.equal(status, 200);
   assert.equal(body.store, join(dir, 'store.db'));
-  assert.equal(body.schema, 3);
+  assert.equal(body.schema, SCHEMA_VERSION);
   assert.equal(body.lastScan.ok, true);
   assert.ok(!Number.isNaN(Date.parse(body.lastScan.at)));
   assert.deepEqual(body.counts, { transcripts: 6, sessions: 5, calls: 12, repos: 1, commits: 2 });
@@ -227,7 +227,7 @@ function sessionsStore(t) {
   return { db, repoRow, session, commitRow };
 }
 
-test('Sessions rules: with unit ids in the repository, the unit of the nearest commit within the hour; otherwise the branch', (t) => {
+test('Sessions rules: the unit of sessions.unit (layer 2) with its source, and the branch always; the page shows the branch only without a unit', (t) => {
   const { db, repoRow, session, commitRow } = sessionsStore(t);
   const U = 'aaaa1111aaaa1111', P = 'bbbb2222bbbb2222', T = 1_767_000_000;
   repoRow(U, '/w/withunits');
@@ -240,8 +240,12 @@ test('Sessions rules: with unit ids in the repository, the unit of the nearest c
   commitRow(U, T + 10_900); // a commit, no unit
   session('p1', P, T, T + 600, 'main');
   commitRow(P, T + 300);
+  // Schema 4: the unit is the session's own (set by the scan from the prompt or a reachable commit), not the
+  // nearest commit of the repository; unitNear is kept and still answers by proximity.
+  db.prepare("UPDATE sessions SET unit = 'P-2026-01-01-0900', unit_source = 'commit' WHERE id = 'u1'").run();
+  assert.equal(unitNear(db, { repo_key: U, first_ts: new Date(T * 1000).toISOString(), last_ts: new Date((T + 600) * 1000).toISOString() }), 'P-2026-01-01-0900');
   const rows = Object.fromEntries(sessionsApi(db).sessions.map((s) => [s.id, s]));
-  assert.deepEqual([rows.u1.unit, rows.u1.branch], ['P-2026-01-01-0900', 'lane-x']);
+  assert.deepEqual([rows.u1.unit, rows.u1.unit_source, rows.u1.branch], ['P-2026-01-01-0900', 'commit', 'lane-x']);
   assert.deepEqual([rows.u2.unit, rows.u2.branch], [null, 'lane-y'], 'a repository with unit ids, a session without one nearby: the branch');
   assert.deepEqual([rows.p1.unit, rows.p1.branch], [null, 'main']);
   assert.equal(unitNear(db, { repo_key: U, first_ts: null, last_ts: null }), null);
