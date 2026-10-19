@@ -821,3 +821,17 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: passato — chat GO 2026-10-19 on 3001 (unattended; Alfonso in the morning digest)
 **Notes**: Merge-tree tree `e1f88ca47` equals the committed tree. Files changed since the base: 17 branch, 11 trunk, none on both sides. Probes 4/4 at 1. Lane board not restarted: no file under `frontend/scripts/lane-board/` changed. The merge body's measurement time reads `22:3x`, an imprecise timestamp; left as is.
 **Prompt document name**: 2026-10-19 22:27
+
+## 2026-10-19 — fix(harness): lane board takes the chat URL from the trunk prompt (P-2026-10-19-2229)
+
+**Prompt**: `claude_2026-10-19_2229_prompt_board_request_fallback.md`: a third chat-link source in `ownChatUrl`, the `Request:` line of the trunk's copy of the prompt named in `prompt.txt`, so the 12 Tack rows backfilled by P-2026-10-19-2105 reach the board.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md` (`df1803517`); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 21:05
+**Causa**: (c)
+**Regressions**: no. `laneBoard.test.ts` 95/95; dropping the source or its Prompt-ID guard turns the new test red. check:scripts green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — deroga P8: no visual change; board started on 4701 from the worktree after the merge `f6200c7a3`, then stopped
+**Notes**: 4700 vs 4701, 606 rows: without chatUrl 268 vs 254; Tack rows (C-2026-10-19-0001, C-2026-10-19-1748) 14 vs 0 without a URL, the 12 backfilled from `prompt`, P-2026-10-19-2140 and 2225 by `chat-id`. Trunk prompts read in one `git cat-file --batch` per 5 minutes, only for new blobs. README had no list of link sources: one paragraph added under "Who launched a lane" (ratified as recommended, unattended). Launchd board on 4700 not restarted.
+**Prompt document name**: 2026-10-19 22:29

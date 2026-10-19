@@ -471,6 +471,8 @@ The launcher is read from the commit that added the lane's prompt to `docs/promp
 5. **manual**: neither; the label is the commit author.
 6. **unknown**: no commit adds a prompt with that Prompt-ID.
 
+A row's chat link (`chatUrl`, `chatUrlFrom`) comes from the lane's own `Request:` line (`request`), else the `Claude-Session:` trailer of that commit (`commit`), else the `Request:` line of the trunk's copy of the prompt named in `prompt.txt` when its `Prompt-ID:` is the lane's (`prompt`, refreshed every 5 minutes), else the latest other lane that names the same `Chat:` id (`chat-id`).
+
 ## Exports
 
 - `/export/trace.json`: Chrome Trace Event format, opens in ui.perfetto.dev. One
