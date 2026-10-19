@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1440
 Chat: C-2026-10-19-0001
 Front: tack
 Lane: full (first UI of Tack: local HTTP server and page; discovery done in P-2026-10-19-1100)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s5a · db39b5880 · verifica visiva della chat dopo l’uscita (RC-23)
 Depends: P-2026-10-19-1405
 Corregge: none
 Request: Alfonso, 2026-10-19 14:35, in the project chat: «Procedi» (slice 5, split in two lanes)

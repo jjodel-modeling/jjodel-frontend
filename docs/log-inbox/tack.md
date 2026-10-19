@@ -131,3 +131,31 @@ Scan 1: 754 files, 324494 records, 0 malformed, 591 sessions, 42007 calls. Scan 
 **Smoke visivo**: non applicabile
 **Notes**: 501 couplings in 8 code files (harness convention 235, Jjodel 116, platform 93, environment 57). The board never reads ~/.claude/projects. Zero-adoption measured on tracer-scaffold and 8 sprotty clones: cost and context ok, commit link lost for deleted clones, about 30 days of transcripts on disk. check:docs Check E red at HEAD before this lane: front tack not in fronts.json.
 **Prompt document name**: 2026-10-19 11:00
+
+## 2026-10-19 — feat: Tack slice 5a, board server, page shell and Sessions view
+**Prompt**: P-2026-10-19-1440: `tack board` (node:http on 127.0.0.1:4710, scan on start, `POST /api/rescan`), preselection by repository, JSON API (repos, sessions, metrics, health), page shell from memory with Sessions view, Timeline/Insights placeholders; tests; run on this Mac and leave it running
+**Files touched**: tack/README.md, tack/bin/tack.mjs, tack/src/board/{api.mjs,server.mjs,page.html,board.css,board.js}, tack/test/board.test.mjs (code commit db39b5880); docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1440_prompt_tack_s5a_board_server.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (8 code files, all under `tack/**`, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Tests 97/97 (was 86); mutation bench in the code commit, 7 of 8 killed, the survivor equivalent. Unattended decisions: (1) `--root` flag added, as on `scan`, for tests; (2) preselection by root commit, not toplevel; (3) last scan time kept in memory, no table; (4) Host/Origin checks; (5) `until` added to the date range; (6) Insights placeholder lists layer 2/3 as not adopted. Visual check is the chat's, after exit (RC-23).
+**Prompt document name**: 2026-10-19 14:40
+
+Run on this Mac: `tack board --no-open --port 4710 --store /tmp/tack-s5a/real.db` from `~/jjodel-release`, left running, PID in `/tmp/tack-s5a/board.pid`; `git status` of `~/jjodel-release` unchanged before and after. First scan 41.2 s (758 transcripts, 595 sessions, 42,205 calls, 6,766 commits, 5 repositories); a rescan 2.2 s, 0 sessions added. Preselected: the Jjodel repository (166 worktrees).
+
+| endpoint | status | bytes | time |
+|---|---|---|---|
+| /api/repos | 200 | 1,108 | 6 ms |
+| /api/sessions?repo=jjodel | 200 | 208,299 | 70 ms |
+| /api/metrics?repo=jjodel | 200 | 106,223 | 117 ms |
+| /api/health | 200 | 419 | 1 ms |
+| /api/sessions (all) | 200 | 232,634 | 22 ms |
+| /api/metrics (all) | 200 | 119,096 | 112 ms |
+| POST /api/rescan | 200 | 231 | 2.2 s |
+| page, css, js | 200 | 4,592 / 9,674 / 9,623 | < 1 ms |
+
+Summary strip for Jjodel, all dates: 526 sessions (384 direct, 142 by branch); cost 3,594.55 USD known, 2 unknown; context peak median 204,723, max 966,483, 254 of 502 sessions with calls at or above 200k; commit within the hour 518 yes, 8 no, 0 unknown, share 98.5%. Privacy spot check on the saved responses: no `cwd` key, no transcript root, no path below a toplevel; the one `/Users/` path is the repository toplevel in `/api/repos` (positive control found it).

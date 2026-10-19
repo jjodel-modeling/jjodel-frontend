@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tack</title>
+<link rel="stylesheet" href="/board.css">
+</head><body><div class="app">
+<aside class="side" aria-label="Board">
+<div class="prod"><span class="logo" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M2 8h8M2 12h11"/></svg></span><div><b>Tack</b><span class="mono" id="p-repo">all repositories</span></div></div>
+<nav class="tabs" aria-label="Views"><button type="button" data-tab="sessions">Sessions</button><button type="button" data-tab="timeline">Timeline</button><button type="button" data-tab="insights">Insights</button></nav>
+<div class="foot">
+<div class="fr"><span>Sessions in store</span><b id="f-sessions">…</b></div>
+<div class="fr"><span>Repositories</span><b id="f-repos">…</b></div>
+<div class="fr"><span>Schema</span><b id="f-schema">…</b></div>
+<div class="fr fs"><span class="ok-dot" id="f-dot"></span><span class="mono" id="f-host">…</span><span id="f-days">…</span></div>
+</div>
+</aside>
+<main>
+<header class="vh"><h1 id="vt">Sessions</h1>
+<label class="sel"><span class="vh-l">Repository</span><select id="repo" aria-label="Repository"><option value="all">All repositories</option></select></label>
+<span class="scan" id="scan" title="Last scan of the transcripts and git history">Last scan …</span>
+<button type="button" class="btn" id="rescan">Rescan</button><span class="spin" id="spin" role="status" aria-label="Scanning" hidden></span>
+</header>
+<div class="view">
+<div class="err" id="err"></div>
+<section id="tab-sessions">
+<div class="kpis" id="kpis" aria-label="Summary">
+<div class="kpi"><span class="kl">Sessions</span><span class="kv"><b id="k-n">…</b><span id="k-n2"></span></span></div>
+<div class="kpi"><span class="kl">Cost, known</span><span class="kv"><b id="k-cost">…</b><span id="k-cost2"></span></span></div>
+<div class="kpi"><span class="kl">Context peak, median</span><span class="kv"><b id="k-med">…</b><span id="k-med2"></span></span></div>
+<div class="kpi"><span class="kl">Context peak, max</span><span class="kv"><b id="k-max">…</b><span id="k-max2"></span></span></div>
+<div class="kpi"><span class="kl">Commit within the hour</span><span class="kv"><b id="k-commit">…</b><span id="k-commit2"></span></span></div>
+</div>
+<form class="filt" id="filt" aria-label="Filters">
+<label>From <input type="date" id="since"></label><label>To <input type="date" id="until"></label>
+<label class="chk"><input type="checkbox" id="only-hi"> only ≥ 200k</label><label class="chk"><input type="checkbox" id="only-unk"> only unknown cost</label>
+<a href="#" id="clear" role="button">Clear</a><span class="meta" id="shown"></span>
+</form>
+<div class="wrap"><table class="sfx" id="sessions"><colgroup>
+<col style="width:96px"><col style="width:60px"><col style="width:160px"><col style="width:190px"><col style="width:72px"><col style="width:80px"><col style="width:68px"><col style="width:112px"><col style="width:84px"><col style="width:220px"><col style="width:104px">
+</colgroup><thead><tr><th>Day</th><th>Start</th><th>Repository</th><th id="h-branch" title="The session's git branch; the unit of work when layer 2 is adopted">Branch</th><th title="How the session was linked to its repository">Link</th><th class="r">Duration</th><th class="r" title="Main-thread API calls">Calls</th><th class="r" title="Largest main-thread context: input + cache read + cache write">Context peak</th><th class="r">Cost</th><th>Models</th><th title="A commit of the repository between the first event and one hour after the last (proximity, not authorship)">Commit ≤ 1 h</th></tr></thead>
+<tbody id="rows"><tr><td colspan="11" class="empty">Loading sessions…</td></tr></tbody></table></div>
+</section>
+<section id="tab-timeline" hidden><div class="ph"><b>Timeline</b><span>arrives in slice 5b</span></div></section>
+<section id="tab-insights" hidden><div class="ph"><b>Insights</b><span>arrives in slice 5b</span></div>
+<h2>Layers 2 and 3<span class="h2n" id="n-layers"></span></h2>
+<div class="wrap"><table class="lfx"><colgroup><col style="width:180px"><col style="width:70px"><col style="width:200px"><col></colgroup>
+<thead><tr><th>Metric</th><th>Layer</th><th>State</th><th>Enabled by</th></tr></thead><tbody id="layers"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody></table></div>
+</section>
+</div>
+</main>
+</div>
+<script src="/board.js"></script>
+</body></html>

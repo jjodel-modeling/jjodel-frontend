@@ -5,9 +5,9 @@ leaves behind (transcripts, git history, a self-assessment log) and shows how th
 It keeps metadata only, never message text, and needs no dependency beyond Node >= 24 (for
 `node:sqlite`; on an older Node every command exits 2).
 
-Status: slice 4 of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
-identity, the git collector and the layer-1 metrics (`tack metrics`) exist; the board comes in slice 5,
-layers 2 and 3 in slice 6.
+Status: slice 5a of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
+identity, the git collector, the layer-1 metrics (`tack metrics`) and the board with its Sessions view
+(`tack board`) exist; Timeline and Insights come in slice 5b, layers 2 and 3 in slice 6.
 
 ## Three data layers
 
@@ -150,6 +150,38 @@ only the split is estimated.
 The store is at schema version 3 (`sessions.git_branch`, `session_repo.link_method` and
 `link_reason`, `session_models`); older stores are migrated on open, and the next `scan` re-reads main
 transcripts once to fill the branch and the per-model costs (rows are matched, none added).
+
+## `tack board`
+
+```
+tack board [--port <n>] [--no-open] [--store <file>] [--root <dir>]
+```
+
+Runs an incremental `scan`, then serves a page on `http://127.0.0.1:4710/` (bound to 127.0.0.1 only)
+and opens it with the platform command (`open`, `xdg-open`) unless `--no-open`. Started inside a git work
+tree, it preselects that repository, by root commit, so a linked worktree selects its main repository;
+elsewhere it shows all repositories. The selection lives in the URL (`?repo=<key>|all&since=&until=`);
+nothing is written in the repository, only the store is.
+
+The page is three static files served from memory (`src/board/page.html`, `board.css`, `board.js`), no
+build step, no CDN, no web font; light and dark follow `prefers-color-scheme`. **Sessions** lists one row
+per session, newest first, with a summary strip and filters; **Timeline** and **Insights** arrive in slice
+5b, and Insights already lists the layer-2 and layer-3 metrics as `not adopted` with the field that would
+enable each.
+
+JSON API, all GET except the rescan:
+
+| Endpoint | Returns |
+|---|---|
+| `/api/repos` | the preselected key and one row per repository: key, name, main toplevel, worktree count, remote host, state, sessions, commits |
+| `/api/sessions?repo=&since=&until=` | one row per session: local day, start, duration, repository, branch (the unit with layer 2), link method, main-thread calls, context peak, cost (null when unknown, never 0), models, commit within the hour |
+| `/api/metrics?repo=&since=` | every declared metric with its layer and state (`computed` with its value, `not-adopted`, `not-implemented`) |
+| `/api/health` | store path, schema version, last scan (time, duration, rows added), row counts |
+| `POST /api/rescan` | runs the incremental scan again and returns the new last scan |
+
+No response carries message text, a commit subject, an author, a session cwd below a repository toplevel
+or a transcript path; `test/board.test.mjs` checks it with the fixture markers. A request whose Host is
+not `127.0.0.1:<port>` or `localhost:<port>`, or whose Origin is another site, is refused.
 
 ## Tests
 
