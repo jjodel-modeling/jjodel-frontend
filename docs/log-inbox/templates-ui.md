@@ -6,6 +6,19 @@ empties this file. The active log is not touched by this lane.
 
 ---
 
+## 2026-10-19 — feat: dashboard sidebar and quick tip on Templates, lane L-B2 (P-2026-10-19-1616)
+**Prompt**: Handoff §2.4 in the R-LIB-20 cut: FILTERS hidden on Templates, active item with aria-current=page and slate-100/600/3px slate-700 bar, no Quick tip on #/templates
+**Files touched**: frontend/src/pages/components/LeftBar.tsx, frontend/src/pages/dashboard.scss, frontend/src/components/NotificationWidget/NotificationWidget.tsx, docs/discovery/discovery_2026-10-19_templates_notations_file_new.md (section P-2026-10-19-1616), docs/discovery/assets/tpl-b2/ (2 PNG), docs/log-inbox/templates-ui.md, docs/prompts/claude_2026-10-19_1616_prompt_templates_sidebar.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3102, DOM read, 5/5 routes; chat check owed (RC-23)
+**Notes**: Typecheck exit 0. Probe with a stubbed tip: tip shown on All projects and Explore, absent on Templates (direct and via sidebar). Active fill rgb(241,245,249), weight 600, inset 3px rgb(51,65,85). Restyle changes All projects, Explore and the FILTERS items (cyan to slate). Regressions unknown: no tests cover the sidebar. Report section P-2026-10-19-1616.
+**Prompt document name**: 2026-10-19 16:16
+
 ## 2026-10-19 — discovery: templates, notations, file new, lane L-A (P-2026-10-19-1510)
 **Prompt**: Phase 1 read-only discovery for the design handoff: Templates page, File menu, creation paths, offscreen viewpoint snapshot, tokens, catalog content against §2.5, lane split and 3.2 cut
 **Files touched**: docs/discovery/discovery_2026-10-19_templates_notations_file_new.md (new), docs/log-inbox/templates-ui.md (new), docs/prompts/claude_2026-10-19_1510_prompt_templates_notations_discovery.md (Status)
