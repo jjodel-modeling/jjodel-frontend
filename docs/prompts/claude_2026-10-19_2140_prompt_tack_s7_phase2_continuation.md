@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2140
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (second session of P-2026-10-19-1800 Phase 2: settings, notifier, transports, sampler, settings page, load strip, tests, closure)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s7 · continued by P-2026-10-19-2225 (context ceiling, RC-51)
 Depends: P-2026-10-19-1800
 Corregge: none (continuation under RC-51, not a repair)
 Request: Alfonso, 2026-10-19 20:51, in the project chat: «si» to the GO of Phase 2 of P-2026-10-19-1800 (same request as P-2026-10-19-1800)

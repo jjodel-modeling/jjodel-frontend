@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2225
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (third session of P-2026-10-19-1800 Phase 2: two red tests, full suite, README, report §0, board, commits, closure)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tack-s7 · e0fd6d286, docs commit carrying this line · 185 tests, 185 pass
 Depends: P-2026-10-19-2140
 Corregge: none (continuation under RC-51, not a repair)
 Request: Alfonso, 2026-10-19 20:51, in the project chat: «si» to the GO of Phase 2 of P-2026-10-19-1800 (same request as P-2026-10-19-1800)
