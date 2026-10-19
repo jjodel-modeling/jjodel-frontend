@@ -861,3 +861,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: non applicabile — deroga P8: no UI change
 **Notes**: Sources in order: `--chat-url` (new, `^https://`), newest prompt in the receiving tree's `docs/prompts/` with that Chat: and an https Request:, `Claude-Session:` trailer of the newest commit adding such a prompt; else `Request: none (…)` and a `warning:` line, never a failed merge. Mutation bench: `if (url) return url;` in source (b) made `if (false && url)` turns the (b) test red, the other six stay green. `Chat:` already took `--chat`; the measured `Chat: —` came from merges run without it.
 **Prompt document name**: 2026-10-19 23:15
+
+## 2026-10-19 — merge: mergeurl into alfonso-frontend-jjtl (P-2026-10-19-2331)
+**Prompt**: `claude_2026-10-19_2331_prompt_merge_mergeurl.md`, a direct merge by `lane-run merge --direct`, no session: `mergeurl` at `b485cc5ff` into `alfonso-frontend-jjtl`, merge base `be72e287f`, 3 commits on the branch side.
+**Files touched**: merge `f9f4e7f2d`: 6 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-19_2315_prompt_merge_request_url.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/merge-into-trunk.md`, `frontend/scripts/lane-templates/trunk-into-branch.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f9f4e7f2d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9431 tests in 384 files, 9 red at import, hooks 952; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat verified merge f9f4e7f2d and the direct gates: typecheck, vitest 9431, build, check:docs all ok
+**Notes**: Rollback tag `pre-mergeurl` on `c9b903250` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2331/result.json`.
+**Prompt document name**: 2026-10-19 23:31
