@@ -9,7 +9,7 @@ import { openStore, storePath } from '../store/open.mjs';
 import { scan, defaultRoot } from '../collectors/claude-code/collect.mjs';
 import { identify } from '../collectors/git/identity.mjs';
 import { collectGit } from '../collectors/git/collect.mjs';
-import { dayParam, healthApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi } from './api.mjs';
+import { dayParam, healthApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi } from './api.mjs';
 
 export const DEFAULT_PORT = 4710;
 
@@ -17,7 +17,10 @@ const asset = (name) => readFileSync(new URL(`./${name}`, import.meta.url), 'utf
 const ASSETS = {
   '/': ['text/html; charset=utf-8', asset('page.html')],
   '/board.css': ['text/css; charset=utf-8', asset('board.css')],
+  '/charts.js': ['text/javascript; charset=utf-8', asset('charts.js')],
   '/board.js': ['text/javascript; charset=utf-8', asset('board.js')],
+  '/timeline.js': ['text/javascript; charset=utf-8', asset('timeline.js')],
+  '/insights.js': ['text/javascript; charset=utf-8', asset('insights.js')],
 };
 
 /** One incremental scan: transcripts, repository identity, git history. Counts only, never a path. */
@@ -73,16 +76,15 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
       if (ASSETS[p]) return send(res, 200, ...ASSETS[p]);
       if (p === '/api/health') return json(res, 200, healthApi(db, { store, lastScan }));
       if (p === '/api/repos') return json(res, 200, { preselected, repos: listBoardRepos(db) });
-      if (p === '/api/sessions' || p === '/api/metrics') {
+      if (p === '/api/sessions' || p === '/api/metrics' || p === '/api/timeline') {
         const q = (k) => url.searchParams.get(k);
         const repo = repoParam(db, q('repo'));
         const since = dayParam('since', q('since'));
         const until = dayParam('until', q('until'));
         const bad = repo.error ?? since.error ?? until.error;
         if (bad) return json(res, 400, { error: bad });
-        return json(res, 200, p === '/api/sessions'
-          ? sessionsApi(db, { repo: repo.key, since: since.day, until: until.day })
-          : metricsApi(db, { repo: repo.key, since: since.day }));
+        const api = { '/api/sessions': sessionsApi, '/api/metrics': metricsApi, '/api/timeline': timelineApi }[p];
+        return json(res, 200, api(db, { repo: repo.key, since: since.day, until: until.day }));
       }
       return json(res, 404, { error: 'not found' });
     } catch (err) {

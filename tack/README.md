@@ -5,9 +5,9 @@ leaves behind (transcripts, git history, a self-assessment log) and shows how th
 It keeps metadata only, never message text, and needs no dependency beyond Node >= 24 (for
 `node:sqlite`; on an older Node every command exits 2).
 
-Status: slice 5a of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
-identity, the git collector, the layer-1 metrics (`tack metrics`) and the board with its Sessions view
-(`tack board`) exist; Timeline and Insights come in slice 5b, layers 2 and 3 in slice 6.
+Status: slice 5b of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
+identity, the git collector, the layer-1 metrics (`tack metrics`) and the board with its Sessions, Timeline
+and Insights views (`tack board`) exist; layers 2 and 3 come in slice 6.
 
 ## Three data layers
 
@@ -163,11 +163,28 @@ tree, it preselects that repository, by root commit, so a linked worktree select
 elsewhere it shows all repositories. The selection lives in the URL (`?repo=<key>|all&since=&until=`);
 nothing is written in the repository, only the store is.
 
-The page is three static files served from memory (`src/board/page.html`, `board.css`, `board.js`), no
-build step, no CDN, no web font; light and dark follow `prefers-color-scheme`. **Sessions** lists one row
-per session, newest first, with a summary strip and filters; **Timeline** and **Insights** arrive in slice
-5b, and Insights already lists the layer-2 and layer-3 metrics as `not adopted` with the field that would
-enable each.
+The page is static files served from memory (`src/board/page.html`, `board.css`, `board.js`, `charts.js`,
+`timeline.js`, `insights.js`), no build step, no CDN, no web font, no chart library; light and dark follow
+`prefers-color-scheme`.
+
+- **Sessions** lists one row per session, newest first, with a summary strip and filters. The column
+  «Unit / branch» shows the unit id of the nearest commit carrying one (proximity, not authorship) in a
+  repository that has unit ids, the branch otherwise.
+- **Timeline** draws one lane per repository (per branch when one repository is selected) on a Day or Week
+  window, with ‹ Latest › navigation. A bar runs from the first to the last event of a session; a marker
+  shows the first call at or above the context threshold (200k) and ticks show commits within the hour. A
+  click or Enter selects the session in Sessions; hover shows the Sessions row fields.
+- **Insights** is a KPI strip and cards drawn by the SVG helpers of `charts.js`: cost per day stacked by
+  model family (a «?» marker counts sessions of unknown cost, never drawn as 0), sessions per day, the
+  context-peak distribution, waits per day, overlap per day and the subagent share. The date range of the
+  selection (`since`, `until`) applies to Insights as it does to Sessions. Layer-2 and layer-3 metrics
+  appear as dashed cards: `not adopted` with the field that would enable each, or `not implemented` (slice 6).
+
+The chart helpers (`bars`, `line`, `meters`, `multiples`, `niceMax`, `dayRange`, `modelShort`) are pure
+functions returning SVG strings, also run by `node --test` in a vm. Model families have fixed colours:
+opus, sonnet, haiku, other (categorical palette slots 1, 2, 3, 7, validated in light and dark) and a
+neutral for cost with no per-model attribution; tokens `--f-*` in `board.css`. A repository whose toplevel
+folder is a bare hash is named after the folder that holds it, else `(unnamed) <key>`.
 
 JSON API, all GET except the rescan:
 
@@ -175,7 +192,8 @@ JSON API, all GET except the rescan:
 |---|---|
 | `/api/repos` | the preselected key and one row per repository: key, name, main toplevel, worktree count, remote host, state, sessions, commits |
 | `/api/sessions?repo=&since=&until=` | one row per session: local day, start, duration, repository, branch (the unit with layer 2), link method, main-thread calls, context peak, cost (null when unknown, never 0), models, commit within the hour |
-| `/api/metrics?repo=&since=` | every declared metric with its layer and state (`computed` with its value, `not-adopted`, `not-implemented`) |
+| `/api/metrics?repo=&since=&until=` | every declared metric with its layer and state (`computed` with its value, `not-adopted`, `not-implemented`); cost per day also by model family |
+| `/api/timeline?repo=&since=&until=` | per session, in epoch ms: start, end, main model family, first call at or above 200k, commit times within the hour |
 | `/api/health` | store path, schema version, last scan (time, duration, rows added), row counts |
 | `POST /api/rescan` | runs the incremental scan again and returns the new last scan |
 

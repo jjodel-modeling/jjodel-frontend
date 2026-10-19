@@ -7,10 +7,13 @@ import { SCHEMA_VERSION } from '../store/open.mjs';
 import { commitWithinHour } from '../store/sessions.mjs';
 import { dayOf } from '../metrics/days.mjs';
 import { METRICS, computeAll, loadSelection } from '../metrics/index.mjs';
+import { modelFamily } from '../metrics/layer1.mjs';
 
 export const CONTEXT_THRESHOLD = 200_000;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const KEY = /^[0-9a-f]{4,40}$/;
+const HASH = /^[0-9a-f]{12,}$/i;
+const HOUR = 3600;
 
 export const timeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -20,6 +23,17 @@ function mainToplevel(commonDirs, toplevels) {
   return fromDir ?? toplevels[0] ?? null;
 }
 
+/**
+ * The name a repository is shown by: its toplevel folder; when that folder is a bare hash (an Overleaf
+ * clone, say), the folder that holds it; when both are hashes or there is no toplevel, (unnamed) and
+ * the short key.
+ */
+export function displayName(toplevel, key) {
+  const parts = toplevel ? toplevel.split(/[\\/]/).filter(Boolean) : [];
+  const named = parts.slice(-2).reverse().find((p) => !HASH.test(p));
+  return named ?? `(unnamed) ${key.slice(0, 8)}`;
+}
+
 export function listBoardRepos(db) {
   const counts = new Map(db.prepare('SELECT repo_key, COUNT(*) AS n FROM session_repo WHERE repo_key IS NOT NULL GROUP BY repo_key').all().map((r) => [r.repo_key, r.n]));
   const commits = new Map(db.prepare('SELECT repo_key, COUNT(*) AS n FROM commits GROUP BY repo_key').all().map((r) => [r.repo_key, r.n]));
@@ -27,7 +41,7 @@ export function listBoardRepos(db) {
     const toplevels = JSON.parse(r.toplevels);
     const toplevel = mainToplevel(JSON.parse(r.common_dirs), toplevels);
     return {
-      key: r.key, name: toplevel ? basename(toplevel) : r.key.slice(0, 12), toplevel, worktrees: toplevels.length,
+      key: r.key, name: displayName(toplevel, r.key), toplevel, worktrees: toplevels.length,
       remote_host: remoteHost(r.remote), state: r.state, sessions: counts.get(r.key) ?? 0, commits: commits.get(r.key) ?? 0,
     };
   });
@@ -75,22 +89,41 @@ LEFT JOIN session_repo sr ON sr.session_id = s.id
 WHERE (? IS NULL OR sr.repo_key = ?)
 GROUP BY s.id`;
 
+const inDays = (day, since, until) => !((since || until) && day === null) && !(since && day < since) && !(until && day > until);
+
+/**
+ * The unit a session is shown with when its repository has unit ids (layer 2 in the commits): the
+ * unit of the commit carrying one, between the first event and an hour after the last, nearest to
+ * the last event (proximity, not authorship). Null without a repository, a time or such a commit.
+ */
+export function unitNear(db, { repo_key, first_ts, last_ts }) {
+  if (!repo_key || !first_ts || !last_ts) return null;
+  const from = Math.floor(Date.parse(first_ts) / 1000);
+  const last = Math.ceil(Date.parse(last_ts) / 1000);
+  const hit = db.prepare(`SELECT unit FROM commits WHERE repo_key = ? AND unit IS NOT NULL AND commit_time BETWEEN ? AND ?
+    ORDER BY ABS(commit_time - ?), commit_time LIMIT 1`).get(repo_key, from, last + HOUR, last);
+  return hit ? hit.unit : null;
+}
+
+/** Repository keys with at least one commit carrying a unit id. */
+const unitRepos = (db) => new Set(db.prepare('SELECT DISTINCT repo_key FROM commits WHERE unit IS NOT NULL').all().map((r) => r.repo_key));
+
 /**
  * Sessions of the selection, newest first, by the local day of their first event (since and until
  * inclusive; a session without a timestamp is kept only when no day bound is set). Main-thread calls
- * only; cost null when unknown, never 0. Layer 2 (a session-unit link) replaces the branch by the unit.
+ * only; cost null when unknown, never 0. unit: see unitNear, null when the repository has no unit ids;
+ * the page shows the unit, and the branch only when there is none.
  */
 export function sessionsApi(db, { repo = null, since = null, until = null } = {}) {
   const names = new Map(listBoardRepos(db).map((r) => [r.key, r.name]));
   const layer2 = hasColumn(db, 'sessions', 'unit');
+  const units = unitRepos(db);
   const rows = [];
   for (const r of db.prepare(SESSIONS).all(repo, repo)) {
     const first = r.first_ts ? Date.parse(r.first_ts) : null;
     const last = r.last_ts ? Date.parse(r.last_ts) : null;
     const day = first === null ? null : dayOf(first);
-    if ((since || until) && day === null) continue;
-    if (since && day < since) continue;
-    if (until && day > until) continue;
+    if (!inDays(day, since, until)) continue;
     rows.push({
       id: r.id,
       day,
@@ -100,7 +133,7 @@ export function sessionsApi(db, { repo = null, since = null, until = null } = {}
       repo_name: r.repo_key ? names.get(r.repo_key) ?? r.repo_key.slice(0, 12) : null,
       missing: r.repo_key ? null : (r.missing ?? 'not-identified'),
       branch: layer2 ? null : r.git_branch ?? null,
-      unit: null,
+      unit: units.has(r.repo_key) ? unitNear(db, r) : null,
       link: r.link_method ?? 'none',
       calls: r.calls,
       context_peak: r.context_peak,
@@ -114,10 +147,38 @@ export function sessionsApi(db, { repo = null, since = null, until = null } = {}
   return { repo, since, until, days: `local (${timeZone()})`, layer2, threshold: CONTEXT_THRESHOLD, sessions: rows };
 }
 
+/**
+ * What the Timeline draws beyond the Sessions rows, for the same selection: per session the last event,
+ * the model family with most main-thread calls, the first main-thread call at or above the context
+ * threshold, and the commit times of its repository within the hour. Epoch ms; times and ids only.
+ */
+export function timelineApi(db, { repo = null, since = null, until = null } = {}) {
+  const calls = db.prepare('SELECT ts, model, context FROM calls WHERE session_id = ? AND sidechain = 0 ORDER BY ts, message_id');
+  const commits = db.prepare('SELECT commit_time FROM commits WHERE repo_key = ? AND commit_time BETWEEN ? AND ? ORDER BY commit_time');
+  const rows = [];
+  for (const r of db.prepare(`SELECT s.id, s.first_ts, s.last_ts, sr.repo_key FROM sessions s LEFT JOIN session_repo sr ON sr.session_id = s.id
+    WHERE (? IS NULL OR sr.repo_key = ?) ORDER BY s.first_ts, s.id`).all(repo, repo)) {
+    if (!r.first_ts || !r.last_ts) continue; // nothing to place on a time axis
+    const start = Date.parse(r.first_ts);
+    const end = Date.parse(r.last_ts);
+    if (!inDays(dayOf(start), since, until)) continue;
+    const count = {};
+    let crossed = null;
+    for (const c of calls.all(r.id)) {
+      if (c.model) count[modelFamily(c.model)] = (count[modelFamily(c.model)] ?? 0) + 1;
+      if (crossed === null && c.context >= CONTEXT_THRESHOLD && c.ts) crossed = Date.parse(c.ts);
+    }
+    const family = Object.entries(count).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0]?.[0] ?? 'unattributed';
+    const ticks = r.repo_key ? commits.all(r.repo_key, Math.floor(start / 1000), Math.ceil(end / 1000) + HOUR).map((c) => c.commit_time * 1000) : [];
+    rows.push({ id: r.id, start, end, family, crossed, commits: ticks });
+  }
+  return { repo, since, until, threshold: CONTEXT_THRESHOLD, sessions: rows };
+}
+
 /** Every declared metric with its layer and state: computed (layer 1, with its value), not-adopted, not-implemented. */
-export function metricsApi(db, { repo = null, since = null } = {}) {
-  const sel = loadSelection(db, { repo, since });
-  const values = computeAll(sel);
+export function metricsApi(db, { repo = null, since = null, until = null } = {}) {
+  const sel = loadSelection(db, { repo, since, until });
+  const values = computeAll(sel, { cost_per_day: { byFamily: true } });
   const metrics = METRICS.map((m) => {
     const v = values[m.name];
     const state = m.layer === 1 ? 'computed' : v;
@@ -126,7 +187,7 @@ export function metricsApi(db, { repo = null, since = null } = {}) {
       ...(m.enabledBy ? { enabledBy: m.enabledBy } : {}), ...(state === 'computed' ? { value: v } : {}),
     };
   });
-  return { repo, since, days: `local (${timeZone()})`, sessions: sel.sessions.length, metrics };
+  return { repo, since, until, days: `local (${timeZone()})`, sessions: sel.sessions.length, metrics };
 }
 
 export function healthApi(db, { store, lastScan }) {

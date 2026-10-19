@@ -29,9 +29,10 @@ export function resolveRepo(db, arg) {
 
 /**
  * Sessions (main transcripts) of the selection: repo = a repository key or null for all; since =
- * 'YYYY-MM-DD', the first day kept (by the day of the session's first event). utc picks UTC days.
+ * 'YYYY-MM-DD', the first day kept (by the day of the session's first event); until, the last day
+ * kept, inclusive. utc picks UTC days.
  */
-export function loadSelection(db, { repo = null, since = null, utc = false } = {}) {
+export function loadSelection(db, { repo = null, since = null, until = null, utc = false } = {}) {
   const rows = db.prepare(`
     SELECT s.id, s.cwd, s.first_ts, s.last_ts, s.cost_usd, s.cost_known, s.cost_unknown_model,
            sr.repo_key, sr.link_method
@@ -46,6 +47,7 @@ export function loadSelection(db, { repo = null, since = null, utc = false } = {
     const first = ms(r.first_ts);
     const day = first === null ? null : dayOf(first, { utc });
     if (since && (day === null || day < since)) continue;
+    if (until && (day === null || day > until)) continue;
     sessions.push({
       id: r.id,
       cwd: r.cwd,
@@ -60,5 +62,5 @@ export function loadSelection(db, { repo = null, since = null, utc = false } = {
       models: new Map(modelsOf.all(r.id).map((m) => [m.model, m.cost_usd])),
     });
   }
-  return { db, repo, since, utc, sessions };
+  return { db, repo, since, until, utc, sessions };
 }

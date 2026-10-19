@@ -6,6 +6,36 @@ empties this file. The active log is not touched by this lane.
 
 ---
 
+## 2026-10-19 — feat: Tack slice 5b, Timeline and Insights views, Sessions fixes
+**Prompt**: P-2026-10-19-1520 (code, stopped at the 200k context ceiling, RC-51) and its continuation P-2026-10-19-1555 (run, measure, bench, README, commits): fix three 5a Sessions defects, add Timeline and Insights with dependency-free SVG chart helpers, tests, run the board on port 4710.
+**Files touched**: tack/README.md, tack/src/board/{api.mjs,server.mjs,page.html,board.css,board.js,charts.js,timeline.js,insights.js}, tack/src/metrics/{layer1.mjs,select.mjs}, tack/test/{board.test.mjs,charts.test.mjs,helpers/views.mjs} (code commit 90d64d594); docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1520_prompt_tack_s5b_timeline_insights.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 14:40 (P-2026-10-19-1440: Sessions defects of 5a, row widths at 1440, KPI ellipsis at 800, hash-named repository)
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no (every file under `tack/**` or listed in DOVE)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (DOM measurements at 1440 and 800 px and the visual check are done by the chat after exit, RC-23)
+**Notes**: Tests 112/112 (was 97). Mutation bench on charts.js: 6 mutants, first run 5 of 6 killed, the survivor (non-numeric value in the bar total) was not equivalent, a test assertion was added, then 6 of 6; file restored. The 1555 prompt file is not on tack-s5b (committed on the release branch as 13c70d0fc), so its Status line was not flipped here. Decisions: see the handoff of P-2026-10-19-1520.
+**Prompt document name**: 2026-10-19 15:55
+
+Unattended decisions (RC-21/RC-25, from `~/.jjodel-lanes/P-2026-10-19-1520/handoff.md`, ordered by consequence): (1) new endpoint `GET /api/timeline` (epoch ms) instead of new keys on `/api/sessions`, so the 5a shape tests stay as they are; (2) unit id of a session is the unit of the commit nearest its last event within first event to last event + 1 h, a proximity not an authorship, only for repositories with unit ids; column «Unit / branch»; (3) `loadSelection` and `/api/metrics` accept `until`, which 5a ignored on metrics; (4) `cost_per_day` gets `byFamily` (default false: CLI and metrics tests unchanged), families opus, sonnet, haiku, other, unattributed; (5) chart helpers in a separate served `charts.js`, run in a vm by `node --test`; (6) hash-named repository named after the folder that holds it, else `(unnamed) <key8>`; (7) family palette from the dataviz categorical slots 1, 2, 3, 7 plus neutral, validated in light and dark, one contrast WARN on aqua in light relieved by legend and `<title>`; plus the Timeline window, Insights card set and 1,088 px table width recorded in the handoff.
+
+Run on this Mac: `tack board --no-open --port 4710 --store /tmp/tack-s5b/real.db` from `~/jjodel-release` (the 5a board, PID 10945, stopped; store copied from `/tmp/tack-s5a/real.db`), left running, PID in `/tmp/tack-s5b/board.pid`; `git status --porcelain` of `~/jjodel-release` unchanged before and after.
+
+| measure (all repositories) | value |
+|---|---|
+| /api/sessions | 200, 241,401 B, 135 ms |
+| /api/metrics | 200, 121,755 B, 135 ms |
+| /api/timeline | 200, 267,940 B, 37 ms |
+| page, board.js, charts.js, timeline.js, insights.js, board.css | 4,395 / 12,833 / 11,750 / 12,832 / 9,201 / 14,712 B |
+| charts per tab (real data rendered through the views in a vm) | Sessions 0 (table); Timeline 4 svg (Day and Week); Insights 7 svg, 2 small-multiple panels |
+| render time in the vm | Timeline 1 to 2 ms; Insights 15 ms |
+
+Not measured here, left to the chat in the browser: table width against the container at 1440 and 800 px, KPI secondary lines at 800 px, load-to-Insights-drawn time, the Unit column showing P-ids for Jjodel, the selector showing «Jjodel Book».
+
+---
+
 ## 2026-10-19 — feat: Tack slice 4, layer-1 metrics, deleted-worktree links, rename fix
 **Prompt**: P-2026-10-19-1335 (code, stopped at the context ceiling RC-51 with tests green and nothing committed) and P-2026-10-19-1405 (cost cross-check, README, commits); `tack metrics`, link inference for path-gone cwds, numstat immune to `diff.renames`, schema 3
 **Files touched**: tack/** (code commit 384348c49), docs/log-inbox/tack.md, docs/prompts/claude_2026-10-19_1335_prompt_tack_s4_metrics.md (Status), docs/prompts/claude_2026-10-19_1405_prompt_tack_s4_continuation.md (added from the trunk, Status)

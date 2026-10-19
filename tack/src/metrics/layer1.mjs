@@ -21,6 +21,9 @@ const share = (a, b) => (b > 0 ? a / b : null);
 const sortKeys = (o) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 const main = (s) => s.calls.filter((c) => c.sidechain === 0);
 
+/** The family of a model id: opus, sonnet or haiku by name, other for any other model. */
+export const modelFamily = (model) => (/opus/i.test(model) ? 'opus' : /sonnet/i.test(model) ? 'sonnet' : /haiku/i.test(model) ? 'haiku' : 'other');
+
 export const sessionsPerDay = {
   name: 'sessions_per_day',
   layer: 1,
@@ -41,8 +44,10 @@ export const costPerDay = {
   name: 'cost_per_day',
   layer: 1,
   definition: 'sum of known session cost (max cost-state.totalCostUSD) by the day of the first event; unknown cost counted apart, never as 0',
-  params: {},
-  compute(sel) {
+  params: { byFamily: false },
+  // byFamily adds { families: { opus|sonnet|haiku|other|unattributed: usd } } to each day and the total:
+  // a session's known cost split by its per-model costs, unattributed when it has none.
+  compute(sel, { byFamily = false } = {}) {
     const days = {};
     const total = { usd: 0, known: 0, unknown: 0, partial: 0 };
     const add = (t, s) => {
@@ -51,6 +56,11 @@ export const costPerDay = {
         t.usd += s.cost;
         t.known++;
         if (s.costPartial) t.partial++;
+        if (byFamily) {
+          const f = (t.families ??= {});
+          if (!s.models.size) f.unattributed = (f.unattributed ?? 0) + s.cost;
+          for (const [model, usd] of s.models) f[modelFamily(model)] = (f[modelFamily(model)] ?? 0) + usd;
+        }
       }
     };
     let undated = 0;

@@ -35,18 +35,17 @@
 <a href="#" id="clear" role="button">Clear</a><span class="meta" id="shown"></span>
 </form>
 <div class="wrap"><table class="sfx" id="sessions"><colgroup>
-<col style="width:96px"><col style="width:60px"><col style="width:160px"><col style="width:190px"><col style="width:72px"><col style="width:80px"><col style="width:68px"><col style="width:112px"><col style="width:84px"><col style="width:220px"><col style="width:104px">
-</colgroup><thead><tr><th>Day</th><th>Start</th><th>Repository</th><th id="h-branch" title="The session's git branch; the unit of work when layer 2 is adopted">Branch</th><th title="How the session was linked to its repository">Link</th><th class="r">Duration</th><th class="r" title="Main-thread API calls">Calls</th><th class="r" title="Largest main-thread context: input + cache read + cache write">Context peak</th><th class="r">Cost</th><th>Models</th><th title="A commit of the repository between the first event and one hour after the last (proximity, not authorship)">Commit ≤ 1 h</th></tr></thead>
+<col style="width:112px"><col style="width:56px"><col style="width:120px"><col style="width:170px"><col style="width:68px"><col style="width:76px"><col style="width:58px"><col style="width:104px"><col style="width:84px"><col style="width:144px"><col style="width:96px">
+</colgroup><thead><tr><th>Day</th><th>Start</th><th>Repository</th><th id="h-branch" title="The unit of the nearest commit within the hour carrying one, when the repository has unit ids; otherwise the session's git branch">Branch</th><th title="How the session was linked to its repository">Link</th><th class="r">Duration</th><th class="r" title="Main-thread API calls">Calls</th><th class="r" title="Largest main-thread context: input + cache read + cache write">Context peak</th><th class="r">Cost</th><th title="Short names; hover a cell for the full model ids">Models</th><th title="A commit of the repository between the first event and one hour after the last (proximity, not authorship)">Commit ≤ 1 h</th></tr></thead>
 <tbody id="rows"><tr><td colspan="11" class="empty">Loading sessions…</td></tr></tbody></table></div>
 </section>
-<section id="tab-timeline" hidden><div class="ph"><b>Timeline</b><span>arrives in slice 5b</span></div></section>
-<section id="tab-insights" hidden><div class="ph"><b>Insights</b><span>arrives in slice 5b</span></div>
-<h2>Layers 2 and 3<span class="h2n" id="n-layers"></span></h2>
-<div class="wrap"><table class="lfx"><colgroup><col style="width:180px"><col style="width:70px"><col style="width:200px"><col></colgroup>
-<thead><tr><th>Metric</th><th>Layer</th><th>State</th><th>Enabled by</th></tr></thead><tbody id="layers"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody></table></div>
-</section>
+<section id="tab-timeline" hidden><div class="empty">Loading the timeline…</div></section>
+<section id="tab-insights" hidden><div class="empty">Loading the insights…</div></section>
 </div>
 </main>
 </div>
+<script src="/charts.js"></script>
 <script src="/board.js"></script>
+<script src="/timeline.js"></script>
+<script src="/insights.js"></script>
 </body></html>
