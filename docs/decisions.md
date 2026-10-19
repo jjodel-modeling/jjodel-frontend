@@ -6215,6 +6215,27 @@ Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked
   rows that name the 2026-10-23 freeze now refer to the 3.2 freeze still to be set. R-LIB-7 and R-LIB-8 are
   unchanged (no sealed notation and no seal guard in 3.2).
 
+Rows R-LIB-11..19 are **provisional**: their direction was approved by Alfonso in the design session of 2026-10-18/19 outside the project, and he asked on 2026-10-19 15:01 to register them as provisional. Source: `docs/design/claude_2026-10-19_design_handoff_templates_notations_file_new.md` §9 (artboards on the Design canvas «Jjodel Templates page»). Values the handoff marks **[proposal]** (level colours, Start here order, level and concept assignments, the 8-class and 5-metamodel thresholds, group names) are not ratified by these rows. Handoff §10 (Q1..Q4) waits for Alfonso. Registered by chat C-2026-10-19-1501 before the discovery P-2026-10-19-1510.
+
+- **R-LIB-11** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **Sealed notations get their own Notations page under BROWSE and a New model flow; they never appear on the Templates page.** The Templates contract is clone and own (case 2), the sealed contract is use and never open (case 1, R-LIB-1, R-LIB-3). Handoff §4, §5. When this ships is bounded by R-LIB-7, which keeps the sealed notations out of 3.2.
+- **R-LIB-12** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **The user-facing term for a sealed notation is «Built-in».** «Sealed» stays an internal word (code, decisions, reports).
+- **R-LIB-13** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **The Templates page has two sections, «Starters» (tier `template`) and «Worked examples» (tier `example`), each with a one-line contract under its title**; a section hides when the filters leave it empty. Refines the two-section layout of R-LIB-9.
+- **R-LIB-14** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **Clone is a secondary button, with a «Preview» ghost button beside it**, no longer a dark primary button on every card.
+- **R-LIB-15** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **A gallery id (`<id>@<n>`) is shown on the card only in Advanced mode.** The deep link of R-LIB-9 is unchanged.
+- **R-LIB-16** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **Card previews use the editor-canvas style (variant D), from a snapshot taken when a version is published and stored with the catalog entry**; a new `@n` is what regenerates it, no rendering on page load. Above a size threshold the preview is a structure list (variant C). An example's preview shows its model in its notation, not the metamodel.
+- **R-LIB-17** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **The concept and level filters combine with AND, show live counts, and draw a chip whose count is 0 dashed and grey**; «Clear filters» appears when a filter is active.
+- **R-LIB-18** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **File › New has a Basic and an Advanced structure (handoff §6), with no fourth cascade level**: «Conforming to» and «Built-in notations» are section labels inside the Model submenu; only items that open a dialog carry an ellipsis.
+- **R-LIB-19** (2026-10-19, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Catalog entries gain `level`, `concepts[]`, an optional `callout` and `preview`; metamodel and model counts are derived, never written.** The handoff's `kind` is not added: it is the `tier` field R-LIB-9 already ratified (`template | example`), so the catalog keeps one field (the chat's reading, recorded as unattended, RC-25).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
