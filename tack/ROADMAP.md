@@ -38,3 +38,9 @@ Source: Tack slice 8, the Lanes page (P-2026-10-19-2320 discovery §2, P-2026-10
 1. The ladder is project level only (`tack.json`), one per lane kind, with no default ladder: without one the cell stays disabled.
 2. Matching reads the tool calls of `log.jsonl` in memory and stores only the milestone index reached, never the command text (the `readLane` rule: text is classed and dropped).
 3. `tack check` validates the patterns (compilable, bounded length) and rejects a ladder whose milestones cannot be told apart.
+
+## Health tab (harness health signals)
+
+Source: R-TACK-5, 2026-10-20; signals and thresholds from `docs/discovery/discovery_2026-10-18_harness_health_retrospective.md` §4.
+
+**Idea.** A Health tab and a banner showing the worst state (red for an invariant break, yellow for a diagnosis line crossed) and the signal that set it, with one sparkline per signal over a rolling 4 weeks. No composite index. The signals are defined by the harness front; Tack reads them, preferably from its own store, and shows what the report says they cannot see.

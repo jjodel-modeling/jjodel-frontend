@@ -6314,6 +6314,12 @@ Evidence: the project chat C-2026-10-19-1748 of 2026-10-19 (17:55 recommendation
   (RC-23, as every Tack slice already delegates to the chat). It still asks Alfonso for the RC-26 list and for any
   slice that opens work he never asked for. Each such decision is reported to him in one line and carried by the
   commit that enacts it as a trailer `Autonomy: continuation | closure-go | merge`, so Tack can count it.
+- **R-TACK-5** (2026-10-20, ratified by Alfonso 2026-10-20 01:04 «Ok», evidence: read, verified: none, reversible: trunk).
+  **Harness health is split between two fronts.** Items 1 and 2 of the Phase 2 proposal of
+  `docs/discovery/discovery_2026-10-18_harness_health_retrospective.md` (governance rows, the signals script) stay
+  with the harness front. Item 3, the Health tab and banner, goes into Tack, not into the 4700 board (R-TACK-2):
+  Tack reads the signals and shows the worst state and the signal that set it. The signals should reuse what the
+  Tack store already holds (lane outcome and stop, work time, front and chat per lane) rather than a second reader.
 
 ## Superate
 
