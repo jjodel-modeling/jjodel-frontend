@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1725
 Chat: C-2026-10-19-1610
 Front: shell-ui
 Lane: fast (three files, additive, no visible change)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane shell-ui · code 5aea38269, docs commit carrying this line · done, dev server 3011 left running for the DOM check
 Depends: P-2026-10-19-1710
 Request: Alfonso, 2026-10-19 17:05: «si, procedi in automatico con /lane auto anche per l'implementazione».
 
