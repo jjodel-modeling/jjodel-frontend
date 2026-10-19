@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-1930
 Chat: C-2026-10-19-1610
 Front: shell-ui
 Lane: full (rail sheet plus the palette's outer border in EditorV2.scss)
-Status: da eseguire
+Status: eseguito 2026-10-19, lane P-2026-10-19-1930 (shell-ui-s8, 05bfba8f3); visual check passed (chat, 3018, 1600x1000)
 Depends: P-2026-10-19-1830
 Request: Alfonso, 2026-10-19 17:45: «ok alle raccomandazioni» (A2 and A3 in the discovery §8), ratified as R-SHELL-2 and R-SHELL-3.
 
