@@ -44,12 +44,12 @@
       "description": "An abstract Shape and its concrete subclasses, instantiated by type.",
       "source": ["frontend/scripts/library/gallery/shapes/Shapes.ecore", "frontend/scripts/library/gallery/shapes/sample-Shapes.xmi"], "notes": "" },
     { "id": "turnstile", "kind": "galleryProject", "tier": "example", "label": "Turnstile", "status": "available", "publisher": "jjodel",
-      "version": 1, "versions": [{ "n": 1, "file": "library/gallery/turnstile/1.jjodel", "published": "2026-10-18", "sha256": "80f8943d9859794a1ac1b79f40b92b6992a5805d6342f2c14c3ef53fc234d50c", "notes": "First version: a copy of frontend/public/examples/codegen/turnstile.jjodel." }],
+      "version": 1, "versions": [{ "n": 1, "file": "library/gallery/turnstile/1.jjodel", "published": "2026-10-18", "sha256": "02e0ab32f867b04890b5f48bc4f665838d74818a46aaf51b73c699e123d222ce", "notes": "First version: frontend/public/examples/codegen/turnstile.jjodel with its hand-written viewpoint, Turnstile statechart." }],
       "description": "A turnstile state machine with its code generation templates, ready to generate.",
-      "source": ["frontend/public/examples/codegen/turnstile.jjodel", "frontend/scripts/examples/build-codegen-examples.ts"], "notes": "The codegen example of P-2026-10-11-1415, packaged unchanged." },
+      "source": ["frontend/public/examples/codegen/turnstile.jjodel", "frontend/scripts/examples/build-codegen-examples.ts"], "notes": "The codegen example of P-2026-10-11-1415, with its ids, its templates and its scenario, and a hand-written viewpoint active on open (P-2026-10-19-0300)." },
     { "id": "petri-producer-consumer", "kind": "galleryProject", "tier": "example", "label": "Producer-consumer", "status": "available", "publisher": "jjodel",
-      "version": 1, "versions": [{ "n": 1, "file": "library/gallery/petri-producer-consumer/1.jjodel", "published": "2026-10-18", "sha256": "1c1410fbcbd508c7d3300e2da795077da174d13aecdf556b563b52bb9279d4c8", "notes": "First version: a copy of frontend/public/examples/codegen/petri-producer-consumer.jjodel." }],
+      "version": 1, "versions": [{ "n": 1, "file": "library/gallery/petri-producer-consumer/1.jjodel", "published": "2026-10-18", "sha256": "79baa79897639d1b9d03c7b04b0b37bb1b0185e7d26ca45d14053c6993597103", "notes": "First version: frontend/public/examples/codegen/petri-producer-consumer.jjodel with its hand-written viewpoint, Petri net." }],
       "description": "A Petri net of a producer and a consumer, two models of one metamodel, with its code generation templates.",
-      "source": ["frontend/public/examples/codegen/petri-producer-consumer.jjodel", "frontend/scripts/examples/build-codegen-examples.ts"], "notes": "The codegen example of P-2026-10-11-1415, packaged unchanged." }
+      "source": ["frontend/public/examples/codegen/petri-producer-consumer.jjodel", "frontend/scripts/examples/build-codegen-examples.ts"], "notes": "The codegen example of P-2026-10-11-1415, with its ids, its templates and its scenario, and a hand-written viewpoint active on open (P-2026-10-19-0300)." }
   ]
 }
