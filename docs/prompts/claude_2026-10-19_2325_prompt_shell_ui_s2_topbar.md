@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2325
 Chat: C-2026-10-19-1610
 Front: shell-ui
 Lane: full (one shared sheet, topbar blocks only)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane shell-ui · code 5f23824e2, docs commit carrying this line · done, visual GO in chat on 3020 (1600x1000)
 Depends: P-2026-10-19-1725
 Request: Alfonso, 2026-10-19 23:19: «Procedere ora» (run S2 and S5 before the tpl-e/tpl-int merges, stylesheets only).
 

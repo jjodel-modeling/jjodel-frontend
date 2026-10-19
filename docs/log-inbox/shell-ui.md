@@ -171,3 +171,18 @@ not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: Chat: S9 frontend changes at ab5225ccc identical to the shell-ui-s9 tip 7d70a7387 checked on 3019 (frontend diff empty; headers 26px, rail text <11px 0, select input border 0, rects unchanged, console init_dash only).
 **Notes**: Rollback tag `pre-shell-ui-s9` on `c72869d2e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2128/result.json`.
 **Prompt document name**: 2026-10-19 21:28
+
+## 2026-10-19 — feat: topbar on shell tokens, 24px targets, muted icon (S2)
+**Prompt**: P-2026-10-19-2325, slice S2 of the shell front (R-SHELL-1, R-SHELL-5): non-menu blocks of `navbar.scss` under `nav.nav-container` onto `--shell-*`: radii 4, neutral borders 1px `--shell-border`, text on `--shell-text-1/2/3`, text >= 11px, weights <= 600 (500 under 12px), mode-switch options and icon buttons at 24px without moving the bar, the + glyph muted in Advanced only.
+**Files touched**: frontend/src/pages/components/navbar.scss (5f23824e2); docs/log-inbox/shell-ui.md, docs/prompts/claude_2026-10-19_2325_prompt_shell_ui_s2_topbar.md (Status line)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, 3020, 1600x1000: nav 0,0,1600,50; switch options 24px; text<11px 0; radii 4 and 50% plus the 6px menu-trigger left to S5; weights 400-600; + icon #64748b in Advanced; toolbar, rail, canvas unchanged; console init_dash only; decisions 1-6 accepted)
+**Notes**: 1600x1000, projects+editor, B+A, before->after: appbar 0,0,1600,50, switch 140x26, toolbar 201,51,1398,40, rail, canvas unchanged; opts 20->24px; text<11px 2->0; borders 1px only; radii 2/3/6/8/10->4; weight 700->500; #94a3b8 text 1->0; + glyph #64748b in A only; close, opts efp fails 4->0; console init_dash. Old lines changed: 1455-1491, 1543-1598, 1626-1781, 1824-1840, 2025-2050, block appended after 2068. Gates: typecheck 0, vitest 66, build 0, smoke GREEN 12/0/3.
+**Prompt document name**: 2026-10-19 23:25
+
+**Ticket** (P-2026-10-19-2325): the user-menu `div.menu-trigger` (52x44) keeps `border-radius: 6px` (`$menu-item-radius`, menu block, painted on hover/open only): to S5 with the rest of the menu block.

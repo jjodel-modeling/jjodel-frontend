@@ -1452,7 +1452,7 @@ $transition-menu: 150ms ease;
 .nav-container.appbar {
   height: var(--jj-appbar-height) !important;
   padding: 0 16px 0 20px !important;
-  border-bottom: 0.5px solid var(--color-border-tertiary, #e2e8f0);
+  border-bottom: 1px solid var(--shell-border);
   box-shadow: none !important;
 
   // Compact logo
@@ -1475,11 +1475,12 @@ $transition-menu: 150ms ease;
   & span.menu-title {
     font-size: 12px !important;
     padding: 6px 8px !important;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--shell-text-2);
     font-weight: 500;
+    border-radius: var(--shell-radius-control);
 
     &:hover {
-      color: var(--color-text-primary);
+      color: var(--shell-text-1);
       background-color: var(--color-bg-secondary);
     }
   }
@@ -1489,6 +1490,7 @@ $transition-menu: 150ms ease;
     width: 28px;
     height: 28px;
     font-size: 11px;
+    font-weight: 500;
   }
 
   .user {
@@ -1540,10 +1542,10 @@ $transition-menu: 150ms ease;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
-  color: var(--color-text-primary);
+  color: var(--shell-text-1);
   background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 6px;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius-control);
   cursor: pointer;
 
   &:hover:not(:disabled) { border-color: var(--color-accent); }
@@ -1576,7 +1578,7 @@ $transition-menu: 150ms ease;
   flex-shrink: 0;
   cursor: pointer;
   transition: background 0.15s ease;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--shell-radius-control);
 
 
   &:hover {
@@ -1595,7 +1597,7 @@ $transition-menu: 150ms ease;
 .project-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-primary, #111418);
+  color: var(--shell-text-1);
   white-space: nowrap;
   max-width: 160px;
   overflow: hidden;
@@ -1623,7 +1625,7 @@ $transition-menu: 150ms ease;
   padding: 6px 10px;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--shell-radius-control);
   cursor: pointer;
   transition: all 150ms ease;
   flex-shrink: 1;
@@ -1686,9 +1688,9 @@ $transition-menu: 150ms ease;
     width: 16px;
     height: 16px;
     min-width: 16px;
-    border-radius: 3px;
-    font-size: 9px;
-    font-weight: 700;
+    border-radius: var(--shell-radius-control);
+    font-size: var(--shell-font-size-min);
+    font-weight: 500;
     flex-shrink: 0;
     line-height: 1;
     transition: width 0.15s ease, height 0.15s ease, min-width 0.15s ease, opacity 0.15s ease;
@@ -1733,7 +1735,7 @@ $transition-menu: 150ms ease;
   &__name {
     font-size: 12px;
     font-weight: 400;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--shell-text-2);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1746,13 +1748,13 @@ $transition-menu: 150ms ease;
     width: 14px;
     height: 14px;
     min-width: 14px;
-    font-size: 10px;
-    color: var(--color-text-placeholder, #94a3b8);
+    font-size: var(--shell-font-size-min);
+    color: var(--shell-text-3);
     opacity: 0;
     transition: opacity 150ms ease, color 150ms ease;
     flex-shrink: 0;
     line-height: 1;
-    border-radius: 2px;
+    border-radius: var(--shell-radius-control);
 
     &:hover {
       color: #ef4444;
@@ -1767,18 +1769,18 @@ $transition-menu: 150ms ease;
   align-items: center;
   padding: 3px 8px;
   background: var(--color-bg-secondary, #f1f5f9);
-  border: 0.5px solid var(--color-border-tertiary, #e2e8f0);
-  border-radius: 6px;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius-control);
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--shell-text-2);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
 
   &:hover {
     border-color: var(--color-text-tertiary, #94a3b8);
-    color: var(--color-text-primary, #475569);
+    color: var(--shell-text-1);
   }
 }
 
@@ -1821,7 +1823,7 @@ $transition-menu: 150ms ease;
   flex-shrink: 0;
   margin-left: 2px;
 
-  border-left: 0.5px solid var(--color-border-secondary, #e2e8f0);
+  border-left: 1px solid var(--shell-border);
   padding-left: 8px;
   margin-left: 8px;
 
@@ -1837,7 +1839,7 @@ $transition-menu: 150ms ease;
     //border: 0.5px solid var(--color-border-secondary, #e2e8f0);
     background-color: transparent;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--shell-radius-control);
     font-size: 16px;
     line-height: 1;
     color: var(--color-text-secondary, #64748b);
@@ -2022,7 +2024,7 @@ $transition-menu: 150ms ease;
   align-items: center;
   gap: 1px;
   padding: 3px;
-  border-radius: 10px;
+  border-radius: var(--shell-radius-control);
   background-color: #f1f5f9;
   flex-shrink: 0;
 
@@ -2030,24 +2032,26 @@ $transition-menu: 150ms ease;
     appearance: none;
     border: none;
     background: transparent;
-    color: #94a3b8;
+    color: var(--shell-text-3);
     font: inherit;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.2px;
     line-height: 1;
     padding: 4px 10px;
-    border-radius: 8px;
+    height: var(--shell-hit);
+    margin-block: -2px;
+    border-radius: var(--shell-radius-control);
     cursor: pointer;
     transition: background 150ms ease, color 150ms ease;
 
     &:hover:not(.appbar-mode-switch__opt--active) {
-      color: #475569;
+      color: var(--shell-text-2);
     }
 
     &--active {
       background-color: #ffffff;
-      color: #1e293b;
+      color: var(--shell-text-1);
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.10);
     }
   }
@@ -2065,4 +2069,37 @@ $transition-menu: 150ms ease;
 // Ensure content fills the full height when models tab bar is hidden
 .not-strip .dock-panel.dock-style-models > .dock-content-holder {
   height: 100% !important;
+}
+
+// ============================================
+// APP BAR — SHELL HIT BOXES AND MUTED ICONS (S2, R-SHELL-5)
+// ============================================
+// The tab close glyph is 14x14 inside a 30px tab: a transparent 24x24 box centred
+// on it carries the click without moving the tab. The tab clips its overflow, and
+// the box stays inside it (3px above and below, 5px into the gap and the padding).
+nav.nav-container .appbar-tab__close {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--shell-hit);
+    height: var(--shell-hit);
+    transform: translate(-50%, -50%);
+  }
+}
+
+// Advanced only: the icon-only buttons recede to the third text level and come
+// back on hover and keyboard focus. The glyph is painted by the global `i.bi`
+// rule, so the colour goes on the <i>, as in the editor toolbar (S4).
+html[data-mode="advanced"] nav.nav-container {
+  .new-document__btn:not(:disabled) i.bi {
+    color: var(--shell-text-3);
+  }
+
+  .new-document__btn:is(:hover, :focus-visible):not(:disabled) i.bi {
+    color: var(--shell-text-1);
+  }
 }
