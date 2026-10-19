@@ -699,3 +699,34 @@ Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of rep
 **Smoke visivo**: passato — chat: popover captures 11-14 checked earlier; reinstalled app running from `~/Applications` (pid 83012)
 **Notes**: `lane-run go` refuses a closure over a blocked merge, so the chat wrote this closure by hand, as for P-2026-10-19-0150. The 9 import-time reds (`window is not defined`) deserve their own ticket.
 **Prompt document name**: 2026-10-19 12:13
+
+## 2026-10-19 — feat(lane-board): sidebar shell and Lanes tab in the agreed design (P-2026-10-19-1130)
+**Prompt**: `claude_2026-10-19_1130_prompt_*.md`, lane board restyle slice 1 of 2. The board page's shell and its Lanes tab follow `Main.dc.html`, light and dark, with no change to data, routes or `/api*` JSON.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md` (code `c40dee260`); this entry and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneBoard tests 161/161 with no test edited; scripts/hooks 935/936, the red one `laneTracking.test.ts:131` (the `tack` front's milestone, from committed data, already red on the tip; ticket below); typecheck:scripts 0; check:scripts PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: built-in browser on 4714, 1440 dark and 800 light, the 24 h table 1158/1160 px with no horizontal scroll, the theme kept as Light
+**Notes**: Board on 4714, not 4712, because the menu bar lane held 4712 (provisional, unattended). Decisions 1-6 were accepted by the chat at 11:45; then the fix of the 24 h table (`compact()`, ten columns). The prompt's commit subject was 82 characters, so it was shortened to fit the 72 of §6.2. Details: `~/.jjodel-lanes/P-2026-10-19-1130/handoff.md`. Slice 2 still owes the `matchMedia` theme checks in `timeline.js` and `insights.js`.
+**Prompt document name**: 2026-10-19 11:30
+
+## 2026-10-19 — ticket: laneTracking test red on the tack front's milestone
+**Ticket**: `scripts/hooks/__tests__/laneTracking.test.ts:131` fails with «tack: expected false to be true»: the front `tack`, added to the fronts registry by `e201c3985`, has no integer `milestone`. It is red on the tip, independent of the board.
+**Priority**: medium
+**Found in**: P-2026-10-19-1130
+
+## 2026-10-19 — feat(lane-board): Timeline, Insights, Requirements in the design (P-2026-10-19-1215)
+**Prompt**: `claude_2026-10-19_1215_prompt_*.md`, continuation of P-2026-10-19-1157 (slice 2 of the board restyle, stopped at the RC-51 ceiling with its edits uncommitted): run the checks, verify `color-mix()` in SVG attributes, README note, board on 4714 for the visual check, then the commits.
+**Files touched**: `frontend/scripts/lane-board/{timeline.js,insights.js,requirements.js,lane-board.mjs,README.md}` (code `696025936`); this entry and the Status lines of the 1157 and 1215 prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneBoard tests 161/161 with no test edited; scripts/hooks 935/936, the red one the ticketed `laneTracking.test.ts:131`; typecheck:scripts 0; check:scripts PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: built-in browser on 4714, four tabs at 1440 dark, switched to Light without reload, 800 light 800/800 px; headless pass on both themes and widths, no console errors
+**Notes**: Covers 1157 too, which wrote no entry. color-mix() in SVG fill paints the computed colour (sampled pixels), fallback not needed. Two 800 px fixes: Insights tokens table +2 px (numeric headers wrap); Requirements 937 px, from the fixed 720 px balance track, not the table min-width as first reported: `.sb-mg` and a `.rq-mx-wrap` round the matrix scroll horizontally. Provisional, unattended (RC-25): the header wrap.
+**Prompt document name**: 2026-10-19 12:15

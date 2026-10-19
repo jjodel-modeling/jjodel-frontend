@@ -34,43 +34,50 @@
     '': 'No outcome: the log has no Outcome line (old lanes, or a lane cut off before its closing message).'
   };
   const OTIP = (o) => (window.LANE_OUTCOME_TIPS[o] || '').replace(/"/g, '&quot;');
-  const OUT = { done: 'var(--ok)', resolved: 'var(--ok)', 'hard-stop': 'var(--hs)', question: 'var(--q)', blocked: 'var(--bad)', failed: 'var(--bad)' };
+  const OUT = { done: 'var(--ok)', resolved: 'var(--ok)', 'hard-stop': 'var(--hs)', question: 'var(--warn)', blocked: 'var(--bad)', failed: 'var(--bad)' };
   const LNAME = { chat: 'Chat (claude.ai)', 'claude-code': 'Claude Code, local session', harness: 'lane-run (merge prompts)', chain: 'Chain (after its first lane)', manual: 'By hand', unknown: 'Unknown' };
   const LCOL = { chat: 'var(--run)', 'claude-code': 'var(--warn)', harness: 'var(--neutral)', chain: 'var(--q)', manual: 'var(--ok)', unknown: 'var(--track)' };
   // resolved (P-2026-10-05-1720): a lane that exited blocked and was resolved afterwards paints its last turn in the ok colour.
   // /api/timeline keeps the raw outcome for the exports and flags the lane beside it (lane.resolved).
   const turnColor = (lane, t, last) => (last && lane.live ? 'var(--run)' : last && lane.resolved ? 'var(--ok)' : OUT[t.o] || 'var(--neutral)');
 
+  // The look of the «Lane Monitor Desktop» design (P-2026-10-19-1157): the board's tokens only (lane-board.mjs THEME_*),
+  // so a theme chosen in the sidebar repaints the tab with no re-render and no prefers-color-scheme check here.
+  const MONO = 'ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace';
   const css = `
-  :root{--q:#7c3aed;--neutral:#94a3b8;--track:#cbd5e1}
-  @media (prefers-color-scheme:dark){:root{--q:#a78bfa;--neutral:#64748b;--track:#334155}}
-  .tl-bar{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;margin:8px 0 12px}
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
-  .seg button{border:0;margin:0;border-right:1px solid var(--line)}.seg button:last-child{border-right:0}
-  .seg button.on{background:var(--accent);color:#fff;font-weight:600}
-  .tl-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);align-items:center}
-  .tl-legend span[title]{cursor:help;border-bottom:1px dotted var(--muted)}
-  .tl-legend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
-  .tl-wrap{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-  .tl-wrap svg{display:block;font:10px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
-  .tl-split{display:flex;align-items:flex-start}.tl-labels{flex:none;border-right:1px solid var(--line)}.tl-scroll{flex:1;overflow-x:auto;overflow-y:hidden}
-  .tl-grp,.tl-lane-lab{cursor:pointer}.tl-grp:hover text{text-decoration:underline}
+  .tl-bar{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin:0 0 12px}
+  .tl-bar>.meta{font-size:12px;color:var(--t-muted)}.tl-bar>.meta:not(:first-child){margin-left:8px}
+  .seg[data-name]{display:inline-flex;gap:2px;padding:2px;background:var(--t-hover);border:1px solid var(--t-line2);border-radius:7px}
+  .seg[data-name] button{height:24px;margin:0;padding:0 10px;border:0;border-radius:5px;background:transparent;color:var(--t-text2);font:inherit;font-size:12px;cursor:pointer}
+  .seg[data-name] button:hover{color:var(--t-text)}.seg[data-name] button.on{background:var(--t-sel);color:var(--t-text);box-shadow:0 0 0 1px var(--t-line3)}
+  .seg[data-name] button:focus-visible{outline:2px solid var(--t-accent);outline-offset:-2px}
+  .tl-legend{display:flex;flex-wrap:wrap;gap:6px 18px;flex-basis:100%;font-size:11.5px;color:var(--t-text2);align-items:center;margin-top:4px}
+  .tl-legend span[title]{cursor:help}
+  .tl-legend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  .tl-legend svg{vertical-align:middle;margin-right:6px}
+  .tl-wrap{background:var(--t-panel);border:1px solid var(--t-line2);border-radius:10px;overflow:hidden}
+  .tl-wrap svg{display:block;font:10.5px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+  .tl-wrap svg .mono{font-family:${MONO};font-variant-numeric:tabular-nums}
+  .tl-split{display:flex;align-items:flex-start}.tl-labels{flex:none;border-right:1px solid var(--t-line2)}.tl-scroll{flex:1;overflow-x:auto;overflow-y:hidden}
+  .tl-grp,.tl-lane-lab{cursor:pointer}.tl-grp:hover text{text-decoration:underline}.tl-lane-lab:hover>rect{fill:var(--t-hover)}
   .tl-dim .tl-lane-lab:not(.sel):not(.rel){opacity:.35}.tl-lane-lab.sel text{font-weight:600}
   .tl-lane{cursor:pointer}.tl-dim .tl-lane:not(.sel):not(.rel){opacity:.25}
-  .tl-lane.sel .tl-turn{stroke:var(--fg);stroke-width:1.5}
+  .tl-turn[data-o=hard-stop]{fill:url(#tl-hatch-hs);stroke:var(--hs);stroke-width:1;stroke-dasharray:2 1.5}
+  .tl-lane.sel .tl-turn{stroke:var(--t-text);stroke-width:1.5;stroke-dasharray:none}
   .tl-conf .tl-turn{stroke:var(--bad);stroke-width:1.5;stroke-dasharray:2 1}
-  .tl-live .tl-turn:last-of-type{animation:tlp 1.6s ease-in-out infinite}@keyframes tlp{50%{opacity:.45}}
-  .tl-detail{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
-  .tl-detail h3{margin:0 0 4px;font-size:14px}.tl-detail .meta{margin-bottom:8px}
-  .tl-detail blockquote{margin:4px 0 8px;padding:6px 8px;border-left:3px solid var(--accent);background:var(--bg);white-space:pre-wrap;max-height:260px;overflow:auto}
-  .tl-detail table{min-width:0}.tl-detail td{padding:4px 8px}.tl-detail a{color:var(--accent);cursor:pointer;text-decoration:none}
-  .tl-empty{padding:24px;color:var(--muted)}
-  .tl-ov,.tl-link,.tl-bk{cursor:help}.tl-bk:hover{fill:var(--fg);fill-opacity:.06}.tl-link:hover path:first-child,.tl-link.pin path:first-child{stroke-width:3}.tl-ov:hover>rect:first-child{stroke-width:2}
-  .tl-pop{position:fixed;z-index:10;max-width:480px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:10px 12px;font-size:12px;line-height:1.5;pointer-events:none}
-  .tl-pop.pinned{pointer-events:auto}.tl-pop .k{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:4px;margin-right:6px;color:#fff}
-  .tl-pop .hd{font-weight:600;margin:4px 0}.tl-pop .sub{color:var(--muted);font-size:11px}
-  .tl-pop blockquote{margin:6px 0 0;padding:6px 8px;border-left:3px solid var(--accent);background:var(--bg);white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;max-height:260px;overflow:auto}
-  .tl-pop mark{background:color-mix(in srgb,var(--accent) 30%,transparent);color:inherit;border-radius:2px;padding:0 1px}`;
+  .tl-live .tl-turn:last-of-type{stroke:var(--run);stroke-opacity:.25;stroke-width:3;paint-order:stroke;animation:tlp 1.6s ease-in-out infinite}@keyframes tlp{50%{opacity:.55}}
+  @media (prefers-reduced-motion:reduce){.tl-live .tl-turn:last-of-type{animation:none}}
+  .tl-detail{margin-top:12px;background:var(--t-panel);border:1px solid var(--t-line2);border-radius:10px;padding:14px 16px}
+  .tl-detail h3{display:flex;align-items:baseline;gap:10px;margin:0 0 4px;font-size:13.5px;font-weight:500}.tl-detail h3 .mono{font:500 12.5px ${MONO}}.tl-detail h3 a{margin-left:auto;font-size:12px;font-weight:400}.tl-detail .meta{margin-bottom:8px}
+  .tl-detail blockquote{margin:4px 0 8px;padding:8px 10px;border-left:2px solid var(--t-accent);background:var(--t-content);border-radius:0 6px 6px 0;white-space:pre-wrap;max-height:260px;overflow:auto;font-size:12.5px}
+  .tl-detail table{min-width:0;width:auto}.tl-detail td{padding:5px 12px 5px 0;font-size:12px;border-bottom:1px solid var(--t-line)}.tl-detail td:nth-child(2),.tl-detail td:nth-child(3){font:12px ${MONO};font-variant-numeric:tabular-nums;white-space:nowrap}.tl-detail a{color:var(--t-link);cursor:pointer;text-decoration:none}
+  .tl-empty{padding:24px;color:var(--t-muted)}
+  .tl-ov,.tl-link,.tl-bk{cursor:help}.tl-bk:hover{fill:var(--t-text);fill-opacity:.06}.tl-link:hover path:first-child,.tl-link.pin path:first-child{stroke-width:3}.tl-ov:hover>rect:first-child{stroke-width:2}
+  .tl-pop{position:fixed;z-index:10;max-width:480px;background:var(--t-panel2);color:var(--t-text);border:1px solid var(--t-line3);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.28);padding:10px 12px;font-size:12px;line-height:1.5;pointer-events:none}
+  .tl-pop.pinned{pointer-events:auto}.tl-pop .k{display:inline-block;font:500 10.5px ${MONO};padding:1px 6px;border-radius:4px;margin-right:6px;color:var(--t-content)}
+  .tl-pop .hd{font-weight:500;margin:4px 0;font-family:${MONO}}.tl-pop .sub{color:var(--t-muted);font-size:11.5px}
+  .tl-pop blockquote{margin:6px 0 0;padding:6px 8px;border-left:2px solid var(--t-accent);background:var(--t-content);white-space:pre-wrap;font-family:${MONO};font-size:11px;max-height:260px;overflow:auto}
+  .tl-pop mark{background:color-mix(in srgb,var(--t-accent) 30%,transparent);color:inherit;border-radius:2px;padding:0 1px}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   function controls() {
@@ -81,9 +88,9 @@
       '<span class="meta">Zoom</span>' + seg('zoom', [['1', 'Fit'], ['2', '2×'], ['4', '4×'], ['8', '8×'], ['16', '16×']], zoom) +
       '<span class="meta">Colour by</span>' + seg('colorBy', [['outcome', 'Outcome'], ['deps', 'Dependencies'], ['heat', 'Heat']], colorBy) +
       '<span class="seg" data-name="fold"><button data-v="open">Expand all</button><button data-v="close">Collapse all</button></span>' +
-      '<span class="tl-legend"><span title="' + OTIP('done') + '"><i style="background:var(--ok)"></i>done</span><span title="' + OTIP('resolved') + '"><i style="background:var(--ok)"></i>resolved</span><span title="' + OTIP('hard-stop') + '"><i style="background:var(--hs)"></i>hard-stop</span><span title="' + OTIP('question') + '"><i style="background:var(--q)"></i>question</span><span title="' + OTIP('blocked') + '"><i style="background:var(--bad)"></i>blocked</span><span title="' + OTIP('running') + '"><i style="background:var(--run)"></i>running</span>' +
+      '<span class="tl-legend"><span title="' + OTIP('done') + '"><i style="background:var(--ok)"></i>done</span><span title="' + OTIP('resolved') + '"><i style="background:var(--ok)"></i>resolved</span><span title="' + OTIP('hard-stop') + '"><i style="background:var(--hs)"></i>hard-stop</span><span title="' + OTIP('question') + '"><i style="background:var(--warn)"></i>question</span><span title="' + OTIP('blocked') + '"><i style="background:var(--bad)"></i>blocked</span><span title="' + OTIP('running') + '"><i style="background:var(--run)"></i>running</span>' +
       '<span><svg width="10" height="10"><path d="M5 0L10 5L5 10L0 5Z" fill="var(--accent)"/></svg> decision</span>' +
-      '<span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--track)" stroke-dasharray="3 2"/></svg> waiting</span>' +
+      '<span><svg width="22" height="8"><line x1="1" y1="4" x2="21" y2="4" stroke="var(--warn)" stroke-width="2" stroke-linecap="round" stroke-dasharray="0 4"/></svg>waiting for you</span>' +
       (group === 'worktree' ? '<span><i style="border:1.5px dashed var(--bad);background:repeating-linear-gradient(45deg,transparent 0 2px,color-mix(in srgb,var(--bad) 40%,transparent) 2px 4px)"></i>overlap in one tree (solid: both working)</span>' : '<span><i style="border:1.5px dashed var(--q);background:repeating-linear-gradient(45deg,transparent 0 2px,color-mix(in srgb,var(--q) 40%,transparent) 2px 4px)"></i>parallel lanes in one row (solid: both working)</span>') + '<span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--fg)" stroke-width="1.5"/></svg> chain</span><span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--accent)" stroke-width="2.25"/></svg> declared dependency</span><span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/></svg> citation</span>' + '</span></div>';
   }
 
@@ -172,14 +179,14 @@
           o.work.map(([s0, s1]) => '<rect x="' + x(s0) + '" y="' + ya + '" width="' + Math.max(x(s1) - x(s0), 2) + '" height="' + (yb - ya) + '" fill="' + col + '" opacity=".22"/>').join('') +
           (open && x(o.b) - x(o.a) > 40 ? '<text x="' + (x(o.a) + 3) + '" y="' + (ya - 2) + '" fill="' + col + '" font-weight="600">⇄ ' + dur(o.b - o.a) + '</text>' : '') + '</g>');
       });
-      const shade = gi % 2 ? 'transparent' : 'var(--bg)';
-      bg.push('<rect x="0" y="' + y + '" width="' + W + '" height="' + h + '" fill="' + shade + '"/><line x1="0" y1="' + y + '" x2="' + W + '" y2="' + y + '" stroke="var(--line)"/>');
+      const shade = 'transparent';
+      bg.push('<rect x="0" y="' + y + '" width="' + W + '" height="' + h + '" fill="' + shade + '"/><line x1="0" y1="' + y + '" x2="' + W + '" y2="' + y + '" stroke="var(--t-line)"/>');
       const name = k.length > 30 ? k.slice(0, 29) + '…' : k;
-      lab.push('<rect x="0" y="' + y + '" width="' + LABEL + '" height="' + h + '" fill="' + shade + '"/><line x1="0" y1="' + y + '" x2="' + LABEL + '" y2="' + y + '" stroke="var(--line)"/>' +
+      lab.push('<rect x="0" y="' + y + '" width="' + LABEL + '" height="' + h + '" fill="' + shade + '"/><line x1="0" y1="' + y + '" x2="' + LABEL + '" y2="' + y + '" stroke="var(--t-line)"/>' +
         '<g class="tl-grp" data-grp="' + esc(k) + '"><rect x="0" y="' + y + '" width="' + LABEL + '" height="' + HEAD + '" fill="transparent"/>' +
-        '<text x="10" y="' + (y + 17) + '" fill="var(--muted)" font-size="11">' + (open ? '▾' : '▸') + '</text>' +
-        '<text x="24" y="' + (y + 17) + '" fill="var(--fg)" font-weight="600" font-size="12">' + esc(name) + '<title>' + esc(k) + '</title></text>' +
-        '<text x="' + (LABEL - 10) + '" y="' + (y + 17) + '" text-anchor="end" fill="var(--muted)">' + ls.length + (pairs.length ? ' · <tspan fill="' + col + '">' + pairs.length + ' ⇄</tspan>' : '') + '</text></g>');
+        '<text x="12" y="' + (y + 17) + '" fill="var(--muted)" font-size="10">' + (open ? '▾' : '▸') + '</text>' +
+        '<text class="mono" x="26" y="' + (y + 17) + '" fill="var(--fg)" font-weight="500" font-size="12">' + esc(name) + '<title>' + esc(k) + '</title></text>' +
+        '<text class="mono" x="' + (LABEL - 14) + '" y="' + (y + 17) + '" text-anchor="end" fill="var(--muted)" font-size="11">' + ls.length + (pairs.length ? ' · <tspan fill="' + col + '">' + pairs.length + ' ⇄</tspan>' : '') + '</text></g>');
       if (!open && pairs.length) lab.push('<text x="24" y="' + (y + 32) + '" fill="' + col + '" font-size="10">' + pairs.length + ' overlap' + (pairs.length > 1 ? 's' : '') + ' · click to expand</text>');
       // Lanes.
       const labelEnd = [];
@@ -188,10 +195,10 @@
         pos.set(l.id, { y: ly + 5, a: x(l.a), b: x(l.b) });
         const cls = (l.id === selected ? ' sel' : related.has(l.id) ? ' rel' : '') + (l.live ? ' tl-live' : '');
         let g = '<g class="tl-lane' + cls + '" data-id="' + l.id + '">';
-        g += '<line x1="' + x(l.a) + '" y1="' + (ly + 5) + '" x2="' + x(l.b) + '" y2="' + (ly + 5) + '" stroke="var(--track)" stroke-dasharray="3 2"/>';
+        g += '<line x1="' + x(l.a) + '" y1="' + (ly + 5) + '" x2="' + x(l.b) + '" y2="' + (ly + 5) + '" stroke="var(--warn)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="0 4" opacity=".7"/>';
         l.turns.forEach((t, i) => {
           const last = i === l.turns.length - 1;
-          g += '<rect class="tl-turn" x="' + x(t.s) + '" y="' + ly + '" width="' + Math.max(x(t.e) - x(t.s), 2) + '" height="10" rx="2" fill="' + turnColor(l, t, last) + '"><title>' + esc(l.id + ' · turn ' + (i + 1) + '\n' + dhm(t.s) + ' to ' + hm(t.e) + ' (' + dur(t.e - t.s) + ')' + (t.o ? '\nOutcome: ' + t.o + (last && l.resolved ? ', resolved' : '') : '')) + '</title></rect>';
+          g += '<rect class="tl-turn"' + (turnColor(l, t, last) === 'var(--hs)' ? ' data-o="hard-stop"' : '') + ' x="' + x(t.s) + '" y="' + (ly - 1) + '" width="' + Math.max(x(t.e) - x(t.s), 2) + '" height="12" rx="3" fill="' + turnColor(l, t, last) + '"><title>' + esc(l.id + ' · turn ' + (i + 1) + '\n' + dhm(t.s) + ' to ' + hm(t.e) + ' (' + dur(t.e - t.s) + ')' + (t.o ? '\nOutcome: ' + t.o + (last && l.resolved ? ', resolved' : '') : '')) + '</title></rect>';
           if (i > 0 && t.s >= t0) g += '<path d="M' + x(t.s) + ' ' + (ly - 2) + 'l5 7l-5 7l-5 -7z" fill="var(--accent)" stroke="var(--card)" stroke-width="1"><title>' + esc('Decision at ' + dhm(t.s) + ' after ' + dur(t.s - l.turns[i - 1].e) + ' of waiting\n' + (t.d || '')) + '</title></path>';
         });
         // Short label after the bar, only where it does not run into the next lane of the same row.
@@ -199,7 +206,7 @@
         const need = txt.length * 5.6 + 4;
         if ((labelEnd[l.row] || 0) < lx && lx + need < W) {
           const next = ls.find((o) => o !== l && o.row === l.row && o.a > l.b);
-          if (!next || x(next.a) > lx + need) { g += '<text x="' + lx + '" y="' + (ly + 9) + '" fill="var(--muted)">' + esc(txt) + '</text>'; labelEnd[l.row] = lx + need; }
+          if (!next || x(next.a) > lx + need) { g += '<text class="mono" x="' + lx + '" y="' + (ly + 9) + '" fill="var(--muted)">' + esc(txt) + '</text>'; labelEnd[l.row] = lx + need; }
         }
         g += '<title>' + esc(l.id + (l.title ? ' · ' + l.title : '')) + '</title></g>';
         rows.push(g);
@@ -208,7 +215,7 @@
           const max = 27;
           lab.push('<g class="tl-lane-lab' + cls + '" data-id="' + l.id + '"><rect x="0" y="' + (ly - 4) + '" width="' + LABEL + '" height="' + ROWE + '" fill="transparent"/>' +
             '<circle cx="16" cy="' + (ly + 5) + '" r="3.5" fill="' + (LCOL[(l.launcher || {}).by] || 'var(--track)') + '"><title>' + esc('Launched by ' + (LNAME[(l.launcher || {}).by] || 'unknown') + ((l.launcher || {}).detail ? ' · ' + l.launcher.detail : '')) + '</title></circle>' +
-            '<text x="24" y="' + (ly + 9) + '" fill="var(--fg)"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="var(--muted)">' + esc(new Date(l.a).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' + hm(l.a)) + '</tspan> ' +
+            '<text x="24" y="' + (ly + 9) + '" fill="var(--fg)"><tspan class="mono" fill="var(--muted)">' + esc(new Date(l.a).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' + hm(l.a)) + '</tspan> ' +
             esc(t.length > max ? t.slice(0, max - 1) + '…' : t || l.id) + '<title>' + esc(l.id + (l.title ? ' · ' + l.title : '')) + '</title></text></g>');
         }
       });
@@ -224,10 +231,10 @@
     let axis = '';
     for (let t = Math.ceil((t0 - tz) / step) * step + tz; t <= t1; t += step) {
       const midnight = new Date(t).getHours() === 0 && new Date(t).getMinutes() === 0;
-      axis += '<line x1="' + x(t) + '" y1="' + (TOP - 6) + '" x2="' + x(t) + '" y2="' + H + '" stroke="var(--line)"' + (midnight ? ' stroke-width="1.5"' : '') + '/>' +
-        '<text x="' + (x(t) + 3) + '" y="' + (TOP - 9) + '" fill="var(--muted)">' + (midnight || step >= 1440 * 60e3 ? new Date(t).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : hm(t)) + '</text>';
+      axis += '<line x1="' + x(t) + '" y1="' + (TOP - 6) + '" x2="' + x(t) + '" y2="' + H + '" stroke="' + (midnight ? 'var(--t-line3)' : 'var(--t-line)') + '"/>' +
+        '<text class="mono" x="' + (x(t) + 3) + '" y="' + (TOP - 9) + '" fill="var(--muted)">' + (midnight || step >= 1440 * 60e3 ? new Date(t).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : hm(t)) + '</text>';
     }
-    axis += '<line x1="' + x(now) + '" y1="4" x2="' + x(now) + '" y2="' + H + '" stroke="var(--accent)" stroke-width="1.5"/><text x="' + (x(now) - 3) + '" y="12" text-anchor="end" fill="var(--accent)" font-weight="600">now</text>';
+    axis += '<line x1="' + x(now) + '" y1="4" x2="' + x(now) + '" y2="' + H + '" stroke="var(--accent)"/><rect x="' + (x(now) - 40) + '" y="2" width="38" height="15" rx="4" fill="var(--accent)"/><text class="mono" x="' + (x(now) - 21) + '" y="13" text-anchor="middle" fill="var(--t-content)" font-weight="500"><title>now</title>' + hm(now) + '</text>';
 
     // Parallelism chart: one column per time bucket. Height = average number of lanes working
     // in the bucket (light backdrop = lanes open); colour = the metric chosen in "Colour by".
@@ -243,7 +250,7 @@
     };
     lanes.forEach((l) => { l.dep = depKind(l); });
     const CATS = {
-      outcome: [['done', 'var(--ok)', 'done'], ['resolved', 'var(--ok)', 'resolved'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']],
+      outcome: [['done', 'var(--ok)', 'done'], ['resolved', 'var(--ok)', 'resolved'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--warn)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']],
       deps: [['concurrent', 'var(--bad)', 'depends on a lane open at the same time'], ['sequential', 'var(--accent)', 'depends on an earlier lane'], ['none', 'var(--neutral)', 'no recorded dependency']],
     };
     const catOf = (l, t, last) => colorBy === 'deps' ? l.dep : (last && l.live ? 'running' : last && l.resolved ? 'resolved' : t.o === 'failed' ? 'blocked' : (t.o in OUT || t.o === 'done') ? t.o : '');
@@ -266,12 +273,12 @@
     });
     const peakOpen = Math.max(1, ...buckets.map((b) => b.open)), peakWork = Math.max(0, ...buckets.map((b) => b.total));
     const ysc = STRIP_H / peakOpen;
-    const heat = (v) => { const r = Math.min(1, v / Math.max(1, peakWork)); const dk = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches; return 'hsl(199,' + (dk ? 80 : 85) + '%,' + Math.round(dk ? 28 + 42 * r : 80 - 48 * r) + '%)'; };
-    let strip = '<line x1="8" y1="' + base + '" x2="' + (8 + plotW) + '" y2="' + base + '" stroke="var(--line)"/>';
-    [Math.ceil(peakOpen / 2), Math.ceil(peakOpen)].forEach((v) => { if (v > 0) strip += '<line x1="8" y1="' + (base - v * ysc) + '" x2="' + (8 + plotW) + '" y2="' + (base - v * ysc) + '" stroke="var(--line)" stroke-dasharray="2 3"/><text x="10" y="' + (base - v * ysc - 2) + '" fill="var(--muted)" font-size="9">' + v + '</text>'; });
+    const heat = (v) => { const r = Math.min(1, v / Math.max(1, peakWork)); return 'color-mix(in srgb,var(--accent) ' + Math.round(18 + 82 * r) + '%,var(--card))'; };
+    let strip = '<line x1="8" y1="' + base + '" x2="' + (8 + plotW) + '" y2="' + base + '" stroke="var(--t-line3)"/>';
+    [Math.ceil(peakOpen / 2), Math.ceil(peakOpen)].forEach((v) => { if (v > 0) strip += '<line x1="8" y1="' + (base - v * ysc) + '" x2="' + (8 + plotW) + '" y2="' + (base - v * ysc) + '" stroke="var(--t-line)"/><text class="mono" x="10" y="' + (base - v * ysc - 2) + '" fill="var(--muted)" font-size="9.5">' + v + '</text>'; });
     buckets.forEach((bk, i) => {
       const bx = x(bk.s) + 0.5, bwpx = Math.max(x(bk.e) - x(bk.s) - 1, 1);
-      if (bk.open > 0.01) strip += '<rect x="' + bx + '" y="' + (base - bk.open * ysc) + '" width="' + bwpx + '" height="' + bk.open * ysc + '" fill="var(--track)" opacity=".55"/>';
+      if (bk.open > 0.01) strip += '<rect x="' + bx + '" y="' + (base - bk.open * ysc) + '" width="' + bwpx + '" height="' + bk.open * ysc + '" fill="var(--track)" opacity=".7"/>';
       if (colorBy === 'heat') {
         if (bk.total > 0.01) strip += '<rect x="' + bx + '" y="' + (base - bk.total * ysc) + '" width="' + bwpx + '" height="' + bk.total * ysc + '" fill="' + heat(bk.total) + '"/>';
       } else {
@@ -291,13 +298,13 @@
       const ly = STRIP_TOP + 36 + i * 13;
       if (ly > base + 6) return;
       lg += colorBy === 'heat'
-        ? '<rect x="10" y="' + (ly - 8) + '" width="40" height="8" rx="2" fill="url(#tl-heat)"/><text x="56" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label) + '</text>'
-        : '<g' + (colorBy === 'outcome' ? ' style="cursor:help"><title>' + esc(window.LANE_OUTCOME_TIPS[k] || '') + '</title>' : '>') + '<rect x="10" y="' + (ly - 8) + '" width="10" height="8" rx="2" fill="' + c + '"/><text x="26" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label.length > 36 ? label.slice(0, 35) + '…' : label) + '</text></g>';
+        ? '<rect x="16" y="' + (ly - 8) + '" width="40" height="8" rx="2" fill="url(#tl-heat)"/><text x="62" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label) + '</text>'
+        : '<g' + (colorBy === 'outcome' ? ' style="cursor:help"><title>' + esc(window.LANE_OUTCOME_TIPS[k] || '') + '</title>' : '>') + '<rect x="16" y="' + (ly - 8) + '" width="14" height="8" rx="2" fill="' + c + '"/><text x="36" y="' + ly + '" fill="var(--muted)" font-size="10">' + esc(label.length > 36 ? label.slice(0, 35) + '…' : label) + '</text></g>';
     });
     lab.unshift('<rect x="0" y="0" width="' + LABEL + '" height="' + TOP + '" fill="var(--card)"/>' +
       '<defs><linearGradient id="tl-heat"><stop offset="0" stop-color="' + heat(0) + '"/><stop offset=".5" stop-color="' + heat(peakWork / 2) + '"/><stop offset="1" stop-color="' + heat(peakWork) + '"/></linearGradient></defs>' +
-      '<text x="10" y="' + (STRIP_TOP + 4) + '" fill="var(--fg)" font-weight="600" font-size="12">Parallelism</text>' +
-      '<text x="10" y="' + (STRIP_TOP + 18) + '" fill="var(--muted)">peak ' + pw.max + ' working · ' + po.max + ' open (avg per column)</text>' + lg);
+      '<text x="16" y="' + (STRIP_TOP + 4) + '" fill="var(--fg)" font-weight="500" font-size="12.5">Parallelism</text>' +
+      '<text x="16" y="' + (STRIP_TOP + 18) + '" fill="var(--muted)" font-size="11">peak ' + pw.max + ' working · ' + po.max + ' open (avg per column)</text>' + lg);
 
     // Dependencies of the selected lane.
     let deps = '';
@@ -311,7 +318,7 @@
         '<path d="' + d + '" fill="none" stroke="transparent" stroke-width="12"/></g>';
     });
     const hatch = (id, c) => '<pattern id="' + id + '" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="' + c + '" opacity=".06"/><line x1="0" y1="0" x2="0" y2="6" stroke="' + c + '" stroke-width="2" opacity=".35"/></pattern>';
-    const defs = '<defs>' + hatch('tl-hatch-bad', 'var(--bad)') + hatch('tl-hatch-q', 'var(--q)') + '<marker id="tl-arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0L8 4L0 8z" fill="var(--accent)"/></marker></defs>';
+    const defs = '<defs>' + hatch('tl-hatch-bad', 'var(--bad)') + hatch('tl-hatch-q', 'var(--q)') + '<pattern id="tl-hatch-hs" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(135)"><rect width="4" height="4" fill="var(--track)"/><line x1="0" y1="0" x2="0" y2="4" stroke="var(--hs)" stroke-width="2"/></pattern><marker id="tl-arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0L8 4L0 8z" fill="var(--accent)"/></marker></defs>';
     html += '<div class="tl-wrap tl-split' + (sel ? ' tl-dim' : '') + '">' +
       '<svg class="tl-labels" width="' + LABEL + '" height="' + H + '">' + lab.join('') + '</svg>' +
       '<div class="tl-scroll"><svg class="tl-plot" width="' + W + '" height="' + H + '">' + defs + bg.join('') + axis + ov.join('') + rows.join('') + strip + deps + '</svg></div></div><div class="tl-pop" id="tl-pop" hidden></div>';
@@ -336,7 +343,7 @@
     const rq = l.request || {};
     const url = rq.url ? (/^https?:\/\//i.test(rq.url) ? '<a href="' + esc(rq.url) + '" target="_blank" rel="noopener">' + esc(rq.url) + '</a>' : esc(rq.url)) : '';
     const request = rq.text || rq.url ? '<div class="meta">Request</div>' + (rq.text ? '<blockquote>' + esc(rq.text) + '</blockquote>' : '') + (url ? '<div class="meta">' + url + '</div>' : '') : '<div class="meta">Request: not recorded</div>';
-    return '<div class="tl-detail"><h3>' + esc(l.id) + (l.title ? ' · ' + esc(l.title) : '') + '</h3>' +
+    return '<div class="tl-detail"><h3><span class="mono">' + esc(l.id) + '</span>' + (l.title ? '<span>' + esc(l.title) + '</span>' : '') + (/^P-\d{4}-\d{2}-\d{2}-\d{4}$/.test(l.id) ? '<a href="#lane=' + esc(l.id) + '">Open in Lanes</a>' : '') + '</h3>' +
       '<div class="meta">' + [l.kind, l.tier, l.chat, short(l.worktree), l.state + (l.outcome && l.outcome !== 'none' ? ' · ' + l.outcome : '')].filter(Boolean).map(esc).join(' · ') + '</div>' +
       '<div class="meta">Launched by <b style="color:' + (LCOL[(l.launcher || {}).by] || 'inherit') + '">' + esc(LNAME[(l.launcher || {}).by] || 'unknown') + '</b>' + ((l.launcher || {}).detail ? ' · ' + esc(l.launcher.detail) : '') + ((l.launcher || {}).file ? ' · <code>' + esc(l.launcher.file) + '</code>' : '') + '</div>' +
       request +

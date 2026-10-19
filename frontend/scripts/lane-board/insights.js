@@ -17,39 +17,50 @@
   const hours = (ms) => (ms / 3600e3).toFixed(ms < 36e6 ? 1 : 0) + ' h';
   const median = (a) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
   const dayKey = (t) => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-  const dark = () => window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
-  // Sequential ramp: one hue (the board's cyan), light to dark; its own steps in dark mode.
-  const ramp = (r) => r <= 0 ? 'var(--bg)' : dark() ? 'hsl(199,80%,' + Math.round(20 + 45 * r) + '%)' : 'hsl(199,85%,' + Math.round(90 - 55 * r) + '%)';
+  // Sequential ramp: one hue, the accent mixed into the card (P-2026-10-19-1157), so the theme chosen in the sidebar
+  // repaints it in CSS, with no prefers-color-scheme check and no re-render.
+  const ramp = (r) => r <= 0 ? 'var(--t-tag)' : 'color-mix(in srgb,var(--accent) ' + Math.round(14 + 86 * r) + '%,var(--card))';
+  const WINDOW = { '7': 'last 7 days', '30': 'last 30 days', '0': 'all time' };
+  const dm = (t) => (isFinite(t) ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '·');
   const OTIP = (o) => ((window.LANE_OUTCOME_TIPS || {})[o] || '').replace(/"/g, '&quot;');
   // resolved (P-2026-10-05-1720): a lane that exited blocked and was resolved afterwards, in the ok colour, not among the blocked.
   // Its flag rides /api/timeline beside the raw outcome; first-shot (/api/insights) keeps the raw outcome on purpose.
-  const OUTS = [['done', 'var(--ok)', 'done'], ['resolved', 'var(--ok)', 'resolved'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--q)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']];
+  const OUTS = [['done', 'var(--ok)', 'done'], ['resolved', 'var(--ok)', 'resolved'], ['hard-stop', 'var(--hs)', 'hard-stop'], ['question', 'var(--warn)', 'question'], ['blocked', 'var(--bad)', 'blocked / failed'], ['running', 'var(--run)', 'running'], ['', 'var(--neutral)', 'no outcome']];
   const outOf = (l) => l.live ? 'running' : l.resolved ? 'resolved' : (() => { const o = (l.outcome && l.outcome !== 'none' ? l.outcome : (l.turns[l.turns.length - 1] || {}).o || '').split(' ')[0]; return o === 'failed' ? 'blocked' : OUTS.some((x) => x[0] === o) ? o : ''; })();
   const KINDS = [['discovery', 'Discovery'], ['phase2', 'Full / Phase 2'], ['fast', 'Fast'], ['merge', 'Merge'], ['', 'Not recorded']];
 
+  // The look of the «Lane Monitor Desktop» design (P-2026-10-19-1157): the board's tokens only, 1 px grids, mono
+  // tabular figures, one accent; the state colours only where a chart is about state.
+  const MONO = 'ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace';
   const css = `
-  .in-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:8px 0 16px}
-  .in-btn{font:inherit;font-size:12px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;text-decoration:none}
-  .in-btn:hover{border-color:var(--accent)}
-  .in-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px}
-  .in-kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
-  .in-kpi .v{font-size:22px;font-weight:600;line-height:1.2}.in-kpi .l{font-size:11px;color:var(--muted);margin-top:2px}
+  .in-bar{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin:0 0 16px}
+  .in-bar>.meta{font-size:12px;color:var(--t-muted)}.in-bar .in-span{font:12px ${MONO};color:var(--t-text2)}.in-bar .in-ex{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .in-btn{height:28px;display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;background:var(--t-hover);color:var(--t-text);border:1px solid var(--t-line2);border-radius:7px;padding:0 10px;cursor:pointer;text-decoration:none}
+  .in-btn:hover{border-color:var(--t-line3);text-decoration:none}.in-btn.in-pri{background:var(--t-accent);border-color:var(--t-accent);color:var(--t-content);font-weight:500}.in-btn.in-pri:hover{filter:brightness(1.08)}
+  .in-btn:focus-visible{outline:2px solid var(--t-accent);outline-offset:1px}
+  .in-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:16px;border:1px solid var(--t-line2);border-radius:10px;background:var(--t-panel);overflow:hidden}
+  .in-kpi{display:flex;flex-direction:column;gap:2px;padding:12px 16px;box-shadow:-1px 0 0 var(--t-line2),0 -1px 0 var(--t-line2)}
+  .in-kpi .v{font-size:22px;font-weight:500;line-height:1.25;letter-spacing:-.01em;font-variant-numeric:tabular-nums}.in-kpi .v.ok{color:var(--ok)}.in-kpi .v.wait{color:var(--warn)}
+  .in-kpi .l{font-size:11.5px;color:var(--t-text2)}.in-kpi .w{font:10.5px ${MONO};color:var(--t-muted)}
   .in-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:16px}
-  .in-card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px;min-width:0}
-  .in-card h3{margin:0 0 2px;font-size:13px}.in-card .sub{font-size:11px;color:var(--muted);margin-bottom:10px}
-  .in-card svg{display:block;max-width:100%;font:10px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
-  .in-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--muted);margin-top:8px}
-  .in-legend .in-key{cursor:help;border-bottom:1px dotted var(--muted)}
-  .in-legend i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
-  .in-card table{min-width:0;width:100%}.in-card td,.in-card th{padding:4px 8px;font-size:12px}
-  .in-tip{position:fixed;z-index:10;pointer-events:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.18);padding:8px 10px;font-size:12px;max-width:320px}
+  .in-card{background:var(--t-panel);border:1px solid var(--t-line2);border-radius:10px;padding:14px 16px;min-width:0}
+  .in-card h3{margin:0 0 2px;font-size:13px;font-weight:500}.in-card .sub{font-size:11.5px;color:var(--t-muted);margin-bottom:12px}
+  .in-card svg{display:block;max-width:100%;font:10px ${MONO};font-variant-numeric:tabular-nums}
+  .in-card code{font:11.5px ${MONO};color:var(--t-text)}
+  .in-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:var(--t-text2);margin-top:10px}
+  .in-legend .in-key{cursor:help}
+  .in-legend i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  .in-card table{min-width:0;width:100%}.in-card td,.in-card th{padding:5px 8px;font-size:12px;border-bottom:1px solid var(--t-line)}
+  .in-card th{height:auto;background:none;font-size:11px;color:var(--t-muted);border-bottom-color:var(--t-line2)}.in-card tbody tr:hover>td{background:var(--t-hover)}
+  .in-tip{position:fixed;z-index:10;pointer-events:none;background:var(--t-panel2);color:var(--t-text);border:1px solid var(--t-line3);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.28);padding:8px 10px;font-size:12px;max-width:320px}
+  .in-tip div{color:var(--t-text2)}
   [data-tip]{cursor:default}[data-tip]:hover{opacity:.8}
-  .in-note{font-size:11px;color:var(--muted);margin-top:8px}
+  .in-note{font-size:11.5px;color:var(--t-muted);margin-top:10px}
   .in-wide{grid-column:1/-1}
-  .in-card td.in-c,.in-card th.in-c{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-  .in-dim{color:var(--muted)}.in-grey{color:var(--muted);opacity:.7}.in-k{color:var(--muted);font-size:11px}
-  .in-card h4{margin:14px 0 4px;font-size:12px;font-weight:600}
-  .in-empty{padding:16px;color:var(--muted);border:1px dashed var(--line);border-radius:8px;margin-top:8px}`;
+  .in-card td.in-c,.in-card th.in-c{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.in-card td.in-c{font-family:${MONO}}.in-card th.in-c{white-space:normal}
+  .in-dim{color:var(--t-muted)}.in-grey{color:var(--t-muted);opacity:.7}.in-k{color:var(--t-muted);font-size:11px}
+  .in-card h4{margin:16px 0 4px;font-size:12px;font-weight:500;color:var(--t-text2)}
+  .in-empty{padding:16px;color:var(--t-muted);border:1px dashed var(--t-line3);border-radius:8px;margin-top:8px}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   function compute() {
@@ -71,14 +82,15 @@
   }
 
   function kpis(c) {
-    const tile = (v, l) => '<div class="in-kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>';
+    const win = WINDOW[range] + (range === '0' ? ', from ' + dm(c.from) : '');
+    const tile = (v, l, cls) => '<div class="in-kpi"><div class="v' + (cls ? ' ' + cls : '') + '">' + v + '</div><div class="l">' + l + '</div><div class="w">' + esc(win) + '</div></div>';
     const done = c.outs.done || 0;
     return '<div class="in-kpis">' +
       tile(c.lanes.length, 'lanes in range') +
-      tile(c.closed ? Math.round(100 * done / c.closed) + '%' : '·', 'closed lanes ending done') +
+      tile(c.closed ? Math.round(100 * done / c.closed) + '%' : '·', 'closed lanes ending done', 'ok') +
       tile(c.spans.length ? dur(median(c.spans)) : '·', 'median lane span, first turn to last') +
       tile(hours(c.work), 'agent working time') +
-      tile(hours(c.waitTot), 'time waiting for a decision') +
+      tile(hours(c.waitTot), 'time waiting for a decision', 'wait') +
       tile(c.waits.length ? dur(median(c.waits.map((w) => w.w))) : '·', 'median wait for a decision (' + c.decisions + ' decisions)') +
       '</div>';
   }
@@ -121,6 +133,9 @@
       '<div class="in-legend"><span>less</span><span>' + lg + '</span><span>more (max ' + max.toFixed(1) + ' lane-hours in one hour)</span></div></div>';
   }
 
+  // Four quiet 1 px lines over a bar chart's height h above its baseline.
+  const grid = (W, base, h) => [1, 2, 3, 4].map((k) => '<line x1="0" y1="' + (base - k * h / 4) + '" x2="' + W + '" y2="' + (base - k * h / 4) + '" stroke="var(--t-line)" shape-rendering="crispEdges"/>').join('');
+
   // Histogram of waits for a decision.
   function waitsChart(c) {
     const B = [[5, '< 5 min'], [15, '5–15 min'], [30, '15–30 min'], [60, '30–60 min'], [120, '1–2 h'], [240, '2–4 h'], [720, '4–12 h'], [Infinity, '> 12 h']];
@@ -128,7 +143,7 @@
     c.waits.forEach((w) => { const i = B.findIndex(([m]) => w.w / 60000 < m); n[i].k++; if (n[i].ids.length < 6) n[i].ids.push(w.l.id); });
     const max = Math.max(1, ...n.map((x) => x.k));
     const W = 520, H = 170, L = 8, BW = (W - L) / B.length, base = H - 30;
-    let s = '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="var(--line)"/>';
+    let s = grid(W, base, base - 18) + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="var(--t-line3)"/>';
     n.forEach((x, i) => {
       const h = (x.k / max) * (base - 18), bx = L + i * BW + 4, w = BW - 8;
       if (x.k) s += '<path d="M' + bx + ' ' + base + 'v' + -(h - 4) + 'q0 -4 4 -4h' + (w - 8) + 'q4 0 4 4v' + (h - 4) + 'z" fill="var(--accent)" data-tip="' + esc(B[i][1] + '|' + x.k + ' decision' + (x.k > 1 ? 's' : '') + '|' + x.ids.join(', ') + (x.k > x.ids.length ? ', …' : '')) + '"/>' +
@@ -147,7 +162,7 @@
     const keys = [...by.keys()].sort().slice(-31);
     const max = Math.max(1, ...keys.map((k) => Object.values(by.get(k)).reduce((a, b) => a + b, 0)));
     const W = 520, H = 170, base = H - 30, BW = (W - 8) / Math.max(keys.length, 1);
-    let s = '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="var(--line)"/>';
+    let s = grid(W, base, base - 18) + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="var(--t-line3)"/>';
     keys.forEach((k, i) => {
       const e = by.get(k), w = Math.min(Math.max(BW - 4, 2), 44), bx = 8 + i * BW + (BW - w) / 2;
       let y = base; const tot = Object.values(e).reduce((a, b) => a + b, 0);
@@ -390,15 +405,14 @@
       (ls.length ? '<div style="overflow-x:auto"><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" data-label-rows="' + rowSpans.length + '" data-rows="' + rows + '" data-col-width="' + colW + '">' + s + '</svg></div>' : '<div class="in-empty">No session lane in this range.</div>') + '<div class="in-legend">' + lg + '</div></div>';
   }
 
-  function exportsBar() {
+  function exportsBar(c) {
     const d = RANGES[range];
     const seg = '<span class="seg" data-name="range">' + [['7', '7 days'], ['30', '30 days'], ['0', 'All']].map(([v, l]) => '<button data-v="' + v + '" class="' + (v === range ? 'on' : '') + '">' + l + '</button>').join('') + '</span>';
-    return '<div class="in-bar"><span class="meta">Range</span>' + seg +
-      '<span class="meta" style="margin-left:16px">Export</span>' +
-      '<button class="in-btn" id="in-perfetto">Open in Perfetto ↗</button>' +
+    return '<div class="in-bar"><span class="meta">Range</span>' + seg + '<span class="in-span">' + esc(dm(c.from) + ' to ' + dm(c.now)) + '</span>' +
+      '<span class="in-ex"><span class="meta" id="in-msg"></span><span class="meta">Export</span>' +
       '<a class="in-btn" href="/export/trace.json?download&days=' + d + '">Trace JSON</a>' +
       '<a class="in-btn" href="/export/lanes.xes?download&days=' + d + '">XES event log</a>' +
-      '<span class="meta" id="in-msg"></span></div>';
+      '<button class="in-btn in-pri" id="in-perfetto">Open in Perfetto ↗</button></span></div>';
   }
 
   // Perfetto accepts a trace by postMessage once it answers PING with PONG.
@@ -426,7 +440,7 @@
     if (!box || !data) return;
     const c = compute();
     const more = !ins ? '' : ins.error ? '<div class="err">insights data unavailable: ' + esc(ins.error) + '</div>' : '<div class="in-grid" style="margin-top:16px">' + areasCard(c) + modelCard(c) + timeCard(c) + tokensCard(c) + '</div>';
-    box.innerHTML = exportsBar() + kpis(c) + '<div class="in-grid">' + heatmap(c) + waitsChart(c) + perDay(c) + byKind(c) + byLauncher(c) + '</div><div style="margin-top:16px">' + longestWaits(c) + '</div>' + more + '<div class="in-tip" id="in-tip" hidden></div>';
+    box.innerHTML = exportsBar(c) + kpis(c) + '<div class="in-grid">' + heatmap(c) + waitsChart(c) + perDay(c) + byKind(c) + byLauncher(c) + '</div><div style="margin-top:16px">' + longestWaits(c) + '</div>' + more + '<div class="in-tip" id="in-tip" hidden></div>';
     box.querySelectorAll('.seg[data-name=range] button').forEach((b) => b.addEventListener('click', () => { range = b.dataset.v; store.set('range', range); render(); }));
     box.querySelectorAll('.seg[data-name=drawn] button').forEach((b) => b.addEventListener('click', () => { drawnOnly = b.dataset.v === '1'; store.set('drawn', b.dataset.v); render(); }));
     const p = document.getElementById('in-perfetto'); if (p) p.addEventListener('click', openPerfetto);
