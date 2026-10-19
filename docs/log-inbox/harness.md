@@ -835,3 +835,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: non applicabile — deroga P8: no visual change; board started on 4701 from the worktree after the merge `f6200c7a3`, then stopped
 **Notes**: 4700 vs 4701, 606 rows: without chatUrl 268 vs 254; Tack rows (C-2026-10-19-0001, C-2026-10-19-1748) 14 vs 0 without a URL, the 12 backfilled from `prompt`, P-2026-10-19-2140 and 2225 by `chat-id`. Trunk prompts read in one `git cat-file --batch` per 5 minutes, only for new blobs. README had no list of link sources: one paragraph added under "Who launched a lane" (ratified as recommended, unattended). Launchd board on 4700 not restarted.
 **Prompt document name**: 2026-10-19 22:29
+
+## 2026-10-19 — merge: boardurl into alfonso-frontend-jjtl (P-2026-10-19-2300)
+**Prompt**: `claude_2026-10-19_2300_prompt_merge_boardurl.md`, a direct merge by `lane-run merge --direct`, no session: `boardurl` at `4e1720b9b` into `alfonso-frontend-jjtl`, merge base `f6200c7a3`, 3 commits on the branch side.
+**Files touched**: merge `b33ab2ba5`: 5 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-19_2229_prompt_board_request_fallback.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b33ab2ba5` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9424 tests in 384 files, 9 red at import, hooks 945; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: merge b33ab2ba5 verified by the chat; lane-board.mjs changed, board restart checked
+**Notes**: Rollback tag `pre-boardurl` on `3525b9a56` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2300/result.json`.
+**Prompt document name**: 2026-10-19 23:00
