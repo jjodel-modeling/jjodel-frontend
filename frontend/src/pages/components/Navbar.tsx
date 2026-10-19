@@ -924,6 +924,12 @@ function NavbarComponent(props: AllProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Mirror the mode on <html> for the shell density tokens (styles/tokens/_shell.scss).
+    // documentElement, not an app div: the rail and the context menu portal to body.
+    useEffect(() => {
+        document.documentElement.dataset.mode = props.advanced ? 'advanced' : 'basic';
+    }, [props.advanced]);
+
     // Layout mode state
     const [layoutMode, setLayoutModeState] = useState<LayoutMode>(() => {
         const mode = getSavedLayoutMode();

@@ -1,0 +1,51 @@
+/**
+ * SHELL TOKENS — the chrome around the canvas
+ *
+ * One set for the six shell surfaces: app bar, canvas toolbar, palette, right rail,
+ * status bar, context menu. Aliases of existing tokens; the only literals are the hit
+ * size, the two density heights and the menu shadow (R-RAIL-10: the shadow is composed
+ * by hand, never var(--shadow-*)).
+ *
+ * Declared on the selector list of the six surface roots, not on :root: the canvas reads
+ * --radius-*, --color-text-*, --border-default and --surface-*, so the shell cannot change
+ * those globally, and no single shell root exists (the rail and the context menu portal
+ * to body). The canvas must never read --shell-*: .editor-v2__canvas is a sibling of the
+ * toolbar and of the palette and inherits none of these names. A popover that portals
+ * outside these roots inherits nothing either; its rules use var(--shell-x, <fallback>).
+ *
+ * Density follows html[data-mode], written by Navbar from Redux `advanced` (R-RAIL-13).
+ * Source: docs/discovery/discovery_2026-10-19_shell_visual_consolidation.md §3.2-3.3.
+ */
+
+nav.nav-container,
+.editor-v2-toolbar,
+aside.editor-v2-palette,
+.properties-tree-overlay,
+.app-statusbar,
+.context-menu {
+  --shell-radius-control: var(--radius-sm);
+  --shell-radius-menu: var(--radius-md);
+  --shell-border: var(--color-panel-border);
+  --shell-text-1: var(--color-text-primary);
+  --shell-text-2: var(--color-text-tertiary);
+  --shell-text-3: var(--color-text-placeholder);
+  --shell-surface-rail: var(--color-slate-50);
+  --shell-surface-field: var(--color-panel-bg);
+  --shell-font-size-min: var(--text-xs);
+  --shell-hit: 24px;
+  --shell-row-height: 26px;
+  --shell-menu-item-height: 36px;
+  --shell-menu-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+html[data-mode="advanced"] :is(
+  nav.nav-container,
+  .editor-v2-toolbar,
+  aside.editor-v2-palette,
+  .properties-tree-overlay,
+  .app-statusbar,
+  .context-menu
+) {
+  --shell-row-height: 24px;
+  --shell-menu-item-height: 28px;
+}
