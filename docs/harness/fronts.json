@@ -75,14 +75,16 @@
       "title": "Tack: the lane board extracted into a project-agnostic harness monitor (v0 discovery first)",
       "exit": "the Tack v0 slices are planned and the extraction moves to its own repository, recorded by a decision row",
       "state": "open",
-      "openedOn": "2026-10-19"
+      "openedOn": "2026-10-19",
+      "milestone": 9
     },
     {
       "slug": "shell-ui",
       "title": "Shell visual consolidation: tokens, density, targets and contrast of topbar, toolbar, rails, status bar and menus",
       "exit": "the shell lanes of the discovery plan are merged and the shell token layer is recorded by a decision row",
       "state": "open",
-      "openedOn": "2026-10-19"
+      "openedOn": "2026-10-19",
+      "milestone": 10
     }
   ]
 }

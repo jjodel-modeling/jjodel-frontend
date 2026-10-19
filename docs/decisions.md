@@ -685,6 +685,7 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   500, peso 600 sull'elemento selezionato. Rinviati badge lettera, filtro che appiattisce
   l'albero, conteggio totale, cambio di indent. C7.1 `TreeViewSidebar.tsx` è codice morto a
   backlog e non si tocca.
+  *Emendata da R-SHELL-2 (2026-10-19): la riga 26px vale in Basic; in Advanced è 24px.*
 - **R-RAIL-8** (2026-08-10) — Nessuna barra di selezione, contro il design: resta la pill
   esistente più il peso 600, che soddisfa lo stesso requisito di accessibilità senza ribaltare
   la Fase 2 C1 del 2026-07-28. Il triplo ruolo di `#0891B2` resta inerte e non si tocca.
@@ -2975,6 +2976,7 @@ bag `_state`, che non contiene affatto il run-state.
   regola morta: si corregge comunque, perche' una regola morta con il token sbagliato rinasce
   sbagliata. Misure: `docs/discovery/discovery_2026-08-20_censimento_testo_e_bordi.md` §4.1 e §4.2.
 
+  *Emendata da R-SHELL-3 (2026-10-19): il bordo esterno di entrambi i rail passa a `--shell-border`, insieme.*
 - **D-UI-12** (2026-08-20) — **Le altezze del chrome applicativo vivono in
   `styles/tokens/_layout.scss` su `:root`; nessun foglio ricopia quei numeri.** Un flex item
   **non deduce la propria altezza da `100vh`** dentro una colonna alta `100vh`: prende il resto
@@ -6247,6 +6249,35 @@ Rows R-LIB-11..19 are **provisional**: their direction was approved by Alfonso i
   (run in progress)». First use: the Place view of the `petri-producer-consumer` example draws its tokens under
   `not simActive`, so a place a run has emptied no longer shows its initial marking. Evidence: P-2026-10-19-0930
   (`50ab1d74c`, branch `library-gallery`), IR, UI and sim suites 2793/2793, 9/9 mutants killed, clone probe 178/178.
+
+## R-SHELL — shell visual consolidation (decisions 2026-10-19)
+
+Evidence: the CSS-overlay pilot of the project chat (`~/.jjodel-lanes/pilots/linear/`, outside the repo),
+`docs/discovery/discovery_2026-10-19_shell_visual_consolidation.md` (P-2026-10-19-1710, §6 and §8), and
+Alfonso's answers in the project chat of 2026-10-19 («ok alle raccomandazioni», 16:51 and 17:45).
+
+- **R-SHELL-1** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: discovery §3.2-3.3, verified: chat DOM
+  check of P-2026-10-19-1725, reversible: trunk). **The shell reads its own token set.** Topbar, editor
+  toolbar, left palette, properties rail, status bar and menus read `--shell-*`, declared once on the six
+  surface roots in `styles/tokens/_shell.scss` as aliases of existing tokens; the canvas never reads it and
+  no `:root` value changes for the shell. The interface mode reaches the DOM as `html[data-mode]`, written by
+  Navbar from Redux `advanced` (R-RAIL-13 holds).
+- **R-SHELL-2** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: pilot v2, discovery §8 A2, verified:
+  none, reversible: trunk). **Density belongs to Advanced.** In Advanced the tree row is 24 px and the menu
+  item 28 px; Basic keeps 26 px and 36 px. Amends R-RAIL-7 on «riga 26px», which now holds for Basic only.
+- **R-SHELL-3** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: discovery §8 A3, verified: none,
+  reversible: trunk). **The outer borders of both rails move to `--shell-border` together** (palette right,
+  rail left), keeping the coupling D-UI-11 asked for. Amends D-UI-11 on the outer border, which no longer
+  stays on `--border-subtle`.
+- **R-SHELL-4** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: discovery §3.4 and §8 A1, verified:
+  none, reversible: trunk). **Right-rail section titles are written in sentence case in the source**, shown
+  at 12 px / 500 without tracking; the left palette keeps its uppercase category label and
+  `.props-header__kind` stays uppercase. The MODELS demo script and the R-SIM row that quote
+  `SEMANTIC TYPE CLASS` follow the new label `Semantic type class`.
+- **R-SHELL-5** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: pilot report after_v2, verified: none,
+  reversible: trunk). **Three text levels and a minimum.** Shell text uses `--shell-text-1/2/3` (#0f172a,
+  #475569, #64748b); `#94a3b8` stays only inside disabled controls (D-UI-13 Em. 6). No shell text under 11 px,
+  shell hit targets at least 24 px without moving the layout, action icons muted only in Advanced.
 
 ## Superate
 
