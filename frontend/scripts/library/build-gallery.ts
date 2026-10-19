@@ -20,8 +20,10 @@
  *
  * Sources: frontend/scripts/library/gallery/<id>/ (the fixtures of src/__tests__/fixtures/xmi-m1/ copied, plus the
  * Families, Persons and Library metamodels and the Library, Graph and Shapes sample models written for the gallery).
- * The tier `template` is built; the tier `example` is a byte copy of its first `source` (a codegen example of
- * frontend/public/examples/codegen/, which stays where it is).
+ * The tier `template` is built from them. The tier `example` is its first `source` (a codegen example of
+ * frontend/public/examples/codegen/, which stays where it is) opened with its own ids, with its hand-written viewpoint
+ * added and its layout placed as a template's (R-LIB-10, P-2026-10-19-0300): the file differs from the codegen example
+ * by the viewpoint and the layout, and generates the same text.
  *
  * A published version is never rewritten (R-LIB-9): when the file of the current version exists, the build refuses it
  * unless GAL_REWRITE names it (`<id>@<n>`, comma separated). A fix is a new version in the catalog.
@@ -33,7 +35,7 @@
  *       GAL_REWRITE  the existing versions the build may overwrite, `<id>@<n>` comma separated
  */
 import { chromium, type Browser, type Page } from '@playwright/test';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { seed } from '../smoke/states.ts';
 
@@ -86,6 +88,20 @@ const clear = (c: string, ref: string): View =>
     [c, { kind: 'edge', metaclasses: [c], reference: ref, label: `${c}.${ref} (drawn clear)`,
         edge: { line: { color: 'transparent', width: 1 }, terminations: { sourceEnd: 'none', targetEnd: 'none' } } }];
 const kindIs = (literal: string) => ({ op: 'eq', left: '$kind.value', right: { kind: 'string', value: literal } });
+/** A statechart state: a rounded box, its name centred, an `entry` action, when set, as a smaller second line. */
+const state = (c: string, extra: Record<string, unknown> = {}): View =>
+    [c, { kind: 'vertex', metaclasses: [c], label: c, defaultSize: { width: 120, height: 48 },
+        shape: { form: 'rounded', fill: '#ffffff', border: { width: 1.5, color: '#1f2937' }, labels: [center(I('name'))], ...extra },
+        fieldCompartments: [{ id: 'entry', source: { from: 'attributes' }, rowFormat: { segments: [{ kind: 'literal', text: 'entry / ' }, { kind: 'value' }], style: { fontSize: 11 } },
+            visible: { when: { op: 'exists', path: '$entry.value' }, then: true, else: false } }],
+        structure: { emptyBehavior: 'hide' } }];
+const transition = { source: 'container', target: '$nextState.value', line: { width: 1.5 }, terminations: arrow, curve: 'arc' };
+/** The event's name, one hop away (Transition.event → Event.name). */
+const EVENT = P('$event.value.$name.value');
+const arc = { source: '$src.value', target: '$tgt.value', line: { width: 1.5 }, curve: 'arc' };
+const tokensAre = (op: string, n: number, path = '$tokens.value') => ({ op, left: path, right: { kind: 'number', value: n } });
+/** The run's own marking of a place (R-MK-1): true while a run marks it. */
+const NOT_MARKED = { op: 'not', arg: { op: 'marked' } };
 
 const VIEWPOINTS: Record<string, Viewpoint[]> = {
     graph: [{ metamodel: 'Graph', name: 'Graph', views: [
@@ -146,6 +162,45 @@ const VIEWPOINTS: Record<string, Viewpoint[]> = {
         vertex('Circle', 'circle', [72, 72], P('$label.value')),
         vertex('Square', 'rect', [72, 72], P('$label.value')),
     ] }],
+    // ── The example viewpoints (R-LIB-10, P-2026-10-19-0300): one per example, named after its language ──────────
+    turnstile: [{ metamodel: 'DemoESM', name: 'Turnstile statechart', views: [
+        state('State'),
+        // `locked : Initial` is a state with behaviour, not a pseudostate: a state with UML's initial transition drawn
+        // on its left (`entry: 'dot'`, a filled dot and a short arrow onto the border).
+        state('Initial', { entry: 'dot' }),
+        ['Terminal', { kind: 'vertex', metaclasses: ['Terminal'], label: 'Terminal (final state)', defaultSize: { width: 28, height: 28 },
+            shape: { form: 'circle', fill: '#ffffff', border: { width: 1.5, color: '#1f2937' }, marker: 'dot-large', labels: [{ position: 'outside', anchor: 's', source: I('name') }] } }],
+        // Vocabulary, read in the arc labels.
+        hidden('Event'),
+        // From the owning state (`transitions` is a composition) to `nextState`, labelled `event [guard] / effect`: an
+        // empty effect takes its ` / ` with it; the guard's brackets need a view of their own (the `]` would stay).
+        ['Transition', { kind: 'edge', metaclasses: ['Transition'], label: 'Transition',
+            edge: { ...transition, labels: { template: [EVENT, L(' / '), P('$effect.value')] } } }],
+        ['Transition', { kind: 'edge', metaclasses: ['Transition'], label: 'Transition (guard)', priority: 1, predicate: { op: 'exists', path: '$guard.value' },
+            edge: { ...transition, labels: { template: [EVENT, L(' ['), P('$guard.value'), L(']'), L(' / '), P('$effect.value')] } } }],
+    ] }],
+    'petri-producer-consumer': [{ metamodel: 'DemoPetri', name: 'Petri net', views: [
+        ['Place', { kind: 'vertex', metaclasses: ['Place'], label: 'Place', defaultSize: { width: 44, height: 44 },
+            shape: { form: 'circle', fill: '#ffffff', border: { width: 1.5, color: '#1f2937' },
+                // The marking: up to four tokens as dots, more as a number. A run shows its own count on the place (the
+                // simulator's pill), so the drawn one steps aside on a place the run marks.
+                marker: { rules: [1, 2, 3, 4].map(n => ({ when: { op: 'and', args: [tokensAre('eq', n), NOT_MARKED] }, then: n === 1 ? 'dot' : `dots-${n}` })), default: '' },
+                labels: [
+                    { position: 'outside', anchor: 's', source: I('name') },
+                    { position: 'center', source: P('$tokens.value'), style: { fontSize: 14, fontWeight: 'semibold' },
+                        visible: { when: { op: 'and', args: [tokensAre('gt', 4), NOT_MARKED] }, then: true, else: false } },
+                ] } }],
+        ['Transition', { kind: 'vertex', metaclasses: ['Transition'], label: 'Transition (a bar)', defaultSize: { width: 10, height: 40 },
+            shape: { form: 'bar', fill: '#1f2937', border: { width: 0 }, labels: [
+                { position: 'outside', anchor: 's', source: I('name') },
+                { position: 'outside', anchor: 'n', source: P('$guard.value'), style: { fontSize: 11, fontStyle: 'italic' },
+                    visible: { when: { op: 'exists', path: '$guard.value' }, then: true, else: false } },
+            ] } }],
+        ['Arc', { kind: 'edge', metaclasses: ['Arc'], label: 'Arc', edge: { ...arc, terminations: arrow } }],
+        ['Arc', { kind: 'edge', metaclasses: ['Arc'], label: 'Arc (weight)', priority: 1, predicate: tokensAre('gt', 1, '$weight.value'),
+            edge: { ...arc, terminations: arrow, labels: { center: P('$weight.value') } } }],
+        ['InhibitorArc', { kind: 'edge', metaclasses: ['InhibitorArc'], label: 'InhibitorArc', edge: { ...arc, terminations: { sourceEnd: 'none', targetEnd: 'hollowCircle' } } }],
+    ] }],
 };
 
 /**
@@ -179,6 +234,20 @@ const PLACES: Record<string, Record<string, { viewpoint?: string; at: Record<str
         } },
     },
     shapes: { 'sample-Shapes': { at: { sun: [0, 0], wheel: [120, 0], house: [240, 0] } } },
+    // The examples (P-2026-10-19-0300), by object name. The turnstile: unlocked right of locked, off below it; the
+    // initial mark and the `coin` loop take the room left of and above locked.
+    turnstile: { demoESM: { at: { locked: [60, 120], unlocked: [400, 120], off: [106, 300] } } },
+    'petri-producer-consumer': {
+        // The flow left to right; the lock below, its inhibitor arc up to t2, whose guard sits above it.
+        demoNet: { at: { p1: [0, 100], t1: [110, 102], p2: [200, 100], t2: [310, 102], p3: [420, 100], t3: [380, 232], lock: [470, 230] } },
+        // Two cycles, the producer's and the consumer's, each a diamond with its places left and right and its bars top
+        // and bottom (the arcs run along the sides); deliver and take on top, the buffer between them on the line from
+        // one to the other, deliver's guard above it, where no arc runs.
+        producerConsumer: { at: {
+            ready: [0, 88], deliver: [105, 10], produced: [176, 88], produce: [105, 170], buffer: [238, 8],
+            busy: [300, 88], take: [405, 10], idle: [476, 88], consume: [405, 170],
+        } },
+    },
 };
 
 const IDS = process.env.GAL_ID ? [process.env.GAL_ID] : GALLERY.map(e => e.id);
@@ -270,7 +339,7 @@ const PLACE = (modelId: string, at: Record<string, [number, number]>) => String.
   const at = ${JSON.stringify(at)};
   const lk = window.windoww.store.getState().idlookup;
   const LABELS = ['name', 'title', 'firstName', 'fullName', 'label', 'lastName'];
-  const labelOf = (o) => { for (const f of (o && o.features) || []) { const v = lk[f]; const n = v && (lk[v.instanceof] || {}).name; if (LABELS.includes(n) && v.values && v.values[0]) return v.values[0]; } return null; };
+  const labelOf = (o) => { for (const f of (o && o.features) || []) { const v = lk[f]; const n = v && (lk[v.instanceof] || {}).name; if (LABELS.includes(n) && v.values && v.values[0]) return v.values[0]; } return (o && o.name) || null; };
   const pane = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${modelId}"] .react-flow');
   const placed = [];
   for (const n of pane ? pane.querySelectorAll('.react-flow__node') : []) {
@@ -280,8 +349,20 @@ const PLACE = (modelId: string, at: Record<string, [number, number]>) => String.
   return { placed, missed: Object.keys(at).filter((k) => !placed.includes(k)) };
 })()`;
 
+/** An example's file stored as the browser stores a saved project (`Offline.import`, projects.ts: the record in
+ *  `localStorage.projects`), so it opens with its own ids: the import a user runs (`importFromText`) renews every id,
+ *  and the generated code names the elements by id. */
+const STORE = (text: string) => String.raw`(() => {
+  const json = JSON.parse(${JSON.stringify(text)});
+  const a = JSON.parse(localStorage.getItem('projects') || '[]').filter((p) => p.id !== json.id);
+  a.push(json);
+  localStorage.setItem('projects', JSON.stringify(a));
+  return json.id;
+})()`;
+
 async function build(browser: Browser, entry: Entry): Promise<void> {
-    const src = SOURCES[entry.id];
+    const example = entry.tier === 'example';
+    const src = example ? { ecore: [] as string[], xmi: [] as string[] } : SOURCES[entry.id];
     if (!src) { check(`${entry.id}: has sources`, false, 'no SOURCES row'); return; }
     const out = target(entry);
     if (!out) return;
@@ -296,12 +377,20 @@ async function build(browser: Browser, entry: Entry): Promise<void> {
         await page.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 300000 });
         await poll(page, `!!(window.windoww && window.windoww.store && window.LPointerTargetable)`, 120000);
         await wait(page, 3000);
-        await page.locator('button', { hasText: 'New Project' }).first().click();
-        await wait(page, 1500);
-        await page.locator('input[type="text"]').first().fill(entry.label);
-        await page.locator('button', { hasText: /^Create/ }).last().click();
-        const pid = await poll<string>(page, `(() => { const a = JSON.parse(localStorage.getItem('projects') || '[]'); return a.length ? a[a.length - 1].id : null; })()`, 30000);
-        check(`${entry.id}: the project «${entry.label}» is created`, !!pid, String(pid));
+        let pid: string | null;
+        if (example) {
+            // An example is its codegen example (`source[0]`, which stays where it is) with the viewpoint added.
+            const json = JSON.parse(readFileSync(REPO(entry.source![0]), 'utf8'));
+            pid = await page.evaluate(STORE(JSON.stringify(json))) as string | null;
+            check(`${entry.id}: ${entry.source![0]} is stored, named ${entry.label}, with its own id`, pid === json.id && json.name === entry.label, String(pid));
+        } else {
+            await page.locator('button', { hasText: 'New Project' }).first().click();
+            await wait(page, 1500);
+            await page.locator('input[type="text"]').first().fill(entry.label);
+            await page.locator('button', { hasText: /^Create/ }).last().click();
+            pid = await poll<string>(page, `(() => { const a = JSON.parse(localStorage.getItem('projects') || '[]'); return a.length ? a[a.length - 1].id : null; })()`, 30000);
+            check(`${entry.id}: the project «${entry.label}» is created`, !!pid, String(pid));
+        }
         if (!pid) return;
         await page.goto(`${URL}/?open=${encodeURIComponent(pid)}#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
         const opened = await poll(page, `(async () => { const i = await ${INFO}; return i && i.id === ${JSON.stringify(pid)} && document.querySelector('input[type="file"][accept=".ecore"]') ? i : null; })()`, 120000);
@@ -324,7 +413,7 @@ async function build(browser: Browser, entry: Entry): Promise<void> {
             await wait(page, 1500);
         }
         const info = await page.evaluate(INFO) as any;
-        check(`${entry.id}: ${src.ecore.length} metamodel(s) and ${src.xmi.length} model(s) in the project`,
+        if (!example) check(`${entry.id}: ${src.ecore.length} metamodel(s) and ${src.xmi.length} model(s) in the project`,
             info.metamodels.length === src.ecore.length && info.models.length === src.xmi.length, { metamodels: info.metamodels.map((m: any) => m.name), models: info.models });
         check(`${entry.id}: every model has objects`, info.models.every((m: any) => m.objects > 0), info.models.map((m: any) => `${m.name}:${m.objects}`));
 
@@ -336,7 +425,7 @@ async function build(browser: Browser, entry: Entry): Promise<void> {
             check(`${entry.id}: the viewpoint ${vp.name} has its ${vp.views.length} views`, ok, got);
             if (ok) built.push({ id: got.id, name: got.name });
         }
-        check(`${entry.id}: one viewpoint per metamodel`, built.length === src.ecore.length, built.map(v => v.name));
+        check(`${entry.id}: one viewpoint per metamodel`, built.length === info.metamodels.length, built.map(v => v.name));
         if (built.length) {
             await page.evaluate(String.raw`(async () => { const lv = await import('/src/utils/lastViewpoint.ts'); lv.activateViewpoint(${JSON.stringify(built[0].id)}); })()`);
             const active = await poll(page, `(() => { const s = window.windoww.store.getState(); return s.viewpoint === ${JSON.stringify(built[0].id)} && s.idlookup[${JSON.stringify(pid)}].activeViewpoint === ${JSON.stringify(built[0].id)}; })()`, 15000);
@@ -388,14 +477,6 @@ const browser = await chromium.launch();
 for (const id of IDS) {
     const entry = GALLERY.find(e => e.id === id);
     if (!entry) { check(`${id}: is a galleryProject of the catalog`, false, ''); continue; }
-    if (entry.tier === 'example') {
-        const out = target(entry);
-        const from = entry.source?.[0];
-        if (!out || !from) continue;
-        copyFileSync(REPO(from), out);
-        check(`${entry.id}@${entry.version}: copied from ${from}`, sha256(out) === sha256(REPO(from)), `${out} sha256 ${sha256(out)}`);
-        continue;
-    }
     await build(browser, entry);
 }
 await browser.close();

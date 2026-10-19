@@ -2,7 +2,9 @@
  * The gallery projects of R-LIB-5 (slice S1, P-2026-10-18-1800): frontend/public/library/gallery/<id>/<n>.jjodel, the
  * project files the Templates page clones, written by the app's own importers and export
  * (scripts/library/build-gallery.ts). Two tiers and versions since R-LIB-9 (P-2026-10-18-2300): five templates, two
- * examples copied from frontend/public/examples/codegen/, every version with the sha256 of its file in the catalog.
+ * examples, every version with the sha256 of its file in the catalog. An example is its codegen example of
+ * frontend/public/examples/codegen/ imported, with a hand-written viewpoint added (R-LIB-10, P-2026-10-19-0300): the
+ * import renews the ids, so the files differ, and what it must keep is checked here, the generated text above all.
  *
  * A `.jjodel` file is the raw project with its whole store in `state`, compressed by `async-lz-string`
  * (`U.compressedState`). Here each file's store is read back as the import reads it and checked against the catalog
@@ -21,6 +23,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import lz from 'async-lz-string';
 import { describe, it, expect } from 'vitest';
 import { currentVersion, parseGalleryRef, resolveGalleryRef, type GalleryVersion } from '../galleryRef';
+import { generate } from '../../codegen/engine/generate';
+import { readModelTemplates } from '../../codegen/engine/templateCodec';
+import { storedScenarios } from '../../codegen/oracle/storedScenarios';
+import { recordOf } from '../../codegen/oracle/__tests__/exampleFixture';
 
 type Lookup = Record<string, any>;
 
@@ -28,7 +34,7 @@ interface Entry { id: string; kind: string; label: string; status: string; tier?
 
 const catalog = JSON.parse(readFileSync(new URL('../../../../docs/library/catalog.json', import.meta.url), 'utf8')) as { version: number; entries: Entry[] };
 const GALLERY = catalog.entries.filter(e => e.kind === 'galleryProject');
-const TEMPLATES = GALLERY.filter(e => e.tier === 'template');
+const EXAMPLES = GALLERY.filter(e => e.tier === 'example');
 
 /** What the build's sources hold: metamodel names, and each model with its number of objects. */
 const EXPECTED: Record<string, { metamodels: string[]; models: Record<string, number> }> = {
@@ -46,8 +52,8 @@ const TIERS: Record<string, string> = {
     turnstile: 'example', 'petri-producer-consumer': 'example',
 };
 
-/** The hand-written viewpoints of each template (R-LIB-9), in order, the first active on open; each with the view
- *  kinds it holds, sorted, as `<metaclass>:<kind>`. */
+/** The hand-written viewpoints of each entry (R-LIB-9; the examples' since R-LIB-10, P-2026-10-19-0300), in order, the
+ *  first active on open; each with the view kinds it holds, sorted, as `<metaclass>:<kind>`. */
 const VIEWPOINTS: Record<string, Record<string, string[]>> = {
     library: { Library: ['Book:edge', 'Book:vertex', 'Library:vertex', 'LibraryItem:edge', 'Magazine:vertex', 'Member:vertex', 'Writer:vertex'] },
     'families-persons': {
@@ -57,6 +63,8 @@ const VIEWPOINTS: Record<string, Record<string, string[]>> = {
     'state-machine': { StateMachine: ['State:edge', 'State:graphVertex', 'State:vertex', 'State:vertex', 'State:vertex', 'StateMachine:vertex', 'Transition:edge', 'Transition:edge'] },
     graph: { Graph: ['Edge:edge', 'Graph:vertex', 'Node:vertex'] },
     shapes: { Shapes: ['Canvas:graphVertex', 'Circle:vertex', 'Square:vertex'] },
+    turnstile: { 'Turnstile statechart': ['Event:vertex', 'Initial:vertex', 'State:vertex', 'Terminal:vertex', 'Transition:edge', 'Transition:edge'] },
+    'petri-producer-consumer': { 'Petri net': ['Arc:edge', 'Arc:edge', 'InhibitorArc:edge', 'Place:vertex', 'Transition:vertex'] },
 };
 
 const publicUrl = (file: string) => new URL(`../../../public/${file}`, import.meta.url);
@@ -117,11 +125,6 @@ describe('the gallery of the catalog', () => {
         for (const e of GALLERY) for (const v of e.versions!) expect(sha256(publicUrl(v.file)), `${e.id}@${v.n}`).toBe(v.sha256);
     });
 
-    it('packages each example unchanged: its first version is the codegen example, byte for byte (mutant: an example edited)', () => {
-        for (const e of GALLERY.filter(x => x.tier === 'example')) {
-            expect(sha256(publicUrl(e.versions!.find(v => v.n === 1)!.file)), e.id).toBe(sha256(publicUrl(`examples/codegen/${e.id}.jjodel`)));
-        }
-    });
 
     it('is served as the public copy the Templates page fetches, byte for byte (mutant: the docs catalog edited, not copied)', () => {
         const docs = readFileSync(new URL('../../../../docs/library/catalog.json', import.meta.url), 'utf8');
@@ -167,7 +170,7 @@ describe.each(GALLERY.map(e => [e.id, e] as const))('the project file of %s', (i
     });
 });
 
-describe.each(TEMPLATES.map(e => [e.id] as const))('the viewpoints of the template %s', (id) => {
+describe.each(GALLERY.map(e => [e.id] as const))('the viewpoints of %s', (id) => {
     /** The project's own viewpoints (not the built-in `Pointer_` ones), each with its views' `<metaclass>:<kind>`. */
     async function own() {
         const { json, store, lookup } = await readProject(id);
@@ -193,6 +196,51 @@ describe.each(TEMPLATES.map(e => [e.id] as const))('the viewpoints of the templa
         expect(json.activeViewpoint).toBe(first.id);
         expect(lookup[json.id].activeViewpoint).toBe(first.id);
         expect(store.viewpoint).toBe(first.id);
+    });
+});
+
+/** The codegen example an example was built from: the file a student imports, which stays as it was. */
+async function readCodegenExample(id: string): Promise<Lookup> {
+    const json = JSON.parse(readFileSync(publicUrl(`examples/codegen/${id}.jjodel`), 'utf8'));
+    return JSON.parse(await lz.decompressFromUTF16(json.state)).idlookup;
+}
+
+/** What a model generates: `main`, then every template that takes no argument, each with its errors. */
+function generated(lookup: Lookup, modelId: string): { templates: string[]; out: Record<string, { code: string; errors: unknown[] }> } {
+    const { templates } = readModelTemplates(lookup, modelId);
+    const entries = ['main', ...templates.filter(t => t.params.length === 0 && t.name !== 'main').map(t => t.name)];
+    const out = Object.fromEntries(entries.map(name => {
+        const r = generate(recordOf(lookup, modelId), lookup, modelId, templates, name);
+        return [name, { code: r.code, errors: r.errors.map((e: any) => e.message ?? e) }];
+    }));
+    return { templates: templates.map(t => `${t.name}(${t.params.join(',')}) ${t.body}`), out };
+}
+
+describe.each(EXAMPLES.map(e => [e.id] as const))('the example %s against its codegen example', (id) => {
+    it('generates the same text from the same templates on every model, byte for byte (mutant: the build loses or edits a template, or the data)', async () => {
+        const { lookup } = await readProject(id);
+        const before = await readCodegenExample(id);
+        const names = Object.keys(EXPECTED[id].models);
+        for (const name of names) {
+            const a = generated(before, modelNamed(before, name).id), b = generated(lookup, modelNamed(lookup, name).id);
+            expect(b.templates.length, name).toBeGreaterThan(0);
+            expect(b.templates, name).toEqual(a.templates);
+            expect(b.out.main.code.length, name).toBeGreaterThan(0);
+            expect(b.out, name).toEqual(a.out);
+        }
+    });
+
+    it('keeps the stored scenarios of each model (mutant: the import drops `runScenarios`)', async () => {
+        const { lookup } = await readProject(id);
+        const before = await readCodegenExample(id);
+        const shape = (lk: Lookup, name: string) => storedScenarios(lk, modelNamed(lk, name).id).map(s => ({ name: s.name, steps: s.steps.length }));
+        for (const name of Object.keys(EXPECTED[id].models)) expect(shape(lookup, name), name).toEqual(shape(before, name));
+    });
+
+    it('keeps the Default viewpoint beside its own, and adds no other (mutant: the build replaces Default)', async () => {
+        const { json, lookup } = await readProject(id);
+        const vps = (lookup[json.id].viewpoints || []).map((v: string) => lookup[v]?.name);
+        expect(vps).toEqual(['Default', ...Object.keys(VIEWPOINTS[id])]);
     });
 });
 

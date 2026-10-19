@@ -14,7 +14,8 @@
  *     frames holding their children, no arc between a container and its children, every vertex visible after fit: its
  *     four corners hit it and its box lies in the canvas left of the properties panel, clear of the minimap; arc labels
  *     overlap no label and no vertex, each arc touches its source, two arcs between the same vertices run apart), then screenshot as <id>.png (<id>-<model>.png when there are more); an example
- *     is screenshot on each of its viewpoints, its rendering recorded, not asserted;
+ *     likewise on its own viewpoint (R-LIB-10, P-2026-10-19-0300), then run in the simulation panel (Reset and its
+ *     events or steps, SIM) and screenshot mid-run as <id>-sim.png, the drawn marking measured against the run's;
  *   - an explicit save, then a reopen from the page load: name and `_clonedFrom` survive.
  * The page shows «Templates» then «Examples», each card with its `<id>@<n>`; the deep links `#/templates/graph@1` (the
  * clone dialog of that version, prefilled) and `#/templates/nope@9` (one line, the page as usual) are screenshot.
@@ -196,6 +197,8 @@ async function cloneFromTemplates(page: Page, entry: Entry, typed?: string, shot
 /** The viewpoints of each template, in order; the first is active on open, the model named here is drawn by the other. */
 const VIEWPOINTS: Record<string, string[]> = {
     library: ['Library'], 'families-persons': ['Families', 'Persons'], 'state-machine': ['StateMachine'], graph: ['Graph'], shapes: ['Shapes'],
+    // The examples' hand-written viewpoints (R-LIB-10, P-2026-10-19-0300).
+    turnstile: ['Turnstile statechart'], 'petri-producer-consumer': ['Petri net'],
 };
 const PICK: Record<string, string> = { 'sample-Persons': 'Persons' };
 
@@ -217,10 +220,12 @@ const MEASURE = (modelId: string) => String.raw`(() => {
       .map(([x, y]) => { const e = document.elementFromPoint(x, y); return !!e && n.contains(e); });
     const dot = n.querySelector('.node-problem-dot');
     const outside = n.querySelector('.ir-label--outside');
-    return { vid: n.dataset.id, obj, cls: cls(obj), text: (n.textContent || '').trim(), form: c ? ([...c.classList].find((k) => k.startsWith('ir-shape--')) || '').slice(10) : '',
+    const entry = n.querySelector('.ir-entry-svg');
+    return { vid: n.dataset.id, obj, name: (lk[obj] || {}).name ?? null, cls: cls(obj), text: (n.textContent || '').trim(), form: c ? ([...c.classList].find((k) => k.startsWith('ir-shape--')) || '').slice(10) : '',
       header: header ? header.textContent.trim() : null, border: c ? getComputedStyle(c).borderTopStyle : '', box: box(n), content: c ? box(c) : box(n),
       corners, marker: !!(c && c.querySelector('.ir-marker-svg')), problem: dot ? dot.className.replace('node-problem-dot ', '') + ' | ' + dot.title : null,
-      outsideLabel: outside ? box(outside) : null };
+      outsideLabel: outside ? box(outside) : null, entry: entry ? box(entry) : null,
+      run: (n.querySelector('.sim-node-run__tokens') || {}).textContent ?? null, drawnMarker: !!(c && c.querySelector('.ir-marker-svg')) };
   });
   // The canvas the user sees ends where the properties panel begins: the first x, along the middle row, whose element
   // is not inside the pane (the pane itself runs on under the panel).
@@ -321,6 +326,38 @@ function criteria(id: string, model: string, d: any): void {
         check(`${tag}: Male and Female vertices by fullName`, male.length === 5 && female.length === 4 && texts(male).includes('Jim March') && texts(female).includes('Kelly Sailor'), texts(d.nodes));
         check(`${tag}: Male and Female told apart by shape`, new Set(male.map((n: any) => n.form)).size === 1 && new Set(female.map((n: any) => n.form)).size === 1 && male[0].form !== female[0].form, { male: male[0]?.form, female: female[0]?.form });
         check(`${tag}: no arc drawn`, drawn.length === 0, arcs(d));
+    } else if (id === 'turnstile') {
+        const st = (name: string) => d.nodes.find((n: any) => n.text === name || n.text.startsWith(name));
+        check(`${tag}: three states, no Event and no Transition drawn`, d.nodes.length === 3 && JSON.stringify(texts(d.nodes)) === '["locked","off","unlocked"]', texts(d.nodes));
+        const locked = st('locked'), unlocked = st('unlocked'), off = st('off');
+        check(`${tag}: locked (Initial) a rounded state with the initial mark on its left, unlocked a plain one, off a bullseye of about 28 px`,
+            locked?.form === 'rounded' && !!locked.entry && locked.entry.x + locked.entry.w <= locked.content.x + 2 && unlocked?.form === 'rounded' && !unlocked.entry
+            && off?.form === 'circle' && off.marker && Math.abs(off.content.w - 28) <= 2,
+            [locked, unlocked, off].map((n: any) => n && `${n.text}:${n.form}:${n.entry ? 'entry ' + JSON.stringify(n.entry) : ''}:${n.marker ? 'marker' : ''}:${n.content.w}`));
+        check(`${tag}: the initial mark inside the canvas`, !!locked?.entry && inside(locked.entry, d.canvas), { entry: locked?.entry, canvas: d.canvas });
+        check(`${tag}: one arc per Transition, from its owning state to nextState`, JSON.stringify(arcs(d)) === JSON.stringify(sorted(['locked>locked', 'locked>unlocked', 'unlocked>locked', 'locked>off'])), arcs(d));
+        check(`${tag}: labelled event [guard] / effect, each part only when set`, JSON.stringify(sorted(d.labels)) === JSON.stringify(sorted(['coin / model.[coins] := model.[coins] + 1', 'push [model.[paid]] / model.[coins] := 0', 'push', 'stop'])), d.labels);
+    } else if (id === 'petri-producer-consumer') {
+        const places = of('Place'), bars = of('Transition');
+        const want = model === 'demoNet' ? { places: 4, bars: 3, arcs: ['p1>t1', 't1>p2', 'p2>t2', 't2>p3', 'lock>t3', 'lock>t2'], labels: ['2', '2'], marked: ['lock', 'p1'] }
+            : { places: 5, bars: 4, arcs: ['ready>produce', 'produce>produced', 'produced>deliver', 'deliver>ready', 'deliver>buffer', 'buffer>take', 'idle>take', 'take>busy', 'busy>consume', 'consume>idle'], labels: [], marked: ['idle', 'ready'] };
+        check(`${tag}: places as circles of about 44 px, transitions as bars of about 10 × 40, nothing else drawn`, places.length === want.places && bars.length === want.bars && d.nodes.length === want.places + want.bars
+            && places.every((n: any) => n.form === 'circle' && Math.abs(n.content.w - 44) <= 2) && bars.every((n: any) => n.form === 'bar' && Math.abs(n.content.w - 10) <= 2 && Math.abs(n.content.h - 40) <= 2),
+            d.nodes.map((n: any) => `${n.cls}:${n.form}:${n.text}:${n.content.w}x${n.content.h}`));
+        check(`${tag}: the marking drawn inside the places that hold tokens, and only there`, JSON.stringify(sorted(places.filter((n: any) => n.drawnMarker).map((n: any) => n.text))) === JSON.stringify(want.marked),
+            places.map((n: any) => `${n.text}:${n.drawnMarker ? 'dots' : ''}`));
+        const byName = (o: string) => d.nodes.find((n: any) => n.obj === o)?.name ?? o;
+        const named = sorted(drawn.map((e: any) => `${byName(e.src)}>${byName(e.tgt)}`));
+        check(`${tag}: one arc per Arc, src to tgt, weight labels only above 1`, JSON.stringify(named) === JSON.stringify(sorted(want.arcs)) && JSON.stringify(sorted(d.labels)) === JSON.stringify(want.labels), { arcs: named, labels: d.labels });
+        // The end's marker id names its kind (`ir-arrow-open-…`, `ir-circle-hollow-…`), then the edge.
+        const kind = (e: any) => (e.marker.match(/#(ir-[a-z-]+?)-irobj_/) || [])[1] ?? e.marker;
+        const ends = [...new Set(drawn.map(kind))];
+        meas(`${tag}: arc ends`, ends);
+        if (model === 'demoNet') {
+            const inh = drawn.find((e: any) => byName(e.src) === 'lock' && byName(e.tgt) === 't2');
+            check(`${tag}: the inhibitor arc ends in a circle, the others in an arrow`, !!inh && kind(inh) === 'ir-circle-hollow' && drawn.filter((e: any) => e !== inh).every((e: any) => kind(e) === 'ir-arrow-open'), drawn.map((e: any) => `${byName(e.src)}>${byName(e.tgt)} ${kind(e)}`));
+            check(`${tag}: t2's guard beside its bar`, /p3\.\[tokens\] < 1/.test(bars.find((n: any) => n.text.startsWith('t2'))?.text ?? ''), bars.map((n: any) => n.text));
+        } else check(`${tag}: every arc ends in an open arrow`, ends.length === 1 && ends[0] === 'ir-arrow-open', ends);
     } else if (id === 'shapes') {
         const canvas = of('Canvas')[0];
         check(`${tag}: the Canvas a frame headed by its name, holding the shapes`, !!canvas && canvas.header === 'Sketch' && [...of('Circle'), ...of('Square')].every((n: any) => inside(n.box, canvas.box)), canvas && canvas.header);
@@ -342,6 +379,57 @@ async function pickViewpoint(page: Page, name: string): Promise<void> {
     await wait(page, 400);
     await page.locator('.toolbar-viewpoint-menu__option', { hasText: name }).first().click();
     await wait(page, 4000);
+}
+
+/** The run of each example (P-2026-10-19-0300): Reset, then its events (a name) or its steps (`step`), on one model. */
+const SIM: Record<string, { model: string; moves: string[] }> = {
+    // `paid` is `coins >= 2` (codegen/examples/turnstile/README.md): one coin and push is a discard, two coins open it.
+    turnstile: { model: 'demoESM', moves: ['coin', 'coin', 'push'] },
+    'petri-producer-consumer': { model: 'producerConsumer', moves: ['step', 'step', 'step'] },
+};
+
+/** The model tab's simulation panel: Reset, the moves, then the drawn marking against the run's, and <id>-sim.png. */
+async function simulate(page: Page, id: string, modelId: string, moves: string[]): Promise<void> {
+    const panel = page.locator('.sim-panel--open').filter({ visible: true }).first();
+    if ((await page.locator('.sim-panel--open').filter({ visible: true }).count()) === 0) {
+        await page.locator('.sim-panel--closed .sim-panel__chip').filter({ visible: true }).first().click().catch(() => undefined);
+        await wait(page, 900);
+    }
+    check(`${id}: the simulation panel opens`, (await page.locator('.sim-panel--open').filter({ visible: true }).count()) > 0, '');
+    await panel.locator('.sim-panel__btn[title="Reset"]').first().click();
+    await wait(page, 900);
+    const status = async () => page.evaluate(`[...document.querySelectorAll('.sim-panel--open .sim-panel__status-line')].filter((e) => e.offsetParent !== null).map((e) => (e.getAttribute('title') || e.textContent || '').trim())`);
+    const fired: string[] = [];
+    for (const move of moves) {
+        if (move === 'step') {
+            await panel.locator('.sim-panel__actions button[title^="Step"]:not([title="Step back"])').first().click();
+            await wait(page, 700);
+            // Two enabled transitions: the run asks; the first candidate is taken.
+            const choice = panel.locator('.sim-panel__choice');
+            if (await choice.count()) { fired.push('choice: ' + (await choice.first().textContent())?.trim()); await choice.first().click(); await wait(page, 700); }
+        } else {
+            await panel.locator('.sim-panel__event').filter({ has: page.locator('span', { hasText: new RegExp(`^${move}$`) }) }).first().click();
+            await wait(page, 700);
+        }
+        fired.push(move);
+    }
+    const d = await page.evaluate(MEASURE(modelId)) as any;
+    const active = await page.evaluate(`[...document.querySelectorAll('.mm-node.sim-active')].filter((e) => e.offsetParent !== null).map((e) => (e.textContent || '').trim())`);
+    meas(`${id} run`, { fired, status: await status(), active, nodes: d?.nodes.map((n: any) => `${n.text}:${n.drawnMarker ? 'dots' : ''}:${n.run ?? ''}`) });
+    if (id === 'turnstile') {
+        check(`${id}: after Reset, coin, coin, push the run is in unlocked`, JSON.stringify(active) === '["unlocked"]', active);
+    } else {
+        // The run's own count is shown on every place; the drawn marking never beside it on a place the run marks.
+        const places = (d?.nodes ?? []).filter((n: any) => n.cls === 'Place');
+        const doubled = places.filter((n: any) => n.drawnMarker && n.run !== null && n.run !== '0');
+        const stale = places.filter((n: any) => n.drawnMarker && n.run === '0');
+        check(`${id}: during the run no place shows the drawn marking beside a non-zero run count`, places.length > 0 && doubled.length === 0, doubled.map((n: any) => `${n.text}:${n.run}`));
+        meas(`${id}: places emptied by the run that still show the drawn (initial) marking`, stale.map((n: any) => `${n.text}:run ${n.run}`));
+    }
+    await closeTip(page);
+    await page.screenshot({ path: `${SHOTS}/${id}-sim.png` });
+    await panel.locator('.sim-panel__btn[title="Reset"]').first().click().catch(() => undefined);
+    await wait(page, 600);
 }
 
 let projectsShell: any = null;
@@ -376,7 +464,7 @@ try {
         check(`${entry.id}: the metamodels are the file's`, JSON.stringify(info.metamodels) === JSON.stringify(exp.metamodels), info.metamodels);
         const counts = Object.fromEntries(info.models.map((m: any) => [m.name, m.objects]));
         check(`${entry.id}: the models and their objects are the file's`, JSON.stringify(counts) === JSON.stringify(exp.models), { clone: counts, file: exp.models });
-        if (entry.tier === 'template') {
+        if (VIEWPOINTS[entry.id]) {
             check(`${entry.id}: its viewpoints, the first active on open`, JSON.stringify(info.viewpoints) === JSON.stringify(VIEWPOINTS[entry.id])
                 && info.active === VIEWPOINTS[entry.id][0] && info.root === VIEWPOINTS[entry.id][0], { viewpoints: info.viewpoints, active: info.active, root: info.root });
         } else meas(`${entry.id}: viewpoints`, { viewpoints: info.viewpoints, active: info.active, root: info.root });
@@ -392,13 +480,14 @@ try {
             await fit(page);
             const d = await page.evaluate(MEASURE(m.id)) as any;
             meas(`${entry.id} ${m.name}`, d && { nodes: d.nodes.map((n: any) => `${n.cls}:${n.form}:${n.text}`), edges: d.edges.map((e: any) => `${d.names[e.src] ?? e.src}>${d.names[e.tgt] ?? e.tgt}${e.clear ? ' (clear)' : ''}`), labels: d.labels, rows: d.rows, containmentArcs: d.containmentArcs });
-            if (entry.tier === 'template' && d) criteria(entry.id, m.name, d);
+            if (VIEWPOINTS[entry.id] && d) criteria(entry.id, m.name, d);
             // What a problem dot says: the registry's problems of that vertex (or its object), with their violations.
             for (const n of (d?.nodes ?? []).filter((x: any) => x.problem)) {
                 meas(`${entry.id} ${m.name}: problems of ${n.text}`, await page.evaluate(String.raw`(async () => { const r = await import('/src/components/editor-v2/problems/registry.ts');
                   return [${JSON.stringify(n.vid)}, ${JSON.stringify(n.obj)}].flatMap((k) => r.getNodeProblemsSnapshot(k)).map((p) => ({ title: p.title, kind: p.kind, conformance: p.conformance })); })()`));
             }
             await page.screenshot({ path: `${SHOTS}/${entry.id}${info.models.length > 1 ? '-' + m.name : ''}.png` });
+            if (SIM[entry.id]?.model === m.name) await simulate(page, entry.id, m.id, SIM[entry.id].moves);
         }
 
         await page.evaluate(SAVE);
