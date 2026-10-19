@@ -67,3 +67,48 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: fallito — rejected at the chat's visual check, superseded by R-LIB-9 (P-2026-10-18-2300)
 **Notes**: Out of scope: the clone probe. Code commit 9 files (>5). Gates: typecheck 0, build 0, check:scripts 0, typecheck:scripts 0, gallery.test 42 (bench: old graph.jjodel, 3 red), build ALL GREEN, clone probe 76/76. Statechart prefill from signals, State=node, Transition=transition, fallback unused. Active viewpoint via activateViewpoint (project.activeViewpoint + root). Gap: Graph Generic draws Edge objects as compartment rows, not arcs. Details: report §«Gallery viewpoints S1b».
 **Prompt document name**: 2026-10-18 21:50
+
+## 2026-10-18 — feat: gallery templates and examples, versioned, deep link, hand-written viewpoints (P-2026-10-18-2300)
+**Prompt**: R-LIB-9: record and revert S1b; per-id version folders, catalog v2 with tier and versions, two-section Templates page, #/templates/<id>@<n>; one hand-written IR viewpoint per template metamodel, active on open, checked by the clone probe; examples packaged unchanged
+**Files touched**: `739dc4ca8` S1b record; `7672cd683` revert; `b08ce9444` + `81c5bc7b3` docs/library/catalog.json; `8602e2c4f` public/library/{catalog.json,gallery/**}, scripts/library/{build-gallery.ts,gallery/**}, src/library/{galleryRef.ts,__tests__/gallery.test.ts}, pages/Templates.{tsx,scss}, App.tsx, the probe; `23fe96d80` build-gallery, gallery/graph sources, 5 packages, test, Templates.tsx, probe. Closure: report section, assets, this inbox, prompt Status
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-18 21:50 (`claude_2026-10-18_2150_prompt_library_gallery_viewpoints.md`: derived viewpoints rejected at the visual check)
+**Causa**: (f)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso 2026-10-19 16:41)
+**Notes**: Out of scope: src/library/galleryRef.ts (new, pure). Round 1 (`d3e02370e`, `ba7eb0f33`): corner-hit visibility check (bench: the 5 cut vertices), layouts <= 520 px, bullseye final, arcs apart, card id line; probe 132/132. Round 2 (`86ff4e69c`, `4a3c1db49`): JRR Tolkien, no-badge check (bench: fails on the old name), library probe 27/27. Gates 0, gallery.test 49. Handle gap: ticket. Report §«Gallery templates and examples».
+**Prompt document name**: 2026-10-18 23:00
+
+## 2026-10-18 — ticket: edges end about 5 px off the node border in every diagram
+**Ticket**: React Flow ends an edge at the outer edge of its handle, and the handles are 8 px `.mm-anchor` boxes centred on the node border, so every arc, in every syntax (default and IR), starts and ends 4–5 px off its node's ink (measured 5 px on every arc of the five gallery templates). An editor lane: end edges on the border (DynamicHandles.tsx / UnifiedEdge.tsx). Not touched in the gallery lane.
+**Priority**: medium
+**Found in**: P-2026-10-18-2300
+**Detail**: docs/discovery/discovery_2026-10-18_notation_library.md §«Gallery templates and examples», Correction round 1, item 3c
+
+## 2026-10-19 — feat: hand-written viewpoints for the two gallery examples (P-2026-10-19-0300)
+**Prompt**: R-LIB-10: one hand-written IR viewpoint per example, active on open, Turnstile statechart on DemoESM and Petri net on DemoPetri; layout by the build; code generation and simulation unchanged; rebuild of version 1 (unpublished)
+**Files touched**: `126e5972f` docs/library/catalog.json; `18ce5cdf1` frontend/scripts/library/build-gallery.ts, frontend/public/library/{catalog.json,gallery/turnstile/1.jjodel,gallery/petri-producer-consumer/1.jjodel}, frontend/src/library/__tests__/gallery.test.ts, frontend/scripts/probe/library-gallery-clone.ts. Closure: report section, assets, this inbox, prompt Status
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-18 23:00 (`claude_2026-10-18_2300_prompt_library_gallery_templates_examples.md`: examples packaged on abstract syntax)
+**Causa**: (f)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso 2026-10-19 16:41)
+**Notes**: Examples opened from the stored record with their own ids, not imported: the $ID table of the generated code then matches byte for byte (bench: the importing build failed it). Codegen equal on 12 / 13+13 templates. Clone probe 62/62 on the examples, all seven 176/176. Its open item (stale tokens during a Petri run, an emptied place's initial dot beside the run's «0») was closed by P-2026-10-19-0930 (`simActive`). Report §«Example viewpoints».
+**Prompt document name**: 2026-10-19 03:00
+
+## 2026-10-19 — feat: IR predicate simActive, the Petri example's tokens hidden during a run (P-2026-10-19-0930)
+**Prompt**: add `{ op: 'simActive' }`, true while a run is active on the element's model, on the 'mark' channel, both backends, offered in the conditional editor as `sim active`, validateIR; tests, round trip, compiler bench; the Petri Place view draws its tokens under `not simActive`, petri-producer-consumer@1 rebuilt (unpublished)
+**Files touched**: `50ab1d74c` viewpoint/ir/{irTypes,irReadCtx,irReadCtxLproxy,irCompile,irValidate}.ts, ir/__tests__/irSimActive.test.ts, ui/ConditionalEditor/conditional.ts (+test), ui/PredicateBuilder/{predicateDefaults.ts,PredicateBuilder.tsx} (+test); `15fac4bfa` docs/library/catalog.json; `e1bb5db65` scripts/library/build-gallery.ts, public/library/{catalog.json,gallery/petri-producer-consumer/1.jjodel}, scripts/probe/library-gallery-clone.ts. Closure: report section, two screenshots, this inbox, prompt Status
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 03:00 (`claude_2026-10-19_0300_prompt_library_example_viewpoints.md`: an emptied place kept its initial dot beside the run's 0)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no — 15 files, all in DOVE (above five, RC-11): the 11 of `50ab1d74c`, the catalog, build-gallery, the package, the probe
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso 2026-10-19 16:41)
+**Notes**: Channel 'mark': simReset and simClear already bump it. Model by `father` walk in the draw backend, run by getSimRun. Bench 5/5 compiler, 4/4 backends. Probe bench on the old package: 1 FAIL, ready alone; rebuilt: 40/40, all seven 178/178. `marked` is not in the builder's list (R-MK-9 M2 never landed), so simActive is offered alone, no «Reads state» group. Commit 1 subject shortened to 72. Report §«IR predicate for a running simulation».
+**Prompt document name**: 2026-10-19 09:30

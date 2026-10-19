@@ -336,3 +336,411 @@ Tree `~/jjodel-w-gallery`, branch `library-gallery`, on `cc0b9af61`. Executor Cl
 
 ### Decisions awaiting Alfonso
 None of the RC-26 list. Observation 1 (Graph edges as arcs) is a design choice for a later slice: a role notation on Graph, or a Generic that draws reference-holding classes as arcs.
+
+## Gallery templates and examples (P-2026-10-18-2300)
+
+R-LIB-9 on the branch: S1b recorded (`739dc4ca8`) and reverted (`7672cd683`); two tiers, versions, deep link; one
+hand-written IR viewpoint per template metamodel. Commits: catalog v2 `b08ce9444`, structure `8602e2c4f`, catalog
+sha256 `81c5bc7b3`, viewpoints `23fe96d80`. Screenshots in `assets/library-gallery/` (uncommitted, RC-17).
+
+### Structure (`8602e2c4f`)
+
+- `public/library/gallery/<id>/1.jjodel` for `library`, `families-persons`, `state-machine`, `graph`, `shapes`
+  (templates) and `turnstile`, `petri-producer-consumer` (examples, byte copies of `public/examples/codegen/`, which
+  stay). Sources in `scripts/library/gallery/<id>/`; the examples' `source` names the codegen file and its build script.
+- Catalog `version: 2`: `tier`, `version`, `versions[{n, file, published, sha256, notes}]`; `package` is gone from the
+  gallery entries (the version's `file` replaces it).
+- `src/library/galleryRef.ts` (new, pure): `parseGalleryRef`, `resolveGalleryRef`, `galleryRefOf`, `currentVersion`.
+  Route `#/templates/:ref`; `_clonedFrom` is `<id>@<n>` (written by the page, `projects.ts` unchanged).
+- build-gallery refuses an existing version file unless `GAL_REWRITE=<id>@<n>`.
+
+### Template viewpoints (`23fe96d80`)
+
+Written in build-gallery as the probes write theirs, then `activateViewpoint` on the first. Measured by the clone probe
+from the DOM, 112/112 on port 3105 (1440×900, light):
+
+| Template | Viewpoint(s) | Measured |
+|---|---|---|
+| graph | Graph | 4 circles A–D, Graph not drawn, 6 open-arrow arcs A>B B>C C>D D>A A>C A>D, 0 rows, 0 containment arcs |
+| library | Library | 3 Book (rounded), 1 Magazine (dashed rect), 2 Writer (ellipse), 2 Member (stadium); 3 `author` + 2 `borrowed by` arcs |
+| state-machine | StateMachine | 6 States; Idle and Warmup filled dots, Off double circle; Running a frame holding Warmup, Steady; 3 arcs, labels `power`, `power [temp > 60]` |
+| families-persons | Families (active), Persons | frames March (4) and Sailor (5) by `lastName`, Members by `firstName`; Male rect ×5, Female stadium ×4 by `fullName` |
+| shapes | Shapes | frame `Sketch` holding sun, wheel (circles) and house (72×72 rect) |
+
+Every vertex is inside the canvas and clear of the minimap after the fit, for all five.
+
+- `State.kind` with `eq` on `$kind.value` against the literal name works on the imported model (the slot holds the
+  literal, R-FRM-3; the comparison is `String(l) === String(r)`).
+- An object-as-edge does not fan out over a multi-valued target (`irEdgeViews.ts:306-323`). Graph fallback applied:
+  `Edge.target` single-valued in the gallery's `Graph.ecore`, the two-target edge split in two. The fixture is untouched.
+- No edge view hides a reference edge: `State.outgoing` and the four `Member.family*` opposites are drawn clear.
+- The fit (`fitView`, maxZoom 1) does not avoid the minimap. The build places the vertices with the drag's write
+  (`syncPositionToJjom`) in short layouts (≤ 330 px tall), each fitted before the export.
+
+### Examples, observed (not edited)
+
+- Both carry only `Default`: they open on abstract syntax, and the card reads `0 viewpoints`.
+- turnstile (`turnstile.png`): State, Event and Transition objects as boxes with reference arcs, the layout taller than
+  the canvas at 100 %, and `tp : Transition` under the minimap.
+- petri-producer-consumer (`…-demoNet.png`, `…-producerConsumer.png`): Arcs drawn as boxes between Places and
+  Transitions, a layout wider than the canvas, and `deliver` under the minimap.
+- As examples of "a whole language" they show no notation yet. A viewpoint lane would be their version 2.
+
+### Template details, observed
+
+- Off's double border (width 4, `double`) renders as two thin rings at 32 px.
+- Warmup's outside label touches Running's bottom edge.
+- `fault` has no trigger, so its arc has no label, as specified.
+- Broken keeps its validation dot (deliberate).
+
+### Decisions taken (unattended)
+
+Each is ratified as recommended, unattended.
+
+1. The ids as the chat proposed them.
+2. `src/library/galleryRef.ts` added outside the DOVE list, so the ref parser runs in the bench (§5).
+3. Families and Persons: two viewpoints, `Families` active on open. The project has one active viewpoint (the root
+   `viewpoint`), so the probe reaches `Persons` through the picker.
+4. The Graph fallback.
+5. Layout by placement in the build. The build context is 1440×900, with a fit before the export.
+6. `package` removed from the gallery entries; `GalleryEntry.package` stays optional.
+7. Version 1 of the templates rebuilt in step 2 rather than bumped. It never left the branch.
+8. The catalog sha update is its own docs commit (P13), so there are five commits instead of four.
+9. The probe gained `CLONE_ONLY`.
+10. A deep link to a non-current version opens its dialog, but only the current version has a card.
+
+### Decisions awaiting Alfonso
+
+None of the RC-26 list.
+
+### Correction round 1
+
+Commits `d3e02370e` (catalog sha256) and `ba7eb0f33`. Version 1 of library, families-persons, state-machine and graph
+was rebuilt; it is still unpublished. shapes is unchanged. Clone probe 132/132 on 3105; gallery.test 49; typecheck,
+build and check:scripts exit 0.
+
+1. **Cut nodes.** The old check measured the React Flow pane, which runs on under the properties panel. The new check
+   needs two things. The element under each corner of a vertex, inset 2 px, must be that vertex. Its box must lie
+   inside the visible canvas (it ends at x = 1083 at 1440×900, found along the pane's middle row) and clear of the
+   minimap.
+   - **Bench on the previous packages:** it fails graph C (corners `1010`), library «Literary Review» (`1010`) and
+     Persons David (`1010`), Dylan (`0000`) and Kelly (`1010`). Those are the vertices the chat saw cut.
+   - **Cause:** the fit centres on the whole pane, not on the visible canvas. At 1440×900 a layout stays visible
+     only when it is at most ~560 px wide. Every layout is now at most 520 × 410.
+   - **Persons:** males then females, in rows of three.
+   - **Families:** the two frames stacked.
+2. **library.**
+   - Members and the magazine sit above the books and the writers below. The `borrowed by` arcs go up and the
+     `author` arcs go down, both straight. No label overlaps another label or a vertex (checked).
+   - The orange dot on J. R. R. Tolkien is a Conformance warning, `invalid_name_format`: «Object "J. R. R. Tolkien"
+     can only contain letters, digits, spaces, apostrophes, or the $ _ symbols». The dots in the name trip it.
+     Renaming the writer in the sample (e.g. «J R R Tolkien») would remove it. Not done: not asked.
+3. **state-machine.**
+   - **a. Final state:** now a 28 px UML bullseye, a ring around the marker registry's `dot-large`, label below.
+   - **b. Warmup:** its `kind` in the sample is `initial` (`<substates name="Warmup" kind="initial"/>`), so the
+     filled dot is right. Frame padding is now 24. The label renders above the dot and clears the bottom edge by
+     more than 8 px (checked).
+   - **c. Arcs leaving Running:** both leave Running itself. `stop` and `fault` have `source="s_running"`, and the
+     probe's source is Running's frame. The gap is not specific to them: every arc in every template ends 4–5 px off
+     its node. React Flow ends an edge at the outer edge of its handle, and the handle is an 8 px `.mm-anchor`
+     centred on the border. Closing the gap is an editor change, so it is asked, not done. The probe records the gap
+     per arc and fails only beyond 6 px.
+4. **graph.** The Edge view uses `curve: 'arc'` (R-VP-22). Single arcs are straight, and the A>D / D>A pair is bowed
+   apart, which is the parallel pair the screenshot showed. The model has no C>A. Pairs between the same two vertices
+   are checked to be at least 16 px apart.
+5. **Templates page.** Each card has the title, then `<id>@<n>` on its own line, mono, nowrap with an ellipsis. All
+   seven cards are checked for one line each, nothing cut.
+
+**Open item, not a defect of this lane.** The two examples have no viewpoint of their own and open on abstract syntax,
+so they do not yet meet R-LIB-9's example tier. Their viewpoints come in a separate lane from the chat.
+
+### Correction round 2
+
+Commits `86ff4e69c` (catalog sha256) and `4a3c1db49`. A template opens with no conformance warning.
+
+- The library writer «J. R. R. Tolkien» is renamed «JRR Tolkien» in `scripts/library/gallery/library/sample-Library.xmi`.
+  Its layout key in PLACES and the probe's expected arc are renamed with it. library@1 was rebuilt with
+  `GAL_REWRITE=library@1`; it is still unpublished.
+- **New probe check:** a template draws no problem badge (`.node-problem-dot`). The one exception is state-machine's
+  Broken, its deliberate error.
+  - **Bench:** on the previous library@1 the check fails on «J. R. R. Tolkien: node-problem-dot--warning |
+    Conformance».
+  - **After the rebuild:** `CLONE_ONLY=library` passes 27/27, with no badge.
+  - **The other templates:** this round did not rerun them. In round 1's full run they had no problem dot beyond
+    Broken.
+- gallery.test 49; typecheck, build, check:scripts and typecheck:scripts exit 0. library.png was retaken.
+- **3c:** the Recommended answer was adopted. The handle gap is untouched; a ticket is filed in
+  `docs/log-inbox/notation-library.md`.
+
+**Templates page layout:** not part of Alfonso's visual OK of 2026-10-19 16:41; a redesign from the design handoff (`docs/design/claude_2026-10-19_design_handoff_templates_notations_file_new.md`, trunk) follows in other lanes.
+
+## Example viewpoints (P-2026-10-19-0300)
+
+R-LIB-10: the two examples get their hand-written viewpoints before `library-gallery` is merged. Version 1 of both is
+still unpublished, so it is rebuilt (`GAL_REWRITE=<id>@1`), not superseded.
+
+### The metamodels and the models, as found
+
+**turnstile, DemoESM** (one model, `demoESM`, 10 objects):
+
+- `State`: `entry : Action [0..*]` (an attribute, a primitive type), `transitions : Transition [0..*]` (a composition).
+- `Initial` extends State, `Terminal` extends State; neither adds a feature.
+- `Transition`: `guard : Expression [0..1]`, `effect : Action [0..*]`, `nextState : State [0..1]`, `event : Event [0..1]`.
+- `Event`: `name : EString`. No enum. No class has a `name` attribute but Event: a state's name is the object's own.
+- Objects: `locked : Initial` (transitions tc, tp, ts), `unlocked : State` (tu), `off : Terminal`; events coin, push,
+  stop; tc locked→locked on coin, effect `model.[coins] := model.[coins] + 1`; tp locked→unlocked on push, guard
+  `model.[paid]`, effect `model.[coins] := 0`; tu unlocked→locked on push; ts locked→off on stop. No state has an entry
+  action. The transitions live in their state's `transitions`; the states and the events in the model.
+
+**petri-producer-consumer, DemoPetri** (two models):
+
+- `PNode` (abstract); `Place` extends it, `tokens : EInt`; `Transition` extends it, `guard : Expression`.
+- `Arc`: `weight : EInt`, `src : PNode`, `tgt : PNode`; `InhibitorArc` extends Arc. No container class: every object
+  sits in the model, so there is no net to hide.
+- `demoNet` (13): places p1 (2 tokens), p2, p3, lock (1); t1, t2 (guard `p3.[tokens] < 1`), t3; arcs a1 p1→t1,
+  a2 t1→p2 (weight 2), a3 p2→t2 (weight 2), a4 t2→p3, a5 lock→t3; inhibitor i1 lock→t2.
+- `producerConsumer` (19): places ready (1), produced, buffer, idle (1), busy; produce, deliver (guard
+  `buffer.[tokens] < 2`), take, consume; ten arcs, none weighted, no inhibitor.
+
+### What was built
+
+`build-gallery.ts` writes the two viewpoints with the IR, as the templates' are (the same `BUILD_VIEWPOINT`), makes
+each the active one, places the layout (PLACES, by object name: the label lookup now falls back to the object's own
+name) and downloads the project.
+
+- **Turnstile statechart**, 6 views.
+  - `State`: rounded 120 × 48, name centred. An `entry` compartment draws `entry / <action>` at 11 px as a second line,
+    visible only when `$entry.value` exists.
+  - `Initial`: the same, plus `entry: 'dot'`, the filled dot with a short arrow onto its left border. This is the
+    Recommended mark (R-VP-22), not colour.
+  - `Terminal`: the bullseye of the state-machine template, 28 px, name below.
+  - `Event`: not drawn (`visible: false`).
+  - `Transition`: an arc from `container` (the owning state: `transitions` is a composition) to `$nextState.value`,
+    `curve: 'arc'`. Labelled by a template `[event, ' / ', effect]`, where the event is one hop away
+    (`$event.value.$name.value`). A priority-1 view, when the guard exists, adds ` [guard]`: a template drops the
+    literal before an empty value, but not the `]` after one.
+  - No reference edge is left to draw clear. Transition is an object-as-edge and Event is hidden, so their edges go
+    with them (measured: 4 arcs, none clear).
+- **Petri net**, 5 views; both models use it.
+  - `Place`: circle 44, name outside below. Marking: `dot` / `dots-2..4` for 1–4 tokens, the number centred for more.
+  - `Transition`: `form: 'bar'` 10 × 40, black, no `barThickness`, so it stays upright and is never turned. Name below,
+    guard above, italic 11 px, only when set. Above, not beside: the arcs leave the bar's sides.
+  - `Arc`: `$src.value` → `$tgt.value`, open arrow, `curve: 'arc'`. A priority-1 view labels `$weight.value` when it is
+    above 1.
+  - `InhibitorArc`: the same, ending in `hollowCircle`.
+- **Layouts.**
+  - Turnstile: unlocked right of locked, off below it.
+  - demoNet: the flow left to right, the lock below right.
+  - producerConsumer: two diamonds, places left and right, bars top and bottom; deliver and take on top with the
+    buffer between them. A first layout, with the bars left and right, put deliver's guard on two arcs; a second, with
+    deliver at the bottom, put it on the two arcs meeting at its top. Both were rejected on the screenshot.
+
+**How an example is opened.** The codegen example is stored as the browser stores a saved project (`Offline.import`:
+its record in `localStorage.projects`) and opened. It is not imported with `importFromText`, because that renews every
+id, and the generated code names the elements by id (the `$ID` table). The first build imported it, and the
+byte-for-byte test failed on that table alone, which is the bench of that test.
+
+**How the files now differ from `public/examples/codegen/`.** Those two files are untouched, and their README still
+points at them. Each gallery copy keeps every id of its codegen example and adds:
+
+- one `DViewPoint` and its 6 (turnstile) or 5 (Petri) `DViewElement`s;
+- `layoutByViewpoint` on the drawn vertices (3; 16);
+- the project's `viewpoints`, `activeViewpoint`, `viewpointsNumber`, `lastModified`, `version`, `clonedCounter`;
+- the fields the version fixer writes on Default when the file is opened (`defaultVSize`, `snap`, the edge offsets and
+  sizes, `version`).
+
+Nothing else changes: no class, object, value, template or scenario.
+
+### Checks
+
+- **Gates.** typecheck, build and `check:scripts` exit 0. `gallery.test` passes 58: 49 before, one removed, four
+  viewpoint tests for the examples, six example tests. With the codegen example tests, 84/84.
+  - `gallery.test` (per example) now checks:
+    - one non-Default viewpoint, named as above, with its view kinds;
+    - active on open (record, project and root);
+    - Default kept beside it;
+    - the sha256 equal to the catalog's;
+    - the stored scenarios kept.
+  - The old test «packages each example unchanged, byte for byte» is removed: the example is no longer a copy.
+- **Code generation.** It is compared with the templates read from each file:
+  - turnstile: 12 templates on demoESM;
+  - Petri: 13 templates on each of demoNet and producerConsumer.
+  - The template list and the text generated by `main` and by `engine` (the templates that take no argument) are
+    equal, byte for byte, to the codegen example's, errors included (none). The test is in `gallery.test`.
+- **Clone probe** (port 3098, 1440×900, light), `CLONE_ONLY=turnstile,petri-producer-consumer`: 62 PASS, 0 FAIL. Per
+  model:
+  - vertices, forms, sizes, arcs, labels;
+  - 0 rows, 0 containment arcs;
+  - every vertex visible after fit (the corner check, clear of the minimap), and the initial mark inside the canvas;
+  - no label over a label or a node;
+  - arcs leaving their source (0–1 px);
+  - no badge;
+  - the inhibitor's end a hollow circle, every other end an open arrow.
+  - Screenshots: `turnstile.png`, `petri-producer-consumer-demoNet.png`, `petri-producer-consumer-producerConsumer.png`.
+- **Simulation**, in the model tab's panel:
+  - Turnstile: Reset, coin, coin, push ends in `unlocked`, highlighted, its pill 1 (`turnstile-sim.png`).
+  - producerConsumer: Reset and three steps; the third asked a choice and took `produce`. It ends with produced,
+    buffer and idle marked (`petri-producer-consumer-sim.png`).
+- **Full probe**, all seven entries, once after the rebuild: 176 PASS, 0 FAIL, ALL GREEN (the templates still green).
+
+### The marking during a run
+
+The simulator draws its own marking on a place:
+
+- on a hand-written view, a corner pill with the run's count, 0 included (`SimNodeRunState`, `ObjectNode.tsx:937`);
+- on a derived view, an inside dot, chosen only when the view carries `generated`.
+
+It never reads the `tokens` attribute. The IR cannot tell that a run is showing the model. `marked` is `tokens !== 0`
+in the run (`netStep.isMarked`), and no other predicate reads the run.
+
+The Place view therefore hides its drawn marking where the run marks the place (`not marked`). Measured after Reset
+and three steps:
+
+- produced, buffer and idle show only the run's pill;
+- `ready`, which the run emptied, still shows its initial dot beside the pill «0» (on `petri-producer-consumer-sim.png`).
+
+Removing the drawn marking from a place the run has emptied needs an editor change. See the decisions below.
+
+### Decisions taken (unattended)
+
+1. The turnstile run is coin, coin, push, not the prompt's coin, push. `paid` is `coins >= 2` (the README), so one
+   coin and push is a discard and the run stays in locked (measured: «push: discarded, tp guard false»).
+2. The examples are opened from the stored record with their own ids, not imported (see above), so that the generated
+   text is identical byte for byte.
+3. The drawn marking is hidden under `not marked`, the best the IR allows today.
+4. A transition's guard sits above the bar and its name below, not beside the bar.
+5. No `decisions.md` row is written: the file is outside this lane's DOVE.
+
+### Decisions awaiting Alfonso
+
+1. **The drawn marking beside the run's.** The view does not hide a place the run has emptied (`ready` above), and
+   closing that needs an editor or IR change, which is outside this lane. Recommended: a lane of its own adds an IR
+   predicate true while a run shows the element's model (additive, of the `marked` family). The Place view then hides
+   its drawn marking under it, and petri-producer-consumer@1 is rebuilt while it is still unpublished.
+
+## IR predicate for a running simulation (P-2026-10-19-0930)
+
+Closes the decision the previous section left awaiting Alfonso (option 1, «ok con la prima», 2026-10-19 09:20). The IR gets
+`{ op: 'simActive' }`, true on an element while a simulation run is active on the model it belongs to. The Petri
+example's Place view draws its tokens under `not simActive`. Commits `50ab1d74c` (IR), `15fac4bfa` (catalog sha256),
+`e1bb5db65` (gallery and probe).
+
+### Discovery
+
+- **How the marking reaches the IR.** `makeReadCtx` (`irReadCtxLproxy.ts:65`) builds the draw backend with the run-state's
+  `isSimActive` injected as `isMarked`. Despite its name, `isSimActive` answers «the run marks this object»
+  (`simRunState.ts:212`). The lproxy backend delegates `isMarked` and `getPresentation` to draw.
+  `irReadCtx.ts` imports nothing, by contract (R-MK-4).
+- **Where the run state lives.** `simRunState.ts` keeps one run per model in `runs`, keyed by the DModel id
+  (`collectModelObjectIds`, `simBridge.ts:140`, compares the `father` walk's DModel to it). `getSimRun(modelId)`
+  (`:241`) says whether a model has a run. The panel starts a run with `simReset(modelid, …)` (`SimulationPanel.tsx:642`)
+  and ends it with `simClear` (Stop `:621`, `:632`, `:484`; unmount `:438`).
+- **The channel.** A run's start and stop already move the `'mark'` version:
+  - `simReset` bumps always (`simRunState.ts:285`);
+  - `simClear` bumps when a run existed (`:502`).
+
+  So `simActive` declares `'mark'`, not a channel of its own. The consumers gate on `channelsInUse.has('mark')`:
+  `irResolve.ts:89` and `:172`, `useIRContainment.ts:136`, `useIRFormView.ts:104`. A view that reads `simActive` also
+  re-resolves at every step, as a `marked` view does.
+- **Backends.** Two `ReadCtx`, switched by `IR_READ_BACKEND = 'lproxy'`: draw (`makeDrawReadCtx`) and lproxy, which
+  delegates every non-slot read to draw. Fifteen production call sites build a bare draw context (instance table,
+  draw adapters, Jodie). They inject neither the marking nor the run, so both read false there.
+- **Where `Predicate.op` is enumerated.**
+  - the union, `irTypes.ts:47`;
+  - `compilePredicate`, `irCompile.ts:219`;
+  - `VALID_PREDICATE_OPS`, `irValidate.ts:121`, a `Record` over the union, so the typecheck forces the entry;
+  - `formatNode`, `conditional.ts:170`;
+  - `PREDICATE_KIND_OPTIONS` and `forPredicateKind` (`predicateDefaults.ts`);
+  - the body switch of `PredicateBuilder.tsx`, whose `default` is pinned to the comparators.
+
+  There is no serializer: the IR is JSON on `view.ir`. `node.[marked]` (`pathExpr.ts`) is a presentation attribute,
+  not this operator. The IR spec (`docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md`) names `marked` and is not
+  updated here, because it is outside DOVE.
+- **The name.** `simActive` is free as an operator (grep). The run-state function `isSimActive` means the marking, as
+  above. It is not renamed (rule 2), and the new `ReadCtx` member is called `isRunActive` so the two do not mix.
+- **The authoring surface, as found.** `marked` is not in the predicate builder's list: the slice that would add it
+  (R-MK-9, M2) never landed, and the builder's `default` branch still says so. «Reads state» is a grouping of the
+  simulator's I/O board editor (`SimBoardEditor.tsx:180`, device bindings), not of the conditional editor, whose list
+  is flat. See decision 4.
+
+### What was built
+
+- `irTypes.ts`: `{ op: 'simActive' }`, no `path` in v1.
+- `irReadCtx.ts`:
+  - `ReadCtx.isRunActive?(elementId)`, optional (rule 11);
+  - `makeDrawReadCtx` takes a fourth parameter, `hasRun(modelId)`, default false;
+  - the element's model is found by walking `father` up to the DModel, bounded at 40 like `simBridge`'s walk.
+    It is true on the model itself, its objects, nested objects and slots, and false on metamodel elements and orphans.
+- `irReadCtxLproxy.ts`: `hasSimRun = id => getSimRun(id) !== undefined` is injected on both branches of
+  `makeReadCtx`, and lproxy delegates `isRunActive` to draw.
+- `irCompile.ts`: the branch declares `'mark'` and returns `ctx.isRunActive?.(id) === true`. That is total: a context
+  without the reader reads false.
+- `irValidate.ts`: `simActive: true`.
+- `conditional.ts`: `sim active`.
+- `predicateDefaults.ts` and `PredicateBuilder.tsx`: offered as «Sim active (run in progress)» after «Is of type…»,
+  seeded as `{ op: 'simActive' }`, with no controls.
+- `build-gallery.ts`: `NOT_MARKED` becomes `NOT_SIM_ACTIVE` (`not simActive`), used by the four marker rules and the
+  «more than four» label.
+- `library-gallery-clone.ts`, for the Petri example:
+  - before Reset, the initial tokens and no pill;
+  - after Reset and three steps, no drawn tokens and a pill on every place, ready included;
+  - after Stop, the initial tokens back and no pill;
+  - places are matched by object name, because a vertex's text runs on into the pill (`ready0`).
+
+### Checks
+
+- **Gates.**
+  - Typecheck exit 0, build exit 0, `check:scripts` exit 0.
+  - IR, viewpoint, UI and sim suites: 106 files, 2793 tests green. `irSimActive.test.ts` adds 16.
+  - Gallery and codegen suites: 20 files, 404 tests green.
+- **Code generation.** `gallery.test` compares the templates and the text of `main` and `engine` for both examples
+  with the codegen examples', byte for byte, the same reference 0300 measured. The structural diff below leaves every
+  class, object and value of the package untouched.
+- **Mutation bench**, in place, restored with `cmp`:
+  - compiler branch, 5/5 killed: always false (8 tests failed), always true (11), no channel (4), reads `isMarked`
+    (8), drops `=== true` (1);
+  - backends, 4/4 killed: lproxy without `isRunActive` (2), lproxy without the run check (2), a walk of one level (8),
+    a walk that stops at the first object (7).
+- **The package.** Decompressed and diffed against `18ce5cdf1`, ids normalised:
+  - the Place view's IR differs only in its 5 `marked` → `simActive`;
+  - the rest is the per-build ids of the viewpoint, its views and their points, and timestamps, as in 0300;
+  - every layout is equal value for value.
+
+  sha256 `79baa798…` → `9cffa7bd…`, in both catalogs.
+- **Probe bench.** The new probe ran on the pre-change package: 39 PASS, 1 FAIL, on `ready` alone (`ready0:dots:0`, its
+  dot beside the run's 0). The fix by name came after that run. It changes only how the places are named, not the
+  failing clause.
+- **Clone probe**, port 3096, `CLONE_ONLY=petri-producer-consumer`: 40 PASS, 0 FAIL.
+  - Mid-run: `ready::0`, `produced::1`, `buffer::1`, `idle::1`, `busy::0`.
+  - After Stop: `ready:dots`, `idle:dots`, no pill.
+  - Screenshots: `petri-producer-consumer-sim.png` (retaken), `petri-producer-consumer-stopped.png`.
+- **Full probe**, all seven entries: 178 PASS, 0 FAIL, ALL GREEN. That is 176 before, plus the two new checks of the
+  Petri run. The screenshots it rewrote, other than the two above, were restored from a copy taken before this lane's
+  probes, so 0300's closure assets are as 0300 left them.
+
+### Decisions taken (unattended)
+
+1. The operator keeps the prompt's name, `simActive`. The `ReadCtx` member is `isRunActive`, beside the run-state's
+   `isSimActive` (the marking), which is not renamed.
+2. It uses the `'mark'` channel: Reset and Stop already bump it (evidence above). As a result, such a view also
+   re-resolves at each step.
+3. The element's model is found by the `father` walk in the draw backend, and the run is asked by model id
+   (`getSimRun`). `simRunState.ts` is unchanged.
+4. The authoring surface. `simActive` is offered in the predicate builder's flat list, and its display text sits next
+   to `marked`'s. No «Reads state» group is added, because that group exists only in the I/O board editor. `marked`
+   stays out of the list: its M2 slice is outside this lane.
+5. The subject of commit 1 says «an element's model», not «the element's model»: the prompt's subject is 73
+   characters, and the hook caps it at 72.
+6. In `build-gallery.ts`, `NOT_MARKED` is renamed `NOT_SIM_ACTIVE`. It is a constant local to the script, and its value
+   is the change.
+7. For the Petri example only, the probe ends its run with Stop and the `-stopped.png` screenshot. The turnstile run
+   ends with Reset, as before.
+8. Commit 1 touches 11 files and the lane 15, all in DOVE. There was no pause (rule 19), because the lane runs
+   unattended on a declared list.
+9. No Layer Impact Report. `viewpoint/ir/` is in §3.1's table, but none of this is in §3.2's trigger (RC-15 (2)),
+   and nothing writes the D-layer.
+10. No `decisions.md` row and no update to the IR spec: both are outside DOVE.
+
+### Decisions awaiting Alfonso
+
+None from the RC-26 list.
