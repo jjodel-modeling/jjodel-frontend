@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-2330
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: fast (one probe file, no app code), unattended (RC-21)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane uml-fixture · probe b2d299f1a, assets a74520920, notation §7 cb6a8bc4c, log 3cc526e5e · probe exit 0, DOM checks pass, 5 edges per viewpoint · visual check: measured only (fixture, not product UI)
 Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5
 Depends: none
 Corregge: P-2026-10-20-2005, whose session (9b6292f7) passed the 250k context ceiling (AM-8) before any probe run; nothing was committed
