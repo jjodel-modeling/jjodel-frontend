@@ -1,0 +1,170 @@
+/**
+ * bindingReader — what the bindings say about the M1 objects of a model (R-OI-2, R-OI-7, R-OI-8; discovery
+ * 2026-10-20 §3.1 to §3.4, slice S1).
+ *
+ * Functions over `OntoReadView`, a small read interface a later adapter implements over the store; nothing here
+ * imports the store, the joiner or React, and nothing writes. Ids in a binding are M2 ids, ids in the view are M1
+ * ids; the view maps one to the other through `metaclassOf` and `ownerOf`.
+ *
+ * - `recordsFor`: every binding that applies to an instance. The instance's metaclass must conform to the owner of the
+ *   type reference, and when the binding has a feature container the metaclass of the instance's classifier must
+ *   conform to that container's owner (R-OI-8: the links record and the objects record share the type reference, the
+ *   classifier's metaclass tells them apart; an enumeration selects none). Conformance is the view's `conformsTo`:
+ *   equal, or a descendant at any depth, so a subclass of the owner (an ActiveClass) qualifies.
+ * - `recordFor`: the single most specific of those: the one whose feature container owner conforms to every other
+ *   candidate's (a record with no feature container is the least specific). `null` when there is no candidate or no
+ *   unique most specific one, as when a metaclass inherits from the owners of two records; `recordsFor` shows that.
+ * - `instantiableClassifiers`: the M1 objects whose metaclass conforms to the owner of the feature container, abstract
+ *   ones left out. A binding with no feature container cannot say which objects classify (the view does not carry the
+ *   type of a reference), so it gives none.
+ * - `featureClosure`: the features of a classifier, its own first and then the inherited ones, level by level over the
+ *   generalization. A feature is listed once. A cycle is reported as data (the ids around it, the first repeated at
+ *   the end) and not followed.
+ * - `slotDiff`: for an instance, the features of its classifier's closure that have no slot, and the slots whose
+ *   defining feature is not in the closure. Nothing is judged when the binding has no slot roles or the instance has no
+ *   classifier.
+ */
+
+import type { OntoBinding } from './bindingCodec';
+
+/** The reads the functions below need; every id is a string, an unknown one reads as empty or `undefined`. */
+export interface OntoReadView {
+    /** The M2 class id of the M1 object `objectId`. */
+    metaclassOf(objectId: string): string | undefined;
+    /** The M1 ids held by the reference `referenceId` of the object `objectId`, in order. */
+    referenceTargets(objectId: string, referenceId: string): string[];
+    /** The value of the attribute `attributeId` of the object `objectId`. */
+    attributeValue(objectId: string, attributeId: string): unknown;
+    /** The M2 class id that owns the M2 feature `featureId`. */
+    ownerOf(featureId: string): string | undefined;
+    /** True when the M2 class `metaclassId` is `superId` or has it as an ancestor, at any depth, over every `extends`. */
+    conformsTo(metaclassId: string, superId: string): boolean;
+}
+
+export interface FeatureClosure {
+    /** Feature ids, own first, then inherited level by level; each once. */
+    features: string[];
+    /** Each cycle as the classifier ids around it, the first one repeated at the end. */
+    cycles: string[][];
+}
+
+export interface OrphanSlot {
+    slot: string;
+    /** The slot's defining feature, `null` when it has none. */
+    feature: string | null;
+}
+
+export interface SlotDiff {
+    /** Features of the closure with no slot, in closure order. */
+    missing: string[];
+    orphans: OrphanSlot[];
+    cycles: string[][];
+}
+
+const classifierOf = (view: OntoReadView, binding: OntoBinding, instanceId: string): string | undefined =>
+    view.referenceTargets(instanceId, binding.typeReference)[0];
+
+/** Every binding of `bindings` that applies to `instanceId`, in the given order; empty when none does. */
+export function recordsFor(view: OntoReadView, bindings: readonly OntoBinding[], instanceId: string): OntoBinding[] {
+    const instanceMeta = view.metaclassOf(instanceId);
+    if (instanceMeta === undefined) return [];
+    return bindings.filter(binding => {
+        const typeOwner = view.ownerOf(binding.typeReference);
+        if (typeOwner === undefined || !view.conformsTo(instanceMeta, typeOwner)) return false;
+        if (binding.featureContainer === undefined) return true;
+        const containerOwner = view.ownerOf(binding.featureContainer);
+        const classifier = classifierOf(view, binding, instanceId);
+        const classifierMeta = classifier !== undefined ? view.metaclassOf(classifier) : undefined;
+        return containerOwner !== undefined && classifierMeta !== undefined && view.conformsTo(classifierMeta, containerOwner);
+    });
+}
+
+/** The most specific binding that applies to `instanceId`, `null` when none does or none is the unique most specific. */
+export function recordFor(view: OntoReadView, bindings: readonly OntoBinding[], instanceId: string): OntoBinding | null {
+    const candidates = recordsFor(view, bindings, instanceId);
+    const ownerOfContainer = (b: OntoBinding): string | undefined =>
+        b.featureContainer !== undefined ? view.ownerOf(b.featureContainer) : undefined;
+    const atLeastAsSpecific = (c: OntoBinding, other: OntoBinding): boolean => {
+        const otherOwner = ownerOfContainer(other);
+        if (otherOwner === undefined) return true;
+        const owner = ownerOfContainer(c);
+        return owner !== undefined && view.conformsTo(owner, otherOwner);
+    };
+    const best = candidates.filter(c => candidates.every(other => other === c || atLeastAsSpecific(c, other)));
+    return best.length === 1 ? best[0] : null;
+}
+
+const isTrue = (v: unknown): boolean => v === true || v === 'true';
+
+/** The M1 ids of `modelObjectIds` that `binding` lets an instance be made of: not abstract, in the given order. */
+export function instantiableClassifiers(view: OntoReadView, binding: OntoBinding, modelObjectIds: readonly string[]): string[] {
+    if (binding.featureContainer === undefined) return [];
+    const owner = view.ownerOf(binding.featureContainer);
+    if (owner === undefined) return [];
+    const abstractFlag = binding.abstractFlag;
+    return modelObjectIds.filter(id => {
+        const meta = view.metaclassOf(id);
+        if (meta === undefined || !view.conformsTo(meta, owner)) return false;
+        return !(abstractFlag !== undefined && isTrue(view.attributeValue(id, abstractFlag)));
+    });
+}
+
+/** The classifiers `classifierId` directly specializes, through the binding's generalization; none without one. */
+function generalsOf(view: OntoReadView, binding: OntoBinding, classifierId: string): string[] {
+    if (!binding.generalization) return [];
+    const { direct, via, general } = binding.generalization as { direct?: string; via?: string; general?: string };
+    if (direct !== undefined) return view.referenceTargets(classifierId, direct);
+    if (via === undefined || general === undefined) return [];
+    return view.referenceTargets(classifierId, via).flatMap(link => view.referenceTargets(link, general));
+}
+
+/** The feature closure of `classifierId`: see the module comment. */
+export function featureClosure(view: OntoReadView, binding: OntoBinding, classifierId: string): FeatureClosure {
+    const features: string[] = [];
+    const seenFeatures = new Set<string>();
+    const cycles: string[][] = [];
+    const visited = new Set<string>([classifierId]);
+    let level: { id: string; path: string[] }[] = [{ id: classifierId, path: [classifierId] }];
+    while (level.length > 0) {
+        const next: { id: string; path: string[] }[] = [];
+        for (const { id, path } of level) {
+            if (binding.featureContainer !== undefined) {
+                for (const f of view.referenceTargets(id, binding.featureContainer)) {
+                    if (seenFeatures.has(f)) continue;
+                    seenFeatures.add(f);
+                    features.push(f);
+                }
+            }
+            for (const general of generalsOf(view, binding, id)) {
+                const at = path.indexOf(general);
+                if (at >= 0) {
+                    cycles.push([...path.slice(at), general]);
+                    continue;
+                }
+                if (visited.has(general)) continue;
+                visited.add(general);
+                next.push({ id: general, path: [...path, general] });
+            }
+        }
+        level = next;
+    }
+    return { features, cycles };
+}
+
+/** The missing features and the orphan slots of `instanceId`: see the module comment. */
+export function slotDiff(view: OntoReadView, binding: OntoBinding, instanceId: string): SlotDiff {
+    const none: SlotDiff = { missing: [], orphans: [], cycles: [] };
+    if (binding.slotContainer === undefined || binding.definingFeature === undefined) return none;
+    const classifier = classifierOf(view, binding, instanceId);
+    if (classifier === undefined) return none;
+    const { features, cycles } = featureClosure(view, binding, classifier);
+    const inClosure = new Set(features);
+    const covered = new Set<string>();
+    const orphans: OrphanSlot[] = [];
+    for (const slot of view.referenceTargets(instanceId, binding.slotContainer)) {
+        const feature = view.referenceTargets(slot, binding.definingFeature)[0] ?? null;
+        if (feature !== null && inClosure.has(feature)) covered.add(feature);
+        else orphans.push({ slot, feature });
+    }
+    return { missing: features.filter(f => !covered.has(f)), orphans, cycles };
+}
