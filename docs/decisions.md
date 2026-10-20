@@ -5960,6 +5960,34 @@ unreached, «Role» in the UI all stand). Decided by Juri in chat `C-2026-10-14-
 `P-2026-10-14-1101`: «non voglio gli endpoint a livello di dashboard. deve stare in un menu dedicato», then the top
 bar among three options.
 
+R-CFG-6..9 below: @tmaog's test of the two merged lanes on beta (#187 issuecomment of 2026-10-18, #186 of
+2026-10-17), read by the chat on 2026-10-20; R-CFG-7..9 decided by Juri in chat `C-2026-10-14-1020` the same day.
+
+**R-CFG-6** (2026-10-20, provisional, unattended (RC-25), evidence: read, verified: none, reversible: trunk) —
+**The element on screen shows its direct components extended, at any depth.** Whatever element is the body of the
+Configurator's panel (the selected row or the one reached by «open»), each element its components hold, references
+and compositions alike, renders as a card with its Identity and Attributes editable and its own Components
+simplified (name and summary); a multi-valued component lists its elements as rows that expand into that card. The
+level below stays simplified. Supersedes, for the Configurator, the depth rule of 12c (`rendersInline` at depth 0
+only) and the compact card of a reference at the extended level. Source: @tmaog's «[ISSUE] Correct behavior» on
+#187 and his mockup (screen 3).
+
+**R-CFG-7** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**Every single-valued reference of the Configurator shows a remove (×), required ones included.** It unlinks and
+never deletes (R-REF-3 semantics); a required slot left empty is reported by the validation. Juri chose it over the
+recommendation (optional ones only). The Data Manager keeps R-REF-3.
+
+**R-CFG-8** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**The Endpoints window gets «Cancel» beside «Done», and arrows beside its tabs.** «Cancel» closes without saving,
+as Escape and the close button do today: the changes stay in the project, unsaved. Arrows ‹ › move to the previous
+and next tab, beside the click and the keyboard.
+
+**R-CFG-9** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**The stand-alone link keeps `&profile=<id>`.** @tmaog asked whether it should read `&role=`; Juri keeps the
+parameter (R-CFG-4 stands). Also adopted from the same test, no decision needed: the Save button changes colour
+while the project has unsaved changes, and the Configurator remembers the instance selected for each type when the
+user switches type and comes back.
+
 ## R-GEN: model-to-text code generation, the pilot (ratifications 2026-10-10)
 
 Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
