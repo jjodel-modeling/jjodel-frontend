@@ -6151,6 +6151,11 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   `VITE_CODEGEN` build flag); the generator ships in 3.2.** Amends R-GEN-1's «no separate 3.1 tag». Evidence:
   `docs/discovery/discovery_2026-10-11_release_3_1_scope.md` (D1, D3, D4), the lanes that carried it out
   (P-2026-10-12-0010 staging absorbed, P-2026-10-12-0012 the build flag) and the version commit (P-2026-10-12-0115).
+- **R-REL-2** (2026-10-20, ratified by Alfonso 2026-10-20 23:25 «Il bit vector entra nella release», evidence: read, verified: none, reversible: trunk).
+  **Bit-vector values (front `hw-notation`, R-BV) ship in 3.2.** The slices that are merged into
+  `alfonso-frontend-jjtl` before the freeze of 2026-10-23 enter the release; the chat that owns the front merges them
+  without a further go-ahead. Amends the earlier plan that S3 (code generation) waits for 3.2: S3 lands only if it is
+  merged before the freeze with the codegen gates green, otherwise it ships in 3.2.x.
 
 ## R-LIB — the notation library and the project gallery (decisions 2026-10-18)
 
@@ -6418,6 +6423,12 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   **One semantics, three back ends.** The evaluator, the `.smv` export (`unsigned word[N]`, `signed word[N]` of nuXmv)
   and the generated Verilog (explicit widths on every operand) compute the same results by construction; an operator
   table run through an external Verilog simulator is the oracle that proves it.
+- **R-BV-7** (2026-10-20, ratified by Alfonso 2026-10-20 23:25 «ok la tua raccomandazione», evidence: read, verified: discovery P-2026-10-20-2055, reversible: trunk).
+  **A stored bit-vector attribute reads its width per element from the model.** In the simulator a `word` domain names
+  the feature that holds the width (`{kind: 'word', widthFeature, signed}`); the width is resolved from the frozen model
+  at Reset and is constant for the run, so two registers of the same metaclass may have different widths and the `.smv`
+  export still declares one static `word[N]` per element. Fixed widths per metaclass are not required. Discovery §5.1,
+  open question 1.
 
 ## Superate
 
