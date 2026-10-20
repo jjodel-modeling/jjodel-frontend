@@ -242,14 +242,15 @@ describe('suppressChannelEdges (R-GV-4)', () => {
         edge('e5', 'VL', 'Vt', 'composition', 'childLaneSet'),
     ];
     const hiddenIds = (out: Edge[]) => out.filter(e => e.hidden).map(e => e.id);
-    it('hides the edge of the declared single-hop channel from the container to a child it draws, only that one', () => {
-        expect(hiddenIds(suppressChannelEdges(edges, model({ edges: 'hide', channelFeature: 'flowNodeRefs' })))).toEqual(['e1']);
+    // L encloses t: with hide, R-GV-18 also hides the other edges between them (e2, e4 reverse, e5); e3 to u stays.
+    it('hides the edge of the declared single-hop channel from the container to a child it draws, and the others between the two', () => {
+        expect(hiddenIds(suppressChannelEdges(edges, model({ edges: 'hide', channelFeature: 'flowNodeRefs' })))).toEqual(['e1', 'e2', 'e4', 'e5']);
     });
     it('hides the composition edges to its children for the default channel', () => {
-        expect(hiddenIds(suppressChannelEdges(edges, model({ edges: 'hide' })))).toEqual(['e5']);
+        expect(hiddenIds(suppressChannelEdges(edges, model({ edges: 'hide' })))).toEqual(['e1', 'e2', 'e4', 'e5']);
     });
-    it('hides nothing for a multi-hop channel, with show, or with the key absent (same array)', () => {
-        expect(suppressChannelEdges(edges, model({ edges: 'hide', channelFeature: null }))).toBe(edges);
+    it('hides only the enclosed edges for a multi-hop channel, nothing with show or with the key absent (same array)', () => {
+        expect(hiddenIds(suppressChannelEdges(edges, model({ edges: 'hide', channelFeature: null })))).toEqual(['e1', 'e2', 'e4', 'e5']);
         expect(suppressChannelEdges(edges, model({ edges: 'show', channelFeature: 'flowNodeRefs' }))).toBe(edges);
         expect(suppressChannelEdges(edges, model({ channelFeature: 'flowNodeRefs' }))).toBe(edges);
     });
@@ -257,11 +258,11 @@ describe('suppressChannelEdges (R-GV-4)', () => {
         const held = model({ edges: 'hide', channelFeature: 'flowNodeRefs', channelValues: new Set(['t', 'u']) });
         const outHeld = suppressChannelEdges(edges, held);
         expect(outHeld.map(e => e.id)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5']);
-        expect(hiddenIds(outHeld)).toEqual(['e1']);
+        expect(hiddenIds(outHeld)).toEqual(['e1', 'e2', 'e4', 'e5']);
         const stale = model({ edges: 'hide', channelFeature: 'flowNodeRefs', channelValues: new Set(['t']) });
         const outStale = suppressChannelEdges(edges, stale);
         expect(outStale.map(e => e.id)).toEqual(['e1', 'e2', 'e4', 'e5']);
-        expect(hiddenIds(outStale)).toEqual(['e1']);
+        expect(hiddenIds(outStale)).toEqual(['e1', 'e2', 'e4', 'e5']);
         // Already hidden (a collapsed hull, a row) and stale: dropped all the same.
         const hiddenStale = [{ ...edges[2], hidden: true }];
         expect(suppressChannelEdges(hiddenStale, stale)).toEqual([]);
@@ -269,7 +270,7 @@ describe('suppressChannelEdges (R-GV-4)', () => {
         const twice = [edge('old', 'VL', 'Vt', 'instanceRef', 'flowNodeRefs'), ...edges];
         const outTwice = suppressChannelEdges(twice, held);
         expect(outTwice.map(e => e.id)).toEqual(['e1', 'e2', 'e3', 'e4', 'e5']);
-        expect(hiddenIds(outTwice)).toEqual(['e1']);
+        expect(hiddenIds(outTwice)).toEqual(['e1', 'e2', 'e4', 'e5']);
         // Without a declared single-hop channel nothing is dropped, duplicates included.
         expect(suppressChannelEdges(twice, model({ edges: 'hide', channelFeature: 'flowNodeRefs' })).map(e => e.id))
             .toEqual(['old', 'e1', 'e2', 'e3', 'e4', 'e5']);
@@ -292,6 +293,52 @@ describe('suppressChannelEdges (R-GV-4)', () => {
     it('never removes an edge the slot still holds: the array keeps its length and ids', () => {
         const out = suppressChannelEdges(edges, model({ edges: 'hide', channelFeature: 'flowNodeRefs' }));
         expect(out.map(e => e.id)).toEqual(edges.map(e => e.id));
+    });
+
+    // R-GV-18, the BPMN shape of «Jjodel harness»: pool H (channel `roles`) holds lane R (channel `performs`), R holds
+    // the nodes a and b; x is drawn outside H.
+    const bpmn = (pool: any, lane: any, parentOf: Array<[string, string]> = [['R', 'H'], ['a', 'R'], ['b', 'R']]): ContainmentModel => ({
+        containers: new Map<string, any>([
+            ['H', { objectId: 'H', vertexId: 'VH', collapsible: false, channelFeature: 'roles', ...pool }],
+            ['R', { objectId: 'R', vertexId: 'VR', collapsible: false, channelFeature: 'performs', ...lane }],
+        ]),
+        childrenOf: new Map([['H', ['R']], ['R', ['a', 'b']]]), parentOf: new Map(parentOf),
+        objByVertex: new Map([['VH', 'H'], ['VR', 'R'], ['Va', 'a'], ['Vb', 'b'], ['Vx', 'x']]),
+        vertexByObj: new Map([['H', 'VH'], ['R', 'VR'], ['a', 'Va'], ['b', 'Vb'], ['x', 'Vx']]),
+    });
+    const flows = [
+        edge('roles', 'VH', 'VR', 'instanceRef', 'roles'),
+        edge('performs', 'VR', 'Va', 'instanceRef', 'performs'),
+        edge('performer', 'Va', 'VR', 'instanceRef', 'performer'),
+        edge('activities', 'VH', 'Va', 'composition', 'activities'),
+        edge('next', 'Va', 'Vb', 'instanceRef', 'next'),
+        edge('out', 'Va', 'Vx', 'instanceRef', 'next'),
+        edge('poolOut', 'VH', 'Vx', 'composition', 'activities'),
+    ];
+    it('R-GV-18: hides the node-to-lane edge, against the channel, and the pool-to-node edge, a claim down, besides the channels', () => {
+        const out = suppressChannelEdges(flows, bpmn({ edges: 'hide' }, { edges: 'hide' }));
+        expect(hiddenIds(out)).toEqual(['roles', 'performs', 'performer', 'activities']);
+        expect(out.map(e => e.id)).toEqual(flows.map(e => e.id));
+    });
+    it('R-GV-18: keeps an edge between two nodes of one lane and an edge to an object outside the container', () => {
+        const out = suppressChannelEdges(flows, bpmn({ edges: 'hide' }, { edges: 'hide' }));
+        expect(out.filter(e => !e.hidden).map(e => e.id)).toEqual(['next', 'out', 'poolOut']);
+    });
+    it('R-GV-18: reads edges per container; with show or the key absent on both, returns edges itself', () => {
+        expect(hiddenIds(suppressChannelEdges(flows, bpmn({ edges: 'show' }, { edges: 'hide' })))).toEqual(['performs', 'performer']);
+        expect(hiddenIds(suppressChannelEdges(flows, bpmn({ edges: 'hide' }, { edges: 'show' })))).toEqual(['roles', 'activities']);
+        expect(suppressChannelEdges(flows, bpmn({ edges: 'show' }, { edges: 'show' }))).toBe(flows);
+        expect(suppressChannelEdges(flows, bpmn({}, {}))).toBe(flows);
+    });
+    it('R-GV-18: matches reference and composition edges only, and ends its walk on a malformed claim cycle', () => {
+        const m2 = edge('m2', 'Va', 'VR', 'reference', 'performer');
+        expect(suppressChannelEdges([m2], bpmn({ edges: 'hide' }, { edges: 'hide' }))).toEqual([m2]);
+        const cyclic = bpmn({ edges: 'hide' }, { edges: 'hide' }, [['R', 'a'], ['a', 'R']]);
+        expect(hiddenIds(suppressChannelEdges([flows[3], flows[4]], cyclic))).toEqual([]);
+    });
+    it('R-GV-18: hides a channel edge whose claim was refused (R-GV-2) when its target encloses its source', () => {
+        // R draws H: H's claim of R would close a cycle, so it is not set, and `roles` is not hidden as a channel.
+        expect(hiddenIds(suppressChannelEdges([flows[0]], bpmn({ edges: 'hide' }, { edges: 'hide' }, [['H', 'R']])))).toEqual(['roles']);
     });
 });
 
