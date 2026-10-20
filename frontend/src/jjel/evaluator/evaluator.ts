@@ -96,6 +96,19 @@ function withBitVectorDefects<T>(step: () => T): T {
     }
 }
 
+/**
+ * Register the two bit-vector constructors (R-BV-5), the only bit-vector
+ * globals, on `ctx`. The evaluator calls it on its own context; the simulator
+ * calls it on its base context, which takes no other global builtin, so that
+ * no model attribute is shadowed there (R-BV-8).
+ */
+export function registerBitVectorConstructors(ctx: EvaluationContext): void {
+    ctx.registerBuiltin('bits', createFunction(['w', 'v'], (args) =>
+        withBitVectorDefects(() => makeBitVector('bits', args))));
+    ctx.registerBuiltin('sbits', createFunction(['w', 'v'], (args) =>
+        withBitVectorDefects(() => makeBitVector('sbits', args))));
+}
+
 // ============================================
 // EVALUATOR CLASS
 // ============================================
@@ -151,10 +164,7 @@ export class JjelEvaluator {
         }));
 
         // Bit-vector constructors (R-BV-5): the only bit-vector globals.
-        this.context.registerBuiltin('bits', createFunction(['w', 'v'], (args) =>
-            withBitVectorDefects(() => makeBitVector('bits', args))));
-        this.context.registerBuiltin('sbits', createFunction(['w', 'v'], (args) =>
-            withBitVectorDefects(() => makeBitVector('sbits', args))));
+        registerBitVectorConstructors(this.context);
     }
 
     /**

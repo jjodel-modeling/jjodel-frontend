@@ -24,6 +24,7 @@
  */
 
 import type { GuardOutcome } from './guardEvaluator';
+import { isBitVector } from '../../jjel/evaluator/context';
 import type {
     ActionOracle, Candidate, CandidateSet, CompiledNet, DerivedOracle, Domain, Evaluation, GuardOracle, HaltReason,
     NetConfiguration, NetLabel, NetRunStatus, NetTransition, SimAssignment, SimState, SimStateAccess, SimValue,
@@ -223,14 +224,23 @@ export function admissible(cs: CandidateSet, selector: string | null): boolean {
     return selector === null ? cs.candidates.length === 0 : cs.candidates.some(c => c.transition === selector);
 }
 
-/** A value of a semantic attribute's domain; `null` (presentation) admits any. The compiler checks initial values with it. */
-export function inDomain(value: SimValue, domain: Domain | null): boolean {
+/**
+ * A value of a semantic attribute's domain; `null` (presentation) admits any. The compiler checks initial values with it.
+ * A `word` value is a vector of the element's `width` and of the domain's signedness: without a width, none (R-BV-7).
+ */
+export function inDomain(value: SimValue, domain: Domain | null, width?: number): boolean {
     if (domain === null) return true;
     switch (domain.kind) {
         case 'boolean': return typeof value === 'boolean';
         case 'range': return typeof value === 'number' && Number.isInteger(value) && value >= domain.min && value <= domain.max;
         case 'enum': return typeof value === 'string' && domain.literals.includes(value);
+        case 'word': return isBitVector(value) && value.width === width && value.signed === domain.signed;
     }
+}
+
+/** The width of the `word` attribute `attr` of `element`, resolved at Reset; `undefined` for any other attribute. */
+export function wordWidth(net: Pick<CompiledNet, 'widths'>, element: string, attr: string): number | undefined {
+    return net.widths?.get(element)?.get(attr);
 }
 
 function applyAll(
@@ -299,7 +309,7 @@ export function step(
             const key = `${a.element}\u0000${a.attr}`;
             if (written.has(key)) return halted({ kind: 'double-assignment', element: a.element, attr: a.attr });
             written.add(key);
-            if (decl.space === 'semantic' && !inDomain(a.value, decl.domain)) {
+            if (decl.space === 'semantic' && !inDomain(a.value, decl.domain, wordWidth(net, a.element, a.attr))) {
                 return halted({ kind: 'domain', element: a.element, attr: a.attr, value: a.value });
             }
             (decl.space === 'semantic' ? semantic : presentation).push(a);
@@ -320,7 +330,7 @@ export function step(
         for (const [element, values] of out.derived.attrs) {
             for (const [attr, value] of values) {
                 const decl = net.declared.get(element)?.get(attr);
-                if (decl && !inDomain(value, decl.domain)) return halted({ kind: 'domain', element, attr, value });
+                if (decl && !inDomain(value, decl.domain, wordWidth(net, element, attr))) return halted({ kind: 'domain', element, attr, value });
             }
         }
         state = { ...assigned, derived: out.derived };
