@@ -9,8 +9,6 @@ import { jjelEval } from '../index';
 import type { JjelValue } from '../evaluator';
 import { EvaluationContext, JjelEvaluationError, evaluate, toJjelValue, fromJjelValue } from '../evaluator';
 import { isBitVector } from '../evaluator/context';
-import type { MethodCallExpr } from '../types/ast';
-import { parseExpression } from '../parser';
 import { parseTemplate } from '../parser/parser';
 import { toVerilog } from '../evaluator/builtins/bitvectors';
 import golden from './fixtures/bv-golden.json';
@@ -33,15 +31,6 @@ function tpl(src: string, ctx?: Record<string, JjelValue>): JjelValue {
     return evaluate(parsed.expression!, ctx ? new EvaluationContext(ctx) : undefined);
 }
 
-/** Evaluate `expr` with the method `M` of its top-level call renamed. */
-function evWithMethod(src: string, method: string): JjelValue {
-    const parsed = parseExpression(src);
-    expect(parsed.errors).toEqual([]);
-    const call = parsed.expression as MethodCallExpr;
-    expect(call.type).toBe('MethodCall');
-    return evaluate({ ...call, method }, new EvaluationContext());
-}
-
 function defect(src: string, ctx?: Record<string, JjelValue>): string {
     try {
         ev(src, ctx);
@@ -56,7 +45,7 @@ function defect(src: string, ctx?: Record<string, JjelValue>): string {
 // GOLDEN SET
 // ============================================================
 
-interface GoldenRow { id: string; expr: string; method?: string; bv?: string; value?: JjelValue; source: string }
+interface GoldenRow { id: string; expr: string; bv?: string; value?: JjelValue; source: string }
 
 describe('golden set (bv-golden.json)', () => {
     const rows = (golden as unknown as { rows: GoldenRow[] }).rows;
@@ -67,7 +56,7 @@ describe('golden set (bv-golden.json)', () => {
     });
 
     test.each(rows.map(r => [r.id, r] as const))('%s', (_id, row) => {
-        const v = row.method ? evWithMethod(row.expr, row.method) : ev(row.expr);
+        const v = ev(row.expr);
         if (row.bv !== undefined) {
             expect(isBitVector(v)).toBe(true);
             expect(toVerilog(v as never)).toBe(row.bv);
@@ -347,10 +336,17 @@ describe('methods', () => {
         expect(defect('bits(8, 1).slise(1, 0)')).toMatch(/Did you mean 'slice'/);
     });
 
-    test("x.and(y), x.or(y), x.not() do not parse yet: and, or, not are keywords after '.'", () => {
-        expect(() => ev('bits(8, 1).and(bits(8, 1))')).toThrow(/parse error/);
-        expect(() => ev('bits(8, 1).not()')).toThrow(/parse error/);
+    test("x.and(y), x.or(y), x.not() parse: a keyword is a member name after '.'", () => {
+        expect(bv("bits(8, '0xcc').and(bits(8, '0xaa'))")).toBe("8'h88");
+        expect(bv("bits(8, '0xcc').or(bits(8, '0xaa'))")).toBe("8'hee");
+        expect(bv("bits(8, '0xcc').not()")).toBe("8'h33");
+        expect(bv("bits(8, '0xcc').not")).toBe("8'h33");
         expect(bv("bits(8, '0xcc').xor(bits(8, '0xff'))")).toBe("8'h33");
+    });
+
+    test('the keywords and, or, not stay boolean outside the member position', () => {
+        expect(ev("bits(8, 1) == bits(8, 1) and not (bits(8, 1) == bits(8, 2))")).toBe(true);
+        expect(defect('bits(8, 1) and bits(8, 1)')).toMatch(/^'and' needs booleans/);
     });
 
     test('a builtin shadows a bare context name; self.bits is unaffected', () => {

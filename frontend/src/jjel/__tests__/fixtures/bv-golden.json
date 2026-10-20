@@ -1,5 +1,5 @@
 {
-  "about": "Golden rows for JjEL bit-vectors (R-BV, slice S1). Expected values are hand-computed from the cited clause; the Verilator oracle of the case table is the later S-oracle step. 'bv' is the expected Verilog form of a vector result, 'value' a plain expected value. A row with 'method' replaces the method name 'M' of the top-level call, for the methods whose names are JjEL keywords and do not parse after '.'. Sections are of IEEE 1800-2017.",
+  "about": "Golden rows for JjEL bit-vectors (R-BV, slice S1). Expected values are hand-computed from the cited clause; the Verilator oracle of the case table is the later S-oracle step. 'bv' is the expected Verilog form of a vector result, 'value' a plain expected value. Sections are of IEEE 1800-2017.",
   "rows": [
     { "id": "add-wrap",        "expr": "bits(8, 255) + bits(8, 1)", "bv": "8'h00", "source": "11.4.3, 11.6.1: the sum is max(L(i), L(j)) = 8 bits wide, the carry is lost" },
     { "id": "add",             "expr": "bits(8, 100) + bits(8, 27)", "bv": "8'h7f", "source": "11.4.3" },
@@ -30,9 +30,9 @@
     { "id": "sext-positive",   "expr": "sbits(4, 3).sext(8)", "bv": "8'sh03", "source": "11.8.2: sign extension of a positive value" },
     { "id": "trunc",           "expr": "bits(16, '0x1234').trunc(8)", "bv": "8'h34", "source": "10.7: truncation keeps the least significant bits" },
     { "id": "xor",             "expr": "bits(8, '0xcc').xor(bits(8, '0xaa'))", "bv": "8'h66", "source": "11.4.8: 8'hcc ^ 8'haa" },
-    { "id": "and",             "expr": "bits(8, '0xcc').M(bits(8, '0xaa'))", "method": "and", "bv": "8'h88", "source": "11.4.8: 8'hcc & 8'haa" },
-    { "id": "or",              "expr": "bits(8, '0xcc').M(bits(8, '0xaa'))", "method": "or", "bv": "8'hee", "source": "11.4.8: 8'hcc | 8'haa" },
-    { "id": "not",             "expr": "bits(8, '0xcc').M()", "method": "not", "bv": "8'h33", "source": "11.4.8: ~8'hcc" },
+    { "id": "and",             "expr": "bits(8, '0xcc').and(bits(8, '0xaa'))", "bv": "8'h88", "source": "11.4.8: 8'hcc & 8'haa" },
+    { "id": "or",              "expr": "bits(8, '0xcc').or(bits(8, '0xaa'))", "bv": "8'hee", "source": "11.4.8: 8'hcc | 8'haa" },
+    { "id": "not",             "expr": "bits(8, '0xcc').not()", "bv": "8'h33", "source": "11.4.8: ~8'hcc" },
     { "id": "shl",             "expr": "bits(8, '0x81').shl(1)", "bv": "8'h02", "source": "11.4.10: 8'h81 << 1, vacated bits zero" },
     { "id": "shr",             "expr": "bits(8, '0x81').shr(1)", "bv": "8'h40", "source": "11.4.10: 8'h81 >> 1, vacated bits zero" },
     { "id": "ashr-signed",     "expr": "sbits(8, '0x80').ashr(1)", "bv": "8'shc0", "source": "11.4.10: >>> on a signed operand fills with the sign bit" },

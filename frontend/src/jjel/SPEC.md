@@ -167,8 +167,8 @@ unary          = 'not' unary
                | postfix
 
 postfix        = primary (
-                   '.' IDENT ('(' argList ')')?
-                 | '?.' IDENT ('(' argList ')')?
+                   '.' memberName ('(' argList ')')?
+                 | '?.' memberName ('(' argList ')')?
                  | '.[' IDENT ']'
                  | '[' expression ']'
                  )*
@@ -187,6 +187,8 @@ arrayLiteral   = '[' (expression (',' expression)*)? ']'
 
 objectLiteral  = '{' (objectEntry (',' objectEntry)*)? '}'
 objectEntry    = (IDENT | STRING) ':' expression
+
+memberName     = IDENT | keyword              -- any keyword but 'true', 'false', 'null'
 
 argList        = (expression (',' expression)*)?
 
@@ -552,7 +554,7 @@ A bit-vector is a fixed-width, two-state value: a width `w` from 1 to 1024, a si
 | `toNumber()` | the value as a number; a defect beyond ±(2^53-1) |
 | `toVerilog()` | the Verilog form as a string |
 
-Zero-argument methods also read without parentheses (`x.asSigned.toNumber`). Known limit: `and`, `or` and `not` are keywords, and the parser takes only an identifier after `.`, so `x.and(y)`, `x.or(y)` and `x.not()` do not parse yet; they are reachable once the parser accepts a keyword as a member name. `x[i]`, `with x do` and `.[x]` on a vector are not defined.
+Zero-argument methods also read without parentheses (`x.asSigned.toNumber`). `and`, `or` and `not` are keywords, and a keyword is a valid member name after `.` and `?.`, so `x.and(y)`, `x.or(y)` and `x.not()` parse as method calls; as operators the keywords stay boolean (`not x` is a defect). `x[i]`, `with x do` and `.[x]` on a vector are not defined.
 
 **Collections.** `distinct`, `distinctBy`, `groupBy`, `contains`, `indexOf` compare width, signedness and bits; `sortBy`, `min`, `max` order vectors under the pair rule; `join` and string interpolation print the Verilog form; `sum` and `avg` refuse vectors.
 
