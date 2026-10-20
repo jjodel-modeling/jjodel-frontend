@@ -196,9 +196,8 @@ export const DATE_METHODS: BuiltinMethod[] = [
 ];
 
 // ============================================
-// BIT-VECTOR METHODS (17 — implemented in evaluator, R-BV)
-// `and`, `or`, `not` are implemented too but left out: as JjEL keywords they
-// do not parse after '.', so offering them would be misleading.
+// BIT-VECTOR METHODS (20 — implemented in evaluator, R-BV)
+// `and`, `or`, `not` are JjEL keywords, valid as member names after '.'.
 // ============================================
 
 export const BITVECTOR_METHODS: BuiltinMethod[] = [
@@ -211,7 +210,10 @@ export const BITVECTOR_METHODS: BuiltinMethod[] = [
     { name: 'zext',       category: 'bitvector', signature: '(w: Integer) -> BitVector',      description: 'Zero-extend to w bits' },
     { name: 'sext',       category: 'bitvector', signature: '(w: Integer) -> BitVector',      description: 'Sign-extend to w bits' },
     { name: 'trunc',      category: 'bitvector', signature: '(w: Integer) -> BitVector',      description: 'Keep the low w bits' },
+    { name: 'and',        category: 'bitvector', signature: '(y: BitVector) -> BitVector',    description: 'Bitwise and' },
+    { name: 'or',         category: 'bitvector', signature: '(y: BitVector) -> BitVector',    description: 'Bitwise or' },
     { name: 'xor',        category: 'bitvector', signature: '(y: BitVector) -> BitVector',    description: 'Bitwise exclusive or' },
+    { name: 'not',        category: 'bitvector', signature: '() -> BitVector',                description: 'Bitwise complement' },
     { name: 'shl',        category: 'bitvector', signature: '(n: Integer) -> BitVector',      description: 'Shift left, zero fill' },
     { name: 'shr',        category: 'bitvector', signature: '(n: Integer) -> BitVector',      description: 'Logical shift right, zero fill' },
     { name: 'ashr',       category: 'bitvector', signature: '(n: Integer) -> BitVector',      description: 'Arithmetic shift right, copies the top bit' },

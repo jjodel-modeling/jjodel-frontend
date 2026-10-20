@@ -5,6 +5,7 @@ import { describe, it, test, expect } from 'vitest';
 
 import { parseExpression, parseExpressionStrict, parseAction } from '../parser';
 import { JjelExpression } from '../types';
+import { jjelEval } from '../index';
 
 function parse(src: string): JjelExpression {
     const result = parseExpression(src);
@@ -65,6 +66,42 @@ describe('Method calls', () => {
     test('no args', () => { expect(parse('a.toUpper()')).toMatchObject({ type: 'MethodCall', method: 'toUpper' }); });
     test('with args', () => { expect(parse('a.substring(1, 3)')).toMatchObject({ type: 'MethodCall', method: 'substring' }); });
     test('null-safe call', () => { expect(parse('a?.toUpper()')).toMatchObject({ type: 'NullSafeMethodCall' }); });
+});
+
+describe('a keyword is a member name after . and ?.', () => {
+    test('method call with a keyword name', () => {
+        expect(parse('x.and(y)')).toMatchObject({ type: 'MethodCall', method: 'and', args: [{ type: 'Identifier', name: 'y' }] });
+        expect(parse('x.or(y)')).toMatchObject({ type: 'MethodCall', method: 'or' });
+        expect(parse('x.not()')).toMatchObject({ type: 'MethodCall', method: 'not', args: [] });
+        expect(parse('x?.not()')).toMatchObject({ type: 'NullSafeMethodCall', method: 'not' });
+    });
+
+    test('member access with a keyword name', () => {
+        expect(parse('self.in')).toMatchObject({ type: 'MemberAccess', object: { type: 'Identifier', name: 'self' }, property: 'in' });
+        expect(parse('e.if')).toMatchObject({ type: 'MemberAccess', property: 'if' });
+        expect(parse('e?.do')).toMatchObject({ type: 'NullSafeMemberAccess', property: 'do' });
+        expect(parse('a.not.b')).toMatchObject({ type: 'MemberAccess', object: { type: 'MemberAccess', property: 'not' }, property: 'b' });
+        for (const kw of ['then', 'else', 'is', 'forall', 'exists', 'such', 'that', 'implies', 'with']) {
+            expect(parse(`a.${kw}`)).toMatchObject({ type: 'MemberAccess', property: kw });
+        }
+    });
+
+    test('a keyword keeps its meaning outside the member position', () => {
+        expect(parse('a and not b')).toMatchObject({ type: 'Binary', operator: 'and', right: { type: 'Unary', operator: 'not' } });
+        expect(parse('a.b or c.d')).toMatchObject({ type: 'Binary', operator: 'or' });
+        expect(parse('a.x and b')).toMatchObject({ type: 'Binary', operator: 'and', left: { type: 'MemberAccess', property: 'x' } });
+        expect(parse('if a.if then 1 else 2')).toMatchObject({ type: 'IfThenElse', condition: { type: 'MemberAccess', property: 'if' } });
+        expect(() => parse('a.')).toThrow("Expected property name after '.'");
+        expect(() => parse('a.(b)')).toThrow("Expected property name after '.'");
+        expect(() => parse('a.true')).toThrow("Expected property name after '.'");
+        expect(() => parse('a?.null')).toThrow("Expected property name after '?.'");
+    });
+
+    test('an object with a property named not evaluates through member access', () => {
+        expect(jjelEval('o.not', { o: { not: 7 } })).toBe(7);
+        expect(jjelEval('o.and + o.in', { o: { and: 1, in: 2 } })).toBe(3);
+        expect(jjelEval('o?.not', { o: null })).toBeNull();
+    });
 });
 
 describe('Arithmetic', () => {
