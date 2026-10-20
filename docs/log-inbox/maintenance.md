@@ -233,3 +233,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-20 19:55
 
 **Ticket** (deferred root cause, core, needs discussion): `LModelElement.fullname` walks the model in O(n) (≈ 14-18 ms a read on 407 objects) and `LValue.get_validTargets` reads it once per option, so opening «References» still costs ≈ 2.9 s for 4 slots on the Activity, and every other `validTargetsJSX` reader pays the same. Phase 1 of P-2026-10-20-1830 went out as two commits, not one, because bash-guard holds P13; `InfoReferenceSlots.tsx` was outside 1830's first scope and was added by the chat's ACK. Evidence: `docs/discovery/discovery_2026-10-20_large_model_click_profile.md` §4.3, §7.
+
+## 2026-10-20 — merge: perf-click-profile into alfonso-frontend-jjtl (P-2026-10-20-2020)
+**Prompt**: `claude_2026-10-20_2020_prompt_merge_perf-click-profile.md`, a direct merge by `lane-run merge --direct`, no session: `perf-click-profile` at `7299b9e6b` into `alfonso-frontend-jjtl`, merge base `9d74b12f7`, 5 commits on the branch side.
+**Files touched**: merge `bfab138ba`: 8 files from the branch side (`docs/discovery/discovery_2026-10-20_large_model_click_profile.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-10-20_1830_prompt_large_model_click_profile.md`, `docs/prompts/claude_2026-10-20_1955_prompt_info_refs_lazy_finish.md`, `frontend/scripts/probe/large-model-click-profile.ts`, `frontend/src/components/editors/Info.tsx`, `frontend/src/components/editors/InfoReferenceSlots.tsx`, `frontend/src/components/editors/__tests__/infoReferenceSlots.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bfab138ba` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9449 tests in 385 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Built-in browser, Jjodel harness, BPMN viewpoint after merge bfab138ba: selection click on Activity write the Phase 2 prompt 2.2 s of long tasks (was 1.6 + 17.4 s in the same browser), on write the ratification memo 3.0 s (was up to 58.7 s); References closed builds no lists; opened it shows 4 slots (performer, lanes, inputs, outputs), 7 selects with their targets, in 2.4 s
+**Notes**: Rollback tag `pre-perf-click-profile` on `06610a866` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-2020/result.json`.
+**Prompt document name**: 2026-10-20 20:20
