@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-1955
 Chat: C-2026-10-20-0839
 Front: maintenance
 Lane: full (continuation of a ceiling-stopped full lane, RC-51; not critical zone)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane perf-click-profile · e392e7c68
 Request: https://claude.ai/code/session_01EMpM7yBvFWpBXh3o1TJSRA
 Depends: P-2026-10-20-1830
 Corregge: —
