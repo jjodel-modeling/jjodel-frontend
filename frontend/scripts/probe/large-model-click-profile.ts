@@ -34,6 +34,16 @@
  *       CLICK_OPEN_REFS "1": after each click, open the «References» section of the Properties
  *                       panel and count the validTargets* calls that opening makes (the click's own
  *                       counts are the closed-section case) (P-2026-10-20-1955)
+ *       CLICK_ABLATE    comma list of in-page prototype ablations, active while recording:
+ *                         "validTargets"  validTargetsJSX / validTargetOptions return []
+ *                         "modelname"     LModel.name returns data.name without the $name scan
+ *       CLICK_STEPS     comma list of profiled interactions besides the clicks (P-2026-10-20-2305):
+ *                         "open"    the model tab opening plus the viewpoint activation
+ *                         "drag"    one 100 px drag of the first clicked node
+ *                         "type"    one character typed in the Properties name field
+ *                         "commit"  Enter in that field (the store write of the new name)
+ *                         "vp"      switching to the viewpoint CLICK_VP2 (default «Harness / Authority»)
+ *       CLICK_STACKS    "1": sample the callers of LModel.name (slows the run; counts only)
  */
 import { chromium, type Page, type CDPSession } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -50,6 +60,8 @@ const STRIP = new Set((process.env.CLICK_STRIP || '').split(',').filter(Boolean)
 const NODES = Number(process.env.CLICK_NODES || 2);
 const PROD = process.env.CLICK_PROD === '1';
 const INTERVAL = Number(process.env.CLICK_INTERVAL || 500);
+const STEPS = new Set((process.env.CLICK_STEPS || '').split(',').filter(Boolean));
+const VP2 = process.env.CLICK_VP2 || 'Harness / Authority';
 const SETTLE_MS = 3000;
 const LABEL = process.env.CLICK_LABEL
     || [PROD ? 'prod' : 'dev', TARGET, VP === '-' ? 'abstract' : VP.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, ''), ...STRIP].join('-');
@@ -277,6 +289,49 @@ await page.waitForTimeout(10000);
 let facts: any = await page.evaluate(FACTS);
 note('after open', facts);
 
+// Call counters on the L-layer paths the first profile named, and the ablations. Prototype
+// patches in the page; the source is untouched. Production reads the classes off window.
+// Installed before the canvas opens (they count only while recording), so the "open" step counts too.
+{
+    const inst = await page.evaluate(`(async () => {
+      const j = ${PROD ? 'window' : "await import('/src/joiner/index.ts')"};
+      const C = window.__perfclick.calls = {};
+      const stacks = ${JSON.stringify(process.env.CLICK_STACKS === '1')};
+      const wrap = (cls, name, label, ablate, sample) => {
+        const p = cls && cls.prototype; if (!p || typeof p[name] !== 'function') return label + ': missing';
+        const orig = p[name];
+        p[name] = function (...a) {
+          if (!window.__perfclick.recording) return orig.apply(this, a);
+          const e = C[label] || (C[label] = { n: 0, ms: 0, depth: 0, callers: {} });
+          e.n++; const t = performance.now(); e.depth++;
+          if (sample && stacks) {
+            // The first frames outside the probe's wrapper and the proxy plumbing name the caller.
+            const fr = String(new Error().stack).split('\\n').slice(2)
+              .filter(s => !/proxy\\.ts|<anonymous>|at Proxy\\.|at Object\\.get /.test(s)).slice(0, 3)
+              .map(s => s.trim().replace(/^at /, '').replace(/\\(?https?:\\/\\/[^/]+/, '').replace(/\\?[^:]*/, '')).join(' < ');
+            e.callers[fr] = (e.callers[fr] || 0) + 1;
+          }
+          try { return ablate ? ablate.apply(this, a) : orig.apply(this, a); } finally { e.depth--; if (e.depth === 0) e.ms += performance.now() - t; }
+        };
+        return label + ': ok';
+      };
+      const ab = new Set(${JSON.stringify((process.env.CLICK_ABLATE || '').split(',').filter(Boolean))});
+      const none = function () { return []; };
+      return [
+        wrap(j.LValue, 'get_validTargetsJSX', 'LValue.validTargetsJSX', ab.has('validTargets') ? none : null),
+        wrap(j.LValue, 'get_validTargetOptions', 'LValue.validTargetOptions', ab.has('validTargets') ? none : null),
+        wrap(j.LValue, 'get_validTargets', 'LValue.validTargets', null),
+        wrap(j.LModelElement, 'get_fullname', 'LModelElement.fullname', null),
+        wrap(j.LObject, 'get_name', 'LObject.name', null, true),
+        // LModel inherits get_name from LPointerTargetable (joiner/classes.ts), whose $name read is
+        // the O(n) _defaultGetterM1 scan; the ablation returns what that getter returns in the end.
+        wrap(j.LModel, 'get_name', 'LModel.name', ab.has('modelname') ? function (c) { return c.data.name || c.data.className; } : null, true),
+        'ablate=' + ([...ab].join(',') || 'none'),
+      ];
+    })()`);
+    note('instruments', inst);
+}
+
 // Strips run on the live store before the canvas tab opens (in-page only; the fixture is untouched).
 if (STRIP.size) {
     const stripped = await page.evaluate(`(async () => {
@@ -304,8 +359,74 @@ if (STRIP.size) {
     note('strip', stripped);
 }
 
+// ── Profiled interaction: reset the page instruments, profile, act, settle, collect ────────────
+const RESET = `(() => { const P = window.__perfclick; P.longtasks = []; P.dispatches = []; P.commits = []; P.names = {}; P.warns = 0; P.warnSamples = []; if (P.calls) for (const k of Object.keys(P.calls)) delete P.calls[k]; P.lastCommit = performance.now(); P.recording = true; })()`;
+const COLLECT = `(() => {
+      const P = window.__perfclick; P.recording = false;
+      const byType = {};
+      for (const d of P.dispatches) { const e = byType[d.type] || (byType[d.type] = { n: 0, ms: 0, top: 0 }); e.n++; if (d.depth === 1) { e.ms += d.ms; e.top++; } }
+      return {
+        longtasks: P.longtasks.map(l => Math.round(l.ms)), longtaskSum: Math.round(P.longtasks.reduce((s, l) => s + l.ms, 0)),
+        dispatches: P.dispatches.length, topDispatches: P.dispatches.filter(d => d.depth === 1).length,
+        dispatchMsTop: Math.round(P.dispatches.filter(d => d.depth === 1).reduce((s, d) => s + d.ms, 0)),
+        byType, slowest: P.dispatches.filter(d => d.depth === 1).sort((a, b) => b.ms - a.ms).slice(0, 8).map(d => ({ type: d.type, ms: Math.round(d.ms), inner: d.inner })),
+        commits: P.commits.length, commitFibers: P.commits.map(c => c.n), commitRenderMs: Math.round(P.commits.reduce((s, c) => s + c.ms, 0)),
+        topComponents: Object.entries(P.names).sort((a, b) => b[1][1] - a[1][1]).slice(0, 25).map(([k, [c, ms]]) => [k, c, Math.round(ms)]),
+        warns: P.warns, warnSamples: P.warnSamples, err: P.err,
+        selected: (window.store.getState()._lastSelected || {}).modelElement || null,
+        calls: P.calls ? Object.fromEntries(Object.entries(P.calls).map(([k, v]) => [k, { n: v.n, ms: Math.round(v.ms) }])) : null,
+        callers: P.calls ? Object.fromEntries(Object.entries(P.calls).filter(([, v]) => v.callers && Object.keys(v.callers).length)
+          .map(([k, v]) => [k, Object.entries(v.callers).sort((a, b) => b[1] - a[1]).slice(0, 12)])) : null,
+        sel: (() => {
+          const L = window.store.getState().idlookup, id = (window.store.getState()._lastSelected || {}).modelElement, d = L[id];
+          if (!d) return null;
+          const slots = (d.features || []).map(f => L[f]).filter(Boolean);
+          const refs = slots.filter(v => L[v.instanceof] && L[v.instanceof].className === 'DReference');
+          return { className: d.className, name: d.name, metaclass: L[d.instanceof] && L[d.instanceof].name, slots: slots.length, refSlots: refs.length,
+                   refTypes: refs.map(v => L[L[v.instanceof].type] && L[L[v.instanceof].type].name) };
+        })(),
+      };
+    })()`;
+result.steps = [];
+async function profiled(step: string, act: () => Promise<unknown>) {
+    await page.evaluate(RESET);
+    await cdp.send('Profiler.start');
+    const t0 = Date.now();
+    const acted = await act();
+    const actMs = Date.now() - t0;
+    const settledMs = await page.evaluate(settle(SETTLE_MS, 240000)) as number;
+    const wallMs = Date.now() - t0;
+    const { profile } = await cdp.send('Profiler.stop') as any;
+    const rec: any = await page.evaluate(COLLECT);
+    await loadChunkMaps(profile);
+    const cpu = analyse(profile);
+    const file = join(OUTDIR, `perfclick-${LABEL}-${step}.cpuprofile`);
+    writeFileSync(file, JSON.stringify(profile));
+    Object.assign(rec, { step, acted, actMs, settledMs: Math.round(settledMs), wallMs, profile: file, cpu });
+    note(`step ${step}`, { acted, wallMs, actMs, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, busyMs: cpu.busyMs, dispatches: rec.dispatches, byType: rec.byType, commits: rec.commits, commitFibers: rec.commitFibers.slice(0, 20), calls: rec.calls });
+    note(`step ${step} top components`, rec.topComponents.slice(0, 15));
+    if (rec.callers) note(`step ${step} callers`, rec.callers);
+    console.log(`TOP10 self time, ${step} (ms, function @ module:line)`);
+    for (const [f, ms] of cpu.fnSelfTop.slice(0, 10)) console.log(`  ${String(ms).padStart(9)}  ${f}`);
+    result.steps.push(rec);
+    writeFileSync(join(OUTDIR, `perfclick-${LABEL}.json`), JSON.stringify(result, null, 1));
+    return rec;
+}
+/** Activates a viewpoint by name: activateViewpoint in dev, its two writes by hand in production. */
+const activateVp = (name: string) => `(async () => {
+  const L = window.store.getState().idlookup;
+  const vp = ${JSON.stringify(name)} === '-' ? null : Object.values(L).find(d => d && d.className === 'DViewPoint' && d.name === ${JSON.stringify(name)});
+  if (${JSON.stringify(name)} !== '-' && !vp) return { error: 'no viewpoint named ' + ${JSON.stringify(name)} };
+  ${PROD ? `
+  const proj = Object.values(L).find(d => d && d.className === 'DProject');
+  window.SetFieldAction.new(proj.id, 'activeViewpoint', vp ? vp.id : null, '', true);
+  window.SetRootFieldAction.new('viewpoint', vp ? vp.id : null, '', true);` : `
+  (await import('/src/utils/lastViewpoint.ts')).activateViewpoint(vp ? vp.id : null);`}
+  return { vp: vp ? vp.name : null };
+})()`;
+
 // Open the target model's tab and activate the viewpoint.
-const opened = await page.evaluate(`(async () => {
+const OPEN_JS = `(async () => {
   const st = window.store.getState();
   const L = st.idlookup;
   const want = ${JSON.stringify(TARGET)};
@@ -331,7 +452,10 @@ const opened = await page.evaluate(`(async () => {
   else [...document.querySelectorAll('.dock-tab')].find(t => t.textContent.trim() === m.name).click();
   lv.activateViewpoint(vp ? vp.id : null);
   return { model: m.name, id: m.id, vp: vp ? vp.name : null, wasOpen: open };`}
-})()`) as any;
+})()`;
+const opened: any = STEPS.has('open')
+    ? (await profiled('open', () => page.evaluate(OPEN_JS))).acted
+    : await page.evaluate(OPEN_JS);
 note('opened', opened);
 check('target opened', !opened.error, JSON.stringify(opened));
 await page.waitForTimeout(8000);
@@ -339,36 +463,6 @@ const settled0 = await page.evaluate(settle(SETTLE_MS, 240000));
 facts = await page.evaluate(FACTS);
 note('before clicks', { settledMs: settled0, ...facts, viewpoints: facts.viewpoints.length });
 result.before = facts;
-
-// Call counters on the L-layer paths the first profile named, and the ablation. Prototype
-// patches in the page; the source is untouched. Production reads the classes off window.
-{
-    const inst = await page.evaluate(`(async () => {
-      const j = ${PROD ? 'window' : "await import('/src/joiner/index.ts')"};
-      const C = window.__perfclick.calls = {};
-      const wrap = (cls, name, label, ablate) => {
-        const p = cls && cls.prototype; if (!p || typeof p[name] !== 'function') return label + ': missing';
-        const orig = p[name];
-        p[name] = function (...a) {
-          if (!window.__perfclick.recording) return orig.apply(this, a);
-          const e = C[label] || (C[label] = { n: 0, ms: 0, depth: 0 });
-          e.n++; const t = performance.now(); e.depth++;
-          try { return ablate ? ablate.apply(this, a) : orig.apply(this, a); } finally { e.depth--; if (e.depth === 0) e.ms += performance.now() - t; }
-        };
-        return label + ': ok';
-      };
-      const ab = ${JSON.stringify(process.env.CLICK_ABLATE || '')};
-      return [
-        wrap(j.LValue, 'get_validTargetsJSX', 'LValue.validTargetsJSX', ab === 'validTargets' ? function () { return []; } : null),
-        wrap(j.LValue, 'get_validTargetOptions', 'LValue.validTargetOptions', ab === 'validTargets' ? function () { return []; } : null),
-        wrap(j.LValue, 'get_validTargets', 'LValue.validTargets', null),
-        wrap(j.LModelElement, 'get_fullname', 'LModelElement.fullname', null),
-        wrap(j.LObject, 'get_name', 'LObject.name', null),
-        'ablate=' + (ab || 'none'),
-      ];
-    })()`);
-    note('instruments', inst);
-}
 
 const paneSel = opened.id ? `[role="tabpanel"][aria-labelledby$="-tab-${opened.id}"]` : '';
 // Clickable = a point of the node's on-screen rect (5x5 grid, centre first) hit-tests to the node
@@ -417,7 +511,7 @@ for (let k = 0; k < Math.min(NODES, nodeIds.length); k++) {
                text: node ? node.textContent.trim().slice(0, 40) : null };
     })()`);
     note(`click ${k + 1} target`, { id, hit, at: [Math.round(px), Math.round(py)] });
-    await page.evaluate(`(() => { const P = window.__perfclick; P.longtasks = []; P.dispatches = []; P.commits = []; P.names = {}; P.warns = 0; P.warnSamples = []; if (P.calls) for (const k of Object.keys(P.calls)) delete P.calls[k]; P.lastCommit = performance.now(); P.recording = true; })()`);
+    await page.evaluate(RESET);
     await cdp.send('Profiler.start');
     const t0 = Date.now();
     await page.mouse.click(px, py);
@@ -425,30 +519,7 @@ for (let k = 0; k < Math.min(NODES, nodeIds.length); k++) {
     const settledMs = await page.evaluate(settle(SETTLE_MS, 240000)) as number;
     const wallMs = Date.now() - t0;
     const { profile } = await cdp.send('Profiler.stop') as any;
-    const rec: any = await page.evaluate(`(() => {
-      const P = window.__perfclick; P.recording = false;
-      const byType = {};
-      for (const d of P.dispatches) { const e = byType[d.type] || (byType[d.type] = { n: 0, ms: 0, top: 0 }); e.n++; if (d.depth === 1) { e.ms += d.ms; e.top++; } }
-      return {
-        longtasks: P.longtasks.map(l => Math.round(l.ms)), longtaskSum: Math.round(P.longtasks.reduce((s, l) => s + l.ms, 0)),
-        dispatches: P.dispatches.length, topDispatches: P.dispatches.filter(d => d.depth === 1).length,
-        dispatchMsTop: Math.round(P.dispatches.filter(d => d.depth === 1).reduce((s, d) => s + d.ms, 0)),
-        byType, slowest: P.dispatches.filter(d => d.depth === 1).sort((a, b) => b.ms - a.ms).slice(0, 8).map(d => ({ type: d.type, ms: Math.round(d.ms), inner: d.inner })),
-        commits: P.commits.length, commitFibers: P.commits.map(c => c.n), commitRenderMs: Math.round(P.commits.reduce((s, c) => s + c.ms, 0)),
-        topComponents: Object.entries(P.names).sort((a, b) => b[1][1] - a[1][1]).slice(0, 25).map(([k, [c, ms]]) => [k, c, Math.round(ms)]),
-        warns: P.warns, warnSamples: P.warnSamples, err: P.err,
-        selected: (window.store.getState()._lastSelected || {}).modelElement || null,
-        calls: P.calls ? Object.fromEntries(Object.entries(P.calls).map(([k, v]) => [k, { n: v.n, ms: Math.round(v.ms) }])) : null,
-        sel: (() => {
-          const L = window.store.getState().idlookup, id = (window.store.getState()._lastSelected || {}).modelElement, d = L[id];
-          if (!d) return null;
-          const slots = (d.features || []).map(f => L[f]).filter(Boolean);
-          const refs = slots.filter(v => L[v.instanceof] && L[v.instanceof].className === 'DReference');
-          return { className: d.className, name: d.name, metaclass: L[d.instanceof] && L[d.instanceof].name, slots: slots.length, refSlots: refs.length,
-                   refTypes: refs.map(v => L[L[v.instanceof].type] && L[L[v.instanceof].type].name) };
-        })(),
-      };
-    })()`);
+    const rec: any = await page.evaluate(COLLECT);
     await loadChunkMaps(profile);
     const cpu = analyse(profile);
     const file = join(OUTDIR, `perfclick-${LABEL}-click${k + 1}.cpuprofile`);
@@ -458,6 +529,7 @@ for (let k = 0; k < Math.min(NODES, nodeIds.length); k++) {
     note(`click ${k + 1} dispatch types`, rec.byType);
     note(`click ${k + 1} slowest dispatches`, rec.slowest);
     note(`click ${k + 1} top components`, rec.topComponents);
+    if (rec.callers) note(`click ${k + 1} callers`, rec.callers);
     console.log(`TOP30 self time, click ${k + 1} (ms, function @ module:line)`);
     for (const [f, ms] of cpu.fnSelfTop) console.log(`  ${String(ms).padStart(9)}  ${f}`);
     console.log(`TOP modules self, click ${k + 1}`);
@@ -488,6 +560,36 @@ for (let k = 0; k < Math.min(NODES, nodeIds.length); k++) {
     await page.waitForTimeout(1000);
 }
 
+// Interactions besides selection (CLICK_STEPS), on the first clicked node (P-2026-10-20-2305).
+if (nodeHits.length && (STEPS.has('drag') || STEPS.has('type') || STEPS.has('commit'))) {
+    const [, px, py] = nodeHits[Math.floor(nodeHits.length / (NODES + 1))];
+    if (STEPS.has('drag')) {
+        // One drag of 100 px to the right, 10 mouse moves (the node is also selected by it).
+        await profiled('drag', async () => {
+            await page.mouse.move(px, py);
+            await page.mouse.down();
+            await page.mouse.move(px + 100, py, { steps: 10 });
+            await page.mouse.up();
+            return { from: [Math.round(px), Math.round(py)], dx: 100 };
+        });
+    } else {
+        await page.mouse.click(px, py);
+        await page.evaluate(settle(SETTLE_MS, 240000));
+    }
+    if (STEPS.has('type') || STEPS.has('commit')) {
+        // The Properties name field: the visible text input whose value is the selected object's name.
+        const NAME_INPUT = `(() => { const L = window.store.getState().idlookup, d = L[(window.store.getState()._lastSelected || {}).modelElement];
+          return d ? [...document.querySelectorAll('input[type="text"], input:not([type])')].find(i => i.value === d.name && i.checkVisibility()) : null; })()`;
+        const found = await page.evaluate(`(() => { const i = ${NAME_INPUT}; if (!i) return null; i.focus(); i.setSelectionRange(i.value.length, i.value.length); return i.value; })()`);
+        check('name field found', found !== null, String(found));
+        if (found !== null) {
+            await profiled('type', async () => { await page.keyboard.type('x'); return { before: found }; });
+            if (STEPS.has('commit')) await profiled('commit', async () => { await page.keyboard.press('Enter'); return { name: found + 'x' }; });
+        }
+    }
+}
+if (STEPS.has('vp')) await profiled('vp', () => page.evaluate(activateVp(VP2)));
+
 // Micro-benchmark on the first selected object: what one `name` and one `fullname` read cost,
 // and how many LObject.name reads each one makes (counters above, recording on).
 if (result.clicks.length && result.clicks[0].selected) {
@@ -510,6 +612,16 @@ if (result.clicks.length && result.clicks[0].selected) {
       };
     })()`);
     note('bench', result.bench);
+    // One full-project serialization, the work of every save and layout autosave (U.compressedState).
+    result.benchSave = await page.evaluate(`(async () => {
+      const U = window.U || ${PROD ? 'null' : "(await import('/src/common/U.tsx')).U"};
+      const L = window.store.getState().idlookup, proj = Object.values(L).find(d => d && d.className === 'DProject');
+      if (!U || !U.compressedState || !proj) return { error: 'no U.compressedState' };
+      const out = [];
+      for (let i = 0; i < 2; i++) { const t = performance.now(); const s = await U.compressedState(proj); out.push({ ms: Math.round(performance.now() - t), chars: s.length }); }
+      return { runs: out };
+    })()`);
+    note('bench save', result.benchSave);
 }
 
 result.pageErrors = pageErrors.slice(0, 20);
