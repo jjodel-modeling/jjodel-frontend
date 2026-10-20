@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-2055
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (new value kind in the JjEL evaluator, exported interfaces of the language core; Phase 1 read-only)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane jjel-bitvector · 319b16865
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: none
 Corregge: —
