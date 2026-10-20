@@ -6132,6 +6132,17 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   Auto layout a lane's record is compared on position and stack extent only (its cross size is computed). Open:
   partitions packed edge to edge, and a child moved out of a `none` container framed again after the drop (inbox
   tickets of P-2026-10-11-1156).
+- **R-GV-18** (2026-10-20, decided by the chat on Alfonso's go-ahead 2026-10-20 14:13, evidence: measured, verified: probe,
+  reversible: branch).
+  **With `containment.edges: 'hide'` a container also hides the edges to what it encloses** (amends R-GV-4;
+  P-2026-10-20-1420, lane `gv-enclosed-edges`, merge `841230360` by P-2026-10-20-1437; LIR
+  `docs/lir/lir_2026-10-20_gv_enclosed_edges.md`). A reference or composition edge (`instanceRef` or `composition`) is
+  hidden when one end is a container whose view declares `edges: 'hide'` and the other end is an object it encloses,
+  its own claim or a deeper one through `parentOf`, in either direction. Hidden, never removed, as the channel edges.
+  Edges between two objects of which neither encloses the other are untouched, and so is every edge when no container
+  declares `hide`. Implemented in `suppressChannelEdges` (`irContainment.ts`); tests in `irContainerLayout.test.ts`,
+  mutation bench m1..m6 killed. Verified by the chat on the project «Jjodel harness», viewpoint «Harness / Lane process
+  (BPMN)»: 107 edges before (42 flows, 24 `performer`, 41 `activities|controlNodes`), 42 after, all flows; 48 nodes.
 
 ## R-REL — release scope (decision 2026-10-11)
 
