@@ -16,7 +16,7 @@
  * Used by the JjEL autocomplete method provider.
  */
 
-export type BuiltinCategory = 'string' | 'collection' | 'number' | 'date' | 'class-structural' | 'meta';
+export type BuiltinCategory = 'string' | 'collection' | 'number' | 'date' | 'bitvector' | 'class-structural' | 'meta';
 
 export interface BuiltinMethod {
     /** Method name as written by the user (e.g. 'snakeCase'). */
@@ -196,6 +196,32 @@ export const DATE_METHODS: BuiltinMethod[] = [
 ];
 
 // ============================================
+// BIT-VECTOR METHODS (17 — implemented in evaluator, R-BV)
+// `and`, `or`, `not` are implemented too but left out: as JjEL keywords they
+// do not parse after '.', so offering them would be misleading.
+// ============================================
+
+export const BITVECTOR_METHODS: BuiltinMethod[] = [
+    { name: 'width',      category: 'bitvector', signature: '() -> Integer',                  description: 'Width in bits' },
+    { name: 'signed',     category: 'bitvector', signature: '() -> Boolean',                  description: 'True if read as two\'s complement' },
+    { name: 'slice',      category: 'bitvector', signature: '(hi: Integer, lo: Integer) -> BitVector', description: 'Bits hi..lo, inclusive (Verilog x[hi:lo])' },
+    { name: 'bit',        category: 'bitvector', signature: '(i: Integer) -> BitVector',      description: 'Bit i as a 1-bit vector' },
+    { name: 'concat',     category: 'bitvector', signature: '(y: BitVector, ...) -> BitVector', description: 'Concatenate, receiver in the high bits (Verilog {x, y})' },
+    { name: 'replicate',  category: 'bitvector', signature: '(n: Integer) -> BitVector',      description: 'n copies (Verilog {n{x}})' },
+    { name: 'zext',       category: 'bitvector', signature: '(w: Integer) -> BitVector',      description: 'Zero-extend to w bits' },
+    { name: 'sext',       category: 'bitvector', signature: '(w: Integer) -> BitVector',      description: 'Sign-extend to w bits' },
+    { name: 'trunc',      category: 'bitvector', signature: '(w: Integer) -> BitVector',      description: 'Keep the low w bits' },
+    { name: 'xor',        category: 'bitvector', signature: '(y: BitVector) -> BitVector',    description: 'Bitwise exclusive or' },
+    { name: 'shl',        category: 'bitvector', signature: '(n: Integer) -> BitVector',      description: 'Shift left, zero fill' },
+    { name: 'shr',        category: 'bitvector', signature: '(n: Integer) -> BitVector',      description: 'Logical shift right, zero fill' },
+    { name: 'ashr',       category: 'bitvector', signature: '(n: Integer) -> BitVector',      description: 'Arithmetic shift right, copies the top bit' },
+    { name: 'asSigned',   category: 'bitvector', signature: '() -> BitVector',                description: 'Same bits, read signed ($signed)' },
+    { name: 'asUnsigned', category: 'bitvector', signature: '() -> BitVector',                description: 'Same bits, read unsigned ($unsigned)' },
+    { name: 'toNumber',   category: 'bitvector', signature: '() -> Integer',                  description: 'Value as a number (refused beyond 2^53-1)' },
+    { name: 'toVerilog',  category: 'bitvector', signature: '() -> String',                   description: 'Verilog form, e.g. 8\'hff' },
+];
+
+// ============================================
 // CLASS STRUCTURAL PROPERTIES (7 — exposed on metamodel classes)
 // ============================================
 
@@ -228,6 +254,7 @@ export const ALL_BUILTIN_METHODS: BuiltinMethod[] = [
     ...COLLECTION_METHODS,
     ...NUMBER_METHODS,
     ...DATE_METHODS,
+    ...BITVECTOR_METHODS,
     ...CLASS_STRUCTURAL_PROPERTIES,
     ...META_PROPERTIES,
 ];

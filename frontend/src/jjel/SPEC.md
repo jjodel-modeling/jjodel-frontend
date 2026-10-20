@@ -57,6 +57,7 @@ JjEL has a **set-theoretic** semantics: its core construct (`forall`) selects an
 | Array | `[elements]` | `[]`, `[1, 2, 3]`, `["a", "b"]` |
 | Object | `{key: value, ...}` | `{}`, `{name: "hello", count: 42}` |
 | Function | Lambda expressions | `a => a.name` |
+| BitVector | none yet; built by `bits(w, v)` / `sbits(w, v)` | `bits(8, 255)`, `sbits(4, -1)` (§7.5) |
 
 ### Type Hierarchy (for `is` operator)
 
@@ -64,6 +65,7 @@ The `is` operator checks type membership including supertypes:
 - Primitive aliases: `EString`/`String`, `EInt`/`Integer`, `EDouble`/`Double`/`Number`, `EBoolean`/`Boolean`
 - Collection aliases: `Array`/`List`/`Collection`
 - `Object`, `Null`
+- `BitVector` (not an `Object`)
 - JjOM types: `DClass`, `DPackage`, `DEnumerator`, etc.
 
 ---
@@ -450,6 +452,7 @@ In order of priority:
 | `0` | No |
 | `""` (empty string) | No |
 | `[]` (empty array) | No |
+| a bit-vector | none: a defect (§7.5) |
 | Everything else | Yes |
 
 ### 6.3 Binary Operator Semantics
@@ -522,6 +525,36 @@ Dates are represented as ISO 8601 strings.
 **Format:** `timestamp()`, `toISOString()`, `toDateString()`, `toTimeString()`, `format(pattern)`
 
 **Global constructors:** `now()`, `today()`, `date(y, m, d)`, `datetime(y, m, d, h, min, s)`, `parseDate(str)`
+
+### 7.5 Bit-vector Values (R-BV)
+
+A bit-vector is a fixed-width, two-state value: a width `w` from 1 to 1024, a signedness, and `w` bits, with no `X` and no `Z` (R-BV-2). The bits are stored unsigned; signedness is an interpretation, used by comparisons, `sext`, `toNumber` and printing. The semantics lives in one module, `evaluator/builtins/bitvectors.ts`. A vector is printed in Verilog form, hex padded to the width: `8'hff`, `8'sh80`, `16'h0034`. Model data holds the width as an `EInt` and the value as an `EInt` or an `EString`; an expression builds the vector: `bits(self.width, self.value)`. A vector never enters the model data.
+
+**Global constructors:** `bits(w, v)` (unsigned) and `sbits(w, v)` (signed), the only bit-vector globals. `v` is a safe integer or a decimal string (`'-12'`), which is a value and must be in range (`0 ≤ v < 2^w` for `bits`, `-2^(w-1) ≤ v < 2^(w-1)` for `sbits`); or a `0x`/`0b` string, which is a bit pattern that must fit in `w` bits (`sbits(8, '0xff')` is -1). Anything else is a defect, never a truncation. Being builtins, `bits` and `sbits` shadow a context variable of the same bare name: read a model feature called `bits` as `self.bits`.
+
+**Operators.** `+`, `-`, `*` compute modulo 2^w; `<`, `<=`, `>`, `>=` follow the signedness; `==`, `!=` compare the bits; unary `-` negates modulo 2^w. Both operands must be vectors of the same width **and** the same signedness (stricter than Verilog, R-BV-3); widen with `zext`/`sext`/`trunc` and cast with `asSigned()`/`asUnsigned()`. Any other operand is a defect naming both kinds: `bits(8, 1) + 1` gives `'+' needs two bit-vectors of the same width and signedness, got 8-bit unsigned and number`; write `bits(8, 1) + bits(8, 1)`. Exceptions: `x == null` is `false` and `x != null` is `true`; `+` with a string concatenates the Verilog form. `/` and `%` are defects (R-BV-4). A vector has no truth value: `not x`, `if x`, `x and y`, `Boolean(x)` and a lambda predicate returning a vector are defects; compare explicitly, `x != bits(8, 0)`. Inside a collection, `==` of two vectors of different width or signedness is `false`, not a defect.
+
+**Methods** (dispatched on the vector, like string and number methods):
+
+| Method | Result |
+|--------|--------|
+| `width`, `signed` | the width; whether it is read signed |
+| `slice(hi, lo)` | bits `hi..lo` inclusive, `0 ≤ lo ≤ hi < w` (Verilog `x[hi:lo]`), unsigned. Not the string `slice`, which is half-open |
+| `bit(i)` | bit `i`, a 1-bit unsigned vector |
+| `concat(y, ...)` | Verilog `{x, y, ...}`, the receiver in the high bits, unsigned |
+| `replicate(n)` | Verilog `{n{x}}`, `n ≥ 1`, unsigned |
+| `zext(w2)`, `sext(w2)` | extend to `w2 ≥ w` with zeros, or with copies of the top bit; signedness kept |
+| `trunc(w2)` | the low `w2 ≤ w` bits; signedness kept. Not the number `trunc` |
+| `and(y)`, `or(y)`, `xor(y)`, `not()` | bitwise, same pair rule as the operators |
+| `shl(n)`, `shr(n)` | shifts with zero fill; `n` a non-negative integer or a vector read unsigned; a shift of `w` or more gives 0 |
+| `ashr(n)` | arithmetic right shift: copies the top bit whatever the signedness |
+| `asSigned()`, `asUnsigned()` | the same bits, read signed or unsigned (`$signed`, `$unsigned`) |
+| `toNumber()` | the value as a number; a defect beyond ±(2^53-1) |
+| `toVerilog()` | the Verilog form as a string |
+
+Zero-argument methods also read without parentheses (`x.asSigned.toNumber`). Known limit: `and`, `or` and `not` are keywords, and the parser takes only an identifier after `.`, so `x.and(y)`, `x.or(y)` and `x.not()` do not parse yet; they are reachable once the parser accepts a keyword as a member name. `x[i]`, `with x do` and `.[x]` on a vector are not defined.
+
+**Collections.** `distinct`, `distinctBy`, `groupBy`, `contains`, `indexOf` compare width, signedness and bits; `sortBy`, `min`, `max` order vectors under the pair rule; `join` and string interpolation print the Verilog form; `sum` and `avg` refuse vectors.
 
 ---
 
