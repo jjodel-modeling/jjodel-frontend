@@ -6332,6 +6332,35 @@ Evidence: the project chat C-2026-10-19-1748 of 2026-10-19 (17:55 recommendation
   Tack reads the signals and shows the worst state and the signal that set it. The signals should reuse what the
   Tack store already holds (lane outcome and stop, work time, front and chat per lane) rather than a second reader.
 
+## R-OI — ontological instantiation in one model: UML class and object diagrams (decisions 2026-10-20)
+
+Evidence: the project chat C-2026-10-20-1835 of 2026-10-20 (18:29 «non è una forma di multilevel modeling?», 18:30
+«procedi» on the recommendation), `docs/harness/fronts.json` (front `instance-of`). Discovery owed:
+P-2026-10-20-1835.
+
+- **R-OI-1** (2026-10-20, ratified by Alfonso 2026-10-20 18:30 «procedi», evidence: read, verified: none, reversible: trunk).
+  **Two ontological levels inside one linguistic level.** One M1 model holds both the classes and their instances
+  (UML `InstanceSpecification` and `Slot` style): a class diagram and an object diagram are two views of the same
+  model. Deep instantiation, potency and a third ontological level are out of scope; the design must not preclude them.
+- **R-OI-2** (2026-10-20, ratified by Alfonso 2026-10-20 18:30 «procedi», evidence: read, verified: none, reversible: trunk).
+  **The ontological instantiation is a relation declared on the metamodel and known to Jjodel as such**, not a set of
+  roles serving one palette. Its roles: the type reference (instance to class), the feature container (class to
+  property), the optional generalization (class to class), the slot container (instance to slot), the defining feature
+  (slot to property) and the value holder of the slot. The creation menu, the slot synthesis and the reconciliation are
+  services of that relation. The UML metamodel of
+  `docs/archivio/claude_2026-10-14_uml_class_object_notation.md` is its first client; any metamodel declaring the relation gets the same services.
+- **R-OI-3** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **Slots are materialized when an instance is created**, one per feature of its class including inherited ones
+  (closure over the generalization, cycles reported, not followed). **Reconciliation is never destructive**: a feature
+  without a slot shows as a ghost row and materializes on its first value; a slot whose feature is gone or no longer
+  reachable is a problem in the registry; an explicit «sync slots» action aligns them. Nothing is deleted silently.
+- **R-OI-4** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **Instance conformance (value type, multiplicity) never blocks an edit** (as R-VAL-4) and is reported in the problems
+  registry. Whether it rides on the user-defined validation of R-VAL or on built-in checks is decided by the discovery.
+- **R-OI-5** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **Links are instances of associations, in a slice after the slots.** The menu that creates a link offers only the
+  associations whose ends accept the types of the two instances it connects.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
