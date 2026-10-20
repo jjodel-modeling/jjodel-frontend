@@ -6361,6 +6361,32 @@ P-2026-10-20-1835.
   **Links are instances of associations, in a slice after the slots.** The menu that creates a link offers only the
   associations whose ends accept the types of the two instances it connects.
 
+- **R-OI-6** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **The relation is declared in the metamodel's `_state` bag, key `ontoBindings`**, a versioned list of named records
+  (`{ v: 1, bindings: [...] }`, every id an M2 id, unknown keys kept), on the pattern of the Simulation roles and the
+  codegen templates; not in annotations. The Ecore export loses it, as it loses the Simulation roles; a mirror into one
+  `eAnnotations source="jjodel/onto"` on the EPackage is a later slice. Discovery P-2026-10-20-1835 §3.1, question 1.
+- **R-OI-7** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Optional roles beyond the six of R-OI-2:** abstract flag, feature type, default value, value mapping (primitive type
+  to literal metaclass). The four slot roles (slot container, defining feature, value holder, value mapping) are
+  all-or-none, so a record may bind the type reference alone. Discovery §3.1 and §3.7, question 2.
+- **R-OI-8** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Links are a second record of the same relation** (`name: 'link'`, the same type reference, feature container
+  `Association.memberEnds`). The reader picks the record by the metaclass of the classifier; enumerations and
+  associations leave the object menu by construction (O1). A third ontological level is a further record. Question 3.
+- **R-OI-9** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **«Sync slots» only creates the missing slots.** Removing orphan slots is a separate action with a confirmation
+  (R-OI-3: nothing is deleted silently). Question 5.
+- **R-OI-10** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The creation surfaces of S2 are a new pane context menu of the editor-v2 canvas with the cascade «New instance of ▸
+  <Class>», and «New instance» on the node menu of a class node.** The Data manager comes later. Question 6.
+- **R-OI-11** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **O2..O5 are built-in live checks computed from the relation's own closure**, reported through the problems registry
+  and never blocking (R-VAL-4); a JjEL `closure` operator is its own lane, not part of this front. Question 7.
+- **Awaiting Alfonso:** question 4 of the discovery, one undo step per instantiation. Today an instance with 3 slots
+  costs 5 undo entries and 9 Cmd+Z [M]; one step needs a change to `redux/reducer/reducer.ts` and
+  `redux/action/action.ts` (lane S2u after S2, recommended). S2 ships with the undo count declared until then.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
