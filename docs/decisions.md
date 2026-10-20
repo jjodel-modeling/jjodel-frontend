@@ -6423,7 +6423,7 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   **One semantics, three back ends.** The evaluator, the `.smv` export (`unsigned word[N]`, `signed word[N]` of nuXmv)
   and the generated Verilog (explicit widths on every operand) compute the same results by construction; an operator
   table run through an external Verilog simulator is the oracle that proves it.
-- **R-BV-7** (2026-10-20, ratified by Alfonso 2026-10-20 23:25 «ok la tua raccomandazione», evidence: read, verified: none, reversible: trunk; discovery P-2026-10-20-2055 §5.1).
+- **R-BV-7** (2026-10-20, ratified by Alfonso 2026-10-20 23:25 «ok la tua raccomandazione», evidence: read, verified: none, reversible: trunk).
   **A stored bit-vector attribute reads its width per element from the model.** In the simulator a `word` domain names
   the feature that holds the width (`{kind: 'word', widthFeature, signed}`); the width is resolved from the frozen model
   at Reset and is constant for the run, so two registers of the same metaclass may have different widths and the `.smv`
