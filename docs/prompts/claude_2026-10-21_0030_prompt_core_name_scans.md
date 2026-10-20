@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0030
 Chat: C-2026-10-20-0839
 Front: maintenance
 Lane: full (core: `src/model/`; Phase 1 waived by Alfonso)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane core-name-scans · b16e1ad57 · verifica visiva della chat dopo il merge
 Request: https://claude.ai/code/session_01EMpM7yBvFWpBXh3o1TJSRA
 Depends: P-2026-10-20-2305
 Corregge: —

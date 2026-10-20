@@ -259,3 +259,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs and probe only, no product code; merge gates green
 **Notes**: Rollback tag `pre-perf-slow-round2` on `37b4150b8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-0013/result.json`.
 **Prompt document name**: 2026-10-21 00:13
+
+## 2026-10-21 — fix(model): LModel.name without the $name scan, duplicate names in O(n) (P-2026-10-21-0030)
+**Prompt**: `claude_2026-10-21_0030_prompt_core_name_scans.md`, full lane (core `src/model/`, Phase 1 waived by Alfonso), worktree `~/jjodel-w-corenames` on `core-name-scans`, session `007d87b7`: fixes 4 and 2 of `discovery_2026-10-20_large_model_slowness_round2.md` §5, LIR first, probe acceptance.
+**Files touched**: `712f66020`: `docs/lir/lir_2026-10-21_core_name_scans.md`. `b16e1ad57`: `frontend/src/model/logicWrapper/LModelElement.tsx` (`LModel.get_name`), `frontend/src/model/logicWrapper/nameUniqueness.ts` (`detectDuplicateNames`), `frontend/src/model/__tests__/m1DuplicateNames.test.ts` (new). This commit: this entry, the prompt's Status line.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown. Probe steps green, in-page check equal on M1 and M2 models, 9 new tests and the uniqueness suites green; the badges are not checked on screen until the chat's visual check after the merge.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile (verifica della chat dopo il merge)
+**Notes**: Dev medians r1-r3: commit 2479 -> 1088 ms, target <= 900 missed because today's baseline is 2479 against the discovery's 1990 (detectDuplicateNames inclusive 1257 -> 86 ms); References 2184 ms task -> none; fullname 409 -> 2 name reads; clicks not worse (interleaved control r4/r5). Mutations m1-m3 killed; m1 only in page (LModelElement.tsx does not load under vitest). Second cause (a): an absolute target on a drifting baseline. Detail in the commit body of `b16e1ad57`.
+**Prompt document name**: 2026-10-21 00:30
