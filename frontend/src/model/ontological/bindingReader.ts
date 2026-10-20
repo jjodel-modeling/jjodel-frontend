@@ -6,13 +6,17 @@
  * imports the store, the joiner or React, and nothing writes. Ids in a binding are M2 ids, ids in the view are M1
  * ids; the view maps one to the other through `metaclassOf` and `ownerOf`.
  *
- * - `recordFor`: the binding that applies to an instance. The type reference must be owned by the instance's
- *   metaclass, and when the binding has a feature container its owner must be the metaclass of the instance's
- *   classifier (R-OI-8: the links record and the objects record share the type reference, the classifier's metaclass
- *   tells them apart; an enumeration selects none). Metaclasses are compared exactly: the view carries no `extends`.
- * - `instantiableClassifiers`: the M1 objects whose metaclass owns the feature container, abstract ones left out. A
- *   binding with no feature container cannot say which objects classify (the view does not carry the type of a
- *   reference), so it gives none.
+ * - `recordsFor`: every binding that applies to an instance. The instance's metaclass must conform to the owner of the
+ *   type reference, and when the binding has a feature container the metaclass of the instance's classifier must
+ *   conform to that container's owner (R-OI-8: the links record and the objects record share the type reference, the
+ *   classifier's metaclass tells them apart; an enumeration selects none). Conformance is the view's `conformsTo`:
+ *   equal, or a descendant at any depth, so a subclass of the owner (an ActiveClass) qualifies.
+ * - `recordFor`: the single most specific of those: the one whose feature container owner conforms to every other
+ *   candidate's (a record with no feature container is the least specific). `null` when there is no candidate or no
+ *   unique most specific one, as when a metaclass inherits from the owners of two records; `recordsFor` shows that.
+ * - `instantiableClassifiers`: the M1 objects whose metaclass conforms to the owner of the feature container, abstract
+ *   ones left out. A binding with no feature container cannot say which objects classify (the view does not carry the
+ *   type of a reference), so it gives none.
  * - `featureClosure`: the features of a classifier, its own first and then the inherited ones, level by level over the
  *   generalization. A feature is listed once. A cycle is reported as data (the ids around it, the first repeated at
  *   the end) and not followed.
@@ -33,6 +37,8 @@ export interface OntoReadView {
     attributeValue(objectId: string, attributeId: string): unknown;
     /** The M2 class id that owns the M2 feature `featureId`. */
     ownerOf(featureId: string): string | undefined;
+    /** True when the M2 class `metaclassId` is `superId` or has it as an ancestor, at any depth, over every `extends`. */
+    conformsTo(metaclassId: string, superId: string): boolean;
 }
 
 export interface FeatureClosure {
@@ -58,19 +64,34 @@ export interface SlotDiff {
 const classifierOf = (view: OntoReadView, binding: OntoBinding, instanceId: string): string | undefined =>
     view.referenceTargets(instanceId, binding.typeReference)[0];
 
-/** The binding of `bindings` that applies to `instanceId`, `null` when none does. */
-export function recordFor(view: OntoReadView, bindings: readonly OntoBinding[], instanceId: string): OntoBinding | null {
+/** Every binding of `bindings` that applies to `instanceId`, in the given order; empty when none does. */
+export function recordsFor(view: OntoReadView, bindings: readonly OntoBinding[], instanceId: string): OntoBinding[] {
     const instanceMeta = view.metaclassOf(instanceId);
-    if (instanceMeta === undefined) return null;
-    for (const binding of bindings) {
-        if (view.ownerOf(binding.typeReference) !== instanceMeta) continue;
-        if (binding.featureContainer === undefined) return binding;
+    if (instanceMeta === undefined) return [];
+    return bindings.filter(binding => {
+        const typeOwner = view.ownerOf(binding.typeReference);
+        if (typeOwner === undefined || !view.conformsTo(instanceMeta, typeOwner)) return false;
+        if (binding.featureContainer === undefined) return true;
+        const containerOwner = view.ownerOf(binding.featureContainer);
         const classifier = classifierOf(view, binding, instanceId);
-        if (classifier === undefined) continue;
-        const classifierMeta = view.metaclassOf(classifier);
-        if (classifierMeta !== undefined && classifierMeta === view.ownerOf(binding.featureContainer)) return binding;
-    }
-    return null;
+        const classifierMeta = classifier !== undefined ? view.metaclassOf(classifier) : undefined;
+        return containerOwner !== undefined && classifierMeta !== undefined && view.conformsTo(classifierMeta, containerOwner);
+    });
+}
+
+/** The most specific binding that applies to `instanceId`, `null` when none does or none is the unique most specific. */
+export function recordFor(view: OntoReadView, bindings: readonly OntoBinding[], instanceId: string): OntoBinding | null {
+    const candidates = recordsFor(view, bindings, instanceId);
+    const ownerOfContainer = (b: OntoBinding): string | undefined =>
+        b.featureContainer !== undefined ? view.ownerOf(b.featureContainer) : undefined;
+    const atLeastAsSpecific = (c: OntoBinding, other: OntoBinding): boolean => {
+        const otherOwner = ownerOfContainer(other);
+        if (otherOwner === undefined) return true;
+        const owner = ownerOfContainer(c);
+        return owner !== undefined && view.conformsTo(owner, otherOwner);
+    };
+    const best = candidates.filter(c => candidates.every(other => other === c || atLeastAsSpecific(c, other)));
+    return best.length === 1 ? best[0] : null;
 }
 
 const isTrue = (v: unknown): boolean => v === true || v === 'true';
@@ -82,7 +103,8 @@ export function instantiableClassifiers(view: OntoReadView, binding: OntoBinding
     if (owner === undefined) return [];
     const abstractFlag = binding.abstractFlag;
     return modelObjectIds.filter(id => {
-        if (view.metaclassOf(id) !== owner) return false;
+        const meta = view.metaclassOf(id);
+        if (meta === undefined || !view.conformsTo(meta, owner)) return false;
         return !(abstractFlag !== undefined && isTrue(view.attributeValue(id, abstractFlag)));
     });
 }

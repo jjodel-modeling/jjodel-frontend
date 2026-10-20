@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OntoBinding } from '../bindingCodec';
-import { featureClosure, instantiableClassifiers, recordFor, slotDiff } from '../bindingReader';
+import { featureClosure, instantiableClassifiers, recordFor, recordsFor, slotDiff } from '../bindingReader';
 import type { OntoReadView } from '../bindingReader';
 
 // The UML subset of the class/object notation design (§2, §6): the library, as M1 objects over M2 ids.
@@ -26,6 +26,18 @@ const OWNERS: Record<string, string> = {
     'Class.ownedAttributes': 'Class',
     'Association.memberEnds': 'Association',
     'Activity.activityTypedBy': 'Activity',
+    'ActiveClass.ownedPorts': 'ActiveClass',
+};
+const SUPERS: Record<string, string[]> = {
+    ActiveClass: ['Class'],
+    Component: ['ActiveClass'],
+    AssociationClass: ['Class', 'Association'],
+};
+const conforms = (meta: string, sup: string, seen = new Set<string>()): boolean => {
+    if (meta === sup) return true;
+    if (seen.has(meta)) return false;
+    seen.add(meta);
+    return (SUPERS[meta] ?? []).some(s => conforms(s, sup, seen));
 };
 
 const viewOf = (objects: Record<string, Obj>): OntoReadView => ({
@@ -33,6 +45,7 @@ const viewOf = (objects: Record<string, Obj>): OntoReadView => ({
     referenceTargets: (id, ref) => objects[id]?.refs?.[ref] ?? [],
     attributeValue: (id, attr) => objects[id]?.attrs?.[attr],
     ownerOf: f => OWNERS[f],
+    conformsTo: (m, s) => conforms(m, s),
 });
 
 const library = (overrides: Record<string, Obj> = {}): Record<string, Obj> => ({
@@ -125,6 +138,17 @@ describe('instantiableClassifiers', () => {
         expect(r).toEqual(['Book', 'Magazine', 'Library', 'Member']);
     });
 
+    it('a subclass of the owner is instantiable at any depth; a class that inherits two owners is offered by both records', () => {
+        const objs = library({
+            Panel: { meta: 'ActiveClass' },
+            Sensor: { meta: 'Component' },
+            Loan: { meta: 'AssociationClass' },
+        });
+        const all = [...ids, 'Panel', 'Sensor', 'Loan'];
+        expect(instantiableClassifiers(viewOf(objs), OBJECT, all)).toEqual(['Book', 'Magazine', 'Library', 'Member', 'Panel', 'Sensor', 'Loan']);
+        expect(instantiableClassifiers(viewOf(objs), LINK, all)).toEqual(['borrows', 'Loan']);
+    });
+
     it('the link record offers the associations', () => {
         expect(instantiableClassifiers(viewOf(library()), LINK, ids)).toEqual(['borrows']);
     });
@@ -177,6 +201,52 @@ describe('recordFor', () => {
     it('the order of the records does not change the choice', () => {
         expect(recordFor(view, [LINK, OBJECT], 'b1')?.name).toBe('object');
         expect(recordFor(view, [LINK, OBJECT], 'l1')?.name).toBe('link');
+    });
+
+    it('an instance of a subclass of Class (an ActiveClass, a Component) selects the object record', () => {
+        const more = viewOf(library({
+            Panel: { meta: 'ActiveClass' },
+            Sensor: { meta: 'Component' },
+            p1: { meta: IS, refs: { 'IS.classifier': ['Panel'] } },
+            s1: { meta: IS, refs: { 'IS.classifier': ['Sensor'] } },
+        }));
+        expect(recordFor(more, records, 'p1')?.name).toBe('object');
+        expect(recordFor(more, records, 's1')?.name).toBe('object');
+    });
+
+    it('a subclass of both Class and Association (AssociationClass) gets two records and no single one', () => {
+        const more = viewOf(library({
+            Loan: { meta: 'AssociationClass' },
+            n1: { meta: IS, refs: { 'IS.classifier': ['Loan'] } },
+        }));
+        expect(recordsFor(more, records, 'n1').map(r => r.name)).toEqual(['object', 'link']);
+        expect(recordsFor(more, [LINK, OBJECT], 'n1').map(r => r.name)).toEqual(['link', 'object']);
+        expect(recordFor(more, records, 'n1')).toBeNull();
+    });
+
+    it('the most specific record wins: a record on ActiveClass beats the one on Class, whatever the order', () => {
+        const ports: OntoBinding = { name: 'active', typeReference: 'IS.classifier', featureContainer: 'ActiveClass.ownedPorts' };
+        const more = viewOf(library({
+            Panel: { meta: 'ActiveClass' },
+            Sensor: { meta: 'Component' },
+            p1: { meta: IS, refs: { 'IS.classifier': ['Panel'] } },
+            s1: { meta: IS, refs: { 'IS.classifier': ['Sensor'] } },
+            b1: { meta: IS, refs: { 'IS.classifier': ['Book'] } },
+        }));
+        for (const list of [[OBJECT, ports], [ports, OBJECT]]) {
+            expect(recordsFor(more, list, 'p1')).toHaveLength(2);
+            expect(recordFor(more, list, 'p1')?.name).toBe('active');
+            expect(recordFor(more, list, 'b1')?.name).toBe('object');
+            expect(recordFor(more, list, 's1')?.name).toBe('active');
+        }
+    });
+
+    it('a record with no feature container is the least specific; two equally specific records give none', () => {
+        const bare: OntoBinding = { name: 'bare', typeReference: 'IS.classifier' };
+        expect(recordsFor(view, [bare, OBJECT], 'b1').map(r => r.name)).toEqual(['bare', 'object']);
+        expect(recordFor(view, [bare, OBJECT], 'b1')?.name).toBe('object');
+        expect(recordFor(view, [OBJECT, { ...OBJECT, name: 'twin' }], 'b1')).toBeNull();
+        expect(recordsFor(view, [], 'b1')).toEqual([]);
     });
 
     it('a record with the type reference alone applies to the instance that owns the reference (FTG+PM)', () => {
