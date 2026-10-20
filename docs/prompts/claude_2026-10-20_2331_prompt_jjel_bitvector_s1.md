@@ -1,6 +1,6 @@
 # JjEL bit-vector values, slice S1: the value and its operations in the evaluator (implementation)
 
-Prompt-ID: P-2026-10-20-2330
+Prompt-ID: P-2026-10-20-2331
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (new value kind in the exported JjelValue union; continuation of P-2026-10-20-2055 after the context ceiling)
@@ -19,7 +19,7 @@ is no hard stop before the code.
 
 ## Lane discipline
 
-Every reply opens with `[P-2026-10-20-2330 · session <id>]`; every final message ends with one line
+Every reply opens with `[P-2026-10-20-2331 · session <id>]`; every final message ends with one line
 `Outcome: done | hard-stop | question | blocked`. Time limit 90 minutes. A question carries one `Recommended:` line.
 Every gate runs in the foreground (P16). No push, no merge. Keep the context lean: read the handoff and the discovery
 sections you need, not whole files you do not edit; do not re-run the discovery's probes.
@@ -55,7 +55,7 @@ file under `frontend/src` is out: if the typecheck forces one, stop with `Outcom
 3. Gates: typecheck 0 through `node scripts/run-quiet.mjs`; `npx vitest run src/jjel src/jjtl src/model/simulation
    src/codegen` green with the 299 earlier JjEL tests unchanged; `npm run build`; the §13 mutation bench on a scratch
    copy, every mutation killed, the killing test named in the commit body.
-4. One `feat(jjel): bit-vector values in the evaluator (P-2026-10-20-2330)` commit and one docs closure commit,
+4. One `feat(jjel): bit-vector values in the evaluator (P-2026-10-20-2331)` commit and one docs closure commit,
    `git add` by path, `Model:` trailer (P6).
 
 ## NON FARE
