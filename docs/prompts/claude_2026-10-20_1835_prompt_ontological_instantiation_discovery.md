@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-1835
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (new service in the editor, the slot synthesis may touch the instance creation path; Phase 1 read-only)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane oi-discovery · report ad405b00b, log dda6af79c · no visual check (Phase 1, no product code)
 Request: none (the chat URL is not available to the chat; Alfonso's words are kept in request.md, RC-43)
 Depends: none
 Corregge: —
