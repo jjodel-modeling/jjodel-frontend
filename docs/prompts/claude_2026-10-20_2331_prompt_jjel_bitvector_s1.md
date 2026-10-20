@@ -44,7 +44,8 @@ Write only the files of the handoff's «Scope» section: `frontend/src/jjel/eval
 `frontend/src/jjel/SPEC.md`, new `frontend/src/jjel/__tests__/bitvector.test.ts`, new
 `frontend/src/jjel/__tests__/fixtures/bv-golden.json`. This list is the Rule 19 declaration: no pause. Docs in the
 closure commit: `docs/decisions.md` rows R-BV-1, 3, 4, 5, 6 rewritten with the §10 amendments (still `provisional,
-unattended`, add `verified: discovery P-2026-10-20-2055`), R-BV-2 with the `null` precision; the Status lines of this
+unattended`, `verified: none`, discovery P-2026-10-20-2055
+cited in the row body), R-BV-2 with the `null` precision; the Status lines of this
 prompt and of `docs/prompts/claude_2026-10-20_2055_prompt_jjel_bitvector_discovery.md`; the log-inbox entry. Any other
 file under `frontend/src` is out: if the typecheck forces one, stop with `Outcome: question` and a `Recommended:` line.
 
