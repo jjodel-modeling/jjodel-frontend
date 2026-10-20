@@ -6,6 +6,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-10-21 — fix: JjEL keyword as member name after `.` and `?.`
+**Prompt**: P-2026-10-21-0011: the JjEL parser accepts any keyword as the member name after `.` and `?.`, so the S1 bit-vector methods `x.and(y)`, `x.or(y)`, `x.not()` parse; remove the S1 workaround, the SPEC §7.5 limit, restore the autocomplete entries, amend R-BV-4.
+**Files touched**: `3aa5993c8` frontend/src/jjel/parser/parser.ts, frontend/src/jjel/__tests__/parser.test.ts, frontend/src/jjel/__tests__/bitvector.test.ts, frontend/src/jjel/__tests__/fixtures/bv-golden.json, frontend/src/jjel/SPEC.md, frontend/src/jjel/metadata/builtins.ts; closure commit: docs/decisions.md (R-BV-4), the Status line of the prompt, this inbox.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (bv-golden.json, not listed: it held half of the S1 workaround, the `M` placeholder and the `method` field of the and/or/not rows)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Gates: typecheck exit 0; vitest src/jjel, src/jjtl, src/model/simulation, src/codegen 1595 passed, only the 7 known jjtl window files; build exit 0. `true`, `false`, `null` stay refused as member names: M12 (R-SIM-17) pins `x.true` as an error, and `null` maps to NULL in JJEL_KEYWORDS, so it is filtered explicitly. JjTL's parser has the same IDENTIFIER-only restriction (jjtl/parser/parser.ts:176, 1045, 1069): reported, not changed.
+**Prompt document name**: 2026-10-21 00:11
+
 ## 2026-10-20 — feat: JjEL bit-vector values, discovery and slice S1
 **Prompt**: P-2026-10-20-2055 (discovery of bit-vector values in JjEL), P-2026-10-20-2331 (slice S1: the value and its operations in the evaluator; stopped at the soft context ceiling with the code uncommitted, RC-51) and P-2026-10-20-2350 (S1 closure: gates, mutation bench, feat commit, docs closure).
 **Files touched**: `319b16865` docs/discovery/discovery_2026-10-20_jjel_bitvector.md; `de0ce082c` frontend/src/jjel/evaluator/builtins/bitvectors.ts (new), frontend/src/jjel/evaluator/context.ts, frontend/src/jjel/evaluator/evaluator.ts, frontend/src/jjel/evaluator/builtins/collections.ts, frontend/src/jjel/metadata/builtins.ts, frontend/src/jjel/SPEC.md, frontend/src/jjel/__tests__/bitvector.test.ts (new), frontend/src/jjel/__tests__/fixtures/bv-golden.json (new); closure commit: docs/decisions.md (R-BV-1..6), the Status lines of the three prompt files, this inbox.

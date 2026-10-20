@@ -6430,10 +6430,10 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   operators and `|` is taken by `such that`, so `+`, `-`, `*`, unary `-`, `==`, `!=`, `<`, `<=`, `>`, `>=` are
   overloaded for bit-vectors, and bitwise operations and shifts are methods (`and`, `or`, `xor`, `not`, `shl`, `shr`,
   `ashr`); the keywords `and`, `or`, `not` stay boolean and refuse a bit-vector (defect). Comparisons return booleans;
-  `x.bit(i)` returns a 1-bit vector. Measured limit of S1 (P-2026-10-20-2331, `de0ce082c`): `x.and(y)`, `x.or(y)`,
-  `x.not()` are implemented but do not parse until the parser accepts a keyword after `.` (`and`, `or`, `not` lex as
-  keywords and the parser takes only an IDENTIFIER there); the other 19 bit-vector names parse. The parser change is a
-  lane of its own.
+  `x.bit(i)` returns a 1-bit vector. The limit measured in S1 (P-2026-10-20-2331, `de0ce082c`), where `x.and(y)`,
+  `x.or(y)`, `x.not()` did not parse, is closed by P-2026-10-21-0011 (`3aa5993c8`): a keyword is a valid member name
+  after `.` and `?.` (the literals `true`, `false`, `null` excepted), so the three parse and evaluate like the other 19
+  bit-vector names. JjTL's own parser still takes only an IDENTIFIER after `.` and `?.` (reported, not changed).
 - **R-BV-5** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
   **Functions and methods first, Verilog literals later.** Amended by the discovery P-2026-10-20-2055 §10: only
   `bits(w, v)` and `sbits(w, v)` are global; `slice(hi, lo)`, `bit(i)`, `concat(...)`, `replicate(n)`, `zext`, `sext`,

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0011
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (JjEL parser, shared by validation, JjTL and the simulator)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane jjel-keyword-member · 3aa5993c8
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-20-2350
 Corregge: —
