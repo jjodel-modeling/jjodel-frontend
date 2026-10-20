@@ -218,3 +218,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: gates only, all green (typecheck 0, vitest 9436 with the 9 known import reds, build 0, checks 0); no UI change, temporary TEMP-DISCOVERY timing logs removed
 **Notes**: Rollback tag `pre-jjscript-timing-logs` on `84221a8fc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0046/result.json`.
 **Prompt document name**: 2026-10-20 00:46
+
+## 2026-10-20 — fix(editor): build References target lists only when the section is open (P-2026-10-20-1955)
+**Prompt**: `claude_2026-10-20_1955_prompt_info_refs_lazy_finish.md`, continuation of the ceiling-stopped P-2026-10-20-1830 (RC-51): review the uncommitted fix, add an opt-in probe step counting `validTargets*` calls on opening «References», run the gates, the m1 check and the before/after medians, commit, remove the temporary `node_modules` symlink, close.
+**Files touched**: `e392e7c68`: `frontend/src/components/editors/Info.tsx`, `frontend/src/components/editors/InfoReferenceSlots.tsx` (new), `frontend/src/components/editors/__tests__/infoReferenceSlots.test.ts` (new), `frontend/scripts/probe/large-model-click-profile.ts` (`CLICK_OPEN_REFS=1`); this commit: this entry and the Status lines of the 1830 and 1955 prompts. Phase 1 of 1830: `fd84e7202` (probe), `3c7dc32f9` (report).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the visual check is the chat's after the merge
+**Notes**: Medians r1-r3, long-task sum: Activity 6805 -> 1196 ms, gateway 1254 -> 1312 ms. Gates: typecheck 0, vitest 9449 tests with the 9 known import reds, build 0. m2 killed by the unit test. Gap: m1 (body evaluated eagerly) and the closed-section case are not unit-tested, Info.tsx does not import in vitest (monaco via joiner); covered by the probe counter only, run by hand: fix 3 calls on click and 4 on open, m1 7 and 0. Regressions unknown until the visual check.
+**Prompt document name**: 2026-10-20 19:55
+
+**Ticket** (deferred root cause, core, needs discussion): `LModelElement.fullname` walks the model in O(n) (≈ 14-18 ms a read on 407 objects) and `LValue.get_validTargets` reads it once per option, so opening «References» still costs ≈ 2.9 s for 4 slots on the Activity, and every other `validTargetsJSX` reader pays the same. Phase 1 of P-2026-10-20-1830 went out as two commits, not one, because bash-guard holds P13; `InfoReferenceSlots.tsx` was outside 1830's first scope and was added by the chat's ACK. Evidence: `docs/discovery/discovery_2026-10-20_large_model_click_profile.md` §4.3, §7.
