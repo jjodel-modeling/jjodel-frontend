@@ -118,3 +118,12 @@ Objects: cityLib : Library (name = City Library); dune : Book (title = Dune, yea
 - MultiplicityElement keeps integer bounds, not ValueSpecifications.
 
 The fixture lane appends here any fallback it had to take because the IR cannot express a rendering of section 4.
+
+Fallbacks of the fixture (P-2026-10-20-2330, `frontend/scripts/probe/uml-class-object-fixture.ts`):
+
+- Attributes and operations share one compartment: only the first `children` compartment of a vertex view renders.
+- The object header `dune : Book` is two `top` labels, the name and `$classifier.value.$name.value`, each underlined by an inline style on its own `span.ir-label`: a vertex label takes one source, no template.
+- An end multiplicity is a literal of the edge view: one Association edge view per multiplicity pair of the model, plus one without multiplicity, since an end label takes one source and `-1` cannot map to `*`.
+- An operation shows its first parameter only, `, ...` past it; a slot shows its first value only: the IR has no list join.
+- The InstanceValue slot row is chosen by `exists` on `$values.values[0].$instance.value`, because `isKind` on the one-step path `$values.values[0]` never matched; the LiteralNull row, written with `isKind`, is therefore unreachable (no null in the example).
+- Every drawn box is given its size, from its top labels and rows: the default height clips the header from two rows on.
