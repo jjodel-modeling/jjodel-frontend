@@ -96,6 +96,15 @@
       "openedOn": "2026-10-20",
       "ownerChat": "C-2026-10-20-1835",
       "milestone": 11
+    },
+    {
+      "slug": "hw-notation",
+      "title": "Hardware design notation demonstrator: ISA, datapath and control views, bit-vector values in JjEL, Verilog generation with an external simulator as oracle (R-BV)",
+      "exit": "R-BV-1..6 are no longer provisional in docs/decisions.md, the bit-vector slices are merged into alfonso-frontend-jjtl, and the demonstrator project generates Verilog that an external simulator runs with the same trace as the Jjodel simulator",
+      "state": "open",
+      "openedOn": "2026-10-20",
+      "ownerChat": "C-2026-10-20-2055",
+      "milestone": 12
     }
   ]
 }

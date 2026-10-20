@@ -6387,6 +6387,38 @@ P-2026-10-20-1835.
   costs 5 undo entries and 9 Cmd+Z [M]; one step needs a change to `redux/reducer/reducer.ts` and
   `redux/action/action.ts` (lane S2u after S2, recommended). S2 ships with the undo count declared until then.
 
+## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
+
+Evidence: the project chat C-2026-10-20-2055 of 2026-10-20 (20:19 a demonstrator first, target and refinements
+later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on the recommendation),
+`docs/harness/fronts.json` (front `hw-notation`). Discovery owed: P-2026-10-20-2055.
+
+- **R-BV-1** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **A bit-vector is a value carrying its width and its signedness, with a `BigInt` payload.** The width is a property
+  of the value, read from the model data (the `width` attribute of a port or a register), not a parameter of a
+  metamodel type: JjEL gets no parametric type. Widths from 1 to at least 128 bits are exact.
+- **R-BV-2** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **Two-state semantics**, as Verilator: no `X`, no `Z`. Four-state values are out of scope and declared as a known
+  limit of the simulator.
+- **R-BV-3** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **No implicit width change.** Binary operators require operands of equal width; extension and truncation are
+  explicit (`zext`, `sext`, `trunc`). A mismatch is a defect of the rule or action that holds the expression, as
+  R-VAL-13 treats a non-boolean verdict. Numbers stay numbers: mixing a number and a bit-vector is a question for the
+  discovery, not an implicit conversion.
+- **R-BV-4** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **The operators of a datapath**: arithmetic modulo 2^N (`+`, `-`, `*`), bitwise `and`/`or`/`xor`/`not`, logical
+  and arithmetic shifts, unsigned and signed comparisons, bit and range selection, concatenation and replication.
+  Division and modulo are deferred.
+- **R-BV-5** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **Functions and methods first, Verilog literals later.** The first slice exposes `bits(w, v)`, `sbits(w, v)`,
+  `x.slice(hi, lo)`, `x.bit(i)`, `concat(...)`, `replicate(n, x)`, `zext`, `sext`, `trunc`. Literals such as `8'hFF`
+  come as syntactic sugar in a later slice, only if the discovery shows the lexer takes the apostrophe without
+  breaking existing tests.
+- **R-BV-6** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **One semantics, three back ends.** The evaluator, the `.smv` export (`unsigned word[N]`, `signed word[N]` of nuXmv)
+  and the generated Verilog (explicit widths on every operand) compute the same results by construction; an operator
+  table run through an external Verilog simulator is the oracle that proves it.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
