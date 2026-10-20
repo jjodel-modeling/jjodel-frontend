@@ -6,7 +6,7 @@ Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5 (reissue; the o
 Front: instance-of
 Lane: fast (one new probe file, no app code), unattended (RC-21)
 Depends: none
-Status: da eseguire
+Status: non completato 2026-10-20 · lane uml-fixture · context ceiling before any probe run, nothing committed · continued by P-2026-10-20-2330
 Corregge: P-2026-10-14-1955, stopped on 2026-10-14 by an API rate limit after about 18 minutes with nothing committed; this prompt replaces it unchanged in scope
 
 Protocollo: docs/PROTOCOL.md (clausole P1..P16 applicabili, tutte salvo deroga esplicita nel prompt).

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-2010
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: fast (new files and their tests only, no critical zone, plan fixed by the discovery §8 S1)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane oi-s1 · code bd633a5e0 + 73d68cea6, log b88ec7927 · vitest green, mutation bench 6/6 red · no visual check (pure layer, no importer) · branch unmerged until the 3.2.0 tag
 Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5
 Depends: none
 Corregge: —
