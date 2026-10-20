@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-1437
 Chat: C-2026-10-20-0839
 Request: https://claude.ai/code/session_01EMpM7yBvFWpBXh3o1TJSRA (merge of gv-enclosed-edges launched by chat C-2026-10-20-0839)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane merge · 841230360 · verifica visiva passata 2026-10-20 (BPMN viewpoint of Jjodel harness after merge 841230360: 42 edges (all irobj_ flows), 0 reference edges (was 107 = 42 + 65), 48 nodes; R-GV-18 holds)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-20-1437 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
