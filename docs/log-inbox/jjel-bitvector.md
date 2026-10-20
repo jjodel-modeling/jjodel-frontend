@@ -52,10 +52,10 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Files touched**: merge `8ad09e0ce` (the parser, its tests, `bitvector.test.ts`, `SPEC.md`, `metadata/builtins.ts`, `docs/decisions.md`, the log inbox and the prompt); `5d96f34dc` `frontend/src/model/validation/__tests__/validationEvaluator.test.ts`; this commit: this entry and the Status of the prompt file.
 **Outcome**: ✅ completed
 **Corregge**: —
-**Causa**: the worker's vitest gate was red on one test: `validationEvaluator.test.ts` used `coll.forAll(x => x.p)` as a rule body that does not compile; with keywords accepted as member names after `.` it parses. The test now drops the closing parenthesis (`5d96f34dc`, the file re-run green, 30/30). The lane's own gate did not cover `src/model/validation`.
+**Causa**: —
 **Regressions**: no. Gates on `8ad09e0ce` in the worker: typecheck 0, typecheck:scripts 0, vitest 9604 tests with the one failure above, build 0, check:docs, check:agents, check:scripts, check:addonly 0. The block was cleared with `lane-run resolve`.
 **Out-of-scope changes**: one test file, fixed by the chat on the trunk.
 **Layer Impact Report**: not-required
 **Smoke visivo**: passato — chat, unattended: JjEL parser only, no UI file in the merge; dev server on 3001 answers 200
-**Notes**: Rollback tags `pre-jjel-keyword-member` on `5c462acac`, `pre-kwmember-testfix-2026-10-21` on `8ad09e0ce`. `lane-run go` refuses a blocked merge even after `resolve`, so the chat wrote this closure by hand.
+**Notes**: One red test in the worker gate: `validationEvaluator.test.ts` used `coll.forAll(x => x.p)` as a body that does not compile, and it now parses; fixed in `5d96f34dc` (file green, 30/30), block cleared with `lane-run resolve`, closure written by hand since `go` refuses a blocked merge. Tags `pre-jjel-keyword-member`, `pre-kwmember-testfix-2026-10-21`.
 **Prompt document name**: 2026-10-21 00:25
