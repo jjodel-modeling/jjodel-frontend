@@ -20,3 +20,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-20 23:50
 
 **Ticket** (medium, found in P-2026-10-20-2331): `x.and(y)`, `x.or(y)`, `x.not()` are implemented but do not parse: `and`, `or`, `not` lex as keywords and the parser takes only an IDENTIFIER after `.` and `?.`. A parser lane that accepts a keyword as a member name is owed; the chat writes it (R-BV-4).
+
+## 2026-10-21 — merge: jjel-bitvector into alfonso-frontend-jjtl (P-2026-10-21-0002)
+**Prompt**: `claude_2026-10-21_0002_prompt_merge_jjel-bitvector.md`, a direct merge by `lane-run merge --direct`, no session: `jjel-bitvector` at `0e8d7e31a` into `alfonso-frontend-jjtl`, merge base `19ea86152`, 8 commits on the branch side.
+**Files touched**: merge `2aa86bb19`: 14 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-10-20_jjel_bitvector.md`, `docs/log-inbox/jjel-bitvector.md`, `docs/prompts/claude_2026-10-20_2055_prompt_jjel_bitvector_discovery.md`, `docs/prompts/claude_2026-10-20_2331_prompt_jjel_bitvector_s1.md`, `docs/prompts/claude_2026-10-20_2350_prompt_jjel_bitvector_s1_closure.md`, `frontend/src/jjel/SPEC.md`, `frontend/src/jjel/__tests__/bitvector.test.ts`, and 6 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2aa86bb19` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9599 tests in 389 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: JjEL evaluator only, no UI file in the merge; every gate green (9599 tests, build, check:docs); dev server on 3001 answers 200
+**Notes**: Rollback tag `pre-jjel-bitvector` on `ba083c6b9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-0002/result.json`.
+**Prompt document name**: 2026-10-21 00:02
