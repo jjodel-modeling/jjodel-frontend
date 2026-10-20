@@ -94,6 +94,9 @@ export function SimInputDialog({ press, action, rows, onCancel, onConfirm }: Sim
                         {r.domain.literals.map(l => <option value={l} key={l}>{l}</option>)}
                     </select>
                 );
+            // An input is never a word: the compiler refuses it (R-BV-8).
+            case 'word':
+                return <span aria-label={aria}>not an input</span>;
         }
     };
 
