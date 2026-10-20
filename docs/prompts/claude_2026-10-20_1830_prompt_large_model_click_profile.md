@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-10-20-1830
 Chat: C-2026-10-20-0839
-Front: performance
+Front: maintenance
 Lane: full (root cause unknown, the fix may land in the critical zone; Phase 1 read-only)
 Status: da eseguire
 Request: https://claude.ai/code/session_01EMpM7yBvFWpBXh3o1TJSRA
