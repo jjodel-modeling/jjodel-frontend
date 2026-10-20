@@ -33,3 +33,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: JjEL evaluator only, no UI file in the merge; every gate green (9599 tests, build, check:docs); dev server on 3001 answers 200
 **Notes**: Rollback tag `pre-jjel-bitvector` on `ba083c6b9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-0002/result.json`.
 **Prompt document name**: 2026-10-21 00:02
+
+## 2026-10-21 — feat: JjEL bit-vector slice S2, the simulator word domain
+**Prompt**: P-2026-10-21-0010 (slice S2: word domains in the simulator, `bvToSmv`; stopped at the soft context ceiling with the code uncommitted, RC-51) and P-2026-10-21-0055 (S2 finish: `bits` undefined in the simulator, gates, bench, docs closure).
+**Files touched**: `9b4ded919` frontend/src/model/simulation/netTypes.ts, netStep.ts, netCompile.ts, stateAttributesCodec.ts, actionEvaluator.ts, subsetChecker.ts, stcChecks.ts, guardContext.ts, bvToSmv.ts (new), __tests__/bvToSmv.test.ts (new), __tests__/wordDomain.test.ts (new); frontend/src/jjel/evaluator/evaluator.ts; frontend/src/components/editor-v2/sim/simBoard.ts, simInputs.ts, SimInputDialog.tsx, simScenarios.ts; closure commit: docs/decisions.md (R-BV-8), the Status lines of the two prompt files, this inbox.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (16 files over two prompts, more than five, all declared by their prompts: listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Gates on 9b4ded919's tree: typecheck exit 0; vitest src/jjel, src/model, src/codegen, src/components/editor-v2/sim 94 files, 2716 passed; build passed. Bench: 6 mutations (the handoff's 5 plus the base-context registration), 0 survivors, killers in the closure commit body. registerBitVectorConstructors sits in evaluator.ts, not bitvectors.ts, which cannot import the evaluator: R-BV-8 (5). toNumber not added, toVerilog in a separate set: R-BV-8 (3).
+**Prompt document name**: 2026-10-21 00:55

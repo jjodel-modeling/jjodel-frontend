@@ -6457,6 +6457,24 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   at Reset and is constant for the run, so two registers of the same metaclass may have different widths and the `.smv`
   export still declares one static `word[N]` per element. Fixed widths per metaclass are not required. Discovery §5.1,
   open question 1.
+- **R-BV-8** (2026-10-21, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **The simulator's word domain (slice S2).** Decided by the chat `C-2026-10-20-2055` under RC-25 (GO on the
+  recommendations of P-2026-10-21-0010; the constructor fix of P-2026-10-21-0055), landed by `9b4ded919`.
+  (1) The width of a `word` attribute is read per element at Reset from its width feature, an integer from 1 to 128
+  (`WORD_MAX_WIDTH`, below the evaluator's 1024), kept in `CompiledNet.widths` and checked by
+  `inDomain(value, domain, width)`: width and signedness must both match. A width that cannot be read is a `'width'`
+  declaration defect named by the element; a word initial is checked per element (a number becomes the vector at that
+  width, a vector must match), and a mismatch is an `'initial'` defect while the value stays (R-SIM-71). (2) A word
+  input is refused at compile (`an input is not a word`); the view files get an inert `word` case only, and the
+  declaration dialog is a later item. (3) The subset checker accepts `bits`/`sbits` with literal arguments. `toNumber`
+  is not added to the verifiable list (an existing test rejects a name shared with a string method); `toVerilog` sits
+  in a separate `NOT_VERIFIABLE_BITVECTOR_METHODS`. (4) `bvToSmv` prints a bit-vector expression as nuXmv text,
+  casting the operand wherever nuXmv reads the signedness differently; there is no `.smv` exporter yet. (5) The
+  simulator's base context gets `bits` and `sbits` through `registerBitVectorConstructors` (exported from
+  `jjel/evaluator/evaluator.ts`, also called by `JjelEvaluator`), and no other global builtin, so that no model name
+  is shadowed there. Measured: without it, `bits(8, 1)` in an action fails with `Function 'bits' is not defined`,
+  which contradicts discovery §5.1. The function lives in `evaluator.ts` rather than `bitvectors.ts`, which cannot
+  import the evaluator. Six mutations, all killed (`docs` closure commit of P-2026-10-21-0055).
 
 ## Superate
 

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0010
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (simulation engine across modules: net types, step, codec, action evaluator, subset checker)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane bv-sim · 9b4ded919
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-20-2350
 Corregge: —

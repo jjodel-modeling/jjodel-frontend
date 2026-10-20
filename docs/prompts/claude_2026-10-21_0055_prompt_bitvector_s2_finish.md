@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0055
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (continuation of P-2026-10-21-0010 after the AM-8 ceiling, RC-51; simulation engine)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane bv-sim · 9b4ded919
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-0010
 Corregge: —
