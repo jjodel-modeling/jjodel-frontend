@@ -87,6 +87,15 @@
       "state": "open",
       "openedOn": "2026-10-19",
       "milestone": 10
+    },
+    {
+      "slug": "instance-of",
+      "title": "Ontological instantiation in one model: UML class and object diagrams, creation menu, slots, links (R-OI)",
+      "exit": "the slices of the P-2026-10-20-1835 plan are merged into alfonso-frontend-jjtl and R-OI-1..5 are no longer provisional in docs/decisions.md",
+      "state": "open",
+      "openedOn": "2026-10-20",
+      "ownerChat": "C-2026-10-20-1835",
+      "milestone": 11
     }
   ]
 }
