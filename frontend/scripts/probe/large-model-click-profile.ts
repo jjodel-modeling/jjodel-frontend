@@ -31,6 +31,9 @@
  *       CLICK_LABEL     output label (default derived from the variant)
  *       CLICK_PROD      "1": the page is a production build (no /src imports)
  *       CLICK_INTERVAL  profiler sampling interval in us (default 500)
+ *       CLICK_OPEN_REFS "1": after each click, open the «References» section of the Properties
+ *                       panel and count the validTargets* calls that opening makes (the click's own
+ *                       counts are the closed-section case) (P-2026-10-20-1955)
  */
 import { chromium, type Page, type CDPSession } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -461,6 +464,25 @@ for (let k = 0; k < Math.min(NODES, nodeIds.length); k++) {
     for (const [f, ms] of cpu.modSelfTop) console.log(`  ${String(ms).padStart(9)}  ${f}`);
     console.log(`TOP functions inclusive, click ${k + 1}`);
     for (const [f, ms] of cpu.fnInclTop) console.log(`  ${String(ms).padStart(9)}  ${f}`);
+    if (process.env.CLICK_OPEN_REFS === '1') {
+        // The click's counts above are the closed-section case; this one is the cost of opening it.
+        // The section is closed again afterwards, so the next click measures the closed case too.
+        const REFS_HEADER = `[...document.querySelectorAll('.props-section__header')].find(h => (h.textContent || '').trim() === 'References')`;
+        const wasClosed = await page.evaluate(`(() => { const b = ${REFS_HEADER}; return b ? b.closest('.props-section').classList.contains('props-section--closed') : null; })()`);
+        await page.evaluate(`(() => { const P = window.__perfclick; P.longtasks = []; if (P.calls) for (const k of Object.keys(P.calls)) delete P.calls[k]; P.recording = true; })()`);
+        if (wasClosed) await page.evaluate(`(${REFS_HEADER}).click()`);
+        await page.waitForTimeout(4000);
+        rec.openRefs = await page.evaluate(`(() => {
+          const P = window.__perfclick; P.recording = false;
+          return { wasClosed: ${JSON.stringify(wasClosed)},
+                   calls: P.calls ? Object.fromEntries(Object.entries(P.calls).filter(([k]) => k.startsWith('LValue.validTarget')).map(([k, v]) => [k, { n: v.n, ms: Math.round(v.ms) }])) : null,
+                   refSlots: document.querySelectorAll('.jj-ref-slot').length,
+                   selects: document.querySelectorAll('.jj-ref-slot select').length,
+                   longtasks: P.longtasks.map(l => Math.round(l.ms)), longtaskSum: Math.round(P.longtasks.reduce((s, l) => s + l.ms, 0)) };
+        })()`);
+        note(`click ${k + 1} open References`, rec.openRefs);
+        if (wasClosed) { await page.evaluate(`(${REFS_HEADER}).click()`); await page.waitForTimeout(1000); }
+    }
     result.clicks.push(rec);
     writeFileSync(join(OUTDIR, `perfclick-${LABEL}.json`), JSON.stringify(result, null, 1));
     await page.waitForTimeout(1000);

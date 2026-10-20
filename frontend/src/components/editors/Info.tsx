@@ -36,6 +36,7 @@ import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../comm
 import { resolveEntityType, entityLetter } from '../../common/entityMeta';
 import DisplayAnnotations from '../editor-v2/nodes/DisplayAnnotations';
 import { simEnabledPatch, simulationEnabled } from '../editor-v2/sim/simRoleStatus';
+import { InfoReferenceSlots } from './InfoReferenceSlots';
 
 // Collapsible section for properties panel grouping
 function CollapsibleSection(props: { title: string; defaultOpen?: boolean; headerRight?: React.ReactNode; children: React.ReactNode }) {
@@ -816,77 +817,10 @@ class builder {
 
         return (
             <CollapsibleSection title="References" defaultOpen={false}>
-                {slots.map(slot => {
-                    const isRequiredSingle = slot.upper === 1 && slot.lower >= 1;
-                    const belowUpper = slot.upper === -1 || slot.targets.length < slot.upper;
-                    return (
-                        <div className="jj-ref-slot" key={slot.key}>
-                            <div className="jj-ref-slot-head">
-                                <span className="jj-ref-slot-name">{slot.name}</span>
-                                <span className="jj-ref-slot-mult">[{slot.lower}..{slot.upper === -1 ? '*' : slot.upper}]</span>
-                            </div>
-
-                            {slot.targets.map(t => (
-                                <div className="jj-slot-value-row jj-ref-row" key={t.rawIndex + ':' + t.id}>
-                                    <select
-                                        className="jj-slot-value-select"
-                                        value={t.id}
-                                        onChange={e => writeAt(slot.lv, t.rawIndex, e.target.value)}
-                                    >
-                                        {/* A single optional ref clears via "-----"; a multivalued
-                                            one clears via the «×», so no empty option there. */}
-                                        {!slot.multi && !isRequiredSingle && <option value="undefined">-----</option>}
-                                        {slot.lv.validTargetsJSX}
-                                    </select>
-                                    <button
-                                        type="button"
-                                        className="jj-ref-open"
-                                        title="Open the referenced element — edits the shared instance"
-                                        onClick={() => openTarget(t.id)}
-                                    >
-                                        <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
-                                    </button>
-                                    {!isRequiredSingle && (
-                                        <button
-                                            type="button"
-                                            className="jj-slot-value-delete"
-                                            title="Remove this reference"
-                                            onClick={() => writeAt(slot.lv, t.rawIndex, 'undefined')}
-                                        >×</button>
-                                    )}
-                                </div>
-                            ))}
-
-                            {/* Empty single ref: a select to set it. */}
-                            {!slot.multi && slot.targets.length === 0 && (
-                                <div className="jj-slot-value-row jj-ref-row">
-                                    <select
-                                        className="jj-slot-value-select"
-                                        value="undefined"
-                                        onChange={e => writeAt(slot.lv, 0, e.target.value)}
-                                    >
-                                        <option value="undefined">-----</option>
-                                        {slot.lv.validTargetsJSX}
-                                    </select>
-                                </div>
-                            )}
-
-                            {/* Multivalued add: append the chosen target. */}
-                            {slot.multi && belowUpper && (
-                                <div className="jj-slot-value-row jj-ref-row jj-ref-row--add">
-                                    <select
-                                        className="jj-slot-value-select"
-                                        value="undefined"
-                                        onChange={e => appendTarget(slot.lv, e.target.value)}
-                                    >
-                                        <option value="undefined">+ add {slot.name}…</option>
-                                        {slot.lv.validTargetsJSX}
-                                    </select>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+                {/* The body is a component of its own so that it is evaluated only when the section is
+                    open: CollapsibleSection mounts children only while open, and each slot reads
+                    validTargetsJSX, a scan of the whole model (P-2026-10-20-1830). */}
+                <InfoReferenceSlots slots={slots} openTarget={openTarget} writeAt={writeAt} appendTarget={appendTarget} />
             </CollapsibleSection>
         );
     }
