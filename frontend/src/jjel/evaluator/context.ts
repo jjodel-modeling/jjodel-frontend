@@ -19,7 +19,30 @@ export type JjelValue =
     | string
     | JjelValue[]
     | JjelObject
-    | JjelFunction;
+    | JjelFunction
+    | JjelBitVector;
+
+/**
+ * Fixed-width two-state bit-vector (R-BV). `bits` is canonical unsigned,
+ * 0 <= bits < 2^width; `signed` is an interpretation used by comparisons,
+ * `sext`, `ashr`, `toNumber` and printing. Built only by `bits`/`sbits` and
+ * the operations of `builtins/bitvectors.ts`; it never enters the D-layer.
+ */
+export interface JjelBitVector {
+    readonly __type: 'BitVector';
+    readonly width: number;
+    readonly signed: boolean;
+    readonly bits: bigint;
+}
+
+/**
+ * Shape check, so a structured-cloned vector (no prototype) still counts.
+ */
+export function isBitVector(value: unknown): value is JjelBitVector {
+    return value !== null && typeof value === 'object'
+        && (value as { __type?: unknown }).__type === 'BitVector'
+        && typeof (value as { bits?: unknown }).bits === 'bigint';
+}
 
 /**
  * Object with properties (e.g., model elements)
@@ -42,7 +65,8 @@ export function isJjelFunction(value: JjelValue): value is JjelFunction {
 }
 
 export function isJjelObject(value: JjelValue): value is JjelObject {
-    return value !== null && typeof value === 'object' && !Array.isArray(value) && !isJjelFunction(value);
+    return value !== null && typeof value === 'object' && !Array.isArray(value) && !isJjelFunction(value)
+        && !isBitVector(value);
 }
 
 // ============================================
@@ -120,6 +144,8 @@ export class TypeRegistry {
                 return Array.isArray(value);
             case 'Object':
                 return isJjelObject(value);
+            case 'BitVector':
+                return isBitVector(value);
             case 'Null':
                 return value === null;
             default:
@@ -503,6 +529,7 @@ export function toJjelValue(value: unknown): JjelValue {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') return value;
     if (Array.isArray(value)) return value.map(toJjelValue);
+    if (isBitVector(value)) return value;
     if (typeof value === 'object') {
         const result: JjelObject = {};
         for (const [k, v] of Object.entries(value)) {
@@ -523,6 +550,7 @@ export function fromJjelValue(value: JjelValue): unknown {
     if (typeof value === 'string') return value;
     if (Array.isArray(value)) return value.map(fromJjelValue);
     if (isJjelFunction(value)) return undefined; // Functions don't convert
+    if (isBitVector(value)) return value;
     if (isJjelObject(value)) {
         const result: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(value)) {

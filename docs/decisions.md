@@ -6151,6 +6151,11 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   `VITE_CODEGEN` build flag); the generator ships in 3.2.** Amends R-GEN-1's «no separate 3.1 tag». Evidence:
   `docs/discovery/discovery_2026-10-11_release_3_1_scope.md` (D1, D3, D4), the lanes that carried it out
   (P-2026-10-12-0010 staging absorbed, P-2026-10-12-0012 the build flag) and the version commit (P-2026-10-12-0115).
+- **R-REL-2** (2026-10-20, ratified by Alfonso 2026-10-20 23:25 «Il bit vector entra nella release», evidence: read, verified: none, reversible: trunk).
+  **Bit-vector values (front `hw-notation`, R-BV) ship in 3.2.** The slices that are merged into
+  `alfonso-frontend-jjtl` before the freeze of 2026-10-23 enter the release; the chat that owns the front merges them
+  without a further go-ahead. Amends the earlier plan that S3 (code generation) waits for 3.2: S3 lands only if it is
+  merged before the freeze with the codegen gates green, otherwise it ships in 3.2.x.
 
 ## R-LIB — the notation library and the project gallery (decisions 2026-10-18)
 
@@ -6393,31 +6398,65 @@ Evidence: the project chat C-2026-10-20-2055 of 2026-10-20 (20:19 a demonstrator
 later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on the recommendation),
 `docs/harness/fronts.json` (front `hw-notation`). Discovery owed: P-2026-10-20-2055.
 
-- **R-BV-1** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+- **R-BV-1** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
   **A bit-vector is a value carrying its width and its signedness, with a `BigInt` payload.** The width is a property
   of the value, read from the model data (the `width` attribute of a port or a register), not a parameter of a
-  metamodel type: JjEL gets no parametric type. Widths from 1 to at least 128 bits are exact.
-- **R-BV-2** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  metamodel type: JjEL gets no parametric type. Widths from 1 to at least 128 bits are exact. Amended by the discovery
+  P-2026-10-20-2055 §10: (1) the payload is canonical unsigned, `0 ≤ bits < 2^width`, and signedness is an
+  interpretation; (2) the value never enters the D-layer (it would break the save, discovery §4): model data holds the
+  width as an `EInt` attribute and the value as an `EInt` (≤ 53 bits) or an `EString`, and an expression builds the
+  vector with `bits(self.width, self.value)`; (3) in σ a stored bit-vector attribute has a `word` domain whose width may
+  be read per element from the frozen model (R-BV-7). Measured in S1 (P-2026-10-20-2331, `de0ce082c`): the constructor
+  refuses a non-canonical payload, golden rows at 1, 53, 64 and 128 bits pass, widths above 1024 (`BV_MAX_WIDTH`) are a
+  defect.
+- **R-BV-2** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
   **Two-state semantics**, as Verilator: no `X`, no `Z`. Four-state values are out of scope and declared as a known
-  limit of the simulator.
-- **R-BV-3** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
-  **No implicit width change.** Binary operators require operands of equal width; extension and truncation are
-  explicit (`zext`, `sext`, `trunc`). A mismatch is a defect of the rule or action that holds the expression, as
-  R-VAL-13 treats a non-boolean verdict. Numbers stay numbers: mixing a number and a bit-vector is a question for the
-  discovery, not an implicit conversion.
-- **R-BV-4** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  limit of the simulator. Confirmed by the discovery P-2026-10-20-2055 §10: nothing in JjEL, σ or the JS target models
+  X or Z. Precision: JjEL `null` is not X; a `null` operand of a bit-vector operator is a defect, except `==` and `!=`,
+  which compare a vector unequal to `null` (S1 test `a null operand is a defect, except for == and != (R-BV-2)`).
+- **R-BV-3** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **No implicit width or signedness change.** Binary operators require operands of equal width and equal signedness
+  (stricter than Verilog, which silently makes a mixed expression unsigned); extension, truncation and casts are
+  explicit (`zext`, `sext`, `trunc`, `asSigned()`, `asUnsigned()`). A mismatch is a defect of the rule or action that
+  holds the expression, as R-VAL-13 treats a non-boolean verdict. Shift amounts, indices, widths and `replicate`
+  counts are plain numbers; any other mix of a number and a bit-vector (`x + 1`, `x == 0`, `x < 3`) is a defect, never
+  a conversion: the user writes `x + bits(8, 1)`. Amended by the discovery P-2026-10-20-2055 §10, which measured that
+  this breaks no existing expression (every arithmetic site is `typeof`-gated, discovery §2.4); S1
+  (P-2026-10-20-2331, `de0ce082c`) holds it under the mutation bench (width, signedness and number checks each killed).
+- **R-BV-4** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
   **The operators of a datapath**: arithmetic modulo 2^N (`+`, `-`, `*`), bitwise `and`/`or`/`xor`/`not`, logical
   and arithmetic shifts, unsigned and signed comparisons, bit and range selection, concatenation and replication.
-  Division and modulo are deferred.
-- **R-BV-5** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
-  **Functions and methods first, Verilog literals later.** The first slice exposes `bits(w, v)`, `sbits(w, v)`,
-  `x.slice(hi, lo)`, `x.bit(i)`, `concat(...)`, `replicate(n, x)`, `zext`, `sext`, `trunc`. Literals such as `8'hFF`
-  come as syntactic sugar in a later slice, only if the discovery shows the lexer takes the apostrophe without
-  breaking existing tests.
-- **R-BV-6** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  Division and modulo are deferred. Amended by the discovery P-2026-10-20-2055 §10: JjEL has no bitwise or shift
+  operators and `|` is taken by `such that`, so `+`, `-`, `*`, unary `-`, `==`, `!=`, `<`, `<=`, `>`, `>=` are
+  overloaded for bit-vectors, and bitwise operations and shifts are methods (`and`, `or`, `xor`, `not`, `shl`, `shr`,
+  `ashr`); the keywords `and`, `or`, `not` stay boolean and refuse a bit-vector (defect). Comparisons return booleans;
+  `x.bit(i)` returns a 1-bit vector. Measured limit of S1 (P-2026-10-20-2331, `de0ce082c`): `x.and(y)`, `x.or(y)`,
+  `x.not()` are implemented but do not parse until the parser accepts a keyword after `.` (`and`, `or`, `not` lex as
+  keywords and the parser takes only an IDENTIFIER there); the other 19 bit-vector names parse. The parser change is a
+  lane of its own.
+- **R-BV-5** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **Functions and methods first, Verilog literals later.** Amended by the discovery P-2026-10-20-2055 §10: only
+  `bits(w, v)` and `sbits(w, v)` are global; `slice(hi, lo)`, `bit(i)`, `concat(...)`, `replicate(n)`, `zext`, `sext`,
+  `trunc` are methods of the bit-vector (receiver dispatch, no shadowing of existing global names). Sized literals
+  `<w>'[s]<b|o|d|h><digits>` are measured feasible: they take a lexer-error space today and change no test
+  (0 occurrences, controlled); unsized `'d3` is refused because `'d3'` is a string today. The literal comes in a later
+  slice and must be lexed by both the JjEL and the JjTL lexers.
+- **R-BV-6** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
   **One semantics, three back ends.** The evaluator, the `.smv` export (`unsigned word[N]`, `signed word[N]` of nuXmv)
-  and the generated Verilog (explicit widths on every operand) compute the same results by construction; an operator
-  table run through an external Verilog simulator is the oracle that proves it.
+  and the generated Verilog (explicit widths on every operand) compute the same results; an operator table run through
+  an external Verilog simulator is the oracle that proves it. Amended by the discovery P-2026-10-20-2055 §10: "by
+  construction" is not true of the code today. The semantics lives in one module
+  (`frontend/src/jjel/evaluator/builtins/bitvectors.ts`, pure, `BigInt`, landed by S1 `de0ce082c`) that the evaluator
+  calls and that the JS target's runtime prelude reuses as text; there is no `.smv` exporter and no Verilog target yet,
+  so the nuXmv and Verilog printers are new code driven by the same case table, and the table's expected values come
+  from Verilator (discovery §9). S1's case table (`bv-golden.json`, 48 rows) is hand-computed from IEEE 1800-2017; its
+  Verilator run is the later S-oracle step.
+- **R-BV-7** (2026-10-20, ratified by Alfonso 2026-10-20 23:25 «ok la tua raccomandazione», evidence: read, verified: none, reversible: trunk).
+  **A stored bit-vector attribute reads its width per element from the model.** In the simulator a `word` domain names
+  the feature that holds the width (`{kind: 'word', widthFeature, signed}`); the width is resolved from the frozen model
+  at Reset and is constant for the run, so two registers of the same metaclass may have different widths and the `.smv`
+  export still declares one static `word[N]` per element. Fixed widths per metaclass are not required. Discovery §5.1,
+  open question 1.
 
 ## Superate
 
