@@ -72,6 +72,8 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
+import { creationOptions, instantiate, objectRecord, type CreationOption } from './hooks/instantiate';
+import type { OntoBinding } from '../../model/ontological/bindingCodec';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
@@ -349,6 +351,8 @@ interface ContextMenuState {
     childKind?: 'attr' | 'op' | 'ref';
     isMultiSelect?: boolean;
     selectedCount?: number;
+    /** Pane menu of the ontological instantiation: the record and its classifiers. */
+    pane?: { record: OntoBinding; options: CreationOption[] };
 }
 
 // Clipboard state type
@@ -3023,6 +3027,33 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         []
     );
 
+    // Pane menu of the ontological instantiation (R-OI-10, hooks/instantiate.ts). It opens
+    // only when the metamodel's bag declares an `object` record; without one the pane right
+    // click is left alone, as before.
+    const onPaneContextMenu = useCallback(
+        (event: MouseEvent | React.MouseEvent) => {
+            if (!isModelMode || !modelid) return;
+            const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+            const record = objectRecord(get, modelid);
+            if (!record) return;
+            event.preventDefault();
+            setContextMenu({
+                x: event.clientX,
+                y: event.clientY,
+                pane: { record, options: creationOptions(get, record, modelid) },
+            });
+        },
+        [isModelMode, modelid]
+    );
+
+    // One instantiation with its slots; its vertex is the one useJjomSync Step 2bis gives a
+    // new root (hooks/instantiate.ts header: a vertex placed at the click broke its undo).
+    const runInstantiate = useCallback((classifierId: string, record: OntoBinding) => {
+        void instantiate(classifierId, record).then(result => {
+            if (!result.ok) console.warn('[EditorV2] instantiate:', result.problems);
+        });
+    }, []);
+
     const onPaneClick = useCallback(() => {
         selectedEdgeIdRef.current = null;  // Clear edge selection
         clearSyntheticEdgeSelection();     // IR object-as-edge selection lives outside the base state
@@ -3308,6 +3339,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const canResetSize = !!node
                 && (node.type === 'objectNode' || node.type === 'classNode' || node.type === 'enumNode')
                 && ((node as any).width != null || (node as any).height != null);
+
+            // «New instance» on a node whose object is a classifier the metamodel's `object`
+            // record lets be instantiated (R-OI-10).
+            if (isModelMode && modelid && node) {
+                const get = (id: string) => (store.getState() as any)?.idlookup?.[id];
+                const record = objectRecord(get, modelid);
+                const objectId: unknown = get(node.id)?.model;
+                if (record && typeof objectId === 'string'
+                    && creationOptions(get, record, modelid).some(o => o.id === objectId)) {
+                    items.push(
+                        { label: 'New instance', icon: 'bi-plus-square', onClick: () => runInstantiate(objectId, record) },
+                        { divider: true },
+                    );
+                }
+            }
 
             // M1: composition children for object nodes (uses compositionCompat utility)
             if (isModelMode && node?.type === 'objectNode') {
@@ -3675,6 +3721,22 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     onClick: () => deleteEdge(contextMenu.edgeId!),
                 },
             ];
+        }
+
+        // Pane menu: the cascade «New instance of ▸ <Class>» (R-OI-10).
+        if (contextMenu?.pane) {
+            const { record, options } = contextMenu.pane;
+            return [{
+                label: 'New instance of',
+                icon: 'bi-plus-square',
+                disabled: options.length === 0,
+                tooltip: options.length === 0 ? 'No class to instantiate' : undefined,
+                children: options.map(o => ({
+                    label: o.name,
+                    icon: 'bi-box',
+                    onClick: () => runInstantiate(o.id, record),
+                })),
+            }];
         }
         return [];
     };
@@ -4760,6 +4822,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onDragOver={onDragOver}
                 onNodeContextMenu={onNodeContextMenu}
                 onEdgeContextMenu={onEdgeContextMenu}
+                onPaneContextMenu={onPaneContextMenu}
                 onNodeClick={jjomSelection.onNodeClick}
                 onEdgeClick={onEdgeClick}
                 onPaneClick={onPaneClick}
