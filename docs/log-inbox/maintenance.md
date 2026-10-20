@@ -246,3 +246,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Built-in browser, Jjodel harness, BPMN viewpoint after merge bfab138ba: selection click on Activity write the Phase 2 prompt 2.2 s of long tasks (was 1.6 + 17.4 s in the same browser), on write the ratification memo 3.0 s (was up to 58.7 s); References closed builds no lists; opened it shows 4 slots (performer, lanes, inputs, outputs), 7 selects with their targets, in 2.4 s
 **Notes**: Rollback tag `pre-perf-click-profile` on `06610a866` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-2020/result.json`.
 **Prompt document name**: 2026-10-20 20:20
+
+## 2026-10-21 — merge: perf-slow-round2 into alfonso-frontend-jjtl (P-2026-10-21-0013)
+**Prompt**: `claude_2026-10-21_0013_prompt_merge_perf-slow-round2.md`, a direct merge by `lane-run merge --direct`, no session: `perf-slow-round2` at `e9bc60d16` into `alfonso-frontend-jjtl`, merge base `fb35595fa`, 2 commits on the branch side.
+**Files touched**: merge `5c462acac`: 2 files from the branch side (`docs/discovery/discovery_2026-10-20_large_model_slowness_round2.md`, `frontend/scripts/probe/large-model-click-profile.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5c462acac` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9599 tests in 389 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs and probe only, no product code; merge gates green
+**Notes**: Rollback tag `pre-perf-slow-round2` on `37b4150b8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-0013/result.json`.
+**Prompt document name**: 2026-10-21 00:13
