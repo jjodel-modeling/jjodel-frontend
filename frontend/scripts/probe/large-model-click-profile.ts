@@ -43,6 +43,9 @@
  *                         "type"    one character typed in the Properties name field
  *                         "commit"  Enter in that field (the store write of the new name)
  *                         "vp"      switching to the viewpoint CLICK_VP2 (default «Harness / Authority»)
+ *                         "audit"   dev only, last: targeted store writes, each followed by a count of
+ *                                   the rendered nodes whose data differs from a fresh transform
+ *                                   (stale nodes); not profiled (P-2026-10-21-0035)
  *       CLICK_STACKS    "1": sample the callers of LModel.name (slows the run; counts only)
  */
 import { chromium, type Page, type CDPSession } from '@playwright/test';
@@ -589,6 +592,70 @@ if (nodeHits.length && (STEPS.has('drag') || STEPS.has('type') || STEPS.has('com
     }
 }
 if (STEPS.has('vp')) await profiled('vp', () => page.evaluate(activateVp(VP2)));
+
+// Staleness audit (P-2026-10-21-0035), dev only: after each targeted store write, compare the
+// data every rendered canvas node holds (props of the node component, read off its fiber) with
+// a fresh jjomVertexToRFNode of its vertex. A node whose fields differ is stale: the sync did
+// not re-transform it. Not profiled; the writes are not undone (the probe ends here).
+if (STEPS.has('audit') && !PROD) {
+    result.audit = await page.evaluate(`(async () => {
+      const T = await import('/src/components/editor-v2/utils/jjomTransformers.ts');
+      const LP = window.LPointerTargetable, S = () => window.store.getState().idlookup;
+      const wait = (ms) => new Promise(r => setTimeout(r, ms));
+      const rendered = () => {
+        const out = new Map();
+        for (const el of document.querySelectorAll('.react-flow__node[data-id]')) {
+          const id = el.getAttribute('data-id'), k = Object.keys(el).find(k => k.startsWith('__reactFiber'));
+          const stack = [el[k] && el[k].child]; let n = 0;
+          while (stack.length && n++ < 300) { const x = stack.pop(); if (!x) continue; const p = x.memoizedProps;
+            if (p && p.id === id && p.data && typeof p.data === 'object') { out.set(id, p.data); break; }
+            if (x.sibling) stack.push(x.sibling); if (x.child) stack.push(x.child); }
+        }
+        return out;
+      };
+      const sig = (d) => JSON.stringify([d.label, d.instanceOfClassName, !!d.isSingleton, !!d.isAbstract,
+        (d.features || []).map(f => [f.featureName, f.value, f.typeName || '', !!f.isMany, !!f.required]),
+        (d.attributes || []).map(a => [a.name, a.type]), (d.references || []).map(r => [r.name, r.type && r.type.name, r.opposite || '']),
+        (d.operations || []).map(o => [o.name, o.returnType, (o.parameters || []).map(p => p.name + ':' + p.type)]),
+        (d.literals || []).map(l => l.name)]);
+      const audit = (label, extra) => { const R = rendered(); const stale = [];
+        for (const [id, d] of R) { const v = LP.fromPointer(id); const f = v && T.jjomVertexToRFNode(v); if (f && sig(f.data) !== sig(d)) stale.push(id); }
+        return { label, rendered: R.size, stale: stale.length, staleIds: stale.slice(0, 4), ...extra }; };
+      const out = [audit('rest')];
+      const R0 = rendered(), L0 = S();
+      const vOf = new Map(); for (const vid of R0.keys()) { const d = L0[vid]; if (d && typeof d.model === 'string') vOf.set(d.model, vid); }
+      const U = (await import('/src/common/U.tsx')).U, alerts = []; U.alert = (...a) => { alerts.push(a.slice(0, 3).map(String).join(' | ').slice(0, 140)); };
+      const vals = (oid) => { const d = rendered().get(vOf.get(oid)); return d ? (d.features || []).map(f => f.value).join('|').slice(0, 160) + (d.isSingleton !== undefined ? ' isSingleton=' + d.isSingleton : '') : null; };
+      const rename = (id, v) => { const x = LP.fromPointer(id); try { x.name = v; } catch (e) {} if (S()[id].name === v) return 'name';
+        try { x['$name'].value = v; } catch (e) {} return S()[id].name === v ? '$name' : 'not landed'; };
+      const write = async (label, f) => { let extra; alerts.length = 0; try { extra = await f(); } catch (e) { extra = { error: String(e).slice(0, 120) }; } await wait(1500); const L1 = S();
+        if (extra && extra.c && L1[extra.c]) extra.cAfter = { final: L1[extra.c].final, isSingleton: L1[extra.c].isSingleton, rendered: vals(extra.c) };
+        if (extra && extra.o) extra.oRendered = vals(extra.o);
+        if (alerts.length) extra.alerts = alerts.slice(0, 3); out.push(audit(label, extra)); };
+      const objs = [...vOf.keys()].filter(id => L0[id] && L0[id].className === 'DObject');
+      const classes = [...vOf.keys()].filter(id => L0[id] && L0[id].className === 'DClass');
+      if (objs.length) {
+        // M1 rows: an attribute slot edit (covered by the hash: positive control), a reference target
+        // renamed, the metaclass renamed, the M2 attribute of a slot renamed.
+        await write('m1 attribute slot edit', () => { for (const o of objs) for (const fv of (L0[o].features || [])) { const d = L0[fv], m = d && L0[d.instanceof];
+          if (m && m.className === 'DAttribute' && L0[m.type] && L0[m.type].className !== 'DEnumerator' && (d.values || []).length && typeof d.values[0] === 'string') { LP.fromPointer(fv).value = d.values[0] + '_e'; return { o, fv }; } } return { none: 1 }; });
+        await write('m1 reference target renamed', () => { const L = S(); for (const o of objs) for (const fv of (L[o].features || [])) { const d = L[fv];
+          for (const t of (d && d.values) || []) if (typeof t === 'string' && vOf.has(t) && t !== o) { const before = vals(o); const how = rename(t, S()[t].name + '_r'); return { o, t, how, newName: S()[t].name, before }; } } return { none: 1 }; });
+        await write('m1 metaclass renamed', () => { const o = objs[0], mc = S()[o].instanceof; const how = rename(mc, S()[mc].name + '_r'); return { o, mc, how }; });
+        await write('m1 M2 attribute renamed', () => { const L = S(); for (const o of objs) for (const fv of (L[o].features || [])) { const m = L[L[fv] && L[fv].instanceof];
+          if (m && m.className === 'DAttribute') { const how = rename(m.id, m.name + '_r'); return { o, a: m.id, how }; } } return { none: 1 }; });
+      }
+      if (classes.length) {
+        // M2 rows: issue #67 (final first, then singleton), a reference's type class renamed.
+        await write('m2 final then singleton (#67)', async () => { const L = S(); const c = classes.find(id => { const l = LP.fromPointer(id); return !l.isSingleton && !l.final && !(l.extendedBy || []).length && !(l.instances || []).length; });
+          if (!c) return { none: 1 }; const lc = LP.fromPointer(c); lc.final = true; await wait(1500); const finalLanded = S()[c].final; lc.isSingleton = true; return { c, finalLanded, isSingleton: S()[c].isSingleton }; });
+        await write('m2 reference type renamed', () => { const L = S(); for (const c of classes) for (const r of (L[c].references || [])) { const t = L[r] && L[r].type;
+          if (typeof t === 'string' && t !== c && vOf.has(t)) { const how = rename(t, S()[t].name + '_r'); return { c, t, how }; } } return { none: 1 }; });
+      }
+      return out;
+    })()`);
+    for (const a of result.audit || []) note('audit', a);
+}
 
 // Micro-benchmark on the first selected object: what one `name` and one `fullname` read cost,
 // and how many LObject.name reads each one makes (counters above, recording on).
