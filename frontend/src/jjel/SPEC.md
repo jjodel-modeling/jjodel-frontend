@@ -558,6 +558,8 @@ Zero-argument methods also read without parentheses (`x.asSigned.toNumber`). `an
 
 **Collections.** `distinct`, `distinctBy`, `groupBy`, `contains`, `indexOf` compare width, signedness and bits; `sortBy`, `min`, `max` order vectors under the pair rule; `join` and string interpolation print the Verilog form; `sum` and `avg` refuse vectors.
 
+**Oracle** (R-BV-10). The operator semantics is checked against Verilator, not against itself. `npm run oracle:bv` (from `frontend/`, Verilator on the `PATH`) runs `scripts/oracle/bv-cases.mjs`, which writes the inputs of `src/jjel/__tests__/fixtures/bv-cases.json` (every operator and method above except the casts and conversions, widths 1 to 128, both signednesses, edge and seeded random operands, shift amounts `0, 1, w-1, w, w+1`), then `scripts/oracle/bv-verilator.mjs`, which emits one SystemVerilog module per operator family with two-state operands sized and signed explicitly, builds and runs it with `verilator --binary` under `.vite-cache/bv-oracle/`, and writes each `expected` back into the table; the Verilog form of each operator is recorded in the table's `oracle.mapping` (`x.ashr(n)` on an unsigned `x` is `$signed(x) >>> n`), and a row Verilog cannot express identically is listed in `oracle.inexpressible`, never dropped. `bitvectorOracle.test.ts` evaluates every row through JjEL against the committed values and runs in the normal suite without Verilator.
+
 ---
 
 ## 8. Contexts of Use
