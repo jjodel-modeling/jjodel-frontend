@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-0300
 Chat: C-2026-10-18-2254
 Front: notation-library
 Lane: full (build script, two packages, catalog, test, probe)
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane notation-library · 18ce5cdf1 · verifica visiva passata 2026-10-19 16:41 (Alfonso, RC-23) · decisione in attesa chiusa da P-2026-10-19-0930
 Request: Alfonso, 2026-10-19 02:58, «Aggiungi i viewpoint, il 23 ottobre non vale più»
 Depends: P-2026-10-18-2300 (templates and examples, branch `library-gallery`, HEAD `4a3c1db49`, closure pending Alfonso's visual OK)
 

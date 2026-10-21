@@ -5,7 +5,7 @@ Lane: fast (three files, dashboard shell)
 Depends: P-2026-10-19-1510 (branch `tplui-disc`, report §1.4, §1.5, §7)
 Chat: C-2026-10-19-1501
 Front: notation-library
-Status: da eseguire
+Status: eseguito 2026-10-19 · lane tpl-b2 · b25c41db8 · visual check owed to the chat (RC-23)
 Corregge: none (new work)
 Request: Alfonso, 2026-10-19 16:09, in the project chat: «Si velocissimo», on the lanes and the Q3/Q4 recommendations of P-2026-10-19-1510
 

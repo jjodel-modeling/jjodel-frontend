@@ -59,6 +59,9 @@ export const JjodelEvents = {
   // Project
   NEW_PROJECT: 'jjodel:new-project',
   CREATE_MODEL: 'jjodel:createModel',
+  // P-2026-10-19-1618. Opens the New model dialog of the open project.
+  // detail (optional): { metamodelId?: string } preselects that metamodel.
+  OPEN_NEW_MODEL_DIALOG: 'jjodel:open-new-model-dialog',
   CREATE_VIEWPOINT: 'jjodel:createViewpoint',
   SHARE_PROJECT: 'jjodel:shareProject',
   // SAVE2. Il progetto e' stato persistito. detail: { timestamp: number|null }.

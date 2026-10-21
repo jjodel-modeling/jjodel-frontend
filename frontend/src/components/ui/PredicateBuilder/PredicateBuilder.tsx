@@ -288,6 +288,9 @@ export const PredicateBuilder: React.FC<PredicateBuilderProps> = ({
                     />
                 );
             }
+            case 'simActive':
+                // Nothing to set: the run is the one on the element's model (P-2026-10-19-0930).
+                return null;
             default: {
                 // The six comparators (eq/neq/lt/lte/gt/gte): two operands.
                 // The residual of this switch is PINNED to the comparator branch

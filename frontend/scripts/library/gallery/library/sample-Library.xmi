@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Instance of gallery/Library.ecore: one library, three books and a magazine, two
+  writers, two members. Every reference is set: each book has its authors, and two
+  items are borrowed by a member.
+-->
+<Library xmi:version="2.0"
+         xmlns:xmi="http://www.omg.org/XMI"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="Library"
+         name="City Library">
+
+  <writers xmi:id="w_austen" name="Jane Austen"/>
+  <writers xmi:id="w_tolkien" name="JRR Tolkien"/>
+
+  <members xmi:id="m_anna" name="Anna"/>
+  <members xmi:id="m_luca" name="Luca"/>
+
+  <items xsi:type="Book" xmi:id="b_pride" title="Pride and Prejudice" isbn="978-0141439518"
+         authors="w_austen" borrowedBy="m_anna"/>
+  <items xsi:type="Book" xmi:id="b_emma" title="Emma" isbn="978-0141439587"
+         authors="w_austen"/>
+  <items xsi:type="Book" xmi:id="b_hobbit" title="The Hobbit" isbn="978-0547928227"
+         authors="w_tolkien" borrowedBy="m_luca"/>
+  <items xsi:type="Magazine" xmi:id="g_review" title="Literary Review" issue="42"/>
+</Library>

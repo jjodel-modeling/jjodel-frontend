@@ -98,9 +98,12 @@ export function createM2(project: LProject, name0?: string) {
 /** `open` (#157, 2026-10-01): false creates the model without opening its editor. The
  *  Configurator's «Create model» needs it: opening the editor hides the LeftBar, which hosts
  *  the Configurator, so the overlay closed under the user (measured by probe). Default true:
- *  every menu path is unchanged. */
-export function createM1(project: LProject, metamodel: LModel, open: boolean = true) {
-    let name = 'model_' + 1;
+ *  every menu path is unchanged.
+ *  `name0` (P-2026-10-19-1618): the name typed in the New model dialog. Kept when unique among
+ *  `metamodel.models`, otherwise the same ending-number rule as the auto name applies to it;
+ *  `DModel.new` then makes it unique among every model and metamodel (` (n)`, nameLookup.ts). */
+export function createM1(project: LProject, metamodel: LModel, open: boolean = true, name0?: string) {
+    let name = (name0 && name0.trim()) || 'model_' + 1;
     let modelNames: (string)[] = metamodel.models.map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
     const dModel: DModel = DModel.new(name, metamodel.id, false, true);
@@ -383,6 +386,10 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
         if (!globalProject) return null;
         return <Undoredocomponent key={'undo'} project={globalProject} />
     }
+    // Section label (R-LIB-18): a heading row inside a submenu, not an item; no focus, no click, no submenu.
+    if (i.section) {
+        return <li key={index} className='section-label' role='presentation'>{i.name}</li>;
+    }
     if (i.name === "divisor") {
         return (
             <li key={index} className='divisor'>
@@ -444,7 +451,29 @@ type MenuEntry = {
     shortcutPills?: string[],  // New: array of pills for keyboard shortcut (adaptive to OS)
     subItems?: (MenuEntry|undefined|null)[],
     disabled?: boolean;
+    section?: boolean;  // renders `name` as a non-interactive section label (uppercase via CSS)
 } | null;
+
+/* File › New › Model lists at most this many metamodels; above it, the most recent ones plus More… (handoff §6). */
+const MODEL_MENU_LIMIT = 5;
+
+/* The creation dialogs listen in ProjectEditor, which lives in the project summary tab: bring it forward first,
+   as LeftBar's requestFromProjectEditor does. */
+function dispatchToProjectEditor(eventName: string) {
+    DockManager.activateProjectSummary();
+    window.dispatchEvent(new CustomEvent(eventName));
+}
+
+/* NEW_PROJECT is heard only by AllProjects. Elsewhere File › New › Project… goes to the dashboard (a page reload,
+   R.navigate) and leaves this request behind; the Navbar mounted there consumes it and opens the create dialog.
+   The timestamp keeps a request cancelled at the unsaved-changes prompt from firing on a later visit. */
+const NEW_PROJECT_REQUEST_KEY = 'jjodel_file_new_project';
+function isAllProjectsPage(): boolean { return window.location.hash.startsWith('#/allProjects'); }
+function newProjectFromMenu() {
+    if (isAllProjectsPage()) { window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT)); return; }
+    sessionStorage.setItem(NEW_PROJECT_REQUEST_KEY, String(Date.now()));
+    R.navigate('/allProjects');
+}
 
 // Simple menu components (inline, no complex memoization)
 function Submenu({ title, items }: { title?: string; items: (MenuEntry|null|undefined)[] }) {
@@ -588,6 +617,27 @@ function NavbarComponent(props: AllProps) {
         return () => window.removeEventListener('hashchange', onHash);
     }, []);
     const consumer = isConsumerMode();
+
+    // File › New › Project… from outside the dashboard (newProjectFromMenu): open the create dialog once
+    // AllProjects has mounted its NEW_PROJECT listener. The Navbar can mount before AllProjects does (measured:
+    // a dispatch one tick after this mount found no listener), so wait until the page's heading has been in the
+    // DOM for two consecutive polls, which leaves AllProjects' passive effects time to run. The request is removed
+    // only when dispatched, so a Navbar that unmounts first leaves it to the next one (a second open is a no-op).
+    useEffect(() => {
+        const requested = Number(sessionStorage.getItem(NEW_PROJECT_REQUEST_KEY));
+        if (!requested || !isAllProjectsPage()) return;
+        if (Date.now() - requested > 30000) { sessionStorage.removeItem(NEW_PROJECT_REQUEST_KEY); return; }
+        let seen = 0, polls = 0;
+        const t = setInterval(() => {
+            seen = document.querySelector('.dashboard-page-title') ? seen + 1 : 0;
+            if (seen >= 2 && sessionStorage.getItem(NEW_PROJECT_REQUEST_KEY)) {
+                sessionStorage.removeItem(NEW_PROJECT_REQUEST_KEY);
+                window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT));
+            }
+            if (seen >= 2 || ++polls > 75 || !isAllProjectsPage()) clearInterval(t);
+        }, 200);
+        return () => clearInterval(t);
+    }, []);
 
     // Advanced Mode Tutorial state
     const [showAdvancedTutorial, setShowAdvancedTutorial] = useState(false);
@@ -1326,13 +1376,20 @@ function NavbarComponent(props: AllProps) {
 
     let newModel: MenuEntry;
     if (project && metamodels.length > 0) {
+        const mmEntries: MenuEntry[] = metamodels.map((m2, i)=>({
+            name: mmNamesArray[i], function: () => createM1(project, m2), id: 'mmid_'+ props.metamodels[i],
+        }));
+        // Above the limit: the most recently created metamodels (the tail of the project's list, in its order) plus More….
+        const overflow = mmEntries.length > MODEL_MENU_LIMIT;
         newModel = {
             id: 'new_model',
             name: 'Model',
             icon: <i className="bi bi-box" />,
-            subItems: metamodels.map((m2, i)=>({
-                name: mmNamesArray[i], function: () => createM1(project, m2), id: 'mmid_'+ props.metamodels[i],
-            }))
+            subItems: [
+                {name: 'Conforming to', section: true},
+                ...(overflow ? mmEntries.slice(-MODEL_MENU_LIMIT) : mmEntries),
+                overflow ? {id: 'new_model_more', name: 'More…', function: () => dispatchToProjectEditor(JjodelEvents.OPEN_NEW_MODEL_DIALOG)} : null,
+            ]
         };
     } else {
         newModel = {
@@ -1370,16 +1427,26 @@ function NavbarComponent(props: AllProps) {
 
         {name: 'File',
             subItems: [
-                consumer ? null : {name: 'New Project',
-                    function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT)),
-                    icon: <i className="bi bi-file-earmark-plus" />,
-                    shortcutPills: formatShortcutPills(SHORTCUTS.NEW),
-                },
-                isDashboard ? null :
+                /* New › (handoff §6, R-LIB-18, cut to 3.2 by R-LIB-20: no built-in notations). Advanced adds
+                   Metamodel, Viewpoint and Transformation; outside a project only Project… and From template… act. */
                 {name: 'New', icon: <i className="bi bi-plus-circle" />,
-                    subItems: [
-                        consumer ? null : {name: 'Metamodel', icon: <i className="bi bi-diagram-3" />, function: ()=> { project && createM2(project); }, shortcutPills: formatShortcutPills(SHORTCUTS.NEW_METAMODEL)},
-                        newModel
+                    subItems: consumer ? [newModel] : [
+                        {name: 'Project…',
+                            function: newProjectFromMenu,
+                            icon: <i className="bi bi-file-earmark-plus" />,
+                            shortcutPills: formatShortcutPills(SHORTCUTS.NEW),
+                        },
+                        {name: 'divisor'},
+                        !props.advanced ? null : {name: 'Metamodel', icon: <i className="bi bi-diagram-3" />, disabled: !project,
+                            function: ()=> { project && createM2(project); }, shortcutPills: formatShortcutPills(SHORTCUTS.NEW_METAMODEL)},
+                        newModel,
+                        !props.advanced ? null : {name: 'Viewpoint', icon: <i className="bi bi-eye" />, disabled: !project,
+                            function: () => { if (project) dispatchToProjectEditor(JjodelEvents.CREATE_VIEWPOINT); }},
+                        // The transformation dialog needs a source and a target metamodel, as in the app-bar New document menu.
+                        !props.advanced ? null : {name: 'Transformation', icon: <i className="bi bi-arrow-left-right" />, disabled: !project || metamodels.length === 0,
+                            function: () => { if (project && metamodels.length) dispatchToProjectEditor(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG); }},
+                        {name: 'divisor'},
+                        {name: 'From template…', icon: <i className="bi bi-grid-3x3-gap" />, function: () => R.navigate('/templates')},
                     ]
                 },
                 {name: 'Recent Projects', icon: <i className="bi bi-clock-history" />, subItems: recentProjects},

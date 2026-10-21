@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Instance of Shapes.ecore: one canvas, and at least one instance of each concrete
+  shape (Circle, Square), typed through xsi:type on the abstract Shape.
+-->
+<Canvas xmi:version="2.0"
+        xmlns:xmi="http://www.omg.org/XMI"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="Shapes"
+        name="Sketch">
+  <shapes xsi:type="Circle" label="sun" radius="12"/>
+  <shapes xsi:type="Circle" label="wheel" radius="4"/>
+  <shapes xsi:type="Square" label="house" side="10"/>
+</Canvas>
