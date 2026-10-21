@@ -6341,6 +6341,12 @@ Evidence: the project chat C-2026-10-19-1748 of 2026-10-19 (17:55 recommendation
   with the harness front. Item 3, the Health tab and banner, goes into Tack, not into the 4700 board (R-TACK-2):
   Tack reads the signals and shows the worst state and the signal that set it. The signals should reuse what the
   Tack store already holds (lane outcome and stop, work time, front and chat per lane) rather than a second reader.
+- **R-TACK-6** (2026-10-21, ratified by Alfonso 2026-10-21 10:09, evidence: read, verified: none, reversible: trunk).
+  **Three kinds of stop, and an auto marker.** Tack shows a lane that ends on `Outcome: hard-stop` as a *breakpoint*
+  (the stop its prompt planned), a *ceiling* (context ceiling with a handoff) or a *hard-stop* (unplanned); a declared
+  `Stop:` line, when lanes write one, wins over the inference. The `Outcome:` token itself is unchanged. Every message a
+  chat sends to a lane in `/lane auto` without Alfonso having answered it starts, after the `[P-...]` bracket, with
+  `[auto]`; Tack counts those resumes and marks the lane with an `auto` pill.
 
 ## R-OI — ontological instantiation in one model: UML class and object diagrams (decisions 2026-10-20)
 

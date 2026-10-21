@@ -266,7 +266,14 @@ fn open_monitor_window(app: &AppHandle, lane: Option<&str>) -> Result<(), String
         let _ = w.set_focus();
         return Ok(());
     }
+    let board = url.clone();
+    let board_new = url.clone();
     WebviewWindowBuilder::new(app, MONITOR, WebviewUrl::External(url))
+        .on_navigation(move |target| follow(&board, target))
+        .on_new_window(move |target, _| {
+            follow(&board_new, &target);
+            tauri::webview::NewWindowResponse::Deny
+        })
         .title("Lane board")
         .inner_size(1280.0, 860.0)
         .min_inner_size(800.0, 500.0)
@@ -275,6 +282,19 @@ fn open_monitor_window(app: &AppHandle, lane: Option<&str>) -> Result<(), String
         .build()
         .map(|_| ())
         .map_err(|e| e.to_string())
+}
+
+/// Routes a navigation of the board window (links.rs `route`): true lets the webview follow
+/// it; a web URL outside the board opens in the default browser, anything else is dropped.
+fn follow(board: &Url, target: &Url) -> bool {
+    match links::route(board, target) {
+        links::Route::Inside => true,
+        links::Route::Browser => {
+            let _ = std::process::Command::new("open").arg(target.as_str()).spawn();
+            false
+        }
+        links::Route::Refuse => false,
+    }
 }
 
 fn hide(app: &AppHandle) {

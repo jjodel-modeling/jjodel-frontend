@@ -114,10 +114,62 @@ pub fn label(s: &Shortcut) -> String {
     out
 }
 
+/// Where a navigation or new-window request from the board's webview goes.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Route {
+    /// Same scheme, host and port as the board: the webview follows it.
+    Inside,
+    /// Any other `http` or `https` URL: handed to the default browser.
+    Browser,
+    /// Anything else (file, javascript, data, other schemes): dropped.
+    Refuse,
+}
+
+/// Decides the fate of `target` for a webview showing `board`.
+pub fn route(board: &tauri::Url, target: &tauri::Url) -> Route {
+    let same_origin = target.scheme() == board.scheme()
+        && target.host_str() == board.host_str()
+        && target.port_or_known_default() == board.port_or_known_default();
+    if same_origin && matches!(target.scheme(), "http" | "https") {
+        Route::Inside
+    } else if matches!(target.scheme(), "http" | "https") {
+        Route::Browser
+    } else {
+        Route::Refuse
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use tauri_plugin_global_shortcut::Code;
+
+    fn url(s: &str) -> tauri::Url {
+        s.parse().unwrap()
+    }
+
+    #[test]
+    fn route_keeps_the_board_inside() {
+        let board = url("http://localhost:4700/");
+        assert_eq!(route(&board, &url("http://localhost:4700/#lane=P-2026-10-21-1000")), Route::Inside);
+        assert_eq!(route(&board, &url("http://localhost:4700/api/state")), Route::Inside);
+    }
+
+    #[test]
+    fn route_sends_other_web_urls_to_the_browser() {
+        let board = url("http://localhost:4700/");
+        assert_eq!(route(&board, &url("https://claude.ai/chat/abc")), Route::Browser);
+        assert_eq!(route(&board, &url("http://localhost:3001/")), Route::Browser);
+        assert_eq!(route(&board, &url("https://localhost:4700/")), Route::Browser);
+    }
+
+    #[test]
+    fn route_refuses_non_web_schemes() {
+        let board = url("http://localhost:4700/");
+        for bad in ["javascript:alert(1)", "file:///etc/passwd", "data:text/html,x", "jjodel-lanes://P-2026-10-21-1000", "about:blank"] {
+            assert_eq!(route(&board, &url(bad)), Route::Refuse, "{bad}");
+        }
+    }
 
     #[test]
     fn accepts_a_prompt_id_link() {
