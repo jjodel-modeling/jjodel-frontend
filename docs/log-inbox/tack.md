@@ -412,3 +412,16 @@ First run, `TACK_STORE=/tmp/tack-v0/<name>.db node tack/bin/tack.mjs board --no-
 | `git status --porcelain --ignored` before / after | identical (4 lines) | identical (1 line) |
 
 **Ticket** (medium): repositories are found only from session directories, so a git work tree with no Claude Code session (the Sprotty clone) is not in the store and `tack board` started there preselects nothing and shows every repository's data. A first-run user in a fresh repository sees someone else's work. Candidate for v0.1: register the launching work tree and show «no session yet» for it.
+
+## 2026-10-21 — merge: tack-v0 into alfonso-frontend-jjtl (P-2026-10-21-1438)
+**Prompt**: `claude_2026-10-21_1438_prompt_merge_tack-v0.md`, a direct merge by `lane-run merge --direct`, no session: `tack-v0` at `31f34732b` into `alfonso-frontend-jjtl`, merge base `77eba1327`, 2 commits on the branch side.
+**Files touched**: merge `61164a7c8`: 7 files from the branch side (`docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-21_1330_prompt_tack_v0_closure.md`, `tack/README.md`, `tack/bin/tack.mjs`, `tack/package.json`, `tack/src/cli/table.mjs`, `tack/test/cli-table.test.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `61164a7c8` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11427 tests in 398 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat checked the tack-v0 worktree at 13:56: tack --version 0.1.0, README Status line as prescribed, bounded tack repos (~/jjodel +60 more), 4710 200
+**Notes**: Rollback tag `pre-tack-v0` on `213243815` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1438/result.json`.
+**Prompt document name**: 2026-10-21 14:38

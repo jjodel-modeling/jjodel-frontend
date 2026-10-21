@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1438
 Chat: C-2026-10-19-1748
 Request: https://claude.ai/code/session_01H3q4V79uL9VsBMuHBRvX4J (merge of tack-v0 launched by chat C-2026-10-19-1748)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane merge · 61164a7c8 · verifica visiva passata 2026-10-21 (Chat checked the tack-v0 worktree at 13:56: tack --version 0.1.0, README Status line as prescribed, bounded tack repos (~/jjodel +60 more), 4710 200)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-21-1438 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
