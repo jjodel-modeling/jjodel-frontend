@@ -306,3 +306,29 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: passato — chat, unattended: Chat checked the Lanes tab on 4710 from the tack-s8 worktree at e68c140bb (renders, Waiting 0 vs 14 before the fix, P-2026-10-19-1800 and 2140 not listed, Prompt-IDs whole, titles wrap, running and last-24h sections populated); tack code at the merge identical to the checked tip; decided under R-TACK-4
 **Notes**: Rollback tag `pre-tack-s8` on `87eba6097` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0052/result.json`.
 **Prompt document name**: 2026-10-20 00:52
+
+## 2026-10-21 — merge: tack-spec into alfonso-frontend-jjtl (P-2026-10-21-1023)
+**Prompt**: `claude_2026-10-21_1023_prompt_merge_tack-spec.md`, a direct merge by `lane-run merge --direct`, no session: `tack-spec` at `d819de505` into `alfonso-frontend-jjtl`, merge base `c3db63f69`, 2 commits on the branch side.
+**Files touched**: merge `39b1964ba`: 3 files from the branch side (`docs/discovery/discovery_2026-10-20_tack_monitor_vs_spec.md`, `docs/prompts/claude_2026-10-20_1900_prompt_tack_monitor_vs_spec_disc.md`, `tack/docs/design-monitor-vs-spec.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `39b1964ba` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11423 tests in 397 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: design note and discovery report, docs only; recommendations ratified by Alfonso 2026-10-21 10:19 (R-TACK-7)
+**Notes**: Rollback tag `pre-tack-spec` on `ebbaebdb9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1023/result.json`.
+**Prompt document name**: 2026-10-21 10:23
+
+## 2026-10-21 — feat: Tack stops, breakpoint, ceiling and hard-stop classes, auto pill
+**Prompt**: P-2026-10-21-1015: a lane that ends `Outcome: hard-stop` is classed breakpoint (the prompt planned it), ceiling (context ceiling, handoff written) or hard-stop (unplanned), and a lane whose resumes all start with `[auto]` gets an auto pill. Measure first, classify in the collector (`stop_kind`, schema 8), show it on the Lanes page, the waiting tile and banner, the Last 24 hours table and the Insights outcome keys.
+**Files touched**: tack/src/collectors/lane-run/collect.mjs, tack/src/store/schema-8.sql (new), tack/src/store/open.mjs, tack/src/board/api.mjs, tack/src/board/lanes.js, tack/src/board/board.css, tack/src/board/insights.js, tack/src/metrics/layer3.mjs, tack/README.md, tack/test/stops.test.mjs (new), tack/test/lanes.test.mjs, tack/test/lanes-api.test.mjs, docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1015_prompt_tack_breakpoints.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (tack suite 231 of 231 pass; 210 before plus 21 new and adjusted)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-stops/board.pid, store copy /tmp/tack-stops/real.db)
+**Notes**: 677 lane folders: 193 hard-stops = 27 breakpoint, 23 ceiling, 143 hard-stop (store of 679: 27, 23, 144). 133 of 159 hard-stops had no readable prompt.txt, so the prompt falls back to input-1.md (breakpoint 11 to 27). Hand check, 10 per class: ceiling 10/10; breakpoint 10/10 plausible; hard-stop 6 right, 4 are planned stops of prompts without a HARD STOP section (the rule says hard-stop). 0 lanes carry [auto] yet. 4710, last 24 h: 12 ceiling, 3 hard-stop.
+**Prompt document name**: 2026-10-21 10:15

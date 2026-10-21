@@ -29,6 +29,7 @@ The Lanes page lists waiting lanes as rows under «Needs attention». After P-20
 4. **`/api/attention`** in Tack with the shape documented in `frontend/scripts/lane-board/README.md` («The menu bar app's routes»): `v`, `now`, `stale`, `board`, `waiting`, `blocked`, `running`, `staleCount`, `staleOldest`, `items[]`, `runningItems[]`, under 2 KB, no CORS header. A test checks the shape against a fixture shaped like the 4700 answer.
 5. Tests for the cards (each wait kind, Recommended present and absent, chat linked and plain), the single-card banner, and `/api/attention`. Full suite green.
 6. Restart the board on 4710 from this worktree as the previous slices did (`TACK_NOTIFY=off`, store copy). Report the waiting count and one card's fields from the API.
+6b. **Follow-ups reported by P-2026-10-21-1015** (same slice, before item 7): (a) a prompt with no `## HARD STOP` section counts as breakpoint when the closing text names a planned stop (Phase 1, visual check, report committed): 4 of 10 sampled hard-stops were such; (b) the swatches of breakpoint, ceiling, hard-stop and the other outcomes reach 3:1 between each other on the light and the dark page (today 1.7 to 2.2:1), measured in a test; (c) the notifier fires distinct events for breakpoint, ceiling and hard-stop instead of «Lane in hard-stop» for all three, with the catalogue and the settings page updated.
 7. Code commits (one per item 2-4 is fine), one docs commit with the log entry and this prompt's `Status:` line.
 
 ## DOVE

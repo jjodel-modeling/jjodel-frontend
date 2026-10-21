@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1016
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (core: redux/reducer/reducer.ts; Layer Impact Report in the discovery; visual check owed)
-Status: da eseguire
+Status: non completato 2026-10-21 · lane oi-s2u · code 55f3bd556, f62d6edb0 (typecheck 0, unit tests green, bench 7/8) · context ceiling before the probes · continued by P-2026-10-21-1041
 Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5
 Depends: P-2026-10-21-0947
 Corregge: —

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-20-1900
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: discovery (read-only inventory; two documents, no code)
-Status: da eseguire
+Status: eseguito 2026-10-20 · lane discovery · Phase 1 report and design note, docs commit carrying this line · hard-stop
 Corregge: none
 Request: Alfonso, 2026-10-20 11:27 («distinguere la parte di monitoraggio (lanes, sessions, timelines, requirements) da quella di specifica dell'harness»), 18:53 (the specification also states what goes into the document repository and what into the KB, and the lifecycle of documents: rotation over a finite number, distilled versions, conditions to update, insert or remove), 18:56 («Si va»)
 

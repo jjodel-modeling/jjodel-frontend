@@ -918,3 +918,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: non applicabile — the click in the webview is checked by the chat after exit (P8 deroga)
 **Notes**: Cause confirmed as stated: no navigation or new-window handler, so WKWebView dropped `target="_blank"`. tauri 2.12.4 has `WebviewWindowBuilder::on_new_window` (`~/.cargo/registry/src/*/tauri-2.12.4/src/webview/webview_window.rs:315`, `NewWindowResponse::Deny` at `src/webview/mod.rs:257`); both hooks go through `route()`, Browser runs `open <url>`. Board and Cargo.toml untouched.
 **Prompt document name**: 2026-10-21 10:00
+
+## 2026-10-21 — merge: lanemon-links into alfonso-frontend-jjtl (P-2026-10-21-1008)
+**Prompt**: `claude_2026-10-21_1008_prompt_merge_lanemon-links.md`, a direct merge by `lane-run merge --direct`, no session: `lanemon-links` at `74dd1181a` into `alfonso-frontend-jjtl`, merge base `4d56f907f`, 2 commits on the branch side.
+**Files touched**: merge `31ee859e2`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-21_1000_prompt_lanemon_external_links.md`, `tools/lane-monitor-app/src-tauri/src/links.rs`, `tools/lane-monitor-app/src-tauri/src/main.rs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `31ee859e2` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11423 tests in 397 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Lane Monitor app rebuilt and relaunched; route() 3 new tests of 56 green; on_new_window Deny in tauri 2.12.4; link click in the Lane board window confirmed by Alfonso 2026-10-21 10:19
+**Notes**: Rollback tag `pre-lanemon-links` on `4d56f907f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1008/result.json`.
+**Prompt document name**: 2026-10-21 10:08
