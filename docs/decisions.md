@@ -6413,6 +6413,17 @@ P-2026-10-20-1835.
   `redux/reducer/reducer.ts` and `redux/action/action.ts`. Until then S2 declares its count (one instantiation is undone
   by two Cmd+Z, the first empty, P-2026-10-21-0100). The slice order after S2 is S3a, S3b, S4, S5 (discovery §8); S3a and
   S3b open with a Layer Impact Report (critical-zone table §3.1).
+- **R-OI-13** (2026-10-21, provisional, unattended, evidence: measured, verified: none, reversible: branch).
+  **S3a reports the ontological findings under one problem kind, `instantiation`**: missing slot (warning, with the
+  «Sync slots» action), orphan slot, duplicate slot (O3) and wrong value kind (O5) as errors, each on the instance's
+  object and vertex. A cycle in the generalization is an error on every classifier of the cycle. Only instances whose
+  record is `object` are judged; links wait for S4. Detection costs 3.9 ms at 200 instances (vitest, under load).
+  Discovery P-2026-10-21-1405 (`docs/discovery/discovery_2026-10-21_onto_s3a_slot_problems.md`), question 3.
+- **R-OI-14** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **«Sync slots» works on one instance, inside one S2u undo group**, appends the missing slots with their default
+  values, grows the node box and never shrinks it; a model-wide variant is not built now (200 instances do not fit the
+  10 s group cap). Removing orphan slots is a later slice (S3b or S3c), as an action with a confirmation (R-OI-9).
+  Discovery P-2026-10-21-1405, questions 2 and 4.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 

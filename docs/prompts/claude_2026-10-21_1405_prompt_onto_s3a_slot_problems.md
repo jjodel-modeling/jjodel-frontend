@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1405
 Chat: C-2026-10-21-1405
 Front: instance-of
 Lane: full (problems/ is in the critical-zone table of CLAUDE.md 3.1; Phase 1 read-only, hard stop on the report)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane oi-s3a · report 78d91320b · four questions answered as recommended by the chat (unattended, RC-25; R-OI-13, R-OI-14) · Phase 2 P-2026-10-21-1600
 Request: none (the chat has no shareable URL; Alfonso's words are kept with --request)
 Depends: P-2026-10-21-1219
 Corregge: —
