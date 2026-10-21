@@ -306,3 +306,16 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: passato — chat, unattended: Chat checked the Lanes tab on 4710 from the tack-s8 worktree at e68c140bb (renders, Waiting 0 vs 14 before the fix, P-2026-10-19-1800 and 2140 not listed, Prompt-IDs whole, titles wrap, running and last-24h sections populated); tack code at the merge identical to the checked tip; decided under R-TACK-4
 **Notes**: Rollback tag `pre-tack-s8` on `87eba6097` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0052/result.json`.
 **Prompt document name**: 2026-10-20 00:52
+
+## 2026-10-21 — merge: tack-spec into alfonso-frontend-jjtl (P-2026-10-21-1023)
+**Prompt**: `claude_2026-10-21_1023_prompt_merge_tack-spec.md`, a direct merge by `lane-run merge --direct`, no session: `tack-spec` at `d819de505` into `alfonso-frontend-jjtl`, merge base `c3db63f69`, 2 commits on the branch side.
+**Files touched**: merge `39b1964ba`: 3 files from the branch side (`docs/discovery/discovery_2026-10-20_tack_monitor_vs_spec.md`, `docs/prompts/claude_2026-10-20_1900_prompt_tack_monitor_vs_spec_disc.md`, `tack/docs/design-monitor-vs-spec.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `39b1964ba` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11423 tests in 397 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: design note and discovery report, docs only; recommendations ratified by Alfonso 2026-10-21 10:19 (R-TACK-7)
+**Notes**: Rollback tag `pre-tack-spec` on `ebbaebdb9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1023/result.json`.
+**Prompt document name**: 2026-10-21 10:23
