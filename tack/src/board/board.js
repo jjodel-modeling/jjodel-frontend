@@ -43,13 +43,16 @@
       '</td><td class="n r">' + c.cost + '</td><td class="c" title="' + esc(s.models.join(', ')) + '">' + c.models + '</td><td>' + c.commit + '</td></tr>';
   }
 
-  const B = root.TackBoard = { esc, int, usd, pct, hhmm, dur, median, unitOrBranch, modelsShort, sessionCells, sessionRow };
+  /** The one line every tab shows for a repository with no recorded session (api.mjs noSessionLine). */
+  const noSessionLine = (name) => 'No Claude Code sessions recorded for ' + name + ' yet.';
+
+  const B = root.TackBoard = { esc, int, usd, pct, hhmm, dur, median, unitOrBranch, modelsShort, sessionCells, sessionRow, noSessionLine };
   root.TackViews = root.TackViews || {};
   if (typeof document === 'undefined') return;
 
   const $ = (id) => document.getElementById(id);
   const TABS = ['lanes', 'sessions', 'timeline', 'insights', 'settings'];
-  const state = B.state = { repos: [], preselected: null, data: null, metrics: null, timeline: null, threshold: 200000, tab: 'lanes', selected: null };
+  const state = B.state = { repos: [], preselected: null, unrecorded: null, data: null, metrics: null, timeline: null, threshold: 200000, tab: 'lanes', selected: null };
 
   async function get(path) {
     const r = await fetch(path, { cache: 'no-store' });
@@ -65,6 +68,8 @@
     history.replaceState(null, '', u);
   }
   const repoSel = () => params().get('repo') || 'all';
+  // The start work tree the store does not hold, when it is the selection.
+  const unrecordedSel = () => { const u = state.unrecorded; const cur = repoSel(); return u && (cur === u.key || (cur.length >= 4 && u.key.startsWith(cur))) ? u : null; };
   function query() {
     const p = params(); const q = new URLSearchParams();
     q.set('repo', repoSel());
@@ -77,6 +82,9 @@
     const v = root.TackViews[t];
     // The lanes and settings views load their own data: they draw before the sessions arrive.
     if (!v || t !== state.tab || (!state.data && t !== 'settings' && t !== 'lanes')) return;
+    // The lanes view gets the same line from /api/lanes.
+    const u = (t === 'timeline' || t === 'insights') && unrecordedSel();
+    if (u) { $('tab-' + t).innerHTML = '<div class="empty">' + esc(noSessionLine(u.name)) + '</div>'; return; }
     v.render(state, $('tab-' + t));
     if (t === 'insights' && B.drawnMs === undefined) B.drawnMs = Math.round(performance.now());
   }
@@ -92,11 +100,12 @@
 
   function renderRepos() {
     const sel = $('repo');
-    const opts = ['<option value="all">All repositories</option>'].concat(state.repos.map((r) =>
+    const u = state.unrecorded;
+    const opts = ['<option value="all">All repositories</option>'].concat(u ? ['<option value="' + esc(u.key) + '">' + esc(u.name) + ' · no recorded session</option>'] : [], state.repos.map((r) =>
       '<option value="' + esc(r.key) + '">' + esc(r.name) + ' · ' + esc(r.key.slice(0, 8)) + ' · ' + r.sessions + ' sessions' + (r.state === 'gone' ? ' (gone)' : '') + '</option>'));
     sel.innerHTML = opts.join('');
     const cur = repoSel();
-    const hit = state.repos.find((r) => r.key === cur || (cur.length >= 4 && r.key.startsWith(cur)));
+    const hit = state.repos.find((r) => r.key === cur || (cur.length >= 4 && r.key.startsWith(cur))) || unrecordedSel();
     sel.value = hit ? hit.key : 'all';
     $('p-repo').textContent = hit ? hit.name : 'all repositories';
     $('p-repo').title = hit ? hit.toplevel || '' : '';
@@ -142,7 +151,7 @@
     $('h-branch').textContent = units ? 'Unit / branch' : 'Branch';
     $('shown').textContent = rows.length + ' of ' + state.data.sessions.length + ' sessions · days ' + state.data.days;
     const now = new Date();
-    $('rows').innerHTML = rows.length ? rows.map((s) => sessionRow(s, state.threshold, now)).join('') : '<tr><td colspan="11" class="empty">No session in this selection.</td></tr>';
+    $('rows').innerHTML = rows.length ? rows.map((s) => sessionRow(s, state.threshold, now)).join('') : '<tr><td colspan="11" class="empty">' + (unrecordedSel() ? esc(noSessionLine(unrecordedSel().name)) : 'No session in this selection.') + '</td></tr>';
     markSelected(false);
   }
 
@@ -170,14 +179,14 @@
       const q = query();
       const [d, m, h, tl] = await Promise.all([get('/api/sessions?' + q), get('/api/metrics?' + q), get('/api/health'), get('/api/timeline?' + q)]);
       state.data = d; state.metrics = m; state.timeline = tl; state.threshold = d.threshold;
-      state.repoName = (state.repos.find((r) => r.key === d.repo) || {}).name || null;
+      state.repoName = (state.repos.find((r) => r.key === d.repo) || (state.unrecorded && state.unrecorded.key === d.repo ? state.unrecorded : {})).name || null;
       renderSessions(); renderHealth(h); renderView(state.tab);
     } catch (e) { $('err').textContent = 'Could not load: ' + e.message; }
   }
 
   async function init() {
     const r = await get('/api/repos');
-    state.repos = r.repos; state.preselected = r.preselected;
+    state.repos = r.repos; state.preselected = r.preselected; state.unrecorded = r.unrecorded || null;
     if (!params().get('repo') && r.preselected) setParams({ repo: r.preselected });
     const p = params(); $('since').value = p.get('since') || ''; $('until').value = p.get('until') || '';
     renderRepos();
@@ -199,7 +208,7 @@
     try {
       const r = await fetch('/api/rescan', { method: 'POST' });
       if (!r.ok) $('err').textContent = 'Rescan failed: ' + ((await r.json()).lastScan || {}).error;
-      const repos = await get('/api/repos'); state.repos = repos.repos; renderRepos();
+      const repos = await get('/api/repos'); state.repos = repos.repos; state.unrecorded = repos.unrecorded || null; renderRepos();
       await load();
     } catch (e) { $('err').textContent = 'Rescan failed: ' + e.message; }
     b.disabled = false; $('spin').hidden = true;

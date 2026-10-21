@@ -3,6 +3,7 @@
 // lie below a toplevel), no transcript path, no commit subject, author or changed-file path. One exception
 // (slice 9): the waiting lanes of /api/lanes and /api/attention carry the reason and the Recommended: line of
 // their closing message, read from the lane folder per request (waiting.mjs) and never stored.
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 import { remoteHost, resolveCwd, cloneIdentity } from '../collectors/git/identity.mjs';
@@ -66,12 +67,33 @@ export function preselect(db, dir) {
   return hit ? hit.key : null;
 }
 
-/** A query's repository: null for all, a full key for a key or unique prefix; { error } otherwise. */
-export function repoParam(db, value) {
+/** The one line every tab shows for a repository with no recorded session. */
+export const noSessionLine = (name) => `No Claude Code sessions recorded for ${name} yet.`;
+
+/**
+ * The work tree that contains dir when the store holds no repository for it (preselect is null):
+ * { key, name, toplevel, unrecorded: true }, key the one the store would give it (its lowest root commit;
+ * a hash of the toplevel before the first commit). Null outside a git work tree or when the store holds it.
+ */
+export function unrecordedRepo(db, dir) {
+  if (preselect(db, dir)) return null;
+  const r = resolveCwd(dir);
+  if (r.reason) return null;
+  const id = cloneIdentity(r.toplevel);
+  const key = id.reason ? createHash('sha1').update(r.toplevel).digest('hex') : id.roots[0];
+  return { key, name: displayName(r.toplevel, key), toplevel: r.toplevel, unrecorded: true };
+}
+
+/**
+ * A query's repository: null for all, a full key for a key or unique prefix; { error } otherwise. unrecorded
+ * (unrecordedRepo) is accepted too, by key or prefix, when no stored repository matches.
+ */
+export function repoParam(db, value, unrecorded = null) {
   if (value === null || value === '' || value === 'all') return { key: null };
   if (!KEY.test(value)) return { error: 'repo takes a repository key or "all"' };
   const hit = db.prepare("SELECT key FROM repos WHERE substr(key, 1, length(?)) = ?").all(value, value);
   if (hit.length === 1) return { key: hit[0].key };
+  if (!hit.length && unrecorded && unrecorded.key.startsWith(value)) return { key: unrecorded.key };
   return { error: hit.length ? `key prefix ${value} matches ${hit.length} repositories` : `no repository ${value}` };
 }
 
@@ -233,10 +255,11 @@ const median = (xs) => {
  * settingsFor(repo).value(key) reads the settings; updatedMs is the time of the latest lane collection.
  * waitFor(id, kind) → { reason, recommended, chatUrl } reads a waiting lane's closing message (waiting.mjs, waitReader);
  * without it the waiting cards carry no text. waitingCards: the waiting lanes, longest waiting first, each with wait:
- * { kind, pill, reason, recommended, chatUrl, since }.
+ * { kind, pill, reason, recommended, chatUrl, since }. unrecorded (unrecordedRepo): its key answers empty, with noSessionLine.
  */
-export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settingsFor, updatedMs = null, waitFor = null } = {}) {
+export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settingsFor, updatedMs = null, waitFor = null, unrecorded = null } = {}) {
   const head = { repo, updatedMs, closure: LANE_CLOSURE };
+  if (repo && unrecorded && repo === unrecorded.key) return { ...head, state: 'empty', reason: noSessionLine(unrecorded.name) };
   if (repo && settingsFor(repo).value('harness.laneRun') === 'off') return { ...head, state: 'off', reason: 'Lanes are turned off for this repository (harness.laneRun)' };
   if (!laneRoot || !existsSync(laneRoot)) return { ...head, state: 'no-root', reason: `No lane-run folder on this machine (${laneRoot})` };
   const rows = db.prepare(LANES).all(repo, repo);
