@@ -75,3 +75,44 @@ Smoke-test scenarios potentially affected:
     the trunk, the pinned handles of the visible nodes unmoved by the run.
   - Import Families.ecore and open a project: no synthetic edge, no route at rest, untouched.
 ```
+
+## 3. Addendum 2026-10-21: A3 on the trunk (P-2026-10-21-1925)
+
+- Tree: `~/jjodel-w-a3trunk`, branch `a3-on-trunk`, cut from the trunk at `7ecaa5c45`; merge `7ae59d306`
+  (`git merge --no-ff elk-handles-a3`, tip `5c578ba53`, merge base `32ff5bf34`, 1417 trunk commits since). R-VP-60
+  ratified by Alfonso 2026-10-21.
+- Conflicts: one, `docs/log-inbox/views.md`. The trunk had folded the inbox into the log and its archive; resolved as
+  the trunk's preamble plus the branch's two entries (P-2026-10-10-0915 and its Petri loop ticket), the folded base
+  entries not carried back. No code conflict: the trunk did not change `irEdgeViews.ts`, `handlePosition.ts`,
+  `DynamicHandles.tsx`, `irLabelAnchors.test.ts` or `petri-ink-ports.ts` since the base, so they come in as measured
+  on the branch (for `petri-ink-ports.ts` the trunk's file plus the A3 assertions and the light-only default of
+  `a57bd4d53`). `petri-drag-loop.ts` is the trunk's, unchanged: the branch never had it, nothing to re-apply.
+  `docs/decisions.md` auto-merged (the branch's one R-VP-60 line).
+- Gates on `7ae59d306`: `npm run typecheck` exit 0, no `error TS`; vitest on `viewpoint/ir`, `editor-v2/components`,
+  `editor-v2/utils` and `edges/__tests__/bundleSpread.test.ts` (every test importing the three code files) 77 files,
+  1673 tests, exit 0; `npm run build` built, 0 error lines (the chunk-size warning only); `npm run smoke` GREEN,
+  12 passed, 3 skipped (declared gaps).
+- Probes, same pages, trunk `7ecaa5c45` on 3085 and tip `7ae59d306` on 3084, light, the probe files of the tip
+  (logs and JSON in `~/.jjodel-lanes/P-2026-10-21-1925/`):
+
+| Measure | trunk | tip (A3) | 0915 lane (trunk -> branch) |
+|---|---|---|---|
+| petri-ink-ports | 63/73 (the 10 A3 checks red, control) | 73/73 | 63/73 -> 73/73 |
+| Non-junction ends after Auto layout, handle over 1 px off along the side | 33 of 68 | 2 of 68 (work->d1, 6 px, the diamond leg) | 33 -> 2 |
+| Handle on another side than the drawn end, off the diamonds | 5 | 0 | 5 -> 0 |
+| Bends drawn over ELK's | 0 | 0 | 0 -> 0 |
+| Default viewpoint panes identical | 4/4 | | 4/4 |
+| petri-drag-loop, Petri classic, 10 fresh pages x 3 drags, at rest / after Auto layout with an edge selected | 0 / 0 crashes, depth 3 | 0 / 0 crashes, depth 3 | (not run: the probe is of P-2026-10-10-1020) |
+| elk-handles-loop, 60 drags + 20 selections per viewpoint (Petri classic, Flowchart, Activity, Statechart) | 0 crashes, depth <= 3, 33/33 | 0 crashes, depth <= 3, 33/33 | Petri classic 5/5 pages crashed both sides; others 0 |
+| DynamicHandles renders per drag (Petri classic, Flowchart, Activity, Statechart) | 7.4, 8.3, 4.3, 8.1 | 7.4, 8.5, 5.2, 8.3 | |
+| Edges pinned after Auto layout (Petri classic, Flowchart, Activity, Statechart) | 0, 0, 0, 0 | 6, 9, 8, 3 | |
+| DemoESM ten presses, default and derived Statechart: pins and kept handles unmoved, no page error | PASS | PASS | PASS |
+
+- The Petri classic loop of 2026-10-10 is gone on both sides with Fix A (`a69fef5d9`): the ticket of the 0915 entry
+  closes on the trunk's code, A3 included. Over 1 px across the side, the tip keeps the circle outline inset of the
+  0915 lane (Petri `lock` ends 1.1 to 2.7 px), not gated.
+- Crops: `~/.jjodel-lanes/P-2026-10-21-1925/crops/sbs_*_trunk_vs_tip.png` (Petri classic, Statechart PEST and ESM,
+  Flowchart, Activity, after Auto layout). The drawn routes are the trunk's; on Petri classic the `lock` label sits
+  below the place on the tip, as in the 0915 lane's crop (A2's outside label avoids the moved handle).
+- The merge commit `7ae59d306` carries no `Model:` trailer (the hook exempts a merge; amending it was refused by the
+  pathspec rule): the model is Anthropic Claude Opus 5.5.
