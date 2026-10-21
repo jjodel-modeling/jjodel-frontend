@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1810
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (build track: the CPU build script and its import check only)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane hw-sa2 · 647aefd57, 8910c3762 · Outcome: done (import check ALL GREEN, three PNGs framed) · verifica visiva in attesa (Alfonso)
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-1620
 Corregge: P-2026-10-21-1620

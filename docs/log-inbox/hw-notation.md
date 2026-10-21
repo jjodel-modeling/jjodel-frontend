@@ -242,3 +242,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: `assignGeometricHandles` (`irEdgeViews.ts:195-196`) gives each object-as-edge the next free index on its side with no clamp to `MAX_HANDLES_PER_SIDE` (4), unlike `portDistribution.ts:415`. A fifth end on one side gets `right-4`, and React Flow refuses it (error #008): under the first hw-cpu Control layout 8 of 20 transitions were not drawn. S-A2 works around it by layout (at most four ends a side and role).
 **Priority**: medium
 **Found in**: P-2026-10-21-1620
+
+## 2026-10-21 — fix: S-A2, framed screenshots, the ports arcs and the guard-label overlap (P-2026-10-21-1810)
+**Prompt**: `claude_2026-10-21_1810_prompt_hw_sa2_frame_fix.md`: close the three items P-2026-10-21-1620 left open: the Datapath and Control screenshots framed and readable, the 25 extra Datapath edges, the `0x0`/`else` guard labels overlapping on DECODE→FETCH (Alfonso's decision: two transitions kept, one view changed).
+**Files touched**: `frontend/scripts/examples/build-hw-cpu.ts`, `frontend/public/examples/hw/hw-cpu.jjodel` (`647aefd57`, `8910c3762`); `docs/discovery/assets/hw-sa2/*.png`, the Status line of the 1810 prompt, this inbox.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 16:20
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa — Alfonso's look at the three PNGs
+**Notes**: Ports: the 25 `Component.ports` arcs read transparent after the remount (39 edges, 14 drawn) and none shows on the PNG; no change. The arc fan puts all three FETCH-DECODE labels at mid-height, so neither curve nor placement parts them: `[else]` moved to the source end (priority-2 view). Shots at deviceScaleFactor 2 (Datapath fits at 0.58); ports 40 to 50 high, their names were half covered. Read beyond the list: irTypes, UnifiedEdge, edgeUtils. Red dot on FETCH not investigated.
+**Prompt document name**: 2026-10-21 18:10
