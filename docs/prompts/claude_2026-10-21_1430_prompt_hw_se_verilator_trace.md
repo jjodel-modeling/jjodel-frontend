@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1430
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (scripts/oracle, one package.json line, a committed trace and a normal-suite test)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane full · 054dd604b
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-1340
 Corregge: —
