@@ -112,3 +112,31 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passato — chat, unattended: JjTL executor fix (attribute read through source __ref) and docs only, no UI file; all gates green
 **Notes**: Rollback tag `pre-hw-jjtl` on `7fc04bb7a` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1302/result.json`.
 **Prompt document name**: 2026-10-21 13:02
+
+## 2026-10-21 — feat: hw demonstrator S-D, route A, the Verilog target and the hw-cpu testbench
+**Prompt**: P-2026-10-21-1340, finish of P-2026-10-21-1300 after its AM-8 ceiling: slice S-D of the hw demonstrator plan §10.1, the Verilog target, genTemplates cpu and tb on HwDesign, committed expected cpu.v and tb.v, the regenerated .jjodel, verilator --lint-only once, gates, commit
+**Files touched**: code 671dc5638: frontend/src/codegen/target/verilog/access.ts (new), frontend/src/codegen/engine/generate.ts, frontend/src/codegen/examples/hw-cpu/hw-cpu.json, frontend/src/codegen/examples/hw-cpu/expected/cpu.v (new), frontend/src/codegen/examples/hw-cpu/expected/tb.v (new), frontend/public/examples/hw/hw-cpu.jjodel, frontend/src/codegen/examples/hw-cpu/__tests__/hw-cpu.verilog.test.ts (new), frontend/src/codegen/examples/__tests__/importable.test.ts; Status lines of the 1300 and 1340 prompts
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Continues P-2026-10-21-1300 from its handoff.md. Eight code files, two undeclared: hw-cpu.verilog.test.ts (8 tests) and importable.test.ts (JS oracle only on a spec with a main template). Gates, lint, five killed mutants in the 671dc5638 body. Lint: default exit 1, one WIDTHEXPAND cpu.v:125; -Wno-WIDTH exit 0. 1300's one-off sim: 171/171 trace lines equal. Template sources stay uncommitted in the lane scratch: the DOVE names no home.
+**Prompt document name**: 2026-10-21 13:40
+
+## 2026-10-21 — ticket: codegen probe: checkable() now treats hw-cpu as a JS example
+**Ticket**: `frontend/scripts/probe/codegen-examples.ts:65` `checkable` holds for any example with a scenario and `genTemplates`; since S-D (671dc5638) hw-cpu has both, so the probe would run JavaScript Generate, Run and Check on its Verilog templates. Needs the predicate `importable.test.ts` now uses: the spec has a `main` template.
+**Priority**: medium
+**Found in**: P-2026-10-21-1300
+
+## 2026-10-21 — ticket: S-D0 printer: a top-level zext prints a bare select, default verilator lint warns
+**Ticket**: The S-D0 printer prints a top-level `zext(8)` as the bare select, so `expected/cpu.v:125` reads `acc <= ir[3:0];` and `verilator --lint-only` without `-Wno-WIDTH` exits 1 on one `%Warning-WIDTHEXPAND`. A size cast (or an explicit zero-extension) would make the generated module lint-clean without the flag; the §7.4 build line passes `-Wno-WIDTH` today.
+**Priority**: low
+**Found in**: P-2026-10-21-1300
+
+## 2026-10-21 — ticket: CodePanel Run on a Verilog entry runs the text as JavaScript
+**Ticket**: `frontend/src/codegen/ui/CodePanel.tsx:276` `canRun` does not look at the entry template's `target`: on a `target: 'verilog'` entry (hw-cpu since 671dc5638) «Run» and «Check» load the generated Verilog in the JavaScript runner. They should be disabled, or routed to a Verilog runner, when the entry is not JavaScript.
+**Priority**: medium
+**Found in**: P-2026-10-21-1300

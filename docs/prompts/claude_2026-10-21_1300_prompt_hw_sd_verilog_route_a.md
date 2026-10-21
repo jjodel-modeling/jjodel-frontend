@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1300
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (second code generation target; templates and testbench)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane hw-sd · 671dc5638 (continued by P-2026-10-21-1340 after the AM-8 ceiling)
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-1145
 Corregge: —
