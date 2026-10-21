@@ -371,3 +371,16 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, TACK_NOTIFY=off, store /tmp/tack-s8/real.db)
 **Notes**: Item 3 not applied: lanes.outcome is read by metrics/layer3.mjs:62 and :82 (final state of laneFirstShot, which parity jjodel compares, and the outcome metric), so the writer, API field and column stay. Item 2 passed on the first run: lane-run removes exit.txt at launch (lane-run.mjs:532), so the fixture keeps run 1's exit in runs.jsonl. Still importing the collector by path: parity/jjodel.mjs (Jjodel adapter), board/waiting.mjs (lane-folder reader).
 **Prompt document name**: 2026-10-21 12:10
+
+## 2026-10-21 — merge: tack-s1a into alfonso-frontend-jjtl (P-2026-10-21-1246)
+**Prompt**: `claude_2026-10-21_1246_prompt_merge_tack-s1a.md`, a direct merge by `lane-run merge --direct`, no session: `tack-s1a` at `601b73a7a` into `alfonso-frontend-jjtl`, merge base `be844ba6d`, 2 commits on the branch side.
+**Files touched**: merge `8dec8e774`: 17 files from the branch side (`docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-21_1210_prompt_tack_s1_adapter_boundary.md`, `tack/bin/tack.mjs`, `tack/contract/v1/README.md`, `tack/contract/v1/entry.json`, `tack/contract/v1/unit.json`, `tack/src/board/server.mjs`, `tack/src/collectors/active.mjs`, and 9 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `8dec8e774` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11427 tests in 398 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat checked 4710 at 12:34 from the tack-s1a worktree: board 200, /api/attention in the 4700 shape (3 running), /api/lanes 200; parity jjodel byte-identical per the lane
+**Notes**: Rollback tag `pre-tack-s1a` on `99072d5fd` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1246/result.json`.
+**Prompt document name**: 2026-10-21 12:46
