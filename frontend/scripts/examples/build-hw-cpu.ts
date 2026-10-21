@@ -199,6 +199,11 @@ const VIEWPOINTS: Viewpoint[] = [
         ['Transition', { kind: 'edge', metaclasses: ['Transition'], label: 'Transition', edge: transition }],
         ['Transition', { kind: 'edge', metaclasses: ['Transition'], label: 'Transition (guard)', priority: 1, predicate: { op: 'exists', path: '$guard.value' },
             edge: { ...transition, labels: { template: [L('['), P('$guard.value'), L(']')] } } }],
+        // DECODE's `else` and NOP's guard run DECODE → FETCH side by side, and a fan of arcs puts every centre label at
+        // mid-height: the `else` one is drawn at its source end, beside the arc as it leaves DECODE.
+        ['Transition', { kind: 'edge', metaclasses: ['Transition'], label: 'Transition (else)', priority: 2,
+            predicate: { op: 'eq', left: '$guard.value', right: { kind: 'string', value: 'else' } },
+            edge: { ...transition, labels: { sourceEnd: L('[else]') } } }],
     ]) },
 ];
 
@@ -618,7 +623,8 @@ async function verify(): Promise<void> {
     const SHOTS = process.env.HWB_SHOTS || new globalThis.URL('../../../docs/discovery/assets/hw-sa2', import.meta.url).pathname;
     mkdirSync(SHOTS, { recursive: true });
     const browser = await chromium.launch();
-    const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+    // Twice the pixels: the pane fits the Datapath at about 0.6, where an 11 px port name would be 6 px on the shot.
+    const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 2 });
     await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
     await seed(ctx, true);
     const page = await ctx.newPage();
