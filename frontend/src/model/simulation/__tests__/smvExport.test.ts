@@ -503,8 +503,10 @@ function checkConfiguration(c: Case, state: SimState, event: string | null): Map
         const o = step(c.run.net, { state, event }, selector, c.guards, c.actions, c.run.derived);
         const admitted = o.kind !== 'inadmissible' && o.kind !== 'halted';
         expect(smvTrans(c.m, smv, inputs), `TRANS sel=${k} (${o.kind}) at ${where}`).toBe(admitted);
+        // Every `next` stays in its type under every input, admitted or not: the reader throws otherwise.
+        const next = smvNext(c.m, smv, inputs);
         if (o.kind === 'inadmissible' || o.kind === 'halted') continue;
-        expect(show(c.m, smvNext(c.m, smv, inputs)), `next with sel=${k} at ${where}`).toBe(show(c.m, fromSim(c, o.next.state)));
+        expect(show(c.m, next), `next with sel=${k} at ${where}`).toBe(show(c.m, fromSim(c, o.next.state)));
         fired.set(selector, o.next.state);
     }
     return fired;
@@ -561,7 +563,7 @@ describe('smvExport goldens', () => {
 });
 
 describe('smvExport round trip by the simulator', () => {
-    it('turnstile: every reachable configuration agrees (dies with the frame arm, the ok_ guard, the derived DEFINE)', () => {
+    it('turnstile: every reachable configuration agrees (dies with the frame arm, either ok_ guard, the derived DEFINE)', () => {
         const c = caseOf(loadSpec('turnstile'));
         const reached = explore(c, 200);
         // locked, unlocked and off, coins 0..3 where reachable: coin three times reaches 3, a fourth coin halts.
