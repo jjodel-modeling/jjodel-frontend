@@ -5,7 +5,7 @@
 import { scan } from '../collectors/claude-code/collect.mjs';
 import { identify } from '../collectors/git/identity.mjs';
 import { collectGit, collectUnpushed } from '../collectors/git/collect.mjs';
-import { collectLanes, defaultLaneRoot } from '../collectors/lane-run/collect.mjs';
+import { traceSource } from '../collectors/active.mjs';
 import { settingsResolver, userSettingsPath } from '../settings/settings.mjs';
 import { storeMinute } from '../host/load.mjs';
 import { notifyTick, releaseLease, takeLease } from './notifier.mjs';
@@ -16,7 +16,7 @@ export const FULL_MS = 30 * 60e3;
 /** Whether the environment turns the notifier off (TACK_NOTIFY=off). */
 export const notifyDisabled = () => process.env.TACK_NOTIFY === 'off';
 
-export function startWatcher({ db, root, laneRoot = defaultLaneRoot(), sampler = null, transports, boardUrl, baseRepo = null,
+export function startWatcher({ db, root, laneRoot = traceSource.root(), sampler = null, transports, boardUrl, baseRepo = null,
   user = userSettingsPath(), tickMs = TICK_MS, fullMs = FULL_MS, now = Date.now, pid = process.pid, log = () => {}, collect = true } = {}) {
   let lastFull = 0;
   let busy = false;
@@ -32,7 +32,7 @@ export function startWatcher({ db, root, laneRoot = defaultLaneRoot(), sampler =
       if (collect) {
         scan(db, root);
         if (t - lastFull >= fullMs) { identify(db); collectGit(db); collectUnpushed(db); lastFull = t; }
-        collectLanes(db, laneRoot, t, { limitMs: (repo) => settingsFor(repo).value('limits.laneMinutes') * 60e3 });
+        traceSource.collect(db, laneRoot, t, { limitMs: (repo) => settingsFor(repo).value('limits.laneMinutes') * 60e3 });
       }
       const load = sampler?.latest() ?? null;
       if (load) storeMinute(db, load);

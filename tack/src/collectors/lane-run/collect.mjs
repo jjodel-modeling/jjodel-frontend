@@ -1,4 +1,4 @@
-// lane-run adapter: the lane folders `lane-run` writes (default ~/.jjodel-lanes/<Prompt-ID>/, or TACK_LANES)
+// lane-run adapter (behind the trace-source boundary in source.mjs): the lane folders `lane-run` writes (default ~/.jjodel-lanes/<Prompt-ID>/, or TACK_LANES)
 // -> lanes and lane_spend. Optional: enabled only when the folder exists. Read-only: nothing is written
 // in a lane folder. Files read (discovery 2026-10-19 §2.4): started.txt, exit.txt (its mtime is the end),
 // pid.txt, tier.txt, session.txt, worktree.txt (resolved to a repository in memory, the path is not kept),
@@ -445,6 +445,13 @@ export function readLane(dir, now = Date.now()) {
   };
 }
 
+/** The lane ids under root: the folders named like a lane, sorted. Throws when root does not read. */
+export function laneIds(root) {
+  return readdirSync(root).filter((n) => LANE_ID.test(n)).sort().filter((id) => {
+    try { return statSync(join(root, id)).isDirectory(); } catch { return false; }
+  });
+}
+
 /** The repository of a worktree path: the one whose recorded toplevels hold it, when exactly one does. */
 function repoOfPath(repos, p) {
   if (!p) return null;
@@ -476,9 +483,8 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opt
   const addSpend = db.prepare('INSERT INTO lane_spend (lane_id, seq, at_ms, usd) VALUES (?, ?, ?, ?)');
   db.exec('BEGIN');
   try {
-    for (const id of readdirSync(root).filter((n) => LANE_ID.test(n)).sort()) {
+    for (const id of laneIds(root)) {
       const dir = join(root, id);
-      try { if (!statSync(dir).isDirectory()) continue; } catch { continue; }
       st.lanes++;
       let names;
       try { names = readdirSync(dir); } catch { st.errors++; continue; }

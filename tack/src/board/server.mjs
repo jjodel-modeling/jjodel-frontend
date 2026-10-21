@@ -12,7 +12,7 @@ import { scan, defaultRoot } from '../collectors/claude-code/collect.mjs';
 import { identify } from '../collectors/git/identity.mjs';
 import { collectGit } from '../collectors/git/collect.mjs';
 import { collectLayers, laneLimit } from '../collectors/layers.mjs';
-import { collectLanes, defaultLaneRoot } from '../collectors/lane-run/collect.mjs';
+import { traceSource } from '../collectors/active.mjs';
 import { attentionApi, dayParam, healthApi, lanesApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi } from './api.mjs';
 import { waitReader } from './waiting.mjs';
 import { htmlAttributes, loadApi, settingsApi, settingsWrite } from './settings-api.mjs';
@@ -49,7 +49,7 @@ export function laneRefresher({ db, laneRoot, now = Date.now, user, collect = nu
   let last = null;
   const lease = db.prepare('SELECT heartbeat_ms FROM notify_lease WHERE id = 1');
   const heartbeat = () => lease.get()?.heartbeat_ms ?? null;
-  const run = collect ?? ((t) => collectLanes(db, laneRoot, t, { limitMs: laneLimit(db, { user }) }));
+  const run = collect ?? ((t) => traceSource.collect(db, laneRoot, t, { limitMs: laneLimit(db, { user }) }));
   return {
     refresh() {
       const t = now();
@@ -113,7 +113,7 @@ function readBody(req) {
  * by tests; sample: run the load sampler. Resolves to { url, port, preselected, server, close } once listening.
  */
 export async function startBoard({ store, root = defaultRoot(), cwd = process.cwd(), port = DEFAULT_PORT, scanOnStart = true,
-  user = userSettingsPath(), notify = false, transports = null, sample = true, sampler = null, laneRoot = defaultLaneRoot() } = {}) {
+  user = userSettingsPath(), notify = false, transports = null, sample = true, sampler = null, laneRoot = traceSource.root() } = {}) {
   const db = openStore(store);
   const userSettings = () => effectiveSettings({ user });
   const channels = transports ?? defaultTransports(userSettings);

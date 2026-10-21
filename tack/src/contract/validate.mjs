@@ -1,9 +1,12 @@
 // Contract v1 validator for the Tack log (JSON Lines). Hand-written, no schema engine:
 // one function per rule, each returning an array of { line, field, rule, message }.
 // Pass 1 is structural (one line at a time); pass 2 is referential (across lines and fields).
+// The id syntax (unit, found_in) is the trace source's configuration, not the contract's (collectors/active.mjs).
+import { traceSource } from '../collectors/active.mjs';
 
-export const UNIT_PATTERN = /^P-\d{4}-\d{2}-\d{2}-\d{4}(-[a-z0-9]{1,8})?$/;
-const FOUND_IN_PATTERN = /^[PC]-\d{4}-\d{2}-\d{2}-\d{4}/;
+const IDS = traceSource.ids;
+export const UNIT_PATTERN = IDS.unit;
+const FOUND_IN_PATTERN = IDS.ref;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const OUTCOMES = ['completed', 'partial', 'problems'];
 const REGRESSIONS = ['yes', 'no', 'unknown'];
@@ -52,7 +55,7 @@ function unitFormat(entry, line) {
   if (!has(entry, 'unit')) return [];
   return typeof entry.unit === 'string' && UNIT_PATTERN.test(entry.unit)
     ? []
-    : [viol(line, 'unit', 'unit-format', 'must match P-YYYY-MM-DD-HHmm with an optional -suffix')];
+    : [viol(line, 'unit', 'unit-format', `must match ${IDS.unitForm}`)];
 }
 
 function notesLength(entry, line) {
@@ -118,7 +121,7 @@ function foundInFormat(entry, line) {
   if (entry.type !== 'ticket' || !has(entry, 'found_in')) return [];
   return typeof entry.found_in === 'string' && FOUND_IN_PATTERN.test(entry.found_in)
     ? []
-    : [viol(line, 'found_in', 'found-in-format', 'must be a P-... or C-... id')];
+    : [viol(line, 'found_in', 'found-in-format', `must be ${IDS.refForm}`)];
 }
 
 function detailEmpty(entry, line) {

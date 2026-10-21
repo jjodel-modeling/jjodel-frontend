@@ -355,13 +355,13 @@ async function parityCmd(args) {
     return 2;
   }
   const { openStore, storePath } = await import('../src/store/open.mjs');
-  const { defaultLaneRoot } = await import('../src/collectors/lane-run/collect.mjs');
+  const { traceSource } = await import('../src/collectors/active.mjs');
   const { importsRoot, DEFAULT_TRUNK } = await import('../src/importers/jjodel-log.mjs');
   const { parityJjodel } = await import('../src/parity/jjodel.mjs');
   const db = openStore(storePath(flags.store));
   let r;
   try {
-    r = parityJjodel(db, { root: flags.lanes ?? defaultLaneRoot(), repo: flags.repo ?? process.cwd(), trunk: flags.trunk ?? process.env.JJODEL_TRUNK ?? DEFAULT_TRUNK, days, imports: importsRoot() });
+    r = parityJjodel(db, { root: flags.lanes ?? traceSource.root(), repo: flags.repo ?? process.cwd(), trunk: flags.trunk ?? process.env.JJODEL_TRUNK ?? DEFAULT_TRUNK, days, imports: importsRoot() });
   } finally {
     db.close();
   }
