@@ -332,3 +332,16 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-stops/board.pid, store copy /tmp/tack-stops/real.db)
 **Notes**: 677 lane folders: 193 hard-stops = 27 breakpoint, 23 ceiling, 143 hard-stop (store of 679: 27, 23, 144). 133 of 159 hard-stops had no readable prompt.txt, so the prompt falls back to input-1.md (breakpoint 11 to 27). Hand check, 10 per class: ceiling 10/10; breakpoint 10/10 plausible; hard-stop 6 right, 4 are planned stops of prompts without a HARD STOP section (the rule says hard-stop). 0 lanes carry [auto] yet. 4710, last 24 h: 12 ceiling, 3 hard-stop.
 **Prompt document name**: 2026-10-21 10:15
+
+## 2026-10-21 — feat: Tack slice 9, waiting cards, /api/attention, distinct stop events
+**Prompt**: P-2026-10-21-1025 (code, stopped at the 200k context ceiling, RC-51, nothing committed) and its continuation P-2026-10-21-1117 (tests, privacy, 4710, commits): waiting lanes as cards with pill, reason, Recommended: line and linked chat, read from log.jsonl and never stored; the banner scrolls to them or holds the one card; GET /api/attention in the 4700 shape; follow-ups of P-2026-10-21-1015 (no HARD STOP section counts as breakpoint, swatches at 3:1, breakpoint/ceiling/hard-stop events).
+**Files touched**: tack/README.md, tack/contract/v1/settings.json, tack/src/board/{api.mjs,board.css,lanes.js,server.mjs,waiting.mjs (new)}, tack/src/collectors/lane-run/collect.mjs, tack/src/notify/notifier.mjs, tack/test/{load,notify,settings,stops,privacy}.test.mjs, tack/test/{swatches,waiting}.test.mjs (new) (code commit 5b7c02c12); docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1025_prompt_tack_s9_waiting_cards.md and claude_2026-10-21_1117_prompt_tack_s9_continuation.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (tack suite 252 of 252 pass; waiting.test.mjs 13 new, privacy 1 new; mutation bench: no 2 KB trim, inverted card order, newest adding commit each killed)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-s9/board.pid, store copy /tmp/tack-s9/real.db)
+**Notes**: 94 lanes waiting in 14 days: Recommended: 24, a ? 36, Question-for-you 5, planned-stop words 41; chat URL 68 (Request: 41, trailer 27). Rules 2: breakpoint 39, ceiling 26, hard-stop 26 (20 moved). Three fills at 3:1 is the most a 21:1 range allows (four span 27:1): bp, hard-stop, tag; ceiling by outline. 4710: 3 waiting, all ceiling. Detail and 6 decisions: ~/.jjodel-lanes/P-2026-10-21-1025/handoff.md.
+**Prompt document name**: 2026-10-21 11:17
