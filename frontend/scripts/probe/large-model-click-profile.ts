@@ -47,6 +47,19 @@
  *                                   the rendered nodes whose data differs from a fresh transform
  *                                   (stale nodes); not profiled (P-2026-10-21-0035)
  *       CLICK_STACKS    "1": sample the callers of LModel.name (slows the run; counts only)
+ *     Round 3 (P-2026-10-21-0905): every step also reports the saves that ran in it (U.compressedState,
+ *     ProjectsApi.save: start, length, silent, caller frames), the long tasks inside them, and storage
+ *     writes over 20,000 chars. More CLICK_STEPS:
+ *                         "idle"    CLICK_IDLE_MS (20000) with nothing done: saves and long tasks
+ *                         "lat"     input latency, profiler off: CLICK_LAT_N (10) clicks, pointerdown to the
+ *                                   first frame with .mm-node.selected; CLICK_LAT_DRAGS (3) drags of
+ *                                   CLICK_LAT_MOVES (20) moves, pointermove to the first frame in which the
+ *                                   node's transform moved; Event Timing per interaction (INP-like); p50/p95
+ *                         "session" drag, 3 s, rename (type + Enter), 3 s, drag back, profiled over
+ *                                   CLICK_SESSION_MS (30000) from the first edit; long tasks split by cause
+ *                                   (inside a save, else the last edit before them), first 20 s and total
+ *                                   CLICK_LAT_DURING_SAVE=1 starts a U.compressedState before each drag
+ *     CLICK_ABLATE also takes "minimap": localStorage jjodel.showMinimap=false before the editor mounts.
  */
 import { chromium, type Page, type CDPSession } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -88,6 +101,47 @@ globalThis.__name = (f) => f;
     new PerformanceObserver((l) => { for (const e of l.getEntries()) P.longtasks.push({ start: e.startTime, ms: e.duration }); })
       .observe({ type: 'longtask', buffered: true });
   } catch (e) { P.err = 'longtask observer: ' + e; }
+  // Round 3 (P-2026-10-21-0905): Event Timing entries, save records, big storage writes, and the
+  // input-to-frame watch (pointerdown to the first frame with the selection ring; pointermove to
+  // the first frame in which the dragged node's transform moved).
+  P.events = []; P.saves = []; P.storage = []; P.marks = []; P.watch = null; P.recStart = 0;
+  try {
+    new PerformanceObserver((l) => { for (const e of l.getEntries()) P.events.push({ name: e.name, start: e.startTime, ps: e.processingStart, pe: e.processingEnd, dur: e.duration, iid: e.interactionId || 0 }); })
+      .observe({ type: 'event', durationThreshold: 16, buffered: true });
+  } catch (e) { P.err = 'event observer: ' + e; }
+  const si = Storage.prototype.setItem;
+  Storage.prototype.setItem = function (k, v) {
+    const t = performance.now();
+    try { return si.call(this, k, v); }
+    finally { const n = String(v).length; if (n > 20000) P.storage.push({ k: String(k).slice(0, 40), len: n, ms: Math.round(performance.now() - t), t }); }
+  };
+  const onInput = (e) => {
+    const w = P.watch; if (!w) return;
+    if (w.kind === 'select' && e.type === 'pointerdown' && w.t0 == null) w.t0 = e.timeStamp;
+    if (w.kind === 'drag') {
+      if (e.type === 'pointerdown') w.down = true;
+      else if (e.type === 'pointerup') w.down = false;
+      else if (e.type === 'pointermove' && w.down) { w.moves++; w.pending.push(e.timeStamp); }
+    }
+  };
+  for (const t of ['pointerdown', 'pointermove', 'pointerup']) window.addEventListener(t, onInput, true);
+  const frame = () => {
+    const w = P.watch;
+    if (w) {
+      const now = performance.now();
+      const n = document.querySelector('.react-flow__node[data-id="' + w.id + '"]');
+      if (w.kind === 'select' && w.t0 != null) {
+        if (w.rf == null && n && n.classList.contains('selected')) w.rf = now - w.t0;
+        if (w.ring == null && n && n.querySelector('.mm-node.selected')) w.ring = now - w.t0;
+      }
+      if (w.kind === 'drag' && w.pending.length) {
+        const tr = n ? n.style.transform : '';
+        if (tr !== w.lastTr) { w.lastTr = tr; for (const t of w.pending) w.lat.push(now - t); w.pending = []; }
+      }
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
   const origWarn = console.warn;
   console.warn = function (...a) {
     if (P.recording) { const s = String(a[0]); if (s.includes('returned a different result') || s.includes('Selector')) { P.warns++; if (P.warnSamples.length < 3) P.warnSamples.push(s.slice(0, 300)); } }
@@ -271,9 +325,12 @@ function analyse(profile: Prof) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────────────────────────
+const ABLATE = new Set((process.env.CLICK_ABLATE || '').split(',').filter(Boolean));
 const browser = await chromium.launch({ args: ['--enable-precise-memory-info'] });
 const ctx = await browser.newContext({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT } });
 await ctx.addInitScript({ content: INIT });
+// MiniMap ablation: the editor reads this key once, when it mounts (EditorV2.tsx minimapVisible).
+if (ABLATE.has('minimap')) await ctx.addInitScript({ content: `try { localStorage.setItem('jjodel.showMinimap', 'false'); } catch (e) {}` });
 await seed(ctx, false);
 const page = await ctx.newPage();
 const pageErrors: string[] = [];
@@ -333,6 +390,25 @@ note('after open', facts);
       ];
     })()`);
     note('instruments', inst);
+    // Every save, recording or not (P-2026-10-21-0905): U.compressedState and ProjectsApi.save, with
+    // start, end, the silent flag and the synchronous caller frames.
+    const saveInst = await page.evaluate(`(async () => {
+      const U = window.U || ${PROD ? 'null' : "(await import('/src/common/U.tsx')).U"};
+      const PA = window.ProjectsApi, P = window.__perfclick;
+      const wrapS = (obj, name, label) => {
+        if (!obj || typeof obj[name] !== 'function') return label + ': missing';
+        const o = obj[name];
+        obj[name] = async function (...a) {
+          const rec = { label, t0: performance.now(), t1: 0, silent: !!(a[1] && a[1].silent),
+            stack: String(new Error().stack).split('\\n').slice(2, 7).map(s => s.trim().replace(/^at /, '').replace(/\\(?https?:\\/\\/[^/]+/, '').replace(/\\?[^:]*/, '')).join(' < ') };
+          P.saves.push(rec);
+          try { return await o.apply(this, a); } finally { rec.t1 = performance.now(); }
+        };
+        return label + ': ok';
+      };
+      return [wrapS(U, 'compressedState', 'compressedState'), wrapS(PA, 'save', 'ProjectsApi.save')];
+    })()`);
+    note('save instruments', saveInst);
 }
 
 // Strips run on the live store before the canvas tab opens (in-page only; the fixture is untouched).
@@ -363,7 +439,19 @@ if (STRIP.size) {
 }
 
 // ── Profiled interaction: reset the page instruments, profile, act, settle, collect ────────────
-const RESET = `(() => { const P = window.__perfclick; P.longtasks = []; P.dispatches = []; P.commits = []; P.names = {}; P.warns = 0; P.warnSamples = []; if (P.calls) for (const k of Object.keys(P.calls)) delete P.calls[k]; P.lastCommit = performance.now(); P.recording = true; })()`;
+const RESET = `(() => { const P = window.__perfclick; P.longtasks = []; P.dispatches = []; P.commits = []; P.names = {}; P.warns = 0; P.warnSamples = []; if (P.calls) for (const k of Object.keys(P.calls)) delete P.calls[k]; P.lastCommit = performance.now(); P.events = []; P.marks = []; P.recStart = performance.now(); P.recording = true; })()`;
+/** Saves and big storage writes since the last RESET, times relative to it (P-2026-10-21-0905). */
+const SAVES = `(() => {
+      const P = window.__perfclick, t0 = P.recStart, now = performance.now();
+      const cs = P.saves.filter(s => s.label === 'compressedState' && (s.t1 === 0 || s.t1 >= t0));
+      const inSave = (l) => cs.some(s => l.start < (s.t1 || now) && l.start + l.ms > s.t0);
+      const lts = P.longtasks.filter(inSave);
+      return {
+        saves: P.saves.filter(s => s.t1 === 0 || s.t1 >= t0).map(s => ({ label: s.label, at: Math.round(s.t0 - t0), ms: Math.round((s.t1 || now) - s.t0), done: s.t1 > 0, silent: s.silent, stack: s.stack })),
+        storage: P.storage.filter(s => s.t >= t0).map(s => ({ k: s.k, len: s.len, ms: s.ms, at: Math.round(s.t - t0) })),
+        saveLongtasks: lts.map(l => Math.round(l.ms)), saveLongtaskSum: Math.round(lts.reduce((a, l) => a + l.ms, 0)),
+      };
+    })()`;
 const COLLECT = `(() => {
       const P = window.__perfclick; P.recording = false;
       const byType = {};
@@ -401,12 +489,14 @@ async function profiled(step: string, act: () => Promise<unknown>) {
     const wallMs = Date.now() - t0;
     const { profile } = await cdp.send('Profiler.stop') as any;
     const rec: any = await page.evaluate(COLLECT);
+    rec.save = await page.evaluate(SAVES);
     await loadChunkMaps(profile);
     const cpu = analyse(profile);
     const file = join(OUTDIR, `perfclick-${LABEL}-${step}.cpuprofile`);
     writeFileSync(file, JSON.stringify(profile));
     Object.assign(rec, { step, acted, actMs, settledMs: Math.round(settledMs), wallMs, profile: file, cpu });
-    note(`step ${step}`, { acted, wallMs, actMs, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, busyMs: cpu.busyMs, dispatches: rec.dispatches, byType: rec.byType, commits: rec.commits, commitFibers: rec.commitFibers.slice(0, 20), calls: rec.calls });
+    note(`step ${step}`, { acted, wallMs, actMs, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, busyMs: cpu.busyMs, dispatches: rec.dispatches, byType: rec.byType, commits: rec.commits, commitFibers: rec.commitFibers.slice(0, 20), calls: rec.calls, save: rec.save });
+    note(`step ${step} modules self`, cpu.modSelfTop.slice(0, 12));
     note(`step ${step} top components`, rec.topComponents.slice(0, 15));
     if (rec.callers) note(`step ${step} callers`, rec.callers);
     console.log(`TOP10 self time, ${step} (ms, function @ module:line)`);
@@ -523,12 +613,13 @@ for (let k = 0; k < Math.min(NODES, nodeIds.length); k++) {
     const wallMs = Date.now() - t0;
     const { profile } = await cdp.send('Profiler.stop') as any;
     const rec: any = await page.evaluate(COLLECT);
+    rec.save = await page.evaluate(SAVES);
     await loadChunkMaps(profile);
     const cpu = analyse(profile);
     const file = join(OUTDIR, `perfclick-${LABEL}-click${k + 1}.cpuprofile`);
     writeFileSync(file, JSON.stringify(profile));
     Object.assign(rec, { click: k + 1, node: id, clickReturnedMs, settledMs: Math.round(settledMs), wallMs, profile: file, cpu });
-    note(`click ${k + 1}`, { node: id, wallMs, clickReturnedMs, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, dispatches: rec.dispatches, topDispatches: rec.topDispatches, dispatchMsTop: rec.dispatchMsTop, commits: rec.commits, commitFibers: rec.commitFibers.slice(0, 20), commitRenderMs: rec.commitRenderMs, warns: rec.warns, busyMs: cpu.busyMs, selected: rec.selected, sel: rec.sel, calls: rec.calls });
+    note(`click ${k + 1}`, { node: id, wallMs, clickReturnedMs, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, dispatches: rec.dispatches, topDispatches: rec.topDispatches, dispatchMsTop: rec.dispatchMsTop, commits: rec.commits, commitFibers: rec.commitFibers.slice(0, 20), commitRenderMs: rec.commitRenderMs, warns: rec.warns, busyMs: cpu.busyMs, selected: rec.selected, sel: rec.sel, calls: rec.calls, save: rec.save });
     note(`click ${k + 1} dispatch types`, rec.byType);
     note(`click ${k + 1} slowest dispatches`, rec.slowest);
     note(`click ${k + 1} top components`, rec.topComponents);
@@ -563,6 +654,78 @@ for (let k = 0; k < Math.min(NODES, nodeIds.length); k++) {
     await page.waitForTimeout(1000);
 }
 
+// ── Round 3 steps (P-2026-10-21-0905) ──────────────────────────────────────────────────────────
+const pct = (a: number[], p: number) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return Math.round(s[Math.min(s.length - 1, Math.floor(p * s.length))]); };
+const latStats = (a: number[]) => ({ n: a.length, p50: pct(a, 0.5), p95: pct(a, 0.95), max: a.length ? Math.round(Math.max(...a)) : null });
+/** Event Timing since the last RESET: per interaction (interactionId), its longest entry (the INP measure). */
+const INTERACTIONS = `(() => { const by = {}; for (const e of window.__perfclick.events) if (e.iid) by[e.iid] = Math.max(by[e.iid] || 0, e.dur);
+  const byName = {}; for (const e of window.__perfclick.events) (byName[e.name] = byName[e.name] || []).push(Math.round(e.dur));
+  return { inp: Object.values(by).map(Math.round), byName }; })()`;
+const dragOnce = async (x: number, y: number, dx: number, moves: number) => {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + dx, y, { steps: moves });
+    await page.mouse.up();
+};
+const nameInputFocus = async (): Promise<string | null> => page.evaluate(`(() => { const L = window.store.getState().idlookup, d = L[(window.store.getState()._lastSelected || {}).modelElement];
+  const i = d ? [...document.querySelectorAll('input[type="text"], input:not([type])')].find(i => i.value === d.name && i.checkVisibility()) : null;
+  if (!i) return null; i.focus(); i.setSelectionRange(i.value.length, i.value.length); return i.value; })()`) as Promise<string | null>;
+
+// idle: nothing done for CLICK_IDLE_MS after a settled canvas; does any save run, any long task?
+if (STEPS.has('idle')) {
+    const IDLE_MS = Number(process.env.CLICK_IDLE_MS || 20000);
+    await page.evaluate(RESET);
+    await page.waitForTimeout(IDLE_MS);
+    const rec: any = await page.evaluate(COLLECT);
+    const save = await page.evaluate(SAVES);
+    result.idle = { ms: IDLE_MS, longtasks: rec.longtasks, longtaskSum: rec.longtaskSum, dispatches: rec.dispatches, commits: rec.commits, save };
+    note('idle', result.idle);
+}
+
+// lat: input latency as felt, profiler off. CLICK_LAT_N selection clicks on different nodes
+// (pointerdown to the first frame showing .mm-node.selected), then CLICK_LAT_DRAGS drags of
+// CLICK_LAT_MOVES moves (each pointermove to the first frame in which the node's transform moved).
+if (STEPS.has('lat') && nodeHits.length) {
+    const N = Number(process.env.CLICK_LAT_N || 10), DRAGS = Number(process.env.CLICK_LAT_DRAGS || 3), MOVES = Number(process.env.CLICK_LAT_MOVES || 20);
+    const ring: number[] = [], rf: number[] = [], inpClick: number[] = [], misses: string[] = [];
+    for (let k = 0; k < N; k++) {
+        const [id, px, py] = nodeHits[Math.floor(k * nodeHits.length / N)];
+        await page.evaluate(RESET);
+        await page.evaluate(`window.__perfclick.watch = { kind: 'select', id: ${JSON.stringify(id)}, t0: null, rf: null, ring: null }`);
+        await page.mouse.click(px, py);
+        await page.evaluate(settle(1500, 60000));
+        const w: any = await page.evaluate(`(() => { const w = window.__perfclick.watch; window.__perfclick.watch = null; return w; })()`);
+        const it: any = await page.evaluate(INTERACTIONS);
+        if (w.ring != null) ring.push(w.ring); else misses.push(id);
+        if (w.rf != null) rf.push(w.rf);
+        if (it.inp.length) inpClick.push(Math.max(...it.inp));
+    }
+    const dragLat: number[] = [], inpDrag: number[] = [], perDrag: any[] = [];
+    const [did, dx0, dy0] = nodeHits[Math.floor(nodeHits.length / (NODES + 1))];
+    for (let d = 0; d < DRAGS; d++) {
+        await page.evaluate(RESET);
+        await page.evaluate(`(() => { const n = document.querySelector('.react-flow__node[data-id="${did}"]');
+          window.__perfclick.watch = { kind: 'drag', id: ${JSON.stringify(did)}, down: false, moves: 0, pending: [], lat: [], lastTr: n ? n.style.transform : '' }; })()`);
+        const dir = d % 2 === 0 ? 1 : -1;
+        // CLICK_LAT_DURING_SAVE=1: a full save starts (not awaited) right before the drag, so the
+        // moves land while async-lz-string runs its chunks.
+        if (process.env.CLICK_LAT_DURING_SAVE === '1') await page.evaluate(`(() => { const L = window.store.getState().idlookup;
+          const proj = Object.values(L).find(d => d && d.className === 'DProject'); window.U.compressedState(proj); return 1; })()`);
+        const t0 = Date.now();
+        await dragOnce(dir > 0 ? dx0 : dx0 + 100, dy0, 100 * dir, MOVES);
+        const gestureMs = Date.now() - t0;
+        await page.evaluate(settle(1500, 60000));
+        const w: any = await page.evaluate(`(() => { const w = window.__perfclick.watch; window.__perfclick.watch = null; return { moves: w.moves, lat: w.lat, pending: w.pending.length }; })()`);
+        const it: any = await page.evaluate(INTERACTIONS);
+        dragLat.push(...w.lat);
+        if (it.inp.length) inpDrag.push(Math.max(...it.inp));
+        perDrag.push({ gestureMs, moves: w.moves, framed: w.lat.length, unframed: w.pending, ...latStats(w.lat) });
+    }
+    result.lat = { select: { ring: latStats(ring), rf: latStats(rf), inp: latStats(inpClick), misses }, drag: { move: latStats(dragLat), inp: latStats(inpDrag), perDrag } };
+    note('lat select', result.lat.select);
+    note('lat drag', result.lat.drag);
+}
+
 // Interactions besides selection (CLICK_STEPS), on the first clicked node (P-2026-10-20-2305).
 if (nodeHits.length && (STEPS.has('drag') || STEPS.has('type') || STEPS.has('commit'))) {
     const [, px, py] = nodeHits[Math.floor(nodeHits.length / (NODES + 1))];
@@ -590,6 +753,61 @@ if (nodeHits.length && (STEPS.has('drag') || STEPS.has('type') || STEPS.has('com
             if (STEPS.has('commit')) await profiled('commit', async () => { await page.keyboard.press('Enter'); return { name: found + 'x' }; });
         }
     }
+}
+// session: three edits spaced like a user (drag, 3 s, rename, 3 s, drag back), profiled over
+// CLICK_SESSION_MS from the first edit, plus any save still running then. Long tasks split by
+// cause: inside a U.compressedState call ("save"), else the last edit started before them.
+if (STEPS.has('session') && nodeHits.length) {
+    const SESSION_MS = Number(process.env.CLICK_SESSION_MS || 30000);
+    const [, px, py] = nodeHits[Math.floor(nodeHits.length / (NODES + 1))];
+    const mark = (k: string) => page.evaluate(`window.__perfclick.marks.push([${JSON.stringify(k)}, performance.now()])`);
+    await page.evaluate(RESET);
+    await cdp.send('Profiler.start');
+    const t0 = Date.now();
+    await mark('drag1'); await dragOnce(px, py, 100, 10);
+    await page.waitForTimeout(3000);
+    await mark('rename');
+    const found = await nameInputFocus();
+    check('session: name field found', found !== null, String(found));
+    if (found !== null) { await page.keyboard.type('y'); await page.keyboard.press('Enter'); }
+    await page.waitForTimeout(3000);
+    await mark('drag2'); await dragOnce(px + 100, py, -100, 10);
+    await mark('idle');
+    const left = SESSION_MS - (Date.now() - t0);
+    if (left > 0) await page.waitForTimeout(left);
+    // A save still in flight at the end of the window is waited for (cap 30 s).
+    await page.evaluate(`(async () => { for (let i = 0; i < 120 && window.__perfclick.saves.some(s => s.t1 === 0); i++) await new Promise(r => setTimeout(r, 250)); })()`);
+    const wallMs = Date.now() - t0;
+    const { profile } = await cdp.send('Profiler.stop') as any;
+    const split: any = await page.evaluate(`(() => {
+      const P = window.__perfclick, t0 = P.recStart, now = performance.now();
+      const cs = P.saves.filter(s => s.label === 'compressedState' && (s.t1 === 0 || s.t1 >= t0));
+      const cause = (l) => { if (cs.some(s => l.start < (s.t1 || now) && l.start + l.ms > s.t0)) return 'save';
+        let k = 'before'; for (const [name, t] of P.marks) if (l.start >= t) k = name; return k; };
+      const by = {};
+      for (const l of P.longtasks) { const c = cause(l), e = by[c] || (by[c] = { n: 0, ms: 0, max: 0, first20s: 0 });
+        e.n++; e.ms += l.ms; e.max = Math.max(e.max, l.ms); if (l.start - t0 < 20000) e.first20s += l.ms; }
+      for (const e of Object.values(by)) { e.ms = Math.round(e.ms); e.max = Math.round(e.max); e.first20s = Math.round(e.first20s); }
+      return { byCause: by, total: Math.round(P.longtasks.reduce((a, l) => a + l.ms, 0)),
+        first20s: Math.round(P.longtasks.filter(l => l.start - t0 < 20000).reduce((a, l) => a + l.ms, 0)),
+        marks: P.marks.map(([k, t]) => [k, Math.round(t - t0)]), timeline: P.longtasks.map(l => [Math.round(l.start - t0), Math.round(l.ms)]) };
+    })()`);
+    {
+        const rec: any = await page.evaluate(COLLECT);
+        const save = await page.evaluate(SAVES);
+        await loadChunkMaps(profile);
+        const cpu = analyse(profile);
+        const file = join(OUTDIR, `perfclick-${LABEL}-session.cpuprofile`);
+        writeFileSync(file, JSON.stringify(profile));
+        result.session = { wallMs, sessionMs: SESSION_MS, ...split, save, dispatches: rec.dispatches, commits: rec.commits, busyMs: cpu.busyMs, modSelfTop: cpu.modSelfTop, fnSelfTop: cpu.fnSelfTop.slice(0, 15), profile: file };
+        note('session split', { wallMs, total: split.total, first20s: split.first20s, byCause: split.byCause, marks: split.marks, busyMs: cpu.busyMs });
+        note('session saves', save);
+        note('session timeline', split.timeline);
+        note('session modules self', cpu.modSelfTop.slice(0, 12));
+        console.log('TOP15 self time, session');
+        for (const [f, ms] of cpu.fnSelfTop.slice(0, 15)) console.log(`  ${String(ms).padStart(9)}  ${f}`);
+    }
+    writeFileSync(join(OUTDIR, `perfclick-${LABEL}.json`), JSON.stringify(result, null, 1));
 }
 if (STEPS.has('vp')) await profiled('vp', () => page.evaluate(activateVp(VP2)));
 
@@ -684,9 +902,24 @@ if (result.clicks.length && result.clicks[0].selected) {
       const U = window.U || ${PROD ? 'null' : "(await import('/src/common/U.tsx')).U"};
       const L = window.store.getState().idlookup, proj = Object.values(L).find(d => d && d.className === 'DProject');
       if (!U || !U.compressedState || !proj) return { error: 'no U.compressedState' };
-      const out = [];
-      for (let i = 0; i < 2; i++) { const t = performance.now(); const s = await U.compressedState(proj); out.push({ ms: Math.round(performance.now() - t), chars: s.length }); }
-      return { runs: out };
+      const out = [], P = window.__perfclick;
+      for (let i = 0; i < 2; i++) {
+        const lt0 = P.longtasks.length, t = performance.now(); const s = await U.compressedState(proj);
+        const lts = P.longtasks.slice(lt0).filter(l => l.start >= t);
+        out.push({ ms: Math.round(performance.now() - t), chars: s.length, longtasks: lts.length, longtaskSum: Math.round(lts.reduce((a, l) => a + l.ms, 0)), longtaskMax: Math.round(Math.max(0, ...lts.map(l => l.ms))) });
+      }
+      // The two halves of compressedState (dev only: the replacer is a module import): the
+      // JSON.stringify with proxyToIdReplacer, and the input length async-lz-string gets
+      // (it yields with setTimeout(0) every 10,000 input chars, compressor.ts:148).
+      let split = null;
+      if (${!PROD}) {
+        const { proxyToIdReplacer } = await import('/src/model/unproxy.ts');
+        const st = { ...window.store.getState() };
+        let t = performance.now(); const j1 = JSON.stringify(st, proxyToIdReplacer); const replacerMs = performance.now() - t;
+        t = performance.now(); const j2 = JSON.stringify(st); const plainMs = performance.now() - t;
+        split = { stringifyReplacerMs: Math.round(replacerMs), stringifyPlainMs: Math.round(plainMs), jsonChars: j1.length, plainChars: j2.length, lzYields: Math.ceil(j1.length / 10000) };
+      }
+      return { runs: out, split };
     })()`);
     note('bench save', result.benchSave);
 }
