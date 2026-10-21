@@ -61,8 +61,8 @@ interface Example {
     scenario: { name: string; steps: unknown[] };
     mutation: { transition: string; from: string; to: string; step: number };
 }
-/** An example with no scenario (hw-cpu until slice S-B): imported and opened, not generated or checked. */
-const checkable = (ex: Example) => !!ex.scenario;
+/** An example with no scenario or no templates (hw-cpu: a scenario from slice S-B, no templates until S-D): imported and opened, not generated or checked. */
+const checkable = (ex: Example) => !!ex.scenario && ex.lookup.MM._state?.genTemplates !== undefined;
 const example = (name: string): Example => JSON.parse(readFileSync(new globalThis.URL(`../../src/codegen/examples/${name}/${name}.json`, import.meta.url), 'utf8'));
 
 const note = (label: string, d: unknown) => console.log(`MEAS  ${label}  ${typeof d === 'string' ? d : JSON.stringify(d)}`);

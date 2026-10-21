@@ -14,11 +14,14 @@
  *     (`syncCreateCompositionLink`, `buildLinks`), the other references by `syncSetReferenceValue`, the attribute
  *     slots through the L proxy (`o.$f.values`);
  *   - the store read back and compared with the spec, element by element, by name;
+ *   - the metamodel's bag with the `state` setter (slice S-B, P-2026-10-21-1145): the simulation roles and the
+ *     declarations of `value` on `Register` and `Cell`, the spec's ids mapped to the app's by name, inside the
+ *     declarations' JSON too (their metaclass and width feature); the spec's scenario stored on the model under its
+ *     name, as the simulator stores it (`runScenarios`); both read back;
  *   - the project renamed (`HW CPU`), the model opened once so its layout is stored, and Navbar's File → «Download
  *     Project» clicked (`ProjectsApi.save`, `buildProjectExportJson`, `U.download`): the browser's download is the file.
- * The spec, src/codegen/examples/hw-cpu/hw-cpu.json, is the truth the node tests read (importable.test.ts). Default
- * viewpoints only: the three views of the plan are slice S-A2; the simulation roles, the program and the scenario
- * are slice S-B.
+ * The spec, src/codegen/examples/hw-cpu/hw-cpu.json, is the truth the node tests read (importable.test.ts,
+ * hw-cpu.run.test.ts). Default viewpoints only: the three views of the plan are slice S-A2.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/examples/build-hw-cpu.ts \
  *         --port 3097 --id P-2026-10-21-1100
@@ -39,7 +42,8 @@ const PRIMITIVES = new Set(['Pointer_EINT', 'Pointer_ESTRING', 'Pointer_EBOOLEAN
 mkdirSync(DIR, { recursive: true });
 
 type Entry = Record<string, any>;
-const spec: { lookup: Record<string, Entry> } = JSON.parse(readFileSync(new globalThis.URL(`../../src/codegen/examples/${NAME}/${NAME}.json`, import.meta.url), 'utf8'));
+interface Scenario { name: string; steps: Array<{ event: string | null; selector: string | null; kind: string }>; expect?: string }
+const spec: { lookup: Record<string, Entry>; scenario?: Scenario } = JSON.parse(readFileSync(new globalThis.URL(`../../src/codegen/examples/${NAME}/${NAME}.json`, import.meta.url), 'utf8'));
 const lookup = spec.lookup;
 const of = (className: string) => Object.values(lookup).filter(d => d.className === className);
 const MM = lookup.MM, M = lookup.M;
@@ -171,6 +175,41 @@ const READ_MODEL = `const idl = w.store.getState().idlookup; const m = w.LProjec
     }
     return { model: m.name, objects: out };`;
 
+/**
+ * The spec's ids mapped to the app's by name: a class of the metamodel, a feature by name under its class, an object
+ * as created (`a.objects`). Then the metamodel's bag with the `state` setter, `simEnabled` first, as
+ * build-codegen-examples.ts INSTALL writes it; a declaration's metaclass and width feature are ids inside the JSON
+ * text of `simStateAttributes`, so they are mapped there too.
+ */
+const INSTALL = `const fx = a.fx; const L = (x) => w.LPointerTargetable.fromPointer(x);
+    const mm = w.LProject.getProject().metamodels[0]; const pkg = mm.packages[0];
+    const map = { MM: mm.id, ...a.objects }; const missing = [];
+    for (const [fid, d] of Object.entries(fx)) if (d.className === 'DClass') {
+        const c = pkg.classes.find((x) => x.name === d.name); if (c) map[fid] = c.id; else missing.push(fid); }
+    for (const [fid, d] of Object.entries(fx)) if (d.className === 'DAttribute' || d.className === 'DReference') {
+        const owner = pkg.classes.find((x) => x.id === map[d.father]);
+        const f = owner && [...owner.attributes, ...owner.references].find((x) => x.name === d.name);
+        if (f) map[fid] = f.id; else missing.push(fid); }
+    const remap = (v) => (typeof v === 'string' && Object.prototype.hasOwnProperty.call(map, v) ? map[v] : v);
+    const decls = (text) => { const j = JSON.parse(text); return JSON.stringify({ ...j, attrs: j.attrs.map((r) => ({ ...r, metaclass: remap(r.metaclass),
+        ...(r.domain && r.domain.kind === 'word' ? { domain: { ...r.domain, widthFeature: remap(r.domain.widthFeature) } } : {}) })) }); };
+    L(mm.id).state = { simEnabled: true };
+    await new Promise((r) => setTimeout(r, 300));
+    const bag = {};
+    for (const [k, v] of Object.entries(fx.MM._state)) if (k !== 'simEnabled') bag[k] = k === 'simStateAttributes' ? decls(v) : remap(v);
+    L(mm.id).state = bag;
+    await new Promise((r) => setTimeout(r, 300));
+    return { map, missing, expected: { simEnabled: true, ...bag }, stored: w.store.getState().idlookup[mm.id]._state || {} };`;
+
+/** The spec's scenario alone, under its own name, stored on the model as the simulator stores it, then read back. */
+const STORE_SCENARIO = `const SC = await import('/src/model/simulation/scenarioCodec.ts');
+    const remap = (v) => (typeof v === 'string' && Object.prototype.hasOwnProperty.call(a.map, v) ? a.map[v] : v);
+    const full = { ...a.scenario, steps: a.scenario.steps.map((s) => ({ ...s, event: remap(s.event), selector: remap(s.selector) })) };
+    w.LPointerTargetable.fromPointer(a.m).state = { [SC.RUN_SCENARIOS_KEY]: SC.encodeScenarios([full]) };
+    await new Promise((r) => setTimeout(r, 300));
+    const back = SC.decodeScenarios(w.store.getState().idlookup[a.m]._state.runScenarios).scenarios;
+    return back.map((s) => ({ name: s.name, expect: s.expect ?? null, same: JSON.stringify(s.steps) === JSON.stringify(full.steps) }));`;
+
 /** Navbar's File → «Download Project», the entry a user clicks (Navbar.tsx, `name: 'Download Project'`). */
 const DOWNLOAD_ENTRY = String.raw`(() => {
   const li = [...document.querySelectorAll('li')].find((l) => { const s = l.querySelector(':scope > label span span'); return s && s.textContent.trim() === 'Download Project'; });
@@ -256,6 +295,22 @@ async function build(): Promise<void> {
         check(`the model ${M.name} is the spec's, object by object and slot by slot (${Object.keys(want).length} objects)`,
             model.model === M.name && diff.length === 0,
             diff.slice(0, 4).map(n => ({ n, want: want[n], got: model.objects[n] })));
+
+        // The simulation roles and declarations on the metamodel, then the scenario on the model (slice S-B).
+        const objects = Object.fromEntries(Object.entries(made).map(([n, m]) => [n, m.obj]));
+        const installed = await ev<{ map: Record<string, string>; missing: string[]; expected: Record<string, unknown>; stored: Record<string, unknown> }>(
+            page, INSTALL, { fx: lookup, objects }, 300);
+        check('every class, feature and object the bag names has its namesake in the app', installed.missing.length === 0, installed.missing);
+        const badKeys = Object.keys(installed.expected).filter(k => JSON.stringify(installed.stored[k]) !== JSON.stringify(installed.expected[k]));
+        check(`the metamodel's bag holds the spec's roles and declarations, mapped (${Object.keys(installed.expected).length} keys)`,
+            badKeys.length === 0 && Object.keys(installed.expected).length === Object.keys(MM._state).length,
+            badKeys.map(k => ({ k, want: installed.expected[k], got: installed.stored[k] })));
+        if (spec.scenario) {
+            const stored = await ev<Array<{ name: string; expect: string | null; same: boolean }>>(page, STORE_SCENARIO,
+                { map: installed.map, scenario: spec.scenario, m: shell.modelId }, 300);
+            check(`the spec's scenario is stored on the model under its name (${spec.scenario.steps.length} steps)`,
+                stored.length === 1 && stored[0].name === spec.scenario.name && stored[0].same && stored[0].expect === (spec.scenario.expect ?? null), stored);
+        }
 
         const renamed = await ev<string>(page, `w.LPointerTargetable.fromPointer(a[0]).name = a[1]; await new Promise((r) => setTimeout(r, 500));
             return w.store.getState().idlookup[a[0]].name;`, [pid, PROJECT]);

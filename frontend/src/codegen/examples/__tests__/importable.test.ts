@@ -123,9 +123,21 @@ describe.each(SHIPPED_EXAMPLES)('the project file of %s', name => {
         const { lookup } = await readFile(name);
         const ex = loadSpec(name);
         const mm = models(lookup, true)[0] as any;
+        // A metamodel's declarations name a metaclass and a width feature by id inside their JSON text (hw-cpu, S-B);
+        // a feature's name is not unique (five `width`), so it is the one of that name under its class's namesake.
+        const feature = (fid: string) => {
+            const f = ex.lookup[fid], owner = f && namesake(lookup, ex.lookup, f.father);
+            const hits = Object.values(lookup).filter((d: any) => d?.className === f?.className && d.name === f?.name && d.father === owner);
+            return hits.length === 1 ? (hits[0] as any).id : undefined;
+        };
+        const declarations = (text: string) => JSON.stringify({ ...JSON.parse(text), attrs: JSON.parse(text).attrs.map((r: any) => ({
+            ...r, metaclass: r.metaclass === null ? null : namesake(lookup, ex.lookup, r.metaclass),
+            ...(r.domain?.kind === 'word' ? { domain: { ...r.domain, widthFeature: feature(r.domain.widthFeature) } } : {}),
+        })) });
         for (const [key, value] of Object.entries(ex.lookup.MM._state ?? {})) {
             if (key === 'genTemplates') continue;
-            const expected = typeof value === 'string' && ex.lookup[value] ? namesake(lookup, ex.lookup, value) : value;
+            const expected = key === 'simStateAttributes' ? declarations(value as string)
+                : typeof value === 'string' && ex.lookup[value] ? namesake(lookup, ex.lookup, value) : value;
             expect(expected, key).not.toBeUndefined();
             expect(mm._state[key], key).toBe(expected);
         }
