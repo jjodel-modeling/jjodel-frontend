@@ -166,3 +166,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passato — chat, unattended: pure .smv exporter and tests only, no UI file; all gates green
 **Notes**: Rollback tag `pre-hw-smv` on `620e0ee00` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1414/result.json`.
 **Prompt document name**: 2026-10-21 14:14
+
+## 2026-10-21 — feat: S-G2, the structural properties generated from the model (P-2026-10-21-1431)
+**Prompt**: `claude_2026-10-21_1431_prompt_hw_sg2_properties.md`: the plan's §10.1 S-G2 entry, items 1 to 6, with the free-ROM variant and the graph check in the exporter; nuXmv neither installed nor run.
+**Files touched**: `frontend/src/model/simulation/smvExport.ts`, `…/__tests__/smvExport.test.ts`, `…/__tests__/fixtures/turnstile.smv`, `…/__tests__/fixtures/hw-cpu.smv`, `…/__tests__/fixtures/hw-cpu-free-rom.smv` (new) (`ade77d5a7`); the Status line of the 1431 prompt; this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck exit 0; vitest `src/model/simulation src/codegen` 52 files, 2871 passed, 5 skipped; build exit 0; smvExport.test.ts 17 passed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Properties read the state only: with events, ready_<t> is en_<t> without its event. A named double write stays refused (S-G1); two memory writes leave !(en_t & e1 = e2). FROZENVARs are named <cell>_<feature> (rom_0_init), not rom_k. On the CPU live_DECODE is proved by dec_else, so in the free-ROM export item 4 holds without nuXmv; S-H's per-opcode instances must leave the else out. Bench: 13 mutations, none survived (body of ade77d5a7). nuXmv not installed.
+**Prompt document name**: 2026-10-21 14:31
