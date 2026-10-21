@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1843
 Chat: C-2026-10-20-2055
 Request: https://claude.ai/code/session_015TA6h4cZMkEoB4r47V9hTk (merge of hw-subset launched by chat C-2026-10-20-2055)
 Lane: full (merge; 1 conflict: `docs/log-inbox/hw-notation.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane merge · 9d2f5c5f6 · verifica visiva passata 2026-10-21 (passato — chat, unattended: subset checker accepts the ROM idiom read; tests only, no UI file; all gates green)
 
 Worktree: `/Users/alfonso/jjodel-w-hwdemo`, branch `hw-demo`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-w-hwdemo` on `hw-demo`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-21-1843 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

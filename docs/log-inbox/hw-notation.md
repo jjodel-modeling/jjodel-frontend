@@ -268,3 +268,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Causa: R-BV-8 (3)'s literal-only rule predates the memory idiom. Accepted is the ROM read only (`read.kind` 'feature'): `smvExport.ts` translates no σ read inside `bits`, which keeps E-CALL. The key is walked. hw-cpu: no action or guard has a subset error (`checkActionSubset`, simBridge's call); the panel not checked by eye. `memoryIdiom.ts` unchanged, already exported. Bench: 5 mutations, all killed (body of 1a85c93d3).
 **Prompt document name**: 2026-10-21 18:20
+
+## 2026-10-21 — merge: hw-subset into hw-demo (P-2026-10-21-1843)
+**Prompt**: `claude_2026-10-21_1843_prompt_merge_hw-subset.md`, a direct merge by `lane-run merge --direct`, no session: `hw-subset` at `433b84f2f` into `hw-demo`, merge base `c64a13cbd`, 3 commits on the branch side.
+**Files touched**: merge `9d2f5c5f6`: 4 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-10-21_1820_prompt_hw_subset_rom_read.md`, `frontend/src/model/simulation/__tests__/subsetChecker.test.ts`, `frontend/src/model/simulation/subsetChecker.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9d2f5c5f6` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11531 tests in 404 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: subset checker accepts the ROM idiom read; tests only, no UI file; all gates green
+**Notes**: Rollback tag `pre-hw-subset` on `7a923fccf` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1843/result.json`.
+**Prompt document name**: 2026-10-21 18:43
