@@ -6388,9 +6388,11 @@ P-2026-10-20-1835.
 - **R-OI-11** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
   **O2..O5 are built-in live checks computed from the relation's own closure**, reported through the problems registry
   and never blocking (R-VAL-4); a JjEL `closure` operator is its own lane, not part of this front. Question 7.
-- **Awaiting Alfonso:** question 4 of the discovery, one undo step per instantiation. Today an instance with 3 slots
-  costs 5 undo entries and 9 Cmd+Z [M]; one step needs a change to `redux/reducer/reducer.ts` and
-  `redux/action/action.ts` (lane S2u after S2, recommended). S2 ships with the undo count declared until then.
+- **R-OI-12** (2026-10-21, ratified by Alfonso 2026-10-21 06:32 «Ok alle raccomandazioni», evidence: measured, verified: none, reversible: trunk).
+  **One undo step per instantiation is its own core lane (S2u), after the 3.2.0 tag**, with a Layer Impact Report on
+  `redux/reducer/reducer.ts` and `redux/action/action.ts`. Until then S2 declares its count (one instantiation is undone
+  by two Cmd+Z, the first empty, P-2026-10-21-0100). The slice order after S2 is S3a, S3b, S4, S5 (discovery §8); S3a and
+  S3b open with a Layer Impact Report (critical-zone table §3.1).
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 
