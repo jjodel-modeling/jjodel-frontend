@@ -205,3 +205,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Properties read the state only: with events, ready_<t> is en_<t> without its event. A named double write stays refused (S-G1); two memory writes leave !(en_t & e1 = e2). FROZENVARs are named <cell>_<feature> (rom_0_init), not rom_k. On the CPU live_DECODE is proved by dec_else, so in the free-ROM export item 4 holds without nuXmv; S-H's per-opcode instances must leave the else out. Bench: 13 mutations, none survived (body of ade77d5a7). nuXmv not installed.
 **Prompt document name**: 2026-10-21 14:31
+
+## 2026-10-21 — merge: hw-props into hw-demo (P-2026-10-21-1536)
+**Prompt**: `claude_2026-10-21_1536_prompt_merge_hw-props.md`, a direct merge by `lane-run merge --direct`, no session: `hw-props` at `baeb6698b` into `hw-demo`, merge base `a061086d1`, 3 commits on the branch side.
+**Files touched**: merge `29086862f`: 7 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-10-21_1431_prompt_hw_sg2_properties.md`, `frontend/src/model/simulation/__tests__/fixtures/hw-cpu-free-rom.smv`, `frontend/src/model/simulation/__tests__/fixtures/hw-cpu.smv`, `frontend/src/model/simulation/__tests__/fixtures/turnstile.smv`, `frontend/src/model/simulation/__tests__/smvExport.test.ts`, `frontend/src/model/simulation/smvExport.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `29086862f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11524 tests in 404 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: pure .smv exporter properties and tests, no UI file; all gates green
+**Notes**: Rollback tag `pre-hw-props` on `db5e53dab` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1536/result.json`.
+**Prompt document name**: 2026-10-21 15:36
