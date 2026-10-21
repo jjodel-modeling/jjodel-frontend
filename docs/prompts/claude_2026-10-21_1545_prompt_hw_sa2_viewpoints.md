@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1545
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (build track: the CPU build script, the regenerated project, an import probe with screenshots)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane hw-sa2 · 34a8a7ee7 · continued by P-2026-10-21-1620 after the AM-8 ceiling · Outcome: hard-stop (time limit; Datapath and Control miss the acceptance criterion) · verifica visiva in attesa (Alfonso)
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-1340
 Corregge: —

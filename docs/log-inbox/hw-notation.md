@@ -218,3 +218,27 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passato — chat, unattended: pure .smv exporter properties and tests, no UI file; all gates green
 **Notes**: Rollback tag `pre-hw-props` on `db5e53dab` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1536/result.json`.
 **Prompt document name**: 2026-10-21 15:36
+
+## 2026-10-21 — feat: S-A2, the viewpoints ISA, Datapath, Control, finished after the context ceiling (P-2026-10-21-1620)
+**Prompt**: `claude_2026-10-21_1620_prompt_hw_sa2_finish.md`, continuation of P-2026-10-21-1545 from its `handoff.md`: finish the three IR viewpoints of S-A2 in `build-hw-cpu.ts`, regenerate `hw-cpu.jjodel`, one screenshot per viewpoint, the acceptance criterion of 1545.
+**Files touched**: `frontend/scripts/examples/build-hw-cpu.ts`, `frontend/public/examples/hw/hw-cpu.jjodel` (`34a8a7ee7`); `docs/discovery/assets/hw-sa2/*.png`, the Status lines of the 1545 and 1620 prompts, this inbox.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa — Alfonso: ISA passes; Datapath and Control screenshots unframed, criterion not met
+**Notes**: Hard-stop on the time limit. Scope note: the import check lives in `build-hw-cpu.ts` (`verify`), not in `codegen-examples.ts`. Gates: typecheck 0, vitest src/codegen green; check:docs green; build and typecheck:scripts not run. Open: Datapath counts the 25 transparent `ports` arcs as drawn edges; guards `0x0` and `else` overlap; fit after remount does not move the canvas; clipped screenshot untested (last run: Vite timeout). Evidence: `~/.jjodel-lanes/P-2026-10-21-1620/probe-build-hw-cpu.log`.
+**Prompt document name**: 2026-10-21 16:20
+
+## 2026-10-21 — ticket: a live viewpoint switch keeps the previous viewpoint's positions
+**Ticket**: Switching the exclusive viewpoint from the toolbar on an open model leaves every vertex where the previous viewpoint had it; the `layoutByViewpoint` record of the new one is applied only when the canvas remounts. Measured on the imported hw-cpu (P-2026-10-21-1620, `verify` in `build-hw-cpu.ts`): PC at (40,400) after the switch to Datapath, (480,1000) after close and reopen; FETCH at (40,1720) under Control, (0,2000) after the remount. Cause named by the research: commit 242a82bcd dropped the dependency that made positions follow (R-LAY-18). The closing tab also stores the previous viewpoint's pan under the new key, so the reopened canvas keeps it and the `%` fit did not move it.
+**Priority**: high
+**Found in**: P-2026-10-21-1620
+**Detail**: `docs/discovery/discovery_2026-10-21_jjomsync_incremental.md`
+
+## 2026-10-21 — ticket: object-as-edge handle index is not clamped, React Flow drops the edge
+**Ticket**: `assignGeometricHandles` (`irEdgeViews.ts:195-196`) gives each object-as-edge the next free index on its side with no clamp to `MAX_HANDLES_PER_SIDE` (4), unlike `portDistribution.ts:415`. A fifth end on one side gets `right-4`, and React Flow refuses it (error #008): under the first hw-cpu Control layout 8 of 20 transitions were not drawn. S-A2 works around it by layout (at most four ends a side and role).
+**Priority**: medium
+**Found in**: P-2026-10-21-1620
