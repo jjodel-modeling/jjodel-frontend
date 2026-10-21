@@ -84,3 +84,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: `subsetChecker.ts:321-322` accepts `bits` only with literal arguments; FETCH's ROM read is `bits(8, rom.cells.filter(…).first.init)`, so the panel shows «1 defect: FETCH exit (E-CALL)». The run is unaffected, but the defect is visible in a demo. The fix belongs to the subset checker or to S-G1's memory idiom, not to the model.
 **Priority**: medium
 **Found in**: P-2026-10-21-1145
+
+## 2026-10-21 — fix: S-C0 JjTL prerequisites, F4 and the containment write-back
+**Prompt**: S-C0 of the hw demonstrator plan §10.1, finished after the context ceiling of P-2026-10-21-1037: rerun the containment write-back probe with its snapshot fixed, fill §3 of the discovery, commit it, close both prompts.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/executor/__tests__/source-ref-member-access.test.ts` (c3f5cb15e); `docs/discovery/discovery_2026-10-21_hw_jjtl_prerequisites.md` (229e822f5); Status lines of `docs/prompts/claude_2026-10-21_1037_prompt_hw_sc0_jjtl_prerequisites.md` and `docs/prompts/claude_2026-10-21_1220_prompt_hw_sc0_finish.md`; this inbox
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: One entry for P-2026-10-21-1037 and -1220 (six files, all declared). F4 fixed in executor.ts, gates and mutation bench in the body of c3f5cb15e. H4 holds, measured in the app on three levels: the fathers move into the slots, roots drops to the container; no ProjectEditor.tsx fix. navResolveRev stays null: pass-2 order, not F4. Evidence: docs/discovery/discovery_2026-10-21_hw_jjtl_prerequisites.md §2-§3.
+**Prompt document name**: 2026-10-21 12:20
+
+**Ticket** (JjTL, medium): three findings outside F4, each with a Recommended line in the discovery §5, none fixed here: pass-2 rule order for `resolve(x, T).attr`; `p.owner.name` inside a `forall` body; `self.src.name` / `source.src.name`.

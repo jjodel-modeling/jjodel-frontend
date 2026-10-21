@@ -831,6 +831,45 @@ export class JjtlExecutor {
     }
 
     /**
+     * Let a binding read THROUGH a `{ __ref: id }` wrapper (F4).
+     *
+     * A reference feature bound as the bare wrapper made `src.name` read null: the
+     * wrapper has no `name`. The Proxy returned here answers the wrapper's own keys
+     * from the wrapper, so `resolveValue`, JjEL equality (`Object.keys`) and
+     * `fromJjelValue` see the value they saw before and `port := src` still resolves
+     * source to target. Every other string key is read (`get`) and tested (`has`, which
+     * JjEL's member access checks first) on the source object the pointer names, looked
+     * up on first use; a value read is itself read through, so `src.owner.name` works
+     * too. Arrays are mapped element-wise. A pointer that names no source object reads
+     * as the bare wrapper did.
+     */
+    private readThroughSourceRef(value: any): any {
+        const isRef = (v: any) =>
+            !!v && typeof v === 'object' && !Array.isArray(v) && typeof v.__ref === 'string';
+        if (Array.isArray(value)) {
+            return value.some(isRef) ? value.map(v => this.readThroughSourceRef(v)) : value;
+        }
+        if (!isRef(value)) return value;
+        let found: any;
+        const source = (target: any): any => {
+            if (found === undefined) found = this.derefSourceRef(target);
+            return found === target ? undefined : found;
+        };
+        return new Proxy(value, {
+            get: (target, key, receiver) => {
+                if (typeof key !== 'string' || key in target) return Reflect.get(target, key, receiver);
+                const obj = source(target);
+                return obj === undefined ? undefined : this.readThroughSourceRef(obj[key]);
+            },
+            has: (target, key) => {
+                if (typeof key !== 'string' || key in target) return Reflect.has(target, key);
+                const obj = source(target);
+                return obj !== undefined && typeof obj === 'object' && key in obj;
+            },
+        });
+    }
+
+    /**
      * Initialize execution context
      */
     private initializeContext(sourceModel: any, targetMetamodel?: any): void {
@@ -2283,7 +2322,7 @@ export class JjtlExecutor {
             for (const [key, value] of proxyEntries(sourceInstance)) {
                 if (!key.startsWith('__')) {
                     bindings[key] = shallowToJjelValue(
-                        key === 'parent' ? this.derefSourceRef(value) : value
+                        key === 'parent' ? this.derefSourceRef(value) : this.readThroughSourceRef(value)
                     );
                 }
             }
