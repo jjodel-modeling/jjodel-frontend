@@ -122,3 +122,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-21-0947
 **Detail**: docs/discovery/discovery_2026-10-21_onto_s2u_undo_group.md
+
+## 2026-10-21 — fix: S3a acceptance probe, regression, assets, closing (P-2026-10-21-1636)
+**Prompt**: items 4 to 8 of the P-2026-10-21-1600 handoff: the probe onto-s3a-slot-problems.ts (S3-0..S3-7) with M4, regression of undo-inline-edit and onto-s2-instantiate, three assets, this entry, delete the two throwaways.
+**Files touched**: S3a lanes 1600/1635, never logged: problems/registry.ts, NodeProblemOverlay.tsx, instantiationToProblems.ts (new), InstantiationProblemSync.tsx (new), problems/__tests__/instantiationToProblems.test.ts (new), EditorV2.tsx, hooks/instantiate.ts, hooks/__tests__/instantiate.test.ts (8b79e63ff). This lane: probe onto-s3a-slot-problems.ts (bb99637b4); docs/discovery/assets/onto-s3a/ three crops and onto-s3a-measures.json, this inbox (docs commit)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 16:00 P-2026-10-21-1600, stopped by the context-ceiling hook (AM-8) during step 3, before any gate
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no (six files in this lane, all in the DOVE list: the probe, four assets, this inbox; NodeProblemOverlay.tsx mutated for M4 and reverted; the two gitignored throwaways deleted as asked)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — three crops read by the session (badge, overlay with Sync slots, five rows); the visual GO stays the chat's (P8)
+**Notes**: Probe run 8: 8/8, load 5.20/8.13. undo-inline-edit 33/33 (8.38/8.85), onto-s2-instantiate 21/21 (8.34/32.81), both unchanged. Bench, 32 tests: M1 1 red, M2 2, M3 2; M4 S3-3 red. valueKindFor stays private. S3-2 adds pages by createInstance (no Add attribute gesture). S3-6 duplicate entry ~350 ms after its definingFeature lands, ~1350 ms from the call. Gates of 1635: typecheck 0, 10/10 + 22/22, build 0. Detail: ~/.jjodel-lanes/P-2026-10-21-1636/closing.md
+**Prompt document name**: 2026-10-21 16:36
+
+## 2026-10-21 — ticket: an orphan slot's row shows its value with no feature name
+**Ticket**: after its Property is deleted, dune's isbn slot renders as the row ` = 978-0441013593`: no feature name and nothing marking it orphan; only the node's badge and the overlay say «Orphan slot». S3b is where orphan rows are drawn.
+**Priority**: low
+**Found in**: P-2026-10-21-1636
+**Detail**: docs/discovery/assets/onto-s3a/onto-s3a-badge-light.png
+
+## 2026-10-21 — ticket: an undo entry with nothing created after a problem-dot click
+**Ticket**: under M4 (the overlay's run branch dropped) the user's undo stack grew 4 → 5 between the click on dune's problem dot, then on «Sync slots», and the end of a 6 s wait, with no object created. Origin not measured; a click-born write such as the pointedBy sync of the shallow-merge ticket is the candidate. In the unmutated flow such a write would join the open «Sync slots» group.
+**Priority**: low
+**Found in**: P-2026-10-21-1636
+**Detail**: ~/.jjodel-lanes/P-2026-10-21-1636/closing.md
