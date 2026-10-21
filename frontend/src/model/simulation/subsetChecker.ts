@@ -39,6 +39,7 @@
 import type { ASTLocation, BinaryExpr, JjelExpression } from '../../jjel/types/ast';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
 import { literalArgument } from './stateAttributesCodec';
+import { matchMemoryIdiom } from './memoryIdiom';
 
 export type SubsetSeverity = 'error' | 'warning' | 'not-verifiable';
 
@@ -319,6 +320,12 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
         case 'FunctionCall':
             // A bit-vector constant (R-BV-8): `bits(w, n)` / `sbits(w, n)` with literal arguments is a nuXmv word constant.
             if ((e.name === 'bits' || e.name === 'sbits') && e.args.every(a => literalArgument(a) !== null)) return;
+            // `bits(w, <ROM idiom>)` with a literal width: the exporter reads it cell by cell (`smvExport.ts`), the key is walked.
+            if ((e.name === 'bits' || e.name === 'sbits') && e.args.length === 2 && literalArgument(e.args[0]) !== null
+                && matchMemoryIdiom(e.args[1])?.read.kind === 'feature') {
+                plain(e.args[1]);
+                return;
+            }
             report(w, 'E-CALL', `\`${e.name}(…)\` calls a function, and guards have none: builtins such as now() are not available.`, e);
             e.args.forEach(asArg);
             return;
