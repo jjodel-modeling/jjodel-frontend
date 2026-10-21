@@ -1166,9 +1166,9 @@ export const UNDO_GROUP_MAX_MS = 10000;
 let undoGroupSeq = 0;
 // Only the opening sender's writes join; it closes on endUndoGroup, on undo or redo, or UNDO_GROUP_MAX_MS after opening.
 let openUndoGroup: { id: number, sender: Pointer<DUser>, openedAt: number } | null = null;
-// The last entry a group wrote and the state before the group: a legacy merge into that entry (a graph create of the
-// sync after endUndoGroup) stays exact. Cleared by any push, undo, redo and beginUndoGroup.
-let undoGroupTail: { entry: GObject, base: DState } | null = null;
+// The last entry a group wrote, the state before the group and the time of its last write: a legacy merge into that entry
+// (a graph create of the sync after endUndoGroup) stays exact. Cleared by any push, undo, redo and beginUndoGroup.
+let undoGroupTail: { entry: GObject, base: DState, lastAt: number } | null = null;
 // The last close of a group and the last clear of the tail, with their cause: read by `undoGroupState` only.
 type UndoGroupEvent = { group: number | null, at: number, by: 'end' | 'begin' | 'undo' | 'cap' | 'push' };
 let undoGroupClosed: UndoGroupEvent | null = null;
@@ -1204,13 +1204,13 @@ function dropUndoGroup(): void {
 
 /** The undo group state, read-only, for the tests and the acceptance probe (`window.undoGroupState` in dev). */
 export function undoGroupState(): {
-    open: { id: number, openedAt: number } | null, tail: { timestamp: number, onTop: boolean } | null,
+    open: { id: number, openedAt: number } | null, tail: { timestamp: number, lastAt: number, onTop: boolean } | null,
     closed: UndoGroupEvent | null, tailCleared: UndoGroupEvent | null,
 } {
     const own = statehistory[openUndoGroup?.sender ?? DUser.current]?.undoable;
     return {
         open: openUndoGroup ? { id: openUndoGroup.id, openedAt: openUndoGroup.openedAt } : null,
-        tail: undoGroupTail ? { timestamp: undoGroupTail.entry.timestamp, onTop: !!own && own[own.length - 1] === undoGroupTail.entry } : null,
+        tail: undoGroupTail ? { timestamp: undoGroupTail.entry.timestamp, lastAt: undoGroupTail.lastAt, onTop: !!own && own[own.length - 1] === undoGroupTail.entry } : null,
         closed: undoGroupClosed && { ...undoGroupClosed },
         tailCleared: undoGroupTailCleared && { ...undoGroupTailCleared },
     };
@@ -1286,13 +1286,14 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 const own = statehistory[action.sender].undoable;
                 if (undoGroupTail && own[own.length - 1] === undoGroupTail.entry) {
                     setExactGroupEntry(undoGroupTail.entry, ret, undoGroupTail.base);
+                    undoGroupTail.lastAt = ret.timestamp;
                     return ret;
                 }
                 own.push(delta);
                 statehistory.all.undoable.push(delta);
                 if (own.length > MAX_HISTORY) own.shift();
                 if (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
-                undoGroupTail = { entry: delta, base: oldState };
+                undoGroupTail = { entry: delta, base: oldState, lastAt: ret.timestamp };
                 return ret;
             }
             let pastDelta = statehistory[action.sender].undoable[statehistory.all.undoable.length-1];
@@ -1303,6 +1304,10 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             let debugMerge = true;
             if (!shouldMerge && (delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs)) shouldMerge = true;
             if (!pastDelta) shouldMerge = false;
+            // A write within the merge tolerance of the group's last write (a sync reaction to it, which the legacy rule
+            // merges into the entry before it) joins the group entry: the window runs from that write, not from the entry's
+            // first one (S2-3n, P-2026-10-21-1121). The group is closed; a later write takes the legacy path.
+            if (undoGroupTail && pastDelta === undoGroupTail.entry && ret.timestamp - undoGroupTail.lastAt < mergeTolerance) shouldMerge = true;
 
             if (false && pastDelta) console.log("merge deltas", {forVertex:delta.vertexs || delta.graphvertexs || delta.graphelements || delta.edgepoints || delta.edges || delta.graphs,
                 isRelevantChange,
