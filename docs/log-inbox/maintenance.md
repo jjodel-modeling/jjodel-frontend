@@ -335,3 +335,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (the visual check is the chat's, pending)
 **Notes**: Inset: getPropertyValue 74/56/52/152 ms to 8-15/0/0/0; vp long tasks 1082 to 830 in a same-window pair at load 7. The batch was measured and dropped: drag measure self time 315 to 228-263 ms only, layouts per burst 135 to 1, drag long tasks median 1433, acceptance missed. MiniMap step skipped: load never at most 8 in 11:45-12:00 (second cause (g)). Numbers: `~/.jjodel-lanes/P-2026-10-21-1115/measurements.md`; batch: `batch.diff` there.
 **Prompt document name**: 2026-10-21 11:15
+
+## 2026-10-21 — merge: perf-round3 into alfonso-frontend-jjtl (P-2026-10-21-1232)
+**Prompt**: `claude_2026-10-21_1232_prompt_merge_perf-round3.md`, a direct merge by `lane-run merge --direct`, no session: `perf-round3` at `c06a8cd6d` into `alfonso-frontend-jjtl`, merge base `cce5ce378`, 8 commits on the branch side.
+**Files touched**: merge `74b80d710`: 10 files from the branch side (`docs/discovery/discovery_2026-10-21_large_model_round3.md`, `docs/lir/lir_2026-10-21_intrinsic_batch_inset.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-10-21_0905_prompt_large_model_slowness_round3.md`, `docs/prompts/claude_2026-10-21_1010_prompt_intrinsic_batch_inset.md`, `docs/prompts/claude_2026-10-21_1115_prompt_intrinsic_batch_finish.md`, `frontend/scripts/probe/large-model-click-profile.ts`, `frontend/src/components/editor-v2/EditorV2.tsx`, and 2 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `74b80d710` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11427 tests in 398 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Built-in browser (dev, other lanes running), Jjodel harness after merge 74b80d710: BPMN 48 nodes 42 edges; selection click 1.0 s of long tasks; viewpoint switch to Authority 1.3 s, back to BPMN 2.4 s (viewpoint of 48 nodes with containers); no regression visible, inset read gone from the render per the lane probe
+**Notes**: Rollback tag `pre-perf-round3` on `0ff5e64c9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1232/result.json`.
+**Prompt document name**: 2026-10-21 12:32

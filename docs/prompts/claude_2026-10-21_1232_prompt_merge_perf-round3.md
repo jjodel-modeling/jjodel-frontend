@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1232
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane merge · 74b80d710 · verifica visiva passata 2026-10-21 (Built-in browser (dev, other lanes running), Jjodel harness after merge 74b80d710: BPMN 48 nodes 42 edges; selection click 1.0 s of long tasks; viewpoint switch to Authority 1.3 s, back to BPMN 2.4 s (viewpoint of 48 nodes with containers); no regression visible, inset read gone from the render per the lane probe)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-21-1232 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
