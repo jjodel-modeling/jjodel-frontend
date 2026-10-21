@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1117
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (second session of P-2026-10-21-1025: tests, privacy, closure)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane tack-s9 · 5b7c02c12 · suite 252/252, 4710 restarted from this worktree (3 waiting) · visual check by the chat on 4710 (RC-23) pending
 Depends: P-2026-10-21-1025
 Corregge: none (continuation under RC-51, not a repair)
 Request: Alfonso, 2026-10-21 10:12, in the project chat: «Esegui in /lane auto» (same request as P-2026-10-21-1025)
