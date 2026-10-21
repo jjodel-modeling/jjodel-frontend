@@ -9,7 +9,7 @@
  *    import under vitest. `ontoReadView` is the `OntoReadView` of `bindingReader.ts` over those records; the menu
  *    options and the synthesis plan are computed from it. Reads only.
  *  - the WRITE half, `instantiate`, reaches the store and `createInstance` (`createAdapter.ts:491`) through a dynamic
- *    `import()`, so the bench never loads them. It writes through `createInstance` only. The instance's vertex is the
+ *    `import()`, so the bench never loads them. It writes through `createInstance`, and the node size below. The instance's vertex is the
  *    one `useJjomSync` Step 2bis gives a new root: a `createVertexForObject` at the click point, right after the
  *    create, left the instantiation out of the undo history (measured, P-2026-10-21-0100: Cmd+Z never removed it and
  *    walked back the entries before it instead; without it one Cmd+Z removes the instance and its slots).
@@ -26,10 +26,18 @@
  *
  * No outer TRANSACTION (rule 12): `addObject` opens its own. One instantiation is therefore several undo entries; S2u
  * makes it one, and the count is measured and declared until then.
+ *
+ * ── The node size ─────────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * A view that authors a `defaultSize` draws a vertex with no manual size at exactly that box (`nodeSizing.ts`,
+ * manual > default > derived), so an object box 60 high clipped the header and all rows but two (ticket of
+ * 2026-10-21, P-2026-10-21-0655). After the slots, the instance's vertex is given the box of `instanceBoxSize` under the
+ * layout in force, through the layout resolver, as a manual size: the rule the UML fixture sizes every drawn box with.
  */
 
 import { decodeOntoBindings, ONTO_BINDINGS_KEY, type OntoBinding, type OntoValueKind } from '../../../model/ontological/bindingCodec';
 import { featureClosure, instantiableClassifiers, type OntoReadView } from '../../../model/ontological/bindingReader';
+import { authoredDefaultSize } from '../nodes/nodeSizing';
 
 /** A D record of the store by id, `undefined` when there is none. */
 export type DGet = (id: string) => any;
@@ -275,6 +283,35 @@ export function synthesisPlan(get: DGet, binding: OntoBinding, classifierId: str
     return plan;
 }
 
+/** Box metrics of the UML fixture (`box`, `scripts/probe/uml-class-object-fixture.ts:222`): chrome, one top label, one row. */
+export const BOX_METRICS = { chrome: 26, label: 20, row: 18 } as const;
+
+/** Width when the view authors a height only: the seed width Step 2bis gives a new root. */
+const SEED_WIDTH = 200;
+
+/** The parts of a vertex view `instanceBoxSize` reads. */
+export interface SizedViewIR {
+    defaultSize?: unknown;
+    visible?: unknown;
+    shape?: { labels?: Array<{ position?: string }> };
+    fieldCompartments?: unknown[];
+}
+
+/**
+ * The box of a new instance's node under `view`: the view's width, and a height that holds the top labels and one row
+ * per slot (no rows when the view has no field compartment), never below the authored height. `null` when the view
+ * authors no `defaultSize` (its box hugs the content already) or is not drawn. Pure.
+ */
+export function instanceBoxSize(view: SizedViewIR | null | undefined, slots: number): { w: number; h: number } | null {
+    if (!view || view.visible === false) return null;
+    const defaults = authoredDefaultSize(view.defaultSize);
+    if (!defaults) return null;
+    const labels = (view.shape?.labels ?? []).filter(l => l?.position === 'top').length;
+    const rows = (view.fieldCompartments?.length ?? 0) > 0 ? Math.max(0, slots) : 0;
+    const h = BOX_METRICS.chrome + BOX_METRICS.label * labels + BOX_METRICS.row * rows;
+    return { w: defaults.width ?? SEED_WIDTH, h: Math.max(defaults.height ?? 0, h) };
+}
+
 // ── The write half ──────────────────────────────────────────────────────────────────────────────────────────────
 
 export interface InstantiateResult {
@@ -300,12 +337,74 @@ async function waitFor<T>(test: () => T | undefined | null | false): Promise<T |
     }
 }
 
+/** The modules the write half reaches, loaded once before the first create. */
+interface WriteModules {
+    joiner: typeof import('../../../joiner');
+    ir: typeof import('../viewpoint/ir/irResolveCore');
+    readCtx: typeof import('../viewpoint/ir/irReadCtxLproxy');
+    layoutKey: typeof import('../viewpoint/layout/vertexLayoutAdapter');
+    layout: typeof import('../viewpoint/layout/vertexLayout');
+}
+
+/** The vertices that draw `objectId`. */
+function verticesOf(lookup: Record<string, any>, objectId: string): string[] {
+    const out: string[] = [];
+    for (const id of Object.keys(lookup ?? {})) {
+        const r = lookup[id];
+        if (r?.model === objectId && /Vertex/.test(String(r.className ?? ''))) out.push(id);
+    }
+    return out;
+}
+
+/**
+ * Give the instance's node the box of `instanceBoxSize` under the view in force (see the module comment): one
+ * TRANSACTION of SetFieldAction only (rule 12), each write resolved by `resolveVertexLayoutWrite` (R-LAY-16). Not
+ * `syncSizeToJjom`: its `markCanvasUpdated` makes the sync skip the vertex for the next 300 ms, which a resize drag
+ * wants (the canvas already holds the size) and a new node does not. Right after the last create, so the write lands
+ * inside the reducer's merge window and adds no undo entry. A problem when the node never appears; nothing when the
+ * view in force authors no size or does not draw the instance.
+ */
+async function sizeInstanceNode(m: WriteModules, get: DGet, instance: string, slots: number): Promise<string | null> {
+    const state: any = m.joiner.store.getState();
+    const signature = m.ir.computeIRSignature(state);
+    const index = signature ? m.ir.getIRIndex(state, signature) : null;
+    const metaclass = get(instance)?.instanceof;
+    if (!index || !isId(metaclass)) return null;
+    const lookup = state.idlookup;
+    const compiled = m.ir.resolveIRView(instance, metaclass, index, m.readCtx.makeReadCtx(lookup), lookup);
+    const size = compiled?.kind === 'vertex' ? instanceBoxSize(compiled.ir as SizedViewIR, slots) : null;
+    if (!size) return null;
+    const vertices = await waitFor(() => {
+        const vs = verticesOf((m.joiner.store.getState() as any)?.idlookup, instance);
+        return vs.length > 0 ? vs : null;
+    });
+    if (!vertices) return 'the node of the instance never appeared';
+    const layoutKey = m.layoutKey.getActiveLayoutKey();
+    m.joiner.TRANSACTION('Instantiate: node size', () => {
+        for (const vid of vertices) {
+            const write = m.layout.resolveVertexLayoutWrite(get(vid), { w: size.w, h: size.h, isResized: true }, layoutKey);
+            if (write.target === 'dictionary') {
+                m.joiner.SetFieldAction.new(vid as any, 'layoutByViewpoint' as any, { [write.vpId]: write.record }, '+=', false);
+                continue;
+            }
+            for (const [key, value] of Object.entries(write.patch)) m.joiner.SetFieldAction.new(vid as any, key as any, value, undefined, false);
+        }
+    });
+    return null;
+}
+
 /** Make one instance of `classifierId` with its slots and default values (see the module comment). */
 export async function instantiate(classifierId: string, record: OntoBinding): Promise<InstantiateResult> {
-    const [{ store }, { createInstance }] = await Promise.all([
+    const [joiner, { createInstance }, ir, readCtx, layoutKey, layout] = await Promise.all([
         import('../../../joiner'),
         import('./createAdapter'),
+        import('../viewpoint/ir/irResolveCore'),
+        import('../viewpoint/ir/irReadCtxLproxy'),
+        import('../viewpoint/layout/vertexLayoutAdapter'),
+        import('../viewpoint/layout/vertexLayout'),
     ]);
+    const { store } = joiner;
+    const modules: WriteModules = { joiner, ir, readCtx, layoutKey, layout };
     const get: DGet = id => (store.getState() as any)?.idlookup?.[id];
     const result: InstantiateResult = { ok: false, instance: null, slots: [], values: [], problems: [] };
     const plan = synthesisPlan(get, record, classifierId);
@@ -322,7 +421,9 @@ export async function instantiate(classifierId: string, record: OntoBinding): Pr
     const instance = made.id;
     result.instance = instance;
     if (plan.slotKey === null || record.slotContainer === undefined) {
-        result.ok = true;
+        const sized = await sizeInstanceNode(modules, get, instance, 0);
+        if (sized) result.problems.push(sized);
+        result.ok = result.problems.length === 0;
         return result;
     }
 
@@ -354,6 +455,8 @@ export async function instantiate(classifierId: string, record: OntoBinding): Pr
         if (value.ok && value.id) result.values.push(value.id);
         else result.problems.push(`value for ${planned.feature}: ${value.reason ?? 'not created'}`);
     }
+    const sized = await sizeInstanceNode(modules, get, instance, result.slots.length);
+    if (sized) result.problems.push(sized);
     result.ok = result.problems.length === 0;
     return result;
 }

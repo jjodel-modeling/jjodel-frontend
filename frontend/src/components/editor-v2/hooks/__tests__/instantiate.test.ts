@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-    creationOptions, instanceName, modelObjectIds, objectRecord, ontoReadView, readOntoBindings, synthesisPlan,
-    type SynthesisPlan,
+    BOX_METRICS, creationOptions, instanceBoxSize, instanceName, modelObjectIds, objectRecord, ontoReadView, readOntoBindings,
+    synthesisPlan, type SynthesisPlan,
 } from '../instantiate';
 
 // A UML subset as D records: the metamodel of the notation file §2 (only what the record reaches) and the library
@@ -221,5 +221,30 @@ describe('synthesisPlan', () => {
         expect(asPlan(synthesisPlan(get, bare, 'Book')).slots).toEqual([]);
         db.InstanceSpecification.abstract = true;
         expect(synthesisPlan(get, bare, 'Book')).toEqual({ error: 'InstanceSpecification is abstract' });
+    });
+});
+
+describe('instanceBoxSize', () => {
+    // The object view of the UML fixture: two top labels (name, classifier), one slot compartment, 280x60 authored.
+    const objectView = {
+        defaultSize: { width: 280, height: 60 },
+        shape: { labels: [{ position: 'top' }, { position: 'top' }] },
+        fieldCompartments: [{ id: 'slots' }],
+    };
+
+    it('grows with the slot count: the header plus one row per slot, the view width kept', () => {
+        const heights = [0, 1, 2, 4].map(n => instanceBoxSize(objectView, n));
+        expect(heights).toEqual([
+            { w: 280, h: 66 }, { w: 280, h: 84 }, { w: 280, h: 102 }, { w: 280, h: 138 },
+        ]);
+        expect(heights[3]!.h).toBe(BOX_METRICS.chrome + 2 * BOX_METRICS.label + 4 * BOX_METRICS.row);
+    });
+
+    it('never goes below the authored height, counts no rows without a compartment, and sizes nothing it does not own', () => {
+        expect(instanceBoxSize({ ...objectView, defaultSize: { width: 280, height: 200 } }, 4)).toEqual({ w: 280, h: 200 });
+        expect(instanceBoxSize({ ...objectView, fieldCompartments: [] }, 4)).toEqual({ w: 280, h: 66 });
+        expect(instanceBoxSize({ ...objectView, defaultSize: undefined }, 4)).toBeNull();
+        expect(instanceBoxSize({ ...objectView, visible: false }, 4)).toBeNull();
+        expect(instanceBoxSize(null, 4)).toBeNull();
     });
 });
