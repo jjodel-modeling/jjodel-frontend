@@ -259,3 +259,29 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: docs and probe only, no product code; merge gates green
 **Notes**: Rollback tag `pre-perf-slow-round2` on `37b4150b8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-0013/result.json`.
 **Prompt document name**: 2026-10-21 00:13
+
+## 2026-10-21 — fix(model): LModel.name without the $name scan, duplicate names in O(n) (P-2026-10-21-0030)
+**Prompt**: `claude_2026-10-21_0030_prompt_core_name_scans.md`, full lane (core `src/model/`, Phase 1 waived by Alfonso), worktree `~/jjodel-w-corenames` on `core-name-scans`, session `007d87b7`: fixes 4 and 2 of `discovery_2026-10-20_large_model_slowness_round2.md` §5, LIR first, probe acceptance.
+**Files touched**: `712f66020`: `docs/lir/lir_2026-10-21_core_name_scans.md`. `b16e1ad57`: `frontend/src/model/logicWrapper/LModelElement.tsx` (`LModel.get_name`), `frontend/src/model/logicWrapper/nameUniqueness.ts` (`detectDuplicateNames`), `frontend/src/model/__tests__/m1DuplicateNames.test.ts` (new). This commit: this entry, the prompt's Status line.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown. Probe steps green, in-page check equal on M1 and M2 models, 9 new tests and the uniqueness suites green; the badges are not checked on screen until the chat's visual check after the merge.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile (verifica della chat dopo il merge)
+**Notes**: Dev medians r1-r3: commit 2479 -> 1088 ms, target <= 900 missed because today's baseline is 2479 against the discovery's 1990 (detectDuplicateNames inclusive 1257 -> 86 ms); References 2184 ms task -> none; fullname 409 -> 2 name reads; clicks not worse (interleaved control r4/r5). Mutations m1-m3 killed; m1 only in page (LModelElement.tsx does not load under vitest). Second cause (a): an absolute target on a drifting baseline. Detail in the commit body of `b16e1ad57`.
+**Prompt document name**: 2026-10-21 00:30
+
+## 2026-10-21 — merge: core-name-scans into alfonso-frontend-jjtl (P-2026-10-21-0149)
+**Prompt**: `claude_2026-10-21_0149_prompt_merge_core-name-scans.md`, a direct merge by `lane-run merge --direct`, no session: `core-name-scans` at `466971410` into `alfonso-frontend-jjtl`, merge base `6a4cc3116`, 3 commits on the branch side.
+**Files touched**: merge `2e9a4dd6c`: 6 files from the branch side (`docs/lir/lir_2026-10-21_core_name_scans.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-10-21_0030_prompt_core_name_scans.md`, `frontend/src/model/__tests__/m1DuplicateNames.test.ts`, `frontend/src/model/logicWrapper/LModelElement.tsx`, `frontend/src/model/logicWrapper/nameUniqueness.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2e9a4dd6c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9668 tests in 392 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Built-in browser, Jjodel harness BPMN after merge 2e9a4dd6c: 48 nodes 42 edges; selection click 1.5 s of long tasks (was 2.2); rename of Role architect committed in 1.3 s (was about 2 s), reverted; References of architect opened with 16 selects (2 slots, 18 to 42 options) and no long task (was 2.4 s); model name shown in the status bar
+**Notes**: Rollback tag `pre-core-name-scans` on `2a8fd6bdc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-0149/result.json`.
+**Prompt document name**: 2026-10-21 01:49

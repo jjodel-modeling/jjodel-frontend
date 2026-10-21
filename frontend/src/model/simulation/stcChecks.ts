@@ -48,7 +48,8 @@ import { describeType, firstAbsence } from '../jjelTriState';
 import { buildGuardContext } from './guardContext';
 import type { SimSnapshot } from './guardContext';
 import { checkGuardSubset } from './subsetChecker';
-import { inDomain } from './netStep';
+import { isBitVector } from '../../jjel/evaluator/context';
+import { inDomain, wordWidth } from './netStep';
 import type { CompiledAction, FoldedTarget } from './actionEvaluator';
 import type { ActionSite, CompiledNet, Domain, InputRead, NetTransition, SimValue } from './netTypes';
 
@@ -66,7 +67,7 @@ export interface StcDefect {
 /** What the rules read: M frozen, the declarations, the places, and a name for an element. */
 export interface StcScope {
     readonly snapshot: SimSnapshot;
-    readonly net: Pick<CompiledNet, 'attributes' | 'declared' | 'places'>;
+    readonly net: Pick<CompiledNet, 'attributes' | 'declared' | 'places' | 'widths'>;
     /** Never the id: the line and the title name elements (R-SIM-62). */
     readonly nameOf: (id: string) => string;
     /**
@@ -140,7 +141,7 @@ function fold(e: JjelExpression, site: string, snapshot: SimSnapshot): Folded | 
 }
 
 function isSimValue(value: JjelValue): value is SimValue {
-    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string';
+    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string' || isBitVector(value);
 }
 
 function elementId(value: JjelValue): string | null {
@@ -259,7 +260,7 @@ export function checkActionValue(c: CompiledAction, site: ActionSite, target: Fo
         return { reason: 'value', detail: `the value is ${type}, not a boolean, a number or a string`, short: `value is ${type}` };
     }
     const decl = target === null ? undefined : scope.net.declared.get(target.element)?.get(target.attr);
-    if (target === null || !decl || inDomain(v.value, decl.domain)) return null;
+    if (target === null || !decl || inDomain(v.value, decl.domain, wordWidth(scope.net, target.element, target.attr))) return null;
     return {
         reason: 'value', detail: `${target.attr} of ${scope.nameOf(target.element)} would be ${String(v.value)}, outside its domain`,
         short: `${target.attr} = ${String(v.value)}, outside its domain`,

@@ -54,6 +54,9 @@ export function parseInputValue(domain: Domain, text: string): SimValue | null {
         }
         case 'enum':
             return domain.literals.includes(t) ? t : null;
+        // An input is never a word: the compiler refuses it (R-BV-8).
+        case 'word':
+            return null;
     }
 }
 
