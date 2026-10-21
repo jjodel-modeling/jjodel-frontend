@@ -26,6 +26,13 @@
  *       PIP_TAG     label of the run in crop and file names (default before)
  *       PIP_COMPARE <before.json>,<after.json>: the default panes compared (PASS when identical), and the
  *                   acceptance numbers of every pane, before then after
+ *       PIP_THEMES  comma list of themes measured (default light: D-UI-15, 2026-10-04, no dark measure; light,dark
+ *                   restores the runs of P-2026-10-03-1920)
+ *
+ * A3 (R-VP-60, reinstated by P-2026-10-10-0915): after each Auto layout, every routed non-junction end's handle within
+ * 1 px of the drawn end along its side (Activity's work->d1 excepted, up to 8 px: UnifiedEdge slides that leg onto the
+ * diamond's vertex), and no handle on another side than its drawn end off the diamonds. On the trunk's code these checks
+ * fail: their control.
  */
 import { chromium, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -39,6 +46,7 @@ const ONLY = (process.env.PIP_ONLY || '').split(',').filter(Boolean);
 const TAG = process.env.PIP_TAG || 'before';
 const OUT = process.env.PIP_OUT || `/tmp/petriink/probe_${TAG}.json`;
 const CROPS = (process.env.PIP_CROPS || `${process.env.HOME}/.jjodel-lanes/P-2026-10-03-1920/crops`).replace(/\/$/, '');
+const DARK = (process.env.PIP_THEMES || 'light').split(',').includes('dark');
 
 let pass = 0; let fail = 0;
 const check = (name: string, ok: boolean, detail: unknown) => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}  ${JSON.stringify(detail).slice(0, 1500)}`); if (ok) pass++; else fail++; };
@@ -661,12 +669,12 @@ function portReport(m: any, cap: any) {
             routed: !!route, elkCaptured: !!oe,
             source: {
                 drawnVsRoute: dist(drawnStart, rs), drawnVsElk: dist(drawnStart, elkStart), drawnVsHandle: dist(drawnStart, hs), routeVsElk: dist(rs, elkStart),
-                drawnSide: sbox ? sideOf(drawnStart, boxOf(sbox)) : null, routeSide: route?.sourceSide ?? null, handleSide: sideOfHandle(rf.sourceHandle), handleFound: !!hs,
+                drawnSide: sbox ? sideOf(drawnStart, boxOf(sbox)) : null, routeSide: route?.sourceSide ?? null, handleSide: sideOfHandle(rf.sourceHandle), handleFound: !!hs, form: sbox?.form ?? null,
                 handleAlong: along(drawnStart, hs, sbox ? sideOf(drawnStart, boxOf(sbox)) : null),
             },
             target: {
                 drawnVsRoute: dist(drawnEnd, re), drawnVsElk: dist(drawnEnd, elkEnd), drawnVsHandle: dist(drawnEnd, ht), routeVsElk: dist(re, elkEnd),
-                drawnSide: tbox ? sideOf(drawnEnd, boxOf(tbox)) : null, routeSide: route?.targetSide ?? null, handleSide: sideOfHandle(rf.targetHandle), handleFound: !!ht,
+                drawnSide: tbox ? sideOf(drawnEnd, boxOf(tbox)) : null, routeSide: route?.targetSide ?? null, handleSide: sideOfHandle(rf.targetHandle), handleFound: !!ht, form: tbox?.form ?? null,
                 handleAlong: along(drawnEnd, ht, tbox ? sideOf(drawnEnd, boxOf(tbox)) : null),
             },
             bends: { drawn: bendsOf(e.pts), route: route?.points ? Math.max(0, route.points.length - 2) : null, elk: elkBends },
@@ -692,6 +700,8 @@ function acceptance(ink: any[] | null, labels: any[], ports: any[] | null) {
         endsOffElk: ends.filter((x) => x.drawnVsElk !== null && x.drawnVsElk > 1).length,
         ends: ends.length,
         handleSideMismatch: ends.filter((x) => x.handleSide && x.drawnSide && x.handleSide !== x.drawnSide).length,
+        // A diamond end keeps its own side rule (one end per side, its slot the vertex): A3 pins no diamond end.
+        handleSideMismatchOffDiamond: ends.filter((x) => x.handleSide && x.drawnSide && x.handleSide !== x.drawnSide && x.form !== 'diamond').map((x) => `${x.e} ${x.end} ${x.handleSide}/${x.drawnSide}`),
         extraBends: (ports ?? []).reduce((n: number, r: any) => n + (r.bends.drawn !== null && r.bends.elk !== null ? Math.max(0, r.bends.drawn - r.bends.elk) : 0), 0),
     };
 }
@@ -713,7 +723,7 @@ function defaultDump(m: any) {
 if (process.env.PIP_COMPARE) {
     const [b, a] = process.env.PIP_COMPARE.split(',').map((f) => JSON.parse(readFileSync(f, 'utf8')));
     for (const key of Object.keys(b.scenes ?? {})) {
-        for (const theme of ['light', 'dark']) {
+        for (const theme of ['light', 'dark'].filter((t) => b.scenes[key]?.defaultPane?.[t] !== undefined)) {
             const x = round2(JSON.stringify(b.scenes[key]?.defaultPane?.[theme])), y = round2(JSON.stringify(a.scenes?.[key]?.defaultPane?.[theme]));
             check(`${key}: the default viewpoint's pane identical before and after (${theme})`, !!x && x === y, x === y ? 'identical' : { before: x?.slice(0, 600), after: y?.slice(0, 600) });
         }
@@ -726,6 +736,21 @@ if (process.env.PIP_COMPARE) {
     }
     console.log(`RESULT ${pass}/${pass + fail}`);
     process.exit(fail ? 1 : 0);
+}
+
+// ── A3 (R-VP-60) ──────────────────────────────────────────────────────────────────────────────────────
+/**
+ * The residue A3 leaves along the side: Activity (UML)'s work->d1, the leg UnifiedEdge slides onto the diamond's vertex
+ * (6 px measured by P-2026-10-03-1920), accepted up to 8 px; anywhere else it counts.
+ */
+const isA3Residue = (label: string, s: string) => label.startsWith('flowB/activityUml ') && /^work->d1 /.test(s) && Number(s.split(' ').pop()) <= 8;
+const a3Total = { off: 0, ends: 0, side: 0, extraBends: 0 };
+function checkA3(label: string, acc: any, total: boolean) {
+    const off = acc.nonJunctionOffHandleAlong.filter((s: string) => !isA3Residue(label, s));
+    check(`${label}: A3, every routed non-junction handle within 1 px of its drawn end along the side (Activity's work->d1 excepted)`, off.length === 0, { off, residue: acc.nonJunctionOffHandleAlong.filter((s: string) => isA3Residue(label, s)) });
+    check(`${label}: A3, no handle on another side than its drawn end, off the diamonds`, acc.handleSideMismatchOffDiamond.length === 0, acc.handleSideMismatchOffDiamond);
+    check(`${label}: no bend drawn over ELK's`, acc.extraBends === 0, acc.extraBends);
+    if (total) { a3Total.off += acc.nonJunctionOffHandleAlong.length; a3Total.ends += acc.nonJunctionEnds; a3Total.side += acc.handleSideMismatchOffDiamond.length; a3Total.extraBends += acc.extraBends; }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────────────────────────────
@@ -755,13 +780,15 @@ for (const sc of SCENES) {
     sceneOut.defaultPane.light = defaultDump(await measure(page, m1));
     sceneOut.defaultInk = { light: await inkOf(page, m1) };
     await crop(page, m1, `pip_${TAG}_${sc.key}_default_light`);
-    meas(`${sc.key} theme dark`, await setTheme(page, 'dark'));
-    await wait(page, 800);
-    sceneOut.defaultPane.dark = defaultDump(await measure(page, m1));
-    sceneOut.defaultInk.dark = await inkOf(page, m1);
-    await crop(page, m1, `pip_${TAG}_${sc.key}_default_dark`);
-    await setTheme(page, 'light');
-    await wait(page, 800);
+    if (DARK) {
+        meas(`${sc.key} theme dark`, await setTheme(page, 'dark'));
+        await wait(page, 800);
+        sceneOut.defaultPane.dark = defaultDump(await measure(page, m1));
+        sceneOut.defaultInk.dark = await inkOf(page, m1);
+        await crop(page, m1, `pip_${TAG}_${sc.key}_default_dark`);
+        await setTheme(page, 'light');
+        await wait(page, 800);
+    }
     for (const notation of sc.notations) {
         await activate(page, defaultVp);
         const d = await derive(page, mm, sc.profile, notation);
@@ -772,14 +799,16 @@ for (const sc of SCENES) {
         await fit(page, m1);
         const n: any = { derive: d, acceptance: {} };
         // 1. Ink, at rest, light then dark (the glyphs do not move with the layout).
-        n.ink = { light: await inkOf(page, m1) };
+        n.ink = { light: await inkOf(page, m1), dark: [] };
         await crop(page, m1, `pip_${TAG}_${sc.key}_${notation}_rest_light`);
-        await setTheme(page, 'dark');
-        await wait(page, 800);
-        n.ink.dark = await inkOf(page, m1);
-        await crop(page, m1, `pip_${TAG}_${sc.key}_${notation}_rest_dark`);
-        await setTheme(page, 'light');
-        await wait(page, 800);
+        if (DARK) {
+            await setTheme(page, 'dark');
+            await wait(page, 800);
+            n.ink.dark = await inkOf(page, m1);
+            await crop(page, m1, `pip_${TAG}_${sc.key}_${notation}_rest_dark`);
+            await setTheme(page, 'light');
+            await wait(page, 800);
+        }
         // 1b. «Color by metaclass» on: the glyphs paint as off (R-VP-50); the control is a node that is not a glyph changing fill.
         if (d.vp) {
             const offFills = await fills(page, m1);
@@ -802,14 +831,14 @@ for (const sc of SCENES) {
             check(`${sc.key}/${notation}: every glyph paints the same with «Color by metaclass» on`, pairs.length > 0 && pairs.every((p) => p.off === p.on), pairs.map((p) => `${p.k} ${p.off}/${p.on}`));
         }
         meas(`${sc.key}/${notation} ink light`, n.ink.light);
-        meas(`${sc.key}/${notation} ink dark`, n.ink.dark);
+        if (DARK) meas(`${sc.key}/${notation} ink dark`, n.ink.dark);
         // A control with signal: the ink read must differ between the themes for every glyph whose declared colour is a
         // theme token (a token that resolves the same in both would make a theme-blind read look right).
         const tokenGlyphs = n.ink.light.filter((g: any, i: number) => /var\(/.test(g.declared ?? '') && n.ink.dark[i]);
         check(`${sc.key}/${notation}: every glyph read on screen, painting its own node (light, dark)`, [...n.ink.light, ...n.ink.dark].every((g: any) => g.onScreen), [...n.ink.light, ...n.ink.dark].filter((g: any) => !g.onScreen).map((g: any) => `${g.node} ${g.kind}`));
         // And the canvas read itself: the background around every glyph changes with the theme.
-        if (n.ink.light.length) check(`${sc.key}/${notation}: the canvas read follows the theme`, n.ink.light.every((g: any, i: number) => n.ink.dark[i] && g.canvas !== n.ink.dark[i].canvas), n.ink.light.map((g: any, i: number) => `${g.node} ${g.canvas}/${n.ink.dark[i]?.canvas}`));
-        if (tokenGlyphs.length) check(`${sc.key}/${notation}: the pixel read follows the theme on token-inked glyphs`, tokenGlyphs.every((g: any) => { const k = n.ink.light.indexOf(g); return g.painted !== n.ink.dark[k].painted; }), tokenGlyphs.map((g: any) => { const k = n.ink.light.indexOf(g); return `${g.node} ${g.painted}/${n.ink.dark[k].painted}`; }));
+        if (DARK && n.ink.light.length) check(`${sc.key}/${notation}: the canvas read follows the theme`, n.ink.light.every((g: any, i: number) => n.ink.dark[i] && g.canvas !== n.ink.dark[i].canvas), n.ink.light.map((g: any, i: number) => `${g.node} ${g.canvas}/${n.ink.dark[i]?.canvas}`));
+        if (DARK && tokenGlyphs.length) check(`${sc.key}/${notation}: the pixel read follows the theme on token-inked glyphs`, tokenGlyphs.every((g: any) => { const k = n.ink.light.indexOf(g); return g.painted !== n.ink.dark[k].painted; }), tokenGlyphs.map((g: any) => { const k = n.ink.light.indexOf(g); return `${g.node} ${g.painted}/${n.ink.dark[k].painted}`; }));
         // 2. Labels, at rest.
         const restRaw = await measure(page, m1);
         if (restRaw.error) { check(`${sc.key}/${notation}: pane measured`, false, restRaw.error); continue; }
@@ -834,13 +863,16 @@ for (const sc of SCENES) {
         n.raw.elk = elkRaw;
         n.elkCapture = cap;
         await crop(page, m1, `pip_${TAG}_${sc.key}_${notation}_elk_light`);
-        await setTheme(page, 'dark');
-        await wait(page, 800);
-        await crop(page, m1, `pip_${TAG}_${sc.key}_${notation}_elk_dark`);
-        await setTheme(page, 'light');
-        await wait(page, 800);
+        if (DARK) {
+            await setTheme(page, 'dark');
+            await wait(page, 800);
+            await crop(page, m1, `pip_${TAG}_${sc.key}_${notation}_elk_dark`);
+            await setTheme(page, 'light');
+            await wait(page, 800);
+        }
         n.acceptance.rest = acceptance(n.ink.light.concat(n.ink.dark.map((g: any) => ({ ...g, node: `${g.node}(dark)` }))), n.labels.rest, null);
         n.acceptance.elk = acceptance(null, n.labels.elk, n.ports);
+        checkA3(`${sc.key}/${notation} after Auto layout`, n.acceptance.elk, true);
         // 2b. Classic Petri: the profile turned DOWN, a second Auto layout (vertical arcs, the case of 2026-10-02).
         if (notation === 'petriClassic' && d.vp) {
             const turned = await setDirection(page, d.vp, 'DOWN');
@@ -857,6 +889,7 @@ for (const sc of SCENES) {
             n.portsDown = portReport(downRaw, capD);
             n.raw.elkDown = downRaw;
             n.acceptance.elkDown = acceptance(null, n.labels.elkDown, n.portsDown);
+            checkA3(`${sc.key}/${notation} after the DOWN Auto layout`, n.acceptance.elkDown, false);
             await crop(page, m1, `pip_${TAG}_${sc.key}_${notation}_elkdown_light`);
             await setDirection(page, d.vp, 'RIGHT');
         }
@@ -872,8 +905,10 @@ for (const sc of SCENES) {
     check(`${sc.key}: no page errors`, errors.length === 0, errors.slice(0, 3));
     await ctx.close();
 }
+result.a3Total = a3Total;
 writeFileSync(OUT, JSON.stringify(result, null, 0));
 await browser.close();
+meas('A3 after Auto layout, every pane: non-junction ends off their handle along the side > 1 px, of all; on another side off the diamonds; extra bends', a3Total);
 meas('out', OUT);
 console.log(`RESULT ${pass}/${pass + fail}`);
 process.exit(fail ? 1 : 0);
