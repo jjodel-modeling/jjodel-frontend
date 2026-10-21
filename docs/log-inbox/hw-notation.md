@@ -242,3 +242,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: `assignGeometricHandles` (`irEdgeViews.ts:195-196`) gives each object-as-edge the next free index on its side with no clamp to `MAX_HANDLES_PER_SIDE` (4), unlike `portDistribution.ts:415`. A fifth end on one side gets `right-4`, and React Flow refuses it (error #008): under the first hw-cpu Control layout 8 of 20 transitions were not drawn. S-A2 works around it by layout (at most four ends a side and role).
 **Priority**: medium
 **Found in**: P-2026-10-21-1620
+
+## 2026-10-21 — docs: S-F, the one-page README for the engineer, first version (P-2026-10-21-1821)
+**Prompt**: `claude_2026-10-21_1821_prompt_hw_sf_readme.md`: slice S-F of the hw demonstrator plan §10.1, a one-page English README for a hardware engineer, written before S-H.
+**Files touched**: `frontend/src/codegen/examples/hw-cpu/README.md` (new, `c46e71b53`); the Status line of the 1821 prompt; this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs only; check:docs exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: First version, to update after S-H (nuXmv run, `npm run mc:hw`, domain properties). Facts read from hw-cpu.json, the trace, cpu.v, tb.v, the oracle script, smvExport.ts and its hw-cpu goldens. The in-app steps (Import, Play, Code panel) follow the build script and the turnstile README; not re-run in the browser here. smvExport has no app caller: the README says so.
+**Prompt document name**: 2026-10-21 18:21

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1821
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: fast (one new Markdown file)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane fast · c46e71b53 · verifica visiva non applicabile (docs only)
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-1430
 Corregge: —
