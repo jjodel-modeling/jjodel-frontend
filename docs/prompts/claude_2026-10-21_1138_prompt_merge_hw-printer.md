@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1138
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane merge · 8d40c015f · verifica visiva passata 2026-10-21 (codegen Verilog printer and tests only, no UI file; gates green after re-run)
 
 Worktree: `/Users/alfonso/jjodel-w-hwdemo`, branch `hw-demo`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-w-hwdemo` on `hw-demo`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-21-1138 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

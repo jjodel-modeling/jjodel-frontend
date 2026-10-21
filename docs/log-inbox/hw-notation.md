@@ -51,3 +51,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Six code files, above five: `composedCases.ts` is not in the S-D0 file list but sits in the declared `verilog/` directory; it holds the (b) cases that the test and the script share. (c) stays in this slice: 4746 cases, 0 disagree with Verilator 5.052; `run` and the build line are copied, since `bv-verilator.mjs` runs on import and exports nothing, and the TS printer loads through Vite's `ssrLoadModule`. Typecheck baseline not run before the edits; after them, exit 0.
 **Prompt document name**: 2026-10-21 10:35
+
+## 2026-10-21 — merge: hw-printer into alfonso-frontend-jjtl (P-2026-10-21-1138)
+**Prompt**: `claude_2026-10-21_1138_prompt_merge_hw-printer.md`, a direct merge by `lane-run merge --direct`, no session: `hw-printer` at `3ae51fbf` into `alfonso-frontend-jjtl`.
+**Files touched**: merge `8d40c015f` (codegen/target/verilog, model/simulation/memoryIdiom.ts, scripts/oracle/bv-printer-verilator.mjs and their tests); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `8d40c015f`: typecheck 0, typecheck:scripts 0, build 0, check:docs, check:agents, check:scripts, check:addonly 0; vitest with failures outside the merge, green re-run alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: codegen Verilog printer and tests only, no UI file; gates green after re-run
+**Notes**: The red test was `traceMonitor.test.ts`, with nine more files (lane-run, board, hook, check-addonly, js printer differential, irSelectionRing) under load average 100; all nine re-run alone at 12:17, 444/444. Block cleared with `lane-run resolve`, closure by hand. Tag `pre-hw-printer on fb9aecbcd`.
+**Prompt document name**: 2026-10-21 11:38
