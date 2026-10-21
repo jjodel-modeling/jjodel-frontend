@@ -101,3 +101,24 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-21-0725
 **Detail**: ~/.jjodel-lanes/P-2026-10-21-0725/s2-5-wip.diff
+
+## 2026-10-21 — fix: S2u one undo entry per instantiation, tickets (a) and (c) closed (P-2026-10-21-1219)
+**Prompt**: close S2u after P-2026-10-21-1121 stopped: revert 13966af7a, explain the second Cmd+Z press, three acceptance runs, undo-inline-edit on the branch and on 9bfc0cc78, build, stop for the GO, then this entry.
+**Files touched**: S2u lanes 1016/1041/1121, never logged: reducer.ts, undoGroup.test.ts (55f3bd556); instantiate.ts, instantiate.test.ts (f62d6edb0, 940bc6e55, efe348885); probe (09b06ba24); reducer.ts, undoGroup.test.ts (13966af7a, reverted in 765b9f94f). This lane: probe onto-s2-instantiate.ts (951feff3e, 3d5b3fd8a); docs/discovery/assets/onto-s2/ three assets (a38d2fc4e); this inbox
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 11:21 P-2026-10-21-1121, whose session stopped with S2-4u fixed and the second press unexplained
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no (seven files in this lane, all in the DOVE list: reducer.ts and undoGroup.test.ts by the revert, the probe, three assets, this inbox)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat C-2026-10-20-1835, RC-23 (book1 : Book four rows, member1 : Member two rows)
+**Notes**: Closes (a) (S2-2p within 4 px) and (c) (S2-5o) in 3/3 runs, 21/21. Second press: the probe's pane click, whose deselect lands a DEdge.pointedBy entry ~300 ms later; with it +1 entry, 2 presses; without 0 entries, 1 press. Probe now focuses and waits for the store idle. 13966af7a reverted: it did not remove the press. undo-inline-edit 33/33 here and on 9bfc0cc78, identical. Build 0, typecheck 0, 182 tests. Detail: ~/.jjodel-lanes/P-2026-10-21-1219/.
+**Prompt document name**: 2026-10-21 12:19
+
+**Ticket** (note, no action): mutant M8 of the 55f3bd556 bench, a legacy push that keeps the group tail, survives: equivalent with one sender, because the tail entry is back on top only after an undo, which clears it.
+
+## 2026-10-21 — ticket: undo outside a group merges shallow and leaves idlookup orphans
+**Ticket**: the legacy undo merge (`U.tsx:903`) is shallow: a later delta's `idlookup` patch is dropped from the merged entry, so one Cmd+Z removes an object and leaves its children or vertex in `idlookup` (measured T2 of the S2u discovery). S2u gives exact contents to group entries only. A case: the `DEdge.pointedBy` sync write that a pane click's deselect triggers lands ~300 ms later as an entry of its own, so create, then pane click, then Cmd+Z costs an extra press with no visible effect.
+**Priority**: medium
+**Found in**: P-2026-10-21-0947
+**Detail**: docs/discovery/discovery_2026-10-21_onto_s2u_undo_group.md
