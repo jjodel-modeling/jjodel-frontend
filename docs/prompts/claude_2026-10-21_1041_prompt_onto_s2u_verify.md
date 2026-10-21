@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1041
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (verification of a core change; visual check owed)
-Status: da eseguire
+Status: non completato 2026-10-21 · lane oi-s2u · fix 940bc6e55, probe 09b06ba24 · 19 of 21 checks pass (S2-4u, S2-3b1 fail) · context ceiling · continued by P-2026-10-21-1121
 Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5
 Depends: none
 Corregge: P-2026-10-21-1016, whose session (624797fb) reached the context ceiling (AM-8) after the code commits
