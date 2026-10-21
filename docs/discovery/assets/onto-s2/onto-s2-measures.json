@@ -1,0 +1,465 @@
+{
+  "url": "http://localhost:3087",
+  "at": "2026-10-21T04:35:19.273Z",
+  "file": "/Users/alfonso/jjodel-demo-exports/uml/uml-class-object.jjodel",
+  "ids": {
+    "model": "Pointer1792557347790_USER_140",
+    "mm": "Pointer1792557347744_USER_4",
+    "classes": {
+      "String": "Pointer1792557347792_USER_147",
+      "Integer": "Pointer1792557347793_USER_152",
+      "Boolean": "Pointer1792557347795_USER_157",
+      "Genre": "Pointer1792557347796_USER_162",
+      "Publication": "Pointer1792557347802_USER_183",
+      "Book": "Pointer1792557347812_USER_218",
+      "Magazine": "Pointer1792557347820_USER_247",
+      "Library": "Pointer1792557347825_USER_265",
+      "Member": "Pointer1792557347830_USER_283",
+      "Holdings": "Pointer1792557347844_USER_332",
+      "Membership": "Pointer1792557347852_USER_361",
+      "Borrowing": "Pointer1792557347860_USER_390"
+    }
+  },
+  "binding": {
+    "ok": true,
+    "missing": [],
+    "raw": "{\"v\":1,\"bindings\":[{\"name\":\"object\",\"typeReference\":\"Pointer1792557347781_USER_108\",\"slotContainer\":\"Pointer1792557347781_USER_110\",\"definingFeature\":\"Pointer1792557347782_USER_112\",\"valueHolder\":\"Pointer1792557347783_USER_114\",\"featureContainer\":\"Pointer1792557347774_USER_86\",\"generalization\":{\"via\":\"Pointer1792557347774_USER_84\",\"general\":\"Pointer1792557347778_USER_98\"},\"abstractFlag\":\"Pointer1792557347787_USER_129\",\"featureType\":\"Pointer1792557347778_USER_100\",\"defaultValue\":\"Pointer1792557347789_USER_135\",\"valueKinds\":[{\"when\":\"primitive:Boolean\",\"create\":\"Pointer1792557347764_USER_52\",\"field\":\"Pointer1792557347790_USER_139\"},{\"when\":\"primitive:String\",\"create\":\"Pointer1792557347763_USER_50\",\"field\":\"Pointer1792557347789_USER_138\"},{\"when\":\"primitive:Integer\",\"create\":\"Pointer1792557347763_USER_48\",\"field\":\"Pointer1792557347789_USER_137\"},{\"when\":\"instance\",\"create\":\"Pointer1792557347765_USER_56\",\"field\":\"Pointer1792557347783_USER_116\"}]},{\"name\":\"link\",\"typeReference\":\"Pointer1792557347781_USER_108\",\"slotContainer\":\"Pointer1792557347781_USER_110\",\"definingFeature\":\"Pointer1792557347782_USER_112\",\"valueHolder\":\"Pointer1792557347783_USER_114\",\"featureContainer\":\"Pointer1792557347776_USER_92\"}]}"
+  },
+  "historyAfterBinding": {
+    "flag": true,
+    "user": 2,
+    "all": 2,
+    "senders": [
+      "globalcanundostate",
+      "all",
+      "Pointer_OfflineUser"
+    ],
+    "lastAgeMs": 850
+  },
+  "cascade": {
+    "at": {
+      "x": 300,
+      "y": 789
+    },
+    "panels": 2,
+    "parent": "New instance of",
+    "labels": [
+      "Book",
+      "Library",
+      "Magazine",
+      "Member"
+    ]
+  },
+  "cascadeFit": {
+    "vh": 900,
+    "lastTop": 859,
+    "lastBottom": 887,
+    "panelTop": 768,
+    "unclampedBottom": 916
+  },
+  "book": {
+    "shape": {
+      "id": "Pointer1792557376979_USER_950",
+      "cls": "InstanceSpecification",
+      "name": "book1",
+      "classifier": "Book",
+      "slots": [
+        {
+          "cls": "Slot",
+          "feature": "isbn",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "genre",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "title",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "year",
+          "values": [],
+          "contained": "father=dvalue"
+        }
+      ]
+    },
+    "added": [
+      "InstanceSpecification:book1",
+      "Slot:Slot_0",
+      "Slot:Slot_1",
+      "Slot:Slot_2",
+      "Slot:Slot_3"
+    ],
+    "vertices": [
+      {
+        "id": "Pointer1792557377125_USER_955",
+        "cls": "DVertex",
+        "x": 50,
+        "y": 9350,
+        "father": "Pointer1792557347790_USER_140_graph5"
+      }
+    ],
+    "clickFlow": {
+      "x": 54.56483727401757,
+      "y": 931.3915641509022
+    },
+    "undo": {
+      "before": 2,
+      "after": 3
+    }
+  },
+  "undo": {
+    "entries": 1,
+    "presses": 2,
+    "back": true,
+    "undoBefore": 2,
+    "undoAfterCreate": 3,
+    "undoAfterPresses": 3,
+    "bindingKept": true,
+    "h0": {
+      "flag": true,
+      "user": 2,
+      "all": 2,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 2210
+    },
+    "h1": {
+      "flag": true,
+      "user": 3,
+      "all": 3,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 3001
+    },
+    "steps": [
+      {
+        "undo": 3,
+        "objects": 98,
+        "instance": true,
+        "binding": true
+      },
+      {
+        "undo": 3,
+        "objects": 93,
+        "instance": false,
+        "binding": true
+      }
+    ]
+  },
+  "member": {
+    "shape": {
+      "id": "Pointer1792557388070_USER_1020",
+      "cls": "InstanceSpecification",
+      "name": "member1",
+      "classifier": "Member",
+      "slots": [
+        {
+          "cls": "Slot",
+          "feature": "name",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "active",
+          "values": [
+            {
+              "cls": "LiteralBoolean",
+              "value": true
+            }
+          ],
+          "contained": "father=dvalue"
+        }
+      ]
+    }
+  },
+  "framed": {
+    "box": [
+      470,
+      9650,
+      1170,
+      10310
+    ],
+    "k": 0.9333333333333333
+  },
+  "objectDiagramNew": [
+    {
+      "name": "book1",
+      "x": 890,
+      "y": 9650,
+      "w": 280,
+      "h": 60
+    },
+    {
+      "name": "member1",
+      "x": 470,
+      "y": 10250,
+      "w": 280,
+      "h": 60
+    }
+  ],
+  "classNode": {
+    "bookItems": [
+      "New instance",
+      "Add Property (ownedAttributes)",
+      "Add Operation (ownedOperations)",
+      "Add Generalization (generalizations)",
+      "Edit",
+      "Duplicate",
+      "Delete",
+      "Up",
+      "Down",
+      "Reset size",
+      "Disable auto-sizing",
+      "Help",
+      "Explain this",
+      "Edit view · View for Class"
+    ],
+    "pubItems": [
+      "Add Property (ownedAttributes)",
+      "Add Operation (ownedOperations)",
+      "Add Generalization (generalizations)",
+      "Edit",
+      "Duplicate",
+      "Delete",
+      "Up",
+      "Down",
+      "Reset size",
+      "Disable auto-sizing",
+      "Help",
+      "Explain this",
+      "Edit view · View for Class"
+    ],
+    "shape": {
+      "id": "Pointer1792557402563_USER_1048",
+      "cls": "InstanceSpecification",
+      "name": "book2",
+      "classifier": "Book",
+      "slots": [
+        {
+          "cls": "Slot",
+          "feature": "isbn",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "genre",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "title",
+          "values": [],
+          "contained": "father=dvalue"
+        },
+        {
+          "cls": "Slot",
+          "feature": "year",
+          "values": [],
+          "contained": "father=dvalue"
+        }
+      ]
+    },
+    "cascadeShape": {
+      "name": "book1"
+    },
+    "vertices": [
+      {
+        "id": "Pointer1792557402906_USER_1053",
+        "cls": "DVertex",
+        "x": 890,
+        "y": 10550,
+        "father": "Pointer1792557347790_USER_140_graph5"
+      }
+    ],
+    "bookNode": {
+      "id": "Pointer1792557347814_USER_224",
+      "name": "Book",
+      "x": 420,
+      "y": 420,
+      "w": 220,
+      "h": 82,
+      "z": "0",
+      "cls": "ir-node-content ir-shape--rect",
+      "band": null,
+      "bandLabel": null
+    }
+  },
+  "rules": {
+    "newNames": [
+      "book1",
+      "member1",
+      "book2"
+    ],
+    "findings": [
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book1",
+        "msg": "isbn has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book1",
+        "msg": "genre has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book1",
+        "msg": "title has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book1",
+        "msg": "year has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "member1",
+        "msg": "name has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book2",
+        "msg": "isbn has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book2",
+        "msg": "genre has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book2",
+        "msg": "title has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O4",
+        "sev": "error",
+        "at": "book2",
+        "msg": "year has 0 values, multiplicity 1..1"
+      },
+      {
+        "rule": "O7",
+        "sev": "error",
+        "at": "book1",
+        "msg": "0 Holdings links at end holdings, library is 1..1"
+      },
+      {
+        "rule": "O7",
+        "sev": "error",
+        "at": "book2",
+        "msg": "0 Holdings links at end holdings, library is 1..1"
+      },
+      {
+        "rule": "O7",
+        "sev": "error",
+        "at": "member1",
+        "msg": "0 Membership links at end members, libraries is 1..-1"
+      }
+    ]
+  },
+  "undoLater": {
+    "entriesBefore": 9,
+    "presses": 2,
+    "steps": [
+      {
+        "undo": 9,
+        "objects": 107,
+        "binding": true,
+        "member1": true
+      },
+      {
+        "undo": 9,
+        "objects": 102,
+        "binding": true,
+        "member1": true
+      }
+    ],
+    "removed": 5
+  },
+  "undoPaths": {
+    "before": {
+      "flag": true,
+      "user": 9,
+      "all": 9,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 2168
+    },
+    "afterCreateInstance": {
+      "flag": true,
+      "user": 11,
+      "all": 11,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 892
+    },
+    "instantiateResult": {
+      "ok": true,
+      "instance": "Pointer1792557410657_USER_1090",
+      "slots": 1,
+      "problems": []
+    },
+    "afterInstantiate": {
+      "flag": true,
+      "user": 12,
+      "all": 12,
+      "senders": [
+        "globalcanundostate",
+        "all",
+        "Pointer_OfflineUser"
+      ],
+      "lastAgeMs": 1933
+    },
+    "undoNoPlace": [
+      {
+        "undo": 12,
+        "objects": 105,
+        "libInstance": true,
+        "diag1": true
+      },
+      {
+        "undo": 12,
+        "objects": 103,
+        "libInstance": false,
+        "diag1": true
+      }
+    ]
+  },
+  "errors": [],
+  "warnings": [],
+  "checks": {
+    "pass": 13,
+    "fail": 0
+  }
+}
