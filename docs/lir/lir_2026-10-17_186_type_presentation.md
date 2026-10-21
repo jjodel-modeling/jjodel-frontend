@@ -99,3 +99,25 @@ Smoke-test scenarios potentially affected:
 - Runtime: nothing reads or writes the key in this step. Its write, persistence, proxy read, undo and `pointedBy`
   were measured on the untouched code (report §4.1). The panel that reads it and the popup that writes it are
   steps B and C, with their own probe.
+
+## Addendum 2026-10-21: two claims of §2 and §4 corrected by measure (after `f2867dc3d`)
+
+- **§2, third bullet, is wrong.** It reasoned from `tsconfig.json`'s `target: ES2020` that a field without an
+  initialiser emits no own property. The production and dev pipeline is not tsc's: `@vitejs/plugin-react` runs
+  `@babel/plugin-transform-class-properties` (`loose: true`) on the TypeScript source (`vite.config.ts:35-40`), and
+  the built `DProfile` and `LProfile` constructors read `…,this.typePermissions={},this.typePresentation=void 0}` and
+  `…,this.typePermissions=void 0,this.typePresentation=void 0}`. That is the form every declared field of the D and L
+  classes already takes (`this.father=void 0`, `E.activeLayout=void 0` on `DProject`). The precedent cited there,
+  `DProject.activeLayout?`, behaves the same way.
+- **What changes at runtime** (probe `_tmp_186c_probe.ts` rerun on the edited tree, port 3188, 0 failures, no page
+  error): a profile created after this change holds the key `typePresentation` with the value `undefined` (arm P0,
+  raw keys: `…, typePermissions, typePresentation, zoom`); before it, the key was absent. The value reads as absent
+  (`typePresentationOf` → null, tested), and JSON drops it at save: after a reload a profile never written has no key,
+  as before. The write, the undo entry, the replace, the proxy read (P3), `pointedBy` (P4: 0 → 1), save, reload and
+  the stand-alone load (P7, P8) measure as on `2c1e694e4`. No reader of the D-layer distinguishes an `undefined` key
+  from an absent one for this field: nothing reads it yet, and step B reads it through `typePresentationOf`.
+- **§4, second bullet, is wrong too.** `frontend/dist` after `f2867dc3d` differs from the build of `492546b1c` by 71
+  diff lines (35 files, the chunk holding the two constructors and the chunks whose names follow its hash). A rebuild
+  of the same tree is identical (0 lines), so the build is deterministic and the difference is this edit's.
+- **The «D-layer» row of §3** stands, with one more line under «What changes»: a profile created in the session holds
+  `typePresentation: undefined` until it is written.
