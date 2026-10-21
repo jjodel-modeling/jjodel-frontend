@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0905
 Chat: C-2026-10-20-0839
 Front: maintenance
 Lane: full (the fixes may touch persistence and the canvas; Phase 1 read-only)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane perf-round3 · discovery 79868633b, probe 966a07bd5 · fix 3 (inset) landed by P-2026-10-21-1115 (365f9ca9a); fix 1 batch measured and dropped
 Request: https://claude.ai/code/session_01EMpM7yBvFWpBXh3o1TJSRA
 Depends: P-2026-10-21-0335
 Corregge: —
