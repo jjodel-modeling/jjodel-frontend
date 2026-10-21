@@ -2229,3 +2229,286 @@ body[data-active-tab="manager"] .properties-tree-overlay {
 // pari specificità l'ordine sorgente decide: il sistema deve poter pareggiare le
 // dichiarazioni della skin B4 che sta sopra senza alzare la specificità.
 @import './railSystem';
+
+// ─── Shell S6: rail surfaces (P-2026-10-19-1742) ─────────────────────────────
+// The rail onto the shell set of `styles/tokens/_shell.scss`: rail surface #f8fafc with
+// white fields, inner neutral borders 1px `--shell-border`, radii 4 (controls) and 8
+// (groups), no text under 11px, weights at most 600 (500 under 12px), neutral #94a3b8
+// text at `--shell-text-3`. Source: discovery_2026-10-19_shell_visual_consolidation.md
+// §3.1, §3.5, §3.7, §4 (S6).
+//
+// After the `railSystem` import on purpose: rules of equal specificity are decided by
+// source order, and this block has to restate a few of that partial's values.
+//
+// Rail-only, so here and not in the sidebar sheet (D-UI-11): the anchor is the overlay
+// plus `--floating`, (0,2,0), which the sidebar standalone and the tab mode never carry.
+// The rail's OUTER border-left stays on `--border-subtle` (D-UI-11, awaiting A3).
+// Not here: section titles, tree row height, small targets, muted icons (S7, S8);
+// `b.me-2` already paints 13/400/#64748b and is left to S7.
+.properties-tree-overlay .properties-with-tree-view--floating {
+
+    // ── Surface ──
+    &.properties-with-tree-view--rail { background: var(--shell-surface-rail); }
+
+    .tree-search,
+    .props-header { background-color: var(--shell-surface-rail); }
+
+    .tree-scope-bar {
+        background: transparent;
+        border-bottom-color: var(--shell-border);
+    }
+
+    // ── Inner borders: 1px, one neutral colour ──
+    .rail-focusbar,
+    .rail-structurebar { border-bottom-color: var(--shell-border); }
+
+    .jj-contents-group { border-color: var(--shell-border); }
+
+    // Width restated with the colour: react-select owns the control's border, and the
+    // prefix class (JjSelect `classNamePrefix`) is the only stable hook on it, never the
+    // emotion `css-*-control` hash. Radius and border only; height stays with :1769.
+    .jj-select__control {
+        border-width: 1px;
+        border-radius: var(--shell-radius-control);
+    }
+
+    // ── Radii: controls 4, groups 8 ──
+    .tree-search__input,
+    .tree-row__action,
+    .rail-focusbar__back,
+    .rail-focusbar__step,
+    .jj-contents-item,
+    .jj-contents-icon,
+    .jj-contents-tag,
+    .jj-context-bar__segment,
+    .jj-toggle-row__badge { border-radius: var(--shell-radius-control); }
+
+    // (0,4,0): the M1 feature badges are (0,3,0) in the sidebar sheet.
+    .tree-row .tree-node__icon {
+        border-radius: var(--shell-radius-control);
+        font-size: var(--shell-font-size-min);
+        font-weight: 500;
+    }
+
+    .jj-empty-state { border-radius: var(--shell-radius-menu); }
+
+    // The view branch's stepper, 6px at :2187. Radius only: no geometry moves.
+    .view-editor-root .jj-field div:has(> button:not([role="checkbox"]) + input) {
+        border-radius: var(--shell-radius-control);
+    }
+
+    // ── Text: 11px floor, weights, neutral colour ──
+    // `:not(.view-editor-root *)`: the view branch hosts the IR authoring surface, whose
+    // geometry this lane must not move (§3.8). The asterisk and the view badge are the
+    // two text changes there that measured a 1px shift; they wait for that surface's lane.
+    .tree-counter,
+    .tree-search__count,
+    .tree-row__not-rendered-hint,
+    .jj-field-required:not(.view-editor-root *),
+    .jj-flags__summary { font-size: var(--shell-font-size-min); }
+
+    .jj-contents-icon {
+        font-size: var(--shell-font-size-min);
+        font-weight: 500;
+    }
+
+    .jj-info-icon {
+        font-size: var(--shell-font-size-min);
+        font-weight: 500;
+        color: var(--shell-text-3);
+    }
+
+    .jj-toggle-row__badge {
+        font-size: var(--shell-font-size-min);
+        font-weight: 500;
+        color: var(--shell-text-3);
+    }
+
+    .jj-contents-tag {
+        font-size: var(--shell-font-size-min);
+        color: var(--shell-text-3);
+    }
+
+    .jj-select__placeholder,
+    .jj-contents-count,
+    .jj-contents-detail,
+    .jj-contents-empty,
+    .jj-flags__summary,
+    .jj-flag__hint,
+    .jj-disclosure__summary { color: var(--shell-text-3); }
+
+    // The header pair is (0,4,0) under `.properties-panel-container` (:371); `.props-header`
+    // here matches it, and source order decides.
+    .jj-type-badge:not(.view-editor-root *),
+    .props-header .props-header__kind,
+    .rail-focusbar__current { font-weight: 500; }
+
+    .props-header .props-header__glyph { font-weight: 600; }
+
+    // ── The inspector form (Arco 3 blocks above, same anchors and specificity) ──
+    .properties-fields {
+        // `:not(:focus)`: one step above the B4 focus rule (0,6,1), which keeps its colour.
+        .jj-field input:not([type="color"]):not([type="checkbox"]) {
+            border-radius: var(--shell-radius-control);
+
+            &:not(:focus) { border-color: var(--shell-border) !important; }
+        }
+
+        .jj-mult__seg.is-selected { font-weight: 500; }
+
+        .jj-mult__custom > div:has(> button:not([role="checkbox"]) + input) {
+            border-color: var(--shell-border);
+            border-radius: var(--shell-radius-control);
+        }
+
+        .jj-flags__group {
+            border-color: var(--shell-border);
+            border-radius: var(--shell-radius-menu);
+        }
+    }
+
+    // Hover keeps the transparent top edge it had (`:hover:not(.is-on)` above).
+    &.properties-with-tree-view--rail-focus .properties-fields .jj-flag {
+        border-top-color: var(--shell-border);
+
+        &:hover:not(.is-on) { border-top-color: transparent; }
+    }
+}
+
+// (0,3,0), one step under the anchor above: the segment's `:hover` and `.is-selected`
+// border colours (0,4,0) must keep winning over the neutral one.
+.properties-with-tree-view--floating .properties-fields .jj-mult__seg {
+    border-color: var(--shell-border);
+    border-radius: var(--shell-radius-control);
+}
+
+// The resize hint and readout render inside the overlay, beside the shell element.
+.properties-tree-overlay .resize-handle__hint,
+.properties-tree-overlay .resize-handle__readout { font-size: var(--shell-font-size-min); }
+
+// ─── Shell S7: rail section titles (P-2026-10-19-1830) ───────────────────────
+// Section titles are written in sentence case in the source (R-SHELL-4) and shown at
+// 12/500 without tracking, `--shell-text-2`. Rail-only, under the S6 anchor (0,2,0) and
+// after it, so equal-specificity rules above are decided by source order (D-UI-11: never
+// in the sidebar sheet). Not reached: `.props-header__kind`, the type badge, stays
+// uppercase; the left palette label lives outside the overlay. The NodeEditor titles are
+// the `<span>` of `.node-section__title`, whose icons keep their own size.
+// Source: discovery_2026-10-19_shell_visual_consolidation.md §3.4, §4 (S7).
+.properties-tree-overlay .properties-with-tree-view--floating {
+    .tree-section__label,
+    .props-section__title,
+    .properties-node-section__label,
+    .jj-flags__title,
+    .node-section__title > span {
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--shell-text-2);
+    }
+}
+
+// ─── Shell S8: rail density, targets, muted icons, outer border (P-2026-10-19-1930) ──
+// Rail-only, under the S6/S7 anchor and after it (D-UI-11: never in the sidebar sheet).
+// Source: discovery_2026-10-19_shell_visual_consolidation.md §3.1, §3.6, §4 (S8).
+.properties-tree-overlay .properties-with-tree-view--floating {
+
+    // Outer border (R-SHELL-3): same 1px `--shell-border` as the left palette's
+    // border-right in EditorV2.scss, replacing `--border-subtle` on both sides together.
+    &.properties-with-tree-view--rail { border-left: 1px solid var(--shell-border); }
+
+    // Density belongs to Advanced (R-SHELL-2): 26px in Basic, 24px in Advanced.
+    .tree-row { height: var(--shell-row-height); }
+
+    // Hit targets of at least `--shell-hit` without moving the layout (R-SHELL-5): a
+    // transparent box centred on the control, never smaller than the control itself.
+    // A pseudo-element hit-tests as its control, and a square one also covers the
+    // corners a rounded control leaves out. `.is-leaf` toggles are
+    // `visibility: hidden`, which the box inherits, so they stay unreachable.
+    .tree-node__toggle,
+    .tree-row__action,
+    .tree-generate-btn,
+    .jj-contents-add,
+    .rail-focusbar__step,
+    button[role="switch"] {
+        position: relative;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: max(100%, var(--shell-hit));
+            height: max(100%, var(--shell-hit));
+            transform: translate(-50%, -50%);
+        }
+    }
+
+    // Section headers are 23px, so a header toggle's box spills a pixel into the next
+    // row. At z-index 1 it wins over that row's background, and a later row's toggle
+    // (z-index 1 in the sidebar sheet) still wins the shared pixel; the sticky filter (5)
+    // and the splitter (100) stay on top.
+    .tree-node__toggle::before { z-index: 1; }
+
+    // Two adjacent 20px actions cannot each own a 24px box: 4px apart, and the group
+    // gives the 4px back on its right so the name keeps its width.
+    .tree-row__actions {
+        gap: 4px;
+        margin-right: -4px;
+    }
+
+    // The Back chip clips its own overflow, so it cannot carry a pseudo box: both chips
+    // grow to the hit size and give it back in negative margins (bar height unchanged).
+    .rail-focusbar__back {
+        height: var(--shell-hit);
+        margin-block: -1px;
+    }
+
+    .rail-focusbar__step {
+        width: var(--shell-hit);
+        height: var(--shell-hit);
+        margin: -1px;
+    }
+
+    // Contents sub-list labels (CLASSES, ENUMERATORS, PACKAGES): list-group labels stay
+    // uppercase at 11px; colour to the third level, 500 under 12px (R-SHELL-5).
+    .jj-section-title {
+        font-weight: 500;
+        color: var(--shell-text-3);
+    }
+}
+
+// Advanced only: action icons recede to the third text level and come back on hover
+// and keyboard focus (S4 pattern). The <i> is painted by the global `i.bi` rule, so the
+// colour goes on the glyph. Disabled steppers keep today's value.
+html[data-mode="advanced"] .properties-tree-overlay .properties-with-tree-view--floating {
+    :is(.tree-row__action, .rail-focusbar__step):not(:disabled) i.bi {
+        color: var(--shell-text-3);
+    }
+
+    :is(.tree-row__action, .rail-focusbar__step):is(:hover, :focus-visible):not(:disabled) i.bi {
+        color: var(--shell-text-1);
+    }
+}
+
+// ─── Shell S9: rail tickets (P-2026-10-19-2050) ──────────────────────────────
+// Rail-only, under the S6/S7/S8 anchor and after it (D-UI-11: never in the sidebar sheet).
+// Source: discovery_2026-10-19_shell_rail_tickets.md §4.
+.properties-tree-overlay .properties-with-tree-view--floating {
+
+    // React-select's own input sits inside `.jj-select__control`, which draws the field.
+    // The B4 rule (:1750) and the panel rule (:598) also match it and gave it a 30px box
+    // with a 1px `!important` border, a small box left of the value. (0,6,1): ties B4's
+    // focus rule and wins by source order. Font size stays, so the value line does not move.
+    .jj-field .jj-select .jj-select__input-container > input.jj-select__input {
+        height: auto;
+        padding: 0;
+        border: 0 !important;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    // Section headers on the row height (R-SHELL-2): at 23px two header toggles' 24px
+    // boxes overlapped by 1px. Already a centred flex row, so the label stays centred.
+    .tree-section__header { min-height: var(--shell-row-height); }
+}

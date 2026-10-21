@@ -44,11 +44,13 @@ const AUTH_PILLARS: {title: string, text: string}[] = [
     {title: 'Transformations', text: 'Model to model, with JjTL.'},
 ];
 
-const TERMS_URL = 'https://www.jjodel.io/terms-conditions-page/';
+const TERMS_URL = 'https://jjodel.io/terms/';
+const PRIVACY_URL = 'https://jjodel.io/app-privacy/';
 const VERSION_MAJOR_MINOR = APP_VERSION.split('.').slice(0, 2).join('.');
 
 // Left column of the main band: product statement, pillars, adoption.
-const AuthIntro = () => (
+// In the register view (wide screens) the pillars and adoption are hidden by CSS and the privacy note is shown.
+const AuthIntro = ({register}: {register: boolean}) => (
     <div className="auth-page__intro">
         <div className="auth-page__eyebrow">
             <span className="auth-page__eyebrow-mark" aria-hidden="true" />
@@ -58,6 +60,9 @@ const AuthIntro = () => (
         <p className="auth-page__subtitle">
             Metamodels and models side by side, with viewpoints, transformations and an AI assistant. Open source, in the browser.
         </p>
+        {register && <p className="auth-page__privacy-note">
+            Your name and nickname are shown to the people you share projects with. Your email is never shown.
+        </p>}
         <div className="auth-page__pillars">
             {AUTH_PILLARS.map(p => (
                 <div className="auth-page__pillar" key={p.title}>
@@ -85,6 +90,7 @@ const AuthFooter = () => (
         </div>
         <div className="auth-page__meta">
             <a className="auth-page__terms" href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms</a>
+            <a className="auth-page__terms" href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">Privacy</a>
             <span className="auth-page__version">v{APP_VERSION}</span>
         </div>
         </div>
@@ -102,7 +108,6 @@ function AuthPage(): JSX.Element {
     const [email, setEmail] = useStateIfMounted('');
     const [password, setPassword] = useStateIfMounted('');
     const [passwordCheck, setPasswordCheck] = useStateIfMounted('');
-    const [newsletter, setNewsletter] = useStateIfMounted(false);
     const [isDirty, setDirty] = useStateIfMounted(false);
     const [dirtyStatuses, setDirtyStatuses] = useStateIfMounted<Dictionary<string, boolean>>({});
 
@@ -256,10 +261,10 @@ function AuthPage(): JSX.Element {
         registerRequest.Surname = surname;
         registerRequest.Country = country;
         registerRequest.Affiliation = affiliation;
-        registerRequest.NewsletterEnabled = newsletter;
         registerRequest.Nickname = nickname;
         registerRequest.Email = email;
         registerRequest.Password = password;
+        registerRequest.NewsletterEnabled = false; // opt-in removed from the form; sent explicitly so the backend contract is unchanged
         // console.log(registerRequest);
         const response: GObject = await AuthApi.register(registerRequest);
 
@@ -308,7 +313,7 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
 
     <main className="auth-page__main">
         <div className="auth-page__container auth-page__grid">
-        <AuthIntro />
+        <AuthIntro register={action === 'register'} />
 
         <form className={'auth-form auth-card'} onSubmit={onSubmit}>
             <div className="auth-card__head">
@@ -317,6 +322,7 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
                     {action === 'login' && 'Sign in'}
                     {action === 'retrieve-password' && 'Reset your password'}
                 </h1>
+                {action === 'register' && <p className="auth-card__lead">It takes a minute.</p>}
                 {action === 'login' && <p className="auth-card__lead">Continue to your projects.</p>}
                 {action === 'retrieve-password' && <p className="auth-card__lead">We will send a reset link to your email.</p>}
             </div>
@@ -325,7 +331,7 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
 
             {/* REGISTRATION */}
 
-            <div className="auth-card__row">
+            <div className="auth-card__fields">
                 <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>First Name</h6>Your first name will be visible to others whenever you interact with them, such as during collaboration on shared projects.</div>} >
                     <label>
                         First Name
@@ -351,7 +357,6 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
                         />
                     </label>
                 </Tooltip>
-            </div>
 
                     <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Nickname</h6>Your nickname will be visible to others whenever you interact with them, such as during collaboration on shared projects.</div>} >
                         <label>
@@ -644,14 +649,13 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
                 <label>
                     Password
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
-                        placeholder={'password'}
+                        placeholder={'At least 8 characters'}
                         value={password}
                         pattern={passPattern}
                         onClick={dirty}
                         onChange={e => setPassword(e.target.value)}
                         type={'password'} required={true} title={'At least 8 characters'}
                     />
-                    <span className="auth-field-hint">At least 8 characters</span>
                 </label>
 
 
@@ -666,26 +670,16 @@ return(<section className={`auth-page ${action === 'register' ? 'register' : act
                         type={'password'} required={true} title={'At least 8 characters'}
                     />
                 </label>
+            </div>
 
-                <div className="auth-section-divider" />
-                <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Newsletter</h6>Select this option for remaining updated about Jjodel new releases, updates, and initiatives.</div>} >
-                    <div className="auth-custom-checkbox-row" onClick={() => { setDirty(true); setNewsletter(!newsletter); }}>
-                        <div className={`auth-custom-checkbox ${newsletter ? 'checked' : ''}`}>
-                            {newsletter && (
-                                <svg viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2">
-                                    <path d="M2 6l3 3 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            )}
-                        </div>
-                        <span className="auth-custom-checkbox-label">Subscribe to the newsletter to receive updates and news about Jjodel.</span>
-                    </div>
-                </Tooltip>
+            <div className="auth-card__foot">
                 <p className="auth-terms-text">
-                    By proceeding you accept the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="auth-terms-link">terms and conditions</a>.
+                    By creating an account you accept the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="auth-terms-link">Terms of Use</a> and the <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="auth-terms-link">Privacy Notice</a>.
                 </p>
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
                     Create account
                 </button>
+            </div>
             </>}
 
             {action === 'login' &&

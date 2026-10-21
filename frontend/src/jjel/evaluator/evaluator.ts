@@ -40,6 +40,7 @@ import {
     JjelTextPart,
     EvaluationContext,
     createFunction,
+    isBitVector,
     isJjelFunction,
     isJjelObject
 } from './context';
@@ -54,6 +55,18 @@ import {
     getDateConstructor
 } from './builtins';
 import { joinWithTextHost } from './builtins/collections';
+import {
+    BITVECTOR_METHOD_NAMES,
+    BitVectorDefect,
+    applyBitVectorOperator,
+    bitVectorsEqual,
+    getBitVectorMethod,
+    getBitVectorProperty,
+    makeBitVector,
+    negateBitVector,
+    noTruthValue,
+    toVerilog
+} from './builtins/bitvectors';
 
 // ============================================
 // EVALUATION ERROR
@@ -68,6 +81,32 @@ export class JjelEvaluationError extends Error {
         super(message);
         this.name = 'JjelEvaluationError';
     }
+}
+
+/**
+ * Run a step that may raise a bit-vector defect and rethrow it as a
+ * JjelEvaluationError with the same message; any other error passes through.
+ */
+function withBitVectorDefects<T>(step: () => T): T {
+    try {
+        return step();
+    } catch (e) {
+        if (e instanceof BitVectorDefect) throw new JjelEvaluationError(e.message);
+        throw e;
+    }
+}
+
+/**
+ * Register the two bit-vector constructors (R-BV-5), the only bit-vector
+ * globals, on `ctx`. The evaluator calls it on its own context; the simulator
+ * calls it on its base context, which takes no other global builtin, so that
+ * no model attribute is shadowed there (R-BV-8).
+ */
+export function registerBitVectorConstructors(ctx: EvaluationContext): void {
+    ctx.registerBuiltin('bits', createFunction(['w', 'v'], (args) =>
+        withBitVectorDefects(() => makeBitVector('bits', args))));
+    ctx.registerBuiltin('sbits', createFunction(['w', 'v'], (args) =>
+        withBitVectorDefects(() => makeBitVector('sbits', args))));
 }
 
 // ============================================
@@ -98,10 +137,14 @@ export class JjelEvaluator {
         // Type conversion functions
         this.context.registerBuiltin('String', createFunction(['value'], ([value]) => {
             if (value === null) return 'null';
+            if (isBitVector(value)) return toVerilog(value);
             return String(value);
         }));
 
         this.context.registerBuiltin('Number', createFunction(['value'], ([value]) => {
+            if (isBitVector(value)) {
+                throw new JjelEvaluationError('Number(x) does not convert a bit-vector: use x.toNumber()');
+            }
             if (typeof value === 'number') return value;
             if (typeof value === 'string') {
                 const num = parseFloat(value);
@@ -112,12 +155,16 @@ export class JjelEvaluator {
         }));
 
         this.context.registerBuiltin('Boolean', createFunction(['value'], ([value]) => {
+            if (isBitVector(value)) throw new JjelEvaluationError(noTruthValue(value).message);
             return Boolean(value);
         }));
 
         this.context.registerBuiltin('Array', createFunction(['...values'], (args) => {
             return args;
         }));
+
+        // Bit-vector constructors (R-BV-5): the only bit-vector globals.
+        registerBitVectorConstructors(this.context);
     }
 
     /**
@@ -290,6 +337,15 @@ export class JjelEvaluator {
     }
 
     private applyBinaryOperator(op: BinaryOperator, left: JjelValue, right: JjelValue): JjelValue {
+        // A bit-vector operand takes its own path (R-BV-3): `+` with a string
+        // concatenates the Verilog form; anything else needs a matching pair.
+        if (isBitVector(left) || isBitVector(right)) {
+            if (op === '+' && (typeof left === 'string' || typeof right === 'string')) {
+                return this.plainText(left) + this.plainText(right);
+            }
+            return withBitVectorDefects(() => applyBitVectorOperator(op, left, right));
+        }
+
         switch (op) {
             // Arithmetic
             case '+':
@@ -378,6 +434,9 @@ export class JjelEvaluator {
             case '-':
                 if (typeof operand === 'number') {
                     return -operand;
+                }
+                if (isBitVector(operand)) {
+                    return negateBitVector(operand);
                 }
                 return null;
 
@@ -480,6 +539,12 @@ export class JjelEvaluator {
                 case 'trimRight':
                     return obj.trimEnd();
             }
+        }
+
+        // Bit-vector: `width`, `signed`, zero-argument methods; never the raw fields.
+        if (isBitVector(obj)) {
+            const value = withBitVectorDefects(() => getBitVectorProperty(obj, property));
+            return value === undefined ? null : value;
         }
 
         // Object property
@@ -758,9 +823,20 @@ export class JjelEvaluator {
                 // Check if first arg is a lambda (function)
                 const firstArg = args[0];
                 if (isJjelFunction(firstArg)) {
-                    return collectionMethod(obj, firstArg, ctx, ...args.slice(1));
+                    return withBitVectorDefects(() => collectionMethod(obj, firstArg, ctx, ...args.slice(1)));
                 }
-                return collectionMethod(obj, ...args);
+                return withBitVectorDefects(() => collectionMethod(obj, ...args));
+            }
+        }
+
+        // Bit-vector methods (R-BV-5), dispatched by receiver like strings and numbers
+        if (isBitVector(obj)) {
+            const bitVectorMethod = getBitVectorMethod(method);
+            if (bitVectorMethod) {
+                return withBitVectorDefects(() => bitVectorMethod(obj, args));
+            }
+            if (args.length === 0 && (method === 'width' || method === 'signed')) {
+                return obj[method];
             }
         }
 
@@ -833,6 +909,9 @@ export class JjelEvaluator {
         }
         if (typeof obj === 'number') {
             return ['abs', 'round', 'floor', 'ceil', 'sqrt', 'pow'];
+        }
+        if (isBitVector(obj)) {
+            return [...BITVECTOR_METHOD_NAMES];
         }
         if (isJjelObject(obj)) {
             return Object.keys(obj).filter(k => !k.startsWith('__') && isJjelFunction(obj[k]));
@@ -1096,12 +1175,18 @@ export class JjelEvaluator {
         if (typeof value === 'number') return value !== 0;
         if (typeof value === 'string') return value.length > 0;
         if (Array.isArray(value)) return value.length > 0;
+        if (isBitVector(value)) throw new JjelEvaluationError(noTruthValue(value).message);
         return true;
     }
 
     private isEqual(a: JjelValue, b: JjelValue): boolean {
         if (a === b) return true;
         if (a === null || b === null) return a === b;
+
+        // Nested equality (arrays, objects): a mismatched pair is unequal, not a defect.
+        if (isBitVector(a) || isBitVector(b)) {
+            return isBitVector(a) && isBitVector(b) && bitVectorsEqual(a, b);
+        }
 
         if (typeof a !== typeof b) return false;
 
@@ -1149,8 +1234,15 @@ export class JjelEvaluator {
         if (typeof value === 'number' || typeof value === 'boolean') return String(value);
         if (Array.isArray(value)) return value.map(v => this.stringify(v, host)).join(', ');
         if (isJjelFunction(value)) return '[Function]';
+        if (isBitVector(value)) return toVerilog(value);
         if (isJjelObject(value)) return JSON.stringify(value);
         return String(value);
+    }
+
+    /** An operand of string `+`: the Verilog form for a bit-vector, `''` for null. */
+    private plainText(value: JjelValue): string {
+        if (isBitVector(value)) return toVerilog(value);
+        return String(value ?? '');
     }
 
     private getTypeName(value: JjelValue): string {
@@ -1160,6 +1252,7 @@ export class JjelEvaluator {
         if (typeof value === 'string') return 'String';
         if (Array.isArray(value)) return 'Array';
         if (isJjelFunction(value)) return 'Function';
+        if (isBitVector(value)) return 'BitVector';
         if (isJjelObject(value)) {
             if ('__type' in value) return String(value.__type);
             return 'Object';

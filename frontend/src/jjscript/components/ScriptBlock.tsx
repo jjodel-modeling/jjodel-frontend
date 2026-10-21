@@ -372,7 +372,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
      */
     const executeLine = useCallback(async (i: number): Promise<ScriptLineResult> => {
         if (!onExecute) return { command: commands[i], success: false, message: 'No executor' };
-        const _iterStart = performance.now(); // TEMP-DISCOVERY
 
         setCurrentLineIndex(i);
         setLineStates(prev =>
@@ -407,8 +406,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             await sleep(BATCH_DELAY_MS);
         }
 
-        // TEMP-DISCOVERY: full per-command wall-clock (onExecute apply + async React re-render/settle absorbed during sleep + BATCH_DELAY_MS). settle ≈ iter − executor.total − BATCH_DELAY_MS.
-        console.log(`[JjScript-TIMING] line=${i + 1} iter=${(performance.now() - _iterStart).toFixed(1)} cmd="${commands[i].slice(0, 60)}"`); // TEMP-DISCOVERY
         return result;
     }, [onExecute, commands, resolvedTarget]);
 

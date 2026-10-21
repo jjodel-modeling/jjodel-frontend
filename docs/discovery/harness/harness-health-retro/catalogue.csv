@@ -1,0 +1,16 @@
+signal,name,targets,threshold,thresholdFrom,tuneWeeksDefined,tuneQuietWeeks,tuneFalseAlarms,tuneTargetIncidents,tuneCaught,evalWeeksDefined,evalQuietWeeks,evalFalseAlarms,evalTargetIncidents,evalCaught,tuneBaseRate,tuneFireWeeks,tunePrecision,evalBaseRate,evalFireWeeks,evalPrecision,fires,firstFire
+S1a,"log rework share (Corregge filled / task entries), rolling 4w",execution+governance hygiene,0.214,p75 of tuning weeks (no quiet week),8,0,0,10,6,3,0,0,2,0,0.875,2,1,1,0,,2,2026-09-06
+S1b,"non-merge lanes with a corrective resume / non-merge lanes, rolling 4w",execution,,none: fewer than 3 tuning weeks,1,0,0,0,0,3,0,0,1,0,1,0,,1,0,,0,
+S2,"unplanned stops / lanes, rolling 4w",execution+cost,,none: fewer than 3 tuning weeks,1,0,0,0,0,3,0,0,2,0,1,0,,1,0,,0,
+S2t,"lanes with a turn over the 90-minute limit, rolling 4w count",execution+cost,0,RC-20 (90 minutes),1,0,0,0,0,3,0,0,2,2,1,1,1,1,3,1,4,2026-09-27
+S2c,"ceiling stops / lanes, rolling 4w",harness weight+cost,,none: fewer than 3 tuning weeks,1,0,0,0,0,3,0,0,1,0,1,0,,1,0,,0,
+S3a,"weekly median first-call context, non-merge lanes",harness weight+cost,,none: fewer than 3 tuning weeks,1,0,0,0,0,3,0,0,1,0,1,0,,1,0,,0,
+S3b,"non-merge lanes with peak context >= 200k, weekly count",harness weight+cost,0,RC-51 soft ceiling (200k),1,0,0,0,0,3,0,0,1,1,1,1,1,1,3,1,4,2026-09-27
+S4a,"active log entries, weekly max",governance hygiene+harness weight,rule (by date),"P9 rotation threshold in force (20, then 40 from 2026-08-18)",9,0,0,7,7,3,0,0,1,1,0.889,8,0.875,0.333,1,1,9,2026-08-02
+S4b,"RC ids cited in a memo, session or prompt and not yet a row of decisions.md, weekly max",governance hygiene,5,p75 of tuning weeks (no quiet week),9,0,0,6,1,3,0,0,1,1,0.889,2,1,0.333,3,0.333,5,2026-08-23
+S4c,"provisional decision rows waiting, weekly max",governance hygiene,0,p75 of tuning weeks (no quiet week),8,0,0,6,0,3,0,0,1,1,0.875,1,1,0.333,2,0.500,3,2026-09-27
+S4d,"prompts still da eseguire more than a day after their lane closed, weekly max",governance hygiene+execution,0,P13 / RC-17 (Status flips in the closing commit),1,0,0,0,0,3,0,0,2,1,1,0,,1,2,1,2,2026-10-11
+S5,"front interleavings (a chat emits on a front again after another chat did), rolling 4w",coordination,0,RC-33 (one chat per front),0,0,0,0,0,2,0,0,1,1,,0,,1,2,1,2,2026-10-11
+S5b,"front switches within the same-chat cadence (gap < 0.65 h), not interleavings, rolling 4w",coordination,,none: fewer than 3 tuning weeks,0,0,0,0,0,2,0,0,1,0,,0,,1,0,,0,
+S6,"lane spend USD (list-price weight), rolling 4w",cost,,none: fewer than 3 tuning weeks,1,0,0,0,0,3,0,0,1,0,1,0,,1,0,,0,
+S6u,"seven-day plan utilization, weekly max of the rate-limit readings of the lanes",cost,,none: fewer than 3 tuning weeks,1,0,0,0,0,3,0,0,1,0,1,0,,1,0,,0,

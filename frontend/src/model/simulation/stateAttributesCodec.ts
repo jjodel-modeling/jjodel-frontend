@@ -29,10 +29,14 @@
  * `mergeDeclarations` gives the run the metamodel's list with the model's
  * globals over it, by name; a model record naming a metaclass is a record defect.
  *
- * Pure: JjEL's parser for the initial literal, and the types of the core.
+ * Pure: JjEL's parser for the initial literal, its bit-vector constructor, and the types of the core.
  */
 
 import { parseExpressionStrict } from '../../jjel/parser';
+import { isBitVector } from '../../jjel/evaluator/context';
+import type { JjelBitVector } from '../../jjel/evaluator/context';
+import { makeBitVector } from '../../jjel/evaluator/builtins/bitvectors';
+import type { JjelExpression } from '../../jjel/types/ast';
 import { inDomain } from './netStep';
 import type { DeclarationDefect, Domain, SimValue, StateAttributeDecl } from './netTypes';
 
@@ -54,7 +58,7 @@ export interface StateAttributeRecord {
     readonly input?: true;
 }
 
-/** A domain with its fields in a fixed order, `null` when it is none of the three. */
+/** A domain with its fields in a fixed order, `null` when it is none of the four. */
 function domainOf(raw: unknown): Domain | null {
     if (!raw || typeof raw !== 'object') return null;
     const d = raw as Record<string, unknown>;
@@ -68,6 +72,10 @@ function domainOf(raw: unknown): Domain | null {
         case 'enum':
             return Array.isArray(d.literals) && d.literals.every(l => typeof l === 'string')
                 ? { kind: 'enum', literals: [...d.literals as string[]] }
+                : null;
+        case 'word':
+            return typeof d.widthFeature === 'string' && d.widthFeature && typeof d.signed === 'boolean'
+                ? { kind: 'word', widthFeature: d.widthFeature, signed: d.signed }
                 : null;
         default:
             return null;
@@ -88,10 +96,18 @@ export function encodeStateAttributes(records: readonly StateAttributeRecord[]):
     });
 }
 
+/** A literal argument of `bits`/`sbits`: a number, a negative number or a quoted string; `null` otherwise. */
+export function literalArgument(e: JjelExpression): number | string | null {
+    if (e.type === 'Literal' && (typeof e.value === 'number' || typeof e.value === 'string')) return e.value;
+    if (e.type === 'Unary' && e.operator === '-' && e.operand.type === 'Literal' && typeof e.operand.value === 'number') return -e.operand.value;
+    return null;
+}
+
 /**
  * The value of a JjEL literal (questions 14, 15): a boolean, a number, a
  * negative number, a quoted string, or a free identifier, which is an
- * enumeration literal and reads as its name. `null` for anything else.
+ * enumeration literal and reads as its name; or a bit-vector `bits(w, n)` /
+ * `sbits(w, n)` with literal arguments in range (R-BV-7). `null` for anything else.
  */
 export function parseInitialLiteral(text: string): SimValue | null {
     const parsed = parseExpressionStrict(text);
@@ -100,19 +116,58 @@ export function parseInitialLiteral(text: string): SimValue | null {
     if (e.type === 'Literal') return e.value;
     if (e.type === 'Unary' && e.operator === '-' && e.operand.type === 'Literal' && typeof e.operand.value === 'number') return -e.operand.value;
     if (e.type === 'Identifier') return e.name;
+    if (e.type === 'FunctionCall' && (e.name === 'bits' || e.name === 'sbits')) {
+        const args = e.args.map(literalArgument);
+        if (args.some(a => a === null)) return null;
+        try {
+            return makeBitVector(e.name, args as Array<number | string>);
+        } catch {
+            return null;
+        }
+    }
     return null;
+}
+
+/** The widest `word` an element may have (R-BV-7). */
+export const WORD_MAX_WIDTH = 128;
+
+/** The width of a `word` element from the values of its width feature: the first, an integer from 1 to 128; else why not. */
+export function wordWidthOf(values: readonly unknown[]): number | string {
+    const raw = values[0];
+    if (raw === undefined) return 'no width';
+    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 1 || raw > WORD_MAX_WIDTH) {
+        return `width ${String(raw)}: an integer from 1 to ${WORD_MAX_WIDTH} is required`;
+    }
+    return raw;
+}
+
+/**
+ * A stored `word` initial on an element of width `width`, checked at Reset (R-BV-7): a number becomes the
+ * vector of that width and signedness when it fits, a vector must have both; `null` when neither holds.
+ */
+export function wordInitialOf(initial: SimValue, width: number, signed: boolean): JjelBitVector | null {
+    if (typeof initial === 'number') {
+        try {
+            return makeBitVector(signed ? 'sbits' : 'bits', [width, initial]);
+        } catch {
+            return null;
+        }
+    }
+    return isBitVector(initial) && initial.width === width && initial.signed === signed ? initial : null;
 }
 
 /**
  * The initial value a domain starts at, as the JjEL text a record stores: `false` for a boolean, the
  * minimum for a range (`0`, `-3`), the first literal for an enumeration as a bare identifier (`A`), and
- * `''` for an enumeration with no literals yet, which stays a defect until it has one.
+ * `''` for an enumeration with no literals yet, which stays a defect until it has one; `0` for a word, a
+ * number each element reads at its own width.
  */
 export function defaultInitialOf(domain: Domain): string {
     switch (domain.kind) {
         case 'boolean': return 'false';
         case 'range': return String(domain.min);
         case 'enum': return domain.literals[0] ?? '';
+        case 'word': return '0';
     }
 }
 

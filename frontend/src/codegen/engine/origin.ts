@@ -26,6 +26,8 @@
 
 import { JjelTokenType, tokenize } from '../../jjel';
 import type { JjelExpression, JjelObject, JjelTextHost, JjelTextPart, JjelValue } from '../../jjel';
+import { isBitVector } from '../../jjel/evaluator/context';
+import { toVerilog } from '../../jjel/evaluator/builtins/bitvectors';
 import { holePrefixes } from './indent';
 import { EMPTY_TEXT, concatTexts, fragment, isText, makeText, renderText } from './text';
 import type { FeatureRead, IndentLevel, LiteralOrigin, Origin, Text, TextFragment, Transformation } from './text';
@@ -195,6 +197,8 @@ function plain(value: JjelValue): string {
     if (value === null || value === undefined) return '';
     if (typeof value === 'string') return value;
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    // Its Verilog form with its width, `8'hff`, as `stringify` prints it (R-BV-6): a vector's payload is a BigInt.
+    if (isBitVector(value)) return toVerilog(value);
     if (Array.isArray(value)) return value.map(plain).join(', ');
     try {
         return JSON.stringify(value) ?? '';

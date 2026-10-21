@@ -58,7 +58,8 @@ export function recordScenario(run: SimRun | undefined): ScenarioRecording {
         kind: 'ok',
         steps: trace.map(t => ({
             event: t.event, selector: t.selector, kind: t.kind,
-            ...(t.inputs ? { inputs: t.inputs.map(i => ({ element: i.element, attr: i.attr, value: i.value })) } : {}),
+            // An input is never a word (R-BV-8): its value is a boolean, a number or a string.
+            ...(t.inputs ? { inputs: t.inputs.map(i => ({ element: i.element, attr: i.attr, value: i.value as boolean | number | string })) } : {}),
         })),
     };
 }

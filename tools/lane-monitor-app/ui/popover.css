@@ -1,0 +1,277 @@
+/* Lane Monitor popover. Palette of the «Lane Monitor Desktop» canvas; system fonts only. */
+
+/* Two palettes with the same tokens. `data-theme` on the root picks one; `system` follows the
+   macOS appearance through prefers-color-scheme. The `-text` tokens are the hue as text: in the
+   light palette the given waiting, blocked and muted values read below 4.5:1 on white, so text
+   takes a darker step of the same hue and the given value stays for dots, borders and fills. */
+:root {
+  color-scheme: dark;
+  --surface: #121317;
+  --raised: #1F2126;
+  --line: #1F2126;
+  --border: #2A2C33;
+  --text: #EDEEF0;
+  --secondary: #A1A4AB;
+  --muted: #7E828B;
+  --muted-text: #7E828B;
+  --waiting: #F2B04C;
+  --waiting-text: #F2B04C;
+  --blocked: #FF6B63;
+  --blocked-text: #FF6B63;
+  --running: #8A93FF;
+  --running-hover: #A1A8FF;
+  --ok: #4CC38A;
+  --on-accent: #121317;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --surface: #FFFFFF;
+  --raised: #F3F4F6;
+  --line: #E5E6EA;
+  --border: #E5E6EA;
+  --text: #16171B;
+  --secondary: #5D616B;
+  --muted: #80848E;
+  --muted-text: #6A6E76;
+  --waiting: #B7791F;
+  --waiting-text: #966319;
+  --blocked: #D64541;
+  --blocked-text: #C33F3B;
+  --running: #5B63D6;
+  --running-hover: #4A52C4;
+  --ok: #2E9E66;
+  --on-accent: #FFFFFF;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    color-scheme: light;
+    --surface: #FFFFFF;
+    --raised: #F3F4F6;
+    --line: #E5E6EA;
+    --border: #E5E6EA;
+    --text: #16171B;
+    --secondary: #5D616B;
+    --muted: #80848E;
+    --muted-text: #6A6E76;
+    --waiting: #B7791F;
+    --waiting-text: #966319;
+    --blocked: #D64541;
+    --blocked-text: #C33F3B;
+    --running: #5B63D6;
+    --running-hover: #4A52C4;
+    --ok: #2E9E66;
+    --on-accent: #FFFFFF;
+  }
+}
+
+* { box-sizing: border-box; }
+
+/* The rules below set display on .more and .stale; the attribute must still win. */
+[hidden] { display: none !important; }
+
+/* The window is transparent: only #pop paints, so its corners are the window's corners. */
+html, body {
+  margin: 0;
+  background: transparent;
+  color: var(--text);
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+#pop {
+  width: 400px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  padding: 12px 0 0;
+}
+
+.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 10px;
+}
+h1 { margin: 0; flex: 1; font-size: 14px; font-weight: 600; }
+.status { display: flex; align-items: center; gap: 6px; color: var(--secondary); font-size: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dot-ok { background: var(--ok); }
+.dot-refreshing { background: var(--running); }
+.dot-warn { background: var(--waiting); }
+.dot-error { background: var(--blocked); }
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -4px -6px -4px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--secondary);
+}
+.icon-btn:hover { background: var(--raised); color: var(--text); }
+#back { margin: -4px 0 -4px -6px; }
+
+.counts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.count { display: flex; flex-direction: column; padding: 10px 14px; }
+.count + .count { border-left: 1px solid var(--line); }
+.count .n { font-size: 22px; font-weight: 600; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.count .l { color: var(--secondary); font-size: 12px; }
+.count-waiting .n { color: var(--waiting-text); }
+.count-blocked .n { color: var(--blocked-text); }
+.count-running .n { color: var(--running); }
+.count .n.zero { color: var(--muted-text); }
+
+.notice {
+  margin: 10px 14px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+}
+.notice.error { border-color: var(--blocked); }
+.notice.warn { border-color: var(--waiting); }
+
+.block { padding-top: 10px; }
+h2 {
+  margin: 0;
+  padding: 0 14px 4px;
+  color: var(--muted-text);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.rows { list-style: none; margin: 0; padding: 0; }
+.empty { padding: 4px 14px 6px; color: var(--muted-text); }
+
+.row {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  column-gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  padding: 6px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.row:hover { background: var(--raised); }
+.row .line {
+  grid-column: 1 / -1;
+  color: var(--secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row .age, .row .left { justify-self: end; color: var(--secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.row .meta { color: var(--secondary); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kind { font-size: 12px; font-weight: 600; }
+.kind-question, .kind-hard-stop { color: var(--waiting-text); }
+.kind-blocked { color: var(--blocked-text); }
+
+.more, .stale {
+  display: block;
+  margin: 2px 0 0;
+  padding: 4px 14px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--secondary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+button.more:hover { color: var(--text); text-decoration: underline; }
+.stale { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 8px; }
+
+.foot {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--line);
+}
+.foot-note { margin: -4px 14px 10px; color: var(--blocked-text); font-size: 12px; }
+.btn {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+}
+.btn-primary { background: var(--running); border-color: var(--running); color: var(--on-accent); font-weight: 600; }
+.btn-primary:hover { background: var(--running-hover); border-color: var(--running-hover); }
+.btn:disabled { color: var(--muted); background: transparent; }
+.btn-text { margin-left: auto; border-color: transparent; background: transparent; color: var(--secondary); }
+.btn-text:hover { color: var(--text); background: var(--raised); }
+
+/* Settings view. */
+.settings {
+  margin: 0;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--line);
+}
+.field { margin: 0; padding: 10px 0 0; border: 0; min-width: 0; }
+.field > label, .field > legend {
+  display: block;
+  padding: 0 0 4px;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  -webkit-user-select: text;
+  user-select: text;
+}
+.input[aria-invalid="true"] { border-color: var(--blocked); }
+.hint { margin: 4px 0 0; color: var(--secondary); font-size: 12px; }
+.field-err { margin: 4px 0 0; color: var(--blocked-text); font-size: 12px; }
+.seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.seg label { position: relative; padding: 4px 0; text-align: center; }
+.seg label + label { border-left: 1px solid var(--border); }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; }
+.seg label:has(input:checked) { background: var(--running); color: var(--on-accent); font-weight: 600; }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--running); outline-offset: -2px; }
+.save-row { display: flex; align-items: center; gap: 10px; padding-top: 10px; }
+.toggles { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.toggle { display: flex; align-items: center; gap: 6px; }
+.toggle input { margin: 0; accent-color: var(--running); }
+/* The config path, cut in the middle: the head shrinks with an ellipsis, the last two
+   segments stay whole; the full path is the line's title. */
+.path { display: flex; align-items: baseline; white-space: nowrap; }
+.path-label { flex-shrink: 0; margin-right: 6px; }
+.path-head { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.path-tail { flex-shrink: 0; }
+
+button:focus-visible, .input:focus-visible { outline: 2px solid var(--running); outline-offset: -2px; }

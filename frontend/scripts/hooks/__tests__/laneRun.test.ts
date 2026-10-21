@@ -719,6 +719,97 @@ describe('lane-run merge', () => {
         expect(c.stdin).toContain('Chat: C-2026-09-26-1702');
     });
 
+    describe('the Request: line (RC-43)', () => {
+        const CHAT = 'C-2026-10-19-1747';
+        const URL_OLD = 'https://claude.ai/code/session_old';
+        const URL_NEW = 'https://claude.ai/code/session_new';
+        const URL_FLAG = 'https://claude.ai/code/session_flag';
+        const URL_TRAILER = 'https://claude.ai/code/session_trailer';
+        const withRequest = (chat: string, request: string) =>
+            `# Prompt: a lane\n\nPrompt-ID: P-2026-09-27-0300\nChat: ${chat}\nRequest: ${request}\nLane: fast\nStatus: eseguito 2026-09-27\n\n## COSA\n\nx\n`;
+        const parkedText = (l: Lab) => readFileSync(parked(l, MERGE_FILE), 'utf8');
+        const requestLine = (text: string) => (/^Request:.*$/m.exec(text) || [''])[0];
+
+        test('kills "--chat-url ignored", "the explicit URL loses to a prompt": --chat-url wins over the prompts and the trailers', () => {
+            const { l, repo } = repoLab();
+            commitFiles(l, repo, 'docs: add prompt', { 'docs/prompts/claude_2026-09-27_0300_prompt_old.md': withRequest(CHAT, URL_OLD) });
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT, '--chat-url', URL_FLAG], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            const text = parkedText(l);
+            expect(text).toContain(`\nChat: ${CHAT}\n`);
+            expect(requestLine(text)).toBe(`Request: ${URL_FLAG} (merge of feat launched by chat ${CHAT})`);
+            expect(r.stdout).not.toContain('warning:');
+        });
+
+        test('kills "--chat-url not checked": a --chat-url that is not https:// is refused', () => {
+            const { l, repo } = repoLab();
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT, '--chat-url', 'claude.ai/x'], { cwd: repo, env: MERGE_ENV });
+            expect(r.status).not.toBe(0);
+            expect(r.stderr).toContain('--chat-url must start with https://');
+        });
+
+        test('kills "the prompts source (b) dropped", "the oldest prompt read": the newest prompt with that Chat: and an https:// Request: gives the URL', () => {
+            const { l, repo } = repoLab();
+            commitFiles(l, repo, 'docs: add prompts', {
+                'docs/prompts/claude_2026-09-27_0300_prompt_old.md': withRequest(CHAT, URL_OLD),
+                'docs/prompts/claude_2026-09-27_0400_prompt_new.md': withRequest(CHAT, URL_NEW),
+                'docs/prompts/claude_2026-09-27_0500_prompt_other.md': withRequest('C-2026-10-19-9999', 'https://claude.ai/code/session_other'),
+                'docs/prompts/claude_2026-09-27_0600_prompt_text.md': withRequest(CHAT, 'Alfonso, in chat'),
+            });
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            expect(requestLine(parkedText(l))).toBe(`Request: ${URL_NEW} (merge of feat launched by chat ${CHAT})`);
+            expect(r.stdout).not.toContain('warning:');
+        });
+
+        test('kills "the trailer source (c) dropped": with no prompt URL, the Claude-Session: trailer of the newest commit that added a prompt with that Chat: gives it', () => {
+            const { l, repo } = repoLab();
+            commitFiles(l, repo, 'docs: add prompt\n\nClaude-Session: https://claude.ai/code/session_older', {
+                'docs/prompts/claude_2026-09-27_0300_prompt_old.md': withRequest(CHAT, 'Alfonso, in chat'),
+            });
+            commitFiles(l, repo, `docs: add prompt\n\nClaude-Session: ${URL_TRAILER}`, {
+                'docs/prompts/claude_2026-09-27_0400_prompt_new.md': withRequest(CHAT, 'Alfonso, in chat'),
+            });
+            commitFiles(l, repo, 'docs: add prompt\n\nClaude-Session: https://claude.ai/code/session_elsewhere', {
+                'docs/prompts/claude_2026-09-27_0500_prompt_other.md': withRequest('C-2026-10-19-9999', 'Alfonso, in chat'),
+            });
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            expect(requestLine(parkedText(l))).toBe(`Request: ${URL_TRAILER} (merge of feat launched by chat ${CHAT})`);
+            expect(r.stdout).not.toContain('warning:');
+        });
+
+        test('kills "the none fallback missing", "no warning", "the merge failed for want of a URL": no URL known for the chat renders Request: none, prints a warning, and the merge goes on', () => {
+            const { l, repo } = repoLab();
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--chat', CHAT], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            expect(requestLine(parkedText(l))).toBe(`Request: none (rendered by lane-run, no chat URL known for ${CHAT})`);
+            expect(r.stdout).toContain(`warning: no chat URL for chat ${CHAT}`);
+            expect(r.stdout).toContain('launch: not requested');
+        });
+
+        test('kills "no --chat reads a URL", "no --chat fails": without --chat the line is none, with the warning', () => {
+            const { l, repo } = repoLab();
+            commitFiles(l, repo, 'docs: add prompt', { 'docs/prompts/claude_2026-09-27_0300_prompt_old.md': withRequest(CHAT, URL_OLD) });
+            const r = laneRun(l, ['merge', 'feat', '--into', 'trunk'], { cwd: repo, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            const text = parkedText(l);
+            expect(text).toContain('\nChat: —\n');
+            expect(requestLine(text)).toBe('Request: none (rendered by lane-run, no chat URL known for no --chat)');
+            expect(r.stdout).toContain('warning: no chat URL for (no --chat)');
+        });
+
+        test('kills "the mirror direction unrendered": --trunk-into carries the same Request: line', () => {
+            const { l, repo } = repoLab();
+            const wt = join(dirname(repo), 'wt-feat');
+            gitIn(l, repo, ['worktree', 'add', '-q', wt, 'feat']);
+            const r = laneRun(l, ['merge', '--trunk-into', 'feat', '--from', 'trunk', '--chat', CHAT, '--chat-url', URL_FLAG], { cwd: wt, env: MERGE_ENV });
+            expect(r.status, r.stderr).toBe(0);
+            const text = readFileSync(parked(l, TAKE_FILE), 'utf8');
+            expect(requestLine(text)).toBe(`Request: ${URL_FLAG} (merge of feat launched by chat ${CHAT})`);
+        });
+    });
+
     test('kills "JJODEL_MODEL_TRAILER ignored": the launch commit carries the trailer the variable names', () => {
         const { l, repo } = repoLab();
         const r = laneRun(l, ['merge', 'feat', '--into', 'trunk', '--launch'], {
@@ -1076,6 +1167,87 @@ describe('lane-run start, the prompt path', () => {
     });
 });
 
+// ── the chat link (P13, RC-43, P-2026-10-19-2105) ────────────────────────────
+
+const SHELL_REQUEST = 'Request: Alfonso, 2026-10-19 12:00 (in chat)';
+const LINK_REFUSAL = 'the lane cannot be linked to its chat';
+
+/** The worktree as a repo whose one commit adds prompt.md with the given header line after Chat:, and the given commit body. */
+function linkLab(requestLine: string, body = 'Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>', lane = 'Lane: fast'): Lab {
+    const l = lab();
+    gitIn(l, l.worktree, ['init', '-q', '-b', 'main']);
+    const prompt = PROMPT.replace('Lane: fast', lane).replace('\nLane:', `\n${requestLine}\nLane:`);
+    commitFiles(l, l.worktree, 'docs: add prompt ' + ID + '\n\n' + body, { 'prompt.md': prompt });
+    return l;
+}
+
+describe('lane-run start, the chat link (P13, RC-43)', () => {
+    test('kills "the gate a warning", "the gate dropped": a non-URL Request: whose commit has no Claude-Session: trailer is refused before anything is written', () => {
+        const l = linkLab(SHELL_REQUEST);
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain(join(l.worktree, 'prompt.md') + ': ' + LINK_REFUSAL + ': start the Request: line with the chat URL, or commit the prompt with the Claude-Session: trailer (P13, RC-43)');
+        expect(existsSync(l.lanes)).toBe(false);
+        expect(calls(l)).toEqual([]);
+    });
+
+    test('kills "a URL Request: refused": a Request: line that starts with a URL starts the lane', () => {
+        const l = linkLab('Request: https://claude.ai/chat/1b373b77-3e1f-4c66-b75e-9eec8a5ba215 (Alfonso, in chat)');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "the trailer branch dropped", "the last commit to touch the prompt read instead of the one that added it": a non-URL Request: starts when the commit that added the prompt carries a claude.ai Claude-Session: trailer', () => {
+        const l = linkLab(SHELL_REQUEST, 'Claude-Session: https://claude.ai/code/session_018RaPfFUZaHRjEo11BkNXZB');
+        // A later edit without the trailer does not unlink it: the adding commit counts.
+        commitFiles(l, l.worktree, 'docs: flip the status', { 'prompt.md': readFileSync(join(l.worktree, 'prompt.md'), 'utf8') + '\nEdited.\n' });
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stderr).not.toContain(LINK_REFUSAL);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "a non-claude.ai trailer accepted": a Claude-Session: trailer that is not a claude.ai URL does not link the lane', () => {
+        const l = linkLab(SHELL_REQUEST, 'Claude-Session: local');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status).toBe(2);
+        expect(r.stderr).toContain(LINK_REFUSAL);
+    });
+
+    test('kills "`none (…)` refused": Request: none (<reason>) is declared and starts the lane', () => {
+        const l = linkLab('Request: none (a follow-up the chat derives from a report)');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "--request ignored by the gate": a non-URL Request: started with --request runs', () => {
+        const l = linkLab(SHELL_REQUEST);
+        const req = join(l.state, 'request.md');
+        writeFileSync(req, 'the words of the request\n');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md', '--request', req]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "a merge prompt gated": a merge prompt (Lane: full (merge …)) with a non-URL Request: and no trailer starts', () => {
+        const l = linkLab(SHELL_REQUEST, 'Model: chat via lane-run', 'Lane: full (merge of feat into trunk)');
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.stderr).not.toContain(LINK_REFUSAL);
+        expect(r.status, r.stderr).toBe(0);
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+
+    test('kills "the missing line refused": a prompt with no Request: line keeps the RC-43 warning and runs', () => {
+        const l = lab();
+        const r = laneRun(l, ['start', l.worktree, 'prompt.md']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('no `Request:` line in the header');
+        expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
+    });
+});
+
 // ── the Outcome line and status --all ────────────────────────────────────────
 
 /** A lane folder written by hand: exited with an exit code, or running on a live pid; its log holds the given assistant texts. */
@@ -1127,6 +1299,86 @@ describe('lane-run status, the Outcome line', () => {
         expect(r.stdout).toContain('state: exited');
         expect(r.stdout).toContain('exit: -');
         expect(r.stdout).toContain('outcome: Outcome: done · abc123');
+    });
+});
+
+// ── the Outcome of the latest run only (issue #181, P-2026-10-20-0030) ────────
+
+const LIMIT_TEXT = "You've hit your session limit · resets 3am (Europe/Rome)";
+
+/**
+ * A lane run twice, as start then resume write it: run 1 ends on `Outcome: hard-stop`;
+ * run 2, appended to log.jsonl and stderr.log, holds the given events and exits with `exit`.
+ */
+function resumedLane(l: Lab, id: string, o: { run2: string[]; exit: string; err1?: string; err2?: string }) {
+    fakeLane(l, id, { texts: ['Phase 1 report.\nOutcome: hard-stop'] });
+    const dir = laneDir(l, id);
+    const log = join(dir, 'log.jsonl');
+    const err = join(dir, 'stderr.log');
+    writeFileSync(err, o.err1 ?? '');
+    const logFrom = readFileSync(log).length;
+    const errFrom = readFileSync(err).length;
+    writeFileSync(log, readFileSync(log, 'utf8') + o.run2.map((x) => x + '\n').join(''));
+    writeFileSync(err, readFileSync(err, 'utf8') + (o.err2 ?? ''));
+    writeFileSync(join(dir, 'runs.jsonl'), [
+        { at: '2026-10-20 00:10', kind: 'start', session: 'sess-1', logFrom: 0, errFrom: 0, outcome: 'hard-stop', exit: '0' },
+        { at: '2026-10-20 00:40', kind: 'resume', session: 'sess-1', logFrom, errFrom },
+    ].map((r) => JSON.stringify(r)).join('\n') + '\n');
+    writeFileSync(join(dir, 'exit.txt'), o.exit + '\n');
+}
+
+const limitResult = (text: string) => JSON.stringify({ type: 'result', subtype: 'success', is_error: true, result: text });
+
+describe('lane-run status, the Outcome of the latest run (issue #181)', () => {
+    test('kills "the Outcome of the run before the resume inherited": run 2 dying on the usage limit reads limit, in status and status --all', () => {
+        const l = lab();
+        resumedLane(l, ID, { run2: [assistant(LIMIT_TEXT), limitResult(LIMIT_TEXT)], exit: '1' });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('outcome: limit');
+        expect(r.stdout).not.toContain('hard-stop');
+        const a = laneRun(l, ['status', '--all']);
+        expect(a.status, a.stderr).toBe(0);
+        expect(a.stdout.trimEnd().split('\n')[1].split(/\s+/)).toEqual([ID, 'exited', 'limit', '1', 'min']);
+    });
+
+    test('kills "limit read only on a non-zero exit", "the stderr tail ignored": the weekly limit with exit 0, and a limit only on stderr, read limit', () => {
+        const l = lab();
+        const weekly = "You've hit your weekly limit · resets Oct 2 at 3pm (Europe/Rome)";
+        resumedLane(l, ID, { run2: [assistant(weekly), limitResult(weekly)], exit: '0' });
+        expect(laneRun(l, ['status', ID]).stdout).toContain('outcome: limit');
+        const m = lab();
+        resumedLane(m, ID, { run2: [], exit: '1', err2: 'Error: ' + LIMIT_TEXT + '\n' });
+        expect(laneRun(m, ['status', ID]).stdout).toContain('outcome: limit');
+    });
+
+    test('kills "a plain death reported as none or limit", "the stderr of run 1 read for run 2": a non-zero exit with no Outcome reads died', () => {
+        const l = lab();
+        resumedLane(l, ID, { run2: [assistant('Working on step 2.')], exit: '143', err1: 'Error: ' + LIMIT_TEXT + '\n' });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toContain('outcome: died');
+        const a = laneRun(l, ['status', '--all']);
+        expect(a.stdout.trimEnd().split('\n')[1].split(/\s+/)).toEqual([ID, 'exited', 'died', '1', 'min']);
+    });
+
+    test('kills "the latest run\'s own Outcome dropped": run 2 closing on `Outcome: done` reads done', () => {
+        const l = lab();
+        resumedLane(l, ID, { run2: [assistant('Closing report.\nOutcome: done')], exit: '0' });
+        const r = laneRun(l, ['status', ID]);
+        expect(r.stdout).toContain('outcome: Outcome: done');
+        expect(laneRun(l, ['status', '--all']).stdout.trimEnd().split('\n')[1].split(/\s+/)).toEqual([ID, 'exited', 'done', '1', 'min']);
+    });
+
+    test('kills "a lane never resumed changed": one run, with or without runs.jsonl, keeps its Outcome; an exit 0 without one stays none', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: hard-stop'] });
+        expect(laneRun(l, ['status', ID]).stdout).toContain('outcome: Outcome: hard-stop');
+        writeFileSync(join(laneDir(l), 'runs.jsonl'), JSON.stringify({ at: '2026-10-20 00:10', kind: 'start', session: null, logFrom: 0 }) + '\n');
+        expect(laneRun(l, ['status', ID]).stdout).toContain('outcome: Outcome: hard-stop');
+        const m = lab();
+        fakeLane(m, ID, { texts: ['No closing line.'] });
+        expect(laneRun(m, ['status', ID]).stdout).toContain('outcome: none');
     });
 });
 

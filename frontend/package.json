@@ -110,6 +110,7 @@
     "check:triggers": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-triggers.ts",
     "log:rotate": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/rotate-log.ts",
     "smoke": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/run.ts",
+    "oracle:bv": "node scripts/oracle/bv-cases.mjs && node scripts/oracle/bv-verilator.mjs",
     "lane-board": "node scripts/lane-board/lane-board.mjs",
     "lane:usage": "node scripts/lane-usage.mjs",
     "smoke:calibrate": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/calibrate.ts",

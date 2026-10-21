@@ -294,6 +294,9 @@ Source: `docs/ratifiche/claude_ratifiche_2026-10-03_issue_driven_auto_lanes.md`,
 - **RC-48** (2026-10-12, decided by Juri in chat `C-2026-10-12-1955`, «risolvere una volta per tutte i 14 errori di baseline», evidence: measured, verified: none, reversible: trunk): **The typecheck baseline is zero.** `npm run typecheck` exits 0: P-2026-10-12-2000 and P-2026-10-12-2001 cleared the 14 errors the baseline had carried (7 files, 8 lines: in six files only types change and the production bundle is byte-identical, `b3f44be17`; `src/api/data.ts` gains one imported name and the Ecore import of a datatype measures equal before and after, `315c62715`). From here an `error TS` line is a red gate, on a lane and on a merge, and no list of known errors is kept again: `CLAUDE.md` §2 and §17, `docs/HARNESS-DOCS.md` §6 and the two merge templates say so (P-2026-10-12-2002). The typecheck gate of a direct merge compares error sets and is unchanged: against an empty set it is the same test.
 - **RC-49** (2026-10-16, ratified by Alfonso under RC-26, his text dated 2026-10-15 and delivered to lane P-2026-10-15-1725 on 2026-10-16 09:37, evidence: measured, verified: none, reversible: trunk): **Lean context and model routing: what is approved, what waits.** On the report `docs/discovery/discovery_2026-10-15_lean_context_model_routing.md` (§4 to §7). (1) The harness stays on the subscription: Phase 2 is governed by usage against the plan limits, not by list-price dollars, which stay as relative weights between cost lines only (report §7.2). (2) Approved now: B0 first (the leftovers of P-2026-10-13-1930); AM-1 (the three model IDs in one place), AM-5 (decisions and log read by ID, file, front and Prompt-ID instead of the last N entries and the whole register), AM-7 (effort per tier); the read-only subagents `Explore` and `explorer` run on Sonnet 5.5. (3) Approved with a condition: `general-purpose` on Sonnet after the B1 measurement; AM-2 and AM-3 after RC-45 closes, subject to Alfonso's veto on the RC-45 report; AM-6 and B5 only after B4 and a passing `check:triggers`. (4) Deferred, to be reconsidered after B1: AM-4 (Haiku reporter) and the benchmark of report §5.7. (5) Accepted in principle, threshold and text still to be ratified: AM-8, a context ceiling per lane session with a handoff file and a fresh restart (proposed 200k soft, 250k hard, report §7.3), and AM-9, one slice per session (report §7.4). This row records the approval and applies nothing: the text of AM-1, AM-5 and AM-7 enters the normative documents only in the batch the report assigns it (§7.5), and RC-16, RC-20, RC-32 and RC-45 are unchanged until then. Input: `docs/archivio/claude_2026-10-15_nota_concentrazione_costi_sessioni.md` (`ba192edb0`).
 - **RC-50** (2026-10-18, approved by Alfonso 2026-10-18 12:29 «sono d'accordo con le tue proposte, rendile subito operative», recommended by a project chat outside the harness front, evidence: measured, verified: none, reversible: trunk): **The context ceiling of AM-8 (RC-49) also applies to the architect.** Every project chat measures its own context from its transcript (last call, input + cache_read + cache_creation, deduplicated by `message.id`) at each lane launch or close and before any long piece of work. Above about 300k tokens per call it writes the checkpoint of its own section of `sessione_CORRENTE.md`, asks Alfonso for a new chat on the same front and opens no further lane. The 60% rule stays only for chats without a measurable transcript. Evidence: chat `C-2026-10-17-1757` measured on 2026-10-18 a per-call context of 641k and 55M input tokens against 3M to 8M per executor lane (`architect.json` in the lane folders). Recorded by a chat other than the front owner, at Alfonso's request (exception to the one-chat-per-front rule of 2026-09-19).
+- **RC-51** (2026-10-18, thresholds ratified by Alfonso 2026-10-18 15:26, text from item 5 of RC-49 and report §7.3 written by lane P-2026-10-18-2125, evidence: measured, verified: agent, reversible: trunk): **(AM-8) Every session has a context ceiling.** Completes RC-49 (5) for AM-8. The measure is the context of one main call, input + cache_read + cache_creation of the latest main `assistant` event, read by `frontend/scripts/hooks/context-ceiling.mjs` (PreToolUse on every tool; B8b `1293f152d`, registered by B7, merge `b93c3fd46`) from the lane log when `JJODEL_LANE_LOG` is set, else from the hook input's `transcript_path`. Soft, 200,000 tokens: a lane session finishes its current step, writes `handoff.md` and `handoff.diff` in its lane folder, `handoff.md` with six sections (Task, Scope, Decisions taken, Evidence, Current diff, Remaining checks), and ends with `Outcome: hard-stop`; the hook denies once with that instruction. Hard, 250,000 tokens: the hook denies every call except the writes of the two handoff files and one `git status` or `git diff`. An interactive session gets the soft deny only, once, and no hard stop; the architect side is RC-50. The thresholds change only by a ratified row, recalibrated on the B1 measurements. A ceiling stop is neither a failure nor a relaunch on the other tier: a drawn lane (RC-45) keeps its tier, and RC-20's time limit stays. Continuation: from B8a, `lane-run resume --fresh <Prompt-ID>` starts a new session from `handoff.md`. Until B8a, which has not landed (`lane-run` has no `--fresh` and exports no `JJODEL_LANE_LOG`), the chat continues a ceiling-stopped lane as a new lane, with a new Prompt-ID whose prompt cites the stopped lane's `handoff.md` and declares `Depends:` on it, never by a plain `resume` of the stopped session (provisional, unattended, decided by chat `C-2026-10-18-2125` under RC-25: a plain resume reopens above soft and hits the hard stop within a few calls).
+- **RC-52** (2026-10-18, accepted in principle by Alfonso in item 5 of RC-49, text of report §7.4 adopted by the chat under RC-25 in memo `docs/ratifiche/claude_2026-10-17_memo_harness_front_fable_trial.md` §2 and written by lane P-2026-10-18-2125, evidence: measured, verified: none, reversible: trunk): **(AM-9) One slice per session.** Completes RC-49 (5) for AM-9. A prompt that declares several slices, by `## Slice <n>` sections or a `Slices:` header (P13), runs each slice in its own session; slice n+1 starts from the committed result of slice n (its commit shas, `git diff --stat` against the cut, its log or inbox entry, its report path), never from its transcript. A `resume` stays for answering a question and for the GO of the same slice. The mechanism is in force from B8a: `lane-run start` runs slice 1, `lane-run next <Prompt-ID>` starts slice n+1 as a fresh session, and `start` refuses a multi-slice prompt with no slice selection; until then the chat writes one prompt per slice, which `lane-run chain` already runs one per session. Option, proposed in memo 2026-10-17 §2: Phase 2 after a Phase 1 hard stop, and a rework after a failed visual GO, are new slices and start fresh from the committed report or Phase 2 prompt; this amends RC-20 for those two cases, ratified by Alfonso on 2026-10-18 at 21:45 (RC-26). Evidence: the note of 2026-10-15 (`ba192edb0`), finding 4: the ten most expensive sessions were discovery plus fix in one session.
+- **RC-53** (2026-10-19, decided by Alfonso in chat `C-2026-10-19-1747`, «regola fissa per il fronte harness» 22:49 and «confermo tutto» 22:59, evidence: read, verified: none, reversible: trunk): **On the harness front the chat decides without asking** (1) the merge into the trunk of a branch that changes only harness scripts and documentation, (2) continuation lanes that correct or complete work Alfonso already approved, (3) GO on closure commits. **It still asks for** every RC-26 item (governance files `docs/decisions.md`, `docs/PROTOCOL.md`, `CLAUDE.md`; deletions; push; model, effort and cost; the critical zone; what the demo shows) and for any new lane that opens work Alfonso never requested. Every decision taken under RC-53 is reported to Alfonso in one line. RC-26 is a floor no later setting can lower.
 
 ## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
 
@@ -683,6 +686,7 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   500, peso 600 sull'elemento selezionato. Rinviati badge lettera, filtro che appiattisce
   l'albero, conteggio totale, cambio di indent. C7.1 `TreeViewSidebar.tsx` è codice morto a
   backlog e non si tocca.
+  *Emendata da R-SHELL-2 (2026-10-19): la riga 26px vale in Basic; in Advanced è 24px.*
 - **R-RAIL-8** (2026-08-10) — Nessuna barra di selezione, contro il design: resta la pill
   esistente più il peso 600, che soddisfa lo stesso requisito di accessibilità senza ribaltare
   la Fase 2 C1 del 2026-07-28. Il triplo ruolo di `#0891B2` resta inerte e non si tocca.
@@ -2521,7 +2525,7 @@ Evidence: `docs/discovery/discovery_2026-09-29_sim_data_level.md` (P-2026-09-29-
   The open list is one row taller, +24.5 px at 1600×1000 (98.6 to 123.1 on the Petri scene at step 1); it opens above the Marking line, so Step (top 854.5) and the status row (top 915) do not move, closed or open (R-SIM-82, G8). Asked by Alfonso on 2026-09-29; built by P-2026-09-29-1221.
 - **R-SIM-99** (2026-09-29, ratified by Alfonso 2026-09-29, evidence: measured, verified: none, reversible: branch).
   **The Simulation pill shows in Advanced mode on a metamodel whose Simulation toggle is on; the simulation model is chosen in the configuration. Amends R-SIM-97 on the gate and on the Properties field.** Alfonso, 2026-09-29: «nella property panel del metamodello farei una sezione chiamata Semantic type Class e sotto metterei un toggle con Simulation, se il toggle è on allora la pill simulation è visibile, i modelli di simulazione sono nella configurazione».
-  In Advanced mode the metamodel's Properties show a section `SEMANTIC TYPE CLASS` after GENERAL with one toggle, `Simulation` (the `PropertiesToggle` row); the «Semantic type» select of R-SIM-97 is removed. The toggle writes a new persisted key, `simEnabled`, a boolean in the metamodel's bag, through `state`: one undo step. Off writes `false` and does not remove the key, because the undo of a removed `_state` key does not restore it (the ticket of P-2026-09-29-1106); measured, one undo of off brings the toggle and the pill back. The gate `simPillVisible` reads Advanced and `simEnabled` on the M2 itself or on the `instanceof` of an M1; `simProfile` no longer gates the pill and keeps its meaning. Compatibility: a bag without a boolean `simEnabled` reads `!!simProfile` (`simEnabled ?? !!simProfile`), so a metamodel saved under R-SIM-97 keeps its pill and its switch reads on; `false` wins over a Semantic type. The preset and the role binding are chosen as before R-SIM-97, in the panel's Profile select and in the roles dialog, whose first-open picker (`KINDS`, `isFirstOpen`) is reachable again. Unchanged from R-SIM-97: the placement, the run cleared when the pill unmounts (Basic, or the toggle off), the Problems ticket. The demo takes 7 clicks per scene on the metamodel (canvas, toggle, chip, Configure…, kind, Continue, Apply), where R-SIM-97 took 6. The number is 99 because R-SIM-98 is reserved by the prompt of `sim-nondet-label` (P-2026-09-29-1221) and is absent on this branch.
+  In Advanced mode the metamodel's Properties show a section `Semantic type class` after GENERAL with one toggle, `Simulation` (the `PropertiesToggle` row); the «Semantic type» select of R-SIM-97 is removed. The toggle writes a new persisted key, `simEnabled`, a boolean in the metamodel's bag, through `state`: one undo step. Off writes `false` and does not remove the key, because the undo of a removed `_state` key does not restore it (the ticket of P-2026-09-29-1106); measured, one undo of off brings the toggle and the pill back. The gate `simPillVisible` reads Advanced and `simEnabled` on the M2 itself or on the `instanceof` of an M1; `simProfile` no longer gates the pill and keeps its meaning. Compatibility: a bag without a boolean `simEnabled` reads `!!simProfile` (`simEnabled ?? !!simProfile`), so a metamodel saved under R-SIM-97 keeps its pill and its switch reads on; `false` wins over a Semantic type. The preset and the role binding are chosen as before R-SIM-97, in the panel's Profile select and in the roles dialog, whose first-open picker (`KINDS`, `isFirstOpen`) is reachable again. Unchanged from R-SIM-97: the placement, the run cleared when the pill unmounts (Basic, or the toggle off), the Problems ticket. The demo takes 7 clicks per scene on the metamodel (canvas, toggle, chip, Configure…, kind, Continue, Apply), where R-SIM-97 took 6. The number is 99 because R-SIM-98 is reserved by the prompt of `sim-nondet-label` (P-2026-09-29-1221) and is absent on this branch.
   Evidence: the lane probe of P-2026-09-29-1225 on 3052 (`_tmp_simtoggle_walk.ts`, gitignored): the 8 gate cells, the undo of on and of off, the legacy bag; the four scenes against `trunk_readings_2026-09-29c`, 64 of 71 readings identical and the other 7 different only by `simEnabled: true` in the bag.
 - **R-SIM-100** (2026-09-29, ratified by Alfonso 2026-09-29, evidence: measured, verified: none, reversible: branch).
   **An ε choice can be resolved at random: a Random button right of Cancel, a seeded draw, the minimal trace. Amends R-SIM-35 on the random policy and on the trace.** Alfonso, 2026-09-29, ratified Part 1 as written: a Random button (`bi-shuffle`) next to Cancel on ε choices with at least two candidates; a uniform draw among the options shown; the trace records the drawn transition and its origin `user|random` («Last step: t3 (random)»); the RNG injected, seedable, the run's seed in the trace; tests with a stub RNG. It enters the MODELS build.
@@ -2710,6 +2714,12 @@ Evidence: the five points the chat C-2026-10-05-1110 parked for Alfonso at the c
 
 - **R-SIM-146** (2026-10-10, ratified by Alfonso 2026-10-10, evidence: read, verified: none, reversible: branch).
   **Five details of the board editor and of the coverage.** (1) The rules of the old board editor marked `TODO: cleanup` in `SimBoardEditor.scss` (the palette, the edit grid's tiles, the nuXmv table and the inspector, unused since R-SIM-143) are deleted, once a search shows that no class of theirs is referenced. (2) In the board editor an arrow moves the selected device one cell and Shift with an arrow selects the neighbouring device, as in design tools; this reverses the map taken in P-2026-10-06-0100 (arrows selected, Shift and an arrow moved). (3) The editor's preview keeps the runtime colours of LEDs and displays, not the amber and cyan of the request, because the preview draws the board as it runs (R-SIM-143); no code change. (4) The Coverage switch of the canvas layer becomes an icon of fixed width with its summary in the title, and its Clear keeps a reserved slot, so the layer's controls have one width with coverage off and on. (5) Clear counts the places marked in the live configuration as visited once, so a place that holds a token is not veiled after a Clear; amends R-SIM-140 («a clear button empties them») on this point.
+
+### Decisions 2026-10-20: a trigger that fork or join fusion drops (R-SIM-147)
+
+Evidence: `docs/discovery/discovery_2026-10-10_sim_event_attributes.md` §3.4 and §11 item 2 (the silent drop, measured); lane P-2026-10-20-0031, branch `sim-trigger-position`, tests `024dfb142`, code `c341ffbd3`. R-SIM-145 stays reserved for guard evaluation errors.
+
+- **R-SIM-147** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: branch). **A trigger that fusion drops is a compile defect at Reset.** A fused transition of a node with role `simFork` takes the trigger of the edge into it, one of a node with role `simJoin` that of the edge out of it (R-SIM-31(3), the choice edge, as R-SIM-144 P3 judges it); a trigger on any other edge of the fusion, an out edge of a fork or an in edge of a join, is never read. At Reset it is the defect `trigger-position`, of the line of R-SIM-61 and of the problems registry as every compile defect (R-SIM-70), beside `event` and `event-feature`: named by the edge, once however many transitions carry it, with the role `guard` (the trigger belongs to the enabling condition, and the registry maps an edge's guard-role defect to its edge unchanged), the subject `e2 trigger` on the defects line, the detail naming the fork or join and its choice edge. A node both fork and join takes the union of its edges' triggers and drops none; without the event role no trigger is read and none is reported. The run does not change: the trigger stays ignored, the transition stays a candidate, and the nuXmv spec is untouched. `CompileDefect.reason` and `StcDefectReason` receive `'trigger-position'` (Rule 11, an additive literal, as R-SIM-70). Declared limit: the registry title reads `Guard: trigger ignored by fork F`, since its role mapping lives in `problems/` (critical zone) and was not touched. A net without forks and joins behaves as before: the parity oracle of the lane.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
@@ -2973,6 +2983,7 @@ bag `_state`, che non contiene affatto il run-state.
   regola morta: si corregge comunque, perche' una regola morta con il token sbagliato rinasce
   sbagliata. Misure: `docs/discovery/discovery_2026-08-20_censimento_testo_e_bordi.md` §4.1 e §4.2.
 
+  *Emendata da R-SHELL-3 (2026-10-19): il bordo esterno di entrambi i rail passa a `--shell-border`, insieme.*
 - **D-UI-12** (2026-08-20) — **Le altezze del chrome applicativo vivono in
   `styles/tokens/_layout.scss` su `:root`; nessun foglio ricopia quei numeri.** Un flex item
   **non deduce la propria altezza da `100vh`** dentro una colonna alta `100vh`: prende il resto
@@ -6121,6 +6132,17 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   Auto layout a lane's record is compared on position and stack extent only (its cross size is computed). Open:
   partitions packed edge to edge, and a child moved out of a `none` container framed again after the drop (inbox
   tickets of P-2026-10-11-1156).
+- **R-GV-18** (2026-10-20, decided by the chat on Alfonso's go-ahead 2026-10-20 14:13, evidence: measured, verified: probe,
+  reversible: branch).
+  **With `containment.edges: 'hide'` a container also hides the edges to what it encloses** (amends R-GV-4;
+  P-2026-10-20-1420, lane `gv-enclosed-edges`, merge `841230360` by P-2026-10-20-1437; LIR
+  `docs/lir/lir_2026-10-20_gv_enclosed_edges.md`). A reference or composition edge (`instanceRef` or `composition`) is
+  hidden when one end is a container whose view declares `edges: 'hide'` and the other end is an object it encloses,
+  its own claim or a deeper one through `parentOf`, in either direction. Hidden, never removed, as the channel edges.
+  Edges between two objects of which neither encloses the other are untouched, and so is every edge when no container
+  declares `hide`. Implemented in `suppressChannelEdges` (`irContainment.ts`); tests in `irContainerLayout.test.ts`,
+  mutation bench m1..m6 killed. Verified by the chat on the project «Jjodel harness», viewpoint «Harness / Lane process
+  (BPMN)»: 107 edges before (42 flows, 24 `performer`, 41 `activities|controlNodes`), 42 after, all flows; 48 nodes.
 
 ## R-REL — release scope (decision 2026-10-11)
 
@@ -6129,6 +6151,16 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   `VITE_CODEGEN` build flag); the generator ships in 3.2.** Amends R-GEN-1's «no separate 3.1 tag». Evidence:
   `docs/discovery/discovery_2026-10-11_release_3_1_scope.md` (D1, D3, D4), the lanes that carried it out
   (P-2026-10-12-0010 staging absorbed, P-2026-10-12-0012 the build flag) and the version commit (P-2026-10-12-0115).
+- **R-REL-2** (2026-10-20, ratified by Alfonso 2026-10-20 23:25 «Il bit vector entra nella release», evidence: read, verified: none, reversible: trunk).
+  **Bit-vector values (front `hw-notation`, R-BV) ship in 3.2.** The slices that are merged into
+  `alfonso-frontend-jjtl` before the freeze of 2026-10-23 enter the release; the chat that owns the front merges them
+  without a further go-ahead. Amends the earlier plan that S3 (code generation) waits for 3.2: S3 lands only if it is
+  merged before the freeze with the codegen gates green, otherwise it ships in 3.2.x.
+- **R-REL-3** (2026-10-21, ratified by Alfonso 2026-10-21 06:37 «per 1 procediamo subito e non aspettiamo dopo il freeze», evidence: read, verified: none, reversible: trunk).
+  **S3 (bit-vectors in code generation) lands before the 2026-10-23 freeze.** Amends R-REL-2's «S3 lands only if merged
+  before the freeze, otherwise 3.2.x»: the chat launches S3 at once and merges it with the codegen gates green. Same
+  morning, «ok» to: installing Verilator for the oracle step (done, 5.052), a ticket for `0xFF` read as `0`, and the
+  GitHub milestone of front `hw-notation`.
 
 ## R-LIB — the notation library and the project gallery (decisions 2026-10-18)
 
@@ -6167,6 +6199,330 @@ Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked
   service replaces it with the same schema.** Curating is a commit. Amends, until that service exists, the parked
   specs' server-side `featured` flag and `curator` role; their clone semantics (deep copy, new ids, passive
   `_clonedFrom`) and read-only opening stand for case 2.
+
+- **R-LIB-7** (2026-10-18, ratified by Alfonso 2026-10-18 «le template e galleria sono parte di 3-2», evidence: measured, verified: none, reversible: trunk).
+  **The project gallery and the Templates page (slices S1 and S2, branch `library-gallery`, P-2026-10-18-1800) ship
+  in 3.2.** They reach the trunk after the 3.1.0 tag, so that 3.1 is not affected. In 3.2 a gallery project is cloned
+  without a read-only opening (slice S7 comes later, on the reducer guard), which is the clone-first reading of
+  R-LIB-6. The sealed notations (S4 onwards), the S3 seal predicate and the S6 reducer guard are not part of this
+  row. Evidence: `docs/discovery/discovery_2026-10-18_notation_library.md` §«Gallery S1+S2» (gallery test 31,
+  clone probe 55/55, the chat's visual check).
+
+- **R-LIB-8** (2026-10-18, ratified by Alfonso 2026-10-18 «ok via libera», evidence: read, verified: none, reversible: trunk).
+  **Critical-zone go-ahead for slice S6: the seal guard in the `CompositeActionReducer` loop of
+  `redux/reducer/reducer.ts`, in two steps.** First a report-only mode that refuses nothing and records every action
+  it would refuse, run on a sealed project through the full M1 scenario (create, link, move, resize, simulate,
+  generate) until it records zero; then an enforcing mode, proved by a battery (JjScript create/set/delete on M2,
+  proxy set, Jodie, collaboration replay, undo, redo) that leaves the structural hash of the sealed M2 unchanged.
+  The guard asks the S3 predicate (`model/librarySeal.ts`) and allowlists the bookkeeping fields M1 work writes on
+  M2. `LoadAction` stays outside the guard and undo/redo get no check of their own (discovery §3.3). A project with
+  no seal behaves exactly as before. Each step carries a Layer Impact Report (CLAUDE.md §3.2) in `docs/lir/`. The
+  work runs on a branch now; it reaches the trunk after the 3.2 release (R-LIB-7 keeps S6 out of 3.2).
+
+- **R-LIB-9** (2026-10-18, ratified by Alfonso 2026-10-18 22:51 «va bene» on the chat's four points, evidence: read, verified: none, reversible: trunk).
+  **The gallery holds two tiers, templates and examples.** A *template* is a small didactic project that teaches one
+  concept, is cloned as a starting point and may be cited by the book or the documentation: metamodel, a sample
+  model and one clear viewpoint written by hand with the IR authoring surface (derived viewpoints are not used for
+  curated material: P-2026-10-18-2150 showed Graph edges as rows, Library books nested, containment arcs over the
+  statechart transitions). An *example* is a complete, realistic case of a whole language (standard-faithful
+  metamodel, several viewpoints, validation, simulation scenario, code generation where it applies) held to the
+  commercial-quality requirement of 2026-10-01 and checked visually by Alfonso. Citability: every entry has a
+  stable id and explicit versions; a published version is never rewritten (a fix is a new version); the deep link
+  is `/templates/<id>@<n>`, resolved by the catalog. On disk one folder per id holds its versions
+  (`frontend/public/library/gallery/<id>/<n>.jjodel`, sources under `frontend/scripts/library/gallery/<id>/`); the
+  tier is a catalog field (`tier: template | example`), not a folder, so a change of tier breaks no citation. The
+  Templates page shows the two tiers as two sections. In 3.2: the five R-LIB-5 projects as templates, and
+  `turnstile` and `petri-producer-consumer` as examples; BPMN and the hierarchical statechart as examples after 3.2.
+  Amends R-LIB-5 (adds the examples tier) and the layout of P-2026-10-18-1800.
+
+- **R-LIB-10** (2026-10-19, ratified by Alfonso 2026-10-19 02:58 «Aggiungi i viewpoint, il 23 ottobre non vale più», evidence: read, verified: none, reversible: trunk).
+  **The 3.2 freeze of 2026-10-23 no longer holds; the gallery examples get their viewpoints before the merge.** 3.1
+  ships from the trunk this week; 3.2 follows in about two to four weeks (Alfonso, 2026-10-18 23:33), its freeze date
+  to be set. The two 3.2 examples, `turnstile` and `petri-producer-consumer`, were packaged by P-2026-10-18-2300 with
+  the `Default` viewpoint only and open on abstract syntax, which does not meet the example tier of R-LIB-9: each gets
+  a hand-written viewpoint (statechart, Petri net) on `library-gallery` before that branch is merged
+  (P-2026-10-19-0300). Supersedes the 3.2 dates of R-GEN-1 (live by 2026-10-26, content freeze 2026-10-23); the
+  rows that name the 2026-10-23 freeze now refer to the 3.2 freeze still to be set. R-LIB-7 and R-LIB-8 are
+  unchanged (no sealed notation and no seal guard in 3.2).
+
+Rows R-LIB-11..19 are **provisional**: their direction was approved by Alfonso in the design session of 2026-10-18/19 outside the project, and he asked on 2026-10-19 15:01 to register them as provisional. Source: `docs/design/claude_2026-10-19_design_handoff_templates_notations_file_new.md` §9 (artboards on the Design canvas «Jjodel Templates page»). Values the handoff marks **[proposal]** (level colours, Start here order, level and concept assignments, the 8-class and 5-metamodel thresholds, group names) are not ratified by these rows. Handoff §10 (Q1..Q4) waits for Alfonso. Registered by chat C-2026-10-19-1501 before the discovery P-2026-10-19-1510.
+
+- **R-LIB-11** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **Sealed notations get their own Notations page under BROWSE and a New model flow; they never appear on the Templates page.** The Templates contract is clone and own (case 2), the sealed contract is use and never open (case 1, R-LIB-1, R-LIB-3). Handoff §4, §5. When this ships is bounded by R-LIB-7, which keeps the sealed notations out of 3.2.
+- **R-LIB-12** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **The user-facing term for a sealed notation is «Built-in».** «Sealed» stays an internal word (code, decisions, reports).
+- **R-LIB-13** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **The Templates page has two sections, «Starters» (tier `template`) and «Worked examples» (tier `example`), each with a one-line contract under its title**; a section hides when the filters leave it empty. Refines the two-section layout of R-LIB-9.
+- **R-LIB-14** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **Clone is a secondary button, with a «Preview» ghost button beside it**, no longer a dark primary button on every card.
+- **R-LIB-15** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **A gallery id (`<id>@<n>`) is shown on the card only in Advanced mode.** The deep link of R-LIB-9 is unchanged.
+- **R-LIB-16** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **Card previews use the editor-canvas style (variant D), from a snapshot taken when a version is published and stored with the catalog entry**; a new `@n` is what regenerates it, no rendering on page load. Above a size threshold the preview is a structure list (variant C). An example's preview shows its model in its notation, not the metamodel.
+- **R-LIB-17** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **The concept and level filters combine with AND, show live counts, and draw a chip whose count is 0 dashed and grey**; «Clear filters» appears when a filter is active.
+- **R-LIB-18** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+  **File › New has a Basic and an Advanced structure (handoff §6), with no fourth cascade level**: «Conforming to» and «Built-in notations» are section labels inside the Model submenu; only items that open a dialog carry an ellipsis.
+- **R-LIB-19** (2026-10-19, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Catalog entries gain `level`, `concepts[]`, an optional `callout` and `preview`; metamodel and model counts are derived, never written.** The handoff's `kind` is not added: it is the `tier` field R-LIB-9 already ratified (`template | example`), so the catalog keeps one field (the chat's reading, recorded as unattended, RC-25).
+
+- **R-LIB-20** (2026-10-19, ratified by Alfonso 2026-10-19 16:09 «Si velocissimo» on the chat's recommendations after P-2026-10-19-1510, evidence: measured, verified: none, reversible: trunk).
+  **The 3.2 cut of the templates handoff, and its Q3/Q4.** In 3.2: the Templates page (L-B1), the dashboard sidebar and quick tip (L-B2), PNG previews from headless snapshots (L-C), the New model dialog with the «Metamodel in this project» tab only (L-D), File › New without a Built-in section in Basic and Advanced (L-E). Out of 3.2, with the sealed notations S4/S5 (R-LIB-7): the Notations page and its BROWSE item, the Built-in tab, Model › <notation> and Browse notations…, handoff Q1 and Q2. Q4: Collections out of 3.2. Q3: levels and Start here as in the handoff §2.5; concepts as there except families-persons «transformation» → «multiple-metamodels», «simulation» added to turnstile and petri-producer-consumer, «containment» added to shapes and graph. Evidence: `docs/discovery/discovery_2026-10-19_templates_notations_file_new.md` §3.3, §4, §6, §7.
+
+- **R-LIB-11** (2026-10-19, ratified by Alfonso 2026-10-19 09:20 «ok con la prima», evidence: measured, verified: none, reversible: trunk).
+  **The IR gains the predicate `simActive`, true on an element while a simulation run is active on that element's
+  model.** It is an addition next to `marked`: no existing predicate changes. It declares the `'mark'` channel (Reset and
+  Stop already bump it), finds the model by walking `father` to the DModel, and reads `getSimRun(modelId)` through the
+  new optional ReadCtx method `isRunActive`; both backends implement it. The conditional editor offers it as «Sim active
+  (run in progress)». First use: the Place view of the `petri-producer-consumer` example draws its tokens under
+  `not simActive`, so a place a run has emptied no longer shows its initial marking. Evidence: P-2026-10-19-0930
+  (`50ab1d74c`, branch `library-gallery`), IR, UI and sim suites 2793/2793, 9/9 mutants killed, clone probe 178/178.
+
+## R-SHELL — shell visual consolidation (decisions 2026-10-19)
+
+Evidence: the CSS-overlay pilot of the project chat (`~/.jjodel-lanes/pilots/linear/`, outside the repo),
+`docs/discovery/discovery_2026-10-19_shell_visual_consolidation.md` (P-2026-10-19-1710, §6 and §8), and
+Alfonso's answers in the project chat of 2026-10-19 («ok alle raccomandazioni», 16:51 and 17:45).
+
+- **R-SHELL-1** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: agent,
+  reversible: trunk). **The shell reads its own token set.** Topbar, editor
+  toolbar, left palette, properties rail, status bar and menus read `--shell-*`, declared once on the six
+  surface roots in `styles/tokens/_shell.scss` as aliases of existing tokens; the canvas never reads it and
+  no `:root` value changes for the shell. The interface mode reaches the DOM as `html[data-mode]`, written by
+  Navbar from Redux `advanced` (R-RAIL-13 holds). Sources: discovery §3.2-3.3; verified by the chat DOM check of P-2026-10-19-1725.
+- **R-SHELL-2** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: none,
+  reversible: trunk). **Density belongs to Advanced.** In Advanced the tree row is 24 px and the menu
+  item 28 px; Basic keeps 26 px and 36 px. Amends R-RAIL-7 on «riga 26px», which now holds for Basic only. Sources: pilot v2, discovery §8 A2.
+- **R-SHELL-3** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: none,
+  reversible: trunk). **The outer borders of both rails move to `--shell-border` together** (palette right,
+  rail left), keeping the coupling D-UI-11 asked for. Amends D-UI-11 on the outer border, which no longer
+  stays on `--border-subtle`. Source: discovery §8 A3.
+- **R-SHELL-4** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: none,
+  reversible: trunk). **Right-rail section titles are written in sentence case in the source**, shown
+  at 12 px / 500 without tracking; the left palette keeps its uppercase category label and
+  `.props-header__kind` stays uppercase. The MODELS demo script and the R-SIM row that quote
+  `SEMANTIC TYPE CLASS` follow the new label `Semantic type class`. Sources: discovery §3.4 and §8 A1.
+- **R-SHELL-5** (2026-10-19, ratified by Alfonso 2026-10-19, evidence: read, verified: none,
+  reversible: trunk). **Three text levels and a minimum.** Shell text uses `--shell-text-1/2/3` (#0f172a,
+  #475569, #64748b); `#94a3b8` stays only inside disabled controls (D-UI-13 Em. 6). No shell text under 11 px,
+  shell hit targets at least 24 px without moving the layout, action icons muted only in Advanced. Source: pilot report after_v2.
+
+- **R-LIB-21** (2026-10-19, ratified by Alfonso 2026-10-19 20:49 «ok», evidence: read, verified: none, reversible: trunk).
+  **Two chats share the front `notation-library`, each with its own scope.** C-2026-10-18-2254 (heir of
+  C-2026-10-18-0110) owns the gallery content (catalog, packages, template and example viewpoints, `simActive`) and the
+  merge of `library-gallery` into the trunk after the 3.1.0 tag, with the current Templates page. C-2026-10-19-1501 owns
+  the design handoff `docs/design/claude_2026-10-19_design_handoff_templates_notations_file_new.md` (Templates page
+  redesign, Notations page, New model dialog, File › New); its lanes start from `library-gallery` at `03b9d4585` or from
+  the trunk after the merge, and land before 3.2. Neither chat emits prompts in the other's scope.
+
+## R-TACK — Tack, the project-agnostic harness monitor (decisions 2026-10-19)
+
+Evidence: the project chat C-2026-10-19-1748 of 2026-10-19 (17:55 recommendations accepted, 22:20 «ti do l'ok», 23:15 «decidi tu»), `tack/ROADMAP.md`, `docs/harness/fronts.json`.
+
+- **R-TACK-1** (2026-10-19, ratified by Alfonso 2026-10-19 22:20, evidence: read, verified: none, reversible: trunk).
+  **The front `tack` is owned by the chat C-2026-10-19-1748**, recorded as `ownerChat` in `docs/harness/fronts.json`.
+  Other chats do not write Tack prompts; P-2026-10-19-2100, written by C-2026-10-19-0001, became a later slice of
+  this chat in its own worktree.
+- **R-TACK-2** (2026-10-19, ratified by Alfonso 2026-10-19 23:15, evidence: read, verified: none, reversible: trunk).
+  **The lane board of `lane-run monitor` (port 4700, `frontend/scripts/lane-board/`) is frozen**: bug fixes only, no new
+  feature. New monitoring features go into Tack, which is meant to replace it.
+- **R-TACK-3** (2026-10-19, ratified by Alfonso 2026-10-19 23:15, evidence: read, verified: none, reversible: trunk).
+  **Tack gets a Lanes page before v0 is closed**, so that v0 covers the view used most on the 4700 board. The v0
+  closure on foreign repositories (P-2026-10-19-2100) follows it.
+- **R-TACK-4** (2026-10-19, ratified by Alfonso 2026-10-19 23:43 «gestisci il tuo in automatico», evidence: read, verified: none, reversible: trunk).
+  **On the front `tack` the owning chat decides alone, as RC-53 does on the harness front:** continuation lanes of
+  approved work, GO on closures and the merge of `tack-*` branches into the trunk after its own check of the board
+  (RC-23, as every Tack slice already delegates to the chat). It still asks Alfonso for the RC-26 list and for any
+  slice that opens work he never asked for. Each such decision is reported to him in one line and carried by the
+  commit that enacts it as a trailer `Autonomy: continuation | closure-go | merge`, so Tack can count it.
+- **R-TACK-5** (2026-10-20, ratified by Alfonso 2026-10-20 01:04 «Ok», evidence: read, verified: none, reversible: trunk).
+  **Harness health is split between two fronts.** Items 1 and 2 of the Phase 2 proposal of
+  `docs/discovery/discovery_2026-10-18_harness_health_retrospective.md` (governance rows, the signals script) stay
+  with the harness front. Item 3, the Health tab and banner, goes into Tack, not into the 4700 board (R-TACK-2):
+  Tack reads the signals and shows the worst state and the signal that set it. The signals should reuse what the
+  Tack store already holds (lane outcome and stop, work time, front and chat per lane) rather than a second reader.
+- **R-TACK-6** (2026-10-21, ratified by Alfonso 2026-10-21 10:09, evidence: read, verified: none, reversible: trunk).
+  **Three kinds of stop, and an auto marker.** Tack shows a lane that ends on `Outcome: hard-stop` as a *breakpoint*
+  (the stop its prompt planned), a *ceiling* (context ceiling with a handoff) or a *hard-stop* (unplanned); a declared
+  `Stop:` line, when lanes write one, wins over the inference. The `Outcome:` token itself is unchanged. Every message a
+  chat sends to a lane in `/lane auto` without Alfonso having answered it starts, after the `[P-...]` bracket, with
+  `[auto]`; Tack counts those resumes and marks the lane with an `auto` pill.
+- **R-TACK-7** (2026-10-21, ratified by Alfonso 2026-10-21 10:19 «via sulle raccomandazioni», evidence: read, verified: none, reversible: trunk).
+  **Monitoring and specification are two halves of Tack** (`tack/docs/design-monitor-vs-spec.md`, report
+  `docs/discovery/discovery_2026-10-20_tack_monitor_vs_spec.md` §6). The specification lives in the observed repository
+  as `.tack/harness.json`, JSON with the `harness.emf` feature names, exported from the papers model and never read
+  across repositories (Q1, Q2); field syntax goes into the metamodel as `FieldSpec.syntax`, the identifier pattern as
+  `identPattern` of the prompt type (Q3); the KB is read through a manifest committed at each checkpoint, a harness
+  front change (Q6); G18 extends `ArtifactType` with placements and lifecycle policies (Q7); conformance is not in v0
+  (Q8). On Alfonso's «decidi tu» the chat set Q4 (the log bound is 40) and Q5 (the KB list of HARNESS-DOCS §2); the
+  claude.ai project instructions are aligned by Alfonso, outside git.
+
+## R-OI — ontological instantiation in one model: UML class and object diagrams (decisions 2026-10-20)
+
+Evidence: the project chat C-2026-10-20-1835 of 2026-10-20 (18:29 «non è una forma di multilevel modeling?», 18:30
+«procedi» on the recommendation), `docs/harness/fronts.json` (front `instance-of`). Discovery owed:
+P-2026-10-20-1835.
+
+- **R-OI-1** (2026-10-20, ratified by Alfonso 2026-10-20 18:30 «procedi», evidence: read, verified: none, reversible: trunk).
+  **Two ontological levels inside one linguistic level.** One M1 model holds both the classes and their instances
+  (UML `InstanceSpecification` and `Slot` style): a class diagram and an object diagram are two views of the same
+  model. Deep instantiation, potency and a third ontological level are out of scope; the design must not preclude them.
+- **R-OI-2** (2026-10-20, ratified by Alfonso 2026-10-20 18:30 «procedi», evidence: read, verified: none, reversible: trunk).
+  **The ontological instantiation is a relation declared on the metamodel and known to Jjodel as such**, not a set of
+  roles serving one palette. Its roles: the type reference (instance to class), the feature container (class to
+  property), the optional generalization (class to class), the slot container (instance to slot), the defining feature
+  (slot to property) and the value holder of the slot. The creation menu, the slot synthesis and the reconciliation are
+  services of that relation. The UML metamodel of
+  `docs/archivio/claude_2026-10-14_uml_class_object_notation.md` is its first client; any metamodel declaring the relation gets the same services.
+- **R-OI-3** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **Slots are materialized when an instance is created**, one per feature of its class including inherited ones
+  (closure over the generalization, cycles reported, not followed). **Reconciliation is never destructive**: a feature
+  without a slot shows as a ghost row and materializes on its first value; a slot whose feature is gone or no longer
+  reachable is a problem in the registry; an explicit «sync slots» action aligns them. Nothing is deleted silently.
+- **R-OI-4** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **Instance conformance (value type, multiplicity) never blocks an edit** (as R-VAL-4) and is reported in the problems
+  registry. Whether it rides on the user-defined validation of R-VAL or on built-in checks is decided by the discovery.
+- **R-OI-5** (2026-10-20, provisional, unattended, evidence: inferred, verified: none, reversible: trunk).
+  **Links are instances of associations, in a slice after the slots.** The menu that creates a link offers only the
+  associations whose ends accept the types of the two instances it connects.
+
+- **R-OI-6** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **The relation is declared in the metamodel's `_state` bag, key `ontoBindings`**, a versioned list of named records
+  (`{ v: 1, bindings: [...] }`, every id an M2 id, unknown keys kept), on the pattern of the Simulation roles and the
+  codegen templates; not in annotations. The Ecore export loses it, as it loses the Simulation roles; a mirror into one
+  `eAnnotations source="jjodel/onto"` on the EPackage is a later slice. Discovery P-2026-10-20-1835 §3.1, question 1.
+- **R-OI-7** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Optional roles beyond the six of R-OI-2:** abstract flag, feature type, default value, value mapping (primitive type
+  to literal metaclass). The four slot roles (slot container, defining feature, value holder, value mapping) are
+  all-or-none, so a record may bind the type reference alone. Discovery §3.1 and §3.7, question 2.
+- **R-OI-8** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Links are a second record of the same relation** (`name: 'link'`, the same type reference, feature container
+  `Association.memberEnds`). The reader picks the record by the metaclass of the classifier; enumerations and
+  associations leave the object menu by construction (O1). A third ontological level is a further record. Question 3.
+- **R-OI-9** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **«Sync slots» only creates the missing slots.** Removing orphan slots is a separate action with a confirmation
+  (R-OI-3: nothing is deleted silently). Question 5.
+- **R-OI-10** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **The creation surfaces of S2 are a new pane context menu of the editor-v2 canvas with the cascade «New instance of ▸
+  <Class>», and «New instance» on the node menu of a class node.** The Data manager comes later. Question 6.
+- **R-OI-11** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **O2..O5 are built-in live checks computed from the relation's own closure**, reported through the problems registry
+  and never blocking (R-VAL-4); a JjEL `closure` operator is its own lane, not part of this front. Question 7.
+- **R-OI-12** (2026-10-21, ratified by Alfonso 2026-10-21 06:32 «Ok alle raccomandazioni», evidence: measured, verified: none, reversible: trunk).
+  **One undo step per instantiation is its own core lane (S2u), after the 3.2.0 tag**, with a Layer Impact Report on
+  `redux/reducer/reducer.ts` and `redux/action/action.ts`. Until then S2 declares its count (one instantiation is undone
+  by two Cmd+Z, the first empty, P-2026-10-21-0100). The slice order after S2 is S3a, S3b, S4, S5 (discovery §8); S3a and
+  S3b open with a Layer Impact Report (critical-zone table §3.1).
+
+## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
+
+Evidence: the project chat C-2026-10-20-2055 of 2026-10-20 (20:19 a demonstrator first, target and refinements
+later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on the recommendation),
+`docs/harness/fronts.json` (front `hw-notation`). Discovery owed: P-2026-10-20-2055.
+
+- **R-BV-1** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **A bit-vector is a value carrying its width and its signedness, with a `BigInt` payload.** The width is a property
+  of the value, read from the model data (the `width` attribute of a port or a register), not a parameter of a
+  metamodel type: JjEL gets no parametric type. Widths from 1 to at least 128 bits are exact. Amended by the discovery
+  P-2026-10-20-2055 §10: (1) the payload is canonical unsigned, `0 ≤ bits < 2^width`, and signedness is an
+  interpretation; (2) the value never enters the D-layer (it would break the save, discovery §4): model data holds the
+  width as an `EInt` attribute and the value as an `EInt` (≤ 53 bits) or an `EString`, and an expression builds the
+  vector with `bits(self.width, self.value)`; (3) in σ a stored bit-vector attribute has a `word` domain whose width may
+  be read per element from the frozen model (R-BV-7). Measured in S1 (P-2026-10-20-2331, `de0ce082c`): the constructor
+  refuses a non-canonical payload, golden rows at 1, 53, 64 and 128 bits pass, widths above 1024 (`BV_MAX_WIDTH`) are a
+  defect.
+- **R-BV-2** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **Two-state semantics**, as Verilator: no `X`, no `Z`. Four-state values are out of scope and declared as a known
+  limit of the simulator. Confirmed by the discovery P-2026-10-20-2055 §10: nothing in JjEL, σ or the JS target models
+  X or Z. Precision: JjEL `null` is not X; a `null` operand of a bit-vector operator is a defect, except `==` and `!=`,
+  which compare a vector unequal to `null` (S1 test `a null operand is a defect, except for == and != (R-BV-2)`).
+- **R-BV-3** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **No implicit width or signedness change.** Binary operators require operands of equal width and equal signedness
+  (stricter than Verilog, which silently makes a mixed expression unsigned); extension, truncation and casts are
+  explicit (`zext`, `sext`, `trunc`, `asSigned()`, `asUnsigned()`). A mismatch is a defect of the rule or action that
+  holds the expression, as R-VAL-13 treats a non-boolean verdict. Shift amounts, indices, widths and `replicate`
+  counts are plain numbers; any other mix of a number and a bit-vector (`x + 1`, `x == 0`, `x < 3`) is a defect, never
+  a conversion: the user writes `x + bits(8, 1)`. Amended by the discovery P-2026-10-20-2055 §10, which measured that
+  this breaks no existing expression (every arithmetic site is `typeof`-gated, discovery §2.4); S1
+  (P-2026-10-20-2331, `de0ce082c`) holds it under the mutation bench (width, signedness and number checks each killed).
+- **R-BV-4** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **The operators of a datapath**: arithmetic modulo 2^N (`+`, `-`, `*`), bitwise `and`/`or`/`xor`/`not`, logical
+  and arithmetic shifts, unsigned and signed comparisons, bit and range selection, concatenation and replication.
+  Division and modulo are deferred. Amended by the discovery P-2026-10-20-2055 §10: JjEL has no bitwise or shift
+  operators and `|` is taken by `such that`, so `+`, `-`, `*`, unary `-`, `==`, `!=`, `<`, `<=`, `>`, `>=` are
+  overloaded for bit-vectors, and bitwise operations and shifts are methods (`and`, `or`, `xor`, `not`, `shl`, `shr`,
+  `ashr`); the keywords `and`, `or`, `not` stay boolean and refuse a bit-vector (defect). Comparisons return booleans;
+  `x.bit(i)` returns a 1-bit vector. The limit measured in S1 (P-2026-10-20-2331, `de0ce082c`), where `x.and(y)`,
+  `x.or(y)`, `x.not()` did not parse, is closed by P-2026-10-21-0011 (`3aa5993c8`): a keyword is a valid member name
+  after `.` and `?.` (the literals `true`, `false`, `null` excepted), so the three parse and evaluate like the other 19
+  bit-vector names. JjTL's own parser still takes only an IDENTIFIER after `.` and `?.` (reported, not changed).
+- **R-BV-5** (2026-10-20, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **Functions and methods first, Verilog literals later.** Amended by the discovery P-2026-10-20-2055 §10: only
+  `bits(w, v)` and `sbits(w, v)` are global; `slice(hi, lo)`, `bit(i)`, `concat(...)`, `replicate(n)`, `zext`, `sext`,
+  `trunc` are methods of the bit-vector (receiver dispatch, no shadowing of existing global names). Sized literals
+  `<w>'[s]<b|o|d|h><digits>` are measured feasible: they take a lexer-error space today and change no test
+  (0 occurrences, controlled); unsized `'d3` is refused because `'d3'` is a string today. The literal comes in a later
+  slice and must be lexed by both the JjEL and the JjTL lexers.
+- **R-BV-6** (2026-10-20, provisional, unattended, evidence: read, verified: none, reversible: trunk).
+  **One semantics, three back ends.** The evaluator, the `.smv` export (`unsigned word[N]`, `signed word[N]` of nuXmv)
+  and the generated Verilog (explicit widths on every operand) compute the same results; an operator table run through
+  an external Verilog simulator is the oracle that proves it. Amended by the discovery P-2026-10-20-2055 §10: "by
+  construction" is not true of the code today. The semantics lives in one module
+  (`frontend/src/jjel/evaluator/builtins/bitvectors.ts`, pure, `BigInt`, landed by S1 `de0ce082c`) that the evaluator
+  calls and that the JS target's runtime prelude reuses as text; there is no `.smv` exporter and no Verilog target yet,
+  so the nuXmv and Verilog printers are new code driven by the same case table, and the table's expected values come
+  from Verilator (discovery §9). S1's case table (`bv-golden.json`, 48 rows) is hand-computed from IEEE 1800-2017; its
+  Verilator run is the later S-oracle step.
+- **R-BV-7** (2026-10-20, ratified by Alfonso 2026-10-20 23:25 «ok la tua raccomandazione», evidence: read, verified: none, reversible: trunk).
+  **A stored bit-vector attribute reads its width per element from the model.** In the simulator a `word` domain names
+  the feature that holds the width (`{kind: 'word', widthFeature, signed}`); the width is resolved from the frozen model
+  at Reset and is constant for the run, so two registers of the same metaclass may have different widths and the `.smv`
+  export still declares one static `word[N]` per element. Fixed widths per metaclass are not required. Discovery §5.1,
+  open question 1.
+- **R-BV-8** (2026-10-21, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **The simulator's word domain (slice S2).** Decided by the chat `C-2026-10-20-2055` under RC-25 (GO on the
+  recommendations of P-2026-10-21-0010; the constructor fix of P-2026-10-21-0055), landed by `9b4ded919`.
+  (1) The width of a `word` attribute is read per element at Reset from its width feature, an integer from 1 to 128
+  (`WORD_MAX_WIDTH`, below the evaluator's 1024), kept in `CompiledNet.widths` and checked by
+  `inDomain(value, domain, width)`: width and signedness must both match. A width that cannot be read is a `'width'`
+  declaration defect named by the element; a word initial is checked per element (a number becomes the vector at that
+  width, a vector must match), and a mismatch is an `'initial'` defect while the value stays (R-SIM-71). (2) A word
+  input is refused at compile (`an input is not a word`); the view files get an inert `word` case only, and the
+  declaration dialog is a later item. (3) The subset checker accepts `bits`/`sbits` with literal arguments. `toNumber`
+  is not added to the verifiable list (an existing test rejects a name shared with a string method); `toVerilog` sits
+  in a separate `NOT_VERIFIABLE_BITVECTOR_METHODS`. (4) `bvToSmv` prints a bit-vector expression as nuXmv text,
+  casting the operand wherever nuXmv reads the signedness differently; there is no `.smv` exporter yet. (5) The
+  simulator's base context gets `bits` and `sbits` through `registerBitVectorConstructors` (exported from
+  `jjel/evaluator/evaluator.ts`, also called by `JjelEvaluator`), and no other global builtin, so that no model name
+  is shadowed there. Measured: without it, `bits(8, 1)` in an action fails with `Function 'bits' is not defined`,
+  which contradicts discovery §5.1. The function lives in `evaluator.ts` rather than `bitvectors.ts`, which cannot
+  import the evaluator. Six mutations, all killed (`docs` closure commit of P-2026-10-21-0055).
+- **R-BV-10** (2026-10-21, provisional, unattended, evidence: measured, verified: probe, reversible: trunk).
+  **The S1 operator semantics is checked against Verilator, and agrees.** Landed by `4b2dc75fd` (P-2026-10-21-0641),
+  the design of discovery §9. `npm run oracle:bv` generates the case table
+  `frontend/src/jjel/__tests__/fixtures/bv-cases.json` (inputs only, fixed seed) and fills `expected` from
+  Verilator 5.052 (`verilator --binary`, one SystemVerilog module per operator family, two-state operands sized and
+  signed explicitly); `bitvectorOracle.test.ts` checks the evaluator row by row in the normal suite, without
+  Verilator. Measured: 4733 rows, 24 operators and methods, widths 1 to 128, both signednesses; 4733 agreements,
+  0 disagreements, 0 rows inexpressible; regeneration byte-identical; five mutations of `bitvectors.ts`, all killed.
+  The one non-literal mapping: `x.ashr(n)` on an unsigned `x` is `$signed(x) >>> n` (IEEE 1800-2017 11.4.10).
+  Icarus as a second opinion is not run. SPEC §7.5.
+- **R-BV-9** (2026-10-21, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **Bit-vectors in code generation (slice S3).** Decided by the lanes P-2026-10-21-0640 (stopped at the AM-8 ceiling,
+  RC-51) and P-2026-10-21-0700, landed by `35c761ca3`. (1) The JS runtime prelude ports `bitvectors.ts` as text, line
+  by line with the messages verbatim (`$BitVector`, frozen, own keys `__type,width,signed,bits`, `toString`/`toJSON`
+  the Verilog form); it does not inline the module by `Function.prototype.toString`, because measured the minified
+  bundle and vitest rename the module's names and its consts have no runtime name. A parity test keeps the copy from
+  drifting (R-BV-6): every row of `bv-golden.json` (the table `bv-cases.json` of P-2026-10-21-0641 is not on this
+  branch) runs through a printed guard whose vectors sit in σ, so nothing folds, plus a grid of 13 operators and one of
+  every method against the evaluator, value or defect message. (2) `$eq`/`$ne` dispatch to `$bvOp` (a mismatch is a
+  defect); nested equality is `$same` (mismatched vectors unequal); `$cmp`, `$div`, `$mod`, `$and`, `$or` dispatch
+  too. (3) A folded vector prints as `$bv(8, false, 0xffn)` (`bitVectorLiteral`), reused by `valueLiteral`; `plain()`
+  prints a template hole in the Verilog form. (4) The S1 methods no string, date, number or collection has print as
+  `$bvm(recv, 'm', () => [args], nullSafe)`, the arguments evaluated after the receiver and never on null; a shared name
+  (`slice`, `trunc`, `toNumber`) is refused `P-STEP` over a step value, `toVerilog` stays refused `T-METHOD`. A
+  stored register is declared on the metamodel: a model may declare globals only (`stateAttributesCodec.ts:303`).
+  Five mutations, all killed (docs closure commit of P-2026-10-21-0700).
 
 ## Superate
 

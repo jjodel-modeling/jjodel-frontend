@@ -120,3 +120,27 @@ None from the RC-26 list.
 
 - Header and footer are full viewport width at every size; no horizontal scroll; 0 page errors. The 390 values match the previous round exactly (card y=96, intro y=555 / 1240). The gap is 140 rather than 96 because the intro stops at 640px: 1200 − 640 − 420 = 140, with 96 as the floor when the content box narrows.
 - Dev server still on 3010.
+
+## Register compact (P-2026-10-18-1720)
+
+Commit `1d17792d9` on `register-compact`: `frontend/src/pages/Auth.tsx`, `frontend/src/pages/auth.scss`. Typecheck exit 0, build exit 0 (chunk-size warning only).
+
+**What changed.** Register view at widths ≥ 1100px: grid `minmax(280px, 1fr) 720px` (96px gap, main padding 40px), intro with eyebrow, 40/46 title, 16/26 subtitle and the privacy note (13/20 #64748b), pillars and adoption hidden by CSS; card 32px 36px, gap 16px, «It takes a minute.», fields in a two-column grid (First | Last, Nickname | Affiliation, Country | Email, Password | Confirm), inputs 40px, label-to-field 6px, row gap 14px; bottom row with the terms/privacy notice (12/18 #64748b, new tab, `noopener noreferrer`) on the left and a 44px «Create account» on the right. Footer, all views: Terms → `https://jjodel.io/terms/`, new Privacy → `https://jjodel.io/app-privacy/`; the old `terms-conditions-page` URL is gone from both files (count 0). Names, patterns, required flags and tooltip texts are untouched; the password hint became the placeholder «At least 8 characters».
+
+**Newsletter.** Checkbox, state and the `NewsletterEnabled` assignment removed. `RegisterRequest.NewsletterEnabled` is optional, so it is left unset: the register payload no longer carries the key (before: always `false`). The backend default for an absent boolean was not verified.
+
+**Decisions taken (unattended, RC-21).**
+1. Grid column is `minmax(280px, 1fr)` instead of plain `1fr`: with plain `1fr` the intro would be 124px at 1100px and 280px only from 1256px up. At 1256px and wider the grid is exactly `1fr + 720px` as specified; between 1100 and 1255 the card shrinks.
+2. Below 1100px the register card stays as before: first and last name share a row, the rest stack, the section divider before the password stays, the bottom row stacks (notice above a full-width button). The privacy note shows at every width in the register view; the dropped newsletter divider is the only below-1100 change besides the new copy.
+3. `.auth-terms-text` restyled globally (12/18 #64748b); it is used only in the register card.
+
+**Probe** (headless Chromium, dev server on port 3011, page = `.auth-page` scroll container; viewport height in brackets):
+
+| Size | Register scrollHeight | Card | Intro column | Horizontal scroll |
+|---|---|---|---|---|
+| 1440×900 | 900 (900), fits | 720×541 | 384 wide | none |
+| 1280×800 | 800 (800), fits | 720×541 | 304 wide | none |
+| 1920×1080 | 1080 (1080), fits | 720×541 | 384 wide | none |
+| 390×844 | 2132 (844), scrolls as before (one column) | 350×1016 | 350 wide | none |
+
+Login and reset at the four sizes: no horizontal scroll, 0 page errors on all 12 page loads; login and reset at desktop sizes fit (900/800/1080), at 390 they scroll as in the previous round (1515, 1371). Dev server left running on 3011. Submits not exercised against the API.

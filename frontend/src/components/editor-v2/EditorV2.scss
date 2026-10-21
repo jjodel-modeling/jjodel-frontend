@@ -228,7 +228,7 @@
     padding: 0 12px 0 20px;
     height: var(--jj-toolbar-height);
     background: var(--surface-1, #f8fafc);
-    border-bottom: 1px solid #f8fafc;
+    border-bottom: 1px solid var(--shell-border);
     flex-shrink: 0;
     position: relative;
 }
@@ -244,10 +244,10 @@
     }
 
     &__label {
-        font-size: 9.5px;
+        font-size: var(--shell-font-size-min);
         text-transform: uppercase;
         letter-spacing: 0.6px;
-        color: var(--text-dim, #94a3b8);
+        color: var(--shell-text-3);
         font-weight: 500;
         margin-right: 2px;
         user-select: none;
@@ -419,7 +419,7 @@
     gap: 2px;
 
     .toolbar-btn {
-        color: var(--text-dim, #94a3b8);
+        color: var(--shell-text-3);
 
         svg {
             width: 16px;
@@ -436,7 +436,7 @@
 .toolbar-align-divider {
     width: 1px;
     height: 18px;
-    background: var(--border-default, #e2e8f0);
+    background: var(--shell-border);
     margin: 0 3px;
     flex-shrink: 0;
 }
@@ -468,7 +468,7 @@
     margin-left: 6px;
     border-radius: 999px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 1;
     white-space: nowrap;
     user-select: none;
@@ -487,7 +487,7 @@
     // `ValidationPill.scss`, che e' il precedente per un indicatore neutro, invece di
     // inventare un token qui (CLAUDE.md §7.2: le variabili si dichiarano in `tokens/`).
     &--never {
-        color: var(--text-dim, #94a3b8);
+        color: var(--shell-text-3);
         background: rgba(148, 163, 184, 0.14);
     }
 
@@ -634,8 +634,8 @@
         align-items: center;
         gap: 4px;
         padding: 3px 8px;
-        border: 1px solid #e2e8f0;
-        border-radius: 5px;
+        border: 1px solid var(--shell-border);
+        border-radius: var(--shell-radius-control);
         // A `<button>` does not inherit the page font the way a `<select>` was already
         // being told to; without this the label falls back to the browser's UI font and
         // the control stops matching the bar beside it.
@@ -850,8 +850,8 @@
     gap: 0;
     flex-shrink: 0;
     padding: 2px;
-    border: 1px solid var(--border-default, #e2e8f0);
-    border-radius: 8px;
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius-menu);
 
     &__btn {
         display: flex;
@@ -863,7 +863,7 @@
         border: none;
         background: transparent;
         color: var(--text-secondary, #64748b);
-        border-radius: 6px;
+        border-radius: var(--shell-radius-control);
         cursor: pointer;
         font-size: 13px;
         transition: background 0.15s, color 0.15s;
@@ -890,7 +890,7 @@
         padding: 0 2px;
         border: none;
         background: transparent;
-        border-radius: 6px;
+        border-radius: var(--shell-radius-control);
         font-size: 11px;
         font-weight: 500;
         font-variant-numeric: tabular-nums;
@@ -911,7 +911,7 @@
         width: 1px;
         height: 16px;
         margin: 0 3px;
-        background: var(--border-default, #e2e8f0);
+        background: var(--shell-border);
         flex-shrink: 0;
     }
 }
@@ -1021,9 +1021,9 @@
         justify-content: center;
         width: 22px;
         height: 22px;
-        border-radius: 5px;
+        border-radius: var(--shell-radius-control);
         font-size: var(--font-size-xs);
-        font-weight: var(--font-weight-bold);
+        font-weight: var(--font-weight-semibold);
         line-height: 1;
 
         &--metamodel {
@@ -1086,10 +1086,10 @@
     &__chevron.bi {
         flex: none;
         font-size: 12px;
-        color: var(--text-dim, #94a3b8);
+        color: var(--shell-text-3);
 
         &:hover {
-            color: var(--text-dim, #94a3b8);
+            color: var(--shell-text-3);
         }
     }
 }
@@ -1124,6 +1124,50 @@
             background: var(--surface-1, #ffffff); // match .toolbar-btn:hover
             color: var(--text-primary);
         }
+    }
+}
+
+// ── Shell chrome (S4, P-2026-10-19-1741) ──
+//
+// `.toolbar-btn`, `.toolbar-separator`, `.toolbar-dropdown-btn` and
+// `.toolbar-selection-count` are also rendered outside the editor (Catalog, Console,
+// Logger, BottomToolbar, ColorSchemeSelector), so their shell values live here, under
+// `.editor-v2-toolbar`, and the bare rules above stay as they are. The `--shell-*`
+// names resolve only under the shell roots (styles/tokens/_shell.scss).
+.editor-v2-toolbar {
+    .toolbar-btn {
+        border-radius: var(--shell-radius-control);
+    }
+
+    // A 0.5px rule painted by its width: now the same 1px hairline as every other
+    // neutral line of the bar.
+    .toolbar-separator {
+        width: 1px;
+        background: var(--shell-border);
+    }
+
+    // The hover border (`:hover:not(:disabled)`, more specific) still wins over this.
+    .toolbar-dropdown-btn {
+        border: 1px solid var(--shell-border);
+        border-radius: var(--shell-radius-control);
+    }
+
+    .toolbar-selection-count {
+        color: var(--shell-text-3);
+    }
+}
+
+// Advanced only: the icon buttons recede to the third text level and come back on
+// hover and keyboard focus. The <i> is painted by the global `i.bi` rule (see
+// `.toolbar-identity__chevron` above), so the colour goes on the glyph, not on the
+// button. Active toggles keep their glyph; disabled ones keep today's value.
+html[data-mode="advanced"] .editor-v2-toolbar {
+    :is(.toolbar-btn, .toolbar-commands__btn, .toolbar-dropdown-btn--icon):not(.active):not(:disabled) i.bi {
+        color: var(--shell-text-3);
+    }
+
+    :is(.toolbar-btn, .toolbar-commands__btn, .toolbar-dropdown-btn--icon):is(:hover, :focus-visible):not(:disabled) i.bi {
+        color: var(--shell-text-1);
     }
 }
 
@@ -1226,8 +1270,8 @@
 
 .editor-v2-palette {
     width: 200px;
-    background: var(--surface-1);
-    border-right: 1px solid var(--border-subtle);
+    background: var(--shell-surface-rail);
+    border-right: 1px solid var(--shell-border);
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -1262,7 +1306,7 @@
         align-items: center;
         gap: 8px;
         padding: 8px 12px;
-        border-radius: 6px;
+        border-radius: var(--shell-radius-control);
         cursor: grab;
         color: var(--text-secondary);
         font-size: 13px;
@@ -1296,8 +1340,8 @@
         }
 
         &__hint {
-            font-size: 9px;
-            color: var(--text-dim);
+            font-size: var(--shell-font-size-min);
+            color: var(--shell-text-3);
             margin-left: auto;
             font-style: italic;
         }
@@ -1313,7 +1357,7 @@
 
     .palette-divider {
         height: 1px;
-        background: var(--border-subtle);
+        background: var(--shell-border);
         margin: 12px 0;
     }
 
@@ -1329,6 +1373,7 @@
 
         strong {
             color: var(--text-secondary);
+            font-weight: var(--font-weight-semibold);
         }
     }
 }
@@ -1345,14 +1390,14 @@
     .palette-instances {
         padding-bottom: 12px;
         margin-bottom: 12px;
-        border-bottom: 0.5px solid var(--border-subtle);
+        border-bottom: 1px solid var(--shell-border);
 
         &__title {
-            font-size: 10px;
+            font-size: var(--shell-font-size-min);
             font-weight: 500;
             letter-spacing: 0.05em;
             text-transform: uppercase;
-            color: var(--text-muted);
+            color: var(--shell-text-2);
             margin-bottom: 8px;
             padding: 0 2px;
         }
@@ -1368,9 +1413,9 @@
             align-items: center;
             gap: 8px;
             padding: 6px 8px;
-            border-radius: 6px;
-            background: var(--surface-2);
-            border: 0.5px solid var(--border-subtle);
+            border-radius: var(--shell-radius-control);
+            background: var(--shell-surface-field);
+            border: 1px solid var(--shell-border);
             font-size: 12px;
             color: var(--text-secondary);
             cursor: grab;
@@ -1410,7 +1455,7 @@
         }
 
         &__subtitle {
-            font-size: 10px;
+            font-size: var(--shell-font-size-min);
             font-weight: 500;
             letter-spacing: 0.05em;
             text-transform: uppercase;
@@ -1455,14 +1500,14 @@
 
     .palette-card {
         background: var(--surface-2);
-        border-radius: 8px;
+        border-radius: var(--shell-radius-menu);
         padding: 10px 12px;
 
         &__title {
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 10px;
+            font-size: var(--shell-font-size-min);
             font-weight: 500;
             letter-spacing: 0.05em;
             text-transform: uppercase;
@@ -1505,9 +1550,9 @@
         }
 
         &__mult {
-            font-size: 10px;
+            font-size: var(--shell-font-size-min);
             font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-            color: #94a3b8;
+            color: var(--shell-text-3);
             font-variant-numeric: tabular-nums;
             flex-shrink: 0;
         }
@@ -1537,7 +1582,7 @@
                 left: 2px;
                 top: 50%;
                 transform: translateY(-50%);
-                color: #94a3b8;
+                color: var(--shell-text-3);
                 font-size: 12px;
                 line-height: 1;
             }
@@ -1548,7 +1593,7 @@
     .palette-hints {
         margin-top: auto;
         padding-top: 10px;
-        border-top: 0.5px solid var(--border-subtle);
+        border-top: 1px solid var(--shell-border);
         display: flex;
         flex-direction: column;
         gap: 6px;
@@ -1562,12 +1607,12 @@
         color: var(--text-secondary);
 
         &__key {
-            font-size: 10px;
+            font-size: var(--shell-font-size-min);
             font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
             background: var(--surface-2);
-            color: #94a3b8;
+            color: var(--shell-text-3);
             padding: 1px 5px;
-            border-radius: 3px;
+            border-radius: var(--shell-radius-control);
             flex-shrink: 0;
         }
 
@@ -3999,24 +4044,24 @@
     position: fixed;
     z-index: 1000;
     background: var(--float-bg, #ffffff);
-    border: 1px solid var(--float-border, #e2e8f0);
-    border-radius: 12px;
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius-menu);
     padding: 6px;
     min-width: 160px;
-    box-shadow: 0 4px 12px var(--float-shadow, rgba(0, 0, 0, 0.08));
+    box-shadow: var(--shell-menu-shadow);
 
     &__item {
         display: flex;
         align-items: center;
         gap: 10px;
         width: 100%;
-        height: 34px;
+        height: var(--shell-menu-item-height);
         padding: 0 10px;
         border: none;
         background: transparent;
-        color: var(--float-text, #0f172a);
+        color: var(--shell-text-1);
         font-size: 14px;
-        border-radius: 6px;
+        border-radius: var(--shell-radius-control);
         cursor: pointer;
         text-align: left;
         transition: background 0.15s;
@@ -4062,7 +4107,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        height: 34px;
+        height: var(--shell-menu-item-height);
         padding: 0 10px;
         user-select: none;
         cursor: default;
@@ -4075,7 +4120,7 @@
             content: '';
             flex: 1;
             height: 1px;
-            background: var(--float-divider, #e2e8f0);
+            background: var(--shell-border);
         }
 
         i.bi {
@@ -4089,13 +4134,13 @@
     &__header-label {
         font-family: var(--font-mono);
         font-size: 12px;
-        color: var(--float-text-muted, #64748b);
+        color: var(--shell-text-3);
         white-space: nowrap;
     }
 
     &__divider {
         height: 1px;
-        background: var(--float-divider, #e2e8f0);
+        background: var(--shell-border);
         margin: 6px 4px;
     }
 }

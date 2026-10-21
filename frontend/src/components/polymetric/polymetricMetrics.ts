@@ -12,6 +12,19 @@ import type { MetricKey, PolymetricNodeData } from './polymetricViews';
 // Metamodel metrics (M2)
 // ---------------------------------------------------------------------------
 
+/** Below this many metaclasses the polymetric rendering is not informative. */
+export const POLYMETRIC_MIN_METACLASSES = 10;
+
+/**
+ * Number of metaclasses extractMetamodelMetrics renders for a metamodel:
+ * the same lModel.classes read, so the open guard and the view agree.
+ */
+export function countPolymetricMetaclasses(modelId: string): number {
+    const lModel: any = LPointerTargetable.fromPointer(modelId);
+    if (!lModel || !lModel.classes) return 0;
+    return Array.isArray(lModel.classes) ? lModel.classes.length : 0;
+}
+
 /**
  * Extract metric data from a metamodel (M2).
  * Each class becomes a node with NAttr, NOp, NSub, NRef, NInst, Abstractness.

@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-18-1752
 Chat: C-2026-10-18-1750
 Front: harness
 Lane: fast (a closure step in `lane-run merge`, its template and its test; governance code, launched heavy)
-Status: da eseguire
+Status: eseguito 2026-10-18 · lane harness · e4eaba0f1
 Request: the lane status chat, 2026-10-18 17:40: the Kind badge of P-2026-10-18-1428 did not show on 4700 because the board had been running since 13:05; restarted by hand at 17:38
 Depends: —
 Corregge: —

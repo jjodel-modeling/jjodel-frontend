@@ -43,6 +43,7 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
   - `src/utils/__tests__/UDComparator.test.ts`
 
   Do not treat any other red as pre-existing without checking.
+- `scripts/hooks/__tests__/agentModels.test.ts` (AM-1, B8c, P-2026-10-18-2125), when you touch `.claude/settings.json`, `.claude/agents/` or a skill's frontmatter: the three IDs of the settings are present and well formed, every `model:` of an agent or skill frontmatter is one of them, and `Explore`, `explorer` and `general-purpose` name `env.JJODEL_LIGHT_MODEL`. It reads the `.claude/` of the tree it runs in.
 
 ## The `check:*` scripts
 
@@ -78,8 +79,9 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 
 ## What `lane-run` records and injects (AM-5, AM-7)
 
-- `~/.jjodel-lanes/<Prompt-ID>/runs.jsonl`, one JSON line per launch, appended at launch: `at`, `kind` (`start`, `resume`, `merge`, `chain`), `session` (null at a start), `tier`, `requestedModel` (the settings pin for heavy, the light model for light, null for a resume), `effort`, `reason`, `injectedBytes` (starts only), `logFrom` (the byte offset of the run in `log.jsonl`).
+- `~/.jjodel-lanes/<Prompt-ID>/runs.jsonl`, one JSON line per launch, appended at launch: `at`, `kind` (`start`, `resume`, `merge`, `chain`), `session` (null at a start), `tier`, `requestedModel` (the settings pin for heavy, the light model for light, null for a resume), `effort`, `reason`, `injectedBytes` (starts only), `logFrom` (the byte offset of the run in `log.jsonl`), `errFrom` (its byte offset in `stderr.log`).
 - `lane-run status <id>` (and `--all`, each lane once) completes the last line after the run exits, written back once: `effectiveModel` (the first `init` event of the run), `outcome` (`done`, `hard-stop`, `question`, `blocked`, `unparsed`, `none`) and `exit`. A lane without the file prints `runs: none`; `tier.txt` is unchanged.
+- `lane-run status` reads the `Outcome:` line of the latest run only, from the `logFrom` of the last `runs.jsonl` line (issue #181): an exited latest run without one prints `limit` when its last `result` event or its `stderr.log` tail (from `errFrom`) carries the usage-limit message, `died` on any other non-zero exit, else `none`.
 - The effort passed as `claude -p --effort <level>`: heavy `xhigh` for `--critical-zone-goahead`, a CLAUDE.md §3.2 file in DOVE or `visual bug` on the Lane line, else `high`; light `high`; `--effort` overrides it; a resume reuses the last line's.
 - `## Decisions in scope (injected by lane-run, AM-5)`, appended by `start` and `merge --launch` to `stdin.md` after the prompt and before the closing reminder: `npm run decisions -- <IDs> --no-related`, the related rows at depth one, the IDs `not found`. The IDs are the prompt's tokens the worktree's register has, and its series' `<SERIES>-<n>` tokens it lacks.
 - `## Log entries in scope (injected by lane-run, AM-5)`: the headers of `npm run log:find -- --prompt <Depends> --front <Front> --limit 10`, then the `Depends:` entries `--full`, dropped above 40,000 characters (`injected: trimmed to headers`). A CLI failure other than an ID not found refuses the start.
@@ -87,10 +89,16 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 ## Rule triggers (B4, P-2026-10-18-1420)
 
 - `docs/harness/rule-triggers.json`, schema 1: entries `{ glob, docs, why }`, a doc being `<repo path>[#<heading fragment>]`; one entry per nested `CLAUDE.md`, glob `<its directory>/**`. The root `CLAUDE.md` has none (it loads by itself).
-- `frontend/scripts/hooks/rule-trigger.mjs`, PreToolUse on `Edit|Write|NotebookEdit`: the first write of a session under an entry's glob is denied with the entry's docs named (read them, retry the same write), once per session and entry (marker `jjodel-rule-trigger-<session_id>.json` in `os.tmpdir()`); fails open. Not registered in `.claude/settings.json` until B7.
+- `frontend/scripts/hooks/rule-trigger.mjs`, PreToolUse on `Edit|Write|NotebookEdit`: the first write of a session under an entry's glob is denied with the entry's docs named (read them, retry the same write), once per session and entry (marker `jjodel-rule-trigger-<session_id>.json` in `os.tmpdir()`); fails open. Registered in `.claude/settings.json` by B7 (P-2026-10-18-1655), after `critical-zone.mjs` in the `Edit|Write|NotebookEdit` entry.
 - `npm run check:triggers`, when you touch the map or add a nested `CLAUDE.md`: fails on a missing doc or `#fragment`, a glob matching no tracked file, a nested `CLAUDE.md` no entry covers, a duplicate glob; exit 2 on a map that is not JSON or not schema 1.
 
-## Context ceiling (B8b, P-2026-10-18-1530)
+## Context ceiling (B8b, P-2026-10-18-1530; RC-51)
 
-- `frontend/scripts/hooks/context-ceiling.mjs`, PreToolUse on every tool (AM-8, report §7.3). Source: `JJODEL_LANE_LOG` when set and readable, else the hook input's `transcript_path`; the measure is input + cache_read + cache_creation of the latest main `assistant` event, read from a 512 KB tail. Thresholds soft 200000, hard 250000, the RC-49 (5) proposal, overridable by `JJODEL_CONTEXT_SOFT`/`JJODEL_CONTEXT_HARD`; B8c ratifies them.
-- Lane session (lane folder by `session.txt` under `~/.jjodel-lanes/`, or `JJODEL_LANES_DIR`): at soft, once per session (marker `jjodel-context-ceiling-<session_id>.json` in `os.tmpdir()`), deny naming `handoff.md`, `handoff.diff` and `Outcome: hard-stop`; at hard, deny all but the handoff writes and one unchained `git status`/`git diff`. Interactive session: once at soft, no hard stop. Fails open. Not registered in `.claude/settings.json` until B7 (matcher `*`).
+- `frontend/scripts/hooks/context-ceiling.mjs`, PreToolUse on every tool (AM-8, report §7.3). Source: `JJODEL_LANE_LOG` when set and readable, else the hook input's `transcript_path`; the measure is input + cache_read + cache_creation of the latest main `assistant` event, read from a 512 KB tail. Thresholds soft 200000, hard 250000, ratified by RC-51 (2026-10-18, B8c), overridable by `JJODEL_CONTEXT_SOFT`/`JJODEL_CONTEXT_HARD`; a change of the defaults needs a ratified row.
+- Lane session (lane folder by `session.txt` under `~/.jjodel-lanes/`, or `JJODEL_LANES_DIR`): at soft, once per session (marker `jjodel-context-ceiling-<session_id>.json` in `os.tmpdir()`), deny naming `handoff.md`, `handoff.diff` and `Outcome: hard-stop`; at hard, deny all but the handoff writes and one unchained `git status`/`git diff`. Interactive session: once at soft, no hard stop. Fails open. Registered by B7 (P-2026-10-18-1655, merge `b93c3fd46`) in `.claude/settings.json`, its own PreToolUse entry with matcher `*`.
+- Under `claude -p` the measure lags one call: at the first PreToolUse of a fresh session the transcript does not exist yet (fail open), and at call n the transcript holds the `assistant` events of calls 1..n-1 only. The first call of a session is never stopped, and calls issued in parallel in one message are all measured on the previous call (B7; ticket for B8a).
+
+## Settings env and agent models (AM-1, B7, P-2026-10-18-1655)
+
+- `.claude/settings.json` `env`: `JJODEL_LIGHT_MODEL` `claude-sonnet-5-5` (read by `lane-run` for the light tier, which otherwise falls back to the constant with `light model: constant (settings env not set, B7)`) and `JJODEL_REPORT_MODEL` `claude-haiku-5-5`. Never `JJODEL_CONTEXT_*`: those belong to a launch, not to the project.
+- `.claude/agents/`: `explorer.md`, `Explore.md` (overrides the built-in) and `general-purpose.md` (overrides the built-in, every tool kept) all name `model: claude-sonnet-5-5`, the full ID, equal to `JJODEL_LIGHT_MODEL`. The agent `model` field accepts the full ID, and a project agent with a built-in's name overrides it (measured in B7). `agentModels.test.ts` compares the agent and skill files with the settings keys (B8c).

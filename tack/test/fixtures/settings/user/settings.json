@@ -1,0 +1,6 @@
+{
+  "appearance": { "theme": "dark", "density": "compact", "fontScale": 1.1 },
+  "channels": { "ntfy": { "enabled": true, "server": "https://ntfy.sh", "topic": "tack-fixture-topic", "token": "tk_fixturefixturefixture" } },
+  "quietHours": { "enabled": true, "start": "22:30", "end": "07:00" },
+  "notifications": { "events": { "lane_done": { "enabled": true, "scope": { "kind": "all", "values": [] }, "channels": ["desktop"] } } }
+}

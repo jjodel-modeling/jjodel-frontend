@@ -363,3 +363,589 @@ Decisions awaiting Alfonso: the registration of `context-ceiling.mjs` in `.claud
 **Ticket**: `frontend/scripts/hooks/context-ceiling.mjs` is built and tested but not registered; B7, interactive, adds it to `.claude/settings.json` as a PreToolUse hook with matcher `*` (with `rule-trigger.mjs` on `Edit|Write|NotebookEdit`). Nothing changes for any session until then.
 **Priority**: medium
 **Found in**: P-2026-10-18-1530
+
+## 2026-10-18 — feat(harness): merges into trunk restart the lane board (P-2026-10-18-1752)
+**Prompt**: `claude_2026-10-18_1752_prompt_board_kickstart.md`: a direct merge whose commit changes `frontend/scripts/lane-board/` restarts the launchd agent `io.jjodel.lane-board` when its plist runs this tree, waits up to 30 s for 4700/api, records `board` in `result.json`; the session template says the same at step 7.
+**Files touched**: code `e4eaba0f1`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/merge-into-trunk.md`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts` (6 tests); this commit: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks 891/891 in 18 files (885 + 6); typecheck:scripts exit 0; check:scripts PASS; check:triggers PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: `board` is null when the diff misses the board or a gate is red; otherwise restarted (seconds), not-running-here (script), no-agent or failed (stderr line), never failing the merge. Pre-merge tip read as `<merge>^1`. Real agent untouched: every lab puts a fake launchctl in PATH and `LANE_RUN_LAUNCHCTL`. Bench of 5 mutants, each killed: commit message of `e4eaba0f1`.
+**Prompt document name**: 2026-10-18 17:52
+
+## 2026-10-18 — merge: board-kickstart into alfonso-frontend-jjtl (P-2026-10-18-1859)
+**Prompt**: `claude_2026-10-18_1859_prompt_merge_board-kickstart.md`, a direct merge by `lane-run merge --direct`, no session: `board-kickstart` at `0357e7360` into `alfonso-frontend-jjtl`, merge base `062a05434`, 2 commits on the branch side.
+**Files touched**: merge `0c7d850ba`: 5 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1752_prompt_board_kickstart.md`, `frontend/scripts/hooks/__tests__/laneRunDirect.test.ts`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/merge-into-trunk.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0c7d850ba` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9370 tests in 382 files, 9 red at import, hooks 891; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge (lane-run.mjs, merge template, laneRunDirect tests): no file under frontend/src, nothing renders differently, no visual check needed; gates green on 0c7d850ba (hooks 891)
+**Notes**: Rollback tag `pre-board-kickstart` on `56b54365e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-1859/result.json`.
+**Prompt document name**: 2026-10-18 18:59
+
+## 2026-10-18 — feat(harness): lane board Cost column and spend per day by turn (P-2026-10-18-1750)
+**Prompt**: `claude_2026-10-18_1750_prompt_lane_board_cost.md`, fast lane in `~/jjodel-w-lanecost` on `lane-cost`: a Cost column after Arch in both Lanes tables, `spendByDay` in /api (per-event deltas on the local day each turn ended), the day total in each Earlier-lanes summary and `today` in the meta line.
+**Files touched**: code `3a015d9ea`: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`; this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks suite 896/896 (10 new tests); typecheck:scripts, check:scripts exit 0; mutation bench on the new code 6/6 killed (no reset, turn start, notification on next turn, no clamp, size out of the key, UTC day).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Alfonso on :4711 (20:03), GO; today $64.43 over 535 lanes, P-2026-10-18-1735 $4.89 = its log's 4.8875
+**Notes**: Unattended (RC-21), accepted by the GO: Cost directly after Arch, three existing assertions and tokenCells adjusted; main.wide 1608 to 1672 px; cost events cached as `cost:<id>` in usage-cache.json, token key not bumped. Subagents ARE in total_cost_usd (modelUsage lists the Sonnet subagent model, per-model costs sum to the total): the tip says so.
+**Prompt document name**: 2026-10-18 17:50
+
+## 2026-10-18 — merge: lane-cost into alfonso-frontend-jjtl (P-2026-10-18-2010)
+**Prompt**: `claude_2026-10-18_2010_prompt_merge_lane-cost.md`, a direct merge by `lane-run merge --direct`, no session: `lane-cost` at `2a0a78ebf` into `alfonso-frontend-jjtl`, merge base `062a05434`, 2 commits on the branch side.
+**Files touched**: merge `93a62b806`: 5 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1750_prompt_lane_board_cost.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `93a62b806` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9381 tests in 382 files, 9 red at import, hooks 902; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: scripts-only merge (lane-board.mjs, its README and test); Alfonso checked the Cost column and the day totals on the 4711 board of the lane at 20:03 and approved; after the merge restartBoard restarted io.jjodel.lane-board in 8.1 s and 4700/api serves spendByDay (today 71.56)
+**Notes**: Rollback tag `pre-lane-cost` on `8f68dcbb5` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-18-2010/result.json`.
+**Prompt document name**: 2026-10-18 20:10
+
+## 2026-10-18 — chore(harness): B7, rule-trigger and context-ceiling registered, AM-1 env, agents on Sonnet (P-2026-10-18-1655)
+**Prompt**: `claude_2026-10-18_1655_prompt_b7_hook_registration.md`, interactive session `8592622e-ae61-42c7-9040-92ca921074f5`: register `rule-trigger.mjs` and `context-ceiling.mjs` in `.claude/settings.json`, add the AM-1 `env` keys, name `claude-sonnet-5-5` in the agent files, add `general-purpose.md` on Sonnet after the B1 «before», check the registration from the settings alone.
+**Files touched**: code `aa22070fd`: `.claude/settings.json`, `.claude/agents/explorer.md`, `.claude/agents/Explore.md`, `.claude/agents/general-purpose.md` (new); this commit: `docs/harness/gates.md`, this entry and two tickets, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. scripts/hooks 885/885 in 18 files (laneRunRouting included), the B8b baseline; typecheck:scripts exit 0; check:scripts PASS 102 files; check:triggers PASS (8 entries); settings JSON parses; registration check 3/3 as expected.
+**Out-of-scope changes**: no. Seven files, all named in DOVE: the four of `aa22070fd` and the three of this commit (RC-11).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: `lane-run` has no dry form of `start`: the «settings env not set» line prints only at a real launch, so the env read is proven by the routing suite and by `lightModelChoice()` reading `env.JJODEL_LIGHT_MODEL` (`lane-run.mjs:725`); none added. Proof scripts and markers of these sessions removed; `/tmp/jjodel-rule-trigger-probe-b4-manual-1.json` is B4's and stays.
+**Prompt document name**: 2026-10-18 16:55
+
+Proofs run by the chat (2026-10-18 17:00 to 17:03, `claude` 2.1.302, hooks loaded only through `claude -p --settings /tmp/b7proof/settings2.json`): soft without lane folder (`7bb59722-f1ef-4e8c-bc21-0f30c31e46b6`, soft 20000), call 1 allowed, call 2 denied «context-ceiling: this session's context is 42103 tokens, at or above the soft ceiling of 20000 (AM-8). Start no new work...», marker written; hard with a fake lane folder (`7b143af0-a4fd-402c-a557-5cf7708b77a3`, 20000/30000), `git log` allowed, lone `git status` allowed, Read denied «...46775 tokens, at or above the hard ceiling of 30000 (AM-8). Every tool is denied except Read, Write or Edit of .../handoff.md...»; rule-trigger (`0ff84010-0167-4696-9aa7-f269c1d87872`), Write of `frontend/src/styles/_b7_probe.scss` denied naming `frontend/src/styles/CLAUDE.md`, no file; negative (`cd7fab95-295a-4d21-9345-9de7370d6b50`), no denial; subagents `Explore` (project override) and `general-purpose` (via `--agents`, `"model": "claude-sonnet-5-5"`) both ran `message.model` `claude-sonnet-5-5`.
+
+Registration check (item 5, 2026-10-18 20:08 to 20:09, `run3.sh`: `claude -p` in `~/jjodel-w-b7`, no `--settings`, no probe hook, hooks from `.claude/settings.json` at the uncommitted state of `aa22070fd`): (A) lane hard run `1dcdee30-ec47-4e92-a4d4-bca338c9ec33`, `JJODEL_LANES_DIR` fake folder, 20000/30000, three sequential calls: `git log -1 --oneline` allowed, `git status --short` allowed (handoff exception), Read of `frontend/package.json` denied «context-ceiling: this session's context is 46496 tokens, at or above the hard ceiling of 30000 (AM-8). Every tool is denied except Read, Write or Edit of /tmp/b7proof/lanes/P-B7-PROOF3/handoff.md or /tmp/b7proof/lanes/P-B7-PROOF3/handoff.diff, and one `git status` or `git diff` with nothing chained...». (B) `126cf73e-571a-4990-8cb8-af970c610076`: Write of `frontend/src/styles/_b7_probe.scss` denied «rule-trigger: frontend/src/styles/_b7_probe.scss falls under rules kept outside the root CLAUDE.md (docs/harness/rule-triggers.json): - frontend/src/styles/**: frontend/src/styles/CLAUDE.md (design system and tokens) Read that doc now, then retry the same write. This fires once per session for each entry.»; no file created. (C) `ec1ad232-b8f9-41e2-89c5-37533dedea5e`, no thresholds: one `Agent` call with `general-purpose`, no denial; the sidechain's `Read` and `SubagentHandback` ran on `claude-sonnet-5-5`, the main session on `claude-opus-5-5`.
+
+The «before» of item 4 (`npm run lane:usage -- --all --json`, 537 lanes; the 18 with runs that ended after the B1 merge `dcd85da10`, 2026-10-18 01:55:37 +0200, P-2026-10-18-0945 to P-2026-10-18-1801): `lane-usage` reports `subagents` per model apart from `main`. Subagents: `claude-sonnet-5-5` only, 150 calls, input 300, cacheRead 9608687, cacheCreation 494991, output 5065, in two lanes (P-2026-10-18-1735: 124 calls; P-2026-10-18-1146: 26 calls); no subagent call on `claude-opus-5-5`. Main sessions over the same lanes: `claude-opus-5-5` 752 calls, cacheRead 108537911, cacheCreation 2380724, output 20575; `claude-sonnet-5-5` 161 calls, cacheRead 16676626, cacheCreation 732416, output 5949.
+
+Decisions taken (unattended): (1) The condition of RC-49 (3) on `general-purpose` («after the B1 measurement») read as: B1 is merged and `lane-usage.mjs` reports subagent tokens per model apart from the main session, so the switch is measurable before and after. Decision of the chat under RC-25, vetoable by Alfonso. (2) The docs commit carries `gates.md`, this inbox and the Status flip together, as the prompt's COME says, rather than the inbox alone as the log-entry skill says; all three are docs (P13 holds).
+
+Decisions awaiting Alfonso: B8c, the ratification of the thresholds 200000/250000 and of the text of AM-8 and AM-9; the AM-1 test that compares the agent files' `model` with the settings `env` keys.
+
+## 2026-10-18 — ticket: context-ceiling lags one call under claude -p; B8a measures JJODEL_LANE_LOG
+**Ticket**: Under `claude -p` `context-ceiling.mjs` measures with a lag of one call: at the first PreToolUse of a fresh session the transcript file does not exist yet (fail open), and at call n the transcript holds the `assistant` events of calls 1..n-1 only (chat proof, `hookin.log`: 0, 1, 2 lines at calls 1, 2, 3). This contradicts the B8b entry, measured on an interactive transcript. Effects: the first call of a session is never stopped; parallel calls in one message are all measured on the previous call; overshoot about one call (~2.5k tokens). B8a measures whether `JJODEL_LANE_LOG`, the stream-json log written live by the wrapper, is free of the lag. Hook code not changed in B7.
+**Priority**: medium
+**Found in**: P-2026-10-18-1655
+
+## 2026-10-18 — ticket: B8c writes the AM-1 test comparing agent models with the settings env
+**Ticket**: `.claude/agents/explorer.md`, `Explore.md` and `general-purpose.md` name `model: claude-sonnet-5-5`, equal by hand to `env.JJODEL_LIGHT_MODEL` of `.claude/settings.json`. No test compares them: B8c writes it, so a change of the light model in one place fails the gate until the other follows.
+**Priority**: low
+**Found in**: P-2026-10-18-1655
+
+## 2026-10-18 — merge: hook-registration into alfonso-frontend-jjtl (P-2026-10-18-2056)
+**Prompt**: `claude_2026-10-18_2056_prompt_merge_hook-registration.md`, a merge session started by `lane-run merge`: `hook-registration` at `a7d859787` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `18ac90fcd`, 2 commits on the branch side.
+**Files touched**: merge `b93c3fd46`: 7 files from the branch side (`.claude/agents/Explore.md`, `.claude/agents/explorer.md`, `.claude/agents/general-purpose.md`, `.claude/settings.json`, `docs/harness/gates.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_1655_prompt_b7_hook_registration.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b93c3fd46`: typecheck exit 0, no error; typecheck:scripts exit 0; vitest 9381 tests in 382 files, 0 failed, the 9 known files red at import (expected 9381 + 0, the branch adds no test); hooks 902 in 18 files (902 + 0); build exit 0; check:docs 5/5; check:agents, check:scripts (134 files), check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — waived by the chat's GO: no file under frontend/src (settings.json, three agent files, docs), nothing renders differently; 3001 was not listening at the hard stop
+**Notes**: Union: `docs/log-inbox/harness.md`, trunk block first, pure additions against both parents (+33/+52). Governance file `.claude/settings.json` under Alfonso's go-ahead (2026-10-18 20:56). Probes 18/18 once, R-LIB-7 none. No lane-board file changed, no restart. check:docs now runs 5 checks, the prompt expected 4.
+**Prompt document name**: 2026-10-18 20:56
+
+## 2026-10-18 — test(harness): B8c, RC-51 and RC-52 rows for AM-8 and AM-9, the AM-1 agent-model test (P-2026-10-18-2125)
+**Prompt**: `claude_2026-10-18_2125_prompt_b8c_context_rules.md`, lane session `23608b95-c01e-4451-918a-949d556b512e`: rows RC-51 (AM-8) and RC-52 (AM-9) after RC-50, P13 and P16 bullets, the AM-1 test `agentModels.test.ts` with negative cases and a mutation bench, the threshold sentence of the `context-ceiling.mjs` header, `gates.md`.
+**Files touched**: code `b571ea5cc`: `frontend/scripts/hooks/__tests__/agentModels.test.ts` (new), `frontend/scripts/hooks/context-ceiling.mjs` (header comment); this commit: `docs/decisions.md` (two rows), `docs/PROTOCOL.md` (P13, P16), `docs/harness/gates.md`, this entry and one ticket, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. agentModels 15/15; scripts/hooks 917 in 19 files (902 + 15, contextCeiling unchanged and green); typecheck:scripts exit 0; check:scripts PASS 103 files; check:triggers PASS (8 entries); `npm run decisions -- RC-51 RC-52` parses both rows, RC-52 `amends: RC-20`.
+**Out-of-scope changes**: no. Seven files, all in DOVE.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: Real check on this worktree's `.claude/`: 3 agents and 3 skills scanned; covered `Explore.md`, `explorer.md`, `general-purpose.md`, the skills name no model. Mutation bench: 21 mutants (set membership 4, read-only rule 5, parser 5, settings IDs 4, messages 2, skills scan 1), all killed, unmutated copy green; list in the body of `b571ea5cc`. RC-51 and RC-52 measured free on all 268 local and remote refs (RC-50 found on 12, positive control).
+**Prompt document name**: 2026-10-18 21:25
+
+Decisions taken (unattended): (1) RC-51, until B8a: the chat continues a ceiling-stopped lane as a new lane, with a new Prompt-ID whose prompt cites the stopped lane's `handoff.md` and declares `Depends:` on it, never by a plain `resume` (decided by the chat under RC-25, written `provisional, unattended` in the row). (2) RC-52's base text is marked as adopted by the chat under RC-25 (memo 2026-10-17 §2): Alfonso accepted AM-9 in principle in RC-49 (5), not its text; RC-51 carries his 15:26 ratification of the thresholds only. (3) The row headers write «item 5 of RC-49», not «RC-49 (5)»: `decisions-query` ends the header at the first `)` and refused both rows with the nested form (measured). (4) The `docs/PROTOCOL.md` version line is not bumped: line 4 says it tracks the set of clauses, not the wording, and P1..P16 are unchanged. (5) The read-only rule also fails an `Explore`, `explorer` or `general-purpose` file that is missing or has no `model:` line (it would run on the parent's model). (6) The checker lives in the test file, the only code file of DOVE; the bench mutates copies of it, so the tests use their own copy of the read-only names. (7) Commit 1's subject reads `..., AM-1 (P-2026-10-18-2125)`: the prompt's `(AM-1, P-…)` suffix is not the form CLAUDE.md §6.2 exempts and `bash-guard` counted 85 characters. (8) `gates.md`: the AM-1 line sits under «Verification gates before commit», and the stale «No test yet compares...» sentence of the AM-1 section now names the test.
+
+Decisions awaiting Alfonso: the option of RC-52 that makes Phase 2 after a Phase 1 hard stop, and a rework after a failed visual GO, new slices started fresh from the committed report or Phase 2 prompt: it amends RC-20, which he ratified (RC-26); until his yes RC-20 holds for those two cases. Ratified by Alfonso on 2026-10-18 at 21:45.
+
+## 2026-10-18 — ticket: decisions-query ends a row header at its first closing parenthesis
+**Ticket**: `npm run decisions` refuses a row whose header parenthesis contains a nested one, e.g. `(2026-10-18, text from RC-49 (5) and ...)`, with «the separator after the parenthesis is not `:`, `.` or ` —`» (measured on RC-51 and RC-52 before their headers were rewritten). The text after the header may nest freely. Either the parser balances parentheses or P9/`decisions.md:4` states the limit; until then a row header names an item as «item 5 of RC-49».
+**Priority**: low
+**Found in**: P-2026-10-18-2125
+
+## 2026-10-18 — merge: context-rules into alfonso-frontend-jjtl (P-2026-10-18-2207)
+**Prompt**: `claude_2026-10-18_2207_prompt_merge_context-rules.md`, a merge session started by `lane-run merge`: `context-rules` at `bac924a41` into `alfonso-frontend-jjtl`, `--no-ff` of the explicit sha, merge base `1904076ef`, 3 commits on the branch side.
+**Files touched**: merge `fe8cc637d`: 7 files from the branch side (`docs/PROTOCOL.md`, `docs/decisions.md`, `docs/harness/gates.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-18_2125_prompt_b8c_context_rules.md`, `frontend/scripts/hooks/__tests__/agentModels.test.ts`, `frontend/scripts/hooks/context-ceiling.mjs`); this commit: this entry, one ticket and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fe8cc637d`: typecheck exit 0, no error; typecheck:scripts exit 0; vitest 9396 tests in 383 files, 0 failed, the same 9 files red at import as on the trunk tip (expected 9381 + 15 from `agentModels.test.ts`); hooks 917 in 19 files (902 + 15); build exit 0; check:docs 5/5; check:agents, check:scripts (135 files), check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — waived by the chat's GO: no file under frontend/src (docs, PROTOCOL.md, two hook-script files), nothing renders differently; 3001 was not listening at the hard stop
+**Notes**: Zero conflicts; merge-tree `36f62362e` equal to the index, `docs/decisions.md` auto-merged, no union. Governance file `docs/PROTOCOL.md` under Alfonso's go-ahead (2026-10-18 22:07); step 2's «must be empty» was red on it by construction. Probes RC-51, RC-52, R-LIB-8 and the two inbox headings once each, R-LIB-9 none. No lane-board file changed, no restart. check:docs runs 5 checks, the prompt expected 4.
+**Prompt document name**: 2026-10-18 22:07
+
+## 2026-10-18 — ticket: the merge template names the wrong pre-merge tip for the check:addonly reset
+**Ticket**: Step 6 of `claude_2026-10-18_2207_prompt_merge_context-rules.md` (rendered from `frontend/scripts/lane-templates/merge-into-trunk.md`) prescribes `git reset --hard fc8dbb93a` on a `check:addonly` violation and calls it «the pre-merge tip», but the pre-merge tip was `7e9c8e36f`, the commit that adds the prompt itself (parent `fc8dbb93a`). Executed, the reset would drop the merge's own prompt commit. Not triggered here (check:addonly PASS). The template should name the tip measured at launch plus the prompt commit, or the first parent of the merge (`HEAD^1`).
+**Priority**: medium
+**Found in**: P-2026-10-18-2207
+
+## 2026-10-18 — discovery: lane monitor as a menu bar app, Phase 1 (P-2026-10-18-2255)
+**Prompt**: `claude_2026-10-18_2255_prompt_lane_monitor_menubar_app.md`, read-only Phase 1 of the Tauri 2 menu bar app over the board on 4700: Q1 what «pending» means, Q2 `/api/attention` and `/l/<id>`, Q3 the question's first line, Q4 the stack measured, Q5 the shortcut, Q6 the path, Q7 the Phase 2 slices.
+**Files touched**: `docs/discovery/discovery_2026-10-18_lane_monitor_menubar_app.md` (new), this inbox, the prompt's Status line; one docs commit. Probes under `/tmp/menubar/` only.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (docs only; no board, plist or agent touched, 4700 read by GET only)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Of today's 10 question / 175 hard-stop / 1 blocked, the rule (trunk Status flipped, later Depends/Corregge, later trunk commit, 72 h) keeps 1 waiting (P-2026-10-18-2220) and 12 stale. Tauri 2 workable: Rust 1.94.1, Xcode 26.6, tauri 2.10.3 cached; no tauri-cli, no signing identity (ad-hoc). Shortcut ⌃⌥⌘L: ⌥⌘L is Edge Downloads and IntelliJ Reformat (measured). Path `tools/lane-monitor-app/`. No decision awaits Alfonso.
+**Prompt document name**: 2026-10-18 22:55
+
+## 2026-10-18 — feat(lane-board): /api/attention and /l/<id> for the menu bar app (P-2026-10-18-2320)
+**Prompt**: `claude_2026-10-18_2320_prompt_lane_monitor_s1_board_attention.md`, slice S1 of the P-2026-10-18-2255 plan: `GET /api/attention` (waiting/stale rule, 72 h), `GET /l/<Prompt-ID>` hand-off page, `#lane=<id>` mark in the Lanes tab, `Corregge:` parsed in `header()`, tests and README.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/hooks/__tests__/laneBoardAttention.test.ts` (new); code commit `4e81cf36e`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (laneBoard* 161/161; scripts/hooks 911 passed, the 25 red laneRun* tests identical on HEAD: `.ts` extension under node v23.3.0)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 4/4 (4712 at 23:52)
+**Notes**: 4712 at 23:33: waiting 1 (P-2026-10-18-2220), staleCount 12, same as the report's probe re-run. Unattended: row found by the Kind badge's data-id (data-id on `<tr>` broke laneBoard.test.ts, outside DOVE); live blocked since = start + 90 min; chains not in running. Mutation bench 24/24. The −142 px scroll seen at the first check did not recur at 23:52 on the same code; fix not applied (RC-51 soft ceiling, handoff.md in the lane folder).
+**Prompt document name**: 2026-10-18 23:20
+
+## 2026-10-18 — ticket: the #lane= scroll runs once and may be undone by a later render
+**Ticket**: `markLane()` in lane-board.mjs clears `laneScroll` after its first `scrollIntoView`; the chat measured the marked row at top −142 px 3.5 s after landing once, then at 342 of 768 on a later check of the same code. Fix ready in the lane's handoff: keep the scroll on every render until the first wheel, touch, key or mouse press, with a vm test.
+**Priority**: low
+**Found in**: P-2026-10-18-2320
+**Detail**: ~/.jjodel-lanes/P-2026-10-18-2320/handoff.md
+
+## 2026-10-19 — feat(lane-monitor-app): Tauri 2 menu bar shell, tray count and popover (P-2026-10-19-0000)
+**Prompt**: `claude_2026-10-19_0000_prompt_lane_monitor_s2_app_shell.md`, slice S2 of the P-2026-10-18-2255 plan: install `tauri-cli` 2, tests first on the HTTP parse and the title formatter, the Tauri 2 shell in `tools/lane-monitor-app/` (tray title, popover, polling from Rust over `std::net`), `cargo tauri build --bundles app`, live run on 4712 with captures.
+**Files touched**: `.gitignore` (two lines of §Q6), `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, build.rs, tauri.conf.json, capabilities/default.json, src/main.rs, src/poll.rs, icons/*}`, `ui/popover.{html,css,js}`); code commit `c5eadb816`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (new tree outside `frontend/`; `cargo test` 18/18; board and 4700 untouched)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, captures checked at 00:27 (tray 1, fixture 6!, dash unreachable; popover design, more link, stale line, running rows, error box)
+**Notes**: tauri-cli 2.12.3; tauri 2.12.4. Bundle 4.4M, adhoc, no quarantine. Mutation bench 3/3. Found live: a 3 s timeout read a slow board (3.6 s measured) as unreachable, now 2 s connect, 15 s read, `no answer` as error; `[hidden]` lost to `.more{display:block}`, fixed. Unattended: right-click tray menu with Quit, row click opens `/#lane=<id>`, bundle id `io.jjodel.lane-monitor`. Commit subject shortened from the prompt's (74 > 72, bash-guard).
+**Prompt document name**: 2026-10-19 00:00
+
+## 2026-10-19 — feat(lane-monitor-app): notify when a lane starts waiting (P-2026-10-19-0033)
+**Prompt**: `claude_2026-10-19_0033_prompt_lane_monitor_s3_notifications.md`, slice S3 of the P-2026-10-18-2255 plan: tests first on a pure transition over two `/api/attention` snapshots, wire `tauri-plugin-notification` into the poll loop, live check on 4712 with a fake `lane-run`, rebuild and reopen for the permission state.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, src/main.rs, src/notify.rs}`); code commit `fc08fe4ea`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 27/27; S2 behaviour unchanged on 4712; board and 4700 untouched)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, 00:48 (permission alert for Lane Monitor, tray 2 with tooltip; one post per entering lane)
+**Notes**: Plugin 2.7.0 (desktop `tap` via `on_action`). Mutation bench 6/6. Live: seed silent, one post per entering id; macOS showed its permission alert and stored each post without a banner (pending); rebuilds, same or new CDHash, not asked again. Click-through and granted-permission persistence not measured. Unattended, accepted: `capabilities/default.json` unchanged (Rust-only use); app-side 72 h guard; `board: error` 200 as a failed poll. `log` is a zsh builtin: use `/usr/bin/log`.
+**Prompt document name**: 2026-10-19 00:33
+
+## 2026-10-19 — feat(lane-monitor-app): jjodel-lanes:// links and the global shortcut (P-2026-10-19-0054)
+**Prompt**: `claude_2026-10-19_0054_prompt_lane_monitor_s4_links_shortcut.md`, slice S4 of the P-2026-10-18-2255 plan: tests first on the deep-link parser and the shortcut config parse, `tauri-plugin-deep-link` and `tauri-plugin-global-shortcut`, bundle installed in `~/Applications`, `lsregister` and `open jjodel-lanes://…` checks against 4712, shortcut registration.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, tauri.conf.json, src/main.rs, src/links.rs}`, `ui/popover.{html,css,js}`); code commit `e76383e8d`; this inbox and the prompt's Status line. Outside the repo: `~/Applications/Lane Monitor.app`, and `~/Library/Application Support/io.jjodel.lane-monitor/config.json` (board 4712, kept until S5).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 34/34; S2 and S3 paths unchanged except the window opener, now off the main thread; board and 4700 untouched)
+**Out-of-scope changes**: yes (`ui/popover.{html,css,js}` for the footer note, outside DOVE; the config file outside the repo; nine files in the code commit)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, 01:10 and 01:21 (lsregister 14, cold and warm links, refusals, shortcut toggles the popover, footer error, /l/ fallback after 1.5 s; off-thread opener)
+**Notes**: Plugins: deep-link 2.6.2, global-shortcut 2.4.1. Mutation bench 6/6. Found live: building the window inside the link's Apple event hung the main thread; link, tray menu and notification tap now open it off-thread. A second process registers the same chord with no error (§Q4 wrong). Tray-menu window stays behind Edge with synthetic clicks, as before the fix: real-click and five-app press tests left to Alfonso. Unattended, accepted: footer note in ui/, config.json format.
+**Prompt document name**: 2026-10-19 00:54
+
+## 2026-10-19 — feat(lane-monitor-app): start at login and restart the board (P-2026-10-19-0129)
+**Prompt**: `claude_2026-10-19_0129_prompt_lane_monitor_s5_login_restart.md`, slice S5 (the last) of the P-2026-10-18-2255 plan: tests first on the restart command builder and the toggle mapping, «Start at login» through `tauri-plugin-autostart` (LaunchAgent), «Restart board» only on 4700, README «Install and first run», installed app pointed back to 4700.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/{Cargo.toml, Cargo.lock, src/main.rs, src/restart.rs}`, `ui/popover.{html,js}`); code commit `c3775d3b3`; this inbox and the prompt's Status line. Outside the repo: `~/Applications/Lane Monitor.app`, `~/Library/LaunchAgents/io.jjodel.lane-monitor.plist` (written and removed), `config.json` set to 4700.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 43/43; S2-S4 paths unchanged; board plist shasum identical before and after, no kickstart run)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, 01:43 (toggle writes and removes the app agent, plutil; board plist shasum unchanged; Restart disabled with reason off 4700; end state on 4700, toggle off)
+**Notes**: Plugin autostart 2.7.0 (auto-launch 0.6.0). Mutation bench 8/8. Live: BTM registered a legacy agent and posted «Background item added»; the plist names the installed binary. Found: pre-S1 4700 answers /api/attention with a 200 HTML page, so the popover shows bad JSON, not «too old» (ticket below; transient per chat). Unattended: reason under the footer via `.more`, toggle re-read on focus, aria-label on the checkbox.
+**Prompt document name**: 2026-10-19 01:29
+
+## 2026-10-19 — ticket: the app reads a pre-S1 board as bad JSON, not «too old»
+**Ticket**: a board whose tree predates S1 answers `/api/attention` (any path) with its HTML page and a 200, so `poll.rs` classifies it as `error` («Board error: bad JSON: expected value at line 1 column 1») instead of `too-old`, which it reserves for a 404. Measured on 4700 at 01:37. Fix: read a 200 with `content-type: text/html` as `too-old`. Transient: gone once the release tree carries S1 and the board is restarted.
+**Priority**: low
+**Found in**: P-2026-10-19-0129
+
+## 2026-10-18 — docs(harness): health signals catalogue and retrospective backtest, Phase 1 (P-2026-10-18-2220)
+**Prompt**: `claude_2026-10-18_2220_prompt_harness_health_retrospective.md`, lane session `ef8b1efd-8d14-4898-968b-02c352db940e`: freeze the harness incidents, inventory the data, compute S1 to S6 weekly and rolling 4 weeks, backtest with a tuning/evaluation split, report and catalogue; Phase 1 only.
+**Files touched**: `10ac68007`: `docs/discovery/discovery_2026-10-18_harness_health_retrospective.md` (§1 only, 22 incidents frozen); `e1bc1ace7`: `docs/discovery/harness/harness-health-retro.mjs` (new), `docs/discovery/harness/harness-health-retro/` (11 CSV, 98 KB); this commit: the full report, this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Read-only on product and governance; check:docs 5/5; the script gives identical bytes on two runs and from a clean checkout of `e1bc1ace7` (combined sha256 `cee3fd3d449f9ebe`), tree left clean.
+**Out-of-scope changes**: no. Only DOVE paths.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: No signal had a quiet week in 08-01..09-30, so no false-alarm rate is measurable; lane data starts 09-26, leaving lane signals untunable. Kept as invariant breaks: S2t (RC-20), S4a (P9), S4d (P13), S5 (RC-33); state at the cutoff red, set by S4d (6 stale prompts). S1a works only on tuning, not proposed. Addendum A1 to A4 (found by the signals, not scored). Session stopped at the RC-51 soft ceiling after this commit. Report §3, §4.
+**Prompt document name**: 2026-10-18 22:20
+
+Decisions taken (unattended): (1) windows: 21-day lead and pre-incident margin, 7-day post-notice margin, rolling 4 weeks; (2) thresholds from ratified rules where one exists (RC-20 90 min, RC-33, RC-51 200k, P9 20 then 40, P13), else the max over quiet tuning weeks, falling back to the 75th percentile of the tuning weeks; (3) S5b window = median same-chat cadence on a front, 0.65 h; (4) I01/I02 split from one seed, I20 noticed = date of this prompt, A1 to A4 kept out of the scoring.
+
+Decisions awaiting Alfonso: none from the RC-26 list; the governance rows of report §6.1 are proposals for the chat under RC-25.
+
+## 2026-10-19 — merge: health-disc into alfonso-frontend-jjtl (P-2026-10-19-0907)
+**Prompt**: `claude_2026-10-19_0907_prompt_merge_health-disc.md`, a direct merge by `lane-run merge --direct`, no session: `health-disc` at `df5a9eb0a` into `alfonso-frontend-jjtl`, merge base `e49ec777e`, 3 commits on the branch side.
+**Files touched**: merge `19e64f188`: 15 files from the branch side (`docs/discovery/discovery_2026-10-18_harness_health_retrospective.md`, `docs/discovery/harness/harness-health-retro.mjs`, `docs/discovery/harness/harness-health-retro/backtest.csv`, `docs/discovery/harness/harness-health-retro/catalogue.csv`, `docs/discovery/harness/harness-health-retro/daily.csv`, `docs/discovery/harness/harness-health-retro/incidents.csv`, `docs/discovery/harness/harness-health-retro/lanes.csv`, `docs/discovery/harness/harness-health-retro/lanes_by_week_kind_model.csv`, and 7 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `19e64f188` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9415 tests in 384 files, 9 red at import, hooks 936; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: visual check not needed: docs and discovery data only, nothing under frontend/src
+**Notes**: Rollback tag `pre-health-disc` on `0042621cd` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-0907/result.json`.
+**Prompt document name**: 2026-10-19 09:07
+
+## 2026-10-19 — merge: menubar-disc into alfonso-frontend-jjtl (P-2026-10-19-0150)
+**Prompt**: `claude_2026-10-19_0150_prompt_merge_menubar-disc.md`, a direct merge by `lane-run merge --direct`, no session: `menubar-disc` at `45a226b7e` into `alfonso-frontend-jjtl`, merge base `1c2f8efa4`, 16 commits on the branch side.
+**Files touched**: merge `590063d13`: 33 files from the branch side (`tools/lane-monitor-app/` (25), `frontend/scripts/lane-board/{lane-board.mjs, README.md}`, `frontend/scripts/hooks/__tests__/laneBoardAttention.test.ts`, `docs/discovery/discovery_2026-10-18_lane_monitor_menubar_app.md`, `.gitignore`, `docs/log-inbox/harness.md` and the S1 to S5 prompts); closure commit of P-2026-10-19-1020: this entry and the Status of the prompt file.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no. Gates on `590063d13` in the worker: typecheck 0 errors; typecheck:scripts exit 0; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 9415 tests, 9 red at import, hooks 936, 25 failed, the same 25 as on the receiving tip before the merge (`vitest-before.json` against `vitest-after.json`), 0 on the incoming branch.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (closed blocked on the vitest gate; no UI under frontend/src)
+**Notes**: Rollback tag `pre-menubar-disc` on `ad517212d` (RC-31). The 25 reds: `lane-run.mjs` imported `decisions-query.ts` in-process and the merge ran on node v23.3.0; fixed by P-2026-10-19-1020. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-0150/result.json`. Closed here, not by `go`, as P-2026-10-19-1020 asks.
+**Prompt document name**: 2026-10-19 01:50
+
+## 2026-10-19 — fix(lane-run): read the register in a child node with the flag (P-2026-10-19-1020)
+**Prompt**: `claude_2026-10-19_1020_prompt_lanerun_tests.md`, lane session `eeda8ca7-1ac6-4efa-a57b-e95e2179614f`: measure the 25 red lane-run tests, fix the cause where it lives, close the merge P-2026-10-19-0150.
+**Files touched**: `1af036abe`: `frontend/scripts/lane-run.mjs` (`citedDecisions`), `frontend/scripts/hooks/__tests__/laneRunRouting.test.ts` (one wrapper argv); this commit: this entry, the merge's entry, the Status of both prompt files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. The three files 172/172 with plain node v23.3.0 and with `NODE_OPTIONS=--experimental-strip-types` (before: 25 red both ways, measured on a temporary worktree at `6b3c265d4`); scripts/hooks 936/936; typecheck:scripts exit 0; check:scripts PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; P8 derogated)
+**Notes**: Cause in lane-run, not the tests: `citedDecisions` imported a `.ts` in-process, so it needed its own node to strip types; the tests spawn it with a replaced env, so NODE_OPTIONS never reaches it. Now a child node with the flag, like `gateCli`. Second cause, in the test: its wrapper lacked `--disable-warning`, and the warning read as a broken CLI. What differed in P-2026-10-19-0907: node v26.8.1 (`~/.local/bin`); pre-fix routing file 13/13 there.
+**Prompt document name**: 2026-10-19 10:20
+
+## 2026-10-19 — merge: lanerun-tests into alfonso-frontend-jjtl (P-2026-10-19-1045)
+**Prompt**: `claude_2026-10-19_1045_prompt_merge_lanerun-tests.md`, a direct merge by `lane-run merge --direct`, no session: `lanerun-tests` at `824e66b27` into `alfonso-frontend-jjtl`, merge base `6b3c265d4`, 2 commits on the branch side.
+**Files touched**: merge `6b544c8f4`: 5 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-19_0150_prompt_merge_menubar-disc.md`, `docs/prompts/claude_2026-10-19_1020_prompt_lanerun_tests.md`, `frontend/scripts/hooks/__tests__/laneRunRouting.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6b544c8f4` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9415 tests in 384 files, 9 red at import, hooks 936; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat: direct merge gates all green on node v26 (vitest 9415 tests, the 9 known import reds only)
+**Notes**: Rollback tag `pre-lanerun-tests` on `643f60350` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-1045/result.json`.
+**Prompt document name**: 2026-10-19 10:45
+
+## 2026-10-19 — feat(lane-monitor-app): rounded popover, settings view, light and dark theme (P-2026-10-19-1125)
+**Prompt**: `claude_2026-10-19_1125_prompt_lane_monitor_settings_theme.md`: rounded 12 px popover on a transparent window, a gear opening a Settings view (theme, board URL, shortcut, Start at login, notifications) saved atomically to `config.json` and applied without a restart, a light palette at 4.5:1, tests first on the config and the board URL rule.
+**Files touched**: `tools/lane-monitor-app/` (README, `src-tauri/src/{config.rs (new), links.rs, main.rs}`, `ui/popover.{html,css,js}`); code commit `dcb1b3dcb`; this inbox and the prompt's Status line. `tauri.conf.json`, `Cargo.toml`, `Cargo.lock`, `capabilities/default.json` unchanged.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`cargo test` 53/53, the 43 of S2-S5 among them; release build exit 0, no warning)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: captures 11-14 and round 1 checked, Quit and Cmd+Q accepted
+**Notes**: Transparency needs no `macos-private-api` since Tauri 2.12.1 (crate docs: no-op). Mutation bench 7/7. Live on 4712, scratch HOME: dark and light popover, Settings by click, theme and notifications saved atomically, Save, Back. Settings and error states rendered from `ui/` in headless Edge with a stubbed bridge: synthesized keys while Alfonso used the Mac were unsafe. Unattended: light text tokens darker where the given hues read below 4.5:1; reopen on lanes view. System follow-live not measured.
+**Prompt document name**: 2026-10-19 11:25
+
+## 2026-10-19 — feat(lane-monitor-app): Quit in the popover, Cmd+Q, settings spacing and path line (P-2026-10-19-1148)
+**Prompt**: `claude_2026-10-19_1148_prompt_lane_monitor_settings_cont.md`: continuation of P-2026-10-19-1125 after its RC-51 ceiling: read the round-2 build, capture the footer with Quit and the Settings view in dark and light on 4712 with the scratch HOME, test Quit by button and Cmd+Q on the test pid only, README, entries.
+**Files touched**: `tools/lane-monitor-app/README.md`; this inbox; the Status lines of P-2026-10-19-1125 and P-2026-10-19-1148. Code commit shared with P-2026-10-19-1125: `dcb1b3dcb`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (round-2 release build exit 0, no warning; `cargo test` 53/53; no source newer than the build)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: captures 11-14 checked, Quit and Cmd+Q accepted
+**Notes**: Captures 11-14 in `/tmp/menubar/settings/`. Quit button and Cmd+Q (CGEventPostToPid to the test pid) both exit with `quit from the popover`; 46611 untouched. At 11:47 the pinned test popover was clicked by hand (theme, Start at login, Open monitor): the scratch LaunchAgent sits in `/tmp`, Alfonso's is untouched. Scratch notifications turned off so the test instance posts no duplicates.
+**Prompt document name**: 2026-10-19 11:48
+
+## 2026-10-19 — merge: menubar-settings into alfonso-frontend-jjtl (P-2026-10-19-1213)
+
+**Prompt**: `claude_2026-10-19_1213_prompt_merge_menubar-settings.md`: direct merge of the lane monitor settings branch (P-2026-10-19-1125, P-2026-10-19-1148) with gates.
+**Files touched**: merge commit `ac0e174b9` (rollback tag `pre-menubar-settings` on `0c38a26d4`); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed (closed by the chat over a red vitest gate)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest is red identically before and after the merge: 1 failed test in `laneTracking.test.ts` (the `tack` front in the committed registry, ticketed) and 9 files red at import with `window is not defined`, all pre-existing on the receiving tip. typecheck, typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: popover captures 11-14 checked earlier; reinstalled app running from `~/Applications` (pid 83012)
+**Notes**: `lane-run go` refuses a closure over a blocked merge, so the chat wrote this closure by hand, as for P-2026-10-19-0150. The 9 import-time reds (`window is not defined`) deserve their own ticket.
+**Prompt document name**: 2026-10-19 12:13
+
+## 2026-10-19 — feat(lane-board): sidebar shell and Lanes tab in the agreed design (P-2026-10-19-1130)
+**Prompt**: `claude_2026-10-19_1130_prompt_*.md`, lane board restyle slice 1 of 2. The board page's shell and its Lanes tab follow `Main.dc.html`, light and dark, with no change to data, routes or `/api*` JSON.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/lane-board/README.md` (code `c40dee260`); this entry and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneBoard tests 161/161 with no test edited; scripts/hooks 935/936, the red one `laneTracking.test.ts:131` (the `tack` front's milestone, from committed data, already red on the tip; ticket below); typecheck:scripts 0; check:scripts PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: built-in browser on 4714, 1440 dark and 800 light, the 24 h table 1158/1160 px with no horizontal scroll, the theme kept as Light
+**Notes**: Board on 4714, not 4712, because the menu bar lane held 4712 (provisional, unattended). Decisions 1-6 were accepted by the chat at 11:45; then the fix of the 24 h table (`compact()`, ten columns). The prompt's commit subject was 82 characters, so it was shortened to fit the 72 of §6.2. Details: `~/.jjodel-lanes/P-2026-10-19-1130/handoff.md`. Slice 2 still owes the `matchMedia` theme checks in `timeline.js` and `insights.js`.
+**Prompt document name**: 2026-10-19 11:30
+
+## 2026-10-19 — ticket: laneTracking test red on the tack front's milestone
+**Ticket**: `scripts/hooks/__tests__/laneTracking.test.ts:131` fails with «tack: expected false to be true»: the front `tack`, added to the fronts registry by `e201c3985`, has no integer `milestone`. It is red on the tip, independent of the board.
+**Priority**: medium
+**Found in**: P-2026-10-19-1130
+
+## 2026-10-19 — feat(lane-board): Timeline, Insights, Requirements in the design (P-2026-10-19-1215)
+**Prompt**: `claude_2026-10-19_1215_prompt_*.md`, continuation of P-2026-10-19-1157 (slice 2 of the board restyle, stopped at the RC-51 ceiling with its edits uncommitted): run the checks, verify `color-mix()` in SVG attributes, README note, board on 4714 for the visual check, then the commits.
+**Files touched**: `frontend/scripts/lane-board/{timeline.js,insights.js,requirements.js,lane-board.mjs,README.md}` (code `696025936`); this entry and the Status lines of the 1157 and 1215 prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneBoard tests 161/161 with no test edited; scripts/hooks 935/936, the red one the ticketed `laneTracking.test.ts:131`; typecheck:scripts 0; check:scripts PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat: built-in browser on 4714, four tabs at 1440 dark, switched to Light without reload, 800 light 800/800 px; headless pass on both themes and widths, no console errors
+**Notes**: Covers 1157 too, which wrote no entry. color-mix() in SVG fill paints the computed colour (sampled pixels), fallback not needed. Two 800 px fixes: Insights tokens table +2 px (numeric headers wrap); Requirements 937 px, from the fixed 720 px balance track, not the table min-width as first reported: `.sb-mg` and a `.rq-mx-wrap` round the matrix scroll horizontally. Provisional, unattended (RC-25): the header wrap.
+**Prompt document name**: 2026-10-19 12:15
+
+## 2026-10-19 — merge: board-restyle into alfonso-frontend-jjtl (P-2026-10-19-1331)
+
+**Prompt**: `claude_2026-10-19_1331_prompt_merge_board-restyle.md`: direct merge of the lane board restyle (slice 1 P-2026-10-19-1130, slice 2 P-2026-10-19-1157 and P-2026-10-19-1215) with gates.
+**Files touched**: merge commit `d26e7f07e` (rollback tag `pre-board-restyle` on `5f2746e70`); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed (closed by the chat over a red vitest gate)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest is red identically before and after the merge: 1 failed test in `laneTracking.test.ts` (the `tack` front in the committed registry, ticketed) and the same 9 files red at import with `window is not defined`, pre-existing on the receiving tip. typecheck, typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, built-in browser on 4714: four tabs, both themes, 1440 and 800 px, before the merge; the 4700 board is restarted after this closure
+**Notes**: `lane-run go` refuses a closure over a blocked merge, so the chat wrote this closure by hand, as for P-2026-10-19-1213.
+**Prompt document name**: 2026-10-19 13:31
+
+## 2026-10-19 — chore(harness): S4d sweep, six stale prompts classified, one flipped (P-2026-10-19-1022)
+**Prompt**: `claude_2026-10-19_1022_prompt_s4d_stale_prompts_sweep.md`, fast lane, docs only: classify the six prompts of retrospective A4 from primary sources (git over all refs, lane folders, inbox entries, `Depends:`/`Corregge:`), flip `Status:` only for done and done elsewhere.
+**Files touched**: `docs/prompts/claude_2026-10-15_1710_prompt_da1_graphvertex_add_discovery.md` (Status flip), this entry, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (docs only; `check:docs` run after the commit)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: S4d counts parked lanes as closed: 1 of 6 is done, 4 are parked and 1 failed. Four of the six have their code or report only on a branch that is not an ancestor of `alfonso-frontend-jjtl`, in a live worktree. Tables below.
+**Prompt document name**: 2026-10-19 10:22
+
+Classification (trunk = `alfonso-frontend-jjtl`; ancestry by `git merge-base --is-ancestor`, patch-equivalence by `git cherry`, both negative for the four branches):
+
+| Prompt-ID | Front | Class | Evidence | Needs |
+|---|---|---|---|---|
+| P-2026-10-15-1710 | release-3-2 | done (flipped) | report `71c07b6fd` and entry `e45998ecd` on the trunk; inbox `Outcome: completed`, `Smoke visivo: non applicabile` (read-only Phase 1); its fix is named in `P-2026-10-16-1000` (`Depends:`) | nothing |
+| P-2026-10-10-0830 | none declared (the Phase 1 file has no `Front:` line; chat `C-2026-10-10-0057`) | parked | Phase 1 report `6b13fbd8c`, S0 probe `0cea4fd7a`, D1 and D2 ratified `676c05ce2`, all only on branch `nested-vertices` (4 commits ahead, worktree `~/jjodel-w-nestedvtx`); S1..S4 never run, no later prompt carries them | a GO for S1, or a merge prompt for the reports; the owning chat decides |
+| P-2026-10-11-1830 | harness (chat `C-2026-10-11-1735`) | parked | Phase 1 report `7d6d3d39a` only on branch `mods-guard`; RC-46 is active but `CLAUDE_CODE_PLUGIN_DIRS` appears nowhere in `frontend/scripts` on the trunk, so the guard is not built | the Phase 2 prompt (or a merge of the report) from the harness chat |
+| P-2026-10-11-2235 | harness (chat `C-2026-10-10-1145`) | parked | S1 code `615a2cb08` only on branch `insights-s1` (1 commit ahead, `~/jjodel-w-insights1`); the lane stopped with a test board on 4703 waiting for the visual check, none recorded; `56af77b88` only names the prompt-add commit in a message | the visual GO, then a merge prompt |
+| P-2026-10-12-0120 | maintenance (chat `C-2026-10-12-0120`) | parked | fix `796839cc8` and discovery `e1605d9b0` only on branch `jjel-multivalued` (2 ahead, `~/jjodel-w-jjelmulti`); no merge prompt exists | a merge prompt (and a visual or console check, if the owning chat wants one) |
+| P-2026-10-14-1955 | maintenance | failed | lane exit 1, no `Outcome:` line; stderr: a scratch vite on 3086 was still running at the end and was killed; branch `uml-fixture` sits at the prompt commit, worktree clean, no fixture file anywhere on the trunk | a rework prompt, or an explicit abandonment |
+
+P-2026-10-10-0830 and the missing `Status:`: two files carry that ID. `claude_2026-10-10_0830_fase2_nested_vertices_s0.md` is a Phase 2 GO message, not a prompt: it opens with `[P-2026-10-10-0830] Phase 2 GO...`, has no `Status:` line by design, and its only match for «Status» is the bullet «Do not touch the `Status` line», which a `^Status` anchor cannot hit. The Phase 1 file `..._prompt_nested_object_vertices_discovery.md` has `Status: da eseguire` and no `Front:` line (the `?` in the chat's table). No Status was added to either: the work is parked.
+
+S4d finding. The rule in `docs/discovery/harness/harness-health-retro.mjs:335-345` counts a lane as closed when its `exit.txt` is older than a day (merge lanes excluded), whatever the `Outcome:` it ended on. On 10-18 it read 6; the sources give 1 done, 4 parked (a Phase 1 or slice hard stop, unmerged branch), 1 failed. 5 of 6 are false positives for «forgot to flip», and 4 of those 5 are the signal that matters more: finished work that is not on the trunk. Proposed rule, one sentence: stale = `exit.txt` older than 24 h with last `Outcome: done` and no Status flip; a separate yellow «parked» count for hard-stop, question, blocked or exit without an Outcome, older than 3 days, and a «branch not merged» count for lane branches whose tip is not an ancestor of the trunk. Proposal only; the script and the report are untouched.
+
+Decisions taken (unattended): P-2026-10-15-1710 counts as done though it is a discovery: its deliverable is the report, which is on the trunk, and the fix belongs to the later prompt that cites it. The four branch-only prompts are parked, not done, even where the lane's own message says «fixed» or «committed»: nothing reached the trunk. Both under RC-21 and RC-25, provisional, unattended.
+
+Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-33): the harness ones are P-2026-10-11-1830 (GO for Phase 2) and P-2026-10-11-2235 (visual GO, then merge); the others are listed in the table.
+
+## 2026-10-19 — merge: s4d-sweep into alfonso-frontend-jjtl (P-2026-10-19-1716)
+
+**Prompt**: `claude_2026-10-19_1716_prompt_merge_s4d-sweep.md`: merge of `s4d-sweep` at `0b2fe67f2` (P-2026-10-19-1022, stale prompts sweep), in a session after `lane-run merge --direct` fell back on the `R-LIB-11` probe.
+**Files touched**: merge commit `124e479c6` (union of `docs/log-inbox/harness.md`, the trunk's block first, byte-checked); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed (closed by the chat over a red vitest gate)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest 9414/9415 and hook tests 935/936, identical to the receiving tip: 1 failed in `laneTracking.test.ts` (ticketed), the same 9 files red at import. `irSelectionRing.test.ts` timed out in `afterAll` in the loaded full run only, 5/5 alone. typecheck, typecheck:scripts, build, check:docs 5/5, check:agents, check:scripts, check:addonly green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — docs-only merge, no UI change (chat GO 2026-10-19; 3001 was not listening)
+**Notes**: Probes 30/31: `- **R-LIB-11**` counts 2 on the merge and on the tip `b90416442`, two distinct trunk rows (provisional `ec898ef06`, active `db1f606cb`) share the id; the branch does not touch `docs/decisions.md`. The id collision is left to the owning chat. Lane board not restarted: no file under `frontend/scripts/lane-board/` changed.
+**Prompt document name**: 2026-10-19 17:16
+
+## 2026-10-19 — fix(harness): lane-run start refuses a lane with no link to its chat, Tack Request URLs (P-2026-10-19-2105)
+**Prompt**: `claude_2026-10-19_2105_prompt_request_url_gate.md`, fast lane in `jjodel-w-requrl` on `requrl`, chat `C-2026-10-19-1747`: a refusal in `lane-run start` for a lane the board cannot link to its chat, its tests, a `Request:` backfill of the Tack prompts, one P13 sentence, a board check on 4701.
+**Files touched**: `f05b10358`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`. This commit: 12 prompts of `C-2026-10-19-0001` and `C-2026-10-19-1748` (the `Request:` line only), `docs/PROTOCOL.md` (P13), this inbox, the prompt's Status line.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — laneRun, laneRunDirect, laneRunRouting 180 green; autoIntake, laneTracking 147 green; typecheck exit 0; check:scripts exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — P8 derogated by the prompt.
+**Notes**: COSA 5 fails: the board reads a lane's header from `~/.jjodel-lanes/<id>/input-1.md` (`lane-board.mjs:77`), not from `docs/prompts/`, so the backfill cannot reach the 12 Tack rows. Board on 4701, before and after: 602 rows, 266 without `chatUrl`, the 12 Tack rows among them. P-2026-10-19-2100 (chat 0001, added after the count of 12) already has a `Claude-Session:` trailer and was left as is (ratified as recommended, unattended). The commit subject was shortened to stay within 72 characters.
+**Prompt document name**: 2026-10-19 21:05
+
+## 2026-10-19 — ticket: the lane board reads Request: from the lane's input copy, never the prompt in the repo
+**Ticket**: `header()` in `lane-board.mjs` (line 77) takes the header from `input-1.md` in the lane folder, falling back to `prompt.txt` and then to the trunk copy. A `Request:` line fixed in `docs/prompts/` after launch never reaches the board's `chatUrl`, so the 12 Tack lanes of `C-2026-10-19-0001` and `C-2026-10-19-1748` stay unlinked even after the backfill. Fix in a lane of its own: when the input copy's `Request:` is not a URL, read the trunk prompt's `Request:` before the commit trailer.
+**Priority**: medium
+**Found in**: P-2026-10-19-2105
+
+## 2026-10-19 — merge: requrl into alfonso-frontend-jjtl (P-2026-10-19-2227)
+**Prompt**: `claude_2026-10-19_2227_prompt_merge_requrl.md`: merge of `requrl` at `aa41865ae` (P-2026-10-19-2105, Request URL gate and Tack backfill), `--no-ff`, in a session; governance file `docs/PROTOCOL.md` on the branch, launch allowed by `--governance-goahead`.
+**Files touched**: merge commit `f6200c7a3` (17 files of the branch, no conflict, no union); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. vitest 9423 passed = 9415 on the tip + 8 new on the branch, the same 9 files red at import; hook tests 944 = 936 + 8. `irCollapsedRender.test.ts` timed out in `afterAll` (Chromium close) in the first loaded run only, 13/13 alone, absent in the rerun. typecheck, typecheck:scripts, build, check:docs 5/5, check:agents, check:scripts, check:addonly green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat GO 2026-10-19 on 3001 (unattended; Alfonso in the morning digest)
+**Notes**: Merge-tree tree `e1f88ca47` equals the committed tree. Files changed since the base: 17 branch, 11 trunk, none on both sides. Probes 4/4 at 1. Lane board not restarted: no file under `frontend/scripts/lane-board/` changed. The merge body's measurement time reads `22:3x`, an imprecise timestamp; left as is.
+**Prompt document name**: 2026-10-19 22:27
+
+## 2026-10-19 — fix(harness): lane board takes the chat URL from the trunk prompt (P-2026-10-19-2229)
+
+**Prompt**: `claude_2026-10-19_2229_prompt_board_request_fallback.md`: a third chat-link source in `ownChatUrl`, the `Request:` line of the trunk's copy of the prompt named in `prompt.txt`, so the 12 Tack rows backfilled by P-2026-10-19-2105 reach the board.
+**Files touched**: `frontend/scripts/lane-board/lane-board.mjs`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md` (`df1803517`); this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 21:05
+**Causa**: (c)
+**Regressions**: no. `laneBoard.test.ts` 95/95; dropping the source or its Prompt-ID guard turns the new test red. check:scripts green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — deroga P8: no visual change; board started on 4701 from the worktree after the merge `f6200c7a3`, then stopped
+**Notes**: 4700 vs 4701, 606 rows: without chatUrl 268 vs 254; Tack rows (C-2026-10-19-0001, C-2026-10-19-1748) 14 vs 0 without a URL, the 12 backfilled from `prompt`, P-2026-10-19-2140 and 2225 by `chat-id`. Trunk prompts read in one `git cat-file --batch` per 5 minutes, only for new blobs. README had no list of link sources: one paragraph added under "Who launched a lane" (ratified as recommended, unattended). Launchd board on 4700 not restarted.
+**Prompt document name**: 2026-10-19 22:29
+
+## 2026-10-19 — merge: boardurl into alfonso-frontend-jjtl (P-2026-10-19-2300)
+**Prompt**: `claude_2026-10-19_2300_prompt_merge_boardurl.md`, a direct merge by `lane-run merge --direct`, no session: `boardurl` at `4e1720b9b` into `alfonso-frontend-jjtl`, merge base `f6200c7a3`, 3 commits on the branch side.
+**Files touched**: merge `b33ab2ba5`: 5 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-19_2229_prompt_board_request_fallback.md`, `frontend/scripts/hooks/__tests__/laneBoard.test.ts`, `frontend/scripts/lane-board/README.md`, `frontend/scripts/lane-board/lane-board.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b33ab2ba5` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9424 tests in 384 files, 9 red at import, hooks 945; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: merge b33ab2ba5 verified by the chat; lane-board.mjs changed, board restart checked
+**Notes**: Rollback tag `pre-boardurl` on `3525b9a56` (RC-31). Union: `docs/log-inbox/harness.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2300/result.json`.
+**Prompt document name**: 2026-10-19 23:00
+
+## 2026-10-19 — feat(harness): merge prompts name the chat that launches them (P-2026-10-19-2315)
+**Prompt**: `claude_2026-10-19_2315_prompt_merge_request_url.md`, fast lane in `jjodel-w-mergeurl` on `mergeurl`, chat `C-2026-10-19-1747`: `lane-run merge` writes `Chat: <id>` and a `Request:` line starting with the chat's URL in the prompt it renders, both directions.
+**Files touched**: `7174054d8`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-templates/merge-into-trunk.md`, `frontend/scripts/lane-templates/trunk-into-branch.md` (one `Request: {{request}}` line each). This commit: this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneRun 136/136 (7 new), laneRunDirect and laneRunRouting 51/51; check:scripts and typecheck:scripts exit 0.
+**Out-of-scope changes**: no. The lane templates are in DOVE on the condition that the header is rendered from them; it is.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — deroga P8: no UI change
+**Notes**: Sources in order: `--chat-url` (new, `^https://`), newest prompt in the receiving tree's `docs/prompts/` with that Chat: and an https Request:, `Claude-Session:` trailer of the newest commit adding such a prompt; else `Request: none (…)` and a `warning:` line, never a failed merge. Mutation bench: `if (url) return url;` in source (b) made `if (false && url)` turns the (b) test red, the other six stay green. `Chat:` already took `--chat`; the measured `Chat: —` came from merges run without it.
+**Prompt document name**: 2026-10-19 23:15
+
+## 2026-10-19 — merge: mergeurl into alfonso-frontend-jjtl (P-2026-10-19-2331)
+**Prompt**: `claude_2026-10-19_2331_prompt_merge_mergeurl.md`, a direct merge by `lane-run merge --direct`, no session: `mergeurl` at `b485cc5ff` into `alfonso-frontend-jjtl`, merge base `be72e287f`, 3 commits on the branch side.
+**Files touched**: merge `f9f4e7f2d`: 6 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-19_2315_prompt_merge_request_url.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-run.mjs`, `frontend/scripts/lane-templates/merge-into-trunk.md`, `frontend/scripts/lane-templates/trunk-into-branch.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f9f4e7f2d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9431 tests in 384 files, 9 red at import, hooks 952; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat verified merge f9f4e7f2d and the direct gates: typecheck, vitest 9431, build, check:docs all ok
+**Notes**: Rollback tag `pre-mergeurl` on `c9b903250` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-19-2331/result.json`.
+**Prompt document name**: 2026-10-19 23:31
+
+## 2026-10-20 — fix(harness): lane-run status reads the Outcome of the latest run only (P-2026-10-20-0030)
+**Prompt**: issue #181: after a resume that dies on the usage limit, `lane-run status` and `status --all` showed the Outcome of the previous run. Read the latest run only; `limit` and `died` for an exited run with no Outcome; tests; one doc line; check board and Tack by rg only.
+**Files touched**: `966f16913`: `frontend/scripts/lane-run.mjs`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`; this commit: `docs/harness/gates.md`, this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Offset from logFrom of the last runs.jsonl line; new additive errFrom for the stderr tail. `limit` regardless of exit code: a real weekly-limit run (P-2026-09-28-2332) exited 0. laneRun.test.ts 141 green, five new, mutation bench 3/1/1 killed. Board and lane-tracking take the value as is (no choke); Tack derives its own outcome from the whole log and keeps the stale read.
+**Prompt document name**: 2026-10-20 00:30
+
+## 2026-10-20 — merge: lane-status-stale into alfonso-frontend-jjtl (P-2026-10-20-0102)
+**Prompt**: `claude_2026-10-20_0102_prompt_merge_lane-status-stale.md`, a direct merge by `lane-run merge --direct`, no session: `lane-status-stale` at `1a96ce5fd` into `alfonso-frontend-jjtl`, merge base `b91d9bb1a`, 3 commits on the branch side.
+**Files touched**: merge `bd583958c`: 5 files from the branch side (`docs/harness/gates.md`, `docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-20_0030_prompt_lane_status_stale_outcome.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bd583958c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9441 tests in 384 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates only, all green (typecheck 0, vitest 9441 with the 9 known import reds, build 0, checks 0); scripts only, lane-run status reads the Outcome of the latest run
+**Notes**: Rollback tag `pre-lane-status-stale` on `8c2616a4a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0102/result.json`.
+**Prompt document name**: 2026-10-20 01:02
+
+## 2026-10-21 — ticket: traceMonitor test fails in merge gates while the dev server holds 3001
+**Ticket**: `frontend/scripts/gates/__tests__/traceMonitor.test.ts` («3001 accepted», «a port in use taken») fails in the full vitest gate of direct merges while Alfonso dev server holds port 3001, and passes 9/9 when run alone. It blocked four merges of front hw-notation on 2026-10-20/21 (P-2026-10-21-0105, -0659, -0845), each cleared by re-run, `lane-run resolve` and a closure by hand. Expected: the test picks a free port it owns, or the gate excludes it when 3001 is taken.
+**Priority**: low
+**Found in**: P-2026-10-21-0845
+
+## 2026-10-21 — fix(lane-monitor-app): external links in the Lane board window open in the browser (P-2026-10-21-1000)
+**Prompt**: `claude_2026-10-21_1000_prompt_lanemon_external_links.md`: the chat link in the «Lane board» webview window did nothing; route external links to the default browser.
+**Files touched**: `tools/lane-monitor-app/src-tauri/src/links.rs` (`Route`, `route()`, 3 tests), `tools/lane-monitor-app/src-tauri/src/main.rs` (`follow()`, `.on_navigation`, `.on_new_window` in `open_monitor_window`); commit `c63d12669`; this entry; the prompt's `Status:`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `cargo test` 56 passed, 0 failed; `cargo tauri build --bundles app` exit 0 (bundle 4.97 MiB); the installed app relaunched (pid alive, tray process running)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the click in the webview is checked by the chat after exit (P8 deroga)
+**Notes**: Cause confirmed as stated: no navigation or new-window handler, so WKWebView dropped `target="_blank"`. tauri 2.12.4 has `WebviewWindowBuilder::on_new_window` (`~/.cargo/registry/src/*/tauri-2.12.4/src/webview/webview_window.rs:315`, `NewWindowResponse::Deny` at `src/webview/mod.rs:257`); both hooks go through `route()`, Browser runs `open <url>`. Board and Cargo.toml untouched.
+**Prompt document name**: 2026-10-21 10:00
+
+## 2026-10-21 — merge: lanemon-links into alfonso-frontend-jjtl (P-2026-10-21-1008)
+**Prompt**: `claude_2026-10-21_1008_prompt_merge_lanemon-links.md`, a direct merge by `lane-run merge --direct`, no session: `lanemon-links` at `74dd1181a` into `alfonso-frontend-jjtl`, merge base `4d56f907f`, 2 commits on the branch side.
+**Files touched**: merge `31ee859e2`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-21_1000_prompt_lanemon_external_links.md`, `tools/lane-monitor-app/src-tauri/src/links.rs`, `tools/lane-monitor-app/src-tauri/src/main.rs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `31ee859e2` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11423 tests in 397 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Lane Monitor app rebuilt and relaunched; route() 3 new tests of 56 green; on_new_window Deny in tauri 2.12.4; link click in the Lane board window confirmed by Alfonso 2026-10-21 10:19
+**Notes**: Rollback tag `pre-lanemon-links` on `4d56f907f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1008/result.json`.
+**Prompt document name**: 2026-10-21 10:08
+
+## 2026-10-21 — feat(lane-monitor-app): the tray title shows waiting and running counts (P-2026-10-21-1020)
+**Prompt**: `claude_2026-10-21_1020_prompt_lanemon_tray_counts.md`: the tray title read «0» with 2 lanes running and 0 waiting; show waiting first, then running, each with its sign.
+**Files touched**: `tools/lane-monitor-app/src-tauri/src/poll.rs` (`title_for` rewritten, new `tooltip_for` and `lanes`, title test rewritten, new `tooltip_formatter` test), `tools/lane-monitor-app/src-tauri/src/main.rs` (tooltip now calls `poll::tooltip_for`; module doc line 3), `docs/log-inbox/harness.md`, this prompt file (Status). Commit `c42a2abd5`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `cargo test` 57 passed, 0 failed; `cargo tauri build --bundles app` exit 0 (bundle 4.97 MiB, 5.0M installed); app quit, `ditto` over `~/Applications/Lane Monitor.app`, relaunched; the menu bar item read through System Events shows `⏸1 ▶5`, matching `/api/attention` (waiting 1, blocked 0, running 5)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the chat checks the tray after exit (P8 deroga); title read as text, not as pixels
+**Notes**: Title `⏸<w>[!] ▶<r>`, zero counts left out, empty at rest; stale/unreachable/pending keep `–`. Choice the prompt left open: blocked > 0 with waiting 0 shows `⏸0!` (the old `0!` kept), so the blocked signal is never lost. Tooltip: «1 lane waiting for you (1 blocked), 2 lanes running»; blocked-only reads «2 lanes blocked». Board and lane-run.mjs untouched (R-TACK-2).
+**Prompt document name**: 2026-10-21 10:20
+
+## 2026-10-21 — ticket: Flaky vitest under load blocks direct merges (traceMonitor port-in-use and others)
+**Ticket**: Under machine load (load average about 100) the vitest gate of lane-run merge --direct fails on tests outside the merged paths, blocking the merge: scripts/gates/__tests__/traceMonitor.test.ts «a port in use taken» failed in P-2026-10-21-1035 and P-2026-10-21-1114; laneRun «JJODEL_MODEL_TRAILER ignored», laneRunDirect «a precondition dropped» and laneBoard tests failed once each. Every one passed on a rerun at load under 20 (/tmp/rerun-1035.log, /tmp/rerun-1114.log). Each time the chat had to resolve the lane and flip the Status by hand, because go refuses a blocked lane. Suggested: make the timing-sensitive tests robust to load (port probes, child process timeouts), or let the direct merge rerun only the failed files once before declaring the gate red.
+**Priority**: medium
+**Found in**: P-2026-10-21-1114

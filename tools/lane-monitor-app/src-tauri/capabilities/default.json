@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The popover: events from the poller and the app's own commands. The monitor window loads the board (a remote URL) and gets no capability.",
+  "windows": ["popover"],
+  "permissions": ["core:default"]
+}

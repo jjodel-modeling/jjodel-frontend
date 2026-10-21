@@ -101,7 +101,7 @@ import { compileDerived, makeDerivedOracle } from '../../../model/simulation/der
 import { decodeStateAttributes, encodeStateAttributes, mergeDeclarations, STATE_ATTRIBUTES_KEY } from '../../../model/simulation/stateAttributesCodec';
 import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
 import {
-    checkActionSubset, checkActionValue, checkElse, checkEventFeature, checkEventRead, checkGuard, checkInputTarget, checkTargetName, eventReads,
+    checkActionSubset, checkActionValue, checkElse, checkEventFeature, checkEventRead, checkGuard, checkInputTarget, checkTargetName, checkTriggerPosition, eventReads,
     inputReads, inputTarget,
 } from '../../../model/simulation/stcChecks';
 import type { StcDefect, StcScope } from '../../../model/simulation/stcChecks';
@@ -389,7 +389,8 @@ function compileActionTable(net: CompiledNet, features: ActionFeatures, lookup: 
  * (`value`); since R-SIM-87 (R7) an `else` with no sibling (`else-alone`),
  * which the run still reads as always true; since R-SIM-144 a read of `event`
  * where no event is bound (`event`) and `event.a` on a name the trigger's type
- * does not have (`event-feature`). Never a run-time outcome: those depend on σ and are explained by
+ * does not have (`event-feature`); since R-SIM-147 a trigger that fork or join fusion
+ * drops (`trigger-position`), with the role `guard`. Never a run-time outcome: those depend on σ and are explained by
  * `stopReason` or halt the run. A defective guard takes its transition out of
  * the candidates; a defective action does not: the transition halts if it fires.
  */
@@ -398,7 +399,7 @@ export interface CompileDefect {
     readonly element: string;
     readonly role: 'guard' | 'action' | 'declaration';
     readonly reason: 'parse-error' | 'subset' | 'undeclared' | 'locality' | 'double-assignment' | 'declaration' | 'read-only' | 'unresolved' | 'value' | 'else-alone'
-        | 'event' | 'event-feature';
+        | 'event' | 'event-feature' | 'trigger-position';
     readonly detail: string;
     /** The guard's, the action's or the equation's text; `''` for any other declaration defect. */
     readonly source: string;
@@ -469,6 +470,31 @@ function elseDefectsOf(net: CompiledNet, features: readonly string[], lookup: Lo
         if (!rule) continue;
         const element = t.origin.find(id => elseText(lookup, id, features) !== null) ?? t.id;
         out.push({ element, role: 'guard', reason: rule.reason, detail: rule.detail, source: elseText(lookup, element, features) ?? 'else', ...(rule.short ? { short: rule.short } : {}) });
+    }
+    return out;
+}
+
+/**
+ * R-SIM-147: each trigger that fork or join fusion drops, named by its edge, once, in compile order.
+ * Only with the event role, as the compiler reads triggers (`compileNet`); the run is unchanged.
+ */
+function triggerPositionDefectsOf(net: CompiledNet, stc: NetStc, view: NetModelView, scope: StcScope): CompileDefect[] {
+    const trigger = stc.event ? stc.trigger : undefined;
+    if (!trigger) return [];
+    const is = (id: string, cls: string | undefined) => !!cls && view.isInstanceOf(id, cls);
+    const kindOf = (id: string) => {
+        const fork = is(id, stc.fork);
+        const join = is(id, stc.join);
+        return fork && join ? 'both' as const : fork ? 'fork' as const : join ? 'join' as const : null;
+    };
+    const out: CompileDefect[] = [];
+    const seen = new Set<string>();
+    for (const t of net.transitions) {
+        for (const { edge, defect } of checkTriggerPosition(t, kindOf, e => view.references(e, trigger).length > 0, scope)) {
+            if (seen.has(edge)) continue;
+            seen.add(edge);
+            out.push({ element: edge, role: 'guard', reason: defect.reason, detail: defect.detail, source: '', ...(defect.short ? { short: defect.short } : {}) });
+        }
     }
     return out;
 }
@@ -759,6 +785,7 @@ export function startRun(
         compileDefects: [
             ...guardDefectsOf(guards, scope, net.transitions),
             ...elseDefectsOf(net, featuresOf(stc, 'guard'), lookup),
+            ...triggerPositionDefectsOf(net, stc, view, scope),
             ...actionDefectsOf(net, actions, snapshot, lookup, scope),
             ...declarationDefectsOf(declarations.defects, lookup),
             ...declarationDefectsOf([...modelDeclarations.defects, ...merged.defects], lookup, [], 'model'),
@@ -1117,7 +1144,7 @@ function defectShort(reason: GuardDefectReason | CompileDefect['reason'], detail
 function defectSubject(d: CompileDefect, lookup: Lookup): string {
     if (d.role === 'declaration') return d.element;
     const element = d.site?.element ?? d.element;
-    const role = d.role === 'action' && d.site && d.site.role !== 'transition' ? d.site.role : d.role;
+    const role = d.reason === 'trigger-position' ? 'trigger' : d.role === 'action' && d.site && d.site.role !== 'transition' ? d.site.role : d.role;
     return `${elementName(lookup, element.split('#')[0])} ${role}`;
 }
 

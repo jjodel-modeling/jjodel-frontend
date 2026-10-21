@@ -54,7 +54,7 @@ import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/e
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
-import { fitPadding, getCanvasRightInset } from './viewportInset';
+import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
 import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
@@ -117,6 +117,8 @@ import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSi
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
+import { POLYMETRIC_MIN_METACLASSES, countPolymetricMetaclasses } from '../polymetric/polymetricMetrics';
+import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
 import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
@@ -748,6 +750,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
+    // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
+    const fitViewOptions = useFitViewOptions();
 
     const {
         activeEditorId,
@@ -1140,14 +1144,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Polymetric view modal (triggered via Tools menu CustomEvent)
     const [polymetricOpen, setPolymetricOpen] = useState(false);
+    // Small-metamodel guard (P-2026-10-19-1745): same count PolymetricView renders
+    const [polymetricGuardOpen, setPolymetricGuardOpen] = useState(false);
 
     useEffect(() => {
         const handlePolymetric = () => {
-            if (modelid) setPolymetricOpen(true);
+            if (!modelid) return;
+            if (!isModelMode && countPolymetricMetaclasses(modelid) < POLYMETRIC_MIN_METACLASSES) {
+                setPolymetricGuardOpen(true);
+                return;
+            }
+            setPolymetricOpen(true);
         };
         window.addEventListener(JjodelEvents.OPEN_POLYMETRIC, handlePolymetric);
         return () => window.removeEventListener(JjodelEvents.OPEN_POLYMETRIC, handlePolymetric);
-    }, [modelid]);
+    }, [modelid, isModelMode]);
 
     // History for undo/redo
     const { takeSnapshot, undo, redo, canUndo, canRedo } = useHistory(getNodes, getEdges);
@@ -4761,7 +4772,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onMove={handleMove}
                 onMoveEnd={saveViewport}
                 fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
-                fitViewOptions={{ padding: fitPadding(), maxZoom: 1 }}
+                fitViewOptions={fitViewOptions}
                 defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
@@ -4996,6 +5007,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         modelId={modelid}
                         modelName={modelInfoData?.name ?? 'Model'}
                         target={isModelMode ? 'model' : 'metamodel'}
+                    />,
+                    document.body,
+                )}
+
+                {modelid && createPortal(
+                    <ConfirmDialog
+                        isOpen={polymetricGuardOpen}
+                        title="Small metamodel"
+                        message={`This metamodel has fewer than ${POLYMETRIC_MIN_METACLASSES} metaclasses. The polymetric rendering is not informative at this size.`}
+                        confirmText="Open anyway"
+                        cancelText="Cancel"
+                        variant="info"
+                        onConfirm={() => { setPolymetricGuardOpen(false); setPolymetricOpen(true); }}
+                        onCancel={() => setPolymetricGuardOpen(false)}
                     />,
                     document.body,
                 )}

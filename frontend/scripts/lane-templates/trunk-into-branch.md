@@ -2,6 +2,7 @@
 
 Prompt-ID: {{promptId}}
 Chat: {{chat}}
+Request: {{request}}
 Lane: full (merge of the trunk into the branch; {{laneNote}})
 Status: da eseguire
 

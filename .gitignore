@@ -93,3 +93,5 @@ docs/analysis/harness-attribution*
 
 # quiet runner logs and output-budget overrides (P-2026-10-13-1930)
 .agent-logs/
+/tools/lane-monitor-app/src-tauri/target/
+/tools/lane-monitor-app/src-tauri/gen/
