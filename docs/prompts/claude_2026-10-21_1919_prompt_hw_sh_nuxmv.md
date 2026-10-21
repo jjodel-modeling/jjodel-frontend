@@ -1,6 +1,6 @@
 # Hardware demonstrator S-H: nuXmv on the CPU, two domain properties, counterexamples as scenarios (implementation)
 
-Prompt-ID: P-2026-10-21-1830
+Prompt-ID: P-2026-10-21-1919
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (build track plus scripts/oracle, one package.json line, a pure simulation module)
@@ -17,7 +17,7 @@ Worktree: `~/jjodel-w-hwdemo`, branch `hw-demo`, at the commit that adds this pr
 
 ## Lane discipline
 
-Every reply opens with `[P-2026-10-21-1830 · session <id>]`; every final message ends with one line
+Every reply opens with `[P-2026-10-21-1919 · session <id>]`; every final message ends with one line
 `Outcome: done | hard-stop | question | blocked`. Time limit 90 minutes. Seven lanes of this front hit the 200k
 ceiling: **read only the plan entry named below, `smvExport.ts`'s exported API and `scenarioCodec.ts:40-70`**; use
 Explore subagents for anything wider; nuXmv output goes to files under `.agent-logs/`, read their tails. **Commit in
