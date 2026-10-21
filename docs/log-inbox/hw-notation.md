@@ -6,6 +6,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-10-21 — feat: hw demonstrator S-A1, HwDesign metamodel and CPU model built by script
+**Prompt**: P-2026-10-21-1100, finish of P-2026-10-21-1036 after its AM-8 ceiling: slice S-A1 of the hw demonstrator plan §10.1, fix the build from the handoff, regenerate hw-cpu.jjodel by the app's export, gates, commit
+**Files touched**: frontend/scripts/examples/build-hw-cpu.ts (new), frontend/src/codegen/examples/hw-cpu/hw-cpu.json (new), frontend/public/examples/hw/hw-cpu.jjodel (new), frontend/src/codegen/oracle/__tests__/exampleFixture.ts, frontend/src/codegen/examples/__tests__/importable.test.ts, frontend/scripts/probe/codegen-examples.ts; Status lines of the 1036 and 1100 prompts
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Code d3abfaade. Build fixes: a feature added and bounded in two calls; a containment append waits until the store lists the child. Build ALL GREEN (13); import probe ALL GREEN (80, hw-cpu 9), the lecture path needs VITE_CODEGEN=true. Six mutants killed (commit body). Deviations from §10.1: Format and FinalState added, guard/exit typed EXPRESSION/ACTION, exit multi-valued.
+**Prompt document name**: 2026-10-21 11:00
+
 ## 2026-10-21 — ticket: JjEL: 0xFF evaluates silently to 0 (lenient parse drops trailing tokens)
 **Ticket**: JjEL reads `0xFF` as the number `0` followed by the identifier `xFF`, and the lenient `parse()` keeps the first expression and drops the rest without an error (discovery `docs/discovery/discovery_2026-10-20_jjel_bitvector.md` §3.3; known defect in `docs/spec/concern_languages.md:102`, parse() does not check EOF). A hardware user writing a hex constant gets 0 silently. Expected: a parse error on trailing tokens, or hex/binary number literals; at minimum the error. Found by P-2026-10-20-2055.
 **Priority**: medium

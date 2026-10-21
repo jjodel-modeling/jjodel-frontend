@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1036
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (new example project built by script; Playwright build)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane hw-sa1 · d3abfaade (finished by P-2026-10-21-1100 after the AM-8 ceiling)
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-1012
 Corregge: —
