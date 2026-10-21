@@ -5,19 +5,40 @@ leaves behind (transcripts, git history, a self-assessment log) and shows how th
 It keeps metadata only, never message text, and needs no dependency beyond Node >= 24 (for
 `node:sqlite`; on an older Node every command exits 2).
 
-Status: slice 6 of 7. The contract, `tack check`, the event store, the Claude Code collector, repository
-identity, the git collector, the metrics of all three layers (`tack metrics`), the board with its Lanes, Sessions,
-Timeline and Insights views (`tack board`), the Jjodel log importer (`tack import jjodel-log`), the lane-run
-adapter and the parity check against Jjodel's lane board (`tack parity jjodel`) exist.
+Status: v0: validated on the author's repositories (Jjodel, harness-book, a Sprotty clone without sessions); external pilot pending.
+
+## Install and first run
+
+Tack needs Node >= 24 and nothing else: no `npm install`, no build step. From a clone of this repository:
+
+```
+node tack/bin/tack.mjs board        # or: cd tack && node bin/tack.mjs board
+node tack/bin/tack.mjs --version
+```
+
+Run it from the root of the repository you want to look at. The first run reads every Claude Code transcript
+under `~/.claude/projects` into `~/.tack/store.db` (about a minute for 700 sessions), then serves the board
+on `http://127.0.0.1:4710/` and opens it. Nothing is written in the repository.
+
+A repository that follows none of the conventions below still gets layer 1: its sessions, cost, context and
+commits. Every layer-2 and layer-3 metric shows `not adopted` with the field that would enable it, and the
+Lanes tab says «No lane-run lanes for this repository». A repository with no Claude Code session at all is not
+in the store, because repositories are found from session directories: the board then preselects nothing and
+shows all repositories.
 
 ## Three data layers
 
-1. **Transcripts and git**: sessions, cost, context, commits. Needs nothing from the repository.
+1. **Transcripts and git**: sessions, cost, context, commits. Requires only Claude Code transcripts on this
+   machine and a git work tree; nothing from the repository.
 2. **Identity**: a unit-of-work id (`P-YYYY-MM-DD-HHmm`) linking a prompt, its sessions and its
-   commits, via the trailer `Unit: <id>` (canonical) or the subject suffix `(P-...)` (alias).
-3. **Self-assessment log**: one append-only file, `.tack/log.jsonl`, one JSON entry per line.
+   commits, via the trailer `Unit: <id>` (canonical) or the subject suffix `(P-...)` (alias). Requires the id in
+   commit messages, or leading the first message of a session.
+3. **Self-assessment log**: one append-only file, `.tack/log.jsonl`, one JSON entry per line. Requires that file
+   (or an import), and for the Lanes tab a lane-run folder on this machine.
 
 Layers 2 and 3 are optional; panels that need them say "not adopted" instead of drawing empty charts.
+
+Lane folders are read through one trace-source boundary (`src/collectors/source.mjs`); lane-run is the only adapter today.
 
 ## `tack check`
 
@@ -84,9 +105,10 @@ exactly `git log --all` of its clones.
 **Commit within the hour** (proximity, not authorship) is computed at query time, not stored: `yes`
 when any commit of the session's repository, by any author, has a commit time between the session's
 first event and one hour after its last event; `no` otherwise; `unknown` when the repository is
-missing. `repos` prints, per repository: key (12 chars), toplevels, remote host, commits, commits
-with a unit id per form, Claude co-authored commits, sessions, sessions with a commit within the
-hour; then the missing cwds grouped by reason.
+missing. `repos` prints one line per repository: key (12 chars), the first toplevel and a count of the
+others (`/Users/x/repo +3 more`), remote host, commits, commits with a unit id per form, Claude co-authored
+commits, sessions, sessions with a commit within the hour; then the missing cwds grouped by reason. Each
+column is as wide as its widest cell and at most 60 characters; a longer cell keeps its tail behind «…».
 
 ### Linking a session whose directory is gone
 
@@ -214,8 +236,8 @@ tack board [--port <n>] [--no-open] [--store <file>] [--root <dir>]
 
 Runs an incremental `scan`, then serves a page on `http://127.0.0.1:4710/` (bound to 127.0.0.1 only)
 and opens it with the platform command (`open`, `xdg-open`) unless `--no-open`. Started inside a git work
-tree, it preselects that repository, by root commit, so a linked worktree selects its main repository;
-elsewhere it shows all repositories. The selection lives in the URL (`?repo=<key>|all&since=&until=`);
+tree whose repository has a session in the store, it preselects that repository, by root commit, so a linked
+worktree selects its main repository; elsewhere it shows all repositories. The selection lives in the URL (`?repo=<key>|all&since=&until=`);
 nothing is written in the repository, only the store is.
 
 The page is static files served from memory (`src/board/page.html`, `board.css`, `board.js`, `charts.js`,
