@@ -1,29 +1,29 @@
 {
   "url": "http://localhost:3087",
-  "at": "2026-10-21T04:35:19.273Z",
+  "at": "2026-10-21T05:15:14.786Z",
   "file": "/Users/alfonso/jjodel-demo-exports/uml/uml-class-object.jjodel",
   "ids": {
-    "model": "Pointer1792557347790_USER_140",
-    "mm": "Pointer1792557347744_USER_4",
+    "model": "Pointer1792559743246_USER_140",
+    "mm": "Pointer1792559743161_USER_4",
     "classes": {
-      "String": "Pointer1792557347792_USER_147",
-      "Integer": "Pointer1792557347793_USER_152",
-      "Boolean": "Pointer1792557347795_USER_157",
-      "Genre": "Pointer1792557347796_USER_162",
-      "Publication": "Pointer1792557347802_USER_183",
-      "Book": "Pointer1792557347812_USER_218",
-      "Magazine": "Pointer1792557347820_USER_247",
-      "Library": "Pointer1792557347825_USER_265",
-      "Member": "Pointer1792557347830_USER_283",
-      "Holdings": "Pointer1792557347844_USER_332",
-      "Membership": "Pointer1792557347852_USER_361",
-      "Borrowing": "Pointer1792557347860_USER_390"
+      "String": "Pointer1792559743248_USER_147",
+      "Integer": "Pointer1792559743251_USER_152",
+      "Boolean": "Pointer1792559743254_USER_157",
+      "Genre": "Pointer1792559743256_USER_162",
+      "Publication": "Pointer1792559743266_USER_183",
+      "Book": "Pointer1792559743283_USER_218",
+      "Magazine": "Pointer1792559743298_USER_247",
+      "Library": "Pointer1792559743305_USER_265",
+      "Member": "Pointer1792559743314_USER_283",
+      "Holdings": "Pointer1792559743339_USER_332",
+      "Membership": "Pointer1792559743353_USER_361",
+      "Borrowing": "Pointer1792559743367_USER_390"
     }
   },
   "binding": {
     "ok": true,
     "missing": [],
-    "raw": "{\"v\":1,\"bindings\":[{\"name\":\"object\",\"typeReference\":\"Pointer1792557347781_USER_108\",\"slotContainer\":\"Pointer1792557347781_USER_110\",\"definingFeature\":\"Pointer1792557347782_USER_112\",\"valueHolder\":\"Pointer1792557347783_USER_114\",\"featureContainer\":\"Pointer1792557347774_USER_86\",\"generalization\":{\"via\":\"Pointer1792557347774_USER_84\",\"general\":\"Pointer1792557347778_USER_98\"},\"abstractFlag\":\"Pointer1792557347787_USER_129\",\"featureType\":\"Pointer1792557347778_USER_100\",\"defaultValue\":\"Pointer1792557347789_USER_135\",\"valueKinds\":[{\"when\":\"primitive:Boolean\",\"create\":\"Pointer1792557347764_USER_52\",\"field\":\"Pointer1792557347790_USER_139\"},{\"when\":\"primitive:String\",\"create\":\"Pointer1792557347763_USER_50\",\"field\":\"Pointer1792557347789_USER_138\"},{\"when\":\"primitive:Integer\",\"create\":\"Pointer1792557347763_USER_48\",\"field\":\"Pointer1792557347789_USER_137\"},{\"when\":\"instance\",\"create\":\"Pointer1792557347765_USER_56\",\"field\":\"Pointer1792557347783_USER_116\"}]},{\"name\":\"link\",\"typeReference\":\"Pointer1792557347781_USER_108\",\"slotContainer\":\"Pointer1792557347781_USER_110\",\"definingFeature\":\"Pointer1792557347782_USER_112\",\"valueHolder\":\"Pointer1792557347783_USER_114\",\"featureContainer\":\"Pointer1792557347776_USER_92\"}]}"
+    "raw": "{\"v\":1,\"bindings\":[{\"name\":\"object\",\"typeReference\":\"Pointer1792559743230_USER_108\",\"slotContainer\":\"Pointer1792559743231_USER_110\",\"definingFeature\":\"Pointer1792559743232_USER_112\",\"valueHolder\":\"Pointer1792559743232_USER_114\",\"featureContainer\":\"Pointer1792559743217_USER_86\",\"generalization\":{\"via\":\"Pointer1792559743216_USER_84\",\"general\":\"Pointer1792559743224_USER_98\"},\"abstractFlag\":\"Pointer1792559743241_USER_129\",\"featureType\":\"Pointer1792559743226_USER_100\",\"defaultValue\":\"Pointer1792559743244_USER_135\",\"valueKinds\":[{\"when\":\"primitive:Boolean\",\"create\":\"Pointer1792559743197_USER_52\",\"field\":\"Pointer1792559743246_USER_139\"},{\"when\":\"primitive:String\",\"create\":\"Pointer1792559743196_USER_50\",\"field\":\"Pointer1792559743245_USER_138\"},{\"when\":\"primitive:Integer\",\"create\":\"Pointer1792559743195_USER_48\",\"field\":\"Pointer1792559743245_USER_137\"},{\"when\":\"instance\",\"create\":\"Pointer1792559743200_USER_56\",\"field\":\"Pointer1792559743233_USER_116\"}]},{\"name\":\"link\",\"typeReference\":\"Pointer1792559743230_USER_108\",\"slotContainer\":\"Pointer1792559743231_USER_110\",\"definingFeature\":\"Pointer1792559743232_USER_112\",\"valueHolder\":\"Pointer1792559743232_USER_114\",\"featureContainer\":\"Pointer1792559743221_USER_92\"}]}"
   },
   "historyAfterBinding": {
     "flag": true,
@@ -34,7 +34,7 @@
       "all",
       "Pointer_OfflineUser"
     ],
-    "lastAgeMs": 850
+    "lastAgeMs": 876
   },
   "cascade": {
     "at": {
@@ -59,7 +59,7 @@
   },
   "book": {
     "shape": {
-      "id": "Pointer1792557376979_USER_950",
+      "id": "Pointer1792559772533_USER_950",
       "cls": "InstanceSpecification",
       "name": "book1",
       "classifier": "Book",
@@ -99,11 +99,11 @@
     ],
     "vertices": [
       {
-        "id": "Pointer1792557377125_USER_955",
+        "id": "Pointer1792559772670_USER_955",
         "cls": "DVertex",
         "x": 50,
         "y": 9350,
-        "father": "Pointer1792557347790_USER_140_graph5"
+        "father": "Pointer1792559743246_USER_140_graph5"
       }
     ],
     "clickFlow": {
@@ -117,7 +117,7 @@
   },
   "undo": {
     "entries": 1,
-    "presses": 2,
+    "presses": 1,
     "back": true,
     "undoBefore": 2,
     "undoAfterCreate": 3,
@@ -132,7 +132,7 @@
         "all",
         "Pointer_OfflineUser"
       ],
-      "lastAgeMs": 2210
+      "lastAgeMs": 2223
     },
     "h1": {
       "flag": true,
@@ -143,15 +143,9 @@
         "all",
         "Pointer_OfflineUser"
       ],
-      "lastAgeMs": 3001
+      "lastAgeMs": 2969
     },
     "steps": [
-      {
-        "undo": 3,
-        "objects": 98,
-        "instance": true,
-        "binding": true
-      },
       {
         "undo": 3,
         "objects": 93,
@@ -162,7 +156,7 @@
   },
   "member": {
     "shape": {
-      "id": "Pointer1792557388070_USER_1020",
+      "id": "Pointer1792559782388_USER_1020",
       "cls": "InstanceSpecification",
       "name": "member1",
       "classifier": "Member",
@@ -192,9 +186,9 @@
       470,
       9650,
       1170,
-      10310
+      10352
     ],
-    "k": 0.9333333333333333
+    "k": 0.8774928774928775
   },
   "objectDiagramNew": [
     {
@@ -202,16 +196,68 @@
       "x": 890,
       "y": 9650,
       "w": 280,
-      "h": 60
+      "h": 138
     },
     {
       "name": "member1",
       "x": 470,
       "y": 10250,
       "w": 280,
-      "h": 60
+      "h": 102
     }
   ],
+  "bookBox": {
+    "name": "book1",
+    "vertex": "Pointer1792559778071_USER_990",
+    "box": {
+      "node": {
+        "w": 280,
+        "h": 138
+      },
+      "labels": [
+        {
+          "text": "book1",
+          "inside": true,
+          "clipped": false,
+          "top": 1.8,
+          "bottom": 23.6
+        },
+        {
+          "text": "Book",
+          "inside": true,
+          "clipped": false,
+          "top": 23.6,
+          "bottom": 45.4
+        }
+      ],
+      "rows": [
+        {
+          "text": "isbn =",
+          "inside": true,
+          "top": 49.8,
+          "bottom": 65.8
+        },
+        {
+          "text": "genre =",
+          "inside": true,
+          "top": 65.8,
+          "bottom": 81.7
+        },
+        {
+          "text": "title =",
+          "inside": true,
+          "top": 81.7,
+          "bottom": 97.7
+        },
+        {
+          "text": "year =",
+          "inside": true,
+          "top": 97.7,
+          "bottom": 113.7
+        }
+      ]
+    }
+  },
   "classNode": {
     "bookItems": [
       "New instance",
@@ -245,7 +291,7 @@
       "Edit view · View for Class"
     ],
     "shape": {
-      "id": "Pointer1792557402563_USER_1048",
+      "id": "Pointer1792559796904_USER_1048",
       "cls": "InstanceSpecification",
       "name": "book2",
       "classifier": "Book",
@@ -281,15 +327,15 @@
     },
     "vertices": [
       {
-        "id": "Pointer1792557402906_USER_1053",
+        "id": "Pointer1792559797248_USER_1053",
         "cls": "DVertex",
         "x": 890,
         "y": 10550,
-        "father": "Pointer1792557347790_USER_140_graph5"
+        "father": "Pointer1792559743246_USER_140_graph5"
       }
     ],
     "bookNode": {
-      "id": "Pointer1792557347814_USER_224",
+      "id": "Pointer1792559743286_USER_224",
       "name": "Book",
       "x": 420,
       "y": 420,
@@ -383,17 +429,17 @@
     ]
   },
   "undoLater": {
-    "entriesBefore": 9,
+    "entriesBefore": 8,
     "presses": 2,
     "steps": [
       {
-        "undo": 9,
+        "undo": 8,
         "objects": 107,
         "binding": true,
         "member1": true
       },
       {
-        "undo": 9,
+        "undo": 8,
         "objects": 102,
         "binding": true,
         "member1": true
@@ -404,29 +450,29 @@
   "undoPaths": {
     "before": {
       "flag": true,
-      "user": 9,
-      "all": 9,
+      "user": 8,
+      "all": 8,
       "senders": [
         "globalcanundostate",
         "all",
         "Pointer_OfflineUser"
       ],
-      "lastAgeMs": 2168
+      "lastAgeMs": 2178
     },
     "afterCreateInstance": {
       "flag": true,
-      "user": 11,
-      "all": 11,
+      "user": 10,
+      "all": 10,
       "senders": [
         "globalcanundostate",
         "all",
         "Pointer_OfflineUser"
       ],
-      "lastAgeMs": 892
+      "lastAgeMs": 875
     },
     "instantiateResult": {
       "ok": true,
-      "instance": "Pointer1792557410657_USER_1090",
+      "instance": "Pointer1792559804983_USER_1090",
       "slots": 1,
       "problems": []
     },
@@ -439,7 +485,7 @@
         "all",
         "Pointer_OfflineUser"
       ],
-      "lastAgeMs": 1933
+      "lastAgeMs": 995
     },
     "undoNoPlace": [
       {
@@ -450,6 +496,18 @@
       },
       {
         "undo": 12,
+        "objects": 105,
+        "libInstance": true,
+        "diag1": true
+      },
+      {
+        "undo": 11,
+        "objects": 105,
+        "libInstance": true,
+        "diag1": true
+      },
+      {
+        "undo": 11,
         "objects": 103,
         "libInstance": false,
         "diag1": true
@@ -459,7 +517,7 @@
   "errors": [],
   "warnings": [],
   "checks": {
-    "pass": 13,
+    "pass": 16,
     "fail": 0
   }
 }
