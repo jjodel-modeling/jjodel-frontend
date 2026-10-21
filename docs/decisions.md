@@ -6508,6 +6508,15 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   (`slice`, `trunc`, `toNumber`) is refused `P-STEP` over a step value, `toVerilog` stays refused `T-METHOD`. A
   stored register is declared on the metamodel: a model may declare globals only (`stateAttributesCodec.ts:303`).
   Five mutations, all killed (docs closure commit of P-2026-10-21-0700).
+- **R-BV-11** (2026-10-21, ratified by Alfonso 2026-10-21 10:32 «ok alle raccomandazioni, procedi con lane auto», evidence: read, verified: none, reversible: branch).
+  **The demonstrator follows the plan of `docs/discovery/discovery_2026-10-21_hw_demonstrator_plan.md`.** The waves
+  of §10.2, demo minimum first; route A (templates on `HwDesign`) in the demo, route B (JjTL to the partner's
+  `VerilogAst`) after the demo minimum is green and only once A == B holds; the CPU ships under
+  `frontend/public/examples/hw/`, outside the gallery, with the `cpu-decode-gap` model closing the demo; nuXmv 2.2.0
+  installed by hand on the presenter's Mac, its licence for the partner project asked of FBK in writing; `hw-demo` is
+  the integration branch, not pushed before S-E is green, then pushed as a branch, not merged into the trunk. The
+  partner's own metamodel file stays outside this public repository: route B artifacts derived from it are committed
+  only with the partner's written consent, otherwise kept local.
 
 ## Superate
 
