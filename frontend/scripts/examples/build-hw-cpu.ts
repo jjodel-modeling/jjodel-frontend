@@ -153,8 +153,8 @@ const component = (c: string): View =>
             { position: 'bottom', source: I('metaclassName'), style: { fontSize: 11, color: GREY } },
         ] } }];
 const OUTPUT = { op: 'eq', left: '$output.value', right: { kind: 'boolean', value: true } };
-/** The port's size: its name over its width. */
-const PW = 80, PH = 40;
+/** The port's size: its name over its width (at 40 high the width row covered half the name). */
+const PW = 80, PH = 50;
 /** From the state that owns it (`State.out` is a composition) to `next`. */
 const transition = { source: 'container', target: '$next.value', line: { width: 1.25, color: INK }, terminations: arrow, curve: 'arc' };
 const state = (c: string, extra: Record<string, unknown> = {}): View =>
@@ -224,7 +224,7 @@ function places(): Record<string, [number, number, number, number]> {
     of('DObject').filter(o => cname(o.instanceof) === 'Instruction')
         .forEach((o, i) => { at[o.name] = [(i % 5) * 170, 210 + Math.floor(i / 5) * 104, 150, 84]; });
     // Datapath: a component and the side of each of its ports, in the order the ports stack on that side.
-    const DY = 1000, G = 12;
+    const DY = 1000, G = 10;
     const comp = (name: string, x: number, y: number, sides: Record<string, 'l' | 'r' | 't' | 'b'>) => {
         const w = CW, h = CW;
         at[name] = [x, y + DY, w, h];
