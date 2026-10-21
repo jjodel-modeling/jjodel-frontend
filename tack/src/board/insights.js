@@ -38,7 +38,7 @@
           facts(['median ' + med(v.median), 'max ' + med(v.max)]);
         break;
       case 'outcome': {
-        const keys = ['done', 'hard-stop', 'question', 'blocked', 'unparsed', 'none', 'running'];
+        const keys = ['done', 'breakpoint', 'ceiling', 'hard-stop', 'question', 'blocked', 'unparsed', 'none', 'running'];
         body = (v.lanes ? counts(keys.map((k) => [k, v.lanes[k]]), 'Lanes by final Outcome line, ' + v.lanes.lanes + ' lanes') : '') +
           facts(['log: completed ' + v.log.completed, 'partial ' + v.log.partial, 'problems ' + v.log.problems + ' of ' + v.log.entries + ' task entries']);
         break;

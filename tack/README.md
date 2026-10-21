@@ -354,6 +354,19 @@ for a merge), `title` (its first `# ` line, at most 200 characters), `work_ms` (
 (unattended)» section of the last closing message; the text is not kept). The migration marks every lane
 for one re-read.
 
+### Store schema 8
+
+Schema 8 adds four `lanes` columns for the three kinds of stop. `stop_kind` is `breakpoint`, `ceiling` or
+`hard-stop` for a lane whose last turn ended `Outcome: hard-stop`, else null. By order: a `Stop: planned |
+ceiling | unplanned` line in the last result wins; else `handoff.md` present and the result naming the
+context ceiling or a handoff is a ceiling; else a `## HARD STOP` section of the prompt (prompt.txt, or
+`input-1.md` when that file is gone) that is not «None» and that the lane is a discovery for, or the result
+says it reached, is a breakpoint; else a hard-stop. `resumes` and `auto_resumes` count the resume messages
+and those starting with `[auto]` after an optional `[P-...]` bracket (the chat's mark for a resume sent in
+`/lane auto`; earlier resumes carry none and get no pill); no message text is kept. `stop_scanned` marks a lane
+whose two counts were computed: a lane read before schema 8 is scanned once, by UPDATE, keeping its other
+columns. The lane-run output and the `Outcome:` token are unchanged.
+
 ## Tests
 
 ```

@@ -250,7 +250,8 @@ export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settings
     started: r.started_ms, end: r.end_ms, workMs: r.work_ms ?? null, spanMs: r.end_ms !== null && r.started_ms !== null ? r.end_ms - r.started_ms : null,
     medianMs: r.kind ? medians[r.kind]?.ms ?? null : null, overLimit: r.live === 1 && r.started_ms !== null && now - r.started_ms > limit(r),
     tokensIn: r.tokens_in ?? null, contextPeak: r.context_peak ?? null, cost: r.cost_usd ?? null,
-    outcome: r.outcome, lastOutcome: r.last_outcome ?? null, resolved: r.resolved === 1, adoptions: r.adoptions ?? null,
+    outcome: r.outcome, lastOutcome: r.last_outcome ?? null, stopKind: r.last_outcome === 'hard-stop' ? r.stop_kind ?? 'hard-stop' : null,
+    resumes: r.resumes ?? 0, autoResumes: r.auto_resumes ?? 0, auto: (r.resumes ?? 0) > 0 && r.auto_resumes === r.resumes, resolved: r.resolved === 1, adoptions: r.adoptions ?? null,
     worktree: r.worktree ?? null, mergeState: r.merge_state ?? null, closed: r.closed === 1,
   });
   const cards = rows.map(card);
@@ -273,10 +274,13 @@ export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settings
   const spendToday = db.prepare(`SELECT COALESCE(SUM(s.usd), 0) AS usd FROM lane_spend s JOIN lanes l ON l.id = s.lane_id
     WHERE s.at_ms >= ? AND s.at_ms <= ? AND (? IS NULL OR l.repo_key = ?)`).get(day.getTime(), now, repo, repo).usd;
 
+  // Waiting by what the lane is waiting on: a question, or a stop of kind breakpoint, ceiling or hard-stop.
+  const waitingBy = { question: 0, breakpoint: 0, ceiling: 0, 'hard-stop': 0 };
+  for (const c of waiting) waitingBy[c.lastOutcome === 'question' ? 'question' : c.stopKind]++;
   const idsOf = (xs) => xs.map((c) => c.id);
   return {
     ...head, state: 'ok', reason: null,
-    tiles: { running: running.length, waiting: waiting.length, blocked: blocked.length, done24: done.length, resolved24: resolved.length, spendToday },
+    tiles: { running: running.length, waiting: waiting.length, waitingBy, blocked: blocked.length, done24: done.length, resolved24: resolved.length, spendToday },
     attention: { waiting, blocked, staleCount: waitingAll.length + blockedAll.length - waiting.length - blockedAll.filter(fresh).length },
     running,
     last24,
@@ -285,7 +289,7 @@ export function lanesApi(db, { repo = null, now = Date.now(), laneRoot, settings
       other: idsOf(last24.filter((c) => !listed.has(c.id))),
     },
     adoptions: cards.filter((c) => c.adoptions > 0).sort((a, b) => (b.end ?? 0) - (a.end ?? 0))
-      .map((c) => ({ id: c.id, front: c.front, chat: c.chat, end: c.end, count: c.adoptions, lastOutcome: c.lastOutcome })),
+      .map((c) => ({ id: c.id, front: c.front, chat: c.chat, end: c.end, count: c.adoptions, lastOutcome: c.lastOutcome, stopKind: c.stopKind, auto: c.auto })),
     medianByKind: medians,
   };
 }
