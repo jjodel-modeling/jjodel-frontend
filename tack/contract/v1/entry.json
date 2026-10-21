@@ -9,7 +9,7 @@
     "type":  { "enum": ["task", "ticket"] },
     "date":  { "type": "string", "format": "date" },
     "title": { "type": "string", "minLength": 1, "maxLength": 200 },
-    "unit":  { "type": "string", "pattern": "^P-\\d{4}-\\d{2}-\\d{2}-\\d{4}(-[a-z0-9]{1,8})?$" },
+    "unit":  { "type": "string", "description": "a unit id, in the id syntax of the trace source (ids.unit, src/collectors/active.mjs)" },
     "notes": { "type": "string", "maxLength": 500 }
   },
   "oneOf": [
@@ -42,7 +42,7 @@
         "type": { "const": "ticket" },
         "finding": { "type": "string", "minLength": 1 },
         "priority": { "enum": ["high", "medium", "low"] },
-        "found_in": { "type": "string", "pattern": "^[PC]-\\d{4}-\\d{2}-\\d{2}-\\d{4}" },
+        "found_in": { "type": "string", "description": "a unit or conversation id, in the id syntax of the trace source (ids.ref, src/collectors/active.mjs)" },
         "detail": { "type": "string", "minLength": 1 }
       },
       "required": ["finding", "priority", "found_in"]

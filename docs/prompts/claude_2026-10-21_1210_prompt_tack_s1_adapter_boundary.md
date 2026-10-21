@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1210
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (moves a collector behind an interface; one stale store column removed)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane tack-s1a · 3e095ad20 · item 3 not applied (lanes.outcome read by metrics/layer3.mjs) · visual check by the chat on 4710 (RC-23) pending
 Corregge: —
 Request: Alfonso, 2026-10-21 10:19, in the project chat: «via sulle raccomandazioni della nota di design (fetta S1)»
 

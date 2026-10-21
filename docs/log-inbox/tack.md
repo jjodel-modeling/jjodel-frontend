@@ -358,3 +358,16 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: passato — chat, unattended: Chat checked 4710 at 11:26 from the tack-s9 worktree: waiting cards (kind pill ACK, answer, GO; reason line; waiting since; chat link), banner 3 lanes waiting, 3 ceilings, /api/attention in the 4700 shape, 1.8 KB
 **Notes**: Rollback tag `pre-tack-s9` on `1df2d6037` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1141/result.json`.
 **Prompt document name**: 2026-10-21 11:41
+
+## 2026-10-21 — feat: Tack S1, trace-source boundary around lane-run
+**Prompt**: P-2026-10-21-1210: an adapter interface in tack/src/collectors/ with lane-run behind it and the Prompt-ID pattern out of contract/, no behaviour change (parity jjodel byte-identical); a two-run guard test; drop the stale lanes.outcome column if nothing outside the collector and the API reads it.
+**Files touched**: code commit 3e095ad20: tack/src/collectors/{source.mjs,active.mjs,lane-run/config.mjs,lane-run/source.mjs} (new), tack/src/collectors/{lane-run/collect.mjs,layers.mjs}, tack/src/contract/{validate.mjs,linkage.mjs}, tack/contract/v1/{entry.json,unit.json,README.md}, tack/src/board/server.mjs, tack/src/notify/watch.mjs, tack/bin/tack.mjs, tack/test/source.test.mjs (new); this commit: docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1210_prompt_tack_s1_adapter_boundary.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (parity jjodel on a frozen lane and store copy: text and --json cmp identical before and after; tack check on 23 fixtures identical to HEAD; 248 existing tests unchanged plus 5 new, 253 of 253 pass; mutation bench: live false on a last outcome done killed by the two-run test)
+**Out-of-scope changes**: no (17 files, all inside DOVE tack/** plus the inbox and the Status line; above five, RC-11, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, TACK_NOTIFY=off, store /tmp/tack-s8/real.db)
+**Notes**: Item 3 not applied: lanes.outcome is read by metrics/layer3.mjs:62 and :82 (final state of laneFirstShot, which parity jjodel compares, and the outcome metric), so the writer, API field and column stay. Item 2 passed on the first run: lane-run removes exit.txt at launch (lane-run.mjs:532), so the fixture keeps run 1's exit in runs.jsonl. Still importing the collector by path: parity/jjodel.mjs (Jjodel adapter), board/waiting.mjs (lane-folder reader).
+**Prompt document name**: 2026-10-21 12:10
