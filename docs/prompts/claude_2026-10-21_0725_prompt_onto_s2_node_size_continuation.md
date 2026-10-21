@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0725
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (instantiate.ts, visual check owed)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane oi-s2 · fix c1a005725, probe b3e6aacee, assets f39138504, log 7999d5d5a · build 0, undo 1 entry 1 press, S2-3m unchanged · visual check passed (book1 : Book, four rows) · S2-5 (class-diagram entry) open as ticket c
 Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5
 Depends: none
 Corregge: P-2026-10-21-0655, whose session (b70de1aa) reached the context ceiling (AM-8) with the fix uncommitted
