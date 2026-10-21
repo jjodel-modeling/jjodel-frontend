@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-    BOX_METRICS, creationOptions, instanceBoxSize, instanceName, modelObjectIds, objectRecord, ontoReadView, readOntoBindings,
-    synthesisPlan, type SynthesisPlan,
+    BOX_METRICS, creationOptions, instanceBoxSize, instanceName, layoutTargets, modelObjectIds, objectRecord, ontoReadView,
+    readOntoBindings, seedLanded, synthesisPlan, viewCentre, type SynthesisPlan,
 } from '../instantiate';
 
 // A UML subset as D records: the metamodel of the notation file §2 (only what the record reaches) and the library
@@ -246,5 +246,43 @@ describe('instanceBoxSize', () => {
         expect(instanceBoxSize({ ...objectView, defaultSize: undefined }, 4)).toBeNull();
         expect(instanceBoxSize({ ...objectView, visible: false }, 4)).toBeNull();
         expect(instanceBoxSize(null, 4)).toBeNull();
+    });
+});
+
+describe('the layout of a new node (tickets (a) and (c), P-2026-10-21-1016)', () => {
+    it('viewCentre is the flow point under the centre of the pane: screen = flow * zoom + offset', () => {
+        expect(viewCentre({ x: 0, y: 0, zoom: 1 }, { width: 800, height: 600 })).toEqual({ x: 400, y: 300 });
+        expect(viewCentre({ x: -100, y: 50, zoom: 2 }, { width: 800, height: 600 })).toEqual({ x: 250, y: 125 });
+    });
+
+    it('layoutTargets: the layout in force first, then every other exclusive viewpoint once, no decorative one', () => {
+        const lookup = {
+            CD: { className: 'DViewPoint', isExclusiveView: true },
+            OD: { className: 'DViewPoint', isExclusiveView: true },
+            DECO: { className: 'DViewPoint', isExclusiveView: false },
+            V1: { className: 'DViewElement', isExclusiveView: true },
+        };
+        expect(layoutTargets(lookup, 'CD', 'CD')).toEqual([
+            { vp: 'CD', layoutKey: 'CD', active: true }, { vp: 'OD', layoutKey: 'OD', active: false },
+        ]);
+        expect(layoutTargets(lookup, 'DECO', '__abstract__')).toEqual([
+            { vp: 'DECO', layoutKey: '__abstract__', active: true },
+            { vp: 'CD', layoutKey: 'CD', active: false }, { vp: 'OD', layoutKey: 'OD', active: false },
+        ]);
+        expect(layoutTargets(lookup, undefined, '__abstract__')[0]).toEqual({ vp: undefined, layoutKey: '__abstract__', active: true });
+    });
+
+    it('seedLanded reads each seeded key through the slot of the feature of that name, by value', () => {
+        const { get, obj, val } = uml();
+        obj('book9', 'InstanceSpecification');
+        const seed = { classifier: 'Book', name: 'book9' };
+        expect(seedLanded(get, 'book9', seed)).toBe(false);
+        val('book9', 'r_InstanceSpecification_classifier', ['Book']);
+        expect(seedLanded(get, 'book9', seed)).toBe(true);
+        expect(seedLanded(get, 'book9', { classifier: 'Magazine' })).toBe(false);
+        obj('lit9', 'LiteralBoolean');
+        expect(seedLanded(get, 'lit9', { value: true })).toBe(false);
+        val('lit9', 'a_LiteralBoolean_value', ['true']);
+        expect(seedLanded(get, 'lit9', { value: true })).toBe(true);
     });
 });

@@ -72,7 +72,7 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
-import { creationOptions, instantiate, objectRecord, type CreationOption } from './hooks/instantiate';
+import { creationOptions, instantiate, objectRecord, viewCentre, type CreationOption } from './hooks/instantiate';
 import type { OntoBinding } from '../../model/ontological/bindingCodec';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
@@ -3046,13 +3046,26 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         [isModelMode, modelid]
     );
 
-    // One instantiation with its slots; its vertex is the one useJjomSync Step 2bis gives a
-    // new root (hooks/instantiate.ts header: a vertex placed at the click broke its undo).
-    const runInstantiate = useCallback((classifierId: string, record: OntoBinding) => {
-        void instantiate(classifierId, record).then(result => {
+    // One instantiation with its slots, one undo entry; its vertex is the one useJjomSync Step 2bis
+    // gives a new root, placed by the layout write of instantiate (hooks/instantiate.ts header):
+    // at the right click under the layout in force, at the centre of the view under any other
+    // layout that draws it and when there is no click (ticket (a), P-2026-10-21-1016). The
+    // viewports and the pane are read at the click, not when the write lands.
+    const runInstantiate = useCallback((classifierId: string, record: OntoBinding, click?: { x: number; y: number }) => {
+        const activeKey = getActiveLayoutKey();
+        const clickAt = click ? screenToFlowPosition(click) : null;
+        const current = getViewport();
+        const el = editorContainerRef.current;
+        const pane = { width: el?.clientWidth ?? 0, height: el?.clientHeight ?? 0 };
+        const placeAt = (layoutKey: string) => {
+            if (layoutKey === activeKey && clickAt) return clickAt;
+            if (pane.width <= 0 || pane.height <= 0) return null;
+            return viewCentre((layoutKey === activeKey ? null : readStoredViewport(modelid, layoutKey)) ?? current, pane);
+        };
+        void instantiate(classifierId, record, placeAt).then(result => {
             if (!result.ok) console.warn('[EditorV2] instantiate:', result.problems);
         });
-    }, []);
+    }, [screenToFlowPosition, getViewport, modelid]);
 
     const onPaneClick = useCallback(() => {
         selectedEdgeIdRef.current = null;  // Clear edge selection
@@ -3726,6 +3739,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         // Pane menu: the cascade «New instance of ▸ <Class>» (R-OI-10).
         if (contextMenu?.pane) {
             const { record, options } = contextMenu.pane;
+            const click = { x: contextMenu.x, y: contextMenu.y };
             return [{
                 label: 'New instance of',
                 icon: 'bi-plus-square',
@@ -3734,7 +3748,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 children: options.map(o => ({
                     label: o.name,
                     icon: 'bi-box',
-                    onClick: () => runInstantiate(o.id, record),
+                    onClick: () => runInstantiate(o.id, record, click),
                 })),
             }];
         }

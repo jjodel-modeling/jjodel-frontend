@@ -9,10 +9,11 @@
  *    import under vitest. `ontoReadView` is the `OntoReadView` of `bindingReader.ts` over those records; the menu
  *    options and the synthesis plan are computed from it. Reads only.
  *  - the WRITE half, `instantiate`, reaches the store and `createInstance` (`createAdapter.ts:491`) through a dynamic
- *    `import()`, so the bench never loads them. It writes through `createInstance`, and the node size below. The instance's vertex is the
+ *    `import()`, so the bench never loads them. It writes through `createInstance`, and the node layout below. The instance's vertex is the
  *    one `useJjomSync` Step 2bis gives a new root: a `createVertexForObject` at the click point, right after the
  *    create, left the instantiation out of the undo history (measured, P-2026-10-21-0100: Cmd+Z never removed it and
- *    walked back the entries before it instead; without it one Cmd+Z removes the instance and its slots).
+ *    walked back the entries before it instead; without it one Cmd+Z removes the instance and its slots). The click
+ *    reaches the node through the layout write instead (ticket (a), P-2026-10-21-1016).
  *
  * ── The synthesis ─────────────────────────────────────────────────────────────────────────────────────────────────
  *
@@ -24,15 +25,22 @@
  * header, «The values arrive with the create, not after it»). Each slot is also awaited in its owner's list before the
  * next one is made, so the order of the list is the closure's.
  *
- * No outer TRANSACTION (rule 12): `addObject` opens its own. One instantiation is therefore several undo entries; S2u
- * makes it one, and the count is measured and declared until then.
+ * No outer TRANSACTION (rule 12): `addObject` opens its own. One instantiation is one undo entry by an undo group of
+ * the history reducer instead (`beginUndoGroup` / `endUndoGroup`, `reducer.ts`, P-2026-10-21-1016): every write lands
+ * in the store as it is made, so the waits below see it, and the group keeps them as one entry whose undo removes every
+ * record created, `idlookup` included. The group closes after the deferred seeding of every created object has landed
+ * (`seedLanded`) and after the node layout is written, so neither pushes an entry of its own.
  *
- * ── The node size ─────────────────────────────────────────────────────────────────────────────────────────────────
+ * ── The node layout ───────────────────────────────────────────────────────────────────────────────────────────────
  *
  * A view that authors a `defaultSize` draws a vertex with no manual size at exactly that box (`nodeSizing.ts`,
  * manual > default > derived), so an object box 60 high clipped the header and all rows but two (ticket of
  * 2026-10-21, P-2026-10-21-0655). After the slots, the instance's vertex is given the box of `instanceBoxSize` under the
  * layout in force, through the layout resolver, as a manual size: the rule the UML fixture sizes every drawn box with.
+ * Every other exclusive viewpoint that draws the instance gets its box under its own layout too, so an instance made
+ * from the class diagram is not left at the default box in the object diagram (ticket (c), P-2026-10-21-1016). The same
+ * write gives the node the position the caller's `InstancePlacement` asks for under each of those layouts: the right
+ * click of the pane menu, the centre of the view where there is no click (ticket (a)).
  */
 
 import { decodeOntoBindings, ONTO_BINDINGS_KEY, type OntoBinding, type OntoValueKind } from '../../../model/ontological/bindingCodec';
@@ -312,6 +320,61 @@ export function instanceBoxSize(view: SizedViewIR | null | undefined, slots: num
     return { w: defaults.width ?? SEED_WIDTH, h: Math.max(defaults.height ?? 0, h) };
 }
 
+/** A point in flow coordinates. */
+export interface FlowPoint {
+    x: number;
+    y: number;
+}
+
+/**
+ * Where the new instance's node goes under a layout key, `null` to keep the position Step 2bis gives it. The caller
+ * knows the click and the viewports; `instantiate` knows which layouts draw the instance.
+ */
+export type InstancePlacement = (layoutKey: string) => FlowPoint | null;
+
+/** The flow point at the centre of a pane `pane` big under the viewport `vp` (screen = flow * zoom + offset). Pure. */
+export function viewCentre(vp: { x: number; y: number; zoom: number }, pane: { width: number; height: number }): FlowPoint {
+    return { x: (pane.width / 2 - vp.x) / vp.zoom, y: (pane.height / 2 - vp.y) / vp.zoom };
+}
+
+/** A layout a new node is laid out in. */
+export interface LayoutTarget {
+    /** The viewpoint whose views draw the node under that layout; `undefined` when none is active. */
+    vp: string | undefined;
+    layoutKey: string;
+    active: boolean;
+}
+
+/**
+ * The layouts a new node is laid out in: the one in force (`activeLayoutKey`, under the active viewpoint), then every
+ * other exclusive viewpoint under its own key (an instance made from the class diagram is drawn by the object diagram
+ * too). A decorative viewpoint that is not active is left out: it shares the abstract-syntax layout. Pure.
+ */
+export function layoutTargets(lookup: Record<string, any>, activeVp: unknown, activeLayoutKey: string): LayoutTarget[] {
+    const active = isId(activeVp) ? activeVp : undefined;
+    const out: LayoutTarget[] = [{ vp: active, layoutKey: activeLayoutKey, active: true }];
+    for (const id of Object.keys(lookup ?? {})) {
+        const d = lookup[id];
+        if (id === active || d?.className !== 'DViewPoint' || !d.isExclusiveView) continue;
+        if (!out.some(t => t.layoutKey === id)) out.push({ vp: id, layoutKey: id, active: false });
+    }
+    return out;
+}
+
+/**
+ * Whether the deferred seeding of `objectId` has landed: every key of `seed` names a slot of the object (by its
+ * feature's name) whose first value reads as the seed's. `addObject` writes the seed 600 ms after the create
+ * (`createAdapter.ts` header), so the undo group waits for it instead of closing before it. Pure.
+ */
+export function seedLanded(get: DGet, objectId: string, seed: Readonly<Record<string, string | number | boolean>>): boolean {
+    const slots: any[] = ((get(objectId)?.features ?? []) as unknown[]).map(id => (isId(id) ? get(id) : undefined));
+    return Object.entries(seed).every(([key, value]) => {
+        const slot = slots.find(v => isId(v?.instanceof) && get(v.instanceof)?.name === key);
+        const first = slot?.values?.[0];
+        return first !== undefined && first !== null && String(first) === String(value);
+    });
+}
+
 // ── The write half ──────────────────────────────────────────────────────────────────────────────────────────────
 
 export interface InstantiateResult {
@@ -357,32 +420,44 @@ function verticesOf(lookup: Record<string, any>, objectId: string): string[] {
 }
 
 /**
- * Give the instance's node the box of `instanceBoxSize` under the view in force (see the module comment): one
- * TRANSACTION of SetFieldAction only (rule 12), each write resolved by `resolveVertexLayoutWrite` (R-LAY-16). Not
+ * Give the instance's node, in every layout of `layoutTargets` whose view draws it, the box of `instanceBoxSize` and
+ * the position `placeAt` asks for (see the module comment): one TRANSACTION of SetFieldAction only (rule 12), each write
+ * resolved by `resolveVertexLayoutWrite` (R-LAY-16). The layout in force takes the position even when no IR view
+ * draws the node there (the click is in its coordinates); another layout only when its IR draws the instance. Not
  * `syncSizeToJjom`: its `markCanvasUpdated` makes the sync skip the vertex for the next 300 ms, which a resize drag
- * wants (the canvas already holds the size) and a new node does not. Right after the last create, so the write lands
- * inside the reducer's merge window and adds no undo entry. A problem when the node never appears; nothing when the
- * view in force authors no size or does not draw the instance.
+ * wants (the canvas already holds the size) and a new node does not. Inside the instantiation's undo group, so it adds
+ * no undo entry. A problem when the node never appears; nothing when no layout has a size or a position to take.
  */
-async function sizeInstanceNode(m: WriteModules, get: DGet, instance: string, slots: number): Promise<string | null> {
+async function layoutInstanceNode(m: WriteModules, get: DGet, instance: string, slots: number, placeAt?: InstancePlacement): Promise<string | null> {
     const state: any = m.joiner.store.getState();
-    const signature = m.ir.computeIRSignature(state);
-    const index = signature ? m.ir.getIRIndex(state, signature) : null;
     const metaclass = get(instance)?.instanceof;
-    if (!index || !isId(metaclass)) return null;
+    if (!isId(metaclass)) return null;
     const lookup = state.idlookup;
-    const compiled = m.ir.resolveIRView(instance, metaclass, index, m.readCtx.makeReadCtx(lookup), lookup);
-    const size = compiled?.kind === 'vertex' ? instanceBoxSize(compiled.ir as SizedViewIR, slots) : null;
-    if (!size) return null;
+    const readCtx = m.readCtx.makeReadCtx(lookup);
+    const patches: Array<{ layoutKey: string; patch: { x?: number; y?: number; w?: number; h?: number; isResized?: boolean } }> = [];
+    for (const target of layoutTargets(lookup, state.viewpoint, m.layoutKey.getLayoutKeyOf(state))) {
+        const signature = m.ir.computeIRSignature(state, target.vp);
+        const index = signature ? m.ir.getIRIndex(state, signature, target.vp) : null;
+        const compiled = index ? m.ir.resolveIRView(instance, metaclass, index, readCtx, lookup) : null;
+        const view = compiled?.kind === 'vertex' && (compiled.ir as SizedViewIR).visible !== false ? compiled.ir as SizedViewIR : null;
+        if (!target.active && !view) continue;
+        const size = instanceBoxSize(view, slots);
+        const point = placeAt?.(target.layoutKey) ?? null;
+        if (!size && !point) continue;
+        patches.push({
+            layoutKey: target.layoutKey,
+            patch: { ...(size ? { w: size.w, h: size.h, isResized: true } : {}), ...(point ? { x: point.x, y: point.y } : {}) },
+        });
+    }
+    if (patches.length === 0) return null;
     const vertices = await waitFor(() => {
         const vs = verticesOf((m.joiner.store.getState() as any)?.idlookup, instance);
         return vs.length > 0 ? vs : null;
     });
     if (!vertices) return 'the node of the instance never appeared';
-    const layoutKey = m.layoutKey.getActiveLayoutKey();
-    m.joiner.TRANSACTION('Instantiate: node size', () => {
-        for (const vid of vertices) {
-            const write = m.layout.resolveVertexLayoutWrite(get(vid), { w: size.w, h: size.h, isResized: true }, layoutKey);
+    m.joiner.TRANSACTION('Instantiate: node layout', () => {
+        for (const vid of vertices) for (const { layoutKey, patch } of patches) {
+            const write = m.layout.resolveVertexLayoutWrite(get(vid), patch, layoutKey);
             if (write.target === 'dictionary') {
                 m.joiner.SetFieldAction.new(vid as any, 'layoutByViewpoint' as any, { [write.vpId]: write.record }, '+=', false);
                 continue;
@@ -393,15 +468,16 @@ async function sizeInstanceNode(m: WriteModules, get: DGet, instance: string, sl
     return null;
 }
 
-/** Make one instance of `classifierId` with its slots and default values (see the module comment). */
-export async function instantiate(classifierId: string, record: OntoBinding): Promise<InstantiateResult> {
-    const [joiner, { createInstance }, ir, readCtx, layoutKey, layout] = await Promise.all([
+/** Make one instance of `classifierId` with its slots and default values, laid out by `placeAt` (see the module comment). */
+export async function instantiate(classifierId: string, record: OntoBinding, placeAt?: InstancePlacement): Promise<InstantiateResult> {
+    const [joiner, adapter, ir, readCtx, layoutKey, layout, history] = await Promise.all([
         import('../../../joiner'),
         import('./createAdapter'),
         import('../viewpoint/ir/irResolveCore'),
         import('../viewpoint/ir/irReadCtxLproxy'),
         import('../viewpoint/layout/vertexLayoutAdapter'),
         import('../viewpoint/layout/vertexLayout'),
+        import('../../../redux/reducer/reducer'),
     ]);
     const { store } = joiner;
     const modules: WriteModules = { joiner, ir, readCtx, layoutKey, layout };
@@ -412,19 +488,42 @@ export async function instantiate(classifierId: string, record: OntoBinding): Pr
         result.problems.push(plan.error);
         return result;
     }
+    const group = history.beginUndoGroup();
+    try {
+        await synthesize(modules, adapter.createInstance, get, plan, record, result, placeAt);
+    } finally {
+        history.endUndoGroup(group);
+    }
+    result.ok = result.problems.length === 0;
+    return result;
+}
+
+/** The creates, the wait for their seeding and the node layout of `instantiate`, inside its undo group. */
+async function synthesize(
+    m: WriteModules, createInstance: typeof import('./createAdapter').createInstance, get: DGet, plan: SynthesisPlan,
+    record: OntoBinding, result: InstantiateResult, placeAt?: InstancePlacement,
+): Promise<void> {
+    // Every create with the seed `addObject` writes after it, awaited before the group closes.
+    const seeded: Array<[string, Readonly<Record<string, string | number | boolean>>]> = [];
+    const settle = async (slots: number) => {
+        for (const [id, seed] of seeded) {
+            if (!(await waitFor(() => seedLanded(get, id, seed)))) result.problems.push(`${id}: its seed never landed`);
+        }
+        const laid = await layoutInstanceNode(m, get, result.instance!, slots, placeAt);
+        if (laid) result.problems.push(laid);
+    };
 
     const made = createInstance(plan.modelId, plan.instanceMetaclass, null, null, plan.instanceSeed);
     if (!made.ok || !made.id) {
         result.problems.push(`instance: ${made.reason ?? 'not created'}`);
-        return result;
+        return;
     }
     const instance = made.id;
     result.instance = instance;
+    seeded.push([instance, plan.instanceSeed]);
     if (plan.slotKey === null || record.slotContainer === undefined) {
-        const sized = await sizeInstanceNode(modules, get, instance, 0);
-        if (sized) result.problems.push(sized);
-        result.ok = result.problems.length === 0;
-        return result;
+        await settle(0);
+        return;
     }
 
     const holder = (ownerId: string, featureId: string | undefined) => () =>
@@ -432,7 +531,7 @@ export async function instantiate(classifierId: string, record: OntoBinding): Pr
     const slotsValue = await waitFor(holder(instance, record.slotContainer));
     if (!slotsValue) {
         result.problems.push(`${plan.slotKey}: the slot of the instance never appeared`);
-        return result;
+        return;
     }
 
     for (const planned of plan.slots) {
@@ -443,6 +542,7 @@ export async function instantiate(classifierId: string, record: OntoBinding): Pr
         }
         const slotId = slot.id;
         result.slots.push(slotId);
+        seeded.push([slotId, planned.seed]);
         // In the owner's list before the next one, so the list keeps the closure order.
         const listed = await waitFor(() => (featureValue(get, instance, record.slotContainer!)?.values ?? []).includes(slotId));
         if (!listed) result.problems.push(`slot ${slotId}: not listed in ${plan.slotKey}`);
@@ -452,11 +552,11 @@ export async function instantiate(classifierId: string, record: OntoBinding): Pr
             continue;
         }
         const value = createInstance(plan.modelId, planned.value.metaclass, slotId, plan.valueKey, planned.value.seed);
-        if (value.ok && value.id) result.values.push(value.id);
+        if (value.ok && value.id) {
+            result.values.push(value.id);
+            seeded.push([value.id, planned.value.seed]);
+        }
         else result.problems.push(`value for ${planned.feature}: ${value.reason ?? 'not created'}`);
     }
-    const sized = await sizeInstanceNode(modules, get, instance, result.slots.length);
-    if (sized) result.problems.push(sized);
-    result.ok = result.problems.length === 0;
-    return result;
+    await settle(result.slots.length);
 }
