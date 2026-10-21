@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0641
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (test oracle against an external simulator; new script and fixture)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane bv-oracle · 4b2dc75fd
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-20-2350
 Corregge: —

@@ -85,3 +85,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: the four sim view files only gained an inert word case; dev server on 3001 answers 200
 **Notes**: Red files under load average 60 from other lanes: `traceMonitor.test.ts` (port checks, already red in vitest-before) and `irSelectionRing.test.ts` (import); both 14/14 green alone at 01:22. Block cleared with `lane-run resolve`, closure by hand. Tag `pre-bv-sim` on `3d1f53016`.
 **Prompt document name**: 2026-10-21 01:05
+
+## 2026-10-21 — test: JjEL bit-vector operators against a Verilator oracle
+**Prompt**: P-2026-10-21-0641: generate a seeded case table of every S1 bit-vector operator and method, fill `expected` with Verilator 5.052, check the evaluator row by row in the normal suite, `npm run oracle:bv`, SPEC §7.5, R-BV-10.
+**Files touched**: `4b2dc75fd` frontend/scripts/oracle/bv-cases.mjs (new), frontend/scripts/oracle/bv-verilator.mjs (new), frontend/src/jjel/__tests__/bitvectorOracle.test.ts (new), frontend/src/jjel/__tests__/fixtures/bv-cases.json (new), frontend/package.json, frontend/src/jjel/SPEC.md; closure commit: docs/decisions.md (R-BV-10), the Status line of the prompt, this inbox.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (6 code files, more than five, all declared by the prompt: listed in Files touched)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 4733 rows, 24 operators, widths 1..128, both signednesses: 4733 agreements, 0 disagreements, 0 inexpressible; regeneration byte-identical. Five bitvectors.ts mutations, all killed (commit body). Gates: typecheck 0, typecheck:scripts 0, vitest src/jjel 430 passed, build 0, check:scripts 0. Mapping: unsigned ashr is `$signed(x) >>> n`. Icarus second opinion not run.
+**Prompt document name**: 2026-10-21 06:41
