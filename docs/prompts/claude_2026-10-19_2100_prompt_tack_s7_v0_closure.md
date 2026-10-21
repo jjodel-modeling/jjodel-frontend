@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-19-2100
 Chat: C-2026-10-19-1748 (written by C-2026-10-19-0001; the tack front moved to C-2026-10-19-1748, Alfonso 2026-10-19 22:20)
 Front: tack
 Lane: full (small: one display fix, a first-run check on two foreign repositories, README; no new feature)
-Status: da eseguire
+Status: superato 2026-10-21 · sostituito da P-2026-10-21-1330 (riscritto sul trunk dopo la fetta 9 e S1; seeding di sessioni headless tolto, RC-26)
 Depends: P-2026-10-19-1655, and the merge of slice 7 (P-2026-10-19-1800 and its continuations) on trunk
 Corregge: none (the `tack repos` column width defect was found by the chat on 2026-10-19 20:55 and is fixed here as item 1)
 Request: Alfonso, 2026-10-19 20:49, in the project chat: «decidi tu» on closing v0 now versus waiting for the Sprotty pilot

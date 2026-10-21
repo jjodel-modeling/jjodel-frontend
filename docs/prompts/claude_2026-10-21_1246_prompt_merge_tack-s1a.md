@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1246
 Chat: C-2026-10-19-1748
 Request: https://claude.ai/code/session_01H3q4V79uL9VsBMuHBRvX4J (merge of tack-s1a launched by chat C-2026-10-19-1748)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane merge · 8dec8e774 · verifica visiva passata 2026-10-21 (Chat checked 4710 at 12:34 from the tack-s1a worktree: board 200, /api/attention in the 4700 shape (3 running), /api/lanes 200; parity jjodel byte-identical per the lane)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-21-1246 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
