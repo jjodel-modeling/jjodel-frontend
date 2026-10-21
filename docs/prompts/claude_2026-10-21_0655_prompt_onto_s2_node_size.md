@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0655
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (node sizing, may reach viewpoint/ which is in the critical-zone table §3.1; visual check owed)
-Status: da eseguire
+Status: non completato 2026-10-21 · lane oi-s2 · fix written uncommitted (instanceBoxSize, sizeInstanceNode), probe 16/16, undo 1 entry 1 press · context ceiling · continued by P-2026-10-21-0725
 Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5
 Depends: P-2026-10-21-0635
 Corregge: —
