@@ -250,3 +250,272 @@ Overlap matrix (✗ = shared file):
 4. **Handoff Q4, Collections**: no finding changes it. Recommended: out of 3.2 (handoff §8 already defers it).
 
 Items 2–4 are the handoff's own closed list (§10), reported here with the evidence; item 1 is the only conflict with a ratified row. No conflict was found with R-LIB-1..6, R-LIB-8..10 or D-UI-15 (the handoff excludes the dark theme, §1).
+
+## P-2026-10-19-1615
+
+Lane L-B1, Templates page, catalog fields and filters. Tree `~/jjodel-w-tpl-b1`, branch `tpl-b1`, base `86854b0e3`; commits `88f109b65` (code, with the public catalog copy) and `64e220112` (docs catalog). Session executed by Opus 5.5 (`claude-opus-5-5`).
+
+### What was done
+
+- **Catalog** (R-LIB-19, values of R-LIB-20): every gallery entry gains `level`, `concepts`, `preview` = `<id>/1.preview.png`; `state-machine` gains the `callout`; `families-persons` takes the handoff's description. No `kind`, no counts. The `$comment` documents the fields. `GalleryEntry` gains four optional fields.
+- **Page** (`Templates.tsx`, `Templates.scss`): header (H1 30px/700, lead 16px slate-600, labelled search on name, description and concept labels), «New to Jjodel? Start here» (Library, Shapes, StateMachine, Families and Persons, Turnstile; a link clears the filters when they hide its card, scrolls to it and focuses it), concept and level chips (`<button aria-pressed>`, rows `role="group"` with `aria-label`, one choice per row, AND, counts on the level chips, dashed grey at 0), «Clear filters», the empty state, «Starters» and «Worked examples» with their contracts, content max 1200px, grid `repeat(auto-fill, minmax(300px, 1fr))` gap 20px, a polite status line with the number shown.
+- **Card**: 136px preview, dot grid in CSS, PNG at `/library/gallery/<preview>` on top (`object-fit: contain`) once it loads, removed on error; title 16px/600 with the level badge; counts with `ElementBadge` (metamodel, model, and the viewpoint count the 3.1 card had); description 14px; amber callout; concept tags; footer with the id (`--font-mono` 12px, Advanced only) and «Clone» (secondary, `bi-copy`, `aria-label="Clone <label>"`).
+- **Tokens** (`tokens.css`): `--color-level-{beginner,intermediate,advanced}-{bg,fg}`, green and blue through the existing grades, violet-100 `#ede9fe` / violet-700 `#6d28d9` as level tokens only. Focus `2px solid var(--color-border-focus)`, offset 2px, on the page's buttons, input and cards.
+- **Test** (`gallery.test.ts`): four new cases (closed vocabularies, the R-LIB-20 values, the preview path, the callout and no written counts). Bench on the docs catalog: «transformation» on families-persons 3 red, graph preview at the package path 2 red, level «expert» 3 red; restored 62/62.
+
+### Measurements (headless Chromium 1440×900, dev server on 3101, seeded as `scripts/smoke/states.ts`, light theme; read from the DOM)
+
+- Sections: Starters 5 cards, Worked examples 2; contracts as R-LIB-13. Grid three columns of 370.7px, gap 20px; `.tpl-page` 1200px wide.
+- Chips at rest: concept counts All 7, Containment 5, Inheritance 3, References 3, Enumerations 1, Validation 1, Multiple metamodels 1, Simulation 2, Code generation 2; levels All 7, Beginner 3, Intermediate 3, Advanced 1.
+- Simulation: Worked examples only (2), Beginner 0 dashed (`border-style: dashed`, `rgb(100,116,139)` on transparent), Clear filters shown. Simulation + Beginner: no section, the empty-state sentence, Enumerations, Validation, Multiple metamodels and Code generation 0 dashed; its Clear filters brings back 7 cards.
+- Search «enum» → `state-machine` only. Start here «Turnstile» with Validation pressed → filters cleared, 7 cards, focus on `tpl-card-turnstile`.
+- Badges: beginner `rgb(21,128,61)` on `rgb(220,252,231)`, intermediate `rgb(29,78,216)` on `rgb(219,234,254)`, advanced `rgb(109,40,217)` on `rgb(237,233,254)`. Focus ring `2px solid rgb(71,85,105)`, offset 2px.
+- Ids: none in Basic, `<id>@1` on all seven in Advanced. Previews: no PNG exists yet (L-C), every card shows the dot grid alone, no broken image. Page errors 0 in both modes.
+
+### How to see it
+
+Dev server on the lane, `#/templates`; Basic and Advanced by the app-bar toggle. Screenshots in `docs/discovery/assets/tpl-b1/`: `templates_basic_1440x900.png`, `templates_advanced_1440x900.png`, `templates_basic_examples.png`, `templates_advanced_examples.png`, `templates_filter_simulation.png`, `templates_empty_state.png`. The quick tip is closed in them; it covers the third card otherwise (L-B2's).
+
+### Decisions taken (unattended)
+
+1. **No «Preview» button.** No read-only opening of a gallery entry exists on this branch (searched `frontend/src` for a gallery or template read-only path; only codegen template hits). R-LIB-14's companion waits for one; no new flow.
+2. **The level tokens sit in `styles/tokens.css`**, as the prompt's DOVE and COSA 4 say; `frontend/src/styles/CLAUDE.md` §7.2 puts new tokens in `_colors-light.scss`. The names are new in both files, so either state of the light theme resolves them.
+3. **`preview` is relative to `/library/gallery/`**, literally `<id>/<n>.preview.png` as the prompt and the test fix it; the page prepends the base. L-C writes the PNG at `frontend/public/library/gallery/<id>/<n>.preview.png`.
+4. **Counts keep the viewpoint count** of the 3.1 card, with its `ElementBadge` (rule 3), beside M and m.
+5. **Dashed zero applies to concept chips too** (R-LIB-17 says «a chip»); counts are shown on the level chips only, as the handoff draws them. A chip at 0 stays clickable and leads to the empty state.
+6. **A pressed chip clicked again returns its row to All.** The search counts as a filter for «Clear filters», which clears it too.
+7. **Existing class names kept** on the roles they had (`templates-card`, `templates-card__label`, `__counts`, `__description`, `__actions`, `templates-grid`, `templates-section`, `__title`); new elements use `tpl-`. The 3.1 head, icon and titles rules stay with a `TODO: cleanup` (rule 9).
+
+### Notes for the chat
+
+- `ElementBadge` uppercases its letter (`element-badge.scss`, `text-transform: uppercase`), so the model badge reads «M» in amber, not the handoff's «m». Out of DOVE; the colour pair is the handoff's.
+- The Jjodie floating button covers the footer of the first card of a column at 1440×900 when it is scrolled to the bottom (`templates_advanced_examples.png`, Turnstile id). Not this lane's element.
+
+### Decisions awaiting Alfonso
+
+None.
+## P-2026-10-19-1616 — L-B2, dashboard sidebar and quick tip (executed)
+
+Branch `tpl-b2`, code commit `b25c41db8`. Handoff §2.4 within the R-LIB-20 cut: no Notations item, no Collections item.
+
+### What was done
+
+- `frontend/src/pages/components/LeftBar.tsx`: `Item` gains the local optional prop `current` (type not exported); when true the item gets class `active` and `aria-current="page"`. Passed by All projects (`active === 'All'` and no `filter` param), Templates (`active === 'Templates'`, so `#/templates/<ref>` too) and Explore (`active === 'Explore'`). The FILTERS `Menu` is not rendered when `active === 'Templates'`. The FILTERS items keep their own `active` (filter state), without `aria-current`.
+- `frontend/src/pages/dashboard.scss`: `.leftbar .item.active` is `--color-slate-100` fill, `--font-semibold` (600), `box-shadow: inset 3px 0 0 var(--color-slate-700)`, text `--color-text-primary`, icon `--color-slate-700`. The cyan `#0ea5e9` and the 0.5px border are gone.
+- `frontend/src/components/NotificationWidget/NotificationWidget.tsx`: `onTemplatesPage = /^\/templates(\/|$)/` on `useLocation().pathname`; the Quick tip branch and `hasTipToShow` (body flag `data-notification-visible`) both skip it. System notices still show on Templates; a skipped tip is not marked seen (same rule as the consumer case). The remote text source is unchanged.
+
+### Measurements (headless Chromium 1440×900, dev server 3102, `seed(ctx, true)`, the notifications worker stubbed with one tip «Right-click on elements for more options»; probe `frontend/scripts/smoke/_tmp_tpl_b2.ts`, gitignored, deleted)
+
+| route | menu headers | active item (`aria-current`) | Quick tip | body flag |
+|---|---|---|---|---|
+| `#/allProjects` | Filters, Favorites, Browse, Resources | All projects (`page`) | shown | `true` |
+| `#/templates` | Favorites, Browse, Resources | Templates (`page`) | absent | none |
+| `#/explore` | Filters, Favorites, Browse, Resources | Explore (`page`) | shown | `true` |
+| `#/allProjects?filter=private` | Filters, Favorites, Browse, Resources | Private (none) | shown | `true` |
+| All projects → sidebar Templates | Favorites, Browse, Resources | Templates (`page`) | absent | none |
+
+Computed style of the active item on every row: background `rgb(241, 245, 249)` (slate-100), weight `600`, box-shadow `rgb(51, 65, 85) 3px 0px 0px 0px inset` (slate-700). Typecheck exit 0 (`.agent-logs/typecheck-20261019-161632.log`).
+
+Pages the restyle changes (report §8.7): All projects, Explore and Templates gain a highlighted item they never had; the FILTERS items on `#/allProjects?filter=…` change from cyan to slate. Notes, Account, Settings, Profile, Updates, Archive, Community and the admin pages have no matching sidebar item and show none highlighted, as before. The project page sidebar (`psb-item`) is not affected.
+
+### Decisions taken (unattended)
+
+1. All projects is current only without a `filter` param; on a filtered view the filter item is the highlighted one, so one item is active at a time.
+2. `aria-current="page"` goes on the page items only; the filter items keep the active style without it (they are a view of All projects, not a page).
+3. The tip is suppressed for every Quick tip on Templates, not by matching the remote text, which the code does not own; system notices stay.
+4. Icon of the active item in slate-700 and text in `--color-text-primary`: the handoff names fill, weight and bar only.
+
+### How to see it
+
+`npm start -- --port 3102 --strictPort` on `tpl-b2`, open `#/allProjects` and `#/templates`. Screenshots: `docs/discovery/assets/tpl-b2/all-projects.png`, `docs/discovery/assets/tpl-b2/templates.png`. Perceptual note for the chat: the inset bar follows the item's `--radius-md`, so its ends are rounded. The Templates screenshot shows the app bar on Basic after leaving All projects: the open ticket `docs/log-inbox/notation-library.md:53`, not this lane.
+---
+
+## P-2026-10-19-1617 — L-C, gallery preview snapshots (lane `tpl-c`)
+
+### What was done
+
+- New `frontend/scripts/library/snap-gallery.ts` (commit `2e8cd5a7a`), sibling of `build-gallery.ts`: for each `galleryProject` of `docs/library/catalog.json` at its current version it stores `<id>/<n>.jjodel` as a saved project (`STORE`), opens it, opens one diagram with `DockManager.open2`, waits 4.5 s (the re-layout watcher), and writes `CanvasExportService.renderTarget` + `generateDataUrl` as PNG at pixelRatio 2, no background colour, to `frontend/public/library/gallery/<id>/<n>.preview.png`. It refuses an existing preview (a FAIL line, exit 1) unless `SNAP_REWRITE=<id>@<n>` names it. The packages are not touched (`git diff` over the gallery folder empty after the runs).
+- Diagram: templates their metamodel (`families-persons`: Families, the others their only one), examples their model in the notation (turnstile `demoESM`, petri `producerConsumer`).
+- Variant D on metamodels: a capture-only stylesheet injected with `page.addStyleTag` (white node and header, `#cbd5e1` hairline, 8 px radius, names 600, dashed border on abstract classes, the handoff's amber pair on enum headers, edges and markers `#64748b` through the editor's own `--edge-color` and `--edge-marker-stroke` on `.react-flow`, edge width 1.2). No source file changed. The script checks after injection that a class header computes `rgb(255, 255, 255)` and an edge `rgb(100, 116, 139)`, and FAILs otherwise: a rename of the editor's classes or tokens shows up as a red line, not as a silently plain preview. Held on 5/5 metamodels. The first try set `stroke` on `.react-flow__edge-path`, which the metamodel editor does not use (its paths are `.reference-edge`/`.inheritance-edge`): the edges stayed dark; read on the PNG, fixed by the tokens.
+
+### Measurements (run 2, the committed PNGs)
+
+| entry | diagram | size at zoom 1 | RF nodes/edges | PNG px | bytes | export ms | entry total s | scale in 300×136 | fitted |
+|---|---|---|---|---|---|---|---|---|---|
+| library@1 | M2 Library | 838×829 | 6/7 | 1676×1658 | 134 826 | 860 | 38.4 (cold Vite) | **16.4 %** | 137×136 |
+| families-persons@1 | M2 Families | 233×348 | 2/8 | 466×696 | 47 687 | 577 | 14.8 | 39.1 % | 91×136 |
+| state-machine@1 | M2 statemachine | 575×709 | 4/6 | 1150×1418 | 138 757 | 859 | 12.1 | **19.2 %** | 110×136 |
+| graph@1 | M2 Graph | 279×588 | 3/4 | 558×1176 | 48 644 | 411 | 11.8 | **23.1 %** | 65×136 |
+| shapes@1 | M2 Shapes | 468×588 | 4/3 | 936×1176 | 63 481 | 424 | 12.4 | **23.1 %** | 108×136 |
+| turnstile@1 | M1 demoESM | 554×323 | 3/4 | 1108×646 | 78 682 | 585 | 10.4 | 42.1 % | 233×136 |
+| petri-producer-consumer@1 | M1 producerConsumer | 568×255 | 9/10 | 1136×510 | 148 168 | 684 | 12.7 | 52.8 % | 300×135 |
+
+- Every PNG: signature `PNG`, pixel size exactly 2× the export size, four corner alphas 0 (transparent), zero page errors. Both example PNGs came out byte-identical across the two runs (78 682 and 148 168 bytes).
+- Gates: `npm run -s check:scripts` PASS (107 files). Negative control: a third run without `SNAP_REWRITE` refused 7/7 (`FAIL … the preview is not rewritten`), `7 FAILED`, exit 1, no browser context opened. `npm run typecheck` does not cover `frontend/scripts/` (`tsconfig.json` includes `src` only); the script ran under `tsx` three times. Port 3096 free after each run (`lsof`).
+
+### Legibility, and a proposed rule (not implemented)
+
+Four of the seven land below 25 % in the card's 300×136 box: library 16.4 %, state-machine 19.2 %, graph 23.1 %, shapes 23.1 % — four of the five templates, all because the metamodel editor lays them out taller than wide. At 25 % a 13 px class name is about 3.3 px: what the card shows below that is a silhouette, not text. The two examples and Families (39–53 %) carry readable shapes, the examples readable labels.
+
+Proposed rule for L-B1 or a later lane: **a preview whose fit scale `min(300 / w, 136 / h)` is below 25 % renders as variant C (the structure list) instead of the PNG**; the scale is computable from the PNG's own size, so the card needs no new catalog field. Applied today it would turn library, state-machine, graph and shapes into lists. The other way to raise the scale is a wide metamodel layout in the package, as `build-gallery.ts` already does for the models (`PLACES`), which is a new `@2` of each template (R-LIB-9) and outside this lane.
+
+### Visual notes
+
+- Families: the eight opposite references Family↔Member run parallel and their role labels overlap (`fa`, `mot`, `familyDaughter`…). That is how the metamodel editor routes them, so it is also what the clone shows; at 39 % the labels are not readable anyway.
+- Variant D items not reproduced: the «abstract» subtitle (the editor marks an abstract class with an italic name, kept, plus the dashed border) and the red error border (no metamodel of the seven has an error).
+
+### The seven previews
+
+library@1 ![library](../../frontend/public/library/gallery/library/1.preview.png)
+
+families-persons@1 ![families-persons](../../frontend/public/library/gallery/families-persons/1.preview.png)
+
+state-machine@1 ![state-machine](../../frontend/public/library/gallery/state-machine/1.preview.png)
+
+graph@1 ![graph](../../frontend/public/library/gallery/graph/1.preview.png)
+
+shapes@1 ![shapes](../../frontend/public/library/gallery/shapes/1.preview.png)
+
+turnstile@1 ![turnstile](../../frontend/public/library/gallery/turnstile/1.preview.png)
+
+petri-producer-consumer@1 ![petri-producer-consumer](../../frontend/public/library/gallery/petri-producer-consumer/1.preview.png)
+
+### How to see it
+
+Open the PNGs above (transparent background: a dark viewer shows the edges on black). To regenerate one: `SNAP_REWRITE=<id>@1 ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/library/snap-gallery.ts --port 3096 --id <Prompt-ID>`. In the app the previews appear once L-B1 writes `preview` in the catalog. Visual check owed to the chat (RC-23).
+
+### Decisions taken (unattended)
+
+1. A refused preview is a FAIL and exits 1, as `GAL_REWRITE` does in `build-gallery.ts`: the negative control reads as red.
+2. Variant D's edge colour goes through the editor's own tokens (`--edge-color`, `--edge-marker-stroke`) on `.react-flow`, not through per-path selectors; the enum header uses the handoff's amber pair as literal hex inside the capture-only sheet (no token added: the sheet is not a source file).
+3. The script verifies variant D by computed style and FAILs when it does not hold, so the brittleness R-LIB-16 accepted is loud. Kept, not dropped: 5/5 held.
+4. Templates without a `DIAGRAM` row show their first metamodel; an example without one is a FAIL.
+5. Examples are captured without restyle: their notation is the preview.
+6. The readability rule is proposed, not implemented (prompt item 5).
+
+### Decisions awaiting Alfonso (RC-26)
+
+None.
+## P-2026-10-19-1618
+
+Lane L-D, branch `tpl-d`, code commit `6d70d38c1`. The New model dialog with the «Metamodel in this project» panel only (R-LIB-20).
+
+### What was done
+
+- `components/NewModelDialog/NewModelDialog.tsx` and `.scss` (new): `role=dialog`, `aria-modal`, `aria-labelledby` on «New model», `aria-describedby` on «Choose what the model conforms to.», close button «Close»; the project's metamodels as radio cards (`.radio-group`/`.radio-card` of `create-project-dialog.scss`) inside a `role=radiogroup`, each with its model count; «Model name»; Cancel (`Button` secondary) and Create model (`Button` primary). Selected card: 2px slate-700 border (1px plus an inset shadow, no shift) and a 3px slate-200 ring (handoff §5). Width 520 px (`max-width`), 391 to 511 px tall. Escape and the overlay close it. New class prefix `tpl-nmd` (0 hits before).
+- `createM1(project, metamodel, open = true, name0?)` (`Navbar.tsx:104`): `name0` trimmed, kept when unique among `metamodel.models`, else the existing ending-number rule.
+- `JjodelEvents.OPEN_NEW_MODEL_DIALOG = 'jjodel:open-new-model-dialog'`, detail optional `{ metamodelId?: string }` (0 hits before).
+- `ProjectEditor.tsx`: `handleNewModelClick` and the `CREATE_MODEL` listener open the dialog, preselecting when there is exactly one metamodel; a listener for the new event; `handleNewModelSubmit` calls `createM1(project, mm, true, name)`. The old picker (`showMetamodelMenu`) no longer opens: its JSX, `handleCreateModel` and `metamodelCountRef` stay with a `// TODO: cleanup` (rule 9).
+
+### Measurements
+
+- **`metamodel.models` is empty on cloned gallery projects** (Families and Persons: `models: []`, `__raw.models: []`, while `instanceof` finds `sample-Families` and `sample-Persons`). The cards therefore count by `instanceof`, and the clash check inside `createM1` reads an empty list on such projects.
+- **The rule that actually keeps names unique is `DModel.new`'s** (`LModelElement.tsx:5024`, `uniqueModelName` over every DModel, suffix ` (n)`): a second «People» on Persons became «People (1)», not `increaseEndingNumber`'s «People2». The dialog's default name is computed over the same pool (every model and metamodel name of the project), so the name shown is the name the model gets.
+- Typecheck exit 0 (twice, after the last edit too); build exit 0; no unit test names `createM1` (`command grep -rl createM1 src --include='*.test.ts*'` exit 1, control `createM2\|DModel` exit 0).
+- Browser smoke, port 3104, probe `frontend/scripts/smoke/_tmp_tpl_d_nmd.ts` (gitignored, not committed), log `.agent-logs/tpl-d-nmd-8.log`: **20/20 PASS**, no page error (three `console.error('init_dash')`, `redux/store.tsx:240`, are not from this lane). Library (one metamodel): rail `+` opens the dialog, Library preselected, name `model_1`, «My Library Model» created on Library and opened; the section's «+ New» opens it too; Escape closes. Families and Persons (two): cards «1 model» each, none preselected, Create disabled until Persons is chosen; «People» created on Persons; `OPEN_NEW_MODEL_DIALOG` with Persons' id preselects it. A new empty project: «This project has no metamodel yet.», name field and Create disabled.
+- Screenshots (light theme, 1440×900): `docs/discovery/assets/tpl-d/nmd-one-metamodel.png`, `nmd-one-metamodel-created.png`, `nmd-two-metamodels.png`, `nmd-two-metamodels-selected.png`, `nmd-no-metamodel.png`.
+- The critical-zone hook let the `createM1` edit through without asking; no Layer Impact Report was written (`docs/lir/` untouched).
+
+### Decisions taken (unattended)
+
+1. A typed name that clashes is not refused in the dialog: `createM1` and `DModel.new` suffix it, as the prompt's «else the existing suffix rule» reads; the field's hint says so. An empty field creates the auto name.
+2. The default name is computed over every model and metamodel name of the project, not over `metamodel.models` (measured empty above): the literal «auto name `createM1` would give» would show `model_1` and then produce `model_1 (1)` when a `model_1` exists elsewhere.
+3. Model counts by `instanceof`, not `metamodel.models`.
+4. Radio cards reuse `.radio-card` (CreateProjectDialog) rather than `aria-pressed` buttons: native radio keyboard behaviour; a `:focus-visible` outline on `--color-border-focus` is added because the shared input is invisible.
+5. The rail listener no longer scrolls to `#section-models`: the scroll existed for the inline picker, which the dialog replaces.
+
+### Left for later
+
+- The models section's «+ New» still draws a chevron with two or more metamodels (`ProjectEditor.tsx`, `showMetamodelMenu`), now pointing at a dialog, not a dropdown. Removing it touches the dead picker block; left to a cleanup lane.
+- `metamodel.models` empty on cloned projects is a forward-link gap (model/CLAUDE.md §3.6); `createM1`'s own clash check is inert there, `DModel.new`'s is what holds.
+
+### How to see it
+
+`npm start -- --port <p>`, open any project with a metamodel, then click the rail's «+ New model» or the Models section's «+ New»; or in the console `window.dispatchEvent(new CustomEvent('jjodel:open-new-model-dialog', { detail: { metamodelId } }))`.
+
+## P-2026-10-19-1650
+
+Lane L-E, branch `tpl-e`, code commit `1c3d9460e`. File › New in the 3.2 structure of R-LIB-18, cut by R-LIB-20 (no built-in notations, no Browse notations…).
+
+### What was done
+
+- `MenuEntry` (local to `Navbar.tsx`) gains `section?: boolean`; `makeEntry` renders it as `<li class="section-label" role="presentation">`, no `tabindex`, no click, no submenu. Styled in `navbar.scss` (the file that styles the Navbar's menu rows): `--text-xs`, `--font-semibold`, `--tracking-wide`, `--color-text-tertiary`, uppercase by CSS, so the DOM text stays «Conforming to».
+- File › New replaces the top-level `New Project` and the old `New ›`. Basic: Project… · divider · Model › · divider · From template…. Advanced: Project… · divider · Metamodel · Model › · Viewpoint · Transformation · divider · From template…. Model › opens with the CONFORMING TO label, then one entry per metamodel calling `createM1(project, m2)`; above `MODEL_MENU_LIMIT = 5`, the last five plus More…, which dispatches `OPEN_NEW_MODEL_DIALOG` with no detail. Viewpoint dispatches `CREATE_VIEWPOINT`, Transformation `OPEN_NEW_TRANSFORMATION_DIALOG`, both through `dispatchToProjectEditor` (project summary brought forward first, as LeftBar's `requestFromProjectEditor`); From template… navigates to `#/templates`. All other File items unchanged, in their order.
+- Project…: **`NEW_PROJECT` is dead inside a project (measured, below)**. On `#/allProjects` Project… dispatches it as before; elsewhere it writes a timestamped request in `sessionStorage['jjodel_file_new_project']` and navigates to `/allProjects` (a page reload). The Navbar mounted there waits until `.dashboard-page-title` has been in the DOM for two consecutive 200 ms polls, removes the request and dispatches `NEW_PROJECT`. A request older than 30 s is dropped (a navigation cancelled at the unsaved-changes prompt does not fire later). Measured on the way: one tick after the Navbar's mount is too early, the first attempt landed on the dashboard with no dialog.
+
+### Measurements (headless Chromium 1440×900, dev server 3106, `seed(ctx, advanced)`, light theme; probe `frontend/scripts/smoke/_tmp_tpl_e_filenew.ts`, gitignored, not committed; log `.agent-logs/tple-probe-3.log`)
+
+**28/28 PASS, 0 page errors** in both contexts. Rows read from the DOM:
+
+- Advanced, dashboard: `Project… | --- | Metamodel(off) | Model(off) | Viewpoint(off) | Transformation(off) | --- | From template…`. Project… opens «Create New Project»; From template… lands on `#/templates`.
+- Advanced, cloned Families and Persons: all enabled; Model › `[CONFORMING TO] | Families | Persons` (label: `text-transform: uppercase`, `role=presentation`, no `tabindex`, `cursor: default`). Model › Persons created `model_1` on Persons. Metamodel ×4 → six metamodels; Model › `[CONFORMING TO] | Persons | metamodel_1 | metamodel_2 | metamodel_3 | metamodel_4 | More…`; More… opens «New model» with 6 radios, 0 checked. Viewpoint opens «New Viewpoint», Transformation «New Transformation».
+- `NEW_PROJECT` dispatched inside the project: no dialog after 1.5 s (dead). Project… inside the project: lands on `#/allProjects` with «Create New Project» open; the request is consumed, a reload of the dashboard opens nothing. From template… inside the project lands on `#/templates`.
+- Basic, dashboard: `Project… | --- | Model(off) | --- | From template…`; Project… opens the dialog. Cloned Library: after the Basic switch, `Project… | --- | Model> | --- | From template…`, Model › `[CONFORMING TO] | Library`, Model › Library created `model_1` on Library.
+- Screenshots (`docs/discovery/assets/tpl-e/`): `fn-advanced-outside.png`, `fn-advanced-project-model.png`, `fn-advanced-six-metamodels.png`, `fn-more-dialog.png`, `fn-project-from-project.png`, `fn-basic-outside.png`, `fn-basic-project-model.png`.
+- Typecheck exit 0 (after the last edit). `check:docs` exit 1 with 4 errors, all on the tip before this lane (same 4 with the inbox at `HEAD`): the L-B1 and L-C entries of `docs/log-inbox/templates-ui.md` lost their tails (no `Corregge`, `Causa` and the rest) in the merge into `tpl-int`. This lane's entry adds none; the two entries are other lanes' and are left as they are, for the chat.
+
+### Findings
+
+- **A Basic user sees Advanced inside a cloned gallery project.** With the stored mode `basic`, the cloned Library loads with Redux `advanced: true` (`{"redux":true,"stored":"basic","tools":true}`): the project state carries it and the Navbar's restore effect never downgrades (`Navbar.tsx`, «Only the positive direction is restored»). File › New follows `props.advanced` like Tools and View, so it shows the Advanced items until the user presses Basic. Same family as the 2026-10-18 ticket on the app-bar mode control; not touched here.
+- Pre-existing, visible in the screenshots: menu entries without an icon draw the `bi bi-app hidden` placeholder as a visible square (the metamodel names under Model ›, as before this lane).
+
+### Decisions taken (unattended)
+
+1. Project… outside the dashboard navigates and opens the dialog (sessionStorage request, consumed by the Navbar), rather than being left dead: the change stays inside `Navbar.tsx`.
+2. «Most recent» metamodels = the tail of the project's metamodel list (creation order; metamodels carry no timestamp), shown in project order, the order of the New model dialog.
+3. Transformation is also disabled in a project with no metamodel, as in the app-bar New document menu (the dialog needs a source and a target).
+4. Consumer mode keeps today's trim: New › shows Model only (Project… and Metamodel were already hidden; Viewpoint, Transformation and From template… are of the same kind).
+5. New › is now shown on the dashboard too (it was hidden there), with only Project… and From template… enabled, as the prompt reads.
+6. The section label keeps sentence case in the DOM and is uppercased by CSS.
+
+### Decisions awaiting Alfonso (RC-26)
+
+None.
+
+### How to see it
+
+`npm start -- --port <p>`, File › New on the dashboard and in a project, in Basic and in Advanced; Model › with six metamodels shows More….
+## P-2026-10-19-1651 — L-C2, template previews readable at card size (lane `tpl-c2`)
+
+### What was done
+
+- `frontend/scripts/library/snap-gallery.ts` (commit `f120bd3cf`): templates are cropped, examples captured as before. `CROP` reads the metamodel from the L-layer (`classes`, `references`, `containment`, `type`, `extends`, `extendedBy`), picks the root class (the most containment references; tie: the first class) and its direct neighbours (its reference types, the classes referencing it, its super- and subclasses), then searches, on a 4 px grid over the viewport's zoom-1 node rects, a frame of the card aspect that keeps the root whole and every `.mm-node__name` wholly inside or wholly outside. Ranking: whole neighbours, then whole nodes, then distance from the centre of root and neighbours. The frame's scale is `max(0.45, min(1, 300/w, 136/h))` over the bbox of root and neighbours (16 px margin): with these five metamodels it is 0.45 every time, the frame 667×302. `SNAP` takes the frame as the export's width, height and `translate`, over the same `renderTarget` (SVG paint inlined, no background).
+- Five PNGs rewritten under `SNAP_REWRITE=<id>@1`, one run per id, each exit 0, `ALL GREEN`, no page error, corners alpha 0. Turnstile and petri: sha256 before and after identical (`31eea861…`, `9e027e01…`); `diff` of the two sha lists: exactly the five templates differ.
+
+### Measurements
+
+| template | root (containments) | neighbours | scale | frame at zoom 1 | name size in card | classes wholly inside |
+|---|---|---|---|---|---|---|
+| library@1 | Library (3) | LibraryItem, Member, Writer | 45 % | 667×302 | 5.9 px | Library, LibraryItem |
+| shapes@1 | Canvas (1) | Shape | 45 % | 667×302 | 5.9 px | Canvas, Shape |
+| graph@1 | Graph (2) | Node, Edge | 45 % | 667×302 | 5.9 px | Graph, Edge |
+| state-machine@1 | StateMachine (2) | State, Transition | 45 % | 667×302 | 5.9 px | StateMachine, StateKind |
+| families-persons@1 | Family (4) | Member | 45 % | 667×302 | 5.9 px | Family, Member |
+
+Name size: the computed `font-size` of `.mm-node__name` (13 px) times the scale. Previously 16.4–39.1 %.
+
+- Gates: `check:scripts` PASS (106 files). Negative control without `SNAP_REWRITE`: 7/7 refused, `7 FAILED`, exit 1. Dev server on 3096 stopped at the end (`lsof` empty).
+- Not cut through a name, but cut: Transition's attribute row (state-machine), Edge's lower edge stubs (graph), the `members` edge label (library), Node and State outside the frame (graph, state-machine: the ranking could not keep them whole together with the root at 45 %).
+- Edge labels are not part of the no-cut rule, and their rendering is not deterministic between runs: library's trial run lacked the `borrowedBy` label that the committed run has (44 352 vs 48 261 bytes).
+
+### The five previews
+
+library@1 ![library](../../frontend/public/library/gallery/library/1.preview.png)
+
+shapes@1 ![shapes](../../frontend/public/library/gallery/shapes/1.preview.png)
+
+graph@1 ![graph](../../frontend/public/library/gallery/graph/1.preview.png)
+
+state-machine@1 ![state-machine](../../frontend/public/library/gallery/state-machine/1.preview.png)
+
+families-persons@1 ![families-persons](../../frontend/public/library/gallery/families-persons/1.preview.png)
+
+### Decisions taken (unattended)
+
+1. The scale is pinned at 45 % for all five, the floor: the root-and-neighbours bbox is taller than 302 px in every metamodel, so no frame above 45 % keeps them. A higher floor would cut more.
+2. Neighbours are read from the model (references and inheritance), not from the edges in the DOM; the frame keeps StateKind (an enum) in state-machine because it is a whole node at no cost, not because it is a neighbour.
+3. Edge labels may be cut; only node names are guarded (the prompt's criterion).
+
+### Decisions awaiting Alfonso (RC-26)
+
+None. Visual check owed to the chat (RC-23).

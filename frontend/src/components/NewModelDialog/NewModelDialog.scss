@@ -1,0 +1,60 @@
+/* New model dialog (P-2026-10-19-1618). Builds on .dialog-* and .radio-card of
+   CreateProjectDialog/create-project-dialog.scss; `tpl-nmd` scopes what is added here. */
+
+.dialog-content.tpl-nmd {
+  max-width: 520px;
+
+  .dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .form-group {
+    margin-bottom: 0;
+  }
+
+  .radio-group {
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 3px;  // room for the selected ring inside the scroll box
+    margin: -3px;
+  }
+
+  // Handoff §5: the selected choice has a 2px slate-700 border and a 3px slate ring; the second
+  // pixel of the border is an inset shadow, so the card does not move.
+  .radio-card.selected .radio-card-content {
+    border-color: var(--color-slate-700);
+    box-shadow: inset 0 0 0 1px var(--color-slate-700), 0 0 0 3px var(--color-slate-200);
+  }
+
+  .radio-card input:focus-visible + .radio-card-content {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.tpl-nmd__titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.tpl-nmd__subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.tpl-nmd__label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+}
+
+.tpl-nmd__empty {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
