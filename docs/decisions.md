@@ -6156,6 +6156,11 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   `alfonso-frontend-jjtl` before the freeze of 2026-10-23 enter the release; the chat that owns the front merges them
   without a further go-ahead. Amends the earlier plan that S3 (code generation) waits for 3.2: S3 lands only if it is
   merged before the freeze with the codegen gates green, otherwise it ships in 3.2.x.
+- **R-REL-3** (2026-10-21, ratified by Alfonso 2026-10-21 06:37 «per 1 procediamo subito e non aspettiamo dopo il freeze», evidence: read, verified: none, reversible: trunk).
+  **S3 (bit-vectors in code generation) lands before the 2026-10-23 freeze.** Amends R-REL-2's «S3 lands only if merged
+  before the freeze, otherwise 3.2.x»: the chat launches S3 at once and merges it with the codegen gates green. Same
+  morning, «ok» to: installing Verilator for the oracle step (done, 5.052), a ticket for `0xFF` read as `0`, and the
+  GitHub milestone of front `hw-notation`.
 
 ## R-LIB — the notation library and the project gallery (decisions 2026-10-18)
 
