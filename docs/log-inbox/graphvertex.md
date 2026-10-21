@@ -31,3 +31,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: BPMN viewpoint of Jjodel harness after merge 841230360: 42 edges (all irobj_ flows), 0 reference edges (was 107 = 42 + 65), 48 nodes; R-GV-18 holds
 **Notes**: Rollback tag `pre-gv-enclosed-edges` on `68fd369ee` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-1437/result.json`.
 **Prompt document name**: 2026-10-20 14:37
+
+## 2026-10-21 — discovery: graphVertex F2 read-only user views, F3 palette click (P-2026-10-21-1926)
+**Prompt**: Phase 1 read-only: reproduce F2 (user views read-only) with a probe, trace it to the line, list readers, propose the smallest fix; F3: palette click and drop paths, viewport centre, proposal and tests
+**Files touched**: docs/discovery/discovery_2026-10-21_gv_f2_readonly_views_f3_palette_click.md (3d08a5aed), frontend/scripts/probe/gv-f2-f3.ts (8bfa1071b)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: F2 reproduces on 9da5b4048: after an in-page open, not after a page load. Root cause: the scan at reducer.ts:1111-1117 registers every view, user ones included, whether or not the seeded viewpoint exists. Fix: Pointer_View id filter in a pure module, with a test. F3: click creates 0 (measured); proposal reuses the drop path at the viewport centre, unsnapped like the drop. Details in the report.
+**Prompt document name**: 2026-10-21 19:26
