@@ -6482,6 +6482,16 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   is shadowed there. Measured: without it, `bits(8, 1)` in an action fails with `Function 'bits' is not defined`,
   which contradicts discovery §5.1. The function lives in `evaluator.ts` rather than `bitvectors.ts`, which cannot
   import the evaluator. Six mutations, all killed (`docs` closure commit of P-2026-10-21-0055).
+- **R-BV-10** (2026-10-21, provisional, unattended, evidence: measured, verified: probe, reversible: trunk).
+  **The S1 operator semantics is checked against Verilator, and agrees.** Landed by `4b2dc75fd` (P-2026-10-21-0641),
+  the design of discovery §9. `npm run oracle:bv` generates the case table
+  `frontend/src/jjel/__tests__/fixtures/bv-cases.json` (inputs only, fixed seed) and fills `expected` from
+  Verilator 5.052 (`verilator --binary`, one SystemVerilog module per operator family, two-state operands sized and
+  signed explicitly); `bitvectorOracle.test.ts` checks the evaluator row by row in the normal suite, without
+  Verilator. Measured: 4733 rows, 24 operators and methods, widths 1 to 128, both signednesses; 4733 agreements,
+  0 disagreements, 0 rows inexpressible; regeneration byte-identical; five mutations of `bitvectors.ts`, all killed.
+  The one non-literal mapping: `x.ashr(n)` on an unsigned `x` is `$signed(x) >>> n` (IEEE 1800-2017 11.4.10).
+  Icarus as a second opinion is not run. SPEC §7.5.
 
 ## Superate
 
