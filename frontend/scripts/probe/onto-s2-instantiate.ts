@@ -17,7 +17,9 @@
  *   S2-4  «Member» gives the slot `active` a LiteralBoolean `true` (Property.defaultValue);
  *   S2-5  «New instance» on the Book class node gives the same structure; the abstract Publication offers no entry;
  *   S2-6  the new instances pass the fixture's object rules O1, O2, O3, O5 (`runRules`; O4 reports the empty slots);
- *   S2-7  page errors [] and no `[EditorV2] instantiate:` warning.
+ *   S2-7  page errors [] and no `[EditorV2] instantiate:` warning;
+ *   S2-8  the node of a new instance holds its header and its four slot rows (DOM boxes), and S2-3n the undo numbers
+ *         of S2-3 are those measured before the node size (P-2026-10-21-0655).
  *
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-oi-s2 frontend/scripts/probe/onto-s2-instantiate.ts \
  *         --port 3087 --id P-2026-10-21-0100
@@ -290,6 +292,10 @@ try {
     out.undo = { entries, presses, back, undoBefore: before.undo, undoAfterCreate: b.c.undo, undoAfterPresses: now.undo, bindingKept: bagAfterUndo, h0, h1, steps };
     check('S2-3 one instantiation is N undo entries (declared, S2u makes it one); Cmd+Z presses bring the objects back, the binding kept',
         back && bagAfterUndo === true, out.undo);
+    // The node size write (P-2026-10-21-0655) must not make the undo worse than measured before it (P-2026-10-21-0635:
+    // 1 entry, 2 presses, the first one a no-op); the numbers are kept in out.undo.
+    check('S2-3n the node size does not make the undo of one instantiation worse: 1 entry, at most 2 presses',
+        entries === 1 && presses <= 2 && back && bagAfterUndo === true, { entries, presses });
     if (!bagAfterUndo) {
         // The undo took the binding: write it again, so the rest of the acceptance runs (measured above, not hidden).
         await ev(page, `w.LPointerTargetable.fromPointer(a.mm).state = { ontoBindings: a.raw }; return 1;`, { mm: ids.mm, raw: written.raw }, 600);
@@ -341,6 +347,39 @@ try {
     const drawnNew = (await readNodes(page)).filter((n) => n.name === b2.inst?.name || n.name === m.inst?.name);
     out.objectDiagramNew = drawnNew.map((n) => ({ name: n.name, x: n.x, y: n.y, w: n.w, h: n.h }));
     check('S2-4d the object diagram draws the two new instances', drawnNew.length === 2, out.objectDiagramNew);
+
+    // ── S2-8: the new instance's node holds its header and its rows (DOM boxes, P-2026-10-21-0655) ─────────────────
+    {
+        const bookVid = b2.inst ? (await verticesOf(page, b2.inst.id))[0]?.id : undefined;
+        const box = bookVid ? await page.evaluate((id) => {
+            const el = document.querySelector(`.dock-tabpane-active .react-flow__node[data-id="${id}"]`) as HTMLElement | null;
+            const content = el?.querySelector('.ir-node-content') as HTMLElement | null;
+            if (!el || !content) return null;
+            const n = el.getBoundingClientRect(); const c = content.getBoundingClientRect();
+            const clip = { l: Math.max(n.left, c.left), r: Math.min(n.right, c.right), t: Math.max(n.top, c.top), b: Math.min(n.bottom, c.bottom) };
+            const inside = (r: DOMRect) => r.width > 0 && r.height > 0
+                && r.left >= clip.l - 0.5 && r.right <= clip.r + 0.5 && r.top >= clip.t - 0.5 && r.bottom <= clip.b + 0.5;
+            // Offsets from the node's top, in screen px (the viewport is scaled: compared with each other only).
+            const span = (r: DOMRect) => ({ top: Math.round((r.top - n.top) * 10) / 10, bottom: Math.round((r.bottom - n.top) * 10) / 10 });
+            const labels = Array.from(el.querySelectorAll('.ir-label--top')).map((l) => {
+                const e = l as HTMLElement; const r = e.getBoundingClientRect();
+                // Both axes: at 280x60 the two labels were squeezed to a third of their line height (measured).
+                const clipped = e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1;
+                return { text: (e.textContent ?? '').trim(), inside: inside(r), clipped, ...span(r) };
+            });
+            const rows = Array.from(el.querySelectorAll('.ir-row')).map((x) => {
+                const r = x.getBoundingClientRect();
+                return { text: (x.textContent ?? '').trim(), inside: inside(r), ...span(r) };
+            });
+            return { node: { w: el.offsetWidth, h: el.offsetHeight }, labels, rows };
+        }, bookVid) : null;
+        out.bookBox = { name: b2.inst?.name, vertex: bookVid, box };
+        const headerBottom = box ? Math.max(...box.labels.map((l) => l.bottom)) : Infinity;
+        check('S2-8 book1: its header (name, classifier) is fully inside its node, no row drawn over it',
+            !!box && JSON.stringify(box.labels.map((l) => l.text)) === JSON.stringify([b2.inst?.name, 'Book'])
+            && box.labels.every((l) => l.inside && !l.clipped) && box.rows.every((r) => r.top >= headerBottom - 0.5), out.bookBox);
+        check('S2-8r book1: its four slot rows are inside its node', !!box && box.rows.length === 4 && box.rows.every((r) => r.inside), out.bookBox);
+    }
 
     // ── S2-5: «New instance» on the class node ────────────────────────────────────────────────────────────────────
     await pickViewpoint(page, VP_CLASS);
