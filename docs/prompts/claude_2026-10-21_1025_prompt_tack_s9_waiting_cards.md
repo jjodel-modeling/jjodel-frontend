@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1025
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (one discovery pass inside the lane, then implementation; no hard stop)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane tack-s9 · completed by P-2026-10-21-1117 (first session stopped at the context ceiling, nothing committed) · 5b7c02c12 · visual check by the chat on 4710 (RC-23) pending
 Depends: P-2026-10-21-1015
 Corregge: none
 Request: Alfonso, 2026-10-21 10:12, in the project chat: «Esegui in /lane auto» on the relayed requirement 3 from chat C-2026-10-20 (09:54): waiting lanes shown as cards with what is needed to answer without opening the lane; and the chat's plan of the same morning: a Tack `/api/attention` with the shape of the 4700 one, so the menu bar app can point to Tack later

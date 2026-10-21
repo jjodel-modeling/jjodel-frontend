@@ -20,7 +20,7 @@ function tmp(t) {
   return dir;
 }
 
-test('the schema declares every key with its levels; the 14 event rows are user + local, credentials user only', () => {
+test('the schema declares every key with its levels; the 16 event rows are user + local, credentials user only', () => {
   const by = Object.fromEntries(KEYS.map((k) => [k.key, k]));
   assert.deepEqual(by['appearance.theme'].levels, ['user']);
   assert.equal(by['appearance.theme'].default, 'system');
@@ -28,7 +28,7 @@ test('the schema declares every key with its levels; the 14 event rows are user 
   assert.equal(by['load.threshold'].default, 20);
   assert.equal(by['channels.ntfy'].secret, true);
   const events = KEYS.filter((k) => k.key.startsWith('notifications.events.'));
-  assert.equal(events.length, 14);
+  assert.equal(events.length, 16);
   assert.ok(events.every((k) => k.levels.join() === 'user,local'));
   assert.ok(!by['notifications.events.merge_conflict'], 'merge_conflict is a disabled catalogue row, not a key');
   assert.deepEqual(events.filter((k) => !k.default.enabled).map((k) => k.key.slice(21)).sort(),

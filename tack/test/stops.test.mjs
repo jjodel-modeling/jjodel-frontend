@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openStore } from '../src/store/open.mjs';
-import { collectLanes, isAutoResume, plannedStopSection, readLane, stopKindOf } from '../src/collectors/lane-run/collect.mjs';
+import { STOP_RULES, collectLanes, isAutoResume, plannedStopSection, readLane, stopKindOf } from '../src/collectors/lane-run/collect.mjs';
 import { lanesApi } from '../src/board/api.mjs';
 import { loadViews } from './helpers/views.mjs';
 import { resultEvent, writeLane } from './helpers/layers-fixture.mjs';
@@ -64,7 +64,10 @@ test('stopKindOf: a planned HARD STOP section that the result reached is a break
   assert.equal(stopKindOf({ result: 'Anything at all.', promptText: PLANNED, kind: 'discovery' }), 'breakpoint', 'a discovery ends at its planned stop');
   assert.equal(stopKindOf({ result: 'Anything at all.', promptText: PLANNED, kind: 'phase2' }), 'hard-stop', 'the planned stop was not reached');
   assert.equal(stopKindOf({ result: 'Phase 1 is committed.', promptText: NONE, kind: 'discovery' }), 'hard-stop', '«None planned» plans no stop');
-  assert.equal(stopKindOf({ result: 'Phase 1 is committed.', promptText: '# no section here', kind: 'discovery' }), 'hard-stop');
+  assert.equal(stopKindOf({ result: 'Phase 1 is committed.', promptText: '# no section here', kind: 'discovery' }), 'breakpoint',
+    'stop rules 2: no HARD STOP section at all, and the result names a planned stop');
+  assert.equal(stopKindOf({ result: 'Gates are red.', promptText: '# no section here', kind: 'discovery' }), 'hard-stop', 'no section and no planned stop named');
+  assert.equal(stopKindOf({ result: 'The visual check is yours.', promptText: '' }), 'breakpoint', 'an unreadable prompt has no section either');
   assert.equal(stopKindOf({ result: 'Gates are red.', promptText: '' }), 'hard-stop');
 });
 
@@ -126,7 +129,7 @@ test('collectLanes stores stop_kind, resumes and auto_resumes, and no message te
   stopLane(root, 'P-2026-01-08-1000', { text: 'Phase 1 is committed.', prompt: PLANNED, msgs: ['[auto] GO secret-text-xyz'] });
   collectLanes(db, root, NOW);
   const r = { ...db.prepare('SELECT * FROM lanes WHERE id = ?').get('P-2026-01-08-1000') };
-  assert.deepEqual([r.stop_kind, r.resumes, r.auto_resumes, r.stop_scanned], ['breakpoint', 1, 1, 1]);
+  assert.deepEqual([r.stop_kind, r.resumes, r.auto_resumes, r.stop_scanned], ['breakpoint', 1, 1, STOP_RULES]);
   assert.ok(!readFileSync(join(dir, 'store.db')).includes('secret-text-xyz'));
   assert.equal(db.prepare('PRAGMA user_version').get().user_version, 8);
 });
@@ -139,8 +142,18 @@ test('collectLanes: a lane read before schema 8 is scanned once, and keeps its p
   const st = collectLanes(db, root, NOW);
   const r = { ...db.prepare('SELECT * FROM lanes WHERE id = ?').get('P-2026-01-08-1100') };
   assert.equal(st.stopScanned, 1);
-  assert.deepEqual([r.stop_kind, r.prompt_status, r.stop_scanned], ['breakpoint', 'eseguito', 1]);
+  assert.deepEqual([r.stop_kind, r.prompt_status, r.stop_scanned], ['breakpoint', 'eseguito', STOP_RULES]);
   assert.equal(collectLanes(db, root, NOW).stopScanned, 0, 'not scanned again');
+});
+
+test('collectLanes: a lane scanned under stop rules 1 is scanned again under rules 2, once', (t) => {
+  const { db, root } = world(t);
+  stopLane(root, 'P-2026-01-08-1200', { text: 'The visual check is yours, stopping.', prompt: '# a prompt without the section' });
+  collectLanes(db, root, NOW);
+  db.exec("UPDATE lanes SET stop_scanned = 1, stop_kind = 'hard-stop' WHERE id = 'P-2026-01-08-1200'");
+  assert.equal(collectLanes(db, root, NOW).stopScanned, 1);
+  assert.equal(db.prepare('SELECT stop_kind FROM lanes WHERE id = ?').get('P-2026-01-08-1200').stop_kind, 'breakpoint');
+  assert.equal(collectLanes(db, root, NOW).stopScanned, 0);
 });
 
 function row(db, id, o = {}) {
@@ -185,11 +198,11 @@ test('the page shows breakpoint, ceiling and hard-stop as three pills with a too
     byState: { running: [], waiting: [], blocked: [], done: [], resolved: [], other: [] }, adoptions: [], medianByKind: {},
   };
   const h = L.html(d, NOW);
-  for (const [cls, label] of [['ln-bp', 'breakpoint'], ['ln-ceil', 'ceiling'], ['ln-wait', 'hard-stop']]) {
+  for (const [cls, label] of [['ln-bp', 'breakpoint'], ['ln-ceil', 'ceiling'], ['ln-hs', 'hard-stop']]) {
     assert.ok(h.includes(`<span class="tag ${cls}" title="${V.TackCharts.esc(L.STOP_TIPS[label])}">${label}</span>`), `${label} pill with its tooltip`);
   }
   assert.ok(/<span class="tag ln-wait">question<\/span>/.test(h), 'a question keeps its own pill');
-  assert.equal((h.match(/class="tag ln-auto"/g) || []).length, 2, 'auto once in the attention list and once in the table, for the one auto lane');
+  assert.equal((h.match(/class="tag ln-auto"/g) || []).length, 1, 'auto once in the table for the one auto lane (the waiting lanes are cards, from waitingCards)');
   assert.ok(/ln-bp"[^>]*>breakpoint<\/span> <span class="tag ln-auto"/.test(h), 'auto follows the outcome pill');
   assert.ok(h.includes('1 breakpoint · 1 ceiling · 1 hard-stop · 1 question'), 'the tile and the banner count the kinds separately');
 });
