@@ -57,3 +57,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-20-2330
 **Detail**: frontend/scripts/probe/uml-class-object-fixture.ts
+
+## 2026-10-21 — fix: S2 closure, cascade clamp, acceptance probe and assets (P-2026-10-21-0635)
+**Prompt**: close S2 after P-2026-10-21-0100 hit the context ceiling: clamp the instance cascade to the viewport, rerun the probe on 3087 with a check on the last cascade item, refresh the screenshots, build and check:docs, stop for the GO, then this entry with two tickets.
+**Files touched**: `frontend/src/components/editor-v2/ContextMenu.tsx` (09f63ce6c); `frontend/scripts/probe/onto-s2-instantiate.ts`, `docs/discovery/assets/onto-s2/` onto-s2-cascade-light.png, onto-s2-new-instance-light.png, onto-s2-measures.json (4f1e07953); `docs/log-inbox/instance-of.md` (this entry)
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-10-21 01:00 P-2026-10-21-0100, continuation of claude_2026-10-21_0040_prompt_onto_s2_instantiate.md
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no (six files, all in the DOVE list: ContextMenu.tsx, the probe, three assets, this inbox)
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito (cascade pass: Book, Library, Magazine, Member inside the viewport; new-instance node fail: header `name : Class` unreadable and two of four slot rows visible for book1 and member1, ticket below)
+**Notes**: Probe 13/13 PASS, exit 0, page errors []; new S2-1v: vh 900, last item 859..887, unclamped bottom 916. Typecheck 0; vitest editor-v2 3786/3786; build exit 0 (warning: joiner dynamically imported by instantiate.ts and statically elsewhere, no split). Carries 4b156d003 of P-2026-10-21-0100, never logged; its decision (click placement dropped for undo) is in the handoff. Second cause: (c), the node size of a new root. Viewed by C-2026-10-20-1835 (RC-23).
+**Prompt document name**: 2026-10-21 06:35
+
+## 2026-10-21 — ticket: a new instance's node is clipped, name and type unreadable
+**Ticket**: BLOCKS the merge of oi-s2. A node created for a new instance (pane cascade or class-node «New instance») keeps the Step 2bis default size 280x60, so the header `name : Class` is unreadable and only two of four slot rows show (book1: isbn, genre; member1: name, active). The object diagram must show the instance name and type: size the node from its rows. The sizing lives in `viewpoint/layout`, outside the S2 lane.
+**Priority**: high
+**Found in**: P-2026-10-21-0635
+**Detail**: docs/discovery/assets/onto-s2/onto-s2-new-instance-light.png
+
+## 2026-10-21 — ticket: place a new instance at the click without breaking undo
+**Ticket**: the creation menu does not place the new instance at the right click: calling `createVertexForObject` right after `createInstance` added 0 undo entries and Cmd+Z then reverted earlier unrelated edits (the binding write included), so P-2026-10-21-0100 dropped it and the vertex comes from `useJjomSync` Step 2bis, far below the diagram (book1 at 890,9650; member1 at 470,10250). Place it at the click through a layout write path that keeps one undo entry (under `viewpoint/layout`, or S2u).
+**Priority**: medium
+**Found in**: P-2026-10-21-0100
+**Detail**: docs/discovery/assets/onto-s2/onto-s2-measures.json
