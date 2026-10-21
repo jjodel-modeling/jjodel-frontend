@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
     BOX_METRICS, creationOptions, instanceBoxSize, instanceName, layoutTargets, modelObjectIds, objectRecord, ontoReadView,
-    layoutLanded, readOntoBindings, seedLanded, synthesisPlan, viewCentre, type NodeLayoutWrite, type SynthesisPlan,
+    layoutLanded, readOntoBindings, seedLanded, synthesisPlan, syncSlotsPlan, viewCentre, type NodeLayoutWrite,
+    type SlotSyncPlan, type SynthesisPlan,
 } from '../instantiate';
 
 // A UML subset as D records: the metamodel of the notation file §2 (only what the record reaches) and the library
@@ -221,6 +222,60 @@ describe('synthesisPlan', () => {
         expect(asPlan(synthesisPlan(get, bare, 'Book')).slots).toEqual([]);
         db.InstanceSpecification.abstract = true;
         expect(synthesisPlan(get, bare, 'Book')).toEqual({ error: 'InstanceSpecification is abstract' });
+    });
+});
+
+describe('syncSlotsPlan (S3a, R-OI-9)', () => {
+    // dune : Book with a slot for each of the four features of its closure, in S2's order.
+    const withDune = () => {
+        const u = uml();
+        const { obj, val } = u;
+        obj('dune', 'InstanceSpecification');
+        val('dune', 'r_InstanceSpecification_classifier', ['Book']);
+        for (const f of ['p_Book_isbn', 'p_Book_genre', 'p_Publication_title', 'p_Publication_year']) {
+            const id = `dune_${f}`;
+            obj(id, 'Slot', val('dune', 'r_InstanceSpecification_slots', [id]));
+            val(id, 'r_Slot_definingFeature', [f]);
+        }
+        return u;
+    };
+    const asSync = (p: SlotSyncPlan | { error: string }): SlotSyncPlan => {
+        if ('error' in p) throw new Error(p.error);
+        return p;
+    };
+    const propOn = (u: ReturnType<typeof uml>, owner: string, name: string, type: string, dflt?: string) => {
+        const id = `p_${owner}_${name}`;
+        u.obj(id, 'Property', u.val(owner, 'r_Class_ownedAttributes', [id]));
+        u.db[id].name = name;
+        u.val(id, 'r_TypedElement_type', [type]);
+        if (dflt !== undefined) u.val(id, 'a_Property_defaultValue', [dflt]);
+    };
+
+    it('pages added to Book: exactly pages, with the slot roles and its default value', () => {
+        const u = withDune();
+        propOn(u, 'Book', 'pages', 'Integer', '320');
+        const plan = asSync(syncSlotsPlan(u.get, u.object as any, 'dune'));
+        expect(plan).toMatchObject({ modelId: 'M1', instance: 'dune', slotKey: 'slots', slotMetaclass: 'Slot', valueKey: 'values' });
+        expect(plan.slots).toEqual([
+            { feature: 'p_Book_pages', seed: { definingFeature: 'p_Book_pages' }, value: { metaclass: 'LiteralInteger', seed: { value: 320 } } },
+        ]);
+    });
+
+    it('nothing missing gives no slot; an orphan and a duplicate are not in it', () => {
+        const u = withDune();
+        expect(asSync(syncSlotsPlan(u.get, u.object as any, 'dune')).slots).toEqual([]);
+        for (const [id, f] of [['dune_orphan', 'p_Member_name'], ['dune_title2', 'p_Publication_title']]) {
+            u.obj(id, 'Slot', u.val('dune', 'r_InstanceSpecification_slots', [id]));
+            u.val(id, 'r_Slot_definingFeature', [f]);
+        }
+        expect(asSync(syncSlotsPlan(u.get, u.object as any, 'dune')).slots).toEqual([]);
+    });
+
+    it('a record without slot roles, or an instance in no model, cannot be synced', () => {
+        const u = withDune();
+        const bare = { name: 'object', typeReference: 'r_InstanceSpecification_classifier', featureContainer: 'r_Class_ownedAttributes' };
+        expect(syncSlotsPlan(u.get, bare, 'dune')).toEqual({ error: 'the slot roles do not resolve' });
+        expect(syncSlotsPlan(u.get, u.object as any, 'nowhere')).toEqual({ error: 'the instance is in no model' });
     });
 });
 

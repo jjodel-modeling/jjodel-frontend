@@ -72,12 +72,13 @@ import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
-import { creationOptions, instantiate, objectRecord, viewCentre, type CreationOption } from './hooks/instantiate';
+import { creationOptions, instanceObjectRecord, instantiate, objectRecord, syncSlots, syncSlotsPlan, viewCentre, type CreationOption } from './hooks/instantiate';
 import type { OntoBinding } from '../../model/ontological/bindingCodec';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
 import { ConformanceProblemSync } from './problems/ConformanceProblemSync';
+import { InstantiationProblemSync } from './problems/InstantiationProblemSync';
 import { SimCheckProblemSync } from './problems/SimCheckProblemSync';
 import { ValidationFreshnessSync } from './problems/ValidationFreshnessSync';
 import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
@@ -3366,6 +3367,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         { divider: true },
                     );
                 }
+                // «Sync slots» on an instance the `object` record judges (S3a, R-OI-9): only the missing slots;
+                // disabled when none is missing. The same function the missing-slot problem's action runs.
+                const instanceRecord = typeof objectId === 'string' ? instanceObjectRecord(get, modelid, objectId) : null;
+                if (instanceRecord && typeof objectId === 'string') {
+                    const plan = syncSlotsPlan(get, instanceRecord, objectId);
+                    const missing = 'error' in plan ? 0 : plan.slots.length;
+                    items.push(
+                        {
+                            label: 'Sync slots', icon: 'bi-arrow-repeat', disabled: missing === 0,
+                            tooltip: missing === 0 ? 'Every feature of the classifier has a slot' : undefined,
+                            onClick: () => void syncSlots(objectId, instanceRecord).then(result => {
+                                if (!result.ok) console.warn('[EditorV2] syncSlots:', result.problems);
+                            }),
+                        },
+                        { divider: true },
+                    );
+                }
             }
 
             // M1: composition children for object nodes (uses compositionCompat utility)
@@ -4957,6 +4975,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             <div className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
+                <InstantiationProblemSync modelid={modelid} graphId={graphId} />
                 <SimCheckProblemSync modelid={modelid} graphId={graphId} />
                 <ValidationFreshnessSync modelid={modelid} />
                 <PalettePanel

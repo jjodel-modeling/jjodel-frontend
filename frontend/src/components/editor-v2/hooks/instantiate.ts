@@ -13,7 +13,8 @@
  *    one `useJjomSync` Step 2bis gives a new root: a `createVertexForObject` at the click point, right after the
  *    create, left the instantiation out of the undo history (measured, P-2026-10-21-0100: Cmd+Z never removed it and
  *    walked back the entries before it instead; without it one Cmd+Z removes the instance and its slots). The click
- *    reaches the node through the layout write instead (ticket (a), P-2026-10-21-1016).
+ *    reaches the node through the layout write instead (ticket (a), P-2026-10-21-1016). `syncSlots` (S3a) is the same
+ *    path on an existing instance: only its missing slots, through the slot loop `synthesize` uses.
  *
  * ── The synthesis ─────────────────────────────────────────────────────────────────────────────────────────────────
  *
@@ -44,7 +45,7 @@
  */
 
 import { decodeOntoBindings, ONTO_BINDINGS_KEY, type OntoBinding, type OntoValueKind } from '../../../model/ontological/bindingCodec';
-import { featureClosure, instantiableClassifiers, type OntoReadView } from '../../../model/ontological/bindingReader';
+import { featureClosure, instantiableClassifiers, recordFor, slotDiff, type OntoReadView } from '../../../model/ontological/bindingReader';
 import { authoredDefaultSize } from '../nodes/nodeSizing';
 import type { VertexLayoutWrite } from '../viewpoint/layout/vertexLayout';
 
@@ -105,6 +106,12 @@ export function readOntoBindings(get: DGet, modelId: string): OntoBinding[] {
 /** The `object` record of the model's metamodel, `null` without one. */
 export function objectRecord(get: DGet, modelId: string): OntoBinding | null {
     return readOntoBindings(get, modelId).find(b => b.name === OBJECT_RECORD) ?? null;
+}
+
+/** The `object` record when it is the most specific record of `instanceId` (S3a, decision D4), `null` otherwise. */
+export function instanceObjectRecord(get: DGet, modelId: string, instanceId: string): OntoBinding | null {
+    const record = recordFor(ontoReadView(get), readOntoBindings(get, modelId), instanceId);
+    return record?.name === OBJECT_RECORD ? record : null;
 }
 
 /** The M1 objects of the model: its roots, then breadth first every object contained in their slots; each once. */
@@ -273,23 +280,69 @@ export function synthesisPlan(get: DGet, binding: OntoBinding, classifierId: str
         slotKey: null, slotMetaclass: null, valueKey: null, slots: [], cycles: [],
     };
     if (binding.slotContainer === undefined || binding.definingFeature === undefined) return plan;
+    const roles = slotRoles(get, binding);
+    if (!roles) return { error: 'the slot roles do not resolve' };
+
+    const { features, cycles } = featureClosure(view, binding, classifierId);
+    plan.slotKey = roles.slotKey;
+    plan.slotMetaclass = roles.slotMetaclass;
+    plan.valueKey = roles.valueKey;
+    plan.cycles = cycles;
+    plan.slots = features.map(feature => plannedSlot(get, view, binding, modelId, roles, feature));
+    return plan;
+}
+
+/** The names the slot roles of `binding` resolve to: the container on the instance, its type, the defining feature and
+ *  the value holder on the slot. `null` when one of the first three does not resolve. */
+interface SlotRoles {
+    slotKey: string;
+    slotMetaclass: string;
+    definingKey: string;
+    valueKey: string | null;
+}
+
+function slotRoles(get: DGet, binding: OntoBinding): SlotRoles | null {
+    if (binding.slotContainer === undefined || binding.definingFeature === undefined) return null;
     const slotKey = get(binding.slotContainer)?.name;
     const slotMetaclass = get(get(binding.slotContainer)?.type)?.name;
     const definingKey = get(binding.definingFeature)?.name;
-    if (!isId(slotKey) || !isId(slotMetaclass) || !isId(definingKey)) return { error: 'the slot roles do not resolve' };
+    if (!isId(slotKey) || !isId(slotMetaclass) || !isId(definingKey)) return null;
     const valueKey = binding.valueHolder !== undefined ? get(binding.valueHolder)?.name : undefined;
+    return { slotKey, slotMetaclass, definingKey, valueKey: isId(valueKey) ? valueKey : null };
+}
 
-    const { features, cycles } = featureClosure(view, binding, classifierId);
-    plan.slotKey = slotKey;
-    plan.slotMetaclass = slotMetaclass;
-    plan.valueKey = isId(valueKey) ? valueKey : null;
-    plan.cycles = cycles;
-    plan.slots = features.map(feature => ({
+/** The slot of `feature`: its seed and the value its default asks for. */
+function plannedSlot(get: DGet, view: OntoReadView, binding: OntoBinding, modelId: string, roles: SlotRoles, feature: string): PlannedSlot {
+    return {
         feature,
-        seed: { [definingKey]: feature },
-        value: plan.valueKey !== null ? plannedValue(get, view, binding, modelId, feature) : null,
-    }));
-    return plan;
+        seed: { [roles.definingKey]: feature },
+        value: roles.valueKey !== null ? plannedValue(get, view, binding, modelId, feature) : null,
+    };
+}
+
+/** What «Sync slots» will create on an existing instance: only the missing slots (R-OI-9). */
+export interface SlotSyncPlan {
+    modelId: string;
+    instance: string;
+    slotKey: string;
+    slotMetaclass: string;
+    valueKey: string | null;
+    /** One per feature of the closure with no slot (`slotDiff`), in closure order; orphans and duplicates left alone. */
+    slots: PlannedSlot[];
+}
+
+/** What `syncSlots` will create on `instanceId`, or why it cannot. Pure. */
+export function syncSlotsPlan(get: DGet, binding: OntoBinding, instanceId: string): SlotSyncPlan | { error: string } {
+    const view = ontoReadView(get);
+    const modelId = modelOf(get, instanceId);
+    if (modelId === undefined) return { error: 'the instance is in no model' };
+    const roles = slotRoles(get, binding);
+    if (!roles) return { error: 'the slot roles do not resolve' };
+    const { missing } = slotDiff(view, binding, instanceId);
+    return {
+        modelId, instance: instanceId, slotKey: roles.slotKey, slotMetaclass: roles.slotMetaclass, valueKey: roles.valueKey,
+        slots: missing.map(feature => plannedSlot(get, view, binding, modelId, roles, feature)),
+    };
 }
 
 /** Box metrics of the UML fixture (`box`, `scripts/probe/uml-class-object-fixture.ts:222`): chrome, one top label, one row. */
@@ -450,7 +503,9 @@ function verticesOf(lookup: Record<string, any>, objectId: string): string[] {
  * no undo entry: it returns once the write has landed (`layoutLanded`). A problem when the node never appears or the
  * write never lands; nothing when no layout has a size or a position to take.
  */
-async function layoutInstanceNode(m: WriteModules, get: DGet, instance: string, slots: number, placeAt?: InstancePlacement): Promise<string | null> {
+async function layoutInstanceNode(
+    m: WriteModules, get: DGet, instance: string, slots: number, placeAt?: InstancePlacement, growOnly = false,
+): Promise<string | null> {
     const state: any = m.joiner.store.getState();
     const metaclass = get(instance)?.instanceof;
     if (!isId(metaclass)) return null;
@@ -477,9 +532,21 @@ async function layoutInstanceNode(m: WriteModules, get: DGet, instance: string, 
         return vs.length > 0 ? vs : null;
     });
     if (!vertices) return 'the node of the instance never appeared';
+    // «Sync slots» (S3a, decision D6): the box grows to hold the new rows and never shrinks; a box already as large as
+    // the rows ask, under a layout, is left as it is there.
+    const grown = (vid: string, layoutKey: string, patch: typeof patches[number]['patch']) => {
+        if (!growOnly || patch.w === undefined || patch.h === undefined) return patch;
+        const now = m.layout.readVertexLayout(get(vid), layoutKey);
+        const w = now.isResized ? Math.max(now.w, patch.w) : patch.w;
+        const h = now.isResized ? Math.max(now.h, patch.h) : patch.h;
+        return now.isResized && w === now.w && h === now.h ? null : { ...patch, w, h };
+    };
+    const planned = vertices.flatMap(vid => patches.map(({ layoutKey, patch }) => ({ vid, layoutKey, patch: grown(vid, layoutKey, patch) })))
+        .filter((p): p is { vid: string; layoutKey: string; patch: typeof patches[number]['patch'] } => p.patch !== null);
+    if (planned.length === 0) return null;
     const writes: NodeLayoutWrite[] = [];
     m.joiner.TRANSACTION('Instantiate: node layout', () => {
-        for (const vid of vertices) for (const { layoutKey, patch } of patches) {
+        for (const { vid, layoutKey, patch } of planned) {
             const write = m.layout.resolveVertexLayoutWrite(get(vid), patch, layoutKey);
             writes.push({ vertex: vid, write });
             if (write.target === 'dictionary') {
@@ -493,8 +560,20 @@ async function layoutInstanceNode(m: WriteModules, get: DGet, instance: string, 
     return null;
 }
 
-/** Make one instance of `classifierId` with its slots and default values, laid out by `placeAt` (see the module comment). */
-export async function instantiate(classifierId: string, record: OntoBinding, placeAt?: InstancePlacement): Promise<InstantiateResult> {
+/**
+ * The instantiations and syncs running now. A run creates its slots one at a time over seconds, so a problem producer
+ * reading the store in the middle would report missing slots that are on their way (S3a, decision D5): it asks this
+ * instead, since the end of a run is not a store change of its own.
+ */
+let inFlight = 0;
+
+/** True while an `instantiate` or a `syncSlots` is running. */
+export function instantiationInFlight(): boolean {
+    return inFlight > 0;
+}
+
+/** The modules of the write half, loaded on first use. */
+async function writeModules() {
     const [joiner, adapter, ir, readCtx, layoutKey, layout, history] = await Promise.all([
         import('../../../joiner'),
         import('./createAdapter'),
@@ -504,25 +583,116 @@ export async function instantiate(classifierId: string, record: OntoBinding, pla
         import('../viewpoint/layout/vertexLayout'),
         import('../../../redux/reducer/reducer'),
     ]);
-    const { store } = joiner;
     const modules: WriteModules = { joiner, ir, readCtx, layoutKey, layout };
-    const get: DGet = id => (store.getState() as any)?.idlookup?.[id];
+    const get: DGet = id => (joiner.store.getState() as any)?.idlookup?.[id];
+    return { modules, createInstance: adapter.createInstance, history, get };
+}
+
+/** Make one instance of `classifierId` with its slots and default values, laid out by `placeAt` (see the module comment). */
+export async function instantiate(classifierId: string, record: OntoBinding, placeAt?: InstancePlacement): Promise<InstantiateResult> {
+    const { modules, createInstance, history, get } = await writeModules();
     const result: InstantiateResult = { ok: false, instance: null, slots: [], values: [], problems: [] };
     const plan = synthesisPlan(get, record, classifierId);
     if ('error' in plan) {
         result.problems.push(plan.error);
         return result;
     }
+    inFlight++;
     const group = history.beginUndoGroup();
     try {
-        await synthesize(modules, adapter.createInstance, get, plan, record, result, placeAt);
+        await synthesize(modules, createInstance, get, plan, record, result, placeAt);
     } finally {
         // After the last write has landed (`seedLanded`, `layoutLanded`): the store sends actions on its update timer,
         // so one macrotask (P-2026-10-21-1041) was not enough and the node layout pushed an entry of its own.
         history.endUndoGroup(group);
+        inFlight--;
     }
     result.ok = result.problems.length === 0;
     return result;
+}
+
+/**
+ * «Sync slots» (R-OI-3, R-OI-9; S3a): create the missing slots of `instanceId`, each with its default value, appended to
+ * its slot list in closure order (decision D7), and grow its node to hold them (D6). Orphans and duplicates are left
+ * alone: nothing is deleted. One undo entry, by the same group and the same waits as `instantiate`. Nothing to create
+ * is a success that writes nothing.
+ */
+export async function syncSlots(instanceId: string, record: OntoBinding): Promise<InstantiateResult> {
+    const { modules, createInstance, history, get } = await writeModules();
+    const result: InstantiateResult = { ok: false, instance: instanceId, slots: [], values: [], problems: [] };
+    const plan = syncSlotsPlan(get, record, instanceId);
+    if ('error' in plan) {
+        result.problems.push(plan.error);
+        return result;
+    }
+    if (plan.slots.length === 0) {
+        result.ok = true;
+        return result;
+    }
+    inFlight++;
+    const group = history.beginUndoGroup();
+    try {
+        const seeded: Seeded = [];
+        await createSlots(createInstance, get, plan, plan.slots, record, result, seeded);
+        await waitSeeded(get, seeded, result);
+        const total = (featureValue(get, instanceId, record.slotContainer!)?.values ?? []).filter(isId).length;
+        const laid = await layoutInstanceNode(modules, get, instanceId, total, undefined, true);
+        if (laid) result.problems.push(laid);
+    } finally {
+        history.endUndoGroup(group);
+        inFlight--;
+    }
+    result.ok = result.problems.length === 0;
+    return result;
+}
+
+/** Every create with the seed `addObject` writes after it, awaited before the group closes. */
+type Seeded = Array<[string, Readonly<Record<string, string | number | boolean>>]>;
+
+async function waitSeeded(get: DGet, seeded: Seeded, result: InstantiateResult): Promise<void> {
+    for (const [id, seed] of seeded) {
+        if (!(await waitFor(() => seedLanded(get, id, seed)))) result.problems.push(`${id}: its seed never landed`);
+    }
+}
+
+/** A thunk reading the DValue of `featureId` on `ownerId`, for `waitFor`. */
+const holder = (get: DGet, ownerId: string, featureId: string | undefined) => () =>
+    featureId !== undefined ? featureValue(get, ownerId, featureId) : undefined;
+
+/**
+ * The slot loop of `synthesize` and `syncSlots`: one slot per entry of `planned` on `plan.instance`, each awaited in the
+ * instance's list before the next one (the list keeps the order), then its default value in the slot's holder.
+ */
+async function createSlots(
+    createInstance: typeof import('./createAdapter').createInstance, get: DGet,
+    plan: { modelId: string; instance: string; slotKey: string; slotMetaclass: string; valueKey: string | null },
+    planned: readonly PlannedSlot[], record: OntoBinding, result: InstantiateResult, seeded: Seeded,
+): Promise<void> {
+    const instance = plan.instance;
+    for (const slotPlan of planned) {
+        const slot = createInstance(plan.modelId, plan.slotMetaclass, instance, plan.slotKey, slotPlan.seed);
+        if (!slot.ok || !slot.id) {
+            result.problems.push(`slot for ${slotPlan.feature}: ${slot.reason ?? 'not created'}`);
+            continue;
+        }
+        const slotId = slot.id;
+        result.slots.push(slotId);
+        seeded.push([slotId, slotPlan.seed]);
+        // In the owner's list before the next one, so the list keeps the closure order.
+        const listed = await waitFor(() => (featureValue(get, instance, record.slotContainer!)?.values ?? []).includes(slotId));
+        if (!listed) result.problems.push(`slot ${slotId}: not listed in ${plan.slotKey}`);
+        if (!slotPlan.value || plan.valueKey === null) continue;
+        if (!(await waitFor(holder(get, slotId, record.valueHolder)))) {
+            result.problems.push(`slot ${slotId}: ${plan.valueKey} never appeared`);
+            continue;
+        }
+        const value = createInstance(plan.modelId, slotPlan.value.metaclass, slotId, plan.valueKey, slotPlan.value.seed);
+        if (value.ok && value.id) {
+            result.values.push(value.id);
+            seeded.push([value.id, slotPlan.value.seed]);
+        }
+        else result.problems.push(`value for ${slotPlan.feature}: ${value.reason ?? 'not created'}`);
+    }
 }
 
 /** The creates, the wait for their seeding and the node layout of `instantiate`, inside its undo group. */
@@ -530,12 +700,9 @@ async function synthesize(
     m: WriteModules, createInstance: typeof import('./createAdapter').createInstance, get: DGet, plan: SynthesisPlan,
     record: OntoBinding, result: InstantiateResult, placeAt?: InstancePlacement,
 ): Promise<void> {
-    // Every create with the seed `addObject` writes after it, awaited before the group closes.
-    const seeded: Array<[string, Readonly<Record<string, string | number | boolean>>]> = [];
+    const seeded: Seeded = [];
     const settle = async (slots: number) => {
-        for (const [id, seed] of seeded) {
-            if (!(await waitFor(() => seedLanded(get, id, seed)))) result.problems.push(`${id}: its seed never landed`);
-        }
+        await waitSeeded(get, seeded, result);
         const laid = await layoutInstanceNode(m, get, result.instance!, slots, placeAt);
         if (laid) result.problems.push(laid);
     };
@@ -553,37 +720,13 @@ async function synthesize(
         return;
     }
 
-    const holder = (ownerId: string, featureId: string | undefined) => () =>
-        featureId !== undefined ? featureValue(get, ownerId, featureId) : undefined;
-    const slotsValue = await waitFor(holder(instance, record.slotContainer));
+    const slotsValue = await waitFor(holder(get, instance, record.slotContainer));
     if (!slotsValue) {
         result.problems.push(`${plan.slotKey}: the slot of the instance never appeared`);
         return;
     }
 
-    for (const planned of plan.slots) {
-        const slot = createInstance(plan.modelId, plan.slotMetaclass!, instance, plan.slotKey, planned.seed);
-        if (!slot.ok || !slot.id) {
-            result.problems.push(`slot for ${planned.feature}: ${slot.reason ?? 'not created'}`);
-            continue;
-        }
-        const slotId = slot.id;
-        result.slots.push(slotId);
-        seeded.push([slotId, planned.seed]);
-        // In the owner's list before the next one, so the list keeps the closure order.
-        const listed = await waitFor(() => (featureValue(get, instance, record.slotContainer!)?.values ?? []).includes(slotId));
-        if (!listed) result.problems.push(`slot ${slotId}: not listed in ${plan.slotKey}`);
-        if (!planned.value || plan.valueKey === null) continue;
-        if (!(await waitFor(holder(slotId, record.valueHolder)))) {
-            result.problems.push(`slot ${slotId}: ${plan.valueKey} never appeared`);
-            continue;
-        }
-        const value = createInstance(plan.modelId, planned.value.metaclass, slotId, plan.valueKey, planned.value.seed);
-        if (value.ok && value.id) {
-            result.values.push(value.id);
-            seeded.push([value.id, planned.value.seed]);
-        }
-        else result.problems.push(`value for ${planned.feature}: ${value.reason ?? 'not created'}`);
-    }
+    const target = { modelId: plan.modelId, instance, slotKey: plan.slotKey, slotMetaclass: plan.slotMetaclass!, valueKey: plan.valueKey };
+    await createSlots(createInstance, get, target, plan.slots, record, result, seeded);
     await settle(result.slots.length);
 }

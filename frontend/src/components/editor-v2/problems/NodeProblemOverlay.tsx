@@ -156,6 +156,8 @@ export function NodeProblemOverlay({ problems, anchorEl, onClose }: Props) {
     }, [anchorEl, problems]);
 
     const onAction = (p: NodeProblem) => {
+        // A 'custom' action that carries its own effect (S3a «Sync slots»): run it and close.
+        if (p.action?.run) { p.action.run(); onClose(); return; }
         if (!p.action?.targetNodeId) return;
         const target = p.action.targetNodeId;
         const inViewport = isNodeInViewport(target);

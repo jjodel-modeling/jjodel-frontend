@@ -51,13 +51,23 @@ export type NodeProblemSeverity = 'warning' | 'error';
  * `'containment'` (R-GV-2, P-2026-10-10-0105 S2) is the sixth: the objects more than one IR container claims and
  * those no container claims beside claimed ones, mapped by `containmentToProblems.ts` from the containment model the
  * presentation pass builds. Same price and same reasoning as the two above; the S2 prompt asks for it by name.
+ *
+ * `'instantiation'` (R-OI-3, P-2026-10-21-1600 S3a) is the seventh: the slots of an instance that do not match its
+ * classifier's feature closure (missing, orphan, two for one feature), a value of the wrong type, a cycle in the
+ * generalization, mapped by `instantiationToProblems.ts` and written by `InstantiationProblemSync`. One kind for all
+ * five findings (the finding is in the id and the title). Same price as the four above, asked for by name.
  */
-export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation' | 'containment';
+export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation' | 'classifier-kind' | 'simulation' | 'containment' | 'instantiation';
 
 export interface NodeProblemAction {
     label: string;
     type: 'focus-node' | 'scroll-to-node' | 'custom';
     targetNodeId?: string;
+    /**
+     * A `'custom'` action's own effect, called by the overlay before the target path (S3a «Sync slots»). A closure, so
+     * session-local like the rest of the registry and never serialized. Additive optional property (rule 11).
+     */
+    run?: () => void;
 }
 
 // Per-violation detail carried by 'conformance' problems, so the overlay can
