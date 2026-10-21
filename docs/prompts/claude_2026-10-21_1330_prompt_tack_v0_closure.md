@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1330
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (small: one display fix, a first-run check on two foreign repositories, README, version; no new feature)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane tack-v0 · daa7c6077 · first run on harness-book and the Sprotty clone recorded; ticket: no preselection for a repository without sessions · visual check by the chat on 4710 (RC-23) pending
 Supersedes: P-2026-10-19-2100 (same task, rewritten on the trunk after slice 9 and S1)
 Corregge: none (the `tack repos` column width defect was found by the chat on 2026-10-19 20:55 and is fixed here as item 1)
 Request: Alfonso, 2026-10-19 20:49, in the project chat: «decidi tu» on closing v0 now versus waiting for the Sprotty pilot; 2026-10-19 22:20: Lanes page before the v0 closure (R-TACK-3)
