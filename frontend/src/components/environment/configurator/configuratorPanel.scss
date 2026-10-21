@@ -100,17 +100,28 @@
         &--unsaved { color: var(--color-form-dirty-text); }
     }
 
+    // R-CFG-9: neutral (Delete's look) while the project is saved; the primary gradient while it has
+    // unsaved changes. The border stays in both states, transparent in the second, so the size does not move.
     &__save {
         display: inline-flex;
         align-items: center;
         gap: var(--space-1);
         padding: var(--space-1) var(--space-3);
-        border: none;
+        border: 1px solid var(--color-form-border);
         border-radius: var(--radius-sm);
-        background: var(--gradient-primary);
-        color: var(--color-text-inverse);
+        background: var(--color-form-surface);
+        color: var(--color-text-primary);
         font-size: var(--text-sm);
         cursor: pointer;
+
+        &:hover { border-color: var(--color-form-border-strong); }
+
+        &--unsaved,
+        &--unsaved:hover {
+            border-color: transparent;
+            background: var(--gradient-primary);
+            color: var(--color-text-inverse);
+        }
 
         &:disabled { opacity: 0.6; cursor: progress; }
     }

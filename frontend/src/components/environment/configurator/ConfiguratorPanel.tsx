@@ -368,7 +368,14 @@ export function ConfiguratorPanel({
                     <span className={`cfg-panel__status${projectModified ? ' cfg-panel__status--unsaved' : ''}`} role="status">
                         {saveStatus(projectModified)}
                     </span>
-                    <button type="button" className="cfg-panel__save" title="Save the project (Ctrl/Cmd+S)" disabled={saving} onClick={save}>
+                    {/* R-CFG-9: the primary action while the project has unsaved changes, neutral once saved. */}
+                    <button
+                        type="button"
+                        className={`cfg-panel__save${projectModified ? ' cfg-panel__save--unsaved' : ''}`}
+                        title="Save the project (Ctrl/Cmd+S)"
+                        disabled={saving}
+                        onClick={save}
+                    >
                         <i className="bi bi-floppy" aria-hidden="true" />
                         Save
                     </button>

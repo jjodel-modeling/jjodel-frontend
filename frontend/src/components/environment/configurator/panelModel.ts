@@ -172,6 +172,19 @@ export function newTargetAt(
     return row && row.actions.includes('change') ? rowIndex : null;
 }
 
+/**
+ * «Remove from the list» on a reference row, and «(none)» in its picker (R-CFG-7, P-2026-10-20-1123):
+ * the unlink of the row, never a delete. A multi-valued row follows its own `remove`, as `jjform/refSlot`
+ * rules it. A single-valued row is unlinked whenever the viewer may change it, required ones included:
+ * `refSlot` gives `change` exactly when the slot is writable and the value is not locked, and withholds
+ * `remove` from a required single (R-REF-3, which the Data Manager keeps). An empty required slot is left
+ * to the validation to report.
+ */
+export function canUnlink(ref: { upper: number }, row: { actions: readonly string[] }): boolean {
+    if (row.actions.includes('remove')) return true;
+    return ref.upper === 1 && row.actions.includes('change');
+}
+
 // ── Header band ────────────────────────────────────────────────────────────
 
 /** The issues chip: «No issues», or the counts with their plurals. */

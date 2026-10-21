@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     FOLD_PREFIX,
+    canUnlink,
     cardinalityLabel,
     cardinalityText,
     componentKind,
@@ -148,6 +149,31 @@ describe('newTargetAt', () => {
         expect(newTargetAt({ upper: 1 }, { link: null, rows: [row(2, ['open', 'change'])] }, 2)).toBe(2);
         expect(newTargetAt({ upper: 1 }, { link: null, rows: [row(2, ['open'])] }, 2)).toBeNull();
         expect(newTargetAt({ upper: 1 }, { link: null, rows: [row(2, ['open', 'change'])] }, 0)).toBeNull();
+    });
+});
+
+// P-2026-10-20-1123, R-CFG-7: the Configurator unlinks every single reference the viewer may write,
+// required ones included; `jjform/refSlot` keeps R-REF-3 for the Data Manager.
+describe('canUnlink', () => {
+    const row = (actions: string[]) => ({ actions });
+    it('on a multi-valued slot follows the row\'s remove, as R-REF-3 rules it', () => {
+        expect(canUnlink({ upper: -1 }, row(['open', 'remove']))).toBe(true);
+        expect(canUnlink({ upper: 2 }, row(['open']))).toBe(false);
+    });
+    it('does not read change on a multi-valued slot', () => {
+        expect(canUnlink({ upper: -1 }, row(['open', 'change']))).toBe(false);
+        expect(canUnlink({ upper: 2 }, row(['open', 'change']))).toBe(false);
+    });
+    it('on a single-valued slot unlinks a required row the viewer may change, and an optional one', () => {
+        expect(canUnlink({ upper: 1 }, row(['open', 'change']))).toBe(true);
+        expect(canUnlink({ upper: 1 }, row(['open', 'change', 'remove']))).toBe(true);
+    });
+    it('keeps a row the viewer may not write: changeable=false, derived, the role, a locked value, a hidden reference', () => {
+        expect(canUnlink({ upper: 1 }, row(['open']))).toBe(false);
+        expect(canUnlink({ upper: 1 }, row([]))).toBe(false);
+    });
+    it('unlinks a dangling pointer of a required single slot, which has no Open', () => {
+        expect(canUnlink({ upper: 1 }, row(['change']))).toBe(true);
     });
 });
 

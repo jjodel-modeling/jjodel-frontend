@@ -43,7 +43,7 @@ import { addChildReason, crumbLabel, newInstanceReason, rendersInline } from '..
 import type { RefShape, RefSlotControls, RefSlotRow } from '../../../jjform';
 import { ComponentPicker } from './ComponentPicker';
 import { DiagLine, FieldTitle, ObjectFields, SectionHead, problemsAttr, useFolds, useObjectModel, usePanelEnv } from './PanelFields';
-import { componentKind, createControl, newTargetAt, orderComponents, summaryLine } from './panelModel';
+import { canUnlink, componentKind, createControl, newTargetAt, orderComponents, summaryLine } from './panelModel';
 
 /** Shown when the host refuses a write without saying why, as `IRFormField` words it. */
 const UNSTATED_REFUSAL = 'The model refused this change';
@@ -200,12 +200,12 @@ function ReferenceSlot({ objectId, comp, diagnostics, via }: { objectId: string;
             consume(setValue(objectId, ref.key, now.link, id, true));
         }
     };
-    /** «(none)»: the unlink of the row, at its index. */
+    /** «(none)»: the unlink of the row, at its index (R-CFG-7: a required single one too). */
     const pickNone = () => {
         const p = picker;
         if (!p || p.row === null) return;
         const row = live().rows.find(r => r.index === p.row);
-        if (row?.actions.includes('remove')) consume(clearValue(objectId, ref.key, p.row, true));
+        if (row && canUnlink(ref, row)) consume(clearValue(objectId, ref.key, p.row, true));
     };
     /** «+ New»: created by the host and linked where `newTargetAt` says (Q4 of the report). */
     const createNew = (rowIndex: number | null) => {
@@ -221,7 +221,7 @@ function ReferenceSlot({ objectId, comp, diagnostics, via }: { objectId: string;
     const remove = (e: React.MouseEvent, row: RefSlotRow) => {
         if (e.detail > 1) return;
         const now = live().rows.find(r => r.index === row.index && r.value === row.value);
-        if (now?.actions.includes('remove')) consume(clearValue(objectId, ref.key, row.index, true));
+        if (now && canUnlink(ref, now)) consume(clearValue(objectId, ref.key, row.index, true));
     };
 
     const shown: FieldDiagnostic[] = refusal ? [{ severity: 'error', message: refusal }, ...diagnostics] : diagnostics;
@@ -231,6 +231,18 @@ function ReferenceSlot({ objectId, comp, diagnostics, via }: { objectId: string;
     const openButton = (row: RefSlotRow) => row.actions.includes('open') && (
         <button type="button" className="cfg-panel__icon" aria-label={`Open ${nameOf(row)}`} title="Open" onClick={() => open(row.value)}>
             <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+        </button>
+    );
+    /** R-CFG-7: on every row the viewer may unlink, a single required one included. */
+    const removeButton = (row: RefSlotRow) => canUnlink(ref, row) && (
+        <button
+            type="button"
+            className="cfg-panel__icon"
+            aria-label={`Remove ${nameOf(row)} from ${label}`}
+            title="Remove from the list (the element is not deleted)"
+            onClick={e => remove(e, row)}
+        >
+            <i className="bi bi-x-lg" aria-hidden="true" />
         </button>
     );
     const brokenGlyph = (row: RefSlotRow) => row.broken && (
@@ -283,6 +295,7 @@ function ReferenceSlot({ objectId, comp, diagnostics, via }: { objectId: string;
                             {summaryOf(row) && <span className="cfg-panel__ref-summary">{summaryOf(row)}</span>}
                         </div>
                         {brokenGlyph(row)}
+                        {removeButton(row)}
                         {openButton(row)}
                         {row.actions.includes('change') && chevron(row.index)}
                     </div>
@@ -296,17 +309,7 @@ function ReferenceSlot({ objectId, comp, diagnostics, via }: { objectId: string;
                                 {summaryOf(row) && <span className="cfg-panel__ref-summary">{summaryOf(row)}</span>}
                             </div>
                             {brokenGlyph(row)}
-                            {row.actions.includes('remove') && (
-                                <button
-                                    type="button"
-                                    className="cfg-panel__icon"
-                                    aria-label={`Remove ${nameOf(row)} from ${label}`}
-                                    title="Remove from the list (the element is not deleted)"
-                                    onClick={e => remove(e, row)}
-                                >
-                                    <i className="bi bi-x-lg" aria-hidden="true" />
-                                </button>
-                            )}
+                            {removeButton(row)}
                             {openButton(row)}
                         </div>
                     ))}
@@ -344,7 +347,7 @@ function ReferenceSlot({ objectId, comp, diagnostics, via }: { objectId: string;
                         label={`Choose ${label}`}
                         options={canLink ? options : []}
                         value={row?.value ?? ''}
-                        allowNone={!!row?.actions.includes('remove')}
+                        allowNone={!!row && canUnlink(ref, row)}
                         typeName={ref.of}
                         create={createFor(picker.row ?? undefined)}
                         onPick={pick}
