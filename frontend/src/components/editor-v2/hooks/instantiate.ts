@@ -29,7 +29,7 @@
  * the history reducer instead (`beginUndoGroup` / `endUndoGroup`, `reducer.ts`, P-2026-10-21-1016): every write lands
  * in the store as it is made, so the waits below see it, and the group keeps them as one entry whose undo removes every
  * record created, `idlookup` included. The group closes after the deferred seeding of every created object has landed
- * (`seedLanded`) and after the node layout is written, so neither pushes an entry of its own.
+ * (`seedLanded`) and after the node layout has landed (`layoutLanded`), so neither pushes an entry of its own.
  *
  * ── The node layout ───────────────────────────────────────────────────────────────────────────────────────────────
  *
@@ -46,6 +46,7 @@
 import { decodeOntoBindings, ONTO_BINDINGS_KEY, type OntoBinding, type OntoValueKind } from '../../../model/ontological/bindingCodec';
 import { featureClosure, instantiableClassifiers, type OntoReadView } from '../../../model/ontological/bindingReader';
 import { authoredDefaultSize } from '../nodes/nodeSizing';
+import type { VertexLayoutWrite } from '../viewpoint/layout/vertexLayout';
 
 /** A D record of the store by id, `undefined` when there is none. */
 export type DGet = (id: string) => any;
@@ -375,6 +376,26 @@ export function seedLanded(get: DGet, objectId: string, seed: Readonly<Record<st
     });
 }
 
+/** One node layout write of `layoutInstanceNode`: the vertex, and the write `resolveVertexLayoutWrite` gave for it. */
+export interface NodeLayoutWrite {
+    vertex: string;
+    write: VertexLayoutWrite;
+}
+
+/**
+ * Whether every write of `writes` is in the store, by value: the record of the layout (`layoutByViewpoint[vpId]`) or
+ * the vertex itself holds each key written. The store sends its actions on its update timer (`COMMIT` every
+ * `U.UpdatingTimer` ms, `reducer.ts`), up to 300 ms after the TRANSACTION returns, so the undo group waits for this
+ * instead of closing before the write and letting it push an entry of its own (S2-4u, P-2026-10-21-1121). Pure.
+ */
+export function layoutLanded(get: DGet, writes: readonly NodeLayoutWrite[]): boolean {
+    return writes.every(({ vertex, write }) => {
+        const held = write.target === 'dictionary' ? get(vertex)?.layoutByViewpoint?.[write.vpId] : get(vertex);
+        const wanted: Record<string, unknown> = write.target === 'dictionary' ? write.record : write.patch;
+        return !!held && Object.entries(wanted).every(([key, value]) => value === undefined || held[key] === value);
+    });
+}
+
 // ── The write half ──────────────────────────────────────────────────────────────────────────────────────────────
 
 export interface InstantiateResult {
@@ -426,7 +447,8 @@ function verticesOf(lookup: Record<string, any>, objectId: string): string[] {
  * draws the node there (the click is in its coordinates); another layout only when its IR draws the instance. Not
  * `syncSizeToJjom`: its `markCanvasUpdated` makes the sync skip the vertex for the next 300 ms, which a resize drag
  * wants (the canvas already holds the size) and a new node does not. Inside the instantiation's undo group, so it adds
- * no undo entry. A problem when the node never appears; nothing when no layout has a size or a position to take.
+ * no undo entry: it returns once the write has landed (`layoutLanded`). A problem when the node never appears or the
+ * write never lands; nothing when no layout has a size or a position to take.
  */
 async function layoutInstanceNode(m: WriteModules, get: DGet, instance: string, slots: number, placeAt?: InstancePlacement): Promise<string | null> {
     const state: any = m.joiner.store.getState();
@@ -455,9 +477,11 @@ async function layoutInstanceNode(m: WriteModules, get: DGet, instance: string, 
         return vs.length > 0 ? vs : null;
     });
     if (!vertices) return 'the node of the instance never appeared';
+    const writes: NodeLayoutWrite[] = [];
     m.joiner.TRANSACTION('Instantiate: node layout', () => {
         for (const vid of vertices) for (const { layoutKey, patch } of patches) {
             const write = m.layout.resolveVertexLayoutWrite(get(vid), patch, layoutKey);
+            writes.push({ vertex: vid, write });
             if (write.target === 'dictionary') {
                 m.joiner.SetFieldAction.new(vid as any, 'layoutByViewpoint' as any, { [write.vpId]: write.record }, '+=', false);
                 continue;
@@ -465,6 +489,7 @@ async function layoutInstanceNode(m: WriteModules, get: DGet, instance: string, 
             for (const [key, value] of Object.entries(write.patch)) m.joiner.SetFieldAction.new(vid as any, key as any, value, undefined, false);
         }
     });
+    if (!(await waitFor(() => layoutLanded(get, writes)))) return 'the node layout never landed';
     return null;
 }
 
@@ -492,9 +517,8 @@ export async function instantiate(classifierId: string, record: OntoBinding, pla
     try {
         await synthesize(modules, adapter.createInstance, get, plan, record, result, placeAt);
     } finally {
-        // `Action.fire` dispatches on a timer (action.ts:349): one macrotask lets the last writes (the node layout)
-        // land in the group instead of pushing an entry of their own after it closes.
-        await new Promise(resolve => setTimeout(resolve, 0));
+        // After the last write has landed (`seedLanded`, `layoutLanded`): the store sends actions on its update timer,
+        // so one macrotask (P-2026-10-21-1041) was not enough and the node layout pushed an entry of its own.
         history.endUndoGroup(group);
     }
     result.ok = result.problems.length === 0;

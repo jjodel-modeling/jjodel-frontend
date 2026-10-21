@@ -1169,23 +1169,53 @@ let openUndoGroup: { id: number, sender: Pointer<DUser>, openedAt: number } | nu
 // The last entry a group wrote and the state before the group: a legacy merge into that entry (a graph create of the
 // sync after endUndoGroup) stays exact. Cleared by any push, undo, redo and beginUndoGroup.
 let undoGroupTail: { entry: GObject, base: DState } | null = null;
+// The last close of a group and the last clear of the tail, with their cause: read by `undoGroupState` only.
+type UndoGroupEvent = { group: number | null, at: number, by: 'end' | 'begin' | 'undo' | 'cap' | 'push' };
+let undoGroupClosed: UndoGroupEvent | null = null;
+let undoGroupTailCleared: UndoGroupEvent | null = null;
+
+function closeUndoGroup(by: UndoGroupEvent['by']): void {
+    if (openUndoGroup) undoGroupClosed = { group: openUndoGroup.id, at: Date.now(), by };
+    openUndoGroup = null;
+}
+
+function clearUndoGroupTail(by: UndoGroupEvent['by']): void {
+    if (undoGroupTail) undoGroupTailCleared = { group: openUndoGroup?.id ?? null, at: Date.now(), by };
+    undoGroupTail = null;
+}
 
 /** Opens an undo group for the current user, closing any open one; returns its id for `endUndoGroup`. */
 export function beginUndoGroup(): number {
+    closeUndoGroup('begin');
+    clearUndoGroupTail('begin');
     openUndoGroup = { id: ++undoGroupSeq, sender: DUser.current, openedAt: Date.now() };
-    undoGroupTail = null;
     return openUndoGroup.id;
 }
 
 /** Closes the group `id`; a no-op when it is no longer the open one (undo, redo, the time cap or a newer group closed it). */
 export function endUndoGroup(id: number): void {
-    if (openUndoGroup?.id === id) openUndoGroup = null;
+    if (openUndoGroup?.id === id) closeUndoGroup('end');
 }
 
 function dropUndoGroup(): void {
-    openUndoGroup = null;
-    undoGroupTail = null;
+    closeUndoGroup('undo');
+    clearUndoGroupTail('undo');
 }
+
+/** The undo group state, read-only, for the tests and the acceptance probe (`window.undoGroupState` in dev). */
+export function undoGroupState(): {
+    open: { id: number, openedAt: number } | null, tail: { timestamp: number, onTop: boolean } | null,
+    closed: UndoGroupEvent | null, tailCleared: UndoGroupEvent | null,
+} {
+    const own = statehistory[openUndoGroup?.sender ?? DUser.current]?.undoable;
+    return {
+        open: openUndoGroup ? { id: openUndoGroup.id, openedAt: openUndoGroup.openedAt } : null,
+        tail: undoGroupTail ? { timestamp: undoGroupTail.entry.timestamp, onTop: !!own && own[own.length - 1] === undoGroupTail.entry } : null,
+        closed: undoGroupClosed && { ...undoGroupClosed },
+        tailCleared: undoGroupTailCleared && { ...undoGroupTailCleared },
+    };
+}
+if ((import.meta as any).env?.DEV) windoww.undoGroupState = undoGroupState;
 
 /** Rewrites `entry` in place (both history stacks hold the same object) as the exact delta from `ret` back to `base`. */
 function setExactGroupEntry(entry: GObject, ret: DState, base: DState): void {
@@ -1249,7 +1279,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
             if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();
-            if (openUndoGroup && ret.timestamp - openUndoGroup.openedAt > UNDO_GROUP_MAX_MS) openUndoGroup = null;
+            if (openUndoGroup && ret.timestamp - openUndoGroup.openedAt > UNDO_GROUP_MAX_MS) closeUndoGroup('cap');
             if (openUndoGroup && openUndoGroup.sender === action.sender && U.userHasInteracted && statehistory.globalcanundostate) {
                 // A write of the open group: its first pushes an entry of its own (never merged into an unrelated
                 // one, whatever its age or graph keys), the next ones rewrite that entry exactly.
@@ -1325,7 +1355,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             }
             else if (isRelevantChange) {
                 let user = (action as Action).sender;
-                undoGroupTail = null;
+                clearUndoGroupTail('push');
                 statehistory[user].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
                 if (statehistory[user].undoable.length > MAX_HISTORY) statehistory[user].undoable.shift();

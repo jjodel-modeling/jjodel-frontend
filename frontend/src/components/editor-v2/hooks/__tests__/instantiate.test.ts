@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     BOX_METRICS, creationOptions, instanceBoxSize, instanceName, layoutTargets, modelObjectIds, objectRecord, ontoReadView,
-    readOntoBindings, seedLanded, synthesisPlan, viewCentre, type SynthesisPlan,
+    layoutLanded, readOntoBindings, seedLanded, synthesisPlan, viewCentre, type NodeLayoutWrite, type SynthesisPlan,
 } from '../instantiate';
 
 // A UML subset as D records: the metamodel of the notation file §2 (only what the record reaches) and the library
@@ -284,5 +284,25 @@ describe('the layout of a new node (tickets (a) and (c), P-2026-10-21-1016)', ()
         expect(seedLanded(get, 'lit9', { value: true })).toBe(false);
         val('lit9', 'a_LiteralBoolean_value', ['true']);
         expect(seedLanded(get, 'lit9', { value: true })).toBe(true);
+    });
+
+    it('layoutLanded holds once every key written is in the store, the dictionary record or the vertex itself (S2-4u)', () => {
+        const lookup: Record<string, any> = { V1: { id: 'V1', className: 'DVertex', x: 0, y: 0, w: 300, layoutByViewpoint: {} } };
+        const get = (id: string) => lookup[id];
+        const writes: NodeLayoutWrite[] = [
+            { vertex: 'V1', write: { target: 'dictionary', vpId: 'VP1', record: { x: 10, y: 20, w: 280, h: 102, isResized: true } as any } },
+            { vertex: 'V1', write: { target: 'scalars', patch: { x: 10, y: 20, w: undefined } } },
+        ];
+        // Written but not sent: the store still holds the old vertex.
+        expect(layoutLanded(get, writes)).toBe(false);
+        lookup.V1 = { ...lookup.V1, layoutByViewpoint: { VP1: { x: 10, y: 20, w: 280, h: 102, isResized: true } } };
+        expect(layoutLanded(get, writes)).toBe(false);
+        lookup.V1 = { ...lookup.V1, x: 10, y: 20 };
+        expect(layoutLanded(get, writes)).toBe(true);
+        // One key short in the record is not landed; an undefined key of the patch is not a key written.
+        lookup.V1 = { ...lookup.V1, layoutByViewpoint: { VP1: { x: 10, y: 20, w: 280, h: 60, isResized: true } } };
+        expect(layoutLanded(get, writes)).toBe(false);
+        expect(layoutLanded(get, [{ vertex: 'V2', write: { target: 'scalars', patch: { x: 1 } } }])).toBe(false);
+        expect(layoutLanded(get, [])).toBe(true);
     });
 });

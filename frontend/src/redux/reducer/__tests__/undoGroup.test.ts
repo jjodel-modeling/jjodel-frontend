@@ -107,7 +107,7 @@ vi.mock('../../../events/registry', () => ({ JjodelEvents: {} }));
 
 const { Uobj } = await vi.importActual<any>('../../../common/UObj');
 h.holder.Uobj = Uobj;
-const { _reducer, beginUndoGroup, endUndoGroup, UNDO_GROUP_MAX_MS } = await import('../reducer');
+const { _reducer, beginUndoGroup, endUndoGroup, undoGroupState, UNDO_GROUP_MAX_MS } = await import('../reducer');
 
 const USER = 'U1';
 const T0 = 2_000_000;
@@ -267,5 +267,40 @@ describe('a group closes', () => {
         endUndoGroup(g2);
         s = at(3000, s, rename('b'));
         expect(entries()).toHaveLength(2);
+    });
+});
+
+describe('a late write of an instantiation (S2-4u, P-2026-10-21-1121)', () => {
+    /** The node layout write of `instantiate` (its scalar form), as the store's update timer sends it, up to 300 ms after its TRANSACTION. */
+    const layout = (id: string) => batch('Instantiate: node layout', [set(id, 'w', 280), set(id, 'h', 102)]);
+    function upToTheLayout(): { s: any, g: number } {
+        let s = at(0, freshState(), rename('a'));
+        const g = beginUndoGroup();
+        s = at(150, s, create('I1'));
+        s = at(939, s, graphCreate('V1', ['V1']));
+        return { s, g };
+    }
+
+    it('inside the open group, 700 ms after its last write (past the legacy 450 ms window), joins the group entry', () => {
+        let { s, g } = upToTheLayout();
+        s = at(1639, s, layout('V1'));
+        endUndoGroup(g);
+        expect(entries()).toHaveLength(2);
+        expect(keysOf(top().idlookup)).toEqual(['I1', 'V1']);
+        expect(s.idlookup.V1.h).toBe(102);
+        const undone = at(3000, s, undoAction());
+        expect(ids(undone)).toEqual(['O1']);
+        // The redo reapplies the whole group, the late write included.
+        expect(at(3500, undone, redoAction()).idlookup.V1.h).toBe(102);
+    });
+
+    it('after endUndoGroup it pushes an entry of its own (the defect): the group state shows the close, then the push', () => {
+        let { s, g } = upToTheLayout();
+        endUndoGroup(g);
+        s = at(1639, s, layout('V1'));
+        expect(entries()).toHaveLength(3);
+        expect(undoGroupState()).toMatchObject({
+            open: null, tail: null, closed: { group: g, by: 'end' }, tailCleared: { group: null, by: 'push', at: T0 + 1639 },
+        });
     });
 });
