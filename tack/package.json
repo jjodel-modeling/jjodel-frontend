@@ -1,6 +1,6 @@
 {
   "name": "tack",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Project-agnostic monitor for agent-assisted development harnesses",
   "private": true,
   "license": "MIT",
