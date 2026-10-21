@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1910
 Chat: C-2026-10-21-1405
 Front: instance-of
 Lane: full (viewpoint/ir/ is in the critical-zone table of CLAUDE.md 3.1; Phase 1 read-only, hard stop on the report)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane oi-s3b · report d6fa8ba7f · questions 1, 3, 4 as recommended; question 2 decided against option (d), unattended (R-OI-15, R-OI-16) · Phase 2 P-2026-10-21-1955 and P-2026-10-21-1956
 Request: none (the chat has no shareable URL; Alfonso's words are kept with --request)
 Depends: P-2026-10-21-1636
 Corregge: —

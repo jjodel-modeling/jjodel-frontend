@@ -6424,6 +6424,20 @@ P-2026-10-20-1835.
   values, grows the node box and never shrinks it; a model-wide variant is not built now (200 instances do not fit the
   10 s group cap). Removing orphan slots is a later slice (S3b or S3c), as an action with a confirmation (R-OI-9).
   Discovery P-2026-10-21-1405, questions 2 and 4.
+- **R-OI-15** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Ghost and orphan rows (S3b).** A closure feature with no slot is a ghost row `<name> = ` in the instance's node,
+  drawn from the binding with no store write; typing a value materializes one Slot and one value in one S2u group
+  (empty text writes nothing). Text that does not parse for the feature's type is written as a String value, so the
+  write is not refused (R-VAL-4) and S3a reports the value type. An orphan row keeps its value and carries a generic
+  marker (the lost feature's name cannot be recovered). The missing-slot problem stays beside the ghost row. Editing
+  real slot rows on the canvas is a later slice. Discovery P-2026-10-21-1910
+  (`docs/discovery/discovery_2026-10-21_onto_s3b_ghost_rows.md`), questions 3 and 4.
+- **R-OI-16** (2026-10-21, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **An instance node's box hugs its rows; «a manual resize wins» is not changed.** The UML client's instance view
+  authors no `defaultSize`, so S2 writes no manual box and ghost rows are never clipped; for a view that does author
+  a fixed size, S2, «Sync slots» and materialization grow the box grow-only inside their own group. Replaces option
+  (d) of the S3b report (a sizing lane changing «a manual resize wins» in `nodeSizing.ts` and `jjomTransformers.ts`),
+  which would change the sizing of every resized node outside this front. Question 2.
 
 ## R-BV: fixed-width bit-vector values in JjEL (decisions 2026-10-20)
 
