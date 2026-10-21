@@ -27,7 +27,10 @@ const LEASE_TTL_MS = 60_000;
 /** The event catalogue, in the order the settings page shows it. lane: the scope filter applies. */
 export const CATALOGUE = [
   { kind: 'lane_question', label: 'Lane asks a question', urgent: true, lane: true, type: 'edge' },
-  { kind: 'lane_hard_stop', label: 'Lane in hard-stop', urgent: false, lane: true, type: 'edge' },
+  // The three stops behind Outcome: hard-stop (lanes.stop_kind, R-TACK-6), one event each (slice 9).
+  { kind: 'lane_breakpoint', label: 'Lane at a breakpoint (waits for a GO)', urgent: false, lane: true, type: 'edge' },
+  { kind: 'lane_ceiling', label: 'Lane at the context ceiling (handoff written)', urgent: false, lane: true, type: 'edge' },
+  { kind: 'lane_hard_stop', label: 'Lane in hard-stop (unplanned)', urgent: false, lane: true, type: 'edge' },
   { kind: 'lane_blocked', label: 'Lane blocked', urgent: true, lane: true, type: 'edge' },
   { kind: 'gate_red', label: 'Gate red at merge', urgent: false, lane: true, type: 'edge' },
   { kind: 'context_hard', label: 'Context above the hard ceiling', urgent: false, lane: false, type: 'edge' },
@@ -89,15 +92,18 @@ export function facts(db, ctx) {
   const name = repoName(db);
   const link = (repo) => `${ctx.boardUrl ?? 'http://127.0.0.1:4710/'}${repo ? `?repo=${repo}` : ''}`;
   const out = Object.fromEntries(CATALOGUE.filter((c) => !c.disabled).map((c) => [c.kind, []]));
-  const lanes = db.prepare(`SELECT id, repo_key, started_ms, end_ms, live, turns, last_outcome, log_mtime_ms, critical, front, chat, merge_state
+  const lanes = db.prepare(`SELECT id, repo_key, started_ms, end_ms, live, turns, last_outcome, log_mtime_ms, critical, front, chat, merge_state, stop_kind
     FROM lanes`).all();
+  const STOP_RULE = { breakpoint: 'lane_breakpoint', ceiling: 'lane_ceiling' };
   for (const l of lanes) {
     if (settingsFor(l.repo_key).value('harness.laneRun') === 'off') continue;
     const base = { unit: l.id, front: l.front, chat: l.chat, repoKey: l.repo_key, repo: name(l.repo_key), link: link(l.repo_key) };
     const at = l.log_mtime_ms ?? l.end_ms ?? l.started_ms ?? now;
     const n = l.turns ?? 0;
-    const outcomeRule = { question: 'lane_question', 'hard-stop': 'lane_hard_stop', blocked: 'lane_blocked', done: 'lane_done' }[l.last_outcome];
-    if (outcomeRule) out[outcomeRule].push({ ...base, transition: `${l.last_outcome}#${n}`, at, outcome: l.last_outcome });
+    const outcomeRule = l.last_outcome === 'hard-stop' ? STOP_RULE[l.stop_kind] ?? 'lane_hard_stop'
+      : { question: 'lane_question', blocked: 'lane_blocked', done: 'lane_done' }[l.last_outcome];
+    const shown = l.last_outcome === 'hard-stop' ? l.stop_kind ?? 'hard-stop' : l.last_outcome;
+    if (outcomeRule) out[outcomeRule].push({ ...base, transition: `${l.last_outcome}#${n}`, at, outcome: shown });
     if (l.critical && l.last_outcome === 'question') out.cz_ask.push({ ...base, transition: `ask#${n}`, at, outcome: 'question' });
     if (l.started_ms) out.lane_started.push({ ...base, transition: 'started', at: l.started_ms, outcome: 'started' });
     if (l.merge_state === 'red') out.gate_red.push({ ...base, transition: 'red', at, outcome: 'red' });

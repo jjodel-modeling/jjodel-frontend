@@ -38,7 +38,7 @@ export const LANE_COLUMN_SOURCES = {
     adoptions: 'Decisions taken (unattended) items of the last result event (count)',
     stop_kind: 'breakpoint | ceiling | hard-stop for a last turn that ended Outcome: hard-stop (stopKindOf), else null',
     resumes: 'resume messages (count)', auto_resumes: 'resume messages starting with [auto] after an optional [P-...] bracket (count; no text kept)',
-    stop_scanned: 'the two columns above were computed (boolean); set by UPDATE alone',
+    stop_scanned: 'the version of the stop rules the three columns above were computed under (STOP_RULES; 0 never); set by UPDATE alone',
     prompt_status: 'first word of the Status: header line of the prompt file at the repository HEAD (git show), lowercased',
   },
   lane_spend: {
@@ -188,6 +188,10 @@ const STOP_LINE = /^[ \t>*_`-]*Stop:[ \t*_`]*(planned|ceiling|unplanned)\b/im;
 const CEILING_WORDS = /context[\w\s-]{0,20}ceiling|soft ceiling|\bAM-8\b|hand-?off/i;
 const PLANNED_WORDS = /phase 1|visual check|report (is |was )?committed|end of phase|planned (hard[- ]?)?stop|breakpoint/i;
 const NO_STOP = /^[\s*_`>-]*none\b/i;
+const STOP_HEAD = /^##[ \t]+hard[- ]?stops?\b/im;
+// The version of the stop rules: a lane scanned under an older one is scanned again (lanes.stop_scanned holds it).
+// 2: a prompt without a HARD STOP section counts as planned when the result names a planned stop (P-2026-10-21-1025).
+export const STOP_RULES = 2;
 
 /**
  * The «## HARD STOP» section of a prompt file's text: its body, or null without the section or when it says
@@ -204,7 +208,8 @@ export function plannedStopSection(text) {
  * The kind of a hard-stop turn: breakpoint (the prompt planned it), ceiling (the session hit the context ceiling and
  * left a handoff), hard-stop (anything else). Rules in order: a declared «Stop: planned|ceiling|unplanned» line of the
  * result wins; handoff.md present and the result naming a ceiling or a handoff; the prompt's HARD STOP section names a
- * stop and the lane is a discovery or the result says that stop was reached; else hard-stop.
+ * stop and the lane is a discovery or the result says that stop was reached; a prompt with no HARD STOP section at all
+ * (not one that says None) and a result naming a planned stop (phase 1, visual check, report committed); else hard-stop.
  * facts: { result, handoff (boolean), promptText, kind }.
  */
 export function stopKindOf({ result = '', handoff = false, promptText = '', kind = null }) {
@@ -216,7 +221,7 @@ export function stopKindOf({ result = '', handoff = false, promptText = '', kind
     const first = section.split('\n').find((l) => l.trim()) || '';
     const own = first.replace(/[*_`#>-]/g, '').trim().toLowerCase().slice(0, 24);
     if (kind === 'discovery' || PLANNED_WORDS.test(result) || (own.length >= 12 && result.toLowerCase().includes(own))) return 'breakpoint';
-  }
+  } else if (!STOP_HEAD.test(String(promptText || '')) && PLANNED_WORDS.test(result)) return 'breakpoint';
   return 'hard-stop';
 }
 
@@ -462,7 +467,7 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opt
   const sessionRepo = db.prepare('SELECT repo_key FROM session_repo WHERE session_id = ?');
   const getKey = db.prepare('SELECT cache_key, live, end_ms, stop_scanned FROM lanes WHERE id = ?');
   // Schema 8 columns are set by UPDATE alone, so that a lane read before schema 8 keeps its other columns (prompt_status).
-  const putStop = db.prepare('UPDATE lanes SET stop_kind = ?, resumes = ?, auto_resumes = ?, stop_scanned = 1 WHERE id = ?');
+  const putStop = db.prepare(`UPDATE lanes SET stop_kind = ?, resumes = ?, auto_resumes = ?, stop_scanned = ${STOP_RULES} WHERE id = ?`);
   const put = db.prepare(`INSERT OR REPLACE INTO lanes (id, repo_key, session_id, started_ms, end_ms, live, tier, runs, outcome,
     blocked_run, over_time, corrective, cost_usd, cache_key, turns, last_outcome, log_mtime_ms, critical, front, chat, merge_state,
     gates_red, kind, title, work_ms, worktree, resolved, adoptions)
@@ -479,7 +484,7 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opt
       try { names = readdirSync(dir); } catch { st.errors++; continue; }
       const key = laneKey(dir, names);
       const ex = getKey.get(id);
-      const stale = !ex || ex.stop_scanned !== 1;
+      const stale = !ex || ex.stop_scanned !== STOP_RULES;
       if (ex && ex.cache_key === key && ex.end_ms !== null && !ex.live && !stale) {
         st.unchanged++;
         continue;

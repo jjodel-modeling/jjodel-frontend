@@ -2,7 +2,9 @@
 // attention, the running cards, the last 24 hours, the lanes by state, and the lanes that reported unattended
 // decisions. Adapted from Jjodel's lane board (port 4700): the same tiles and cards; the phase ladder and the
 // architect-chat tokens are shown disabled with their reason (discovery 2026-10-19, Tack Lanes page, §2).
-// html(), runningCard() and poller() are pure (test/lanes-view.test.mjs runs them in a vm).
+// Slice 9: the waiting lanes are cards above the running ones, with what it takes to answer them (the reason, the
+// Recommended: line, the chat), and a banner «N lanes waiting» that scrolls to them, or shows the one card.
+// html(), runningCard(), waitingCard(), banner() and poller() are pure (test/lanes-view.test.mjs runs them in a vm).
 'use strict';
 (function (root) {
   const C = root.TackCharts, B = root.TackBoard;
@@ -18,7 +20,7 @@
   const clock = (ms) => (ms === null || ms === undefined ? '–' : B.hhmm(new Date(ms).toISOString()));
   const ago = (ms, now) => (ms === null || ms === undefined ? '–' : mins(now - ms) + ' ago');
   const disabled = (label, reason) => '<span class="ln-dis" title="' + esc(reason) + '" aria-label="' + esc(label + ': ' + reason) + '">' + esc(label) + '</span>';
-  const OUTCOME_CLASS = { done: 'ln-done', question: 'ln-wait', 'hard-stop': 'ln-wait', breakpoint: 'ln-bp', ceiling: 'ln-ceil', blocked: 'ln-block' };
+  const OUTCOME_CLASS = { done: 'ln-done', question: 'ln-wait', 'hard-stop': 'ln-hs', breakpoint: 'ln-bp', ceiling: 'ln-ceil', blocked: 'ln-block' };
   // The three stops behind Outcome: hard-stop (the collector's stop_kind); the tooltip says what each means.
   const STOP_TIPS = {
     breakpoint: 'Breakpoint: a stop the prompt planned (its HARD STOP section). Nothing went wrong; the lane waits for a GO.',
@@ -42,6 +44,44 @@
   const badges = (c) => (c.kind ? '<span class="tag">' + esc(c.kind) + '</span>' : '') + (c.tier ? '<span class="tag">' + esc(c.tier) + '</span>' : '') +
     (c.direct ? '<span class="tag" title="A direct merge: no Claude session">direct</span>' : '') + (c.critical ? '<span class="tag ln-block" title="Critical zone">critical</span>' : '');
   const base = (p) => (p ? p.split(/[\\/]/).filter(Boolean).pop() : null);
+  const pad = (n) => String(n).padStart(2, '0');
+  /** Local YYYY-MM-DD HH:MM. */
+  const stamp = (ms) => { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+
+  // The pill of a waiting card says what the answer is; the class keeps the colour of the stop kind.
+  const WAIT_TIPS = {
+    GO: 'GO: the lane stopped where its prompt planned (a breakpoint); it continues on a GO.',
+    answer: 'answer: the lane asks a question; it continues on the answer.',
+    ACK: 'ACK: the session hit the context ceiling and wrote a handoff; the continuation needs a go.',
+    'hard-stop': 'hard-stop: an unplanned stop; look at the lane.',
+  };
+  const PILL_CLASS = { GO: 'ln-bp', answer: 'ln-wait', ACK: 'ln-ceil', 'hard-stop': 'ln-hs' };
+  const CHAT_NOTE = 'The chat that must answer: the Request: line of the prompt, else the Claude-Session: trailer of the commit that added it';
+
+  /** A waiting lane: id, wait pill, title, the reason, the Recommended: line set apart, waiting since, the chat that answers. */
+  function waitingCard(c, now) {
+    const w = c.wait || {};
+    const pill = w.pill || 'hard-stop';
+    const who = c.chat || (w.chatUrl ? 'chat' : '—');
+    const chat = w.chatUrl ? '<a class="mono ln-chat" href="' + esc(w.chatUrl) + '" target="_blank" rel="noopener noreferrer" title="' + esc(CHAT_NOTE) + '">' + esc(who) + '</a>'
+      : '<span class="mono ln-chat" title="' + esc(CHAT_NOTE + '; no URL resolves') + '">' + esc(who) + '</span>';
+    return '<section class="in-card ln-card ln-wcard" data-id="' + esc(c.id) + '" aria-label="' + esc(c.id + ' waits: ' + pill) + '">' +
+      '<h3><span class="mono">' + esc(c.id) + '</span><span class="tag ' + (PILL_CLASS[pill] || '') + '" title="' + esc(WAIT_TIPS[pill] || '') + '">' + esc(pill) + '</span>' +
+      (c.auto ? '<span class="tag ln-auto" title="' + esc(AUTO_TIP) + '">auto</span>' : '') + badges(c) + '</h3>' +
+      '<div class="sub">' + esc(c.title || '(no title)') + '</div>' +
+      (w.reason ? '<p class="ln-why">' + esc(w.reason) + '</p>' : '<p class="ln-why dim">No closing message to quote.</p>') +
+      (w.recommended ? '<p class="ln-rec"><span class="kl">Recommended</span>' + esc(w.recommended) + '</p>' : '') +
+      '<div class="ln-facts"><span title="' + esc(w.since ? stamp(w.since) : '') + '">waiting ' + esc(mins(w.since ? now - w.since : null)) + ' · since ' + esc(w.since ? stamp(w.since) : '–') + '</span>' +
+      '<span>answer in ' + chat + '</span></div></section>';
+  }
+
+  /** The banner over the page: «N lanes waiting» scrolling to the cards; exactly one waiting lane, the banner shows its card. '' for none. */
+  function banner(cards, by, now) {
+    if (!cards || !cards.length) return '';
+    if (cards.length === 1) return '<div class="ln-banner ln-one" role="status"><div class="ln-bh">1 lane waiting</div>' + waitingCard(cards[0], now) + '</div>';
+    return '<button type="button" class="ln-banner" data-scroll="ln-waiting" role="status">' + cards.length + ' lanes waiting' +
+      (waitText(by) ? '<span class="dim"> · ' + esc(waitText(by)) + '</span>' : '') + '</button>';
+  }
 
   /** A running lane: id, kind and tier, title, elapsed work against the median of its kind (when there is one). */
   function runningCard(c, now) {
@@ -77,7 +117,9 @@
     if (d.state !== 'ok') return '<div class="empty ln-absent">' + esc(d.reason) + '</div>';
     const t = d.tiles;
     const tile = (label, v, sub) => '<div class="kpi"><span class="kl">' + esc(label) + '</span><span class="kv"><b>' + v + '</b><span>' + esc(sub || '') + '</span></span></div>';
+    const wc = d.waitingCards || [];
     let out = '<div class="meta ln-upd">Updated ' + esc(d.updatedMs ? clock(d.updatedMs) : '–') + '; the page refreshes every 20 s while it is shown</div>';
+    out += banner(wc, t.waitingBy, now);
     out += '<div class="kpis ln-kpis" aria-label="Lanes">' + tile('Running', t.running) + tile('Waiting', t.waiting, waitText(t.waitingBy) || 'question or stop') + tile('Blocked', t.blocked, 'now') +
       tile('Done', t.done24, '24 h') + tile('Resolved', t.resolved24, '24 h') + tile('Spend today', B.usd(t.spendToday)) + '</div>';
 
@@ -85,7 +127,12 @@
     if (a.waiting.length || a.blocked.length || a.staleCount) {
       out += '<h2 title="' + esc(d.closure) + '">Needs attention<span class="h2n">' + (a.waiting.length + a.blocked.length) + ' open' +
         (waitText(t.waitingBy) ? ' (' + waitText(t.waitingBy) + ')' : '') + (a.staleCount ? ', ' + a.staleCount + ' older than 72 h not listed' : '') + '</span></h2>';
-      out += '<ul class="ln-attn">' + a.blocked.map((c) => attnRow(c, now, d.closure)).join('') + a.waiting.map((c) => attnRow(c, now, d.closure)).join('') + '</ul>';
+      // The waiting lanes are the cards below; the list keeps the blocked ones.
+      if (a.blocked.length) out += '<ul class="ln-attn">' + a.blocked.map((c) => attnRow(c, now, d.closure)).join('') + '</ul>';
+    }
+    if (wc.length > 1) {
+      out += '<h2 id="ln-waiting">Waiting<span class="h2n">' + wc.length + ', longest first</span></h2>';
+      out += '<div class="in-grid">' + wc.map((c) => waitingCard(c, now)).join('') + '</div>';
     }
 
     out += '<h2>Running<span class="h2n">' + d.running.length + '</span></h2>';
@@ -114,7 +161,7 @@
     return { tick, start() { timers.setInterval(tick, every); return this; } };
   }
 
-  root.TackLanes = { html, runningCard, poller, waitText, STOP_TIPS, AUTO_TIP, PHASE_REASON, ARCH_REASON, LAUNCH_NOTE };
+  root.TackLanes = { html, runningCard, waitingCard, banner, WAIT_TIPS, poller, waitText, STOP_TIPS, AUTO_TIP, PHASE_REASON, ARCH_REASON, LAUNCH_NOTE };
   if (typeof document === 'undefined') return;
 
   let box = null;
@@ -134,7 +181,12 @@
       busy = false;
     }
   }
-  root.TackViews.lanes = { render: (state, el) => { box = el; load(); } };
+  const scroll = (e) => {
+    const b = e.target.closest && e.target.closest('[data-scroll]');
+    const to = b && document.getElementById(b.getAttribute('data-scroll'));
+    if (to) to.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  root.TackViews.lanes = { render: (state, el) => { if (box !== el) el.addEventListener('click', scroll); box = el; load(); } };
   const p = poller({ load, visible: () => document.visibilityState === 'visible', active: () => B.state && B.state.tab === 'lanes' }).start();
   document.addEventListener('visibilitychange', p.tick);
 })(typeof window !== 'undefined' ? window : globalThis);

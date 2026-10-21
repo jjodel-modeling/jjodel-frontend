@@ -233,6 +233,14 @@ The page is static files served from memory (`src/board/page.html`, `board.css`,
   lane closes only on a commit naming its Prompt-ID after it ended (the tooltip says so); past 72 h it is
   counted, not listed. Phase progress and architect-chat tokens are shown disabled with their reason: not
   tracked in v0. The page refreshes every 20 s while it is shown and the browser tab is visible.
+  Slice 9: a card per waiting lane sits above the running cards, longest waiting first: Prompt-ID and title,
+  the wait as a pill (`GO` for a breakpoint, `answer` for a question, `ACK` for a ceiling, `hard-stop`),
+  the reason (for a question its text, for a stop the first sentence of the closing message naming it, at most
+  300 characters), the `Recommended:` line set apart, waiting since (relative and absolute), and the chat that
+  must answer, linked when a URL resolves (the prompt's `Request:` line, else the `Claude-Session:` trailer of
+  the commit that added it) and plain text otherwise. The text is read from the lane's `log.jsonl` when the
+  page asks (`src/board/waiting.mjs`, memoised by the log's size) and never written to the store. A banner
+  «N lanes waiting» scrolls to the cards; with exactly one waiting lane, the banner shows its card.
 - **Sessions** lists one row per session, newest first, with a summary strip and filters. The column
   «Unit / branch» shows the session's unit (layer 2, above), the branch otherwise.
 - **Timeline** draws one lane per repository (per branch when one repository is selected) on a Day or Week
@@ -261,7 +269,8 @@ JSON API, all GET except the rescan:
 | `/api/sessions?repo=&since=&until=` | one row per session: local day, start, duration, repository, branch, unit and its source (layer 2), link method, main-thread calls, context peak, cost (null when unknown, never 0), models, commit within the hour |
 | `/api/metrics?repo=&since=&until=` | every declared metric with its layer and state (`computed` with its value, or `not-adopted`); cost per day also by model family |
 | `/api/timeline?repo=&since=&until=` | per session, in epoch ms: start, end, main model family, first call at or above 200k, commit times within the hour |
-| `/api/lanes?repo=` | `state` and `reason`; with `ok`, the tiles, `attention` (`waiting`, `blocked`, `staleCount`), `running`, `last24`, `byState`, `adoptions`, `medianByKind`; `updatedMs` and the `closure` rule always |
+| `/api/lanes?repo=` | `state` and `reason`; with `ok`, the tiles, `attention` (`waiting`, `blocked`, `staleCount`, `staleOldest`), `waitingCards` (each with `wait`: `kind`, `pill`, `reason`, `recommended`, `chatUrl`, `since`), `running`, `last24`, `byState`, `adoptions`, `medianByKind`; `updatedMs` and the `closure` rule always |
+| `/api/attention` | the shape of Jjodel's lane board route for the menu bar app (`frontend/scripts/lane-board/README.md`, «The menu bar app's routes»): `v`, `now`, `stale`, `board`, `waiting`, `blocked`, `running`, `staleCount`, `staleOldest`, `items[]`, `runningItems[]`; all repositories, under 2 KB, no CORS header. `phase` and `left` are empty (not tracked) |
 | `/api/health` | store path, schema version, last scan (time, duration, rows added), row counts |
 | `POST /api/rescan` | runs the incremental scan again and returns the new last scan |
 
@@ -299,9 +308,11 @@ tack settings [--repo <dir>]   # every key, its effective value and the level it
 
 The notifier is a set of rules over what the collectors already store; nothing hooks into lane-run.
 The catalogue is `CATALOGUE` in `src/notify/notifier.mjs`. On by default: `lane_question`,
-`lane_hard_stop`, `lane_blocked`, `gate_red`, `context_hard`, `cz_ask`, `lane_silent`, `retention`.
+`lane_breakpoint`, `lane_ceiling`, `lane_hard_stop`, `lane_blocked`, `gate_red`, `context_hard`, `cz_ask`, `lane_silent`, `retention`.
 Off by default: `lane_done`, `lane_started`, `merge_completed`, `daily_spend`, `host_load`,
-`unpushed`. `merge_conflict` is listed but disabled in v0. Each row has `enabled`, a `scope` (`all`,
+`unpushed`. `merge_conflict` is listed but disabled in v0. A lane that ends `Outcome: hard-stop` fires one of three
+events by its stop kind (slice 9): `lane_breakpoint` (a planned stop, waits for a GO), `lane_ceiling` (the context
+ceiling, handoff written) or `lane_hard_stop` (unplanned). Each row has `enabled`, a `scope` (`all`,
 `fronts` or `chats`) and its `channels`.
 
 An occurrence is sent once, on its rising edge: it is claimed in `notify_events`, so a poll never
@@ -361,10 +372,12 @@ Schema 8 adds four `lanes` columns for the three kinds of stop. `stop_kind` is `
 ceiling | unplanned` line in the last result wins; else `handoff.md` present and the result naming the
 context ceiling or a handoff is a ceiling; else a `## HARD STOP` section of the prompt (prompt.txt, or
 `input-1.md` when that file is gone) that is not «None» and that the lane is a discovery for, or the result
-says it reached, is a breakpoint; else a hard-stop. `resumes` and `auto_resumes` count the resume messages
+says it reached, is a breakpoint; a prompt with no `## HARD STOP` section at all (not one that says «None»)
+and a result naming a planned stop (Phase 1, a visual check, a committed report) is a breakpoint too (stop rules 2,
+slice 9); else a hard-stop. `resumes` and `auto_resumes` count the resume messages
 and those starting with `[auto]` after an optional `[P-...]` bracket (the chat's mark for a resume sent in
-`/lane auto`; earlier resumes carry none and get no pill); no message text is kept. `stop_scanned` marks a lane
-whose two counts were computed: a lane read before schema 8 is scanned once, by UPDATE, keeping its other
+`/lane auto`; earlier resumes carry none and get no pill); no message text is kept. `stop_scanned` holds the version of
+the stop rules a lane was scanned under (`STOP_RULES`; a lane scanned under an older one is scanned again): a lane read before schema 8 is scanned once, by UPDATE, keeping its other
 columns. The lane-run output and the `Outcome:` token are unchanged.
 
 ## Tests

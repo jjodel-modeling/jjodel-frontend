@@ -1,6 +1,6 @@
 // tack board: a local page over the store, node:http only, bound to 127.0.0.1. On start it runs an
 // incremental scan (the collectors of slices 2-3), then serves the page and the JSON API of api.mjs;
-// POST /api/rescan repeats the scan. Nothing is written outside the store: the selection lives in
+// POST /api/rescan repeats the scan. Slice 9: GET /api/attention (the 4700 board's shape). Nothing is written outside the store: the selection lives in
 // the URL, the last scan time in memory. Slice 7: /settings and the settings API (writes go to the user
 // file or tack.local.json only), the host load sampler and GET /api/load, and the notifier (notify: true, set
 // by the CLI, off under TACK_NOTIFY=off).
@@ -13,7 +13,8 @@ import { identify } from '../collectors/git/identity.mjs';
 import { collectGit } from '../collectors/git/collect.mjs';
 import { collectLayers, laneLimit } from '../collectors/layers.mjs';
 import { collectLanes, defaultLaneRoot } from '../collectors/lane-run/collect.mjs';
-import { dayParam, healthApi, lanesApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi } from './api.mjs';
+import { attentionApi, dayParam, healthApi, lanesApi, listBoardRepos, metricsApi, preselect, repoParam, sessionsApi, timelineApi } from './api.mjs';
+import { waitReader } from './waiting.mjs';
 import { htmlAttributes, loadApi, settingsApi, settingsWrite } from './settings-api.mjs';
 import { createSampler, runningLanes } from '../host/load.mjs';
 import { effectiveSettings, settingsResolver, userSettingsPath } from '../settings/settings.mjs';
@@ -121,6 +122,8 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
   const preselected = preselect(db, cwd);
   let allowed = new Set();
   const lanes = laneRefresher({ db, laneRoot, user });
+  const waitFor = waitReader(laneRoot);
+  const lanesOf = (repo) => lanesApi(db, { repo, laneRoot, settingsFor: settingsResolver(db, { user }), updatedMs: lanes.updatedMs(), waitFor });
 
   const server = createServer((req, res) => {
     // Bound to 127.0.0.1; the Host check also turns away a DNS-rebound page, the Origin check a cross-site POST.
@@ -165,7 +168,12 @@ export async function startBoard({ store, root = defaultRoot(), cwd = process.cw
         const repo = repoParam(db, url.searchParams.get('repo'));
         if (repo.error) return json(res, 400, { error: repo.error });
         lanes.refresh();
-        return json(res, 200, lanesApi(db, { repo: repo.key, laneRoot, settingsFor: settingsResolver(db, { user }), updatedMs: lanes.updatedMs() }));
+        return json(res, 200, lanesOf(repo.key));
+      }
+      // The menu bar app's route, in the shape of Jjodel's lane board (4700): all repositories, no CORS header.
+      if (p === '/api/attention') {
+        lanes.refresh();
+        return json(res, 200, attentionApi(lanesOf(null), { staleMs: LEASE_FRESH_MS }));
       }
       if (p === '/api/health') return json(res, 200, healthApi(db, { store, lastScan }));
       if (p === '/api/repos') return json(res, 200, { preselected, repos: listBoardRepos(db) });

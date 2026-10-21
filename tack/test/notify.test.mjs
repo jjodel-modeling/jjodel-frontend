@@ -110,7 +110,7 @@ test('quiet hours queue non-urgent events and deliver one digest when they end; 
   assert.equal(w.sent.length, 2, 'still quiet');
   const morning = await w.tick(Date.parse('2026-01-09T08:00:00Z'));
   assert.equal(morning.digested, 2);
-  assert.deepEqual(w.sent.slice(2).map(([ch, m]) => `${ch} ${m.title} | ${m.body}`), ['desktop Tack - 2 during quiet hours | Lane in hard-stop 2', 'ntfy Tack - 2 during quiet hours | Lane in hard-stop 2']);
+  assert.deepEqual(w.sent.slice(2).map(([ch, m]) => `${ch} ${m.title} | ${m.body}`), ['desktop Tack - 2 during quiet hours | Lane in hard-stop (unplanned) 2', 'ntfy Tack - 2 during quiet hours | Lane in hard-stop (unplanned) 2']);
   await w.tick(Date.parse('2026-01-09T08:01:00Z'));
   assert.equal(w.sent.length, 4, 'one digest');
   assert.deepEqual(w.status('lane_hard_stop').map((s) => s.split(' ')[2]), ['digested', 'digested']);
@@ -208,8 +208,27 @@ test('the ntfy transport POSTs to server/topic with title, priority, click and t
   await assert.rejects(ntfyTransport({ fetch: async () => ({ ok: true }), config: { topic: null } }).send({ title: 'a', body: 'b' }), /no topic/);
 });
 
-test('the catalogue: 15 events, merge_conflict a disabled row with its reason, urgent on question and blocked', () => {
-  assert.equal(CATALOGUE.length, 15);
+test('the catalogue: 17 events, merge_conflict a disabled row with its reason, urgent on question and blocked', () => {
+  assert.equal(CATALOGUE.length, 17);
   assert.deepEqual(CATALOGUE.filter((c) => c.disabled).map((c) => c.kind), ['merge_conflict']);
   assert.deepEqual(CATALOGUE.filter((c) => c.urgent).map((c) => c.kind), ['lane_question', 'lane_blocked']);
+});
+
+test('a hard-stop fires one of three events by its stop kind: breakpoint, ceiling, unplanned hard-stop', async (t) => {
+  const w = world(t);
+  await w.tick();
+  w.lane('P-2026-01-08-3001', { last_outcome: 'hard-stop', stop_kind: 'breakpoint', log_mtime_ms: NOW });
+  w.lane('P-2026-01-08-3002', { last_outcome: 'hard-stop', stop_kind: 'ceiling', log_mtime_ms: NOW });
+  w.lane('P-2026-01-08-3003', { last_outcome: 'hard-stop', stop_kind: 'hard-stop', log_mtime_ms: NOW });
+  w.lane('P-2026-01-08-3004', { last_outcome: 'hard-stop', stop_kind: null, log_mtime_ms: NOW });
+  await w.tick(NOW + MIN);
+  const titles = w.sent.filter(([ch]) => ch === 'desktop').map(([, m]) => `${m.title} | ${m.body.split(' · ')[0]}`).sort();
+  assert.deepEqual(titles, [
+    'Tack - Lane at a breakpoint (waits for a GO) | P-2026-01-08-3001',
+    'Tack - Lane at the context ceiling (handoff written) | P-2026-01-08-3002',
+    'Tack - Lane in hard-stop (unplanned) | P-2026-01-08-3003',
+    'Tack - Lane in hard-stop (unplanned) | P-2026-01-08-3004',
+  ], 'a lane not yet classed (stop_kind null) counts as unplanned');
+  assert.deepEqual([w.status('lane_breakpoint').length, w.status('lane_ceiling').length, w.status('lane_hard_stop').length], [1, 1, 2]);
+  assert.ok(w.sent.some(([, m]) => m.body.includes('breakpoint')), 'the message names the kind as its outcome');
 });
