@@ -242,3 +242,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: `assignGeometricHandles` (`irEdgeViews.ts:195-196`) gives each object-as-edge the next free index on its side with no clamp to `MAX_HANDLES_PER_SIDE` (4), unlike `portDistribution.ts:415`. A fifth end on one side gets `right-4`, and React Flow refuses it (error #008): under the first hw-cpu Control layout 8 of 20 transitions were not drawn. S-A2 works around it by layout (at most four ends a side and role).
 **Priority**: medium
 **Found in**: P-2026-10-21-1620
+
+## 2026-10-21 — fix: the subset checker accepts bits(w, <ROM idiom>), closing the E-CALL ticket on FETCH (P-2026-10-21-1820)
+**Prompt**: `claude_2026-10-21_1820_prompt_hw_subset_rom_read.md`: accept `bits(w, x)` / `sbits(w, x)` with a literal `w` and `x` a literal or a memory-idiom read, reusing `matchMemoryIdiom`; every other case keeps its verdict. Closes the ticket «Subset checker flags the hw-cpu ROM read bits(8, c.init) as E-CALL».
+**Files touched**: `frontend/src/model/simulation/subsetChecker.ts`, `…/__tests__/subsetChecker.test.ts` (`1a85c93d3`); the Status line of the 1820 prompt; this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 11:45 (P-2026-10-21-1145)
+**Causa**: (c)
+**Regressions**: no. Typecheck exit 0; vitest `src/model/simulation src/codegen` 53 files, 2881 passed, 5 skipped; build exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Causa: R-BV-8 (3)'s literal-only rule predates the memory idiom. Accepted is the ROM read only (`read.kind` 'feature'): `smvExport.ts` translates no σ read inside `bits`, which keeps E-CALL. The key is walked. hw-cpu: no action or guard has a subset error (`checkActionSubset`, simBridge's call); the panel not checked by eye. `memoryIdiom.ts` unchanged, already exported. Bench: 5 mutations, all killed (body of 1a85c93d3).
+**Prompt document name**: 2026-10-21 18:20

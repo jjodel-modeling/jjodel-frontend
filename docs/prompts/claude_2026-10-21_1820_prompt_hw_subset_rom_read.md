@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1820
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (one simulation module and its test)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane hw-subset · 1a85c93d3
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-1431
 Corregge: P-2026-10-21-1145
