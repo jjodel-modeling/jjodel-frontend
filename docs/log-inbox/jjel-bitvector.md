@@ -6,6 +6,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-10-21 — fix: code panel prints a bit-vector run result instead of throwing
+**Prompt**: P-2026-10-21-0715: the code panel's `JSON.stringify` on run results and transformation arguments throws on a JjEL bit-vector's `bigint`; one helper prints a vector in Verilog form, any other bigint in decimal, everything else as today, used in `CodePanel.tsx` and `checkView.ts`, with a unit test.
+**Files touched**: `dc4b0626e` frontend/src/codegen/ui/CodePanel.tsx, frontend/src/codegen/ui/checkView.ts, frontend/src/codegen/ui/displayJson.ts (new), frontend/src/codegen/ui/__tests__/displayJson.test.ts (new); closure commit: the Status line of the prompt, this inbox.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Cause: the worker's structuredClone strips the class `toJSON`, the bigint stays. Vector and bigint print bare at any depth. Gates: typecheck exit 0; vitest src/codegen 20 files, 350 passed; build exit 0. Bench: 4 mutations, 0 survivors. No ticket for this defect in hw-notation.md. checkView's `differences` still walks a vector as a plain object (a leaf `x.bits`): reported, not changed.
+**Prompt document name**: 2026-10-21 07:15
+
 ## 2026-10-21 — fix: JjEL keyword as member name after `.` and `?.`
 **Prompt**: P-2026-10-21-0011: the JjEL parser accepts any keyword as the member name after `.` and `?.`, so the S1 bit-vector methods `x.and(y)`, `x.or(y)`, `x.not()` parse; remove the S1 workaround, the SPEC §7.5 limit, restore the autocomplete entries, amend R-BV-4.
 **Files touched**: `3aa5993c8` frontend/src/jjel/parser/parser.ts, frontend/src/jjel/__tests__/parser.test.ts, frontend/src/jjel/__tests__/bitvector.test.ts, frontend/src/jjel/__tests__/fixtures/bv-golden.json, frontend/src/jjel/SPEC.md, frontend/src/jjel/metadata/builtins.ts; closure commit: docs/decisions.md (R-BV-4), the Status line of the prompt, this inbox.
