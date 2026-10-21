@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1500
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (small: preselection fallback and empty states; no new collector)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane tack-v0b · 82cdc7792 · Sprotty first run now preselects the work tree as unrecorded, every tab empty · visual check by the chat on 4711 (RC-23) pending
 Corregge: P-2026-10-21-1330 (finding of its first-run check: started from `~/harness-exp/sprotty`, which has no Claude Code session, the board preselects no repository and shows every repository's data, Jjodel's included)
 Request: Alfonso, 2026-10-19 20:49, in the project chat: «decidi tu» on closing v0 (this slice is the condition the chat set for the v0.1.0 tag)
 

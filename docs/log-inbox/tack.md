@@ -425,3 +425,30 @@ First run, `TACK_STORE=/tmp/tack-v0/<name>.db node tack/bin/tack.mjs board --no-
 **Smoke visivo**: passato — chat, unattended: Chat checked the tack-v0 worktree at 13:56: tack --version 0.1.0, README Status line as prescribed, bounded tack repos (~/jjodel +60 more), 4710 200
 **Notes**: Rollback tag `pre-tack-v0` on `213243815` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1438/result.json`.
 **Prompt document name**: 2026-10-21 14:38
+
+## 2026-10-21 — fix: Tack v0b, preselect the start work tree when it has no session
+**Prompt**: P-2026-10-21-1500: when the start directory is a git work tree the store does not hold, preselect it as unrecorded instead of all repositories; one empty-state line on Lanes, Sessions, Timeline and Insights and empty API answers for it; tests; README «Install and first run»; re-run the Sprotty first-run check.
+**Files touched**: code commit 82cdc7792: tack/src/board/{api.mjs,server.mjs,board.js}, tack/test/first-run.test.mjs (new), tack/README.md; this commit: docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1500_prompt_tack_v0b_first_run.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 13:30 (P-2026-10-21-1330)
+**Causa**: (c)
+**Regressions**: no (node --test on tack/test: 264 of 264 pass, 257 existing plus 7 new, privacy tests included)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23)
+**Notes**: Key of the unrecorded work tree: its lowest root commit, the key identify() would give it, so a later session turns it into the stored row with no URL change (rescan drops `unrecorded`); a work tree with no commit gets a SHA-1 of its toplevel. /api/attention and the notifier's base repository unchanged. README also corrected in the board section and the /api/repos row, same behaviour.
+**Prompt document name**: 2026-10-21 15:00
+
+First run, `TACK_STORE=/tmp/tack-v0b/sprotty.db node tack/bin/tack.mjs board --no-open --port 4711` from `~/harness-exp/sprotty`, no flag, API read with `?repo=` set to the preselected key as the page does:
+
+| | ~/harness-exp/sprotty |
+|---|---|
+| preselected | 36a4e5574719 (sprotty, `unrecorded`); CLI «repository: sprotty, no recorded session» |
+| scan | 98 s, 696 sessions, 7241 commits, 5 stored repositories (none of them sprotty) |
+| sessions / timeline of the repository | 0 / 0 |
+| metrics | sessions 0; 9 computed (layer 1, over no session), 8 `not-adopted` |
+| Lanes tab | state `empty`: «No Claude Code sessions recorded for sprotty yet.» |
+| keys of the other 5 repositories in the four tab answers | 0 |
+| /api/attention | 200, 1145 bytes, the 4700 shape, unchanged route |
+| `git status --porcelain --ignored` before / after | identical (1 line) |
+| exit on SIGTERM | 0 |
