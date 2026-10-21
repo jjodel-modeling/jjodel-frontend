@@ -1,6 +1,6 @@
 # Tack slice 9, continuation after the context ceiling
 
-Prompt-ID: P-2026-10-21-1115
+Prompt-ID: P-2026-10-21-1117
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: full (second session of P-2026-10-21-1025: tests, privacy, closure)
@@ -17,7 +17,7 @@ Worktree: `~/jjodel-w-tack-s9`, branch `tack-s9`, **reused as is** with the unco
 Model and tier: as `lane-run start` assigns.
 
 ## Lane discipline
-Every reply opens with `[P-2026-10-21-1115 · session <id>]`; every final message ends with `Outcome: done | hard-stop | question | blocked`; questions carry `Recommended: <one line>`; unattended (RC-21, RC-25) except the RC-26 list. Time limit: 60 minutes. Node: `~/.local/bin/node`.
+Every reply opens with `[P-2026-10-21-1117 · session <id>]`; every final message ends with `Outcome: done | hard-stop | question | blocked`; questions carry `Recommended: <one line>`; unattended (RC-21, RC-25) except the RC-26 list. Time limit: 60 minutes. Node: `~/.local/bin/node`.
 
 **Context budget, strict.** Read only `~/.jjodel-lanes/P-2026-10-21-1025/handoff.md`, then the COSA, DOVE and NON FARE of `docs/prompts/claude_2026-10-21_1025_prompt_tack_s9_waiting_cards.md` by range. Never read a whole source file; `grep -n`, then ranges. Tests with `--test-reporter=dot` piped through `grep -E 'not ok|# (tests|pass|fail)'`. Handoff at 120k.
 
