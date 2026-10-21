@@ -1,6 +1,6 @@
 //! Lane Monitor: a menu bar app over the lane board's `GET /api/attention`.
 //!
-//! The tray shows the `waiting` count as its title beside a monochrome template icon; a left
+//! The tray shows the waiting and running counts as its title beside a monochrome template icon; a left
 //! click toggles the popover, a borderless always-on-top 400 px webview placed under the icon
 //! and hidden when it loses focus. The poller runs on its own thread every 30 s (and at once
 //! when the popover opens) and pushes each snapshot to the tray and to the popover. A lane
@@ -435,12 +435,7 @@ fn start_poller(app: AppHandle, rx: Receiver<()>) {
         }
         if let Some(tray) = app.tray_by_id(TRAY_ID) {
             let _ = tray.set_title(Some(poll::title_for(&snap)));
-            let tip = match (&snap.attention, snap.state) {
-                (Some(a), "ok") => format!("Lanes: {} waiting, {} blocked, {} running", a.waiting, a.blocked, a.running),
-                _ if snap.state == "unreachable" => format!("Lanes: board unreachable ({})", snap.detail),
-                _ => format!("Lanes: {}", snap.detail),
-            };
-            let _ = tray.set_tooltip(Some(tip));
+            let _ = tray.set_tooltip(Some(poll::tooltip_for(&snap)));
         }
         *shared.snapshot.lock().unwrap() = snap.clone();
         let _ = app.emit_to(POPOVER, "attention", &snap);
