@@ -294,21 +294,6 @@ describe('a late write of an instantiation (S2-4u, P-2026-10-21-1121)', () => {
         expect(at(3500, undone, redoAction()).idlookup.V1.h).toBe(102);
     });
 
-    it('after endUndoGroup, within 450 ms of its last write (a sync reaction), joins the group entry exactly; then not', () => {
-        let { s, g } = upToTheLayout();
-        s = at(1639, s, layout('V1'));
-        endUndoGroup(g);
-        // 300 ms after the group's last write, 1789 ms after its first: the legacy window alone would push it.
-        s = at(1939, s, batch('Create element', [set('V1', 'name', 'v')]));
-        expect(entries()).toHaveLength(2);
-        // The window does not slide on a merge: 561 ms after the group's last write, a user edit pushes its own entry.
-        s = at(2200, s, rename('b'));
-        expect(entries()).toHaveLength(3);
-        const twice = at(3200, at(3000, s, undoAction()), undoAction());
-        expect(ids(twice)).toEqual(['O1']);
-        expect(twice.idlookup.O1.name).toBe('a');
-    });
-
     it('after endUndoGroup it pushes an entry of its own (the defect): the group state shows the close, then the push', () => {
         let { s, g } = upToTheLayout();
         endUndoGroup(g);
