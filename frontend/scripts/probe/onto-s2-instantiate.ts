@@ -509,7 +509,7 @@ try {
             && (st[st.length - 1] as { member1: boolean }).member1, out.undoLater);
         const ul = out.undoLater as { entries?: number; idlBefore?: number; idlAfterPresses?: number };
         // The entries after the instantiation's own (e3[0] is the one before it): a later sync write of `pointedBy`
-        // alone (~3.3 s after, the same after other creations) is not part of the instantiation, and a group held open
+        // alone (a pane click's deselect triggers it, P-2026-10-21-1219) is not part of the instantiation, and a group held open
         // that long would swallow the user's own edits (P-2026-10-21-1121): a known measure, one Cmd+Z each, not a fail.
         const later = (e3 as Array<{ keys: string[]; fields?: string[] }>).slice(1 + (ul.entries ?? 0));
         const lateSync = later.filter((e) => e.keys.every((k) => k === 'idlookup' || k === 'action_title') && !!e.fields
