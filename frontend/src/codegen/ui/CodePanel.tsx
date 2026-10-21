@@ -48,6 +48,7 @@ import { runOracle } from '../oracle/oracle';
 import { decodeStoredScenarios, storedScenariosRaw } from '../oracle/storedScenarios';
 import TemplateEditor from './TemplateEditor';
 import { checkView } from './checkView';
+import { displayJson } from './displayJson';
 import type { GenerateResult } from '../engine/generate';
 import type { TemplateRecord } from '../engine/templates';
 import type { ModelOrigin, Origin, TextFragment, TextMapEntry } from '../engine/text';
@@ -94,7 +95,7 @@ function elementName(lookup: Lookup, id: string): string {
 
 function transformationText(o: ModelOrigin): string {
     const t = o.transformation;
-    return t.args && t.args.length > 0 ? `${t.name}(${t.args.map(a => JSON.stringify(a)).join(', ')})` : t.name;
+    return t.args && t.args.length > 0 ? `${t.name}(${t.args.map(a => displayJson(a)).join(', ')})` : t.name;
 }
 
 /** What the origin bar says of a fragment. */
@@ -579,7 +580,7 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
                         {outcome && outcome.response.ok && (
                             <div className="codegen-panel__result">
                                 <div className="codegen-panel__label">{`${RUN_ENTRY}() returned, ${outcome.ms} ms`}</div>
-                                <pre className="codegen-panel__value">{JSON.stringify(outcome.response.results[0] ?? null, null, 2) ?? 'undefined'}</pre>
+                                <pre className="codegen-panel__value">{displayJson(outcome.response.results[0] ?? null, 2) ?? 'undefined'}</pre>
                             </div>
                         )}
                         {runError && (
