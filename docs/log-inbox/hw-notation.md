@@ -112,3 +112,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passato — chat, unattended: JjTL executor fix (attribute read through source __ref) and docs only, no UI file; all gates green
 **Notes**: Rollback tag `pre-hw-jjtl` on `7fc04bb7a` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1302/result.json`.
 **Prompt document name**: 2026-10-21 13:02
+
+## 2026-10-21 — feat: S-G1, the nuXmv .smv exporter, finished after the context ceiling (P-2026-10-21-1341)
+**Prompt**: `claude_2026-10-21_1341_prompt_hw_sg1_finish.md`, continuing `claude_2026-10-21_1301_prompt_hw_sg1_smv_exporter.md` from its handoff: goldens, round trip by the simulator on the committed S-B trace, mutation bench, closure of both Prompt-IDs.
+**Files touched**: `frontend/src/model/simulation/smvExport.ts`, `…/__tests__/smvExport.test.ts`, `…/__tests__/fixtures/turnstile.smv`, `…/__tests__/fixtures/hw-cpu.smv` (`8e20fd489`, `2f602806c`); the Status lines of the 1301 and 1341 prompts; this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck exit 0; vitest `src/model/simulation src/jjel src/codegen src/model src/jjtl` 3878 passed, 5 skipped, 7 suites red = the §17 jjtl window imports; build exit 0; smvExport.test.ts 9 passed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Continuation of P-2026-10-21-1301 after the AM-8 ceiling. Deviation from the plan: a derived attribute is exported as a DEFINE of its equation (the turnstile's paid), not refused. The round trip found a bug in handoff decision 7: a memory write tested no key on the last cell, so every STA also wrote RAM[15]; fixed in 8e20fd489. Bench: 9 mutations, none survived (body of 2f602806c). nuXmv not installed.
+**Prompt document name**: 2026-10-21 13:41
