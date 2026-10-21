@@ -304,3 +304,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-21-0335
 **Detail**: `~/.jjodel-lanes/P-2026-10-21-0335/probe-_tmp_audit0335.log` (labels jjs-fin-tmp-auth and jjs-fin-tmp-auth-head)
+
+## 2026-10-21 — merge: jjomsync-incremental into alfonso-frontend-jjtl (P-2026-10-21-0416)
+**Prompt**: `claude_2026-10-21_0416_prompt_merge_jjomsync-incremental.md`, a direct merge by `lane-run merge --direct`, no session: `jjomsync-incremental` at `d2d18b2d5` into `alfonso-frontend-jjtl`, merge base `487dacb74`, 7 commits on the branch side.
+**Files touched**: merge `d9ea6a486`: 11 files from the branch side (`docs/discovery/discovery_2026-10-21_jjomsync_incremental.md`, `docs/lir/lir_2026-10-21_jjomsync_incremental.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-10-21_0035_prompt_jjomsync_incremental.md`, `docs/prompts/claude_2026-10-21_0155_prompt_jjomsync_incremental_fix.md`, `docs/prompts/claude_2026-10-21_0335_prompt_jjomsync_incremental_finish.md`, `frontend/scripts/probe/large-model-click-profile.ts`, `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d9ea6a486` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9708 tests in 393 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Built-in browser, Jjodel harness BPMN after merge d9ea6a486: 48 nodes 42 edges on open; selection click 1.2 s of long tasks (2.2 s before the night fixes on the same browser); drag of the Activity write the Phase 2 prompt by about 80 px with real mouse moves 2.2 s of long tasks including the drop, position written, dragged back, 48/42 unchanged. Rename and stale-node checks rely on the lane audit (0 stale in abstract syntax).
+**Notes**: Rollback tag `pre-jjomsync-incremental` on `487dacb74` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-0416/result.json`.
+**Prompt document name**: 2026-10-21 04:16
