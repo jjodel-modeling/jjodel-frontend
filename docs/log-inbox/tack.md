@@ -345,3 +345,16 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-s9/board.pid, store copy /tmp/tack-s9/real.db)
 **Notes**: 94 lanes waiting in 14 days: Recommended: 24, a ? 36, Question-for-you 5, planned-stop words 41; chat URL 68 (Request: 41, trailer 27). Rules 2: breakpoint 39, ceiling 26, hard-stop 26 (20 moved). Three fills at 3:1 is the most a 21:1 range allows (four span 27:1): bp, hard-stop, tag; ceiling by outline. 4710: 3 waiting, all ceiling. Detail and 6 decisions: ~/.jjodel-lanes/P-2026-10-21-1025/handoff.md.
 **Prompt document name**: 2026-10-21 11:17
+
+## 2026-10-21 — merge: tack-s9 into alfonso-frontend-jjtl (P-2026-10-21-1141)
+**Prompt**: `claude_2026-10-21_1141_prompt_merge_tack-s9.md`, a direct merge by `lane-run merge --direct`, no session: `tack-s9` at `24334c432` into `alfonso-frontend-jjtl`, merge base `4ecf3c26f`, 2 commits on the branch side.
+**Files touched**: merge `9115d32d7`: 18 files from the branch side (`docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-21_1025_prompt_tack_s9_waiting_cards.md`, `tack/README.md`, `tack/contract/v1/settings.json`, `tack/src/board/api.mjs`, `tack/src/board/board.css`, `tack/src/board/lanes.js`, `tack/src/board/server.mjs`, and 10 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9115d32d7` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11423 tests in 397 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat checked 4710 at 11:26 from the tack-s9 worktree: waiting cards (kind pill ACK, answer, GO; reason line; waiting since; chat link), banner 3 lanes waiting, 3 ceilings, /api/attention in the 4700 shape, 1.8 KB
+**Notes**: Rollback tag `pre-tack-s9` on `1df2d6037` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1141/result.json`.
+**Prompt document name**: 2026-10-21 11:41
