@@ -900,3 +900,8 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: passato — chat, unattended: gates only, all green (typecheck 0, vitest 9441 with the 9 known import reds, build 0, checks 0); scripts only, lane-run status reads the Outcome of the latest run
 **Notes**: Rollback tag `pre-lane-status-stale` on `8c2616a4a` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-20-0102/result.json`.
 **Prompt document name**: 2026-10-20 01:02
+
+## 2026-10-21 — ticket: traceMonitor test fails in merge gates while the dev server holds 3001
+**Ticket**: `frontend/scripts/gates/__tests__/traceMonitor.test.ts` («3001 accepted», «a port in use taken») fails in the full vitest gate of direct merges while Alfonso dev server holds port 3001, and passes 9/9 when run alone. It blocked four merges of front hw-notation on 2026-10-20/21 (P-2026-10-21-0105, -0659, -0845), each cleared by re-run, `lane-run resolve` and a closure by hand. Expected: the test picks a free port it owns, or the gate excludes it when 3001 is taken.
+**Priority**: low
+**Found in**: P-2026-10-21-0845
