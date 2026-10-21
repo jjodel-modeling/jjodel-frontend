@@ -23,7 +23,8 @@
  *   S2-8  the node of a new instance holds its header and its four slot rows (DOM boxes), and S2-3n the undo numbers
  *         of S2-3 are those measured before the node size (P-2026-10-21-0655);
  *   S2u   one undo group per instantiation (P-2026-10-21-1016): S2-3n the cascade and S2-3b the class-node entry are
- *         1 entry and 1 Cmd+Z with as many `idlookup` entries after the press as before the instantiation, S2-4u
+ *         1 entry and 1 Cmd+Z with as many `idlookup` entries after the press as before the instantiation (S2-3b1: past
+ *         the late sync entries of `pointedBy` alone, a measure, P-2026-10-21-1121), S2-4u
  *         Member 1 entry, S2-2p the cascade node box contains the click (4 px), S2-3m bare createInstance +2 and
  *         instantiate +1 (decision 5).
  *
@@ -117,7 +118,23 @@ const history = (page: Page) => ev<Record<string, unknown>>(page, `
     const h = w.statehistory || {}; const u = h[w.DUser.current]; const last = u && u.undoable[u.undoable.length - 1];
     return { flag: w.U ? w.U.userHasInteracted : null, user: u ? u.undoable.length : null, all: h.all ? h.all.undoable.length : null,
         senders: Object.keys(h), lastAgeMs: last && last.timestamp ? Date.now() - last.timestamp : null };`, undefined, 0);
+/** Wait until the user's undo stack has not grown for 800 ms (the COMMIT tick is 300 ms), at most 4 s; the last read. */
+async function settle(page: Page) {
+    let h = await history(page); let since = Date.now(); const end = Date.now() + 4000;
+    while (Date.now() < end && Date.now() - since < 800) {
+        await wait(page, 150); const n = await history(page);
+        if (n.user !== h.user) since = Date.now();
+        h = n;
+    }
+    return h;
+}
 /** The user's undo entries from index `from` on: per entry its age, top-level keys and the idlookup records it touches. */
+/** The reducer's undo group state (`undoGroupState`, dev only), its times as ages like `entriesFrom`, and the buffer. */
+const groupState = (page: Page) => ev<Record<string, unknown> | null>(page, `
+    if (!w.undoGroupState) return null; const g = w.undoGroupState(); const now = Date.now(); const t = w.transactionStatus || {};
+    const age = (e) => e && { ...e, ageMs: now - e.at, at: undefined };
+    return { open: g.open && { id: g.open.id, ageMs: now - g.open.openedAt }, tail: g.tail && { ageMs: now - g.tail.timestamp, lastAgeMs: now - g.tail.lastAt, onTop: g.tail.onTop },
+        closed: age(g.closed), tailCleared: age(g.tailCleared), txDepth: t.transactionDepthLevel, txBegun: t.hasBegun };`, undefined, 0);
 const entriesFrom = (page: Page, from: number) => ev<unknown[]>(page, `
     const u = w.statehistory[w.DUser.current]; const now = Date.now();
     return u.undoable.slice(a).map((d) => { const il = d.idlookup || {}; const ks = Object.keys(il);
@@ -303,8 +320,14 @@ try {
     const entries = (b.c.undo ?? 0) - (before.undo ?? 0);
     const free = async () => (await emptyPanePoint(page, 'left')) ?? p1;
     const h1 = await history(page);
-    { const q = await free(); await page.mouse.click(q.x, q.y); }
+    // No pane click before the presses (P-2026-10-21-1219): the click's deselect makes a sync write of `DEdge.pointedBy`
+    // land ~300 ms later as an undo entry of its own (measured: +1 entry, 2 presses with it; 0 entries, 1 press without).
+    // The user's sequence is create, then Cmd+Z: focus the canvas and let the store go idle first.
     await page.evaluate(() => (document.querySelector('.editor-v2') as HTMLElement | null)?.focus());
+    const h1s = await settle(page);
+    out.settled = { pushed: (h1s.user as number) - (h1.user as number), top: await entriesFrom(page, (h1.user as number) - 1) };
+    // The entries and the group state at the first press: what a press with no visible effect undoes (P-2026-10-21-1121).
+    out.undoPre = { entries: await entriesFrom(page, (before.undo ?? 1) - 1), group: await groupState(page) };
     const bag = () => ev<boolean>(page, `const s = w.store.getState().idlookup[a]._state; return !!(s && s.ontoBindings);`, ids.mm, 0);
     let presses = 0; let back = false; let now = b.c; let bagAfterUndo = true;
     const steps: unknown[] = [];
@@ -342,7 +365,7 @@ try {
     const preMember = await census(page, ids.model);
     await c3.child.locator('.context-menu__item', { hasText: 'Member' }).first().click();
     const m = await waitInstance(page, ids.model, before2Ids, ids.classes.Member, 2);
-    out.memberUndo = { before: preMember.undo, after: m.c.undo, entries: await entriesFrom(page, (preMember.undo ?? 1) - 1) };
+    out.memberUndo = { before: preMember.undo, after: m.c.undo, entries: await entriesFrom(page, (preMember.undo ?? 1) - 1), group: await groupState(page) };
     check('S2-4u «Member» (a default value) is 1 undo entry, not 2', (m.c.undo ?? 0) - (preMember.undo ?? 0) === 1, out.memberUndo);
     const memberShape = m.inst ? shapeOf(m.c.objects, m.inst.id) : null;
     const active = memberShape?.slots.find((s) => s.feature === 'active');
@@ -463,11 +486,12 @@ try {
 
     // ── S2-3b: undo of a later instantiation (book3, the class-node entry) ─────────────────────────────────────────
     {
-        const q = await emptyPanePoint(page, 'left');
-        if (q) await page.mouse.click(q.x, q.y);
+        // No pane click, the store idle before the baseline, as in S2-3 (P-2026-10-21-1219).
         await page.evaluate(() => (document.querySelector('.dock-tabpane-active .editor-v2') as HTMLElement | null)?.focus());
+        await settle(page);
         const u0 = await census(page, ids.model);
         const e3 = await entriesFrom(page, (before3.undo ?? 1) - 1);
+        out.undoLaterGroup = await groupState(page);
         const gone = new Set([b3.inst?.id, ...((b3.inst?.f.slots ?? []) as string[])]);
         const st: unknown[] = []; let n = 0; let ok = false; let kept = true;
         for (; n < 10 && !ok && kept;) {
@@ -484,8 +508,19 @@ try {
         check('S2-3b a later instantiation (book3): Cmd+Z removes it with its slots, nothing else', ok && kept
             && (st[st.length - 1] as { member1: boolean }).member1, out.undoLater);
         const ul = out.undoLater as { entries?: number; idlBefore?: number; idlAfterPresses?: number };
-        check('S2-3b1 the class-node instantiation is 1 entry and 1 Cmd+Z, no idlookup orphan after the press (S2u)',
-            ok && n === 1 && ul.entries === 1 && ul.idlAfterPresses === ul.idlBefore, out.undoLater);
+        // The entries after the instantiation's own (e3[0] is the one before it): a later sync write of `pointedBy`
+        // alone (~3.3 s after, the same after other creations) is not part of the instantiation, and a group held open
+        // that long would swallow the user's own edits (P-2026-10-21-1121): a known measure, one Cmd+Z each, not a fail.
+        const later = (e3 as Array<{ keys: string[]; fields?: string[] }>).slice(1 + (ul.entries ?? 0));
+        const lateSync = later.filter((e) => e.keys.every((k) => k === 'idlookup' || k === 'action_title') && !!e.fields
+            && e.fields.every((x) => /^clonedCounter:/.test(x) || x.split(':').pop()!.split(',').every((k) => k === 'pointedBy' || k === 'clonedCounter'))
+            && e.fields.some((x) => x.split(':').pop()!.split(',').includes('pointedBy')));
+        const syncMeasure = { lateSync: lateSync.length, others: later.length - lateSync.length, presses: n };
+        out.undoLaterSync = syncMeasure;
+        meas('S2-3b1 late sync entries (pointedBy only), not the instantiation', syncMeasure);
+        check('S2-3b1 the class-node instantiation is 1 entry of its own and 1 Cmd+Z past the late sync entries, no idlookup orphan (S2u)',
+            ok && ul.entries === 1 && later.length === lateSync.length && n === 1 + lateSync.length && ul.idlAfterPresses === ul.idlBefore,
+            { ...syncMeasure, entries: ul.entries, idlBefore: ul.idlBefore, idlAfterPresses: ul.idlAfterPresses });
         if (!kept) {
             await ev(page, `w.LPointerTargetable.fromPointer(a.mm).state = { ontoBindings: a.raw }; return 1;`, { mm: ids.mm, raw: written.raw }, 600);
             out.bindingRewritten2 = await bag();
