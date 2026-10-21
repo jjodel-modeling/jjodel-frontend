@@ -150,3 +150,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: codegen engine and JS target only, no UI file; 3001 answers 200
 **Notes**: The red test was `traceMonitor.test.ts`, a port check that fails while the dev server holds 3001 (red in every merge of this front); re-run alone 9/9. Block cleared with `lane-run resolve`, closure by hand. Tag `pre-bv-codegen on 5e4790f1a`.
 **Prompt document name**: 2026-10-21 08:45
+
+## 2026-10-21 — merge: bv-codepanel into alfonso-frontend-jjtl (P-2026-10-21-0855)
+**Prompt**: `claude_2026-10-21_0855_prompt_merge_bv-codepanel.md`, a direct merge by `lane-run merge --direct`, no session: `bv-codepanel` at `c5358a0b1` into `alfonso-frontend-jjtl`, merge base `f33993e63`, 3 commits on the branch side.
+**Files touched**: merge `eee32699f`: 6 files from the branch side (`docs/log-inbox/jjel-bitvector.md`, `docs/prompts/claude_2026-10-21_0715_prompt_codepanel_bitvector_render.md`, `frontend/src/codegen/ui/CodePanel.tsx`, `frontend/src/codegen/ui/__tests__/displayJson.test.ts`, `frontend/src/codegen/ui/checkView.ts`, `frontend/src/codegen/ui/displayJson.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `eee32699f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11423 tests in 397 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: built-in browser on 3001: app loads, CodePanel module loads; in the page displayJson prints bits(8,255)+bits(8,1) as 8h00 inside an object and sbits(8,-128) as 8sh80, a plain object unchanged; no new console error
+**Notes**: Rollback tag `pre-bv-codepanel` on `0bad8f4d9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-0855/result.json`.
+**Prompt document name**: 2026-10-21 08:55
