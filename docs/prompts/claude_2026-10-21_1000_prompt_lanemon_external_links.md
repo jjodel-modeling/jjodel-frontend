@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1000
 Chat: C-2026-10-19-1748
 Front: harness
 Lane: fast (bug fix in the menu bar app, allowed on the frozen board by R-TACK-2; launched by the tack chat at Alfonso's request)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane lanemon-links · c63d12669
 Corregge: none
 Request: Alfonso, 2026-10-21 08:54 («nella finestra che si apre cliccando sull'icona nella topbar, il link alla chat non funziona») and 09:48 («se non hai risolto procedi in /lane auto»)
 

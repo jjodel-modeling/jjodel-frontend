@@ -905,3 +905,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Ticket**: `frontend/scripts/gates/__tests__/traceMonitor.test.ts` («3001 accepted», «a port in use taken») fails in the full vitest gate of direct merges while Alfonso dev server holds port 3001, and passes 9/9 when run alone. It blocked four merges of front hw-notation on 2026-10-20/21 (P-2026-10-21-0105, -0659, -0845), each cleared by re-run, `lane-run resolve` and a closure by hand. Expected: the test picks a free port it owns, or the gate excludes it when 3001 is taken.
 **Priority**: low
 **Found in**: P-2026-10-21-0845
+
+## 2026-10-21 — fix(lane-monitor-app): external links in the Lane board window open in the browser (P-2026-10-21-1000)
+**Prompt**: `claude_2026-10-21_1000_prompt_lanemon_external_links.md`: the chat link in the «Lane board» webview window did nothing; route external links to the default browser.
+**Files touched**: `tools/lane-monitor-app/src-tauri/src/links.rs` (`Route`, `route()`, 3 tests), `tools/lane-monitor-app/src-tauri/src/main.rs` (`follow()`, `.on_navigation`, `.on_new_window` in `open_monitor_window`); commit `c63d12669`; this entry; the prompt's `Status:`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `cargo test` 56 passed, 0 failed; `cargo tauri build --bundles app` exit 0 (bundle 4.97 MiB); the installed app relaunched (pid alive, tray process running)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the click in the webview is checked by the chat after exit (P8 deroga)
+**Notes**: Cause confirmed as stated: no navigation or new-window handler, so WKWebView dropped `target="_blank"`. tauri 2.12.4 has `WebviewWindowBuilder::on_new_window` (`~/.cargo/registry/src/*/tauri-2.12.4/src/webview/webview_window.rs:315`, `NewWindowResponse::Deny` at `src/webview/mod.rs:257`); both hooks go through `route()`, Browser runs `open <url>`. Board and Cargo.toml untouched.
+**Prompt document name**: 2026-10-21 10:00
