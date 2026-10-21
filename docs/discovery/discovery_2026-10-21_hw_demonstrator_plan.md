@@ -804,7 +804,41 @@ Numbered as §3-§9 cite them. None blocks wave 1 of §10.2.
 
 ## 12. Decisions taken (unattended)
 
-(pending)
+Taken under RC-25 by this discovery, each reversible on the branch; numbered as §5.3 cites them. None is an item of
+RC-26's list.
+
+1. **The verdicts of §8**: D1 amended (two routes, A first; the JjTL prerequisites), D2 amended (exit actions, no
+   derived wires, the datapath as structure, Harvard memory), D3 amended (`PortId`, `Signal`), D4 confirmed with its
+   shape, D5 confirmed.
+2. **Harvard memory**: a ROM of frozen cells read with `bits(w, c.init)` and a RAM of σ cells (§5.2, measured).
+3. **An accumulator**, not a register file; the register file is the first extension (§8 D4).
+4. **The clock is ε**: Play runs the program to `HALT`, and the `.smv` export has no event `IVAR` for it; a `clk`
+   event is a later variant (§11, question 2).
+5. **One control state is one cycle**; its transfers are its exit action, no entry or transition action writes a
+   register (§5.3).
+6. **The JjEL→Verilog printer is the centre**, in `frontend/src/codegen/target/verilog/` (R-GEN-16's second target),
+   and its operator forms are those of `oracle.mapping` (R-BV-10).
+7. **Route A before route B**; a test A == B when B lands (§8 D1).
+8. **One build script** per §3, the app's own export, a spec JSON beside it read by the node tests.
+9. **Ports are vertices, wires are objects-as-edges**, nothing nested, viewpoints hand-written (R3, R4, R10, R11).
+10. **Constants are strings**, `bits(8, '0xff')` (R6); **the testbench samples at `negedge clk`** (R5).
+11. **The printer wraps a nested operator result in `{…}`**, so Verilog's context widths cannot change a JjEL value
+    (S-D0).
+12. **One recogniser of the memory idiom**, `frontend/src/model/simulation/memoryIdiom.ts`, read by the printer and
+    by the exporter, so the two cannot disagree on what a memory access is.
+13. **The `.smv` exporter is `frontend/src/model/simulation/smvExport.ts`**, pure, the place the computational model
+    spec gives it (`:241-243`); its first cut is the one-token state machine with the four σ domains, the rest
+    refused with a defect (S-G1).
+14. **Two exports of one model**: concrete ROM for the program's properties, free ROM for the structural ones (R14).
+15. **The structural properties are generated**, six families (S-G2); the per-opcode instances come from the ISA view
+    through a template (S-H). **The domain properties are written once** in `hw-cpu.properties.smv`, and an invariant
+    that the simulator can also read is a watch (R-SIM-137).
+16. **A counterexample becomes a `ScenarioRecord`** by a pure `smvTrace.ts`, plus the ROM contents for a free-ROM
+    trace (R15).
+17. **nuXmv runs from a node script on the presenter's Mac**, never inside the app and never shipped with it (spec
+    `:235-236`); the normal suite checks a committed verdict without nuXmv, as for Verilator.
+18. **DECODE has a fused `else` to FETCH**, so the six undefined opcodes act as `NOP` and the shipped model is
+    deadlock-free (R16).
 
 ## 13. Decisions awaiting Alfonso
 
