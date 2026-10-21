@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0640
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (code generation engine and JS target of the R-GEN pilot, near the 3.2 freeze)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane bv-codegen · 35c761ca3
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-0055
 Corregge: —

@@ -6482,6 +6482,22 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   is shadowed there. Measured: without it, `bits(8, 1)` in an action fails with `Function 'bits' is not defined`,
   which contradicts discovery §5.1. The function lives in `evaluator.ts` rather than `bitvectors.ts`, which cannot
   import the evaluator. Six mutations, all killed (`docs` closure commit of P-2026-10-21-0055).
+- **R-BV-9** (2026-10-21, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  **Bit-vectors in code generation (slice S3).** Decided by the lanes P-2026-10-21-0640 (stopped at the AM-8 ceiling,
+  RC-51) and P-2026-10-21-0700, landed by `35c761ca3`. (1) The JS runtime prelude ports `bitvectors.ts` as text, line
+  by line with the messages verbatim (`$BitVector`, frozen, own keys `__type,width,signed,bits`, `toString`/`toJSON`
+  the Verilog form); it does not inline the module by `Function.prototype.toString`, because measured the minified
+  bundle and vitest rename the module's names and its consts have no runtime name. A parity test keeps the copy from
+  drifting (R-BV-6): every row of `bv-golden.json` (the table `bv-cases.json` of P-2026-10-21-0641 is not on this
+  branch) runs through a printed guard whose vectors sit in σ, so nothing folds, plus a grid of 13 operators and one of
+  every method against the evaluator, value or defect message. (2) `$eq`/`$ne` dispatch to `$bvOp` (a mismatch is a
+  defect); nested equality is `$same` (mismatched vectors unequal); `$cmp`, `$div`, `$mod`, `$and`, `$or` dispatch
+  too. (3) A folded vector prints as `$bv(8, false, 0xffn)` (`bitVectorLiteral`), reused by `valueLiteral`; `plain()`
+  prints a template hole in the Verilog form. (4) The S1 methods no string, date, number or collection has print as
+  `$bvm(recv, 'm', () => [args], nullSafe)`, the arguments evaluated after the receiver and never on null; a shared name
+  (`slice`, `trunc`, `toNumber`) is refused `P-STEP` over a step value, `toVerilog` stays refused `T-METHOD`. A
+  stored register is declared on the metamodel: a model may declare globals only (`stateAttributesCodec.ts:303`).
+  Five mutations, all killed (docs closure commit of P-2026-10-21-0700).
 
 ## Superate
 
