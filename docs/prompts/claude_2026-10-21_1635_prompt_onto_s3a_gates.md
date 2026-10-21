@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1635
 Chat: C-2026-10-21-1405
 Front: instance-of
 Lane: full (problems/ is in the critical-zone table of CLAUDE.md 3.1; Layer Impact Report in the discovery and restated by P-2026-10-21-1600)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane oi-s3a · code 8b79e63ff (typecheck 0, 32/32 unit tests, build 0) · bench M1 1/32, M2 2/32, M3 2/32 red · continued by P-2026-10-21-1636
 Request: none (the chat has no shareable URL; Alfonso's words are kept with --request)
 Depends: P-2026-10-21-1600
 Corregge: —
