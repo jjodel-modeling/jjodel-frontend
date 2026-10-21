@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1121
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (core: reducer.ts undo group; verification probe; no visual change expected)
-Status: da eseguire
+Status: non completato 2026-10-21 · lane oi-s2u · efe348885 (S2-4u fixed), 13966af7a (core merge, no effect, reverted by 1219) · second press unexplained · continued by P-2026-10-21-1219
 Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5
 Depends: none
 Corregge: P-2026-10-21-1041, whose session (d02e1895) reached the context ceiling with S2-4u and S2-3b1 failing
