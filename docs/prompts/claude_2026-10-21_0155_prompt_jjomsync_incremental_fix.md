@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0155
 Chat: C-2026-10-20-0839
 Front: maintenance
 Lane: full (critical zone: `useJjomSync.ts`, CLAUDE.md §3.1; continuation of a ceiling-stopped lane, RC-51)
-Status: da eseguire
+Status: non completato 2026-10-21 · lane jjomsync-incremental · LIR aad47a12d; code and tests complete but uncommitted at the context ceiling · continued by P-2026-10-21-0335
 Request: https://claude.ai/code/session_01EMpM7yBvFWpBXh3o1TJSRA
 Depends: P-2026-10-21-0035
 Corregge: —

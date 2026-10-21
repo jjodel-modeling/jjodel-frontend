@@ -285,3 +285,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Built-in browser, Jjodel harness BPMN after merge 2e9a4dd6c: 48 nodes 42 edges; selection click 1.5 s of long tasks (was 2.2); rename of Role architect committed in 1.3 s (was about 2 s), reverted; References of architect opened with 16 selects (2 slots, 18 to 42 options) and no long task (was 2.4 s); model name shown in the status bar
 **Notes**: Rollback tag `pre-core-name-scans` on `2a8fd6bdc` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-0149/result.json`.
 **Prompt document name**: 2026-10-21 01:49
+
+## 2026-10-21 — fix(editor-v2): useJjomSync re-transforms only changed vertices (P-2026-10-21-0335)
+**Prompt**: `claude_2026-10-21_0335_prompt_jjomsync_incremental_finish.md`, full lane (critical zone, `useJjomSync.ts`), continuation of P-2026-10-21-0155 after its context-ceiling stop (RC-51), from its `handoff.md`: probe acceptance in three dev runs, the `Date.now()` and anti-bounce benches, the code commit and the closure.
+**Files touched**: `242a82bcd`: `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/sync/vertexSnapshot.ts` (new), `frontend/src/components/editor-v2/sync/__tests__/vertexSnapshot.test.ts` (new), `frontend/src/redux/reducer/__tests__/reducerCopyOnWrite.test.ts`. This commit: this inbox, the Status lines of P-2026-10-21-0035, P-2026-10-21-0155 and P-2026-10-21-0335.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates and probe show none: typecheck 0 error TS; build ok; vitest 384 files passed, 9 known red at import, 9708 tests, criticalZone 70/70 with the go-ahead variable unset; BPMN 48 nodes 42 edges; the audit's one standing stale row is identical on HEAD's `useJjomSync.ts`. The visual check is the chat's and still pending.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile (the visual check is the chat's, pending)
+**Notes**: Drag median 1661 ms, 421 name reads per drag, open, clicks, commit and viewpoint switch all below the report baseline. `Date.now()` restored: 16 sync runs per drag against 1, no change in reads or time. Removing the anti-bounce re-run is caught by no instrument (gap). `frontend/scripts/probe/_tmp_*` is not gitignored, so the temporary probe lived in `scripts/smoke/` and was deleted. Measurements and the mutation table are in the body of `242a82bcd`.
+**Prompt document name**: 2026-10-21 03:35
+
+## 2026-10-21 — ticket: M2 attribute rename leaves M1 nodes stale under a viewpoint
+**Ticket**: Under the «Harness / Authority» viewpoint, renaming the M2 attribute behind a slot (`name` → `name_r`) leaves 3 object nodes showing the old feature name 3 s later, while a fresh `jjomVertexToRFNode` shows the new one. Abstract syntax refreshes the same row (0 stale of 407). The count is identical with HEAD's `useJjomSync.ts`, so it predates P-2026-10-21-0155 and the hash's `slotFeatureName` term does not reach these nodes. The node data under a viewpoint probably comes from a path other than the sync's re-transform (not measured).
+**Priority**: low
+**Found in**: P-2026-10-21-0335
+**Detail**: `~/.jjodel-lanes/P-2026-10-21-0335/probe-_tmp_audit0335.log` (labels jjs-fin-tmp-auth and jjs-fin-tmp-auth-head)

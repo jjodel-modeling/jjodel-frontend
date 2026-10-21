@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0035
 Chat: C-2026-10-20-0839
 Front: maintenance
 Lane: full (critical zone: `useJjomSync.ts`, CLAUDE.md §3.1; Phase 1 read-only, then Phase 2 on GO)
-Status: da eseguire
+Status: non completato 2026-10-21 · lane jjomsync-incremental · discovery d525d3ae8; Phase 1 done, Phase 2 not started in this session · continued by P-2026-10-21-0155
 Request: https://claude.ai/code/session_01EMpM7yBvFWpBXh3o1TJSRA
 Depends: P-2026-10-20-2305
 Corregge: —
