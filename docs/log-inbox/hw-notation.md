@@ -255,3 +255,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: in attesa — Alfonso's look at the three PNGs
 **Notes**: Ports: the 25 `Component.ports` arcs read transparent after the remount (39 edges, 14 drawn) and none shows on the PNG; no change. The arc fan puts all three FETCH-DECODE labels at mid-height, so neither curve nor placement parts them: `[else]` moved to the source end (priority-2 view). Shots at deviceScaleFactor 2 (Datapath fits at 0.58); ports 40 to 50 high, their names were half covered. Read beyond the list: irTypes, UnifiedEdge, edgeUtils. Red dot on FETCH not investigated.
 **Prompt document name**: 2026-10-21 18:10
+
+## 2026-10-21 — fix: the subset checker accepts bits(w, <ROM idiom>), closing the E-CALL ticket on FETCH (P-2026-10-21-1820)
+**Prompt**: `claude_2026-10-21_1820_prompt_hw_subset_rom_read.md`: accept `bits(w, x)` / `sbits(w, x)` with a literal `w` and `x` a literal or a memory-idiom read, reusing `matchMemoryIdiom`; every other case keeps its verdict. Closes the ticket «Subset checker flags the hw-cpu ROM read bits(8, c.init) as E-CALL».
+**Files touched**: `frontend/src/model/simulation/subsetChecker.ts`, `…/__tests__/subsetChecker.test.ts` (`1a85c93d3`); the Status line of the 1820 prompt; this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 11:45 (P-2026-10-21-1145)
+**Causa**: (c)
+**Regressions**: no. Typecheck exit 0; vitest `src/model/simulation src/codegen` 53 files, 2881 passed, 5 skipped; build exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Causa: R-BV-8 (3)'s literal-only rule predates the memory idiom. Accepted is the ROM read only (`read.kind` 'feature'): `smvExport.ts` translates no σ read inside `bits`, which keeps E-CALL. The key is walked. hw-cpu: no action or guard has a subset error (`checkActionSubset`, simBridge's call); the panel not checked by eye. `memoryIdiom.ts` unchanged, already exported. Bench: 5 mutations, all killed (body of 1a85c93d3).
+**Prompt document name**: 2026-10-21 18:20

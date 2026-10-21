@@ -12,6 +12,9 @@ import { getCollectionMethod, getDateMethod, getNumberMethod, getStringMethod } 
 import { checkGuardSubset, GUARD_ROOTS, NOT_VERIFIABLE_METHODS } from '../subsetChecker';
 import type { SubsetDiagnostic } from '../subsetChecker';
 import { STATE_RESERVED } from '../../../jjel/stateReserved';
+import { checkActionSubset } from '../stcChecks';
+import { compileModelRun } from '../../../codegen/target/js/access';
+import { loadSpec, recordOf } from '../../../codegen/oracle/__tests__/exampleFixture';
 
 function check(src: string): SubsetDiagnostic[] {
     const parsed = parseExpression(src);
@@ -208,5 +211,49 @@ describe('state access .[x] (R-SIM-18, R-SIM-30, R-SIM-42), P-2026-09-25-1445', 
         expect(STATE_RESERVED.presentationRoot).toBe('node');
         expect([...STATE_RESERVED.readOnlyAttributes]).toEqual(['marked', 'tokens']);
         expect(STATE_RESERVED.operator).toBe('.[');
+    });
+});
+
+describe('bits(w, <ROM idiom>): the read the .smv exporter translates, P-2026-10-21-1820', () => {
+    const ROM = 'rom.cells.filter(c => c.addr == PC.[value].toNumber()).first.init';
+
+    it('the hw-cpu FETCH read is accepted, in both constructors and both forms of .first (dies without the idiom case)', () => {
+        expect(codes(`bits(8, ${ROM}) == IR.[value]`)).toEqual([]);
+        expect(codes(`sbits(8, ${ROM}) == IR.[value]`)).toEqual([]);
+        expect(codes(`bits(8, ${ROM.replace('.first.', '.first().')}) == IR.[value]`)).toEqual([]);
+    });
+
+    it('an argument outside the idiom keeps E-CALL', () => {
+        expect(codes('bits(8, someAttr) == IR.[value]')).toEqual(['E-CALL']);
+        expect(codes('bits(8, self.init) == IR.[value]')).toEqual(['E-CALL']);
+    });
+
+    it('a σ read of the idiom keeps E-CALL: the exporter translates the ROM read only (dies with any idiom accepted)', () => {
+        expect(codes('bits(8, ram.cells.filter(c => c.addr == 1).first.[value]) == IR.[value]')).toEqual(['E-CALL']);
+    });
+
+    it('a non-literal width keeps E-CALL (dies without the width test)', () => {
+        expect(codes('bits(n, 3) == IR.[value]')).toEqual(['E-CALL']);
+        expect(codes(`bits(n, ${ROM}) == IR.[value]`)).toEqual(['E-CALL']);
+    });
+
+    it('a third argument keeps E-CALL (dies without the arity test)', () => {
+        expect(codes(`bits(8, ${ROM}, 1) == IR.[value]`)).toEqual(['E-CALL']);
+    });
+
+    it('the key of the idiom is walked (dies when the argument is not walked)', () => {
+        expect(codes('bits(8, rom.cells.filter(c => c.addr == node.[pc]).first.init) == IR.[value]')).toEqual(['E-NODE']);
+        expect(codes('bits(8, rom.cells.filter(c => c.addr == PC.[value] / 2).first.init) == IR.[value]')).toEqual(['T-DIV']);
+    });
+
+    it('the hw-cpu model: no guard and no action carries a subset error (dies without the idiom case)', () => {
+        const spec = loadSpec('hw-cpu');
+        const compiled = compileModelRun(spec.lookup, spec.modelId, recordOf(spec.lookup, spec.modelId));
+        if (compiled.kind !== 'ok') throw new Error(compiled.reason);
+        const actions = [...compiled.run.actions.values()].flat();
+        const guards = [...compiled.run.guards.values()].flat();
+        expect(actions.some(c => c.source.includes(`bits(8, ${ROM})`))).toBe(true);
+        expect(actions.map(c => [c.source, c.defect, checkActionSubset(c)]).filter(([, d, s]) => d !== null || s !== null)).toEqual([]);
+        expect(guards.filter(g => g.defect !== null).map(g => [g.source, g.defect])).toEqual([]);
     });
 });
