@@ -23,8 +23,11 @@ on `http://127.0.0.1:4710/` and opens it. Nothing is written in the repository.
 A repository that follows none of the conventions below still gets layer 1: its sessions, cost, context and
 commits. Every layer-2 and layer-3 metric shows `not adopted` with the field that would enable it, and the
 Lanes tab says «No lane-run lanes for this repository». A repository with no Claude Code session at all is not
-in the store, because repositories are found from session directories: the board then preselects nothing and
-shows all repositories.
+in the store, because repositories are found from session directories. Started from such a repository, the board
+preselects its work tree anyway, marked `no recorded session` in the picker, and every tab (Lanes, Sessions,
+Timeline, Insights) shows one line, «No Claude Code sessions recorded for <name> yet.», and no data of any other
+repository. «All repositories» stays selectable in the picker. Started outside a git work tree, the board
+preselects nothing and shows all repositories.
 
 ## Three data layers
 
@@ -237,7 +240,9 @@ tack board [--port <n>] [--no-open] [--store <file>] [--root <dir>]
 Runs an incremental `scan`, then serves a page on `http://127.0.0.1:4710/` (bound to 127.0.0.1 only)
 and opens it with the platform command (`open`, `xdg-open`) unless `--no-open`. Started inside a git work
 tree whose repository has a session in the store, it preselects that repository, by root commit, so a linked
-worktree selects its main repository; elsewhere it shows all repositories. The selection lives in the URL (`?repo=<key>|all&since=&until=`);
+worktree selects its main repository; inside a work tree the store does not hold, it preselects that work tree as
+unrecorded (key: its lowest root commit, the key the store would give it) and every tab answers empty for it;
+outside a git work tree it shows all repositories. The selection lives in the URL (`?repo=<key>|all&since=&until=`);
 nothing is written in the repository, only the store is.
 
 The page is static files served from memory (`src/board/page.html`, `board.css`, `board.js`, `charts.js`,
@@ -287,7 +292,7 @@ JSON API, all GET except the rescan:
 
 | Endpoint | Returns |
 |---|---|
-| `/api/repos` | the preselected key and one row per repository: key, name, main toplevel, worktree count, remote host, state, sessions, commits |
+| `/api/repos` | the preselected key, `unrecorded` (the start work tree when the store does not hold it: key, name, toplevel; else null) and one row per repository: key, name, main toplevel, worktree count, remote host, state, sessions, commits |
 | `/api/sessions?repo=&since=&until=` | one row per session: local day, start, duration, repository, branch, unit and its source (layer 2), link method, main-thread calls, context peak, cost (null when unknown, never 0), models, commit within the hour |
 | `/api/metrics?repo=&since=&until=` | every declared metric with its layer and state (`computed` with its value, or `not-adopted`); cost per day also by model family |
 | `/api/timeline?repo=&since=&until=` | per session, in epoch ms: start, end, main model family, first call at or above 200k, commit times within the hour |
