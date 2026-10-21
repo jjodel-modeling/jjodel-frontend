@@ -71,6 +71,7 @@ import {SaveManager} from "../../components/topbar/SaveManager";
 import Api from "../../api/api";
 import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
 import {JjodelEvents} from "../../events/registry";
+import { registerSystemViews } from '../../common/defaultViewsRegistry';
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -1108,13 +1109,8 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
     // initialize default views map
     if (typeof Defaults.defaultViewPointsMap[Defaults.Pointer_ViewPointDefault] !== 'object') {
-        for (let k in ret.idlookup) {
-            let e = ret.idlookup[k];
-            if (!e || typeof e !== 'object') continue;
-            let v: DViewElement|DViewPoint = e as any;
-            if (v.className.includes('DViewPoint')) Defaults.defaultViewPointsMap[k] = v;
-            if (v.className.includes('DViewElement')) Defaults.defaultViewsMap[k] = v;
-        }
+        // Only Pointer_View* records: on an in-page open the guard is still open and the state holds user views.
+        registerSystemViews(ret.idlookup as any, Defaults.defaultViewPointsMap, Defaults.defaultViewsMap);
     }
 
     return ret;
