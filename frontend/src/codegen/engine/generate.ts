@@ -14,8 +14,10 @@
  * when the metamodel binds none. Its element lists are the pool's handles; `trigger`, `source`, `target`, `guard`
  * and `actions` are JjEL functions of one element. Then `target`, the active target profile, JavaScript in the
  * pilot (codegen/target/js/access.ts, R-GEN-16 provisional): its runtime, the initial state and the compiled net,
- * and the printer's guards, actions and equations; `null` with `stc`. The context's Text host and read observer are
- * an `OriginHost`.
+ * and the printer's guards, actions and equations; `null` with `stc`. The entry template's `target` field chooses
+ * it: `'verilog'` binds the Verilog profile (codegen/target/verilog/access.ts, hardware demonstrator slice S-D),
+ * whose refusal of the model's shape is an error on the entry and leaves the entry unevaluated; any other value, or
+ * none, binds JavaScript. The context's Text host and read observer are an `OriginHost`.
  *
  * Templates never write: JjEL has no assignment, and nothing here writes the lookup or the record.
  *
@@ -26,6 +28,7 @@ import { EvaluationContext, JjelEvaluator, createFunction } from '../../jjel';
 import type { JjelValue } from '../../jjel';
 import { stcAccess } from '../stcAccess';
 import { jsTarget } from '../target/js/access';
+import { VERILOG_TARGET_NAME, verilogTarget } from '../target/verilog/access';
 import type { StcElement, StcView } from '../stcAccess';
 import { OriginHost, TemplateSources } from './origin';
 import { registerTemplates } from './templates';
@@ -85,7 +88,18 @@ export function generate(
     }
     const view = stcAccess<JjelValue>(lookup, modelId, id => handles.get(id) ?? null);
 
-    const ctx = new EvaluationContext({ ...globals, stc: view ? stcValue(view) : null, target: view ? jsTarget(globals, lookup, modelId) : null });
+    // The target profile the entry names (R-GEN-16): Verilog for `'verilog'`, JavaScript otherwise.
+    let target: JjelValue | null = null;
+    let refused: string | null = null;
+    if (view && templates.find(t => t.name === entry)?.target === VERILOG_TARGET_NAME) {
+        try {
+            target = verilogTarget(globals, lookup, modelId);
+        } catch (error) {
+            refused = error instanceof Error ? error.message : String(error);
+        }
+    } else if (view) target = jsTarget(globals, lookup, modelId);
+
+    const ctx = new EvaluationContext({ ...globals, stc: view ? stcValue(view) : null, target });
     const sources = new TemplateSources();
     const host = new OriginHost(lookup, sources);
     ctx.textHost = host;
@@ -97,6 +111,8 @@ export function generate(
     let text = EMPTY_TEXT;
     if (!set.has(entry)) {
         errors.push({ template: entry, offset: 0, line: 1, column: 1, message: `No template named '${entry}'` });
+    } else if (refused !== null) {
+        errors.push({ template: entry, offset: 0, line: 1, column: 1, message: `The model has no ${VERILOG_TARGET_NAME}: ${refused}` });
     } else if (set.usable(entry)) {
         try {
             text = set.call(entry, args);

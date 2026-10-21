@@ -25,7 +25,7 @@ import { readFileSync } from 'node:fs';
 import lz from 'async-lz-string';
 import { describe, it, expect } from 'vitest';
 import { generate } from '../../engine/generate';
-import { readModelTemplates } from '../../engine/templateCodec';
+import { decodeTemplates, readModelTemplates } from '../../engine/templateCodec';
 import { runOracle } from '../../oracle/oracle';
 import { storedScenarios } from '../../oracle/storedScenarios';
 import { SHIPPED, SHIPPED_EXAMPLES, inProcess, loadSpec, recordOf } from '../../oracle/__tests__/exampleFixture';
@@ -187,7 +187,9 @@ describe.each(SHIPPED_EXAMPLES)('the project file of %s', name => {
         expect(clashes).toEqual([]);
     });
 
-    it.runIf(!!spec.scenario && spec.lookup.MM._state?.genTemplates !== undefined)('passes the oracle on its stored scenario with the templates it carries: «Check» in node (mutant: the scenario or the templates of the other example)', async () => {
+    // A JavaScript program has a `main`; hw-cpu's templates print Verilog (slice S-D) and Verilator is S-E's oracle.
+    const javascript = decodeTemplates(spec.lookup.MM._state?.genTemplates).templates.some(t => t.name === 'main');
+    it.runIf(!!spec.scenario && javascript)('passes the oracle on its stored scenario with the templates it carries: «Check» in node (mutant: the scenario or the templates of the other example)', async () => {
         const { lookup } = await readFile(name);
         const ex = loadSpec(name);
         const m = models(lookup, false).find((d: any) => d.name === ex.lookup.M.name) as any;
