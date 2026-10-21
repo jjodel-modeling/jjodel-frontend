@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1301
 Chat: C-2026-10-20-2055
 Front: hw-notation
 Lane: full (new pure exporter in the simulation core; golden files)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane hw-smv · 8e20fd489 · continued by P-2026-10-21-1341 after the AM-8 ceiling · verifica visiva non applicabile (no UI change)
 Request: none (project chat without a shareable URL; Alfonso's words are kept locally through `lane-run start --request`)
 Depends: P-2026-10-21-1145
 Corregge: —
