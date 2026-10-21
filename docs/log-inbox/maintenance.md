@@ -361,3 +361,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (production probe only, table in the body of `1a54325f2`)
 **Notes**: Absolute thresholds missed on medians: ring p50 87 (85), move p95 120 (100); 86/120 with new-5 replacing new-4, spiked to load 151. They came from one ablation run, not a median: cause (a). Chat ACK relaxed them to relative: -26 %/-26 % vs same-window base (at least 15 %), drag -75 % (at least 50 %). Sizes sha1 de0b0609592d on 8 runs, control 41 vs 0. Runs: `~/.jjodel-lanes/P-2026-10-21-1535/handoff.md`.
 **Prompt document name**: 2026-10-21 15:35
+
+## 2026-10-21 — merge: perf-round3 into alfonso-frontend-jjtl (P-2026-10-21-1753)
+**Prompt**: `claude_2026-10-21_1753_prompt_merge_perf-round3.md`, a direct merge by `lane-run merge --direct`, no session: `perf-round3` at `23c49ad70` into `alfonso-frontend-jjtl`, merge base `d46ad0632`, 5 commits on the branch side.
+**Files touched**: merge `460d77437`: 9 files from the branch side (`docs/lir/lir_2026-10-21_intrinsic_cache.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-10-21_1240_prompt_intrinsic_cache.md`, `docs/prompts/claude_2026-10-21_1355_prompt_intrinsic_cache_finish.md`, `docs/prompts/claude_2026-10-21_1535_prompt_intrinsic_cache_commit.md`, `frontend/scripts/probe/large-model-click-profile.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/intrinsicMeasureCache.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/intrinsicMeasureCache.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `460d77437` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11522 tests in 401 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Built-in browser (dev, zoom 60%), Jjodel harness after merge 460d77437: BPMN 48 nodes 42 edges; selection click 0.4 s of long tasks (145/129/121), ring in 745 ms by rAF polling under dev load; drag of about 80 px 0.69 s of long tasks including the drop, dragged back; node sizes unchanged on screen
+**Notes**: Rollback tag `pre-perf-round3-P-2026-10-21-1753` on `b0a5ec435` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1753/result.json`.
+**Prompt document name**: 2026-10-21 17:53
