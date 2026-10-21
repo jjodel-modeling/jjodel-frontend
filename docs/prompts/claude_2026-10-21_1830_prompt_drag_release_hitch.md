@@ -1,6 +1,6 @@
 # Canvas: the hitch at drag release on a large model (discovery)
 
-Prompt-ID: P-2026-10-21-1820
+Prompt-ID: P-2026-10-21-1830
 Chat: C-2026-10-20-0839
 Front: maintenance
 Lane: full (the fix will likely land in the sync layer, critical zone; Phase 1 read-only)
@@ -16,7 +16,7 @@ adds this prompt. Model and tier: heavy, as pinned (RC-16), effort `xhigh`.
 
 ## Lane discipline
 
-Every reply opens with `[P-2026-10-21-1820 · session <id>]`; every final message ends with one line
+Every reply opens with `[P-2026-10-21-1830 · session <id>]`; every final message ends with one line
 `Outcome: done | hard-stop | question | blocked`. Time limit 90 minutes. Every gate runs in the foreground (P16). No
 push, no merge. Phase 1 only: hard stop on the discovery report; no product code edited. Context discipline, learned
 on the previous perf lanes (all four stopped at the AM-8 ceiling): never cat a probe log or a CPU profile, grep the
