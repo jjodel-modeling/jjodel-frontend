@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0149
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane merge · 2e9a4dd6c · verifica visiva passata 2026-10-21 (Built-in browser, Jjodel harness BPMN after merge 2e9a4dd6c: 48 nodes 42 edges; selection click 1.5 s of long tasks (was 2.2); rename of Role architect committed in 1.3 s (was about 2 s), reverted; References of architect opened with 16 selects (2 slots, 18 to 42 options) and no long task (was 2.4 s); model name shown in the status bar)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-21-0149 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
