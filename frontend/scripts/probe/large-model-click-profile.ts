@@ -43,6 +43,9 @@
  *                         "type"    one character typed in the Properties name field
  *                         "commit"  Enter in that field (the store write of the new name)
  *                         "vp"      switching to the viewpoint CLICK_VP2 (default «Harness / Authority»)
+ *                         "stale"   after "vp": node sizes in place against a fresh mount, per change of
+ *                                   inherited CSS (fonts, theme, a widening <style> and its removal);
+ *                                   not profiled (P-2026-10-21-1355)
  *                         "audit"   dev only, last: targeted store writes, each followed by a count of
  *                                   the rendered nodes whose data differs from a fresh transform
  *                                   (stale nodes); not profiled (P-2026-10-21-0035)
@@ -839,6 +842,74 @@ if (STEPS.has('session') && nodeHits.length) {
     writeFileSync(join(OUTDIR, `perfclick-${LABEL}.json`), JSON.stringify(result, null, 1));
 }
 if (STEPS.has('vp')) await profiled('vp', () => page.evaluate(activateVp(VP2)));
+
+// Staleness of the intrinsic measure cache (P-2026-10-21-1355), not profiled. Sizes of every canvas
+// node in place (S) against the sizes after a fresh mount (F: viewpoint off and back on, so every
+// IRNodeContent unmounts and its entry is dropped), per change of inherited CSS: none (fonts), the
+// theme attribute on <html>, a <style> in <head> that widens the IR text (positive control: it must
+// move some size), and its removal. stale = nodes whose S and F differ.
+if (STEPS.has('stale')) {
+    const SIZES = `(() => [...document.querySelectorAll('.react-flow__node')]
+      .map(n => [n.getAttribute('data-id'), n.offsetWidth + 'x' + n.offsetHeight]))()`;
+    const settled = () => page.evaluate(settle(SETTLE_MS, 240000));
+    const sizes = async () => { await settled(); return await page.evaluate(SIZES) as [string, string][]; };
+    const differ = (a: [string, string][], b: [string, string][]) => {
+        const m = new Map(b);
+        return a.filter(([id, s]) => m.get(id) !== s).length + Math.abs(a.length - b.length);
+    };
+    let controlMoved = 0, controlRemeasured = 0;
+    // CLICK_LAYOUTS: the IR contents measured in place since a mark (a measure read is a cache miss).
+    const mark = () => page.evaluate(`window.__measureLayouts ? window.__measureLayouts.bursts.length : -1`) as Promise<number>;
+    const measuredSince = (n0: number) => page.evaluate(`(() => { const S = window.__measureLayouts; if (!S) return -1;
+      const els = new Set(); for (const b of S.bursts.slice(${n0})) for (const e of b.els) els.add(e); return els.size; })()`) as Promise<number>;
+    // Both viewpoints: a node whose box is a view default or a manual size (every BPMN node of the
+    // harness fixture) does not follow its content, so only a viewpoint with derived boxes discriminates.
+    for (const v of [VP, VP2]) {
+        const tag = v.replace(/^.*\/ */, '');
+        let irOff = -1, lastRemeasured = -1;
+        const fresh = async () => {
+            await page.evaluate(activateVp('-'));
+            await settled();
+            irOff = await page.evaluate(`document.querySelectorAll('.ir-node-content').length`) as number;
+            await page.evaluate(activateVp(v));
+            return sizes();
+        };
+        const sub = async (name: string, change: string | null) => {
+            const n0 = await mark();
+            if (change) await page.evaluate(change);
+            const s = await sizes();
+            lastRemeasured = n0 < 0 ? -1 : await measuredSince(n0);
+            const irOn = await page.evaluate(`document.querySelectorAll('.ir-node-content').length`) as number;
+            const f = await fresh();
+            const stale = differ(s, f);
+            note(`stale ${tag} ${name}`, { nodes: s.length, stale, irContent: irOn, remeasured: lastRemeasured, irContentWhileOff: irOff });
+            check(`stale ${tag} ${name}`, stale === 0 && s.length > 0 && irOff === 0, `${stale} of ${s.length} nodes, ${irOff} IR contents while off`);
+            return s;
+        };
+        await page.evaluate(activateVp(v));
+        await settled();
+        await sub('fonts', null);
+        const s1 = await sub('theme', `document.documentElement.setAttribute('data-theme', 'dark')`);
+        await page.evaluate(`document.documentElement.setAttribute('data-theme', 'light')`);
+        const s2 = await sub('style', `(() => { const s = document.createElement('style'); s.id = 'perfclick-stale';
+          s.textContent = '.ir-node-content, .ir-node-content * { letter-spacing: 12px !important; font-size: 28px !important; }';
+          document.head.appendChild(s); })()`);
+        controlRemeasured += Math.max(0, lastRemeasured);
+        // In place, and only the nodes whose box the hook writes (inline width): their new size is a cache miss.
+        const written = new Set(await page.evaluate(`[...document.querySelectorAll('.react-flow__node')]
+          .filter(n => n.style.width).map(n => n.getAttribute('data-id'))`) as string[]);
+        const before = new Map(s1);
+        const moved = s2.filter(([id, sz]) => written.has(id) && before.get(id) !== sz).length;
+        note(`stale ${tag} control`, { moved, movedAll: differ(s2, s1), written: written.size });
+        controlMoved += moved;
+        const s3 = await sub('style removed', `document.getElementById('perfclick-stale').remove()`);
+        note(`stale ${tag} restored`, { differFromTheme: differ(s3, s1) });
+    }
+    // A box derived from the reading moves only on a viewpoint that has one; elsewhere the control is the
+    // in-place re-measure after the style lands (the epoch reached the cache), which needs CLICK_LAYOUTS.
+    check('stale control: the style reaches the cache', controlMoved > 0 || controlRemeasured > 0,
+        `${controlMoved} hook-sized nodes moved in place, ${controlRemeasured} IR contents re-measured in place`);
+}
 
 // Staleness audit (P-2026-10-21-0035), dev only: after each targeted store write, compare the
 // data every rendered canvas node holds (props of the node component, read off its fiber) with
