@@ -465,3 +465,12 @@ First run, `TACK_STORE=/tmp/tack-v0b/sprotty.db node tack/bin/tack.mjs board --n
 **Smoke visivo**: passato — chat, unattended: Chat checked v0b at 15:24 from ~/harness-exp/sprotty on 4712: preselected sprotty unrecorded, sessions/lanes/timeline/metrics empty, 0 keys of other repositories, clone git status unchanged
 **Notes**: Rollback tag `pre-tack-v0b` on `fcd03e0c0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1558/result.json`.
 **Prompt document name**: 2026-10-21 15:58
+
+## 2026-10-21 — ticket: Tack collector shows a stale Outcome after a resumed run dies
+**Ticket**: The Tack lane-run collector (`tack/src/collectors/lane-run/collect.mjs`, around lines 95-109) derives a lane's outcome from the whole `log.jsonl`. After `lane-run resume`, when the new run dies without an Outcome line (usage limit or any non-zero exit), Tack still shows the outcome of the previous run.
+
+`lane-run status` had the same defect (issue #181), fixed by 966f16913, merge bd583958c (P-2026-10-20-0030): the outcome belongs to the latest run only, and a run that dies without one reads `limit` (usage-limit message) or `died` (any other non-zero exit). Tack should take the latest run's offset the same way (`latestRunFrom`, `runFate` in `lane-run.mjs`) or read the status output.
+
+Done when a test with run 1 ending in hard-stop and run 2 dying on the usage limit shows `limit` in Tack, and the parity check with `lane-run status` stays green.
+**Priority**: medium
+**Found in**: P-2026-10-20-0030
