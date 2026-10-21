@@ -294,3 +294,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: First version, to update after S-H (nuXmv run, `npm run mc:hw`, domain properties). Facts read from hw-cpu.json, the trace, cpu.v, tb.v, the oracle script, smvExport.ts and its hw-cpu goldens. The in-app steps (Import, Play, Code panel) follow the build script and the turnstile README; not re-run in the browser here. smvExport has no app caller: the README says so.
 **Prompt document name**: 2026-10-21 18:21
+
+## 2026-10-21 — merge: hw-readme into hw-demo (P-2026-10-21-1901)
+**Prompt**: `claude_2026-10-21_1901_prompt_merge_hw-readme.md`, a direct merge by `lane-run merge --direct`, no session: `hw-readme` at `0f60a7d58` into `hw-demo`, merge base `c64a13cbd`, 3 commits on the branch side.
+**Files touched**: merge `9eb07f0cf`: 3 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-10-21_1821_prompt_hw_sf_readme.md`, `frontend/src/codegen/examples/hw-cpu/README.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9eb07f0cf` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11531 tests in 404 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: docs only, README of hw-cpu; all gates green
+**Notes**: Rollback tag `pre-hw-readme` on `59a7077f4` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1901/result.json`.
+**Prompt document name**: 2026-10-21 19:01
