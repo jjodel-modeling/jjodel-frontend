@@ -1,5 +1,6 @@
 /**
- * The fixture of the oracle tests: the two lecture examples (codegen/examples/), read from their JSON, a record
+ * The fixture of the oracle tests: the two lecture examples (codegen/examples/), read from their JSON (and the list of
+ * every shipped example, for importable.test.ts), a record
  * shaped like `buildEvalContext`'s over each, the in-process runner of S4's tests, and the mutation the README
  * describes. Not a test file: imported by `examples.test.ts` and by `target/js/__tests__/access.test.ts`.
  *
@@ -32,11 +33,45 @@ export interface Example {
     readonly mutation: { readonly transition: string; readonly from: string; readonly to: string; readonly step: number };
 }
 
+/** The lecture examples: templates, a scenario and a mutation each, the subjects of the oracle's tests. */
 export const EXAMPLES = ['turnstile', 'petri-producer-consumer'] as const;
+
+/**
+ * Every example shipped as a project file, the lecture examples first: its folder under `public/examples/` and the
+ * project name the file carries (the build script's). `hw-cpu` is the hardware demonstrator's
+ * (scripts/examples/build-hw-cpu.ts), built from nothing, so its spec has no scene, and until slice S-B no roles,
+ * templates or scenario.
+ */
+export const SHIPPED = {
+    turnstile: { dir: 'codegen', project: 'Turnstile' },
+    'petri-producer-consumer': { dir: 'codegen', project: 'Producer-consumer' },
+    'hw-cpu': { dir: 'hw', project: 'HW CPU' },
+} as const;
+
+export type ShippedName = keyof typeof SHIPPED;
+export const SHIPPED_EXAMPLES = Object.keys(SHIPPED) as ShippedName[];
+
+/** The spec of any shipped example: the lecture examples' `Example`, with what an example built from nothing lacks. */
+export interface ExampleSpec {
+    readonly name: string;
+    readonly scene: string | null;
+    readonly profile: string;
+    readonly metamodelId: string;
+    readonly modelId: string;
+    readonly lookup: Lookup;
+    readonly jjscript?: readonly string[];
+    readonly scenario?: ScenarioRecord;
+    readonly mutation?: Example['mutation'];
+}
+
+/** A shipped example's spec, read fresh. */
+export function loadSpec(name: ShippedName): ExampleSpec {
+    return JSON.parse(readFileSync(new URL(`../../examples/${name}/${name}.json`, import.meta.url), 'utf8'));
+}
 
 /** The example, read fresh: generation freezes the objects of the record it is given, never the lookup. */
 export function loadExample(name: (typeof EXAMPLES)[number]): Example {
-    return JSON.parse(readFileSync(new URL(`../../examples/${name}/${name}.json`, import.meta.url), 'utf8'));
+    return loadSpec(name) as Example;
 }
 
 /** A record shaped like `buildEvalContext`'s for the model `modelId` of `lookup`. */

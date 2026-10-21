@@ -17,12 +17,17 @@
  *     Templates tab, Save, Generate, «Check» diverges at the fixture's step and transition; the line removed, «Check»
  *     agrees again.
  *
+ * The hardware demonstrator's CPU (P-2026-10-21-1036, slice S-A1), frontend/public/examples/hw/hw-cpu.jjodel
+ * (scripts/examples/build-hw-cpu.ts), is imported the same way, twice, with the same id checks; it has no templates
+ * and no scenario yet (slices S-B, S-D), so instead of Generate, Run and Check its model opens and its editor shows
+ * one node per object of the spec.
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-11-1415/crops/ (CGE_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-examples.ts \
  *         --port 3097 --id P-2026-10-11-1415
- * Env:  CGE_EXAMPLE  one example name (default: both)
- *       CGE_DIR      the folder of the files to import (default frontend/public/examples/codegen; the URL check
+ * Env:  CGE_EXAMPLE  one example name (default: all three)
+ *       CGE_DIR      the folder of the files to import (default frontend/public/examples/<codegen|hw>; the URL check
  *                    applies only to the default)
  *       CGE_OUT      JSON output (default frontend/scripts/smoke/_tmp_codegen-examples.json, gitignored)
  *       CGE_CROPS    the folder of the crops
@@ -35,11 +40,13 @@ import { seed } from '../smoke/states.ts';
 
 const URL = (process.env.PROBE_URL || 'http://localhost:3097/').replace(/\/$/, '');
 if (/:(3000|3001|3003)$/.test(URL)) throw new Error('never 3000, 3001 or 3003');
-const DEFAULT_DIR = new globalThis.URL('../../public/examples/codegen', import.meta.url).pathname;
-const DIR = process.env.CGE_DIR || DEFAULT_DIR;
+/** The folder of each example's file under public/examples/, and so under the dev server's /examples/. */
+const FOLDER: Record<string, string> = { turnstile: 'codegen', 'petri-producer-consumer': 'codegen', 'hw-cpu': 'hw' };
+const dirOf = (name: string) => process.env.CGE_DIR || new globalThis.URL(`../../public/examples/${FOLDER[name]}`, import.meta.url).pathname;
+const DIR = process.env.CGE_DIR || 'frontend/public/examples/<codegen|hw>';
 const OUT = process.env.CGE_OUT || new globalThis.URL('../smoke/_tmp_codegen-examples.json', import.meta.url).pathname;
 const CROPS = process.env.CGE_CROPS || `${homedir()}/.jjodel-lanes/P-2026-10-11-1415/crops`;
-const NAMES = process.env.CGE_EXAMPLE ? [process.env.CGE_EXAMPLE] : ['turnstile', 'petri-producer-consumer'];
+const NAMES = process.env.CGE_EXAMPLE ? [process.env.CGE_EXAMPLE] : ['turnstile', 'petri-producer-consumer', 'hw-cpu'];
 const STEPS: Record<string, number> = { turnstile: 7, 'petri-producer-consumer': 8 };
 const CROP: Record<string, string> = { turnstile: 'turnstile_check.png', 'petri-producer-consumer': 'petri_check.png' };
 /** The first line the example's own `main` template writes. */
@@ -54,6 +61,8 @@ interface Example {
     scenario: { name: string; steps: unknown[] };
     mutation: { transition: string; from: string; to: string; step: number };
 }
+/** An example with no scenario (hw-cpu until slice S-B): imported and opened, not generated or checked. */
+const checkable = (ex: Example) => !!ex.scenario;
 const example = (name: string): Example => JSON.parse(readFileSync(new globalThis.URL(`../../src/codegen/examples/${name}/${name}.json`, import.meta.url), 'utf8'));
 
 const note = (label: string, d: unknown) => console.log(`MEAS  ${label}  ${typeof d === 'string' ? d : JSON.stringify(d)}`);
@@ -183,6 +192,23 @@ async function clickAndWait(page: Page, panel: string, label: 'Run' | 'Check'): 
     return done ? page.evaluate(STATE(panel)) : null;
 }
 
+/** Opens the project and its model: the model loads, and its editor shows one node per object of the spec. */
+async function openModel(page: Page, name: string, which: string, pid: string, ex: Example): Promise<Record<string, any>> {
+    await page.goto(`${URL}/?open=${encodeURIComponent(pid)}#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    const loaded = await poll<{ mm: string; m1: string }>(page, LOADED(ex.lookup.MM.name, ex.lookup.M.name), 120000);
+    check(`${name} ${which}: the project opens with the model ${ex.lookup.M.name}`, !!loaded, JSON.stringify(loaded));
+    if (!loaded) return {};
+    await wait(page, 3000);
+    await page.evaluate(String.raw`(async () => { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(loaded.m1)})); })()`);
+    const pane = PANE(loaded.m1);
+    await poll(page, `(() => { const p = ${pane}; return !!p && p.querySelectorAll('.react-flow__node').length > 0; })()`, 60000);
+    await wait(page, 3000);
+    const nodes = await page.evaluate(`(() => { const p = ${pane}; return p ? p.querySelectorAll('.react-flow__node').length : 0; })()`) as number;
+    const objects = Object.values(ex.lookup).filter((d: any) => d.className === 'DObject').length;
+    check(`${name} ${which}: the model's editor shows one node per object of the spec (${objects})`, nodes === objects, `${nodes} nodes`);
+    return { loaded, nodes };
+}
+
 /** Opens the project and its model, the setting on, Generate, Run, Check: the pass line, or null. */
 async function generateRunCheck(page: Page, name: string, which: string, pid: string, ex: Example, setting: boolean): Promise<Record<string, any>> {
     const r: Record<string, any> = {};
@@ -306,15 +332,15 @@ for (const name of NAMES) {
     const ex = example(name);
     const r: Record<string, any> = {};
     result.examples[name] = r;
-    const file = `${DIR}/${name}.jjodel`;
+    const file = `${dirOf(name)}/${name}.jjodel`;
     const text = readFileSync(file, 'utf8');
     const json = JSON.parse(text);
     const fileIds = new Set(elementIds(JSON.parse(await lz.decompressFromUTF16(json.state)).idlookup));
     note(`${name}: the file`, { file, chars: text.length, project: json.name, elements: fileIds.size });
 
-    if (DIR === DEFAULT_DIR) {
-        const served = await (await fetch(`${URL}/examples/codegen/${name}.jjodel`)).text();
-        check(`${name}: the dev server serves the file at /examples/codegen/${name}.jjodel, byte-identical`, served === text, `${served.length} vs ${text.length}`);
+    if (!process.env.CGE_DIR) {
+        const served = await (await fetch(`${URL}/examples/${FOLDER[name]}/${name}.jjodel`)).text();
+        check(`${name}: the dev server serves the file at /examples/${FOLDER[name]}/${name}.jjodel, byte-identical`, served === text, `${served.length} vs ${text.length}`);
     }
 
     // First import, from the dashboard's File menu.
@@ -330,9 +356,13 @@ for (const name of NAMES) {
         note('dashboard: the imported project', { card, content });
         if (content) await crop(page, 'import_dashboard.png', { x: content.x, y: content.y, w: content.w, h: Math.min(content.h, Math.max(420, (card ? card.y + card.h - content.y : 0) + 40)) }, 0);
     }
-    r.firstRun = await generateRunCheck(page, name, '(first import)', first.id, ex, !settingOn);
-    settingOn = true;
-    if (r.firstRun.panelBox) await crop(page, CROP[name], r.firstRun.panelBox);
+    if (checkable(ex)) {
+        r.firstRun = await generateRunCheck(page, name, '(first import)', first.id, ex, !settingOn);
+        settingOn = true;
+        if (r.firstRun.panelBox) await crop(page, CROP[name], r.firstRun.panelBox);
+    } else {
+        r.firstOpen = await openModel(page, name, '(first import)', first.id, ex);
+    }
 
     // Second import of the same file.
     await dashboard(page);
@@ -348,6 +378,10 @@ for (const name of NAMES) {
     check(`${name}: the two imports share no element id, and neither keeps an id of the file`,
         !!idsA && !!idsB && idsA.length === fileIds.size && idsB.length === fileIds.size && shared.length === 0 && fromFile.length === 0 && second.id !== first.id,
         { file: fileIds.size, first: idsA?.length, second: idsB?.length, shared: shared.slice(0, 3), fromFile: fromFile.slice(0, 3) });
+    if (!checkable(ex)) {
+        r.secondOpen = await openModel(page, name, '(second import)', second.id, ex);
+        continue;
+    }
     r.secondRun = await generateRunCheck(page, name, '(second import)', second.id, ex, false);
     r.firstAgain = await generateRunCheck(page, name, '(first import, again)', first.id, ex, false);
     if (r.firstAgain.panel) await readmeMutation(page, name, r.firstAgain.panel, ex);
