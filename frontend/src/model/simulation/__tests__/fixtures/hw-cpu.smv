@@ -1,0 +1,277 @@
+-- cpu: a one-token state machine and its state attributes (smvExport, S-G1).
+MODULE main
+VAR
+  state : {FETCH, DECODE, EX_LDA, EX_STA, EX_ADD, EX_SUB, EX_AND, EX_LDI, EX_JZ, EX_JMP, HALT};
+  PC_value : unsigned word[4];
+  IR_value : unsigned word[8];
+  ACC_value : unsigned word[8];
+  Z__value : unsigned word[1];
+  rom_0_value : unsigned word[8];
+  rom_1_value : unsigned word[8];
+  rom_2_value : unsigned word[8];
+  rom_3_value : unsigned word[8];
+  rom_4_value : unsigned word[8];
+  rom_5_value : unsigned word[8];
+  rom_6_value : unsigned word[8];
+  rom_7_value : unsigned word[8];
+  rom_8_value : unsigned word[8];
+  rom_9_value : unsigned word[8];
+  rom_10_value : unsigned word[8];
+  rom_11_value : unsigned word[8];
+  rom_12_value : unsigned word[8];
+  rom_13_value : unsigned word[8];
+  rom_14_value : unsigned word[8];
+  rom_15_value : unsigned word[8];
+  ram_0_value : unsigned word[8];
+  ram_1_value : unsigned word[8];
+  ram_2_value : unsigned word[8];
+  ram_3_value : unsigned word[8];
+  ram_4_value : unsigned word[8];
+  ram_5_value : unsigned word[8];
+  ram_6_value : unsigned word[8];
+  ram_7_value : unsigned word[8];
+  ram_8_value : unsigned word[8];
+  ram_9_value : unsigned word[8];
+  ram_10_value : unsigned word[8];
+  ram_11_value : unsigned word[8];
+  ram_12_value : unsigned word[8];
+  ram_13_value : unsigned word[8];
+  ram_14_value : unsigned word[8];
+  ram_15_value : unsigned word[8];
+IVAR
+  sel : {none, fetch_decode, dec_NOP, dec_LDA, dec_STA, dec_ADD, dec_SUB, dec_AND, dec_LDI, dec_JZ, dec_JMP, dec_HLT, dec_else, ret_LDA, ret_STA, ret_ADD, ret_SUB, ret_AND, ret_LDI, ret_JZ, ret_JMP};
+DEFINE
+  rom_cells_init_1 := case PC_value = 0ud4_0 : 0ud8_97; PC_value = 0ud4_1 : 0ud8_47; PC_value = 0ud4_2 : 0ud8_102; PC_value = 0ud4_3 : 0ud8_46; PC_value = 0ud4_4 : 0ud8_103; PC_value = 0ud4_5 : 0ud8_45; PC_value = 0ud4_6 : 0ud8_30; PC_value = 0ud4_7 : 0ud8_126; PC_value = 0ud4_8 : 0ud8_79; PC_value = 0ud4_9 : 0ud8_46; PC_value = 0ud4_10 : 0ud8_28; PC_value = 0ud4_11 : 0ud8_61; PC_value = 0ud4_12 : 0ud8_44; PC_value = 0ud4_13 : 0ud8_134; PC_value = 0ud4_14 : 0ud8_240; TRUE : 0ud8_0; esac;
+  ram_cells_value_1 := case IR_value[3:0] = 0ud4_0 : ram_0_value; IR_value[3:0] = 0ud4_1 : ram_1_value; IR_value[3:0] = 0ud4_2 : ram_2_value; IR_value[3:0] = 0ud4_3 : ram_3_value; IR_value[3:0] = 0ud4_4 : ram_4_value; IR_value[3:0] = 0ud4_5 : ram_5_value; IR_value[3:0] = 0ud4_6 : ram_6_value; IR_value[3:0] = 0ud4_7 : ram_7_value; IR_value[3:0] = 0ud4_8 : ram_8_value; IR_value[3:0] = 0ud4_9 : ram_9_value; IR_value[3:0] = 0ud4_10 : ram_10_value; IR_value[3:0] = 0ud4_11 : ram_11_value; IR_value[3:0] = 0ud4_12 : ram_12_value; IR_value[3:0] = 0ud4_13 : ram_13_value; IR_value[3:0] = 0ud4_14 : ram_14_value; TRUE : ram_15_value; esac;
+  g_fetch_decode := TRUE;
+  g_dec_NOP := (IR_value[7:4] = 0ud4_0);
+  g_dec_LDA := (IR_value[7:4] = 0ud4_1);
+  g_dec_STA := (IR_value[7:4] = 0ud4_2);
+  g_dec_ADD := (IR_value[7:4] = 0ud4_3);
+  g_dec_SUB := (IR_value[7:4] = 0ud4_4);
+  g_dec_AND := (IR_value[7:4] = 0ud4_5);
+  g_dec_LDI := (IR_value[7:4] = 0ud4_6);
+  g_dec_JZ := (IR_value[7:4] = 0ud4_7);
+  g_dec_JMP := (IR_value[7:4] = 0ud4_8);
+  g_dec_HLT := (IR_value[7:4] = 0ud4_15);
+  g_ret_LDA := TRUE;
+  g_ret_STA := TRUE;
+  g_ret_ADD := TRUE;
+  g_ret_SUB := TRUE;
+  g_ret_AND := TRUE;
+  g_ret_LDI := TRUE;
+  g_ret_JZ := TRUE;
+  g_ret_JMP := TRUE;
+  en_fetch_decode := state = FETCH & g_fetch_decode;
+  en_dec_NOP := state = DECODE & g_dec_NOP;
+  en_dec_LDA := state = DECODE & g_dec_LDA;
+  en_dec_STA := state = DECODE & g_dec_STA;
+  en_dec_ADD := state = DECODE & g_dec_ADD;
+  en_dec_SUB := state = DECODE & g_dec_SUB;
+  en_dec_AND := state = DECODE & g_dec_AND;
+  en_dec_LDI := state = DECODE & g_dec_LDI;
+  en_dec_JZ := state = DECODE & g_dec_JZ;
+  en_dec_JMP := state = DECODE & g_dec_JMP;
+  en_dec_HLT := state = DECODE & g_dec_HLT;
+  en_dec_else := state = DECODE & !(g_dec_NOP | g_dec_LDA | g_dec_STA | g_dec_ADD | g_dec_SUB | g_dec_AND | g_dec_LDI | g_dec_JZ | g_dec_JMP | g_dec_HLT);
+  en_ret_LDA := state = EX_LDA & g_ret_LDA;
+  en_ret_STA := state = EX_STA & g_ret_STA;
+  en_ret_ADD := state = EX_ADD & g_ret_ADD;
+  en_ret_SUB := state = EX_SUB & g_ret_SUB;
+  en_ret_AND := state = EX_AND & g_ret_AND;
+  en_ret_LDI := state = EX_LDI & g_ret_LDI;
+  en_ret_JZ := state = EX_JZ & g_ret_JZ;
+  en_ret_JMP := state = EX_JMP & g_ret_JMP;
+  some_enabled := en_fetch_decode | en_dec_NOP | en_dec_LDA | en_dec_STA | en_dec_ADD | en_dec_SUB | en_dec_AND | en_dec_LDI | en_dec_JZ | en_dec_JMP | en_dec_HLT | en_dec_else | en_ret_LDA | en_ret_STA | en_ret_ADD | en_ret_SUB | en_ret_AND | en_ret_LDI | en_ret_JZ | en_ret_JMP;
+  final := state = HALT;
+ASSIGN
+  init(state) := FETCH;
+  next(state) := case
+      sel = fetch_decode : DECODE;
+      sel = dec_NOP : FETCH;
+      sel = dec_LDA : EX_LDA;
+      sel = dec_STA : EX_STA;
+      sel = dec_ADD : EX_ADD;
+      sel = dec_SUB : EX_SUB;
+      sel = dec_AND : EX_AND;
+      sel = dec_LDI : EX_LDI;
+      sel = dec_JZ : EX_JZ;
+      sel = dec_JMP : EX_JMP;
+      sel = dec_HLT : HALT;
+      sel = dec_else : FETCH;
+      sel = ret_LDA : FETCH;
+      sel = ret_STA : FETCH;
+      sel = ret_ADD : FETCH;
+      sel = ret_SUB : FETCH;
+      sel = ret_AND : FETCH;
+      sel = ret_LDI : FETCH;
+      sel = ret_JZ : FETCH;
+      sel = ret_JMP : FETCH;
+      TRUE : state;
+    esac;
+  init(PC_value) := 0ud4_0;
+  next(PC_value) := case
+      sel = fetch_decode : (PC_value + 0ud4_1);
+      sel = ret_JZ : case (Z__value = 0ud1_1) : IR_value[3:0]; TRUE : PC_value; esac;
+      sel = ret_JMP : IR_value[3:0];
+      TRUE : PC_value;
+    esac;
+  init(IR_value) := 0ud8_0;
+  next(IR_value) := case
+      sel = fetch_decode : rom_cells_init_1;
+      TRUE : IR_value;
+    esac;
+  init(ACC_value) := 0ud8_0;
+  next(ACC_value) := case
+      sel = ret_LDA : ram_cells_value_1;
+      sel = ret_ADD : (ACC_value + ram_cells_value_1);
+      sel = ret_SUB : (ACC_value - ram_cells_value_1);
+      sel = ret_AND : (ACC_value & ram_cells_value_1);
+      sel = ret_LDI : extend(IR_value[3:0], 4);
+      TRUE : ACC_value;
+    esac;
+  init(Z__value) := 0ud1_0;
+  next(Z__value) := case
+      sel = ret_LDA : case (ram_cells_value_1 = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      sel = ret_ADD : case ((ACC_value + ram_cells_value_1) = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      sel = ret_SUB : case ((ACC_value - ram_cells_value_1) = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      sel = ret_AND : case ((ACC_value & ram_cells_value_1) = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      sel = ret_LDI : case (extend(IR_value[3:0], 4) = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      TRUE : Z__value;
+    esac;
+  init(rom_0_value) := 0ud8_0;
+  next(rom_0_value) := rom_0_value;
+  init(rom_1_value) := 0ud8_0;
+  next(rom_1_value) := rom_1_value;
+  init(rom_2_value) := 0ud8_0;
+  next(rom_2_value) := rom_2_value;
+  init(rom_3_value) := 0ud8_0;
+  next(rom_3_value) := rom_3_value;
+  init(rom_4_value) := 0ud8_0;
+  next(rom_4_value) := rom_4_value;
+  init(rom_5_value) := 0ud8_0;
+  next(rom_5_value) := rom_5_value;
+  init(rom_6_value) := 0ud8_0;
+  next(rom_6_value) := rom_6_value;
+  init(rom_7_value) := 0ud8_0;
+  next(rom_7_value) := rom_7_value;
+  init(rom_8_value) := 0ud8_0;
+  next(rom_8_value) := rom_8_value;
+  init(rom_9_value) := 0ud8_0;
+  next(rom_9_value) := rom_9_value;
+  init(rom_10_value) := 0ud8_0;
+  next(rom_10_value) := rom_10_value;
+  init(rom_11_value) := 0ud8_0;
+  next(rom_11_value) := rom_11_value;
+  init(rom_12_value) := 0ud8_0;
+  next(rom_12_value) := rom_12_value;
+  init(rom_13_value) := 0ud8_0;
+  next(rom_13_value) := rom_13_value;
+  init(rom_14_value) := 0ud8_0;
+  next(rom_14_value) := rom_14_value;
+  init(rom_15_value) := 0ud8_0;
+  next(rom_15_value) := rom_15_value;
+  init(ram_0_value) := 0ud8_0;
+  next(ram_0_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_0 : ACC_value;
+      TRUE : ram_0_value;
+    esac;
+  init(ram_1_value) := 0ud8_0;
+  next(ram_1_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_1 : ACC_value;
+      TRUE : ram_1_value;
+    esac;
+  init(ram_2_value) := 0ud8_0;
+  next(ram_2_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_2 : ACC_value;
+      TRUE : ram_2_value;
+    esac;
+  init(ram_3_value) := 0ud8_0;
+  next(ram_3_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_3 : ACC_value;
+      TRUE : ram_3_value;
+    esac;
+  init(ram_4_value) := 0ud8_0;
+  next(ram_4_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_4 : ACC_value;
+      TRUE : ram_4_value;
+    esac;
+  init(ram_5_value) := 0ud8_0;
+  next(ram_5_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_5 : ACC_value;
+      TRUE : ram_5_value;
+    esac;
+  init(ram_6_value) := 0ud8_0;
+  next(ram_6_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_6 : ACC_value;
+      TRUE : ram_6_value;
+    esac;
+  init(ram_7_value) := 0ud8_0;
+  next(ram_7_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_7 : ACC_value;
+      TRUE : ram_7_value;
+    esac;
+  init(ram_8_value) := 0ud8_0;
+  next(ram_8_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_8 : ACC_value;
+      TRUE : ram_8_value;
+    esac;
+  init(ram_9_value) := 0ud8_0;
+  next(ram_9_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_9 : ACC_value;
+      TRUE : ram_9_value;
+    esac;
+  init(ram_10_value) := 0ud8_0;
+  next(ram_10_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_10 : ACC_value;
+      TRUE : ram_10_value;
+    esac;
+  init(ram_11_value) := 0ud8_0;
+  next(ram_11_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_11 : ACC_value;
+      TRUE : ram_11_value;
+    esac;
+  init(ram_12_value) := 0ud8_0;
+  next(ram_12_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_12 : ACC_value;
+      TRUE : ram_12_value;
+    esac;
+  init(ram_13_value) := 0ud8_0;
+  next(ram_13_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_13 : ACC_value;
+      TRUE : ram_13_value;
+    esac;
+  init(ram_14_value) := 0ud8_0;
+  next(ram_14_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_14 : ACC_value;
+      TRUE : ram_14_value;
+    esac;
+  init(ram_15_value) := 0ud8_0;
+  next(ram_15_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_15 : ACC_value;
+      TRUE : ram_15_value;
+    esac;
+TRANS
+  case
+    sel = none : !some_enabled;
+    sel = fetch_decode : en_fetch_decode;
+    sel = dec_NOP : en_dec_NOP;
+    sel = dec_LDA : en_dec_LDA;
+    sel = dec_STA : en_dec_STA;
+    sel = dec_ADD : en_dec_ADD;
+    sel = dec_SUB : en_dec_SUB;
+    sel = dec_AND : en_dec_AND;
+    sel = dec_LDI : en_dec_LDI;
+    sel = dec_JZ : en_dec_JZ;
+    sel = dec_JMP : en_dec_JMP;
+    sel = dec_HLT : en_dec_HLT;
+    sel = dec_else : en_dec_else;
+    sel = ret_LDA : en_ret_LDA;
+    sel = ret_STA : en_ret_STA;
+    sel = ret_ADD : en_ret_ADD;
+    sel = ret_SUB : en_ret_SUB;
+    sel = ret_AND : en_ret_AND;
+    sel = ret_LDI : en_ret_LDI;
+    sel = ret_JZ : en_ret_JZ;
+    sel = ret_JMP : en_ret_JMP;
+  esac;

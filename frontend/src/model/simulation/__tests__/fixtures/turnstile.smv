@@ -1,0 +1,44 @@
+-- demoESM: a one-token state machine and its state attributes (smvExport, S-G1).
+MODULE main
+VAR
+  state : {locked, unlocked, off};
+  model_coins : 0..3;
+IVAR
+  sel : {none, tc, tp, ts, tu};
+  event : {absent, coin, push, stop};
+DEFINE
+  model_paid := (model_coins >= 2);
+  g_tc := TRUE;
+  g_tp := model_paid;
+  g_ts := TRUE;
+  g_tu := TRUE;
+  en_tc := state = locked & event = coin & g_tc;
+  en_tp := state = locked & event = push & g_tp;
+  en_ts := state = locked & event = stop & g_ts;
+  en_tu := state = unlocked & event = push & g_tu;
+  ok_tc := ((model_coins + 1) >= 0 & (model_coins + 1) <= 3);
+  some_enabled := en_tc | en_tp | en_ts | en_tu;
+  final := state = off;
+ASSIGN
+  init(state) := locked;
+  next(state) := case
+      sel = tc : locked;
+      sel = tp : unlocked;
+      sel = ts : off;
+      sel = tu : locked;
+      TRUE : state;
+    esac;
+  init(model_coins) := 0;
+  next(model_coins) := case
+      sel = tc & ok_tc : (model_coins + 1);
+      sel = tp : 0;
+      TRUE : model_coins;
+    esac;
+TRANS
+  case
+    sel = none : !some_enabled;
+    sel = tc : en_tc & ok_tc;
+    sel = tp : en_tp;
+    sel = ts : en_ts;
+    sel = tu : en_tu;
+  esac;
