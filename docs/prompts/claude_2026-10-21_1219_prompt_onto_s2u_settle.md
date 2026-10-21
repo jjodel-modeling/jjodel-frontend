@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1219
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (verification of a core change; visual check owed)
-Status: eseguito 2026-10-21 · lane oi-s2u · revert 765b9f94f, probe 951feff3e + 3d5b3fd8a, assets a38d2fc4e, log 53834b0b2 · all probe checks pass in 3 runs (1 entry 1 press from cascade and class-node entry, Member 1 entry, placement within 4 px, S2-5o), undo-inline-edit 33/33 identical, build 0 · visual check passed
+Status: eseguito 2026-10-21 · lane oi-s2u · revert 765b9f94f, probe 951feff3e + 3d5b3fd8a, assets a38d2fc4e, log 53834b0b2 · all probe checks pass in 3 runs (1 entry 1 press from cascade and class-node entry, Member 1 entry, placement within 4 px, S2-5o), undo-inline-edit 33/33 identical, build 0 · visual check passed · Alfonso visual GO 2026-10-21 19:09
 Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5
 Depends: none
 Corregge: P-2026-10-21-1121, whose session (c83814fb) stopped with S2-4u fixed and the second press unexplained
