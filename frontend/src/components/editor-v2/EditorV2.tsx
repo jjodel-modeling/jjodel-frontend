@@ -54,7 +54,7 @@ import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/e
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
-import { fitPadding, getCanvasRightInset } from './viewportInset';
+import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
 import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
@@ -750,6 +750,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
+    // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
+    const fitViewOptions = useFitViewOptions();
 
     const {
         activeEditorId,
@@ -4770,7 +4772,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onMove={handleMove}
                 onMoveEnd={saveViewport}
                 fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
-                fitViewOptions={{ padding: fitPadding(), maxZoom: 1 }}
+                fitViewOptions={fitViewOptions}
                 defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
