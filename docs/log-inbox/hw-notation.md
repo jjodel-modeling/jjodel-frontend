@@ -179,3 +179,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Verilator 5.052. The trace header records the sha256 of cpu.v and tb.v; the test fails if either changes without a new run. Script bench on scratch copies: EX_SUB transfer gives "cycle 27: ACC jjodel 05, verilator 07", DECODE to EX_STA gives "cycle 20: state". Test bench: 5 mutants, each killed by its named test; two appended a comment to cpu.v and tb.v, restored by git checkout. The code commit was amended once, message only, to carry the bench.
 **Prompt document name**: 2026-10-21 14:30
+
+## 2026-10-21 — merge: hw-oracle into hw-demo (P-2026-10-21-1521)
+**Prompt**: `claude_2026-10-21_1521_prompt_merge_hw-oracle.md`, a direct merge by `lane-run merge --direct`, no session: `hw-oracle` at `d57c4d0de` into `hw-demo`, merge base `a061086d1`, 3 commits on the branch side.
+**Files touched**: merge `ebdfefbbf`: 6 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-10-21_1430_prompt_hw_se_verilator_trace.md`, `frontend/package.json`, `frontend/scripts/oracle/hw-cpu-verilator.mjs`, `frontend/src/codegen/examples/hw-cpu/__tests__/hw-cpu.verilator.test.ts`, `frontend/src/codegen/examples/hw-cpu/hw-cpu.verilator.trace`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ebdfefbbf` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11516 tests in 404 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: oracle script, committed Verilator trace and its test, no UI file; all gates green
+**Notes**: Rollback tag `pre-hw-oracle` on `a061086d1` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1521/result.json`.
+**Prompt document name**: 2026-10-21 15:21
