@@ -492,6 +492,9 @@ export async function instantiate(classifierId: string, record: OntoBinding, pla
     try {
         await synthesize(modules, adapter.createInstance, get, plan, record, result, placeAt);
     } finally {
+        // `Action.fire` dispatches on a timer (action.ts:349): one macrotask lets the last writes (the node layout)
+        // land in the group instead of pushing an entry of their own after it closes.
+        await new Promise(resolve => setTimeout(resolve, 0));
         history.endUndoGroup(group);
     }
     result.ok = result.problems.length === 0;
