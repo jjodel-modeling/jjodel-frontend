@@ -166,3 +166,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passato — chat, unattended: pure .smv exporter and tests only, no UI file; all gates green
 **Notes**: Rollback tag `pre-hw-smv` on `620e0ee00` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1414/result.json`.
 **Prompt document name**: 2026-10-21 14:14
+
+## 2026-10-21 — feat: hw demonstrator S-E, the hw-cpu trace compared with Verilator (P-2026-10-21-1430)
+**Prompt**: `claude_2026-10-21_1430_prompt_hw_se_verilator_trace.md`: slice S-E of the hw demonstrator plan §10.1 (D5, trace format §7.4): the Verilator oracle script, the `oracle:hw` script, the committed Verilator trace and a stale-proof normal-suite test.
+**Files touched**: code `054dd604b`: `frontend/scripts/oracle/hw-cpu-verilator.mjs` (new), `frontend/package.json`, `frontend/src/codegen/examples/hw-cpu/hw-cpu.verilator.trace` (new), `frontend/src/codegen/examples/hw-cpu/__tests__/hw-cpu.verilator.test.ts` (new); the Status line of the 1430 prompt; this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck exit 0; vitest `src/codegen` 26 files, 2103 passed, 5 skipped; `npm run oracle:hw` exit 0, 171 lines, 171 agree; check:scripts PASS; build exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Verilator 5.052. The trace header records the sha256 of cpu.v and tb.v; the test fails if either changes without a new run. Script bench on scratch copies: EX_SUB transfer gives "cycle 27: ACC jjodel 05, verilator 07", DECODE to EX_STA gives "cycle 20: state". Test bench: 5 mutants, each killed by its named test; two appended a comment to cpu.v and tb.v, restored by git checkout. The code commit was amended once, message only, to carry the bench.
+**Prompt document name**: 2026-10-21 14:30
