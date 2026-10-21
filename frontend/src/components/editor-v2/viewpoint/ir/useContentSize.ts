@@ -35,6 +35,7 @@ import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayou
 import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
 import { authoredDefaultSize, defaultBoxFor, sizeSourceOf } from '../../nodes/nodeSizing';
 import type { ShapeForm } from './irTypes';
+import { dropIntrinsic, onIntrinsicEpoch, readIntrinsic } from './intrinsicMeasureCache';
 
 const px = (v: string): number => {
     const n = parseFloat(v);
@@ -169,21 +170,19 @@ export function useContentDrivenSize(
      */
     const unaccepted = useRef(0);
     const [, remeasure] = useState(0);
+    /** The element the last reading was taken on, whose cache entry the unmount drops. */
+    const measuredEl = useRef<HTMLElement | null>(null);
 
-    // On a cold load the fonts can land after the first paint, and every
-    // measurement here is a text measurement. One re-measure, armed only while
-    // they are still pending, so a warm app pays nothing.
-    useEffect(() => {
-        const fonts = (document as any).fonts;
-        if (!fonts?.ready || fonts.status === 'loaded') return;
-        let alive = true;
-        fonts.ready.then(() => { if (alive) remeasure(t => t + 1); });
-        return () => { alive = false; };
-    }, []);
+    // The reading is cached per element (intrinsicMeasureCache.ts); what the element inherits from the
+    // document is the cache's epoch. A bump (the fonts landing on a cold load, which this effect waited
+    // for alone until P-2026-10-21-1240, a theme attribute, stylesheet text) re-measures: a commit is
+    // asked for, and the epoch makes it miss. A warm app with no bump pays a set insertion.
+    useEffect(() => onIntrinsicEpoch(() => remeasure(t => t + 1)), []);
 
     // No dependency array on purpose: the trigger is a commit of the content,
-    // which is when the ink can have changed. The work is guarded below, so a
-    // commit that changes nothing costs one style write and one layout read.
+    // which is when the ink can have changed. The work is guarded below, and the
+    // reading is cached, so a commit that changes nothing costs the cache key
+    // (class, inline style, markup) and no style write or layout read.
     useLayoutEffect(() => {
         if (!active) {
             // A default removed (or the view no longer carrying one) on a shape with no
@@ -239,7 +238,9 @@ export function useContentDrivenSize(
             return;
         }
 
-        const derived = boxFromIntrinsic(desc, measureIntrinsic(el));
+        // The node's box is part of the key: a reading that depended on it is retaken after a write.
+        const derived = boxFromIntrinsic(desc, readIntrinsic(el, measureIntrinsic, `${curW}x${curH}`));
+        measuredEl.current = el;
         const size = defaults ? defaultBoxFor(defaults, derived, desc.keepAspectRatio) : derived;
         written.current = size;
         fromDefault.current = defaults !== undefined;
@@ -297,6 +298,7 @@ export function useContentDrivenSize(
     // sync may already have patched it on with the very numbers this hook wrote. Mount-only on
     // purpose: a cleanup per commit would drop the size and the effect above would rewrite it.
     useLayoutEffect(() => () => {
+        if (measuredEl.current) dropIntrinsic(measuredEl.current);
         const mine = written.current;
         if (mine === null) return;
         const state = store.getState() as any;

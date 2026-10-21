@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1535
 Chat: C-2026-10-20-0839
 Front: maintenance
 Lane: full (critical zone: `viewpoint/ir/`, CLAUDE.md §3.1 table; continuation, RC-51)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane perf-round3 · 1a54325f2 · acceptance relaxed by the chat ACK to relative thresholds against the same-window base · visual check: measured only (production probe, see the commit body)
 Request: https://claude.ai/code/session_01EMpM7yBvFWpBXh3o1TJSRA
 Depends: P-2026-10-21-1355
 Corregge: —

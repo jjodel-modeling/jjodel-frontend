@@ -348,3 +348,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Built-in browser (dev, other lanes running), Jjodel harness after merge 74b80d710: BPMN 48 nodes 42 edges; selection click 1.0 s of long tasks; viewpoint switch to Authority 1.3 s, back to BPMN 2.4 s (viewpoint of 48 nodes with containers); no regression visible, inset read gone from the render per the lane probe
 **Notes**: Rollback tag `pre-perf-round3` on `0ff5e64c9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1232/result.json`.
 **Prompt document name**: 2026-10-21 12:32
+
+## 2026-10-21 — fix(editor-v2): intrinsic measure cache with inherited-CSS invalidation (P-2026-10-21-1535)
+**Prompt**: `claude_2026-10-21_1535_prompt_intrinsic_cache_commit.md`, continuation of P-2026-10-21-1240 and P-2026-10-21-1355 (both stopped at the time limit): two more runs of the new build and one of the base under the load gate, acceptance on medians, the code commit and the closure.
+**Files touched**: `1a54325f2`: `frontend/src/components/editor-v2/viewpoint/ir/intrinsicMeasureCache.ts` (new), `viewpoint/ir/useContentSize.ts`, `viewpoint/ir/__tests__/intrinsicMeasureCache.test.ts` (new), `frontend/scripts/probe/large-model-click-profile.ts`; this commit: this entry and the Status of the prompts 1240, 1355 and 1535.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: unknown: node sizes string-equal and stale 0 on every production run, typecheck exit 0 and build passed on the merged tree `5bc4d4f69` plus the change; vitest from 1355 on the pre-merge tree only, no human visual check
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (P-2026-10-21-1240, `docs/lir/lir_2026-10-21_intrinsic_cache.md`, `e42b8e120`)
+**Smoke visivo**: non applicabile (production probe only, table in the body of `1a54325f2`)
+**Notes**: Absolute thresholds missed on medians: ring p50 87 (85), move p95 120 (100); 86/120 with new-5 replacing new-4, spiked to load 151. They came from one ablation run, not a median: cause (a). Chat ACK relaxed them to relative: -26 %/-26 % vs same-window base (at least 15 %), drag -75 % (at least 50 %). Sizes sha1 de0b0609592d on 8 runs, control 41 vs 0. Runs: `~/.jjodel-lanes/P-2026-10-21-1535/handoff.md`.
+**Prompt document name**: 2026-10-21 15:35
