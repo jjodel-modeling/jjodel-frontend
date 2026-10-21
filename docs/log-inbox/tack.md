@@ -319,3 +319,16 @@ Board: the s6 board (PID 42412, `node ~/jjodel-w-tack-s6/tack/bin/tack.mjs board
 **Smoke visivo**: passato — chat, unattended: design note and discovery report, docs only; recommendations ratified by Alfonso 2026-10-21 10:19 (R-TACK-7)
 **Notes**: Rollback tag `pre-tack-spec` on `ebbaebdb9` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1023/result.json`.
 **Prompt document name**: 2026-10-21 10:23
+
+## 2026-10-21 — feat: Tack stops, breakpoint, ceiling and hard-stop classes, auto pill
+**Prompt**: P-2026-10-21-1015: a lane that ends `Outcome: hard-stop` is classed breakpoint (the prompt planned it), ceiling (context ceiling, handoff written) or hard-stop (unplanned), and a lane whose resumes all start with `[auto]` gets an auto pill. Measure first, classify in the collector (`stop_kind`, schema 8), show it on the Lanes page, the waiting tile and banner, the Last 24 hours table and the Insights outcome keys.
+**Files touched**: tack/src/collectors/lane-run/collect.mjs, tack/src/store/schema-8.sql (new), tack/src/store/open.mjs, tack/src/board/api.mjs, tack/src/board/lanes.js, tack/src/board/board.css, tack/src/board/insights.js, tack/src/metrics/layer3.mjs, tack/README.md, tack/test/stops.test.mjs (new), tack/test/lanes.test.mjs, tack/test/lanes-api.test.mjs, docs/log-inbox/tack.md, docs/prompts/claude_2026-10-21_1015_prompt_tack_breakpoints.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (tack suite 231 of 231 pass; 210 before plus 21 new and adjusted)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (visual check by the chat after exit, RC-23; board restarted on 4710 from this worktree, PID in /tmp/tack-stops/board.pid, store copy /tmp/tack-stops/real.db)
+**Notes**: 677 lane folders: 193 hard-stops = 27 breakpoint, 23 ceiling, 143 hard-stop (store of 679: 27, 23, 144). 133 of 159 hard-stops had no readable prompt.txt, so the prompt falls back to input-1.md (breakpoint 11 to 27). Hand check, 10 per class: ceiling 10/10; breakpoint 10/10 plausible; hard-stop 6 right, 4 are planned stops of prompts without a HARD STOP section (the rule says hard-stop). 0 lanes carry [auto] yet. 4710, last 24 h: 12 ceiling, 3 hard-stop.
+**Prompt document name**: 2026-10-21 10:15

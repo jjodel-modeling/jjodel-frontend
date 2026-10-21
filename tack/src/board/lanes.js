@@ -18,8 +18,26 @@
   const clock = (ms) => (ms === null || ms === undefined ? '–' : B.hhmm(new Date(ms).toISOString()));
   const ago = (ms, now) => (ms === null || ms === undefined ? '–' : mins(now - ms) + ' ago');
   const disabled = (label, reason) => '<span class="ln-dis" title="' + esc(reason) + '" aria-label="' + esc(label + ': ' + reason) + '">' + esc(label) + '</span>';
-  const OUTCOME_CLASS = { done: 'ln-done', question: 'ln-wait', 'hard-stop': 'ln-wait', blocked: 'ln-block' };
-  const outcome = (o) => '<span class="tag ' + (OUTCOME_CLASS[o] || '') + '">' + esc(o || 'none') + '</span>';
+  const OUTCOME_CLASS = { done: 'ln-done', question: 'ln-wait', 'hard-stop': 'ln-wait', breakpoint: 'ln-bp', ceiling: 'ln-ceil', blocked: 'ln-block' };
+  // The three stops behind Outcome: hard-stop (the collector's stop_kind); the tooltip says what each means.
+  const STOP_TIPS = {
+    breakpoint: 'Breakpoint: a stop the prompt planned (its HARD STOP section). Nothing went wrong; the lane waits for a GO.',
+    ceiling: 'Ceiling: the session hit the context ceiling and wrote a handoff. The work continues in a new lane.',
+    'hard-stop': 'Hard-stop: an unplanned stop. Look at the lane.',
+  };
+  const AUTO_TIP = 'auto: every resume of this lane was sent in /lane auto (the message starts with [auto]), so its breakpoints did not stop for Alfonso. Resumes before the marker existed carry none and get no pill.';
+  /** The outcome pill: a final hard-stop shows its kind (breakpoint, ceiling, hard-stop), and auto follows when all resumes were auto. */
+  const outcome = (o, stopKind, auto) => {
+    const label = o === 'hard-stop' ? stopKind || 'hard-stop' : o;
+    return '<span class="tag ' + (OUTCOME_CLASS[label] || '') + '"' + (STOP_TIPS[label] ? ' title="' + esc(STOP_TIPS[label]) + '"' : '') + '>' + esc(label || 'none') + '</span>' +
+      (auto ? ' <span class="tag ln-auto" title="' + esc(AUTO_TIP) + '">auto</span>' : '');
+  };
+  const PLURAL = { question: 'questions', breakpoint: 'breakpoints', ceiling: 'ceilings', 'hard-stop': 'hard-stops' };
+  /** Waiting lanes by what they wait on: «2 breakpoints · 1 hard-stop», zero kinds left out; null when none. */
+  const waitText = (by) => {
+    const parts = ['breakpoint', 'ceiling', 'hard-stop', 'question'].filter((x) => by && by[x]).map((x) => by[x] + ' ' + (by[x] === 1 ? x : PLURAL[x]));
+    return parts.length ? parts.join(' · ') : null;
+  };
   const launcher = (c) => (c.chat ? '<span class="mono" title="' + esc(LAUNCH_NOTE) + '">' + esc(c.chat) + '</span>' : '<span class="dim" title="' + esc(LAUNCH_NOTE) + '">—</span>');
   const badges = (c) => (c.kind ? '<span class="tag">' + esc(c.kind) + '</span>' : '') + (c.tier ? '<span class="tag">' + esc(c.tier) + '</span>' : '') +
     (c.direct ? '<span class="tag" title="A direct merge: no Claude session">direct</span>' : '') + (c.critical ? '<span class="tag ln-block" title="Critical zone">critical</span>' : '');
@@ -43,12 +61,12 @@
       '</div></section>';
   }
 
-  const attnRow = (c, now, closure) => '<li data-id="' + esc(c.id) + '" title="' + esc(closure) + '"><span class="mono">' + esc(c.id) + '</span>' + outcome(c.lastOutcome) +
+  const attnRow = (c, now, closure) => '<li data-id="' + esc(c.id) + '" title="' + esc(closure) + '"><span class="mono">' + esc(c.id) + '</span>' + outcome(c.lastOutcome, c.stopKind, c.auto) +
     '<span class="ln-t">' + esc(c.title || '') + '</span><span class="dim">' + esc(ago(c.end ?? c.started, now)) + '</span></li>';
 
   function lastRow(c, now) {
     return '<tr data-id="' + esc(c.id) + '"><td class="c ln-id">' + esc(c.id) + '</td><td>' + (c.kind ? esc(c.kind) : '<span class="dim">–</span>') + '</td><td class="ln-ti" title="' + esc(c.title || '') + '"><div class="ln-clamp">' + esc(c.title || '') +
-      '</div></td><td>' + outcome(c.lastOutcome) + (c.resolved ? ' <span class="tag">resolved</span>' : '') + '</td><td class="n">' + esc(clock(c.started)) + '–' + esc(clock(c.end)) +
+      '</div></td><td>' + outcome(c.lastOutcome, c.stopKind, c.auto) + (c.resolved ? ' <span class="tag">resolved</span>' : '') + '</td><td class="n">' + esc(clock(c.started)) + '–' + esc(clock(c.end)) +
       '</td><td class="n r">' + esc(mins(c.workMs)) + '</td><td class="n r">' + esc(mins(c.spanMs)) + '</td><td class="n r">' + esc(k(c.tokensIn)) +
       '</td><td class="n r">' + (c.cost === null ? '<span class="dim">–</span>' : B.usd(c.cost)) + '</td><td class="n r">' + esc(k(c.contextPeak)) +
       '</td><td>' + disabled('–', ARCH_REASON) + '</td><td>' + launcher(c) + '</td></tr>';
@@ -60,13 +78,13 @@
     const t = d.tiles;
     const tile = (label, v, sub) => '<div class="kpi"><span class="kl">' + esc(label) + '</span><span class="kv"><b>' + v + '</b><span>' + esc(sub || '') + '</span></span></div>';
     let out = '<div class="meta ln-upd">Updated ' + esc(d.updatedMs ? clock(d.updatedMs) : '–') + '; the page refreshes every 20 s while it is shown</div>';
-    out += '<div class="kpis ln-kpis" aria-label="Lanes">' + tile('Running', t.running) + tile('Waiting', t.waiting, 'question or hard-stop') + tile('Blocked', t.blocked, 'now') +
+    out += '<div class="kpis ln-kpis" aria-label="Lanes">' + tile('Running', t.running) + tile('Waiting', t.waiting, waitText(t.waitingBy) || 'question or stop') + tile('Blocked', t.blocked, 'now') +
       tile('Done', t.done24, '24 h') + tile('Resolved', t.resolved24, '24 h') + tile('Spend today', B.usd(t.spendToday)) + '</div>';
 
     const a = d.attention;
     if (a.waiting.length || a.blocked.length || a.staleCount) {
       out += '<h2 title="' + esc(d.closure) + '">Needs attention<span class="h2n">' + (a.waiting.length + a.blocked.length) + ' open' +
-        (a.staleCount ? ', ' + a.staleCount + ' older than 72 h not listed' : '') + '</span></h2>';
+        (waitText(t.waitingBy) ? ' (' + waitText(t.waitingBy) + ')' : '') + (a.staleCount ? ', ' + a.staleCount + ' older than 72 h not listed' : '') + '</span></h2>';
       out += '<ul class="ln-attn">' + a.blocked.map((c) => attnRow(c, now, d.closure)).join('') + a.waiting.map((c) => attnRow(c, now, d.closure)).join('') + '</ul>';
     }
 
@@ -85,7 +103,7 @@
     out += '<h2>Unattended decisions<span class="h2n">as reported in each lane\'s closing message</span></h2>';
     out += d.adoptions.length ? '<div class="wrap"><table class="sfx ln-tab"><thead><tr><th>Prompt-ID</th><th>Front</th><th>Chat</th><th>Ended</th><th class="r">Decisions</th><th>Last outcome</th></tr></thead><tbody>' +
       d.adoptions.map((x) => '<tr><td class="c">' + esc(x.id) + '</td><td>' + esc(x.front || '–') + '</td><td class="c">' + esc(x.chat || '—') + '</td><td class="n">' + esc(ago(x.end, now)) +
-        '</td><td class="n r">' + x.count + '</td><td>' + outcome(x.lastOutcome) + '</td></tr>').join('') + '</tbody></table></div>'
+        '</td><td class="n r">' + x.count + '</td><td>' + outcome(x.lastOutcome, x.stopKind, x.auto) + '</td></tr>').join('') + '</tbody></table></div>'
       : '<div class="empty">No lane reported an unattended decision.</div>';
     return out;
   }
@@ -96,7 +114,7 @@
     return { tick, start() { timers.setInterval(tick, every); return this; } };
   }
 
-  root.TackLanes = { html, runningCard, poller, PHASE_REASON, ARCH_REASON, LAUNCH_NOTE };
+  root.TackLanes = { html, runningCard, poller, waitText, STOP_TIPS, AUTO_TIP, PHASE_REASON, ARCH_REASON, LAUNCH_NOTE };
   if (typeof document === 'undefined') return;
 
   let box = null;

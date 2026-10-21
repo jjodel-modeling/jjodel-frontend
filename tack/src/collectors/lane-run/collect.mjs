@@ -36,6 +36,9 @@ export const LANE_COLUMN_SOURCES = {
     kind: 'Lane: header line of the same file, or its file name (enum)', title: 'first # line of the same header (capped)',
     work_ms: 'sum of the turns (input mtime to result duration)', worktree: 'worktree.txt', resolved: 'resolved.txt exists (boolean)',
     adoptions: 'Decisions taken (unattended) items of the last result event (count)',
+    stop_kind: 'breakpoint | ceiling | hard-stop for a last turn that ended Outcome: hard-stop (stopKindOf), else null',
+    resumes: 'resume messages (count)', auto_resumes: 'resume messages starting with [auto] after an optional [P-...] bracket (count; no text kept)',
+    stop_scanned: 'the two columns above were computed (boolean); set by UPDATE alone',
     prompt_status: 'first word of the Status: header line of the prompt file at the repository HEAD (git show), lowercased',
   },
   lane_spend: {
@@ -169,6 +172,57 @@ export function lastAdoptions(buf) {
   return last ? adoptionsOf(last.result) : null;
 }
 
+/** The text of the last turn-closing result event of a log; '' without one. Read in memory, never stored. */
+export function lastResultText(buf) {
+  let last = '';
+  if (buf) {
+    eachLine(buf, '"type":"result"', (raw) => {
+      const e = parse(raw.toString('utf8'));
+      if (e && e.type === 'result' && !notTurn(e)) last = String(e.result || '');
+    });
+  }
+  return last;
+}
+
+const STOP_LINE = /^[ \t>*_`-]*Stop:[ \t*_`]*(planned|ceiling|unplanned)\b/im;
+const CEILING_WORDS = /context[\w\s-]{0,20}ceiling|soft ceiling|\bAM-8\b|hand-?off/i;
+const PLANNED_WORDS = /phase 1|visual check|report (is |was )?committed|end of phase|planned (hard[- ]?)?stop|breakpoint/i;
+const NO_STOP = /^[\s*_`>-]*none\b/i;
+
+/**
+ * The «## HARD STOP» section of a prompt file's text: its body, or null without the section or when it says
+ * «None» / «None planned».
+ */
+export function plannedStopSection(text) {
+  const m = /^##[ \t]+hard[- ]?stops?\b[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/im.exec(String(text || ''));
+  if (!m) return null;
+  const body = m[1].trim();
+  return !body || NO_STOP.test(body) ? null : body;
+}
+
+/**
+ * The kind of a hard-stop turn: breakpoint (the prompt planned it), ceiling (the session hit the context ceiling and
+ * left a handoff), hard-stop (anything else). Rules in order: a declared «Stop: planned|ceiling|unplanned» line of the
+ * result wins; handoff.md present and the result naming a ceiling or a handoff; the prompt's HARD STOP section names a
+ * stop and the lane is a discovery or the result says that stop was reached; else hard-stop.
+ * facts: { result, handoff (boolean), promptText, kind }.
+ */
+export function stopKindOf({ result = '', handoff = false, promptText = '', kind = null }) {
+  const declared = STOP_LINE.exec(result)?.[1].toLowerCase();
+  if (declared) return declared === 'planned' ? 'breakpoint' : declared === 'ceiling' ? 'ceiling' : 'hard-stop';
+  if (handoff && CEILING_WORDS.test(result)) return 'ceiling';
+  const section = plannedStopSection(promptText);
+  if (section) {
+    const first = section.split('\n').find((l) => l.trim()) || '';
+    const own = first.replace(/[*_`#>-]/g, '').trim().toLowerCase().slice(0, 24);
+    if (kind === 'discovery' || PLANNED_WORDS.test(result) || (own.length >= 12 && result.toLowerCase().includes(own))) return 'breakpoint';
+  }
+  return 'hard-stop';
+}
+
+/** True when a resume message starts, after an optional [P-...] bracket, with [auto]. */
+export const isAutoResume = (text) => /^\s*(\[P-[^\]]*\]\s*)?\[auto\]/i.test(String(text || '').slice(0, 300));
+
 const OUTCOMES = ['done', 'hard-stop', 'question', 'blocked'];
 /** The outcome of a turn from the Outcome word of its result event: one of four words, unparsed, or none. */
 const turnOutcome = (w) => (!w ? 'none' : OUTCOMES.includes(w) ? w : 'unparsed');
@@ -192,6 +246,16 @@ export function kindOf(laneLine, file = '') {
   if (/^discovery|^phase 1 only|^full \(discovery\b/.test(l) || (/^full \(phase 1\b/.test(l) && /read-only/.test(l) && !/two-phase|same session|in cascade|after the chat'?s go/.test(l))) return 'discovery';
   if (/^full|^phase|implementation/.test(l)) return 'phase2';
   return null;
+}
+
+/**
+ * The prompt text of a lane, in memory: the file prompt.txt names, else input-1.md (the prompt as the session received
+ * it; lanes of a deleted worktree, and the oldest lanes without prompt.txt, keep only that); '' when neither reads.
+ */
+export function promptTextOf(dir) {
+  const path = readTrim(join(dir, 'prompt.txt'));
+  if (path) { try { return readFileSync(path, 'utf8'); } catch { /* the file is gone: the lane keeps its input */ } }
+  return readTrim(join(dir, 'input-1.md'));
 }
 
 const NO_HEADER = { front: null, chat: null, kind: null, title: null };
@@ -283,7 +347,7 @@ const numbered = (names, re) => names.map((n) => re.exec(n)).filter(Boolean).map
 /** The cache key of a lane folder: every file read, by size and mtime. */
 export function laneKey(dir, names) {
   const files = ['log.jsonl', 'exit.txt', 'started.txt', 'pid.txt', 'tier.txt', 'session.txt', 'worktree.txt', 'runs.jsonl',
-    'result.json', 'prompt.txt', 'goahead.txt', 'resolved.txt', 'direct.json',
+    'result.json', 'prompt.txt', 'goahead.txt', 'resolved.txt', 'direct.json', 'handoff.md',
     ...names.filter((n) => /^(input|msg)-\d+\.md$/.test(n)).sort()];
   return files.map((f) => `${f}:${size(join(dir, f))}:${mtime(join(dir, f))}`).join('|');
 }
@@ -321,6 +385,17 @@ export function readLane(dir, now = Date.now()) {
   }
   const msgs = numbered(names, /^msg-(\d+)\.md$/);
   const classes = inputs.length > 1 ? turns.slice(1).map((t) => t.c) : msgs.map((k) => inputClass(readTrim(join(dir, `msg-${k}.md`)).slice(0, 1500)));
+  const resumeTexts = inputs.length > 1 ? inputs.slice(1).map((k) => readTrim(join(dir, `input-${k}.md`))) : msgs.map((k) => readTrim(join(dir, `msg-${k}.md`)));
+  const header = promptHeader(readTrim(join(dir, 'prompt.txt')) || null);
+  const lastOutcome = res.length ? turnOutcome(res[res.length - 1].outcome) : 'none';
+  let stopKind = null;
+  if (lastOutcome === 'hard-stop') {
+    const promptText = promptTextOf(dir);
+    const head = promptText.slice(0, 8192);
+    const cut = head.search(/^## /m);
+    const kind = header.kind ?? kindOf(LANE.exec(cut === -1 ? head : head.slice(0, cut))?.[1] ?? '');
+    stopKind = stopKindOf({ result: lastResultText(buf), handoff: names.includes('handoff.md'), promptText, kind });
+  }
   const co = costEvents(buf);
   const spend = [];
   let prev = 0;
@@ -347,13 +422,16 @@ export function readLane(dir, now = Date.now()) {
     overTime: res.some((r) => r.ms > 90 * 60e3),
     maxRunMs: res.reduce((a, r) => Math.max(a, r.ms), 0),
     turns: res.length,
-    lastOutcome: res.length ? turnOutcome(res[res.length - 1].outcome) : 'none',
+    lastOutcome,
+    stopKind,
+    resumes: resumeTexts.length,
+    autoResumes: resumeTexts.filter(isAutoResume).length,
     logMtime: buf ? Math.round(mtime(join(dir, 'log.jsonl'))) || null : null,
     critical: CRITICAL_REASON.test(tierLine) || existsSync(join(dir, 'goahead.txt')),
     workMs: Math.round(turns.reduce((a, t) => a + (t.e - t.s), 0)),
     resolved: existsSync(join(dir, 'resolved.txt')),
     adoptions: lastAdoptions(buf),
-    ...promptHeader(readTrim(join(dir, 'prompt.txt')) || null),
+    ...header,
     mergeState: merge.state,
     gatesRed: merge.gatesRed,
     corrective: classes.includes('corrective'),
@@ -377,12 +455,14 @@ function repoOfPath(repos, p) {
  */
 export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opts = {}) {
   const limitMs = opts.limitMs ?? (() => 90 * 60e3);
-  const st = { enabled: false, lanes: 0, read: 0, unchanged: 0, errors: 0, spendRows: 0 };
+  const st = { enabled: false, lanes: 0, read: 0, unchanged: 0, errors: 0, spendRows: 0, stopScanned: 0 };
   if (!existsSync(root)) return st;
   st.enabled = true;
   const repos = db.prepare('SELECT key, toplevels FROM repos').all().map((r) => ({ key: r.key, toplevels: JSON.parse(r.toplevels) }));
   const sessionRepo = db.prepare('SELECT repo_key FROM session_repo WHERE session_id = ?');
-  const getKey = db.prepare('SELECT cache_key, live, end_ms FROM lanes WHERE id = ?');
+  const getKey = db.prepare('SELECT cache_key, live, end_ms, stop_scanned FROM lanes WHERE id = ?');
+  // Schema 8 columns are set by UPDATE alone, so that a lane read before schema 8 keeps its other columns (prompt_status).
+  const putStop = db.prepare('UPDATE lanes SET stop_kind = ?, resumes = ?, auto_resumes = ?, stop_scanned = 1 WHERE id = ?');
   const put = db.prepare(`INSERT OR REPLACE INTO lanes (id, repo_key, session_id, started_ms, end_ms, live, tier, runs, outcome,
     blocked_run, over_time, corrective, cost_usd, cache_key, turns, last_outcome, log_mtime_ms, critical, front, chat, merge_state,
     gates_red, kind, title, work_ms, worktree, resolved, adoptions)
@@ -399,17 +479,24 @@ export function collectLanes(db, root = defaultLaneRoot(), now = Date.now(), opt
       try { names = readdirSync(dir); } catch { st.errors++; continue; }
       const key = laneKey(dir, names);
       const ex = getKey.get(id);
-      if (ex && ex.cache_key === key && ex.end_ms !== null && !ex.live) {
+      const stale = !ex || ex.stop_scanned !== 1;
+      if (ex && ex.cache_key === key && ex.end_ms !== null && !ex.live && !stale) {
         st.unchanged++;
         continue;
       }
       let l;
       try { l = readLane(dir, now); } catch { st.errors++; continue; }
+      if (ex && ex.cache_key === key && ex.end_ms !== null && !ex.live) {
+        putStop.run(l.stopKind, l.resumes, l.autoResumes, id);
+        st.stopScanned++;
+        continue;
+      }
       const repo = repoOfPath(repos, l.worktree) ?? (l.session ? sessionRepo.get(l.session)?.repo_key ?? null : null);
       put.run(id, repo, l.session, l.started, l.end, l.live ? 1 : 0, l.tier, l.runs, l.outcome, l.blockedRun ? 1 : 0,
         l.maxRunMs > limitMs(repo) ? 1 : 0, l.corrective ? 1 : 0, l.cost, key, l.turns, l.lastOutcome, l.logMtime,
         l.critical ? 1 : 0, l.front, l.chat, l.mergeState, l.gatesRed, l.kind, l.title, l.workMs, l.worktree, l.resolved ? 1 : 0,
         l.adoptions);
+      putStop.run(l.stopKind, l.resumes, l.autoResumes, id);
       delSpend.run(id);
       for (const s of l.spend) addSpend.run(id, s.seq, s.at, s.usd);
       st.spendRows += l.spend.length;

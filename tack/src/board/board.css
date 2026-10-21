@@ -18,6 +18,7 @@
 :root[data-theme=high-contrast]{color-scheme:light;--t-side:#FFFFFF;--t-content:#FFFFFF;--t-panel:#FFFFFF;--t-panel2:#FFFFFF;--t-head:#F0F0F0;--t-line:#767676;--t-line2:#595959;--t-line3:#3B3B3B;
 --t-text:#000000;--t-text2:#1A1A1A;--t-muted:#3D3D3D;--t-accent:#2B2FB0;--t-link:#1C1F9E;--t-accent-dim:#9FA3E8;--t-done:#0B6B3A;--t-wait:#8A5300;--t-block:#B00020;
 --t-sel:#DCDCF5;--t-hover:#EDEDED;--t-tag:#E6E6E6}
+:root{--t-bp:#475569}
 :root{--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace}
 *{box-sizing:border-box}body{margin:0;background:var(--t-content);color:var(--t-text);font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 a{color:var(--t-link);text-decoration:none}a:hover{text-decoration:underline}.mono{font-family:var(--mono)}
@@ -139,6 +140,8 @@ table.se-ev td{font-size:12.5px}table.se-ev tr.se-off td{color:var(--t-muted)}.s
 .ln-card h3 .tag{font-weight:400}.ln-facts{display:flex;flex-wrap:wrap;gap:4px 14px;font:12px var(--mono);color:var(--t-text2);font-variant-numeric:tabular-nums}
 .ln-dis{color:var(--t-muted);border:1px dashed var(--t-line3);border-radius:5px;padding:0 6px;cursor:help}
 .ln-done{color:var(--t-done)}.ln-wait{color:var(--t-wait)}.ln-block{color:var(--t-block)}
+/* Stops: breakpoint solid slate, ceiling outlined neutral, hard-stop the warning colour; auto is a quiet tag beside the outcome. */
+.tag.ln-bp{background:var(--t-bp);color:#FFFFFF}.tag.ln-ceil{background:transparent;color:var(--t-text2);box-shadow:inset 0 0 0 1px var(--t-line3)}.tag.ln-auto{background:var(--t-accent-dim);color:var(--t-text);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
 .ln-attn{list-style:none;margin:0;padding:0;border:1px solid var(--t-line2);border-radius:10px;background:var(--t-panel)}
 .ln-attn li{display:flex;align-items:baseline;gap:10px;padding:8px 14px;border-top:1px solid var(--t-line);cursor:help}.ln-attn li:first-child{border-top:0}.ln-attn .ln-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 table.sfx.ln-tab{min-width:0;table-layout:auto}.ln-tab td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}

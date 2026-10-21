@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1015
 Chat: C-2026-10-19-1748
 Front: tack
 Lane: fast (classification in the lane-run collector and the Lanes page; no governance change)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane tack-stops · 4c07b73ba · visual check by the chat on 4710 (RC-23) pending
 Corregge: none
 Request: Alfonso, 2026-10-21 10:09, in the project chat: «una cosa importante ed urgente, come già discusso dobbiamo distinguere tra gli hard-stop e i breakpoint, inoltre i breakpoint che non si fermano perché in modalità /lane auto devono essere contraddistinti da un pill 'auto'»
 
