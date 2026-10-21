@@ -452,3 +452,16 @@ First run, `TACK_STORE=/tmp/tack-v0b/sprotty.db node tack/bin/tack.mjs board --n
 | /api/attention | 200, 1145 bytes, the 4700 shape, unchanged route |
 | `git status --porcelain --ignored` before / after | identical (1 line) |
 | exit on SIGTERM | 0 |
+
+## 2026-10-21 — merge: tack-v0b into alfonso-frontend-jjtl (P-2026-10-21-1558)
+**Prompt**: `claude_2026-10-21_1558_prompt_merge_tack-v0b.md`, a direct merge by `lane-run merge --direct`, no session: `tack-v0b` at `9d69c1647` into `alfonso-frontend-jjtl`, merge base `8f3e52ef3`, 2 commits on the branch side.
+**Files touched**: merge `f46cec60d`: 7 files from the branch side (`docs/log-inbox/tack.md`, `docs/prompts/claude_2026-10-21_1500_prompt_tack_v0b_first_run.md`, `tack/README.md`, `tack/src/board/api.mjs`, `tack/src/board/board.js`, `tack/src/board/server.mjs`, `tack/test/first-run.test.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f46cec60d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11507 tests in 400 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: Chat checked v0b at 15:24 from ~/harness-exp/sprotty on 4712: preselected sprotty unrecorded, sessions/lanes/timeline/metrics empty, 0 keys of other repositories, clone git status unchanged
+**Notes**: Rollback tag `pre-tack-v0b` on `fcd03e0c0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1558/result.json`.
+**Prompt document name**: 2026-10-21 15:58
