@@ -38,7 +38,10 @@ function MenuPanel({ x, y, items, onClose }: ContextMenuProps) {
     const openCascade = (index: number, target: HTMLElement) => {
         const r = target.getBoundingClientRect();
         const left = r.right + CASCADE_FLIP_WIDTH > window.innerWidth ? r.left - CASCADE_FLIP_WIDTH : r.right;
-        setOpen({ index, x: left, y: r.top - 6 });
+        // Kept inside the viewport's height: shifted up so the last item stays visible.
+        const height = (items[index].children?.length ?? 0) * r.height + 12;
+        const top = Math.max(8, Math.min(r.top - 6, window.innerHeight - height - 8));
+        setOpen({ index, x: left, y: top });
     };
     const opened = open !== null ? items[open.index] : undefined;
 
