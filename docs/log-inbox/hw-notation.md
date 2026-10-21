@@ -64,3 +64,23 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: codegen Verilog printer and tests only, no UI file; gates green after re-run
 **Notes**: The red test was `traceMonitor.test.ts`, with nine more files (lane-run, board, hook, check-addonly, js printer differential, irSelectionRing) under load average 100; all nine re-run alone at 12:17, 444/444. Block cleared with `lane-run resolve`, closure by hand. Tag `pre-hw-printer on fb9aecbcd`.
 **Prompt document name**: 2026-10-21 11:38
+
+## 2026-10-21 — feat: hw demonstrator S-B, simulation roles, a running program and its committed trace
+
+**Prompt**: Hardware demonstrator slice S-B (plan §10.1), P-2026-10-21-1145: state roles, word σ attributes on registers and cells, a ROM program and its per-cycle trace.
+**Files touched**: `frontend/src/codegen/examples/hw-cpu/hw-cpu.json`, `…/hw-cpu/hw-cpu.trace.json`, `…/hw-cpu/__tests__/hw-cpu.run.test.ts`, `frontend/scripts/examples/build-hw-cpu.ts`, `frontend/public/examples/hw/hw-cpu.jjodel`, `frontend/src/codegen/examples/__tests__/importable.test.ts`, `frontend/scripts/probe/codegen-examples.ts`; this commit: the Status of the prompt, this entry and one ticket.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 0, typecheck:scripts 0, check:scripts 0, build 0; vitest jjel/codegen/model/jjtl 3862 passed, failures only in the known jjtl window imports (CLAUDE.md §17).
+**Out-of-scope changes**: yes, `importable.test.ts` and `codegen-examples.ts`, two files beyond the five declared, without the Rule 19 pause.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane R7 probe: Play to Terminated in 170 steps, the run inspector reads ram_12 = 8'h2a; the panel shows the E-CALL defect (ticket below).
+**Notes**: Code a1acfa658; lane stopped at the AM-8 ceiling and the chat wrote this closure from its handoff. The program multiplies 7 by 6 into RAM[12] in 170 cycles; seven spec mutants killed. The build probe reports a read race in the S-A1 metamodel (`Transition.next` read 0..1 right after its bound write); the file holds 1..1.
+**Prompt document name**: 2026-10-21 11:45
+
+## 2026-10-21 — ticket: Subset checker flags the hw-cpu ROM read bits(8, c.init) as E-CALL
+
+**Ticket**: `subsetChecker.ts:321-322` accepts `bits` only with literal arguments; FETCH's ROM read is `bits(8, rom.cells.filter(…).first.init)`, so the panel shows «1 defect: FETCH exit (E-CALL)». The run is unaffected, but the defect is visible in a demo. The fix belongs to the subset checker or to S-G1's memory idiom, not to the model.
+**Priority**: medium
+**Found in**: P-2026-10-21-1145
