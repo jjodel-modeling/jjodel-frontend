@@ -931,3 +931,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: passato — chat, unattended: Lane Monitor app rebuilt and relaunched; route() 3 new tests of 56 green; on_new_window Deny in tauri 2.12.4; link click in the Lane board window confirmed by Alfonso 2026-10-21 10:19
 **Notes**: Rollback tag `pre-lanemon-links` on `4d56f907f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1008/result.json`.
 **Prompt document name**: 2026-10-21 10:08
+
+## 2026-10-21 — feat(lane-monitor-app): the tray title shows waiting and running counts (P-2026-10-21-1020)
+**Prompt**: `claude_2026-10-21_1020_prompt_lanemon_tray_counts.md`: the tray title read «0» with 2 lanes running and 0 waiting; show waiting first, then running, each with its sign.
+**Files touched**: `tools/lane-monitor-app/src-tauri/src/poll.rs` (`title_for` rewritten, new `tooltip_for` and `lanes`, title test rewritten, new `tooltip_formatter` test), `tools/lane-monitor-app/src-tauri/src/main.rs` (tooltip now calls `poll::tooltip_for`; module doc line 3), `docs/log-inbox/harness.md`, this prompt file (Status). Commit `c42a2abd5`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `cargo test` 57 passed, 0 failed; `cargo tauri build --bundles app` exit 0 (bundle 4.97 MiB, 5.0M installed); app quit, `ditto` over `~/Applications/Lane Monitor.app`, relaunched; the menu bar item read through System Events shows `⏸1 ▶5`, matching `/api/attention` (waiting 1, blocked 0, running 5)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the chat checks the tray after exit (P8 deroga); title read as text, not as pixels
+**Notes**: Title `⏸<w>[!] ▶<r>`, zero counts left out, empty at rest; stale/unreachable/pending keep `–`. Choice the prompt left open: blocked > 0 with waiting 0 shows `⏸0!` (the old `0!` kept), so the blocked signal is never lost. Tooltip: «1 lane waiting for you (1 blocked), 2 lanes running»; blocked-only reads «2 lanes blocked». Board and lane-run.mjs untouched (R-TACK-2).
+**Prompt document name**: 2026-10-21 10:20

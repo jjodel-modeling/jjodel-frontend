@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1020
 Chat: C-2026-10-19-1748
 Front: harness
 Lane: fast (tray title format in the menu bar app; the 4700 board is not touched, R-TACK-2)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane lanemon-tray · c42a2abd5
 Corregge: none
 Request: Alfonso, 2026-10-21 10:12, in the project chat: «Esegui in /lane auto» on the relayed requirement 1 from chat C-2026-10-20 (09:54): the tray title shows both counts, waiting first, then running
 

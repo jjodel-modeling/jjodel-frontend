@@ -300,13 +300,52 @@ pub fn poll_once(board_url: &str, prev_synced: Option<u64>) -> Snapshot {
     classify(result, board_url, prev_synced, now_ms())
 }
 
-/// The menu bar title: the `waiting` count, followed by `!` when a lane is blocked (a
-/// template icon cannot carry a coloured dot); `–` when there is no count to show.
+/// The menu bar title: `⏸<waiting>` then `▶<running>`, a zero count left out, `!` right after
+/// the waiting count when a lane is blocked (a template icon cannot carry a coloured dot). A
+/// blocked lane with nothing waiting still shows `⏸0!`. Empty when idle (only the icon
+/// remains); `–` when there is no count to show.
 pub fn title_for(snap: &Snapshot) -> String {
     match (&snap.attention, snap.state) {
-        (Some(att), "ok") if att.blocked > 0 => format!("{}!", att.waiting),
-        (Some(att), "ok") => att.waiting.to_string(),
+        (Some(att), "ok") => {
+            let mut parts: Vec<String> = Vec::new();
+            if att.waiting > 0 || att.blocked > 0 {
+                parts.push(format!("\u{23F8}{}{}", att.waiting, if att.blocked > 0 { "!" } else { "" }));
+            }
+            if att.running > 0 {
+                parts.push(format!("\u{25B6}{}", att.running));
+            }
+            parts.join(" ")
+        }
         _ => "\u{2013}".to_string(),
+    }
+}
+
+fn lanes(n: u32, rest: &str) -> String {
+    format!("{} {}{}", n, if n == 1 { "lane" } else { "lanes" }, rest)
+}
+
+/// The tray tooltip in full words; the board's own detail when there is no count.
+pub fn tooltip_for(snap: &Snapshot) -> String {
+    match (&snap.attention, snap.state) {
+        (Some(a), "ok") => {
+            let mut parts: Vec<String> = Vec::new();
+            if a.waiting > 0 {
+                let blocked = if a.blocked > 0 { format!(" ({} blocked)", a.blocked) } else { String::new() };
+                parts.push(format!("{}{}", lanes(a.waiting, " waiting for you"), blocked));
+            } else if a.blocked > 0 {
+                parts.push(lanes(a.blocked, " blocked"));
+            }
+            if a.running > 0 {
+                parts.push(lanes(a.running, " running"));
+            }
+            if parts.is_empty() {
+                "No lanes waiting or running".to_string()
+            } else {
+                parts.join(", ")
+            }
+        }
+        _ if snap.state == "unreachable" => format!("Lanes: board unreachable ({})", snap.detail),
+        _ => format!("Lanes: {}", snap.detail),
     }
 }
 
@@ -432,18 +471,36 @@ mod tests {
 
     #[test]
     fn title_formatter() {
-        let with = |waiting, blocked| Snapshot {
+        let with = |waiting, blocked, running| Snapshot {
             state: "ok",
-            attention: Some(Attention { waiting, blocked, ..Default::default() }),
+            attention: Some(Attention { waiting, blocked, running, ..Default::default() }),
             ..Snapshot::pending("http://b")
         };
-        assert_eq!(title_for(&with(0, 0)), "0");
-        assert_eq!(title_for(&with(3, 0)), "3");
-        assert_eq!(title_for(&with(3, 1)), "3!");
-        assert_eq!(title_for(&with(0, 2)), "0!");
+        assert_eq!(title_for(&with(0, 0, 2)), "\u{25B6}2");
+        assert_eq!(title_for(&with(1, 0, 2)), "\u{23F8}1 \u{25B6}2");
+        assert_eq!(title_for(&with(0, 0, 0)), "");
+        assert_eq!(title_for(&with(1, 1, 0)), "\u{23F8}1!");
+        assert_eq!(title_for(&with(3, 1, 1)), "\u{23F8}3! \u{25B6}1");
+        assert_eq!(title_for(&with(0, 2, 0)), "\u{23F8}0!");
         assert_eq!(title_for(&Snapshot::pending("http://b")), "\u{2013}");
         let unreachable = classify(Err(FetchError::Unreachable("x".into())), "http://b", Some(1), 2);
         assert_eq!(title_for(&unreachable), "\u{2013}");
+    }
+
+    #[test]
+    fn tooltip_formatter() {
+        let with = |waiting, blocked, running| Snapshot {
+            state: "ok",
+            attention: Some(Attention { waiting, blocked, running, ..Default::default() }),
+            ..Snapshot::pending("http://b")
+        };
+        assert_eq!(tooltip_for(&with(0, 0, 2)), "2 lanes running");
+        assert_eq!(tooltip_for(&with(1, 0, 2)), "1 lane waiting for you, 2 lanes running");
+        assert_eq!(tooltip_for(&with(0, 0, 0)), "No lanes waiting or running");
+        assert_eq!(tooltip_for(&with(1, 1, 0)), "1 lane waiting for you (1 blocked)");
+        assert_eq!(tooltip_for(&with(0, 2, 1)), "2 lanes blocked, 1 lane running");
+        let unreachable = classify(Err(FetchError::Unreachable("x".into())), "http://b", Some(1), 2);
+        assert!(tooltip_for(&unreachable).starts_with("Lanes: board unreachable"));
     }
 
     #[test]
