@@ -944,3 +944,8 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: non applicabile — the chat checks the tray after exit (P8 deroga); title read as text, not as pixels
 **Notes**: Title `⏸<w>[!] ▶<r>`, zero counts left out, empty at rest; stale/unreachable/pending keep `–`. Choice the prompt left open: blocked > 0 with waiting 0 shows `⏸0!` (the old `0!` kept), so the blocked signal is never lost. Tooltip: «1 lane waiting for you (1 blocked), 2 lanes running»; blocked-only reads «2 lanes blocked». Board and lane-run.mjs untouched (R-TACK-2).
 **Prompt document name**: 2026-10-21 10:20
+
+## 2026-10-21 — ticket: Flaky vitest under load blocks direct merges (traceMonitor port-in-use and others)
+**Ticket**: Under machine load (load average about 100) the vitest gate of lane-run merge --direct fails on tests outside the merged paths, blocking the merge: scripts/gates/__tests__/traceMonitor.test.ts «a port in use taken» failed in P-2026-10-21-1035 and P-2026-10-21-1114; laneRun «JJODEL_MODEL_TRAILER ignored», laneRunDirect «a precondition dropped» and laneBoard tests failed once each. Every one passed on a rerun at load under 20 (/tmp/rerun-1035.log, /tmp/rerun-1114.log). Each time the chat had to resolve the lane and flip the Status by hand, because go refuses a blocked lane. Suggested: make the timing-sensitive tests robust to load (port probes, child process timeouts), or let the direct merge rerun only the failed files once before declaring the gate red.
+**Priority**: medium
+**Found in**: P-2026-10-21-1114
