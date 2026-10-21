@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1010
 Chat: C-2026-10-20-0839
 Front: maintenance
 Lane: full (critical zone: `viewpoint/ir/useContentSize.ts`, CLAUDE.md §3.1 table; Phase 1 is the round 3 report)
-Status: da eseguire
+Status: non completato 2026-10-21 · lane perf-round3 · LIR 2c4331c68; code and tests complete but uncommitted at the context ceiling · continued by P-2026-10-21-1115
 Request: https://claude.ai/code/session_01EMpM7yBvFWpBXh3o1TJSRA
 Depends: P-2026-10-21-0905
 Corregge: —

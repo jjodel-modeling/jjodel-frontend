@@ -8,6 +8,8 @@
  * room for the overlay. Viewport-only: no sync/D-layer imports.
  */
 
+import { useMemo } from 'react';
+
 /** Current right inset in px (overlay footprint), or 0 when the overlay is hidden. */
 export function getCanvasRightInset(): number {
     if (typeof window === 'undefined') return 0;
@@ -26,7 +28,52 @@ export function getCanvasRightInset(): number {
 export function fitPadding(
     base: number = 0.2
 ): number | { top: number; bottom: number; left: number; right: `${number}px` } {
-    const inset = getCanvasRightInset();
+    return paddingForInset(getCanvasRightInset(), base);
+}
+
+function paddingForInset(
+    inset: number,
+    base: number,
+): number | { top: number; bottom: number; left: number; right: `${number}px` } {
     if (inset <= 0) return base;
     return { top: base, bottom: base, left: base, right: `${inset + 20}px` };
+}
+
+/**
+ * The inset as a render may read it (P-2026-10-21-1010). `getCanvasRightInset` costs a
+ * `getComputedStyle(document.body)`, a document-wide style recalc, and the editor read it
+ * in every render through `fitViewOptions` (round 3 report §3.4). The value has one writer,
+ * PropertiesWithTreeView, inline on <body>; a MutationObserver on the body's `style`
+ * attribute sees that write and refreshes the cache, after a string compare of the inline
+ * declaration so another body style write (a drag cursor) costs no style read.
+ */
+const INSET_VAR = '--jj-canvas-right-inset';
+let cachedInset: number | null = null;
+let cachedRaw = '';
+
+function canvasRightInsetForRender(): number {
+    if (typeof window === 'undefined') return 0;
+    if (typeof MutationObserver === 'undefined') return getCanvasRightInset();
+    if (cachedInset === null) {
+        cachedRaw = document.body.style.getPropertyValue(INSET_VAR);
+        cachedInset = getCanvasRightInset();
+        new MutationObserver(() => {
+            const raw = document.body.style.getPropertyValue(INSET_VAR);
+            if (raw === cachedRaw) return;
+            cachedRaw = raw;
+            cachedInset = getCanvasRightInset();
+        }).observe(document.body, { attributes: true, attributeFilter: ['style'] });
+    }
+    return cachedInset;
+}
+
+/**
+ * `fitViewOptions` for the ReactFlow prop: no style read in the render, and the same
+ * object while the inset holds. React Flow copies the prop into its store whenever its
+ * reference changes and uses it for every queued fit, not only the first (the `fitView`
+ * prop can turn true after the mount), so the value follows the inset as before.
+ */
+export function useFitViewOptions(): { padding: ReturnType<typeof fitPadding>; maxZoom: number } {
+    const inset = canvasRightInsetForRender();
+    return useMemo(() => ({ padding: paddingForInset(inset, 0.2), maxZoom: 1 }), [inset]);
 }
