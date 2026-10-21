@@ -99,3 +99,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-21 12:20
 
 **Ticket** (JjTL, medium): three findings outside F4, each with a Recommended line in the discovery §5, none fixed here: pass-2 rule order for `resolve(x, T).attr`; `p.owner.name` inside a `forall` body; `self.src.name` / `source.src.name`.
+
+## 2026-10-21 — merge: hw-jjtl into hw-demo (P-2026-10-21-1302)
+**Prompt**: `claude_2026-10-21_1302_prompt_merge_hw-jjtl.md`, a direct merge by `lane-run merge --direct`, no session: `hw-jjtl` at `26793856d` into `hw-demo`, merge base `f8ee48a07`, 5 commits on the branch side.
+**Files touched**: merge `19877ff1c`: 6 files from the branch side (`docs/discovery/discovery_2026-10-21_hw_jjtl_prerequisites.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-10-21_1037_prompt_hw_sc0_jjtl_prerequisites.md`, `docs/prompts/claude_2026-10-21_1220_prompt_hw_sc0_finish.md`, `frontend/src/jjtl/executor/__tests__/source-ref-member-access.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `19877ff1c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11496 tests in 401 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: JjTL executor fix (attribute read through source __ref) and docs only, no UI file; all gates green
+**Notes**: Rollback tag `pre-hw-jjtl` on `7fc04bb7a` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1302/result.json`.
+**Prompt document name**: 2026-10-21 13:02
