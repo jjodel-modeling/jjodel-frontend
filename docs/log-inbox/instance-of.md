@@ -82,3 +82,22 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: medium
 **Found in**: P-2026-10-21-0100
 **Detail**: docs/discovery/assets/onto-s2/onto-s2-measures.json
+
+## 2026-10-21 — fix: size a new instance's node from its rows, ticket (b) closed (P-2026-10-21-0725)
+**Prompt**: commit the uncommitted fix of P-2026-10-21-0655 (context ceiling), measure S2-3m against a baseline at 4f1e07953, try gap S2-5 in instantiate.ts only, build, stop for the GO, then this entry.
+**Files touched**: `frontend/src/components/editor-v2/hooks/instantiate.ts`, `hooks/__tests__/instantiate.test.ts` (c1a005725); `frontend/scripts/probe/onto-s2-instantiate.ts` (b3e6aacee); `docs/discovery/assets/onto-s2/` three assets (f39138504); `docs/log-inbox/instance-of.md` (this entry)
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-10-21 06:55 P-2026-10-21-0655, whose session reached the context ceiling with the fix uncommitted
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — chat, unattended, 1/1 (new-instance screenshot: book1 : Book four rows, member1 : Member two)
+**Notes**: Closes ticket (b) for the object-diagram creation paths: nodes 280x138 and 280x102, probe 16/16. Undo S2-3: 1 entry, 1 press in 3/3 runs (was 2 presses, the first empty). S2-3m unchanged over six runs, fix and baseline: +2, +1, 2 presses. Typecheck 0, instantiate.test.ts 15/15, build 0. Probe and assets split in two commits (P13 guard). S2-5 not done: hard stop on the 60-minute limit, ticket (c) below. Detail: ~/.jjodel-lanes/P-2026-10-21-0725/handoff.md.
+**Prompt document name**: 2026-10-21 07:25
+
+## 2026-10-21 — ticket: a new instance made from the class diagram keeps 280x60 in the object diagram
+**Ticket**: ticket (c), does not block the merge of oi-s2. «New instance» on a class node in the class diagram leaves the instance's node at 280x60 in the object diagram: the view in force hides the instance, so instantiate.ts sizes nothing. WIP (not committed): size it in every exclusive viewpoint that draws it, in instantiate.ts only, plus probe check S2-5o. In its one run S2-3 regressed to 2 presses (cause not measured; suspect the second viewpoint's index build delaying the write past the merge window), and S2-5o read no node: it needs zoom-to-fit after the switch.
+**Priority**: medium
+**Found in**: P-2026-10-21-0725
+**Detail**: ~/.jjodel-lanes/P-2026-10-21-0725/s2-5-wip.diff
