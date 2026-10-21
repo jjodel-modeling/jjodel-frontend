@@ -98,3 +98,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: 4733 rows, 24 operators, widths 1..128, both signednesses: 4733 agreements, 0 disagreements, 0 inexpressible; regeneration byte-identical. Five bitvectors.ts mutations, all killed (commit body). Gates: typecheck 0, typecheck:scripts 0, vitest src/jjel 430 passed, build 0, check:scripts 0. Mapping: unsigned ashr is `$signed(x) >>> n`. Icarus second opinion not run.
 **Prompt document name**: 2026-10-21 06:41
+
+## 2026-10-21 — merge: bv-oracle into alfonso-frontend-jjtl (P-2026-10-21-0659)
+**Prompt**: `claude_2026-10-21_0659_prompt_merge_bv-oracle.md`, a direct merge by `lane-run merge --direct`, no session: `bv-oracle` at `5f3dfea09` into `alfonso-frontend-jjtl`.
+**Files touched**: merge `56f7cdbf3` (`frontend/scripts/oracle/`, `bv-cases.json`, `bitvectorOracle.test.ts`, `package.json` script `oracle:bv`, `SPEC.md`, `docs/decisions.md` R-BV-10, the log inbox, the prompt); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `56f7cdbf3`: typecheck 0, typecheck:scripts 0, build 0, check:docs, check:agents, check:scripts, check:addonly 0; vitest 9734 tests with 1 failure outside the merge, green re-run alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: test oracle only, no UI file; dev server on 3001 answers 200
+**Notes**: The red test was `traceMonitor.test.ts` «3001 accepted», a port check that depends on the dev server running on 3001; it also failed in the bv-sim merge. Re-run alone 9/9 at 07:11. Block cleared with `lane-run resolve`, closure by hand. Tag `pre-bv-oracle` on `4cfa9fa29`.
+**Prompt document name**: 2026-10-21 06:59
