@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1600
 Chat: C-2026-10-21-1405
 Front: instance-of
 Lane: full (problems/ is in the critical-zone table of CLAUDE.md 3.1; Layer Impact Report in the discovery; visual check owed)
-Status: da eseguire
+Status: non completato 2026-10-21 · lane oi-s3a · R1 settled (no delete cascade), files 1-8 written, nothing committed · context ceiling at step 3 (AM-8) · continued by P-2026-10-21-1635 and P-2026-10-21-1636
 Request: none (the chat has no shareable URL; Alfonso's words are kept with --request)
 Depends: P-2026-10-21-1405
 Corregge: —
