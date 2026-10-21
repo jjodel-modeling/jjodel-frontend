@@ -1,6 +1,6 @@
 # Ontological instantiation, S2u Phase 2: an undo group per instantiation, tickets (a) and (c)
 
-Prompt-ID: P-2026-10-21-1012
+Prompt-ID: P-2026-10-21-1016
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (core: redux/reducer/reducer.ts; Layer Impact Report in the discovery; visual check owed)
@@ -15,7 +15,7 @@ otherwise stop with `Outcome: blocked`. Model and tier: heavy, effort `xhigh`.
 
 ## Lane discipline
 
-Every reply opens with `[P-2026-10-21-1012 · session <id>]`; final line `Outcome: done | hard-stop | question |
+Every reply opens with `[P-2026-10-21-1016 · session <id>]`; final line `Outcome: done | hard-stop | question |
 blocked`. Time limit 90 minutes. **No subagent, no background task.** Foreground gates and probes (P16). **Context
 economy:** grep, never read `reducer.ts`, `U.tsx` or `EditorV2.tsx` whole; short tool output; never a whole diff.
 **Commit the code as soon as typecheck and unit tests are green**, before probes and bench. No push, no merge. Do not
@@ -62,8 +62,8 @@ the log entry in `docs/log-inbox/instance-of.md` (closing tickets a and c, openi
 
 1. Baseline typecheck through `node scripts/run-quiet.mjs` from `frontend/` (zero errors).
 2. Reducer group with its unit tests; typecheck zero; commit `feat(core): undo groups in the history reducer
-   (P-2026-10-21-1012)`.
+   (P-2026-10-21-1016)`.
 3. `instantiate.ts` on the group, tickets (a) and (c); unit tests; commit `fix(onto): one undo group per instantiation,
-   placement and sizing (P-2026-10-21-1012)`.
-4. Probe and screenshots; commit `chore(probe): S2u undo, placement and sizing checks (P-2026-10-21-1012)`.
+   placement and sizing (P-2026-10-21-1016)`.
+4. Probe and screenshots; commit `chore(probe): S2u undo, placement and sizing checks (P-2026-10-21-1016)`.
 5. Mutation bench (results in a commit body or the report), `npm run build` exit 0; report and stop for the GO.
