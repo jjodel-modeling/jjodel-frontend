@@ -111,3 +111,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: test oracle only, no UI file; dev server on 3001 answers 200
 **Notes**: The red test was `traceMonitor.test.ts` «3001 accepted», a port check that depends on the dev server running on 3001; it also failed in the bv-sim merge. Re-run alone 9/9 at 07:11. Block cleared with `lane-run resolve`, closure by hand. Tag `pre-bv-oracle` on `4cfa9fa29`.
 **Prompt document name**: 2026-10-21 06:59
+
+## 2026-10-21 — feat: JjEL bit-vector slice S3, code generation
+**Prompt**: P-2026-10-21-0640 (slice S3: a bit-vector through the codegen pilot, `plain()`, `valueLiteral`, the JS runtime prelude and the S1 methods; stopped at the soft context ceiling with the code uncommitted, RC-51) and P-2026-10-21-0700 (S3 finish: the tests of the handoff, the prelude parity test, gates, bench, docs, two tickets)
+**Files touched**: `35c761ca3` frontend/src/codegen/engine/origin.ts, frontend/src/codegen/target/js/access.ts, frontend/src/codegen/target/js/printer.ts, frontend/src/codegen/target/js/__tests__/printer.bitvector.test.ts (new), frontend/src/codegen/oracle/__tests__/bitvector.test.ts (new); docs closure: docs/decisions.md (R-BV-9), docs/prompts/claude_2026-10-21_0640_prompt_bitvector_s3_codegen.md, docs/prompts/claude_2026-10-21_0700_prompt_bitvector_s3_finish.md, docs/log-inbox/jjel-bitvector.md, docs/log-inbox/hw-notation.md (two tickets)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Gates on 35c761ca3: typecheck exit 0; vitest src/jjel src/model src/codegen src/components 266 files, 8115 passed, none red; build exit 0. Parity on bv-golden.json, 48 rows (bv-cases.json not on this branch). Bench, 5 mutations all killed: plain branch, valueLiteral branch, + without asUintN, $bvPair any widths, $eq no dispatch. Handoff step corrected: the register is declared on MM (stateAttributesCodec.ts:303). Tickets #212 high, #213 medium. Decisions: R-BV-9.
+**Prompt document name**: 2026-10-21 07:00
