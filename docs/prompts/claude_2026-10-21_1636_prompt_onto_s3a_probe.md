@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1636
 Chat: C-2026-10-21-1405
 Front: instance-of
 Lane: full (problems/ is in the critical-zone table of CLAUDE.md 3.1; Layer Impact Report in the discovery and restated by P-2026-10-21-1600)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane oi-s3a · probe bb99637b4 (8/8, M4 red), closing 329bda77e · undo-inline-edit 33/33, onto-s2-instantiate 21/21 · visual check by the chat on the crops passed, Alfonso GO pending
 Request: none (the chat has no shareable URL; Alfonso's words are kept with --request)
 Depends: P-2026-10-21-1635
 Corregge: —
