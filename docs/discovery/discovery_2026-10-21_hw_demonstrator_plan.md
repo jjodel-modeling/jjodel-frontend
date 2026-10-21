@@ -842,4 +842,29 @@ RC-26's list.
 
 ## 13. Decisions awaiting Alfonso
 
-(pending)
+RC-26 items only. What the demonstrator shows the partner is Alfonso's call, so items 1-4 are RC-26's «what the
+demo shows or leaves out»; 5 is cost, 6 the push.
+
+1. **What the demo shows, and where the CPU ships.** The plan ships `frontend/public/examples/hw/hw-cpu.jjodel`,
+   outside the gallery (not merged, §3), and adds a second model `cpu-decode-gap` whose stored scenario is the nuXmv
+   counterexample (S-H, R16).
+   Recommended: ship under `public/examples/hw/`, not the gallery; close the demo with `cpu-decode-gap` (nuXmv names
+   the missing opcode, the scenario replays it, the watch stops Play), prepared, not edited live.
+2. **The slice order.**
+   Recommended: the waves of §10.2, demo minimum first (S-D0, S-A1, S-B, S-D, S-A2, S-E, then S-G1, S-G2, S-H, S-F),
+   route B after the demo minimum is green.
+3. **Route A or route B in the demo.**
+   Recommended: route A in the demo (it reaches Verilator without JjTL and is B's oracle); route B shown afterwards,
+   and only once A == B holds, as the engineer's own metamodel at work.
+4. **nuXmv in the partner demo, given its licence.** nuXmv 2.2.0 «can be used only for non-commercial or academic
+   purposes» (§9 R12); a research project with an industrial partner may or may not be that. It is not installed here,
+   and S-H is blocked until it is; this lane installed nothing.
+   Recommended: install the macOS arm64 build of 2.2.0 on the presenter's Mac for the research prototype, and ask FBK
+   in writing whether the partner project is covered before the partner's engineer installs it.
+5. **Model, effort and cost of the sessions.** About ten sessions for the demo minimum, fourteen with route B and
+   S-B', each under the 200k ceiling (§10.1).
+   Recommended: the heavy tier and effort `xhigh` for S-D0, S-G1 and S-C0 (new semantics) and for S-A2 (canvas,
+   CLAUDE.md §5); P16's rule for the rest.
+6. **The push of `hw-demo`.**
+   Recommended: no push until S-E is green (the first end-to-end proof); then push the branch, not a merge to the
+   trunk.
