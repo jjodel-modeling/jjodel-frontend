@@ -124,3 +124,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Gates on 35c761ca3: typecheck exit 0; vitest src/jjel src/model src/codegen src/components 266 files, 8115 passed, none red; build exit 0. Parity on bv-golden.json, 48 rows (bv-cases.json not on this branch). Bench, 5 mutations all killed: plain branch, valueLiteral branch, + without asUintN, $bvPair any widths, $eq no dispatch. Handoff step corrected: the register is declared on MM (stateAttributesCodec.ts:303). Tickets #212 high, #213 medium. Decisions: R-BV-9.
 **Prompt document name**: 2026-10-21 07:00
+
+## 2026-10-21 — merge: bv-codegen into alfonso-frontend-jjtl (P-2026-10-21-0845)
+**Prompt**: `claude_2026-10-21_0845_prompt_merge_bv-codegen.md`, a direct merge by `lane-run merge --direct`, no session: `bv-codegen` at `a54ad9466` into `alfonso-frontend-jjtl`.
+**Files touched**: merge `b7e65c825` (origin.ts, access.ts, printer.ts and their tests, docs/decisions.md R-BV-9, the log inboxes, the prompts); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b7e65c825`: typecheck 0, typecheck:scripts 0, build 0, check:docs, check:agents, check:scripts, check:addonly 0; vitest with one failure outside the merge, green re-run alone.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: codegen engine and JS target only, no UI file; 3001 answers 200
+**Notes**: The red test was `traceMonitor.test.ts`, a port check that fails while the dev server holds 3001 (red in every merge of this front); re-run alone 9/9. Block cleared with `lane-run resolve`, closure by hand. Tag `pre-bv-codegen on 5e4790f1a`.
+**Prompt document name**: 2026-10-21 08:45
