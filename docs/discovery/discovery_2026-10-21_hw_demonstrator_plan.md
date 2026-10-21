@@ -560,7 +560,223 @@ generated Verilog; it is not in this plan (§11, question 8).
 
 ## 10. Slice plan
 
-(pending)
+Every slice: Phase 1 discovery only where marked, otherwise a direct Phase 2 on the file set below; gates
+`npm run typecheck` exit 0, `npm run build` when `src/` changes, `npm run test` on the named test files, and, when
+`frontend/scripts/` changes, `npm run typecheck:scripts` and `npm run check:scripts`; a closing entry in
+`docs/log-inbox/hw-notation.md` with `npm run check:docs`. Tier as `lane-run`'s rule decides (P16). «Fits» is an
+estimate against the 200k ceiling (RC-51), from the S1-S3 bit-vector lanes that each closed in one session and from
+this plan's first session, which hit the ceiling at 210k on reading alone; it is a judgement, not a measure. A slice
+that would not fit is split here.
+
+### 10.1 The slices
+
+**S-D0 — the JjEL→Verilog printer of the register-transfer subset, with its oracle.** The centre (§8).
+- Files (new): `frontend/src/codegen/target/verilog/printer.ts`, `…/verilog/__tests__/printer.test.ts`,
+  `frontend/src/model/simulation/memoryIdiom.ts` (the recogniser of `coll.filter(c => c.F == E).first.X`, pure, shared
+  with S-G1, so it sits in the simulation core that both the codegen and the exporter may import) and its test;
+  `frontend/scripts/oracle/bv-printer-verilator.mjs` (a sibling of `bv-verilator.mjs`, reusing its `run` and build
+  line, §7.4).
+- Subset: σ reads `X.[a]` and the memory idiom (→ `x`, `ram[e]`, `rom[e]`, the `toNumber` inside the idiom dropped);
+  `bits`/`sbits` constants (→ `toVerilog`, §7.2); the 24 operators of `oracle.mapping` in
+  `src/jjel/__tests__/fixtures/bv-cases.json` ([measured] 24 keys, 4733 rows); `if … then … else` (→ `c ? a : b`);
+  comparisons; an action's `X.[a] := e` lines (→ `x <= e;`). Anything else is a defect that names the element.
+- The width trap: JjEL widths are exact (R-BV-3), Verilog widths are context-determined (IEEE 1800-2017 §11.6), so a
+  printed `a + b` read in a wider context keeps the carry. The printer wraps every operator result that is the
+  operand of another operator in a self-determined concatenation `{…}`; the composed tests below are its oracle,
+  since every row of the table holds one operator.
+- Tests: (a) normal suite: every row of `bv-cases.json` printed, the text equal to its operator's `oracle.mapping`
+  form instantiated on the row; (b) composed golden cases where the context would change the value (`(a + b).zext(16)`,
+  `(a + b) == c` with a carry, `(a.shl(1)).slice(8, 1)`) with values computed by the S1 evaluator; (c) the Verilator
+  mode compiles the printed text of (a) and (b) and compares with the rows' values (`node scripts/oracle/bv-printer-verilator.mjs`,
+  not in the normal suite). Mutation bench on the wrapping rule and on the signed casts of `ashr`/`zext`/`sext`.
+- Depends on nothing. **Fits** one session if (c) reuses `bv-verilator.mjs` as is; if not, (c) moves to S-E.
+- Parallel with S-A1 and S-C0 (disjoint files).
+
+**S-A1 — the `HwDesign` metamodel and the CPU model, built by a script.**
+- Files: new `frontend/scripts/examples/build-hw-cpu.ts` (the `build-codegen-examples.ts` harness, the metamodel from
+  nothing with the `bpmn-lanes-fixture.ts` helpers, §3), new `frontend/src/codegen/examples/hw-cpu/hw-cpu.json` (the
+  spec in the `turnstile.json` shape), generated `frontend/public/examples/hw/hw-cpu.jjodel`; edited
+  `frontend/src/codegen/oracle/__tests__/exampleFixture.ts` (`EXAMPLES` generalised, §3).
+- Content: the D4 shape (§8) over the three views of D2 (ISA: instruction formats, fields with bit ranges,
+  opcodes; datapath; control): the ISA classes (an `Instruction` with its opcode, a `Field` with `hi`/`lo`),
+  `Register`, `Alu`, `Mux`, `Port`, `Wire`, `Memory`, `Cell`, `State`, `Transition`, `InitialState`; the 11 control
+  states and ~20 transitions with their exit texts and guards; ROM and RAM as 16
+  `Cell`s each; default viewpoints only.
+- Tests: `src/codegen/examples/__tests__/importable.test.ts` on the new file (through `EXAMPLES`); the import probe
+  `scripts/probe/codegen-examples.ts` extended to it.
+- Depends on nothing. Playwright and a dev server per build (§3). **Fits** one session.
+
+**S-B — simulation roles and a running program with a committed trace.**
+- Files: `hw-cpu.json` (`lookup.MM._state`: the roles of §5.3, `simStateAttributes`, the program in the ROM cells'
+  `init`, a scenario with its `expect`), `build-hw-cpu.ts` (the `INSTALL` of the bags), the regenerated `.jjodel`; new
+  `frontend/src/codegen/examples/hw-cpu/__tests__/hw-cpu.run.test.ts` and committed
+  `frontend/src/codegen/examples/hw-cpu/hw-cpu.trace.json` (one line per cycle in the format of §7.4).
+- The program: at most 16 bytes, with a loop (`JZ`, `JMP`) and a result written to RAM, for example a product by
+  repeated addition; `HALT` has role `simTerminal`, so its quiescence is acceptance; DECODE carries the fused `else`
+  of R16.
+- Tests: the headless step loop (the `wordDomain.test.ts` harness, §5.2) to quiescence, the trace equal to the
+  committed one, the scenario's `expect` true; the first gate is the in-app probe of R7 (Play to HALT, the board and
+  the inspector read).
+- Depends on S-A1. **Fits** one session.
+
+**S-A2 — the three viewpoints of D2 (ISA, datapath, control).**
+- Files: `build-hw-cpu.ts` (viewpoints through `view.ir`, the gallery pattern, R-LIB-9), the regenerated `.jjodel`.
+- Constraints: R3, R4, R10, R11 (ports as vertices, wires as objects-as-edges, no nesting, no derived viewpoint); no
+  edit of `portDistribution.ts`, `DynamicHandles.tsx` or any §3.1 file.
+- Tests: the import probe takes a screenshot per viewpoint; visual smoke (P-clause) with the acceptance criterion
+  written before the run (CLAUDE.md §5).
+- Depends on S-B (the same build script). **Fits** one session; the canvas risks make it the slice most likely to
+  stop on a visual finding.
+
+**S-D — route A: the Verilog target in the engine, the templates on `HwDesign`, the testbench.**
+- Files: new `frontend/src/codegen/target/verilog/access.ts` (the `jsTarget` shape of `target/js/access.ts`:
+  `guard`, `actions`, `initial`, printing Verilog through S-D0); `frontend/src/codegen/engine/generate.ts` (which
+  target binds `target`, today `jsTarget` at `:88` [read]), and the template set's optional target field in
+  `engine/templateCodec.ts` (additive, R-GEN-12, Rule 11); `hw-cpu.json` (`genTemplates`: entries `cpu` and `tb`),
+  `build-hw-cpu.ts`, the regenerated `.jjodel`; committed `frontend/src/codegen/examples/hw-cpu/expected/{cpu.v,tb.v}`.
+- Content: one module `cpu` (state `localparam`s, registers, `reg [7:0] rom [0:15]` with an `initial` from the cells'
+  `init`, `ram`, one `always @(posedge clk)` with a `case (state)` whose arms are the exit transfers and the next
+  state), and a `tb` that instantiates it, clocks it and prints the §7.4 line at `negedge clk` (R5).
+- Tests: generation on the fixture equals the committed `.v` texts; `verilator --lint-only` on them inside the S-E
+  script (not the normal suite).
+- Depends on S-D0, S-B. **Fits** one session.
+
+**S-E — the trace comparison with Verilator (D5).**
+- Files: new `frontend/scripts/oracle/hw-cpu-verilator.mjs` (§7.4), `frontend/package.json` (script `oracle:hw`, no
+  dependency), committed `frontend/src/codegen/examples/hw-cpu/hw-cpu.verilator.trace`, and a normal-suite test that
+  the committed Verilator trace equals `hw-cpu.trace.json` without running Verilator (the `bitvectorOracle.test.ts`
+  pattern).
+- Tests: `npm run oracle:hw` green; a mutation (one transfer changed in the template output) makes it name the first
+  diverging cycle and register.
+- Depends on S-B, S-D. **Fits** one session. After it the demo runs end to end: model → simulation → Verilog →
+  Verilator, same trace.
+
+**S-G1 — the `.smv` exporter, core.**
+- Where: `frontend/src/model/simulation/smvExport.ts`, new, pure, next to `bvToSmv.ts` (the layout of the
+  computational model spec, `:241-243` [read]: «the pure core in `frontend/src/model/simulation/` (… subset checker,
+  step function, exporter; no React)»). Tests in `…/__tests__/smvExport.test.ts`, goldens in
+  `…/__tests__/fixtures/{turnstile,hw-cpu}.smv`.
+- Reads: `CompiledNet` (`netTypes.ts:252-282` [read]: `transitions` with `preset`, `postset`, `triggers`,
+  `guardSites`, `elseOf`, `actionSites`; `attributes`, `declared`, `widths`, `initial`, `final`, `defects`), the frozen
+  snapshot M (element names; the `addr` and `init` of the cells become constants), the guard and action texts of the
+  sites parsed by the JjEL parser, the watches of `runWatches` (`watchCodec.ts`, R-SIM-137), and `bvToSmv` with a
+  `leaves` callback for σ reads.
+- Translates today, by the spec's table (§8 of `computational_model.md:214-228` [read]): the **control FSM** of a
+  one-token state machine (bound 1) as one enumerated `VAR state` from `simNode`, `init` from `simInitial`, one
+  `DEFINE en_<t>` per transition (source state, trigger against the event `IVAR`, guard, `else` as the negation of its
+  siblings' guards), the selector `IVAR` with `TRANS` admissibility, `DEFINE final` from `simTerminal`, and a quiescent
+  step that changes nothing; the **σ attributes** in all four domains of `netTypes.ts:28-37` (`boolean`,
+  `min..max`, `{literals}`, `unsigned word[N]`/`signed word[N]` with N per element from `CompiledNet.widths`),
+  initials from `CompiledNet.initial`; the **transfers** as `ASSIGN next(x) := case <writes of x> ; TRUE : x; esac;`,
+  the `TRUE` arm being the frame condition, a memory write unrolled per cell (`case en_<t> & e = 0ud4_k : v; …`); the
+  **watches** as `INVARSPEC`. The three forms `bvToSmv` lacks (R13) are added in the exporter.
+- Refused with a defect, first cut: a Petri marking with bound above 1, fork and join, a derived attribute (`DEFINE`
+  by `derivedEvaluator`, later), `toNumber` outside the memory idiom, `/`, `%`, strings, decimals.
+- Tests: goldens for the turnstile and the CPU; a round trip by the simulator itself (every `DEFINE en_<t>` evaluated
+  on the configurations of the committed trace equals the simulator's candidate set, so the export is checked against
+  the semantics without nuXmv); mutation bench on the frame arm, the `else` negation and the cell unrolling.
+- Depends on S-D0 (`memoryIdiom.ts`) and reads the S-B fixture. **Fits** one session.
+
+**S-G2 — the structural properties, generated from the model.**
+- Files: `smvExport.ts` (a `properties` section and the free-ROM variant), its tests and goldens.
+- Generated, none written by hand, each named by the element it is about:
+  1. *No deadlock except a final state*: `INVARSPEC final | some_enabled`, and *final is quiescent*:
+     `INVARSPEC final -> !some_enabled`; one instance `INVARSPEC state = s -> some_enabled` per non-final `s`, so the
+     report names the state.
+  2. *Every state returns to the initial one*: `LTLSPEC G F (state = FETCH | final)`; plus a graph check in the
+     exporter itself, without nuXmv, that every node reaches the initial node or a final one ignoring guards.
+  3. *At most one write per attribute per step*: checked statically from the sites of each transition (exit of the
+     source, the transition's action, entry of the target, `netStep.ts:296`, `:310`) for named targets; for two
+     memory writes in one firing, `INVARSPEC !(en_<t> & e1 = e2)`. On the CPU this is proved by the exporter (one
+     memory write, in `EX_STA`).
+  4. *Every opcode has a path in the control*: in the **free-ROM** export (`FROZENVAR rom_k : unsigned word[8]`,
+     R14) FETCH can load any byte into IR, so the instance of item 1 at `DECODE` holds iff every opcode has a
+     transition; its counterexample's ROM names the opcode (R15). The exporter is generic and knows no opcode; the
+     per-opcode instances, one `INVARSPEC (state = DECODE & IR_value[7:4] = 0ud4_<op>) -> some_enabled` per
+     `Instruction` of the ISA view, are printed by a template entry `smvIsa` on `HwDesign` in S-H, so they too come
+     from the model.
+  5. *No choice*: `INVARSPEC !(en_<t> & en_<u>)` for sibling transitions, so Play never stops to ask
+     (`simBridge.ts:1560-1574`, §5.1).
+  6. *Memory addresses in range*: one `INVARSPEC` per idiom occurrence, proved by the exporter when the cells cover
+     every value of the index's width (16 cells, 4-bit index).
+- Depends on S-G1. **Fits** one session.
+
+**S-H — nuXmv on the CPU: the run script, two domain properties, counterexamples as scenarios.**
+- Files: new `frontend/scripts/oracle/hw-cpu-nuxmv.mjs` (a sibling of the Verilator scripts: version check, a
+  `-source` command file, `read_model`, `go`, `check_invar`, `check_ltlspec`, the engine of R14 per variant, the trace
+  printed with the XML plugin of `show_traces`, number read from `show_plugins`), `frontend/package.json` (script
+  `mc:hw`), new `frontend/src/model/simulation/smvTrace.ts` (pure: an XML trace and the exporter's name map → a
+  `ScenarioRecord`, plus the ROM contents for a free-ROM trace), its test, committed
+  `frontend/src/codegen/examples/hw-cpu/hw-cpu.properties.smv` and the verdicts `hw-cpu.mc.json`.
+- Domain properties (written by hand, in the committed file): *`PC` is constant after `HALT`*:
+  `FROZENVAR pc0 : unsigned word[4];  LTLSPEC G ((state = HALT & PC_value = pc0) -> X PC_value = pc0)`, the frozen
+  `pc0` quantifying over every value; *the program halts with its result*:
+  `LTLSPEC F state = HALT` and `LTLSPEC G (state = HALT -> RAM_15_value = 0ud8_<expected>)` on the concrete export. An
+  optional third as a watch, so the simulator and nuXmv read one text (R-SIM-137): at FETCH, `Z` is set iff `ACC` is
+  zero; it holds only if every instruction that writes `ACC` writes `Z` (§11, question 7).
+- Counterexample → scenario: each trace state after the first becomes one `ScenarioStep` (`scenarioCodec.ts:61-66`
+  [read]): `event` from the event `IVAR`, `selector` from the selector `IVAR` where there was a choice and `null`
+  otherwise, `kind` `fired` or `quiescence`, `inputs` from the input `IVAR`s; an LTL lasso contributes its stem and
+  one turn of its loop, within `SCENARIO_MAX_STEPS = 1000` (`scenarioCodec.ts:46` [read]); the scenario's name is the
+  property's. That is the spec's «same information; replayable without conversion» (`computational_model.md:228`)
+  for the concrete export; for the free-ROM export the ROM contents are written into the cells' `init` first (R15).
+  Round-trip test: the scenario replayed by the step loop reaches a configuration that violates the property's
+  watch. Entry into the app: the build script adds a second model of the same metamodel, `cpu-decode-gap` (DECODE
+  without its `else`), whose `runScenarios` holds the counterexample nuXmv returned for it (so `build-hw-cpu.ts` and
+  `hw-cpu.json` are in this slice's files too); a panel command to load a trace is not in this plan (§11, question 9).
+- Normal suite without nuXmv: the export of the fixture hashes to the one recorded in `hw-cpu.mc.json`, so a model
+  change without a new `npm run mc:hw` fails (the `oracle:bv` pattern).
+- Depends on S-G2 and on **nuXmv installed** (R12, §13 item 4); blocked without it. **Fits** one session.
+
+**S-C0 — the two JjTL prerequisites of D1.** Phase 1 first (a JjTL lane of its own, §8 D1.2).
+- Files: `frontend/src/jjtl/executor/executor.ts` (F4: dereference a source `{__ref}` in a binding's member access),
+  a new test in `frontend/src/jjtl/executor/__tests__/`; the containment write-back measurement is an in-app probe
+  (`frontend/scripts/probe/`, scratch) and, if it fails, a fix in `frontend/src/components/project/ProjectEditor.tsx`
+  (`:1833-1856`, `:2017-2023`, §4.3).
+- Tests: the §4.5 variants `flat`, `nav`, `navResolveRev` as executed tests, the last two green after the fix.
+- Depends on nothing. **Fits** one session for F4 and the probe; a `ProjectEditor.tsx` fix is a second session.
+- Parallel with S-D0 and S-A1.
+
+**S-C1 — `VerilogAst` revised and the transformation `hw_to_verilog`.**
+- Files: the build script (the `VerilogAst` metamodel per §6.3: `PortId`, abstract `Signal`, the three references, no
+  `portNames`), the transformation text in the spec JSON, the regenerated `.jjodel`; the printer exposed to JjTL
+  bindings as one helper for `bodyText` (§8 D1.1), in the JjTL executor's builtins.
+- Depends on S-C0, S-D. **Fits** one session.
+
+**S-C2 — templates on `VerilogAst` and the test A == B.**
+- Files: `hw-cpu.json` (the `VerilogAst` template set), the build script, a test that route B's text equals route A's
+  committed `cpu.v`/`tb.v` byte for byte.
+- Depends on S-C1. **Fits** one session.
+
+**S-F — a one-page README for the engineer.**
+- File: `frontend/src/codegen/examples/hw-cpu/README.md`: what the notation is, how to open the project, run the
+  program, read the trace, generate Verilog, run `npm run oracle:hw` and `npm run mc:hw`, the hex-as-string rule (R6),
+  what is not covered (§5.3 limits, the derived-word limit). No partner name.
+- Depends on S-E and S-H (and S-C2 if route B is in the demo). **Fits** a light session.
+
+**S-B' (optional) — the JS oracle of the CPU (R-GEN-11).** `hw-cpu.json` JS templates copied from `turnstile.json`,
+the `word` case of `inDomain` in the shared example templates (R8, `hw-notation.md:19`); after S-B; one session; not
+needed by the demo.
+
+### 10.2 Order, parallelism, what the demo needs
+
+The **build track** is serial and is the critical path: `build-hw-cpu.ts`, `hw-cpu.json` and the generated
+`.jjodel` are edited by S-A1, S-B, S-D, S-A2, S-H, S-C1 and S-C2, in that order. Everything else runs beside it.
+
+| Wave | Slices in parallel (disjoint files) | Note |
+|---|---|---|
+| 1 | S-D0 · S-A1 · S-C0 | `codegen/target/verilog/` + `memoryIdiom.ts` · build track · `jjtl/` |
+| 2 | S-B | build track |
+| 3 | S-D · S-G1 | build track + `codegen/engine/` · `model/simulation/smvExport.ts` only |
+| 4 | S-A2 · S-E · S-G2 | build track · `scripts/oracle/` + `package.json` · `smvExport.ts` |
+| 5 | S-H | build track, `package.json` after S-E (one line each: `oracle:hw`, `mc:hw`) |
+| 6 | S-C1, then S-C2 | build track; route B |
+| 7 | S-F | after S-E and S-H (and S-C2 if route B is in the demo) |
+
+The demo cannot do without: **S-D0, S-A1, S-B, S-A2, S-D, S-E** (the model simulated, its Verilog generated and
+agreeing with Verilator) and, now that model checking is part of it, **S-G1, S-G2, S-H**, plus **S-F**. Route B
+(S-C0, S-C1, S-C2) shows the engineer's own metamodel at work and has route A as its oracle; the demo works without
+it. S-B' is optional. Fourteen slices, one of them optional; the demo minimum is ten, about ten sessions.
 
 ## 11. Open questions
 
