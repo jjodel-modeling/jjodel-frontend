@@ -780,7 +780,27 @@ it. S-B' is optional. Fourteen slices, one of them optional; the demo minimum is
 
 ## 11. Open questions
 
-(pending)
+Numbered as §3-§9 cite them. None blocks wave 1 of §10.2.
+
+1. Is an export of the engineer's `VerilogAst` project available, or does S-C1 rebuild it from the prose of the
+   prompt (§6.1)? Blocks S-C1 only.
+2. Clock: decision 4 (§12) takes ε; does the engineer prefer a visible `clk` event on the board? It changes the
+   export by one event `IVAR`, nothing else.
+3. Does `ParamOverride.name` stay a string (§6.3)? Yes for the CPU, which has no parameterised instance.
+4. The datapath driving the behaviour (structural Verilog, one module per component, §8 D2.3): a later round, or
+   never?
+5. F4 (§4.5): fixed in the JjTL executor (S-C0), or worked around by rule order in `hw_to_verilog`?
+6. Where the project ships: `frontend/public/examples/hw/` (this plan) or the gallery, which is not merged (§3)?
+7. ISA: does every instruction that writes `ACC` (`LDA`, `LDI`, `ADD`, `SUB`, `AND`) also write `Z`? It decides
+   whether the `Z` invariant of S-H holds or is a finding about the ISA.
+8. Yosys' SMV backend, to check the same properties on the generated Verilog: a later round or never? Yosys is not
+   installed (§9).
+9. A panel command that loads a nuXmv counterexample into `runScenarios`: a later item, or part of the demo (S-H
+   installs it from the build script instead)?
+10. The nuXmv engine per export (BDD, IC3, bounded) and the time per property: measured in S-H; a free-ROM property
+    above 30 s on the presenter's Mac is shown as a recorded result (R14).
+11. The program in ROM (S-B): a product by repeated addition, a sum, a countdown? Its expected result enters both the
+    scenario's `expect` and the `LTLSPEC` of S-H.
 
 ## 12. Decisions taken (unattended)
 
