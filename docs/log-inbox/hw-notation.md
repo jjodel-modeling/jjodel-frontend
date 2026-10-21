@@ -153,3 +153,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Continuation of P-2026-10-21-1301 after the AM-8 ceiling. Deviation from the plan: a derived attribute is exported as a DEFINE of its equation (the turnstile's paid), not refused. The round trip found a bug in handoff decision 7: a memory write tested no key on the last cell, so every STA also wrote RAM[15]; fixed in 8e20fd489. Bench: 9 mutations, none survived (body of 2f602806c). nuXmv not installed.
 **Prompt document name**: 2026-10-21 13:41
+
+## 2026-10-21 — merge: hw-smv into hw-demo (P-2026-10-21-1414)
+**Prompt**: `claude_2026-10-21_1414_prompt_merge_hw-smv.md`, a direct merge by `lane-run merge --direct`, no session: `hw-smv` at `1b6c648fd` into `hw-demo`, merge base `31e277fcd`, 6 commits on the branch side.
+**Files touched**: merge `27f4024c1`: 7 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-10-21_1301_prompt_hw_sg1_smv_exporter.md`, `docs/prompts/claude_2026-10-21_1341_prompt_hw_sg1_finish.md`, `frontend/src/model/simulation/__tests__/fixtures/hw-cpu.smv`, `frontend/src/model/simulation/__tests__/fixtures/turnstile.smv`, `frontend/src/model/simulation/__tests__/smvExport.test.ts`, `frontend/src/model/simulation/smvExport.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `27f4024c1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11513 tests in 403 files, 9 red at import, hooks 957; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato — chat, unattended: pure .smv exporter and tests only, no UI file; all gates green
+**Notes**: Rollback tag `pre-hw-smv` on `620e0ee00` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1414/result.json`.
+**Prompt document name**: 2026-10-21 14:14
