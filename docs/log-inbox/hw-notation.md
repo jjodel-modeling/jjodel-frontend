@@ -281,3 +281,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: passato — chat, unattended: subset checker accepts the ROM idiom read; tests only, no UI file; all gates green
 **Notes**: Rollback tag `pre-hw-subset` on `7a923fccf` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1843/result.json`.
 **Prompt document name**: 2026-10-21 18:43
+
+## 2026-10-21 — docs: S-F, the one-page README for the engineer, first version (P-2026-10-21-1821)
+**Prompt**: `claude_2026-10-21_1821_prompt_hw_sf_readme.md`: slice S-F of the hw demonstrator plan §10.1, a one-page English README for a hardware engineer, written before S-H.
+**Files touched**: `frontend/src/codegen/examples/hw-cpu/README.md` (new, `c46e71b53`); the Status line of the 1821 prompt; this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs only; check:docs exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: First version, to update after S-H (nuXmv run, `npm run mc:hw`, domain properties). Facts read from hw-cpu.json, the trace, cpu.v, tb.v, the oracle script, smvExport.ts and its hw-cpu goldens. The in-app steps (Import, Play, Code panel) follow the build script and the turnstile README; not re-run in the browser here. smvExport has no app caller: the README says so.
+**Prompt document name**: 2026-10-21 18:21
