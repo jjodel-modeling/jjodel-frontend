@@ -16,8 +16,13 @@ DEFINE
   en_tp := state = locked & event = push & g_tp;
   en_ts := state = locked & event = stop & g_ts;
   en_tu := state = unlocked & event = push & g_tu;
+  ready_tc := state = locked & g_tc;
+  ready_tp := state = locked & g_tp;
+  ready_ts := state = locked & g_ts;
+  ready_tu := state = unlocked & g_tu;
   ok_tc := ((model_coins + 1) >= 0 & (model_coins + 1) <= 3);
   some_enabled := en_tc | en_tp | en_ts | en_tu;
+  some_ready := ready_tc | ready_tp | ready_ts | ready_tu;
   final := state = off;
 ASSIGN
   init(state) := locked;
@@ -42,3 +47,15 @@ TRANS
     sel = ts : en_ts;
     sel = tu : en_tu;
   esac;
+-- The structural properties, generated from the model (smvExport, S-G2).
+INVARSPEC NAME no_deadlock := final | some_ready; -- proved by the exporter: every state that is not final is proved live
+INVARSPEC NAME final_quiescent := final -> !some_ready; -- proved by the exporter: a transition out of a final state is never enabled (R-SIM-27)
+INVARSPEC NAME live_locked := state = locked -> some_ready; -- proved by the exporter: tc leaves locked without a guard
+INVARSPEC NAME live_unlocked := state = unlocked -> some_ready; -- proved by the exporter: tu leaves unlocked without a guard
+LTLSPEC NAME returns_locked := G F (state = locked | final);
+-- graph_returns_unlocked: proved by the exporter: unlocked reaches locked or a final state, first by tu
+-- single_write_tc: proved by the exporter: one write by name
+-- single_write_tp: proved by the exporter: one write by name
+-- no_choice_tc_tp: proved by the exporter: tc and tp have no event in common
+-- no_choice_tc_ts: proved by the exporter: tc and ts have no event in common
+-- no_choice_tp_ts: proved by the exporter: tp and ts have no event in common

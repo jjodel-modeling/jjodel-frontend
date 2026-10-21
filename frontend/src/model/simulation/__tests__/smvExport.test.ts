@@ -25,8 +25,8 @@ import type { GuardOutcome } from '../guardEvaluator';
 import { candidates, step } from '../netStep';
 import type { ActionOracle, GuardOracle, SimState } from '../netTypes';
 import type { ScenarioStep } from '../scenarioCodec';
-import { exportSmv, SMV_NO_EVENT, SMV_NO_SELECTOR } from '../smvExport';
-import type { SmvExportResult, SmvNames } from '../smvExport';
+import { exportSmv, pathsHome, SMV_NO_EVENT, SMV_NO_SELECTOR } from '../smvExport';
+import type { SmvExportResult, SmvNames, SmvProperty } from '../smvExport';
 import type { WatchRecord } from '../watchCodec';
 
 const WRITE = process.env.SMV_WRITE === '1';
@@ -39,12 +39,12 @@ function compile(spec: ExampleSpec): ModelRun {
     return compiled.run;
 }
 
-function exportSpec(spec: ExampleSpec, watches?: readonly WatchRecord[]): { run: ModelRun; result: SmvExportResult } {
+function exportSpec(spec: ExampleSpec, watches?: readonly WatchRecord[], freeRom?: boolean): { run: ModelRun; result: SmvExportResult } {
     const run = compile(spec);
-    return { run, result: exportSmv({ ...run, nameOf: id => spec.lookup[id]?.name ?? id, watches }) };
+    return { run, result: exportSmv({ ...run, nameOf: id => spec.lookup[id]?.name ?? id, watches, freeRom }) };
 }
 
-function ok(result: SmvExportResult): { text: string; names: SmvNames } {
+function ok(result: SmvExportResult): { text: string; names: SmvNames; properties: readonly SmvProperty[] } {
     if (result.kind !== 'ok') throw new Error(`refused: ${JSON.stringify(result.defects)}`);
     return result;
 }
@@ -75,10 +75,13 @@ interface SmvModule {
     readonly trans: Expr[];
     readonly specs: Map<string, Expr>;
     readonly constants: Set<string>;
+    readonly frozen: Map<string, SmvType>;
+    /** An LTLSPEC's formula, as its tokens joined: the reader does not evaluate LTL. */
+    readonly ltl: Map<string, string>;
 }
 
 const TOKEN = /\s*(0[us]d\d+_\d+|\d+|[A-Za-z_][A-Za-z0-9_]*|:=|::|\.\.|<->|->|!=|<=|>=|<<|>>|[()[\]{}:;,&|!=<>+\-*])/y;
-const SECTIONS = new Set(['MODULE', 'VAR', 'IVAR', 'DEFINE', 'ASSIGN', 'TRANS', 'INVARSPEC']);
+const SECTIONS = new Set(['MODULE', 'VAR', 'FROZENVAR', 'IVAR', 'DEFINE', 'ASSIGN', 'TRANS', 'INVARSPEC', 'LTLSPEC']);
 /** Left binding power and associativity; `!` binds at 11, unary `-` at 9, a bit selection tighter than all. */
 const INFIX: Record<string, readonly [number, 'left' | 'right']> = {
     '->': [1, 'right'], '<->': [2, 'left'], '|': [3, 'left'], xor: [3, 'left'], xnor: [3, 'left'], '&': [4, 'left'],
@@ -299,22 +302,23 @@ function parseModule(text: string): SmvModule {
     const p = new Parser(tokenize(text));
     const m: SmvModule = {
         vars: new Map(), ivars: new Map(), defines: new Map(), init: new Map(), next: new Map(), trans: [], specs: new Map(), constants: new Set(),
+        frozen: new Map(), ltl: new Map(),
     };
     const fresh = (name: string) => {
-        if (m.vars.has(name) || m.ivars.has(name) || m.defines.has(name)) throw new Error(`smv: ${name} declared twice`);
+        if (m.vars.has(name) || m.ivars.has(name) || m.defines.has(name) || m.frozen.has(name)) throw new Error(`smv: ${name} declared twice`);
         return name;
     };
     p.take('MODULE');
     p.take('main');
     while (p.peek() !== undefined) {
         const section = p.take();
-        if (section === 'VAR' || section === 'IVAR') {
+        if (section === 'VAR' || section === 'IVAR' || section === 'FROZENVAR') {
             while (p.isName() && p.peek(1) === ':') {
                 const name = fresh(p.take());
                 p.take(':');
                 const type = p.type();
                 p.take(';');
-                (section === 'VAR' ? m.vars : m.ivars).set(name, type);
+                (section === 'VAR' ? m.vars : section === 'IVAR' ? m.ivars : m.frozen).set(name, type);
                 if (type.k === 'enum') for (const c of type.values) m.constants.add(c);
             }
         } else if (section === 'DEFINE') {
@@ -345,6 +349,14 @@ function parseModule(text: string): SmvModule {
             p.take(':=');
             m.specs.set(name, p.expr());
             p.take(';');
+        } else if (section === 'LTLSPEC') {
+            p.take('NAME');
+            const name = p.take();
+            p.take(':=');
+            const tokens: string[] = [];
+            while (p.peek() !== ';') tokens.push(p.take());
+            p.take(';');
+            m.ltl.set(name, tokens.join(' '));
         } else {
             throw new Error(`smv: no section ${section}`);
         }
@@ -359,7 +371,7 @@ function scope(m: SmvModule, vars: ReadonlyMap<string, V>, ivars: ReadonlyMap<st
         get: name => {
             const v = vars.get(name) ?? ivars.get(name);
             if (v) return v;
-            if (m.vars.has(name) || m.ivars.has(name)) throw new Error(`smv: ${name} has no value here`);
+            if (m.vars.has(name) || m.ivars.has(name) || m.frozen.has(name)) throw new Error(`smv: ${name} has no value here`);
             const d = m.defines.get(name);
             if (d) {
                 let x = memo.get(name);
@@ -393,8 +405,10 @@ function assign(m: SmvModule, exprs: ReadonlyMap<string, Expr>, s: Scope): SmvSt
     return out;
 }
 
-const smvInit = (m: SmvModule): SmvState => assign(m, m.init, scope(m, new Map(), new Map()));
-const smvNext = (m: SmvModule, state: SmvState, inputs: SmvState): SmvState => assign(m, m.next, scope(m, state, inputs));
+/** A FROZENVAR keeps its value: the values of `state`'s, carried into the state after. */
+const frozenOf = (m: SmvModule, state: SmvState): Array<[string, V]> => [...m.frozen.keys()].map(n => [n, state.get(n)!]);
+const smvInit = (m: SmvModule, frozen: SmvState = new Map()): SmvState => new Map([...assign(m, m.init, scope(m, frozen, new Map())), ...frozenOf(m, frozen)]);
+const smvNext = (m: SmvModule, state: SmvState, inputs: SmvState): SmvState => new Map([...assign(m, m.next, scope(m, state, inputs)), ...frozenOf(m, state)]);
 const smvTrans = (m: SmvModule, state: SmvState, inputs: SmvState): boolean => m.trans.every(t => truth(t(scope(m, state, inputs))));
 const show = (m: SmvModule, state: SmvState): string => [...m.vars.keys()].map(n => `${n}=${fmt(state.get(n)!)}`).join(' ');
 
@@ -438,12 +452,14 @@ interface Case {
     readonly eventConst: ReadonlyMap<string | null, string>;
     /** How many derived values were compared with their `DEFINE`. */
     derivedCompared: number;
+    /** The values of the FROZENVARs, the same at every configuration. */
+    readonly frozen: SmvState;
 }
 
 const invert = (m: ReadonlyMap<string, string>) => new Map([...m].map(([k, v]) => [v, k]));
 
-function caseOf(spec: ExampleSpec, watches?: readonly WatchRecord[]): Case {
-    const { run, result } = exportSpec(spec, watches);
+function caseOf(spec: ExampleSpec, watches?: readonly WatchRecord[], free?: { frozen: SmvState }): Case {
+    const { run, result } = exportSpec(spec, watches, free !== undefined);
     const { text, names } = ok(result);
     expect([...names.attributes.values()].filter(a => a.role === 'input')).toEqual([]);
     return {
@@ -454,11 +470,12 @@ function caseOf(spec: ExampleSpec, watches?: readonly WatchRecord[]): Case {
         selConst: new Map<string | null, string>([[null, SMV_NO_SELECTOR], ...invert(names.transitions)]),
         eventConst: new Map<string | null, string>([[null, SMV_NO_EVENT], ...invert(names.events)]),
         derivedCompared: 0,
+        frozen: free?.frozen ?? new Map(),
     };
 }
 
 function fromSim(c: Case, state: SimState): SmvState {
-    const out = new Map<string, V>();
+    const out = new Map<string, V>(c.frozen);
     for (const name of c.m.vars.keys()) {
         if (name === 'state') {
             const marked = [...state.marking].filter(([, n]) => n > 0).map(([p]) => p);
@@ -514,7 +531,7 @@ function checkConfiguration(c: Case, state: SimState, event: string | null): Map
 
 /** The scenario run by the text alone, from `init`, checked step by step against the simulator; the text's states. */
 function replay(c: Case, steps: readonly ScenarioStep[]): SmvState[] {
-    let smv = smvInit(c.m);
+    let smv = smvInit(c.m, c.frozen);
     let state = c.run.net.initial;
     expect(show(c.m, smv)).toBe(show(c.m, fromSim(c, state)));
     const out = [smv];
@@ -553,11 +570,11 @@ function explore(c: Case, limit: number): Map<string, SimState> {
 // ── the tests ──
 
 describe('smvExport goldens', () => {
-    for (const name of ['turnstile', 'hw-cpu'] as const) {
-        it(`${name}: the text equals the golden (dies with any change of the text)`, () => {
-            const { text } = ok(exportSpec(loadSpec(name)).result);
-            if (WRITE) writeFileSync(golden(name), text);
-            expect(text).toBe(readFileSync(golden(name), 'utf8'));
+    for (const [name, file, free] of [['turnstile', 'turnstile', false], ['hw-cpu', 'hw-cpu', false], ['hw-cpu', 'hw-cpu-free-rom', true]] as const) {
+        it(`${file}: the text equals the golden (dies with any change of the text)`, () => {
+            const { text } = ok(exportSpec(loadSpec(name), undefined, free).result);
+            if (WRITE) writeFileSync(golden(file), text);
+            expect(text).toBe(readFileSync(golden(file), 'utf8'));
         });
     }
 });
@@ -607,7 +624,8 @@ describe('smvExport watches', () => {
             { name: 'two_coins', kind: 'breakpoint', text: 'model.[coins] == 2' },
         ];
         const c = caseOf(loadSpec('turnstile'), watches);
-        expect([...c.m.specs.keys()]).toEqual(['coins_in_range', 'two_coins']);
+        // The watches first, then the structural properties of S-G2.
+        expect([...c.m.specs.keys()]).toEqual(['coins_in_range', 'two_coins', 'no_deadlock', 'final_quiescent', 'live_locked', 'live_unlocked']);
         const modelId = loadSpec('turnstile').modelId;
         for (const state of explore(c, 200).values()) {
             const s = scope(c.m, fromSim(c, state), new Map());
@@ -647,5 +665,153 @@ describe('smvExport refusals', () => {
         const { result } = exportSpec(withText(loadSpec('hw-cpu'), ADD, 'ACC.[value] := ACC.[value] + bits(8, PC.[value].toNumber())'));
         if (result.kind !== 'refused') throw new Error('exported');
         expect(result.defects.map(d => d.message).join('\n')).toMatch(/toNumber outside the key of the memory idiom/);
+    });
+});
+
+describe('smvExport structural properties (S-G2)', () => {
+    const named = (properties: readonly SmvProperty[], family: SmvProperty['family']) => properties.filter(p => p.family === family).map(p => p.name);
+    const STA = 'ram.cells.filter(c => c.addr == IR.[value].slice(3, 0).toNumber()).first.[value] := ACC.[value]';
+
+    it('turnstile: every INVARSPEC holds where the run goes, reading no input, and ready_<t> is the candidate set under some event (dies with the event left in ready_, a guard dropped from it)', () => {
+        const c = caseOf(loadSpec('turnstile'));
+        const { properties } = ok(exportSpec(loadSpec('turnstile')).result);
+        const events = [...c.eventConst.keys()];
+        let readyTrue = 0;
+        for (const state of explore(c, 200).values()) {
+            // No IVAR in the scope: a property that reads `sel` or `event` throws.
+            const s = scope(c.m, fromSim(c, state), new Map());
+            for (const [name, f] of c.m.specs) expect(truth(f(s)), `${name} at ${show(c.m, fromSim(c, state))}`).toBe(true);
+            for (const [t, k] of c.selConst) {
+                if (t === null) continue;
+                const some = events.some(e => candidates(c.run.net, { state, event: e }, c.guards).candidates.some(x => x.transition === t));
+                expect(truth(s.get(`ready_${k}`)), `ready_${k} at ${show(c.m, fromSim(c, state))}`).toBe(some);
+                if (some) readyTrue++;
+            }
+        }
+        expect(readyTrue).toBeGreaterThan(0);
+        expect([...c.m.specs.keys()]).toEqual(['no_deadlock', 'final_quiescent', 'live_locked', 'live_unlocked']);
+        expect(c.m.ltl.get('returns_locked')).toBe('G F ( state = locked | final )');
+        // Out of locked the three transitions take three events: no choice, proved without a text.
+        expect(properties.filter(p => p.family === 'no-choice').map(p => [p.name, p.text, p.verdict?.reason])).toEqual([
+            ['no_choice_tc_tp', null, 'tc and tp have no event in common'],
+            ['no_choice_tc_ts', null, 'tc and ts have no event in common'],
+            ['no_choice_tp_ts', null, 'tp and ts have no event in common'],
+        ]);
+        expect(properties.find(p => p.name === 'graph_returns_unlocked')?.verdict).toEqual({ holds: true, reason: 'unlocked reaches locked or a final state, first by tu' });
+    });
+
+    it('hw-cpu: every INVARSPEC holds at each of the 170 cycles (dies with a negation dropped in no_choice or final_quiescent)', () => {
+        const spec = loadSpec('hw-cpu');
+        const c = caseOf(spec);
+        const states = replay(c, spec.scenario!.steps);
+        for (const [i, smv] of states.entries()) {
+            const s = scope(c.m, smv, new Map());
+            for (const [name, f] of c.m.specs) expect(truth(f(s)), `${name} at cycle ${i}`).toBe(true);
+        }
+        expect(c.m.specs.size).toBe(2 + 10 + 55 + 3);
+    });
+
+    it('hw-cpu: one property per element of each family (dies with a property dropped, a sibling pair missed)', () => {
+        const { run, result } = exportSpec(loadSpec('hw-cpu'));
+        const { text, names, properties } = ok(result);
+        const net = run.net;
+        const final = new Set([...(net.final ?? []), ...(net.activityFinal ?? [])]);
+        const place = invert(names.states);
+        const sel = invert(names.transitions);
+        const start = [...net.initial.marking].find(([, n]) => n > 0)![0];
+        expect(named(properties, 'no-deadlock')).toEqual(['no_deadlock', 'final_quiescent', ...[...net.places].filter(p => !final.has(p)).map(p => `live_${place.get(p)}`)]);
+        expect(named(properties, 'returns')).toEqual([`returns_${place.get(start)}`,
+            ...[...net.places].filter(p => p !== start && !final.has(p)).map(p => `graph_returns_${place.get(p)}`)]);
+        const pairs: string[] = [];
+        for (const p of net.places) {
+            const out = net.transitions.filter(t => t.preset[0].place === p);
+            for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) pairs.push(`no_choice_${sel.get(out[i].id)}_${sel.get(out[j].id)}`);
+        }
+        expect(pairs).toHaveLength(55);
+        expect(named(properties, 'no-choice')).toEqual(pairs);
+        expect(named(properties, 'single-write')).toEqual(['fetch_decode', 'ret_LDA', 'ret_STA', 'ret_ADD', 'ret_SUB', 'ret_AND', 'ret_LDI', 'ret_JZ', 'ret_JMP'].map(t => `single_write_${t}`));
+        expect(named(properties, 'address-range')).toEqual(['in_range_rom_cells_init_1', 'in_range_ram_cells_value_1', 'in_range_ret_STA_ram_cells_value_1']);
+        expect(properties.find(p => p.name === 'in_range_ret_STA_ram_cells_value_1')?.element).toBe('ram');
+        for (const p of properties) if (p.text !== null) expect(text).toContain(p.text);
+        expect(parseModule(text).ltl.get('returns_FETCH')).toBe('G F ( state = FETCH | final )');
+    });
+
+    it('hw-cpu: what the exporter proves (dies with the else proof, the static single write, the address coverage)', () => {
+        const { properties } = ok(exportSpec(loadSpec('hw-cpu')).result);
+        const verdict = (name: string) => properties.find(p => p.name === name)?.verdict;
+        expect(verdict('live_DECODE')).toEqual({ holds: true, reason: 'dec_else is the else of the other transitions out of DECODE' });
+        expect(verdict('live_FETCH')).toEqual({ holds: true, reason: 'fetch_decode leaves FETCH without a guard' });
+        expect(verdict('no_deadlock')?.holds).toBe(true);
+        expect(verdict('final_quiescent')?.holds).toBe(true);
+        expect(verdict('returns_FETCH')).toBeNull();
+        expect(verdict('single_write_ret_STA')).toEqual({ holds: true, reason: 'one memory write' });
+        expect(verdict('single_write_fetch_decode')).toEqual({ holds: true, reason: '2 writes by name, to distinct attributes' });
+        expect(properties.filter(p => p.family === 'single-write').every(p => p.text === null)).toBe(true);
+        expect(properties.filter(p => p.name.startsWith('graph_returns_')).every(p => p.verdict?.holds === true)).toBe(true);
+        const choices = properties.filter(p => p.family === 'no-choice');
+        expect(choices.filter(p => p.verdict !== null).map(p => p.name)).toEqual(choices.filter(p => p.name.includes('dec_else')).map(p => p.name));
+        expect(choices.filter(p => p.verdict !== null)).toHaveLength(10);
+        for (const p of properties.filter(q => q.family === 'address-range')) expect(p.verdict?.reason).toMatch(/^the 16 cells cover every value of the 4-bit key /);
+    });
+
+    it('the graph check needs every arc of a path, the first and the last (dies with the graph check ignoring one edge)', () => {
+        const arcs = [{ id: 'bc', from: 'b', to: 'c' }, { id: 'ad', from: 'a', to: 'd' }, { id: 'ca', from: 'c', to: 'a' }];
+        expect(pathsHome(arcs, new Set(['a']))).toEqual(new Map([['a', null], ['c', 'ca'], ['b', 'bc']]));
+        for (const drop of ['bc', 'ca']) expect(pathsHome(arcs.filter(a => a.id !== drop), new Set(['a'])).has('b'), drop).toBe(false);
+        expect(pathsHome(arcs, new Set(['d'])).get('b')).toBe('bc');
+    });
+
+    it('two memory writes in one firing: !(en_t & e1 = e2), false exactly where the simulator halts on a double assignment', () => {
+        const write = (spec: ExampleSpec) => {
+            const site = Object.values(spec.lookup).find((d: any) => Array.isArray(d.values) && d.values.includes(STA)) as { values: unknown[] };
+            site.values = [STA, STA.replace('IR.[value].slice(3, 0)', 'PC.[value]')];
+            return spec;
+        };
+        const { properties } = ok(exportSpec(write(loadSpec('hw-cpu'))).result);
+        const p = properties.find(q => q.name === 'single_write_ret_STA')!;
+        expect(p.text).toBe('INVARSPEC NAME single_write_ret_STA := !(en_ret_STA & PC_value = IR_value[3:0]);');
+        expect(p.verdict).toBeNull();
+        expect(named(properties, 'address-range')).toContain('in_range_ret_STA_ram_cells_value_2');
+        const c = caseOf(write(loadSpec('hw-cpu')));
+        const exSta = c.names.states.get('EX_STA')!;
+        const at = (pc: bigint): SimState => {
+            const init = c.run.net.initial;
+            const attrs = new Map([...init.attrs].map(([e, m]) => [e, new Map(m)]));
+            attrs.get('PC')!.set('value', { ...(attrs.get('PC')!.get('value') as object), bits: pc } as never);
+            attrs.get('IR')!.set('value', { ...(attrs.get('IR')!.get('value') as object), bits: 0x2dn } as never);
+            return { ...init, marking: new Map([...c.run.net.places].map(q => [q, q === exSta ? 1 : 0])), attrs };
+        };
+        const spec = c.m.specs.get('single_write_ret_STA')!;
+        for (const [pc, clash] of [[13n, true], [3n, false]] as const) {
+            expect(truth(spec(scope(c.m, fromSim(c, at(pc)), new Map()))), `PC = ${pc}`).toBe(!clash);
+            const o = step(c.run.net, { state: at(pc), event: null }, c.names.transitions.get('ret_STA')!, c.guards, c.actions, c.run.derived);
+            expect(o.kind === 'halted' && o.reason.kind === 'double-assignment', `PC = ${pc}`).toBe(clash);
+        }
+    });
+
+    it('free ROM: the bytes are FROZENVARs, FETCH loads any of them, and with the program\'s bytes the text replays the 170 cycles (dies with the constants kept)', () => {
+        const fixed = parseModule(ok(exportSpec(loadSpec('hw-cpu')).result).text);
+        const { text, names } = ok(exportSpec(loadSpec('hw-cpu'), undefined, true).result);
+        const m = parseModule(text);
+        expect(m.frozen.size).toBe(16);
+        expect([...names.frozen!.values()].every(f => f.feature === 'init')).toBe(true);
+        expect([...m.frozen.values()].every(t => t.k === 'word' && t.w === 8 && !t.s)).toBe(true);
+        // The program's byte behind each FROZENVAR: the free read and the fixed read at the same PC.
+        const frozen = new Map<string, V>();
+        for (let k = 0n; k < 16n; k++) {
+            const pc = new Map([['PC_value', word(4, false, k)]]);
+            const cell = m.defines.get('rom_cells_init_1')!({ get: n => (m.frozen.has(n) ? { k: 'sym', v: n } : pc.get(n)!) });
+            frozen.set((cell as { v: string }).v, fixed.defines.get('rom_cells_init_1')!(scope(fixed, pc, new Map())));
+        }
+        expect(frozen.size).toBe(16);
+        const spec = loadSpec('hw-cpu');
+        expect(replay(caseOf(spec, undefined, { frozen }), spec.scenario!.steps)).toHaveLength(171);
+        // A ROM of one byte no instruction decodes: FETCH loads it, DECODE is still live, by its else.
+        const c = caseOf(loadSpec('hw-cpu'), undefined, { frozen: new Map([...m.frozen.keys()].map(n => [n, word(8, false, 0x90n)])) });
+        const after = smvNext(c.m, smvInit(c.m, c.frozen), inputsOf(c, null, c.names.transitions.get('fetch_decode')!));
+        const s = scope(c.m, after, new Map());
+        expect(fmt(after.get('IR_value')!)).toBe('0ud8_144');
+        expect(truth(s.get('en_dec_else'))).toBe(true);
+        expect(truth(c.m.specs.get('live_DECODE')!(s))).toBe(true);
     });
 });

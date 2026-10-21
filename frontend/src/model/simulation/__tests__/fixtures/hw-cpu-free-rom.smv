@@ -1,0 +1,385 @@
+-- cpu: a one-token state machine and its state attributes (smvExport, S-G1).
+-- The free-ROM variant (S-G2, R14): a cell's feature read through the memory idiom is a FROZENVAR.
+MODULE main
+VAR
+  state : {FETCH, DECODE, EX_LDA, EX_STA, EX_ADD, EX_SUB, EX_AND, EX_LDI, EX_JZ, EX_JMP, HALT};
+  PC_value : unsigned word[4];
+  IR_value : unsigned word[8];
+  ACC_value : unsigned word[8];
+  Z__value : unsigned word[1];
+  rom_0_value : unsigned word[8];
+  rom_1_value : unsigned word[8];
+  rom_2_value : unsigned word[8];
+  rom_3_value : unsigned word[8];
+  rom_4_value : unsigned word[8];
+  rom_5_value : unsigned word[8];
+  rom_6_value : unsigned word[8];
+  rom_7_value : unsigned word[8];
+  rom_8_value : unsigned word[8];
+  rom_9_value : unsigned word[8];
+  rom_10_value : unsigned word[8];
+  rom_11_value : unsigned word[8];
+  rom_12_value : unsigned word[8];
+  rom_13_value : unsigned word[8];
+  rom_14_value : unsigned word[8];
+  rom_15_value : unsigned word[8];
+  ram_0_value : unsigned word[8];
+  ram_1_value : unsigned word[8];
+  ram_2_value : unsigned word[8];
+  ram_3_value : unsigned word[8];
+  ram_4_value : unsigned word[8];
+  ram_5_value : unsigned word[8];
+  ram_6_value : unsigned word[8];
+  ram_7_value : unsigned word[8];
+  ram_8_value : unsigned word[8];
+  ram_9_value : unsigned word[8];
+  ram_10_value : unsigned word[8];
+  ram_11_value : unsigned word[8];
+  ram_12_value : unsigned word[8];
+  ram_13_value : unsigned word[8];
+  ram_14_value : unsigned word[8];
+  ram_15_value : unsigned word[8];
+FROZENVAR
+  rom_0_init : unsigned word[8];
+  rom_1_init : unsigned word[8];
+  rom_2_init : unsigned word[8];
+  rom_3_init : unsigned word[8];
+  rom_4_init : unsigned word[8];
+  rom_5_init : unsigned word[8];
+  rom_6_init : unsigned word[8];
+  rom_7_init : unsigned word[8];
+  rom_8_init : unsigned word[8];
+  rom_9_init : unsigned word[8];
+  rom_10_init : unsigned word[8];
+  rom_11_init : unsigned word[8];
+  rom_12_init : unsigned word[8];
+  rom_13_init : unsigned word[8];
+  rom_14_init : unsigned word[8];
+  rom_15_init : unsigned word[8];
+IVAR
+  sel : {none, fetch_decode, dec_NOP, dec_LDA, dec_STA, dec_ADD, dec_SUB, dec_AND, dec_LDI, dec_JZ, dec_JMP, dec_HLT, dec_else, ret_LDA, ret_STA, ret_ADD, ret_SUB, ret_AND, ret_LDI, ret_JZ, ret_JMP};
+DEFINE
+  rom_cells_init_1 := case PC_value = 0ud4_0 : rom_0_init; PC_value = 0ud4_1 : rom_1_init; PC_value = 0ud4_2 : rom_2_init; PC_value = 0ud4_3 : rom_3_init; PC_value = 0ud4_4 : rom_4_init; PC_value = 0ud4_5 : rom_5_init; PC_value = 0ud4_6 : rom_6_init; PC_value = 0ud4_7 : rom_7_init; PC_value = 0ud4_8 : rom_8_init; PC_value = 0ud4_9 : rom_9_init; PC_value = 0ud4_10 : rom_10_init; PC_value = 0ud4_11 : rom_11_init; PC_value = 0ud4_12 : rom_12_init; PC_value = 0ud4_13 : rom_13_init; PC_value = 0ud4_14 : rom_14_init; TRUE : rom_15_init; esac;
+  ram_cells_value_1 := case IR_value[3:0] = 0ud4_0 : ram_0_value; IR_value[3:0] = 0ud4_1 : ram_1_value; IR_value[3:0] = 0ud4_2 : ram_2_value; IR_value[3:0] = 0ud4_3 : ram_3_value; IR_value[3:0] = 0ud4_4 : ram_4_value; IR_value[3:0] = 0ud4_5 : ram_5_value; IR_value[3:0] = 0ud4_6 : ram_6_value; IR_value[3:0] = 0ud4_7 : ram_7_value; IR_value[3:0] = 0ud4_8 : ram_8_value; IR_value[3:0] = 0ud4_9 : ram_9_value; IR_value[3:0] = 0ud4_10 : ram_10_value; IR_value[3:0] = 0ud4_11 : ram_11_value; IR_value[3:0] = 0ud4_12 : ram_12_value; IR_value[3:0] = 0ud4_13 : ram_13_value; IR_value[3:0] = 0ud4_14 : ram_14_value; TRUE : ram_15_value; esac;
+  g_fetch_decode := TRUE;
+  g_dec_NOP := (IR_value[7:4] = 0ud4_0);
+  g_dec_LDA := (IR_value[7:4] = 0ud4_1);
+  g_dec_STA := (IR_value[7:4] = 0ud4_2);
+  g_dec_ADD := (IR_value[7:4] = 0ud4_3);
+  g_dec_SUB := (IR_value[7:4] = 0ud4_4);
+  g_dec_AND := (IR_value[7:4] = 0ud4_5);
+  g_dec_LDI := (IR_value[7:4] = 0ud4_6);
+  g_dec_JZ := (IR_value[7:4] = 0ud4_7);
+  g_dec_JMP := (IR_value[7:4] = 0ud4_8);
+  g_dec_HLT := (IR_value[7:4] = 0ud4_15);
+  g_ret_LDA := TRUE;
+  g_ret_STA := TRUE;
+  g_ret_ADD := TRUE;
+  g_ret_SUB := TRUE;
+  g_ret_AND := TRUE;
+  g_ret_LDI := TRUE;
+  g_ret_JZ := TRUE;
+  g_ret_JMP := TRUE;
+  en_fetch_decode := state = FETCH & g_fetch_decode;
+  en_dec_NOP := state = DECODE & g_dec_NOP;
+  en_dec_LDA := state = DECODE & g_dec_LDA;
+  en_dec_STA := state = DECODE & g_dec_STA;
+  en_dec_ADD := state = DECODE & g_dec_ADD;
+  en_dec_SUB := state = DECODE & g_dec_SUB;
+  en_dec_AND := state = DECODE & g_dec_AND;
+  en_dec_LDI := state = DECODE & g_dec_LDI;
+  en_dec_JZ := state = DECODE & g_dec_JZ;
+  en_dec_JMP := state = DECODE & g_dec_JMP;
+  en_dec_HLT := state = DECODE & g_dec_HLT;
+  en_dec_else := state = DECODE & !(g_dec_NOP | g_dec_LDA | g_dec_STA | g_dec_ADD | g_dec_SUB | g_dec_AND | g_dec_LDI | g_dec_JZ | g_dec_JMP | g_dec_HLT);
+  en_ret_LDA := state = EX_LDA & g_ret_LDA;
+  en_ret_STA := state = EX_STA & g_ret_STA;
+  en_ret_ADD := state = EX_ADD & g_ret_ADD;
+  en_ret_SUB := state = EX_SUB & g_ret_SUB;
+  en_ret_AND := state = EX_AND & g_ret_AND;
+  en_ret_LDI := state = EX_LDI & g_ret_LDI;
+  en_ret_JZ := state = EX_JZ & g_ret_JZ;
+  en_ret_JMP := state = EX_JMP & g_ret_JMP;
+  some_enabled := en_fetch_decode | en_dec_NOP | en_dec_LDA | en_dec_STA | en_dec_ADD | en_dec_SUB | en_dec_AND | en_dec_LDI | en_dec_JZ | en_dec_JMP | en_dec_HLT | en_dec_else | en_ret_LDA | en_ret_STA | en_ret_ADD | en_ret_SUB | en_ret_AND | en_ret_LDI | en_ret_JZ | en_ret_JMP;
+  final := state = HALT;
+ASSIGN
+  init(state) := FETCH;
+  next(state) := case
+      sel = fetch_decode : DECODE;
+      sel = dec_NOP : FETCH;
+      sel = dec_LDA : EX_LDA;
+      sel = dec_STA : EX_STA;
+      sel = dec_ADD : EX_ADD;
+      sel = dec_SUB : EX_SUB;
+      sel = dec_AND : EX_AND;
+      sel = dec_LDI : EX_LDI;
+      sel = dec_JZ : EX_JZ;
+      sel = dec_JMP : EX_JMP;
+      sel = dec_HLT : HALT;
+      sel = dec_else : FETCH;
+      sel = ret_LDA : FETCH;
+      sel = ret_STA : FETCH;
+      sel = ret_ADD : FETCH;
+      sel = ret_SUB : FETCH;
+      sel = ret_AND : FETCH;
+      sel = ret_LDI : FETCH;
+      sel = ret_JZ : FETCH;
+      sel = ret_JMP : FETCH;
+      TRUE : state;
+    esac;
+  init(PC_value) := 0ud4_0;
+  next(PC_value) := case
+      sel = fetch_decode : (PC_value + 0ud4_1);
+      sel = ret_JZ : case (Z__value = 0ud1_1) : IR_value[3:0]; TRUE : PC_value; esac;
+      sel = ret_JMP : IR_value[3:0];
+      TRUE : PC_value;
+    esac;
+  init(IR_value) := 0ud8_0;
+  next(IR_value) := case
+      sel = fetch_decode : rom_cells_init_1;
+      TRUE : IR_value;
+    esac;
+  init(ACC_value) := 0ud8_0;
+  next(ACC_value) := case
+      sel = ret_LDA : ram_cells_value_1;
+      sel = ret_ADD : (ACC_value + ram_cells_value_1);
+      sel = ret_SUB : (ACC_value - ram_cells_value_1);
+      sel = ret_AND : (ACC_value & ram_cells_value_1);
+      sel = ret_LDI : extend(IR_value[3:0], 4);
+      TRUE : ACC_value;
+    esac;
+  init(Z__value) := 0ud1_0;
+  next(Z__value) := case
+      sel = ret_LDA : case (ram_cells_value_1 = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      sel = ret_ADD : case ((ACC_value + ram_cells_value_1) = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      sel = ret_SUB : case ((ACC_value - ram_cells_value_1) = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      sel = ret_AND : case ((ACC_value & ram_cells_value_1) = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      sel = ret_LDI : case (extend(IR_value[3:0], 4) = 0ud8_0) : 0ud1_1; TRUE : 0ud1_0; esac;
+      TRUE : Z__value;
+    esac;
+  init(rom_0_value) := 0ud8_0;
+  next(rom_0_value) := rom_0_value;
+  init(rom_1_value) := 0ud8_0;
+  next(rom_1_value) := rom_1_value;
+  init(rom_2_value) := 0ud8_0;
+  next(rom_2_value) := rom_2_value;
+  init(rom_3_value) := 0ud8_0;
+  next(rom_3_value) := rom_3_value;
+  init(rom_4_value) := 0ud8_0;
+  next(rom_4_value) := rom_4_value;
+  init(rom_5_value) := 0ud8_0;
+  next(rom_5_value) := rom_5_value;
+  init(rom_6_value) := 0ud8_0;
+  next(rom_6_value) := rom_6_value;
+  init(rom_7_value) := 0ud8_0;
+  next(rom_7_value) := rom_7_value;
+  init(rom_8_value) := 0ud8_0;
+  next(rom_8_value) := rom_8_value;
+  init(rom_9_value) := 0ud8_0;
+  next(rom_9_value) := rom_9_value;
+  init(rom_10_value) := 0ud8_0;
+  next(rom_10_value) := rom_10_value;
+  init(rom_11_value) := 0ud8_0;
+  next(rom_11_value) := rom_11_value;
+  init(rom_12_value) := 0ud8_0;
+  next(rom_12_value) := rom_12_value;
+  init(rom_13_value) := 0ud8_0;
+  next(rom_13_value) := rom_13_value;
+  init(rom_14_value) := 0ud8_0;
+  next(rom_14_value) := rom_14_value;
+  init(rom_15_value) := 0ud8_0;
+  next(rom_15_value) := rom_15_value;
+  init(ram_0_value) := 0ud8_0;
+  next(ram_0_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_0 : ACC_value;
+      TRUE : ram_0_value;
+    esac;
+  init(ram_1_value) := 0ud8_0;
+  next(ram_1_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_1 : ACC_value;
+      TRUE : ram_1_value;
+    esac;
+  init(ram_2_value) := 0ud8_0;
+  next(ram_2_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_2 : ACC_value;
+      TRUE : ram_2_value;
+    esac;
+  init(ram_3_value) := 0ud8_0;
+  next(ram_3_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_3 : ACC_value;
+      TRUE : ram_3_value;
+    esac;
+  init(ram_4_value) := 0ud8_0;
+  next(ram_4_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_4 : ACC_value;
+      TRUE : ram_4_value;
+    esac;
+  init(ram_5_value) := 0ud8_0;
+  next(ram_5_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_5 : ACC_value;
+      TRUE : ram_5_value;
+    esac;
+  init(ram_6_value) := 0ud8_0;
+  next(ram_6_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_6 : ACC_value;
+      TRUE : ram_6_value;
+    esac;
+  init(ram_7_value) := 0ud8_0;
+  next(ram_7_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_7 : ACC_value;
+      TRUE : ram_7_value;
+    esac;
+  init(ram_8_value) := 0ud8_0;
+  next(ram_8_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_8 : ACC_value;
+      TRUE : ram_8_value;
+    esac;
+  init(ram_9_value) := 0ud8_0;
+  next(ram_9_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_9 : ACC_value;
+      TRUE : ram_9_value;
+    esac;
+  init(ram_10_value) := 0ud8_0;
+  next(ram_10_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_10 : ACC_value;
+      TRUE : ram_10_value;
+    esac;
+  init(ram_11_value) := 0ud8_0;
+  next(ram_11_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_11 : ACC_value;
+      TRUE : ram_11_value;
+    esac;
+  init(ram_12_value) := 0ud8_0;
+  next(ram_12_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_12 : ACC_value;
+      TRUE : ram_12_value;
+    esac;
+  init(ram_13_value) := 0ud8_0;
+  next(ram_13_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_13 : ACC_value;
+      TRUE : ram_13_value;
+    esac;
+  init(ram_14_value) := 0ud8_0;
+  next(ram_14_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_14 : ACC_value;
+      TRUE : ram_14_value;
+    esac;
+  init(ram_15_value) := 0ud8_0;
+  next(ram_15_value) := case
+      sel = ret_STA & IR_value[3:0] = 0ud4_15 : ACC_value;
+      TRUE : ram_15_value;
+    esac;
+TRANS
+  case
+    sel = none : !some_enabled;
+    sel = fetch_decode : en_fetch_decode;
+    sel = dec_NOP : en_dec_NOP;
+    sel = dec_LDA : en_dec_LDA;
+    sel = dec_STA : en_dec_STA;
+    sel = dec_ADD : en_dec_ADD;
+    sel = dec_SUB : en_dec_SUB;
+    sel = dec_AND : en_dec_AND;
+    sel = dec_LDI : en_dec_LDI;
+    sel = dec_JZ : en_dec_JZ;
+    sel = dec_JMP : en_dec_JMP;
+    sel = dec_HLT : en_dec_HLT;
+    sel = dec_else : en_dec_else;
+    sel = ret_LDA : en_ret_LDA;
+    sel = ret_STA : en_ret_STA;
+    sel = ret_ADD : en_ret_ADD;
+    sel = ret_SUB : en_ret_SUB;
+    sel = ret_AND : en_ret_AND;
+    sel = ret_LDI : en_ret_LDI;
+    sel = ret_JZ : en_ret_JZ;
+    sel = ret_JMP : en_ret_JMP;
+  esac;
+-- The structural properties, generated from the model (smvExport, S-G2).
+INVARSPEC NAME no_deadlock := final | some_enabled; -- proved by the exporter: every state that is not final is proved live
+INVARSPEC NAME final_quiescent := final -> !some_enabled; -- proved by the exporter: a transition out of a final state is never enabled (R-SIM-27)
+INVARSPEC NAME live_FETCH := state = FETCH -> some_enabled; -- proved by the exporter: fetch_decode leaves FETCH without a guard
+INVARSPEC NAME live_DECODE := state = DECODE -> some_enabled; -- proved by the exporter: dec_else is the else of the other transitions out of DECODE
+INVARSPEC NAME live_EX_LDA := state = EX_LDA -> some_enabled; -- proved by the exporter: ret_LDA leaves EX_LDA without a guard
+INVARSPEC NAME live_EX_STA := state = EX_STA -> some_enabled; -- proved by the exporter: ret_STA leaves EX_STA without a guard
+INVARSPEC NAME live_EX_ADD := state = EX_ADD -> some_enabled; -- proved by the exporter: ret_ADD leaves EX_ADD without a guard
+INVARSPEC NAME live_EX_SUB := state = EX_SUB -> some_enabled; -- proved by the exporter: ret_SUB leaves EX_SUB without a guard
+INVARSPEC NAME live_EX_AND := state = EX_AND -> some_enabled; -- proved by the exporter: ret_AND leaves EX_AND without a guard
+INVARSPEC NAME live_EX_LDI := state = EX_LDI -> some_enabled; -- proved by the exporter: ret_LDI leaves EX_LDI without a guard
+INVARSPEC NAME live_EX_JZ := state = EX_JZ -> some_enabled; -- proved by the exporter: ret_JZ leaves EX_JZ without a guard
+INVARSPEC NAME live_EX_JMP := state = EX_JMP -> some_enabled; -- proved by the exporter: ret_JMP leaves EX_JMP without a guard
+LTLSPEC NAME returns_FETCH := G F (state = FETCH | final);
+-- graph_returns_DECODE: proved by the exporter: DECODE reaches FETCH or a final state, first by dec_NOP
+-- graph_returns_EX_LDA: proved by the exporter: EX_LDA reaches FETCH or a final state, first by ret_LDA
+-- graph_returns_EX_STA: proved by the exporter: EX_STA reaches FETCH or a final state, first by ret_STA
+-- graph_returns_EX_ADD: proved by the exporter: EX_ADD reaches FETCH or a final state, first by ret_ADD
+-- graph_returns_EX_SUB: proved by the exporter: EX_SUB reaches FETCH or a final state, first by ret_SUB
+-- graph_returns_EX_AND: proved by the exporter: EX_AND reaches FETCH or a final state, first by ret_AND
+-- graph_returns_EX_LDI: proved by the exporter: EX_LDI reaches FETCH or a final state, first by ret_LDI
+-- graph_returns_EX_JZ: proved by the exporter: EX_JZ reaches FETCH or a final state, first by ret_JZ
+-- graph_returns_EX_JMP: proved by the exporter: EX_JMP reaches FETCH or a final state, first by ret_JMP
+-- single_write_fetch_decode: proved by the exporter: 2 writes by name, to distinct attributes
+-- single_write_ret_LDA: proved by the exporter: 2 writes by name, to distinct attributes
+-- single_write_ret_STA: proved by the exporter: one memory write
+-- single_write_ret_ADD: proved by the exporter: 2 writes by name, to distinct attributes
+-- single_write_ret_SUB: proved by the exporter: 2 writes by name, to distinct attributes
+-- single_write_ret_AND: proved by the exporter: 2 writes by name, to distinct attributes
+-- single_write_ret_LDI: proved by the exporter: 2 writes by name, to distinct attributes
+-- single_write_ret_JZ: proved by the exporter: one write by name
+-- single_write_ret_JMP: proved by the exporter: one write by name
+INVARSPEC NAME no_choice_dec_NOP_dec_LDA := !(en_dec_NOP & en_dec_LDA);
+INVARSPEC NAME no_choice_dec_NOP_dec_STA := !(en_dec_NOP & en_dec_STA);
+INVARSPEC NAME no_choice_dec_NOP_dec_ADD := !(en_dec_NOP & en_dec_ADD);
+INVARSPEC NAME no_choice_dec_NOP_dec_SUB := !(en_dec_NOP & en_dec_SUB);
+INVARSPEC NAME no_choice_dec_NOP_dec_AND := !(en_dec_NOP & en_dec_AND);
+INVARSPEC NAME no_choice_dec_NOP_dec_LDI := !(en_dec_NOP & en_dec_LDI);
+INVARSPEC NAME no_choice_dec_NOP_dec_JZ := !(en_dec_NOP & en_dec_JZ);
+INVARSPEC NAME no_choice_dec_NOP_dec_JMP := !(en_dec_NOP & en_dec_JMP);
+INVARSPEC NAME no_choice_dec_NOP_dec_HLT := !(en_dec_NOP & en_dec_HLT);
+INVARSPEC NAME no_choice_dec_NOP_dec_else := !(en_dec_NOP & en_dec_else); -- proved by the exporter: dec_else is the else of dec_NOP
+INVARSPEC NAME no_choice_dec_LDA_dec_STA := !(en_dec_LDA & en_dec_STA);
+INVARSPEC NAME no_choice_dec_LDA_dec_ADD := !(en_dec_LDA & en_dec_ADD);
+INVARSPEC NAME no_choice_dec_LDA_dec_SUB := !(en_dec_LDA & en_dec_SUB);
+INVARSPEC NAME no_choice_dec_LDA_dec_AND := !(en_dec_LDA & en_dec_AND);
+INVARSPEC NAME no_choice_dec_LDA_dec_LDI := !(en_dec_LDA & en_dec_LDI);
+INVARSPEC NAME no_choice_dec_LDA_dec_JZ := !(en_dec_LDA & en_dec_JZ);
+INVARSPEC NAME no_choice_dec_LDA_dec_JMP := !(en_dec_LDA & en_dec_JMP);
+INVARSPEC NAME no_choice_dec_LDA_dec_HLT := !(en_dec_LDA & en_dec_HLT);
+INVARSPEC NAME no_choice_dec_LDA_dec_else := !(en_dec_LDA & en_dec_else); -- proved by the exporter: dec_else is the else of dec_LDA
+INVARSPEC NAME no_choice_dec_STA_dec_ADD := !(en_dec_STA & en_dec_ADD);
+INVARSPEC NAME no_choice_dec_STA_dec_SUB := !(en_dec_STA & en_dec_SUB);
+INVARSPEC NAME no_choice_dec_STA_dec_AND := !(en_dec_STA & en_dec_AND);
+INVARSPEC NAME no_choice_dec_STA_dec_LDI := !(en_dec_STA & en_dec_LDI);
+INVARSPEC NAME no_choice_dec_STA_dec_JZ := !(en_dec_STA & en_dec_JZ);
+INVARSPEC NAME no_choice_dec_STA_dec_JMP := !(en_dec_STA & en_dec_JMP);
+INVARSPEC NAME no_choice_dec_STA_dec_HLT := !(en_dec_STA & en_dec_HLT);
+INVARSPEC NAME no_choice_dec_STA_dec_else := !(en_dec_STA & en_dec_else); -- proved by the exporter: dec_else is the else of dec_STA
+INVARSPEC NAME no_choice_dec_ADD_dec_SUB := !(en_dec_ADD & en_dec_SUB);
+INVARSPEC NAME no_choice_dec_ADD_dec_AND := !(en_dec_ADD & en_dec_AND);
+INVARSPEC NAME no_choice_dec_ADD_dec_LDI := !(en_dec_ADD & en_dec_LDI);
+INVARSPEC NAME no_choice_dec_ADD_dec_JZ := !(en_dec_ADD & en_dec_JZ);
+INVARSPEC NAME no_choice_dec_ADD_dec_JMP := !(en_dec_ADD & en_dec_JMP);
+INVARSPEC NAME no_choice_dec_ADD_dec_HLT := !(en_dec_ADD & en_dec_HLT);
+INVARSPEC NAME no_choice_dec_ADD_dec_else := !(en_dec_ADD & en_dec_else); -- proved by the exporter: dec_else is the else of dec_ADD
+INVARSPEC NAME no_choice_dec_SUB_dec_AND := !(en_dec_SUB & en_dec_AND);
+INVARSPEC NAME no_choice_dec_SUB_dec_LDI := !(en_dec_SUB & en_dec_LDI);
+INVARSPEC NAME no_choice_dec_SUB_dec_JZ := !(en_dec_SUB & en_dec_JZ);
+INVARSPEC NAME no_choice_dec_SUB_dec_JMP := !(en_dec_SUB & en_dec_JMP);
+INVARSPEC NAME no_choice_dec_SUB_dec_HLT := !(en_dec_SUB & en_dec_HLT);
+INVARSPEC NAME no_choice_dec_SUB_dec_else := !(en_dec_SUB & en_dec_else); -- proved by the exporter: dec_else is the else of dec_SUB
+INVARSPEC NAME no_choice_dec_AND_dec_LDI := !(en_dec_AND & en_dec_LDI);
+INVARSPEC NAME no_choice_dec_AND_dec_JZ := !(en_dec_AND & en_dec_JZ);
+INVARSPEC NAME no_choice_dec_AND_dec_JMP := !(en_dec_AND & en_dec_JMP);
+INVARSPEC NAME no_choice_dec_AND_dec_HLT := !(en_dec_AND & en_dec_HLT);
+INVARSPEC NAME no_choice_dec_AND_dec_else := !(en_dec_AND & en_dec_else); -- proved by the exporter: dec_else is the else of dec_AND
+INVARSPEC NAME no_choice_dec_LDI_dec_JZ := !(en_dec_LDI & en_dec_JZ);
+INVARSPEC NAME no_choice_dec_LDI_dec_JMP := !(en_dec_LDI & en_dec_JMP);
+INVARSPEC NAME no_choice_dec_LDI_dec_HLT := !(en_dec_LDI & en_dec_HLT);
+INVARSPEC NAME no_choice_dec_LDI_dec_else := !(en_dec_LDI & en_dec_else); -- proved by the exporter: dec_else is the else of dec_LDI
+INVARSPEC NAME no_choice_dec_JZ_dec_JMP := !(en_dec_JZ & en_dec_JMP);
+INVARSPEC NAME no_choice_dec_JZ_dec_HLT := !(en_dec_JZ & en_dec_HLT);
+INVARSPEC NAME no_choice_dec_JZ_dec_else := !(en_dec_JZ & en_dec_else); -- proved by the exporter: dec_else is the else of dec_JZ
+INVARSPEC NAME no_choice_dec_JMP_dec_HLT := !(en_dec_JMP & en_dec_HLT);
+INVARSPEC NAME no_choice_dec_JMP_dec_else := !(en_dec_JMP & en_dec_else); -- proved by the exporter: dec_else is the else of dec_JMP
+INVARSPEC NAME no_choice_dec_HLT_dec_else := !(en_dec_HLT & en_dec_else); -- proved by the exporter: dec_else is the else of dec_HLT
+INVARSPEC NAME in_range_rom_cells_init_1 := PC_value = 0ud4_0 | PC_value = 0ud4_1 | PC_value = 0ud4_2 | PC_value = 0ud4_3 | PC_value = 0ud4_4 | PC_value = 0ud4_5 | PC_value = 0ud4_6 | PC_value = 0ud4_7 | PC_value = 0ud4_8 | PC_value = 0ud4_9 | PC_value = 0ud4_10 | PC_value = 0ud4_11 | PC_value = 0ud4_12 | PC_value = 0ud4_13 | PC_value = 0ud4_14 | PC_value = 0ud4_15; -- proved by the exporter: the 16 cells cover every value of the 4-bit key PC_value
+INVARSPEC NAME in_range_ram_cells_value_1 := IR_value[3:0] = 0ud4_0 | IR_value[3:0] = 0ud4_1 | IR_value[3:0] = 0ud4_2 | IR_value[3:0] = 0ud4_3 | IR_value[3:0] = 0ud4_4 | IR_value[3:0] = 0ud4_5 | IR_value[3:0] = 0ud4_6 | IR_value[3:0] = 0ud4_7 | IR_value[3:0] = 0ud4_8 | IR_value[3:0] = 0ud4_9 | IR_value[3:0] = 0ud4_10 | IR_value[3:0] = 0ud4_11 | IR_value[3:0] = 0ud4_12 | IR_value[3:0] = 0ud4_13 | IR_value[3:0] = 0ud4_14 | IR_value[3:0] = 0ud4_15; -- proved by the exporter: the 16 cells cover every value of the 4-bit key IR_value[3:0]
+INVARSPEC NAME in_range_ret_STA_ram_cells_value_1 := IR_value[3:0] = 0ud4_0 | IR_value[3:0] = 0ud4_1 | IR_value[3:0] = 0ud4_2 | IR_value[3:0] = 0ud4_3 | IR_value[3:0] = 0ud4_4 | IR_value[3:0] = 0ud4_5 | IR_value[3:0] = 0ud4_6 | IR_value[3:0] = 0ud4_7 | IR_value[3:0] = 0ud4_8 | IR_value[3:0] = 0ud4_9 | IR_value[3:0] = 0ud4_10 | IR_value[3:0] = 0ud4_11 | IR_value[3:0] = 0ud4_12 | IR_value[3:0] = 0ud4_13 | IR_value[3:0] = 0ud4_14 | IR_value[3:0] = 0ud4_15; -- proved by the exporter: the 16 cells cover every value of the 4-bit key IR_value[3:0]
