@@ -16,10 +16,16 @@
  *   S2-3  undo: the entries one instantiation pushes and the Cmd+Z presses that bring the objects back;
  *   S2-4  «Member» gives the slot `active` a LiteralBoolean `true` (Property.defaultValue);
  *   S2-5  «New instance» on the Book class node gives the same structure; the abstract Publication offers no entry;
+ *         S2-5o, run last on a second class-node instance, its node in the object diagram (zoom to fit) holds its
+ *         header and four rows (P-2026-10-21-0725, P-2026-10-21-1016);
  *   S2-6  the new instances pass the fixture's object rules O1, O2, O3, O5 (`runRules`; O4 reports the empty slots);
  *   S2-7  page errors [] and no `[EditorV2] instantiate:` warning;
  *   S2-8  the node of a new instance holds its header and its four slot rows (DOM boxes), and S2-3n the undo numbers
- *         of S2-3 are those measured before the node size (P-2026-10-21-0655).
+ *         of S2-3 are those measured before the node size (P-2026-10-21-0655);
+ *   S2u   one undo group per instantiation (P-2026-10-21-1016): S2-3n the cascade and S2-3b the class-node entry are
+ *         1 entry and 1 Cmd+Z with as many `idlookup` entries after the press as before the instantiation, S2-4u
+ *         Member 1 entry, S2-2p the cascade node box contains the click (4 px), S2-3m bare createInstance +2 and
+ *         instantiate +1 (decision 5).
  *
  * Run:  node frontend/scripts/lane-run.mjs probe ~/jjodel-w-oi-s2 frontend/scripts/probe/onto-s2-instantiate.ts \
  *         --port 3087 --id P-2026-10-21-0100
@@ -64,9 +70,9 @@ const CENSUS = `
             for (const c of f[fd.name]) if (typeof c === 'string' && idl[c] && idl[c].father === vid) q.push(c); }
         out.push({ id, cls: idl[o.instanceof] && idl[o.instanceof].name, name: o.name, father: o.father, f }); }
     const undo = w.statehistory && w.statehistory[w.DUser.current] ? w.statehistory[w.DUser.current].undoable.length : null;
-    return { objects: out, undo };`;
+    return { objects: out, undo, idl: Object.keys(idl).length };`;
 interface Obj { id: string; cls: string; name: string; father: string; f: Record<string, unknown[]> }
-const census = (page: Page, modelId: string) => ev<{ objects: Obj[]; undo: number | null }>(page, CENSUS, modelId, 0);
+const census = (page: Page, modelId: string) => ev<{ objects: Obj[]; undo: number | null; idl: number }>(page, CENSUS, modelId, 0);
 
 /** An instance and its slots as names: classifier, then per slot (list order) its defining feature and values. */
 function shapeOf(objs: Obj[], instanceId: string) {
@@ -111,6 +117,14 @@ const history = (page: Page) => ev<Record<string, unknown>>(page, `
     const h = w.statehistory || {}; const u = h[w.DUser.current]; const last = u && u.undoable[u.undoable.length - 1];
     return { flag: w.U ? w.U.userHasInteracted : null, user: u ? u.undoable.length : null, all: h.all ? h.all.undoable.length : null,
         senders: Object.keys(h), lastAgeMs: last && last.timestamp ? Date.now() - last.timestamp : null };`, undefined, 0);
+/** The user's undo entries from index `from` on: per entry its age, top-level keys and the idlookup records it touches. */
+const entriesFrom = (page: Page, from: number) => ev<unknown[]>(page, `
+    const u = w.statehistory[w.DUser.current]; const now = Date.now();
+    return u.undoable.slice(a).map((d) => { const il = d.idlookup || {}; const ks = Object.keys(il);
+        return { ageMs: d.timestamp ? now - d.timestamp : null, keys: Object.keys(d).filter((k) => !/^timestamp/.test(k)).slice(0, 12),
+            idl: ks.length, cls: ks.slice(0, 8).map((k) => (il[k] && il[k].className) || (w.store.getState().idlookup[k] || {}).className || '?'),
+            fields: ks.length <= 4 ? ks.map((k) => k.slice(-14) + ':' + (il[k] && typeof il[k] === 'object' ? Object.keys(il[k]).slice(0, 8).join(',') : String(il[k]).slice(0, 40))) : undefined,
+            title: d.action_title }; });`, from, 0);
 const menuCount = (page: Page) => page.locator(MENU).count();
 const closeMenu = async (page: Page) => {
     await page.keyboard.press('Escape');
@@ -270,7 +284,20 @@ try {
         !!bookShape && bookShape.classifier === 'Book' && JSON.stringify(bookShape.slots.map((s) => s.feature)) === JSON.stringify(BOOK_CLOSURE)
         && bookShape.slots.every((s) => s.cls === 'Slot' && s.values.length === 0)
         && added.filter((o) => o.cls === 'InstanceSpecification').length === 1 && added.length === 5, out.book);
-    check('S2-2v one vertex for the new instance (position measured: Step 2bis, not the click point)', bookVerts.length === 1, { bookVerts, flow1 });
+    check('S2-2v one vertex for the new instance', bookVerts.length === 1, { bookVerts, flow1 });
+    // Ticket (a): the node's top-left goes at the click, so its DOM box (screen) contains the click point within 4 px;
+    // the top-left's distance from the click is kept (measured: the canvas snaps it to its 16 px grid).
+    const placed = bookVerts[0] ? await page.evaluate(({ id, at }) => {
+        const el = document.querySelector(`.dock-tabpane-active .react-flow__node[data-id="${id}"]`) as HTMLElement | null;
+        const mm = el?.style.transform.match(/translate\(\s*(-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+        if (!el || !mm) return null;
+        const r = el.getBoundingClientRect();
+        return { flow: { x: +mm[1], y: +mm[2] }, box: { l: r.left, t: r.top, r: r.right, b: r.bottom }, at };
+    }, { id: bookVerts[0].id, at: p1 }) : null;
+    out.placement = { placed, flow1 };
+    check('S2-2p the cascade instance\'s node box contains the right-click point within 4 px', !!placed && !!flow1
+        && placed.box.l - 4 <= p1.x && p1.x <= placed.box.r + 4 && placed.box.t - 4 <= p1.y && p1.y <= placed.box.b + 4,
+        { ...out.placement, topLeftDelta: placed && flow1 && { x: placed.flow.x - flow1.x, y: placed.flow.y - flow1.y } });
 
     // ── S2-3: undo of one instantiation ────────────────────────────────────────────────────────────────────────────
     const entries = (b.c.undo ?? 0) - (before.undo ?? 0);
@@ -289,13 +316,15 @@ try {
         back = now.objects.length === before.objects.length && now.objects.every((o) => beforeIds.has(o.id));
         steps.push({ undo: now.undo, objects: now.objects.length, instance: !!b.inst && now.objects.some((o) => o.id === b.inst!.id), binding: bagAfterUndo });
     }
-    out.undo = { entries, presses, back, undoBefore: before.undo, undoAfterCreate: b.c.undo, undoAfterPresses: now.undo, bindingKept: bagAfterUndo, h0, h1, steps };
+    out.undo = { entries, presses, back, undoBefore: before.undo, undoAfterCreate: b.c.undo, undoAfterPresses: now.undo, bindingKept: bagAfterUndo,
+        idlBefore: before.idl, idlAfterCreate: b.c.idl, idlAfterPresses: now.idl, h0, h1, steps };
     check('S2-3 one instantiation is N undo entries (declared, S2u makes it one); Cmd+Z presses bring the objects back, the binding kept',
         back && bagAfterUndo === true, out.undo);
     // The node size write (P-2026-10-21-0655) must not make the undo worse than measured before it (P-2026-10-21-0635:
     // 1 entry, 2 presses, the first one a no-op); the numbers are kept in out.undo.
-    check('S2-3n the node size does not make the undo of one instantiation worse: 1 entry, at most 2 presses',
-        entries === 1 && presses <= 2 && back && bagAfterUndo === true, { entries, presses });
+    check('S2-3n the cascade instantiation is 1 entry and 1 Cmd+Z, no idlookup orphan after the press (S2u)',
+        entries === 1 && presses === 1 && back && bagAfterUndo === true && now.idl === before.idl,
+        { entries, presses, idlBefore: before.idl, idlAfterCreate: b.c.idl, idlAfterPresses: now.idl });
     if (!bagAfterUndo) {
         // The undo took the binding: write it again, so the rest of the acceptance runs (measured above, not hidden).
         await ev(page, `w.LPointerTargetable.fromPointer(a.mm).state = { ontoBindings: a.raw }; return 1;`, { mm: ids.mm, raw: written.raw }, 600);
@@ -310,8 +339,11 @@ try {
     const b2 = await waitInstance(page, ids.model, before2Ids, ids.classes.Book, 4);
     const p2 = (await emptyPanePoint(page, 'right')) ?? p1;
     const c3 = await openCascade(page, p2);
+    const preMember = await census(page, ids.model);
     await c3.child.locator('.context-menu__item', { hasText: 'Member' }).first().click();
     const m = await waitInstance(page, ids.model, before2Ids, ids.classes.Member, 2);
+    out.memberUndo = { before: preMember.undo, after: m.c.undo, entries: await entriesFrom(page, (preMember.undo ?? 1) - 1) };
+    check('S2-4u «Member» (a default value) is 1 undo entry, not 2', (m.c.undo ?? 0) - (preMember.undo ?? 0) === 1, out.memberUndo);
     const memberShape = m.inst ? shapeOf(m.c.objects, m.inst.id) : null;
     const active = memberShape?.slots.find((s) => s.feature === 'active');
     out.member = { shape: memberShape };
@@ -349,9 +381,7 @@ try {
     check('S2-4d the object diagram draws the two new instances', drawnNew.length === 2, out.objectDiagramNew);
 
     // ── S2-8: the new instance's node holds its header and its rows (DOM boxes, P-2026-10-21-0655) ─────────────────
-    {
-        const bookVid = b2.inst ? (await verticesOf(page, b2.inst.id))[0]?.id : undefined;
-        const box = bookVid ? await page.evaluate((id) => {
+    const nodeBox = (id: string) => page.evaluate((id) => {
             const el = document.querySelector(`.dock-tabpane-active .react-flow__node[data-id="${id}"]`) as HTMLElement | null;
             const content = el?.querySelector('.ir-node-content') as HTMLElement | null;
             if (!el || !content) return null;
@@ -372,7 +402,10 @@ try {
                 return { text: (x.textContent ?? '').trim(), inside: inside(r), ...span(r) };
             });
             return { node: { w: el.offsetWidth, h: el.offsetHeight }, labels, rows };
-        }, bookVid) : null;
+        }, id);
+    {
+        const bookVid = b2.inst ? (await verticesOf(page, b2.inst.id))[0]?.id : undefined;
+        const box = bookVid ? await nodeBox(bookVid) : null;
         out.bookBox = { name: b2.inst?.name, vertex: bookVid, box };
         const headerBottom = box ? Math.max(...box.labels.map((l) => l.bottom)) : Infinity;
         check('S2-8 book1: its header (name, classifier) is fully inside its node, no row drawn over it',
@@ -434,6 +467,7 @@ try {
         if (q) await page.mouse.click(q.x, q.y);
         await page.evaluate(() => (document.querySelector('.dock-tabpane-active .editor-v2') as HTMLElement | null)?.focus());
         const u0 = await census(page, ids.model);
+        const e3 = await entriesFrom(page, (before3.undo ?? 1) - 1);
         const gone = new Set([b3.inst?.id, ...((b3.inst?.f.slots ?? []) as string[])]);
         const st: unknown[] = []; let n = 0; let ok = false; let kept = true;
         for (; n < 10 && !ok && kept;) {
@@ -443,11 +477,15 @@ try {
             kept = await bag();
             ok = !c.objects.some((o) => gone.has(o.id));
             st.push({ undo: c.undo, objects: c.objects.length, binding: kept, member1: c.objects.some((o) => o.id === m.inst?.id) });
-            if (ok) out.undoLater = { entriesBefore: u0.undo, presses: n, steps: st, removed: u0.objects.length - c.objects.length };
+            if (ok) out.undoLater = { entriesBefore: u0.undo, presses: n, steps: st, removed: u0.objects.length - c.objects.length,
+                entries: (b3.c.undo ?? 0) - (before3.undo ?? 0), entryList: e3, idlBefore: before3.idl, idlAfterCreate: b3.c.idl, idlAfterPresses: c.idl };
         }
         if (!ok) out.undoLater = { entriesBefore: u0.undo, presses: n, steps: st, removed: false };
         check('S2-3b a later instantiation (book3): Cmd+Z removes it with its slots, nothing else', ok && kept
             && (st[st.length - 1] as { member1: boolean }).member1, out.undoLater);
+        const ul = out.undoLater as { entries?: number; idlBefore?: number; idlAfterPresses?: number };
+        check('S2-3b1 the class-node instantiation is 1 entry and 1 Cmd+Z, no idlookup orphan after the press (S2u)',
+            ok && n === 1 && ul.entries === 1 && ul.idlAfterPresses === ul.idlBefore, out.undoLater);
         if (!kept) {
             await ev(page, `w.LPointerTargetable.fromPointer(a.mm).state = { ontoBindings: a.raw }; return 1;`, { mm: ids.mm, raw: written.raw }, 600);
             out.bindingRewritten2 = await bag();
@@ -465,8 +503,8 @@ try {
     const d1 = await history(page);
     const d2r = await ev<unknown>(page, `const ins = await import('/src/components/editor-v2/hooks/instantiate.ts');
         const get = (id) => w.store.getState().idlookup[id];
-        const rec = ins.objectRecord(get, a.model); const r = await ins.instantiate(a.lib, rec);
-        return { ok: r.ok, instance: r.instance, slots: r.slots.length, problems: r.problems };`, { model: ids.model, lib }, 1500);
+        const rec = ins.objectRecord(get, a.model); const t0 = Date.now(); const r = await ins.instantiate(a.lib, rec);
+        return { ok: r.ok, instance: r.instance, slots: r.slots.length, problems: r.problems, ms: Date.now() - t0 };`, { model: ids.model, lib }, 1500);
     const d2 = await history(page);
     // Cmd+Z on that instantiation, called from the page: is it removed?
     const libInst = (d2r as { instance?: string } | null)?.instance;
@@ -481,6 +519,36 @@ try {
     }
     out.undoPaths = { before: d0, afterCreateInstance: d1, instantiateResult: d2r, afterInstantiate: d2, undoNoPlace: dz };
     meas('undo paths', out.undoPaths);
+    {
+        const u = (h: Record<string, unknown>) => (h.user as number | null) ?? 0;
+        const r = d2r as { ok?: boolean; problems?: string[]; ms?: number } | null;
+        check('S2-3m bare createInstance +2 entries, instantiate +1 with no problem (decision 5)',
+            u(d1) - u(d0) === 2 && u(d2) - u(d1) === 1 && !!r?.ok && (r.problems ?? []).length === 0,
+            { createInstance: u(d1) - u(d0), instantiate: u(d2) - u(d1), problems: r?.problems, ms: r?.ms });
+    }
+
+    // ── S2-5o: a class-node instance, made under the class diagram, in the object diagram (zoom to fit) ─────────────
+    // Last, so the undo measures above keep their viewpoint (P-2026-10-21-0725). book3 was undone by S2-3b: a fresh one.
+    {
+        if (bookNode) await rightClickNode(bookNode.id);
+        const before4 = await census(page, ids.model);
+        const before4Ids = new Set(before4.objects.map((o) => o.id));
+        await page.locator(`${MENU} .context-menu__item`, { hasText: /^New instance$/ }).first().click();
+        const b4 = await waitInstance(page, ids.model, before4Ids, ids.classes.Book, 4);
+        await pickViewpoint(page, VP_OBJECT);
+        await wait(page, SETTLE_MS);
+        { const fit = page.locator('.toolbar-commands__level:visible'); if (await fit.count()) { await fit.first().click(); await wait(page, 900); } }
+        const vid = b4.inst ? (await verticesOf(page, b4.inst.id))[0]?.id : undefined;
+        const box = vid ? await nodeBox(vid) : null;
+        out.classNodeBox = { name: b4.inst?.name, vertex: vid, box };
+        const headerBottom = box ? Math.max(...box.labels.map((l) => l.bottom)) : Infinity;
+        await page.locator('.dock-tabpane-active .react-flow').first().screenshot({ path: `${OUT}/onto-s2-class-node-instance-light.png` });
+        meas('screenshot', `${OUT}/onto-s2-class-node-instance-light.png`);
+        check('S2-5o a class-node instance in the object diagram: header (name, classifier) and four slot rows inside its node',
+            !!box && JSON.stringify(box.labels.map((l) => l.text)) === JSON.stringify([b4.inst?.name, 'Book'])
+            && box.labels.every((l) => l.inside && !l.clipped) && box.rows.length === 4
+            && box.rows.every((r) => r.inside && r.top >= headerBottom - 0.5), out.classNodeBox);
+    }
 
     // ── S2-7 ──────────────────────────────────────────────────────────────────────────────────────────────────────
     out.errors = errors.slice(0, 10);
