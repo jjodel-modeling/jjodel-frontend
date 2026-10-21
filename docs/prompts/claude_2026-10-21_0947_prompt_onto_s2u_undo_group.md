@@ -1,6 +1,6 @@
 # Ontological instantiation, S2u with tickets (a) and (c): one transaction per instantiation (Phase 1, Layer Impact Report)
 
-Prompt-ID: P-2026-10-21-0950
+Prompt-ID: P-2026-10-21-0947
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (core: redux/reducer/reducer.ts and redux/action/action.ts; Phase 1 read-only, hard stop for Alfonso's ratification)
@@ -16,11 +16,11 @@ effort `xhigh`.
 
 ## Lane discipline
 
-Every reply opens with `[P-2026-10-21-0950 · session <id>]`; final line `Outcome: done | hard-stop | question |
+Every reply opens with `[P-2026-10-21-0947 · session <id>]`; final line `Outcome: done | hard-stop | question |
 blocked`. Time limit 90 minutes. **No subagent, no background task.** Foreground gates and probes (P16). **Context
 economy:** grep, never read `reducer.ts`, `action.ts` or `EditorV2.tsx` whole; short tool output; never a whole diff.
 No push, no merge. Do not touch `Status`. **Phase 1 only: no product code is edited.** It ends with a hard stop on the
-report: the core change waits for Alfonso's yes (R-OI-12, RC-26).
+report: Alfonso said yes to the core change on 2026-10-21 09:46; the chat reads the Layer Impact Report and gives the GO for Phase 2 (R-OI-12).
 
 ## COSA
 
