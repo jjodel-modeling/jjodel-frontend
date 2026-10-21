@@ -60,6 +60,12 @@
  *                                   (inside a save, else the last edit before them), first 20 s and total
  *                                   CLICK_LAT_DURING_SAVE=1 starts a U.compressedState before each drag
  *     CLICK_ABLATE also takes "minimap": localStorage jjodel.showMinimap=false before the editor mounts.
+ *     CLICK_LAYOUTS "1": count the layouts the intrinsic measure forces (P-2026-10-21-1010). Every read of
+ *                   offsetWidth/offsetHeight on an `.ir-node-content` at `max-content` is a measure read; the
+ *                   reads of one synchronous stretch are one burst (the measures of one commit). A read
+ *                   forces a layout when it is the first of its burst, or when the element read
+ *                   before it is no longer at `max-content` (restored in between). Also notes the size of every
+ *                   canvas node after the open, for a before/after comparison.
  */
 import { chromium, type Page, type CDPSession } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -331,6 +337,24 @@ const ctx = await browser.newContext({ viewport: { width: VIEWPORT_WIDTH, height
 await ctx.addInitScript({ content: INIT });
 // MiniMap ablation: the editor reads this key once, when it mounts (EditorV2.tsx minimapVisible).
 if (ABLATE.has('minimap')) await ctx.addInitScript({ content: `try { localStorage.setItem('jjodel.showMinimap', 'false'); } catch (e) {}` });
+const LAYOUTS = process.env.CLICK_LAYOUTS === '1';
+if (LAYOUTS) await ctx.addInitScript({ content: `(() => {
+  const S = window.__measureLayouts = { bursts: [], cur: null, last: null };
+  for (const k of ['offsetWidth', 'offsetHeight']) {
+    const d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, k);
+    Object.defineProperty(HTMLElement.prototype, k, { ...d, get() {
+      if (this.classList && this.classList.contains('ir-node-content') && this.style.width === 'max-content') {
+        if (!S.cur) {
+          S.cur = { layouts: 0, els: new Set() }; S.bursts.push(S.cur); S.last = null;
+          queueMicrotask(() => { S.cur = null; });
+        }
+        if (!S.last || (S.last !== this && S.last.style.width !== 'max-content')) S.cur.layouts++;
+        S.last = this; S.cur.els.add(this);
+      }
+      return d.get.call(this);
+    } });
+  }
+})();` });
 await seed(ctx, false);
 const page = await ctx.newPage();
 const pageErrors: string[] = [];
@@ -556,6 +580,11 @@ const settled0 = await page.evaluate(settle(SETTLE_MS, 240000));
 facts = await page.evaluate(FACTS);
 note('before clicks', { settledMs: settled0, ...facts, viewpoints: facts.viewpoints.length });
 result.before = facts;
+if (LAYOUTS) note('node sizes', await page.evaluate(`(() => {
+  const ns = [...document.querySelectorAll('.react-flow__node')].map(n => [n.getAttribute('data-id'), n.offsetWidth, n.offsetHeight]);
+  ns.sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  return { nodes: ns.length, edges: document.querySelectorAll('.react-flow__edge').length, first3: ns.slice(0, 3), all: ns.map(n => n[1] + 'x' + n[2]).join(',') };
+})()`));
 
 const paneSel = opened.id ? `[role="tabpanel"][aria-labelledby$="-tab-${opened.id}"]` : '';
 // Clickable = a point of the node's on-screen rect (5x5 grid, centre first) hit-tests to the node
@@ -924,6 +953,15 @@ if (result.clicks.length && result.clicks[0].selected) {
     note('bench save', result.benchSave);
 }
 
+if (LAYOUTS) {
+    result.measureLayouts = await page.evaluate(`(() => {
+      const b = window.__measureLayouts.bursts;
+      const per = b.map(x => x.layouts), els = b.map(x => x.els.size);
+      return { bursts: b.length, layouts: per.reduce((a, c) => a + c, 0), maxLayoutsPerBurst: Math.max(0, ...per),
+        burstsWithMoreThanOne: per.filter(x => x > 1).length, elementsRead: els.reduce((a, c) => a + c, 0), maxElementsPerBurst: Math.max(0, ...els) };
+    })()`);
+    note('measure layouts', result.measureLayouts);
+}
 result.pageErrors = pageErrors.slice(0, 20);
 result.failures = failures;
 writeFileSync(join(OUTDIR, `perfclick-${LABEL}.json`), JSON.stringify(result, null, 1));
