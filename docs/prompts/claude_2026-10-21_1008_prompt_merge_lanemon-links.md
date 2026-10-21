@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1008
 Chat: —
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane merge · 31ee859e2 · verifica visiva passata 2026-10-21 (Lane Monitor app rebuilt and relaunched; route() 3 new tests of 56 green; on_new_window Deny in tauri 2.12.4; link click in the Lane board window confirmed by Alfonso 2026-10-21 10:19)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-21-1008 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
