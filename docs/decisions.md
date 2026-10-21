@@ -5233,7 +5233,8 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - Ratified 2026-10-04 by the chat on Alfonso's delegation, P-2026-10-04-0010: kept as measured. Without R-VP-60 the
     ends are counted on the trunk's handles; the lane probe after the A3 revert finds no outside label within 4 px of an
     arrowhead at rest, after Auto layout, under DOWN (min 17.52 px), as with it.
-- **R-VP-60** (2026-10-03, withdrawn 2026-10-04, after Málaga, evidence: measured, verified: none, reversible: branch).
+- **R-VP-60** (2026-10-03, withdrawn 2026-10-04, after Málaga, ratified by Alfonso 2026-10-21, evidence: measured,
+  verified: none, reversible: branch).
   **The React Flow handles of an ELK-routed edge sit on its drawn ends (D-B); amends R-VP-49 («the handles keep their
   uniform slots»), the critical-zone lane R-VP-49 deferred to.** A3 of P-2026-10-03-1920, adopted by the chat's GO (RC-21,
   RC-25), RC-30 go-ahead, LIR `docs/lir/lir_2026-10-03_petri_ink_ports.md`. The text of R-VP-49 is not edited. Source: the
@@ -5252,6 +5253,9 @@ successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rai
   - Withdrawn 2026-10-04 by the chat on Alfonso's delegation, P-2026-10-04-0010 (revert `04c13e039`): it touches the
     handle code in the critical zone for a few pixels after an Auto layout, days before the MODELS demo; it returns after
     Málaga (2026-10-09) as a lane of its own. R-VP-49 stands: handles as on the trunk (34 of 68 ends off after Auto layout).
+  - Reinstated provisional 2026-10-10, P-2026-10-10-0915, awaits Alfonso's ratification.
+  - Ratified by Alfonso 2026-10-21 (session_01Mk7LmH7N6YcSQiKx7oNZP5, 19:15); merged onto the trunk of 2026-10-21 by
+    P-2026-10-21-1925, re-measured there: LIR `docs/lir/lir_2026-10-10_elk_handles_a3.md` §3.
 
 ## Serie R-EE — edge ends, slice E (decisioni 2026-09-30)
 
