@@ -6347,6 +6347,15 @@ Evidence: the project chat C-2026-10-19-1748 of 2026-10-19 (17:55 recommendation
   `Stop:` line, when lanes write one, wins over the inference. The `Outcome:` token itself is unchanged. Every message a
   chat sends to a lane in `/lane auto` without Alfonso having answered it starts, after the `[P-...]` bracket, with
   `[auto]`; Tack counts those resumes and marks the lane with an `auto` pill.
+- **R-TACK-7** (2026-10-21, ratified by Alfonso 2026-10-21 10:19 «via sulle raccomandazioni», evidence: read, verified: none, reversible: trunk).
+  **Monitoring and specification are two halves of Tack** (`tack/docs/design-monitor-vs-spec.md`, report
+  `docs/discovery/discovery_2026-10-20_tack_monitor_vs_spec.md` §6). The specification lives in the observed repository
+  as `.tack/harness.json`, JSON with the `harness.emf` feature names, exported from the papers model and never read
+  across repositories (Q1, Q2); field syntax goes into the metamodel as `FieldSpec.syntax`, the identifier pattern as
+  `identPattern` of the prompt type (Q3); the KB is read through a manifest committed at each checkpoint, a harness
+  front change (Q6); G18 extends `ArtifactType` with placements and lifecycle policies (Q7); conformance is not in v0
+  (Q8). On Alfonso's «decidi tu» the chat set Q4 (the log bound is 40) and Q5 (the KB list of HARNESS-DOCS §2); the
+  claude.ai project instructions are aligned by Alfonso, outside git.
 
 ## R-OI — ontological instantiation in one model: UML class and object diagrams (decisions 2026-10-20)
 
