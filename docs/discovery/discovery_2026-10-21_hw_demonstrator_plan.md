@@ -2,7 +2,9 @@
 
 - Prompt-ID: P-2026-10-21-0950 (`docs/prompts/claude_2026-10-21_0950_prompt_hw_demonstrator_plan.md`)
 - Chat: C-2026-10-20-2055 · Front: hw-notation · Phase 1, read-only
-- Session: b169adbf-9aa9-48a0-b724-a61ff7a28602
+- Session: b169adbf-9aa9-48a0-b724-a61ff7a28602 (§0-§8); §9-§13 by P-2026-10-21-1012, session
+  66c12855-e1c5-4117-ad8d-d1c752246089, after the AM-8 ceiling (RC-51), from the handoff in
+  `~/.jjodel-lanes/P-2026-10-21-0950/handoff.md`; it adds model checking with nuXmv (Alfonso, 2026-10-21)
 - Tree: `~/jjodel-w-hwdemo`, branch `hw-demo`, HEAD `3afead0b1` (docs: prompt P-2026-10-21-0950)
 - Executor model: Opus 5.5 (`claude-opus-5-5`), effort xhigh
 - Baseline: `npm run typecheck` exit 0, no `error TS` line (log `.agent-logs/typecheck-baseline-20261021-094708.log`)
@@ -529,7 +531,32 @@ checked in the normal suite without Verilator, as `bitvectorOracle.test.ts` does
 
 ## 9. Risks for a live demonstration (COSA 7)
 
-(pending)
+Tags as in the header, plus **[prev]**: read or measured by the session of P-2026-10-21-0950 and carried by its
+handoff, not re-opened here (the continuation prompt asks not to re-read the sources of §0-§8). R1-R11 are that
+session's table; R12-R16 are the nuXmv part, read or measured in this session on HEAD `2c2c15eda`.
+
+| # | Risk | Evidence | Mitigation in the plan |
+|---|---|---|---|
+| R1 | Size. The demo project is about 150-250 objects (two metamodels, ~40 datapath and control elements, 32 memory cells, the `VerilogAst` model of route B). The largest model measured so far, 407 objects: click 0.45 s, drag 1.7 s, open 2.7 s; save 5.6-6.6 s on the dev build | [prev] round-3 prompt `:26-29`; `…round2.md:185` | ROM and RAM cells stay out of the datapath viewpoint (one `Memory` vertex, cells listed in the inspector); the demo runs on a production build, not the dev server |
+| R2 | A JjScript build slows from 1.45 s to 9.1 s between 47 and 355 objects | [prev] `discovery_2026-10-01_jjscript_run_slowdown.md:9` | The model is built once, unattended, by the build script; never typed live |
+| R3 | There is no port concept: an edge attaches to the vertex hull | [prev] spec addendum `:21`, `:196` | Ports are M1 objects with their own vertex, claimed by the containment channel; wires are objects-as-edges (the Petri `Arc` pattern), never plain references (`useM1ReferenceEdges.ts:146-148` dedupes by vertex pair, so two wires between one pair of components would be one edge) |
+| R4 | `MAX_HANDLES_PER_SIDE = 4` | [prev] `portDistribution.ts:520`; ticket `claude-code-log-archive.md:4719` | One vertex per port keeps every component under the cap; no edit of `portDistribution.ts` (critical zone) |
+| R5 | Off-by-one in trace sampling: the Verilog side can print before or after the edge | [prev] §7.4 | The testbench prints at `negedge clk`; the first S-E comparison is checked by hand on two instructions before the script trusts it |
+| R6 | Hex literals: `0xFF` is a parse error in an action, a silent 0 on the lenient path | §5.2 [measured]; `hw-notation.md:9` | Every constant is a string, `bits(8, '0xff')`; the README says so; the lexer ticket stays open |
+| R7 | The word domain has never run through `startRun` or the panel | §5.1 | The first gate of S-B is an in-app probe that runs the program and reads the board and the inspector |
+| R8 | The example templates' `inDomain` has no `word` case | §7.3; `hw-notation.md:19` | Only for S-B' (the optional JS oracle) |
+| R9 | Critical zone. Building edits no §3.1 file; opening a project runs `VersionFixer.update` | [prev] `SaveManager.ts:56`, `VersionFixer.tsx:142`, `:146-153` | The `.jjodel` file is written only by the app's export (never by hand), so the migration path is the one every project takes; the printer and the exporter live outside §3.1 (`codegen/target/verilog/`, `model/simulation/`); the F4 fix is in `jjtl/executor/executor.ts` and `ProjectEditor.tsx`, neither in §3.1 |
+| R10 | Edges whose source is a nested vertex are deleted | [prev] ticket of branch `nested-vertices`; `useM1ReferenceEdges.ts:158` | Wires are objects, not references (R3); no port vertex is nested inside its component's vertex |
+| R11 | A derived viewpoint enters a drag loop | [prev] `elk-handles-a3`; trunk amplifier `archive:995` | Viewpoints are hand-written through `view.ir` (R-LIB-9), no derived viewpoint |
+| R12 | **nuXmv is not installed** on this machine, and its licence is narrow | [measured] `command -v nuXmv nuxmv NuSMV nusmv` exit 1, no output; positive control `command -v verilator node` exit 0 (`/opt/homebrew/bin/verilator`); `uname -m` → `arm64`. [read, web 2026-10-21] `nuxmv.fbk.eu/download.html`: version 2.2.0 «(June 4, 2026)», binaries for Linux x86_64 and **macOS arm64** (no Intel macOS, Windows «coming soon»), each with a SHA-256 file, direct links, no registration; `license.html`: «nuXmv can be used only for non-commercial or academic purposes», the source «only for reading with no right of modification». Not in Homebrew (prompt; `brew` not queried here, it would hit the network) | Installed by hand, outside the repo, never from a script of the plan: download the macOS arm64 archive of 2.2.0 and its SHA-256 file, check the digest (`shasum -a 256`), unpack under `~/opt/nuXmv-2.2.0/`, put its `bin/` on `PATH`; if Gatekeeper refuses the unsigned binary, clear the quarantine attribute of that one file (not verified). The binary is not redistributable with the frontend (spec `computational_model.md:235-236` [read]), so the checker runs on the presenter's Mac through a node script, never inside the app. Whether a project with an industrial partner is «academic» use is §13 item 4 |
+| R13 | `bvToSmv` covers the bit-vector operators, not the whole text the CPU's actions use | [read] `bvToSmv.ts:244-276`: the node kinds are `Literal`, `FunctionCall` (`bits`/`sbits` only), `Unary`, `Binary`, `MethodCall`, `MemberAccess`; no `Conditional` (`if … then … else`); `toNumber` is in `ZERO_ARG` (`:241`) but the method switch (`:164-234`) has no case for it, so it throws «has no nuXmv translation»; nothing for `coll.filter(c => …).first` | The exporter (S-G) adds three forms around `bvToSmv`, through its `leaves` callback and a pre-pass: `if-then-else` → `case c : a; TRUE : b; esac`; the memory idiom `cells.filter(c => c.addr == E.toNumber()).first.X` → a `case` over the frozen `addr` constants, `E = 0udW_k`, which removes `toNumber` where the CPU uses it; anything else is a `SmvTranslationDefect` naming the element. The subset checker's T-codes (`subsetChecker.ts:61`, `:83`) stay the gate of what a guard may say |
+| R14 | State space. The concrete program is one deterministic path (≈ 3 cycles × instructions run); a ROM left free for program-independent properties adds 128 frozen bits to 128 RAM bits and ~25 register and control bits | Arithmetic on D4's shape (§8); no run (R12) | Two exports of one model (§10, S-G): **concrete ROM** (constants from the cells' `init`), checked with BDDs, for the program's own properties; **free ROM** (`FROZENVAR rom_k`), checked with IC3 or bounded model checking, for the structural ones. The engine and the time per property are the first measurement of S-G; a property over 30 s on the presenter's Mac leaves the live part of the demo and is shown as a recorded result |
+| R15 | A counterexample of the free-ROM export **is a program**, not only a run: the frozen `rom_k` values are part of it | Consequence of R14 and of `parseInitialLiteral` (§5.1: a model cannot give per-cell initials to σ) | The trace converter (S-H) returns two things: the ROM contents, written into the cells' `init` (a model edit, done by the build script or by JjScript), and the run as a `ScenarioRecord` (`scenarioCodec.ts:54-75`). For the concrete export it returns the run only |
+| R16 | An undefined opcode deadlocks DECODE. A 4-bit opcode has 16 values and D4 defines 10 | §8 D4 | The model ships with DECODE's fused `else` (`netStep.ts:155`, §5.1) to FETCH, so 6 opcodes act as `NOP`; the structural property of §10 S-G checks it. Removing that `else` live and letting nuXmv name the missing opcode is a demo choice (§13 item 1) |
+
+Not a risk, recorded because the prompt asks: **yosys and Icarus Verilog are not installed** either ([measured]
+`command -v yosys iverilog` exit 1, no output). Yosys' SMV backend would let the same properties be checked on the
+generated Verilog; it is not in this plan (§11, question 8).
 
 ## 10. Slice plan
 
