@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-0635
 Chat: C-2026-10-20-1835
 Front: instance-of
 Lane: full (EditorV2 menu, visual check owed)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane oi-s2 · code 4b156d003 + fix 09f63ce6c, probe 4f1e07953, log b65bb3e41 · build 0 · visual check: cascade pass, new-instance node fail (ticket b, blocks the merge of oi-s2)
 Request: https://claude.ai/code/session_015eDtjagjBtuPHhhhfUTTo5
 Depends: none
 Corregge: P-2026-10-21-0100, whose session (e7d1d822) reached the context ceiling (AM-8) after the code commit 4b156d003
