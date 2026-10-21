@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-21-1925
 Chat: C-2026-10-20-0003
 Front: maintenance
 Lane: full (merge of a branch 1416 commits behind into a trunk copy, LIR, probes)
-Status: da eseguire
+Status: eseguito 2026-10-21 · lane a3-on-trunk · 7ae59d306 · verifica visiva passata 2026-10-21 (RC-23 by the chat on the side-by-side crops; GO of the chat)
 Request: https://claude.ai/code/session_01Mk7LmH7N6YcSQiKx7oNZP5 (Alfonso, 2026-10-21 19:15: «ok alle raccomandazioni procedi in modalita lane auto»: R-VP-60 ratified, merge of elk-handles-a3)
 Corregge: —
 Protocollo: docs/PROTOCOL.md, clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
