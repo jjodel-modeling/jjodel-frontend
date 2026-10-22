@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: harness
 Lane: fast (one function family in lane-run.mjs, measured cause; the 4700 board is not touched, R-TACK-2)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-22 · lane status-cache · be184d551
 Corregge: none
 Request: Alfonso, 2026-10-22 11:34, in the project chat: «lane monitor non carica le info»
 
