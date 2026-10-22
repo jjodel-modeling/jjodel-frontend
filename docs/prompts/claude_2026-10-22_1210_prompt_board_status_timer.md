@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: harness
 Lane: fast (bug fix on the 4700 board, allowed by R-TACK-2; measured cause)
 Depends: P-2026-10-22-1140
-Status: da eseguire
+Status: eseguito 2026-10-22 · lane board-timer · ab4824a83
 Corregge: none
 Request: Alfonso, 2026-10-22 11:34, in the project chat: «lane monitor non carica le info»
 

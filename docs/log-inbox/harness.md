@@ -975,3 +975,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: passato — chat, unattended: chat C-2026-10-22-1050: status --all on the trunk 0.31-0.63 s over 741 lanes, 737 state-cache.json, output rows match; the 4700 board still times out for a separate cause (its own synchronous git calls block the event loop), fixed in its own lane
 **Notes**: Rollback tag `pre-status-cache` on `a9d439520` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-22-1147/result.json`.
 **Prompt document name**: 2026-10-22 11:47
+
+## 2026-10-22 — fix(lane-board): git reads off the event loop, status kill on child runtime (P-2026-10-22-1210)
+**Prompt**: The 4700 board answered "lane-run status timed out after 15 s" although status --all takes 0.3-0.6 s: its synchronous git reads blocked the event loop and the kill timer won over a child that had already exited. Make the git reads async with the same arguments, timeouts and caches; decide the kill on the child's own runtime; tests; measure on a 4790 instance under a 20 s busy loop; gates.
+**Files touched**: frontend/scripts/lane-board/lane-board.mjs, frontend/scripts/hooks/__tests__/laneBoardStatusTimer.test.ts (ab4824a83); docs/log-inbox/harness.md, docs/prompts/claude_2026-10-22_1210_prompt_board_status_timer.md (this commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Board tests 168 passed in 6 files (6 new); typecheck:scripts, check:scripts exit 0; promptCommitMap equals the HEAD parse on ~/jjodel (995 entries)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the chat checks the board and the tray after the merge (P8 deroga)
+**Notes**: 4790, warm caches, 20 s busy loop, load 4-13: /api error "" on 5/5 (cold 8.0 s, then 0.5-0.8 s). Old timeout not reproduced at that load; loop stall in the cold round measured instead: max 0.49 s new, 6.6 s on the HEAD copy (4791). /api/attention primes trunk Status before attentionOf. Mutation bench (4 mutants, all red) in the commit message. 4700 agent untouched.
+**Prompt document name**: 2026-10-22 12:10
