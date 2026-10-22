@@ -958,9 +958,14 @@ function NavbarComponent(props: AllProps) {
         if (isAdv) enableAdvancedMode(); else disableAdvancedMode();
     };
 
-    // Restore the persisted mode once per mount. Redux `advanced` has no boot-time
-    // initializer (default `false`, store.tsx:215) while the user's last explicit choice
-    // lives in localStorage, so without this a reload silently drops Advanced everywhere.
+    // Restore the persisted mode whenever Redux `advanced` reads false. Redux `advanced` has
+    // no boot-time initializer (default `false`, store.tsx:215) while the user's last explicit
+    // choice lives in localStorage, so without this a reload silently drops Advanced everywhere.
+    // Not once per mount: a page change runs `U.resetState()` (PathChecker.tsx:14), whose
+    // deferred LOAD of `DState.new()` lands after the new page's Navbar has mounted with the
+    // stale `true`, so a mount-only restore misses it (P-2026-10-22-1150). Every explicit
+    // switch to Basic (disableAdvancedMode, BottomBar, ProfileSection) writes 'basic' to
+    // localStorage first, so false here with 'advanced' persisted is always a reset.
     // Owned by the app bar because the mode is global: the Navbar is the only component
     // mounted on every view (dashboard included), whereas the Properties card — where this
     // effect used to live — mounts only inside the project editor. Only the positive
@@ -971,8 +976,7 @@ function NavbarComponent(props: AllProps) {
             SetRootFieldAction.new('advanced', true);
             windoww.advanced = true;
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [props.advanced]);
 
     // Mirror the mode on <html> for the shell density tokens (styles/tokens/_shell.scss).
     // documentElement, not an app div: the rail and the context menu portal to body.
