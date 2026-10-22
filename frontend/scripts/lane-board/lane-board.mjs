@@ -18,7 +18,7 @@
 // Usage: node ~/.jjodel-lanes/board/lane-board.mjs [--port 4700] [--refresh 30]
 
 import { createServer } from 'node:http';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, openSync, readSync, fstatSync, closeSync, realpathSync } from 'node:fs';
 import { homedir, loadavg } from 'node:os';
@@ -69,14 +69,26 @@ function tail(path, bytes = 256 * 1024) {
 // The header of a lane's prompt: input-1.md (from P-2026-09-28-1545 on), else the file named in
 // prompt.txt, else the trunk's copy of the prompt (lanes of 2026-09-26/27, removed worktrees).
 // Kept once found, or once the lane has exited: a prompt's Lane, Chat and title lines do not change.
+// The trunk's copy is read off the event loop (P-2026-10-22-1210): a header that needs it before it is loaded
+// starts the load, is not kept, and leaves the load in headWait for primeHeader to await.
 const headMem = new Map();
+const headWait = new Map();
 function header(dir) {
     if (headMem.has(dir)) return headMem.get(dir);
     const promptPath = readTrim(join(dir, 'prompt.txt'));
     const file = promptPath.replace(/^.*\//, '');
     let text = readTrim(join(dir, 'input-1.md')).slice(0, 4000);
     if (!text && promptPath) text = readTrim(promptPath).slice(0, 4000);
-    if (!text && existsSync(join(dir, 'exit.txt'))) text = trunkPrompt(dir.replace(/^.*\//, ''), file).slice(0, 4000);
+    let waiting = false;
+    if (!text && existsSync(join(dir, 'exit.txt'))) {
+        const id = dir.replace(/^.*\//, '');
+        const t = trunkPrompt(id, file);
+        if (t !== null) text = t.slice(0, 4000);
+        else {
+            waiting = true;
+            if (!headWait.has(dir)) headWait.set(dir, loadTrunkPrompt(id, file).finally(() => headWait.delete(dir)));
+        }
+    }
     const line = (k) => (text.match(new RegExp('^' + k + ':\\s*(.*)$', 'm')) || [])[1] || '';
     const title = (text.match(/^#\s+(.*)$/m) || [])[1] || '';
     // The Request: line (RC-43) of the header block, before the first `## ` section: its first word, a URL or `none`.
@@ -84,8 +96,15 @@ function header(dir) {
     // The lanes this one declares (P13 `Depends:`) and corrects (`Corregge:`, a Prompt-ID or the prompt's `YYYY-MM-DD HH:mm`), for /api/attention.
     const ids = (s) => [...new Set([...(s.match(/P-\d{4}-\d{2}-\d{2}-\d{4}/g) || []), ...[...s.matchAll(/\b(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})\b/g)].map((m) => 'P-' + m[1] + '-' + m[2] + m[3])])];
     const h = { lane: line('Lane'), chat: line('Chat'), title, file, request, depends: ids(line('Depends')), corregge: ids(line('Corregge')) };
-    if (text || existsSync(join(dir, 'exit.txt'))) headMem.set(dir, h);
+    if (!waiting && (text || existsSync(join(dir, 'exit.txt')))) headMem.set(dir, h);
     return h;
+}
+
+/** header(dir) once the trunk's copy of its prompt, when it needs one, is loaded. Never rejects. */
+async function primeHeader(dir) {
+    header(dir);
+    const w = headWait.get(dir);
+    if (w) await w;
 }
 
 /** Kind from the Lane line's first word (P13: fast, full (<trigger>), discovery); lane-run's merge prompts declare `Lane: full (merge; …)`, or count them, `full (two merges …)`. */
@@ -618,19 +637,28 @@ function snapshot(r) {
     return data;
 }
 
-/** One run of `lane-run status --all` as a child process: `{ ok, stdout, error }`, `error` one line; killed at `killMs`. */
+/** One run of `lane-run status --all` as a child process: `{ ok, stdout, error }`, `error` one line; killed at `killMs`.
+ *  The kill is decided on the child's own runtime (P-2026-10-22-1210): a timer that fires late, because the event loop
+ *  was blocked, finds a child that exited meanwhile still unreaped, since the timers phase runs before the I/O that
+ *  reports the exit. So the timer checks once, and again after one turn of the loop (setImmediate, past the poll
+ *  phase); a child that has exited by then is not killed, and its `close` resolves from its output. */
 export function runStatus(spawnFn = spawn, killMs = STATUS_KILL_MS) {
     return new Promise((done) => {
         const out = [], err = [];
         const fail = (error) => done({ ok: false, stdout: '', error: String(error).replace(/\s+/g, ' ').trim() });
-        let child, killed = false;
+        let child, killed = false, closed = false;
         try { child = spawnFn(process.execPath, [LANE_RUN, 'status', '--all'], { stdio: ['ignore', 'pipe', 'pipe'] }); }
         catch (e) { return fail('lane-run status: ' + e.message); }
-        const timer = setTimeout(() => { killed = true; child.kill('SIGKILL'); }, killMs);
+        const exited = () => closed || child.exitCode != null || child.signalCode != null;
+        const timer = setTimeout(() => {
+            if (exited()) return;
+            setImmediate(() => { if (!exited()) { killed = true; child.kill('SIGKILL'); } });
+        }, killMs);
         child.stdout.on('data', (b) => out.push(b));
         child.stderr.on('data', (b) => err.push(b));
         child.on('error', (e) => { clearTimeout(timer); fail('lane-run status: ' + e.message); });
         child.on('close', (code) => {
+            closed = true;
             clearTimeout(timer);
             if (code === 0 && !killed) done({ ok: true, stdout: Buffer.concat(out).toString('utf8'), error: '' });
             else fail(killed ? 'lane-run status timed out after ' + killMs / 1000 + ' s' : Buffer.concat(err).toString('utf8').trim() || 'lane-run status failed (exit ' + code + ')');
@@ -638,10 +666,23 @@ export function runStatus(spawnFn = spawn, killMs = STATUS_KILL_MS) {
     });
 }
 
+/** The git reads a snapshot makes, done before it and off the event loop (P-2026-10-22-1210): the launchers' and the
+ *  trunk Request: memos, and the trunk's copy of the prompt for the headers that need one, one lane after another. */
+async function prepareSnapshot(r) {
+    const memos = Promise.all([loadPromptCommits(), loadTrunkRequests()]);
+    for (const line of (r.ok ? r.stdout : '').split('\n').slice(1)) {
+        const id = line.trim().split(/\s{2,}/)[0];
+        if (!id || id.startsWith('chain-') || !existsSync(join(ROOT, id))) continue;
+        await primeHeader(join(ROOT, id));
+    }
+    await memos;
+}
+
 /** Starts a status run unless one is in flight; resolves once its snapshot is in the cache. Never rejects. */
 function refreshStatus() {
     if (!statusFlight) {
-        statusFlight = runStatus().then((r) => {
+        statusFlight = runStatus().then(async (r) => {
+            try { await prepareSnapshot(r); } catch { /* snapshot() reads whatever the memos hold */ }
             try { snapshot(r); } catch (e) { snapshot({ ok: false, stdout: '', error: String(e) }); }
         }).finally(() => { statusFlight = null; });
     }
@@ -1009,11 +1050,30 @@ function chains() {
 // only `Co-Authored-By: Claude`, a hand commit neither; lane-run writes the merge and
 // take-trunk prompts itself; a chain launches every lane after its first.
 const REPO = process.env.JJODEL_REPO || join(homedir(), 'jjodel');
+// The git log runs off the event loop (P-2026-10-22-1210, 6.75 s measured): promptCommits() reads the memo and,
+// past its 5 minutes, starts loadPromptCommits() in the background; prepareSnapshot() awaits it before a snapshot.
 let launchMem = { at: 0, map: new Map() };
+let launchFlight = null;
 function promptCommits() {
-    if (Date.now() - launchMem.at < 5 * 60e3) return launchMem.map;
+    if (Date.now() - launchMem.at >= 5 * 60e3) loadPromptCommits();
+    return launchMem.map;
+}
+
+/** The memo of promptCommits(), reloaded when past its 5 minutes, one git log at a time. Never rejects. */
+function loadPromptCommits() {
+    if (Date.now() - launchMem.at < 5 * 60e3) return Promise.resolve(launchMem.map);
+    if (!launchFlight) {
+        launchFlight = git(['log', '--all', '--diff-filter=A', '--name-only', '--format=%x1e%h%x1f%an%x1f%aI%x1f%B%x1f', '--', 'docs/prompts/'])
+            .then((r) => { launchMem = { at: Date.now(), map: promptCommitMap(r) }; return launchMem.map; })
+            .catch(() => launchMem.map)
+            .finally(() => { launchFlight = null; });
+    }
+    return launchFlight;
+}
+
+/** The commits that added a prompt, by Prompt-ID, from the git log of loadPromptCommits(): `r` is `{ status, stdout }`. */
+export function promptCommitMap(r) {
     const map = new Map();
-    const r = spawnSync('git', ['-C', REPO, 'log', '--all', '--diff-filter=A', '--name-only', '--format=%x1e%h%x1f%an%x1f%aI%x1f%B%x1f', '--', 'docs/prompts/'], { encoding: 'utf8', timeout: 20_000, maxBuffer: 64 * 1024 * 1024 });
     if (r.status === 0) {
         for (const rec of r.stdout.split('\x1e')) {
             const f = rec.split('\x1f');
@@ -1030,7 +1090,6 @@ function promptCommits() {
             }
         }
     }
-    launchMem = { at: Date.now(), map };
     return map;
 }
 
@@ -1051,17 +1110,29 @@ function launcherOf(id, chainPos, chat) {
 
 // The Prompt-ID and Request: line of every prompt on the trunk, by file name (P-2026-10-19-2229): a lane's
 // input-1.md keeps the Request: it was given, the trunk's copy the one written since. One `git cat-file --batch`
-// every 5 minutes, for the blobs not read before.
+// every 5 minutes, for the blobs not read before. Off the event loop like promptCommits() (P-2026-10-22-1210).
 const reqByBlob = new Map();
 let trunkReqMem = { at: 0, map: new Map() };
+let trunkReqFlight = null;
 function trunkRequests() {
-    if (Date.now() - trunkReqMem.at < 5 * 60e3) return trunkReqMem.map;
+    if (Date.now() - trunkReqMem.at >= 5 * 60e3) loadTrunkRequests();
+    return trunkReqMem.map;
+}
+
+/** The memo of trunkRequests(), reloaded when past its 5 minutes, one load at a time. Never rejects. */
+function loadTrunkRequests() {
+    if (Date.now() - trunkReqMem.at < 5 * 60e3) return Promise.resolve(trunkReqMem.map);
+    if (!trunkReqFlight) trunkReqFlight = readTrunkRequests().catch(() => trunkReqMem.map).finally(() => { trunkReqFlight = null; });
+    return trunkReqFlight;
+}
+
+async function readTrunkRequests() {
     const map = new Map();
-    const r = git(['ls-tree', TRUNK, 'docs/prompts/']);
+    const r = await git(['ls-tree', TRUNK, 'docs/prompts/']);
     const tree = r.status === 0 ? r.stdout.split('\n').map((l) => /^\S+ blob (\S+)\t(.*)$/.exec(l)).filter(Boolean) : [];
     const fresh = tree.map((m) => m[1]).filter((b) => !reqByBlob.has(b));
     if (fresh.length) {
-        const c = spawnSync('git', ['-C', REPO, 'cat-file', '--batch'], { input: fresh.join('\n') + '\n', timeout: 20_000, maxBuffer: 256 * 1024 * 1024 });
+        const c = await gitRun(['cat-file', '--batch'], { input: fresh.join('\n') + '\n', encoding: null, maxBuffer: 256 * 1024 * 1024 });
         const buf = c.status === 0 ? c.stdout : Buffer.alloc(0);
         for (let at = 0; at < buf.length;) {
             const nl = buf.indexOf(10, at);
@@ -1157,23 +1228,64 @@ const AREAS = [
 const BANDS = [[50, '≤50'], [200, '51–200'], [800, '201–800'], [Infinity, '>800']];
 const isProbe = (p) => p.startsWith('frontend/scripts/probe/') || /(^|\/)_tmp_/.test(p);
 const areaOf = (p) => (isProbe(p) ? '' : AREAS.find((a) => a.re.test(p)).key);
-const git = (args) => spawnSync('git', ['-C', REPO, ...args], { encoding: 'utf8', timeout: 20_000, maxBuffer: 64 * 1024 * 1024 });
+/** git as a child process, with spawnSync's result shape `{ status, stdout }` and its limits, without blocking the event loop
+ *  (P-2026-10-22-1210): killed (SIGTERM) at `timeout` ms or past `maxBuffer` bytes of stdout, `status` null then, as spawnSync
+ *  reports them; stdout a string, a Buffer with `encoding: null`; `input` written to stdin. Never rejects. */
+function gitRun(args, { input = null, encoding = 'utf8', timeout = 20_000, maxBuffer = 64 * 1024 * 1024 } = {}) {
+    return new Promise((resolve) => {
+        const chunks = [];
+        let bytes = 0, cut = false, settled = false;
+        const settle = (status) => {
+            if (settled) return;
+            settled = true;
+            const buf = Buffer.concat(chunks);
+            resolve({ status, stdout: encoding ? buf.toString(encoding) : buf });
+        };
+        let child;
+        try { child = spawn('git', ['-C', REPO, ...args], { stdio: [input === null ? 'ignore' : 'pipe', 'pipe', 'ignore'] }); }
+        catch { return settle(null); }
+        const stop = () => { cut = true; child.kill('SIGTERM'); };
+        const timer = setTimeout(stop, timeout);
+        child.stdout.on('data', (d) => { bytes += d.length; if (bytes > maxBuffer) stop(); else chunks.push(d); });
+        child.on('error', () => { clearTimeout(timer); settle(null); });
+        child.on('close', (code) => { clearTimeout(timer); settle(cut ? null : code); });
+        if (input !== null) { child.stdin.on('error', () => { /* git exited first */ }); child.stdin.end(input); }
+    });
+}
+const git = (args) => gitRun(args);
 const alive = (pid) => { if (!pid) return false; try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 
-/** The trunk's copy of a lane's prompt, found by the file name of prompt.txt or by the Prompt-ID's time stamp; '' when none. */
+/** The trunk's copy of a lane's prompt, found by the file name of prompt.txt or by the Prompt-ID's time stamp; '' when none,
+ *  null until loadTrunkPrompt(id, file) has read it (P-2026-10-22-1210: the reads run off the event loop). */
 let trunkPrompts = { at: 0, files: [] };
+let trunkPromptsFlight = null;
+const trunkPromptMem = new Map();
 function trunkPrompt(id, file) {
-    if (Date.now() - trunkPrompts.at > 5 * 60e3) {
-        const r = git(['ls-tree', '--name-only', TRUNK, 'docs/prompts/']);
-        trunkPrompts = { at: Date.now(), files: r.status === 0 ? r.stdout.split('\n').filter(Boolean) : [] };
-    }
-    const m = /^P-(\d{4}-\d{2}-\d{2})-(\d{4})$/.exec(id);
-    const stamp = m ? 'docs/prompts/claude_' + m[1] + '_' + m[2] + '_' : '';
-    for (const p of trunkPrompts.files.filter((x) => (file && x.endsWith('/' + file)) || (stamp && x.startsWith(stamp)))) {
-        const r = git(['show', TRUNK + ':' + p]);
-        if (r.status === 0 && r.stdout.includes('Prompt-ID: ' + id)) return r.stdout;
-    }
-    return '';
+    const hit = trunkPromptMem.get(id + '\n' + file);
+    return hit === undefined ? null : hit;
+}
+
+/** Reads the trunk's copy of a lane's prompt into the memo of trunkPrompt(id, file), and returns it. Never rejects. */
+async function loadTrunkPrompt(id, file) {
+    let text = '';
+    try {
+        if (Date.now() - trunkPrompts.at > 5 * 60e3) {
+            if (!trunkPromptsFlight) {
+                trunkPromptsFlight = git(['ls-tree', '--name-only', TRUNK, 'docs/prompts/'])
+                    .then((r) => { trunkPrompts = { at: Date.now(), files: r.status === 0 ? r.stdout.split('\n').filter(Boolean) : [] }; })
+                    .finally(() => { trunkPromptsFlight = null; });
+            }
+            await trunkPromptsFlight;
+        }
+        const m = /^P-(\d{4}-\d{2}-\d{2})-(\d{4})$/.exec(id);
+        const stamp = m ? 'docs/prompts/claude_' + m[1] + '_' + m[2] + '_' : '';
+        for (const p of trunkPrompts.files.filter((x) => (file && x.endsWith('/' + file)) || (stamp && x.startsWith(stamp)))) {
+            const r = await git(['show', TRUNK + ':' + p]);
+            if (r.status === 0 && r.stdout.includes('Prompt-ID: ' + id)) { text = r.stdout; break; }
+        }
+    } catch { text = ''; }
+    trunkPromptMem.set(id + '\n' + file, text);
+    return text;
 }
 
 const gitFacts = { key: '', scannedAt: 0, trunk: '', seen: new Set(), byPid: new Map(), reverted: new Map(), entries: [], rc: [] };
@@ -1205,9 +1317,22 @@ function trunkStatus(id) {
     const hit = statusMem.get(id);
     if (hit && Date.now() - hit.at < ATTN_MS) return hit.s;
     const dir = join(ROOT, id);
-    const s = (trunkPrompt(id, existsSync(dir) ? header(dir).file : '').match(/^Status:[ \t]*(.*)$/m) || [])[1] || '';
+    const text = trunkPrompt(id, existsSync(dir) ? header(dir).file : '');
+    // Not read yet (primeStatus was not awaited for this id): '' this time, and nothing kept.
+    if (text === null) return '';
+    const s = (text.match(/^Status:[ \t]*(.*)$/m) || [])[1] || '';
     statusMem.set(id, { at: Date.now(), s });
     return s;
+}
+
+/** What trunkStatus(id) reads, re-read off the event loop whenever trunkStatus would compute it afresh. Never rejects. */
+async function primeStatus(id) {
+    const hit = statusMem.get(id);
+    if (hit && Date.now() - hit.at < ATTN_MS) return;
+    const dir = join(ROOT, id);
+    let file = '';
+    if (existsSync(dir)) { await primeHeader(dir); file = header(dir).file; }
+    await loadTrunkPrompt(id, file);
 }
 
 /** firstLineOf the lane's final message: the last `result` event of its log that is a turn. */
@@ -1253,6 +1378,11 @@ async function attention() {
         const h = header(join(ROOT, r.id));
         for (const x of new Set([...(h.depends || []), ...(h.corregge || [])])) if (x < r.id) named.set(x, [...(named.get(x) || []), r.id]);
     }
+    // The trunk Status of the candidates that attentionOf asks closureOf about, read before it (P-2026-10-22-1210).
+    for (const r of rows) {
+        const k = stripKey(r);
+        if (!r.chain && !attnClosed.has(r.id) && (k === 'question' || k === 'blocked' || k === 'hard-stop')) await primeStatus(r.id);
+    }
     const facts = { closed: attnClosed, status: trunkStatus, namedBy: (id) => named.get(id) || [], commits: [], text: finalText };
     // Closure (c) reads the trunk's log from the oldest candidate that (a) and (b) leave open.
     let since = Infinity;
@@ -1272,15 +1402,16 @@ async function attention() {
  *  new commits that carry a Prompt-ID only (0.6 s on the first scan, measured 2026-10-10). */
 function refreshGit(since) {
     if (gitFlight) return gitFlight;
-    const refs = git(['for-each-ref', '--format=%(objectname) %(refname)']);
-    if (refs.status !== 0) return Promise.resolve(gitFacts);
-    const key = createHash('sha1').update(refs.stdout).digest('hex');
-    if (key === gitFacts.key) return Promise.resolve(gitFacts);
-    const trunk = (refs.stdout.split('\n').find((l) => l.endsWith(' refs/heads/' + TRUNK)) || '').split(' ')[0];
-    // An hour of slack on the committer date; the first scan starts two days before the first lane.
-    const from = gitFacts.scannedAt ? new Date(gitFacts.scannedAt - 3600e3).toISOString() : since;
-    const scanAt = Date.now();
     gitFlight = (async () => {
+        // for-each-ref too runs off the event loop (P-2026-10-22-1210).
+        const refs = await git(['for-each-ref', '--format=%(objectname) %(refname)']);
+        if (refs.status !== 0) return gitFacts;
+        const key = createHash('sha1').update(refs.stdout).digest('hex');
+        if (key === gitFacts.key) return gitFacts;
+        const trunk = (refs.stdout.split('\n').find((l) => l.endsWith(' refs/heads/' + TRUNK)) || '').split(' ')[0];
+        // An hour of slack on the committer date; the first scan starts two days before the first lane.
+        const from = gitFacts.scannedAt ? new Date(gitFacts.scannedAt - 3600e3).toISOString() : since;
+        const scanAt = Date.now();
         const out = await gitAsync(['log', '--all', '--no-merges', '--since=' + from, '--format=%x1e%H%x1f%aI%x1f%s%x1f%b']);
         if (out !== null) {
             const fresh = addCommits(out);
@@ -1302,7 +1433,7 @@ function refreshGit(since) {
                 }
             }
         }
-        if (trunk && trunk !== gitFacts.trunk) { gitFacts.entries = logEntries(); gitFacts.rc = rcRows(); gitFacts.trunk = trunk; }
+        if (trunk && trunk !== gitFacts.trunk) { gitFacts.entries = await logEntries(); gitFacts.rc = await rcRows(); gitFacts.trunk = trunk; }
         return gitFacts;
     })().finally(() => { gitFlight = null; });
     return gitFlight;
@@ -1336,12 +1467,12 @@ const stampPid = (s) => { const m = /(\d{4})-(\d{2})-(\d{2})[ T_](\d{2}):?(\d{2}
 const filePid = (s) => { const m = /claude_(\d{4}-\d{2}-\d{2})_(\d{4})_/.exec(s || ''); return m ? 'P-' + m[1] + '-' + m[2] : ''; };
 
 /** The P9 entries of the trunk: inboxes first (newest), then the active log, then the archive. */
-function logEntries() {
-    const ls = git(['ls-tree', '--name-only', TRUNK, 'docs/log-inbox/']);
+async function logEntries() {
+    const ls = await git(['ls-tree', '--name-only', TRUNK, 'docs/log-inbox/']);
     const files = [...(ls.status === 0 ? ls.stdout.split('\n').filter((p) => p.endsWith('.md')) : []), 'docs/claude-code-log.md', 'docs/claude-code-log-archive.md'];
     const raw = [];
     for (const file of files) {
-        const r = git(['show', TRUNK + ':' + file]);
+        const r = await git(['show', TRUNK + ':' + file]);
         if (r.status !== 0) continue;
         let cur = null;
         for (const ln of r.stdout.split('\n')) {
@@ -1367,8 +1498,8 @@ function logEntries() {
 }
 
 /** RC rows of the trunk's decisions.md from RC-20 (the orchestrated lanes) on: id, date, the bold title. */
-function rcRows() {
-    const r = git(['show', TRUNK + ':docs/decisions.md']);
+async function rcRows() {
+    const r = await git(['show', TRUNK + ':docs/decisions.md']);
     if (r.status !== 0) return [];
     const lines = r.stdout.split('\n');
     const out = [];
@@ -1471,6 +1602,8 @@ function insights() {
             // header() here, not after the await: its reads and trunk lookups overlap the git child processes.
             try { rows.push({ id, dir, t: laneTimeline(id, now) }); header(dir); } catch { /* an unreadable lane folder: skipped */ }
         }
+        // The trunk lookups header() started run off the event loop (P-2026-10-22-1210): insightLane reads them once loaded.
+        for (const { dir } of rows) await primeHeader(dir);
         if (tlDirty) {
             try { writeFileSync(TL_CACHE_FILE + '.tmp', JSON.stringify(tlCache)); renameSync(TL_CACHE_FILE + '.tmp', TL_CACHE_FILE); } catch { /* best effort */ }
             tlDirty = false;
