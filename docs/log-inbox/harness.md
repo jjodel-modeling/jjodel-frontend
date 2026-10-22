@@ -949,3 +949,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Ticket**: Under machine load (load average about 100) the vitest gate of lane-run merge --direct fails on tests outside the merged paths, blocking the merge: scripts/gates/__tests__/traceMonitor.test.ts «a port in use taken» failed in P-2026-10-21-1035 and P-2026-10-21-1114; laneRun «JJODEL_MODEL_TRAILER ignored», laneRunDirect «a precondition dropped» and laneBoard tests failed once each. Every one passed on a rerun at load under 20 (/tmp/rerun-1035.log, /tmp/rerun-1114.log). Each time the chat had to resolve the lane and flip the Status by hand, because go refuses a blocked lane. Suggested: make the timing-sensitive tests robust to load (port probes, child process timeouts), or let the direct merge rerun only the failed files once before declaring the gate red.
 **Priority**: medium
 **Found in**: P-2026-10-21-1114
+
+## 2026-10-22 — perf(lane-run): status --all caches the outcome of exited lanes (P-2026-10-22-1140)
+**Prompt**: The board on 4700 timed out (status --all over 15 s, about 740 lanes, every exited log parsed on every call). Cache outcome and fate of exited lanes in state-cache.json, keyed on what a resume changes; replace the discarded runLines call in statusAll with completeRun in a try/catch; tests, real-root measurement, gates.
+**Files touched**: frontend/scripts/lane-run.mjs, frontend/scripts/hooks/__tests__/laneRun.test.ts (be184d551); docs/log-inbox/harness.md, docs/prompts/claude_2026-10-22_1140_prompt_status_all_outcome_cache.md (this commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. laneRun.test.ts 145 passed (4 new); typecheck:scripts, check:scripts exit 0. Real root: id, state and outcome columns of status --all identical before, at the filling run and at the hitting run; only Date.now-based elapsed minutes moved (2 running lanes, 1 exited without exit.txt, 1 chain)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — the chat checks the board and the tray after the merge (P8 deroga)
+**Notes**: Real root, load 6-8: 8.7 s before, 8.5 s filling, 0.33 s hitting; 735 caches written. Key adds stderr.log size and errFrom to the prompt's list (runFate reads stderr): stricter, never looser. A lane dead without exit.txt has no key and reads the log as before. Mutation bench in the commit message. lane-board.mjs untouched (R-TACK-2).
+**Prompt document name**: 2026-10-22 11:40

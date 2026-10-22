@@ -1,5 +1,5 @@
 import { describe, test, expect, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, chmodSync, realpathSync, rmSync, unlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, chmodSync, realpathSync, rmSync, unlinkSync, utimesSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -1401,6 +1401,87 @@ describe('lane-run status --all', () => {
         expect(rows[2].split(/\s+/)).toEqual(['P-2026-09-27-1015', 'running', 'none', '12', 'min']);
         expect(rows[3].split(/\s+/)).toEqual(['P-2026-09-27-0405', 'exited', 'unparsed', '1', 'min']);
         expect(rows[4].split(/\s+/)).toEqual(['P-2026-09-26-1640', 'exited', 'done', '5', 'min']);
+    });
+});
+
+// ── the outcome cache of exited lanes (P-2026-10-22-1140) ────────────────────
+
+describe('lane-run status --all, state-cache.json', () => {
+    const cacheOf = (l: Lab, id = ID) => join(laneDir(l, id), 'state-cache.json');
+    const outcomeOf = (l: Lab) => laneRun(l, ['status', '--all']).stdout.trimEnd().split('\n')[1].split(/\s+/)[2];
+
+    test('kills "the cache never read": a hit returns the stored outcome without reading the log', () => {
+        const l = lab();
+        // Two logs of the same size: only the cache can say done once the second replaces the first.
+        fakeLane(l, ID, { texts: ['Outcome: done\nxxx'] });
+        expect(outcomeOf(l)).toBe('done');
+        expect(existsSync(cacheOf(l))).toBe(true);
+        const log = join(laneDir(l), 'log.jsonl');
+        const before = readFileSync(log).length;
+        writeFileSync(log, assistant('Outcome: hard-stop') + '\n');
+        expect(readFileSync(log).length).toBe(before);
+        expect(outcomeOf(l)).toBe('done');
+        expect(laneRun(l, ['status', ID]).stdout).toContain('outcome: Outcome: done');
+    });
+
+    test('kills "the cache never invalidated": a resumed lane (log grown, new exit mtime) misses and recomputes', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Phase 1 report.\nOutcome: hard-stop'] });
+        expect(outcomeOf(l)).toBe('hard-stop');
+        const dir = laneDir(l);
+        const log = join(dir, 'log.jsonl');
+        const logFrom = readFileSync(log).length;
+        writeFileSync(log, readFileSync(log, 'utf8') + assistant('Closing report.\nOutcome: done') + '\n');
+        writeFileSync(join(dir, 'runs.jsonl'), [
+            { at: '2026-10-22 11:00', kind: 'start', session: 'sess-1', logFrom: 0, errFrom: 0, outcome: 'hard-stop', exit: '0' },
+            { at: '2026-10-22 11:30', kind: 'resume', session: 'sess-1', logFrom, errFrom: 0 },
+        ].map((r) => JSON.stringify(r)).join('\n') + '\n');
+        writeFileSync(join(dir, 'exit.txt'), '0\n');
+        const later = new Date(Date.now() + 120000);
+        utimesSync(join(dir, 'exit.txt'), later, later);
+        expect(outcomeOf(l)).toBe('done');
+    });
+
+    test('kills "a corrupt cache trusted or fatal": a cache file that does not parse is ignored', () => {
+        const l = lab();
+        fakeLane(l, ID, { texts: ['Outcome: blocked'] });
+        writeFileSync(cacheOf(l), '{"key": not json');
+        const r = laneRun(l, ['status', '--all']);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout.trimEnd().split('\n')[1].split(/\s+/)[2]).toBe('blocked');
+        expect(JSON.parse(readFileSync(cacheOf(l), 'utf8')).outcome).toBe('Outcome: blocked');
+    });
+
+    test('kills "the cache changes the table", "the fate dropped from the cache": the output is identical with and without the cache', () => {
+        const l = lab();
+        fakeLane(l, 'P-2026-10-01-0900', { texts: ['Outcome: done · abc123'], startedMsAgo: 5.5 * 60000 });
+        fakeLane(l, 'P-2026-10-01-1000', { texts: ['Outcome: finished'] });
+        fakeLane(l, 'P-2026-10-01-1100', { texts: ['Outcome: blocked'], running: true, startedMsAgo: 12.5 * 60000 });
+        fakeLane(l, 'P-2026-10-01-1200', { texts: ['No closing line.'] });
+        resumedLane(l, 'P-2026-10-01-1300', { run2: [assistant(LIMIT_TEXT), limitResult(LIMIT_TEXT)], exit: '1' });
+        resumedLane(l, 'P-2026-10-01-1400', { run2: [assistant('Working on step 2.')], exit: '143' });
+        fakeLane(l, 'P-2026-10-01-1500', { texts: ['Outcome: blocked'] });
+        writeFileSync(join(laneDir(l, 'P-2026-10-01-1500'), 'resolved.txt'), '2026-10-01 15:30 · alfonso · fixed by hand\n');
+        const ids = ['P-2026-10-01-0900', 'P-2026-10-01-1000', 'P-2026-10-01-1200', 'P-2026-10-01-1300', 'P-2026-10-01-1400', 'P-2026-10-01-1500'];
+        const filling = laneRun(l, ['status', '--all']);
+        expect(filling.status, filling.stderr).toBe(0);
+        for (const id of ids) expect(existsSync(cacheOf(l, id)), id).toBe(true);
+        expect(existsSync(cacheOf(l, 'P-2026-10-01-1100'))).toBe(false);
+        const hitting = laneRun(l, ['status', '--all']);
+        for (const id of ids) rmSync(cacheOf(l, id));
+        const without = laneRun(l, ['status', '--all']);
+        expect(hitting.stdout).toBe(filling.stdout);
+        expect(without.stdout).toBe(filling.stdout);
+        expect(filling.stdout.trimEnd().split('\n').map((r) => r.split(/\s+/).slice(0, 3))).toEqual([
+            ['id', 'state', 'outcome'],
+            ['P-2026-10-01-1500', 'exited', 'resolved'],
+            ['P-2026-10-01-1400', 'exited', 'died'],
+            ['P-2026-10-01-1300', 'exited', 'limit'],
+            ['P-2026-10-01-1200', 'exited', 'none'],
+            ['P-2026-10-01-1100', 'running', 'none'],
+            ['P-2026-10-01-1000', 'exited', 'unparsed'],
+            ['P-2026-10-01-0900', 'exited', 'done'],
+        ]);
     });
 });
 
