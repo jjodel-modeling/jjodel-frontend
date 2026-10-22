@@ -110,3 +110,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Writer: PathChecker.tsx:14 runs U.resetState() (U.tsx:451, LOAD of DState.new()) on every in-page route change; it lands after the new Navbar mounted with the stale true. The restore effect now runs on [props.advanced]. Probe 16/16 on the fix; with [] it fails 6. The sidebar item reloads the page, so only in-page changes showed the bug. Typecheck 0, build 0. 1 unattended decision: localStorage, not a ref, tells a reset from an explicit Basic (all three writers persist 'basic' first).
 **Prompt document name**: 2026-10-22 11:50
+
+## 2026-10-22 — merge: tpl-mode into alfonso-frontend-jjtl (P-2026-10-22-1203)
+**Prompt**: `claude_2026-10-22_1203_prompt_merge_tpl-mode.md`, a direct merge by `lane-run merge --direct`, no session: `tpl-mode` at `6b1646b40` into `alfonso-frontend-jjtl`, merge base `b91c751ac`, 2 commits on the branch side.
+**Files touched**: merge `2ba77d965`: 4 files from the branch side (`docs/log-inbox/templates-ui.md`, `docs/prompts/claude_2026-10-22_1150_prompt_templates_mode_restore.md`, `frontend/scripts/probe/templates-mode-restore.ts`, `frontend/src/pages/components/Navbar.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2ba77d965` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11536 tests in 402 files, 9 red at import, hooks 961; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat C-2026-10-22-1050, RC-23 on localhost:3000 at 12:13: Advanced then #/templates by hash twice: data-mode advanced, app bar Advanced, 7 gallery ids; Basic then Templates: basic, 0 ids, localStorage basic
+**Notes**: Rollback tag `pre-tpl-mode` on `3c90455bd` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-22-1203/result.json`.
+**Prompt document name**: 2026-10-22 12:03

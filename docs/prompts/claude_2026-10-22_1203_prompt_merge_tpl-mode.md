@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-22-1203
 Chat: C-2026-10-22-1050
 Request: https://claude.ai/code/session_018F8q1ZrKrECfKBBHqcxogb (merge of tpl-mode launched by chat C-2026-10-22-1050)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-22 · lane merge · 2ba77d965 · verifica visiva passata 2026-10-22 (chat C-2026-10-22-1050, RC-23 on localhost:3000 at 12:13: Advanced then #/templates by hash twice: data-mode advanced, app bar Advanced, 7 gallery ids; Basic then Templates: basic, 0 ids, localStorage basic)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-22-1203 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
