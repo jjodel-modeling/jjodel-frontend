@@ -5,7 +5,7 @@ Lane: full (build script change, seven binaries rewritten under SNAP_REWRITE)
 Depends: P-2026-10-19-1617 (`snap-gallery.ts`, merged on `tpl-int`)
 Chat: C-2026-10-19-1501
 Front: notation-library
-Status: eseguito 2026-10-19 · lane tpl-c2 · f120bd3cf · visual check owed to the chat (RC-23)
+Status: eseguito 2026-10-19 · lane tpl-c2 · f120bd3cf · visual check passed 2026-10-22 11:45 (chat C-2026-10-22-1050, RC-23, built-in browser at 1440×900 on the trunk dev server)
 Corregge: P-2026-10-19-1617 (template previews land at 16–23 % in the card and are unreadable: measured by the lane, confirmed by the chat's visual check at 1440×900 on `tpl-int`)
 Request: Alfonso, 2026-10-19 16:09, in the project chat: «Si velocissimo», on the lanes of P-2026-10-19-1510
 

@@ -5,7 +5,7 @@ Lane: full (main menu structure in a 2146-line file, a local menu type extended)
 Depends: P-2026-10-19-1618 (New model dialog and `OPEN_NEW_MODEL_DIALOG`, merged on `tpl-int`)
 Chat: C-2026-10-19-1501
 Front: notation-library
-Status: eseguito 2026-10-19 · lane tpl-e · 1c3d9460e · visual check owed to the chat (RC-23)
+Status: eseguito 2026-10-19 · lane tpl-e · 1c3d9460e · visual check passed 2026-10-22 11:45 (chat C-2026-10-22-1050, RC-23, built-in browser at 1440×900 on the trunk dev server)
 Corregge: none (new work)
 Request: Alfonso, 2026-10-19 16:09, in the project chat: «Si velocissimo», on the lanes of P-2026-10-19-1510 (L-E after L-D)
 
