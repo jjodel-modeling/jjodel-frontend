@@ -2625,11 +2625,14 @@ describe('lane-run track (RC-44)', () => {
         expect(ghWrites(l)).toEqual([]);
         const r = laneRun(l, ['track', '--sync'], { cwd: repo });
         expect(r.status, r.stderr).toBe(0);
-        expect(r.stdout.trim()).toBe('card ' + TRACK_ID + ': ' + ISSUE_1 + ' · Ready');
+        // Only the card lines: the sync also reports the milestones of the fronts the live
+        // docs/harness/fronts.json marks closed, which this lab's fake gh does not know.
+        const cards = (out: string) => out.split('\n').filter((x) => x.startsWith('card ')).join('\n');
+        expect(cards(r.stdout)).toBe('card ' + TRACK_ID + ': ' + ISSUE_1 + ' · Ready');
         expect(ghColumn(l)).toBe('Ready');
         const n = ghWrites(l).length;
         const again = laneRun(l, ['track', '--sync'], { cwd: repo });
-        expect(again.stdout.trim()).toBe(r.stdout.trim());
+        expect(cards(again.stdout)).toBe(cards(r.stdout));
         expect(ghWrites(l)).toHaveLength(n);
     });
 
