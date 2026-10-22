@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: notation-library
 Lane: fast (one defect found in the RC-23 check of the L-B1..L-E lanes; dashboard only, no critical-zone file)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-22 · lane tpl-mode · a8f9b2115 · visual check owed to the chat (RC-23)
 Corregge: 2026-10-19 16:15 (`claude_2026-10-19_1615_prompt_templates_page.md`: the Templates page enters in Basic when the persisted mode is Advanced)
 Request: Alfonso, 2026-10-22 11:12, in the project chat: «allora chiudiamo questa voce con /lane auto» on closing the notation-library front
 

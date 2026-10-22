@@ -97,3 +97,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Probe on port 3096, 7/7 entries snapshotted headless: PNG 12-55 KB, html-to-image SVG 1.4-6.8 MB (unusable), 15-27 s per entry. No sealed package on any branch: Notations page, Built-in tab and Basic notation entries proposed out of 3.2 (R-LIB-7). families-persons has no transformation. 8 unattended decisions, 4 awaiting Alfonso (report §9, §10).
 **Prompt document name**: 2026-10-19 15:10
+
+## 2026-10-22 — fix: Templates page keeps the persisted Advanced mode on entry (P-2026-10-22-1150)
+**Prompt**: The Templates page entered in Basic with Advanced persisted; find the writer that resets Redux `advanced`, fix it so every reset path keeps the persisted mode, probe both directions
+**Files touched**: frontend/src/pages/components/Navbar.tsx, frontend/scripts/probe/templates-mode-restore.ts (new) in a8f9b2115; docs/log-inbox/templates-ui.md, docs/prompts/claude_2026-10-22_1150_prompt_templates_mode_restore.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-19 16:15
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Writer: PathChecker.tsx:14 runs U.resetState() (U.tsx:451, LOAD of DState.new()) on every in-page route change; it lands after the new Navbar mounted with the stale true. The restore effect now runs on [props.advanced]. Probe 16/16 on the fix; with [] it fails 6. The sidebar item reloads the page, so only in-page changes showed the bug. Typecheck 0, build 0. 1 unattended decision: localStorage, not a ref, tells a reset from an explicit Basic (all three writers persist 'basic' first).
+**Prompt document name**: 2026-10-22 11:50
