@@ -6249,9 +6249,9 @@ Evidence: the project chat of 2026-10-18 (Alfonso's answers in chat), the parked
   rows that name the 2026-10-23 freeze now refer to the 3.2 freeze still to be set. R-LIB-7 and R-LIB-8 are
   unchanged (no sealed notation and no seal guard in 3.2).
 
-Rows R-LIB-11..19 are **provisional**: their direction was approved by Alfonso in the design session of 2026-10-18/19 outside the project, and he asked on 2026-10-19 15:01 to register them as provisional. Source: `docs/design/claude_2026-10-19_design_handoff_templates_notations_file_new.md` §9 (artboards on the Design canvas «Jjodel Templates page»). Values the handoff marks **[proposal]** (level colours, Start here order, level and concept assignments, the 8-class and 5-metamodel thresholds, group names) are not ratified by these rows. Handoff §10 (Q1..Q4) waits for Alfonso. Registered by chat C-2026-10-19-1501 before the discovery P-2026-10-19-1510.
+Rows R-LIB-22 (registered as R-LIB-11) and R-LIB-12..19 are **provisional**: their direction was approved by Alfonso in the design session of 2026-10-18/19 outside the project, and he asked on 2026-10-19 15:01 to register them as provisional. Source: `docs/design/claude_2026-10-19_design_handoff_templates_notations_file_new.md` §9 (artboards on the Design canvas «Jjodel Templates page»). Values the handoff marks **[proposal]** (level colours, Start here order, level and concept assignments, the 8-class and 5-metamodel thresholds, group names) are not ratified by these rows. Handoff §10 (Q1..Q4) waits for Alfonso. Registered by chat C-2026-10-19-1501 before the discovery P-2026-10-19-1510.
 
-- **R-LIB-11** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
+- **R-LIB-22** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk; registered as R-LIB-11 and renumbered on 2026-10-22 by chat C-2026-10-22-1050 on Alfonso's «decidi tu», because R-LIB-11 is the simActive row ratified at 09:20 the same day; prompts written on 2026-10-19 after 15:01 that cite «R-LIB-11..19» mean this row and R-LIB-12..19).
   **Sealed notations get their own Notations page under BROWSE and a New model flow; they never appear on the Templates page.** The Templates contract is clone and own (case 2), the sealed contract is use and never open (case 1, R-LIB-1, R-LIB-3). Handoff §4, §5. When this ships is bounded by R-LIB-7, which keeps the sealed notations out of 3.2.
 - **R-LIB-12** (2026-10-19, provisional, evidence: read, verified: none, reversible: trunk).
   **The user-facing term for a sealed notation is «Built-in».** «Sealed» stays an internal word (code, decisions, reports).
@@ -6281,6 +6281,9 @@ Rows R-LIB-11..19 are **provisional**: their direction was approved by Alfonso i
   (run in progress)». First use: the Place view of the `petri-producer-consumer` example draws its tokens under
   `not simActive`, so a place a run has emptied no longer shows its initial marking. Evidence: P-2026-10-19-0930
   (`50ab1d74c`, branch `library-gallery`), IR, UI and sim suites 2793/2793, 9/9 mutants killed, clone probe 178/178.
+
+- **R-LIB-23** (2026-10-22, decided by the chat on Alfonso's «decidi tu», unattended, evidence: read, verified: none, reversible: trunk).
+  **The notation-library front closes on the 3.2 cut; the sealed notations move to a new front, `notation-seal`, opened after the 3.2 tag.** R-LIB-7 and R-LIB-8 keep the S3 seal predicate and the S6 reducer guard off the trunk until after the 3.2 release, so the front's exit (a sealed notation available with its probe) could not be met before the tag. notation-library now exits on the gallery and Templates work: S1, S2, L-B1..L-E merged into alfonso-frontend-jjtl, the RC-23 checks passed (Alfonso 2026-10-19 16:41; chat 2026-10-22, b91c751ac), and the Templates mode fix (P-2026-10-22-1150) merged. notation-seal carries the old exit and the branches `library-seal` and `library-seal-guard` (S3, S6 step 1, unmerged), S6 step 2 (enforcing mode, R-LIB-8 battery), S4, S5, S7 and the Notations page of R-LIB-22. Milestone 13 on jjodel-lanes.
 
 ## R-SHELL — shell visual consolidation (decisions 2026-10-19)
 

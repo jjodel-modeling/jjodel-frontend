@@ -64,8 +64,8 @@
     },
     {
       "slug": "notation-library",
-      "title": "Notation library and project gallery (R-LIB)",
-      "exit": "docs/library/catalog.json marks every R-LIB-5 gallery project and at least one R-LIB-4 sealed notation as available, and both flows (clone from the gallery, new model from a sealed notation) pass their probe on alfonso-frontend-jjtl",
+      "title": "Notation library and project gallery (R-LIB), 3.2 cut: gallery, Templates page, New model dialog, File › New",
+      "exit": "the gallery and Templates slices (S1, S2, L-B1..L-E) and the Templates mode fix P-2026-10-22-1150 are merged into alfonso-frontend-jjtl with their visual check passed; the sealed notations moved to notation-seal (R-LIB-23)",
       "state": "open",
       "openedOn": "2026-10-18",
       "milestone": 8
@@ -105,6 +105,16 @@
       "openedOn": "2026-10-20",
       "ownerChat": "C-2026-10-20-2055",
       "milestone": 12
+    },
+    {
+      "slug": "notation-seal",
+      "title": "Sealed notations after 3.2: seal predicate, reducer guard, Notations page, New model from a sealed notation (R-LIB-1..4, R-LIB-8, R-LIB-22)",
+      "exit": "docs/library/catalog.json marks at least one R-LIB-4 sealed notation as available, the S6 guard runs in enforcing mode with the R-LIB-8 battery green, and the flow «new model from a sealed notation» passes its probe on alfonso-frontend-jjtl",
+      "state": "open",
+      "openedOn": "2026-10-22",
+      "ownerChat": "C-2026-10-22-1050",
+      "ownerSince": "2026-10-22",
+      "milestone": 13
     }
   ]
 }
