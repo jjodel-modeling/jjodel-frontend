@@ -962,3 +962,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: non applicabile — the chat checks the board and the tray after the merge (P8 deroga)
 **Notes**: Real root, load 6-8: 8.7 s before, 8.5 s filling, 0.33 s hitting; 735 caches written. Key adds stderr.log size and errFrom to the prompt's list (runFate reads stderr): stricter, never looser. A lane dead without exit.txt has no key and reads the log as before. Mutation bench in the commit message. lane-board.mjs untouched (R-TACK-2).
 **Prompt document name**: 2026-10-22 11:40
+
+## 2026-10-22 — merge: status-cache into alfonso-frontend-jjtl (P-2026-10-22-1147)
+**Prompt**: `claude_2026-10-22_1147_prompt_merge_status-cache.md`, a direct merge by `lane-run merge --direct`, no session: `status-cache` at `ea6fc96fe` into `alfonso-frontend-jjtl`, merge base `a9d439520`, 2 commits on the branch side.
+**Files touched**: merge `0764dcd90`: 4 files from the branch side (`docs/log-inbox/harness.md`, `docs/prompts/claude_2026-10-22_1140_prompt_status_all_outcome_cache.md`, `frontend/scripts/hooks/__tests__/laneRun.test.ts`, `frontend/scripts/lane-run.mjs`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0764dcd90` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11536 tests in 402 files, 9 red at import, hooks 961; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: chat C-2026-10-22-1050: status --all on the trunk 0.31-0.63 s over 741 lanes, 737 state-cache.json, output rows match; the 4700 board still times out for a separate cause (its own synchronous git calls block the event loop), fixed in its own lane
+**Notes**: Rollback tag `pre-status-cache` on `a9d439520` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-22-1147/result.json`.
+**Prompt document name**: 2026-10-22 11:47

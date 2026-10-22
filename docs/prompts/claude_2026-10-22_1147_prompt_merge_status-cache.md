@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-22-1147
 Chat: C-2026-10-22-1050
 Request: https://claude.ai/code/session_018F8q1ZrKrECfKBBHqcxogb (merge of status-cache launched by chat C-2026-10-22-1050)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-22 · lane merge · 0764dcd90 · verifica visiva passata 2026-10-22 (chat C-2026-10-22-1050: status --all on the trunk 0.31-0.63 s over 741 lanes, 737 state-cache.json, output rows match; the 4700 board still times out for a separate cause (its own synchronous git calls block the event loop), fixed in its own lane)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-22-1147 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
