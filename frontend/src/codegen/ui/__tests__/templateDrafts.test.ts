@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyDrafts, changedOutside, editDraft, followStore, isDirty, shownDraft } from '../templateDrafts';
+import { applyDrafts, changedOutside, draftOf, editDraft, followStore, isDirty, recordOf, shownDraft } from '../templateDrafts';
 import type { Drafts } from '../templateDrafts';
 import type { TemplateRecord } from '../../engine/templates';
 
@@ -57,5 +57,28 @@ describe('templateDrafts: dirty, clean and outside writes (R-GEN-22)', () => {
         let swap: Drafts = editDraft({}, cls, { name: 'main' });
         swap = editDraft(swap, main, { name: 'cls' });
         expect(applyDrafts(stored, swap).problems).toEqual({});
+    });
+});
+
+describe('templateDrafts: the mode (S5, R-GEN-27)', () => {
+    it('a record with no mode drafts as expression and saves with no mode while it stays one', () => {
+        expect(draftOf(main).mode).toBe('expression');
+        const d = editDraft({}, main, { body: '"x"' });
+        expect('mode' in recordOf(d.main)).toBe(false);
+    });
+
+    it('switching the mode is a dirty edit, written by Save; switching back drops the draft', () => {
+        const d = editDraft({}, main, { mode: 'text', body: '${cls(self)}' });
+        expect(isDirty(d.main)).toBe(true);
+        expect(applyDrafts(stored, d).next[0]).toEqual({ name: 'main', params: [], body: '${cls(self)}', mode: 'text' });
+        expect(editDraft(d, main, { mode: 'expression', body: main.body })).toEqual({});
+    });
+
+    it('a text record keeps its mode through an edit, and the store holding it drops the draft', () => {
+        const t: TemplateRecord = { name: 't', params: [], body: 'a', mode: 'text' };
+        const d = editDraft({}, t, { body: 'b' });
+        expect(recordOf(d.t)).toEqual({ name: 't', params: [], body: 'b', mode: 'text' });
+        expect(followStore(d, [{ ...t, body: 'b' }])).toEqual({});
+        expect(followStore(d, [{ name: 't', params: [], body: 'b' }])).toBe(d);
     });
 });

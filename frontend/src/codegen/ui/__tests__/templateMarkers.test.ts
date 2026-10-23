@@ -28,3 +28,18 @@ describe('templateMarkers: parse errors at their line and column of the body', (
         expect(markers[0].startLineNumber).toBe(2);
     });
 });
+
+describe('templateMarkers in text mode (S5, T5)', () => {
+    it('a broken hole at line 3, column 7 of a text body is marked at 3:7 (mutant: lexer column from a quote)', () => {
+        expect(templateMarkers('one\ntwo\nabcd${)x}', 'text').map(m => [m.startLineNumber, m.startColumn])).toEqual([[3, 7]]);
+    });
+
+    it('a text body with quotes and no hole has no marker; the same body as an expression has one', () => {
+        expect(templateMarkers('SELECT "id" FROM t', 'text')).toEqual([]);
+        expect(templateMarkers('SELECT "id" FROM t').length).toBeGreaterThan(0);
+    });
+
+    it('a `with … do` in a hole of a text body is refused', () => {
+        expect(templateMarkers('x\n${with s do name}', 'text').map(m => [m.message, m.startLineNumber])).toEqual([[WITH_REFUSED, 2]]);
+    });
+});

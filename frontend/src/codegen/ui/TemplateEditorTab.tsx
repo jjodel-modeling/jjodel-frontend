@@ -5,7 +5,9 @@
  * Opened by openTemplateEditor.ts, one tab per metamodel, `cached` so a hidden tab keeps its drafts. On the left the
  * metamodel's templates, a dot on each with an unsaved draft; in the centre the name, the parameters and the body of
  * the selected one, the body in Monaco with the `jjel-template` language (templateLanguage.ts) and the markers of
- * templateMarkers.ts (owner `codegen-parse`), set on every change.
+ * templateMarkers.ts (owner `codegen-parse`), set on every change. The «Mode» select (S5, R-GEN-27) converts the
+ * body between text and expression (templateMode.ts) as a draft edit, and the model switches to the language of the
+ * mode, `jjel-template-text` for text; a body that cannot be converted keeps its mode, with the reason.
  *
  * Typing writes nothing: the drafts live here (templateDrafts.ts). «Save» and Ctrl/Cmd+S write every draft at once,
  * through `templatesPatch` and the metamodel's `state` setter, one SetFieldAction, one undo step, nothing when the
@@ -24,11 +26,12 @@ import DockManager from '../../components/abstract/DockManager';
 import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 import { largeMonacoOptions, mergeMonacoOptions } from '../../components/editors/monacoConfig';
 import { GEN_TEMPLATES_KEY, decodeTemplates, templatesPatch } from '../engine/templateCodec';
-import { TEMPLATE_LANGUAGE_ID, TEMPLATE_THEME_ID, ensureTemplateLanguage } from './templateLanguage';
+import { TEMPLATE_LANGUAGE_ID, TEMPLATE_TEXT_LANGUAGE_ID, TEMPLATE_THEME_ID, ensureTemplateLanguage } from './templateLanguage';
 import { templateMarkers } from './templateMarkers';
+import { convertBody } from './templateMode';
 import { applyDrafts, changedOutside, editDraft, followStore, shownDraft } from './templateDrafts';
 import type { DraftEdit, Drafts } from './templateDrafts';
-import type { TemplateRecord } from '../engine/templates';
+import type { TemplateMode, TemplateRecord } from '../engine/templates';
 import './TemplateEditorTab.scss';
 
 /** The dock tab id of a metamodel's Template Editor (R-GEN-20). */
@@ -185,7 +188,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
     const addTemplate = () => {
         const taken = new Set([...templates.map(t => t.name), ...Object.values(drafts).map(d => d.name.trim()), ...Object.keys(drafts)]);
         const name = freshName(taken);
-        write([...templates, { name, params: [], body: '""' }]);
+        write([...templates, { name, params: [], body: '', mode: 'text' }]);
         setSelected(name);
     };
 
@@ -194,6 +197,16 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
         const key = current.key;
         setDrafts(({ [key]: _gone, ...others }) => others);
         if (current.stored) write(templates.filter(t => t.name !== key));
+    };
+
+    const switchMode = (to: TemplateMode) => {
+        if (!shown) return;
+        const converted = convertBody(shown.body, shown.mode, to);
+        if (!converted.ok) {
+            setRefused(converted.reason);
+            return;
+        }
+        edit({ body: converted.body, mode: to });
     };
 
     const revertCurrent = () => {
@@ -229,16 +242,19 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
     const applying = useRef(false);
     const editRef = useRef(edit);
     editRef.current = edit;
+    const mode: TemplateMode = shown?.mode ?? 'text';
+    const modeRef = useRef(mode);
+    modeRef.current = mode;
 
     const mark = (model: Monaco.editor.ITextModel) => {
-        const markers = templateMarkers(model.getValue()).map(m => ({ ...m, severity: monaco.MarkerSeverity.Error }));
+        const markers = templateMarkers(model.getValue(), modeRef.current).map(m => ({ ...m, severity: monaco.MarkerSeverity.Error }));
         monaco.editor.setModelMarkers(model, MARKER_OWNER, markers);
     };
 
     useEffect(() => {
         if (!hostRef.current) return;
         ensureTemplateLanguage();
-        const model = monaco.editor.createModel('', TEMPLATE_LANGUAGE_ID);
+        const model = monaco.editor.createModel('', modeRef.current === 'text' ? TEMPLATE_TEXT_LANGUAGE_ID : TEMPLATE_LANGUAGE_ID);
         const editor = monaco.editor.create(hostRef.current, {
             ...mergeMonacoOptions(largeMonacoOptions, {
                 fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
@@ -248,6 +264,8 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                 tabSize: 4,
                 insertSpaces: true,
                 automaticLayout: true,
+                // A quote typed before a quote steps over it: `""` plus a typed opening quote leaves no stray one.
+                autoClosingOvertype: 'always',
             }),
             model,
             theme: TEMPLATE_THEME_ID,
@@ -274,13 +292,15 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
         const model = editor?.getModel();
         if (!editor || !model) return;
         editor.updateOptions({ readOnly: !hasTemplate });
+        const language = mode === 'text' ? TEMPLATE_TEXT_LANGUAGE_ID : TEMPLATE_LANGUAGE_ID;
+        if (model.getLanguageId() !== language) monaco.editor.setModelLanguage(model, language);
         if (model.getValue() !== body) {
             applying.current = true;
             model.setValue(body);
             applying.current = false;
         }
         mark(model);
-    }, [body, hasTemplate, current?.key]);
+    }, [body, mode, hasTemplate, current?.key]);
 
     // Ctrl/Cmd+S outside Monaco (the name and parameter fields).
     const onKeyDown = (e: React.KeyboardEvent) => {
@@ -350,6 +370,18 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                                 onChange={e => edit({ params: e.target.value })}
                             />
                         </label>
+                        <label className="codegen-tpl__field">
+                            <span className="codegen-tpl__label">Mode</span>
+                            <select
+                                className="codegen-tpl__input"
+                                value={shown.mode}
+                                title="Text: the body is the output, with ${…} holes. Expression: the body is a JjEL expression."
+                                onChange={e => switchMode(e.target.value as TemplateMode)}
+                            >
+                                <option value="text">Text</option>
+                                <option value="expression">Expression</option>
+                            </select>
+                        </label>
                     </div>
                 ) : (
                     <div className="codegen-tpl__hint">No template yet: «New template» adds one.</div>
@@ -395,7 +427,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                     </button>
                 </div>
                 <div className="codegen-tpl__help">
-                    A template is a JjEL expression, usually one string with {'${…}'} holes; templates call each other by name.
+                    A template is text with {'${…}'} holes ({'\\${'} writes {'${'}), or in expression mode a JjEL expression; templates call each other by name.
                     Typing writes nothing: Save writes every draft at once.
                 </div>
             </section>
