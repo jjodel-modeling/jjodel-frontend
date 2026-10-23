@@ -12,7 +12,7 @@
  * in the tab's right pane, also when the tab is already open. The generator opened is remembered as the metamodel's
  * last used, for the pill.
  *
- * Reached only from the Code panel's lazy chunk (scripts/gates/check-codegen-lazy.ts).
+ * Reached only from the Code panel's lazy chunk and the left bar's dynamic import (scripts/gates/check-codegen-lazy.ts).
  */
 
 import React from 'react';
@@ -22,6 +22,9 @@ import { isConsumerMode } from '../../components/environment/consumerMode';
 import TemplateEditorTab, { TemplateTabTitle, chooseModelInTemplateTab, selectInTemplateTab, templateTabId } from './TemplateEditorTab';
 import { rememberGenerator } from './generatorTabs';
 import { DEFAULT_GENERATOR_ID } from '../engine/generatorCodec';
+
+/** The left bar's «+ New generator» reaches the tab's creation through this module's dynamic import (R-GEN-42). */
+export { createGenerator } from './TemplateEditorTab';
 
 /** Opens, or brings forward, the generator's tab on `template` (and `model`); false when refused or not possible. */
 export function openTemplateEditor(

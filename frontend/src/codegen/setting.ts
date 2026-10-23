@@ -80,3 +80,47 @@ export function codePillVisible(
     const present = (stored: unknown) => typeof stored === 'string' && stored !== '';
     return present(bag?.genTemplates) || present(bag?.genGenerators);
 }
+
+/** The id of the default generator, as `engine/generatorCodec.ts` names it (`DEFAULT_GENERATOR_ID`), not imported. */
+const DEFAULT_ENTRY_ID = 'default';
+
+/** A generator row of the left bar's GENERATORS section (R-GEN-42). */
+export interface GeneratorEntry {
+    readonly id: string;
+    readonly name: string;
+}
+
+/**
+ * The generators of the metamodel `metamodelId` for the left bar (R-GEN-42, P-2026-10-24-0004): the default first,
+ * named by `genGenerators` or «Default», then the others in their stored order; none when the metamodel holds neither
+ * key. A key read and a guarded `JSON.parse` of `genGenerators` only, never the codec (this module loads with the
+ * setting off): a key that does not parse, or has no version 1 and no list, gives the default alone, as
+ * `decodeGenerators` does. A row is kept with a non-empty id and name and an id no earlier kept row holds; the
+ * codec's finer checks (root, files, target, templates) are not repeated, so a hand-broken generator can be listed
+ * here and refused by the tab.
+ */
+export function generatorEntries(lookup: Readonly<Record<string, any>>, metamodelId: string): GeneratorEntry[] {
+    const bag = lookup[metamodelId]?._state;
+    const present = (stored: unknown) => typeof stored === 'string' && stored !== '';
+    if (!present(bag?.genTemplates) && !present(bag?.genGenerators)) return [];
+    let defaultName = 'Default';
+    const others: GeneratorEntry[] = [];
+    let parsed: any = null;
+    try {
+        parsed = present(bag.genGenerators) ? JSON.parse(bag.genGenerators) : null;
+    } catch {
+        parsed = null;
+    }
+    if (parsed && typeof parsed === 'object' && parsed.v === 1 && Array.isArray(parsed.generators)) {
+        const ids = new Set<string>();
+        for (const g of parsed.generators) {
+            if (!g || typeof g !== 'object') continue;
+            if (typeof g.id !== 'string' || g.id === '' || ids.has(g.id)) continue;
+            if (typeof g.name !== 'string' || g.name === '') continue;
+            ids.add(g.id);
+            if (g.id === DEFAULT_ENTRY_ID) defaultName = g.name;
+            else others.push({ id: g.id, name: g.name });
+        }
+    }
+    return [{ id: DEFAULT_ENTRY_ID, name: defaultName }, ...others];
+}

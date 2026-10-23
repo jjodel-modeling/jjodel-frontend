@@ -1137,6 +1137,17 @@ project-card .tip {
       &--m { background: #fef3c7; color: #92400e; }
       &--T { background: #dcfce7; color: #15803d; }
       &--V { background: #fce7f3; color: #9d174d; }
+      &--G { background: #cffafe; color: #0e7490; }
+    }
+
+    /* GENERATORS (R-GEN-42): the metamodel's name over its generators, when the project has more than one. */
+    .psb-group {
+      padding: 4px 16px 2px;
+      font-size: 11px;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .psb-item-name {

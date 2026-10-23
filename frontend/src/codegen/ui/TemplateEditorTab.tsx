@@ -95,6 +95,26 @@ function freshGeneratorName(list: readonly GeneratorRecord[]): string {
     return `generator${n}`;
 }
 
+/**
+ * Creates a generator on the metamodel, named fresh, and opens its tab on `model` (the selector's «New generator»,
+ * and the left bar's «+ New generator» through openTemplateEditor, R-GEN-42); the new generator's id, or null when
+ * the metamodel is gone.
+ */
+export function createGenerator(metamodelId: string, model?: string): string | null {
+    const idlookup = (store.getState() as any).idlookup ?? {};
+    if (!idlookup[metamodelId]) return null;
+    const bag = idlookup[metamodelId]._state;
+    const rawT = storedKey(bag?.[GEN_TEMPLATES_KEY]);
+    const rawG = storedKey(bag?.[GEN_GENERATORS_KEY]);
+    const current = decodeGenerators(rawT, rawG).generators;
+    const next = addGenerator(current, freshGeneratorName(current));
+    const patch = generatorsPatch(rawT, rawG, next);
+    if (patch) (LPointerTargetable.fromPointer(metamodelId as any) as any).state = patch;
+    const id = next[next.length - 1].id;
+    openTemplateEditor(metamodelId, elementName(idlookup, metamodelId), null, id, model);
+    return id;
+}
+
 // ── Registry of the open tabs, by tab id ─────────────────────────────────────
 
 interface OpenTab {
@@ -256,11 +276,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
     const openGenerator = (id: string) => {
         if (id !== generatorId) openTemplateEditor(metamodelId, metamodelName(), null, id, paneModel ?? undefined);
     };
-    const newGenerator = () => {
-        const next = addGenerator(decoded.generators, freshGeneratorName(decoded.generators));
-        writePatch(generatorsPatch(rawT, rawG, next));
-        openTemplateEditor(metamodelId, metamodelName(), null, next[next.length - 1].id, paneModel ?? undefined);
-    };
+    const newGenerator = () => { createGenerator(metamodelId, paneModel ?? undefined); };
     const commitRename = () => {
         const name = (renaming ?? '').trim();
         setRenaming(null);
