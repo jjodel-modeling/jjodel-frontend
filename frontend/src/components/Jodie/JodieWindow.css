@@ -78,141 +78,87 @@
     }
 }
 
-.jodie-window.jodie-dragging,
 .jodie-window.jodie-resizing {
     user-select: none;
 }
 
-.jodie-window.jodie-dragging {
-    cursor: grabbing;
-    box-shadow: var(--shadow-2xl);
-}
-
-/* Fullscreen modifier: left-anchored, full viewport height. Drag/resize disabled. */
-.jodie-window--fullscreen {
-    border-radius: 0;
-    border-left: none;
-    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.12);
-}
-
-.jodie-window--fullscreen .jodie-header {
-    cursor: default;
-}
-
-.jodie-window--fullscreen .jodie-input-container {
-    border-radius: 0;
-}
-
 /* ========================================
-   Resize Handles - Base Style
+   Dock (R-JJD-1): a grid column of the project dashboard, or, where no
+   dashboard slot exists, a full-height column on the viewport's right edge.
    ======================================== */
 
-.jodie-resize-handle {
+.jodie-dock-slot {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+}
+
+.jodie-window--docked {
+    position: relative;
+    z-index: auto;
+    height: 100%;
+    border: none;
+    border-left: 1px solid #e2e8f0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.jodie-window--viewport {
+    top: var(--jj-appbar-height);
+    right: 0;
+    bottom: 0;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 0;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Enter/exit slide sideways, from the edge the column is attached to. */
+.jodie-window--docked.jodie-window--hidden,
+.jodie-window--viewport.jodie-window--hidden {
+    transform: translateX(8px);
+}
+
+.jodie-window--docked .jodie-input-container,
+.jodie-window--viewport .jodie-input-container {
+    border-radius: 0;
+}
+
+/* Vertical drag handle on the left edge; 6px hit area, 2px line on hover/drag. */
+.jodie-dock-handle {
     position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 6px;
     z-index: 10;
+    cursor: col-resize;
+    touch-action: none;
 }
 
-/* Corner Handles (larger hit area) */
-.jodie-resize-handle.nw,
-.jodie-resize-handle.ne,
-.jodie-resize-handle.sw,
-.jodie-resize-handle.se {
-    width: 20px;
-    height: 20px;
-}
-
-.jodie-resize-handle.nw {
-    top: 0;
-    left: 0;
-    cursor: nw-resize;
-    border-top-left-radius: var(--radius-lg);
-}
-
-.jodie-resize-handle.ne {
-    top: 0;
-    right: 0;
-    cursor: ne-resize;
-    border-top-right-radius: var(--radius-lg);
-}
-
-.jodie-resize-handle.sw {
-    bottom: 0;
-    left: 0;
-    cursor: sw-resize;
-    border-bottom-left-radius: var(--radius-lg);
-}
-
-.jodie-resize-handle.se {
-    bottom: 0;
-    right: 0;
-    cursor: se-resize;
-    border-bottom-right-radius: var(--radius-lg);
-}
-
-/* Visual indicator for SE corner */
-.jodie-resize-handle.se::before {
+.jodie-dock-handle::after {
     content: '';
     position: absolute;
-    bottom: 4px;
-    right: 4px;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid var(--color-border-secondary);
-    border-bottom: 2px solid var(--color-border-secondary);
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.jodie-window:hover .jodie-resize-handle.se::before {
-    opacity: 0.6;
-}
-
-/* Edge Handles */
-.jodie-resize-handle.n,
-.jodie-resize-handle.s {
-    left: 20px;
-    right: 20px;
-    height: 6px;
-}
-
-.jodie-resize-handle.e,
-.jodie-resize-handle.w {
-    top: 20px;
-    bottom: 20px;
-    width: 6px;
-}
-
-.jodie-resize-handle.n {
     top: 0;
-    cursor: n-resize;
-}
-
-.jodie-resize-handle.s {
     bottom: 0;
-    cursor: s-resize;
-}
-
-.jodie-resize-handle.e {
-    right: 0;
-    cursor: e-resize;
-}
-
-.jodie-resize-handle.w {
     left: 0;
-    cursor: w-resize;
+    width: 2px;
+    background: transparent;
+    transition: background 0.15s ease;
 }
 
-/* Hover effect for edge handles */
-.jodie-resize-handle.n:hover,
-.jodie-resize-handle.s:hover,
-.jodie-resize-handle.e:hover,
-.jodie-resize-handle.w:hover {
-    background: rgba(71, 85, 105, 0.1);
+.jodie-dock-handle:hover::after,
+.jodie-window.jodie-resizing .jodie-dock-handle::after {
+    background: rgba(71, 85, 105, 0.35);
 }
 
-/* Active state during resize */
-.jodie-window.jodie-resizing .jodie-resize-handle {
-    background: rgba(71, 85, 105, 0.15);
+.jodie-dock-handle:focus-visible {
+    outline: none;
+}
+
+.jodie-dock-handle:focus-visible::after {
+    background: #0ea5e9;
 }
 
 /* ========================================
@@ -226,7 +172,7 @@
     padding: 12px 16px;
     background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
-    cursor: grab;
+    cursor: default;
     user-select: none;
 }
 
