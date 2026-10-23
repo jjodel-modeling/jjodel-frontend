@@ -26,9 +26,10 @@
       "slug": "codegen-pilot",
       "title": "Model-to-text generation pilot (R-GEN)",
       "exit": "the S1..S5 branches are ancestors of alfonso-frontend-jjtl, and S6 is merged or deferred to 3.2.x by a decision row (R-GEN-15)",
-      "state": "open",
+      "state": "closed",
       "openedOn": "2026-10-10",
-      "milestone": 3
+      "milestone": 3,
+      "closedOn": "2026-10-23"
     },
     {
       "slug": "simulator",

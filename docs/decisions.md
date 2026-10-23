@@ -6030,6 +6030,9 @@ Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
   examples were correct but unreadable for students. Implemented by P-2026-10-11-1052; the oracle's «Check» control
   in the Code panel, sharing the result area of «Run», by P-2026-10-11-1053.
 
+
+- **R-GEN-18** (2026-10-23, decided by the chat on Alfonso's «andiamo avanti», unattended, evidence: measured, verified: none, reversible: trunk).
+  **The 3.2 build ships the code generator: `VITE_CODEGEN = true` in `frontend/.env.production` and `frontend/.env.staging`; the Experimental setting «Code generation» stays off by default.** The oracle of slice S6 is already on the trunk (`src/codegen/oracle/`, Check in the Code panel, P-2026-10-11-1053), so by R-GEN-15 it enters 3.2 behind the setting. `check:codegen-lazy` with the flag on, 2026-10-23 17:05: ALL GREEN in both modes, `CodePanel` a dynamic entry outside the eager closure, 20 generator modules outside it, the runner worker named by the CodePanel chunk only. The codegen-pilot front closes with this row; its branch `codegen-pilot` carries nothing the trunk lacks (the discovery report is identical, the log entry is in the archive).
 ## R-GV — graphVertex containment: channel, layout, membership (ratifiche 2026-10-10)
 
 Source: `docs/discovery/discovery_2026-10-10_graphvertex_bpmn_lanes.md` (P-2026-10-10-0105 Phase 1, §H and §I), spec
