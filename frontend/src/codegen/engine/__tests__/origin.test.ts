@@ -57,18 +57,18 @@ describe('§B.3 row 1, identity: a bare feature read', () => {
     it('carries (element id, feature id, identity) (mutant: the feature id not read from idlookup)', () => {
         const f = holeFragment('"${s.title}"');
         expect(f.text).toBe('unlocked State');
-        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' } });
+        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' }, template: 'main' });
     });
 
     it('the dual form o.p() and a number feature are reads too', () => {
-        expect(holeFragment('"${s.title()}"').origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' } });
+        expect(holeFragment('"${s.title()}"').origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' }, template: 'main' });
         const f = holeFragment('"${s.n}"');
-        expect([f.text, f.origin]).toEqual(['3', { kind: 'model', elementId: 's2', feature: 'A_n', featureName: 'n', transformation: { name: 'identity' } }]);
+        expect([f.text, f.origin]).toEqual(['3', { kind: 'model', elementId: 's2', feature: 'A_n', featureName: 'n', transformation: { name: 'identity' }, template: 'main' }]);
     });
 
     it('the element id is the owner of the feature read, not the receiver the navigation starts from (mutant: the receiver id)', () => {
         const f = holeFragment('"${t.next.title}"');
-        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' } });
+        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name: 'identity' }, template: 'main' });
     });
 });
 
@@ -79,7 +79,7 @@ describe('§B.3 row 2, character-aligned builtins: their name', () => {
         ['reverse()', 'etatS dekcolnu', 'reverse'], ['toUpper', 'UNLOCKED STATE', 'toUpper'], ['toUpperCase', 'UNLOCKED STATE', 'toUpper'],
     ])('s.title.%s (mutant: the transformation name dropped)', (call, text, name) => {
         const f = holeFragment('"${s.title.' + call + '}"');
-        expect([f.text, f.origin]).toEqual([text, { kind: 'model', ...TITLE, transformation: { name } }]);
+        expect([f.text, f.origin]).toEqual([text, { kind: 'model', ...TITLE, transformation: { name }, template: 'main' }]);
     });
 });
 
@@ -89,7 +89,7 @@ describe('§B.3 row 3, sub-range builtins: their name and arguments', () => {
         ['substring(0, 8)', 'substring', [0, 8]], ['slice(2)', 'slice', [2]], ['slice(-5)', 'slice', [-5]], ['charAt(0)', 'charAt', [0]],
     ])('s.title.%s (mutant: the arguments dropped)', (call, name, args) => {
         const f = holeFragment('"${s.title.' + call + '}"');
-        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name, args } });
+        expect(f.origin).toEqual({ kind: 'model', ...TITLE, transformation: { name, args }, template: 'main' });
     });
 });
 
@@ -98,7 +98,7 @@ describe('§B.3 row 4, lossy whole-value builtins: their name', () => {
         ['camelCase()', 'camelCase'], ['pascalCase()', 'pascalCase'], ['snakeCase()', 'snakeCase'], ['kebabCase()', 'kebabCase'],
         ['padStart(20, "*")', 'padStart'], ['padEnd(20)', 'padEnd'], ['quote()', 'quote'],
     ])('s.title.%s', (call, name) => {
-        expect(holeFragment('"${s.title.' + call + '}"').origin).toEqual({ kind: 'model', ...TITLE, transformation: { name } });
+        expect(holeFragment('"${s.title.' + call + '}"').origin).toEqual({ kind: 'model', ...TITLE, transformation: { name }, template: 'main' });
     });
 });
 
@@ -108,7 +108,7 @@ describe('§B.3 row 5, anything else: opaque, with the reads observed in the hol
         ['s.title * 2', [TITLE]], ['s.title + t.label', [TITLE, LABEL]], ['s.title.substring(s.n)', [TITLE, { elementId: 's2', feature: 'A_n', featureName: 'n' }]],
         ['t.label + t.label', [LABEL]], ['"x"', []],
     ])('%s (mutant: the reads not recorded)', (expr, reads) => {
-        expect(holeFragment('"${' + expr + '}"').origin).toEqual({ kind: 'opaque', reads });
+        expect(holeFragment('"${' + expr + '}"').origin).toEqual({ kind: 'opaque', reads, template: 'main' });
     });
 });
 

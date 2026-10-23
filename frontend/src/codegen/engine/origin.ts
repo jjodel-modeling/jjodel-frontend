@@ -211,8 +211,11 @@ function plain(value: JjelValue): string {
     }
 }
 
-const opaque = (text: string, reads: readonly FeatureRead[] = []): Text =>
-    (text === '' ? EMPTY_TEXT : makeText([fragment(text, { kind: 'opaque', reads })]));
+/** The template field of a model or opaque origin: the hole's template, absent when the hole's position is unknown. */
+const templateOf = (template: string): { template?: string } => (template !== '' ? { template } : {});
+
+const opaque = (text: string, reads: readonly FeatureRead[] = [], template = ''): Text =>
+    (text === '' ? EMPTY_TEXT : makeText([fragment(text, { kind: 'opaque', reads, ...templateOf(template) })]));
 
 export class OriginHost implements JjelTextHost {
     /** The reads of the holes being evaluated, innermost last. */
@@ -249,7 +252,7 @@ export class OriginHost implements JjelTextHost {
             this.budget.leave();
         }
         this.budget.rethrow();
-        const text = failure ? this.errorText(expr, failure.error) : this.attribute(value, expr, reads);
+        const text = failure ? this.errorText(expr, failure.error) : this.attribute(value, expr, reads, at.template);
         return text as unknown as JjelValue;
     }
 
@@ -304,22 +307,22 @@ export class OriginHost implements JjelTextHost {
         return concatTexts(parts);
     }
 
-    /** The Text of a hole's value, by the rules of §B.4. */
-    private attribute(value: JjelValue, expr: JjelExpression, reads: readonly Read[]): Text {
+    /** The Text of a hole's value, by the rules of §B.4; its model or opaque origin names the hole's template. */
+    private attribute(value: JjelValue, expr: JjelExpression, reads: readonly Read[], template: string): Text {
         if (isText(value)) return value;
         if (value === null || value === undefined) return EMPTY_TEXT;
         if (Array.isArray(value) && value.some(v => isText(v))) return this.toText(value);
         const text = plain(value);
         if (text === '') return EMPTY_TEXT;
         if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-            const model = this.modelOrigin(value, expr, reads);
+            const model = this.modelOrigin(value, expr, reads, template);
             if (model) return makeText([fragment(text, model)]);
         }
-        return opaque(text, this.featureReads(reads));
+        return opaque(text, this.featureReads(reads), template);
     }
 
     /** Rule 1: a member read, or a named builtin with literal arguments on one; the owner is the last read's target. */
-    private modelOrigin(value: JjelValue, expr: JjelExpression, reads: readonly Read[]): Origin | null {
+    private modelOrigin(value: JjelValue, expr: JjelExpression, reads: readonly Read[], template: string): Origin | null {
         const last = reads[reads.length - 1];
         if (!last) return null;
         let transformation: Transformation | null = null;
@@ -331,7 +334,7 @@ export class OriginHost implements JjelTextHost {
         }
         if (!transformation) return null;
         const read = this.featureRead(last);
-        return read ? { kind: 'model', ...read, transformation } : null;
+        return read ? { kind: 'model', ...read, transformation, ...templateOf(template) } : null;
     }
 
     /** The reads of a hole on model elements, once each, in order. */
