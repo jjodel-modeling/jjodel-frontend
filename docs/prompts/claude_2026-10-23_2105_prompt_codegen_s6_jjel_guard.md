@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: release-3-2
 Lane: full (implementation; the JjEL evaluator, shared by templates, validation rules, viewpoints and the simulator; no critical-zone file)
 Depends: P-2026-10-23-2030
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane codegen · bf9bde96b · bench 13/13 killed, no expectation changed · lazy gate on green, off not run · visual check owed by the chat (RC-23)
 Corregge: none
 Request: Alfonso, 2026-10-23 20:06, in the project chat: prototype reads in JjEL (`getProperty` uses `property in obj`, so `x.constructor` and `x["__proto__"]` are readable although no native function can be called)
 
