@@ -118,6 +118,16 @@
       "ownerChat": "C-2026-10-22-1050",
       "ownerSince": "2026-10-22",
       "milestone": 13
+    },
+    {
+      "slug": "codegen",
+      "title": "Code generation after the pilot: generators as viewpoints, several per project, template authoring (R-GEN)",
+      "exit": "a decision row closes the front once the generator-as-viewpoint slices are merged into alfonso-frontend-jjtl, or a decision row defers them",
+      "state": "open",
+      "openedOn": "2026-10-23",
+      "ownerChat": "C-2026-10-23-2009",
+      "ownerSince": "2026-10-23",
+      "milestone": 14
     }
   ]
 }
