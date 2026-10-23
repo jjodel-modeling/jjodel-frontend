@@ -6318,6 +6318,8 @@ Alfonso's answers in the project chat of 2026-10-19 («ok alle raccomandazioni»
   #475569, #64748b); `#94a3b8` stays only inside disabled controls (D-UI-13 Em. 6). No shell text under 11 px,
   shell hit targets at least 24 px without moving the layout, action icons muted only in Advanced. Source: pilot report after_v2.
 
+- **R-SHELL-6** (2026-10-23, decided by the chat on Alfonso's «andiamo avanti», unattended, evidence: read, verified: none, reversible: trunk).
+  **The shell-ui front closes.** The nine shell lanes of the discovery plan (`docs/discovery/discovery_2026-10-19_shell_visual_consolidation.md`), shell-ui-s1 to shell-ui-s9, are merged into alfonso-frontend-jjtl (first-parent merges, checked 2026-10-23), and the shell token layer (`--shell-*` tokens, `html[data-mode]`) is recorded by R-SHELL-1..5. Later shell work goes to maintenance or to a new front.
 - **R-LIB-21** (2026-10-19, ratified by Alfonso 2026-10-19 20:49 «ok», evidence: read, verified: none, reversible: trunk).
   **Two chats share the front `notation-library`, each with its own scope.** C-2026-10-18-2254 (heir of
   C-2026-10-18-0110) owns the gallery content (catalog, packages, template and example viewpoints, `simActive`) and the

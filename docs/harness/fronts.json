@@ -86,9 +86,10 @@
       "slug": "shell-ui",
       "title": "Shell visual consolidation: tokens, density, targets and contrast of topbar, toolbar, rails, status bar and menus",
       "exit": "the shell lanes of the discovery plan are merged and the shell token layer is recorded by a decision row",
-      "state": "open",
+      "state": "closed",
       "openedOn": "2026-10-19",
-      "milestone": 10
+      "milestone": 10,
+      "closedOn": "2026-10-23"
     },
     {
       "slug": "instance-of",
