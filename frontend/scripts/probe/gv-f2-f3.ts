@@ -81,7 +81,7 @@ const countClasses = (page: Page) => page.evaluate(() =>
 
 const ACTIVE = '.dock-tabpane-active';
 
-/** The centre of the visible canvas (.editor-v2__canvas) in client and in flow coordinates, from the viewport transform. */
+/** The centre of the visible canvas (.editor-v2__canvas less the right inset) in client and in flow coordinates, from the viewport transform. */
 async function canvasGeom(page: Page) {
     return page.evaluate((root) => {
         const c = document.querySelector(`${root} .editor-v2__canvas`) as HTMLElement | null;
@@ -92,8 +92,10 @@ async function canvasGeom(page: Page) {
         const rr = rf.getBoundingClientRect();
         const m = vp.style.transform.match(/translate\(\s*(-?[\d.]+)px,\s*(-?[\d.]+)px\)\s*scale\(\s*([\d.]+)\s*\)/);
         const vx = m ? +m[1] : 0; const vy = m ? +m[2] : 0; const z = m ? +m[3] : 1;
-        const cx = cr.left + cr.width / 2; const cy = cr.top + cr.height / 2;
-        return { client: { x: cx, y: cy }, flow: { x: (cx - rr.left - vx) / z, y: (cy - rr.top - vy) / z }, rf: { left: rr.left, top: rr.top }, vp: { x: vx, y: vy, z } };
+        // The Properties+Tree overlay covers the right of the canvas: the centre is the one of the visible part.
+        const inset = Math.min(Math.max(parseFloat(getComputedStyle(document.body).getPropertyValue('--jj-canvas-right-inset')) || 0, 0), cr.width);
+        const cx = cr.left + (cr.width - inset) / 2; const cy = cr.top + cr.height / 2;
+        return { inset, client: { x: cx, y: cy }, flow: { x: (cx - rr.left - vx) / z, y: (cy - rr.top - vy) / z }, rf: { left: rr.left, top: rr.top }, vp: { x: vx, y: vy, z } };
     }, ACTIVE);
 }
 
@@ -152,11 +154,13 @@ const panCentreTo = async (page: Page, target: { x: number; y: number }) => {
         target = { x: target.x + pick.dx, y: target.y + pick.dy };
     }
 };
-const hitAtCentre = async (page: Page) => page.evaluate((root) => {
-    const c = document.querySelector(`${root} .editor-v2__canvas`)!.getBoundingClientRect();
-    const el = document.elementFromPoint(c.left + c.width / 2, c.top + c.height / 2) as HTMLElement | null;
-    return { pane: !!el?.classList.contains('react-flow__pane'), node: (el?.closest('.react-flow__node') as HTMLElement | null)?.dataset.id ?? null };
-}, ACTIVE);
+const hitAtCentre = async (page: Page) => {
+    const g = await canvasGeom(page);
+    return page.evaluate(([cx, cy]) => {
+        const el = document.elementFromPoint(cx, cy) as HTMLElement | null;
+        return { pane: !!el?.classList.contains('react-flow__pane'), node: (el?.closest('.react-flow__node') as HTMLElement | null)?.dataset.id ?? null };
+    }, [g?.client.x ?? -1, g?.client.y ?? -1] as const);
+};
 
 
 async function main() {
