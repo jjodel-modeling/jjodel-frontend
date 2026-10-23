@@ -127,6 +127,7 @@ import { simPillVisible } from './sim/simRoleStatus';
 import { getSimRun, useSimVersion } from './sim/simRunState';
 import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
 import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
+import { isConsumerMode } from '../environment/consumerMode';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
@@ -429,7 +430,7 @@ const SIM_SLOT_LEFT = 'calc(200px + 16px + 48px + 16px)';
  * open panel, followed as it opens, closes and grows; in the Simulation pill's slot when there is none. The chip is
  * the Simulation chip's (`sim-panel__chip`), so the two read as a pair; the place is inline, no stylesheet loads here.
  */
-function CodegenSlot({ modelid }: { modelid: string }) {
+function CodegenSlot({ modelid, isMetamodel }: { modelid: string; isMetamodel: boolean }) {
     const anchor = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
     const [left, setLeft] = useState<number | null>(null);
@@ -457,7 +458,7 @@ function CodegenSlot({ modelid }: { modelid: string }) {
         <div ref={anchor} style={{ display: 'contents' }}>
             {open && CodePanel ? (
                 <React.Suspense fallback={null}>
-                    <CodePanel modelid={modelid} left={place} onClose={() => setOpen(false)} />
+                    <CodePanel modelid={modelid} isMetamodel={isMetamodel} left={place} onClose={() => setOpen(false)} />
                 </React.Suspense>
             ) : (
                 <div className="codegen-pill" style={{ position: 'absolute', left: place, bottom: 24, zIndex: 850 }}>
@@ -5049,7 +5050,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
                 {/* Gated (R-SIM-97, R-SIM-99): unmounting clears the run of this model (SimulationPanel's cleanup). */}
                 {modelid && simPill && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
-                {CODEGEN_BUILD && modelid && codePill && <CodegenSlot modelid={modelid} />}
+                {/* R-GEN-23: no Code pill in consumer mode, decided here so codegen/setting.ts imports nothing. */}
+                {CODEGEN_BUILD && modelid && codePill && !isConsumerMode() && <CodegenSlot modelid={modelid} isMetamodel={!isModelMode} />}
 
             </div>
         </EditorContext.Provider>

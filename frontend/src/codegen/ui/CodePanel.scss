@@ -140,6 +140,15 @@
         color: var(--color-warning-text);
     }
 
+    // A metamodel no model conforms to (R-GEN-19): the reason Output stays empty.
+    &__hint--empty {
+        padding: 8px 10px;
+        border: 1px dashed var(--color-border-primary);
+        border-radius: 6px;
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-secondary);
+    }
+
     &__help {
         padding-top: 8px;
         border-top: 1px solid var(--color-border-secondary);
