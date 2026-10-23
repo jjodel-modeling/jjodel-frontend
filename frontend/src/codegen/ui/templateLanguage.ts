@@ -12,11 +12,13 @@
  * the same states; no quote closes itself there, a quote being text.
  *
  * The theme is the JjTL editor's (jjtl/editor/jjtlTheme.ts), reused, with the hole delimiters and the escapes
- * coloured. Registered once, on the first editor; this module is reached only from the Code panel's chunk.
+ * coloured. Registered once, on the first editor; this module is reached only from the Code panel's chunk. The
+ * completion provider of both languages (templateCompletion.ts, S4) is registered with them.
  */
 
 import { Monaco, monaco } from '../../joiner';
 import { jjtlTheme } from '../../jjtl/editor/jjtlTheme';
+import { registerTemplateCompletion } from './templateCompletion';
 
 export const TEMPLATE_LANGUAGE_ID = 'jjel-template';
 /** The language of a text-mode body (S5, R-GEN-26). */
@@ -149,7 +151,7 @@ const templateTheme: Monaco.editor.IStandaloneThemeData = {
 
 let registered = false;
 
-/** Registers both languages and their theme, once. */
+/** Registers both languages, their completion and their theme, once. */
 export function ensureTemplateLanguage(): void {
     if (registered) return;
     monaco.languages.register({ id: TEMPLATE_LANGUAGE_ID });
@@ -158,6 +160,7 @@ export function ensureTemplateLanguage(): void {
     monaco.languages.register({ id: TEMPLATE_TEXT_LANGUAGE_ID });
     monaco.languages.setMonarchTokensProvider(TEMPLATE_TEXT_LANGUAGE_ID, templateTextLanguage);
     monaco.languages.setLanguageConfiguration(TEMPLATE_TEXT_LANGUAGE_ID, templateTextLanguageConfiguration);
+    registerTemplateCompletion(monaco, TEMPLATE_LANGUAGE_ID, TEMPLATE_TEXT_LANGUAGE_ID);
     monaco.editor.defineTheme(TEMPLATE_THEME_ID, templateTheme);
     registered = true;
 }
