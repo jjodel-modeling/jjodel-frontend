@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (implementation; eager left bar plus the setting module, no critical-zone file)
 Depends: P-2026-10-24-0003
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane codegen · 51620011c · bench 10/10 · crops in the lane folder
 Corregge: none
 Request: Alfonso, 2026-10-23 23:54, in the project chat (kept locally in the chain folder as `request.md`)
 

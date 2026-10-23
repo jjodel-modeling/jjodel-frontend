@@ -189,3 +189,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Bench 7/7. Probes on 3131: generator-tab 22/22, codegen-check 43/43; crops in the 0045 lane folder, visual check by the chat (RC-23). Regression: G3's scrollIntoView scrolled .dock-top 1321px when the tab went behind; fixed in 5a4cbed0c, the probe guards it. Unattended: that fix (a G3 bug, no feature); the 0003 handoff's decisions 1-9. Cleanup candidate: TemplateEditor.tsx, no importer. Not fixed: «g1 (gone)» flashes on a new generator's first render. 15 files, all in DOVE.
 **Prompt document name**: 2026-10-24 00:45
+
+## 2026-10-24 — feat(codegen): GENERATORS section in the project left bar (P-2026-10-24-0004)
+**Prompt**: G4 of 3.3 (R-GEN-42): a GENERATORS section after TRANSFORMS in the project left bar, setting on only, none in consumer mode; rows open the generator tab, «+ New generator» creates one; both by dynamic import, so the lazy gate stays green. generatorEntries in setting.ts with tests, probe, crops.
+**Files touched**: feat 51620011c: frontend/src/codegen/setting.ts, __tests__/setting.test.ts, ui/TemplateEditorTab.tsx, ui/openTemplateEditor.ts; frontend/src/pages/components/LeftBar.tsx, pages/dashboard.scss; frontend/scripts/probe/codegen-leftbar.ts (new); docs: docs/log-inbox/codegen.md, the prompt's Status line
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 10/10 on generatorEntries. Probe on 3132: 21/21; crops in the lane folder, visual check by the chat (RC-23). Lazy gate --on green, only setting.ts eager. Out of DOVE, unattended (RC-21): the tab's «New generator» lifted into an exported createGenerator in TemplateEditorTab.tsx, re-exported by openTemplateEditor.ts; the creation had no entry outside the component. 7 files (>5). Not covered: the multi-metamodel group header and metamodel picker (no fixture with two metamodels).
+**Prompt document name**: 2026-10-24 00:04
