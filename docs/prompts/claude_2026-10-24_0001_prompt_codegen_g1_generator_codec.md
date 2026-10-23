@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (implementation; new engine file and its tests, no critical-zone file)
 Depends: P-2026-10-24-0000
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane codegen · f41de8b23 · bench 6/6
 Corregge: none
 Request: Alfonso, 2026-10-23 23:54, in the project chat (kept locally in the chain folder as `request.md`)
 
