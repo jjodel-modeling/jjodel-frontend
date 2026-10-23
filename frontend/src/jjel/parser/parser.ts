@@ -116,6 +116,23 @@ export class JjelParser {
     }
 
     /**
+     * A text body (R-GEN-26): the tokens of a `textBody` lexer, always one
+     * `InterpolatedStringExpr`, also with no hole (one text part) or empty (no
+     * part), never a `Literal`; the input must end with it.
+     */
+    parseTextBody(): JjelParserResult {
+        try {
+            const expression = this.interpolatedString();
+            if (!this.isAtEnd()) {
+                throw this.error(this.peek(), `Unexpected '${this.peek().value}' after the end of the text`);
+            }
+            return { expression, errors: this.errors };
+        } catch (error) {
+            return { expression: null, errors: this.errors };
+        }
+    }
+
+    /**
      * An action, `<target> := <expression>` (R-SIM-17, R-SIM-40): the target
      * ends in `.[attribute]`, never a read-only one, and the input ends with
      * the expression. Expects the tokens of an action-mode lexer (`ASSIGN`).
@@ -1074,6 +1091,31 @@ export function parseTemplate(source: string): JjelParserResult {
 
     const parser = new JjelParser(tokens, { interpolation: true });
     return parser.parseStrict();
+}
+
+/**
+ * Parse a template body in text mode (R-GEN-26): the whole source is the inside
+ * of one interpolated string (lexer option `textBody`), so the result is an
+ * `InterpolatedStringExpr` whose positions are already the body's own. Holes
+ * parse as in `parseTemplate`.
+ */
+export function parseTemplateText(source: string): JjelParserResult {
+    const lexer = new JjelLexer(source, { textBody: true });
+    const { tokens, errors: lexerErrors } = lexer.tokenize();
+
+    if (lexerErrors.length > 0) {
+        return {
+            expression: null,
+            errors: lexerErrors.map((e: JjelLexerError) => ({
+                message: e.message,
+                line: e.line,
+                column: e.column,
+            })),
+        };
+    }
+
+    const parser = new JjelParser(tokens, { interpolation: true });
+    return parser.parseTextBody();
 }
 
 /**
