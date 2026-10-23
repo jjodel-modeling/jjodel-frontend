@@ -15,7 +15,9 @@
  * 4. literal: the text between holes carries its template position, recovered from `tokenize`, because the parts
  *    of an interpolated string carry none (S1).
  * A hole that throws is an error fragment at the hole's template position with the exception's message, and
- * generation goes on; `null` renders '' in a hole, in `+` and in a Text join (U10).
+ * generation goes on; `null` renders '' in a hole, in `+` and in a Text join (U10). The exception is the generation
+ * budget (text.ts, R-GEN-28): each hole is a time checkpoint, and once the budget has tripped the hole rethrows its
+ * stop instead of writing an error fragment; each Text built here is an output checkpoint.
  *
  * Each splice into a hole adds an indentation level with the hole line's leading whitespace (indent.ts).
  * Feature ids come from idlookup through a side table keyed by handle (`WeakMap`): a handle's `id` names its
@@ -29,8 +31,8 @@ import type { JjelExpression, JjelObject, JjelTextHost, JjelTextPart, JjelValue 
 import { isBitVector } from '../../jjel/evaluator/context';
 import { toVerilog } from '../../jjel/evaluator/builtins/bitvectors';
 import { holePrefixes } from './indent';
-import { EMPTY_TEXT, concatTexts, fragment, isText, makeText, renderText } from './text';
-import type { FeatureRead, IndentLevel, LiteralOrigin, Origin, Text, TextFragment, Transformation } from './text';
+import { EMPTY_TEXT, GenerationBudget, concatTexts, fragment, isText, makeText, renderText } from './text';
+import type { FeatureRead, IndentLevel, LiteralOrigin, Origin, TemplatePosition, Text, TextFragment, Transformation } from './text';
 
 type Lookup = Record<string, any>;
 
@@ -218,7 +220,7 @@ export class OriginHost implements JjelTextHost {
     private readonly features = new WeakMap<object, Map<string, string>>();
     private nextLevel = 1;
 
-    constructor(private readonly lookup: Lookup, private readonly sources: TemplateSources) {}
+    constructor(private readonly lookup: Lookup, private readonly sources: TemplateSources, private readonly budget: GenerationBudget = new GenerationBudget()) {}
 
     /** The `readObserver` of the template context: records the read in the hole being evaluated. */
     readonly observe = (target: JjelObject, property: string, value: JjelValue): void => {
@@ -230,6 +232,9 @@ export class OriginHost implements JjelTextHost {
     }
 
     evaluateHole(expr: JjelExpression, evaluate: () => JjelValue): JjelValue {
+        const at: TemplatePosition = this.sources.holePosition(expr) ?? { template: '', offset: -1, line: 0, column: 0 };
+        this.budget.checkpoint(at);
+        this.budget.enter(at);
         const reads: Read[] = [];
         this.frames.push(reads);
         let value: JjelValue = null;
@@ -241,7 +246,9 @@ export class OriginHost implements JjelTextHost {
         } finally {
             this.frames.pop();
             this.frames[this.frames.length - 1]?.push(...reads);
+            this.budget.leave();
         }
+        this.budget.rethrow();
         const text = failure ? this.errorText(expr, failure.error) : this.attribute(value, expr, reads);
         return text as unknown as JjelValue;
     }
@@ -259,15 +266,15 @@ export class OriginHost implements JjelTextHost {
                 for (const f of this.toText(part.value).fragments) fragments.push(fragment(f.text, f.origin, [level, ...f.indent]));
             }
         }
-        return makeText(fragments) as unknown as JjelValue;
+        return this.budget.measure(makeText(fragments)) as unknown as JjelValue;
     }
 
     concat(left: JjelValue, right: JjelValue): JjelValue {
-        return concatTexts([this.toText(left), this.toText(right)]) as unknown as JjelValue;
+        return this.budget.measure(concatTexts([this.toText(left), this.toText(right)])) as unknown as JjelValue;
     }
 
     join(items: JjelValue[], separator: JjelValue): JjelValue {
-        return this.joinTexts(items.map(v => this.toText(v)), this.toText(separator)) as unknown as JjelValue;
+        return this.budget.measure(this.joinTexts(items.map(v => this.toText(v)), this.toText(separator))) as unknown as JjelValue;
     }
 
     stringify(text: JjelValue): string {
