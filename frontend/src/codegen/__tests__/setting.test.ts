@@ -197,6 +197,16 @@ describe('codePillVisible', () => {
         expect(codePillVisible(true, false, lookup(STORED), 'LOOSE', true)).toBe(false);
         expect(codePillVisible(true, false, lookup(STORED), 'MISSING', true)).toBe(false);
     });
+
+    it('shows in Basic mode when the metamodel holds only genGenerators, on M1 and M2 (kills: genGenerators not read)', () => {
+        const GENS = { genGenerators: '{"v":1,"generators":[{"id":"g1","name":"doc","files":[],"target":"none","templates":[]}]}' };
+        expect(codePillVisible(true, false, lookup(GENS), 'M', true)).toBe(true);
+        expect(codePillVisible(true, false, lookup(GENS), 'MM', false)).toBe(true);
+        expect(codePillVisible(false, false, lookup(GENS), 'M', true)).toBe(false);
+        expect(codePillVisible(true, false, lookup({ genGenerators: '' }), 'M', true)).toBe(false);
+        expect(codePillVisible(true, false, lookup({ genGenerators: '', genTemplates: '' }), 'MM', false)).toBe(false);
+        expect(codePillVisible(true, false, lookup(GENS), 'LOOSE', true)).toBe(false);
+    });
 });
 
 describe('a build without the flag (kills: flag ignored; flag read once at import; any non-empty value read as on)', () => {
