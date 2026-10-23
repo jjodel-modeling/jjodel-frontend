@@ -8,6 +8,7 @@
  *   is this module's, per session, never persisted.
  * - A Save of one generator's templates: one patch through `generatorsPatch` (G1), the other generators as stored.
  * - Check is offered only on a generator whose target is `js` (R-GEN-35).
+ * - Run likewise: it calls `main()` of the generator's `js` file; a `none` target produces text, not a program (R-GEN-35).
  * - «Go to template»: the template a fragment names, while the list holds it.
  *
  * Pure but for the session memory: no React, no store.
@@ -58,6 +59,11 @@ export function saveGeneratorTemplates(
 
 /** Check is offered only on a generator whose target is `js` (R-GEN-35). */
 export function checkOffered(target: GeneratorTarget): boolean {
+    return target === 'js';
+}
+
+/** Run is offered only on a generator whose target is `js`: it calls `main()` of its `js` file (R-GEN-35). */
+export function runOffered(target: GeneratorTarget): boolean {
     return target === 'js';
 }
 

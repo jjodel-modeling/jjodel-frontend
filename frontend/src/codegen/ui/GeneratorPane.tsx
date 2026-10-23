@@ -41,7 +41,7 @@ import { displayJson } from './displayJson';
 import { conformingModels } from './conformingModels';
 import { linesOf } from './codeLines';
 import { elementAt, elementName, originText, templateTarget } from './codeOrigins';
-import { checkOffered } from './generatorTabs';
+import { checkOffered, runOffered } from './generatorTabs';
 import { selectOnModelCanvas } from './canvasSelection';
 import type { GeneratorRecord } from '../engine/generatorCodec';
 import type { GeneratorResult } from '../engine/generateFiles';
@@ -68,6 +68,8 @@ const NO_SCENARIO = 'Record a scenario in the simulator first.';
 
 /** The tooltip of «Check» on a generator whose target is not `js` (R-GEN-35). */
 const NOT_JS = 'Check runs only on a generator whose target is js.';
+/** The tooltip of «Run» on a generator whose target is not `js` (R-GEN-35). */
+const RUN_NOT_JS = 'Run runs only on a generator whose target is js.';
 
 /** The project of the current user, as the simulator reads it (SimulationPanel.tsx `projectIdOfUser`); '' when none. */
 function projectIdOfUser(): string {
@@ -177,11 +179,12 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
     const timeoutMs = Number(timeout);
     const timeoutValid = Number.isFinite(timeoutMs) && timeoutMs >= 1;
     const offered = checkOffered(generator.target);
-    const canRun = !!result && !result.hasErrors && !running && !checking && timeoutValid;
+    const runnable = runOffered(generator.target);
+    const canRun = runnable && !!result && !result.hasErrors && !running && !checking && timeoutValid;
     const canCheck = offered && !!result && !result.hasErrors && !running && !checking && timeoutValid && scenario !== null && targetId !== null;
 
     const run = async () => {
-        if (!result || result.hasErrors || !timeoutValid) return;
+        if (!runnable || !result || result.hasErrors || !timeoutValid) return;
         const { code, map } = result;
         setRunning(true);
         setOutcome(null);
@@ -397,7 +400,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                         type="button"
                         className="codegen-panel__button codegen-panel__button--primary"
                         disabled={!canRun}
-                        title={result?.hasErrors ? 'Fix the generation errors first' : `Run the module and call its ${RUN_ENTRY}()`}
+                        title={!runnable ? RUN_NOT_JS : result?.hasErrors ? 'Fix the generation errors first' : `Run the module and call its ${RUN_ENTRY}()`}
                         onClick={() => { void run(); }}
                     >
                         <i className="bi bi-play-fill" />
@@ -434,6 +437,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                     </button>
                 </div>
             )}
+            {mode === 'run' && !runnable && <div className="codegen-panel__hint" role="status">{RUN_NOT_JS}</div>}
             {mode === 'check' && !offered && <div className="codegen-panel__hint" role="status">{NOT_JS}</div>}
             {mode !== 'preview' && result?.hasErrors && <div className="codegen-panel__hint">{`${mode === 'run' ? 'Run' : 'Check'} is off while the generation has errors.`}</div>}
 

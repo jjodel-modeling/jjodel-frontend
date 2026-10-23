@@ -6,7 +6,7 @@
 
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
-    checkOffered, forgetGenerators, generatorTabId, launchGenerator, rememberGenerator, saveGeneratorTemplates, templateToSelect,
+    checkOffered, forgetGenerators, generatorTabId, launchGenerator, rememberGenerator, runOffered, saveGeneratorTemplates, templateToSelect,
 } from '../generatorTabs';
 import { elementAt, pickOnCanvas, templateTarget } from '../codeOrigins';
 import { addGenerator, decodeGenerators, encodeGenerators, GEN_GENERATORS_KEY } from '../../engine/generatorCodec';
@@ -78,6 +78,13 @@ describe('checkOffered', () => {
     it('Check is disabled on target none (kills: condition dropped)', () => {
         expect(checkOffered('none')).toBe(false);
         expect(checkOffered('js')).toBe(true);
+    });
+});
+
+describe('runOffered', () => {
+    it('Run is disabled on target none (kills: Run enabled on target none)', () => {
+        expect(runOffered('none')).toBe(false);
+        expect(runOffered('js')).toBe(true);
     });
 });
 
