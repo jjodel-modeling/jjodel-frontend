@@ -9,6 +9,13 @@
  * body between text and expression (templateMode.ts) as a draft edit, and the model switches to the language of the
  * mode, `jjel-template-text` for text; a body that cannot be converted keeps its mode, with the reason.
  *
+ * On the right the preview (S3, P-2026-10-23-2225): a model conforming to the metamodel (conformingModels.ts), an
+ * entry (`main` if present, else the edited template), and the generated text in the Code panel's `<pre>`-with-gutter
+ * form (codeLines.ts). It generates PREVIEW_DELAY_MS after the last edit over the stored list with the drafts merged
+ * in (templatePreview.ts), the model's record built anew each time as CodePanel.tsx builds it. The errors are listed
+ * above the text; those of the edited template are also Monaco markers at their hole (owner `codegen-gen`). No Run,
+ * no Check: they stay in the panel.
+ *
  * Typing writes nothing: the drafts live here (templateDrafts.ts). «Save» and Ctrl/Cmd+S write every draft at once,
  * through `templatesPatch` and the metamodel's `state` setter, one SetFieldAction, one undo step, nothing when the
  * list is unchanged; a template with no draft follows the store, so an Undo after a Save shows the stored body again.
@@ -20,17 +27,24 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useSelector } from 'react-redux';
-import { LPointerTargetable, Monaco, monaco } from '../../joiner';
+import { shallowEqual, useSelector } from 'react-redux';
+import { DUser, LPointerTargetable, Monaco, monaco, store } from '../../joiner';
+import { buildEvalContext } from '../../jjscript';
+import { evalContextFor } from '../../components/editor-v2/sim/simBridge';
 import DockManager from '../../components/abstract/DockManager';
 import ConfirmDialog from '../../components/ConfirmDialog/ConfirmDialog';
 import { largeMonacoOptions, mergeMonacoOptions } from '../../components/editors/monacoConfig';
+import { generate } from '../engine/generate';
 import { GEN_TEMPLATES_KEY, decodeTemplates, templatesPatch } from '../engine/templateCodec';
 import { TEMPLATE_LANGUAGE_ID, TEMPLATE_TEXT_LANGUAGE_ID, TEMPLATE_THEME_ID, ensureTemplateLanguage } from './templateLanguage';
 import { templateMarkers } from './templateMarkers';
 import { convertBody } from './templateMode';
 import { applyDrafts, changedOutside, editDraft, followStore, shownDraft } from './templateDrafts';
+import { conformingModels } from './conformingModels';
+import { linesOf } from './codeLines';
+import { previewEntry, previewMarkers, previewTemplates } from './templatePreview';
 import type { DraftEdit, Drafts } from './templateDrafts';
+import type { GenerateResult } from '../engine/generate';
 import type { TemplateMode, TemplateRecord } from '../engine/templates';
 import './TemplateEditorTab.scss';
 
@@ -39,6 +53,35 @@ export const templateTabId = (metamodelId: string): string => `codegen_tpl_${met
 
 /** The Monaco marker owner of the parse errors. */
 const MARKER_OWNER = 'codegen-parse';
+
+/** The Monaco marker owner of the preview's generation errors (S3). */
+const GEN_MARKER_OWNER = 'codegen-gen';
+
+/** The pause after the last edit before the preview generates again (S3, discovery §3.4, risk 6). */
+const PREVIEW_DELAY_MS = 400;
+
+type Lookup = Record<string, any>;
+
+/** The project of the current user, as CodePanel.tsx reads it; '' when none. */
+function projectIdOfUser(): string {
+    try {
+        return (LPointerTargetable.fromPointer(DUser.current as any) as any)?.project?.id ?? '';
+    } catch {
+        return '';
+    }
+}
+
+/** An element's name for a reader, as CodePanel.tsx words it. */
+function elementName(lookup: Lookup, id: string): string {
+    const d = lookup[id];
+    return typeof d?.name === 'string' && d.name ? d.name : `${d?.className ?? 'element'} ${id}`;
+}
+
+/** One refresh of the preview: the generation, or why the model could not be read. */
+interface Preview {
+    readonly result: GenerateResult | null;
+    readonly failure: string | null;
+}
 
 // ── Registry of the open tabs, by metamodel id ───────────────────────────────
 
@@ -155,6 +198,35 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
     const dirtyCount = Object.keys(drafts).length;
     const problem = current ? applied.problems[current.key] ?? null : null;
     const outside = current && drafts[current.key] ? changedOutside(drafts[current.key], templates) : false;
+
+    // ── Preview (S3): a model of the metamodel, an entry, the generated text ──
+    const models = useSelector((state: any) => conformingModels(state.idlookup ?? {}, projectIdOfUser(), metamodelId), shallowEqual);
+    const [chosenModel, setChosenModel] = useState<string | null>(null);
+    const [chosenEntry, setChosenEntry] = useState<string | null>(null);
+    const [preview, setPreview] = useState<Preview | null>(null);
+    const targetId = chosenModel !== null && models.includes(chosenModel) ? chosenModel : models[0] ?? null;
+    const previewList = useMemo(() => previewTemplates(templates, drafts), [templates, drafts]);
+    const edited = shown ? shown.name.trim() : null;
+    const entryName = previewEntry(previewList, chosenEntry, edited);
+
+    // Generated again PREVIEW_DELAY_MS after the last change; the model's record is built anew each time.
+    useEffect(() => {
+        if (entryName === null || targetId === null) {
+            setPreview(null);
+            return;
+        }
+        const timer = setTimeout(() => {
+            const lookup: Lookup = (store.getState() as any).idlookup ?? {};
+            try {
+                const globals = buildEvalContext(evalContextFor(lookup, targetId, projectIdOfUser()), { extentModelId: targetId });
+                setPreview({ result: generate(globals, lookup, targetId, previewList, entryName), failure: null });
+            } catch (error) {
+                setPreview({ result: null, failure: error instanceof Error ? error.message : String(error) });
+            }
+        }, PREVIEW_DELAY_MS);
+        return () => clearTimeout(timer);
+    }, [previewList, entryName, targetId]);
+    const previewLines = useMemo(() => (preview?.result ? linesOf(preview.result.code, preview.result.map) : []), [preview]);
 
     // ── Writes ──────────────────────────────────────────────────────────────
     const write = useCallback((next: readonly TemplateRecord[]) => {
@@ -302,6 +374,15 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
         mark(model);
     }, [body, mode, hasTemplate, current?.key]);
 
+    // The preview's errors of the edited template, at their hole; between refreshes Monaco moves them with the text.
+    useEffect(() => {
+        const model = editorRef.current?.getModel();
+        if (!model) return;
+        const parsed = templateMarkers(model.getValue(), modeRef.current);
+        const markers = previewMarkers(preview?.result?.errors ?? [], hasTemplate ? edited : null, parsed);
+        monaco.editor.setModelMarkers(model, GEN_MARKER_OWNER, markers.map(m => ({ ...m, severity: monaco.MarkerSeverity.Error })));
+    }, [preview, edited, hasTemplate]);
+
     // Ctrl/Cmd+S outside Monaco (the name and parameter fields).
     const onKeyDown = (e: React.KeyboardEvent) => {
         if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 's') {
@@ -430,6 +511,63 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
                     A template is text with {'${…}'} holes ({'\\${'} writes {'${'}), or in expression mode a JjEL expression; templates call each other by name.
                     Typing writes nothing: Save writes every draft at once.
                 </div>
+            </section>
+
+            <section className="codegen-tpl__preview" aria-label="Preview">
+                <div className="codegen-tpl__side-title">Preview</div>
+                <div className="codegen-tpl__fields">
+                    <label className="codegen-tpl__field codegen-tpl__field--wide">
+                        <span className="codegen-tpl__label">Model</span>
+                        <select
+                            className="codegen-tpl__input"
+                            value={targetId ?? ''}
+                            disabled={models.length === 0}
+                            onChange={e => setChosenModel(e.target.value)}
+                        >
+                            {models.length === 0 && <option value="">No model</option>}
+                            {models.map(id => <option key={id} value={id}>{elementName((store.getState() as any).idlookup ?? {}, id)}</option>)}
+                        </select>
+                    </label>
+                    <label className="codegen-tpl__field codegen-tpl__field--wide">
+                        <span className="codegen-tpl__label">Entry</span>
+                        <select
+                            className="codegen-tpl__input"
+                            value={entryName ?? ''}
+                            disabled={previewList.length === 0}
+                            onChange={e => setChosenEntry(e.target.value)}
+                        >
+                            {previewList.map((t, i) => <option key={`${i}-${t.name}`} value={t.name}>{t.name}</option>)}
+                        </select>
+                    </label>
+                </div>
+                {models.length === 0 && (
+                    <div className="codegen-tpl__hint" role="status">No model conforms to this metamodel: create one to see the generated text.</div>
+                )}
+                {preview?.failure && <div className="codegen-tpl__hint codegen-tpl__hint--error">{`The model could not be read: ${preview.failure}`}</div>}
+                {preview?.result && preview.result.errors.length > 0 && (
+                    <ul className="codegen-tpl__errors" aria-label="Generation errors">
+                        {preview.result.errors.map((e, i) => (
+                            <li className="codegen-tpl__error" key={`error-${i}`}>
+                                <span className="codegen-tpl__error-at">{`${e.template} ${e.line}:${e.column}`}</span>
+                                <span>{e.message}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+                {preview?.result && (
+                    <pre className="codegen-tpl__code" aria-label="Generated text">
+                        {previewLines.map((pieces, i) => (
+                            <span className="codegen-tpl__line" data-line={i + 1} key={i}>
+                                <span className="codegen-tpl__gutter">{i + 1}</span>
+                                <span className="codegen-tpl__text">
+                                    {pieces.map((p, j) => (p.entry === null
+                                        ? <React.Fragment key={j}>{p.text}</React.Fragment>
+                                        : <span key={j} className={`codegen-tpl__span codegen-tpl__span--${p.entry.origin.kind}`}>{p.text}</span>))}
+                                </span>
+                            </span>
+                        ))}
+                    </pre>
+                )}
             </section>
 
             <ConfirmDialog

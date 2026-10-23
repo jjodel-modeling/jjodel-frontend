@@ -1,7 +1,7 @@
 // Template Editor tab (P-2026-10-23-1945, R-GEN-20) — loaded with the lazy chunk of the Code panel only.
 //
 // A dock tab of the `models` group: the list of the metamodel's templates on the left, the selected template's
-// fields over Monaco in the centre. The controls repeat the Code panel's (CodePanel.scss) at the same sizes, under
+// fields over Monaco in the centre, the preview on the right (S3). The controls repeat the Code panel's (CodePanel.scss) at the same sizes, under
 // classes of their own: this file does not depend on the panel's stylesheet being loaded.
 //
 // Design-system tokens only, none defined here (rule 28). Cyan marks focus and the unsaved dot, as the canvas accent.
@@ -248,6 +248,99 @@
             line-height: 1;
             color: inherit;
         }
+    }
+
+    // -- preview (S3) ----------------------------------------------------------
+    &__preview {
+        display: flex;
+        flex: 0 0 38%;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 260px;
+        min-height: 0;
+        padding: 12px;
+        border-left: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+    }
+
+    &__preview &__field {
+        flex: 1 1 0;
+    }
+
+    &__errors {
+        display: flex;
+        flex: 0 0 auto;
+        flex-direction: column;
+        gap: 4px;
+        max-height: 30%;
+        margin: 0;
+        padding: 8px;
+        overflow: auto;
+        list-style: none;
+        border: 1px solid var(--color-error-muted);
+        border-radius: 4px;
+        background: var(--color-error-subtle);
+    }
+
+    &__error {
+        display: flex;
+        gap: 8px;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-error-text);
+        overflow-wrap: anywhere;
+    }
+
+    &__error-at {
+        flex: 0 0 auto;
+        font-family: var(--font-mono);
+    }
+
+    // The Code panel's output form (CodePanel.scss `__code`, `__line`, `__gutter`, `__text`): one line per generated
+    // line, never wrapped, the gutter sticky and opaque at the left edge while the text scrolls on both axes.
+    &__code {
+        display: grid;
+        flex: 1 1 auto;
+        grid-template-columns: minmax(max-content, 1fr);
+        align-content: start;
+        min-height: 0;
+        margin: 0;
+        padding: 8px 0;
+        overflow: auto;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.6;
+        tab-size: 4;
+    }
+
+    &__line {
+        display: flex;
+        min-width: max-content;
+        padding-right: 12px;
+    }
+
+    &__gutter {
+        position: sticky;
+        left: 0;
+        flex: 0 0 32px;
+        padding-right: 8px;
+        text-align: right;
+        color: var(--color-text-placeholder);
+        background-color: var(--color-bg-primary);
+        user-select: none;
+    }
+
+    &__text {
+        white-space: pre;
+    }
+
+    &__span--model,
+    &__span--opaque {
+        color: var(--color-text-primary);
     }
 
     // Primary: the slate gradient, white text and glyph, as CodePanel.scss `__button--primary`.
