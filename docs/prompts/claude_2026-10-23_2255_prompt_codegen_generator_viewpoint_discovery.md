@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (discovery; touches persistence of a shipped feature, a new viewpoint kind, possibly a migration)
 Depends: P-2026-10-23-2145
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane codegen · 6d7d56d4f · discovery
 Corregge: none
 Request: Alfonso, 2026-10-23 20:09, in the project chat (kept locally in `~/.jjodel-lanes/P-2026-10-23-2255/request.md`)
 
