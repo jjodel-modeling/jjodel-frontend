@@ -16,6 +16,9 @@
  * above the text; those of the edited template are also Monaco markers at their hole (owner `codegen-gen`). No Run,
  * no Check: they stay in the panel.
  *
+ * Completion (S4, P-2026-10-23-2300): the tab sets the context of its Monaco model in templateCompletion.ts, built on
+ * demand over the store's metamodel and the templates with the drafts merged in, and clears it on unmount.
+ *
  * Typing writes nothing: the drafts live here (templateDrafts.ts). «Save» and Ctrl/Cmd+S write every draft at once,
  * through `templatesPatch` and the metamodel's `state` setter, one SetFieldAction, one undo step, nothing when the
  * list is unchanged; a template with no draft follows the store, so an Undo after a Save shows the stored body again.
@@ -39,12 +42,14 @@ import { GEN_TEMPLATES_KEY, decodeTemplates, templatesPatch } from '../engine/te
 import { TEMPLATE_LANGUAGE_ID, TEMPLATE_TEXT_LANGUAGE_ID, TEMPLATE_THEME_ID, ensureTemplateLanguage } from './templateLanguage';
 import { templateMarkers } from './templateMarkers';
 import { convertBody } from './templateMode';
-import { applyDrafts, changedOutside, editDraft, followStore, shownDraft } from './templateDrafts';
+import { applyDrafts, changedOutside, editDraft, followStore, paramsOf, shownDraft } from './templateDrafts';
 import { conformingModels } from './conformingModels';
 import { linesOf } from './codeLines';
 import { previewEntry, previewMarkers, previewTemplates } from './templatePreview';
+import { buildCompletionContext, setTemplateCompletionContext } from './templateCompletion';
 import type { DraftEdit, Drafts } from './templateDrafts';
 import type { GenerateResult } from '../engine/generate';
+import type { TemplateCompletionContext } from './templateCompletion';
 import type { TemplateMode, TemplateRecord } from '../engine/templates';
 import './TemplateEditorTab.scss';
 
@@ -317,6 +322,11 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
     const mode: TemplateMode = shown?.mode ?? 'text';
     const modeRef = useRef(mode);
     modeRef.current = mode;
+    // The completion context of this render's templates and edited template, built when a completion is asked for.
+    const completionRef = useRef<() => TemplateCompletionContext | null>(() => null);
+    completionRef.current = () => buildCompletionContext(
+        (store.getState() as any).idlookup ?? {}, metamodelId, previewList, shown ? edited : null, shown ? paramsOf(shown.params) : [],
+    );
 
     const mark = (model: Monaco.editor.ITextModel) => {
         const markers = templateMarkers(model.getValue(), modeRef.current).map(m => ({ ...m, severity: monaco.MarkerSeverity.Error }));
@@ -344,11 +354,14 @@ export default function TemplateEditorTab({ metamodelId, initial = null }: Templ
         });
         editorRef.current = editor;
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveRef.current());
+        const uri = model.uri.toString();
+        setTemplateCompletionContext(uri, () => completionRef.current());
         const sub = editor.onDidChangeModelContent(() => {
             mark(model);
             if (!applying.current) editRef.current({ body: model.getValue() });
         });
         return () => {
+            setTemplateCompletionContext(uri, null);
             sub.dispose();
             editor.dispose();
             model.dispose();
