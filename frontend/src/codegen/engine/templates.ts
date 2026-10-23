@@ -20,6 +20,8 @@
  * the throw into one error fragment (origin.ts) instead of a stack overflow. 64 is far above the containment depth
  * of a model a template walks, and about a tenth of the depth at which the stack runs out: without the bound, a
  * template that calls itself once per level overflowed above 625 levels under vitest's node (measured in S2).
+ * Depth does not bound fan-out (two self-calls per level stay under 64 and make 2^64 calls): each call is also a
+ * checkpoint of the generation's budget (text.ts, R-GEN-28), for the time before it runs and the output after.
  *
  * Pure: JjEL, the guard subset checker and the engine.
  */
@@ -28,6 +30,7 @@ import { JjelTokenType, createFunction, parseTemplate, parseTemplateText, tokeni
 import type { EvaluationContext, JjelEvaluator, JjelExpression, JjelParserResult, JjelValue } from '../../jjel';
 import { checkGuardSubset } from '../../model/simulation/subsetChecker';
 import type { OriginHost, TemplateSources } from './origin';
+import { GenerationBudget } from './text';
 import type { TemplatePosition, Text } from './text';
 
 /**
@@ -89,7 +92,8 @@ function positionIn(body: string, template: string, line: number, column: number
 
 /**
  * Registers `records` as builtins of `root`, the context of the generation, evaluated by `evaluator` with `host`
- * as its Text host; their sources go to `sources`, for the positions of holes and literal text.
+ * as its Text host; their sources go to `sources`, for the positions of holes and literal text. `budget` is the
+ * generation's, the one `host` checks.
  */
 export function registerTemplates(
     records: readonly TemplateRecord[],
@@ -97,6 +101,7 @@ export function registerTemplates(
     evaluator: JjelEvaluator,
     host: OriginHost,
     sources: TemplateSources,
+    budget: GenerationBudget = new GenerationBudget(),
 ): TemplateSet {
     const problems: TemplateProblem[] = [];
     const compiled = new Map<string, { record: TemplateRecord; expr: JjelExpression | null }>();
@@ -142,15 +147,19 @@ export function registerTemplates(
         const entry = compiled.get(name);
         if (!entry) throw new Error(`No template named '${name}'`);
         if (!entry.expr) throw new Error(`Template '${name}' has errors and cannot be called`);
+        const at: TemplatePosition = { template: name, offset: 0, line: 1, column: 1 };
+        budget.checkpoint(at);
         if (depth >= MAX_TEMPLATE_DEPTH) {
             throw new Error(`Template '${name}' called more than ${MAX_TEMPLATE_DEPTH} levels deep: the recursion has no end`);
         }
         depth++;
+        budget.enter(at);
         try {
             const bindings: Record<string, JjelValue> = {};
             entry.record.params.forEach((p, i) => { bindings[p] = args[i] ?? null; });
-            return host.toText(evaluator.evaluate(entry.expr, root.child(bindings)));
+            return budget.measure(host.toText(evaluator.evaluate(entry.expr, root.child(bindings))));
         } finally {
+            budget.leave();
             depth--;
         }
     };

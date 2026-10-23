@@ -17,7 +17,7 @@ import { DEFAULT_TIMEOUT_MS, STARTUP_TIMEOUT_MS, WORKER_READY, framesOf } from '
 import type { RunRequest, RunResponse, WorkerReply } from '../protocol';
 import { runInWorker } from '../runner';
 import type { RunnerErrorEvent, RunnerWorker } from '../runner';
-import { NETWORK_GLOBALS, bootWorker, executeRun, shadowNetwork } from '../runner.worker';
+import { ESCAPE_GLOBALS, NETWORK_GLOBALS, bootWorker, executeRun, shadowEscapes, shadowNetwork } from '../runner.worker';
 import type { ModuleLoader } from '../runner.worker';
 
 let loads = 0;
@@ -377,6 +377,63 @@ describe('the sandbox: network globals', () => {
 
     it('importing the worker module outside a worker shadows nothing: node keeps its fetch', () => {
         expect(typeof (globalThis as any).fetch).toBe('function');
+    });
+});
+
+describe('the sandbox: nested workers, caches and storage (S7, R-GEN-30)', () => {
+    /** A scope shaped like a worker's: the constructors own, `caches` and `navigator` getters on the prototype, `storage` on the navigator's. */
+    function workerLike() {
+        const proto: any = {};
+        Object.defineProperty(proto, 'caches', { get: () => ({ add() {} }), configurable: true, enumerable: true });
+        const navProto: any = {};
+        Object.defineProperty(navProto, 'storage', { get: () => ({ persist() {} }), configurable: true, enumerable: true });
+        const nav = Object.create(navProto);
+        Object.defineProperty(proto, 'navigator', { get: () => nav, configurable: true, enumerable: true });
+        const scope: any = Object.create(proto);
+        scope.Worker = function W() {};
+        scope.SharedWorker = function SW() {};
+        return { scope, nav, navProto };
+    }
+
+    it('names the three globals of the discovery (2026-10-23 §4.3)', () => {
+        expect([...ESCAPE_GLOBALS].sort()).toEqual(['SharedWorker', 'Worker', 'caches']);
+    });
+
+    it('shadowEscapes removes Worker, SharedWorker, caches and navigator.storage (mutant: shadowEscapes not called, or the navigator skipped)', () => {
+        const { scope, nav, navProto } = workerLike();
+        expect(shadowEscapes(scope)).toEqual([]);
+        for (const name of ESCAPE_GLOBALS) expect(typeof scope[name], name).toBe('undefined');
+        expect(nav.storage).toBeUndefined();
+        expect(Object.prototype.hasOwnProperty.call(navProto, 'storage')).toBe(false);
+        expect(scope.navigator).toBe(nav);
+    });
+
+    it('a navigator.storage that can be neither deleted nor shadowed is reported by that name', () => {
+        const nav: any = {};
+        Object.defineProperty(nav, 'storage', { value: {}, writable: false, configurable: false });
+        Object.preventExtensions(nav);
+        expect(shadowEscapes({ navigator: nav })).toEqual(['navigator.storage']);
+    });
+
+    it('bootWorker removes the four names before ready', () => {
+        const { scope, nav } = workerLike();
+        const seen: unknown[] = [];
+        scope.postMessage = () => { seen.push([scope.Worker, scope.SharedWorker, scope.caches, nav.storage]); };
+        scope.onmessage = null;
+        bootWorker(scope);
+        expect(seen).toEqual([[undefined, undefined, undefined, undefined]]);
+    });
+
+    it('a worker whose navigator.storage stays reachable refuses to run', async () => {
+        const nav: any = {};
+        Object.defineProperty(nav, 'storage', { value: {}, writable: false, configurable: false });
+        Object.preventExtensions(nav);
+        const replies: any[] = [];
+        const scope: any = { navigator: nav, onmessage: null, postMessage: (m: unknown) => { replies.push(m); } };
+        bootWorker(scope);
+        scope.onmessage({ data: { code: MODULE, calls: [] } });
+        await vi.waitFor(() => expect(replies).toHaveLength(2));
+        expect(replies[1]).toMatchObject({ ok: false, kind: 'sandbox', message: 'The sandbox could not remove navigator.storage: nothing ran.' });
     });
 });
 
