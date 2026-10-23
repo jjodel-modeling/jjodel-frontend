@@ -128,6 +128,16 @@
       "ownerChat": "C-2026-10-23-2009",
       "ownerSince": "2026-10-23",
       "milestone": 14
+    },
+    {
+      "slug": "jjodie-ui",
+      "title": "Jjodie panel redesign: docked panel, script card, live JjEL on selection, ghost preview, editable scripts, script as file (3.3)",
+      "exit": "the jjodie-panel slices are merged into alfonso-frontend-jjtl after the 3.2 release, or a decision row defers them",
+      "state": "open",
+      "openedOn": "2026-10-24",
+      "ownerChat": "C-2026-10-24-0020",
+      "ownerSince": "2026-10-24",
+      "milestone": 15
     }
   ]
 }
