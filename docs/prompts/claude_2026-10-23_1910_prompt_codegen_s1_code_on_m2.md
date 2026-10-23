@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: release-3-2
 Lane: full (implementation; EditorV2.tsx and CodePanel.tsx, no critical-zone file)
 Depends: P-2026-10-23-1840
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane codegen · c192a4f5e · R-GEN-21 included · lazy gate off mode red as on the tip (ticket)
 Corregge: none
 Request: Alfonso, 2026-10-23 18:19, in the project chat: «code appare su M1 e non su M2 anche se le template sono definite sul metamodello, quindi si deve poter aprire anche su M2»
 
