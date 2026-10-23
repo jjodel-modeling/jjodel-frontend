@@ -76,9 +76,12 @@ interface PalettePanelProps {
      *  same (the drop gate reads the unfiltered rootable list) and rendered abstract per
      *  spec §10, so they get a secondary group instead of disappearing without a trace. */
     undeclaredClasses?: MetaclassInfo[];
+    /** Click or Enter/Space on an entry: creates it at the canvas centre (the drop path). Member
+     *  entries stay inert, as on a bare-canvas drop. Without it the entries are drag-only. */
+    onItemActivate?: (type: string, metaclassId?: string) => void;
 }
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [] }: PalettePanelProps) {
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
@@ -95,6 +98,18 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
     const onDragEnd = useCallback(() => {
         setDraggedMetaclassId(null);
     }, []);
+
+    // Click and Enter/Space on an entry (WCAG: a focusable button). An HTML5 drag fires no click.
+    const activateProps = (type: string, metaclassId?: string) => onItemActivate ? {
+        role: 'button',
+        tabIndex: 0,
+        onClick: () => onItemActivate(type, metaclassId),
+        onKeyDown: (event: React.KeyboardEvent) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            onItemActivate(type, metaclassId);
+        },
+    } : {};
 
     // Resolve the metaclass of the currently selected DObject (M1 only).
     // Reads from the canonical `_lastSelected.modelElement` channel (via prop) so the
@@ -143,6 +158,7 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
                                     draggable
                                     onDragStart={(e) => onDragStart(e, 'objectNode', cls.id)}
                                     onDragEnd={onDragEnd}
+                                    {...activateProps('objectNode', cls.id)}
                                 >
                                     <i className="bi bi-box" />
                                     <span>{cls.name}</span>
@@ -162,6 +178,7 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
                                         draggable
                                         onDragStart={(e) => onDragStart(e, 'objectNode', cls.id)}
                                         onDragEnd={onDragEnd}
+                                        {...activateProps('objectNode', cls.id)}
                                     >
                                         <i className="bi bi-box" />
                                         <span>{cls.name}</span>
@@ -262,6 +279,7 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
                             className={`palette-item ${item.group === 'Members' ? 'palette-item--member' : ''}`}
                             draggable
                             onDragStart={(e) => onDragStart(e, item.type)}
+                            {...(item.group === 'Members' ? {} : activateProps(item.type))}
                         >
                             <i className={`bi ${item.icon}`} />
                             <span>{item.label}</span>

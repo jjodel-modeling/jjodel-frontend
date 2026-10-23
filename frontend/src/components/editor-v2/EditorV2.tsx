@@ -53,6 +53,7 @@ import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeomet
 import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/edgeLanes';
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
+import { clientCentre } from './utils/canvasCentre';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
@@ -2312,20 +2313,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         takeSnapshot();
     }, [takeSnapshot]);
 
-    // Handle drop from palette
-    const onDrop = useCallback(
-        (event: React.DragEvent) => {
-            event.preventDefault();
-
-            const rawType = event.dataTransfer.getData('application/reactflow');
-            if (!rawType) return;
-
+    // Create a palette element at a client point: the body of the palette drop, shared by the
+    // drop (at the cursor) and by a click or Enter/Space on a palette entry (at the canvas centre).
+    const createFromPalette = useCallback(
+        (rawType: string, metaclassId: string | undefined, client: { x: number; y: number }) => {
             // Members must be dropped on nodes, not canvas
             if (['attribute', 'operation', 'literal'].includes(rawType)) return;
 
             const position = screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
+                x: client.x,
+                y: client.y,
             });
 
             // Center node under cursor instead of placing top-left at cursor
@@ -2345,7 +2342,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
                 // M1: objectNode from palette
                 if (rawType === 'objectNode') {
-                    const metaclassId = event.dataTransfer.getData('metaclassId');
                     if (!metaclassId) return;
                     const mi = modeInfoRef.current;
                     const metaclass = mi.allClasses.find(c => c.id === metaclassId);
@@ -2413,7 +2409,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         }
                         if (compatRefs.length > 1) {
                             setPendingContainmentDrop({
-                                position: { x: event.clientX, y: event.clientY },
+                                position: { x: client.x, y: client.y },
                                 flowPosition: position,
                                 containerNodeId: containerNode.id,
                                 childClass: metaclass,
@@ -2556,6 +2552,29 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setNodes((nds) => [...nds, newNode]);
         },
         [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes, applyMembershipOps, scheduleLayoutSave]
+    );
+
+    // Handle drop from palette
+    const onDrop = useCallback(
+        (event: React.DragEvent) => {
+            event.preventDefault();
+
+            const rawType = event.dataTransfer.getData('application/reactflow');
+            if (!rawType) return;
+
+            createFromPalette(rawType, event.dataTransfer.getData('metaclassId') || undefined, { x: event.clientX, y: event.clientY });
+        },
+        [createFromPalette]
+    );
+
+    // Click or Enter/Space on a palette entry: the drop at the canvas centre, on the drop's grid.
+    const onPaletteActivate = useCallback(
+        (type: string, metaclassId?: string) => {
+            const canvas = editorContainerRef.current;
+            if (!canvas) return;
+            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect()));
+        },
+        [createFromPalette]
     );
 
     // Allow drop — with M1 cursor feedback for non-rootable classes
@@ -4891,6 +4910,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     undeclaredClasses={irPalette.undeclared}
                     allClasses={modeInfo.allClasses}
                     selectedDObjectId={lastSelectedModelElement ?? null}
+                    onItemActivate={onPaletteActivate}
                 />
                 <div className="editor-v2__main">
                     <Toolbar
