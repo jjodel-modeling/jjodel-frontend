@@ -84,6 +84,18 @@ export class JjelEvaluationError extends Error {
 }
 
 /**
+ * The evaluation ran past `EvaluationContext.deadline` (R-JJD-3). Not a
+ * `JjelEvaluationError`: the expression is not wrong, it was stopped, and a
+ * caller tells the two apart with `instanceof`.
+ */
+export class JjelTimeoutError extends Error {
+    constructor(public readonly deadline: number) {
+        super('JjEL evaluation stopped: deadline exceeded');
+        this.name = 'JjelTimeoutError';
+    }
+}
+
+/**
  * Run a step that may raise a bit-vector defect and rethrow it as a
  * JjelEvaluationError with the same message; any other error passes through.
  */
@@ -211,6 +223,9 @@ export class JjelEvaluator {
      */
     evaluate(expr: JjelExpression, ctx?: EvaluationContext): JjelValue {
         const evalCtx = ctx || this.context;
+        if (evalCtx.deadline !== undefined && Date.now() > evalCtx.deadline) {
+            throw new JjelTimeoutError(evalCtx.deadline);
+        }
 
         switch (expr.type) {
             case 'Literal':

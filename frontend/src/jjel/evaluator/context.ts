@@ -368,6 +368,13 @@ export class EvaluationContext {
      * nothing. Set only by the code generator. Inherited by children, like `stateAccess`.
      */
     readObserver?: (target: JjelObject, property: string, value: JjelValue) => void;
+    /**
+     * Optional time bound (R-JJD-3), an absolute `Date.now()` value in ms.
+     * `JjelEvaluator.evaluate` throws `JjelTimeoutError` once the clock is
+     * past it. `undefined`: no bound, no clock read. Inherited by children,
+     * like `stateAccess`.
+     */
+    deadline?: number;
 
     constructor(
         initialBindings?: Record<string, JjelValue>,
@@ -449,6 +456,8 @@ export class EvaluationContext {
         // Propagate the template hooks so lambdas and forall see them (R-GEN-10).
         child.textHost = this.textHost;
         child.readObserver = this.readObserver;
+        // Propagate the time bound so lambdas and forall bodies stop too (R-JJD-3).
+        child.deadline = this.deadline;
         child.pushScope();
 
         if (bindings) {
