@@ -56,6 +56,7 @@ import { checkView } from './checkView';
 import { displayJson } from './displayJson';
 import { conformingModels } from './conformingModels';
 import { openTemplateEditor } from './openTemplateEditor';
+import { linesOf } from './codeLines';
 import type { GenerateResult } from '../engine/generate';
 import type { TemplateRecord } from '../engine/templates';
 import type { ModelOrigin, Origin, TextFragment, TextMapEntry } from '../engine/text';
@@ -135,36 +136,6 @@ function freshName(templates: readonly TemplateRecord[]): string {
     let n = templates.length + 1;
     while (taken.has(`template${n}`)) n++;
     return `template${n}`;
-}
-
-/** One rendered piece of a line: plain text (an indentation prefix) or the span of a map entry. */
-interface Piece {
-    readonly text: string;
-    readonly entry: TextMapEntry | null;
-}
-
-/** The lines of the code, each cut at its map entries; a zero-width entry (an error fragment) writes nothing. */
-function linesOf(code: string, map: readonly TextMapEntry[]): Piece[][] {
-    const texts = code.split('\n');
-    if (texts.length > 1 && texts[texts.length - 1] === '') texts.pop();
-    const byLine = new Map<number, TextMapEntry[]>();
-    for (const e of map) {
-        if (e.end <= e.start) continue;
-        const list = byLine.get(e.line);
-        if (list) list.push(e);
-        else byLine.set(e.line, [e]);
-    }
-    return texts.map((text, i) => {
-        const pieces: Piece[] = [];
-        let at = 0;
-        for (const e of byLine.get(i + 1) ?? []) {
-            if (e.start > at) pieces.push({ text: text.slice(at, e.start), entry: null });
-            pieces.push({ text: text.slice(e.start, e.end), entry: e });
-            at = e.end;
-        }
-        if (at < text.length) pieces.push({ text: text.slice(at), entry: null });
-        return pieces;
-    });
 }
 
 /**
