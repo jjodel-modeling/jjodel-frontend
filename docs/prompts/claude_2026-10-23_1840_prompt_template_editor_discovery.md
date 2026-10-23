@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: release-3-2
 Lane: full (discovery, Phase 1 read-only, then hard stop; the plan feeds the implementation slices)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane codegen · Phase 1, report `docs/discovery/discovery_2026-10-23_codegen_authoring.md` in the same commit · hard stop
 Corregge: none
 Request: Alfonso, 2026-10-23 18:19 and 18:37, in the project chat: the Code panel shows on M1 and not on M2 although the templates are defined on the metamodel, so it must open on M2 too; writing templates in that window is awkward; «mettiamo il template editor in 3.2»
 

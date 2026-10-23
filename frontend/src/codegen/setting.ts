@@ -63,17 +63,18 @@ export function useCodegenEnabled(): boolean {
 }
 
 /**
- * The «Code» pill of an editor (discovery §I.5): the setting on, an M1 (generation runs on a model), and either the
- * metamodel the model is an instance of holds `genTemplates` in its `_state` (R-GEN-12), or Advanced mode (Redux
- * `state.advanced`, as `simPillVisible`), where the first template is written. The key is read as stored, never
- * decoded: the codec is the generator's, and this module loads without it.
+ * The «Code» pill of an editor (discovery §I.5): the setting on, and either the metamodel holds `genTemplates` in its
+ * `_state` (R-GEN-12), or Advanced mode (Redux `state.advanced`, as `simPillVisible`), where the first template is
+ * written. The metamodel is the one the model is an instance of on an M1, the editor's own on an M2 (R-GEN-19,
+ * P-2026-10-23-1910: the templates live there). The key is read as stored, never decoded: the codec is the
+ * generator's, and this module loads without it.
  */
 export function codePillVisible(
     enabled: boolean, advanced: boolean, lookup: Readonly<Record<string, any>>, modelid: string, isModelMode: boolean,
 ): boolean {
-    if (!enabled || !isModelMode) return false;
+    if (!enabled) return false;
     if (advanced) return true;
-    const metamodelId = lookup[modelid]?.instanceof;
+    const metamodelId = isModelMode ? lookup[modelid]?.instanceof : modelid;
     if (typeof metamodelId !== 'string') return false;
     const stored = lookup[metamodelId]?._state?.genTemplates;
     return typeof stored === 'string' && stored !== '';
