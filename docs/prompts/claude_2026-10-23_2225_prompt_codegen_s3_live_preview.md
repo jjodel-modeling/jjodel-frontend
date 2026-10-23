@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: release-3-2
 Lane: full (implementation; codegen UI only; no critical-zone file)
 Depends: P-2026-10-23-2145
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane codegen · 917ca4106 · bench 12/12 killed, no expectation changed · refresh 13.1 ms median on Petri, debounce 400 ms · lazy gate on green, off not run · visual check owed by the chat (RC-23)
 Corregge: none
 Request: Alfonso, 2026-10-23, in the project chat: «scrivere le template in quella finestra è un po' scomodo» and «mettiamo il template editor in 3.2»
 
