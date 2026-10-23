@@ -2,8 +2,9 @@
  * templates — template records registered as JjEL builtins (slice S2, R-GEN-4, R-GEN-12; spec §4, discovery §A.3,
  * §B.1, U1).
  *
- * A template is a stored record `{name, params, body}`: the body is a JjEL expression parsed by `parseTemplate`,
- * usually one interpolated string, and its value is a Text. Each record becomes a builtin of the one evaluation
+ * A template is a stored record `{name, params, body, mode?}`: the body is a JjEL expression parsed by `parseTemplate`,
+ * usually one interpolated string, or in text mode the inside of one, parsed by `parseTemplateText` (S5, R-GEN-25,
+ * R-GEN-26); its value is a Text. Each record becomes a builtin of the one evaluation
  * context of a generation (the JjTL helper precedent, `jjtl/executor/executor.ts`), so templates call each other
  * and themselves with no definition syntax. A call evaluates the body in a child of that context with the
  * parameters bound, missing arguments `null`: a template sees the globals and its parameters, never its caller's
@@ -23,18 +24,34 @@
  * Pure: JjEL, the guard subset checker and the engine.
  */
 
-import { JjelTokenType, createFunction, parseTemplate, tokenize } from '../../jjel';
-import type { EvaluationContext, JjelEvaluator, JjelExpression, JjelValue } from '../../jjel';
+import { JjelTokenType, createFunction, parseTemplate, parseTemplateText, tokenize } from '../../jjel';
+import type { EvaluationContext, JjelEvaluator, JjelExpression, JjelParserResult, JjelValue } from '../../jjel';
 import { checkGuardSubset } from '../../model/simulation/subsetChecker';
 import type { OriginHost, TemplateSources } from './origin';
 import type { TemplatePosition, Text } from './text';
+
+/**
+ * How a body is read (R-GEN-25): `text`, the inside of one interpolated string (`parseTemplateText`), or `expression`,
+ * a JjEL expression (`parseTemplate`). A record with no mode is an expression, so every template saved before the
+ * field keeps its parse and its output.
+ */
+export type TemplateMode = 'text' | 'expression';
 
 /** A template as stored (templateCodec.ts) and as the panel edits it. `target` names the target language, when set. */
 export interface TemplateRecord {
     readonly name: string;
     readonly params: readonly string[];
     readonly body: string;
+    readonly mode?: TemplateMode;
     readonly target?: string;
+}
+
+/** The mode of a record: absent reads `expression`. */
+export const modeOf = (record: { readonly mode?: TemplateMode }): TemplateMode => (record.mode === 'text' ? 'text' : 'expression');
+
+/** The parse of a body in its mode: the one dispatch of the engine and of the editor's markers (R-GEN-26). */
+export function parseTemplateBody(record: { readonly body: string; readonly mode?: TemplateMode }): JjelParserResult {
+    return modeOf(record) === 'text' ? parseTemplateText(record.body) : parseTemplate(record.body);
 }
 
 /** Nested template calls at most: one more is an error. */
@@ -100,7 +117,7 @@ export function registerTemplates(
             problems.push({ ...start, message: `Template name '${name}' is a JjEL builtin` });
             continue;
         }
-        const parsed = parseTemplate(record.body);
+        const parsed = parseTemplateBody(record);
         let expr: JjelExpression | null = parsed.expression;
         if (parsed.errors.length > 0 || !expr) {
             for (const e of parsed.errors) problems.push({ ...positionIn(record.body, name, e.line, e.column), message: e.message });
@@ -116,7 +133,7 @@ export function registerTemplates(
                 });
             }
             if (refused.length > 0) expr = null;
-            else sources.register(name, record.body, expr);
+            else sources.register(name, record.body, expr, modeOf(record));
         }
         compiled.set(name, { record, expr });
     }

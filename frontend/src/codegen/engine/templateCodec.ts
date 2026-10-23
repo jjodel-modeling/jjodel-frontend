@@ -5,7 +5,8 @@
  * The templates of a metamodel live in one key of its `_state` bag, `genTemplates`, the bag that holds the STC
  * roles they read (R-GEN-7), whose value is a JSON string, as `runScenarios` and `runWatches` are
  * (model/simulation/scenarioCodec.ts): `{"v":1,"templates":[template...]}`, a template being `name`, `params`,
- * `body`, and `target` when it has one, written in that order, so the same templates give the same string. The key
+ * `body`, `mode` and `target` when it has them, written in that order, so the same templates give the same string.
+ * A record with no `mode` is an expression (R-GEN-25): nothing writes `mode` for it, so a stored string keeps its bytes. The key
  * is not a `sim*` key on purpose: `runSignature` folds every `sim*` key of the bag (simBridge.ts), so an edit would
  * interrupt a run.
  *
@@ -15,8 +16,9 @@
  *
  * Decoding is tolerant, template by template: a string that is not JSON, or has no `v` 1 and `templates` list, is
  * one defect on the key and the list is not readable; a template that is not a record, has no name, a name an
- * earlier one holds, params that are not a list of strings, a body that is not a text, or a target that is not a
- * text, is a defect of its own and the others decode. Unknown fields are ignored. No VersionFixer step and no
+ * earlier one holds, params that are not a list of strings, a body that is not a text, a mode that is neither `text`
+ * nor `expression`, or a target that is not a text, is a defect of its own and the others decode. Unknown fields are
+ * ignored. No VersionFixer step and no
  * `irVersion`: a project saved before the key has none, and unknown keys survive save and load (discovery §C.3).
  * The `.ecore` export drops the whole bag, the STC roles with it (discovery §C.4).
  *
@@ -49,7 +51,13 @@ export interface DecodedTemplates {
 export function encodeTemplates(templates: readonly TemplateRecord[]): string {
     return JSON.stringify({
         v: 1,
-        templates: templates.map(t => ({ name: t.name, params: [...t.params], body: t.body, ...(t.target !== undefined ? { target: t.target } : {}) })),
+        templates: templates.map(t => ({
+            name: t.name,
+            params: [...t.params],
+            body: t.body,
+            ...(t.mode !== undefined ? { mode: t.mode } : {}),
+            ...(t.target !== undefined ? { target: t.target } : {}),
+        })),
     });
 }
 
@@ -79,9 +87,16 @@ export function decodeTemplates(raw: string | null | undefined): DecodedTemplate
         if (names.has(name)) return defect(`${name}: the name is taken by an earlier one.`);
         if (!Array.isArray(r.params) || r.params.some(p => typeof p !== 'string')) return defect(`${name}: the parameters are not a list of names.`);
         if (typeof r.body !== 'string') return defect(`${name}: the body is not a text.`);
+        if (r.mode !== undefined && r.mode !== 'text' && r.mode !== 'expression') return defect(`${name}: the mode is neither text nor expression.`);
         if (r.target !== undefined && typeof r.target !== 'string') return defect(`${name}: the target is not a text.`);
         names.add(name);
-        templates.push({ name, params: [...(r.params as string[])], body: r.body, ...(typeof r.target === 'string' ? { target: r.target } : {}) });
+        templates.push({
+            name,
+            params: [...(r.params as string[])],
+            body: r.body,
+            ...(r.mode === 'text' || r.mode === 'expression' ? { mode: r.mode } : {}),
+            ...(typeof r.target === 'string' ? { target: r.target } : {}),
+        });
     });
     return { templates, defects, readable: true };
 }
