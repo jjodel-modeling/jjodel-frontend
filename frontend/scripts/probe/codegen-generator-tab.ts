@@ -1,0 +1,405 @@
+/**
+ * codegen-generator-tab probe (P-2026-10-24-0003, completed by P-2026-10-24-0045): the generator tab of slice G3
+ * (R-GEN-35, R-GEN-40, R-GEN-41), on the Turnstile lecture example of codegen/examples/.
+ *
+ * Fresh context, Advanced mode, the experimental setting on. The scene is imported and the fixture's bags written
+ * with the `state` setter (codegen-check.ts's page-side helpers, copied: that probe is not imported), the fixture's
+ * scenario stored on the model. Then, as a user:
+ *   - the Code pill of the model's editor opens the default generator's tab, `codegen_tpl_<mm>`, with that model
+ *     chosen in the right pane; Preview shows the text of `main.js`, no error (crop tab_preview.png);
+ *   - Alt+click on a span whose template is not the selected one selects that template in the list (crop
+ *     goto_template.png); the gutter control of a hovered line names a template;
+ *   - Run: `main()` returns (crop run_output.png); Check on the stored scenario passes (crop check_result.png);
+ *   - «New generator»: its tab `codegen_tpl_<mm>_<id>` opens, the selector lists two generators (crop
+ *     generator_selector.png); its target is `none`, so Run and Check are disabled;
+ *   - back on the default, a click on a model span selects that element's vertex in the model's editor (crop
+ *     canvas_selection.png);
+ *   - the pill, with two generators, shows a menu of both, the last used marked (crop pill_menu.png); its item opens
+ *     that generator's tab.
+ *
+ * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
+ *
+ * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
+ *         --port 3131 --id P-2026-10-24-0045
+ * Env:  CGT_OUT      JSON output (default frontend/scripts/smoke/_tmp_codegen-generator-tab.json, gitignored)
+ *       CGT_CROPS    the folder of the crops
+ */
+import { chromium, type Page } from '@playwright/test';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { seed } from '../smoke/states.ts';
+
+const URL = (process.env.PROBE_URL || 'http://localhost:3131/').replace(/\/$/, '');
+if (/:(3000|3001|3003)$/.test(URL)) throw new Error('never 3000, 3001 or 3003');
+const OUT = process.env.CGT_OUT || new globalThis.URL('../smoke/_tmp_codegen-generator-tab.json', import.meta.url).pathname;
+const CROPS = process.env.CGT_CROPS || `${homedir()}/.jjodel-lanes/P-2026-10-24-0045/crops`;
+const NAME = 'turnstile';
+mkdirSync(CROPS, { recursive: true });
+
+interface Example {
+    name: string;
+    scene: string;
+    lookup: Record<string, any>;
+    scenario: { name: string; steps: Array<{ event: string | null; selector: string | null; kind: string }> };
+}
+
+const ex: Example = JSON.parse(readFileSync(new globalThis.URL(`../../src/codegen/examples/${NAME}/${NAME}.json`, import.meta.url), 'utf8'));
+const scene = (name: string) => new globalThis.URL(`./fixtures/${name}.jjodel`, import.meta.url).pathname;
+
+const note = (label: string, d: unknown) => console.log(`MEAS  ${label}  ${typeof d === 'string' ? d : JSON.stringify(d)}`);
+let failures = 0;
+const check = (label: string, ok: boolean, detail: unknown) => {
+    if (!ok) failures++;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}  ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
+};
+const wait = (page: Page, ms: number) => page.waitForTimeout(ms);
+
+async function poll<T>(page: Page, expr: string, ms: number): Promise<T | null> {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+        const v = await page.evaluate(expr).catch(() => null) as T | null;
+        if (v) return v;
+        await wait(page, 250);
+    }
+    return null;
+}
+
+async function crop(page: Page, file: string, box: { x: number; y: number; w: number; h: number } | null, pad = 8) {
+    if (!box) { check(`crop ${file} has a box`, false, 'null'); return; }
+    // Jodie's quick tips float over the dock: closed as a user closes them, so the crop shows the subject.
+    await page.evaluate(`document.querySelectorAll('.notification-close').forEach((b) => b.click())`);
+    await wait(page, 200);
+    const vp = page.viewportSize() ?? { width: 1600, height: 1000 };
+    const x = Math.max(0, Math.floor(box.x - pad));
+    const y = Math.max(0, Math.floor(box.y - pad));
+    const width = Math.min(vp.width - x, Math.ceil(box.w + 2 * pad));
+    const height = Math.min(vp.height - y, Math.ceil(box.h + 2 * pad));
+    await page.screenshot({ path: `${CROPS}/${file}`, clip: { x, y, width, height } });
+    console.log(`CROP  ${CROPS}/${file}  ${width}x${height}`);
+}
+
+// ── Page side, copied from codegen-check.ts (plain strings: no transform) ─────────────────────────
+
+const IMPORT = (text: string) => String.raw`(async () => {
+  const api = await import('/src/api/persistance/projects.ts');
+  const count = () => JSON.parse(localStorage.getItem('projects') || '[]').length;
+  const before = count();
+  await api.ProjectsApi.importFromText(${JSON.stringify(text)});
+  for (let i = 0; i < 75 && count() <= before; i++) await new Promise(r => setTimeout(r, 200));
+  const a = JSON.parse(localStorage.getItem('projects') || '[]');
+  return a.length > before ? a[a.length - 1].id : null;
+})()`;
+
+const LOADED = (mm: string, m1: string) => String.raw`(() => {
+  try {
+    const all = Object.values(window.windoww.store.getState().idlookup).filter((d) => d && typeof d === 'object');
+    const a = all.find((d) => d.className === 'DModel' && d.isMetamodel && d.name === ${JSON.stringify(mm)});
+    const b = all.find((d) => d.className === 'DModel' && !d.isMetamodel && d.name === ${JSON.stringify(m1)});
+    if (!a || !b || document.querySelectorAll('.dock-tab').length === 0) return null;
+    return { mm: a.id, m1: b.id };
+  } catch (e) { return null; }
+})()`;
+
+/** The fixture's ids by name, then its bags with the `state` setter, then its scenario stored on the model. */
+const INSTALL = (ids: { mm: string; m1: string }) => String.raw`(async () => {
+  const fx = ${JSON.stringify(ex.lookup)};
+  const lk = () => window.windoww.store.getState().idlookup;
+  const L = (x) => window.LPointerTargetable.fromPointer(x);
+  const mmId = ${JSON.stringify(ids.mm)}, m1Id = ${JSON.stringify(ids.m1)};
+  const under = (id, root) => { let d = lk()[id]; for (let i = 0; d && i < 40; i++) { if (d.id === root) return true; d = lk()[d.father]; } return false; };
+  const all = Object.values(lk()).filter((d) => d && typeof d === 'object');
+  const map = { MM: mmId, M: m1Id };
+  const missing = [];
+  for (const [fid, d] of Object.entries(fx)) {
+    if (d.className === 'DClass') {
+      const c = all.find((x) => x.className === 'DClass' && x.name === d.name && under(x.id, mmId));
+      if (c) map[fid] = c.id; else missing.push(fid);
+    }
+  }
+  for (const [fid, d] of Object.entries(fx)) {
+    if (d.className === 'DAttribute' || d.className === 'DReference') {
+      const f = all.find((x) => x.className === d.className && x.name === d.name && x.father === map[d.father]);
+      if (f) map[fid] = f.id; else missing.push(fid);
+    }
+    if (d.className === 'DObject') {
+      const o = all.find((x) => x.className === 'DObject' && x.name === d.name && under(x.id, m1Id));
+      if (o) map[fid] = o.id; else missing.push(fid);
+    }
+  }
+  const remap = (v) => (typeof v === 'string' && Object.prototype.hasOwnProperty.call(map, v) ? map[v] : v);
+  L(mmId).state = { simEnabled: true };
+  await new Promise((r) => setTimeout(r, 300));
+  const bag = {};
+  for (const [k, v] of Object.entries(fx.MM._state)) if (k !== 'simEnabled') bag[k] = remap(v);
+  L(mmId).state = bag;
+  await new Promise((r) => setTimeout(r, 300));
+  const own = fx.M._state || {};
+  if (Object.keys(own).length > 0) { L(m1Id).state = { ...own }; await new Promise((r) => setTimeout(r, 300)); }
+  const SC = await import('/src/model/simulation/scenarioCodec.ts');
+  const scenario = ${JSON.stringify(ex.scenario)};
+  const full = { ...scenario, steps: scenario.steps.map((s) => ({ ...s, event: remap(s.event), selector: remap(s.selector) })) };
+  L(m1Id).state = { [SC.RUN_SCENARIOS_KEY]: SC.encodeScenarios([full]) };
+  await new Promise((r) => setTimeout(r, 300));
+  return { map, missing };
+})()`;
+
+const PANE = (m1Id: string) => `(document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m1Id}"]'))`;
+const TAB = (tabId: string) => `(document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${tabId}"] .codegen-tpl'))`;
+const CLICK = (expr: string) => String.raw`(() => { const el = ${expr}; if (!el) return { found: false }; el.click(); return { found: true }; })()`;
+const BOX = (expr: string) => String.raw`(() => { const el = ${expr}; if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`;
+
+/** The tab as the user reads it: generator selector, selected template, the pane's mode, model and controls. */
+const STATE = (tab: string) => String.raw`(() => {
+  const t = ${tab};
+  if (!t) return null;
+  const sel = t.querySelector('select[aria-label="Generator"]');
+  const item = t.querySelector('.codegen-tpl__item[aria-selected="true"] .codegen-tpl__item-name');
+  const pane = t.querySelector('.codegen-pane');
+  const model = pane && pane.querySelector('select[aria-label="Model"]');
+  const mode = pane && pane.querySelector('.codegen-pane__modes [aria-selected="true"]');
+  const btn = (re) => pane && [...pane.querySelectorAll('.codegen-panel__run button')].find((b) => re.test(b.textContent.trim()));
+  const run = btn(/^Run(ning)?$/), chk = btn(/^Check(ing)?$/);
+  const pass = pane && pane.querySelector('.codegen-panel__result--pass');
+  const bad = pane && pane.querySelector('.codegen-panel__result--error');
+  const ok = pane && pane.querySelector('.codegen-panel__result:not(.codegen-panel__result--pass):not(.codegen-panel__result--error)');
+  return {
+    generators: sel ? [...sel.options].map((o) => o.value + ':' + o.textContent) : null,
+    generator: sel ? sel.value : null,
+    template: item ? item.textContent : null,
+    mode: mode ? mode.textContent.trim() : null,
+    model: model ? model.value : null,
+    target: pane ? (pane.querySelector('.codegen-pane__target') || {}).textContent || null : null,
+    files: pane ? [...pane.querySelectorAll('.codegen-pane__file')].map((f) => f.textContent) : [],
+    lines: pane ? pane.querySelectorAll('.codegen-panel__line').length : 0,
+    errors: pane ? [...pane.querySelectorAll('.codegen-panel__error')].map((e) => e.textContent) : [],
+    run: run ? { disabled: run.disabled, title: run.title, text: run.textContent.trim() } : null,
+    check: chk ? { disabled: chk.disabled, title: chk.title, text: chk.textContent.trim() } : null,
+    returned: ok ? { label: (ok.querySelector('.codegen-panel__label') || {}).textContent || null, value: ((ok.querySelector('.codegen-panel__value') || {}).textContent || '').slice(0, 120) } : null,
+    pass: pass ? pass.textContent.trim() : null,
+    error: bad ? bad.textContent.trim().slice(0, 200) : null,
+  };
+})()`;
+
+/** The active tab of every dock panel, and where the model's editor is laid out against the viewport. */
+const DOCK = (m1Id: string) => String.raw`(() => {
+  const active = [...document.querySelectorAll('.dock-tab-active [role="tab"], [role="tab"][aria-selected="true"]')].map((t) => (t.id || '').replace(/^.*-tab-/, ''));
+  const p = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m1Id}"]');
+  const r = p ? p.getBoundingClientRect() : null;
+  const scrolled = [];
+  for (let e = p && p.parentElement; e; e = e.parentElement) if (e.scrollLeft) scrolled.push((e.className || e.tagName).toString().slice(0, 60) + ' ' + e.scrollLeft);
+  return { active: [...new Set(active)].filter(Boolean), pane: r ? { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) } : null, inView: !!r && r.x >= 0 && r.x + r.width <= innerWidth + 1, scrolled };
+})()`;
+
+const mode = (page: Page, tab: string, label: string) => page.evaluate(CLICK(`[...${tab}.querySelectorAll('.codegen-pane__modes button')].find((b) => b.textContent.trim() === '${label}')`));
+
+// ── Main ──────────────────────────────────────────────────────────────────────────────────────
+
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
+await seed(ctx, true);
+await ctx.addInitScript(() => { localStorage.setItem('jjodel.experimental.codegen', 'true'); });
+const page = await ctx.newPage();
+const errors: string[] = [];
+page.on('pageerror', (e: Error) => errors.push('pageerror: ' + e.message));
+page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text().slice(0, 200)); });
+const result: Record<string, any> = { url: URL };
+
+async function main(): Promise<void> {
+    await page.goto(`${URL}/#/allProjects`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    await poll(page, `!!(window.windoww && window.windoww.store && window.LPointerTargetable)`, 120000);
+    await wait(page, 2000);
+    const pid = await page.evaluate(IMPORT(readFileSync(scene(ex.scene), 'utf8'))) as string | null;
+    check(`the scene ${ex.scene} is imported`, !!pid, String(pid));
+    if (!pid) return;
+    await page.goto(`${URL}/?open=${encodeURIComponent(pid)}#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    const loaded = await poll<{ mm: string; m1: string }>(page, LOADED(ex.lookup.MM.name, ex.lookup.M.name), 120000);
+    check('the project loads', !!loaded, JSON.stringify(loaded));
+    if (!loaded) return;
+    await wait(page, 3000);
+    const { mm, m1 } = loaded;
+    const installed = await page.evaluate(INSTALL({ mm, m1 })) as any;
+    check('every element of the fixture has its namesake in the app', installed.missing.length === 0, installed.missing);
+
+    // The model's editor, its pill: one generator, so the default's tab opens at once with this model chosen.
+    await page.evaluate(String.raw`(async () => { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(m1)})); })()`);
+    const pane = PANE(m1);
+    await poll(page, `(() => { const p = ${pane}; return !!p && p.querySelectorAll('.react-flow__node').length > 0; })()`, 60000);
+    await wait(page, 2000);
+    check('the Code pill is on the model\'s editor', !!(await poll(page, `!!(${pane} && ${pane}.querySelector('.codegen-pill button'))`, 30000)), '');
+    await page.evaluate(CLICK(`${pane}.querySelector('.codegen-pill button')`));
+    const tabId = `codegen_tpl_${mm}`;
+    const tab = TAB(tabId);
+    const opened = await poll<any>(page, String.raw`(() => { const s = ${STATE(tab)}; return s && s.lines > 0 ? s : null; })()`, 90000);
+    result.opened = opened;
+    note('the tab the pill opened', opened);
+    check(`the pill opens the default generator's tab ${tabId}, Preview, the model chosen`,
+        !!opened && opened.generator === 'default' && opened.mode === 'Preview' && opened.model === m1, JSON.stringify(opened && { generator: opened.generator, mode: opened.mode, model: opened.model }));
+    check('Preview shows the text of main.js with no generation error', !!opened && opened.files.join() === 'main.js' && opened.errors.length === 0 && opened.lines > 5,
+        JSON.stringify(opened && { files: opened.files, lines: opened.lines, errors: opened.errors.slice(0, 3) }));
+    note('the dock once the tab is open', await page.evaluate(DOCK(m1)));
+    check('no floating editor panel is left on the canvas', !(await page.evaluate(`!!(${pane}.querySelector('.codegen-panel'))`)), '');
+    await wait(page, 500);
+    await crop(page, 'tab_preview.png', await page.evaluate(BOX(tab)) as any);
+
+    // «Go to template»: Alt+click a span whose template is not the selected one.
+    const before = opened?.template ?? null;
+    const target = await page.evaluate(String.raw`(() => {
+      const spans = [...${tab}.querySelectorAll('.codegen-pane__code [data-template]')];
+      const s = spans.find((x) => x.getAttribute('data-template') !== ${JSON.stringify(before)});
+      if (!s) return null;
+      s.setAttribute('data-probe-alt', '1');
+      return s.getAttribute('data-template');
+    })()`) as string | null;
+    check('a span names a template other than the selected one', !!target, `${before} -> ${target}`);
+    if (target) {
+        await page.locator('[data-probe-alt="1"]').click({ modifiers: ['Alt'] });
+        const picked = await poll<string>(page, String.raw`(() => { const s = ${STATE(tab)}; return s && s.template === ${JSON.stringify(target)} ? s.template : null; })()`, 5000);
+        check(`Alt+click selects the template «${target}» in the list`, picked === target, String(picked));
+        await crop(page, 'goto_template.png', await page.evaluate(BOX(`${tab}.querySelector('.codegen-tpl__side')`)) as any);
+    }
+    note('the dock after the Alt+click', await page.evaluate(DOCK(m1)));
+    // The gutter control on a hovered line.
+    await page.locator(`[role="tabpanel"][aria-labelledby$="-tab-${tabId}"] .codegen-pane__code .codegen-panel__line [data-template]`).first().hover();
+    const jump = await poll<string>(page, `(() => { const b = ${tab}.querySelector('.codegen-pane__jump'); return b ? b.title : null; })()`, 3000);
+    check('the gutter of a hovered line offers «go to template»', !!jump && /^Go to template \S+/.test(jump), String(jump));
+
+    // Run.
+    await mode(page, tab, 'Run');
+    await poll(page, `(() => { const s = ${STATE(tab)}; return s && s.run && !s.run.disabled; })()`, 10000);
+    await page.evaluate(CLICK(`[...${tab}.querySelectorAll('.codegen-panel__run button')].find((b) => b.textContent.trim() === 'Run')`));
+    const ran = await poll<any>(page, String.raw`(() => { const s = ${STATE(tab)}; return s && (s.returned || s.error) ? s : null; })()`, 60000);
+    result.run = ran;
+    note('Run', ran && { returned: ran.returned, error: ran.error });
+    check('Run on target js: main() returns', !!ran?.returned && /^main\(\) returned, \d+ ms$/.test(ran.returned.label ?? ''), JSON.stringify(ran?.returned ?? ran?.error ?? null));
+    await crop(page, 'run_output.png', await page.evaluate(BOX(`${tab}.querySelector('.codegen-pane')`)) as any);
+
+    // Check on the stored scenario.
+    await mode(page, tab, 'Check');
+    await poll(page, `(() => { const s = ${STATE(tab)}; return s && s.check && !s.check.disabled; })()`, 10000);
+    await page.evaluate(CLICK(`[...${tab}.querySelectorAll('.codegen-panel__run button')].find((b) => b.textContent.trim() === 'Check')`));
+    const checked = await poll<any>(page, String.raw`(() => { const s = ${STATE(tab)}; return s && (s.pass || s.error) && s.check && s.check.text === 'Check' ? s : null; })()`, 90000);
+    result.check = checked;
+    const n = ex.scenario.steps.length;
+    check(`Check passes on «${ex.scenario.name}», ${n} steps`, checked?.pass === `Agrees with the simulator on ${n} steps · ${ex.scenario.name}`, JSON.stringify(checked?.pass ?? checked?.error ?? null));
+    await crop(page, 'check_result.png', await page.evaluate(BOX(`${tab}.querySelector('.codegen-pane')`)) as any);
+
+    // A second generator: its own tab, target none, so neither Run nor Check.
+    await page.evaluate(CLICK(`${tab}.querySelector('button[aria-label="New generator"]')`));
+    const second = await poll<{ id: string; s: any }>(page, String.raw`(() => {
+      const panels = [...document.querySelectorAll('[role="tabpanel"]')].filter((p) => (p.getAttribute('aria-labelledby') || '').includes('-tab-codegen_tpl_${mm}_'));
+      const p = panels.find((x) => x.querySelector('.codegen-tpl') && x.offsetParent !== null) || panels[0];
+      if (!p) return null;
+      const id = p.getAttribute('aria-labelledby').replace(/^.*-tab-/, '');
+      const s = ${STATE(`(document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-' + id + '"] .codegen-tpl'))`)};
+      return s && s.generators && s.generators.length === 2 && !s.generators.some((g) => / \(gone\)$/.test(g)) && s.target ? { id, s } : null;
+    })()`, 20000);
+    result.second = second;
+    note('the second generator', second);
+    check(`«New generator» opens its own tab codegen_tpl_${mm}_<id>, the selector lists two generators`,
+        !!second && second.id === `codegen_tpl_${mm}_${second.s.generator}` && second.s.generator !== 'default' && second.s.generators.length === 2, JSON.stringify(second && { id: second.id, generators: second.s.generators }));
+    if (second) {
+        const tab2 = TAB(second.id);
+        await crop(page, 'generator_selector.png', await page.evaluate(BOX(`${tab2}.querySelector('.codegen-tpl__side')`)) as any);
+        check('the new generator\'s target is none', second.s.target === 'target none', String(second.s.target));
+        await mode(page, tab2, 'Run');
+        await wait(page, 300);
+        const r2 = await page.evaluate(STATE(tab2)) as any;
+        await mode(page, tab2, 'Check');
+        await wait(page, 300);
+        const c2 = await page.evaluate(STATE(tab2)) as any;
+        check('on target none Run and Check are disabled (R-GEN-35)', r2?.run?.disabled === true && c2?.check?.disabled === true,
+            JSON.stringify({ run: r2?.run, check: c2?.check }));
+    }
+
+    // Back on the default (its tab, from the selector), a click on a model span selects the vertex on the canvas.
+    await page.evaluate(String.raw`(async () => { const o = await import('/src/codegen/ui/openTemplateEditor.ts'); o.openTemplateEditor(${JSON.stringify(mm)}, ${JSON.stringify(ex.lookup.MM.name)}, null, 'default'); })()`);
+    await poll(page, `!!(${tab} && ${tab}.offsetParent !== null && ${tab}.querySelector('.codegen-pane__code .code-span--model[data-origin-id]'))`, 10000);
+    await mode(page, tab, 'Preview');
+    await wait(page, 300);
+    const element = await page.evaluate(String.raw`(() => {
+      const lk = window.windoww.store.getState().idlookup;
+      const spans = [...${tab}.querySelectorAll('.codegen-pane__code .code-span--model[data-origin-id]')];
+      const s = spans.find((x) => (lk[x.getAttribute('data-origin-id')] || {}).className === 'DObject');
+      if (!s) return null;
+      s.setAttribute('data-probe-pick', '1');
+      return s.getAttribute('data-origin-id');
+    })()`) as string | null;
+    check('a span from a model object', !!element, String(element));
+    if (element) {
+        // A DOM click, as the mouse gives it: Playwright's own click scrolls every ancestor to the span first.
+        note('the dock before the span click', await page.evaluate(DOCK(m1)));
+        await page.evaluate(CLICK(`document.querySelector('[data-probe-pick="1"]')`));
+        const selected = await poll<string[]>(page, String.raw`(() => {
+          const p = ${pane};
+          if (!p || p.offsetParent === null) return null;
+          const lk = window.windoww.store.getState().idlookup;
+          const s = [...p.querySelectorAll('.react-flow__node.selected')].map((n) => (lk[n.getAttribute('data-id')] || {}).model || n.getAttribute('data-id'));
+          return s.length > 0 ? s : null;
+        })()`, 5000);
+        result.selected = selected;
+        await wait(page, 1200);
+        const dock = await page.evaluate(DOCK(m1)) as any;
+        result.dockAfterClick = dock;
+        note('the dock after the span click', dock);
+        check('after the span click the model\'s editor is the tab in front, in the viewport', dock.inView === true && dock.active.includes(m1), JSON.stringify(dock));
+        check('a click on a model span selects that element\'s vertex, only it, in the model\'s editor', !!selected && selected.length === 1 && selected[0] === element, JSON.stringify(selected));
+        // The canvas pans to the selection: the box once it has settled.
+        await wait(page, 1200);
+        const nodeBox = await page.evaluate(BOX(`${pane}.querySelector('.react-flow__node.selected')`)) as any;
+        note('the selected vertex box', nodeBox);
+        await crop(page, 'canvas_selection.png', nodeBox, 60);
+
+        // Canvas to code with the tab behind: a click on another vertex links its spans there, the dock stays put.
+        const other = await page.evaluate(String.raw`(() => {
+          const n = [...${pane}.querySelectorAll('.react-flow__node:not(.selected)')].find((x) => { const r = x.getBoundingClientRect(); return r.x > 0 && r.y > 60 && r.x + r.width < innerWidth && r.y + r.height < innerHeight; });
+          if (!n) return null;
+          const r = n.getBoundingClientRect();
+          return { x: r.x + r.width / 2, y: r.y + Math.min(12, r.height / 2) };
+        })()`) as { x: number; y: number } | null;
+        if (other) {
+            await page.mouse.click(other.x, other.y);
+            await wait(page, 1000);
+            const after = await page.evaluate(DOCK(m1)) as any;
+            note('the dock after a canvas click', after);
+            check('a canvas selection with the generator tab behind leaves the dock unscrolled and the editor in view',
+                after.inView === true && after.scrolled.length === 0, JSON.stringify(after));
+        } else {
+            check('another vertex in view to click', false, 'none');
+        }
+    }
+
+    // The pill with two generators: a menu, the last used marked; its item opens that tab.
+    await page.evaluate(CLICK(`${pane}.querySelector('.codegen-pill button')`));
+    const menu = await poll<any>(page, String.raw`(() => {
+      const m = document.querySelector('.codegen-panel--menu [role="menu"]');
+      if (!m) return null;
+      return [...m.querySelectorAll('[role="menuitem"]')].map((b) => ({ name: b.querySelector('.codegen-panel__item-name').textContent, last: b.getAttribute('aria-current') === 'true' }));
+    })()`, 10000);
+    result.menu = menu;
+    note('the pill menu', menu);
+    check('with two generators the pill shows a menu of both, the default last used', !!menu && menu.length === 2 && menu.filter((i: any) => i.last).length === 1 && menu[0].last === true, JSON.stringify(menu));
+    await wait(page, 800);
+    const menuBox = await page.evaluate(BOX(`document.querySelector('.codegen-panel--menu')`)) as any;
+    note('the pill menu box', menuBox);
+    await crop(page, 'pill_menu.png', menuBox);
+    if (menu && second) {
+        await page.evaluate(CLICK(`document.querySelectorAll('.codegen-panel--menu [role="menuitem"]')[1]`));
+        const back = await poll<boolean>(page, `(() => { const t = ${TAB(second.id)}; return !!t && t.offsetParent !== null && !document.querySelector('.codegen-panel--menu'); })()`, 10000);
+        check('the menu item opens that generator\'s tab and the menu closes', back === true, String(back));
+    }
+}
+
+try {
+    await main();
+} catch (e) {
+    check('the probe ran to its end', false, String((e as Error).stack ?? e).slice(0, 400));
+}
+const own = errors.filter(e => /codegen|oracle|jjodelOracle|GeneratorPane|TemplateEditor/i.test(e));
+result.errors = errors;
+note('console errors', { total: errors.length, codegen: own.length });
+check('no console error from the generator tab', own.length === 0, own.slice(0, 5));
+writeFileSync(OUT, JSON.stringify(result, null, 1));
+console.log(`${failures === 0 ? 'ALL GREEN' : `${failures} FAILED`}  (${OUT})`);
+await browser.close();
+process.exit(failures === 0 ? 0 : 1);
