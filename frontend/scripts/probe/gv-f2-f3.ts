@@ -195,6 +195,12 @@ async function main() {
     await entry.dragTo(m2pane, { targetPosition: { x: 260, y: 220 } });
     await wait(page, 2500);
     const afterDrag = await countClasses(page);
+    const geomAtClick = await canvasGeom(page);
+    const dragIds = await idsOf(page, 'DClass', '^NewClass');
+    const dv = dragIds.length ? await vertexOf(page, dragIds[dragIds.length - 1]) : null;
+    const pb = await m2pane.boundingBox();
+    const dragFlow = pb && geomAtClick ? { x: (pb.x + 260 - geomAtClick.rf.left - geomAtClick.vp.x) / geomAtClick.vp.z, y: (pb.y + 220 - geomAtClick.rf.top - geomAtClick.vp.y) / geomAtClick.vp.z } : null;
+    const dragOff = dv && dragFlow ? offCentre(dv, dragFlow) : null;
     await entry.click();
     await wait(page, 3000);
     const afterClick = await countClasses(page);
@@ -221,7 +227,8 @@ async function main() {
     await paletteItem(page, 'Attribute').click({ timeout: 5000 }).catch((e) => meas('memberClickError', String(e).slice(0, 200)));
     await wait(page, 2000);
     out.f3m2 = {
-        geom, clicked, vertex: cv, offCentre: cv && geom ? offCentre(cv, geom.flow) : null, focused,
+        geom, geomAtClick, clicked, vertex: cv, offCentre: cv && geom ? offCentre(cv, geom.flow) : null,
+        offCentreAtClick: cv && geomAtClick ? offCentre(cv, geomAtClick.flow) : null, dragVertex: dv, dragFlow, dragOff, focused,
         enterCreated: afterEnter - afterClick, spaceCreated: afterSpace - afterEnter,
         memberClick: { attributes: (await idsOf(page, 'DAttribute')).length - attrs0, classes: (await countClasses(page)) - afterSpace },
     };
@@ -378,10 +385,17 @@ async function sceneHull() {
     const regionsOf = () => page.evaluate(() => Object.values((window as any).store.getState().idlookup)
         .filter((d: any) => d?.className === 'DObject' && (window as any).store.getState().idlookup[d.instanceof]?.name === 'Region').map((d: any) => d.id as string));
 
-    // 1. Bare centre (flow -600, 300): Region (rootable) creates one root; State (non-rootable) creates nothing.
+    // 1. Bare centre (flow -600, 300): State (non-rootable) creates nothing; Region (rootable) creates one root.
     let g = await canvasGeom(page);
     if (g) await panCentreTo(page, { x: g.rf.left + g.vp.x + -600 * g.vp.z, y: g.rf.top + g.vp.y + 300 * g.vp.z });
     const bareHit = await hitAtCentre(page);
+    // State first: once Region is created it sits on the centre and a State click drops into it.
+    const s0 = await statesOf();
+    await paletteItem(page, 'State').click({ timeout: 5000 }).catch(() => {});
+    await wait(page, 2500);
+    out.stateBare = { hit: bareHit, offered: (out.paletteItems as string[]).includes('State'), created: (await statesOf()).length - s0.length };
+    meas('stateBare', out.stateBare);
+    await page.mouse.click(5, 5);
     const r0 = await regionsOf();
     await paletteItem(page, 'Region').click({ timeout: 5000 }).catch(() => {});
     await wait(page, 2500);
@@ -390,12 +404,6 @@ async function sceneHull() {
     const rv = rNew.length === 1 ? await vertexOf(page, rNew[0]) : null;
     out.regionBare = { hit: bareHit, created: rNew.length, vertex: rv, offCentre: rv && g ? offCentre(rv, g.flow) : null };
     meas('regionBare', out.regionBare);
-    await page.mouse.click(5, 5);
-    const s0 = await statesOf();
-    await paletteItem(page, 'State').click({ timeout: 5000 }).catch(() => {});
-    await wait(page, 2500);
-    out.stateBare = { offered: (out.paletteItems as string[]).includes('State'), created: (await statesOf()).length - s0.length };
-    meas('stateBare', out.stateBare);
 
     // 2. Centre on region1's box at (75%, 80%), clear of A (the drop's container hit test is a bbox test over the nodes,
     // findIRDropContainerAt), then State: one State in region1.states.
