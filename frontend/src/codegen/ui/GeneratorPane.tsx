@@ -71,6 +71,19 @@ const NOT_JS = 'Check runs only on a generator whose target is js.';
 /** The tooltip of «Run» on a generator whose target is not `js` (R-GEN-35). */
 const RUN_NOT_JS = 'Run runs only on a generator whose target is js.';
 
+/**
+ * Brings `el` into view inside the code view `box`, scrolling `box` alone. `scrollIntoView` scrolls every ancestor
+ * too: with the tab behind another dock tab (a canvas selection, or the click that brings the model's tab forward),
+ * it scrolled the dock sideways to reveal a hidden span and left the model's editor off screen.
+ */
+function revealIn(box: HTMLElement | null, el: Element | null | undefined): void {
+    if (!box || !el) return;
+    const b = box.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    if (r.top < b.top) box.scrollTop -= b.top - r.top;
+    else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom;
+}
+
 /** The project of the current user, as the simulator reads it (SimulationPanel.tsx `projectIdOfUser`); '' when none. */
 function projectIdOfUser(): string {
     try {
@@ -262,8 +275,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
     // The first linked span in view.
     useEffect(() => {
         if (!linked) return;
-        const span = codeRef.current?.querySelector('.code-span--linked');
-        span?.scrollIntoView?.({ block: 'nearest' });
+        revealIn(codeRef.current, codeRef.current?.querySelector('.code-span--linked'));
     }, [linked, result]);
 
     // The outline follows the edge on screen, pan and zoom included, until another selection; none while hidden.
@@ -310,7 +322,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
     // The line of a runtime error in view.
     useEffect(() => {
         if (errorLine === null) return;
-        codeRef.current?.querySelector(`[data-line="${errorLine}"]`)?.scrollIntoView?.({ block: 'nearest' });
+        revealIn(codeRef.current, codeRef.current?.querySelector(`[data-line="${errorLine}"]`));
     }, [errorLine]);
 
     const spanClass = (e: TextMapEntry): string => {
