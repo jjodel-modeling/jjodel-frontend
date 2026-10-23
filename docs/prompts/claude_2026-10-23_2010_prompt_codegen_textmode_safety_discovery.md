@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: release-3-2
 Lane: full (discovery, Phase 1 read-only, then hard stop; feeds the slices after S2 of P-2026-10-23-1840)
 Depends: P-2026-10-23-1945
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane codegen · discovery report, Phase 1 only · R-GEN-25..30 provisional in the report
 Corregge: none
 Request: Alfonso, 2026-10-23 20:06, in the project chat: two requests for the code generation front, from trying an SQL generator on an ERD metamodel: (1) template bodies in text mode by default (no outer quotes, `${…}` holes), with an additive `mode` field in the record, absence meaning expression, so saved templates stay valid; to be decided now that the Template Editor exists, freeze on the 27th; (2) safety: recursion, time and output limits in generation (it runs on the main thread), prototype reads in JjEL (`getProperty` uses `property in obj`, so `x.constructor` and `x["__proto__"]` are readable although no native function can be called), CSP for the runner's worker. A read-only discovery draft by another chat (P-...-1900, not available to this chat) was asked to be adapted to the front release-3-2 and to slices S1/S2; this prompt replaces it.
 

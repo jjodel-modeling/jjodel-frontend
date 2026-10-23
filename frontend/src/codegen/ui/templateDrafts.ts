@@ -2,8 +2,9 @@
  * templateDrafts — the drafts of the Template Editor tab, and how they meet the stored list (slice S2,
  * P-2026-10-23-1945; R-GEN-22, discovery §5.2).
  *
- * A draft is a template being edited: its name, its parameters as typed (a comma-separated list) and its body, over
- * the stored record it started from, its `base`, keyed by the base's name. Only dirty drafts are kept: an edit that
+ * A draft is a template being edited: its name, its parameters as typed (a comma-separated list), its body and its
+ * mode (S5, R-GEN-27), over the stored record it started from, its `base`, keyed by the base's name. Only dirty
+ * drafts are kept: an edit that
  * brings a draft back to its base drops it, so a template with no draft shows the stored record and follows every
  * outside write (an Undo, the panel's own editor). A dirty draft stays when the store changes under it, and is then
  * «changed outside the editor»; if the store comes to hold what the draft holds, the draft is dropped.
@@ -15,7 +16,8 @@
  * Pure: no Monaco, no store.
  */
 
-import type { TemplateRecord } from '../engine/templates';
+import { modeOf } from '../engine/templates';
+import type { TemplateMode, TemplateRecord } from '../engine/templates';
 
 export interface TemplateDraft {
     readonly base: TemplateRecord;
@@ -23,27 +25,31 @@ export interface TemplateDraft {
     /** As typed: a comma-separated list. */
     readonly params: string;
     readonly body: string;
+    /** The mode of the body (R-GEN-27): the toggle is a draft edit, written by Save. */
+    readonly mode: TemplateMode;
 }
 
 /** Dirty drafts by the name of their base. */
 export type Drafts = Readonly<Record<string, TemplateDraft>>;
 
 /** The editable fields of a draft. */
-export type DraftEdit = Partial<Pick<TemplateDraft, 'name' | 'params' | 'body'>>;
+export type DraftEdit = Partial<Pick<TemplateDraft, 'name' | 'params' | 'body' | 'mode'>>;
 
 export const paramsOf = (text: string): string[] => text.split(',').map(p => p.trim()).filter(p => p !== '');
 
 export function draftOf(record: TemplateRecord): TemplateDraft {
-    return { base: record, name: record.name, params: record.params.join(', '), body: record.body };
+    return { base: record, name: record.name, params: record.params.join(', '), body: record.body, mode: modeOf(record) };
 }
 
-/** The record a draft saves as. */
+/** The record a draft saves as; a base with no mode keeps none while the draft stays an expression. */
 export function recordOf(draft: TemplateDraft): TemplateRecord {
-    return { ...draft.base, name: draft.name.trim(), params: paramsOf(draft.params), body: draft.body };
+    const { mode: _baseMode, ...base } = draft.base;
+    const mode = draft.base.mode === undefined && draft.mode === 'expression' ? {} : { mode: draft.mode };
+    return { ...base, name: draft.name.trim(), params: paramsOf(draft.params), body: draft.body, ...mode };
 }
 
 const sameRecord = (a: TemplateRecord, b: TemplateRecord): boolean =>
-    a.name === b.name && a.body === b.body && a.target === b.target && a.params.join('\u0000') === b.params.join('\u0000');
+    a.name === b.name && a.body === b.body && modeOf(a) === modeOf(b) && a.target === b.target && a.params.join('\u0000') === b.params.join('\u0000');
 
 /** The draft differs from what it started from. */
 export function isDirty(draft: TemplateDraft): boolean {

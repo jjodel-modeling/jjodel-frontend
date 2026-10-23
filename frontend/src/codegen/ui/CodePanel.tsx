@@ -266,7 +266,7 @@ export default function CodePanel({ modelid, left, onClose, isMetamodel = false 
 
     const addTemplate = () => {
         const name = freshName(templates);
-        save([...templates, { name, params: [], body: '""' }]);
+        save([...templates, { name, params: [], body: '', mode: 'text' }]);
         setSelected(name);
     };
 
@@ -512,7 +512,7 @@ export default function CodePanel({ modelid, left, onClose, isMetamodel = false 
                             />
                         )}
                         <div className="codegen-panel__help">
-                            A template is a JjEL expression, usually one string with {'${…}'} holes; templates call each other by name.
+                            A template is text with {'${…}'} holes, or in expression mode a JjEL expression; templates call each other by name.
                             They are stored in the metamodel, and the .ecore export does not keep them.
                         </div>
                     </div>

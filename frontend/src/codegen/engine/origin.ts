@@ -69,8 +69,8 @@ export class TemplateSources {
     private readonly holes = new WeakMap<object, SourceInfo>();
     private readonly strings = new WeakMap<object, { info: SourceInfo; spans: readonly LiteralSpan[] }>();
 
-    /** Registers the AST `expr` of `template`, parsed from `source`. */
-    register(template: string, source: string, expr: JjelExpression): void {
+    /** Registers the AST `expr` of `template`, parsed from `source` in `mode` (absent: an expression). */
+    register(template: string, source: string, expr: JjelExpression, mode?: 'text' | 'expression'): void {
         const lineStarts = [0];
         for (let i = 0; i < source.length; i++) if (source[i] === '\n') lineStarts.push(i + 1);
         const info: SourceInfo = { template, lineStarts };
@@ -84,7 +84,7 @@ export class TemplateSources {
             }
             const n = node as JjelExpression;
             if (n.type === 'InterpolatedString') {
-                this.strings.set(n, { info, spans: literalSpans(source, n) });
+                this.strings.set(n, { info, spans: literalSpans(source, n, mode === 'text' && n === expr) });
                 for (const part of n.parts) if (part.kind === 'expression') this.holes.set(part.expr, info);
             }
             for (const [key, value] of Object.entries(n)) if (key !== 'location') walk(value);
@@ -129,23 +129,25 @@ function literalOrigin(info: SourceInfo, offset: number): LiteralOrigin {
  * The literal parts of the string literal `node` in `source`, in AST order: its own source lexed again with the
  * `interpolation` option, its text tokens up to the closing quote, the empty ones dropped as the parser drops them.
  * The first token starts at the opening quote, the others right after a hole's `}`; an escape is two source
- * characters for one of the value.
+ * characters for one of the value. The root of a text body (`textBody`, R-GEN-26) is lexed with `textBody`: no
+ * quote, and the only escape is `\${`, three source characters for two of the value.
  */
-function literalSpans(source: string, node: JjelExpression): LiteralSpan[] {
+function literalSpans(source: string, node: JjelExpression, textBody = false): LiteralSpan[] {
     const start = node.location?.start.offset;
     const end = node.location?.end.offset;
     if (start === undefined || end === undefined) return [];
-    const { tokens } = tokenize(source.slice(start, end), { interpolation: true });
+    const { tokens } = tokenize(source.slice(start, end), textBody ? { textBody: true } : { interpolation: true });
     const spans: LiteralSpan[] = [];
     for (let i = 0; i < tokens.length; i++) {
         const tok = tokens[i];
         if (tok.type !== JjelTokenType.STRING_PART && tok.type !== JjelTokenType.STRING) continue;
         if (tok.value !== '') {
             const offsets: number[] = [];
-            let at = start + tok.start + (i === 0 ? 1 : 0);
+            let at = start + tok.start + (i === 0 && !textBody ? 1 : 0);
             for (let k = 0; k < tok.value.length; k++) {
                 offsets.push(at);
-                at += source[at] === '\\' ? 2 : 1;
+                if (!textBody) at += source[at] === '\\' ? 2 : 1;
+                else at += source[at] === '\\' && source[at + 1] === '$' && source[at + 2] === '{' ? 2 : 1;
             }
             spans.push({ value: tok.value, offsets });
         }
