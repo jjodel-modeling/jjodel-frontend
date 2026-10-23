@@ -296,6 +296,8 @@
         font-family: var(--font-mono);
     }
 
+    // TODO: cleanup — since G3 (P-2026-10-24-0003) the right pane is GeneratorPane.tsx, with the Code panel's own
+    // classes (CodePanel.scss); `__errors` to `__span--opaque` below have no element left.
     // The Code panel's output form (CodePanel.scss `__code`, `__line`, `__gutter`, `__text`): one line per generated
     // line, never wrapped, the gutter sticky and opaque at the left edge while the text scrolls on both axes.
     &__code {
@@ -341,6 +343,67 @@
     &__span--model,
     &__span--opaque {
         color: var(--color-text-primary);
+    }
+
+    // -- generator (G3) -----------------------------------------------------------
+    &__generator {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        > .codegen-tpl__input {
+            width: 100%;
+            font-family: inherit;
+        }
+    }
+
+    &__generator-actions {
+        display: flex;
+        gap: 4px;
+    }
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: 1px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 12px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    &__generator-meta {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-text-placeholder);
+        overflow-wrap: anywhere;
     }
 
     // Primary: the slate gradient, white text and glyph, as CodePanel.scss `__button--primary`.
@@ -399,5 +462,98 @@
             line-height: 1;
             color: inherit;
         }
+    }
+}
+
+// -- generator pane (G3): GeneratorPane.tsx, in the place of the preview, the Code panel's classes inside ---------
+.codegen-pane {
+    overflow-y: auto;
+
+    &__head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    &__modes {
+        margin-left: 0;
+    }
+
+    &__target {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-text-placeholder);
+    }
+
+    &__files {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    &__file {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 22px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+            color: var(--color-text-primary);
+        }
+
+        &[aria-selected="true"] {
+            border-color: var(--color-border-focus);
+            background: var(--color-bg-active);
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__file-error {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--color-error-text);
+    }
+
+    // The text fills the pane's height, not the floating panel's 320px.
+    .codegen-panel__code {
+        flex: 1 1 auto;
+        min-height: 120px;
+        max-height: none;
+    }
+
+    // The gutter control of a hovered line: «go to template» (R-GEN-41), in the place of the line number.
+    &__jump {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        width: 100%;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-canvas-accent);
+        cursor: pointer;
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    // Over the canvas of another dock tab: fixed to the viewport, never in the way of a click.
+    &__edge-outline {
+        position: fixed;
+        z-index: 1000;
     }
 }
