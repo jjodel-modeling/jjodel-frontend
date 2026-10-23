@@ -8,6 +8,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+Draft of 3.2.0. It covers the trunk `alfonso-frontend-jjtl` after the text of `[3.1.0]` was written (2026-10-12): first the work that reached the beta on 2026-10-18 (marked *beta*), then the work merged after it.
+
+### Added
+
+#### Code generation
+- Model-to-text code generation ships in this build: a Code panel with templates over the model, a JavaScript target, a Run of the generated code and «Check», which compares a run of the generated code with the Jjodel simulator on the stored scenarios. It is off by default: Settings → Advanced → Experimental → «Code generation» (R-GEN-18).
+- Two lecture examples as importable project files: Petri producer-consumer and Turnstile.
+- Bit-vector values in code generation and in the Code panel.
+
+#### Templates and gallery
+- Templates page under BROWSE: starter projects and worked examples you clone into your workspace, with search, concept and level filters, card previews and, in Advanced mode, a citable gallery id (`<id>@<n>`) with a deep link (R-LIB-9, R-LIB-13, R-LIB-15).
+- Seven gallery projects (Library, Families and Persons, StateMachine, Graph, Shapes, Turnstile, Petri producer-consumer), each with hand-written viewpoints.
+- File › New in the 3.2 structure: Project, Metamodel, Model, Viewpoint, Transformation and From template; the model entries are enabled only inside a project.
+- New model dialog: choose the metamodel the model conforms to, with a name that gets a number when it is already in use.
+
+#### Simulation
+- Bit-vector word domains: a register's width is read per element at Reset.
+- The IR predicate «sim active», true while a run shows an element's model; the Petri example hides its initial tokens during a run.
+- Simulation guide and semantics reference in `docs/help/simulation/`.
+
+#### JjEL
+- Fixed-width bit-vector values in the evaluator (R-BV).
+
+#### Data Manager and environments
+- References in the Data Manager detail: a reference section that links, changes and removes, following the slot's rule (#172). *beta*
+
+#### AI
+- Live model catalogs for Anthropic, OpenAI and Gemini; «Test connection» lists the models; the picker shows the newest model per family and the older ones on demand. *beta*
+- Settings rows of the AI providers show the connection state.
+
+### Changed
+- The shell (top bar, editor toolbar, left palette, rails, status bar, menus) uses one token layer: denser layout, 24 px targets, muted action icons in Advanced, rail titles in sentence case (R-SHELL-1..5).
+- Sign in, registration and password reset have a new layout; registration no longer asks for the newsletter.
+- What's new screen for 3.1. *beta*
+
+### Fixed
+- Large models: References lists are built only when the section is open, model names without a full scan, the canvas re-transforms only the vertices that changed, the intrinsic size of a node is measured once per content.
+- A graphVertex container hides the edges it encloses (R-GV-18).
+- The simulator compiles triggers by position, and fuses fork and join.
+- A keyword is a valid member name after `.` and `?.` in JjEL.
+- The Templates page keeps Advanced mode when you reach it from inside the app.
+- A user view stays editable after the project is opened again or the page is reloaded (graphVertex F2).
+- A click, Enter or Space on a palette entry creates the instance at the centre of the view (graphVertex F3).
+- A reference row shows «Open» once (#172). *beta*
+
+### To check before the tag
+- Whether 3.1.0 ships on its own first: then the *beta* items move to `[3.1.0]`.
+- The Endpoints section and the Configurator panel (#186, #187) are on the beta and not yet on the trunk: they enter with the alignment of `staging`.
+- The graphVertex F2 and F3 lines assume the merge of `gv-f2-f3`.
+
 ## [3.1.0] - 2026-10-12
 
 This release covers the trunk `alfonso-frontend-jjtl` since `3.0.0` together with the fixes released on beta (`staging`) in the same period. The code generator is not part of this release.
