@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: release-3-2
 Lane: full (implementation; codegen UI only; no critical-zone file)
 Depends: P-2026-10-23-2225
-Status: eseguito 2026-10-23 · lane codegen · 666740aa0 · bench 12/12 killed, no expectation changed · param class from call sites only, `self.` offers nothing (unbound in templates) · lazy gate on green, off not run · visual check owed by the chat (RC-23)
+Status: eseguito 2026-10-23 · lane codegen · 666740aa0 · bench 12/12 killed, no expectation changed · param class from call sites only, `self.` offers nothing (unbound in templates) · lazy gate on green, off not run · merged 3b5901f05 by C-2026-10-23-2009 (front codegen), gates green on the trunk (typecheck, vitest src/codegen 2159, lazy on, build) · visual check by the chat 2026-10-23 on DemoPetri copy: text outside a hole offers nothing, a hole offers p, the five classes, stc, target and the template, stc. lists its 11 members with calls; parameter-class features not exercised (no typed call site), test template deleted and saved
 Corregge: none
 Request: Alfonso, 2026-10-23, in the project chat: «scrivere le template in quella finestra è un po' scomodo» and «mettiamo il template editor in 3.2»
 
