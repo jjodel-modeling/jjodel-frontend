@@ -15,4 +15,15 @@ describe('clientCentre', () => {
     it('is the corner of a zero-size rect', () => {
         expect(clientCentre({ left: 12, top: 34, width: 0, height: 0 })).toEqual({ x: 12, y: 34 });
     });
+
+    // The Properties+Tree overlay covers the right of the canvas (--jj-canvas-right-inset, P-2026-10-22-1325):
+    // measured canvas 201..1599 under an overlay from 1200, inset 408.
+    it('is the centre of the part the right inset leaves uncovered', () => {
+        expect(clientCentre({ left: 201, top: 91, width: 1398, height: 876 }, 408)).toEqual({ x: 696, y: 529 });
+    });
+
+    it('clamps the inset to the width, and ignores a negative one', () => {
+        expect(clientCentre({ left: 100, top: 0, width: 300, height: 10 }, 500)).toEqual({ x: 100, y: 5 });
+        expect(clientCentre({ left: 100, top: 0, width: 300, height: 10 }, -50)).toEqual({ x: 250, y: 5 });
+    });
 });

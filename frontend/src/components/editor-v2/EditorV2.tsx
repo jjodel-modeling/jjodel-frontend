@@ -2567,12 +2567,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         [createFromPalette]
     );
 
-    // Click or Enter/Space on a palette entry: the drop at the canvas centre, on the drop's grid.
+    // Click or Enter/Space on a palette entry: the drop at the centre of the canvas the overlay leaves
+    // visible, on the drop's grid.
     const onPaletteActivate = useCallback(
         (type: string, metaclassId?: string) => {
             const canvas = editorContainerRef.current;
             if (!canvas) return;
-            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect()));
+            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
         },
         [createFromPalette]
     );

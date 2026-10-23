@@ -11,6 +11,11 @@ export interface ClientRect {
     height: number;
 }
 
-export function clientCentre(rect: ClientRect): { x: number; y: number } {
-    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+/**
+ * `rightInset` is the part of the canvas the floating Properties+Tree overlay covers on the right
+ * (`--jj-canvas-right-inset`, P-2026-10-22-1325): the centre is the one of the uncovered part.
+ */
+export function clientCentre(rect: ClientRect, rightInset = 0): { x: number; y: number } {
+    const inset = Math.min(Math.max(rightInset, 0), rect.width);
+    return { x: rect.left + (rect.width - inset) / 2, y: rect.top + rect.height / 2 };
 }
