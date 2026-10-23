@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-Draft of 3.2.0. It covers the trunk `alfonso-frontend-jjtl` after the text of `[3.1.0]` was written (2026-10-12): first the work that reached the beta on 2026-10-18 (marked *beta*), then the work merged after it.
+Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (`staging` at `3da1d6348`), which becomes 3.1.0.
 
 ### Added
 
@@ -31,17 +31,13 @@ Draft of 3.2.0. It covers the trunk `alfonso-frontend-jjtl` after the text of `[
 #### JjEL
 - Fixed-width bit-vector values in the evaluator (R-BV).
 
-#### Data Manager and environments
-- References in the Data Manager detail: a reference section that links, changes and removes, following the slot's rule (#172). *beta*
 
 #### AI
-- Live model catalogs for Anthropic, OpenAI and Gemini; «Test connection» lists the models; the picker shows the newest model per family and the older ones on demand. *beta*
 - Settings rows of the AI providers show the connection state.
 
 ### Changed
 - The shell (top bar, editor toolbar, left palette, rails, status bar, menus) uses one token layer: denser layout, 24 px targets, muted action icons in Advanced, rail titles in sentence case (R-SHELL-1..5).
 - Sign in, registration and password reset have a new layout; registration no longer asks for the newsletter.
-- What's new screen for 3.1. *beta*
 
 ### Fixed
 - Large models: References lists are built only when the section is open, model names without a full scan, the canvas re-transforms only the vertices that changed, the intrinsic size of a node is measured once per content.
@@ -51,14 +47,8 @@ Draft of 3.2.0. It covers the trunk `alfonso-frontend-jjtl` after the text of `[
 - The Templates page keeps Advanced mode when you reach it from inside the app.
 - A user view stays editable after the project is opened again or the page is reloaded (graphVertex F2).
 - A click, Enter or Space on a palette entry creates the instance at the centre of the view (graphVertex F3).
-- A reference row shows «Open» once (#172). *beta*
 
-### To check before the tag
-- Whether 3.1.0 ships on its own first: then the *beta* items move to `[3.1.0]`.
-- The Endpoints section and the Configurator panel (#186, #187) are on the beta and not yet on the trunk: they enter with the alignment of `staging`.
-- The graphVertex F2 and F3 lines assume the merge of `gv-f2-f3`.
-
-## [3.1.0] - 2026-10-12
+## [3.1.0] - unreleased (beta of 2026-10-18)
 
 This release covers the trunk `alfonso-frontend-jjtl` since `3.0.0` together with the fixes released on beta (`staging`) in the same period. The code generator is not part of this release.
 
@@ -114,6 +104,10 @@ Projects: 3.1 saves projects in format 2.230 and opens projects saved in formats
 - Reference editor in the canvas rail with drill-in, inline edit and create-and-link for references (#142).
 - Environment configuration and Configurator screen with role profiles and a restricted consumer shell (#157).
 - Jodie in the Configurator: for the end user it answers without developer tools, follows the selected element, the drill-in and the role profile, and offers proposals the user can apply (#168).
+- References in the Data Manager detail: a reference section that links, changes and removes, following the slot's rule (#172).
+- Live model catalogs for Anthropic, OpenAI and Gemini; «Test connection» lists the models; the picker shows the newest model per family and the older ones on demand.
+- Endpoints window from the app bar: the editable metaclasses and the roles of the stand-alone environment (#186, R-CFG-5).
+- Configurator panel: the role chip beside the title, the panel rules and components (#187).
 
 ### Changed
 - Project format 2.230: every instance, nested ones included, is listed by its model (#174). Format 2.229 introduces the `Expression` and `Action` types. Saves in an older format are migrated when they are opened.
@@ -124,6 +118,7 @@ Projects: 3.1 saves projects in format 2.230 and opens projects saved in formats
 - The default notation of M2 and M1 canvases is more legible in the light theme (contrast of headers, edges and quiet text).
 - The metamodel canvas refuses references and supertypes whose type is not a class.
 - The authoring Form tab is labelled Layout; the Symbol tab opens the Symbol Editor directly.
+- What's new screen for 3.1.
 
 ### Fixed
 - Cmd+S saves the live project; a view IR never stores an L-proxy.
@@ -144,6 +139,7 @@ Projects: 3.1 saves projects in format 2.230 and opens projects saved in formats
 - A click on an edge shows the element the edge represents; deleting an M1 edge removes the link, not the reference; deleting an object drawn as an edge deletes the object; a stale M1 reference edge leaves the canvas.
 - Drawing a subclass link, or switching a containment, updates the model canvas that is already open (M1 palette, «Add» and connect gestures).
 - IR node corners, shadow and selection ring are no longer clipped; the loading overlay sits above the rail.
+- A reference row shows «Open» once (#172).
 
 ### Removed
 - The dark theme: Settings → Appearance no longer offers it, and a dark theme chosen earlier opens in light.
