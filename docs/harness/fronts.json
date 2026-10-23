@@ -57,7 +57,7 @@
     },
     {
       "slug": "release-3-2",
-      "title": "Release 3.2 for the MDE course: freeze 2026-10-23, live 2026-10-26",
+      "title": "Release 3.2 for the MDE course: freeze 2026-10-27, tag and live 2026-10-29 (Alfonso, 2026-10-23); 3.1 ships first from the beta",
       "exit": "git tag -l 3.2.0 is non-empty and CHANGELOG.md has ## [3.2.0]",
       "state": "open",
       "openedOn": "2026-10-10",
