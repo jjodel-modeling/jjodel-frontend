@@ -97,6 +97,18 @@ function withBitVectorDefects<T>(step: () => T): T {
 }
 
 /**
+ * Member guard (R-GEN-29): `__proto__`, and a name inherited from
+ * `Object.prototype` that the receiver does not own (`constructor`,
+ * `toString`, `__defineGetter__`...), read as a missing member. Own attributes
+ * with those names stay readable. `hasOwnProperty.call` rather than
+ * `Object.hasOwn`, which the default Vite target does not ship.
+ */
+function isBlockedMember(obj: object, name: string): boolean {
+    if (name === '__proto__') return true;
+    return name in Object.prototype && !Object.prototype.hasOwnProperty.call(obj, name);
+}
+
+/**
  * Register the two bit-vector constructors (R-BV-5), the only bit-vector
  * globals, on `ctx`. The evaluator calls it on its own context; the simulator
  * calls it on its base context, which takes no other global builtin, so that
@@ -592,11 +604,15 @@ export class JjelEvaluator {
                 }
             }
 
-            // Check if property exists before accessing
-            if (property in obj) {
-                const value = obj[property] ?? null;
-                ctx.readObserver?.(obj, property, value);
-                return value;
+            // Check if property exists before accessing. A blocked name, or a
+            // value that is a native function, reads as missing (R-GEN-29).
+            if (!isBlockedMember(obj, property) && property in obj) {
+                const raw = obj[property];
+                if (typeof raw !== 'function') {
+                    const value = raw ?? null;
+                    ctx.readObserver?.(obj, property, value);
+                    return value;
+                }
             }
 
             // Property doesn't exist on the host. When the caller has opted
@@ -864,8 +880,10 @@ export class JjelEvaluator {
 
         // Object methods
         if (isJjelObject(obj)) {
-            const methodValue = obj[method];
-            if (isJjelFunction(methodValue)) {
+            // Blocked names and native functions read as missing (R-GEN-29).
+            const read = isBlockedMember(obj, method) ? undefined : obj[method];
+            const methodValue = typeof read === 'function' ? undefined : read;
+            if (methodValue !== undefined && isJjelFunction(methodValue)) {
                 return methodValue.call(args, ctx);
             }
             // Dual form for zero-arg builtins (spec 2.11): if the property
@@ -991,7 +1009,13 @@ export class JjelEvaluator {
     private evaluateObjectLiteral(expr: ObjectLiteralExpr, ctx: EvaluationContext): JjelValue {
         const result: Record<string, JjelValue> = {};
         for (const entry of expr.entries) {
-            result[entry.key] = this.evaluate(entry.value, ctx);
+            // An own data property: a `__proto__` key is a key, not the prototype (R-GEN-29).
+            Object.defineProperty(result, entry.key, {
+                value: this.evaluate(entry.value, ctx),
+                writable: true,
+                enumerable: true,
+                configurable: true,
+            });
         }
         return result;
     }
@@ -1071,7 +1095,11 @@ export class JjelEvaluator {
             return obj[Math.trunc(index)] ?? null;
         }
         if (isJjelObject(obj) && (typeof index === 'string' || typeof index === 'number')) {
-            return (obj as any)[String(index)] ?? null;
+            // Blocked names and native functions read as missing (R-GEN-29).
+            const key = String(index);
+            if (isBlockedMember(obj, key)) return null;
+            const value = (obj as any)[key];
+            return typeof value === 'function' ? null : value ?? null;
         }
         return null;
     }
