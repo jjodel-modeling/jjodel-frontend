@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: graphvertex
 Lane: full (continuation; reducer.ts core already committed in 4da12da92, F3 in EditorV2.tsx and PalettePanel.tsx uncommitted)
 Depends: P-2026-10-21-1950
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane graphvertex · 5a1faa267 · verifica visiva della chat dopo il merge (RC-23)
 Corregge: none
 Request: Alfonso, 2026-10-22 13:12, in the project chat: «andiamo avanti» on finishing the 3.2 work; the chat put graphVertex F2/F3 in the release
 

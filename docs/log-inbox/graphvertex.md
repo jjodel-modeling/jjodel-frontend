@@ -44,3 +44,23 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: F2 reproduces on 9da5b4048: after an in-page open, not after a page load. Root cause: the scan at reducer.ts:1111-1117 registers every view, user ones included, whether or not the seeded viewpoint exists. Fix: Pointer_View id filter in a pure module, with a test. F3: click creates 0 (measured); proposal reuses the drop path at the viewport centre, unsnapped like the drop. Details in the report.
 **Prompt document name**: 2026-10-21 19:26
+
+## 2026-10-23 — fix(F2, F3): read-only user views and palette click at the visible canvas centre (P-2026-10-22-1325)
+**Prompt**: Finish Phase 2 of P-2026-10-21-1950 in a fresh session: typecheck F3, unit tests, probe AFTER scenes (card, url, main, bpmn, hull, demo), vitest, build, commit F3, crops for the chat, docs commit
+**Files touched**: frontend/src/components/editor-v2/EditorV2.tsx, frontend/src/components/editor-v2/panels/PalettePanel.tsx, frontend/src/components/editor-v2/utils/canvasCentre.ts (ce9e499ad, 5a1faa267); frontend/src/components/editor-v2/utils/__tests__/canvasCentre.test.ts (5a1faa267); frontend/scripts/probe/gv-f2-f3.ts (c98c5be6d, 1bcd4d5cd); F2 in 4da12da92; this inbox and the two prompts
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Eight files, all in the handoff scope. The crop showed the click centred on .editor-v2__canvas, 200 px right of the visible centre: the fixed Properties+Tree overlay covers 408 px. Fix 5a1faa267 subtracts --jj-canvas-right-inset. Probe: click/Enter/Space 1, member 0, offCentre (1,-6) main, (4,4) bpmn, (8,4) hull; stateBare 0, stateInRegion 1; F2 user checks false, map only Pointer_View*; demo identical. Gates: typecheck 0, vitest 4052, build, smoke 12/0/3.
+**Prompt document name**: 2026-10-22 13:25
+
+**Decisions** (ratified as recommended, unattended): (1) probe container check on a Region/State scene, since BPMN lanes hold children by reference; (2) demo fixtures have no user views, the F2 demo check is a no-change check; (3) the probe matches palette entries by their label span; (4) commit a94dae98d was amended twice before F2, unpushed; (5) the off-centre bound is half the 16-grid step, not 1 px: the shared drop snaps (drag lands (-4,4) off its cursor, nodes at residue 10,12 mod 16); (6) the hull probe clicks State before Region, which otherwise sits on the centre and takes the drop; (7) the click centres on the canvas less the right overlay inset, the value fitView already reserves. Crops: ~/.jjodel-lanes/P-2026-10-22-1325/crops/.
+
+## 2026-10-23 — ticket: the M1 palette does not offer reference-membership children
+**Ticket**: The M1 palette does not offer the children a container holds by reference (a Task into a BPMN lane, whose lanes hold flowNodeRefs): deriveDroppableChildMetaclasses (irInteraction.ts:158) adds only targets of containment refs of drop containers, so the BPMN palette offers Collaboration, Process and LaneSet and no Task; a Task cannot be dropped into a lane either.
+**Priority**: medium
+**Found in**: P-2026-10-21-1950
