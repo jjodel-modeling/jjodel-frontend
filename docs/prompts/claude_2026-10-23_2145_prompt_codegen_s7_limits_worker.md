@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: release-3-2
 Lane: full (implementation; codegen engine and runner worker; no critical-zone file)
 Depends: P-2026-10-23-2105
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane codegen · b588a2e28 · bench 8/8 killed, no expectation changed · lazy gate on green, off not run · visual check owed by the chat (RC-23)
 Corregge: none
 Request: Alfonso, 2026-10-23 20:06, in the project chat: limits on recursion, time and output in generation (it runs on the main thread), CSP for the runner worker
 
