@@ -1,0 +1,58 @@
+// ============================================
+// ENDPOINTS WINDOW (#186, R-CFG-5) — the stand-alone environment's dedicated window
+// ============================================
+// The frame is the wizard's (`envgen-backdrop`, `envgen-modal`, header, content, footer:
+// EnvGenWizardModal.scss, global); the steps inside keep their own `envgen-*` rules. Only what the
+// window adds lives here.
+
+// No sidebar here: narrower than the wizard. Two classes, so it wins over `.envgen-modal` alone.
+.envgen-modal.endpoints-window {
+  width: min(1000px, calc(100vw - 80px));
+  min-width: 0;
+}
+
+.endpoints-window {
+  &__tabs {
+    display: inline-flex;
+    gap: var(--space-1);
+    margin-bottom: var(--space-3);
+  }
+
+  &__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
+    border: none;
+    border-left: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-tertiary);
+    font-size: var(--text-md);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-selection-bar);
+      outline-offset: 1px;
+    }
+
+    // Active tab: the selection family (cyan as an active indicator, never as a button fill).
+    &--active,
+    &--active:hover {
+      background: var(--color-selection-bg);
+      border-left-color: var(--color-selection-bar);
+      color: var(--color-selection-bar);
+      font-weight: var(--font-semibold);
+    }
+  }
+
+  // The tab names the panel, so the step's own heading is not repeated under it (#186 mockups).
+  &__panel .envgen-section-title {
+    display: none;
+  }
+}

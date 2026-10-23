@@ -1615,6 +1615,25 @@ function NavbarComponent(props: AllProps) {
             ]
         },
 
+        /* Endpoints (#186, R-CFG-5) - the stand-alone environment's window, opened on a tab through the
+           event ProjectEditor listens to; hidden on dashboard and in consumer mode, shown in Basic and Advanced */
+        (isDashboard || consumer) ? null : {name: 'Endpoints',
+            subItems: [
+                {name: 'Editable metaclasses',
+                    function: () => {
+                        window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD, { detail: { tab: 'metaclasses' } }));
+                    },
+                    icon: <i className="bi bi-grid-1x2" />
+                },
+                {name: 'Roles',
+                    function: () => {
+                        window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD, { detail: { tab: 'roles' } }));
+                    },
+                    icon: <i className="bi bi-people" />
+                },
+            ]
+        },
+
         /* Analyze - Live Validation/Validate are permanent stubs; advanced items hidden on dashboard;
            hidden entirely in consumer mode (#157 F3b: validation is a developer concern) */
         consumer ? null : {name: 'Analyze',
@@ -2045,14 +2064,16 @@ function NavbarComponent(props: AllProps) {
                     salvataggio e' del progetto, non di una vista, quindi vale per
                     tutte le tab. Consumatore di `JjodelEvents.PROJECT_SAVED`, non
                     una seconda fonte di verita'; si rende da solo `null` finche' non
-                    c'e' niente da raccontare. */}
-                {project && <LastSavedIndicator />}
+                    c'e' niente da raccontare. #187: not in consumer mode, where the save and its
+                    status sit in the Configurator's element panel. */}
+                {project && !consumer && <LastSavedIndicator />}
                 {/* #157 R1 (field test 2026-09-29, decision of 2026-10-01): a visible «Save»
                     beside the save state, for developer and consumer alike. Fourth caller of
                     `saveProjectWithFeedback`, not a fourth save: menu, Ctrl/Cmd+S and the Data
                     Manager's button go through the same function. Always enabled but while
-                    saving, as the Data Manager's: `U.isProjectModified` is not subscribable. */}
-                {project && (
+                    saving, as the Data Manager's: `U.isProjectModified` is not subscribable.
+                    #187: the developer's only; Ctrl/Cmd+S still saves for the consumer. */}
+                {project && !consumer && (
                     <button
                         type="button"
                         className="appbar-save"
@@ -2063,10 +2084,12 @@ function NavbarComponent(props: AllProps) {
                         <i className="bi bi-floppy" aria-hidden="true" /> Save
                     </button>
                 )}
-                {project && <div className="appbar__sep" />}
+                {project && !consumer && <div className="appbar__sep" />}
                 {/* Basic/Advanced mode switch — the single visible writer for the global
                     interface mode (2026-07-30). Replaces the former read-only level badge:
-                    same state, now actionable in place instead of bouncing to Settings. */}
+                    same state, now actionable in place instead of bouncing to Settings.
+                    #187: not in consumer mode, and neither are the separators it leaves. */}
+                {!consumer && (
                 <div className="appbar-mode-switch" role="group" aria-label="Interface mode">
                     {(['basic', 'advanced'] as const).map((m) => (
                         <button
@@ -2081,11 +2104,12 @@ function NavbarComponent(props: AllProps) {
                         </button>
                     ))}
                 </div>
-                <div className="appbar__sep" />
+                )}
+                {!consumer && <div className="appbar__sep" />}
                 {/* Layout Controls moved to EditorV2 Toolbar */}
                 {/* Tree View Toggle — currently renders nothing (commented out) */}
                 {/* Divider */}
-                {project && <div className="appbar__sep" />}
+                {project && !consumer && <div className="appbar__sep" />}
                 {/* Help menu — inlined */}
                 <div className='nav-hamburger hoverable inline help-menu' tabIndex={0}>
                     <span className={'menu-title'}>
