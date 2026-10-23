@@ -6600,6 +6600,43 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   stored register is declared on the metamodel: a model may declare globals only (`stateAttributesCodec.ts:303`).
   Five mutations, all killed (docs closure commit of P-2026-10-21-0700).
 
+## R-JJD: the Jjodie panel redesign (decisions 2026-10-24)
+
+Evidence: the project chat C-2026-10-24-0020 of 2026-10-24 (00:40 «eseguilo con /lane auto e dopo le discovery
+procedi con l'implementazione»; 01:14 «S6 ok», «Apply ok» on A1 and A2 of the report), the discovery report
+`docs/discovery/discovery_2026-10-24_jjodie_panel_jjel_live.md` (P-2026-10-24-0020, P-2026-10-24-0115),
+`docs/harness/fronts.json` (front `jjodie-ui`). Target release 3.3; nothing reaches the trunk before 3.2 is released.
+
+- **R-JJD-1** (2026-10-24, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Jjodie docks as a grid column of `.dashboard-container` in `ProjectDashboard`, not as a fixed overlay**: the editor
+  shrinks with it. Floating and maximized modes go away. The Properties rail's `right` becomes the dock width through a
+  body variable declared in `styles/tokens/` (default `0px`) and written by the dock; `--jj-canvas-right-inset` stays as
+  it is. The width (420..760, default 460) persists as an optional `dockWidth` on `JodieConfig`, per browser profile,
+  written on pointer-up; `position` and `size` stay readable and unused. Report D1, D7, D8; D-UI-1 is read as «flush
+  with the window side of the canvas» (A4).
+- **R-JJD-2** (2026-10-24, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **A script's dry run is a pure, read-only effects planner**, not a live run with rollback and not a sandboxed
+  transaction. The effect chips and the ghost preview come only from it. The ghost preview appends synthetic,
+  non-draggable, non-selectable nodes and edges to `flowElements` in `EditorV2.tsx` and creates no D-object; no
+  critical-zone file is touched. Apply compares planned and real effects per metaclass and reports a mismatch.
+  The planner warns when a script writes one end of an opposite pair (A3: opposites are not mirrored, unchanged here).
+  Report D2, D3.
+- **R-JJD-3** (2026-10-24, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **JjEL live evaluation stays synchronous on the main thread, bounded by an optional `deadline` on
+  `EvaluationContext`** checked in `JjelEvaluator.evaluate`. Multi-selection reaches Jjodie through a new event in
+  `events/registry.ts` that publishes React Flow's selected nodes. Report D4, D6.
+- **R-JJD-4** (2026-10-24, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **No `add` command**: `set =` on a multi-valued M1 reference appends and `+=` exists. From the language note only
+  the formatter that breaks after `in` remains. Report D5.
+- **R-JJD-5** (2026-10-24, ratified by Alfonso 01:14, evidence: read, verified: none, reversible: branch).
+  **A script file is an optional `DProject.scripts` field, read with `|| []` like `transformations`**, with no
+  VersionFixer migration. It is listed under SCRIPTS and opened as an editor tab. Report A1.
+- **R-JJD-6** (2026-10-24, ratified by Alfonso 01:14, evidence: read, verified: none, reversible: branch).
+  **Apply is one undoable step through a minimal undo group in `reducer.ts`**: the length of
+  `statehistory[user].undoable` is marked at Apply start and the deltas pushed until Apply end are merged through the
+  existing `U.objectMergeInPlace(pastDelta, delta)` path. A core change, authorised for this front only, with tests.
+  Report A2.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
