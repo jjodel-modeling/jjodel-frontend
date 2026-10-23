@@ -55,6 +55,7 @@ import TemplateEditor from './TemplateEditor';
 import { checkView } from './checkView';
 import { displayJson } from './displayJson';
 import { conformingModels } from './conformingModels';
+import { openTemplateEditor } from './openTemplateEditor';
 import type { GenerateResult } from '../engine/generate';
 import type { TemplateRecord } from '../engine/templates';
 import type { ModelOrigin, Origin, TextFragment, TextMapEntry } from '../engine/text';
@@ -486,6 +487,16 @@ export default function CodePanel({ modelid, left, onClose, isMetamodel = false 
                             <button type="button" className="codegen-panel__add" disabled={!metamodelId} onClick={addTemplate}>
                                 <i className="bi bi-plus-lg" />
                                 <span>New template</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="codegen-panel__add"
+                                disabled={!metamodelId}
+                                title="Edit the templates in a tab of their own, with Monaco"
+                                onClick={() => { if (metamodelId) openTemplateEditor(metamodelId, elementName(lookupNow, metamodelId), current?.name ?? null); }}
+                            >
+                                <i className="bi bi-box-arrow-up-right" />
+                                <span>Open editor</span>
                             </button>
                         </div>
                         {current && (

@@ -1,0 +1,310 @@
+// Template Editor tab (P-2026-10-23-1945, R-GEN-20) — loaded with the lazy chunk of the Code panel only.
+//
+// A dock tab of the `models` group: the list of the metamodel's templates on the left, the selected template's
+// fields over Monaco in the centre. The controls repeat the Code panel's (CodePanel.scss) at the same sizes, under
+// classes of their own: this file does not depend on the panel's stylesheet being loaded.
+//
+// Design-system tokens only, none defined here (rule 28). Cyan marks focus and the unsaved dot, as the canvas accent.
+
+.codegen-tpl {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    font-size: 12px;
+
+    // -- list -----------------------------------------------------------------
+    &__side {
+        display: flex;
+        flex: 0 0 220px;
+        flex-direction: column;
+        gap: 8px;
+        min-height: 0;
+        padding: 12px;
+        overflow: auto;
+        border-right: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+    }
+
+    &__side-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__list {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    &__item,
+    &__add {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 26px;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: 1px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
+    &__item[aria-selected="true"] {
+        border-color: var(--color-border-focus);
+        background: var(--color-bg-active);
+        color: var(--color-text-primary);
+    }
+
+    &__item-name {
+        overflow: hidden;
+        font-family: var(--font-mono);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__item-params {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        font-family: var(--font-mono);
+        color: var(--color-text-placeholder);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__dirty {
+        flex: 0 0 auto;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--color-canvas-accent);
+    }
+
+    &__add {
+        border: 1px dashed var(--color-border-primary);
+        background: var(--color-bg-primary);
+    }
+
+    // -- editor ---------------------------------------------------------------
+    &__main {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+        min-height: 0;
+        padding: 12px;
+    }
+
+    &__fields {
+        display: flex;
+        gap: 8px;
+    }
+
+    &__field {
+        display: flex;
+        flex: 0 1 220px;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    &__field--wide {
+        flex: 1 1 auto;
+    }
+
+    &__label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--color-text-tertiary);
+    }
+
+    &__input {
+        min-width: 0;
+        height: 26px;
+        padding: 0 6px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: var(--color-canvas-accent);
+            box-shadow: 0 0 0 2px var(--color-canvas-accent-subtle);
+        }
+    }
+
+    &__monaco {
+        flex: 1 1 auto;
+        min-height: 160px;
+        overflow: hidden;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 6px;
+    }
+
+    &__monaco--empty {
+        display: none;
+    }
+
+    &__hint,
+    &__help {
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-text-tertiary);
+        overflow-wrap: anywhere;
+    }
+
+    &__hint--error {
+        color: var(--color-error-text);
+    }
+
+    &__hint--warning {
+        color: var(--color-warning-text);
+    }
+
+    &__help {
+        padding-top: 8px;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    &__button {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 26px;
+        padding: 0 10px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 12px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    // Primary: the slate gradient, white text and glyph, as CodePanel.scss `__button--primary`.
+    &__button--primary {
+        border-color: transparent;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        color: #ffffff;
+
+        &:hover:not(:disabled) {
+            border-color: transparent;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: #ffffff;
+        }
+    }
+}
+
+// -- tab title ----------------------------------------------------------------
+.codegen-tpl-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    > .bi {
+        font-size: 12px;
+    }
+
+    &__dirty {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--color-canvas-accent);
+    }
+
+    &__close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        margin-left: 2px;
+        padding: 0;
+        border: none;
+        border-radius: 3px;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 14px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+}
