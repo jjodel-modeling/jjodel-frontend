@@ -47,3 +47,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: non applicabile
 **Notes**: Docs commit 45b575dcf, closure in a second commit because the Status sha cannot name its own commit (P13). Twelve findings (spec behind R-SIM rows on R-SIM-18, -20, double assignment, priorities, subset checker, ranges) and four items awaiting Alfonso (A1 profile constraints unenforced, A2 out-of-domain initial applied, A3 scenario expect has no UI, A4 Running on inputs vs R-SIM-29): see the discovery report. No docs/help index exists.
 **Prompt document name**: 2026-10-20 00:35
+
+## 2026-10-23 — merge: sim-docs into alfonso-frontend-jjtl (P-2026-10-22-1313)
+**Prompt**: `claude_2026-10-22_1313_prompt_merge_sim-docs.md`, a direct merge by `lane-run merge --direct`, no session: `sim-docs` at `3970d3aef` into `alfonso-frontend-jjtl`, merge base `425187033`, 5 commits on the branch side.
+**Files touched**: merge `bb9b275ac`: 6 files from the branch side (`docs/discovery/discovery_2026-10-20_sim_semantics_docs.md`, `docs/help/simulation/simulation-guide.md`, `docs/help/simulation/simulation-semantics.md`, `docs/log-inbox/simulation.md`, `docs/prompts/claude_2026-10-20_0015_prompt_sim_semantics_docs.md`, `docs/prompts/claude_2026-10-20_0035_prompt_sim_semantics_docs_continue.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `bb9b275ac` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 11542 tests in 403 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only (simulation guide and semantics reference), no UI; all gates green
+**Notes**: Rollback tag `pre-sim-docs` on `48fa3567e` (RC-31). Union: `docs/log-inbox/simulation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-10-22-1313/result.json`.
+**Prompt document name**: 2026-10-22 13:13

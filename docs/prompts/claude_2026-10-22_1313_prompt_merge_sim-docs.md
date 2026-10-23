@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-22-1313
 Chat: C-2026-10-22-1050
 Request: https://claude.ai/code/session_018F8q1ZrKrECfKBBHqcxogb (merge of sim-docs launched by chat C-2026-10-22-1050)
 Lane: full (merge; 1 conflict: `docs/log-inbox/simulation.md` measured)
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane merge · bb9b275ac · verifica visiva passata 2026-10-23 (docs only (simulation guide and semantics reference), no UI; all gates green)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-22-1313 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
