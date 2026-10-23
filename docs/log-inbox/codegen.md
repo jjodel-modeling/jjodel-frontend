@@ -171,3 +171,21 @@ empties this file. The active log is not touched by this lane.
 **Prompt document name**: 2026-10-24 00:02
 
 **Ticket** (G4 input): opaque fragments built outside a hole (a `join` separator, a `+` operand, origin.ts `toText`/`opaque(', ')`) carry no template; a hole-level stamp would credit a called template's separators to its caller, so the right place is the template-call return in templates.ts, outside this lane's DOVE.
+
+## 2026-10-24 — ticket: codegen-panel.ts probe drives the removed floating panel
+**Ticket**: `frontend/scripts/probe/codegen-panel.ts` still drives the 3.2 floating Code panel, which G3 turned into a launcher (R-GEN-40): its phase on fails from «the pill opens the panel» onward. Port it to the generator tab, keeping the same assertions: templates written through the tab's list, Monaco and Save; Output becomes Preview; span-to-canvas and canvas-to-span links with the tab and the model's editor in separate dock tabs; Run modes; the scroll and gutter metrics of the code view re-measured on the pane. Phase off (`CGP_PHASE=base`) does not touch the panel and still applies. The checks that `codegen-check.ts` covered were ported by P-2026-10-24-0045; the new `codegen-generator-tab.ts` covers the tab.
+**Priority**: medium
+**Found in**: P-2026-10-24-0045
+
+## 2026-10-24 — feat(codegen): generator tab, panel as launcher, two-way provenance (P-2026-10-24-0003, P-2026-10-24-0045)
+**Prompt**: G3 of 3.3 (0003, cut at the context limit, work uncommitted) completed by 0045: lazy-split check and commit of the G3 work; Run enabled only on target `js` (R-GEN-35) with its test; mutation bench on generatorTabs.test.ts; probe of the generator tab; old probes ported or ticketed; the seven crops.
+**Files touched**: feat e4be12d09: frontend/src/codegen/ui/ CodePanel.tsx, CodePanel.scss, GeneratorPane.tsx (new), TemplateEditorTab.tsx, TemplateEditorTab.scss, openTemplateEditor.ts, canvasSelection.ts (new), codeOrigins.ts (new), generatorTabs.ts (new), __tests__/generatorTabs.test.ts (new); fix 1c74ff6fd: generatorTabs.ts, GeneratorPane.tsx, generatorTabs.test.ts; fix 5a4cbed0c: GeneratorPane.tsx; test 52f4a6e0c: frontend/scripts/probe/codegen-generator-tab.ts (new); test 8e598441f: frontend/scripts/probe/codegen-check.ts; docs: docs/log-inbox/codegen.md, the Status lines of the 0003 and 0045 prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-24 00:03
+**Causa**: (g)
+**Regressions**: yes
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 7/7. Probes on 3131: generator-tab 22/22, codegen-check 43/43; crops in the 0045 lane folder, visual check by the chat (RC-23). Regression: G3's scrollIntoView scrolled .dock-top 1321px when the tab went behind; fixed in 5a4cbed0c, the probe guards it. Unattended: that fix (a G3 bug, no feature); the 0003 handoff's decisions 1-9. Cleanup candidate: TemplateEditor.tsx, no importer. Not fixed: «g1 (gone)» flashes on a new generator's first render. 15 files, all in DOVE.
+**Prompt document name**: 2026-10-24 00:45

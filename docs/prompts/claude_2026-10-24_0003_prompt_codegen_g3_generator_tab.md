@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (implementation; codegen UI and the pill site in EditorV2.tsx, no critical-zone file)
 Depends: P-2026-10-24-0002
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane codegen · e4be12d09 · completed by P-2026-10-24-0045
 Corregge: none
 Request: Alfonso, 2026-10-23 23:54, in the project chat (kept locally in the chain folder as `request.md`)
 
