@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: release-3-2
 Lane: full (implementation; new modules under frontend/src/codegen/ui/, one button in CodePanel.tsx, no critical-zone file)
 Depends: P-2026-10-23-1910
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane codegen · 12f7bf5db, 540fa488a, 5fdbe37e9 · templateDrafts.ts added outside DOVE (unattended) · lazy gate on green, off not run (ticket)
 Corregge: none
 Request: Alfonso, 2026-10-23 18:19 and 18:37, in the project chat: «scrivere le template in quella finestra è un po' scomodo»; «mettiamo il template editor in 3.2»
 
