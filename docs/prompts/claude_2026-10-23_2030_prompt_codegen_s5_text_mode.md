@@ -5,7 +5,7 @@ Chat: C-2026-10-22-1050
 Front: release-3-2
 Lane: full (implementation; JjEL lexer and parser entry point, codegen engine and UI; no critical-zone file)
 Depends: P-2026-10-23-2010
-Status: da eseguire
+Status: eseguito 2026-10-23 · lane codegen · c90c22d0f, 3b89efd49, 6024127a4 · lazy gate on green, off not run · converter counts 4/13 and 5/12, not 3
 Corregge: none
 Request: Alfonso, 2026-10-23 20:06, in the project chat: template bodies in text mode by default (no outer quotes, `${…}` holes), an additive `mode` field in the record, absence meaning expression, so saved templates stay valid
 
