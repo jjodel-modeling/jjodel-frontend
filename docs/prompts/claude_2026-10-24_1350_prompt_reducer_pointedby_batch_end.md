@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (core change authorised by R-JJD-12)
 Depends: P-2026-10-24-0657
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane pba · 08c6ca741
 Corregge: 2026-10-24 02:56
 Request: Alfonso, 2026-10-24 13:47, in the project chat («si hai il mio si esplicito, fixa anche il ticket .. procedi con /lane auto»)
 Model: claude-opus-5-5
