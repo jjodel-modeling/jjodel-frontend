@@ -31,6 +31,7 @@ import {
 } from './MegamodelEdge';
 import { Defaults, isDataManagerViewpointId } from '../../joiner';
 import { placeScriptNodes, scriptLinks, type MegamodelScriptInput } from './megamodelScripts';
+import { uniqueScriptName } from '../scripts/projectScripts';
 import './MegamodelView.scss';
 
 // The viewpoints Jjodel seeds itself are excluded from the megamodel, through
@@ -770,13 +771,15 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         const node = nodeMap.get(nodeId);
         if (!node) return;
         if (newName !== node.name && newName.trim()) {
-            // Update local node name for immediate feedback
+            // Update local node name for immediate feedback; a script file shows the `.jjs`
+            // name the rename stores (S6c)
+            const shown = scriptIds.has(nodeId) ? uniqueScriptName(newName, scripts || [], nodeId) : newName.trim();
             setNodes(prev => prev.map(n =>
-                n.id === nodeId ? { ...n, name: newName.trim() } : n
+                n.id === nodeId ? { ...n, name: shown } : n
             ));
             onRenameNode?.(nodeId, node.kind, newName.trim());
         }
-    }, [nodeMap, onRenameNode]);
+    }, [nodeMap, onRenameNode, scriptIds, scripts]);
 
     // ── Delete with confirmation ─────────────────────────────────────────────
     const showDeleteConfirmation = useCallback((nodeId: string) => {

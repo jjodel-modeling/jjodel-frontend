@@ -4,7 +4,7 @@ import MetamodelTab from './MetamodelTab';
 import ModelTab from './ModelTab';
 import DocumentationTab from './DocumentationTab';
 import InstanceManagerTab from './InstanceManagerTab';
-import ScriptTab from './ScriptTab';
+import ScriptTab, { ScriptTabTitle } from './ScriptTab';
 import { managerTabId } from './instanceManagerModel';
 // Viewpoint editing is handled inline in the right-panel "Viewpoints" tab —
 // no dedicated dock tab is created.
@@ -69,7 +69,7 @@ class TabDataMaker {
         const tabId = `jjs_${script.id}`;
         return {
             id: tabId,
-            title: <div className="tab-title active-on-mouseenter" data-type="script">{script.name}</div>,
+            title: <ScriptTabTitle scriptId={script.id} name={script.name} />,
             group: 'models',
             closable: true,
             content: <ScriptTab scriptId={script.id} key={tabId} />

@@ -9,6 +9,7 @@ import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 import { ScriptEditorView } from './ScriptEditorView';
+import { ScriptFileUpdateView } from './ScriptFileUpdateView';
 import { closeScriptEditor, getScriptEditorTarget, subscribeScriptEditor } from './scriptEditorModel';
 import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from '../../types/jodie';
 import { AIEvents, JjScriptEvents } from '../../events/registry';
@@ -331,7 +332,9 @@ export function JodieWindow({
                 </div>
             )}
 
-            {scriptEditor && <ScriptEditorView key={scriptEditor.key} target={scriptEditor} onBack={closeScriptEditor} />}
+            {scriptEditor && (scriptEditor.update
+                ? <ScriptFileUpdateView key={scriptEditor.key} target={scriptEditor} onBack={closeScriptEditor} />
+                : <ScriptEditorView key={scriptEditor.key} target={scriptEditor} onBack={closeScriptEditor} />)}
 
             <div className={`jodie-conversation${scriptEditor ? ' jodie-conversation--hidden' : ''}`}>
             <ChatMessages

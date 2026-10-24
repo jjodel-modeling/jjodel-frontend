@@ -15,7 +15,9 @@ import { getScriptPreview } from '../editor-v2/preview/scriptPreviewStore';
 import { openScriptAsFile } from '../scripts/scriptFiles';
 import { JjodelEvents } from '../../events/registry';
 import { store } from '../../joiner';
-import { editedLines, editedScript, reviewRequest, setEditedScript, type ScriptEditorTarget } from './scriptEditorModel';
+import {
+    editedLines, editedScript, linkScriptFile, noteScriptFollowUp, reviewRequest, setEditedScript, type ScriptEditorTarget,
+} from './scriptEditorModel';
 import './ScriptEditorView.scss';
 
 export interface ScriptEditorViewProps {
@@ -42,7 +44,7 @@ const EDITOR_OPTIONS = {
 type PlanState = { kind: 'planning' } | { kind: 'planned'; plan: EffectsPlan } | { kind: 'failed'; message: string };
 
 export function ScriptEditorView({ target, onBack }: ScriptEditorViewProps): JSX.Element {
-    const { key, generated, modelId, name, onFollowUp } = target;
+    const { key, generated, modelId, name, onFollowUp, messageId } = target;
     const [text, setText] = useState(() => editedScript(key, generated));
     const [compare, setCompare] = useState(false);
     const [planState, setPlanState] = useState<PlanState>({ kind: 'planning' });
@@ -130,10 +132,14 @@ export function ScriptEditorView({ target, onBack }: ScriptEditorViewProps): JSX
     }, [compare]);
     const onReview = useCallback(() => {
         if (!onFollowUp || !text.trim()) return;
+        noteScriptFollowUp(key, messageId, name);
         onFollowUp(reviewRequest(text));
         onBack();
-    }, [onFollowUp, text, onBack]);
-    const onSave = useCallback(() => { openScriptAsFile(text, name, modelId); }, [text, name, modelId]);
+    }, [onFollowUp, text, onBack, key, messageId, name]);
+    const onSave = useCallback(() => {
+        const entry = openScriptAsFile(text, name, modelId);
+        if (entry) linkScriptFile(key, messageId, name, entry.id);
+    }, [text, name, modelId, key, messageId]);
 
     const status =
         !text.trim() ? { kind: 'empty', text: 'Empty script · nothing to preview' }

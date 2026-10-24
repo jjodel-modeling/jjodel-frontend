@@ -29,7 +29,8 @@ export function scriptFileName(name: string | null | undefined): string {
 }
 
 /** `name` as a `.jjs` file name that no script of `scripts` holds, `exceptId` excluded. */
-export function uniqueScriptName(name: string | null | undefined, scripts: DProjectScript[], exceptId?: string): string {
+export function uniqueScriptName(name: string | null | undefined, scripts: ReadonlyArray<Pick<DProjectScript, 'id' | 'name'>>,
+                                 exceptId?: string): string {
     const taken = new Set(scripts.filter(s => s.id !== exceptId).map(s => s.name));
     const file = scriptFileName(name);
     const base = file.slice(0, -SCRIPT_EXTENSION.length);

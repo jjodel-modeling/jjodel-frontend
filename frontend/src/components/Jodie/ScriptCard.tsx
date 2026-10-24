@@ -7,18 +7,29 @@
  * conversation, on click for any card. Apply stays on the canvas bar; the card reads `applied`
  * when the preview of its script goes from applying to cleared. `Edit script` opens the script in
  * the panel's editor (S5), whose edited text counts as the card's own for the preview and Apply.
+ * `Open as file` links the card to the file it stores; a card of a later reply that targets that
+ * file shows `Update file`, a diff of the file against its script with Accept and Reject (S6c).
  *
  * `ScriptCardContext` is set by the Jjodie message bubble: without it (other Markdown hosts, an
  * M2 reply, no model in scope) a JjScript block keeps the open code block and its Run button.
  */
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useSelector } from 'react-redux';
 import { planEffects, type EffectsPlan } from '../../jjscript/executor/effectsPlanner';
 import { buildPlanWorld } from '../../jjscript/executor/planWorld';
 import { getScriptPreview, subscribeScriptPreview } from '../editor-v2/preview/scriptPreviewStore';
 import { JjodelEvents } from '../../events/registry';
 import { store } from '../../joiner';
-import { openScriptAsFile } from '../scripts/scriptFiles';
-import { editedScript, getScriptEditorVersion, openScriptEditor, subscribeScriptEditor } from './scriptEditorModel';
+import { openScriptAsFile, readProjectScript } from '../scripts/scriptFiles';
+import {
+    editedScript,
+    getScriptEditorVersion,
+    linkScriptFile,
+    noteScriptFollowUp,
+    openScriptEditor,
+    scriptFileTarget,
+    subscribeScriptEditor,
+} from './scriptEditorModel';
 import {
     fixWarningsRequest,
     scriptCardChips,
@@ -110,15 +121,28 @@ export function ScriptCard({ code, context, children }: ScriptCardProps): JSX.El
     const warningLine = scriptCardWarningLine(warnings);
     const name = scriptCardName(code);
     const lines = scriptCardLineCount(code);
+    // The file a later reply updates (S6c), while it is still in the project.
+    const fileId = scriptFileTarget(key, messageId, name);
+    const file = useSelector((state: any) => (fileId ? readProjectScript(fileId, state) : undefined));
+    const upToDate = !!file && file.text === edited;
 
     const onPreview = useCallback(() => requestPreview(code, modelId), [code, modelId]);
     const onFix = useCallback(() => {
-        if (onFollowUp && warnings.length > 0) onFollowUp(fixWarningsRequest(code, warnings));
-    }, [onFollowUp, code, warnings]);
+        if (!onFollowUp || warnings.length === 0) return;
+        noteScriptFollowUp(key, messageId, name);
+        onFollowUp(fixWarningsRequest(code, warnings));
+    }, [onFollowUp, code, warnings, key, messageId, name]);
     const onEdit = useCallback(() => {
-        openScriptEditor({ key, generated: code, modelId, name, onFollowUp });
-    }, [key, code, modelId, name, onFollowUp]);
-    const onOpenAsFile = useCallback(() => { openScriptAsFile(code, name, modelId); }, [code, name, modelId]);
+        openScriptEditor({ key, generated: code, modelId, name, onFollowUp, messageId });
+    }, [key, code, modelId, name, onFollowUp, messageId]);
+    const onOpenAsFile = useCallback(() => {
+        const entry = openScriptAsFile(code, name, modelId);
+        if (entry) linkScriptFile(key, messageId, name, entry.id);
+    }, [code, name, modelId, key, messageId]);
+    const onUpdateFile = useCallback(() => {
+        if (!file) return;
+        openScriptEditor({ key: `update\u0000${key}`, generated: code, modelId, name, messageId, update: { scriptId: file.id, script: edited } });
+    }, [file, key, code, modelId, name, messageId, edited]);
 
     const statusText =
         status.kind === 'planning' ? 'Planning…'
@@ -178,6 +202,17 @@ export function ScriptCard({ code, context, children }: ScriptCardProps): JSX.El
                 <button type="button" className="jj-script-card__action" onClick={onOpenAsFile} title="Store the script as a project file and open it">
                     Open as file
                 </button>
+                {file && (
+                    <button
+                        type="button"
+                        className="jj-script-card__action"
+                        onClick={onUpdateFile}
+                        disabled={upToDate}
+                        title={upToDate ? `${file.name} already holds this script` : `Review the changes to ${file.name}`}
+                    >
+                        Update file
+                    </button>
+                )}
                 <button
                     type="button"
                     className="jj-script-card__disclosure"
