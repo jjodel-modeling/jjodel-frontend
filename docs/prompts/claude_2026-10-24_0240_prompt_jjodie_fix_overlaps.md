@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (fix after the S1a and S1b probes)
 Depends: P-2026-10-24-0210, P-2026-10-24-0211
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjp-fx1 · 12906d19a · probes green (dock 35/35, S1b 33/33), tip under the open rail noted in the log
 Corregge: 2026-10-24 01:35
 Request: Alfonso, 2026-10-24 00:40, in the project chat (unattended run)
 Model: claude-opus-5-5
