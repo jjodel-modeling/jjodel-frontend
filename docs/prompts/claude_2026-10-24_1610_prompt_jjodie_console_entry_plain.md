@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: fast (visual simplification, two components and one stylesheet)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui-cel · a13f4b64c · non fuso: la chat fonde
 Corregge: none
 Request: Alfonso, 2026-10-24 ~15:55, in the project chat («semplifichiamo la visualizzazione nei due screenshot, nella seconda togli </> Source»), with a screenshot of a JjEL entry (`› self.name` in a bordered field, a `JJEL` pill, the value `"model_1 (1)"` in a bordered chip, the time `15:51` under it, the whole inside a bordered card)
 Model: claude-sonnet-5-5
