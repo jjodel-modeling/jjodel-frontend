@@ -47,6 +47,7 @@ import StatusBar from "../../components/StatusBar";
 import { JjodelEvents } from '../../events/registry';
 import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
 import { isConsumerMode } from '../../components/environment/consumerMode';
+import { JodieDockSlot } from '../../components/Jodie/JodieWindow';
 
 
 type UserProps = {
@@ -665,6 +666,9 @@ function ProjectDashboard(props: DashProps): any {
                     stays mounted underneath (`.project-dock-wrapper--consumer`). Nothing to close. */}
                 {consumer && <ConfiguratorTab variant="page" open onClose={() => {}} />}
             </div>
+            {/* R-JJD-1 — Jjodie docks here as the last grid column: the globally mounted
+                JodieWindow portals into this slot, so the editor shrinks beside it. */}
+            <JodieDockSlot />
             {/* TODO: Add contextual RightPanel for project view with:
                 - Overview: Rev, creation date, owner
                 - Quick Actions: "View Megamodel", "New Metamodel"
