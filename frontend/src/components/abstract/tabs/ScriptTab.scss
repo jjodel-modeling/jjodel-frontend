@@ -100,6 +100,39 @@
     &__editor {
         flex: 1;
         min-height: 0;
+
+        // Monaco's focus outline ran the full height of the split handle (P-2026-10-25-0005);
+        // the caret and the current line show the focus.
+        .monaco-editor,
+        .monaco-editor.focused {
+            outline: none !important;
+        }
+    }
+
+    // Jjodie, from the header: this tab hides the floating launcher (P-2026-10-25-0005).
+    &__jodie {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-size: 15px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
     }
 
     // P-2026-10-24-2320: the split, the planner's diagnostics, Preview.

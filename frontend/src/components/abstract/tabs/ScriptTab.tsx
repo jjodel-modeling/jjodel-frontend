@@ -30,6 +30,7 @@ import { buildPlanWorld } from '../../../jjscript/executor/planWorld';
 import { applyAsOneStep } from '../../editor-v2/preview/PreviewBar';
 import { createdCounts, effectsMismatch, plannedCounts } from '../../editor-v2/preview/previewApplyCheck';
 import { toast } from '../../Toast/toastDispatch';
+import { JjodieEvents } from '../../../events/registry';
 import { JJSCRIPT_LANGUAGE_ID, JJSCRIPT_THEME_ID, registerJjscriptLanguage } from '../../../jjscript/editor/jjscriptMonaco';
 import './ScriptTab.scss';
 
@@ -40,6 +41,8 @@ export interface ScriptTabProps {
 /** The planning delay after typing. */
 const PLAN_DEBOUNCE_MS = 300;
 const MARKER_OWNER = 'jjscript-plan';
+/** With the glyph margin, the 30 px margin that editors/skeleton.scss imposes on every Monaco editor. */
+const EDITOR_DECORATIONS_WIDTH = 10;
 
 export const EDITOR_WIDTH_KEY = 'jjodel.refactoring.editorWidth';
 export const EDITOR_WIDTH_MIN = 480;
@@ -266,6 +269,10 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
                         onClick={() => setPreviewing(true)} disabled={!chosen || !text.trim() || busy} aria-pressed={previewing}>
                     Preview
                 </button>
+                <button type="button" className="script-tab__jodie" aria-label="Open Jjodie" title="Open Jjodie"
+                        onClick={() => window.dispatchEvent(new CustomEvent(JjodieEvents.OPEN))}>
+                    <i className="bi bi-robot" aria-hidden="true" />
+                </button>
             </div>
             <div className="script-tab__split">
                 <div className="script-tab__left" style={{ width: editorWidth }}>
@@ -281,7 +288,13 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
                             onChange={(value) => setText(value || '')}
                             options={{
                                 minimap: { enabled: false },
-                                lineNumbers: 'on',
+                                // The global Monaco rules of editors/skeleton.scss pin the margin to 30 px and
+                                // the content to left 30 px: a layout with the same 30 px (glyph margin plus
+                                // decorations, no line numbers, which that margin clips anyway) lets the
+                                // content reach the split handle (P-2026-10-25-0005).
+                                lineNumbers: 'off',
+                                folding: false,
+                                lineDecorationsWidth: EDITOR_DECORATIONS_WIDTH,
                                 glyphMargin: true,
                                 fontSize: 13,
                                 fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
