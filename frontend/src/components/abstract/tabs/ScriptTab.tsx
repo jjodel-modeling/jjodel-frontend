@@ -17,6 +17,12 @@ export interface ScriptTabProps {
     scriptId: string;
 }
 
+/** The tab title: the entry's name from the store, so a rename from the tree or the megamodel shows at once (S6c). */
+export const ScriptTabTitle: React.FC<{ scriptId: string; name: string }> = ({ scriptId, name }) => {
+    const stored = useSelector((state: any) => readProjectScript(scriptId, state)?.name);
+    return <div className="tab-title active-on-mouseenter" data-type="script">{stored ?? name}</div>;
+};
+
 const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
     const entry = useSelector((state: any) => readProjectScript(scriptId, state));
     const models = useSelector((state: any) => projectM1Models(state),

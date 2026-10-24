@@ -1,15 +1,19 @@
 /**
  * Script editor model (S5, R-JJD-2): the edited lines that get the green bar, and the editor store.
+ * S6c: the line diff, the input of `Update file`, and the links of cards to script files.
  */
 import { describe, it, expect } from 'vitest';
 import {
     closeScriptEditor,
     editedLines,
     editedScript,
+    fileUpdateInput,
     getScriptEditorTarget,
     getScriptEditorVersion,
+    lineDiff,
     openScriptEditor,
     reviewRequest,
+    ScriptFileLinks,
     setEditedScript,
     subscribeScriptEditor,
 } from '../scriptEditorModel';
@@ -97,5 +101,100 @@ describe('editor store', () => {
         setEditedScript('k5', GEN, GEN);
         off();
         expect(calls).toBe(1);
+    });
+});
+
+describe('lineDiff', () => {
+    it('marks the lines of the new text outside the common subsequence as added and the old ones as removed', () => {
+        const rows = lineDiff('a\nb\nc', 'a\nB\nc\nd');
+        expect(rows).toEqual([
+            { kind: 'same', text: 'a' },
+            { kind: 'removed', text: 'b' },
+            { kind: 'added', text: 'B' },
+            { kind: 'same', text: 'c' },
+            { kind: 'added', text: 'd' },
+        ]);
+    });
+
+    it('keeps the removed lines after the end of the new text', () => {
+        expect(lineDiff('a\nb\nc', 'a')).toEqual([
+            { kind: 'same', text: 'a' },
+            { kind: 'removed', text: 'b' },
+            { kind: 'removed', text: 'c' },
+        ]);
+    });
+});
+
+describe('fileUpdateInput', () => {
+    const FILE = ['// Two states', 'create State s1', 'create State s2 // mine'].join('\n');
+    const NEXT = ['// Two states', 'create State s1', 'create State s3', 'set s1.name = "Idle"'].join('\n');
+
+    it('puts the file as it is now on the left, the user edits included, and counts the rows', () => {
+        const input = fileUpdateInput(FILE, NEXT)!;
+        expect(input.original).toBe(FILE);
+        expect(input.modified).toBe(NEXT);
+        expect(input.added).toBe(2);
+        expect(input.removed).toBe(1);
+    });
+
+    it('counts nothing when the file already holds the script', () => {
+        expect(fileUpdateInput(NEXT, NEXT)).toEqual({ original: NEXT, modified: NEXT, added: 0, removed: 0 });
+    });
+
+    it('is undefined when the file is gone', () => {
+        expect(fileUpdateInput(undefined, NEXT)).toBeUndefined();
+    });
+});
+
+describe('ScriptFileLinks', () => {
+    it('targets the file of an earlier card with the same name from a later message', () => {
+        const links = new ScriptFileLinks();
+        links.link('m1:a', 'm1', 'Two states', 'S1');
+        expect(links.targetOf('m2:a', 'm2', 'Two states')).toBe('S1');
+    });
+
+    it('does not target from the linked card itself, a card of the same message, another name or an earlier message', () => {
+        const links = new ScriptFileLinks();
+        links.see('m0');
+        links.link('m1:a', 'm1', 'Two states', 'S1');
+        expect(links.targetOf('m1:a', 'm1', 'Two states')).toBeUndefined();
+        expect(links.targetOf('m1:b', 'm1', 'Two states')).toBeUndefined();
+        expect(links.targetOf('m2:a', 'm2', 'Three states')).toBeUndefined();
+        expect(links.targetOf('m0:a', 'm0', 'Two states')).toBeUndefined();
+    });
+
+    it('targets the newest earlier link of the name', () => {
+        const links = new ScriptFileLinks();
+        links.link('m1:a', 'm1', 'Two states', 'S1');
+        links.link('m2:a', 'm2', 'Two states', 'S2');
+        expect(links.targetOf('m3:a', 'm3', 'Two states')).toBe('S2');
+    });
+
+    it('binds the first new message after a follow-up to the file of the asking card, whatever its name', () => {
+        const links = new ScriptFileLinks();
+        links.link('m1:a', 'm1', 'Two states', 'S1');
+        links.followUp(links.fileOf('m1:a', 'm1', 'Two states')!);
+        expect(links.targetOf('m1:a', 'm1', 'Two states')).toBeUndefined();
+        expect(links.targetOf('m2:a', 'm2', 'Fixed states')).toBe('S1');
+        // Sticky for that message, and spent: the next message is not an answer.
+        expect(links.targetOf('m2:a', 'm2', 'Fixed states')).toBe('S1');
+        expect(links.targetOf('m3:a', 'm3', 'Other')).toBeUndefined();
+    });
+
+    it('carries the file through a card that targets it', () => {
+        const links = new ScriptFileLinks();
+        links.link('m1:a', 'm1', 'Two states', 'S1');
+        expect(links.fileOf('m2:a', 'm2', 'Two states')).toBe('S1');
+        links.followUp(links.fileOf('m2:a', 'm2', 'Two states')!);
+        expect(links.targetOf('m3:a', 'm3', 'Renamed')).toBe('S1');
+    });
+
+    it('keeps an accepted card on its file, as the newest link of its name', () => {
+        const links = new ScriptFileLinks();
+        links.link('m1:a', 'm1', 'Two states', 'S1');
+        expect(links.targetOf('m2:a', 'm2', 'Two states')).toBe('S1');
+        links.link('m2:a', 'm2', 'Two states', 'S1', false);
+        expect(links.targetOf('m2:a', 'm2', 'Two states')).toBe('S1');
+        expect(links.targetOf('m3:a', 'm3', 'Two states')).toBe('S1');
     });
 });
