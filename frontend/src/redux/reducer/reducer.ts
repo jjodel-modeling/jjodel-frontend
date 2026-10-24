@@ -553,6 +553,10 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
         // and that's all, the reducer is really simple as actions are really simple.
     }
 
+    // A pointedBy parked by this batch (a pointer to an element the batch creates later in path order) is resolved
+    // here, so it lands in this batch's delta and not in the next action's (R-JJD-12, P-2026-10-24-1350).
+    if (PendingPointedByPaths.all.length) newState = PendingPointedByPaths.getSolveableActions2(newState, oldState);
+
     // effetti collaterali, aggiornamento di ridondanze
     newState = updateRedundancies_OBSOLETE(newState, oldState, Action.possibleInconsistencies);
     return newState;
