@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (probe and closure of S4b)
 Depends: P-2026-10-24-0225
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui-s4p · fix 5adbb82c5, probe 790efc32c · gates green · probe 22/22 (light, 3012) · crops in ~/.jjodel-lanes/P-2026-10-24-0255/ · hard-stop, non fuso
 Corregge: none
 Request: Alfonso, 2026-10-24 00:40, in the project chat (unattended run)
 Model: claude-opus-5-5
