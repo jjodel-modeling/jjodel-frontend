@@ -11,6 +11,9 @@
  * a few seconds and goes to the console as a warning (R-JJD-2).
  *
  * The bar also clears the preview when the model it was planned against changes.
+ *
+ * M2 (P-2026-10-24-1600): a preview planned on a metamodel runs with the M2 scope, the counts read
+ * the level of the open editor, and a mixed script shows its effects on the other level in one segment.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
@@ -22,7 +25,7 @@ import { isDeferrable, runPasses } from '../../../jjscript/executor/runPasses';
 import { buildPlanWorld } from '../../../jjscript/executor/planWorld';
 import { toast } from '../../Toast/toastDispatch';
 import { clearScriptPreview, getScriptPreview, isPreviewStale, setScriptPreviewApplying, type ScriptPreview } from './scriptPreviewStore';
-import { createdCounts, effectsMismatch, plannedCounts } from './previewApplyCheck';
+import { createdCounts, effectsMismatch, otherLevelEffects, planLevel, plannedCounts } from './previewApplyCheck';
 import './PreviewBar.scss';
 
 export interface PreviewBarProps {
@@ -72,9 +75,10 @@ function scriptCommands(script: string): string[] {
 
 async function applyScript(preview: ScriptPreview): Promise<{ applied: number; failed: number }> {
     const idlookup: any = (store.getState() as any).idlookup ?? {};
-    const metamodelId = idlookup[preview.modelId]?.instanceof;
+    const m2 = preview.world.level === 'M2';
+    const metamodelId = m2 ? preview.modelId : idlookup[preview.modelId]?.instanceof;
     if (typeof metamodelId !== 'string') return { applied: 0, failed: 0 };
-    const scope = { level: 'M1' as const, metamodelId, modelId: preview.modelId };
+    const scope = m2 ? { level: 'M2' as const, metamodelId } : { level: 'M1' as const, metamodelId, modelId: preview.modelId };
     const commands = scriptCommands(preview.script);
     const run = await runPasses(commands, async (i) => {
         try {
@@ -126,8 +130,10 @@ export function PreviewBar({ preview }: PreviewBarProps): JSX.Element {
         }
     }, [busy, preview]);
 
-    const objects = preview.plan.created.length;
+    const objects = Object.values(plannedCounts(preview.plan)).reduce((a, b) => a + b, 0);
     const warnings = preview.plan.warnings.length;
+    const other = otherLevelEffects(preview.plan);
+    const otherLevel = planLevel(preview.plan) === 'M2' ? 'M1' : 'M2';
     return (
         <div className="jj-preview-bar" role="toolbar" aria-label="Script preview">
             <span className="jj-preview-bar__title">Preview</span>
@@ -137,6 +143,12 @@ export function PreviewBar({ preview }: PreviewBarProps): JSX.Element {
             <span className={warnings > 0 ? 'jj-preview-bar__warnings jj-preview-bar__warnings--on' : 'jj-preview-bar__warnings'}>
                 {warnings} {warnings === 1 ? 'warning' : 'warnings'}
             </span>
+            {other > 0 && (
+                <>
+                    <span className="jj-preview-bar__sep" aria-hidden="true">·</span>
+                    <span className="jj-preview-bar__other">{other} {other === 1 ? 'effect' : 'effects'} on {otherLevel}</span>
+                </>
+            )}
             {mismatch && (
                 <>
                     <span className="jj-preview-bar__sep" aria-hidden="true">·</span>

@@ -55,11 +55,12 @@ function extractFirstCodeBlock(text: string): ExtractedCodeBlock | null {
     };
 }
 
-// S2: a reply shows script cards when it was written against an M1 model and holds a block
-// MarkdownRenderer turns into one (the same test as its CodeBlock).
+// S2: a reply shows script cards when it was written against an M1 model, or an M2 metamodel
+// (P-2026-10-24-1600), and holds a block MarkdownRenderer turns into one (the same test as its CodeBlock).
 function scriptCardModelId(message: ChatMessage): string | null {
     if (message.role !== 'assistant' || message.jjscriptResult || isConsumerMode()) return null;
     const scope = message.jjodieScope;
+    if (scope?.level === 'M2') return scope.metamodelId || null;
     return scope?.level === 'M1' && scope.modelId ? scope.modelId : null;
 }
 
