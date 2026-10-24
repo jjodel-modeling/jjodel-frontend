@@ -230,7 +230,10 @@ const SPLIT = (tab: string) => String.raw`(() => {
   const main = t.querySelector('.codegen-tpl__main'), bar = t.querySelector('.codegen-tpl__splitter');
   if (!main || !bar) return null;
   const r = t.getBoundingClientRect(), m = main.getBoundingClientRect(), s = bar.getBoundingClientRect();
-  return { ratio: Math.round(1000 * m.width / (r.right - m.left - s.width)) / 1000, main: Math.round(m.width), bar: { x: s.x + s.width / 2, y: s.y + s.height / 2, w: s.width }, stored: localStorage.getItem('jjodel.codegen.tabSplit'), focusable: bar.tabIndex === 0, role: bar.getAttribute('role') };
+  // The ratio is the share of what grows: the columns' paddings and borders left out, as TemplateEditorTab measures it.
+  const frame = (el) => { if (!el) return 0; const cs = getComputedStyle(el); return [cs.paddingLeft, cs.paddingRight, cs.borderLeftWidth, cs.borderRightWidth].reduce((n, v) => n + (parseFloat(v) || 0), 0); };
+  const fm = frame(main), fp = frame(bar.nextElementSibling);
+  return { ratio: Math.round(1000 * (m.width - fm) / (r.right - m.left - s.width - fm - fp)) / 1000, main: Math.round(m.width), bar: { x: s.x + s.width / 2, y: s.y + s.height / 2, w: s.width }, stored: localStorage.getItem('jjodel.codegen.tabSplit'), focusable: bar.tabIndex === 0, role: bar.getAttribute('role') };
 })()`;
 
 /** The template editor's Monaco instance in the tab: its model's first line, the selection, the lines in view. */
@@ -307,6 +310,7 @@ async function main(): Promise<void> {
     check('the Properties/Tree rail covers the canvas, not the generator tab', !!beside.rail && beside.railOnCanvas, JSON.stringify({ rail: beside.rail, canvas: beside.canvas, tab: beside.tab }));
     check('no floating editor panel is left on the canvas', !(await page.evaluate(`!!(${pane}.querySelector('.codegen-panel'))`)), '');
     await wait(page, 500);
+    await crop(page, 'rail_beside.png', beside.found ? { x: beside.canvas.x, y: Math.min(beside.canvas.y, beside.tab.y), w: beside.tab.x + beside.tab.w - beside.canvas.x, h: Math.max(beside.canvas.h, beside.tab.h) } : null, 0);
     await crop(page, 'tab_preview.png', await page.evaluate(BOX(tab)) as any);
 
     // «Go to template»: Alt+click a span whose template is not the selected one.
@@ -561,7 +565,8 @@ async function main(): Promise<void> {
     await wait(page, 300);
     const sMin = await page.evaluate(SPLIT(tab)) as any;
     check('the drag stops at 200 px of editor column', !!sMin && Math.abs(sMin.main - 200) <= 2, JSON.stringify(sMin?.main));
-    await page.focus('.codegen-tpl__splitter');
+    // The splitter of this tab: the other generator's tab, behind it in the panel, has one too.
+    await page.evaluate(`${tab}.querySelector('.codegen-tpl__splitter').focus()`);
     await page.keyboard.press('ArrowRight');
     await wait(page, 200);
     const sKey = await page.evaluate(SPLIT(tab)) as any;
