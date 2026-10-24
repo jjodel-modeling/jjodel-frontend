@@ -1,0 +1,103 @@
+/**
+ * PlanWorld builder — the world `planEffects` reads, built from the store's `idlookup` (S4b, R-JJD-2)
+ *
+ * The planner (`effectsPlanner.ts`) reads plain data and never the store; this is the one
+ * place that reads the store for it. D-layer only, so a plain `idlookup` fixture is enough to
+ * test it (the L-layer pulls in `window` through the `joiner` barrel):
+ *
+ *  - classes: every `DClass` whose `father` chain ends at the model's metamodel (backward
+ *    links, CLAUDE.md §3.6), first name wins as `findMetaclassByName` (`instance.ts:93-115`);
+ *    attributes and references inherited included, own before inherited, first name wins;
+ *    `containment` is `composition || aggregation` (`LReference.get_containment`);
+ *    `opposite` and `type` by name; `upper` is `upperBound` (`-1` unbounded);
+ *  - elements: every `DObject` whose `father` chain ends at the model, roots and contained
+ *    alike (R-JS-10); the name by the `makeDrawReadCtx` rule; `root` when its father is the
+ *    model; `container` when its father is a `DValue`; reference slots by feature, ids only,
+ *    holes dropped.
+ *
+ * Read-only: nothing here writes, dispatches or allocates in the store.
+ */
+
+import { classAncestry, makeDrawReadCtx } from '../../components/editor-v2/viewpoint/ir/irReadCtx';
+import { modelIdOfObject } from '../../components/abstract/tabs/instanceManagerModel';
+import type { PlanAttribute, PlanClass, PlanElement, PlanReference, PlanWorld } from './effectsPlanner';
+
+type Idlookup = Record<string, any>;
+
+const ids = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+
+const upperOf = (f: any): number => (typeof f?.upperBound === 'number' ? f.upperBound : 1);
+
+function readClass(idlookup: Idlookup, classId: string): PlanClass {
+    const c = idlookup[classId];
+    const ancestry = classAncestry(idlookup, classId);
+    const attributes: PlanAttribute[] = [];
+    const references: PlanReference[] = [];
+    for (const a of ancestry) {
+        const k = idlookup[a.id];
+        for (const id of ids(k?.attributes)) {
+            const f = idlookup[id];
+            if (!f?.name || attributes.some((x) => x.name === f.name)) continue;
+            attributes.push({ name: f.name, upper: upperOf(f) });
+        }
+        for (const id of ids(k?.references)) {
+            const f = idlookup[id];
+            if (!f?.name || references.some((x) => x.name === f.name)) continue;
+            const ref: PlanReference = {
+                name: f.name,
+                containment: !!(f.composition || f.aggregation),
+                upper: upperOf(f),
+                type: (typeof f.type === 'string' ? idlookup[f.type]?.name : undefined) ?? '',
+            };
+            const opposite = typeof f.opposite === 'string' ? idlookup[f.opposite]?.name : undefined;
+            if (opposite) ref.opposite = opposite;
+            references.push(ref);
+        }
+    }
+    return {
+        name: c.name,
+        abstract: !!c.abstract,
+        singleton: !!c.isSingleton,
+        kinds: ancestry.map((a) => a.name),
+        attributes,
+        references,
+    };
+}
+
+/** The `PlanWorld` of the M1 model `modelId`; empty when it is not a model with a metamodel. */
+export function buildPlanWorld(idlookup: Idlookup, modelId: string): PlanWorld {
+    const world: PlanWorld = { classes: {}, elements: [] };
+    const model = idlookup?.[modelId];
+    const metamodelId = model?.instanceof;
+    if (model?.className !== 'DModel' || typeof metamodelId !== 'string') return world;
+
+    const names = makeDrawReadCtx(idlookup);
+    for (const id in idlookup) {
+        const o = idlookup[id];
+        if (o?.className === 'DClass') {
+            if (!o.name || world.classes[o.name] || modelIdOfObject(idlookup, id) !== metamodelId) continue;
+            world.classes[o.name] = readClass(idlookup, id);
+            continue;
+        }
+        if (o?.className !== 'DObject' || modelIdOfObject(idlookup, id) !== modelId) continue;
+        const father = idlookup[o.father];
+        const element: PlanElement = {
+            id,
+            name: names.getName(id) ?? '',
+            className: idlookup[o.instanceof]?.name ?? '',
+            root: o.father === modelId,
+        };
+        if (father?.className === 'DValue' && typeof father.father === 'string') {
+            const feature = idlookup[father.instanceof]?.name;
+            if (feature) element.container = { owner: father.father, feature };
+        }
+        for (const fid of ids(o.features)) {
+            const slot = idlookup[fid];
+            const feature = slot ? idlookup[slot.instanceof] : undefined;
+            if (feature?.className !== 'DReference' || !feature.name) continue;
+            (element.references ??= {})[feature.name] = ids(slot.values);
+        }
+        world.elements.push(element);
+    }
+    return world;
+}

@@ -101,6 +101,10 @@ export const JjodelEvents = {
   // once per animation frame and only when the list differs. detail: CanvasSelectionDetail
   // { modelId, nodeIds, elementIds } (components/editor-v2/utils/canvasSelection.ts), in selection order.
   CANVAS_SELECTION_CHANGED: 'jjodel:canvas-selection-changed',
+  // P-2026-10-24-0225 (R-JJD-2). Plan an M1 script and show its ghost preview on the canvas of the
+  // model. detail: ScriptPreviewRequest { script, modelId } (components/editor-v2/preview/scriptPreviewStore.ts);
+  // an empty script clears the preview.
+  SCRIPT_PREVIEW_REQUEST: 'jjodel:script-preview-request',
 } as const;
 
 // ─── JjScript ───────────────────────────────────────────────────
