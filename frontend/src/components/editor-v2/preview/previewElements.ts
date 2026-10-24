@@ -11,10 +11,13 @@
  * empty canvas starts at the origin. Edges: the reference writes `=` and `+=` whose two ends are
  * drawn (a planned node or a node of the model), and the containment of a
  * `create instance … in P.ref`. A planned element carries the warning marker when a warning's line
- * is its create line or a line that writes one of its features or references.
+ * is its create line or a line that writes one of its features or references, or, for a line that
+ * plans no effect (an unknown feature, an unresolvable target), when the line names it as the owner
+ * it writes: the instance of `set X.f …`, the slot owner of `remove … from X.f`.
  */
 import type { Edge, Node } from '@xyflow/react';
 import type { EffectsPlan, PlanWorld } from '../../../jjscript/executor/effectsPlanner';
+import { parse } from '../../../jjscript/parser/parser';
 
 export const PREVIEW_ID_PREFIX = 'jjpreview:';
 
@@ -53,7 +56,22 @@ function resolveHandle(handle: string, plan: EffectsPlan, world: PlanWorld): str
     return found.length === 1 ? found[0].id : null;
 }
 
-export function buildPreviewElements(plan: EffectsPlan, world: PlanWorld, drawn: readonly DrawnNode[]): PreviewElements {
+/** The owner a script line writes: X of `set X.f …` and of `remove … from X.f`; null for any other line. */
+function writtenOwner(text: string | undefined): string | null {
+    if (!text?.trim()) return null;
+    try {
+        const parsed = parse(text.trim());
+        const args: any = parsed.success ? parsed.ast?.args : null;
+        if (args?.command === 'set') return args.target?.segments?.join('::') || null;
+        if (args?.command === 'remove') return args.from?.segments?.join('::') || null;
+    } catch {
+        // A line that does not parse names no owner.
+    }
+    return null;
+}
+
+/** `script`, when given, is the text the plan was read from: its lines name the owner of a warning that plans no effect. */
+export function buildPreviewElements(plan: EffectsPlan, world: PlanWorld, drawn: readonly DrawnNode[], script?: string): PreviewElements {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     if (plan.created.length === 0 && plan.references.length === 0) return { nodes, edges };
@@ -71,6 +89,14 @@ export function buildPreviewElements(plan: EffectsPlan, world: PlanWorld, drawn:
     for (const c of plan.created) if (warnedLines.has(c.line)) warned.add(c.id);
     for (const f of plan.features) if (warnedLines.has(f.line)) warned.add(f.ownerId);
     for (const r of plan.references) if (warnedLines.has(r.line)) warned.add(r.sourceId);
+    if (script !== undefined) {
+        const lines = script.split('\n');
+        for (const w of plan.warnings) {
+            const owner = writtenOwner(lines[w.line - 1]);
+            const id = owner ? resolveHandle(owner, plan, world) : null;
+            if (id) warned.add(id);
+        }
+    }
 
     // Element id -> node id: planned instances get their preview node, drawn elements their node.
     const nodeOf = new Map<string, string>();
