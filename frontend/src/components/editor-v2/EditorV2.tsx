@@ -4944,7 +4944,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 )}
             </ReactFlow>
 
-            {scriptPreview && <PreviewBar preview={scriptPreview} />}
+            {/* A preview another view drives (the Refactoring tab, P-2026-10-25-0020) keeps its bar there. */}
+            {scriptPreview && !scriptPreview.owner && <PreviewBar preview={scriptPreview} />}
 
             {pendingConnection && (
                 <EdgeTypePopup

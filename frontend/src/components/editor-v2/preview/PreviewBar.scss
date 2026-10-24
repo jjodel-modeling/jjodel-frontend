@@ -91,6 +91,14 @@
     }
 }
 
+// A planned removal (P-2026-10-25-0020): what the element loses, struck through, beside it.
+.react-flow__node.jj-preview-node--removed {
+    border-color: var(--color-error);
+    background: var(--color-error-subtle);
+    color: var(--color-error-text);
+    text-decoration: line-through;
+}
+
 // Warning marker: a small amber dot on the top-right corner.
 .react-flow__node.jj-preview-node--warning::after {
     content: '';

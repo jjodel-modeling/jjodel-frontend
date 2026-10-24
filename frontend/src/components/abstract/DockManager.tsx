@@ -1,10 +1,11 @@
-import {DockLayout, TabData} from 'rc-dock';
+import {BoxData, DockLayout, PanelData, TabData} from 'rc-dock';
 import { JjodelEvents } from '../../events/registry';
 import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
 import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, store} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
 import { isConsumerMode } from '../environment/consumerMode';
+import { besideAction, splitSizes, type BesidePanel } from '../scripts/refactoringBeside';
 import {DocumentationTab} from "./tabs/DocumentationTab";
 import React from 'react';
 import { JjtlDevelopmentEnv, ModelOption } from '../../jjtl/components';
@@ -190,6 +191,70 @@ class DockManager {
             detail: { editorType: 'transformation', modelId: scriptId }
         }));
         return true;
+    }
+
+    /**
+     * Show the canvas tab of `modelId` in the dock panel right of the tab `besideTabId`
+     * (P-2026-10-25-0020, the Refactoring tab beside its target): raise it there when it already is,
+     * move it there when it is open elsewhere, open it there otherwise, and split `besideTabId`'s
+     * panel to the right, the editor taking `ratio` of the width, when there is no panel to its right.
+     * Never a second instance of the tab. Returns false when the dock cannot place it (the tab is
+     * floating, maximized or nested, no such model, consumer mode for a metamodel).
+     */
+    static openBeside(besideTabId: string, modelId: string, ratio: number): boolean {
+        const dock = DockManager.dock;
+        if (!dock || !besideTabId || !modelId) return false;
+        const model = (store.getState() as any).idlookup?.[modelId];
+        if (model?.className !== 'DModel') return false;
+        if (isConsumerMode() && model.isMetamodel) return false;
+        try {
+            const layout = dock.getLayout();
+            if (layout?.dockbox?.mode !== 'horizontal' || layout.maxbox?.children?.length) return false;
+            const children = layout.dockbox.children as Array<PanelData | BoxData>;
+            const panels: BesidePanel[] = children.map(c => ({
+                id: c.id as string,
+                tabIds: 'tabs' in c ? c.tabs.map(t => t.id as string) : [],
+            }));
+            const action = besideAction(panels, besideTabId, modelId);
+            if (action.kind === 'unavailable') return false;
+            const target = children.find(c => c.id === action.panelId);
+            if (!target || !('tabs' in target)) return false;
+            const open = () => dock.find(modelId) as TabData | undefined;
+            const fresh = () => (model.isMetamodel ? TabDataMaker.metamodel(model) : TabDataMaker.model(model));
+            switch (action.kind) {
+                case 'activate': dock.updateTab(modelId, null as any, true); return true;
+                case 'move-into': dock.dockMove(open() as TabData, target, 'middle'); return true;
+                case 'open-into': dock.dockMove(fresh(), target, 'middle'); return true;
+                case 'split-move': dock.dockMove(open() as TabData, target, 'right'); break;
+                case 'split-open': dock.dockMove(fresh(), target, 'right'); break;
+            }
+            // rc-dock splits in two equal halves: share them by `ratio`, as its divider does (sizes in place, a new box).
+            const after = dock.getLayout();
+            const kids = [...after.dockbox.children];
+            const at = kids.findIndex(c => 'tabs' in c && c.tabs.some(t => t.id === besideTabId));
+            const left = kids[at];
+            const right = kids[at + 1];
+            if (at >= 0 && right) {
+                [left.size, right.size] = splitSizes(left.size ?? 0, right.size ?? 0, ratio);
+                const dockbox: BoxData = { ...after.dockbox, children: kids };
+                for (const c of kids) c.parent = dockbox;
+                dock.changeLayout({ ...after, dockbox }, besideTabId, 'update');
+            }
+            return true;
+        } catch (error) {
+            console.error('[DockManager] openBeside:', error);
+            return false;
+        }
+    }
+
+    /** The share of the width the tab `besideTabId`'s panel takes from it and the panel to its right; null when there is none. */
+    static besideRatio(besideTabId: string): number | null {
+        const kids = DockManager.dock?.getLayout()?.dockbox?.children ?? [];
+        const at = kids.findIndex(c => 'tabs' in c && c.tabs.some(t => t.id === besideTabId));
+        const left = kids[at];
+        const right = kids[at + 1];
+        if (at < 0 || !right || !(left.size! > 0) || !(right.size! > 0)) return null;
+        return left.size! / (left.size! + right.size!);
     }
 
     static async openManager(me: LModel): Promise<boolean> {

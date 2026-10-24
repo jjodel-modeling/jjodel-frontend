@@ -186,6 +186,11 @@
         min-width: 0;
     }
 
+    // Beside the target's tab (P-2026-10-25-0020): the editor takes the whole tab.
+    &--beside &__left {
+        flex: 1;
+    }
+
     &__handle {
         flex: none;
         width: 5px;
@@ -269,4 +274,11 @@
     &--error::after {
         background: var(--color-error);
     }
+}
+
+// The panel beside a Refactoring tab (P-2026-10-25-0040). The main dock shows a top-level panel only
+// when it holds a pinnable tab header (`.not-strip` in DockManagerStyles.scss); the target's canvas
+// tab has none, so its panel would stay `display: none`.
+.not-strip > .dock-layout .dock-hbox:has(> .dock-panel .script-tab--beside) > .dock-panel {
+    display: block;
 }
