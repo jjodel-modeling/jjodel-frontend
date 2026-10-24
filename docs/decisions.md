@@ -6657,6 +6657,13 @@ procedi con l'implementazione»; 01:14 «S6 ok», «Apply ok» on A1 and A2 of t
   **Two follow-ups open on this front**: the Quick tip clears the Properties panel too (a panel-width variable, small
   lane), and a short discovery on the extra undo entry «Create element» (pointedBy on the new vertices) that a canvas
   click adds after Apply, which may touch the sync layer.
+- **R-JJD-12** (2026-10-24, ratified by Alfonso 13:47 «si hai il mio si esplicito, fixa anche il ticket», evidence: measured,
+  verified: none, reversible: branch). **The pending `pointedBy` writes are resolved in the same batch**: at the end of
+  `CompositeActionReducer` (`reducer.ts`, before `updateRedundancies_OBSOLETE`) the queue `PendingPointedByPaths` is
+  drained again, so a pointer to an element created later in the batch lands in that batch's delta (option A of
+  `docs/discovery/discovery_2026-10-24_undo_after_apply.md`). A second core change in `reducer.ts` for this front, beside
+  R-JJD-6; it applies to every batch. The same lane fixes the duplicated `vertexs` entry in a new DVertex's `pointedBy`
+  (ticket F8) if its cause is in the reducer or the D-layer and outside the critical zone.
 
 ## Superate
 
