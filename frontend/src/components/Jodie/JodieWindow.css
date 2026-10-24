@@ -2130,23 +2130,27 @@
    CODE REPL ENTRIES (in ChatMessages history)
    ======================================== */
 
+/* A plain console line (P-2026-10-24-1610): no card, no field, no chip. The
+   `.jodie-messages` scope and !important beat the generic `.jodie-messages code`
+   box. The output starts where the expression starts: prompt 12px + gap 6px. */
 .jodie-code-entry {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 8px 12px;
-    margin: 4px 0;
-    border-radius: 8px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
     font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.5;
 }
 
-.jodie-code-entry--error {
-    background: rgba(239, 68, 68, 0.06);
-    border-color: rgba(239, 68, 68, 0.25);
+/* Consecutive entries: 8px apart (the list's gap is 16px). */
+.jodie-code-entry + .jodie-code-entry {
+    margin-top: -8px;
+}
+
+/* Hairline between an entry and the next message. */
+.jodie-code-entry:has(+ .jodie-message) {
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
 }
 
 .jodie-code-entry__row {
@@ -2157,69 +2161,59 @@
 }
 
 .jodie-code-entry__prompt {
+    width: 12px;
     color: #0ea5e9;
     font-weight: 600;
     flex-shrink: 0;
     user-select: none;
 }
 
+.jodie-messages .jodie-code-entry__input,
+.jodie-messages .jodie-code-entry__output {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    font-family: inherit;
+    font-size: 13px;
+    color: #0f172a !important;
+    white-space: pre-wrap;
+}
+
 .jodie-code-entry__input {
     flex: 1;
-    color: var(--color-text-primary, #0f172a);
-    background: transparent;
-    white-space: pre-wrap;
 }
 
 .jodie-code-entry__flavor {
     flex-shrink: 0;
-    padding: 1px 5px;
-    border-radius: 4px;
-    background: rgba(14, 165, 233, 0.08);
-    color: #0ea5e9;
-    font-size: 9px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    line-height: 1.2;
+    color: #94a3b8;
+    font-size: 11px;
 }
 
-.jodie-code-entry__output-row {
-    padding-left: 14px;
+.jodie-code-entry__output-row,
+.jodie-code-entry__warnings {
+    padding-left: 18px;
 }
 
-.jodie-code-entry__output {
-    color: var(--color-text-secondary, #64748b);
-    background: transparent;
-    white-space: pre-wrap;
+.jodie-messages .jodie-code-entry__output-row--error .jodie-code-entry__output {
+    color: #b91c1c !important;
 }
 
-.jodie-code-entry__output-row--error .jodie-code-entry__output {
-    color: #b91c1c;
-}
-
-/* Timed out (R-JJD-9) is muted text, as in the live result, not an error.
-   !important and the .jodie-messages scope: `.jodie-messages code` sets an !important colour. */
+/* Timed out (R-JJD-9) is muted text, as in the live result, not an error. */
 .jodie-messages .jodie-code-entry__output-row--timed-out .jodie-code-entry__output {
-    color: var(--color-text-disabled, #94a3b8) !important;
-}
-
-.jodie-code-entry__meta {
-    margin-top: 2px;
-    padding-left: 14px;
-    opacity: 0.7;
+    color: #94a3b8 !important;
 }
 
 /* ========================================
    CODE ENTRY WARNING BLOCK
    Surfaces silent-null events (undefined identifiers) from the JjEL evaluator.
-   Visual: amber pill, 11px, aligned with the output row's left padding.
+   Visual: amber text, 11px, unboxed, aligned with the output text.
    ======================================== */
 
 .jodie-code-entry__warnings {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding-left: 14px;
     margin-top: 2px;
 }
 
@@ -2227,9 +2221,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: #fef3c7; /* amber-100 */
     color: #78350f;      /* amber-900 */
     font-size: 11px;
     line-height: 1.4;
@@ -2242,13 +2233,13 @@
     font-size: 12px;
 }
 
-.jodie-code-entry__warning code {
+.jodie-messages .jodie-code-entry__warning code {
     font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
     font-size: 11px;
-    background: rgba(120, 53, 15, 0.08);
-    padding: 0 4px;
-    border-radius: 3px;
-    color: #78350f;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #78350f !important;
 }
 
 /* ========================================
