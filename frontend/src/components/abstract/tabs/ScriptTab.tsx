@@ -13,6 +13,7 @@ import {
     projectTargetCandidates, readProjectScript, runScriptOnModel, saveProjectScript,
 } from '../../scripts/scriptFiles';
 import { compatibleModels, readTarget, targetLabel } from '../../scripts/projectScripts';
+import { JJSCRIPT_LANGUAGE_ID, JJSCRIPT_THEME_ID, registerJjscriptLanguage } from '../../../jjscript/editor/jjscriptMonaco';
 import './ScriptTab.scss';
 
 export interface ScriptTabProps {
@@ -96,8 +97,9 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
                 <Editor
                     width="100%"
                     height="100%"
-                    language="plaintext"
-                    theme="vs"
+                    language={JJSCRIPT_LANGUAGE_ID}
+                    theme={JJSCRIPT_THEME_ID}
+                    beforeMount={registerJjscriptLanguage}
                     value={text}
                     onChange={(value) => setText(value || '')}
                     options={{
