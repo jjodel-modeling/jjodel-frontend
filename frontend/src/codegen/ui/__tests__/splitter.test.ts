@@ -24,6 +24,12 @@ describe('clampSplit', () => {
     it('takes the middle when the width cannot hold both minimums (kills: clamp inverted on a narrow tab)', () => {
         expect(clampSplit(100, 400)).toBe(200);
     });
+
+    it('keeps each side its own minimum (kills: the end minimum read from the start one)', () => {
+        expect(clampSplit(0, 1000, 176, 175)).toBe(176);
+        expect(clampSplit(1000, 1000, 176, 175)).toBe(825);
+        expect(splitRatio(1000, 1000, 176, 175)).toBeCloseTo(0.825);
+    });
 });
 
 describe('readSplitRatio / writeSplitRatio', () => {

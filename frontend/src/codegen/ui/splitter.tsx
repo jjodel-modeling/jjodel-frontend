@@ -15,15 +15,18 @@ export const DEFAULT_SPLIT_RATIO = 0.55;
 export const SPLIT_MIN_PX = 200;
 export const SPLIT_STEP_PX = 16;
 
-/** The editor column's width `px` within `width`, kept `min` from either side; the middle when both cannot be. */
-export function clampSplit(px: number, width: number, min: number = SPLIT_MIN_PX): number {
-    if (width <= 2 * min) return width / 2;
-    return Math.min(width - min, Math.max(min, px));
+/**
+ * The editor column's width `px` within `width`, kept `min` from the start and `minEnd` from the end; the middle when
+ * both cannot be.
+ */
+export function clampSplit(px: number, width: number, min: number = SPLIT_MIN_PX, minEnd: number = min): number {
+    if (width <= min + minEnd) return width / 2;
+    return Math.min(width - minEnd, Math.max(min, px));
 }
 
 /** The ratio of a clamped position. */
-export function splitRatio(px: number, width: number): number {
-    return width > 0 ? clampSplit(px, width) / width : DEFAULT_SPLIT_RATIO;
+export function splitRatio(px: number, width: number, min: number = SPLIT_MIN_PX, minEnd: number = min): number {
+    return width > 0 ? clampSplit(px, width, min, minEnd) / width : DEFAULT_SPLIT_RATIO;
 }
 
 const validRatio = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0 && value < 1;
@@ -58,10 +61,15 @@ function defaultStorage(): Storage | null {
     }
 }
 
-/** Where the split is measured: the editor column's left edge and the width it shares with the right pane. */
+/**
+ * Where the split is measured: the left edge of the editor column's flexible part and the width it shares with the
+ * right pane's, the columns' paddings and borders left out; the minimums of either part, the default `SPLIT_MIN_PX`.
+ */
 export interface SplitArea {
     readonly left: number;
     readonly width: number;
+    readonly minStart?: number;
+    readonly minEnd?: number;
 }
 
 export interface ColumnSplitterProps {
@@ -80,7 +88,7 @@ export function ColumnSplitter({ ratio, onRatio, area }: ColumnSplitterProps): R
     const moveTo = (px: number): number | null => {
         const a = area();
         if (!a || a.width <= 0) return null;
-        const next = splitRatio(px, a.width);
+        const next = splitRatio(px, a.width, a.minStart ?? SPLIT_MIN_PX, a.minEnd ?? a.minStart ?? SPLIT_MIN_PX);
         onRatio(next);
         return next;
     };

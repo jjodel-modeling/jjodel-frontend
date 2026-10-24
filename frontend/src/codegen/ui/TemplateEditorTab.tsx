@@ -61,7 +61,7 @@ import { elementName } from './codeOrigins';
 import { generatorTabId, rememberGenerator, saveGeneratorTemplates, templateToSelect } from './generatorTabs';
 import { openTemplateEditor } from './openTemplateEditor';
 import GeneratorPane from './GeneratorPane';
-import { ColumnSplitter, readSplitRatio } from './splitter';
+import { ColumnSplitter, SPLIT_MIN_PX, readSplitRatio } from './splitter';
 import type { GeneratorResult } from '../engine/generateFiles';
 import type { GeneratorRecord } from '../engine/generatorCodec';
 import type { TemplateTarget } from './codeOrigins';
@@ -213,6 +213,13 @@ function freshName(taken: ReadonlySet<string>): string {
     return `template${n}`;
 }
 
+/** An element's horizontal paddings and borders, 0 when absent. */
+function frameWidth(el: Element | null | undefined): number {
+    if (!el) return 0;
+    const cs = getComputedStyle(el);
+    return [cs.paddingLeft, cs.paddingRight, cs.borderLeftWidth, cs.borderRightWidth].reduce((n, v) => n + (parseFloat(v) || 0), 0);
+}
+
 interface Item {
     /** The draft key: the stored name, or the base name of a draft whose template is gone. */
     readonly key: string;
@@ -242,9 +249,20 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
     const mainRef = useRef<HTMLElement>(null);
     const splitArea = useCallback(() => {
         const root = rootRef.current?.getBoundingClientRect();
-        const main = mainRef.current?.getBoundingClientRect();
-        const bar = rootRef.current?.querySelector('.codegen-tpl__splitter')?.getBoundingClientRect().width ?? 0;
-        return root && main ? { left: main.left, width: root.right - main.left - bar } : null;
+        const mainEl = mainRef.current;
+        if (!root || !mainEl) return null;
+        const main = mainEl.getBoundingClientRect();
+        const barEl = rootRef.current?.querySelector('.codegen-tpl__splitter');
+        const bar = barEl?.getBoundingClientRect().width ?? 0;
+        // The columns' paddings and borders sit outside the flex share: the split is measured on what grows, so the
+        // column's edge follows the pointer and the minimums hold on the columns' outer widths.
+        const fm = frameWidth(mainEl), fp = frameWidth(barEl?.nextElementSibling);
+        return {
+            left: main.left + fm,
+            width: root.right - main.left - bar - fm - fp,
+            minStart: Math.max(0, SPLIT_MIN_PX - fm),
+            minEnd: Math.max(0, SPLIT_MIN_PX - fp),
+        };
     }, []);
 
     // Drafts the store has come to hold are dropped (an Undo/Redo onto the draft, the panel saving the same text).
