@@ -8,7 +8,7 @@ import {AI, ChatMessage, ConsoleEntry, CodeEntry, CodeWarning, isCodeEntry, Jjod
 import { formatAmbiguousCandidates } from '../../jjel/evaluator/context';
 import { MarkdownMessage } from './MarkdownMessage';
 import { JjelValueInspector, detectKind } from './JjelValueInspector';
-import { JjScriptService, ScriptLineResult } from '../../jjscript';
+import { JjScriptService, ScriptLineResult, isJjScriptCode } from '../../jjscript';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
 import { ProviderIcon } from '../icons';
@@ -17,6 +17,8 @@ import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { findProfile } from '../../joiner/environmentConfig';
 import { activeProfileId, isConsumerMode } from '../environment/consumerMode';
 import { CONSUMER_NO_SCOPE, CONSUMER_PROVIDER_INVITE, consumerGreeting } from './consumerVoice';
+import { ScriptCardContext, type ScriptCardContextValue } from './ScriptCard';
+import { isScriptCardBlock } from './scriptCardModel';
 
 interface ChatMessagesProps {
     messages: ConsoleEntry[];
@@ -53,6 +55,21 @@ function extractFirstCodeBlock(text: string): ExtractedCodeBlock | null {
     };
 }
 
+// S2: a reply shows script cards when it was written against an M1 model and holds a block
+// MarkdownRenderer turns into one (the same test as its CodeBlock).
+function scriptCardModelId(message: ChatMessage): string | null {
+    if (message.role !== 'assistant' || message.jjscriptResult || isConsumerMode()) return null;
+    const scope = message.jjodieScope;
+    return scope?.level === 'M1' && scope.modelId ? scope.modelId : null;
+}
+
+function hasScriptCardBlock(text: string): boolean {
+    for (const m of text.matchAll(/```(\w+)?\n([\s\S]*?)```/g)) {
+        if (isScriptCardBlock((m[1] ?? 'text').toLowerCase(), m[2].replace(/\n$/, ''), isJjScriptCode)) return true;
+    }
+    return false;
+}
+
 function formatTimestamp(timestamp: number): string {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -62,7 +79,7 @@ function getInitials(name: string): string {
     return name.split(' ').map(n => n[0] || '').join('').toUpperCase().slice(0, 2) || 'U';
 }
 
-function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecute, onOfferAsk, onAskFromError }: { message: ChatMessage; onJjScriptExecute?: (commands: string[], scope?: JjodieScope) => Promise<ScriptLineResult[]>; onTestInCode?: (code: string, language: string | null) => void; onOfferExecute?: (messageId: string, input: string) => void; onOfferAsk?: (messageId: string, input: string) => void; onAskFromError?: (input: string) => void }): JSX.Element {
+function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecute, onOfferAsk, onAskFromError, newestScriptCard = false }: { message: ChatMessage; onJjScriptExecute?: (commands: string[], scope?: JjodieScope) => Promise<ScriptLineResult[]>; onTestInCode?: (code: string, language: string | null) => void; onOfferExecute?: (messageId: string, input: string) => void; onOfferAsk?: (messageId: string, input: string) => void; onAskFromError?: (input: string) => void; newestScriptCard?: boolean }): JSX.Element {
     const isUser = message.role === 'user';
     const providerInfo = message.provider ? AI[message.provider] : null;
     const displayName = message.userName || 'You';
@@ -83,6 +100,13 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
 
     // #168 J7: the consumer has no console mode to promote into, and no «Source» to read.
     const consumer = isConsumerMode();
+
+    // S2: the context that turns this reply's JjScript blocks into collapsed script cards.
+    const cardModelId = scriptCardModelId(message);
+    const scriptCardContext = React.useMemo<ScriptCardContextValue | null>(
+        () => cardModelId ? { modelId: cardModelId, messageId: message.id, newest: newestScriptCard, onFollowUp: onAskFromError } : null,
+        [cardModelId, message.id, newestScriptCard, onAskFromError]
+    );
 
     // Promotion is shown only on real assistant replies (not user messages, not
     // JjScript success/error feedback) and only when the reply contains a fenced code block.
@@ -182,12 +206,14 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
                         </div>
                     )}
                     <div className="jodie-message-text">
-                        <MarkdownMessage
-                            content={message.content}
-                            isUser={isUser}
-                            onJjScriptExecute={onJjScriptExecute ? executeInScope : undefined}
-                            showSourceToggle={!consumer}
-                        />
+                        <ScriptCardContext.Provider value={scriptCardContext}>
+                            <MarkdownMessage
+                                content={message.content}
+                                isUser={isUser}
+                                onJjScriptExecute={onJjScriptExecute ? executeInScope : undefined}
+                                showSourceToggle={!consumer}
+                            />
+                        </ScriptCardContext.Provider>
                     </div>
                 </div>
                 {promoteCodeBlock && onTestInCode && (
@@ -385,6 +411,17 @@ function ConsumerWelcome({ providerMissing, onOpenSettings }: { providerMissing?
 export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestInCode, onAskJjodie, onOfferExecute, onOfferAsk, onAskFromError, onOpenSettings, providerMissing }: ChatMessagesProps): JSX.Element {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // S2: the reply holding the newest script card previews it on the canvas by itself.
+    const newestScriptCardId = React.useMemo(() => {
+        for (let i = messages.length - 1; i >= 0; i--) {
+            const m = messages[i];
+            if (isCodeEntry(m)) continue;
+            const chat = m as ChatMessage;
+            if (scriptCardModelId(chat) && hasScriptCardBlock(chat.content)) return chat.id;
+        }
+        return null;
+    }, [messages]);
+
     // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -551,6 +588,7 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
                                 onOfferExecute={onOfferExecute}
                                 onOfferAsk={onOfferAsk}
                                 onAskFromError={onAskFromError}
+                                newestScriptCard={entry.id === newestScriptCardId}
                             />
                         )
                     ))}
