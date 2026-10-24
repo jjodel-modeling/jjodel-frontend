@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: discovery (read-only, hard stop)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui-rfb · report docs/discovery/discovery_2026-10-24_refactoring_operations.md · docs only · hard stop
 Corregge: none
 Request: Alfonso, 2026-10-24 ~23:15 («proceedi con una /lane auto», on mockup B of the refactoring page)
 Model: claude-opus-5-5
