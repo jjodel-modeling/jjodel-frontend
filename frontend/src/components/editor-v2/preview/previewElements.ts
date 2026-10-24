@@ -14,9 +14,16 @@
  * is its create line or a line that writes one of its features or references, or, for a line that
  * plans no effect (an unknown feature, an unresolvable target), when the line names it as the owner
  * it writes: the instance of `set X.f …`, the slot owner of `remove … from X.f`.
+ *
+ * M2 (P-2026-10-24-1600): a plan read on a metamodel (`plan.level === 'M2'`) draws its own level only
+ * (`buildM2Preview`): a ghost node per planned class, enumeration and package, labelled with its kind
+ * and its planned rows (attributes, references, operations, literals); the rows planned into an
+ * existing element go in one ghost rows node beside the column, joined to the element's node by a
+ * dashed edge; planned references (owner to type) and generalizations (child to parent) are dashed
+ * ghost edges when both ends are drawn. An M1 plan draws only its M1 creations.
  */
 import type { Edge, Node } from '@xyflow/react';
-import type { EffectsPlan, PlanWorld } from '../../../jjscript/executor/effectsPlanner';
+import { effectLevel, type EffectsPlan, type PlannedCreate, type PlanWorld } from '../../../jjscript/executor/effectsPlanner';
 import { parse } from '../../../jjscript/parser/parser';
 
 export const PREVIEW_ID_PREFIX = 'jjpreview:';
@@ -40,6 +47,8 @@ export interface DrawnNode {
 
 export const PREVIEW_NODE_WIDTH = 180;
 export const PREVIEW_NODE_HEIGHT = 48;
+/** The height a planned row adds to an M2 ghost node. */
+export const PREVIEW_ROW_HEIGHT = 18;
 const COLUMN_GAP = 80;
 const ROW_GAP = 24;
 
@@ -72,6 +81,8 @@ function writtenOwner(text: string | undefined): string | null {
 
 /** `script`, when given, is the text the plan was read from: its lines name the owner of a warning that plans no effect. */
 export function buildPreviewElements(plan: EffectsPlan, world: PlanWorld, drawn: readonly DrawnNode[], script?: string): PreviewElements {
+    if (plan.level === 'M2') return buildM2Preview(plan, world, drawn, script);
+    if (plan.created.some((c) => effectLevel(c) === 'M2')) plan = { ...plan, created: plan.created.filter((c) => effectLevel(c) === 'M1') };
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     if (plan.created.length === 0 && plan.references.length === 0) return { nodes, edges };
@@ -147,6 +158,144 @@ export function buildPreviewElements(plan: EffectsPlan, world: PlanWorld, drawn:
         if ((r.operator !== '=' && r.operator !== '+=') || !r.targetId) continue;
         pushEdge(nodeOf.get(r.sourceId), nodeOf.get(r.targetId), r.feature, r.containment);
     }
+    return { nodes, edges };
+}
+
+const M2_NODE_KINDS = new Set(['Class', 'Enumeration', 'Package']);
+
+/** The row of a planned feature or literal in its ghost node; null for a kind drawn as no row (a parameter). */
+function m2Row(c: PlannedCreate): string | null {
+    switch (c.metaclass) {
+        case 'Attribute': return `${c.name} : ${c.type ?? 'EString'}`;
+        case 'Reference': return `${c.containment ? '\u25C6 ' : ''}${c.name} \u2192 ${c.type ?? '?'}`;
+        case 'Operation': return `${c.name}()${c.type ? ` : ${c.type}` : ''}`;
+        case 'Literal': return c.name;
+        default: return null;
+    }
+}
+
+/** The element an M2 line names as the holder it writes into: the container of `create … in X`, `add … to X`, the target of `set X.p`, the class of `X extends Y`. */
+function m2NamedHolder(text: string | undefined): string | null {
+    if (!text?.trim()) return null;
+    try {
+        const parsed = parse(text.trim());
+        const args: any = parsed.success ? parsed.ast?.args : null;
+        const qn = args?.command === 'create' ? args.parent : args?.command === 'add' ? args.to
+            : args?.command === 'set' ? args.target : args?.command === 'extends' ? args.childClass : null;
+        const segments: string[] | undefined = qn?.segments;
+        return segments && segments.length > 0 ? segments[segments.length - 1] : null;
+    } catch {
+        // A line that does not parse names no holder.
+    }
+    return null;
+}
+
+/** The ghost nodes and edges of a plan read on a metamodel (see the header). */
+function buildM2Preview(plan: EffectsPlan, world: PlanWorld, drawn: readonly DrawnNode[], script?: string): PreviewElements {
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+    const own = plan.created.filter((c) => effectLevel(c) === 'M2');
+    const generalizations = plan.generalizations ?? [];
+    if (own.length === 0 && generalizations.length === 0) return { nodes, edges };
+
+    let x = 0;
+    let y = 0;
+    const placed = drawn.filter((d) => !d.nested);
+    if (placed.length > 0) {
+        x = Math.max(...placed.map((d) => d.x + d.width)) + COLUMN_GAP;
+        y = Math.min(...placed.map((d) => d.y));
+    }
+
+    // Element id -> node id: drawn elements their node, planned classifiers and packages their ghost.
+    const nodeOf = new Map<string, string>();
+    for (const d of drawn) if (!nodeOf.has(d.elementId)) nodeOf.set(d.elementId, d.nodeId);
+    const heads = own.filter((c) => M2_NODE_KINDS.has(c.metaclass));
+    for (const c of heads) nodeOf.set(c.id, PREVIEW_ID_PREFIX + c.id);
+
+    // Rows per holder: a planned head, or an existing element (its ghost rows node).
+    const rowsOf = new Map<string, string[]>();
+    const holderOf = new Map<string, string>();
+    for (const c of own) {
+        if (M2_NODE_KINDS.has(c.metaclass)) { holderOf.set(c.id, c.id); continue; }
+        const holder = c.containerId ?? '';
+        holderOf.set(c.id, holderOf.get(holder) ?? holder);
+        const row = m2Row(c);
+        if (row === null) continue;
+        const key = holderOf.get(c.id)!;
+        rowsOf.set(key, [...(rowsOf.get(key) ?? []), row]);
+    }
+
+    const warnedLines = new Set(plan.warnings.map((w) => w.line));
+    const warned = new Set<string>();
+    for (const c of own) if (warnedLines.has(c.line)) warned.add(holderOf.get(c.id) ?? c.id);
+    for (const f of plan.features) if (effectLevel(f) === 'M2' && warnedLines.has(f.line)) warned.add(holderOf.get(f.ownerId) ?? f.ownerId);
+    if (script !== undefined) {
+        // A warned line plans no effect: the holder it names takes the marker, a planned one first.
+        const lines = script.split('\n');
+        const existing = world.m2?.elements ?? [];
+        for (const w of plan.warnings) {
+            const name = m2NamedHolder(lines[w.line - 1]);
+            if (!name) continue;
+            const planned = heads.filter((c) => c.name === name);
+            if (planned.length > 0) { warned.add(planned[planned.length - 1].id); continue; }
+            const found = existing.filter((e) => e.name === name);
+            if (found.length === 1) warned.add(M2_NODE_KINDS.has(found[0].kind) ? found[0].id : found[0].father ?? found[0].id);
+        }
+    }
+
+    const pushNode = (id: string, label: string, rows: number, holder: string) => {
+        const height = PREVIEW_NODE_HEIGHT + rows * PREVIEW_ROW_HEIGHT;
+        nodes.push({
+            id,
+            type: 'default',
+            position: { x, y },
+            width: PREVIEW_NODE_WIDTH,
+            height,
+            data: { label },
+            style: { whiteSpace: 'pre-line' },
+            className: warned.has(holder) ? 'jj-preview-node jj-preview-node--warning' : 'jj-preview-node',
+            draggable: false,
+            selectable: false,
+            deletable: false,
+            connectable: false,
+            focusable: false,
+        });
+        y += height + ROW_GAP;
+    };
+    const pushEdge = (source: string | undefined, target: string | undefined, label: string, containment: boolean) => {
+        if (!source || !target) return;
+        edges.push({
+            id: `${PREVIEW_ID_PREFIX}edge:${edges.length + 1}`,
+            source,
+            target,
+            type: 'default',
+            label,
+            className: containment ? 'jj-preview-edge jj-preview-edge--containment' : 'jj-preview-edge',
+            selectable: false,
+            deletable: false,
+            reconnectable: false,
+            focusable: false,
+        });
+    };
+
+    for (const c of heads) {
+        const rows = rowsOf.get(c.id) ?? [];
+        const head = `${c.metaclass === 'Class' && c.abstract ? 'abstract ' : ''}${c.metaclass.toLowerCase()} ${c.name}`;
+        pushNode(PREVIEW_ID_PREFIX + c.id, [head, ...rows].join('\n'), rows.length, c.id);
+    }
+    for (const [holder, rows] of rowsOf) {
+        if (nodeOf.get(holder) && isPreviewId(nodeOf.get(holder))) continue;
+        const target = nodeOf.get(holder);
+        if (!target) continue;
+        const id = `${PREVIEW_ID_PREFIX}rows:${holder}`;
+        pushNode(id, rows.map((r) => `+ ${r}`).join('\n'), rows.length - 1, holder);
+        pushEdge(id, target, '', false);
+    }
+    for (const c of own) {
+        if (c.metaclass !== 'Reference' || !c.typeId) continue;
+        pushEdge(nodeOf.get(holderOf.get(c.id) ?? ''), nodeOf.get(c.typeId), c.name, !!c.containment);
+    }
+    for (const g of generalizations) pushEdge(nodeOf.get(g.childId), nodeOf.get(g.parentId), 'extends', false);
     return { nodes, edges };
 }
 
