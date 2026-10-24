@@ -16,7 +16,8 @@ import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
 import { activeProfileId, isConsumerMode } from '../../components/environment/consumerMode';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
-import { deleteProjectScript, openScriptAsFile, readProjectScripts, renameProjectScript } from '../../components/scripts/scriptFiles';
+import { deleteProjectScript, readProjectScripts, renameProjectScript } from '../../components/scripts/scriptFiles';
+import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
 import { SCRIPT_EXTENSION } from '../../components/scripts/projectScripts';
 import type { DProjectScript } from '../../joiner/classes';
 
@@ -319,6 +320,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const [renamingScriptId, setRenamingScriptId] = useState<string | null>(null);
     const [scriptRenameValue, setScriptRenameValue] = useState('');
     const [deletingScript, setDeletingScript] = useState<DProjectScript | null>(null);
+    const [refactoringDialogOpen, setRefactoringDialogOpen] = useState(false);
     useEffect(() => {
         if (!scriptMenu) return;
         const close = () => setScriptMenu(null);
@@ -429,7 +431,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         return (
             <div className={`psb-section${isCollapsed ? ' collapsed' : ''}`} data-psb-section="scripts">
                 <div className="psb-section-header" onClick={() => toggleSection('scripts')}>
-                    <span className="psb-section-label">Scripts</span>
+                    <span className="psb-section-label">Refactorings</span>
                     <i className="bi bi-chevron-down psb-chevron" />
                 </div>
                 <div className="psb-section-body">
@@ -451,13 +453,13 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                             }}
                             title={sc.name}
                         >
-                            <span className="psb-badge psb-badge--S">S</span>
+                            <span className="psb-badge psb-badge--S">R</span>
                             {renamingScriptId === sc.id ? (
                                 <input
                                     className="psb-rename-input"
                                     autoFocus
                                     value={scriptRenameValue}
-                                    aria-label="Script name"
+                                    aria-label="Refactoring name"
                                     onClick={(e) => e.stopPropagation()}
                                     onChange={(e) => setScriptRenameValue(e.target.value)}
                                     onBlur={commitScriptRename}
@@ -472,9 +474,10 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                             <i className="bi bi-arrow-right psb-item-arrow" />
                         </div>
                     ))}
-                    <div className="psb-new" onClick={() => openScriptAsFile('', 'script')}>
+                    {/* R-JJD-14: the same dialog as the «+» artifact menu, which asks the target level. */}
+                    <div className="psb-new" onClick={() => setRefactoringDialogOpen(true)}>
                         <i className="bi bi-plus" />
-                        <span>New script</span>
+                        <span>New refactoring</span>
                     </div>
                 </div>
                 {scriptMenu && menuScript && (
@@ -495,13 +498,14 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 )}
                 <ConfirmDialog
                     isOpen={!!deletingScript}
-                    title="Delete script"
+                    title="Delete refactoring"
                     message={`Delete "${deletingScript?.name ?? ''}"? This cannot be undone.`}
                     confirmText="Delete"
                     variant="danger"
                     onConfirm={() => { if (deletingScript) deleteProjectScript(deletingScript.id); setDeletingScript(null); }}
                     onCancel={() => setDeletingScript(null)}
                 />
+                <NewRefactoringDialog isOpen={refactoringDialogOpen} onClose={() => setRefactoringDialogOpen(false)} />
             </div>
         );
     };

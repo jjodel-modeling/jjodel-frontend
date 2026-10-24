@@ -48,6 +48,8 @@ export interface NewScript {
     text: string;
     modelId?: string;
     generatedText?: string;
+    level?: DProjectScript['level'];
+    metamodelId?: string;
 }
 
 /** Append a new entry; returns the list and the entry. */
@@ -56,7 +58,58 @@ export function addScript(scripts: DProjectScript[], input: NewScript, now: numb
     const entry: DProjectScript = { id, name: uniqueScriptName(input.name, scripts), text: input.text || '', updatedAt: now };
     if (input.modelId) entry.modelId = input.modelId;
     if (input.generatedText !== undefined) entry.generatedText = input.generatedText;
+    if (input.level) entry.level = input.level;
+    if (input.level === 'M1' && input.metamodelId) entry.metamodelId = input.metamodelId;
     return { scripts: [...scripts, entry], entry };
+}
+
+/**
+ * The target of a Refactoring (R-JJD-14), read with defaults: an entry without `level` changes
+ * any level, an M1 entry without `metamodelId` the models of any metamodel.
+ */
+export interface RefactoringTarget {
+    level?: 'M2' | 'M1';
+    metamodelId?: string;
+}
+
+export function readTarget(entry: Pick<DProjectScript, 'level' | 'metamodelId'> | null | undefined): RefactoringTarget {
+    const level = entry?.level === 'M2' || entry?.level === 'M1' ? entry.level : undefined;
+    return level === 'M1' && entry?.metamodelId ? { level, metamodelId: entry.metamodelId } : { level };
+}
+
+/** A model or metamodel of the project, as the target rules read it. */
+export interface TargetCandidate {
+    id: string;
+    name: string;
+    isMetamodel: boolean;
+    /** The metamodel of an M1. */
+    metamodelId?: string;
+}
+
+/** The target a script planned on `model` gets: the metamodel level, or the models of its metamodel. */
+export function targetOfModel(model: Pick<TargetCandidate, 'isMetamodel' | 'metamodelId'> | null | undefined): RefactoringTarget {
+    if (!model) return {};
+    if (model.isMetamodel) return { level: 'M2' };
+    return model.metamodelId ? { level: 'M1', metamodelId: model.metamodelId } : { level: 'M1' };
+}
+
+/**
+ * The candidates a Refactoring with `target` may run on, in input order. Any level lists the
+ * models first and the metamodels after, so the first choice stays the first model.
+ */
+export function compatibleModels<T extends TargetCandidate>(candidates: ReadonlyArray<T>, target: RefactoringTarget): T[] {
+    if (target.level === 'M2') return candidates.filter(c => c.isMetamodel);
+    if (target.level === 'M1') {
+        return candidates.filter(c => !c.isMetamodel && (!target.metamodelId || c.metamodelId === target.metamodelId));
+    }
+    return [...candidates.filter(c => !c.isMetamodel), ...candidates.filter(c => c.isMetamodel)];
+}
+
+/** The target as the Refactoring tab shows it under the title. */
+export function targetLabel(target: RefactoringTarget, metamodelName?: string): string {
+    if (target.level === 'M2') return 'Metamodel';
+    if (target.level === 'M1') return target.metamodelId ? `Model of ${metamodelName || 'a missing metamodel'}` : 'Model';
+    return 'Any level';
 }
 
 /** Rename entry `id`; the list unchanged (same array) when there is no such entry. */

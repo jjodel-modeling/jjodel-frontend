@@ -10,7 +10,10 @@ import type { DModel, DProject } from '../../joiner';
 import { LModel, SetFieldAction, U, store } from '../../joiner';
 import { JjodelEvents } from '../../events/registry';
 import DockManager from '../abstract/DockManager';
-import { addScript, findScript, readScripts, renameScript, removeScript, updateScript, type ScriptPatch } from './projectScripts';
+import {
+    addScript, findScript, readScripts, renameScript, removeScript, targetOfModel, updateScript,
+    type ScriptPatch, type TargetCandidate,
+} from './projectScripts';
 
 /** Wait before asking a canvas that `open2` has just mounted for the preview: its listener installs on mount. */
 const PREVIEW_AFTER_OPEN_MS = 350;
@@ -64,6 +67,7 @@ export function deleteProjectScript(scriptId: string): void {
     removeProjectScript(scriptId);
 }
 
+// TODO: cleanup, no caller since the tab lists `projectTargetCandidates` (R-JJD-14).
 /** The M1 models of the open project, as `{ id, name }`, in project order. */
 export function projectM1Models(state: any = store.getState()): { id: string; name: string }[] {
     const ids = (dProject(state)?.models || []) as string[];
@@ -74,12 +78,45 @@ export function projectM1Models(state: any = store.getState()): { id: string; na
 }
 
 /**
+ * The models and metamodels of the open project, in project order, as the Refactoring target
+ * rules read them (R-JJD-14): metamodels carry `isMetamodel`, an M1 the id of its metamodel.
+ */
+export function projectTargetCandidates(state: any = store.getState()): TargetCandidate[] {
+    const d = dProject(state);
+    // The metamodels live on `metamodels`; `models` may list them too, so each id is read once.
+    const ids = [...new Set([...((d?.metamodels || []) as string[]), ...((d?.models || []) as string[])])];
+    return ids
+        .map(id => state.idlookup?.[id] as DModel | undefined)
+        .filter((m): m is DModel => !!m)
+        .map(m => {
+            const c: TargetCandidate = { id: m.id as string, name: m.name || (m.id as string), isMetamodel: !!m.isMetamodel };
+            if (!m.isMetamodel && m.instanceof) c.metamodelId = m.instanceof as string;
+            return c;
+        });
+}
+
+/**
  * Store `text` as a new script file of the open project and open it in its editor tab. Called by
- * Jjodie's `Open as file` (S2) and `Save as file` (S5). Returns the entry, or undefined when no
- * project is open.
+ * Jjodie's `Open as file` (S2) and `Save as file` (S5). The target level (R-JJD-14) is the one of
+ * the model the script was planned on. Returns the entry, or undefined when no project is open.
  */
 export function openScriptAsFile(text: string, suggestedName: string, modelId?: string): DProjectScript | undefined {
-    const { scripts, entry } = addScript(readProjectScripts(), { name: suggestedName, text, modelId });
+    const model = modelId ? projectTargetCandidates().find(c => c.id === modelId) : undefined;
+    const target = targetOfModel(model);
+    const { scripts, entry } = addScript(readProjectScripts(), { name: suggestedName, text, modelId, ...target });
+    if (!writeProjectScripts(scripts)) return undefined;
+    DockManager.openScript(entry.id, entry);
+    return entry;
+}
+
+/**
+ * Create an empty Refactoring with its target level (R-JJD-14), from the «+» artifact menu or the
+ * tree's «New refactoring», and open its tab. Returns the entry, or undefined with no project open.
+ */
+export function createProjectRefactoring(input: { name?: string; level: 'M2' | 'M1'; metamodelId?: string }): DProjectScript | undefined {
+    const { scripts, entry } = addScript(readProjectScripts(), {
+        name: input.name || 'refactoring', text: '', level: input.level, metamodelId: input.metamodelId,
+    });
     if (!writeProjectScripts(scripts)) return undefined;
     DockManager.openScript(entry.id, entry);
     return entry;

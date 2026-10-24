@@ -37,6 +37,22 @@
         color: var(--color-accent);
     }
 
+    // R-JJD-14: the name with the Refactoring's target level under it.
+    &__heading {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        gap: 1px;
+    }
+
+    &__target {
+        color: var(--color-form-muted);
+        font-size: var(--text-xs);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     &__spacer {
         flex: 1;
     }
