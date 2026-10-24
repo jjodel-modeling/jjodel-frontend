@@ -6679,6 +6679,36 @@ procedi con l'implementazione»; 01:14 «S6 ok», «Apply ok» on A1 and A2 of t
   may change a metamodel and, optionally, all its conforming models in the same artifact (coupled evolution), or be
   applied to a single model.
 
+## R-RFB: refactoring operations that migrate instance data (decisions 2026-10-24)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-10-24_refactoring_operations.md` (P-2026-10-24-2321,
+merged in `972a30c4e`), section «Decisions awaiting Alfonso»; the project chat C-2026-10-24-0020, Alfonso 2026-10-24
+«ok alle raccomandazioni». Design reference: board «Refactoring B» of the design canvas. All rows: ratified by
+Alfonso as recommended, evidence: read, verified: none, reversible: trunk (docs only, no code yet).
+
+- **R-RFB-1** (2026-10-24). **Syntax: bare verbs** as in the mockup (`extract`, `pull`, `push`, `inline` become
+  reserved words; `rename`, `move`, `set` reused). Slice S2a first counts identifiers named `extract|pull|push|inline`
+  in the bundled examples; if any is found, fall back to one prefix word (`refactor pull up …`).
+- **R-RFB-2** (2026-10-24). **M1 migration copies values into the new slots and then deletes the old feature**; no
+  re-pointing of `DValue.instanceof` through a raw SetFieldAction. No guard bypassed, no core change.
+- **R-RFB-3** (2026-10-24). **One refactoring is a sequence of ordered steps, one TRANSACTION each with a settle,
+  inside one R-JJD-6 undo group**; never a single TRANSACTION (CLAUDE.md rule 12).
+- **R-RFB-4** (2026-10-24). **Lossy operations**: the planner lists every value that will be lost, per model, and
+  Apply stays disabled until the user acknowledges the loss in the preview; no `force` keyword in the script. Lossless
+  operations apply with no extra step.
+- **R-RFB-5** (2026-10-24). **Scope**: every model of the project that conforms to the metamodel is migrated and
+  listed in the plan; no model can be skipped in the first release.
+- **R-RFB-6** (2026-10-24). **The generic `move` stays as it is** (packages, classes); `move attribute … from … to …
+  via …` gets its own parse path through `set_father`. The fix of the current `move` on features waits for slice
+  S0's measurement.
+- **R-RFB-7** (2026-10-24). **Rename warns with the textual occurrences and does not rewrite them**; a rewriting
+  rename is its own discovery.
+- **R-RFB-8** (2026-10-24). **First release**: rename warnings, pull up, extract superclass, set multiplicity (with the
+  loss report of R-RFB-4). Move via, push down, inline class and type change come after.
+
+Open, not decided by these rows (questions 3 and 4 of the report): whether Jjodie's Run and the script editor's Run
+open an undo group too, and whether a filled slot left behind when a superclass is removed is a bug or intended.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
