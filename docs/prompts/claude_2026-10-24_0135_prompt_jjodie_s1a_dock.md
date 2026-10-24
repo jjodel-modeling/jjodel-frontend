@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (implementation S1a, code and gates)
 Depends: P-2026-10-24-0115
-Status: eseguito 2026-10-24 · lane jjodie-ui · 467e3ec98
+Status: eseguito 2026-10-24 · lane jjodie-ui · 467e3ec98 · verifica visiva fallita 2026-10-24 (probe P-2026-10-24-0210, 34/35: header close button past the edge at 460, fixed in 785e65d19; Quick tip toast over the dock, open, outside S1a)
 Corregge: none
 Request: Alfonso, 2026-10-24 00:40 and 01:14, in the project chat (unattended run; S6 and one-step Apply approved)
 Model: claude-opus-5-5
