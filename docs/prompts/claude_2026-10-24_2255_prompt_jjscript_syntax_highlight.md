@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (implementation, code, gates and probe)
 Depends: P-2026-10-24-2215
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui-hl · code 60b41aa39 · gates green · probe 19/19 · done
 Corregge: none
 Request: Alfonso, 2026-10-24 22:50, in the project chat («puoi mettere il syntax highlight all'editor dei refactoring?»)
 Model: claude-opus-5-5
