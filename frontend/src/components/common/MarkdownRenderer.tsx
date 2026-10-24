@@ -120,7 +120,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
     }
 
     return (
-        <div className={`md-code-block ${isSingleLine ? 'md-code-block--single' : ''}`}>
+        <div className={`md-code-block ${isSingleLine ? 'md-code-block--single' : ''}${showLineNumbers ? ' md-code-block--numbered' : ''}`}>
             {/* Header only for multi-line code */}
             {!isSingleLine && (
                 <div className="md-code-header">
@@ -168,6 +168,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
                 PreTag="div"
                 className="md-code-content"
                 showLineNumbers={showLineNumbers}
+                // One element per line, so a host can soft-wrap with a hanging indent
+                // (Jjodie chat, MarkdownMessage.css). Unstyled, the lines render as before.
+                wrapLines
+                lineProps={{ className: 'md-code-line' }}
                 lineNumberStyle={{
                     minWidth: '2.5em',
                     paddingRight: '1em',

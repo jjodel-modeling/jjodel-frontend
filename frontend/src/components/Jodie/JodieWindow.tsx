@@ -9,7 +9,6 @@ import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from '../../types/jodie';
-import { AIDisclaimer } from '../common/AIDisclaimer';
 import { AIEvents, JjScriptEvents } from '../../events/registry';
 
 interface JodieWindowProps {
@@ -345,8 +344,6 @@ export function JodieWindow({
                 entries={messages}
                 onClearRequested={onClearCurrentMode}
             />
-
-            <AIDisclaimer feature="chat" />
         </div>
     );
 
