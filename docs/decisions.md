@@ -6678,6 +6678,17 @@ procedi con l'implementazione»; 01:14 «S6 ok», «Apply ok» on A1 and A2 of t
   «Script», which would cast JjScript as a low-level programming language. Direction, not yet planned: one Refactoring
   may change a metamodel and, optionally, all its conforming models in the same artifact (coupled evolution), or be
   applied to a single model.
+- **R-JJD-15** (2026-10-24, unattended decisions of P-2026-10-24-2320/2340 ratified by Alfonso 2026-10-24 ~23:58
+  «merge nel tronco», evidence: measured, verified: none, reversible: trunk). **The refactoring page (mockup A of the
+  design canvas) ships in 3.2** with these choices: the right pane is a compact read-only class-box renderer, not an
+  embedded EditorV2 canvas (the canvas would mount `useJjomSync`, critical zone), and for an M1 target it shows the
+  metamodel with the M1 effects as chips only; plan and preview state are local to the tab, not the global
+  `scriptPreviewStore`; the planner fills `slotValues` for an M2 world only; the wavy underline marks unresolved names
+  with a column range, gutter dots mark every warned line; the editor width lives in
+  `localStorage['jjodel.refactoring.editorWidth']` (480..800, default 600); Jjodie's launcher moves to the right edge on
+  the Refactoring tab only; `.script-tab__target` and `.script-tab__model` stay for the rf1 probe. Log:
+  `docs/log-inbox/jjodie-ui-rfa.md`. Follow-up P-2026-10-25-0005: one Preview label, no empty editor gutter, launcher
+  aligned with the docked panel.
 
 ## R-RFB: refactoring operations that migrate instance data (decisions 2026-10-24)
 
