@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (codegen UI only; the dock is driven through its public API, no change to DockManager)
 Depends: P-2026-10-24-0318
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane codegen · 826a0f6bc · completed by P-2026-10-24-1630
 Corregge: P-2026-10-24-0003
 Request: Alfonso, 2026-10-24 15:08, in the project chat, after his visual check of `cg-generators` (kept locally as `request.md`)
 

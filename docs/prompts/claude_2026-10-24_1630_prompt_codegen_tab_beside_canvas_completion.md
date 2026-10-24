@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (completion of P-2026-10-24-1515, stopped at the context limit with its work uncommitted)
 Depends: P-2026-10-24-1515
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane codegen · f0c8c77f7 · bench 8/8 · crops in the lane folder
 Corregge: P-2026-10-24-1515
 Request: Alfonso, 2026-10-24 15:08, in the project chat (kept locally as `request.md`)
 
