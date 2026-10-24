@@ -105,6 +105,15 @@ export function compatibleModels<T extends TargetCandidate>(candidates: Readonly
     return [...candidates.filter(c => !c.isMetamodel), ...candidates.filter(c => c.isMetamodel)];
 }
 
+/**
+ * The Refactorings that may run on `artifact`, in project order: the menu of the artifact's tab
+ * (R-JJD-14). The same rule as `compatibleModels`, read from the artifact's side.
+ */
+export function refactoringsForArtifact<S extends Pick<DProjectScript, 'level' | 'metamodelId'>>(
+    scripts: ReadonlyArray<S>, artifact: Pick<TargetCandidate, 'id' | 'name' | 'isMetamodel' | 'metamodelId'>): S[] {
+    return scripts.filter(s => compatibleModels([artifact], readTarget(s)).length > 0);
+}
+
 /** The target as the Refactoring tab shows it under the title. */
 export function targetLabel(target: RefactoringTarget, metamodelName?: string): string {
     if (target.level === 'M2') return 'Metamodel';
