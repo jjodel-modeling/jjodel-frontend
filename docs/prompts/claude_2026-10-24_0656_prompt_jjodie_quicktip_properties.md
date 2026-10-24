@@ -5,7 +5,7 @@ Lane: full (small, R-JJD-11)
 Depends: P-2026-10-24-0240
 Chat: C-2026-10-24-0020
 Front: jjodie-ui
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjp-qt2 · abdcc0d92 · probe green (dock 36/36), tip clear of rail and dock
 Corregge: none
 Request: Alfonso, 2026-10-24 06:51, in the project chat («ok alle raccomandazioni» on the night digest)
 Model: claude-opus-5-5
