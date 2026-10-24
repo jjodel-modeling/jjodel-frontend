@@ -1,6 +1,6 @@
 # Code generation 3.3: empty state for a generator with no templates, and the range reveal crop
 
-Prompt-ID: P-2026-10-24-0310
+Prompt-ID: P-2026-10-24-0318
 Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (small fix in the generator tab's right pane, no critical-zone file)
@@ -20,7 +20,7 @@ Model and tier: as `lane-run` assigns.
 
 ## Lane discipline
 
-Every reply opens with `[P-2026-10-24-0310 · session <id>]`; every final message ends with
+Every reply opens with `[P-2026-10-24-0318 · session <id>]`; every final message ends with
 `Outcome: done | hard-stop | question | blocked`; every question carries `Recommended: <one line>`. Unattended
 (RC-21, RC-25) except the RC-26 list. Time limit: 45 minutes. No subagents, no background tasks. Commit as soon as
 the gates are green. One probe run per tool call. Never print a diff, a whole file or a whole log. Dev server:
@@ -43,7 +43,7 @@ error line `main 1:1 No template named 'main'` over an empty code view (G4 crop
    list); non-empty list with a missing root still reports the error (kills: the error hidden for every missing
    root).
 3. Probe: extend `scripts/probe/codegen-generator-tab.ts` with the empty generator case. Crops under
-   `~/.jjodel-lanes/P-2026-10-24-0310/crops/`: the empty generator's tab; and, on the default Turnstile generator, the
+   `~/.jjodel-lanes/P-2026-10-24-0318/crops/`: the empty generator's tab; and, on the default Turnstile generator, the
    editor right after an Alt+click on a model fragment of Preview, showing the producing template selected **and its
    range revealed and highlighted in the editor** (the G3 crop showed only the list selection). If the reveal does
    not happen, say so in the report and fix it within `TemplateEditorTab.tsx` if the map gives the range; if the
@@ -62,7 +62,7 @@ From `frontend/`: `npm run typecheck` exit 0; `npm run build`; `npx vitest run s
 
 ## Close
 
-`fix(codegen): empty state for a generator with no templates (P-2026-10-24-0310)` (and, if item 3 needed a fix, a
+`fix(codegen): empty state for a generator with no templates (P-2026-10-24-0318)` (and, if item 3 needed a fix, a
 second `fix(codegen)` commit), then the docs commit with the log entry and the `Status:` flip
 `eseguito 2026-10-24 · lane codegen · <fix sha> · <bench k/n> · crops in the lane folder`. `Outcome: done`.
 
