@@ -1117,6 +1117,63 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
 }
 
+/**
+ * Undo group (R-JJD-6): the deltas a user pushes between `beginUndoGroup` and `endUndoGroup` become one
+ * undo entry, so one undo reverts a whole script Apply. While the group is open every delta of that user is
+ * pushed as its own entry (no merge into an entry below the mark, no drop, no MAX_HISTORY shift); the end
+ * folds the entries since the mark with `composeUndoDeltas`. A nested begin only counts; an end without a
+ * begin, and a group that pushed fewer than two entries, leave the history as it is.
+ * The caller flushes the pending 300 ms COMMIT before calling end, or its deltas land after the group.
+ */
+let undoGroup: { depth: number; user: Pointer<DUser>; mark: number } | null = null;
+
+export function beginUndoGroup(user: Pointer<DUser> = DUser.current): void {
+    if (undoGroup) { undoGroup.depth++; return; }
+    undoGroup = { depth: 1, user, mark: statehistory[user]?.undoable.length ?? 0 };
+}
+
+export function endUndoGroup(): void {
+    if (!undoGroup || --undoGroup.depth > 0) return;
+    const { user, mark } = undoGroup;
+    undoGroup = null;
+    const history = statehistory[user];
+    if (!history) return;
+    const start = Math.min(mark, history.undoable.length);
+    if (history.undoable.length - start < 2) return;
+    const grouped = history.undoable.splice(start);
+    let merged: GObject = grouped[0];
+    for (let i = 1; i < grouped.length; i++) merged = composeUndoDeltas(merged, grouped[i]);
+    merged.timestamp = grouped[grouped.length - 1].timestamp;
+    for (const d of grouped) U.arrayRemoveAll(statehistory.all.undoable, d);
+    history.undoable.push(merged);
+    statehistory.all.undoable.push(merged);
+    while (history.undoable.length > MAX_HISTORY) history.undoable.shift();
+    while (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
+}
+
+/**
+ * One undo delta out of two consecutive ones: `older` restores S0 from S1, `newer` restores S1 from S2, the
+ * result restores S0 from S2. Per key the older value wins, unless both are nested deltas: then they compose.
+ * Not `U.objectMergeInPlace`: it is shallow (the second `idlookup` would be dropped whole) and its `??` takes
+ * a restored `undefined` or `null` for a missing key.
+ */
+function composeUndoDeltas(older: GObject, newer: GObject): GObject {
+    const own = (o: GObject, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+    const isObj = (v: unknown) => v !== null && typeof v === 'object';
+    const ret: GObject = {};
+    for (const k in newer) if (own(newer, k)) ret[k] = newer[k];
+    for (const k in older) {
+        if (!own(older, k)) continue;
+        ret[k] = own(newer, k) && isObj(older[k]) && isObj(newer[k]) ? composeUndoDeltas(older[k], newer[k]) : older[k];
+    }
+    if (Array.isArray(older) || Array.isArray(newer) || older.__jjObjDiffIsArr || newer.__jjObjDiffIsArr) {
+        ret.__jjObjDiffIsArr = true;
+        if ('length' in older) ret.length = older.length;
+        else if ('length' in newer) ret.length = newer.length;
+    }
+    return ret;
+}
+
 function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DState {
     let state: DState = oldState;
     let times: number = action.value;
@@ -1203,6 +1260,11 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
             if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();
+            if (undoGroup && undoGroup.user === action.sender) {
+                statehistory[action.sender].undoable.push(delta);
+                statehistory.all.undoable.push(delta);
+                return ret;
+            }
             let pastDelta = statehistory[action.sender].undoable[statehistory.all.undoable.length-1];
             const allowMerge = true; // switch for debugging
             let isRelevantChange = isRelevantChangeCheck(delta as GObject<DState>, pastDelta as GObject<DState>);

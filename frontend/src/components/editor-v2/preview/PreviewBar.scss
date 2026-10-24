@@ -32,6 +32,11 @@
         font-weight: 600;
     }
 
+    // Planned and real effects of an Apply differ (S4c): shown for a few seconds.
+    &__mismatch {
+        color: var(--color-warning-text);
+    }
+
     &__btn {
         margin-left: 4px;
         padding: 3px 10px;
