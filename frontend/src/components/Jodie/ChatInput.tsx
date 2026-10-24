@@ -6,13 +6,17 @@
 import React, { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, useCallback, useMemo } from 'react';
 import {
     ChatImage, ChatDocument, JodieConfig, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor,
-    ConsoleEntry, ChatMessage, CodeEntry,
+    ConsoleEntry, ChatMessage, CodeEntry, CONSOLE_MODES, CONSOLE_MODE_LABELS, AI, AIConfig,
 } from '../../types/jodie';
 import { AIEvents } from '../../events/registry';
 import { getJjelSuggestions, applyJjelSuggestion } from '../../jjel/autocomplete';
 import type { Suggestion } from '../../jjscript/autocomplete/types';
 import { isConsumerMode } from '../environment/consumerMode';
 import { CONSUMER_INPUT_PLACEHOLDER, consumerSlashCommand } from './consumerVoice';
+import { ProviderModelSelector } from '../common/ProviderModelSelector';
+import { AIDisclaimer } from '../common/AIDisclaimer';
+import { JjelLiveResult } from './JjelLiveResult';
+import type { JjelLiveSubmission } from './JjelLiveResult';
 import './ChatInput.scss';
 
 interface ChatInputProps {
@@ -29,7 +33,7 @@ interface ChatInputProps {
     onOpenSettings?: () => void;
     /** Active console mode (Jjodie / JjScript / JjEL). Drives placeholder, font, prompt glyph and submit behavior. */
     consoleMode: ConsoleMode;
-    /** Switch to a different mode (backtick shortcut, `/` meta-commands). */
+    /** Switch to a different mode (in-input mode selector, backtick shortcut, `/` meta-commands). */
     onConsoleModeChange: (m: ConsoleMode, via?: ConsoleModeSwitchVia) => void;
     /** Active flavor in JjEL mode (today: 'jjel'). */
     codeFlavor: CodeFlavor;
@@ -133,6 +137,8 @@ export function ChatInput({
     const isJjodie = consoleMode === 'jjodie';
     // #168 J7: the consumer's input has no mode prompt, no mode switch, and two commands only.
     const consumer = isConsumerMode();
+    // Full disclaimer sentence for the tooltip of the truncated meta line (same words as AIDisclaimer compact).
+    const disclaimerTitle = `${AI[AIConfig.getPreferred('chat')]?.name ?? 'AI'} can make mistakes. Verify important information.`;
     const [message, setMessage] = useState('');
     const [images, setImages] = useState<ChatImage[]>([]);
     const [documents, setDocuments] = useState<ChatDocument[]>([]);
@@ -154,6 +160,8 @@ export function ChatInput({
     // freshly-printed result entry when setMessage('') triggers the suggestion
     // effect with an empty/typo prefix that some providers still return matches for.
     const suppressUntilNextCharRef = useRef<boolean>(false);
+    // S3c: the last JjEL submit, re-evaluated by JjelLiveResult on selection changes.
+    const [liveSubmission, setLiveSubmission] = useState<JjelLiveSubmission | null>(null);
 
     // Filtered, in-session history for ↑/↓ navigation.
     // Chat: user messages only (assistant replies excluded). Code: same flavor only.
@@ -349,10 +357,10 @@ export function ChatInput({
         if (isCode) {
             if (!trimmed) return;
             onSubmitCode(trimmed);
-            setMessage('');
+            // S3c: the expression stays in the input and follows the canvas selection.
+            setLiveSubmission({ expression: trimmed, nonce: Date.now() });
             setHistoryIndex(-1);
             setSavedMessage('');
-            if (textareaRef.current) textareaRef.current.style.height = 'auto';
             // Regola A: close the autocomplete dropdown explicitly on submit and
             // reset its tracked state. Same reset shape as the mode/flavor effect
             // and acceptCompletion, so callers see a consistent post-submit state.
@@ -769,9 +777,38 @@ export function ChatInput({
                 </div>
             )}
 
+            {/* S3c: history and live result of the last expression, above the input. */}
+            {isCode && <JjelLiveResult submission={liveSubmission} />}
+
+            {/* S1b: the JjEL scope hint, right above the input (it left the header). */}
+            {isCode && (
+                <div className="jodie-code-scope jodie-code-scope--composer" title="Variables available in JjEL expressions">
+                    scope: self, model, classes
+                </div>
+            )}
+
             <div className="jodie-input-row">
                 <div className={`jodie-composer${isCode ? ' jodie-composer--code' : ''}`}>
-                    {!consumer && <span className="jodie-code-prompt" aria-hidden="true">{`${consoleMode}>`}</span>}
+                    {/* S1b: the mode selector sits inside the input, on its left. A native <select>
+                        laid transparently over the `<mode>>` glyph keeps keyboard and screen-reader
+                        access; same modes and same state as the old header switch.
+                        #168 J7: not in the consumer, who has natural language only. */}
+                    {!consumer && (
+                        <span className="jodie-mode-select" title="Console mode (Cmd+J / Ctrl+.)">
+                            <span className="jodie-code-prompt" aria-hidden="true">{`${consoleMode}>`}</span>
+                            <i className="bi bi-chevron-down jodie-mode-select__chevron" aria-hidden="true" />
+                            <select
+                                className="jodie-mode-select__control"
+                                aria-label="Console mode"
+                                value={consoleMode}
+                                onChange={(e) => onConsoleModeChange(e.target.value as ConsoleMode, 'pill')}
+                            >
+                                {CONSOLE_MODES.map(m => (
+                                    <option key={m} value={m}>{CONSOLE_MODE_LABELS[m]}</option>
+                                ))}
+                            </select>
+                        </span>
+                    )}
                     <textarea
                         ref={textareaRef}
                         className={`jodie-input${isCode ? ' jodie-input--code' : ''}`}
@@ -853,6 +890,19 @@ export function ChatInput({
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* S1b: one 11.5 px line under the input: model selector and AI disclaimer. The
+                disclaimer truncates in a narrow panel, its full text stays in the tooltip. */}
+            <div className="jodie-composer-meta">
+                <ProviderModelSelector
+                    feature="chat"
+                    compact
+                    onNavigateToSettings={onOpenSettings}
+                />
+                <span className="jodie-composer-meta__disclaimer" title={disclaimerTitle}>
+                    <AIDisclaimer feature="chat" compact />
+                </span>
             </div>
 
             {/* Hidden file input */}

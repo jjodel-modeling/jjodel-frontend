@@ -910,6 +910,8 @@ export class JodieConfig {
     providers: Dictionary<TAIProvider, ProviderConfig>;
     position?: { x: number; y: number };
     size?: { width: number; height: number };
+    /** Width in px of the docked panel (R-JJD-1). `position` and `size` belong to the retired floating window. */
+    dockWidth?: number;
     appVersion: string =  '1.0.0';
 
     constructor() {
@@ -1095,6 +1097,8 @@ export interface CodeEntry {
     warnings?: CodeWarning[];
     /** Raw JjEL value when ok, retained for the inline inspector. */
     rawValue?: unknown;
+    /** The evaluation hit its deadline (R-JJD-9): the error text renders muted. */
+    timedOut?: boolean;
 }
 
 /**

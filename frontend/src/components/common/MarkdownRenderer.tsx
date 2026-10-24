@@ -3,7 +3,7 @@
  * Renders Markdown content with full GFM support and syntax highlighting
  */
 
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useState, useCallback, useContext } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -11,6 +11,8 @@ import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ScriptBlock, isJjScriptCode, ScriptLineResult } from '../../jjscript';
 import { isConsumerMode } from '../environment/consumerMode';
 import { ConsumerProposal } from '../Jodie/ConsumerProposal';
+import { ScriptCard, ScriptCardContext } from '../Jodie/ScriptCard';
+import { isScriptCardBlock } from '../Jodie/scriptCardModel';
 import './MarkdownRenderer.scss';
 
 interface MarkdownRendererProps {
@@ -75,6 +77,8 @@ interface CodeBlockProps {
 const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute }) => {
     const [copied, setCopied] = useState(false);
     const [jjscriptMode, setJjscriptMode] = useState(false);
+    // S2: in a Jjodie reply with an M1 model in scope, a JjScript block is a collapsed card.
+    const scriptCardContext = useContext(ScriptCardContext);
 
     const handleCopy = useCallback(async () => {
         try {
@@ -105,8 +109,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
         return <ConsumerProposal code={code} onExecute={onJjScriptExecute} />;
     }
 
+    const asScriptCard = !!scriptCardContext && isScriptCardBlock(language, code, isJjScriptCode);
+
     // If in JjScript mode, render ScriptBlock with integrated close button
-    if (jjscriptMode) {
+    if (jjscriptMode && !asScriptCard) {
         return (
             <div className="md-jjscript-wrapper">
                 <ScriptBlock
@@ -119,8 +125,8 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
         );
     }
 
-    return (
-        <div className={`md-code-block ${isSingleLine ? 'md-code-block--single' : ''}`}>
+    const codeBlock = (
+        <div className={`md-code-block ${isSingleLine ? 'md-code-block--single' : ''}${showLineNumbers ? ' md-code-block--numbered' : ''}`}>
             {/* Header only for multi-line code */}
             {!isSingleLine && (
                 <div className="md-code-header">
@@ -130,7 +136,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
                     {!displayLanguage && <span />}
                     <div className="md-code-actions">
                         {/* JjScript run button - only shown if code looks like JjScript */}
-                        {couldBeJjScript && (
+                        {couldBeJjScript && !asScriptCard && (
                             <button
                                 className="md-code-jjscript"
                                 onClick={() => setJjscriptMode(true)}
@@ -168,6 +174,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
                 PreTag="div"
                 className="md-code-content"
                 showLineNumbers={showLineNumbers}
+                // One element per line, so a host can soft-wrap with a hanging indent
+                // (Jjodie chat, MarkdownMessage.css). Unstyled, the lines render as before.
+                wrapLines
+                lineProps={{ className: 'md-code-line' }}
                 lineNumberStyle={{
                     minWidth: '2.5em',
                     paddingRight: '1em',
@@ -179,6 +189,11 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
             </SyntaxHighlighter>
         </div>
     );
+
+    if (asScriptCard) {
+        return <ScriptCard code={code} context={scriptCardContext!}>{codeBlock}</ScriptCard>;
+    }
+    return codeBlock;
 };
 
 /**

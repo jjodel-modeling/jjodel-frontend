@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (new UI surface, executor semantics to discover)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui · Phase 1 stopped at the context ceiling, report by P-2026-10-24-0115; Phase 2 in the jjp-* lanes, merged in jjodie-panel
 Target release: 3.3 (not before the 3.2 freeze closes; no slice enters 3.2)
 Request: Alfonso, 2026-10-24 00:40, in the project chat: run with /lane auto and, after the discovery, go on with the implementation (design discussed in a Cowork chat, not on the repo)
 Model: claude-opus-5-5 (Phase 1 and Phase 2)

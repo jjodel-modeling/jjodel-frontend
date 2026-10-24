@@ -78,141 +78,113 @@
     }
 }
 
-.jodie-window.jodie-dragging,
 .jodie-window.jodie-resizing {
     user-select: none;
 }
 
-.jodie-window.jodie-dragging {
-    cursor: grabbing;
-    box-shadow: var(--shadow-2xl);
-}
-
-/* Fullscreen modifier: left-anchored, full viewport height. Drag/resize disabled. */
-.jodie-window--fullscreen {
-    border-radius: 0;
-    border-left: none;
-    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.12);
-}
-
-.jodie-window--fullscreen .jodie-header {
-    cursor: default;
-}
-
-.jodie-window--fullscreen .jodie-input-container {
-    border-radius: 0;
-}
-
 /* ========================================
-   Resize Handles - Base Style
+   Dock (R-JJD-1): a grid column of the project dashboard, or, where no
+   dashboard slot exists, a full-height column on the viewport's right edge.
    ======================================== */
 
-.jodie-resize-handle {
+.jodie-dock-slot {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+}
+
+.jodie-window--docked {
+    position: relative;
+    z-index: auto;
+    height: 100%;
+    border: none;
+    border-left: 1px solid #e2e8f0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.jodie-window--viewport {
+    top: var(--jj-appbar-height);
+    right: 0;
+    bottom: 0;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 0;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Enter/exit slide sideways, from the edge the column is attached to. */
+.jodie-window--docked.jodie-window--hidden,
+.jodie-window--viewport.jodie-window--hidden {
+    transform: translateX(8px);
+}
+
+.jodie-window--docked .jodie-input-container,
+.jodie-window--viewport .jodie-input-container {
+    border-radius: 0;
+}
+
+/* At dock widths the header's content is wider than the panel (506 px against 460,
+   measured by the S1a probe), which pushed the close button past the window edge.
+   The actions and the avatar never shrink, so close stays reachable; the title
+   column (name, provider selector) gives way first, until S1b moves the selector
+   and the mode switch out of the header. */
+.jodie-window--docked .jodie-header-right,
+.jodie-window--viewport .jodie-header-right,
+.jodie-window--docked .jodie-avatar,
+.jodie-window--viewport .jodie-avatar,
+.jodie-window--docked .jodie-mode-switch,
+.jodie-window--viewport .jodie-mode-switch {
+    flex-shrink: 0;
+}
+
+.jodie-window--docked .jodie-header-left,
+.jodie-window--viewport .jodie-header-left,
+.jodie-window--docked .jodie-title,
+.jodie-window--viewport .jodie-title {
+    min-width: 0;
+}
+
+.jodie-window--docked .jodie-title,
+.jodie-window--viewport .jodie-title {
+    overflow: hidden;
+}
+
+/* Vertical drag handle on the left edge; 6px hit area, 2px line on hover/drag. */
+.jodie-dock-handle {
     position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 6px;
     z-index: 10;
+    cursor: col-resize;
+    touch-action: none;
 }
 
-/* Corner Handles (larger hit area) */
-.jodie-resize-handle.nw,
-.jodie-resize-handle.ne,
-.jodie-resize-handle.sw,
-.jodie-resize-handle.se {
-    width: 20px;
-    height: 20px;
-}
-
-.jodie-resize-handle.nw {
-    top: 0;
-    left: 0;
-    cursor: nw-resize;
-    border-top-left-radius: var(--radius-lg);
-}
-
-.jodie-resize-handle.ne {
-    top: 0;
-    right: 0;
-    cursor: ne-resize;
-    border-top-right-radius: var(--radius-lg);
-}
-
-.jodie-resize-handle.sw {
-    bottom: 0;
-    left: 0;
-    cursor: sw-resize;
-    border-bottom-left-radius: var(--radius-lg);
-}
-
-.jodie-resize-handle.se {
-    bottom: 0;
-    right: 0;
-    cursor: se-resize;
-    border-bottom-right-radius: var(--radius-lg);
-}
-
-/* Visual indicator for SE corner */
-.jodie-resize-handle.se::before {
+.jodie-dock-handle::after {
     content: '';
     position: absolute;
-    bottom: 4px;
-    right: 4px;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid var(--color-border-secondary);
-    border-bottom: 2px solid var(--color-border-secondary);
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.jodie-window:hover .jodie-resize-handle.se::before {
-    opacity: 0.6;
-}
-
-/* Edge Handles */
-.jodie-resize-handle.n,
-.jodie-resize-handle.s {
-    left: 20px;
-    right: 20px;
-    height: 6px;
-}
-
-.jodie-resize-handle.e,
-.jodie-resize-handle.w {
-    top: 20px;
-    bottom: 20px;
-    width: 6px;
-}
-
-.jodie-resize-handle.n {
     top: 0;
-    cursor: n-resize;
-}
-
-.jodie-resize-handle.s {
     bottom: 0;
-    cursor: s-resize;
-}
-
-.jodie-resize-handle.e {
-    right: 0;
-    cursor: e-resize;
-}
-
-.jodie-resize-handle.w {
     left: 0;
-    cursor: w-resize;
+    width: 2px;
+    background: transparent;
+    transition: background 0.15s ease;
 }
 
-/* Hover effect for edge handles */
-.jodie-resize-handle.n:hover,
-.jodie-resize-handle.s:hover,
-.jodie-resize-handle.e:hover,
-.jodie-resize-handle.w:hover {
-    background: rgba(71, 85, 105, 0.1);
+.jodie-dock-handle:hover::after,
+.jodie-window.jodie-resizing .jodie-dock-handle::after {
+    background: rgba(71, 85, 105, 0.35);
 }
 
-/* Active state during resize */
-.jodie-window.jodie-resizing .jodie-resize-handle {
-    background: rgba(71, 85, 105, 0.15);
+.jodie-dock-handle:focus-visible {
+    outline: none;
+}
+
+.jodie-dock-handle:focus-visible::after {
+    background: #0ea5e9;
 }
 
 /* ========================================
@@ -226,7 +198,7 @@
     padding: 12px 16px;
     background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
-    cursor: grab;
+    cursor: default;
     user-select: none;
 }
 
@@ -393,6 +365,52 @@
 .jodie-close-btn:hover {
     background: rgba(239, 68, 68, 0.1);
     color: #dc2626;
+}
+
+/* S1b: overflow menu of the header (Reset and any action that is not new conversation or close) */
+.jodie-overflow {
+    position: relative;
+}
+
+.jodie-overflow-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 180px;
+    padding: 4px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    z-index: 20;
+}
+
+.jodie-overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #334155;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.jodie-overflow-item:hover,
+.jodie-overflow-item:focus-visible {
+    background: #f1f5f9;
+    outline: none;
+}
+
+.jodie-overflow-item i {
+    font-size: 14px;
+    color: #64748b;
 }
 
 /* ========================================
@@ -1957,6 +1975,7 @@
    ======================================== */
 
 /* Pill-style segmented control in the header */
+/* TODO: cleanup — S1b moved the mode switch into the composer (.jodie-mode-select, ChatInput.scss) */
 .jodie-mode-switch {
     display: inline-flex;
     align-items: center;
@@ -1996,6 +2015,7 @@
 }
 
 /* Sub-row shown only in Code mode (JjEL/JS toggle + scope indicator) */
+/* TODO: cleanup — S1b moved the scope hint above the input; no element carries this class now */
 .jodie-code-subrow {
     display: flex;
     align-items: center;
@@ -2110,23 +2130,27 @@
    CODE REPL ENTRIES (in ChatMessages history)
    ======================================== */
 
+/* A plain console line (P-2026-10-24-1610): no card, no field, no chip. The
+   `.jodie-messages` scope and !important beat the generic `.jodie-messages code`
+   box. The output starts where the expression starts: prompt 12px + gap 6px. */
 .jodie-code-entry {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 8px 12px;
-    margin: 4px 0;
-    border-radius: 8px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
     font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.5;
 }
 
-.jodie-code-entry--error {
-    background: rgba(239, 68, 68, 0.06);
-    border-color: rgba(239, 68, 68, 0.25);
+/* Consecutive entries: 8px apart (the list's gap is 16px). */
+.jodie-code-entry + .jodie-code-entry {
+    margin-top: -8px;
+}
+
+/* Hairline between an entry and the next message. */
+.jodie-code-entry:has(+ .jodie-message) {
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
 }
 
 .jodie-code-entry__row {
@@ -2137,63 +2161,59 @@
 }
 
 .jodie-code-entry__prompt {
+    width: 12px;
     color: #0ea5e9;
     font-weight: 600;
     flex-shrink: 0;
     user-select: none;
 }
 
+.jodie-messages .jodie-code-entry__input,
+.jodie-messages .jodie-code-entry__output {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    font-family: inherit;
+    font-size: 13px;
+    color: #0f172a !important;
+    white-space: pre-wrap;
+}
+
 .jodie-code-entry__input {
     flex: 1;
-    color: var(--color-text-primary, #0f172a);
-    background: transparent;
-    white-space: pre-wrap;
 }
 
 .jodie-code-entry__flavor {
     flex-shrink: 0;
-    padding: 1px 5px;
-    border-radius: 4px;
-    background: rgba(14, 165, 233, 0.08);
-    color: #0ea5e9;
-    font-size: 9px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    line-height: 1.2;
+    color: #94a3b8;
+    font-size: 11px;
 }
 
-.jodie-code-entry__output-row {
-    padding-left: 14px;
+.jodie-code-entry__output-row,
+.jodie-code-entry__warnings {
+    padding-left: 18px;
 }
 
-.jodie-code-entry__output {
-    color: var(--color-text-secondary, #64748b);
-    background: transparent;
-    white-space: pre-wrap;
+.jodie-messages .jodie-code-entry__output-row--error .jodie-code-entry__output {
+    color: #b91c1c !important;
 }
 
-.jodie-code-entry__output-row--error .jodie-code-entry__output {
-    color: #b91c1c;
-}
-
-.jodie-code-entry__meta {
-    margin-top: 2px;
-    padding-left: 14px;
-    opacity: 0.7;
+/* Timed out (R-JJD-9) is muted text, as in the live result, not an error. */
+.jodie-messages .jodie-code-entry__output-row--timed-out .jodie-code-entry__output {
+    color: #94a3b8 !important;
 }
 
 /* ========================================
    CODE ENTRY WARNING BLOCK
    Surfaces silent-null events (undefined identifiers) from the JjEL evaluator.
-   Visual: amber pill, 11px, aligned with the output row's left padding.
+   Visual: amber text, 11px, unboxed, aligned with the output text.
    ======================================== */
 
 .jodie-code-entry__warnings {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding-left: 14px;
     margin-top: 2px;
 }
 
@@ -2201,9 +2221,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: #fef3c7; /* amber-100 */
     color: #78350f;      /* amber-900 */
     font-size: 11px;
     line-height: 1.4;
@@ -2216,13 +2233,13 @@
     font-size: 12px;
 }
 
-.jodie-code-entry__warning code {
+.jodie-messages .jodie-code-entry__warning code {
     font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
     font-size: 11px;
-    background: rgba(120, 53, 15, 0.08);
-    padding: 0 4px;
-    border-radius: 3px;
-    color: #78350f;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #78350f !important;
 }
 
 /* ========================================

@@ -6,7 +6,9 @@
 .notification-widget {
   position: fixed;
   bottom: 60px;
-  right: 24px;
+  // Clear of the docked Jjodie and of the Properties rail, which sits flush with the
+  // dock's left edge (R-JJD-7); --jj-rail-width is 0px when the rail is hidden.
+  right: calc(24px + var(--jj-jodie-dock-width, 0px) + var(--jj-rail-width, 0px));
   width: 320px;
   background: #ffffff;
   border-radius: 12px;
