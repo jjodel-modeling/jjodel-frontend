@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (verification only, no product change)
 Depends: P-2026-10-24-0350
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjp-fin · 781310074 · T1 closed by P-2026-10-24-0505 (99702d7ea)
 Corregge: none
 Request: Alfonso, 2026-10-24 00:40, in the project chat (unattended run)
 Model: claude-opus-5-5

@@ -110,6 +110,10 @@ await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
 const page = await ctx.newPage();
 const errors: string[] = [];
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+// Console errors by phase (P-2026-10-24-0505): measured, not checked, to tell a megamodel-open error with no script from one with scripts.
+let phase = 'setup';
+const consoleErrors: Array<{ phase: string; text: string }> = [];
+page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push({ phase, text: m.text().slice(0, 300) }); });
 const result: any = { url: URL };
 
 const project = await importScene(page, 'scene_1_DemoPEST.jjodel');
@@ -125,8 +129,11 @@ meas('sections before', before.map(s => `${s.label}:${s.rows.length}`));
 const scriptsIdx = before.findIndex(s => s.label === 'Scripts');
 const transIdx = before.findIndex(s => s.label === 'Transforms');
 check('SCRIPTS is listed right after Transforms, empty', scriptsIdx >= 0 && scriptsIdx === transIdx + 1 && before[scriptsIdx].rows.length === 0, { scriptsIdx, transIdx });
+phase = 'megamodel-before';
 const mmBefore = await readMegamodel(page);
+phase = 'scripts';
 meas('megamodel before', { cards: mmBefore.cards.length, edges: mmBefore.edges });
+meas('megamodel before, cards', mmBefore.cards);
 
 if (project && target) {
     await openModel(page, target.id);
@@ -196,8 +203,11 @@ if (project && target) {
     check('the other sections are unchanged at the end', JSON.stringify(others(secs)) === JSON.stringify(others(before)), { before: others(before), after: others(secs) });
 
     // Megamodel view: two script nodes, the existing nodes where they were, one more edge.
+    phase = 'megamodel-after';
     const mmAfter = await readMegamodel(page);
+    phase = 'end';
     meas('megamodel after', { cards: mmAfter.cards.length, edges: mmAfter.edges });
+    meas('megamodel after, cards', mmAfter.cards);
     const scriptCards = mmAfter.cards.filter((c: any) => c.type === 'JjScript file');
     check('the megamodel lists both scripts as nodes', scriptCards.length === 2 && scriptCards.some((c: any) => c.name === 'probe one.jjs') && scriptCards.some((c: any) => c.name === 'renamed.jjs'), scriptCards);
     const moved = mmBefore.cards.filter((b: any) => {
@@ -211,6 +221,7 @@ if (project && target) {
 }
 
 check('no page errors', errors.length === 0, errors.slice(0, 5));
+meas('console errors by phase', consoleErrors.slice(0, 10));
 result.failures = failures;
 writeFileSync(join(OUT, 's6b_probe.json'), JSON.stringify(result, null, 2));
 await browser.close();

@@ -7,7 +7,7 @@
  * model's own metaclasses and writes one unknown feature. Checked from the DOM: the card replaces the open block (no
  * Run button); status, name and line count; the chips equal the planner's creates per metaclass and reference writes
  * per feature, computed here from `planEffects` over `buildPlanWorld` on the open model; one amber line with the count
- * and the first warning; Fix warnings enabled, Edit script and Open as file disabled with `Coming in this release`; the
+ * and the first warning; Fix warnings enabled, Edit script and Open as file enabled with their S5 titles (P-2026-10-24-0505); the
  * canvas preview bar showing the same N as the chips and N ghost nodes; `Show script` revealing the code; a TypeScript
  * block and a jjscript block in a reply without an M1 scope unchanged (Run still there); no console errors.
  *
@@ -232,7 +232,8 @@ if (target) {
     check('amber line is one line, truncated with an ellipsis, amber', c.warnOneLine === true && c.warnEllipsis === 'ellipsis' && c.warnNowrap === 'nowrap' && c.warnColor === 'rgb(180, 83, 9)', { one: c.warnOneLine, e: c.warnEllipsis, ws: c.warnNowrap, col: c.warnColor, icon: c.warnIconColor });
     const act = Object.fromEntries((c.actions || []).map((a: any) => [a.text, a]));
     check('Fix warnings enabled', act['Fix warnings'] && !act['Fix warnings'].disabled, act['Fix warnings']);
-    check('Edit script and Open as file disabled, tooltip Coming in this release', ['Edit script', 'Open as file'].every((k) => act[k]?.disabled && act[k]?.title === 'Coming in this release'), [act['Edit script'], act['Open as file']]);
+    const wantActTitles: Record<string, string> = { 'Edit script': 'Edit the script, with a live preview', 'Open as file': 'Store the script as a project file and open it' };
+    check('Edit script and Open as file enabled, with their S5 titles', Object.keys(wantActTitles).every((k) => act[k] && !act[k].disabled && act[k].title === wantActTitles[k]), [act['Edit script'], act['Open as file']]);
     check('Show script collapsed by default', c.disclosure === 'Show script' && c.expanded === 'false' && !c.codeShown, { d: c.disclosure, e: c.expanded, s: c.codeShown });
 
     const others: any = await page.evaluate(`(() => {
