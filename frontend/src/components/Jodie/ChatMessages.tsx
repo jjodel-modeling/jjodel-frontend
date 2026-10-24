@@ -211,7 +211,6 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
                                 content={message.content}
                                 isUser={isUser}
                                 onJjScriptExecute={onJjScriptExecute ? executeInScope : undefined}
-                                showSourceToggle={!consumer}
                             />
                         </ScriptCardContext.Provider>
                     </div>
@@ -275,6 +274,12 @@ function AmbiguousInstanceWarning({ warning }: { warning: CodeWarning }): JSX.El
     );
 }
 
+/** Flavor as plain text on the console entry's input row. */
+const CODE_FLAVOR_LABELS: Record<CodeEntry['flavor'], string> = {
+    jjel: 'JjEL',
+    js: 'JS',
+};
+
 function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?: (entry: CodeEntry) => void }): JSX.Element {
     // A timed-out evaluation (R-JJD-9) is muted text, not an error.
     const isTimedOut = !entry.output.ok && entry.timedOut === true;
@@ -286,11 +291,11 @@ function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?:
     const inspectorKind = entry.output.ok ? detectKind(entry.rawValue) : null;
     const [inspectorOpen, setInspectorOpen] = useState(false);
     return (
-        <div className={`jodie-code-entry${isError ? ' jodie-code-entry--error' : ''}`}>
+        <div className={`jodie-code-entry${isError ? ' jodie-code-entry--error' : ''}`} title={formatTimestamp(entry.timestamp)}>
             <div className="jodie-code-entry__row jodie-code-entry__input-row">
                 <span className="jodie-code-entry__prompt" aria-hidden="true">›</span>
                 <code className="jodie-code-entry__input">{entry.input}</code>
-                <span className="jodie-code-entry__flavor">{entry.flavor}</span>
+                <span className="jodie-code-entry__flavor">{CODE_FLAVOR_LABELS[entry.flavor] ?? entry.flavor}</span>
             </div>
             <div className={`jodie-code-entry__row jodie-code-entry__output-row${isError ? ' jodie-code-entry__output-row--error' : ''}${isTimedOut ? ' jodie-code-entry__output-row--timed-out' : ''}`}>
                 <code className="jodie-code-entry__output">{outputText}</code>
@@ -340,9 +345,6 @@ function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?:
                     <span>Ask Jjodie about this</span>
                 </button>
             )}
-            <div className="jodie-message-meta jodie-code-entry__meta">
-                <span className="jodie-message-time">{formatTimestamp(entry.timestamp)}</span>
-            </div>
         </div>
     );
 }
