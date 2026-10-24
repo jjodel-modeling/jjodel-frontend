@@ -125,6 +125,32 @@
     border-radius: 0;
 }
 
+/* At dock widths the header's content is wider than the panel (506 px against 460,
+   measured by the S1a probe), which pushed the close button past the window edge.
+   The actions and the avatar never shrink, so close stays reachable; the title
+   column (name, provider selector) gives way first, until S1b moves the selector
+   and the mode switch out of the header. */
+.jodie-window--docked .jodie-header-right,
+.jodie-window--viewport .jodie-header-right,
+.jodie-window--docked .jodie-avatar,
+.jodie-window--viewport .jodie-avatar,
+.jodie-window--docked .jodie-mode-switch,
+.jodie-window--viewport .jodie-mode-switch {
+    flex-shrink: 0;
+}
+
+.jodie-window--docked .jodie-header-left,
+.jodie-window--viewport .jodie-header-left,
+.jodie-window--docked .jodie-title,
+.jodie-window--viewport .jodie-title {
+    min-width: 0;
+}
+
+.jodie-window--docked .jodie-title,
+.jodie-window--viewport .jodie-title {
+    overflow: hidden;
+}
+
 /* Vertical drag handle on the left edge; 6px hit area, 2px line on hover/drag. */
 .jodie-dock-handle {
     position: absolute;
