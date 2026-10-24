@@ -2,7 +2,8 @@
  * ScriptCard — a generated JjScript in a Jjodie reply, collapsed (S2, R-JJD-2).
  *
  * Status line, name and line count, effect chips and one amber warning line, all from the
- * read-only planner (`planEffects` over `buildPlanWorld`) against the reply's M1 model. The card
+ * read-only planner (`planEffects` over `buildPlanWorld`) against the reply's M1 model, or its
+ * metamodel for an M2 reply (P-2026-10-24-1600: the chips read the `M2Kind` metaclasses). The card
  * drives the ghost preview through `SCRIPT_PREVIEW_REQUEST`: on mount for the newest card of the
  * conversation, on click for any card. Apply stays on the canvas bar; the card reads `applied`
  * when the preview of its script goes from applying to cleared. `Edit script` opens the script in
@@ -10,8 +11,8 @@
  * `Open as file` links the card to the file it stores; a card of a later reply that targets that
  * file shows `Update file`, a diff of the file against its script with Accept and Reject (S6c).
  *
- * `ScriptCardContext` is set by the Jjodie message bubble: without it (other Markdown hosts, an
- * M2 reply, no model in scope) a JjScript block keeps the open code block and its Run button.
+ * `ScriptCardContext` is set by the Jjodie message bubble: without it (other Markdown hosts, no
+ * model or metamodel in scope) a JjScript block keeps the open code block and its Run button.
  */
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useSelector } from 'react-redux';
@@ -41,7 +42,7 @@ import {
 import './ScriptCard.scss';
 
 export interface ScriptCardContextValue {
-    /** The M1 model the reply was written against. */
+    /** The M1 model, or the M2 metamodel, the reply was written against. */
     modelId: string;
     /** The reply's message id: keys the one automatic preview per card. */
     messageId: string;

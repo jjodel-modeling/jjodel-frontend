@@ -14,13 +14,17 @@
  *    alike (R-JS-10); the name by the `makeDrawReadCtx` rule; `root` when its father is the
  *    model; `container` when its father is a `DValue`; reference slots by feature, ids only,
  *    holes dropped.
+ *  - m2 (P-2026-10-24-1520): every package, class, enum, feature, literal and parameter whose
+ *    `father` chain ends at the metamodel (the open one, or the one the M1 model conforms to),
+ *    with its father, `extends`, `type`, containment and upper bound; `level` is the open editor's.
+ *    A metamodel is a `DModel` with `isMetamodel`; its world has no M1 elements.
  *
  * Read-only: nothing here writes, dispatches or allocates in the store.
  */
 
 import { classAncestry, makeDrawReadCtx } from '../../components/editor-v2/viewpoint/ir/irReadCtx';
 import { modelIdOfObject } from '../../components/abstract/tabs/instanceManagerModel';
-import type { PlanAttribute, PlanClass, PlanElement, PlanReference, PlanWorld } from './effectsPlanner';
+import type { M2Kind, PlanAttribute, PlanClass, PlanElement, PlanM2Element, PlanMetamodel, PlanReference, PlanWorld } from './effectsPlanner';
 
 type Idlookup = Record<string, any>;
 
@@ -64,12 +68,58 @@ function readClass(idlookup: Idlookup, classId: string): PlanClass {
     };
 }
 
-/** The `PlanWorld` of the M1 model `modelId`; empty when it is not a model with a metamodel. */
+const M2_KINDS: Record<string, M2Kind> = {
+    DPackage: 'Package', DClass: 'Class', DEnumerator: 'Enumeration', DAttribute: 'Attribute',
+    DReference: 'Reference', DOperation: 'Operation', DEnumLiteral: 'Literal', DParameter: 'Parameter',
+};
+
+/** The elements of the metamodel `metamodelId`, by their `father` chain. */
+function readMetamodel(idlookup: Idlookup, metamodelId: string): PlanMetamodel {
+    const mm = idlookup[metamodelId];
+    const elements: PlanM2Element[] = [];
+    for (const id in idlookup) {
+        const o = idlookup[id];
+        const kind = o ? M2_KINDS[o.className] : undefined;
+        if (!kind || typeof o.name !== 'string' || modelIdOfObject(idlookup, id) !== metamodelId) continue;
+        const e: PlanM2Element = { id, name: o.name, kind, father: typeof o.father === 'string' ? o.father : null };
+        if (kind === 'Class') {
+            e.abstract = !!o.abstract;
+            if (o.interface) e.interface = true;
+            e.extends = ids(o.extends);
+        }
+        if (kind === 'Attribute' || kind === 'Reference' || kind === 'Operation' || kind === 'Parameter') {
+            e.type = typeof o.type === 'string' ? o.type : null;
+            e.upper = upperOf(o);
+        }
+        if (kind === 'Reference') e.containment = !!(o.composition || o.aggregation);
+        elements.push(e);
+    }
+    const firstPackage = ids(mm?.packages).find((p) => idlookup[p]?.className === 'DPackage')
+        ?? elements.find((e) => e.kind === 'Package' && e.father === metamodelId)?.id;
+    return { id: metamodelId, name: typeof mm?.name === 'string' ? mm.name : '', defaultParent: firstPackage ?? metamodelId, elements };
+}
+
+/**
+ * The `PlanWorld` of the model `modelId`: an M1 model with its metamodel, or a metamodel (M2,
+ * no M1 elements); empty when it is neither.
+ */
 export function buildPlanWorld(idlookup: Idlookup, modelId: string): PlanWorld {
     const world: PlanWorld = { classes: {}, elements: [] };
     const model = idlookup?.[modelId];
+    if (model?.className === 'DModel' && model.isMetamodel === true) {
+        for (const id in idlookup) {
+            const o = idlookup[id];
+            if (o?.className !== 'DClass' || !o.name || world.classes[o.name] || modelIdOfObject(idlookup, id) !== modelId) continue;
+            world.classes[o.name] = readClass(idlookup, id);
+        }
+        world.level = 'M2';
+        world.m2 = readMetamodel(idlookup, modelId);
+        return world;
+    }
     const metamodelId = model?.instanceof;
     if (model?.className !== 'DModel' || typeof metamodelId !== 'string') return world;
+    world.level = 'M1';
+    world.m2 = readMetamodel(idlookup, metamodelId);
 
     const names = makeDrawReadCtx(idlookup);
     for (const id in idlookup) {

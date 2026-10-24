@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (extends the planner beyond the M1 subset)
 Depends: P-2026-10-24-1350
-Status: da eseguire
+Status: non completato 2026-10-24 · lane jjp-m2 · context ceiling (AM-8) before the first test run, wip 4ad31c758 · continued by P-2026-10-24-1600
 Corregge: none
 Request: Alfonso, 2026-10-24 15:15, in the project chat («chiudiamo tutto senza aspettare la 3.2», then «Dentro la 3.2»)
 Model: claude-opus-5-5

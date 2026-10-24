@@ -10,6 +10,7 @@ import { planEffects, type PlanWorld } from '../../../../jjscript/executor/effec
 import {
     PREVIEW_ID_PREFIX,
     PREVIEW_NODE_HEIGHT,
+    PREVIEW_ROW_HEIGHT,
     appendPreview,
     buildPreviewElements,
     drawnNodes,
@@ -229,5 +230,84 @@ describe('scriptPreviewStore', () => {
         expect(isPreviewStale(p, gone)).toBe(true);
         setScriptPreviewApplying(true);
         expect(isPreviewStale(getScriptPreview()!, renamed)).toBe(false);
+    });
+});
+
+/** A metamodel with a package, a class `Person` and an enum `Color`, drawn as two class/enum nodes. */
+function m2world(): PlanWorld {
+    return {
+        level: 'M2',
+        classes: {},
+        elements: [],
+        m2: {
+            id: 'mm', name: 'MM', defaultParent: 'pkg',
+            elements: [
+                { id: 'pkg', name: 'mmpkg', kind: 'Package', father: 'mm' },
+                { id: 'cPerson', name: 'Person', kind: 'Class', father: 'pkg', abstract: false, extends: [] },
+                { id: 'eColor', name: 'Color', kind: 'Enumeration', father: 'pkg' },
+            ],
+        },
+    };
+}
+const m2drawn: DrawnNode[] = [
+    { nodeId: 'vPerson', elementId: 'cPerson', x: 0, y: 0, width: 200, height: 100, nested: false },
+    { nodeId: 'vColor', elementId: 'eColor', x: 0, y: 200, width: 200, height: 80, nested: false },
+];
+
+describe('buildPreviewElements on M2 (P-2026-10-24-1600)', () => {
+    const script = [
+        'create class Animal',
+        'create class Dog extends Animal',
+        'create attribute legs in Dog type EInt',
+        'create reference owner in Dog type Person',
+        'create enumeration Size',
+        'create literal SMALL in Size',
+        'create attribute nick in Person',
+        'create containment pets in Person type Dog',
+    ].join('\n');
+
+    it('a ghost node per planned class and enumeration, with its planned rows, in a column right of the drawn nodes', async () => {
+        const plan = await planEffects(script, m2world());
+        expect(plan.errors).toEqual([]);
+        const { nodes } = buildPreviewElements(plan, m2world(), m2drawn);
+        const byLabel = nodes.map((n) => (n.data as any).label);
+        expect(byLabel).toEqual([
+            'class Animal',
+            'class Dog\nlegs : EInt\nowner \u2192 Person',
+            'enumeration Size\nSMALL',
+            '+ nick : EString\n+ \u25C6 pets \u2192 Dog',
+        ]);
+        expect(nodes.every((n) => isPreviewId(n.id) && n.position.x === 280)).toBe(true);
+        expect(nodes[1].height).toBe(PREVIEW_NODE_HEIGHT + 2 * PREVIEW_ROW_HEIGHT);
+        expect(nodes[1].position.y).toBe(nodes[0].position.y + PREVIEW_NODE_HEIGHT + 24);
+        for (const n of nodes) expect(n).toMatchObject({ draggable: false, selectable: false, className: 'jj-preview-node', style: { whiteSpace: 'pre-line' } });
+    });
+
+    it('dashed ghost edges for the rows of an existing class, the references and the generalizations', async () => {
+        const plan = await planEffects(script, m2world());
+        const { edges } = buildPreviewElements(plan, m2world(), m2drawn);
+        expect(edges.map((e) => [e.source, e.target, e.label, e.className])).toEqual([
+            [`${PREVIEW_ID_PREFIX}rows:cPerson`, 'vPerson', '', 'jj-preview-edge'],
+            [`${PREVIEW_ID_PREFIX}planned:2`, 'vPerson', 'owner', 'jj-preview-edge'],
+            ['vPerson', `${PREVIEW_ID_PREFIX}planned:2`, 'pets', 'jj-preview-edge jj-preview-edge--containment'],
+            [`${PREVIEW_ID_PREFIX}planned:2`, `${PREVIEW_ID_PREFIX}planned:1`, 'extends', 'jj-preview-edge'],
+        ]);
+    });
+
+    it('a warned line marks the node that holds the row', async () => {
+        const text = 'create class Dog\ncreate reference owner in Dog type Ghost\ncreate attribute a in Person type Nope';
+        const plan = await planEffects(text, m2world());
+        expect(plan.warnings.map((w) => w.line)).toEqual([2, 3]);
+        const { nodes } = buildPreviewElements(plan, m2world(), m2drawn, text);
+        expect(nodes.map((n) => n.className)).toEqual(['jj-preview-node jj-preview-node--warning']);
+        // No row was planned into Person: no rows node to mark; without the script, no marker.
+        expect(buildPreviewElements(plan, m2world(), m2drawn).nodes.map((n) => n.className)).toEqual(['jj-preview-node']);
+    });
+
+    it('an M1 plan of a mixed script draws only its M1 creations', async () => {
+        const plan = await planEffects('create class Pet\ncreate instance of State "A"', world());
+        expect(plan.created.length).toBe(2);
+        const { nodes } = buildPreviewElements(plan, world(), drawn);
+        expect(nodes.map((n) => (n.data as any).label)).toEqual(['A : State']);
     });
 });
