@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (implementation S6a, core field authorised by R-JJD-5)
 Depends: P-2026-10-24-0115
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui-s6a · code 57688ba2e, 15646f6a5 · gates green · probe 13/13 · done
 Corregge: none
 Request: Alfonso, 2026-10-24 01:14, in the project chat («S6 ok»: optional DProject.scripts, no migration)
 Model: claude-opus-5-5
