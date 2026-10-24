@@ -3,11 +3,13 @@
  * Docked chat panel (R-JJD-1): a grid column of the project dashboard, resized from its left edge
  */
 
-import React, { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
+import { ScriptEditorView } from './ScriptEditorView';
+import { closeScriptEditor, getScriptEditorTarget, subscribeScriptEditor } from './scriptEditorModel';
 import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from '../../types/jodie';
 import { AIEvents, JjScriptEvents } from '../../events/registry';
 
@@ -141,8 +143,23 @@ export function JodieWindow({
     const [isAlive, setIsAlive] = useState<boolean>(() => JodieConfig.hasEnabledProviders());
     const [isAnimating, setIsAnimating] = useState(false);
     const slot = useSyncExternalStore(subscribeDockSlot, getDockSlot);
+    const scriptEditor = useSyncExternalStore(subscribeScriptEditor, getScriptEditorTarget);
 
     const windowRef = useRef<HTMLDivElement>(null);
+    // Scroll of the conversation when the script editor opened (S5), restored on `Chat`. Read by a
+    // store listener, which runs in the click handler, before the conversation is hidden.
+    const chatScrollRef = useRef<number | null>(null);
+    useEffect(() => subscribeScriptEditor(() => {
+        if (getScriptEditorTarget() && chatScrollRef.current === null) {
+            chatScrollRef.current = windowRef.current?.querySelector<HTMLElement>('.jodie-messages')?.scrollTop ?? null;
+        }
+    }), []);
+    useLayoutEffect(() => {
+        if (scriptEditor || chatScrollRef.current === null) return;
+        const list = windowRef.current?.querySelector<HTMLElement>('.jodie-messages');
+        if (list) list.scrollTop = chatScrollRef.current;
+        chatScrollRef.current = null;
+    }, [scriptEditor]);
     const resizeStart = useRef<{ x: number; width: number }>({ x: 0, width: 0 });
     const dockWidthRef = useRef<number>(dockWidth);
     dockWidthRef.current = dockWidth;
@@ -314,6 +331,9 @@ export function JodieWindow({
                 </div>
             )}
 
+            {scriptEditor && <ScriptEditorView key={scriptEditor.key} target={scriptEditor} onBack={closeScriptEditor} />}
+
+            <div className={`jodie-conversation${scriptEditor ? ' jodie-conversation--hidden' : ''}`}>
             <ChatMessages
                 messages={messages}
                 isWaiting={isWaiting}
@@ -344,6 +364,7 @@ export function JodieWindow({
                 entries={messages}
                 onClearRequested={onClearCurrentMode}
             />
+            </div>
         </div>
     );
 

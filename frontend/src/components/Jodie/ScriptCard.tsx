@@ -5,7 +5,8 @@
  * read-only planner (`planEffects` over `buildPlanWorld`) against the reply's M1 model. The card
  * drives the ghost preview through `SCRIPT_PREVIEW_REQUEST`: on mount for the newest card of the
  * conversation, on click for any card. Apply stays on the canvas bar; the card reads `applied`
- * when the preview of its script goes from applying to cleared.
+ * when the preview of its script goes from applying to cleared. `Edit script` opens the script in
+ * the panel's editor (S5), whose edited text counts as the card's own for the preview and Apply.
  *
  * `ScriptCardContext` is set by the Jjodie message bubble: without it (other Markdown hosts, an
  * M2 reply, no model in scope) a JjScript block keeps the open code block and its Run button.
@@ -16,6 +17,8 @@ import { buildPlanWorld } from '../../jjscript/executor/planWorld';
 import { getScriptPreview, subscribeScriptPreview } from '../editor-v2/preview/scriptPreviewStore';
 import { JjodelEvents } from '../../events/registry';
 import { store } from '../../joiner';
+import { openScriptAsFile } from '../scripts/scriptFiles';
+import { editedScript, getScriptEditorVersion, openScriptEditor, subscribeScriptEditor } from './scriptEditorModel';
 import {
     fixWarningsRequest,
     scriptCardChips,
@@ -46,8 +49,6 @@ export interface ScriptCardProps {
     children: React.ReactNode;
 }
 
-const COMING = 'Coming in this release';
-
 // Per session, not per mount: the panel remounts its messages when it closes and reopens, and an
 // applied or already previewed card must not preview again by itself.
 const autoPreviewed = new Set<string>();
@@ -66,7 +67,10 @@ export function ScriptCard({ code, context, children }: ScriptCardProps): JSX.El
     const [open, setOpen] = useState(false);
 
     const preview = useSyncExternalStore(subscribeScriptPreview, getScriptPreview);
-    const mine = !!preview && preview.modelId === modelId && preview.script === code;
+    // The card's script, as generated or as edited in the script editor (S5).
+    useSyncExternalStore(subscribeScriptEditor, getScriptEditorVersion);
+    const edited = editedScript(key, code);
+    const mine = !!preview && preview.modelId === modelId && (preview.script === code || preview.script === edited);
 
     // Applied: the preview of this script was applying, then went away.
     const sawApplying = useRef(false);
@@ -111,6 +115,10 @@ export function ScriptCard({ code, context, children }: ScriptCardProps): JSX.El
     const onFix = useCallback(() => {
         if (onFollowUp && warnings.length > 0) onFollowUp(fixWarningsRequest(code, warnings));
     }, [onFollowUp, code, warnings]);
+    const onEdit = useCallback(() => {
+        openScriptEditor({ key, generated: code, modelId, name, onFollowUp });
+    }, [key, code, modelId, name, onFollowUp]);
+    const onOpenAsFile = useCallback(() => { openScriptAsFile(code, name, modelId); }, [code, name, modelId]);
 
     const statusText =
         status.kind === 'planning' ? 'Planning…'
@@ -164,8 +172,12 @@ export function ScriptCard({ code, context, children }: ScriptCardProps): JSX.El
                 >
                     Fix warnings
                 </button>
-                <button type="button" className="jj-script-card__action" disabled title={COMING}>Edit script</button>
-                <button type="button" className="jj-script-card__action" disabled title={COMING}>Open as file</button>
+                <button type="button" className="jj-script-card__action" onClick={onEdit} title="Edit the script, with a live preview">
+                    Edit script
+                </button>
+                <button type="button" className="jj-script-card__action" onClick={onOpenAsFile} title="Store the script as a project file and open it">
+                    Open as file
+                </button>
                 <button
                     type="button"
                     className="jj-script-card__disclosure"
