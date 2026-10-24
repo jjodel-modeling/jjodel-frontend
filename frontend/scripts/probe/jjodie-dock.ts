@@ -13,13 +13,16 @@
  *   - the canvas (`.react-flow` of the M1 pane) is narrower by the dock's width with Jjodie open;
  *   - the Properties rail's right edge equals the dock's left edge, and with Jjodie closed the viewport's right edge;
  *   - no visible element with `position: fixed` outside the dock overlaps the dock's box;
+ *   - the Quick tip (`.notification-widget`, its tips API stubbed with one tip) intersects neither the rail nor the dock
+ *     with both shown (P-2026-10-24-0656);
  *   - no fullscreen or maximize button in the window, and every header button inside the window's box;
  *   - closed: the window unmounts, the FAB is shown, the slot is 0 px wide, the body variable is back to 0px, and the
  *     FAB opens the window again;
  *   - no console or page error from the moment Jjodie is first opened (errors while the project loads are listed, not
  *     judged: they are not this slice's).
  *
- * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0210/ (JJD_CROPS): jjodie_open_rail.png, jjodie_closed.png.
+ * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0210/ (JJD_CROPS): jjodie_open_rail.png, jjodie_closed.png,
+ * quicktip_rail_dock.png.
  *
  * Run:  PROBE_URL=http://localhost:3012 node --experimental-strip-types frontend/scripts/probe/jjodie-dock.ts
  * Env:  JJD_OUT    JSON output (default frontend/scripts/smoke/_tmp_jjodie-dock.json, gitignored)
@@ -194,6 +197,11 @@ try {
     const ctx = await browser.newContext({ viewport: VIEWPORT });
     await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
     await seed(ctx, true);
+    // The Quick tip reads its posts from a remote worker: one stubbed tip makes it show on every run.
+    await ctx.route('https://jjodel-notifications.alfonso99.workers.dev/**', (route) => route.fulfill({
+        status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify({ posts: [{ id: 'probe-tip', category: 'tip', message: 'Probe tip: the Quick tip clears the rail and the dock.' }] }),
+    }));
     const page = await ctx.newPage();
     page.on('pageerror', (e: Error) => (phase === 'load' ? loadErrors : jodieErrors).push('pageerror: ' + e.message.slice(0, 200)));
     page.on('console', (m) => { if (m.type() === 'error') (phase === 'load' ? loadErrors : jodieErrors).push('console: ' + m.text().slice(0, 200)); });
@@ -235,6 +243,21 @@ try {
     const fixed = await page.evaluate(FIXED_OVER_DOCK) as any[];
     result.fixedOverDock = fixed;
     check('open: no position:fixed element overlaps the dock', Array.isArray(fixed) && fixed.length === 0, fixed);
+    // The Quick tip with the rail open and Jjodie docked (P-2026-10-24-0656): its box meets neither the rail nor the dock.
+    await poll(page, `!!document.querySelector('.notification-widget')`, 10000);
+    const tip = await page.evaluate(String.raw`(() => {
+      const r2 = (v) => Math.round(v * 100) / 100;
+      const box = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return { x: r2(r.x), y: r2(r.y), w: r2(r.width), h: r2(r.height), right: r2(r.right), bottom: r2(r.bottom) }; };
+      const meets = (a, b) => !!a && !!b && Math.min(a.right, b.right) - Math.max(a.x, b.x) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.y, b.y) > 0.5;
+      const t = box(document.querySelector('.notification-widget'));
+      const rail = box(document.querySelector('.properties-tree-overlay'));
+      const dock = box(document.querySelector('.jodie-window'));
+      return { tip: t, rail, dock, railWidthVar: getComputedStyle(document.body).getPropertyValue('--jj-rail-width').trim(), overRail: meets(t, rail), overDock: meets(t, dock) };
+    })()`) as any;
+    result.tip = tip;
+    note('open: quick tip', tip);
+    check('open: the Quick tip is shown and meets neither the rail nor the dock', !!tip?.tip && !!tip.rail && !!tip.dock && !tip.overRail && !tip.overDock, JSON.stringify(tip));
+    if (tip?.tip) await crop(page, 'quicktip_rail_dock.png', { x: tip.tip.x - 40, y: tip.tip.y - 40, w: VIEWPORT.width, h: tip.tip.h + 80 });
     const fs = await page.evaluate(FULLSCREEN) as any;
     check('open: no fullscreen / maximize button', !!fs && fs.byClass === 0 && fs.byLabel.length === 0, JSON.stringify(fs));
     // The header's actions must stay inside the window: at 460 the close button sat 47 px past the viewport edge
