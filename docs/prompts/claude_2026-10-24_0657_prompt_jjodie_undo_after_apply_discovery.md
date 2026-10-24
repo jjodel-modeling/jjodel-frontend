@@ -5,7 +5,7 @@ Lane: full (discovery, read-only)
 Depends: P-2026-10-24-0256
 Chat: C-2026-10-24-0020
 Front: jjodie-ui
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui · report 1bfa7192c · fixed by P-2026-10-24-1350
 Corregge: none
 Request: Alfonso, 2026-10-24 06:51, in the project chat («ok alle raccomandazioni» on the night digest)
 Model: claude-opus-5-5

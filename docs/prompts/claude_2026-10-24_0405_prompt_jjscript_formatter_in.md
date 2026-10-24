@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (small, language tooling, no visual change)
 Depends: P-2026-10-24-0115
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui · dbef14d8b · display only (R-JJD-10)
 Corregge: none
 Request: Alfonso, 2026-10-24 00:40, in the project chat (unattended run; language note of P-2026-10-24-0020)
 Model: claude-opus-5-5
