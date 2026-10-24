@@ -12,6 +12,10 @@
  * in the tab's right pane, also when the tab is already open. The generator opened is remembered as the metamodel's
  * last used, for the pill.
  *
+ * Beside the canvas (P-2026-10-24-1515): a new tab goes to the panel of an open tab of the same metamodel's
+ * generators, else to a split right of the panel that holds the model's (or metamodel's) editor tab, about 45 % of
+ * the width (canvasSelection.ts `dockBeside`), else to the first panel as before.
+ *
  * Reached only from the Code panel's lazy chunk and the left bar's dynamic import (scripts/gates/check-codegen-lazy.ts).
  */
 
@@ -21,6 +25,7 @@ import DockManager from '../../components/abstract/DockManager';
 import { isConsumerMode } from '../../components/environment/consumerMode';
 import TemplateEditorTab, { TemplateTabTitle, chooseModelInTemplateTab, selectInTemplateTab, templateTabId } from './TemplateEditorTab';
 import { rememberGenerator } from './generatorTabs';
+import { dockBeside, findPanel, generatorTabsOf, panelOf } from './canvasSelection';
 import { DEFAULT_GENERATOR_ID } from '../engine/generatorCodec';
 
 /** The left bar's «+ New generator» reaches the tab's creation through this module's dynamic import (R-GEN-42). */
@@ -50,8 +55,6 @@ export function openTemplateEditor(
         return true;
     }
 
-    const target = dock.getLayout()?.dockbox?.children?.[0];
-    if (!target) return false;
     const tab: TabData = {
         id,
         group: 'models',
@@ -60,6 +63,15 @@ export function openTemplateEditor(
         title: React.createElement(TemplateTabTitle, { metamodelId, name: metamodelName, generatorId }),
         content: React.createElement(TemplateEditorTab, { metamodelId, initial: template, generatorId, model: model ?? null }),
     };
+    const siblings = findPanel(dock, generatorTabsOf(metamodelId));
+    if (siblings) {
+        dock.dockMove(tab, siblings, 'middle');
+        return true;
+    }
+    const canvas = [model, metamodelId].find(c => c !== undefined && panelOf(dock, c) !== null);
+    if (canvas !== undefined && dockBeside(dock, tab, canvas)) return true;
+    const target = dock.getLayout()?.dockbox?.children?.[0];
+    if (!target) return false;
     dock.dockMove(tab, target, 'middle');
     return true;
 }

@@ -42,7 +42,7 @@ import { displayJson } from './displayJson';
 import { conformingModels } from './conformingModels';
 import { linesOf } from './codeLines';
 import { elementAt, elementName, originText, templateTarget } from './codeOrigins';
-import { checkOffered, noTemplates, paneGeneration, runOffered } from './generatorTabs';
+import { checkOffered, generatorTabId, noTemplates, paneGeneration, runOffered } from './generatorTabs';
 import { selectOnModelCanvas } from './canvasSelection';
 import type { GeneratorRecord } from '../engine/generatorCodec';
 import type { GeneratorResult } from '../engine/generateFiles';
@@ -239,7 +239,8 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
         setLinked(elementId);
         setNotice(null);
         const lookup: Lookup = (store.getState() as any).idlookup ?? {};
-        void selectOnModelCanvas(lookup, targetId, elementId).then(pick => {
+        // The canvas comes forward beside this tab, not over it (P-2026-10-24-1515).
+        void selectOnModelCanvas(lookup, targetId, elementId, undefined, { tabId: generatorTabId(metamodelId, generator.id), metamodelId }).then(pick => {
             if (!mounted.current) return;
             setEdgeOutline(pick?.kind === 'edge' ? pick.edgeId : null);
             if (!pick) setNotice(`${elementName(lookup, elementId)} is not on the canvas.`);

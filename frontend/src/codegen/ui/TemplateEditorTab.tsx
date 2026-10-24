@@ -61,6 +61,7 @@ import { elementName } from './codeOrigins';
 import { generatorTabId, rememberGenerator, saveGeneratorTemplates, templateToSelect } from './generatorTabs';
 import { openTemplateEditor } from './openTemplateEditor';
 import GeneratorPane from './GeneratorPane';
+import { ColumnSplitter, readSplitRatio } from './splitter';
 import type { GeneratorResult } from '../engine/generateFiles';
 import type { GeneratorRecord } from '../engine/generatorCodec';
 import type { TemplateTarget } from './codeOrigins';
@@ -234,6 +235,17 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
     const [selected, setSelected] = useState<string | null>(initial);
     const [refused, setRefused] = useState<string | null>(null);
     const [confirmClose, setConfirmClose] = useState(false);
+
+    // The editor column's share of the width right of the list, against the right pane (P-2026-10-24-1515).
+    const [split, setSplit] = useState(() => readSplitRatio());
+    const rootRef = useRef<HTMLDivElement>(null);
+    const mainRef = useRef<HTMLElement>(null);
+    const splitArea = useCallback(() => {
+        const root = rootRef.current?.getBoundingClientRect();
+        const main = mainRef.current?.getBoundingClientRect();
+        const bar = rootRef.current?.querySelector('.codegen-tpl__splitter')?.getBoundingClientRect().width ?? 0;
+        return root && main ? { left: main.left, width: root.right - main.left - bar } : null;
+    }, []);
 
     // Drafts the store has come to hold are dropped (an Undo/Redo onto the draft, the panel saving the same text).
     useEffect(() => {
@@ -487,7 +499,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
     };
 
     return (
-        <div className="codegen-tpl" onKeyDown={onKeyDown} onPointerDownCapture={() => rememberGenerator(metamodelId, generatorId)}>
+        <div className="codegen-tpl" ref={rootRef} onKeyDown={onKeyDown} onPointerDownCapture={() => rememberGenerator(metamodelId, generatorId)}>
             <aside className="codegen-tpl__side">
                 <div className="codegen-tpl__side-title">Generator</div>
                 <div className="codegen-tpl__generator">
@@ -581,7 +593,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
                 </button>
             </aside>
 
-            <section className="codegen-tpl__main">
+            <section className="codegen-tpl__main" ref={mainRef} style={{ flex: `${split / (1 - split)} 1 0` }}>
                 {!exists && <div className="codegen-tpl__hint codegen-tpl__hint--error">This metamodel is gone: its templates cannot be saved.</div>}
                 {current && shown ? (
                     <div className="codegen-tpl__fields">
@@ -665,6 +677,8 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
                     Typing writes nothing: Save writes every draft at once.
                 </div>
             </section>
+
+            <ColumnSplitter ratio={split} onRatio={setSplit} area={splitArea} />
 
             {previewGenerator ? (
                 <GeneratorPane metamodelId={metamodelId} generator={previewGenerator} model={paneModel} onGoToTemplate={goToTemplate} onGenerated={setGenerated} />

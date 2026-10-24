@@ -6,6 +6,15 @@
 //
 // Design-system tokens only, none defined here (rule 28). Cyan marks focus and the unsaved dot, as the canvas accent.
 
+// The dock panel that holds a generator tab beside the canvas (P-2026-10-24-1515). PinnableDock hides every panel
+// without a pinnable tab header (DockManagerStyles.scss `.not-strip`), and the split layout caps a last panel at
+// 710px (abstract/style.scss, the retired Properties column): both are lifted for this panel only. The doubled class
+// in :has() outranks the body-scoped cap without !important.
+.not-strip > .dock-layout .dock-hbox > .dock-panel:has(.codegen-tpl.codegen-tpl) {
+    display: block;
+    max-width: none;
+}
+
 .codegen-tpl {
     display: flex;
     height: 100%;
@@ -133,6 +142,20 @@
         gap: 8px;
     }
 
+    // -- splitter (P-2026-10-24-1515) --------------------------------------------
+    &__splitter {
+        flex: 0 0 6px;
+        cursor: col-resize;
+        background: var(--color-border-secondary);
+        touch-action: none;
+
+        &:hover,
+        &:focus-visible {
+            outline: none;
+            background: var(--color-border-focus);
+        }
+    }
+
     &__field {
         display: flex;
         flex: 0 1 220px;
@@ -253,10 +276,11 @@
     // -- preview (S3) ----------------------------------------------------------
     &__preview {
         display: flex;
-        flex: 0 0 38%;
+        // Grows against the editor column's inline flex: their widths keep the splitter's ratio (P-2026-10-24-1515).
+        flex: 1 1 0;
         flex-direction: column;
         gap: 8px;
-        min-width: 260px;
+        min-width: 200px; // splitter.tsx SPLIT_MIN_PX
         min-height: 0;
         padding: 12px;
         border-left: 1px solid var(--color-border-secondary);

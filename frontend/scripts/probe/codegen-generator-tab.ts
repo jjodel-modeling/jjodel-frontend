@@ -20,6 +20,11 @@
  *   - the pill, with two generators, shows a menu of both, the last used marked (crop pill_menu.png); its item opens
  *     that generator's tab.
  *
+ * P-2026-10-24-1515: the tab opens beside the canvas, two panels side by side, and stays on screen after a fragment
+ * click, also when stacked by hand on the canvas (crop beside_selection.png), the Properties/Tree rail over the
+ * canvas, not the tab; moved out of the canvas panel, it joins the other generator tabs; the splitter is dragged, clamped,
+ * stepped with the keyboard, reset, and its ratio kept over a reload (crops split_before.png, split_after.png).
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
@@ -196,6 +201,38 @@ const DOCK = (m1Id: string) => String.raw`(() => {
   return { active: [...new Set(active)].filter(Boolean), pane: r ? { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) } : null, inView: !!r && r.x >= 0 && r.x + r.width <= innerWidth + 1, scrolled };
 })()`;
 
+/** The model's editor and the generator tab: both laid out, in two dock panels, side by side (P-2026-10-24-1515). */
+const BESIDE = (m1Id: string, tabId: string) => String.raw`(() => {
+  const p = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m1Id}"]');
+  const t = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${tabId}"]');
+  if (!p || !t) return { found: false };
+  const box = (e) => { const r = e.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; };
+  const a = box(p), b = box(t);
+  const code = t.querySelector('.codegen-pane__code');
+  const c = code ? box(code) : null;
+  const rail = document.querySelector('.properties-tree-overlay:not(.properties-tree-overlay--collapsed)');
+  const shown = (e, r) => e.offsetParent !== null && r.w > 0 && r.h > 0 && r.x >= 0 && r.x + r.w <= innerWidth + 1;
+  return {
+    found: true, canvas: a, tab: b, code: c,
+    panels: p.closest('.dock-panel') !== t.closest('.dock-panel'),
+    visible: shown(p, a) && shown(t, b) && !!code && shown(code, c),
+    sideBySide: a.x + a.w <= b.x + 2 && a.y < b.y + b.h && b.y < a.y + a.h,
+    share: Math.round(1000 * b.w / (a.w + b.w)) / 1000,
+    rail: rail ? box(rail) : null,
+    railOnCanvas: !rail || (box(rail).x + box(rail).w <= a.x + a.w + 2 && box(rail).x + box(rail).w <= b.x + 2),
+  };
+})()`;
+
+/** The editor column's share of the width right of the template list, and the splitter (P-2026-10-24-1515). */
+const SPLIT = (tab: string) => String.raw`(() => {
+  const t = ${tab};
+  if (!t) return null;
+  const main = t.querySelector('.codegen-tpl__main'), bar = t.querySelector('.codegen-tpl__splitter');
+  if (!main || !bar) return null;
+  const r = t.getBoundingClientRect(), m = main.getBoundingClientRect(), s = bar.getBoundingClientRect();
+  return { ratio: Math.round(1000 * m.width / (r.right - m.left - s.width)) / 1000, main: Math.round(m.width), bar: { x: s.x + s.width / 2, y: s.y + s.height / 2, w: s.width }, stored: localStorage.getItem('jjodel.codegen.tabSplit'), focusable: bar.tabIndex === 0, role: bar.getAttribute('role') };
+})()`;
+
 /** The template editor's Monaco instance in the tab: its model's first line, the selection, the lines in view. */
 const EDITOR = (tab: string) => String.raw`(async () => {
   const t = ${tab};
@@ -262,6 +299,12 @@ async function main(): Promise<void> {
     check('Preview shows the text of main.js with no generation error', !!opened && opened.files.join() === 'main.js' && opened.errors.length === 0 && opened.lines > 5,
         JSON.stringify(opened && { files: opened.files, lines: opened.lines, errors: opened.errors.slice(0, 3) }));
     note('the dock once the tab is open', await page.evaluate(DOCK(m1)));
+    const beside = await page.evaluate(BESIDE(m1, tabId)) as any;
+    result.beside = beside;
+    note('the canvas and the tab once open', beside);
+    check('the tab opens beside the canvas: two panels, both visible, side by side, the tab about 45 %',
+        beside.found && beside.panels && beside.visible && beside.sideBySide && Math.abs(beside.share - 0.45) < 0.06, JSON.stringify(beside));
+    check('the Properties/Tree rail covers the canvas, not the generator tab', !!beside.rail && beside.railOnCanvas, JSON.stringify({ rail: beside.rail, canvas: beside.canvas, tab: beside.tab }));
     check('no floating editor panel is left on the canvas', !(await page.evaluate(`!!(${pane}.querySelector('.codegen-panel'))`)), '');
     await wait(page, 500);
     await crop(page, 'tab_preview.png', await page.evaluate(BOX(tab)) as any);
@@ -421,6 +464,35 @@ async function main(): Promise<void> {
         const nodeBox = await page.evaluate(BOX(`${pane}.querySelector('.react-flow__node.selected')`)) as any;
         note('the selected vertex box', nodeBox);
         await crop(page, 'canvas_selection.png', nodeBox, 60);
+        const kept = await page.evaluate(BESIDE(m1, tabId)) as any;
+        result.besideAfterClick = kept;
+        check('after a fragment click the code view is still on screen beside the canvas, the rail on the canvas', kept.found && kept.panels && kept.visible && kept.sideBySide && kept.railOnCanvas, JSON.stringify(kept));
+        await crop(page, 'beside_selection.png', kept.found ? { x: kept.canvas.x, y: Math.min(kept.canvas.y, kept.tab.y), w: kept.tab.x + kept.tab.w - kept.canvas.x, h: Math.max(kept.canvas.h, kept.tab.h) } : null, 0);
+
+        // The tab moved by hand into the canvas's own panel: a fragment click moves it to a right split first.
+        const stacked = await page.evaluate(String.raw`(async () => {
+          const d = (await import('/src/components/abstract/DockManager.tsx')).default.dock;
+          const canvas = d.find(${JSON.stringify(m1)}), gen = d.find(${JSON.stringify(tabId)});
+          if (!canvas || !gen) return null;
+          d.dockMove(gen, canvas.parent, 'middle');
+          await new Promise((r) => setTimeout(r, 600));
+          return d.find(${JSON.stringify(m1)}).parent === d.find(${JSON.stringify(tabId)}).parent;
+        })()`);
+        check('the tab can be stacked by hand in the canvas panel', stacked === true, String(stacked));
+        await poll(page, `!!(${tab} && ${tab}.offsetParent !== null && ${tab}.querySelector('[data-probe-pick="1"]'))`, 5000);
+        await page.evaluate(CLICK(`document.querySelector('[data-probe-pick="1"]')`));
+        await wait(page, 1500);
+        const moved = await page.evaluate(BESIDE(m1, tabId)) as any;
+        result.besideAfterStacked = moved;
+        const reselected = await page.evaluate(String.raw`(() => { const p = ${pane}; return p ? p.querySelectorAll('.react-flow__node.selected').length : -1; })()`);
+        check('a fragment click with the tab stacked on the canvas moves it beside, the code still on screen, the vertex selected',
+            moved.found && moved.panels && moved.visible && moved.sideBySide && moved.railOnCanvas && reselected === 1, JSON.stringify({ moved, reselected }));
+        const panels = await page.evaluate(String.raw`(async () => {
+          const d = (await import('/src/components/abstract/DockManager.tsx')).default.dock;
+          const walk = (n) => n.tabs ? [n.tabs.map((t) => t.id)] : (n.children || []).flatMap(walk);
+          return walk(d.getLayout().dockbox).filter((ids) => ids.some((id) => id.startsWith('codegen_tpl_'))).length;
+        })()`);
+        check('moved out of the canvas panel, the tab joins the panel of the other generator tabs', panels === 1, String(panels));
 
         // Canvas to code with the tab behind: a click on another vertex links its spans there, the dock stays put.
         const other = await page.evaluate(String.raw`(() => {
@@ -460,6 +532,64 @@ async function main(): Promise<void> {
         const back = await poll<boolean>(page, `(() => { const t = ${TAB(second.id)}; return !!t && t.offsetParent !== null && !document.querySelector('.codegen-panel--menu'); })()`, 10000);
         check('the menu item opens that generator\'s tab and the menu closes', back === true, String(back));
     }
+
+    // The splitter between the editor column and the right pane: drag, keyboard, kept over a reload.
+    await page.evaluate(String.raw`(async () => { const o = await import('/src/codegen/ui/openTemplateEditor.ts'); o.openTemplateEditor(${JSON.stringify(mm)}, ${JSON.stringify(ex.lookup.MM.name)}, null, 'default'); })()`);
+    await poll(page, `!!(${tab} && ${tab}.offsetParent !== null)`, 10000);
+    await wait(page, 500);
+    const s0 = await page.evaluate(SPLIT(tab)) as any;
+    note('the split before the drag', s0);
+    check('a focusable vertical separator between the editor column and the right pane', !!s0 && s0.focusable && s0.role === 'separator', JSON.stringify(s0));
+    if (!s0) return;
+    await crop(page, 'split_before.png', await page.evaluate(BOX(tab)) as any);
+    await page.mouse.move(s0.bar.x, s0.bar.y);
+    await page.mouse.down();
+    await page.mouse.move(s0.bar.x - 25, s0.bar.y, { steps: 6 });
+    await page.mouse.move(s0.bar.x - 50, s0.bar.y, { steps: 6 });
+    await page.mouse.up();
+    await wait(page, 300);
+    const s1 = await page.evaluate(SPLIT(tab)) as any;
+    result.split = { before: s0, after: s1 };
+    note('the split after a 50 px drag left', s1);
+    check('at the default 45 % tab a drag left narrows the editor column by the drag and stores the ratio',
+        !!s1 && Math.abs(s0.main - s1.main - 50) <= 3 && s1.stored !== null && Math.abs(Number(s1.stored) - s1.ratio) < 0.01, JSON.stringify({ s0: s0.main, s1: s1?.main, stored: s1?.stored, ratio: s1?.ratio }));
+    await crop(page, 'split_after.png', await page.evaluate(BOX(tab)) as any);
+    await page.mouse.move(s1.bar.x, s1.bar.y);
+    await page.mouse.down();
+    await page.mouse.move(s1.bar.x - 2000, s1.bar.y, { steps: 6 });
+    await page.mouse.up();
+    await wait(page, 300);
+    const sMin = await page.evaluate(SPLIT(tab)) as any;
+    check('the drag stops at 200 px of editor column', !!sMin && Math.abs(sMin.main - 200) <= 2, JSON.stringify(sMin?.main));
+    await page.focus('.codegen-tpl__splitter');
+    await page.keyboard.press('ArrowRight');
+    await wait(page, 200);
+    const sKey = await page.evaluate(SPLIT(tab)) as any;
+    check('ArrowRight on the focused splitter widens the editor column by 16 px', !!sKey && Math.abs(sKey.main - sMin.main - 16) <= 2, JSON.stringify({ from: sMin?.main, to: sKey?.main }));
+    await page.mouse.dblclick(sKey.bar.x, sKey.bar.y);
+    await wait(page, 200);
+    const sReset = await page.evaluate(SPLIT(tab)) as any;
+    check('a double-click resets the default ratio', !!sReset && Math.abs(sReset.ratio - 0.55) < 0.01 && sReset.stored === '0.55', JSON.stringify(sReset && { ratio: sReset.ratio, stored: sReset.stored }));
+    // A drag again, then a reload: the tab opens on the stored ratio.
+    await page.mouse.move(sReset.bar.x, sReset.bar.y);
+    await page.mouse.down();
+    await page.mouse.move(sReset.bar.x - 40, sReset.bar.y, { steps: 6 });
+    await page.mouse.up();
+    await wait(page, 300);
+    const s2 = await page.evaluate(SPLIT(tab)) as any;
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 300000 });
+    const again = await poll<{ mm: string; m1: string }>(page, LOADED(ex.lookup.MM.name, ex.lookup.M.name), 120000);
+    check('the project loads again after the reload', !!again, JSON.stringify(again));
+    if (!again) return;
+    await wait(page, 2000);
+    await page.evaluate(String.raw`(async () => { const o = await import('/src/codegen/ui/openTemplateEditor.ts'); o.openTemplateEditor(${JSON.stringify(again.mm)}, ${JSON.stringify(ex.lookup.MM.name)}, null, 'default'); })()`);
+    const tabAgain = TAB(`codegen_tpl_${again.mm}`);
+    await poll(page, `!!(${tabAgain} && ${tabAgain}.offsetParent !== null)`, 20000);
+    await wait(page, 800);
+    const s3 = await page.evaluate(SPLIT(tabAgain)) as any;
+    result.splitReload = { before: s2, after: s3 };
+    note('the split before and after the reload', { before: s2?.ratio, after: s3?.ratio, stored: s3?.stored });
+    check('after a reload the tab keeps the dragged ratio', !!s2 && !!s3 && Math.abs(s3.ratio - s2.ratio) < 0.01 && s3.stored === s2.stored, JSON.stringify({ before: s2?.ratio, after: s3?.ratio }));
 }
 
 try {
