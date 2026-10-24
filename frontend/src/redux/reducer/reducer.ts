@@ -469,7 +469,9 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                 derivedActions.push(
                     Action.parse(SetRootFieldAction.create(statefoldername, elem.id,'[]', true)));
                 if (!Array.isArray(elem.pointedBy)) elem.pointedBy = [];
-                elem.pointedBy.push(PointedBy.new(statefoldername));
+                // The folder entry is added by the derived pointer action above (`PointedBy.add`, in this batch or at
+                // its end); pushing it here too gave every new element two of them (ticket F8, P-2026-10-24-1350).
+                // elem.pointedBy.push(PointedBy.new(statefoldername));
                 /*if (false && action.isPointer) {
                     if (Array.isArray(action.value)) {
                         const ptr: Pointer[] = action.value;

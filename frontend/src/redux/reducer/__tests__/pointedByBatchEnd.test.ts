@@ -1,12 +1,14 @@
 /**
- * A `pointedBy` write parked during a batch is resolved in that batch (P-2026-10-24-1350, R-JJD-12).
+ * A `pointedBy` write parked during a batch is resolved in that batch (P-2026-10-24-1350, R-JJD-12), and a
+ * created element carries its root-folder entry once (ticket F8).
  * Report: docs/discovery/discovery_2026-10-24_undo_after_apply.md.
  *
  * THE DEFECT, measured in the app (probe `frontend/scripts/probe/jjodie-udo-after-apply.ts`): a vertex batch holds
  * `idlookup.<graph>.subElements += <vertex>` and the vertex's `CreateElementAction`. Sorted by path the graph comes first,
  * `PointedBy.add` finds no vertex and parks the write in `PendingPointedByPaths.all`, which was drained only at the start
  * of the NEXT composite: any later action (a canvas click) then carried the vertex's `pointedBy` and pushed an undo entry
- * of its own.
+ * of its own. F8: `CreateElementAction` pushed the folder entry (`vertexs`) into the element by hand and the derived
+ * `vertexs[]` pointer action added it again through `PointedBy.add`.
  *
  * HERE the real `_reducer` (with the real `Uobj`) runs in `environment: node` with the doubles of
  * `reducerCopyOnWrite.test.ts`. `PendingPointedByPaths` and `PointedBy` are doubled with the bodies of
@@ -278,5 +280,25 @@ describe('a pointedBy parked during a batch is resolved in that batch', () => {
         expect(s2.idlookup[G].subElements).toEqual([]);
         const s3 = dispatch(s2, redoAction());
         expect(sources(s3, V)).toContain(SUB);
+    });
+});
+
+describe('ticket F8: a created element carries its root-folder entry once', () => {
+    it('a DVertex (folder `vertexs`, sorted after idlookup): one `vertexs` entry after creation, undo and redo', () => {
+        const s1 = dispatch(freshState(), vertexBatch());
+        expect(s1.vertexs).toEqual([V]);
+        expect(count(sources(s1, V), 'vertexs')).toBe(1);
+        const s2 = dispatch(s1, undoAction());
+        expect(s2.idlookup[V]).toBeUndefined();
+        const s3 = dispatch(s2, redoAction());
+        expect(count(sources(s3, V), 'vertexs')).toBe(1);
+        expect(count(sources(s3, V), SUB)).toBe(1);
+    });
+
+    it('a DClass (folder `classs`, sorted before idlookup): one `classs` entry in the same batch', () => {
+        const s1 = dispatch(freshState(), batch('Create element', [create({ id: C, className: 'DClass', pointedBy: [] })]));
+        expect(s1.classs).toEqual([C]);
+        expect(count(sources(s1, C), 'classs')).toBe(1);
+        expect(h.PendingPointedByPaths.all).toHaveLength(0);
     });
 });
