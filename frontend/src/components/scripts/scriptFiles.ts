@@ -58,6 +58,12 @@ export function removeProjectScript(scriptId: string): void {
     if (next !== list) writeProjectScripts(next);
 }
 
+/** Delete a script file from the project tree or the megamodel (S6b): its tab closes first. */
+export function deleteProjectScript(scriptId: string): void {
+    DockManager.closeTab(`jjs_${scriptId}`);
+    removeProjectScript(scriptId);
+}
+
 /** The M1 models of the open project, as `{ id, name }`, in project order. */
 export function projectM1Models(state: any = store.getState()): { id: string; name: string }[] {
     const ids = (dProject(state)?.models || []) as string[];
