@@ -6664,6 +6664,12 @@ procedi con l'implementazione»; 01:14 «S6 ok», «Apply ok» on A1 and A2 of t
   `docs/discovery/discovery_2026-10-24_undo_after_apply.md`). A second core change in `reducer.ts` for this front, beside
   R-JJD-6; it applies to every batch. The same lane fixes the duplicated `vertexs` entry in a new DVertex's `pointedBy`
   (ticket F8) if its cause is in the reducer or the D-layer and outside the critical zone.
+- **R-JJD-13** (2026-10-24, decided by Alfonso 15:15 «chiudiamo tutto senza aspettare la 3.2», then «Dentro la 3.2»
+  when told that the trunk is also the 3.2 base, evidence: read, verified: none, reversible: trunk).
+  **The Jjodie panel redesign ships in 3.2, not 3.3**: `jjodie-panel` merges into `alfonso-frontend-jjtl` before the
+  3.2 tag, after the closing lanes P-2026-10-24-1520 (M2 scripts) and P-2026-10-24-1521 (megamodel NaN paths, Discard
+  under Playwright), a trunk-into-branch sync and Alfonso's visual GO. Supersedes the target line of this section's
+  evidence paragraph and of P-2026-10-24-0020.
 
 ## Superate
 
