@@ -75,7 +75,7 @@ export function projectM1Models(state: any = store.getState()): { id: string; na
 export function openScriptAsFile(text: string, suggestedName: string, modelId?: string): DProjectScript | undefined {
     const { scripts, entry } = addScript(readProjectScripts(), { name: suggestedName, text, modelId });
     if (!writeProjectScripts(scripts)) return undefined;
-    DockManager.openScript(entry.id);
+    DockManager.openScript(entry.id, entry);
     return entry;
 }
 

@@ -171,13 +171,14 @@ class DockManager {
      */
     /**
      * Open the editor tab of a project script file (S6a, R-JJD-5), or raise it when it is open.
-     * Returns false when the dock is not ready or the project has no such script.
+     * Returns false when the dock is not ready or the project has no such script. `written` is an
+     * entry the caller has just written: the store commits in batches, so it may not be there yet.
      */
-    static openScript(scriptId: string): boolean {
+    static openScript(scriptId: string, written?: { id: string; name: string }): boolean {
         if (!DockManager.dock || !scriptId) return false;
         const pid = U.getProjectID_URL();
         const scripts = ((pid && (store.getState() as any).idlookup?.[pid]?.scripts) || []) as Array<{ id: string; name: string }>;
-        const script = scripts.find(s => s.id === scriptId);
+        const script = scripts.find(s => s.id === scriptId) || (written?.id === scriptId ? written : undefined);
         if (!script) {
             console.warn('[DockManager] openScript: no such script in the project', scriptId);
             return false;
