@@ -6,7 +6,7 @@
 .notification-widget {
   position: fixed;
   bottom: 60px;
-  right: 24px;
+  right: calc(24px + var(--jj-jodie-dock-width, 0px));
   width: 320px;
   background: #ffffff;
   border-radius: 12px;

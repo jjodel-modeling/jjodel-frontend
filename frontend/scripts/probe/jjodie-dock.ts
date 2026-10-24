@@ -295,6 +295,9 @@ try {
     check('reload: rail right edge equals the dock left edge', near(reload.rail?.right ?? -1, reload.window?.x ?? -2), JSON.stringify({ railRight: reload.rail?.right, dockLeft: reload.window?.x }));
 
     // Back to the default for the closed crop and the reset path: the header Reset restores 460.
+    // Since S1b (P-2026-10-24-0211) Reset lives in the header's overflow menu, rendered only while open.
+    await page.evaluate(CLICK(`document.querySelector('.jodie-window .jodie-overflow-btn')`));
+    await wait(page, 300);
     const reset = await page.evaluate(CLICK(`document.querySelector('.jodie-window button[title*="Reset" i], .jodie-window button[aria-label*="Reset" i]')`)) as any;
     await wait(page, 600);
     const afterReset = await page.evaluate(STATE(ids.m1)) as any;
