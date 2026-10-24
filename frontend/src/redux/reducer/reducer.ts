@@ -469,7 +469,9 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                 derivedActions.push(
                     Action.parse(SetRootFieldAction.create(statefoldername, elem.id,'[]', true)));
                 if (!Array.isArray(elem.pointedBy)) elem.pointedBy = [];
-                elem.pointedBy.push(PointedBy.new(statefoldername));
+                // The folder entry is added by the derived pointer action above (`PointedBy.add`, in this batch or at
+                // its end); pushing it here too gave every new element two of them (ticket F8, P-2026-10-24-1350).
+                // elem.pointedBy.push(PointedBy.new(statefoldername));
                 /*if (false && action.isPointer) {
                     if (Array.isArray(action.value)) {
                         const ptr: Pointer[] = action.value;
@@ -552,6 +554,10 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
 
         // and that's all, the reducer is really simple as actions are really simple.
     }
+
+    // A pointedBy parked by this batch (a pointer to an element the batch creates later in path order) is resolved
+    // here, so it lands in this batch's delta and not in the next action's (R-JJD-12, P-2026-10-24-1350).
+    if (PendingPointedByPaths.all.length) newState = PendingPointedByPaths.getSolveableActions2(newState, oldState);
 
     // effetti collaterali, aggiornamento di ridondanze
     newState = updateRedundancies_OBSOLETE(newState, oldState, Action.possibleInconsistencies);
