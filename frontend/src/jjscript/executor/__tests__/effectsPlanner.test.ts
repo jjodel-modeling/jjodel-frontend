@@ -224,9 +224,9 @@ describe('warnings', () => {
         expect(plan.warnings).toEqual([expect.objectContaining({ line: 2, code: 'OPPOSITE_ONE_END' })]);
     });
 
-    it('an M2 command is one `unsupported: <command>` warning, with no effect', async () => {
-        const plan = await planEffects('create class Foo', world());
-        expect(plan.warnings).toEqual([{ line: 1, code: 'UNSUPPORTED', message: 'unsupported: create class' }]);
+    it('a command outside the planned set is one `unsupported: <command>` warning, with no effect', async () => {
+        const plan = await planEffects('move Person to NewPackage', world());
+        expect(plan.warnings).toEqual([{ line: 1, code: 'UNSUPPORTED', message: 'unsupported: move' }]);
         expect(plan.created).toEqual([]);
         expect(plan.error).toBeNull();
     });

@@ -126,6 +126,12 @@ describe('planEffects on M2: one test per command kind', () => {
         expect(codes(p.errors)).toEqual(['CIRCULAR_INHERITANCE']);
     });
 
+    it('a repeated extends plans one generalization (extends.ts:125-137)', async () => {
+        const p = await plan('create class Student\nStudent extends Person\nStudent extends Person');
+        expect((p.generalizations ?? []).map((g) => g.line)).toEqual([2]);
+        expect(p.errors).toEqual([]);
+    });
+
     it('abstract toggles the flag of a class', async () => {
         const p = await plan('abstract Person\nabstract Person');
         expect(p.features.map((f) => [f.feature, f.value])).toEqual([['abstract', true], ['abstract', false]]);
@@ -183,7 +189,7 @@ describe('planEffects on M2: order and levels', () => {
     });
 
     it('a mixed script is planned per level, on an M1 world', async () => {
-        const p = await plan('create class Pet\ncreate attribute legs in Pet type Integer\ncreate instance Person "bob"\nset bob.name = "Bob"\nset Pet.abstract = true', world('M1'));
+        const p = await plan('create class Pet\ncreate attribute legs in Pet type Integer\ncreate instance of Person "bob"\nset bob.name = "Bob"\nset Pet.abstract = true', world('M1'));
         expect(p.errors).toEqual([]);
         expect(p.warnings).toEqual([]);
         expect(p.level).toBe('M1');
