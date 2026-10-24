@@ -186,6 +186,11 @@
         min-width: 0;
     }
 
+    // Beside the target's tab (P-2026-10-25-0020): the editor takes the whole tab.
+    &--beside &__left {
+        flex: 1;
+    }
+
     &__handle {
         flex: none;
         width: 5px;

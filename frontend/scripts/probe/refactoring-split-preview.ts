@@ -12,6 +12,8 @@
  * P-2026-10-25-0005: one «Preview» (the pane title says «<name> · preview» in muted text, nothing idle), the code
  * area reaching the split handle with no full-height focus outline, and on this tab no floating launcher but a
  * header robot button that opens the dock; the launcher on another tab unchanged.
+ * P-2026-10-25-0020: the tab's own pane is now the fallback below 1100 px of window (from there the target's tab
+ * shows beside it, refactoring-side-by-side.ts), so this probe runs at 1080 px to keep measuring it.
  *
  * Fixture: fixtures/jjscript-m1-esm.jjodel (as jjodie-rf2-run-from-tab.ts), plus one model of its metamodel created
  * through the Navbar's createM1 and filled through JjScriptService. Real app, own dev server (never 3000, 3001,
@@ -99,7 +101,8 @@ const READ_MARKERS = `(() => {
 })()`;
 
 const browser = await chromium.launch();
-const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
+const VIEWPORT = { width: 1080, height: 1000 };
+const ctx = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
 await seed(ctx, true);
 await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
 const page: Page = await ctx.newPage();
@@ -356,7 +359,7 @@ await jbtn.click();
 await wait(page, 1200);
 const dock1 = await page.evaluate(`(() => { const w = document.querySelector('.jodie-window'); const s = document.querySelector('.jodie-dock-slot'); const r = w ? w.getBoundingClientRect() : null; return { window: !!w, slot: !!s, rect: r ? { x: Math.round(r.x), width: Math.round(r.width) } : null }; })()`) as any;
 meas('header button opens the dock', { before: dock0, after: dock1 });
-check('header button opens the docked panel', dock0 === 0 && dock1.window && dock1.slot && !!dock1.rect && dock1.rect.x + dock1.rect.width >= 1600 - 2, { before: dock0, after: dock1 });
+check('header button opens the docked panel', dock0 === 0 && dock1.window && dock1.slot && !!dock1.rect && dock1.rect.x + dock1.rect.width >= VIEWPORT.width - 2, { before: dock0, after: dock1 });
 await page.evaluate(`(() => { const c = document.querySelector('.jodie-window [aria-label="Close"], .jodie-window .jodie-close, .jodie-window button[title="Close"]'); if (c) c.click(); })()`);
 await wait(page, 800);
 meas('dock after close', await page.locator('.jodie-window').count());

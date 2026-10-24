@@ -14,6 +14,15 @@
  * `Apply` runs the script as one undo step (R-JJD-6) through the canvas preview's own path
  * (`applyAsOneStep`) and closes the preview, `Discard` closes it. Editing while previewing re-plans.
  * Nothing runs from the header.
+ *
+ * Beside (P-2026-10-25-0020): from `BESIDE_MIN_WINDOW` px of window the tab holds only the editor,
+ * and the target's own canvas tab is placed right of it in the dock (`DockManager.openBeside`,
+ * reused when open, never a second instance; editor 40 / canvas 60 by default, the share kept in
+ * `localStorage[SPLIT_RATIO_KEY]`). Preview publishes the tab's plan to the shared
+ * `scriptPreviewStore` with the tab as its owner: the canvas draws the ghosts with its own layout,
+ * zoom and pan and no bar of its own; the bar stays here. Changing the target closes the preview and
+ * brings the new target's tab beside; closing the tab clears its preview. On a narrower window, or
+ * when the dock cannot place the target's tab, the tab keeps its own class-box pane as before.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
@@ -28,6 +37,9 @@ import { RefactoringPreviewBar, RefactoringPreviewPane } from '../../scripts/Ref
 import { planEffects, type EffectsPlan, type PlanWorld } from '../../../jjscript/executor/effectsPlanner';
 import { buildPlanWorld } from '../../../jjscript/executor/planWorld';
 import { applyAsOneStep } from '../../editor-v2/preview/PreviewBar';
+import { clearOwnedScriptPreview, publishScriptPreview, setScriptPreviewApplying } from '../../editor-v2/preview/scriptPreviewStore';
+import { SPLIT_RATIO_DEFAULT, SPLIT_RATIO_KEY, besideMode, clampSplitRatio } from '../../scripts/refactoringBeside';
+import DockManager from '../DockManager';
 import { createdCounts, effectsMismatch, plannedCounts } from '../../editor-v2/preview/previewApplyCheck';
 import { toast } from '../../Toast/toastDispatch';
 import { JjodieEvents } from '../../../events/registry';
@@ -59,6 +71,18 @@ function readEditorWidth(): number {
         return EDITOR_WIDTH_DEFAULT;
     }
 }
+
+function readSplitRatio(): number {
+    try {
+        const v = Number(window.localStorage.getItem(SPLIT_RATIO_KEY));
+        return v ? clampSplitRatio(v) : SPLIT_RATIO_DEFAULT;
+    } catch {
+        return SPLIT_RATIO_DEFAULT;
+    }
+}
+
+/** The pause before the share of the split is written, after the dock's divider stops. */
+const SPLIT_SAVE_MS = 400;
 
 interface PlanState { text: string; modelId: string; world: PlanWorld; plan: EffectsPlan | null }
 
@@ -200,6 +224,69 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
     const [busy, setBusy] = useState(false);
     const typeName = useCallback((id: string) => (store.getState() as any).idlookup?.[id]?.name as string | undefined, []);
 
+    // ── Beside the target's tab ───────────────────────────────────────────────
+    const tabId = `jjs_${scriptId}`;
+    const rootRef = useRef<HTMLDivElement | null>(null);
+    const [windowWidth, setWindowWidth] = useState<number>(() => window.innerWidth);
+    useEffect(() => {
+        const onResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+    const wide = besideMode(windowWidth, true) === 'beside';
+    const [placed, setPlaced] = useState<string | null>(null);
+    const placeBeside = useCallback((): boolean => {
+        const ok = !!chosen && DockManager.openBeside(tabId, chosen, readSplitRatio());
+        setPlaced(ok ? chosen : null);
+        return ok;
+    }, [tabId, chosen]);
+    useEffect(() => {
+        if (!wide || !chosen) { setPlaced(null); return; }
+        // After the dock has committed this tab's own placement.
+        const timer = window.setTimeout(placeBeside, 0);
+        return () => window.clearTimeout(timer);
+    }, [wide, chosen, placeBeside]);
+    const beside = besideMode(windowWidth, placed === chosen && !!chosen) === 'beside';
+
+    // The dock's divider moves the split: keep the editor's share once it stops.
+    useEffect(() => {
+        const el = rootRef.current;
+        if (!beside || !el || typeof ResizeObserver === 'undefined') return;
+        let timer = 0;
+        const observer = new ResizeObserver(() => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(() => {
+                const ratio = DockManager.besideRatio(tabId);
+                if (ratio !== null) try { window.localStorage.setItem(SPLIT_RATIO_KEY, String(clampSplitRatio(ratio))); } catch { /* private mode */ }
+            }, SPLIT_SAVE_MS);
+        });
+        observer.observe(el);
+        return () => { observer.disconnect(); window.clearTimeout(timer); };
+    }, [beside, tabId]);
+
+    // The canvas beside draws the preview: the tab publishes its plan, re-planned as you type.
+    const canvasPreview = beside && previewing;
+    useEffect(() => {
+        if (!canvasPreview || busy) return;
+        if (current?.plan) publishScriptPreview({ script: current.text, modelId: current.modelId, world: current.world, plan: current.plan, owner: tabId });
+        else clearOwnedScriptPreview(tabId);
+    }, [canvasPreview, busy, current, tabId]);
+    useEffect(() => {
+        if (!canvasPreview) clearOwnedScriptPreview(tabId);
+    }, [canvasPreview, tabId]);
+    useEffect(() => () => clearOwnedScriptPreview(tabId), [tabId]);
+    // A new target closes the preview.
+    const previewedTarget = useRef(chosen);
+    useEffect(() => {
+        if (previewedTarget.current !== chosen) setPreviewing(false);
+        previewedTarget.current = chosen;
+    }, [chosen]);
+
+    const startPreview = () => {
+        if (wide) placeBeside();
+        setPreviewing(true);
+    };
+
     const save = () => {
         if (!entry) return;
         saveProjectScript(scriptId, chosen && chosen !== entry.modelId ? { text, modelId: chosen } : { text });
@@ -209,6 +296,7 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
     const apply = async () => {
         if (!entry || !current?.plan || busy) return;
         setBusy(true);
+        if (canvasPreview) setScriptPreviewApplying(true);
         try {
             if (chosen !== entry.modelId) saveProjectScript(scriptId, { modelId: chosen });
             const before = buildPlanWorld((store.getState() as any).idlookup ?? {}, chosen);
@@ -222,6 +310,7 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Unknown error', 'Refactoring not applied');
         } finally {
+            if (canvasPreview) clearOwnedScriptPreview(tabId);
             setBusy(false);
         }
     };
@@ -238,7 +327,8 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
     const conforming = metamodelId ? candidates.filter(c => !c.isMetamodel && c.metamodelId === metamodelId).length : 0;
 
     return (
-        <div className="script-tab" data-script-id={scriptId}>
+        <div className={`script-tab${beside ? ' script-tab--beside' : ''}`} data-script-id={scriptId}
+             data-layout={beside ? 'beside' : 'pane'} ref={rootRef}>
             <div className="script-tab__toolbar">
                 <span className="script-tab__heading">
                     <span className="script-tab__name" title={entry.name}>
@@ -266,7 +356,7 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
                 </span>
                 <button type="button"
                         className={`script-tab__button script-tab__button--primary script-tab__button--solid${previewing ? ' script-tab__button--active' : ''}`}
-                        onClick={() => setPreviewing(true)} disabled={!chosen || !text.trim() || busy} aria-pressed={previewing}>
+                        onClick={startPreview} disabled={!chosen || !text.trim() || busy} aria-pressed={previewing}>
                     Preview
                 </button>
                 <button type="button" className="script-tab__jodie" aria-label="Open Jjodie" title="Open Jjodie"
@@ -275,7 +365,7 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
                 </button>
             </div>
             <div className="script-tab__split">
-                <div className="script-tab__left" style={{ width: editorWidth }}>
+                <div className="script-tab__left" style={beside ? undefined : { width: editorWidth }}>
                     <div className="script-tab__editor">
                         <Editor
                             width="100%"
@@ -314,7 +404,12 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
                             ))}
                         </ul>
                     )}
+                    {beside && previewing && plan && (
+                        <RefactoringPreviewBar plan={plan} conformingModels={conforming} busy={busy} stale={stale}
+                                               onDiscard={() => setPreviewing(false)} onApply={() => { void apply(); }} />
+                    )}
                 </div>
+                {!beside && <>
                 <div className="script-tab__handle" role="separator" aria-orientation="vertical" aria-label="Resize the editor"
                      aria-valuemin={EDITOR_WIDTH_MIN} aria-valuemax={EDITOR_WIDTH_MAX} aria-valuenow={editorWidth}
                      onPointerDown={onHandleDown} onPointerMove={onHandleMove} onPointerUp={onHandleUp} onPointerCancel={onHandleUp} />
@@ -326,6 +421,7 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
                                                onDiscard={() => setPreviewing(false)} onApply={() => { void apply(); }} />
                     )}
                 </div>
+                </>}
             </div>
         </div>
     );
