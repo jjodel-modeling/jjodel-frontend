@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (short discovery inside, then implementation)
 Depends: P-2026-10-25-0005
-Status: da eseguire
+Status: non completato 2026-10-25 · lane jjp-sbs · f27fe1a3d, 27eeafa03 (wip) · context ceiling at the probe, 20/23 · continued and closed by P-2026-10-25-0040
 Corregge: 2026-10-24 23:20
 Request: Alfonso, 2026-10-25 ~00:12 («vai con l'affiancamento in /lane auto»), after a screenshot of the refactoring tab on HwDesign judged «non mi pare bellissima» and the question «non sarebbe possibile visualizzare direttamente il metamodello originale?»
 Model: claude-opus-5-5

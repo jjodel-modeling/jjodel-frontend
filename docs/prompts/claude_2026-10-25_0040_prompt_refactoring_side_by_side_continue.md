@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (continuation of P-2026-10-25-0020)
 Depends: P-2026-10-25-0020
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane jjp-sbs · 984a104d9 · non fuso: refactoring-side-by-side 25/25, split-preview at 1080 px, m2-preview, s4c ALL PASS; typecheck 0, vitest 12036 tests (9 known import failures), build 0, smoke GREEN; crops in ~/.jjodel-lanes/P-2026-10-25-0040/
 Corregge: 2026-10-25 00:20
 Request: Alfonso, 2026-10-25 ~00:12 («vai con l'affiancamento in /lane auto»)
 Model: claude-opus-5-5
