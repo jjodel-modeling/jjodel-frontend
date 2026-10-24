@@ -469,8 +469,8 @@
 /* Soft wrap with a hanging indent of 4ch on wrapped lines. Each line is a
    .md-code-line (MarkdownRenderer wrapLines); the first visual line starts at the
    line's left edge, continuation lines 4ch further in. With line numbers the
-   inline number column (2.5em + 1em padding) is part of the first line, so the
-   indent is measured from the code, not from the number. */
+   inline number column (min-width 2.5em, padding included: border-box) is part
+   of the first line, so the indent is measured from the code, not from the number. */
 .jodie-message-bubble .md-code-block .md-code-content code {
     white-space: pre-wrap !important;
     overflow-wrap: anywhere;
@@ -483,8 +483,8 @@
 }
 
 .jodie-message-bubble .md-code-block--numbered .md-code-line {
-    padding-left: calc(3.5em + 4ch);
-    text-indent: calc(-3.5em - 4ch);
+    padding-left: calc(2.5em + 4ch);
+    text-indent: calc(-2.5em - 4ch);
 }
 
 /* No nested card padding: next to prose, the code block bleeds to the bubble's
