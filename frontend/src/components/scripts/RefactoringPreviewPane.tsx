@@ -68,7 +68,7 @@ export const RefactoringPreviewPane: React.FC<RefactoringPreviewPaneProps> = ({ 
         <div className="rfa-pane" data-previewing={previewing ? 'true' : 'false'}>
             <div className="rfa-pane__title">
                 <span>{metamodelName || 'Metamodel'}</span>
-                <span className="rfa-pane__mode">{previewing ? 'Preview' : 'Read-only'}</span>
+                {previewing && <span className="rfa-pane__mode">· preview</span>}
             </div>
             <div className="rfa-pane__scroll" ref={hostRef}>
                 {!layout || !layout.boxes.length ? (

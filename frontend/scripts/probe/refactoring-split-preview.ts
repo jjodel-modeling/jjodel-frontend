@@ -9,6 +9,9 @@
  * dashed generalizations on the right pane, the bar with chips and the slot loss. Apply: the metamodel changed, one
  * undo entry; one Cmd+Z restores it. Also: the editor at 600 px and its resize persisted, no Save or «Run on» in the
  * header, Jjodie's launcher on the window side. No page errors.
+ * P-2026-10-25-0005: one «Preview» (the pane title says «<name> · preview» in muted text, nothing idle), the code
+ * area reaching the split handle with no full-height focus outline, and on this tab no floating launcher but a
+ * header robot button that opens the dock; the launcher on another tab unchanged.
  *
  * Fixture: fixtures/jjscript-m1-esm.jjodel (as jjodie-rf2-run-from-tab.ts), plus one model of its metamodel created
  * through the Navbar's createM1 and filled through JjScriptService. Real app, own dev server (never 3000, 3001,
@@ -62,6 +65,26 @@ const READ_TAB = `(() => {
     struck: [...t.querySelectorAll('.rfa-feature--removed .rfa-feature__name')].map(e => getComputedStyle(e).textDecorationLine),
     addedBorder: (() => { const b = t.querySelector('.rfa-box--added'); return b ? getComputedStyle(b).borderTopStyle + ' ' + getComputedStyle(b).borderTopColor : null; })(),
     bar: bar ? bar.innerText.replace(/\\s+/g, ' ').trim() : null,
+  };
+})()`;
+
+/** The editor's geometry against the split handle, Monaco's layout and the focus outline (P-2026-10-25-0005). */
+const READ_EDITOR = `(() => {
+  const t = document.querySelector(${JSON.stringify(TAB)});
+  if (!t) return null;
+  const r = (s) => { const e = t.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return { x: Math.round(b.x), right: Math.round(b.right), width: Math.round(b.width) }; };
+  const m = window.monaco;
+  const ed = m && m.editor.getEditors ? m.editor.getEditors().find(e => t.contains(e.getContainerDomNode())) : null;
+  const li = ed ? ed.getLayoutInfo() : null;
+  const outline = (s) => { const e = t.querySelector(s); if (!e) return null; const c = getComputedStyle(e); return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineColor, offset: c.outlineOffset, border: c.borderRightStyle + ' ' + c.borderRightWidth + ' ' + c.borderRightColor }; };
+  return {
+    handle: r('.script-tab__handle'), left: r('.script-tab__left'), editor: r('.script-tab__editor'),
+    monaco: r('.script-tab__editor .monaco-editor'), guard: r('.script-tab__editor .overflow-guard'),
+    scrollable: r('.script-tab__editor .editor-scrollable'), ruler: r('.script-tab__editor .decorationsOverviewRuler'),
+    vscroll: r('.script-tab__editor .scrollbar.vertical'),
+    layout: li ? { width: li.width, contentLeft: li.contentLeft, contentWidth: li.contentWidth, vScroll: li.verticalScrollbarWidth, ruler: li.overviewRuler && li.overviewRuler.width, minimap: li.minimap && li.minimap.minimapWidth } : null,
+    focused: ed ? ed.hasTextFocus() : null,
+    outlineMonaco: outline('.script-tab__editor .monaco-editor'), outlineEditor: outline('.script-tab__editor'),
   };
 })()`;
 
@@ -147,6 +170,12 @@ meas('scene', scene);
 const filled = (scene.slot || []).find((s: any) => s.modelId === scene.model);
 check('scene: the model holds values of the attribute', !!filled && filled.count >= 1, scene.slot);
 
+// The launcher before any Refactoring tab, on the project's own tab.
+const LAUNCHER = `(() => { const l = document.querySelector('.jodie-minimized'); if (!l) return null; const r = l.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), display: getComputedStyle(l).display }; })()`;
+const launcher0 = await page.evaluate(LAUNCHER) as any;
+meas('launcher on the project tab, before', launcher0);
+const PANE_TITLE = `(() => { const t = document.querySelector(${JSON.stringify(TAB)} + ' .rfa-pane__title'); if (!t) return null; const m = t.querySelector('.rfa-pane__mode'); return { text: [...t.children].map(c => c.textContent.trim()).join(' '), mode: m ? m.textContent.trim() : null, modeColor: m ? getComputedStyle(m).color : null }; })()`;
+
 // The M2 Refactoring, empty, on the metamodel.
 phase = 'tab';
 const entry: any = await page.evaluate(`(async () => {
@@ -162,6 +191,9 @@ check('editor at 600 px', tab?.leftWidth === 600, tab?.leftWidth);
 check('header: no Save, no «Run on», Preview present', !!tab && !tab.buttons.some((b: string) => /^Save$|^Run/.test(b)) && tab.buttons.includes('Preview'), tab?.buttons);
 check('header: «Refactoring of» with the selector', /^Refactoring of/.test(tab?.of || ''), tab?.of);
 check('read-only pane draws the metamodel', (tab?.boxes || 0) > 0 && tab?.previewing === 'false', { boxes: tab?.boxes, previewing: tab?.previewing });
+const title0 = await page.evaluate(PANE_TITLE) as any;
+meas('pane title, idle', title0);
+check('pane title idle: the name only', !!title0 && title0.mode === null && !/preview|read-only/i.test(title0.text), title0);
 const selected = await page.locator(`${TAB} .script-tab__model`).inputValue().catch(() => null);
 check('target is the metamodel', selected === scene.esm, { selected, esm: scene.esm });
 
@@ -190,6 +222,10 @@ if (!typed.includes(SCRIPT)) {
     await page.evaluate(`(() => { const m = window.monaco; const x = m.editor.getModels().filter(x => x.getLanguageId() === 'jjscript').pop(); x.setValue(${JSON.stringify(SCRIPT)}); })()`);
 }
 await wait(page, 1200);
+const geo = await page.evaluate(READ_EDITOR) as any;
+meas('editor geometry, focused', geo);
+check('code area reaches the split handle (±2 px)', !!geo && Math.abs(geo.scrollable.right - geo.handle.x) <= 2 && geo.layout.contentLeft === geo.scrollable.x - geo.monaco.x, { scrollableRight: geo?.scrollable?.right, handleX: geo?.handle?.x, contentLeft: geo?.layout?.contentLeft, scrollableLeft: geo ? geo.scrollable.x - geo.monaco.x : null });
+check('no focus outline on the editor', !!geo && geo.focused === true && /^none /.test(geo.outlineMonaco.outline) && /^none /.test(geo.outlineEditor.outline), { focused: geo?.focused, monaco: geo?.outlineMonaco, editor: geo?.outlineEditor });
 tab = await page.evaluate(READ_TAB);
 const markers = await page.evaluate(READ_MARKERS) as any[];
 meas('diagnostics', { tab, markers });
@@ -234,8 +270,17 @@ check('preview: one added feature, one struck feature', tab?.featAdded === 1 && 
 check('preview: one dashed generalization', tab?.edgesAdded === 1, { added: tab?.edgesAdded, all: tab?.edges });
 check('preview bar: chips, slot loss, Discard and Apply', /\+1 class/.test(tab?.bar || '') && /\+1 feature/.test(tab?.bar || '') && /\+1 generalization/.test(tab?.bar || '')
     && /−1 element/.test(tab?.bar || '') && /loses \d+ slot value/.test(tab?.bar || '') && /Discard/.test(tab?.bar || '') && /Apply/.test(tab?.bar || ''), tab?.bar);
+const title1 = await page.evaluate(PANE_TITLE) as any;
+meas('pane title, previewing', title1);
+check('pane title previewing: «<name> · preview», muted', !!title1 && title1.mode === '· preview' && title1.text === `${scene.esmName} · preview`, title1);
+check('one «Preview» in the tab', (await page.locator(`${TAB} :text-is("Preview")`).count()) === 1, await page.locator(`${TAB} :text-is("Preview")`).count());
 const sP = await page.evaluate(readMm) as any;
 check('nothing runs before Apply', !sP.hasNew && sP.hasAttr && sP.undo === s0.undo, sP);
+const tabBoxP = await page.locator(TAB).first().boundingBox();
+if (tabBoxP) {
+    await page.screenshot({ path: join(OUT, 'rfp_previewing.png'), clip: tabBoxP });
+    meas('crop', join(OUT, 'rfp_previewing.png'));
+}
 const rightBox = await page.locator(`${TAB} .script-tab__right`).first().boundingBox();
 if (rightBox) {
     await page.screenshot({ path: join(OUT, 'rfa_preview_pane.png'), clip: rightBox });
@@ -291,10 +336,30 @@ const width = await page.evaluate(`({ dom: Math.round(document.querySelector(${J
 meas('resize', width);
 check('resize to 700 px, persisted', width.dom === 700 && width.stored === '700', width);
 
-// Jjodie's launcher on this page: on the window side, not over the sidebar.
-const launcher = await page.locator('.jodie-minimized').first().boundingBox().catch(() => null);
-meas('launcher', launcher);
-check('launcher on the window side', !!launcher && launcher.x + launcher.width >= 1600 - 24 && launcher.x > 800, launcher);
+// Jjodie on this page: no floating launcher, the header's robot button opens the dock.
+const tabBoxI = await page.locator(TAB).first().boundingBox();
+if (tabBoxI) {
+    await page.screenshot({ path: join(OUT, 'rfp_idle.png'), clip: tabBoxI });
+    meas('crop', join(OUT, 'rfp_idle.png'));
+}
+const launcher = await page.evaluate(LAUNCHER) as any;
+meas('launcher on the Refactoring tab', launcher);
+check('no floating launcher on the Refactoring tab', !!launcher && launcher.display === 'none' && launcher.width === 0, launcher);
+const jbtn = page.locator(`${TAB} .script-tab__toolbar button[aria-label="Open Jjodie"]`);
+const jb = await jbtn.boundingBox().catch(() => null);
+const pv = await page.locator(`${TAB} .script-tab__toolbar button`, { hasText: 'Preview' }).boundingBox().catch(() => null);
+const tb = await page.locator(`${TAB} .script-tab__toolbar`).boundingBox().catch(() => null);
+meas('header Jjodie button', { jb, preview: pv, toolbar: tb });
+check('header Jjodie button: 28 px, after Preview, at the right end', !!jb && !!pv && !!tb && Math.round(jb.width) === 28 && Math.round(jb.height) === 28 && jb.x > pv.x + pv.width && tb.x + tb.width - (jb.x + jb.width) <= 16, { jb, pv, tb });
+const dock0 = await page.locator('.jodie-window').count();
+await jbtn.click();
+await wait(page, 1200);
+const dock1 = await page.evaluate(`(() => { const w = document.querySelector('.jodie-window'); const s = document.querySelector('.jodie-dock-slot'); const r = w ? w.getBoundingClientRect() : null; return { window: !!w, slot: !!s, rect: r ? { x: Math.round(r.x), width: Math.round(r.width) } : null }; })()`) as any;
+meas('header button opens the dock', { before: dock0, after: dock1 });
+check('header button opens the docked panel', dock0 === 0 && dock1.window && dock1.slot && !!dock1.rect && dock1.rect.x + dock1.rect.width >= 1600 - 2, { before: dock0, after: dock1 });
+await page.evaluate(`(() => { const c = document.querySelector('.jodie-window [aria-label="Close"], .jodie-window .jodie-close, .jodie-window button[title="Close"]'); if (c) c.click(); })()`);
+await wait(page, 800);
+meas('dock after close', await page.locator('.jodie-window').count());
 
 // The launcher rule holds only while the Refactoring tab is the active one: switch to another tab of the dock.
 phase = 'other tab';
@@ -302,7 +367,7 @@ const other = await page.evaluate(`(() => { const tabs = [...document.querySelec
 await wait(page, 1200);
 const offTab = await page.evaluate(`(() => { const l = document.querySelector('.jodie-minimized'); const r = l ? l.getBoundingClientRect() : null; return { scriptActive: !!document.querySelector(${JSON.stringify(TAB)}), launcher: r ? { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width) } : null, right: l ? getComputedStyle(l).right : null }; })()`) as any;
 meas('launcher on another tab', { other, ...offTab });
-check('launcher rule off on another tab', !!other && !offTab.scriptActive && !!offTab.launcher && !(offTab.launcher.x === Math.round(launcher?.x ?? -1) && offTab.launcher.y === Math.round(launcher?.y ?? -1)), { other, ...offTab });
+check('launcher on another tab unchanged', !!other && !offTab.scriptActive && !!offTab.launcher && !!launcher0 && offTab.launcher.x === launcher0.x && offTab.launcher.y === launcher0.y && offTab.launcher.width === launcher0.width, { other, before: launcher0, ...offTab });
 await page.screenshot({ path: join(OUT, 'rfa_other_tab_launcher.png') });
 meas('crop', join(OUT, 'rfa_other_tab_launcher.png'));
 
