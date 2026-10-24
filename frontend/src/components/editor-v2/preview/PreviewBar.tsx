@@ -52,8 +52,12 @@ async function flushPendingCommit(): Promise<void> {
     await sleep(0);
 }
 
-/** Run the script as one undo step: the group closes after the queued writes, and the sync layer's, are in. */
-async function applyAsOneStep(preview: ScriptPreview): Promise<{ applied: number; failed: number }> {
+/**
+ * Run the script as one undo step: the group closes after the queued writes, and the sync layer's, are in.
+ * Also the Apply of the Refactoring tab's own preview (P-2026-10-24-2320), which reads only
+ * `script`, `modelId` and `world.level` of `preview`.
+ */
+export async function applyAsOneStep(preview: Pick<ScriptPreview, 'script' | 'modelId' | 'world'>): Promise<{ applied: number; failed: number }> {
     beginUndoGroup();
     try {
         return await applyScript(preview);
@@ -73,7 +77,7 @@ function scriptCommands(script: string): string[] {
         .filter((l) => l && !l.startsWith('//') && !l.startsWith('#') && !l.toLowerCase().startsWith('target '));
 }
 
-async function applyScript(preview: ScriptPreview): Promise<{ applied: number; failed: number }> {
+async function applyScript(preview: Pick<ScriptPreview, 'script' | 'modelId' | 'world'>): Promise<{ applied: number; failed: number }> {
     const idlookup: any = (store.getState() as any).idlookup ?? {};
     const m2 = preview.world.level === 'M2';
     const metamodelId = m2 ? preview.modelId : idlookup[preview.modelId]?.instanceof;

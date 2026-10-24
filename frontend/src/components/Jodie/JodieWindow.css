@@ -929,6 +929,23 @@
     }
 }
 
+/* Refactoring tab (P-2026-10-24-2320, R-JJD-1): the launcher follows the docked panel, on the
+   window side of the page where the dock opens, not over the project sidebar; its bottom clears
+   the tab's preview bar. Same 48px size as in the editor tabs. */
+@media (min-width: 769px) {
+    body:has(.dock-tabpane-active .script-tab) .jodie-minimized {
+        left: auto;
+        right: 16px;
+        bottom: calc(var(--jj-statusbar-height) + 64px);
+        width: 48px;
+        height: 48px;
+    }
+
+    body:has(.dock-tabpane-active .script-tab) .jodie-minimized i {
+        font-size: 24px;
+    }
+}
+
 .jodie-minimized.jodie-has-unread::after {
     content: '';
     position: absolute;

@@ -101,4 +101,139 @@
         flex: 1;
         min-height: 0;
     }
+
+    // P-2026-10-24-2320: the split, the planner's diagnostics, Preview.
+    &__of {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--color-form-muted);
+        white-space: nowrap;
+    }
+
+    &__warnings {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--color-form-muted);
+        white-space: nowrap;
+
+        &--on {
+            color: var(--color-warning-text);
+        }
+
+        &--errors {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__button--solid {
+        background: var(--color-accent);
+        color: var(--color-text-inverse);
+
+        &:hover:not(:disabled) {
+            background: var(--color-accent-hover);
+        }
+    }
+
+    &__button--active {
+        box-shadow: inset 0 0 0 1px var(--color-text-inverse);
+    }
+
+    &__split {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+    }
+
+    &__left {
+        display: flex;
+        flex-direction: column;
+        flex: none;
+        min-width: 0;
+    }
+
+    &__handle {
+        flex: none;
+        width: 5px;
+        border-left: 1px solid var(--color-form-border);
+        cursor: col-resize;
+        touch-action: none;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+    }
+
+    &__right {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__problems {
+        flex: none;
+        max-height: 30%;
+        margin: 0;
+        padding: 4px 0;
+        overflow: auto;
+        list-style: none;
+        border-top: 1px solid var(--color-form-border);
+        background: var(--color-form-surface);
+        font-size: var(--text-xs);
+    }
+
+    &__problem {
+        display: flex;
+        gap: 8px;
+        padding: 2px 10px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &::before {
+            content: '';
+            flex: none;
+            width: 7px;
+            height: 7px;
+            margin-top: 5px;
+            border-radius: 50%;
+            background: var(--color-warning);
+        }
+
+        &--error::before {
+            background: var(--color-error);
+        }
+    }
+
+    &__problem-at {
+        flex: none;
+        min-width: 56px;
+        color: var(--color-form-muted);
+        font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    &__problem-msg {
+        color: var(--color-text-primary);
+    }
+}
+
+// Monaco's glyph margin: an amber dot on a line with warnings, red with an error.
+.script-tab__glyph {
+    &::after {
+        content: '';
+        display: block;
+        width: 7px;
+        height: 7px;
+        margin: 6px auto 0;
+        border-radius: 50%;
+        background: var(--color-warning);
+    }
+
+    &--error::after {
+        background: var(--color-error);
+    }
 }
