@@ -31,6 +31,7 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: New `JjelTimeoutError` (not a JjelEvaluationError), exported from jjel/evaluator and jjel/index; deadline is absolute Date.now() ms, inherited by child(). Bench 4/4 killed: check removed, `>` inverted, child() drops deadline, wrong error class. Gates: typecheck rc=0, vitest 11771/11771 (9 files fail at import, the §17 list), build rc=0. Both jjel index files carry the export: four source files, all under jjel/.
 **Prompt document name**: 2026-10-24 01:36
+
 ## 2026-10-24 — feat: read-only effects planner for JjScript (S4a)
 **Prompt**: P-2026-10-24-0137, slice S4a under R-JJD-2/R-JJD-4: a pure, read-only effects planner for M1 JjScript (create instance, set, +=, -=, reference writes), warnings for unknown metaclass/feature, unresolvable target, one end of an opposite pair, unsupported M2 commands; tests first, mutation bench of at least five mutants.
 **Files touched**: frontend/src/jjscript/executor/effectsPlanner.ts, frontend/src/jjscript/executor/__tests__/effectsPlanner.test.ts (e854a04c2); docs/log-inbox/jjodie-ui.md (this commit)
@@ -45,6 +46,7 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-24 01:37
 
 **Ticket** (S4b/S2 input): the planner reads a plain-data `PlanWorld`; the builder from the store (as `buildWorld` in `ConsumerProposal.tsx`, with `opposite` and attribute `upper`) is not in this lane and is owed by the first UI consumer. Rename and delete are planned too (they move the names later lines resolve). The prompt's Status flip was not made: the `status-flip` skill is user-invoked only.
+
 ## 2026-10-24 — feat: jjodie S1a, docked panel with a resize handle
 **Prompt**: P-2026-10-24-0135, slice S1a under R-JJD-1: Jjodie as a grid column of `.dashboard-container`, left-edge drag handle 420..760 (default 460), `dockWidth` on `JodieConfig` saved on pointer-up, floating and fullscreen removed, Properties rail offset by a new body variable. Code and gates only; visual check in the probe lane.
 **Files touched**: frontend/src/components/Jodie/Jodie.tsx, JodieWindow.tsx, JodieWindow.css, frontend/src/components/editors/properties-with-tree-view.scss, frontend/src/pages/components/Dashboard.tsx, frontend/src/pages/dashboard.scss, frontend/src/styles/tokens/_layout.scss, frontend/src/types/jodie.ts (467e3ec98); docs/log-inbox/jjodie-ui.md, docs/prompts/claude_2026-10-24_0135_prompt_jjodie_s1a_dock.md (this commit)
@@ -59,3 +61,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Prompt document name**: 2026-10-24 01:35
 
 **Ticket** (unattended decisions, `ratified as recommended, unattended`, RC-21/RC-25, for the digest): (1) where no dashboard slot exists (pages other than a project) the panel docks to the viewport's right edge, fixed, full height below the app bar; (2) the docked panel is not hidden by the notifications popover (it no longer overlaps it); hide-on-popover still applies to the FAB and the viewport fallback; (3) the header Reset now restores the default dock width 460; (4) the handle is a focusable `role="separator"`, ArrowLeft/ArrowRight step 8 px, saved per key press. For the probe: moving between a project and another page swaps portal and in-place rendering, so the window remounts and an unsent input draft is lost.
+
+## 2026-10-24 — feat: publish the canvas multi-selection as an event (S3b)
+**Prompt**: P-2026-10-24-0155, slice S3b under R-JJD-3: probe shift-click against `selectElement`, then a registry event publishing React Flow's selected nodes from EditorV2 (rAF-debounced, unchanged lists not emitted), unit test for the pure part, probe re-run for 1, 2, 3 nodes.
+**Files touched**: frontend/src/components/editor-v2/EditorV2.tsx, frontend/src/events/registry.ts, frontend/src/components/editor-v2/utils/canvasSelection.ts, frontend/src/components/editor-v2/utils/__tests__/canvasSelection.test.ts, frontend/scripts/probe/canvas-multi-selection.ts (9be43bbac); docs/log-inbox/jjodie-ui.md, docs/prompts/claude_2026-10-24_0155_prompt_jjodie_s3b_multiselection_event.md (this commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe (DemoPEST demoSM): (1) click A, shift B, shift C: React Flow selects A, A+B, A+B+C. (2) selectElement does not collapse it; D isSelected also holds all three. (3) _lastSelected follows the last click. Event detail {modelId,nodeIds,elementIds}, one emission per step. Out of scope: new pure module canvasSelection.ts, needed for a bench test. Bench 3/3 killed. Two probe runs saw 0 nodes on a stale dev server after the registry reload; a restart cleared it, A/B showed EditorV2 not the cause.
+**Prompt document name**: 2026-10-24 01:55
