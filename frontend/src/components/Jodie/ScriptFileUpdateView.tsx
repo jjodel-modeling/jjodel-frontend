@@ -10,6 +10,7 @@ import { useSelector } from 'react-redux';
 import { DiffEditor, type DiffOnMount } from '@monaco-editor/react';
 import { readProjectScript, saveProjectScript } from '../scripts/scriptFiles';
 import { fileUpdateInput, linkScriptFile, type ScriptEditorTarget } from './scriptEditorModel';
+import { JJSCRIPT_LANGUAGE_ID, JJSCRIPT_THEME_ID, registerJjscriptLanguage } from '../../jjscript/editor/jjscriptMonaco';
 import './ScriptEditorView.scss';
 
 export interface ScriptFileUpdateViewProps {
@@ -98,8 +99,9 @@ export function ScriptFileUpdateView({ target, onBack }: ScriptFileUpdateViewPro
                         <DiffEditor
                             width="100%"
                             height="100%"
-                            language="plaintext"
-                            theme="vs"
+                            language={JJSCRIPT_LANGUAGE_ID}
+                            theme={JJSCRIPT_THEME_ID}
+                            beforeMount={registerJjscriptLanguage}
                             original={input.original}
                             modified={input.modified}
                             keepCurrentOriginalModel

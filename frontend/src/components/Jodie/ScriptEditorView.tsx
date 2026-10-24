@@ -13,6 +13,7 @@ import { planEffects, type EffectsPlan } from '../../jjscript/executor/effectsPl
 import { buildPlanWorld } from '../../jjscript/executor/planWorld';
 import { getScriptPreview } from '../editor-v2/preview/scriptPreviewStore';
 import { openScriptAsFile } from '../scripts/scriptFiles';
+import { JJSCRIPT_LANGUAGE_ID, JJSCRIPT_THEME_ID, registerJjscriptLanguage } from '../../jjscript/editor/jjscriptMonaco';
 import { JjodelEvents } from '../../events/registry';
 import { store } from '../../joiner';
 import {
@@ -196,8 +197,9 @@ export function ScriptEditorView({ target, onBack }: ScriptEditorViewProps): JSX
                     <Editor
                         width="100%"
                         height="100%"
-                        language="plaintext"
-                        theme="vs"
+                        language={JJSCRIPT_LANGUAGE_ID}
+                        theme={JJSCRIPT_THEME_ID}
+                        beforeMount={registerJjscriptLanguage}
                         value={text}
                         onChange={onChange}
                         onMount={onMount}
@@ -209,8 +211,9 @@ export function ScriptEditorView({ target, onBack }: ScriptEditorViewProps): JSX
                         <DiffEditor
                             width="100%"
                             height="100%"
-                            language="plaintext"
-                            theme="vs"
+                            language={JJSCRIPT_LANGUAGE_ID}
+                            theme={JJSCRIPT_THEME_ID}
+                            beforeMount={registerJjscriptLanguage}
                             original={generated}
                             modified={text}
                             keepCurrentOriginalModel
