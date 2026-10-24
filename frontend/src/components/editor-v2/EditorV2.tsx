@@ -1723,7 +1723,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const model = idlookup[nodeId]?.model;
             return typeof model === 'string' && model ? model : undefined;
         });
-        return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn));
+        return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn, scriptPreview.script));
     }, [flowElements, scriptPreview]);
 
     // Persist the merged session override of a synthetic edge on the hidden

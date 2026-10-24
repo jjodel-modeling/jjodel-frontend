@@ -123,6 +123,26 @@ describe('buildPreviewElements', () => {
         expect(nodes.map((n) => n.className)).toEqual(['jj-preview-node jj-preview-node--warning', 'jj-preview-node']);
     });
 
+    it('marks the owner a warned line writes when the line plans no effect (unknown feature, unresolvable target)', async () => {
+        const script = [
+            'create instance of State "A"',
+            'create instance of State "B"',
+            'create instance of State "C"',
+            '',
+            'set B.zzNoSuchFeature = 1',
+            'remove Nobody from C.next',
+        ].join('\n');
+        const plan = await planEffects(script, world());
+        expect(plan.warnings.map((w) => [w.code, w.line])).toEqual([['UNKNOWN_PROPERTY', 5], ['INSTANCE_NOT_FOUND', 6]]);
+        expect(plan.features).toEqual([]);
+        expect(plan.references).toEqual([]);
+        const marked = (s?: string) => buildPreviewElements(plan, world(), drawn, s).nodes.map((n) => !!n.className?.includes('--warning'));
+        // The blank line keeps the numbering: line 5 is `set B…`, line 6 is `remove … from C.next`.
+        expect(marked(script)).toEqual([false, true, true]);
+        // Without the script the lines cannot be read: no marker.
+        expect(marked()).toEqual([false, false, false]);
+    });
+
     it('draws nothing for a plan without creations or links', async () => {
         const plan = await planEffects('set Idle.name = "Off"', world());
         expect(buildPreviewElements(plan, world(), drawn)).toEqual({ nodes: [], edges: [] });
