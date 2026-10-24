@@ -241,11 +241,13 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
         return ok;
     }, [tabId, chosen]);
     useEffect(() => {
-        if (!wide || !chosen) { setPlaced(null); return; }
+        // Not before the entry is in the store: without it the target reads as any level and
+        // `chosen` falls to the first model, which would be placed beside an M2 Refactoring.
+        if (!wide || !chosen || !entry) { setPlaced(null); return; }
         // After the dock has committed this tab's own placement.
         const timer = window.setTimeout(placeBeside, 0);
         return () => window.clearTimeout(timer);
-    }, [wide, chosen, placeBeside]);
+    }, [wide, chosen, placeBeside, !!entry]); // eslint-disable-line react-hooks/exhaustive-deps
     const beside = besideMode(windowWidth, placed === chosen && !!chosen) === 'beside';
 
     // The dock's divider moves the split: keep the editor's share once it stops.

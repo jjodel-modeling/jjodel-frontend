@@ -140,6 +140,8 @@ check('scene: 8 classes or more, a filled attribute, a second metamodel', scene.
 phase = 'layout';
 await page.evaluate(`(async () => { const dm = (await import('/src/components/abstract/DockManager.tsx')).default; const j = await import('/src/joiner/index.ts'); await dm.open2(j.L.fromPointer(${JSON.stringify(scene.esm)})); })()`);
 await wait(page, 4000);
+// The classes added by the scene reach the canvas a little later on a loaded machine.
+for (let i = 0; i < 30 && (await page.locator('.dock-tabpane-active .react-flow__node').count()) < 8; i++) await wait(page, 500);
 const fullPanel: any = await page.evaluate(`(async () => { const dm = (await import('/src/components/abstract/DockManager.tsx')).default; const l = dm.dock.getLayout(); const p = l.dockbox.children.find(c => (c.tabs || []).some(t => t.id === ${JSON.stringify(scene.esm)})); return p ? p.id : null; })()`);
 const nodeBoxes = await page.locator('.dock-tabpane-active .react-flow__node').evaluateAll((ns) => ns.map((n) => { const r = n.getBoundingClientRect(); return { id: n.getAttribute('data-id'), x: r.x, y: r.y, w: r.width, h: r.height }; }).filter((b) => b.w > 60 && b.h > 30));
 meas('class nodes on the full-width canvas', nodeBoxes.length);
@@ -177,6 +179,7 @@ check('two visible panels, the metamodel right of the Refactoring tab, x ranges 
 const share = dock.script?.box && dock.target?.box ? dock.script.box.width / (dock.script.box.width + dock.target.box.width) : null;
 check('editor about 40 % of the split', share !== null && Math.abs(share - 0.4) <= 0.03, share);
 check('one instance of the metamodel tab', dock.instances === 1, dock.instances);
+check('the model tab not moved beside an M2 Refactoring', !(dock.panels.find((p: any) => p.id === dock.target?.id)?.tabs || []).includes(scene.model), dock.panels.find((p: any) => p.id === dock.target?.id)?.tabs);
 check('the tab holds the editor only (no pane, no handle)', dock.layoutAttr === 'beside' && (await page.locator(`${TAB} .rfa-pane`).count()) === 0 && (await page.locator(`${TAB} .script-tab__handle`).count()) === 0, dock.layoutAttr);
 let canvas: any = await page.evaluate(READ_CANVAS(dock.target?.id || ''));
 const samePos = (a: any, b: any) => !!a && !!b && Object.keys(a).length > 0 && Object.keys(a).every((k) => b[k] && b[k][0] === a[k][0] && b[k][1] === a[k][1]);
