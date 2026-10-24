@@ -2197,6 +2197,12 @@
     color: #b91c1c;
 }
 
+/* Timed out (R-JJD-9) is muted text, as in the live result, not an error.
+   !important and the .jodie-messages scope: `.jodie-messages code` sets an !important colour. */
+.jodie-messages .jodie-code-entry__output-row--timed-out .jodie-code-entry__output {
+    color: var(--color-text-disabled, #94a3b8) !important;
+}
+
 .jodie-code-entry__meta {
     margin-top: 2px;
     padding-left: 14px;

@@ -29,6 +29,7 @@ export const jjelProvider: LanguageProvider = {
             timestamp: Date.now(),
             warnings: outcome.warnings.length > 0 ? outcome.warnings : undefined,
             rawValue: outcome.ok ? outcome.value : undefined,
+            timedOut: 'timedOut' in outcome && outcome.timedOut ? true : undefined,
         };
         return { entries: [entry] };
     },

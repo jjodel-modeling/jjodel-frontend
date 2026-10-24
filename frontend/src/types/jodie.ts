@@ -1097,6 +1097,8 @@ export interface CodeEntry {
     warnings?: CodeWarning[];
     /** Raw JjEL value when ok, retained for the inline inspector. */
     rawValue?: unknown;
+    /** The evaluation hit its deadline (R-JJD-9): the error text renders muted. */
+    timedOut?: boolean;
 }
 
 /**

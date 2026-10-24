@@ -10,7 +10,7 @@
 
 import { buildEvalContext } from '../../jjscript';
 import type { ExecutionContext } from '../../jjscript/types';
-import { jjelEvalWithDiagnostics, EvaluationContext, JjelEvaluator, JjelTimeoutError } from '../../jjel';
+import { EvaluationContext, JjelEvaluator, JjelTimeoutError } from '../../jjel';
 import { parseExpression } from '../../jjel/parser';
 import type { JjelValue, JjelWarning } from '../../jjel';
 import { DUser, L, LUser, LProject } from '../../joiner';
@@ -59,6 +59,8 @@ export interface JjelEvalOutcome {
      * branch; never populated on the parse/throw failure branch.
      */
     warnings: JjelWarning[];
+    /** True when the evaluation hit its deadline (R-JJD-9): muted, not an error. */
+    timedOut?: boolean;
 }
 
 /** One element the live JjEL result is evaluated on (P-2026-10-24-0241). */
@@ -89,6 +91,14 @@ export interface JjelLiveRow {
 
 /** Deadline of one live evaluation round, over all its targets (S3a `deadline`). */
 export const JJEL_LIVE_DEADLINE_MS = 500;
+
+/** Deadline of one conversation evaluation, the JjEL mode submit (R-JJD-9). */
+export const JJEL_CONVERSATION_DEADLINE_MS = 2000;
+
+/** Muted reply of a conversation evaluation that hit its deadline. */
+export function jjelTimedOutText(budgetMs: number): string {
+    return `timed out after ${budgetMs / 1000} s`;
+}
 
 function stripJjelErrorPrefix(msg: string): string {
     return msg.replace(/^JjEL (parse |evaluation )?error: /, '');
@@ -173,13 +183,26 @@ export function evaluateJjelLive(
     });
 }
 
-/** Evaluate a JjEL expression in the current Jjodie code-mode context. */
-export function evaluateJjelInJodie(expression: string): JjelEvalOutcome {
+/**
+ * Evaluate a JjEL expression in the current Jjodie code-mode context, bounded by the
+ * S3a deadline (R-JJD-9): past `budgetMs` the outcome is `timedOut`, not an error.
+ */
+export function evaluateJjelInJodie(
+    expression: string,
+    budgetMs: number = JJEL_CONVERSATION_DEADLINE_MS,
+): JjelEvalOutcome {
     try {
-        const variables = buildJodieJjelVariables();
-        const { value, warnings } = jjelEvalWithDiagnostics(expression, variables);
+        const parsed = parseExpression(expression);
+        if (parsed.errors.length > 0) throw new Error(`JjEL parse error: ${parsed.errors[0].message}`);
+        if (!parsed.expression) throw new Error('JjEL parse error: No expression produced');
+        const ctx = new EvaluationContext(buildJodieJjelVariables());
+        ctx.deadline = Date.now() + budgetMs;
+        const { value, warnings } = new JjelEvaluator(ctx).evaluateWithDiagnostics(parsed.expression, ctx);
         return { ok: true, text: formatJjelValue(value), value, warnings };
     } catch (e) {
+        if (e instanceof JjelTimeoutError) {
+            return { ok: false, text: jjelTimedOutText(budgetMs), warnings: [], timedOut: true };
+        }
         const msg = e instanceof Error ? e.message : String(e);
         return {
             ok: false,

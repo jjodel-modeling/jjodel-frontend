@@ -276,12 +276,14 @@ function AmbiguousInstanceWarning({ warning }: { warning: CodeWarning }): JSX.El
 }
 
 function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?: (entry: CodeEntry) => void }): JSX.Element {
-    const isError = !entry.output.ok;
+    // A timed-out evaluation (R-JJD-9) is muted text, not an error.
+    const isTimedOut = !entry.output.ok && entry.timedOut === true;
+    const isError = !entry.output.ok && !isTimedOut;
     const outputText = entry.output.ok
         ? String(entry.output.value)
         : entry.output.error;
     const warnings = entry.warnings ?? [];
-    const inspectorKind = !isError ? detectKind(entry.rawValue) : null;
+    const inspectorKind = entry.output.ok ? detectKind(entry.rawValue) : null;
     const [inspectorOpen, setInspectorOpen] = useState(false);
     return (
         <div className={`jodie-code-entry${isError ? ' jodie-code-entry--error' : ''}`}>
@@ -290,7 +292,7 @@ function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?:
                 <code className="jodie-code-entry__input">{entry.input}</code>
                 <span className="jodie-code-entry__flavor">{entry.flavor}</span>
             </div>
-            <div className={`jodie-code-entry__row jodie-code-entry__output-row${isError ? ' jodie-code-entry__output-row--error' : ''}`}>
+            <div className={`jodie-code-entry__row jodie-code-entry__output-row${isError ? ' jodie-code-entry__output-row--error' : ''}${isTimedOut ? ' jodie-code-entry__output-row--timed-out' : ''}`}>
                 <code className="jodie-code-entry__output">{outputText}</code>
                 {inspectorKind && (
                     <button
