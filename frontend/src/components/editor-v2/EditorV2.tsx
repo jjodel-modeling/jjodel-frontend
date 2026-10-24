@@ -54,6 +54,7 @@ import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/e
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
 import { clientCentre } from './utils/canvasCentre';
+import { orderSelection, sameIdList, resolveElementIds, type CanvasSelectionDetail } from './utils/canvasSelection';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
@@ -1560,6 +1561,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Get selected nodes and edges for properties panel
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
+
+    // Publish React Flow's multi-selection (R-JJD-3): one emission per animation frame at most,
+    // none when the ordered list is unchanged. Read-only: `_lastSelected` and selectElement are
+    // untouched, so single selection works as before.
+    const publishedSelectionRef = useRef<string[]>([]);
+    const selectionFrameRef = useRef<number | null>(null);
+    const selectedNodesRef = useRef(selectedNodes);
+    selectedNodesRef.current = selectedNodes;
+    useEffect(() => {
+        if (selectionFrameRef.current !== null) return;
+        selectionFrameRef.current = requestAnimationFrame(() => {
+            selectionFrameRef.current = null;
+            const prev = publishedSelectionRef.current;
+            const next = orderSelection(prev, selectedNodesRef.current.map((n) => n.id));
+            if (sameIdList(prev, next)) return;
+            publishedSelectionRef.current = next;
+            const detail: CanvasSelectionDetail = {
+                modelId: modelid ?? '',
+                nodeIds: next,
+                elementIds: resolveElementIds(next, (store.getState() as any).idlookup),
+            };
+            window.dispatchEvent(new CustomEvent(JjodelEvents.CANVAS_SELECTION_CHANGED, { detail }));
+        });
+    }, [selectedNodes, modelid]);
+    useEffect(() => () => {
+        if (selectionFrameRef.current !== null) cancelAnimationFrame(selectionFrameRef.current);
+        selectionFrameRef.current = null;
+        if (publishedSelectionRef.current.length === 0) return;
+        publishedSelectionRef.current = [];
+        const detail: CanvasSelectionDetail = { modelId: modelid ?? '', nodeIds: [], elementIds: [] };
+        window.dispatchEvent(new CustomEvent(JjodelEvents.CANVAS_SELECTION_CHANGED, { detail }));
+    }, [modelid]);
 
     // Canonical selection channel — `_lastSelected.modelElement` is written by both
     // flow (`useJjomSelection.selectElement`) and classic (`graphElement.select` /
