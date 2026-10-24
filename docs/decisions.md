@@ -6670,6 +6670,14 @@ procedi con l'implementazione»; 01:14 «S6 ok», «Apply ok» on A1 and A2 of t
   3.2 tag, after the closing lanes P-2026-10-24-1520 (M2 scripts) and P-2026-10-24-1521 (megamodel NaN paths, Discard
   under Playwright), a trunk-into-branch sync and Alfonso's visual GO. Supersedes the target line of this section's
   evidence paragraph and of P-2026-10-24-0020.
+- **R-JJD-14** (2026-10-24, decided by Alfonso 20:33, evidence: read, verified: none, reversible: trunk).
+  **A saved script is a Refactoring artifact**: the «Refactoring» entry of the artifact menu creates one, Jjodie's
+  `Open as file` and the editor's `Save as file` create one, and a Refactoring is run from a menu on the artifact of
+  the active tab, always through the ghost preview and Apply as one undo (R-JJD-2, R-JJD-6). «Refactoring» is used in a
+  broad sense: an in-place change of a metamodel or of a model, with no guarantee that meaning is preserved. Not
+  «Script», which would cast JjScript as a low-level programming language. Direction, not yet planned: one Refactoring
+  may change a metamodel and, optionally, all its conforming models in the same artifact (coupled evolution), or be
+  applied to a single model.
 
 ## Superate
 
