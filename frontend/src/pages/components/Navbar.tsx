@@ -66,6 +66,7 @@ import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { isConsumerMode } from '../../components/environment/consumerMode';
+import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
 import { DOCUMENT_TYPES, DocumentTypeEntry } from '../../constants/documentTypes';
 
 
@@ -131,6 +132,7 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
     const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const [submenuOpen, setSubmenuOpen] = useState(false);
     const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const [refactoringDialogOpen, setRefactoringDialogOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -238,8 +240,8 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
                     ? { ...entry, onCreate: () => window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG)) }
                     : { ...entry, available: false, disabledReason: 'Create a metamodel first' };
             case 'refactoring':
-                // TODO: wire when refactoring document type lands
-                return entry;
+                // R-JJD-14: the dialog asks the target level, then creates the entry and opens its tab.
+                return { ...entry, onCreate: () => setRefactoringDialogOpen(true) };
             default:
                 return entry;
         }
@@ -348,6 +350,7 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
                     ))}
                 </div>
             )}
+            <NewRefactoringDialog isOpen={refactoringDialogOpen} onClose={() => setRefactoringDialogOpen(false)} />
         </div>
     );
 }

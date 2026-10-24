@@ -3069,6 +3069,10 @@ export interface DProjectScript {
     modelId?: string;
     generatedText?: string;
     updatedAt: number;
+    /** The level a Refactoring changes (R-JJD-14); absent on an older entry, read as any level. */
+    level?: 'M2' | 'M1';
+    /** With `level: 'M1'`, the metamodel whose models it changes; absent means any metamodel. */
+    metamodelId?: string;
 }
 @Leaf
 @RuntimeAccessible('DProject')

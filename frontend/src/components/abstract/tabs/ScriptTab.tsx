@@ -1,16 +1,18 @@
 /**
- * Editor tab of a project script file (S6a, R-JJD-5).
+ * Editor tab of a project script file (S6a, R-JJD-5), a Refactoring under R-JJD-14.
  *
  * Monaco on the script text, `Save` (writes the entry of `DProject.scripts`) and `Run on <model>`,
  * which runs through the S4b preview: the model's canvas opens and shows the ghost of the planned
- * effects, applied or discarded from the canvas bar. Nothing is executed from here.
+ * effects, applied or discarded from the canvas bar. Nothing is executed from here. The target
+ * level shows under the title, and `Run on` lists only the models it fits.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import Editor from '@monaco-editor/react';
 import {
-    projectM1Models, readProjectScript, runScriptOnModel, saveProjectScript,
+    projectTargetCandidates, readProjectScript, runScriptOnModel, saveProjectScript,
 } from '../../scripts/scriptFiles';
+import { compatibleModels, readTarget, targetLabel } from '../../scripts/projectScripts';
 import './ScriptTab.scss';
 
 export interface ScriptTabProps {
@@ -25,13 +27,18 @@ export const ScriptTabTitle: React.FC<{ scriptId: string; name: string }> = ({ s
 
 const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
     const entry = useSelector((state: any) => readProjectScript(scriptId, state));
-    const models = useSelector((state: any) => projectM1Models(state),
-        (a, b) => a.length === b.length && a.every((m, i) => m.id === b[i].id && m.name === b[i].name));
+    const candidates = useSelector((state: any) => projectTargetCandidates(state),
+        (a, b) => a.length === b.length && a.every((m, i) => m.id === b[i].id && m.name === b[i].name
+            && m.isMetamodel === b[i].isMetamodel && m.metamodelId === b[i].metamodelId));
+    const target = readTarget(entry);
+    const models = useMemo(() => compatibleModels(candidates, target),
+        [candidates, target.level, target.metamodelId]); // eslint-disable-line react-hooks/exhaustive-deps
+    const targetText = targetLabel(target, candidates.find(c => c.id === target.metamodelId)?.name);
 
     const [text, setText] = useState<string>(entry?.text ?? '');
     const [modelId, setModelId] = useState<string>(entry?.modelId ?? '');
 
-    // The chosen model falls back to the first M1 when the stored one is gone.
+    // The chosen model falls back to the first compatible one when the stored one is gone or does not fit.
     const chosen = useMemo(
         () => (models.some(m => m.id === modelId) ? modelId : models[0]?.id || ''),
         [models, modelId]);
@@ -63,10 +70,15 @@ const ScriptTab: React.FC<ScriptTabProps> = ({ scriptId }) => {
     return (
         <div className="script-tab" data-script-id={scriptId}>
             <div className="script-tab__toolbar">
-                <span className="script-tab__name" title={entry.name}>
-                    <i className="bi bi-file-earmark-code" aria-hidden="true" />
-                    {entry.name}
-                    {dirty && <span className="script-tab__dirty" aria-label="Unsaved changes">•</span>}
+                <span className="script-tab__heading">
+                    <span className="script-tab__name" title={entry.name}>
+                        <i className="bi bi-arrow-repeat" aria-hidden="true" />
+                        {entry.name}
+                        {dirty && <span className="script-tab__dirty" aria-label="Unsaved changes">•</span>}
+                    </span>
+                    <span className="script-tab__target" data-target-level={target.level || 'any'}>
+                        Refactoring · {targetText}
+                    </span>
                 </span>
                 <span className="script-tab__spacer" />
                 <button type="button" className="script-tab__button" onClick={save} disabled={!dirty}>Save</button>
