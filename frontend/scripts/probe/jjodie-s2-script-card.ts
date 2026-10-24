@@ -258,9 +258,12 @@ if (target) {
     meas('bar motion before Discard', motion);
     check('the card asked for the preview once (no request loop)', motion.requests === 1, motion.requests);
     const bars = await page.locator('.jj-preview-bar').count();
+    // The Properties rail is a fixed overlay (z 900) over the canvas: the bar must sit clear of it, or a real click lands on the rail.
+    const hits: any[] = await page.evaluate(`(() => [...document.querySelectorAll('.jj-preview-bar button')].map((b) => { const r = b.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { text: b.textContent, own: !!t && (t === b || b.contains(t)), hit: t ? t.tagName + '.' + String(t.className).slice(0, 50) : null }; }))()`) as any;
+    check('the bar buttons are the hit target at their centre', hits.length === 2 && hits.every((h) => h.own), hits);
     const discardErr = await page.locator('.jj-preview-bar button', { hasText: 'Discard' }).first().click({ timeout: 5000 }).then(() => null, (e: Error) => e.message.split('\n').slice(0, 6).join(' | '));
     meas('discard click', { bars, error: discardErr });
-    if (discardErr) await page.evaluate(`document.querySelector('.jj-preview-bar .jj-preview-bar__btn')?.click()`);
+    check('a Playwright click on Discard lands', !discardErr, discardErr || '');
     await wait(page, 800);
     const gone: any = await page.evaluate(READ_BAR);
     await page.locator('.jodie-window .jj-script-card__summary').first().click();
