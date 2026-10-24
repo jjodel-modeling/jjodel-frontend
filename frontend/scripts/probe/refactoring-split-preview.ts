@@ -33,8 +33,8 @@ const OUT = process.env.RFA_OUT || join(homedir(), '.jjodel-lanes', 'P-2026-10-2
 mkdirSync(OUT, { recursive: true });
 
 let failures = 0;
-const check = (name: string, ok: boolean, detail: unknown) => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}  ${JSON.stringify(detail).slice(0, 800)}`); };
-const meas = (name: string, v: unknown) => console.log(`MEAS  ${name}  ${typeof v === 'string' ? v : JSON.stringify(v).slice(0, 1500)}`);
+const check = (name: string, ok: boolean, detail: unknown) => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}  ${String(JSON.stringify(detail)).slice(0, 800)}`); };
+const meas = (name: string, v: unknown) => console.log(`MEAS  ${name}  ${typeof v === 'string' ? v : String(JSON.stringify(v)).slice(0, 1500)}`);
 const wait = (page: Page, ms: number) => page.waitForTimeout(ms);
 
 const TAB = '.dock-tabpane-active .script-tab';
@@ -111,10 +111,17 @@ const scene: any = await page.evaluate(`(async () => {
   const project = () => j.L.fromPointer(j.DUser.current).project;
   const settle = async (find) => { for (let i = 0; i < 50; i++) { await new Promise(r => setTimeout(r, 100)); const x = find(); if (x) return x; } return null; };
   const esm = project().metamodels[0];
+  const concreteAttr = (els) => els.find(e => e.kind === 'Attribute' && els.some(c => c.id === e.father && c.kind === 'Class' && !c.abstract));
+  // The fixture's metamodel has references only: give its first concrete class one attribute.
+  if (!concreteAttr(pw.buildPlanWorld(j.store.getState().idlookup, esm.id).m2.elements)) {
+    const host = pw.buildPlanWorld(j.store.getState().idlookup, esm.id).m2.elements.find(e => e.kind === 'Class' && !e.abstract && e.father && !/^E[A-Z]/.test(e.name));
+    if (host) await js.JjScriptService.execute('create attribute rfaLabel in ' + host.name + ' type EString', { level: 'M2', metamodelId: esm.id, metamodelName: esm.name });
+    await settle(() => concreteAttr(pw.buildPlanWorld(j.store.getState().idlookup, esm.id).m2.elements));
+  }
   const L0 = j.store.getState().idlookup;
   const w0 = pw.buildPlanWorld(L0, esm.id);
   const els = w0.m2.elements;
-  const attr = els.find(e => e.kind === 'Attribute' && els.some(c => c.id === e.father && c.kind === 'Class' && !c.abstract));
+  const attr = concreteAttr(els);
   if (!attr) return { error: 'no attribute on a concrete class' };
   const cls = els.find(c => c.id === attr.father);
   const typeName = (attr.type && L0[attr.type] && L0[attr.type].name) || 'EString';
@@ -166,7 +173,11 @@ const LINES = [
     'create class RfaBad extends Nopeclass',
 ];
 const SCRIPT = LINES.join('\n');
-await page.locator(`${TAB} .script-tab__editor .view-lines`).first().click();
+meas('monaco width vs left pane', await page.evaluate(`(() => { const t = document.querySelector(${JSON.stringify(TAB)}); const r = (s) => { const e = t && t.querySelector(s); return e ? Math.round(e.getBoundingClientRect().width) : null; }; return { left: r('.script-tab__left'), editor: r('.script-tab__editor'), monaco: r('.script-tab__editor .monaco-editor'), lines: r('.script-tab__editor .view-lines') }; })()`));
+await page.locator(`${TAB} .script-tab__editor .monaco-editor`).first().click({ position: { x: 80, y: 12 } });
+// The click alone left the focus outside Monaco in the first green run: focus the tab's editor through its API.
+const focused = await page.evaluate(`(() => { const t = document.querySelector(${JSON.stringify(TAB)}); const m = window.monaco; const ed = m && m.editor.getEditors ? m.editor.getEditors().find(e => t && t.contains(e.getContainerDomNode())) : null; if (ed) ed.focus(); const a = document.activeElement; return { editor: !!ed, active: a ? a.tagName + '.' + String(a.className).slice(0, 60) : null }; })()`);
+meas('focus before typing', focused);
 for (let i = 0; i < LINES.length; i++) {
     await page.keyboard.type(LINES[i], { delay: 5 });
     await page.keyboard.press('Escape');
@@ -284,6 +295,16 @@ check('resize to 700 px, persisted', width.dom === 700 && width.stored === '700'
 const launcher = await page.locator('.jodie-minimized').first().boundingBox().catch(() => null);
 meas('launcher', launcher);
 check('launcher on the window side', !!launcher && launcher.x + launcher.width >= 1600 - 24 && launcher.x > 800, launcher);
+
+// The launcher rule holds only while the Refactoring tab is the active one: switch to another tab of the dock.
+phase = 'other tab';
+const other = await page.evaluate(`(() => { const tabs = [...document.querySelectorAll('.dock-tab')]; const o = tabs.find(t => !t.classList.contains('dock-tab-active') && !/rfa probe/.test(t.textContent)); if (!o) return null; (o.querySelector('.dock-tab-btn') || o).dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); (o.querySelector('.dock-tab-btn') || o).click(); return o.textContent.trim(); })()`);
+await wait(page, 1200);
+const offTab = await page.evaluate(`(() => { const l = document.querySelector('.jodie-minimized'); const r = l ? l.getBoundingClientRect() : null; return { scriptActive: !!document.querySelector(${JSON.stringify(TAB)}), launcher: r ? { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width) } : null, right: l ? getComputedStyle(l).right : null }; })()`) as any;
+meas('launcher on another tab', { other, ...offTab });
+check('launcher rule off on another tab', !!other && !offTab.scriptActive && !!offTab.launcher && !(offTab.launcher.x === Math.round(launcher?.x ?? -1) && offTab.launcher.y === Math.round(launcher?.y ?? -1)), { other, ...offTab });
+await page.screenshot({ path: join(OUT, 'rfa_other_tab_launcher.png') });
+meas('crop', join(OUT, 'rfa_other_tab_launcher.png'));
 
 check('no page errors', errors.filter(e => e.text.startsWith('pageerror')).length === 0, errors.slice(0, 6));
 meas('console errors', errors.slice(0, 6));
