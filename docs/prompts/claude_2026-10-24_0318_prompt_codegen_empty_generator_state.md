@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (small fix in the generator tab's right pane, no critical-zone file)
 Depends: P-2026-10-24-0004
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane codegen · eae105d89 · bench 4/4 · crops in the lane folder
 Corregge: P-2026-10-24-0003
 Request: Alfonso, 2026-10-24 03:05, in the project chat: «Ok alle raccomandazioni» (fix the empty generator's error state)
 
