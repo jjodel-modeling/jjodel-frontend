@@ -11,7 +11,7 @@ import { LModel, SetFieldAction, U, store } from '../../joiner';
 import { JjodelEvents } from '../../events/registry';
 import DockManager from '../abstract/DockManager';
 import {
-    addScript, findScript, readScripts, renameScript, removeScript, targetOfModel, updateScript,
+    addScript, findScript, readScripts, refactoringsForArtifact, renameScript, removeScript, targetOfModel, updateScript,
     type ScriptPatch, type TargetCandidate,
 } from './projectScripts';
 
@@ -95,6 +95,12 @@ export function projectTargetCandidates(state: any = store.getState()): TargetCa
         });
 }
 
+/** The Refactorings of the open project that may run on artifact `modelId` (R-JJD-14), for its tab menu. */
+export function projectRefactoringsFor(modelId: string, state: any = store.getState()): DProjectScript[] {
+    const artifact = projectTargetCandidates(state).find(c => c.id === modelId);
+    return artifact ? refactoringsForArtifact(readProjectScripts(state), artifact) : [];
+}
+
 /**
  * Store `text` as a new script file of the open project and open it in its editor tab. Called by
  * Jjodie's `Open as file` (S2) and `Save as file` (S5). The target level (R-JJD-14) is the one of
@@ -125,6 +131,7 @@ export function createProjectRefactoring(input: { name?: string; level: 'M2' | '
 /**
  * Run `text` on `modelId` as the S4b preview: open the model's canvas, then ask it for the ghost
  * preview through `SCRIPT_PREVIEW_REQUEST`. The user applies or discards from the canvas bar.
+ * The one request path of both the Refactoring tab's `Run on` and the artifact tab's menu.
  */
 export async function runScriptOnModel(text: string, modelId: string): Promise<void> {
     const model = LModel.fromPointer(modelId as any) as LModel | undefined;

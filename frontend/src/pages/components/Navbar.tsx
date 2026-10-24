@@ -67,6 +67,7 @@ import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { isConsumerMode } from '../../components/environment/consumerMode';
 import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
+import RunRefactoringMenu from '../../components/scripts/RunRefactoringMenu';
 import { DOCUMENT_TYPES, DocumentTypeEntry } from '../../constants/documentTypes';
 
 
@@ -1906,6 +1907,9 @@ function NavbarComponent(props: AllProps) {
     }
 
     const [showOverflow, setShowOverflow] = useState(false);
+    /** The right-click menu of a metamodel or model tab: «Run refactoring…» (R-JJD-14). */
+    const [artifactMenu, setArtifactMenu] = useState<{ modelId: string; x: number; y: number } | null>(null);
+    const closeArtifactMenu = useCallback(() => setArtifactMenu(null), []);
     /** #157 R1 — the topbar «Save» is busy for the duration of one save, nothing more. */
     const [savingProject, setSavingProject] = useState(false);
     const saveFromTopbar = async () => {
@@ -1990,6 +1994,11 @@ function NavbarComponent(props: AllProps) {
                                 key={tab.id}
                                 className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}`}
                                 onClick={() => handleTabClick(tab.id)}
+                                onContextMenu={tab.type === 'metamodel' || tab.type === 'model' ? (e) => {
+                                    e.preventDefault();
+                                    setArtifactMenu({ modelId: tab.id, x: e.clientX, y: e.clientY });
+                                } : undefined}
+                                data-tab-id={tab.id}
                                 title={(() => {
                                     const typeLabel = getTabTypeLabel(tab.type);
                                     return typeLabel ? `${tab.title} — ${typeLabel}` : tab.title;
@@ -2013,6 +2022,11 @@ function NavbarComponent(props: AllProps) {
                             </button>
                         );
                     })}
+                    {artifactMenu && (
+                        <RunRefactoringMenu key={artifactMenu.modelId + artifactMenu.x + artifactMenu.y}
+                                            modelId={artifactMenu.modelId} x={artifactMenu.x} y={artifactMenu.y}
+                                            onClose={closeArtifactMenu} />
+                    )}
                     {overflowTabs.length > 0 && (
                         <div className="appbar-tabs__overflow">
                             <button
