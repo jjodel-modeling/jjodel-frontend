@@ -127,6 +127,9 @@ import SimulationPanel from './sim/SimulationPanel';
 import { simPillVisible } from './sim/simRoleStatus';
 import { getSimRun, useSimVersion } from './sim/simRunState';
 import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
+import { appendPreview, buildPreviewElements, drawnNodes, isPreviewId } from './preview/previewElements';
+import { installScriptPreviewListener, useScriptPreview } from './preview/scriptPreviewStore';
+import { PreviewBar } from './preview/PreviewBar';
 import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
 import { isConsumerMode } from '../environment/consumerMode';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
@@ -749,7 +752,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
     const jjomSelection = useJjomSelection(modelid, isJjomMode, highlightModeActive, assignHighlight);
 
-    const { screenToFlowPosition, getNodes, getNode, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    const { screenToFlowPosition, getNodes: getFlowNodes, getNode, getEdges: getFlowEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    // The ghost preview's synthetic nodes and edges (S4b, R-JJD-2) are on React Flow's arrays but
+    // are no canvas state: every reader below (layout, distribution, history, gestures) sees the
+    // canvas without them, so none of them can be laid out, snapshotted or written back.
+    const getNodes = useCallback(() => getFlowNodes().filter((n) => !isPreviewId(n.id)), [getFlowNodes]);
+    const getEdges = useCallback(() => getFlowEdges().filter((e) => !isPreviewId(e.id)), [getFlowEdges]);
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
@@ -1702,6 +1710,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             nodeId => (store.getState() as any).idlookup?.[nodeId]?.model),
         [irContainment.nodes, irContainment.edges, simEvents],
     );
+
+    // Ghost preview of a planned script (S4b, R-JJD-2): synthetic nodes and edges appended to the arrays handed to
+    // React Flow, as the run's events are hidden above. No D-object, never draggable or selectable, ids prefixed and
+    // filtered out of getNodes/getEdges and of every handler below. Same arrays as before when there is no preview.
+    useEffect(() => installScriptPreviewListener(() => (store.getState() as any).idlookup ?? {}), []);
+    const scriptPreview = useScriptPreview(modelid);
+    const canvasElements = useMemo(() => {
+        if (!scriptPreview) return flowElements;
+        const idlookup = (store.getState() as any).idlookup ?? {};
+        const drawn = drawnNodes(flowElements.nodes, (nodeId) => {
+            const model = idlookup[nodeId]?.model;
+            return typeof model === 'string' && model ? model : undefined;
+        });
+        return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn));
+    }, [flowElements, scriptPreview]);
 
     // Persist the merged session override of a synthetic edge on the hidden
     // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
@@ -4792,6 +4815,41 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         document.addEventListener('mouseup', onMouseUp);
     }, []);
 
+    // Ghost preview ids (S4b) never reach a handler: their changes, clicks, menus and connections are dropped here.
+    const handleCanvasNodesChange = useCallback((changes: any[]) => {
+        const own = changes.filter((c) => !isPreviewId(c?.id ?? c?.item?.id));
+        if (own.length > 0) handleNodesChange(own);
+    }, [handleNodesChange]);
+    const handleCanvasEdgesChange = useCallback((changes: EdgeChange[]) => {
+        const own = changes.filter((c) => !isPreviewId((c as any)?.id ?? (c as any)?.item?.id));
+        if (own.length > 0) onEdgesChange(own);
+    }, [onEdgesChange]);
+    const handleCanvasConnect = useCallback((connection: Connection) => {
+        if (isPreviewId(connection.source) || isPreviewId(connection.target)) return;
+        onConnect(connection);
+    }, [onConnect]);
+    const isValidCanvasConnection = useCallback((connection: Edge | Connection) =>
+        !isPreviewId(connection.source) && !isPreviewId(connection.target) && isValidConnection(connection),
+    [isValidConnection]);
+    const handleCanvasReconnect = useCallback((oldEdge: Edge, connection: Connection) => {
+        if (isPreviewId(oldEdge.id) || isPreviewId(connection.source) || isPreviewId(connection.target)) return;
+        handleReconnect(oldEdge, connection);
+    }, [handleReconnect]);
+    const handleCanvasNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+        if (!isPreviewId(node.id)) jjomSelection.onNodeClick(event, node);
+    }, [jjomSelection]);
+    const handleCanvasEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+        if (!isPreviewId(edge.id)) onEdgeClick(event, edge);
+    }, [onEdgeClick]);
+    const handleCanvasNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+        if (isPreviewId(node.id)) { event.preventDefault(); return; }
+        onNodeContextMenu(event, node);
+    }, [onNodeContextMenu]);
+    const handleCanvasEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+        if (isPreviewId(edge.id)) { event.preventDefault(); return; }
+        onEdgeContextMenu(event, edge);
+    }, [onEdgeContextMenu]);
+
     // Canvas inner JSX — extracted so the same React Flow tree can be embedded
     // either in the standalone `.editor-v2__canvas` (flow / no-viewpoint) or
     // inside the `.editor-split-flow` pane (split mode).
@@ -4799,25 +4857,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={flowElements.nodes}
-                edges={flowElements.edges}
-                onNodesChange={handleNodesChange}
+                nodes={canvasElements.nodes}
+                edges={canvasElements.edges}
+                onNodesChange={handleCanvasNodesChange}
                 onNodeDrag={handleNodeDragPointer}
                 onNodeDragStop={handleNodeDragPointerEnd}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
+                onEdgesChange={handleCanvasEdgesChange}
+                onConnect={handleCanvasConnect}
                 onConnectEnd={onConnectEnd}
-                isValidConnection={isValidConnection}
-                onReconnect={handleReconnect}
+                isValidConnection={isValidCanvasConnection}
+                onReconnect={handleCanvasReconnect}
                 onReconnectStart={handleReconnectStart}
                 edgesReconnectable={true}
                 reconnectRadius={20}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
-                onNodeContextMenu={onNodeContextMenu}
-                onEdgeContextMenu={onEdgeContextMenu}
-                onNodeClick={jjomSelection.onNodeClick}
-                onEdgeClick={onEdgeClick}
+                onNodeContextMenu={handleCanvasNodeContextMenu}
+                onEdgeContextMenu={handleCanvasEdgeContextMenu}
+                onNodeClick={handleCanvasNodeClick}
+                onEdgeClick={handleCanvasEdgeClick}
                 onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
@@ -4885,6 +4943,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 />
                 )}
             </ReactFlow>
+
+            {scriptPreview && <PreviewBar preview={scriptPreview} />}
 
             {pendingConnection && (
                 <EdgeTypePopup
