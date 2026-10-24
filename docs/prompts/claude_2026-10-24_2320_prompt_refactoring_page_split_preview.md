@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (short discovery inside, then implementation)
 Depends: P-2026-10-24-2255
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui-rfa · stopped at the context ceiling, wip 383a3f2b0; continued and closed by P-2026-10-24-2340
 Corregge: none
 Request: Alfonso, 2026-10-24 ~23:15 («proceedi con una /lane auto», on mockup A of the refactoring page)
 Model: claude-opus-5-5

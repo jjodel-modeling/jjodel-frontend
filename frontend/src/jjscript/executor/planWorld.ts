@@ -18,13 +18,17 @@
  *    `father` chain ends at the metamodel (the open one, or the one the M1 model conforms to),
  *    with its father, `extends`, `type`, containment and upper bound; `level` is the open editor's.
  *    A metamodel is a `DModel` with `isMetamodel`; its world has no M1 elements.
+ *  - m2.slotValues, a metamodel world only (P-2026-10-24-2320): per attribute or reference, the
+ *    conforming models (`instanceof` the metamodel) whose `DValue` slots of it hold values, with
+ *    the count; null, undefined and '' are holes. Not read for an M1 world, so an M1 preview does
+ *    not go stale on an attribute edit.
  *
  * Read-only: nothing here writes, dispatches or allocates in the store.
  */
 
 import { classAncestry, makeDrawReadCtx } from '../../components/editor-v2/viewpoint/ir/irReadCtx';
 import { modelIdOfObject } from '../../components/abstract/tabs/instanceManagerModel';
-import type { M2Kind, PlanAttribute, PlanClass, PlanElement, PlanM2Element, PlanMetamodel, PlanReference, PlanWorld } from './effectsPlanner';
+import type { M2Kind, PlanAttribute, PlanClass, PlanElement, PlanM2Element, PlanMetamodel, PlanReference, PlanSlotValues, PlanWorld } from './effectsPlanner';
 
 type Idlookup = Record<string, any>;
 
@@ -99,6 +103,29 @@ function readMetamodel(idlookup: Idlookup, metamodelId: string): PlanMetamodel {
     return { id: metamodelId, name: typeof mm?.name === 'string' ? mm.name : '', defaultParent: firstPackage ?? metamodelId, elements };
 }
 
+/** The values the conforming models of `metamodelId` hold, per feature of `features`. */
+function readSlotValues(idlookup: Idlookup, metamodelId: string, features: ReadonlySet<string>): Record<string, PlanSlotValues[]> | undefined {
+    const counts = new Map<string, Map<string, number>>();
+    for (const id in idlookup) {
+        const v = idlookup[id];
+        if (v?.className !== 'DValue' || !features.has(v.instanceof) || !Array.isArray(v.values)) continue;
+        const n = v.values.filter((x: unknown) => x !== null && x !== undefined && x !== '').length;
+        if (!n) continue;
+        const modelId = modelIdOfObject(idlookup, id);
+        const model = modelId ? idlookup[modelId] : undefined;
+        if (!model || model.isMetamodel || model.instanceof !== metamodelId) continue;
+        const perModel = counts.get(v.instanceof) ?? new Map<string, number>();
+        perModel.set(modelId as string, (perModel.get(modelId as string) ?? 0) + n);
+        counts.set(v.instanceof, perModel);
+    }
+    if (!counts.size) return undefined;
+    const out: Record<string, PlanSlotValues[]> = {};
+    for (const [feature, perModel] of counts) {
+        out[feature] = [...perModel].map(([modelId, count]) => ({ modelId, model: idlookup[modelId]?.name || modelId, count }));
+    }
+    return out;
+}
+
 /**
  * The `PlanWorld` of the model `modelId`: an M1 model with its metamodel, or a metamodel (M2,
  * no M1 elements); empty when it is neither.
@@ -114,6 +141,9 @@ export function buildPlanWorld(idlookup: Idlookup, modelId: string): PlanWorld {
         }
         world.level = 'M2';
         world.m2 = readMetamodel(idlookup, modelId);
+        const features = new Set(world.m2.elements.filter((e) => e.kind === 'Attribute' || e.kind === 'Reference').map((e) => e.id));
+        const slotValues = readSlotValues(idlookup, modelId, features);
+        if (slotValues) world.m2.slotValues = slotValues;
         return world;
     }
     const metamodelId = model?.instanceof;

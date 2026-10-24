@@ -38,7 +38,9 @@
  * namespace (`DUPLICATE_NAME`), a type, superclass, container or element found neither in the
  * metamodel nor among what the script creates (`UNKNOWN_*_TYPE`, `PARENT_NOT_FOUND`,
  * `CHILD_NOT_FOUND`, `MEMBER_NOT_FOUND`, `ELEMENT_NOT_FOUND`), a `set` on a property the element
- * does not have (`UNKNOWN_PROPERTY`). A mixed script is planned per level (`lineLevel`).
+ * does not have (`UNKNOWN_PROPERTY`), a `delete` of an attribute or reference whose slots hold
+ * values in a conforming model (`FEATURE_HAS_VALUES`, one per model, from `PlanMetamodel.slotValues`;
+ * the line still plans). A mixed script is planned per level (`lineLevel`).
  *
  * Declared limits: `let`, `forall`, blocks, `move`, `copy` and an M2 `remove` are `unsupported`;
  * a `delete` lists the contained elements it cascades to but not the incoming links it clears;
@@ -124,6 +126,18 @@ export interface PlanMetamodel {
     /** Where `create class|enum|package` without `in` goes: the first package, else the metamodel (`getDefaultParent`, `utils.ts:225-279`). */
     defaultParent: string;
     elements: PlanM2Element[];
+    /**
+     * A metamodel world: per attribute or reference id, the conforming models whose slots of that
+     * feature hold values, and how many (`FEATURE_HAS_VALUES`). Absent: no model holds any, or not read.
+     */
+    slotValues?: Record<string, PlanSlotValues[]>;
+}
+
+/** The values one conforming model holds in the slots of one feature. */
+export interface PlanSlotValues {
+    modelId: string;
+    model: string;
+    count: number;
 }
 
 export interface PlanWorld {
@@ -261,6 +275,8 @@ interface LineResult {
     effect?: Effect;
     /** M2: the generalizations the line writes. */
     generalizations?: PlannedGeneralization[];
+    /** M2 `delete`: the attributes and references of the metamodel it removes, cascade included. */
+    droppedFeatures?: string[];
 }
 
 const ok = (effect?: Effect): LineResult => ({ success: true, effect });
@@ -831,7 +847,8 @@ function planM2Delete(m2: M2Simulation, args: DeleteArgs, line: number): LineRes
     const ids = new Set(doomed.map((o) => o.id));
     for (const o of doomed) o.deleted = true;
     for (const o of m2.live()) o.extends = o.extends.filter((id) => !ids.has(id));
-    return ok({ kind: 'delete', value: { line, id: e.id, name: e.name, contained: doomed.slice(1).map((o) => o.name), level: 'M2' } });
+    const droppedFeatures = doomed.filter((o) => o.kind === 'Attribute' || o.kind === 'Reference').map((o) => o.id);
+    return { ...ok({ kind: 'delete', value: { line, id: e.id, name: e.name, contained: doomed.slice(1).map((o) => o.name), level: 'M2' } }), droppedFeatures };
 }
 
 /** `executeExtends` (`extends.ts:44-160`). */
@@ -936,6 +953,21 @@ function oppositeWarnings(sim: Simulation, references: PlannedReference[]): Plan
     return out;
 }
 
+/** A `delete` that drops features whose slots hold values in conforming models: one warning per model, values summed. */
+function slotValueWarnings(world: PlanWorld, line: number, featureIds: readonly string[]): PlanIssue[] {
+    const perModel = new Map<string, { model: string; count: number }>();
+    for (const id of featureIds) {
+        for (const s of world.m2?.slotValues?.[id] ?? []) {
+            const m = perModel.get(s.modelId) ?? { model: s.model, count: 0 };
+            m.count += s.count;
+            perModel.set(s.modelId, m);
+        }
+    }
+    return [...perModel.values()].filter((m) => m.count > 0).map((m) => ({
+        line, code: 'FEATURE_HAS_VALUES', message: `${m.model} loses ${m.count} slot ${m.count === 1 ? 'value' : 'values'}`,
+    }));
+}
+
 /** Plan the effects of a script, M1 and M2 commands alike, against `world`. Reads `world`, never writes it. */
 export async function planEffects(code: string, world: PlanWorld): Promise<EffectsPlan> {
     const lines = scriptLines(code);
@@ -966,6 +998,7 @@ export async function planEffects(code: string, world: PlanWorld): Promise<Effec
         const line = lines[outcome.index].line;
         if (outcome.status === 'success') {
             plan.generalizations!.push(...(outcome.result.generalizations ?? []));
+            if (outcome.result.droppedFeatures?.length) plan.warnings.push(...slotValueWarnings(world, line, outcome.result.droppedFeatures));
             const effect = outcome.result.effect;
             if (!effect) continue;
             if (effect.kind === 'create') plan.created.push(effect.value);
