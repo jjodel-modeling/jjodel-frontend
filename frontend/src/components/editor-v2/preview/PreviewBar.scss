@@ -4,7 +4,9 @@
 .jj-preview-bar {
     position: absolute;
     top: 12px;
-    left: 50%;
+    // Centred on the canvas left of the Properties rail, a fixed overlay (z 900) that would
+    // otherwise cover the buttons; --jj-rail-width is 0px when the rail is hidden.
+    left: calc(50% - var(--jj-rail-width, 0px) / 2);
     transform: translateX(-50%);
     z-index: 6;
     display: flex;
