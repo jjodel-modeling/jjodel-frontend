@@ -16,6 +16,8 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 - Model-to-text code generation ships in this build: a Code panel with templates over the model, a JavaScript target, a Run of the generated code and «Check», which compares a run of the generated code with the Jjodel simulator on the stored scenarios. It is off by default: Settings → Advanced → Experimental → «Code generation» (R-GEN-18).
 - Two lecture examples as importable project files: Petri producer-consumer and Turnstile.
 - Bit-vector values in code generation and in the Code panel.
+- Template authoring: the Code panel also opens on a metamodel, generating over a conforming model you choose; a Template Editor tab with live preview and completion; template bodies as text with `${...}` holes or as JjEL expressions. Generation is bounded (2000 ms, 1,000,000 characters) and the generated code runs in a locked-down worker.
+- Known limit: templates can be edited both in the Code panel and in the Template Editor tab. From 3.3 the tab is the only authoring surface, with several generators per metamodel (R-GEN-39, R-GEN-40).
 
 #### Templates and gallery
 - Templates page under BROWSE: starter projects and worked examples you clone into your workspace, with search, concept and level filters, card previews and, in Advanced mode, a citable gallery id (`<id>@<n>`) with a deep link (R-LIB-9, R-LIB-13, R-LIB-15).
