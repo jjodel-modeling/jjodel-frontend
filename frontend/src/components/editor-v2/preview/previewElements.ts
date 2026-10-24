@@ -21,6 +21,14 @@
  * existing element go in one ghost rows node beside the column, joined to the element's node by a
  * dashed edge; planned references (owner to type) and generalizations (child to parent) are dashed
  * ghost edges when both ends are drawn. An M1 plan draws only its M1 creations.
+ *
+ * M2 placement (P-2026-10-25-0020): a ghost goes next to the node it relates to, the parent a planned
+ * class extends, else the type of a reference it holds, else the holder of a reference typed by it,
+ * and for a rows node the element it adds to: right of it, else below, left, above, the first spot
+ * that overlaps no drawn node and no ghost already placed. With no related node drawn, or no free
+ * spot, it goes in the column right of the drawn nodes, below what the column holds. The planned
+ * removals of existing elements are a struck-through ghost beside their holder: the features it
+ * loses, or the element itself.
  */
 import type { Edge, Node } from '@xyflow/react';
 import { effectLevel, type EffectsPlan, type PlannedCreate, type PlanWorld } from '../../../jjscript/executor/effectsPlanner';
@@ -191,12 +199,54 @@ function m2NamedHolder(text: string | undefined): string | null {
 }
 
 /** The ghost nodes and edges of a plan read on a metamodel (see the header). */
+/** A box in flow coordinates. */
+export interface PreviewBox {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+/** The clearance a placed ghost keeps from any other box. */
+const CLEARANCE = 16;
+
+function overlaps(a: PreviewBox, b: PreviewBox): boolean {
+    return a.x < b.x + b.width + CLEARANCE && b.x < a.x + a.width + CLEARANCE
+        && a.y < b.y + b.height + CLEARANCE && b.y < a.y + a.height + CLEARANCE;
+}
+
+/** The first free spot for a `width` x `height` box next to `anchor`: right, below, left, above; null when all four are taken. */
+export function besideSpot(anchor: PreviewBox, width: number, height: number, taken: readonly PreviewBox[]): { x: number; y: number } | null {
+    const spots = [
+        { x: anchor.x + anchor.width + COLUMN_GAP, y: anchor.y },
+        { x: anchor.x, y: anchor.y + anchor.height + ROW_GAP },
+        { x: anchor.x - COLUMN_GAP - width, y: anchor.y },
+        { x: anchor.x, y: anchor.y - ROW_GAP - height },
+    ];
+    return spots.find((p) => !taken.some((t) => overlaps({ ...p, width, height }, t))) ?? null;
+}
+
+const M2_FEATURE_KINDS = new Set(['Attribute', 'Reference', 'Operation', 'Literal']);
+
 function buildM2Preview(plan: EffectsPlan, world: PlanWorld, drawn: readonly DrawnNode[], script?: string): PreviewElements {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     const own = plan.created.filter((c) => effectLevel(c) === 'M2');
     const generalizations = plan.generalizations ?? [];
-    if (own.length === 0 && generalizations.length === 0) return { nodes, edges };
+    const existing = world.m2?.elements ?? [];
+    const drawnIds = new Set(drawn.map((d) => d.elementId));
+    // Planned removals of drawn elements: per holder, the rows it loses, or the element's own head.
+    const removedOf = new Map<string, string[]>();
+    for (const d of plan.deleted) {
+        if (effectLevel(d) !== 'M2') continue;
+        const el = existing.find((e) => e.id === d.id);
+        if (!el) continue;
+        const holder = M2_FEATURE_KINDS.has(el.kind) ? el.father : el.id;
+        if (!holder || !drawnIds.has(holder)) continue;
+        const row = M2_FEATURE_KINDS.has(el.kind) ? `\u2212 ${el.name}` : `${el.kind.toLowerCase()} ${el.name}`;
+        removedOf.set(holder, [...(removedOf.get(holder) ?? []), row]);
+    }
+    if (own.length === 0 && generalizations.length === 0 && removedOf.size === 0) return { nodes, edges };
 
     let x = 0;
     let y = 0;
@@ -205,6 +255,9 @@ function buildM2Preview(plan: EffectsPlan, world: PlanWorld, drawn: readonly Dra
         x = Math.max(...placed.map((d) => d.x + d.width)) + COLUMN_GAP;
         y = Math.min(...placed.map((d) => d.y));
     }
+    // Node id -> box: the drawn top-level nodes, then every ghost as it is placed.
+    const boxOf = new Map<string, PreviewBox>();
+    for (const d of placed) boxOf.set(d.nodeId, { x: d.x, y: d.y, width: d.width, height: d.height });
 
     // Element id -> node id: drawn elements their node, planned classifiers and packages their ghost.
     const nodeOf = new Map<string, string>();
@@ -232,7 +285,6 @@ function buildM2Preview(plan: EffectsPlan, world: PlanWorld, drawn: readonly Dra
     if (script !== undefined) {
         // A warned line plans no effect: the holder it names takes the marker, a planned one first.
         const lines = script.split('\n');
-        const existing = world.m2?.elements ?? [];
         for (const w of plan.warnings) {
             const name = m2NamedHolder(lines[w.line - 1]);
             if (!name) continue;
@@ -243,24 +295,39 @@ function buildM2Preview(plan: EffectsPlan, world: PlanWorld, drawn: readonly Dra
         }
     }
 
-    const pushNode = (id: string, label: string, rows: number, holder: string) => {
+    const pushNode = (id: string, label: string, rows: number, holder: string, anchors: readonly (string | undefined)[] = [], removed = false) => {
         const height = PREVIEW_NODE_HEIGHT + rows * PREVIEW_ROW_HEIGHT;
+        const taken = [...boxOf.values()];
+        let position: { x: number; y: number } | null = null;
+        for (const a of anchors) {
+            const box = a ? boxOf.get(a) : undefined;
+            if (box && (position = besideSpot(box, PREVIEW_NODE_WIDTH, height, taken))) break;
+        }
+        if (!position) {
+            // The column: below what it holds, past any box in the way.
+            while (taken.some((t) => overlaps({ x, y, width: PREVIEW_NODE_WIDTH, height }, t))) y += PREVIEW_ROW_HEIGHT;
+            position = { x, y };
+            y += height + ROW_GAP;
+        }
+        boxOf.set(id, { ...position, width: PREVIEW_NODE_WIDTH, height });
+        const classes = ['jj-preview-node'];
+        if (removed) classes.push('jj-preview-node--removed');
+        if (warned.has(holder)) classes.push('jj-preview-node--warning');
         nodes.push({
             id,
             type: 'default',
-            position: { x, y },
+            position,
             width: PREVIEW_NODE_WIDTH,
             height,
             data: { label },
             style: { whiteSpace: 'pre-line' },
-            className: warned.has(holder) ? 'jj-preview-node jj-preview-node--warning' : 'jj-preview-node',
+            className: classes.join(' '),
             draggable: false,
             selectable: false,
             deletable: false,
             connectable: false,
             focusable: false,
         });
-        y += height + ROW_GAP;
     };
     const pushEdge = (source: string | undefined, target: string | undefined, label: string, containment: boolean) => {
         if (!source || !target) return;
@@ -278,17 +345,30 @@ function buildM2Preview(plan: EffectsPlan, world: PlanWorld, drawn: readonly Dra
         });
     };
 
+    // What a planned head relates to, nearest first: the parent it extends, the type of a reference it holds, the holder of a reference typed by it.
+    const anchorsOf = (id: string): (string | undefined)[] => [
+        ...generalizations.filter((g) => g.childId === id).map((g) => nodeOf.get(g.parentId)),
+        ...own.filter((r) => r.metaclass === 'Reference' && holderOf.get(r.id) === id && r.typeId).map((r) => nodeOf.get(r.typeId!)),
+        ...own.filter((r) => r.metaclass === 'Reference' && r.typeId === id).map((r) => nodeOf.get(holderOf.get(r.id) ?? '')),
+    ];
     for (const c of heads) {
         const rows = rowsOf.get(c.id) ?? [];
         const head = `${c.metaclass === 'Class' && c.abstract ? 'abstract ' : ''}${c.metaclass.toLowerCase()} ${c.name}`;
-        pushNode(PREVIEW_ID_PREFIX + c.id, [head, ...rows].join('\n'), rows.length, c.id);
+        pushNode(PREVIEW_ID_PREFIX + c.id, [head, ...rows].join('\n'), rows.length, c.id, anchorsOf(c.id));
     }
     for (const [holder, rows] of rowsOf) {
         if (nodeOf.get(holder) && isPreviewId(nodeOf.get(holder))) continue;
         const target = nodeOf.get(holder);
         if (!target) continue;
         const id = `${PREVIEW_ID_PREFIX}rows:${holder}`;
-        pushNode(id, rows.map((r) => `+ ${r}`).join('\n'), rows.length - 1, holder);
+        pushNode(id, rows.map((r) => `+ ${r}`).join('\n'), rows.length - 1, holder, [target]);
+        pushEdge(id, target, '', false);
+    }
+    for (const [holder, rows] of removedOf) {
+        const target = nodeOf.get(holder);
+        if (!target) continue;
+        const id = `${PREVIEW_ID_PREFIX}removed:${holder}`;
+        pushNode(id, rows.join('\n'), rows.length - 1, holder, [target], true);
         pushEdge(id, target, '', false);
     }
     for (const c of own) {

@@ -21,6 +21,8 @@ type Idlookup = Record<string, any>;
 export interface ScriptPreviewRequest {
     script: string;
     modelId: string;
+    /** The view that drives this preview and shows its bar; the canvas then draws the ghosts only (P-2026-10-25-0020). */
+    owner?: string;
 }
 
 export interface ScriptPreview {
@@ -32,6 +34,8 @@ export interface ScriptPreview {
     plan: EffectsPlan;
     /** Apply is running: the model changes under it, and that does not clear the preview. */
     applying: boolean;
+    /** Set when a view other than the canvas drives the preview (the Refactoring tab): the canvas shows no bar. */
+    owner?: string;
 }
 
 let current: ScriptPreview | null = null;
@@ -60,6 +64,23 @@ export function clearScriptPreview(modelId?: string): void {
     emit();
 }
 
+/** Clear the preview `owner` drives; another's preview, or a request in flight, stays. */
+export function clearOwnedScriptPreview(owner: string): void {
+    if (!current || current.owner !== owner) return;
+    clearScriptPreview();
+}
+
+/**
+ * Show a plan its owner has already read (the Refactoring tab plans as you type): no second
+ * planning, and a request in flight is superseded as by a new request.
+ */
+export function publishScriptPreview(preview: Omit<ScriptPreview, 'worldKey' | 'applying'> & { owner: string }): ScriptPreview {
+    generation++;
+    current = { ...preview, worldKey: worldKeyOf(preview.world), applying: false };
+    emit();
+    return current;
+}
+
 export function setScriptPreviewApplying(applying: boolean): void {
     if (!current || current.applying === applying) return;
     current = { ...current, applying };
@@ -81,6 +102,7 @@ export async function requestScriptPreview(request: ScriptPreviewRequest, idlook
     const plan = await planEffects(request.script, world);
     if (mine !== generation) return null;
     current = { script: request.script, modelId: request.modelId, world, worldKey: worldKeyOf(world), plan, applying: false };
+    if (request.owner) current.owner = request.owner;
     emit();
     return current;
 }

@@ -18,8 +18,10 @@ import {
     type DrawnNode,
 } from '../previewElements';
 import {
+    clearOwnedScriptPreview,
     clearScriptPreview,
     getScriptPreview,
+    publishScriptPreview,
     isPreviewStale,
     requestScriptPreview,
     setScriptPreviewApplying,
@@ -231,6 +233,28 @@ describe('scriptPreviewStore', () => {
         setScriptPreviewApplying(true);
         expect(isPreviewStale(getScriptPreview()!, renamed)).toBe(false);
     });
+
+    it('publishes an owned plan without planning again, superseding a request in flight (P-2026-10-25-0020)', async () => {
+        const plan = await planEffects('create instance of Machine "Own"', world());
+        const inFlight = requestScriptPreview({ script: 'create instance of Machine "Other"', modelId: 'm' }, idlookup());
+        const p = publishScriptPreview({ script: 'x', modelId: 'm', world: world(), plan, owner: 'tab1' });
+        expect(await inFlight).toBeNull();
+        expect(getScriptPreview()).toBe(p);
+        expect(p).toMatchObject({ owner: 'tab1', applying: false, modelId: 'm' });
+        expect(p.plan).toBe(plan);
+    });
+
+    it('an owner clears only its own preview; a request carries its owner (P-2026-10-25-0020)', async () => {
+        await requestScriptPreview({ script: 'create instance of Machine', modelId: 'm' }, idlookup());
+        expect(getScriptPreview()!.owner).toBeUndefined();
+        clearOwnedScriptPreview('tab1');
+        expect(getScriptPreview()).not.toBeNull();
+        await requestScriptPreview({ script: 'create instance of Machine', modelId: 'm', owner: 'tab2' }, idlookup());
+        clearOwnedScriptPreview('tab1');
+        expect(getScriptPreview()!.owner).toBe('tab2');
+        clearOwnedScriptPreview('tab2');
+        expect(getScriptPreview()).toBeNull();
+    });
 });
 
 /** A metamodel with a package, a class `Person` and an enum `Color`, drawn as two class/enum nodes. */
@@ -266,7 +290,7 @@ describe('buildPreviewElements on M2 (P-2026-10-24-1600)', () => {
         'create containment pets in Person type Dog',
     ].join('\n');
 
-    it('a ghost node per planned class and enumeration, with its planned rows, in a column right of the drawn nodes', async () => {
+    it('a ghost node per planned class and enumeration, with its planned rows, beside what it relates to', async () => {
         const plan = await planEffects(script, m2world());
         expect(plan.errors).toEqual([]);
         const { nodes } = buildPreviewElements(plan, m2world(), m2drawn);
@@ -277,9 +301,12 @@ describe('buildPreviewElements on M2 (P-2026-10-24-1600)', () => {
             'enumeration Size\nSMALL',
             '+ nick : EString\n+ \u25C6 pets \u2192 Dog',
         ]);
-        expect(nodes.every((n) => isPreviewId(n.id) && n.position.x === 280)).toBe(true);
+        expect(nodes.every((n) => isPreviewId(n.id))).toBe(true);
         expect(nodes[1].height).toBe(PREVIEW_NODE_HEIGHT + 2 * PREVIEW_ROW_HEIGHT);
-        expect(nodes[1].position.y).toBe(nodes[0].position.y + PREVIEW_NODE_HEIGHT + 24);
+        // P-2026-10-25-0020: Animal relates to nothing drawn, so the column right of the drawn nodes;
+        // Dog right of the Animal it extends; Size below Animal in the column; Person's rows beside
+        // Person, left of it because right is Animal's and below is Color's.
+        expect(nodes.map((n) => [n.position.x, n.position.y])).toEqual([[280, 0], [540, 0], [280, 72], [-260, 0]]);
         for (const n of nodes) expect(n).toMatchObject({ draggable: false, selectable: false, className: 'jj-preview-node', style: { whiteSpace: 'pre-line' } });
     });
 
@@ -309,5 +336,47 @@ describe('buildPreviewElements on M2 (P-2026-10-24-1600)', () => {
         expect(plan.created.length).toBe(2);
         const { nodes } = buildPreviewElements(plan, world(), drawn);
         expect(nodes.map((n) => (n.data as any).label)).toEqual(['A : State']);
+    });
+
+    it('no ghost overlaps a drawn node or another ghost (P-2026-10-25-0020)', async () => {
+        const plan = await planEffects(script, m2world());
+        const { nodes } = buildPreviewElements(plan, m2world(), m2drawn);
+        const boxes = [
+            ...m2drawn.map((d) => ({ x: d.x, y: d.y, w: d.width, h: d.height })),
+            ...nodes.map((n) => ({ x: n.position.x, y: n.position.y, w: n.width!, h: n.height! })),
+        ];
+        for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+            const a = boxes[i];
+            const b = boxes[j];
+            expect(a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h).toBe(false);
+        }
+    });
+
+    it('a class referencing a drawn class goes right of it; with no free spot beside, the column (P-2026-10-25-0020)', async () => {
+        const plan = await planEffects('create class Pet\ncreate reference owner in Pet type Person', m2world());
+        expect(buildPreviewElements(plan, m2world(), m2drawn).nodes[0].position).toEqual({ x: 280, y: 0 });
+        // Person boxed in on four sides: the column right of everything drawn.
+        const walled: DrawnNode[] = [
+            ...m2drawn,
+            { nodeId: 'r', elementId: 'r', x: 280, y: 0, width: 200, height: 100, nested: false },
+            { nodeId: 'l', elementId: 'l', x: -400, y: 0, width: 200, height: 100, nested: false },
+            { nodeId: 'u', elementId: 'u', x: 0, y: -400, width: 200, height: 300, nested: false },
+        ];
+        expect(buildPreviewElements(plan, m2world(), walled).nodes[0].position).toEqual({ x: 560, y: -400 });
+    });
+
+    it('removals of drawn elements are a struck-through ghost beside their holder (P-2026-10-25-0020)', async () => {
+        const w = m2world();
+        w.m2!.elements.push({ id: 'aName', name: 'name', kind: 'Attribute', father: 'cPerson' } as any);
+        const plan = await planEffects('delete Person.name\ndelete Color', w);
+        const { nodes, edges } = buildPreviewElements(plan, w, m2drawn);
+        expect(nodes.map((n) => [n.id, (n.data as any).label, n.className])).toEqual([
+            [`${PREVIEW_ID_PREFIX}removed:cPerson`, '\u2212 name', 'jj-preview-node jj-preview-node--removed'],
+            [`${PREVIEW_ID_PREFIX}removed:eColor`, 'enumeration Color', 'jj-preview-node jj-preview-node--removed'],
+        ]);
+        expect(edges.map((e) => [e.source, e.target])).toEqual([
+            [`${PREVIEW_ID_PREFIX}removed:cPerson`, 'vPerson'],
+            [`${PREVIEW_ID_PREFIX}removed:eColor`, 'vColor'],
+        ]);
     });
 });
