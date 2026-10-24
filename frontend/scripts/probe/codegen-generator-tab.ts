@@ -1,5 +1,5 @@
 /**
- * codegen-generator-tab probe (P-2026-10-24-0003, completed by P-2026-10-24-0045): the generator tab of slice G3
+ * codegen-generator-tab probe (P-2026-10-24-0003, completed by P-2026-10-24-0045 and P-2026-10-24-0318): the generator tab of slice G3
  * (R-GEN-35, R-GEN-40, R-GEN-41), on the Turnstile lecture example of codegen/examples/.
  *
  * Fresh context, Advanced mode, the experimental setting on. The scene is imported and the fixture's bags written
@@ -7,11 +7,14 @@
  * scenario stored on the model. Then, as a user:
  *   - the Code pill of the model's editor opens the default generator's tab, `codegen_tpl_<mm>`, with that model
  *     chosen in the right pane; Preview shows the text of `main.js`, no error (crop tab_preview.png);
- *   - Alt+click on a span whose template is not the selected one selects that template in the list (crop
- *     goto_template.png); the gutter control of a hovered line names a template;
+ *   - Alt+click on a model span whose template is not the selected one selects that template in the list (crop
+ *     goto_template.png); the map gives a model fragment its template, no range, so no range is selected (crop
+ *     goto_model.png); Alt+click on a literal span selects and reveals its producing range (crop goto_range.png);
+ *     the gutter control of a hovered line names a template;
  *   - Run: `main()` returns (crop run_output.png); Check on the stored scenario passes (crop check_result.png);
  *   - «New generator»: its tab `codegen_tpl_<mm>_<id>` opens, the selector lists two generators (crop
- *     generator_selector.png); its target is `none`, so Run and Check are disabled;
+ *     generator_selector.png); it has no template, so Preview, Run and Check show the empty state, no error, no gutter
+ *     (crop empty_generator.png); with a template added, its target `none` keeps Run and Check disabled;
  *   - back on the default, a click on a model span selects that element's vertex in the model's editor (crop
  *     canvas_selection.png);
  *   - the pill, with two generators, shows a menu of both, the last used marked (crop pill_menu.png); its item opens
@@ -172,6 +175,9 @@ const STATE = (tab: string) => String.raw`(() => {
     files: pane ? [...pane.querySelectorAll('.codegen-pane__file')].map((f) => f.textContent) : [],
     lines: pane ? pane.querySelectorAll('.codegen-panel__line').length : 0,
     errors: pane ? [...pane.querySelectorAll('.codegen-panel__error')].map((e) => e.textContent) : [],
+    empty: pane ? ((pane.querySelector('.codegen-panel__hint--empty') || {}).textContent || null) : null,
+    gutters: pane ? pane.querySelectorAll('.codegen-panel__gutter').length : 0,
+    redHints: pane ? pane.querySelectorAll('.codegen-panel__hint--error, .codegen-panel__result--error').length : 0,
     run: run ? { disabled: run.disabled, title: run.title, text: run.textContent.trim() } : null,
     check: chk ? { disabled: chk.disabled, title: chk.title, text: chk.textContent.trim() } : null,
     returned: ok ? { label: (ok.querySelector('.codegen-panel__label') || {}).textContent || null, value: ((ok.querySelector('.codegen-panel__value') || {}).textContent || '').slice(0, 120) } : null,
@@ -188,6 +194,24 @@ const DOCK = (m1Id: string) => String.raw`(() => {
   const scrolled = [];
   for (let e = p && p.parentElement; e; e = e.parentElement) if (e.scrollLeft) scrolled.push((e.className || e.tagName).toString().slice(0, 60) + ' ' + e.scrollLeft);
   return { active: [...new Set(active)].filter(Boolean), pane: r ? { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) } : null, inView: !!r && r.x >= 0 && r.x + r.width <= innerWidth + 1, scrolled };
+})()`;
+
+/** The template editor's Monaco instance in the tab: its model's first line, the selection, the lines in view. */
+const EDITOR = (tab: string) => String.raw`(async () => {
+  const t = ${tab};
+  if (!t) return null;
+  const J = await import('/src/joiner/index.ts');
+  const ed = J.monaco.editor.getEditors().find((e) => t.contains(e.getContainerDomNode()));
+  if (!ed || !ed.getModel()) return null;
+  const s = ed.getSelection();
+  const v = ed.getVisibleRanges()[0];
+  return {
+    selection: s ? { line: s.startLineNumber, column: s.startColumn, endLine: s.endLineNumber, endColumn: s.endColumn } : null,
+    selected: s ? ed.getModel().getValueInRange(s).slice(0, 80) : '',
+    visible: v ? [v.startLineNumber, v.endLineNumber] : null,
+    painted: ed.getContainerDomNode().querySelectorAll('.selected-text').length,
+    lines: ed.getModel().getLineCount(),
+  };
 })()`;
 
 const mode = (page: Page, tab: string, label: string) => page.evaluate(CLICK(`[...${tab}.querySelectorAll('.codegen-pane__modes button')].find((b) => b.textContent.trim() === '${label}')`));
@@ -245,18 +269,47 @@ async function main(): Promise<void> {
     // «Go to template»: Alt+click a span whose template is not the selected one.
     const before = opened?.template ?? null;
     const target = await page.evaluate(String.raw`(() => {
-      const spans = [...${tab}.querySelectorAll('.codegen-pane__code [data-template]')];
+      const spans = [...${tab}.querySelectorAll('.codegen-pane__code .code-span--model[data-template]')];
       const s = spans.find((x) => x.getAttribute('data-template') !== ${JSON.stringify(before)});
       if (!s) return null;
       s.setAttribute('data-probe-alt', '1');
       return s.getAttribute('data-template');
     })()`) as string | null;
-    check('a span names a template other than the selected one', !!target, `${before} -> ${target}`);
+    check('a model span names a template other than the selected one', !!target, `${before} -> ${target}`);
     if (target) {
         await page.locator('[data-probe-alt="1"]').click({ modifiers: ['Alt'] });
         const picked = await poll<string>(page, String.raw`(() => { const s = ${STATE(tab)}; return s && s.template === ${JSON.stringify(target)} ? s.template : null; })()`, 5000);
         check(`Alt+click selects the template «${target}» in the list`, picked === target, String(picked));
         await crop(page, 'goto_template.png', await page.evaluate(BOX(`${tab}.querySelector('.codegen-tpl__side')`)) as any);
+        // A model fragment's origin names its template, not a range (text.ts ModelOrigin): the editor shows the template, nothing selected.
+        const shown = await poll<any>(page, String.raw`(async () => { const e = await ${EDITOR(tab)}; return e && e.lines > 0 ? e : null; })()`, 5000);
+        result.modelRange = shown;
+        note('the template editor after the Alt+click on a model span', shown);
+        check('a model span: the template is in the editor, no range selected (the map gives none)',
+            !!shown && !!shown.selection && shown.selection.line === shown.selection.endLine && shown.selection.column === shown.selection.endColumn, JSON.stringify(shown));
+        await wait(page, 300);
+        await crop(page, 'goto_model.png', await page.evaluate(BOX(`${tab}.querySelector('.codegen-tpl__main') || ${tab}`)) as any);
+        // A literal fragment's origin gives its range: selected in the template's editor, in view and painted.
+        const literal = await page.evaluate(String.raw`(() => {
+          const spans = [...${tab}.querySelectorAll('.codegen-pane__code .code-span--literal[data-template]')];
+          const s = spans.find((x) => x.getAttribute('data-template') !== ${JSON.stringify(target)} && x.textContent.trim().length > 2);
+          if (!s) return null;
+          s.setAttribute('data-probe-lit', '1');
+          return { template: s.getAttribute('data-template'), text: s.textContent.slice(0, 60) };
+        })()`) as { template: string; text: string } | null;
+        check('a literal span of another template', !!literal, JSON.stringify(literal));
+        if (literal) {
+            await page.locator('[data-probe-lit="1"]').scrollIntoViewIfNeeded();
+            await page.locator('[data-probe-lit="1"]').click({ modifiers: ['Alt'] });
+            const range = await poll<any>(page, String.raw`(async () => { const s = ${STATE(tab)}; if (!s || s.template !== ${JSON.stringify(literal.template)}) return null; const e = await ${EDITOR(tab)}; return e && e.selection && (e.selection.line !== e.selection.endLine || e.selection.column !== e.selection.endColumn) ? e : null; })()`, 5000);
+            result.range = { literal, range };
+            note('the template editor after the Alt+click on a literal span', { literal, range });
+            check(`Alt+click on a literal span of «${literal.template}» selects its producing range, in view and painted`,
+                !!range && !!range.visible && range.selection.line >= range.visible[0] && range.selection.line <= range.visible[1] && range.painted > 0 && range.selected.length > 0,
+                JSON.stringify(range));
+            await wait(page, 300);
+            await crop(page, 'goto_range.png', await page.evaluate(BOX(tab)) as any);
+        }
     }
     note('the dock after the Alt+click', await page.evaluate(DOCK(m1)));
     // The gutter control on a hovered line.
@@ -302,6 +355,25 @@ async function main(): Promise<void> {
         const tab2 = TAB(second.id);
         await crop(page, 'generator_selector.png', await page.evaluate(BOX(`${tab2}.querySelector('.codegen-tpl__side')`)) as any);
         check('the new generator\'s target is none', second.s.target === 'target none', String(second.s.target));
+        // No template yet: one neutral empty state in every mode, no error, no gutter, nothing to run.
+        const EMPTY_TEXT = 'No templates yet. «New template» on the left adds the first one.';
+        const modes: Record<string, any> = {};
+        for (const m of ['Preview', 'Run', 'Check']) {
+            await mode(page, tab2, m);
+            await wait(page, 700);
+            modes[m] = await page.evaluate(STATE(tab2));
+        }
+        result.empty = modes;
+        note('the empty generator', Object.fromEntries(Object.entries(modes).map(([k, v]) => [k, v && { empty: v.empty, errors: v.errors, gutters: v.gutters, lines: v.lines, redHints: v.redHints, run: v.run, check: v.check }])));
+        check('an empty generator shows the empty state in Preview, Run and Check, no error, no gutter, no Run or Check',
+            Object.values(modes).every((v: any) => v && v.empty === EMPTY_TEXT && v.errors.length === 0 && v.gutters === 0 && v.lines === 0 && v.redHints === 0 && v.run === null && v.check === null && v.files.length === 0),
+            JSON.stringify(Object.fromEntries(Object.entries(modes).map(([k, v]) => [k, v && { empty: v.empty, errors: v.errors, gutters: v.gutters, redHints: v.redHints }]))));
+        await mode(page, tab2, 'Preview');
+        await wait(page, 300);
+        await crop(page, 'empty_generator.png', await page.evaluate(BOX(tab2)) as any);
+        // With a template, the target none keeps Run and Check off (R-GEN-35).
+        await page.evaluate(CLICK(`${tab2}.querySelector('.codegen-tpl__add')`));
+        await poll(page, `(() => { const s = ${STATE(tab2)}; return s && s.empty === null && s.template ? true : null; })()`, 10000);
         await mode(page, tab2, 'Run');
         await wait(page, 300);
         const r2 = await page.evaluate(STATE(tab2)) as any;

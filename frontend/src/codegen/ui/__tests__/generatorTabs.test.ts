@@ -4,10 +4,14 @@
  * commit body.
  */
 
-import { beforeEach, describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
-    checkOffered, forgetGenerators, generatorTabId, launchGenerator, rememberGenerator, runOffered, saveGeneratorTemplates, templateToSelect,
+    checkOffered, forgetGenerators, generatorTabId, launchGenerator, noTemplates, paneGeneration, rememberGenerator, runOffered, saveGeneratorTemplates,
+    templateToSelect,
 } from '../generatorTabs';
+import { generateGenerator } from '../../engine/generateFiles';
+import type { GeneratorRecord } from '../../engine/generatorCodec';
+import { loadExample, recordOf } from '../../oracle/__tests__/exampleFixture';
 import { elementAt, pickOnCanvas, templateTarget } from '../codeOrigins';
 import { addGenerator, decodeGenerators, encodeGenerators, GEN_GENERATORS_KEY } from '../../engine/generatorCodec';
 import { encodeTemplates, GEN_TEMPLATES_KEY } from '../../engine/templateCodec';
@@ -85,6 +89,27 @@ describe('runOffered', () => {
     it('Run is disabled on target none (kills: Run enabled on target none)', () => {
         expect(runOffered('none')).toBe(false);
         expect(runOffered('js')).toBe(true);
+    });
+});
+
+describe('paneGeneration (P-2026-10-24-0318)', () => {
+    const gen = (templates: TemplateRecord[]): GeneratorRecord =>
+        ({ id: 'g1', name: 'New', root: 'main', files: [{ path: 'main.js', entry: 'main' }], target: 'js', templates });
+
+    it('an empty list shows the empty state and calls no generation (kills: generate called on an empty list)', () => {
+        const generate = vi.fn(() => 'generated');
+        expect(noTemplates(gen([]))).toBe(true);
+        expect(paneGeneration(gen([]), generate)).toBeNull();
+        expect(generate).not.toHaveBeenCalled();
+    });
+
+    it('a non-empty list with a missing root still reports the error (kills: the error hidden for every missing root)', () => {
+        const ex = loadExample('turnstile');
+        const g = gen([row]);
+        expect(noTemplates(g)).toBe(false);
+        const out = paneGeneration(g, () => generateGenerator(recordOf(ex.lookup, ex.modelId), ex.lookup, ex.modelId, g));
+        expect(out).not.toBeNull();
+        expect(out!.files[0].result.errors.map(e => e.message)).toEqual(["No template named 'main'"]);
     });
 });
 

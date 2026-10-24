@@ -14,6 +14,7 @@
  * - Check: the oracle (oracle.ts `runOracle`, R-GEN-11) on the same text over a scenario stored on the model
  *   (storedScenarios.ts); offered only when the generator's target is `js` (R-GEN-35).
  * Run and Check, and their results, moved here from CodePanel.tsx with their behaviour, the 3.2 panel's classes kept.
+ * A generator with no template shows one neutral empty state in every mode, and nothing is generated (P-2026-10-24-0318).
  *
  * Provenance both ways (R-GEN-41). Hovering a span outlines every span of its fragment and names its origin under the
  * text. A click on a model span selects its element on the model's canvas, opening the model's tab first
@@ -41,7 +42,7 @@ import { displayJson } from './displayJson';
 import { conformingModels } from './conformingModels';
 import { linesOf } from './codeLines';
 import { elementAt, elementName, originText, templateTarget } from './codeOrigins';
-import { checkOffered, runOffered } from './generatorTabs';
+import { checkOffered, noTemplates, paneGeneration, runOffered } from './generatorTabs';
 import { selectOnModelCanvas } from './canvasSelection';
 import type { GeneratorRecord } from '../engine/generatorCodec';
 import type { GeneratorResult } from '../engine/generateFiles';
@@ -62,6 +63,9 @@ const RUN_ENTRY = 'main';
 
 /** The pause after the last edit before the preview generates again (S3, discovery §3.4, risk 6). */
 const PREVIEW_DELAY_MS = 400;
+
+/** The pane of a generator with no template, in every mode. */
+const NO_TEMPLATES = 'No templates yet. «New template» on the left adds the first one.';
 
 /** The tooltip of «Check» when the model has no stored scenario. */
 const NO_SCENARIO = 'Record a scenario in the simulator first.';
@@ -174,7 +178,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
         const timer = setTimeout(() => {
             const lookup: Lookup = (store.getState() as any).idlookup ?? {};
             try {
-                setGenerated(generateGenerator(evalGlobals(lookup, targetId), lookup, targetId, generator));
+                setGenerated(paneGeneration(generator, () => generateGenerator(evalGlobals(lookup, targetId), lookup, targetId, generator)));
                 setFailure(null);
             } catch (error) {
                 setGenerated(null);
@@ -311,6 +315,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
     const view = mode === 'check' && checked ? checkView(checked.result, checked.scenario, id => elementName(lookupNow, id)) : null;
     const checkElement = view?.status === 'failure' && view.line !== null && checked ? elementAt(checked.map, view.line, null) : null;
     const noModel = targetId === null;
+    const empty = noTemplates(generator);
     const checkTitle = !offered
         ? NOT_JS
         : noModel
@@ -375,7 +380,8 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                     {`No model conforms to ${elementName(lookupNow, metamodelId)}: create one to generate, run and check.`}
                 </div>
             )}
-            {generated && generated.files.length > 0 && (
+            {empty && <div className="codegen-panel__hint codegen-panel__hint--empty" role="status">{NO_TEMPLATES}</div>}
+            {!empty && generated && generated.files.length > 0 && (
                 <div className="codegen-pane__files" role="tablist" aria-label="Files">
                     {generated.files.map(f => (
                         <button
@@ -393,9 +399,9 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                     ))}
                 </div>
             )}
-            {generated && generated.files.length === 0 && <div className="codegen-panel__hint">This generator declares no file: add a template.</div>}
+            {!empty && generated && generated.files.length === 0 && <div className="codegen-panel__hint">This generator declares no file: add a template.</div>}
             {failure && <div className="codegen-panel__hint codegen-panel__hint--error">{`The model could not be read: ${failure}`}</div>}
-            {mode === 'preview' && result && result.errors.length > 0 && (
+            {!empty && mode === 'preview' && result && result.errors.length > 0 && (
                 <ul className="codegen-panel__errors" aria-label="Generation errors">
                     {result.errors.map((e, i) => (
                         <li className="codegen-panel__error" key={`error-${i}`}>
@@ -406,7 +412,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                 </ul>
             )}
 
-            {mode === 'run' && (
+            {!empty && mode === 'run' && (
                 <div className="codegen-panel__row codegen-panel__run">
                     <button
                         type="button"
@@ -425,7 +431,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                     </label>
                 </div>
             )}
-            {mode === 'check' && (
+            {!empty && mode === 'check' && (
                 <div className="codegen-panel__row codegen-panel__run">
                     <select
                         className="codegen-panel__scenario"
@@ -449,17 +455,17 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                     </button>
                 </div>
             )}
-            {mode === 'run' && !runnable && <div className="codegen-panel__hint" role="status">{RUN_NOT_JS}</div>}
-            {mode === 'check' && !offered && <div className="codegen-panel__hint" role="status">{NOT_JS}</div>}
-            {mode !== 'preview' && result?.hasErrors && <div className="codegen-panel__hint">{`${mode === 'run' ? 'Run' : 'Check'} is off while the generation has errors.`}</div>}
+            {!empty && mode === 'run' && !runnable && <div className="codegen-panel__hint" role="status">{RUN_NOT_JS}</div>}
+            {!empty && mode === 'check' && !offered && <div className="codegen-panel__hint" role="status">{NOT_JS}</div>}
+            {!empty && mode !== 'preview' && result?.hasErrors && <div className="codegen-panel__hint">{`${mode === 'run' ? 'Run' : 'Check'} is off while the generation has errors.`}</div>}
 
-            {mode === 'run' && outcome && outcome.response.ok && (
+            {!empty && mode === 'run' && outcome && outcome.response.ok && (
                 <div className="codegen-panel__result">
                     <div className="codegen-panel__label">{`${RUN_ENTRY}() returned, ${outcome.ms} ms`}</div>
                     <pre className="codegen-panel__value">{displayJson(outcome.response.results[0] ?? null, 2) ?? 'undefined'}</pre>
                 </div>
             )}
-            {runError && (
+            {!empty && runError && (
                 <div className="codegen-panel__result codegen-panel__result--error" role="alert">
                     <div className="codegen-panel__run-error">{`${runError.kind}: ${runError.message}`}</div>
                     {runError.line !== null && (
@@ -477,13 +483,13 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                     )}
                 </div>
             )}
-            {view?.status === 'pass' && (
+            {!empty && view?.status === 'pass' && (
                 <div className="codegen-panel__result codegen-panel__result--pass" role="status" title={view.text}>
                     <i className="bi bi-check2-circle" />
                     <span>{view.text}</span>
                 </div>
             )}
-            {view && view.status !== 'pass' && (
+            {!empty && view && view.status !== 'pass' && (
                 <div className="codegen-panel__result codegen-panel__result--error" role="alert">
                     <div className="codegen-panel__run-error">{view.text}</div>
                     {view.status === 'divergence' ? (
@@ -520,7 +526,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                 </div>
             )}
 
-            {result && (
+            {!empty && result && (
                 <pre className="codegen-panel__code codegen-pane__code" ref={codeRef} aria-label="Generated text" onMouseLeave={() => setHoverLine(null)}>
                     {lines.map((pieces, i) => {
                         const jump = hoverLine === i ? lineTarget(i) : null;
@@ -567,11 +573,11 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                     })}
                 </pre>
             )}
-            <div className="codegen-panel__origin" aria-live="polite">
+            {!empty && <div className="codegen-panel__origin" aria-live="polite">
                 {notice ?? (hover
                     ? originText(lookupNow, hover.origin)
                     : 'Hover a span for its origin; click a model value to select it on the canvas, Alt+click to go to its template.')}
-            </div>
+            </div>}
             {edgeBox && createPortal(
                 <div
                     className="codegen-panel__edge-outline codegen-pane__edge-outline"

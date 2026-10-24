@@ -10,6 +10,7 @@
  * - Check is offered only on a generator whose target is `js` (R-GEN-35).
  * - Run likewise: it calls `main()` of the generator's `js` file; a `none` target produces text, not a program (R-GEN-35).
  * - «Go to template»: the template a fragment names, while the list holds it.
+ * - A generator with no template is empty, not wrong: nothing is generated (P-2026-10-24-0318).
  *
  * Pure but for the session memory: no React, no store.
  */
@@ -65,6 +66,19 @@ export function checkOffered(target: GeneratorTarget): boolean {
 /** Run is offered only on a generator whose target is `js`: it calls `main()` of its `js` file (R-GEN-35). */
 export function runOffered(target: GeneratorTarget): boolean {
     return target === 'js';
+}
+
+/** A generator with no template yet: its pane shows the empty state, not an error (P-2026-10-24-0318). */
+export function noTemplates(generator: { readonly templates: readonly unknown[] }): boolean {
+    return generator.templates.length === 0;
+}
+
+/**
+ * The pane's generation: `generate()` run on a generator with templates, `null` with none and nothing run. A missing
+ * root over a non-empty list still runs, and reports its error.
+ */
+export function paneGeneration<T>(generator: { readonly templates: readonly unknown[] }, generate: () => T): T | null {
+    return noTemplates(generator) ? null : generate();
 }
 
 /** The template «go to template» selects: the one the fragment names, while listed; `null` otherwise. */
