@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (implementation S4c, core undo layer authorised by R-JJD-6)
 Depends: P-2026-10-24-0225
-Status: da eseguire
+Status: eseguito 2026-10-24 · lane jjodie-ui · code 74fab8b7c · probe a12b100fd ALL PASS · gates green · done
 Corregge: none
 Request: Alfonso, 2026-10-24 01:14, in the project chat («Apply ok»: one-step Apply through a minimal undo group)
 Model: claude-opus-5-5
