@@ -1,0 +1,214 @@
+/**
+ * JjEL live result (slice S3c, P-2026-10-24-0241).
+ * Sober version of the mockup: hairlines only, no tinted background, no nested boxes,
+ * no uppercase labels. Value in mono 15 px slate-900, type in 12 px slate-400.
+ */
+
+.jjel-live {
+    margin: 0 12px 6px;
+    background: transparent;
+    font-family: var(--font-mono);
+}
+
+// Previous evaluations, muted, newest at the bottom.
+.jjel-live__history {
+    list-style: none;
+    margin: 0 0 6px;
+    padding: 0;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--color-text-disabled, #94a3b8);
+}
+
+.jjel-live__history-row {
+    display: flex;
+    gap: 0;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.jjel-live__history-expr,
+.jjel-live__history-path {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jjel-live__history-expr {
+    flex: 0 1 auto;
+}
+
+.jjel-live__history-on {
+    flex: 0 0 auto;
+    white-space: pre;
+}
+
+.jjel-live__history-path {
+    flex: 0 1 auto;
+}
+
+.jjel-live__history-value {
+    flex: 1 1 auto;
+    margin-left: 3ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
+}
+
+// The result block: one hairline above, nothing around it.
+.jjel-live__result {
+    border-top: 1px solid var(--color-border-secondary, #e5e9ef);
+    padding-top: 6px;
+    background: transparent;
+}
+
+.jjel-live__target {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 20px;
+    color: var(--color-text-tertiary, #475569);
+}
+
+.jjel-live__self {
+    color: var(--color-text-disabled, #94a3b8);
+}
+
+.jjel-live__badge {
+    padding: 0 4px;
+    border: 1px solid var(--color-border-primary, #cbd5e1);
+    border-radius: 3px;
+    font-size: 10.5px;
+    line-height: 14px;
+    color: var(--color-text-tertiary, #475569);
+}
+
+.jjel-live__kind {
+    color: var(--color-text-secondary, #334155);
+}
+
+.jjel-live__path {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-primary, #0f172a);
+}
+
+.jjel-live__mode {
+    margin-left: auto;
+    flex: 0 0 auto;
+    color: var(--color-text-disabled, #94a3b8);
+}
+
+.jjel-live__pin {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-text-disabled, #94a3b8);
+    cursor: pointer;
+
+    &:hover {
+        color: var(--color-text-secondary, #334155);
+    }
+
+    &:focus-visible {
+        outline: 1px solid var(--color-border-focus, #475569);
+        outline-offset: 1px;
+    }
+
+    &[aria-pressed='true'] {
+        color: var(--color-text-primary, #0f172a);
+    }
+}
+
+// One target: the value, then its type.
+.jjel-live__value-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    padding: 2px 0;
+}
+
+.jjel-live__value {
+    min-width: 0;
+    font-size: 15px;
+    line-height: 22px;
+    color: var(--color-text-primary, #0f172a);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.jjel-live__type {
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: var(--color-text-disabled, #94a3b8);
+}
+
+// Not applicable and timed out are muted text, not errors.
+.jjel-live__value-line--not-applicable .jjel-live__value,
+.jjel-live__value-line--timed-out .jjel-live__value {
+    font-size: 13px;
+    color: var(--color-text-disabled, #94a3b8);
+}
+
+// Parse and runtime errors keep the code-entry error colour.
+.jjel-live__value-line--error .jjel-live__value {
+    font-size: 13px;
+    color: var(--color-error-text, #b91c1c);
+}
+
+// Several targets: a compact two-column list, hairlines between rows.
+.jjel-live__list {
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+    max-height: 168px;
+    overflow-y: auto;
+}
+
+.jjel-live__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 2px 0;
+    font-size: 13px;
+    line-height: 20px;
+
+    & + & {
+        border-top: 1px solid var(--color-border-secondary, #e5e9ef);
+    }
+}
+
+.jjel-live__row-path {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-tertiary, #475569);
+}
+
+.jjel-live__row-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-primary, #0f172a);
+}
+
+.jjel-live__row--not-applicable .jjel-live__row-value,
+.jjel-live__row--timed-out .jjel-live__row-value {
+    color: var(--color-text-disabled, #94a3b8);
+}
+
+.jjel-live__row--error .jjel-live__row-value {
+    color: var(--color-error-text, #b91c1c);
+}

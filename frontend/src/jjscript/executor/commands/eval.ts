@@ -107,6 +107,12 @@ export interface BuildEvalContextOptions {
      * `docs/discovery/harness/probe_2026-09-09_estensione_perimetro_validato.mts`.
      */
     extentModelId?: string;
+    /**
+     * Binds `data` (and `node`) to this element instead of Redux `_lastSelected`
+     * (P-2026-10-24-0241, Jjodie live JjEL over a multi-selection: one call per
+     * element). `null`: bind neither. Absent: `_lastSelected`, as before.
+     */
+    self?: { elementId: string; nodeId?: string } | null;
 }
 
 /**
@@ -324,8 +330,8 @@ export function buildEvalContext(
     // `self.instanceOf == RoadNetwork` resolves by reference identity.
     try {
         const state: any = store.getState();
-        const selectedMeId = state?._lastSelected?.modelElement;
-        const selectedNodeId = state?._lastSelected?.node;
+        const selectedMeId = opts?.self !== undefined ? opts.self?.elementId : state?._lastSelected?.modelElement;
+        const selectedNodeId = opts?.self !== undefined ? opts.self?.nodeId : state?._lastSelected?.node;
         if (selectedMeId) {
             const me = LPointerTargetable.fromPointer(selectedMeId) as any;
             if (me) variables['data'] = wrapSelectedElement(me, classByName, instanceById, fillWorklist);
