@@ -1139,6 +1139,21 @@ project-card .tip {
       &--m { background: #fef3c7; color: #92400e; }
       &--T { background: #dcfce7; color: #15803d; }
       &--V { background: #fce7f3; color: #9d174d; }
+      &--S { background: #cffafe; color: #0e7490; }
+    }
+
+    /* Inline rename of a SCRIPTS row (S6b): takes the place of .psb-item-name. */
+    .psb-rename-input {
+      flex: 1;
+      min-width: 0;
+      height: 20px;
+      padding: 0 4px;
+      border: 1px solid #0ea5e9;
+      border-radius: 3px;
+      font: inherit;
+      color: inherit;
+      background: #fff;
+      outline: none;
     }
 
     .psb-item-name {

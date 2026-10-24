@@ -15,6 +15,10 @@ import { createM2 } from './Navbar';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
 import { activeProfileId, isConsumerMode } from '../../components/environment/consumerMode';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { deleteProjectScript, openScriptAsFile, readProjectScripts, renameProjectScript } from '../../components/scripts/scriptFiles';
+import { SCRIPT_EXTENSION } from '../../components/scripts/projectScripts';
+import type { DProjectScript } from '../../joiner/classes';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
@@ -102,6 +106,9 @@ const Menu = (props: MenuProps) => {
         </div>
     );
 }
+
+/** The SCRIPTS list of a project with none, one reference for every render (S6b). */
+const NO_SCRIPTS: DProjectScript[] = [];
 
 function LeftBar(props: LeftBarProps): JSX.Element {
 
@@ -302,6 +309,39 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const consumerTypes = consumerTypesKey
         ? consumerTypesKey.split('\u0002').map((row) => { const [id, name] = row.split('\u0001'); return { id, name }; })
         : [];
+    // S6b (R-JJD-5): the project's script files. One empty array for "none", so the selector
+    // does not hand back a new reference on every store change.
+    const pScripts: DProjectScript[] = useSelector((state: any) => {
+        const list = readProjectScripts(state);
+        return list.length ? list : NO_SCRIPTS;
+    });
+    const [scriptMenu, setScriptMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+    const [renamingScriptId, setRenamingScriptId] = useState<string | null>(null);
+    const [scriptRenameValue, setScriptRenameValue] = useState('');
+    const [deletingScript, setDeletingScript] = useState<DProjectScript | null>(null);
+    useEffect(() => {
+        if (!scriptMenu) return;
+        const close = () => setScriptMenu(null);
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+        document.addEventListener('click', close);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('click', close);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [scriptMenu]);
+    const startScriptRename = (sc: DProjectScript) => {
+        setScriptMenu(null);
+        setRenamingScriptId(sc.id);
+        setScriptRenameValue(sc.name.endsWith(SCRIPT_EXTENSION) ? sc.name.slice(0, -SCRIPT_EXTENSION.length) : sc.name);
+    };
+    const commitScriptRename = () => {
+        if (!renamingScriptId) return;
+        const sc = pScripts.find(x => x.id === renamingScriptId);
+        // An empty name keeps the old one: the pure rename would turn it into `script.jjs`.
+        if (sc && scriptRenameValue.trim()) renameProjectScript(sc.id, scriptRenameValue);
+        setRenamingScriptId(null);
+    };
     const [shownTypeId, setShownTypeId] = useState<string | null>(null);
     useEffect(() => {
         const onShown = (e: Event) => setShownTypeId((e as CustomEvent).detail?.typeId ?? null);
@@ -375,6 +415,93 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         <span>{newLabel}</span>
                     </div>
                 </div>
+            </div>
+        );
+    };
+
+    /**
+     * SCRIPTS (S6b): the markup of `renderSection`, plus what a script row needs and the other
+     * rows do not: a context menu with Rename and Delete, and an inline rename field.
+     */
+    const renderScriptsSection = () => {
+        const isCollapsed = !!collapsedSections['scripts'];
+        const menuScript = scriptMenu ? pScripts.find(x => x.id === scriptMenu.id) : undefined;
+        return (
+            <div className={`psb-section${isCollapsed ? ' collapsed' : ''}`} data-psb-section="scripts">
+                <div className="psb-section-header" onClick={() => toggleSection('scripts')}>
+                    <span className="psb-section-label">Scripts</span>
+                    <i className="bi bi-chevron-down psb-chevron" />
+                </div>
+                <div className="psb-section-body">
+                    {pScripts.map(sc => (
+                        <div
+                            key={sc.id}
+                            className="psb-item"
+                            data-script-id={sc.id}
+                            onClick={() => { if (renamingScriptId !== sc.id) DockManager.openScript(sc.id); }}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const menuW = 160, menuH = 80;
+                                setScriptMenu({
+                                    id: sc.id,
+                                    x: Math.min(e.clientX, window.innerWidth - menuW - 8),
+                                    y: Math.min(e.clientY, window.innerHeight - menuH - 8),
+                                });
+                            }}
+                            title={sc.name}
+                        >
+                            <span className="psb-badge psb-badge--S">S</span>
+                            {renamingScriptId === sc.id ? (
+                                <input
+                                    className="psb-rename-input"
+                                    autoFocus
+                                    value={scriptRenameValue}
+                                    aria-label="Script name"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => setScriptRenameValue(e.target.value)}
+                                    onBlur={commitScriptRename}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') commitScriptRename();
+                                        else if (e.key === 'Escape') setRenamingScriptId(null);
+                                    }}
+                                />
+                            ) : (
+                                <span className="psb-item-name">{sc.name}</span>
+                            )}
+                            <i className="bi bi-arrow-right psb-item-arrow" />
+                        </div>
+                    ))}
+                    <div className="psb-new" onClick={() => openScriptAsFile('', 'script')}>
+                        <i className="bi bi-plus" />
+                        <span>New script</span>
+                    </div>
+                </div>
+                {scriptMenu && menuScript && (
+                    <div
+                        className="tree-node__context-menu psb-script-menu"
+                        style={{ position: 'fixed', top: scriptMenu.y, left: scriptMenu.x, zIndex: 9999 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="tree-node__context-item" onClick={() => startScriptRename(menuScript)}>
+                            <i className="bi bi-pencil" />
+                            <span>Rename</span>
+                        </div>
+                        <div className="tree-node__context-item" onClick={() => { setScriptMenu(null); setDeletingScript(menuScript); }}>
+                            <i className="bi bi-trash3" />
+                            <span>Delete</span>
+                        </div>
+                    </div>
+                )}
+                <ConfirmDialog
+                    isOpen={!!deletingScript}
+                    title="Delete script"
+                    message={`Delete "${deletingScript?.name ?? ''}"? This cannot be undone.`}
+                    confirmText="Delete"
+                    variant="danger"
+                    onConfirm={() => { if (deletingScript) deleteProjectScript(deletingScript.id); setDeletingScript(null); }}
+                    onCancel={() => setDeletingScript(null)}
+                />
             </div>
         );
     };
@@ -462,6 +589,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     () => requestFromProjectEditor(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG),
                     'New transform',
                 )}
+
+                {!consumer && renderScriptsSection()}
 
                 {!consumer && renderSection(
                     'viewpoints', 'Viewpoints', 'V',
