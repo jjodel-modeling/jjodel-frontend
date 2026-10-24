@@ -1,7 +1,7 @@
 import {DockLayout, TabData} from 'rc-dock';
 import { JjodelEvents } from '../../events/registry';
 import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
-import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U} from '../../joiner';
+import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U, store} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
 import { managerTabId } from "./tabs/instanceManagerModel";
 import { isConsumerMode } from '../environment/consumerMode';
@@ -169,6 +169,28 @@ class DockManager {
      * Metamodels are refused rather than silently ignored: the manager catalogues
      * INSTANCES, and an M2 has none. Returns false so the caller can tell.
      */
+    /**
+     * Open the editor tab of a project script file (S6a, R-JJD-5), or raise it when it is open.
+     * Returns false when the dock is not ready or the project has no such script.
+     */
+    static openScript(scriptId: string): boolean {
+        if (!DockManager.dock || !scriptId) return false;
+        const pid = U.getProjectID_URL();
+        const scripts = ((pid && (store.getState() as any).idlookup?.[pid]?.scripts) || []) as Array<{ id: string; name: string }>;
+        const script = scripts.find(s => s.id === scriptId);
+        if (!script) {
+            console.warn('[DockManager] openScript: no such script in the project', scriptId);
+            return false;
+        }
+        void DockManager.open('models', TabDataMaker.script(script));
+        // A code tab with no model under it: the panels follow it as they follow a JjTL tab
+        // (`EditorType` has no 'script' member).
+        window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
+            detail: { editorType: 'transformation', modelId: scriptId }
+        }));
+        return true;
+    }
+
     static async openManager(me: LModel): Promise<boolean> {
         if (!me?.id) return false;
         if (me.isMetamodel) {

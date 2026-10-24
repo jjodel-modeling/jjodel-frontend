@@ -3060,6 +3060,16 @@ export class ProjectPointers{
     favorite!: Dictionary<Pointer<DUser>, true | undefined>;
     author!: Pointer<DUser>;
 }
+/** A JjScript file stored in the project (S6a, R-JJD-5): `name` ends in `.jjs`, `modelId` is the M1
+ *  model it was last run on, `generatedText` the text Jjodie last generated for it. */
+export interface DProjectScript {
+    id: string;
+    name: string;
+    text: string;
+    modelId?: string;
+    generatedText?: string;
+    updatedAt: number;
+}
 @Leaf
 @RuntimeAccessible('DProject')
 export class DProject extends DPointerTargetable {
@@ -3099,6 +3109,10 @@ export class DProject extends DPointerTargetable {
     version!: number;
     tagNames!: string[];
     transformations: any[] = [];
+    /** JjScript files of the project (S6a, R-JJD-5). Optional and without a default: a project saved
+     *  before the field existed has none, so it is read with `|| []` everywhere, like `transformations`,
+     *  and needs no VersionFixer migration. */
+    scripts?: DProjectScript[];
     expandedTreeNodes: string[] = [];
 
     /** Width in px of the property panel column. Range [320, 640]. */
@@ -3190,6 +3204,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     version!: number;
     tagNames!: string[];
     transformations!: any[];
+    scripts?: DProjectScript[];
     expandedTreeNodes!: string[];
     layoutPropertyPanelWidth!: number;
     layoutTreeWidth!: number;
