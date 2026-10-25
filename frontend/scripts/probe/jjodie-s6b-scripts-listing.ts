@@ -3,12 +3,14 @@
  * the throwaway browser profile and to the lane folder.
  *
  * Question: are the project's script files listed as S6b asks? Two scripts made with `openScriptAsFile` (one on a
- * model, one on none) appear under SCRIPTS in the left bar and as nodes of the megamodel view, the first linked to its
+ * model, one on none) appear under REFACTORINGS in the left bar and as nodes of the megamodel view, the first linked to its
  * model; the existing megamodel nodes keep their place. A click on a row opens its tab; the row's context menu renames
  * it in place and offers Delete behind a confirmation. The rows of the other sections do not change.
  *
  * Fixture: scene_1_DemoPEST.jjodel (as jjodie-s6a-script-file.ts); its first M1 model.
- * Real app, own dev server (never 3000, 3001, 3003), light theme. One crop: the SCRIPTS section after the rename.
+ * Real app, own dev server (never 3000, 3001, 3003), light theme. One crop: the REFACTORINGS section after the rename.
+ *
+ * Labels follow R-JJD-14 (P-2026-10-25-1120): the section reads «Refactorings», the megamodel card «Refactoring».
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> \
  *         frontend/scripts/probe/jjodie-s6b-scripts-listing.ts --port 3017 --id P-2026-10-24-0355
@@ -70,7 +72,7 @@ const READ_SECTIONS = `(() => [...document.querySelectorAll('.leftbar--project .
     .map(r => (r.querySelector('.psb-item-name, span:not(.psb-badge)')?.textContent || '').trim()),
 })))()`;
 const readSections = (page: Page) => page.evaluate(READ_SECTIONS) as Promise<Array<{ i: number; label: string; rows: string[] }>>;
-const others = (secs: Array<{ label: string; rows: string[] }>) => secs.filter(s => s.label !== 'Scripts').map(s => `${s.label}:${s.rows.length}:${s.rows.join('|')}`);
+const others = (secs: Array<{ label: string; rows: string[] }>) => secs.filter(s => s.label !== 'Refactorings').map(s => `${s.label}:${s.rows.length}:${s.rows.join('|')}`);
 
 const READ_STORE = `(async () => {
   const j = await import('/src/joiner/index.ts');
@@ -126,9 +128,9 @@ check('an M1 model', !!target, st.models);
 
 const before = await readSections(page);
 meas('sections before', before.map(s => `${s.label}:${s.rows.length}`));
-const scriptsIdx = before.findIndex(s => s.label === 'Scripts');
+const scriptsIdx = before.findIndex(s => s.label === 'Refactorings');
 const transIdx = before.findIndex(s => s.label === 'Transforms');
-check('SCRIPTS is listed right after Transforms, empty', scriptsIdx >= 0 && scriptsIdx === transIdx + 1 && before[scriptsIdx].rows.length === 0, { scriptsIdx, transIdx });
+check('REFACTORINGS is listed right after Transforms, empty', scriptsIdx >= 0 && scriptsIdx === transIdx + 1 && before[scriptsIdx].rows.length === 0, { scriptsIdx, transIdx });
 phase = 'megamodel-before';
 const mmBefore = await readMegamodel(page);
 phase = 'scripts';
@@ -150,8 +152,8 @@ if (project && target) {
     const [one, two] = created;
 
     let secs = await readSections(page);
-    const rows = secs.find(s => s.label === 'Scripts')?.rows || [];
-    check('both are listed under SCRIPTS with the .jjs name', JSON.stringify(rows) === JSON.stringify(['probe one.jjs', 'probe two.jjs']), rows);
+    const rows = secs.find(s => s.label === 'Refactorings')?.rows || [];
+    check('both are listed under REFACTORINGS with the .jjs name', JSON.stringify(rows) === JSON.stringify(['probe one.jjs', 'probe two.jjs']), rows);
     check('the other sections are unchanged after the create', JSON.stringify(others(secs)) === JSON.stringify(others(before)), { before: others(before), after: others(secs) });
 
     // Click opens the tab: the second script's tab is active, the click raises the first.
@@ -182,7 +184,7 @@ if (project && target) {
     await wait(page, 800);
     st = await readStore(page);
     secs = await readSections(page);
-    const renamedRows = secs.find(s => s.label === 'Scripts')?.rows || [];
+    const renamedRows = secs.find(s => s.label === 'Refactorings')?.rows || [];
     check('rename writes renamed.jjs to the store and the row', st.scripts?.find((s: any) => s.id === two.id)?.name === 'renamed.jjs' && renamedRows.includes('renamed.jjs'), { store: st.scripts?.map((s: any) => s.name), rows: renamedRows });
     const section = await page.locator('.leftbar--project [data-psb-section="scripts"]').boundingBox();
     if (section) await page.screenshot({ path: `${OUT}/s6b_scripts_section.png`, clip: { x: section.x, y: section.y, width: section.width, height: section.height } });
@@ -208,8 +210,8 @@ if (project && target) {
     phase = 'end';
     meas('megamodel after', { cards: mmAfter.cards.length, edges: mmAfter.edges });
     meas('megamodel after, cards', mmAfter.cards);
-    const scriptCards = mmAfter.cards.filter((c: any) => c.type === 'JjScript file');
-    check('the megamodel lists both scripts as nodes', scriptCards.length === 2 && scriptCards.some((c: any) => c.name === 'probe one.jjs') && scriptCards.some((c: any) => c.name === 'renamed.jjs'), scriptCards);
+    const scriptCards = mmAfter.cards.filter((c: any) => c.type === 'Refactoring');
+    check('the megamodel lists both scripts as Refactoring nodes', scriptCards.length === 2 && scriptCards.some((c: any) => c.name === 'probe one.jjs') && scriptCards.some((c: any) => c.name === 'renamed.jjs'), scriptCards);
     const moved = mmBefore.cards.filter((b: any) => {
         const a = mmAfter.cards.find((c: any) => c.name === b.name && c.kind === b.kind);
         return !a || a.left !== b.left || a.top !== b.top;
