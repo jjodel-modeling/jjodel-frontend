@@ -1,6 +1,6 @@
 # Code generation 3.3: SELECT_NODE centres on React Flow's own viewport (completion of P-2026-10-25-1355)
 
-Prompt-ID: P-2026-10-25-1435
+Prompt-ID: P-2026-10-25-1441
 Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (one handler in EditorV2.tsx, outside the critical zone; scope extended by the chat under RC-25)
@@ -20,7 +20,7 @@ Model and tier: as `lane-run` assigns.
 
 ## Lane discipline
 
-Every reply opens with `[P-2026-10-25-1435 · session <id>]`; every final message ends with
+Every reply opens with `[P-2026-10-25-1441 · session <id>]`; every final message ends with
 `Outcome: done | hard-stop | question | blocked`. Unattended (RC-21, RC-25) except the RC-26 list. Time limit: 60
 minutes. No subagents, no background tasks. Commit the fix as soon as typecheck and tests are green, before the probe.
 Never print a diff, a whole file or a whole log; read `~/.jjodel-lanes/P-2026-10-25-1355/handoff.md` once (not the
@@ -45,12 +45,12 @@ from the React Flow container's left, i.e. relative to the window, and moves the
    is not moved (kills: move on every select); the zoom is unchanged (kills: fitView used). Extend
    `scripts/probe/codegen-generator-tab.ts`: Alfonso's sequence, a fragment click on a node that starts off-screen
    on the narrowed canvas, assert it ends inside the canvas viewport and selected. Crops under
-   `~/.jjodel-lanes/P-2026-10-25-1435/crops/`: the narrowed canvas with the revealed, selected node beside the code;
+   `~/.jjodel-lanes/P-2026-10-25-1441/crops/`: the narrowed canvas with the revealed, selected node beside the code;
    the full-width canvas after a selection from elsewhere (unchanged behaviour).
 3. **Close 1355 too**: its code is committed (`f141bb614` 7px grab area for the divider, `d88d939bd` probe) but its
    log entry and Status flip are missing. Write one log entry covering both lanes (1355's item 0 diagnosis and its
    decisions 1-3 from the handoff, this lane's fix) and flip both `Status:` lines: 1355 `eseguito 2026-10-25 · lane
-   codegen · f141bb614 · item 2 completed by P-2026-10-25-1435`, this one `eseguito 2026-10-25 · lane codegen · <fix
+   codegen · f141bb614 · item 2 completed by P-2026-10-25-1441`, this one `eseguito 2026-10-25 · lane codegen · <fix
    sha> · <bench k/n> · crops in the lane folder`.
 
 ## DOVE
@@ -68,7 +68,7 @@ From `frontend/`: `npm run typecheck` exit 0; `npm run build`; `npx vitest run s
 
 ## Close
 
-`fix(editor): SELECT_NODE centres on the flow viewport, no move when visible (P-2026-10-25-1435)`, then the docs
+`fix(editor): SELECT_NODE centres on the flow viewport, no move when visible (P-2026-10-25-1441)`, then the docs
 commit (log entry and both flips). `Outcome: done`.
 
 ## NON FARE
