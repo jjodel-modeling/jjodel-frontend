@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (one handler in EditorV2.tsx, outside the critical zone; scope extended by the chat under RC-25)
 Depends: P-2026-10-25-1355
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane codegen · 10abb57b3 · bench 8/8 · crops in the lane folder
 Corregge: P-2026-10-25-1355
 Request: Alfonso, 2026-10-25 13:52, in the project chat (kept locally as `request.md`)
 

@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (codegen UI; dock divider CSS at the narrowest scope; no critical-zone file)
 Depends: P-2026-10-25-1310
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane codegen · f141bb614 · item 2 completed by P-2026-10-25-1441
 Corregge: P-2026-10-25-1310, P-2026-10-24-1515
 Request: Alfonso, 2026-10-25 13:52, in the project chat: «adesso si apre affiancato il canvas, la separazione tra canvas e il resto non è resizable, inoltre quando clicco su un elemento non si seleziona l'elemento nel canvas»
 
