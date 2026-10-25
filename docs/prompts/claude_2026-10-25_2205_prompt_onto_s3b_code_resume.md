@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-25-2205
 Chat: C-2026-10-25-2159
 Front: instance-of
 Lane: full (viewpoint/ir/ is in the critical-zone table of CLAUDE.md 3.1; Layer Impact Report in the discovery)
-Status: da eseguire
+Status: eseguito
 Request: none (Alfonso: «decidi tu», /lane auto, 2026-10-25 22:01)
 Depends: P-2026-10-21-1910
 Corregge: P-2026-10-21-1955 (stopped at step 3 on a usage limit, 2026-10-21 20:33, nothing committed)

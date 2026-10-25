@@ -147,3 +147,30 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Priority**: low
 **Found in**: P-2026-10-21-1636
 **Detail**: ~/.jjodel-lanes/P-2026-10-21-1636/closing.md
+
+## 2026-10-25 — fix: S3b ghost and orphan rows, probe, regression, assets (P-2026-10-25-2220)
+**Prompt**: S3b Phase 2 closure over P-2026-10-21-1955 (stopped at step 3, nothing committed), P-2026-10-25-2205 (code) and this lane: re-export the library after decision 2, the probe onto-s3b-ghost-rows.ts S3b-0..S3b-5 with M4, regression of S2, S3a and undo-inline-edit on the new export, four crops, this entry.
+**Files touched**: 2205 (f454b12b7): hooks/instantiate.ts, hooks/__tests__/instantiate.test.ts, viewpoint/ir/IRNodeContent.tsx, IRRow.tsx, irStyle.ts, scripts/probe/uml-class-object-fixture.ts. This lane: scripts/probe/onto-s3b-ghost-rows.ts (cd69c6243); docs/discovery/assets/onto-s3b/ four crops and onto-s3b-measures.json, this inbox, the Status line of the 2205 prompt (docs commit). Outside the repo: ~/jjodel-demo-exports/uml-s3b/uml-class-object.jjodel
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-21 19:56 P-2026-10-21-1956, never launched, replaced by this lane
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no (twelve files over the two lanes, all in their DOVE lists; IRNodeContent.tsx mutated for M4 and reverted)
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — four crops read by the session (ghost row, typing, pages = 300, orphan row); the visual GO stays the chat's (P8)
+**Notes**: Probe run 4: 6/6, load 2.51/1.78 (run 1 4/6: undo counted from before the double-click, see ticket). M4: S3b-4 red only. onto-s2 21/21, onto-s3a 8/8, undo-inline-edit 33/33, all on the new export. Bench of 2205, 30 tests: M1 6 red, M2 1, M3 1. Gates of 2205: typecheck 0, 30/30, ir and nodes 1455/1455, build 0. Decision 2: instance boxes 300x84..138 manual before, 200x80 unresized now. Detail: ~/.jjodel-lanes/P-2026-10-25-2220/closing.md
+**Prompt document name**: 2026-10-25 22:20
+
+**Ticket** (decision 2, measured): the old export carried five manual instance boxes (cityLib, dune, history, nature, alice: 300 wide, 84 to 138 high, isResized true); the new one carries none (all ten 200x80, isResized false), and the rendered box hugs its rows: dune 200x135.5 with four rows, 200x153.7 with the ghost row, which sits inside it and is hit-tested. S2 on the new export measures book1 200x136 and member1 200x99, where it measured 280x138; no S2 check asserted the old size. The orphan row now carries the marker and the tooltip but still no feature name (D7), so the ticket of 2026-10-21 on the nameless orphan row is half closed. The native `title` tooltip is not painted in a headless screenshot: the orphan crop shows the marker, the tooltip text is in onto-s3b-measures.json.
+
+## 2026-10-25 — ticket: opening a ghost row's editor adds an undo entry with nothing created
+**Ticket**: the double-click on dune's ghost value moves the user's undo stack 3 → 4 with no idlookup key created, before any text is typed; Enter then adds the materialization's one entry (4 → 5) and one Cmd+Z removes it (5 → 4), so the double-click's entry needs a second Cmd+Z with no visible effect. Same family as the shallow-merge ticket (a click-born selection write landing as an entry of its own); onto-s3b-ghost-rows.ts counts S3b-2's +1 from the open editor and records both lengths.
+**Priority**: low
+**Found in**: P-2026-10-25-2220
+**Detail**: docs/discovery/assets/onto-s3b/onto-s3b-measures.json
+
+## 2026-10-25 — ticket: a ghost row's feature name is cut while its value is typed
+**Ticket**: with the editor open, the ghost row of dune's pages reads `pa… = [300]`: the input takes the row's width and the feature name is ellipsized, so the user types without seeing which feature. Measured at 200 px of node width.
+**Priority**: low
+**Found in**: P-2026-10-25-2220
+**Detail**: docs/discovery/assets/onto-s3b/onto-s3b-typing-light.png
