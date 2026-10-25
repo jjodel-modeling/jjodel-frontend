@@ -15,6 +15,24 @@
     max-width: none;
 }
 
+// The boundary between the canvas and a generator panel beside it (P-2026-10-25-1355): rc-dock's divider, 1px wide in
+// the app (abstract/style.scss), so a drag had to start on that exact pixel. In a box that holds a generator panel the
+// divider takes 7px over the two panels' edges, the margins give the layout its 1px back, and the 1px line stays in
+// the middle. Boxes without a generator panel keep the 1px divider.
+.not-strip > .dock-layout .dock-hbox:has(> .dock-panel.dock-style-codegen) > .dock-divider {
+    flex: 0 0 7px;
+    margin: 0 -3px;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    background-color: var(--color-border-secondary);
+    background-clip: padding-box;
+    z-index: 2;
+
+    &::after {
+        left: 50%;
+    }
+}
+
 // The project page, Documentation, a transformation, a viewpoint and canvas-only mode zero every panel right of the
 // first and stretch the first, all !important (abstract/style.scss, the body attributes below). A generator panel beside
 // the first is lifted and takes the share `dockBeside` gives it (P-2026-10-25-1045); the :has() outranks those rules.
