@@ -45,6 +45,12 @@
  * app-bar entry (crop beside_unchanged.png); moved into the first panel and out by hand, one tab, listed only inside.
  * The dock after the reload is reported (generator tabs restored or not), not fixed.
  *
+ * P-2026-10-25-1310, the finding's sequence: GENERATORS with the project page active (app-bar tab), the model canvas
+ * opened, its Code pill: the tab moves beside the canvas, the canvas the active app-bar tab, no generator entry (crop
+ * finding_pill_beside.png); GENERATORS with the project page in front moves it back to the first panel; a fragment
+ * click from there opens the canvas and the tab moves beside it, the selection beside the code (crop
+ * finding_fragment_beside.png).
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
@@ -929,6 +935,91 @@ async function main(): Promise<void> {
     const movedOut = await page.evaluate(DOCKED) as any;
     const g7 = genEntries(await page.evaluate(APPBAR) as any[]);
     check('moved out again: one dock tab, no app-bar entry', movedOut.all.filter((id: string) => id === leftTab).length === 1 && !movedOut.first.includes(leftTab) && g7.length === 0, JSON.stringify({ dock: movedOut.all, bar: g7 }));
+
+    // P-2026-10-25-1310, the finding's sequence: GENERATORS with the project page active and no canvas docked (the tab
+    // joins the app bar), then the model's canvas opened, then its Code pill: the tab moves beside the canvas, which
+    // stays the active app-bar tab, and the app bar no longer lists the generator.
+    await page.evaluate(String.raw`(async () => {
+      const dm = (await import('/src/components/abstract/DockManager.tsx')).default;
+      const walk = (n) => n.tabs ? n.tabs.map((t) => t.id) : (n.children || []).flatMap(walk);
+      const lookup = window.windoww.store.getState().idlookup || {};
+      walk(dm.dock.getLayout().dockbox).filter((id) => id.startsWith('codegen_tpl_') || (lookup[id] && lookup[id].className === 'DModel')).forEach((id) => dm.closeTab(id));
+      await new Promise((r) => setTimeout(r, 300));
+      dm.activateProjectSummary();
+    })()`);
+    await wait(page, 1200);
+    await page.evaluate(CLICK(`document.querySelector('.psb-section--generators .psb-item[data-generator]')`));
+    await poll(page, `!!(${TAB(leftTab)} && ${TAB(leftTab)}.offsetParent !== null)`, 20000);
+    await wait(page, 1000);
+    const f1 = await page.evaluate(DOCKED) as any;
+    check('finding step 1: from GENERATORS, no canvas docked, the tab is in the first panel, listed in the app bar', !!f1.first && f1.first.includes(leftTab) && genEntries(await page.evaluate(APPBAR) as any[]).length === 1, JSON.stringify(f1));
+    await page.evaluate(String.raw`(async () => { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(again.m1)})); })()`);
+    await poll(page, `(() => { const p = ${PANE(again.m1)}; return !!p && p.offsetParent !== null && p.querySelectorAll('.react-flow__node').length > 0 && !!p.querySelector('.codegen-pill button'); })()`, 30000);
+    await wait(page, 800);
+    const f2 = await page.evaluate(DOCKED) as any;
+    note('finding step 2: the model canvas opened over the app-bar tab', f2);
+    await page.evaluate(CLICK(`${PANE(again.m1)}.querySelector('.codegen-pill button')`));
+    await wait(page, 600);
+    // Several generators: the pill's menu, its Default item.
+    await page.evaluate(String.raw`(() => {
+      const items = [...document.querySelectorAll('.codegen-panel--menu [role="menuitem"]')];
+      const d = items.find((b) => /^Default$/.test(((b.querySelector('.codegen-panel__item-name') || {}).textContent || '').trim())) || items[0];
+      if (d) d.click();
+    })()`);
+    await wait(page, 1800);
+    const pillBeside = await page.evaluate(BESIDE(again.m1, leftTab)) as any;
+    const pillDock = await page.evaluate(DOCKED) as any;
+    const pillBar = await page.evaluate(APPBAR) as any[];
+    const pillActive = pillBar.filter((t: any) => t.active);
+    result.findingPill = { beside: pillBeside, dock: pillDock, bar: pillBar };
+    note('finding step 3: after the Code pill', result.findingPill);
+    check('after the pill the generator tab is beside the canvas, both on screen, side by side (kills: only activated)', pillBeside.found && pillBeside.panels && pillBeside.visible && pillBeside.sideBySide, JSON.stringify(pillBeside));
+    check('after the pill the canvas is the first panel\'s active tab and the generator is not in it', pillDock.firstActive === again.m1 && !pillDock.first.includes(leftTab) && pillDock.all.filter((id: string) => id === leftTab).length === 1, JSON.stringify(pillDock));
+    check('after the pill the app bar shows the canvas tab active and lists no generator tab', genEntries(pillBar).length === 0 && pillActive.length === 1 && !/appbar-tab--generator/.test(pillActive[0].cls), JSON.stringify(pillBar));
+    await crop(page, 'finding_pill_beside.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+
+    // Back to the app bar: the project page brought forward, GENERATORS moves the tab into the first panel (COSA 2);
+    // then a fragment click opens the model's canvas and the tab moves beside it, the selection beside the code (COSA 3).
+    await page.evaluate(String.raw`(async () => (await import('/src/components/abstract/DockManager.tsx')).default.activateProjectSummary())()`);
+    await wait(page, 1000);
+    await page.evaluate(CLICK(`document.querySelector('.psb-section--generators .psb-item[data-generator]')`));
+    await wait(page, 1500);
+    const back = await page.evaluate(DOCKED) as any;
+    note('GENERATORS with the project page in front, the tab beside a hidden canvas', back);
+    check('from GENERATORS with no canvas in front, the tab goes back to the first panel, active, listed in the app bar (COSA 2)', !!back.first && back.first.includes(leftTab) && back.firstActive === leftTab && genEntries(await page.evaluate(APPBAR) as any[]).length === 1, JSON.stringify(back));
+    await mode(page, TAB(leftTab), 'Preview');
+    await poll(page, `!!(${TAB(leftTab)} && ${TAB(leftTab)}.querySelector('.codegen-pane__code .code-span--model[data-origin-id]'))`, 10000);
+    const fragElement = await page.evaluate(String.raw`(() => {
+      const lk = window.windoww.store.getState().idlookup;
+      const spans = [...${TAB(leftTab)}.querySelectorAll('.codegen-pane__code .code-span--model[data-origin-id]')];
+      const objects = spans.filter((x) => (lk[x.getAttribute('data-origin-id')] || {}).className === 'DObject');
+      const s = objects.find((x) => x.classList.contains('code-tok')) || objects[0];
+      if (!s) return null;
+      s.setAttribute('data-probe-pick2', '1');
+      return s.getAttribute('data-origin-id');
+    })()`) as string | null;
+    check('the app-bar tab shows a span from a model object', !!fragElement, String(fragElement));
+    if (fragElement) {
+        await page.evaluate(CLICK(`document.querySelector('[data-probe-pick2="1"]')`));
+        const sel = await poll<string[]>(page, String.raw`(() => {
+          const p = ${PANE(again.m1)};
+          if (!p || p.offsetParent === null) return null;
+          const lk = window.windoww.store.getState().idlookup;
+          const s = [...p.querySelectorAll('.react-flow__node.selected')].map((n) => (lk[n.getAttribute('data-id')] || {}).model || n.getAttribute('data-id'));
+          return s.length > 0 ? s : null;
+        })()`, 6000);
+        await wait(page, 1500);
+        const fragBeside = await page.evaluate(BESIDE(again.m1, leftTab)) as any;
+        const fragDock = await page.evaluate(DOCKED) as any;
+        const fragBar = await page.evaluate(APPBAR) as any[];
+        const selBox = await page.evaluate(BOX(`${PANE(again.m1)}.querySelector('.react-flow__node.selected')`)) as any;
+        result.findingFragment = { selected: sel, beside: fragBeside, dock: fragDock, node: selBox };
+        note('a fragment click from the app-bar placement', result.findingFragment);
+        check('a fragment click from the app-bar placement ends with canvas and tab side by side (kills: canvas tab activated over the code)', fragBeside.found && fragBeside.panels && fragBeside.visible && fragBeside.sideBySide && fragDock.firstActive === again.m1 && !fragDock.first.includes(leftTab) && genEntries(fragBar).length === 0, JSON.stringify({ beside: fragBeside, dock: fragDock }));
+        const selIn = !!selBox && fragBeside.found && selBox.w > 0 && selBox.x >= fragBeside.canvas.x && selBox.x + selBox.w <= fragBeside.canvas.x + fragBeside.canvas.w;
+        check('after the fragment click the element is selected on the canvas, visible beside the code', !!sel && sel.length === 1 && sel[0] === fragElement && selIn, JSON.stringify({ selected: sel, node: selBox, canvas: fragBeside.canvas }));
+        await crop(page, 'finding_fragment_beside.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+    }
 }
 
 try {
