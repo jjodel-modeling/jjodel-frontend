@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: full (small fixes, code, gates and probes)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane jjodie-ui · 99dbe6cbe · tickets 2 and 3 already fixed by c6f8a2a28, 1 and 4 closed here
 Corregge: 2026-10-24 06:55, 2026-10-24 04:30, 2026-10-24 02:55, 2026-10-24 22:55
 Request: Alfonso, 2026-10-25 10:15, in the project chat («va bene» on the cleanup lane of the four small tickets)
 Model: claude-opus-5-5
