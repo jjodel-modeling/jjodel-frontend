@@ -169,7 +169,10 @@ describe('appendPreview and drawnNodes', () => {
             { id: 'jjpreview:planned:1', position: { x: 0, y: 0 }, data: {} },
             { id: 'v4', position: { x: 3, y: 4 }, parentId: 'v1', width: 10, height: 20, data: {} },
         ] as Node[];
-        expect(drawnNodes(nodes, (id) => (id === 'v1' ? 'o1' : undefined))).toEqual([
+        const read = drawnNodes(nodes, (id) => (id === 'v1' ? 'o1' : undefined));
+        // No DOM behind a bare node: a row is not on screen.
+        expect(read.map((d) => d.rowOf?.('name'))).toEqual([null, null]);
+        expect(read.map(({ rowOf, ...box }) => box)).toEqual([
             { nodeId: 'v1', elementId: 'o1', x: 1, y: 2, width: 30, height: 40, nested: false },
             { nodeId: 'v4', elementId: 'v4', x: 3, y: 4, width: 10, height: 20, nested: true },
         ]);
@@ -295,26 +298,29 @@ describe('buildPreviewElements on M2 (P-2026-10-24-1600)', () => {
         expect(plan.errors).toEqual([]);
         const { nodes } = buildPreviewElements(plan, m2world(), m2drawn);
         const byLabel = nodes.map((n) => (n.data as any).label);
+        // P-2026-10-25-0110: the rows added to Person are a compartment under Person, placed first.
         expect(byLabel).toEqual([
+            '+ nick : EString\n+ \u25C6 pets \u2192 Dog',
             'class Animal',
             'class Dog\nlegs : EInt\nowner \u2192 Person',
             'enumeration Size\nSMALL',
-            '+ nick : EString\n+ \u25C6 pets \u2192 Dog',
         ]);
         expect(nodes.every((n) => isPreviewId(n.id))).toBe(true);
-        expect(nodes[1].height).toBe(PREVIEW_NODE_HEIGHT + 2 * PREVIEW_ROW_HEIGHT);
-        // P-2026-10-25-0020: Animal relates to nothing drawn, so the column right of the drawn nodes;
-        // Dog right of the Animal it extends; Size below Animal in the column; Person's rows beside
-        // Person, left of it because right is Animal's and below is Color's.
-        expect(nodes.map((n) => [n.position.x, n.position.y])).toEqual([[280, 0], [540, 0], [280, 72], [-260, 0]]);
-        for (const n of nodes) expect(n).toMatchObject({ draggable: false, selectable: false, className: 'jj-preview-node', style: { whiteSpace: 'pre-line' } });
+        expect(nodes[2].height).toBe(PREVIEW_NODE_HEIGHT + 2 * PREVIEW_ROW_HEIGHT);
+        // Person's compartment flush under Person (same x and width, top at its bottom, no gap); Animal
+        // relates to nothing drawn, so the column right of the drawn nodes; Dog right of the Animal it extends;
+        // Size below Animal in the column.
+        expect(nodes.map((n) => [n.position.x, n.position.y])).toEqual([[0, 100], [280, 0], [540, 0], [280, 72]]);
+        expect([nodes[0].width, nodes[0].height]).toEqual([200, 2 * PREVIEW_ROW_HEIGHT + 8]);
+        expect(nodes[0].className).toBe('jj-preview-node jj-preview-compartment');
+        for (const n of nodes.slice(1)) expect(n).toMatchObject({ draggable: false, selectable: false, className: 'jj-preview-node', style: { whiteSpace: 'pre-line' } });
     });
 
     it('dashed ghost edges for the rows of an existing class, the references and the generalizations', async () => {
         const plan = await planEffects(script, m2world());
         const { edges } = buildPreviewElements(plan, m2world(), m2drawn);
+        // The rows of an existing class are a compartment flush under it: no edge joins them.
         expect(edges.map((e) => [e.source, e.target, e.label, e.className])).toEqual([
-            [`${PREVIEW_ID_PREFIX}rows:cPerson`, 'vPerson', '', 'jj-preview-edge'],
             [`${PREVIEW_ID_PREFIX}planned:2`, 'vPerson', 'owner', 'jj-preview-edge'],
             ['vPerson', `${PREVIEW_ID_PREFIX}planned:2`, 'pets', 'jj-preview-edge jj-preview-edge--containment'],
             [`${PREVIEW_ID_PREFIX}planned:2`, `${PREVIEW_ID_PREFIX}planned:1`, 'extends', 'jj-preview-edge'],
@@ -327,7 +333,7 @@ describe('buildPreviewElements on M2 (P-2026-10-24-1600)', () => {
         expect(plan.warnings.map((w) => w.line)).toEqual([2, 3]);
         const { nodes } = buildPreviewElements(plan, m2world(), m2drawn, text);
         expect(nodes.map((n) => n.className)).toEqual(['jj-preview-node jj-preview-node--warning']);
-        // No row was planned into Person: no rows node to mark; without the script, no marker.
+        // No row was planned into Person: no compartment to mark; without the script, no marker.
         expect(buildPreviewElements(plan, m2world(), m2drawn).nodes.map((n) => n.className)).toEqual(['jj-preview-node']);
     });
 
@@ -362,21 +368,42 @@ describe('buildPreviewElements on M2 (P-2026-10-24-1600)', () => {
             { nodeId: 'l', elementId: 'l', x: -400, y: 0, width: 200, height: 100, nested: false },
             { nodeId: 'u', elementId: 'u', x: 0, y: -400, width: 200, height: 300, nested: false },
         ];
-        expect(buildPreviewElements(plan, m2world(), walled).nodes[0].position).toEqual({ x: 560, y: -400 });
+        const sealed = [{ x: -1000, y: -1000, width: 1500, height: 1700 }];
+        expect(buildPreviewElements(plan, m2world(), walled, undefined, sealed).nodes[0].position).toEqual({ x: 560, y: -400 });
+        // Sliding along a side finds the room the four straight spots lack (P-2026-10-25-0110).
+        expect(buildPreviewElements(plan, m2world(), walled).nodes[0].position).toEqual({ x: 280, y: -120 });
     });
 
-    it('removals of drawn elements are a struck-through ghost beside their holder (P-2026-10-25-0020)', async () => {
+    it('a new class keeps 24 px from an edge label (P-2026-10-25-0110)', async () => {
+        const plan = await planEffects('create class Pet\ncreate reference owner in Pet type Person', m2world());
+        // A label where the straight right spot would sit; below Person is within 24 px of Color: the ghost goes left.
+        const label = [{ x: 300, y: 20, width: 60, height: 16 }];
+        expect(buildPreviewElements(plan, m2world(), m2drawn, undefined, label).nodes[0].position).toEqual({ x: -260, y: 0 });
+    });
+
+    it('a removed row is struck where the node draws it, a removed element whole (P-2026-10-25-0110)', async () => {
         const w = m2world();
         w.m2!.elements.push({ id: 'aName', name: 'name', kind: 'Attribute', father: 'cPerson' } as any);
         const plan = await planEffects('delete Person.name\ndelete Color', w);
-        const { nodes, edges } = buildPreviewElements(plan, w, m2drawn);
-        expect(nodes.map((n) => [n.id, (n.data as any).label, n.className])).toEqual([
-            [`${PREVIEW_ID_PREFIX}removed:cPerson`, '\u2212 name', 'jj-preview-node jj-preview-node--removed'],
-            [`${PREVIEW_ID_PREFIX}removed:eColor`, 'enumeration Color', 'jj-preview-node jj-preview-node--removed'],
+        const measured = m2drawn.map((d) => d.nodeId === 'vPerson' ? { ...d, rowOf: (name: string) => name === 'name' ? { dx: 8, dy: 40, width: 184, height: 20 } : null } : d);
+        const { nodes, edges } = buildPreviewElements(plan, w, measured);
+        expect(nodes.map((n) => [n.id, (n.data as any).label, n.className, n.position, n.width, n.height])).toEqual([
+            [`${PREVIEW_ID_PREFIX}strike:aName`, '', 'jj-preview-node jj-preview-strike', { x: 8, y: 40 }, 184, 20],
+            [`${PREVIEW_ID_PREFIX}strike:eColor`, '', 'jj-preview-node jj-preview-strike jj-preview-strike--element', { x: 0, y: 200 }, 200, 80],
         ]);
-        expect(edges.map((e) => [e.source, e.target])).toEqual([
-            [`${PREVIEW_ID_PREFIX}removed:cPerson`, 'vPerson'],
-            [`${PREVIEW_ID_PREFIX}removed:eColor`, 'vColor'],
+        expect(edges).toEqual([]);
+    });
+
+    it('a removed row that is not on screen goes struck in a compartment under its node (P-2026-10-25-0110)', async () => {
+        const w = m2world();
+        w.m2!.elements.push({ id: 'aName', name: 'name', kind: 'Attribute', father: 'cPerson' } as any);
+        const plan = await planEffects('delete Person.name\ncreate attribute nick in Person', w);
+        const { nodes } = buildPreviewElements(plan, w, m2drawn);
+        // The added rows first, flush under Person; the removed one flush under them.
+        expect(nodes.map((n) => [n.id, (n.data as any).label, n.position, n.height])).toEqual([
+            [`${PREVIEW_ID_PREFIX}rows:cPerson`, '+ nick : EString', { x: 0, y: 100 }, PREVIEW_ROW_HEIGHT + 8],
+            [`${PREVIEW_ID_PREFIX}removed:cPerson`, '\u2212 name', { x: 0, y: 100 + PREVIEW_ROW_HEIGHT + 8 }, PREVIEW_ROW_HEIGHT + 8],
         ]);
+        expect(nodes[1].className).toBe('jj-preview-node jj-preview-compartment jj-preview-node--removed');
     });
 });

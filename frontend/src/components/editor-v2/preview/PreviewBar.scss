@@ -99,6 +99,38 @@
     text-decoration: line-through;
 }
 
+// The rows planned into a drawn class (P-2026-10-25-0110): a compartment flush under its node.
+.react-flow__node.jj-preview-node.jj-preview-compartment {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 4px 10px;
+    line-height: 18px;
+    text-align: left;
+    border-top-width: 0;
+    border-radius: 0 0 var(--radius-node) var(--radius-node);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+// A removed row, struck where the node draws it, or a removed element struck whole.
+.react-flow__node.jj-preview-node.jj-preview-strike {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--color-error-subtle);
+    background-image: linear-gradient(var(--color-error), var(--color-error));
+    background-repeat: no-repeat;
+    background-position: 0 50%;
+    background-size: 100% 1.5px;
+    box-sizing: border-box;
+}
+
+.react-flow__node.jj-preview-node.jj-preview-strike--element {
+    border: 1.5px dashed var(--color-error);
+    border-radius: var(--radius-node);
+}
+
 // Warning marker: a small amber dot on the top-right corner.
 .react-flow__node.jj-preview-node--warning::after {
     content: '';
