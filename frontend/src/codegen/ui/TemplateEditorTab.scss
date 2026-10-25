@@ -575,6 +575,15 @@
         }
     }
 
+    // The text coloured by token (P-2026-10-24-1516), the colours inline from the Monaco theme: a fragment is cut into
+    // one span per token, so its hover is one band across the pieces, not an outline around each.
+    &__code .code-span--hover {
+        border-radius: 0;
+        outline: none;
+        background: var(--color-canvas-accent-subtle);
+        box-shadow: inset 0 1px 0 var(--color-canvas-accent), inset 0 -1px 0 var(--color-canvas-accent);
+    }
+
     // Over the canvas of another dock tab: fixed to the viewport, never in the way of a click.
     &__edge-outline {
         position: fixed;

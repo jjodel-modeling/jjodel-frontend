@@ -27,7 +27,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { shallowEqual, useSelector } from 'react-redux';
-import { DUser, LPointerTargetable, store } from '../../joiner';
+import { DUser, LPointerTargetable, monaco, store } from '../../joiner';
 import { buildEvalContext } from '../../jjscript';
 import { evalContextFor } from '../../components/editor-v2/sim/simBridge';
 import { resolveEdgeSelectionTarget } from '../../components/editor-v2/utils/edgeSelectionTarget';
@@ -41,6 +41,8 @@ import { checkView } from './checkView';
 import { displayJson } from './displayJson';
 import { conformingModels } from './conformingModels';
 import { linesOf } from './codeLines';
+import { COLOUR_MAX_CHARS, colourLines, languageOf, tokenStyles } from './codeTokens';
+import { jjtlTheme } from '../../jjtl/editor/jjtlTheme';
 import { elementAt, elementName, originText, templateTarget } from './codeOrigins';
 import { checkOffered, generatorTabId, noTemplates, paneGeneration, runOffered } from './generatorTabs';
 import { selectOnModelCanvas } from './canvasSelection';
@@ -51,6 +53,8 @@ import type { RunResponse } from '../runner/protocol';
 import type { OracleResult } from '../oracle/oracle';
 import type { ScenarioRecord } from '../../model/simulation/scenarioCodec';
 import type { TemplateTarget } from './codeOrigins';
+import type { Piece } from './codeLines';
+import type { LineToken, TokenClass } from './codeTokens';
 import './CodePanel.scss';
 
 type Lookup = Record<string, any>;
@@ -74,6 +78,8 @@ const NO_SCENARIO = 'Record a scenario in the simulator first.';
 const NOT_JS = 'Check runs only on a generator whose target is js.';
 /** The tooltip of «Run» on a generator whose target is not `js` (R-GEN-35). */
 const RUN_NOT_JS = 'Run runs only on a generator whose target is js.';
+/** The colours of the generated text: the Template Editor's theme (templateLanguage.ts extends jjtlTheme). */
+const TOKEN_STYLES = tokenStyles(jjtlTheme.rules);
 
 /**
  * Brings `el` into view inside the code view `box`, scrolling `box` alone. `scrollIntoView` scrolls every ancestor
@@ -191,6 +197,20 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
     // The file shown follows the declared list: gone from it, the first.
     const file = generated?.files.find(f => f.path === filePath) ?? generated?.files[0] ?? null;
     const result = file?.result ?? null;
+
+    // The shown file's tokens, from Monaco's tokenizer for its extension; none for plain text or past the budget.
+    const codeText = result?.code ?? null;
+    const language = useMemo(() => (file ? languageOf(file.path, monaco.languages.getLanguages().map(l => l.id)) : null), [file?.path]);
+    const [tokens, setTokens] = useState<{ code: string; language: string; lines: LineToken[][] } | null>(null);
+    useEffect(() => {
+        if (codeText === null || language === null || codeText.length > COLOUR_MAX_CHARS) return;
+        let live = true;
+        // colorize waits for the language's tokenizer to load; tokenize alone returns untyped tokens until then.
+        monaco.editor.colorize('', language, {}).then(() => {
+            if (live) setTokens({ code: codeText, language, lines: monaco.editor.tokenize(codeText, language) });
+        }, () => undefined);
+        return () => { live = false; };
+    }, [codeText, language]);
     const scenario = scenarios.find(s => s.name === scenarioName) ?? scenarios[0] ?? null;
 
     const timeoutMs = Number(timeout);
@@ -308,7 +328,10 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
 
     // ── Rendering ─────────────────────────────────────────────────────────────
     const lookupNow: Lookup = (store.getState() as any).idlookup ?? {};
-    const lines = useMemo(() => (result ? linesOf(result.code, result.map) : []), [result]);
+    const lines = useMemo(() => {
+        const plain: readonly (readonly (Piece & { token?: TokenClass | null })[])[] = result ? linesOf(result.code, result.map) : [];
+        return result && tokens && tokens.code === result.code && tokens.language === language ? colourLines(plain, tokens.lines) : plain;
+    }, [result, tokens, language]);
     const fragmentIndex = useMemo(() => new Map<TextFragment, number>((result?.text.fragments ?? []).map((f, i) => [f, i])), [result]);
     const runError = mode === 'run' && outcome && !outcome.response.ok ? outcome.response.error : null;
     const errorLine = runError && result && outcome && outcome.code === result.code ? runError.line : null;
@@ -553,11 +576,16 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                                 </span>
                                 <span className="codegen-panel__text">
                                     {pieces.map((p, j) => (p.entry === null ? (
-                                        <React.Fragment key={j}>{p.text}</React.Fragment>
+                                        p.token ? (
+                                            <span key={j} className={`code-tok code-tok--${p.token}`} style={TOKEN_STYLES[p.token]}>{p.text}</span>
+                                        ) : (
+                                            <React.Fragment key={j}>{p.text}</React.Fragment>
+                                        )
                                     ) : (
                                         <span
                                             key={j}
-                                            className={spanClass(p.entry)}
+                                            className={p.token ? `${spanClass(p.entry)} code-tok code-tok--${p.token}` : spanClass(p.entry)}
+                                            style={p.token ? TOKEN_STYLES[p.token] : undefined}
                                             data-fragment={fragmentIndex.get(p.entry.fragment)}
                                             data-origin-id={p.entry.origin.kind === 'model' ? p.entry.origin.elementId : undefined}
                                             data-template={templateTarget(p.entry.origin)?.template}

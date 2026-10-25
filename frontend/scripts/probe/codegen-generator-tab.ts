@@ -25,6 +25,9 @@
  * canvas, not the tab; moved out of the canvas panel, it joins the other generator tabs; the splitter is dragged, clamped,
  * stepped with the keyboard, reset, and its ratio kept over a reload (crops split_before.png, split_after.png).
  *
+ * P-2026-10-24-1516: Preview is coloured by Monaco's tokenizer, every provenance span keeps its fragment, a hover outlines
+ * every piece of the fragment (crops preview_coloured.png, preview_hovered.png), the span clicked on the canvas is coloured.
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
@@ -313,6 +316,78 @@ async function main(): Promise<void> {
     await crop(page, 'rail_beside.png', beside.found ? { x: beside.canvas.x, y: Math.min(beside.canvas.y, beside.tab.y), w: beside.tab.x + beside.tab.w - beside.canvas.x, h: Math.max(beside.canvas.h, beside.tab.h) } : null, 0);
     await crop(page, 'tab_preview.png', await page.evaluate(BOX(tab)) as any);
 
+    // P-2026-10-24-1516: the text coloured by Monaco's javascript tokenizer, the provenance kept on every piece.
+    const colour = await poll<any>(page, String.raw`(() => {
+      const code = ${tab}.querySelector('.codegen-pane__code');
+      const toks = code ? [...code.querySelectorAll('.code-tok')] : [];
+      if (toks.length === 0) return null;
+      const kw = toks.filter((t) => t.classList.contains('code-tok--keyword'));
+      const words = new Set(kw.map((t) => t.textContent));
+      const spans = [...code.querySelectorAll('.code-span')];
+      return {
+        toks: toks.length, keywords: kw.length, hasConst: words.has('const'), hasFunction: words.has('function'),
+        classes: [...new Set(toks.map((t) => [...t.classList].find((c) => c.startsWith('code-tok--'))))].sort(),
+        keywordColour: kw[0] ? getComputedStyle(kw[0]).color : null,
+        spans: spans.length, colouredSpans: spans.filter((x) => x.classList.contains('code-tok')).length,
+        spansWithoutFragment: spans.filter((x) => !x.hasAttribute('data-fragment')).length,
+      };
+    })()`, 15000);
+    result.colour = colour;
+    note('the colouring of the Preview', colour);
+    check('Preview is coloured: keyword pieces on const and function, three classes or more, the keyword in the theme colour',
+        !!colour && colour.hasConst && colour.hasFunction && colour.classes.length >= 3 && colour.keywordColour === 'rgb(14, 165, 233)', JSON.stringify(colour));
+    check('every provenance span keeps its fragment, coloured or not', !!colour && colour.colouredSpans > 0 && colour.spansWithoutFragment === 0, JSON.stringify(colour && { spans: colour.spans, coloured: colour.colouredSpans, without: colour.spansWithoutFragment }));
+    // The crops with the right pane widened (splitter to its minimum), reset afterwards to the fresh state.
+    const sc = await page.evaluate(SPLIT(tab)) as any;
+    if (sc) {
+        await page.mouse.move(sc.bar.x, sc.bar.y);
+        await page.mouse.down();
+        await page.mouse.move(sc.bar.x - 600, sc.bar.y, { steps: 8 });
+        await page.mouse.up();
+        await wait(page, 300);
+    }
+    await page.evaluate(`(() => { const c = ${tab}.querySelector('.codegen-pane__code'); c.scrollLeft = 0; c.scrollTop = 0; })()`);
+    const codeBox = await page.evaluate(BOX(`${tab}.querySelector('.codegen-pane__code')`)) as any;
+    note('the code view for the colour crops', codeBox);
+    await crop(page, 'preview_coloured.png', codeBox);
+    // A fragment cut into several coloured pieces, on screen: the mouse goes to it, no scroll.
+    const hoverAt = await page.evaluate(String.raw`(() => {
+      const code = ${tab}.querySelector('.codegen-pane__code');
+      const box = code.getBoundingClientRect();
+      const seen = (x) => { const r = x.getBoundingClientRect(); return r.width > 0 && r.left >= box.left + 40 && r.right <= box.right && r.top >= box.top && r.bottom <= box.bottom; };
+      const spans = [...code.querySelectorAll('.code-span.code-tok[data-fragment]')].filter(seen);
+      const pieces = (x) => code.querySelectorAll('.code-span[data-fragment="' + x.getAttribute('data-fragment') + '"]').length;
+      const s = spans.find((x) => pieces(x) >= 3) || spans[0];
+      if (!s) return null;
+      s.setAttribute('data-probe-hover', '1');
+      const r = s.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2, pieces: pieces(s) };
+    })()`) as any;
+    if (hoverAt) {
+        await page.mouse.move(hoverAt.x, hoverAt.y);
+        await wait(page, 200);
+        const hovered = await page.evaluate(String.raw`(() => {
+          const s = document.querySelector('[data-probe-hover="1"]');
+          const f = s.getAttribute('data-fragment');
+          const same = [...${tab}.querySelectorAll('.codegen-pane__code .code-span[data-fragment="' + f + '"]')];
+          const classes = [...new Set(same.map((x) => [...x.classList].find((c) => c.startsWith('code-tok--'))))].filter(Boolean);
+          return { fragment: f, pieces: same.length, classes, hovered: same.filter((x) => x.classList.contains('code-span--hover')).length, others: ${tab}.querySelectorAll('.code-span--hover').length };
+        })()`) as any;
+        note('a coloured fragment hovered', hovered);
+        check('hovering a fragment cut into coloured pieces outlines every piece of it, and only them', hovered.pieces >= 2 && hovered.hovered === hovered.pieces && hovered.others === hovered.pieces, JSON.stringify(hovered));
+        await crop(page, 'preview_hovered.png', codeBox);
+        await page.mouse.move(0, 0);
+    } else {
+        check('a coloured fragment on screen to hover', false, '');
+    }
+    if (sc) {
+        const sw = await page.evaluate(SPLIT(tab)) as any;
+        await page.mouse.dblclick(sw.bar.x, sw.bar.y);
+        await page.evaluate(`localStorage.removeItem('jjodel.codegen.tabSplit')`);
+        await wait(page, 300);
+        note('the split reset after the colour crops', await page.evaluate(SPLIT(tab)));
+    }
+
     // «Go to template»: Alt+click a span whose template is not the selected one.
     const before = opened?.template ?? null;
     const target = await page.evaluate(String.raw`(() => {
@@ -439,7 +514,8 @@ async function main(): Promise<void> {
     const element = await page.evaluate(String.raw`(() => {
       const lk = window.windoww.store.getState().idlookup;
       const spans = [...${tab}.querySelectorAll('.codegen-pane__code .code-span--model[data-origin-id]')];
-      const s = spans.find((x) => (lk[x.getAttribute('data-origin-id')] || {}).className === 'DObject');
+      const objects = spans.filter((x) => (lk[x.getAttribute('data-origin-id')] || {}).className === 'DObject');
+      const s = objects.find((x) => x.classList.contains('code-tok')) || objects[0];
       if (!s) return null;
       s.setAttribute('data-probe-pick', '1');
       return s.getAttribute('data-origin-id');
@@ -448,6 +524,7 @@ async function main(): Promise<void> {
     if (element) {
         // A DOM click, as the mouse gives it: Playwright's own click scrolls every ancestor to the span first.
         note('the dock before the span click', await page.evaluate(DOCK(m1)));
+        check('the span clicked is coloured (P-2026-10-24-1516)', await page.evaluate(`!!document.querySelector('[data-probe-pick="1"].code-tok')`) as boolean, '');
         await page.evaluate(CLICK(`document.querySelector('[data-probe-pick="1"]')`));
         const selected = await poll<string[]>(page, String.raw`(() => {
           const p = ${pane};
