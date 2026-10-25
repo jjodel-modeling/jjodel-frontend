@@ -60,6 +60,13 @@
  * the viewport stays; the tab closed, a SELECT_NODE from elsewhere puts an off-screen vertex one third into the full-width
  * canvas (crop reveal_fullwidth.png).
  *
+ * P-2026-10-25-1510 (supersedes the panel header of 1045 and «no app-bar entry» beside of 1200 and 1310): one tab bar,
+ * the app bar's. Beside the canvas the generator panel lays out no .dock-bar, no .dock-tab, no maximize, its content the
+ * whole panel, also after a divider drag; the app bar lists the generator once, active and beside, next to the active
+ * canvas tab (crop beside_two_tabs.png); its entry clicked keeps the layout and focuses the generator; moved in and out
+ * of the first panel, one entry each time; closed from its entry, the split goes, the canvas takes the dock width and
+ * the rail is back (crop appbar_close_full_width.png).
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
@@ -275,6 +282,37 @@ const HEADER = (tabId: string) => String.raw`(() => {
 })()`;
 const visibleHeader = (h: any) => !!h && h.inDom && h.visible && h.close && /^Default · /.test(h.title);
 
+/** The app bar's tab strip, every entry (P-2026-10-25-1200; `beside` from P-2026-10-25-1510). */
+const APPBAR = String.raw`(() => [...document.querySelectorAll('.appbar-tabs .appbar-tab')].map((b) => ({
+  cls: b.className, name: (b.querySelector('.appbar-tab__name') || {}).textContent || '', active: b.classList.contains('appbar-tab--active'),
+  beside: b.classList.contains('appbar-tab--beside'),
+  icon: !!b.querySelector('.appbar-tab__badge .bi-code-slash'), close: !!b.querySelector('.appbar-tab__close'),
+  visible: b.offsetParent !== null && b.getBoundingClientRect().width > 0 })))()`;
+const genEntries = (bar: any[]) => bar.filter((t: any) => /appbar-tab--generator/.test(t.cls));
+/** Beside the canvas: the generator listed once, active and beside, and the canvas's entry active too (P-2026-10-25-1510). */
+const besideInBar = (bar: any[], canvasName: string, mmName: string) => {
+    const g = genEntries(bar);
+    return g.length === 1 && g[0].visible && g[0].icon && g[0].close && g[0].active && g[0].beside && g[0].name === `Default · ${mmName}`
+        && bar.some((t: any) => t.active && !t.beside && t.name === canvasName);
+};
+
+/** The rc-dock tab bar of the generator tab's panel: bars laid out, tabs and controls shown, the content's share (P-2026-10-25-1510). */
+const PANEL_BAR = (tabId: string) => String.raw`(() => {
+  const t = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${tabId}"]');
+  const panel = t && t.closest('.dock-panel');
+  if (!panel) return { found: false };
+  const laid = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).display !== 'none'; };
+  const bars = [...panel.querySelectorAll('.dock-bar')];
+  const c = t.getBoundingClientRect(), p = panel.getBoundingClientRect();
+  return {
+    found: true, codegen: panel.classList.contains('dock-style-codegen'), bars: bars.length, shownBars: bars.filter(laid).length,
+    tabs: [...panel.querySelectorAll('.dock-tab')].filter(laid).length,
+    extra: [...panel.querySelectorAll('.dock-panel-max-btn, .dock-extra-content')].filter(laid).length,
+    contentTop: Math.round(c.y - p.y), contentH: Math.round(c.height), panelH: Math.round(p.height),
+  };
+})()`;
+const noPanelBar = (b: any) => !!b && b.found && b.codegen && b.bars >= 1 && b.shownBars === 0 && b.tabs === 0 && b.extra === 0 && Math.abs(b.contentTop) <= 1 && Math.abs(b.contentH - b.panelH) <= 2;
+
 /** The dock divider left of the generator tab's panel: shown, its width, which points 3px off its line grab it (P-2026-10-25-1355). */
 const DIVIDER = (tabId: string) => String.raw`(() => {
   const t = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${tabId}"]');
@@ -443,11 +481,16 @@ async function main(): Promise<void> {
     note('the canvas and the tab once open', beside);
     check('the tab opens beside the canvas: two panels, both visible, side by side, the tab about 45 %',
         beside.found && beside.panels && beside.visible && beside.sideBySide && Math.abs(beside.share - 0.45) < 0.06, JSON.stringify(beside));
-    const headBeside = await page.evaluate(HEADER(tabId)) as any;
-    result.headerBeside = headBeside;
-    note('the tab header beside the canvas', headBeside);
-    check('beside the canvas the tab has its header: in the DOM, visible, «Default · <metamodel>», its close control (P-2026-10-25-1045)', visibleHeader(headBeside), JSON.stringify(headBeside));
-    if (beside.found) await crop(page, 'header_beside.png', { x: beside.canvas.x, y: Math.max(0, beside.tab.y - 60), w: beside.tab.x + beside.tab.w - beside.canvas.x, h: 260 }, 0);
+    // P-2026-10-25-1510: one tab bar, the app bar's. Beside the canvas the panel holds content only, and the app bar
+    // lists the generator next to the canvas tab, both active.
+    const barBeside = await page.evaluate(PANEL_BAR(tabId)) as any;
+    const appBeside = await poll<any[]>(page, `(() => { const b = ${APPBAR}; return b.some((t) => t.beside) ? b : null; })()`, 3000) ?? await page.evaluate(APPBAR) as any[];
+    result.headerBeside = { panelBar: barBeside, header: await page.evaluate(HEADER(tabId)), appBar: appBeside };
+    note('the tab bar beside the canvas: the panel\'s and the app bar\'s', result.headerBeside);
+    check('beside the canvas the generator panel renders no tab bar: no .dock-bar laid out, no .dock-tab, no maximize, the content fills the panel (kills: bar shown)', noPanelBar(barBeside), JSON.stringify(barBeside));
+    check('beside the canvas the app bar lists the generator tab once, bi-code-slash, «Default · <metamodel>», active and beside, the canvas tab active too (kills: ghost filter for beside)',
+        besideInBar(appBeside, ex.lookup.M.name, ex.lookup.MM.name), JSON.stringify(appBeside));
+    await crop(page, 'beside_two_tabs.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
     const railOpen = await poll<any>(page, `(() => { const r = ${RAIL}; return r.shown ? null : r; })()`, 5000);
     result.railBeside = railOpen;
     check('opened from the pill beside the canvas, the Properties/Tree rail is collapsed, inset 0px (P-2026-10-25-0925)', !!railOpen && railOpen.inset === '0px', JSON.stringify(railOpen ?? await page.evaluate(RAIL)));
@@ -943,11 +986,6 @@ async function main(): Promise<void> {
     const leftTab = `codegen_tpl_${again.mm}`;
     await poll(page, `!!(${TAB(leftTab)} && ${TAB(leftTab)}.offsetParent !== null)`, 20000);
     await wait(page, 1500);
-    const APPBAR = String.raw`(() => [...document.querySelectorAll('.appbar-tabs .appbar-tab')].map((b) => ({
-      cls: b.className, name: (b.querySelector('.appbar-tab__name') || {}).textContent || '', active: b.classList.contains('appbar-tab--active'),
-      icon: !!b.querySelector('.appbar-tab__badge .bi-code-slash'), close: !!b.querySelector('.appbar-tab__close'),
-      visible: b.offsetParent !== null && b.getBoundingClientRect().width > 0 })))()`;
-    const genEntries = (bar: any[]) => bar.filter((t: any) => /appbar-tab--generator/.test(t.cls));
     const inMain = await page.evaluate(DOCKED) as any;
     const bar1 = await page.evaluate(APPBAR) as any[];
     const fullBox = await page.evaluate(BOX(TAB(leftTab))) as any;
@@ -992,8 +1030,8 @@ async function main(): Promise<void> {
     const g5 = genEntries(await page.evaluate(APPBAR) as any[]);
     result.besideLast = { beside: besideLast, header: headLast, dock: dockBeside, bar: g5 };
     note('a canvas docked, the tab opened again', result.besideLast);
-    check('with a canvas docked the tab opens beside it, its own header, not in the first panel (kills: always the main panel)', besideLast.found && besideLast.panels && besideLast.sideBySide && visibleHeader(headLast) && !dockBeside.first.includes(leftTab), JSON.stringify({ beside: besideLast, first: dockBeside.first }));
-    check('beside, the app bar has no generator entry (no ghost)', g5.length === 0, JSON.stringify(g5));
+    check('with a canvas docked the tab opens beside it, no rc-dock header of its own, not in the first panel (kills: always the main panel)', besideLast.found && besideLast.panels && besideLast.sideBySide && !visibleHeader(headLast) && noPanelBar(await page.evaluate(PANEL_BAR(leftTab))) && !dockBeside.first.includes(leftTab), JSON.stringify({ beside: besideLast, first: dockBeside.first }));
+    check('beside, the app bar lists the generator once, active and beside (P-2026-10-25-1510)', g5.length === 1 && g5[0].beside && g5[0].active, JSON.stringify(g5));
     if (besideLast.found) await crop(page, 'beside_unchanged.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
     const MOVE = (dir: string) => String.raw`(async () => {
       const d = (await import('/src/components/abstract/DockManager.tsx')).default.dock;
@@ -1004,15 +1042,15 @@ async function main(): Promise<void> {
     await page.evaluate(MOVE('middle'));
     const movedIn = await page.evaluate(DOCKED) as any;
     const g6 = genEntries(await page.evaluate(APPBAR) as any[]);
-    check('moved into the first panel by hand: one dock tab, listed once in the app bar', movedIn.all.filter((id: string) => id === leftTab).length === 1 && movedIn.first.includes(leftTab) && g6.length === 1 && g6[0].name === `Default · ${ex.lookup.MM.name}`, JSON.stringify({ dock: movedIn.all, bar: g6 }));
+    check('moved into the first panel by hand: one dock tab, listed once in the app bar, not beside (kills: duplicate)', movedIn.all.filter((id: string) => id === leftTab).length === 1 && movedIn.first.includes(leftTab) && g6.length === 1 && !g6[0].beside && g6[0].name === `Default · ${ex.lookup.MM.name}`, JSON.stringify({ dock: movedIn.all, bar: g6 }));
     await page.evaluate(MOVE('right'));
     const movedOut = await page.evaluate(DOCKED) as any;
     const g7 = genEntries(await page.evaluate(APPBAR) as any[]);
-    check('moved out again: one dock tab, no app-bar entry', movedOut.all.filter((id: string) => id === leftTab).length === 1 && !movedOut.first.includes(leftTab) && g7.length === 0, JSON.stringify({ dock: movedOut.all, bar: g7 }));
+    check('moved out again: one dock tab, listed once in the app bar, beside (kills: duplicate)', movedOut.all.filter((id: string) => id === leftTab).length === 1 && !movedOut.first.includes(leftTab) && g7.length === 1 && g7[0].beside, JSON.stringify({ dock: movedOut.all, bar: g7 }));
 
     // P-2026-10-25-1310, the finding's sequence: GENERATORS with the project page active and no canvas docked (the tab
     // joins the app bar), then the model's canvas opened, then its Code pill: the tab moves beside the canvas, which
-    // stays the active app-bar tab, and the app bar no longer lists the generator.
+    // stays the active app-bar tab, and the app bar lists the generator beside it (P-2026-10-25-1510).
     await page.evaluate(String.raw`(async () => {
       const dm = (await import('/src/components/abstract/DockManager.tsx')).default;
       const walk = (n) => n.tabs ? n.tabs.map((t) => t.id) : (n.children || []).flatMap(walk);
@@ -1049,8 +1087,19 @@ async function main(): Promise<void> {
     note('finding step 3: after the Code pill', result.findingPill);
     check('after the pill the generator tab is beside the canvas, both on screen, side by side (kills: only activated)', pillBeside.found && pillBeside.panels && pillBeside.visible && pillBeside.sideBySide, JSON.stringify(pillBeside));
     check('after the pill the canvas is the first panel\'s active tab and the generator is not in it', pillDock.firstActive === again.m1 && !pillDock.first.includes(leftTab) && pillDock.all.filter((id: string) => id === leftTab).length === 1, JSON.stringify(pillDock));
-    check('after the pill the app bar shows the canvas tab active and lists no generator tab', genEntries(pillBar).length === 0 && pillActive.length === 1 && !/appbar-tab--generator/.test(pillActive[0].cls), JSON.stringify(pillBar));
+    check('after the pill the app bar shows the canvas tab active and the generator tab beside it, active, once (P-2026-10-25-1510)', besideInBar(pillBar, ex.lookup.M.name, ex.lookup.MM.name) && pillActive.length === 2, JSON.stringify(pillBar));
+    check('after the pill the generator panel holds content only, no tab bar (kills: bar shown)', noPanelBar(await page.evaluate(PANEL_BAR(leftTab))), JSON.stringify(await page.evaluate(PANEL_BAR(leftTab))));
     await crop(page, 'finding_pill_beside.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+    // The generator's app-bar entry clicked while beside: the layout stays, focus goes into the generator.
+    await page.evaluate(`document.activeElement && document.activeElement.blur && document.activeElement.blur()`);
+    await page.evaluate(CLICK(`document.querySelector('.appbar-tabs .appbar-tab--generator .appbar-tab__name')`));
+    await wait(page, 800);
+    const clickBeside = await page.evaluate(BESIDE(again.m1, leftTab)) as any;
+    const clickDock = await page.evaluate(DOCKED) as any;
+    const focusIn = await page.evaluate(`!!document.activeElement && !!document.activeElement.closest('[role="tabpanel"][aria-labelledby$="-tab-${leftTab}"]')`) as boolean;
+    result.appBarClickBeside = { beside: clickBeside, dock: clickDock, focusIn, bar: await page.evaluate(APPBAR) };
+    check('the generator\'s app-bar entry clicked while beside keeps canvas and generator side by side, the canvas the first panel\'s tab, focus in the generator',
+        clickBeside.found && clickBeside.panels && clickBeside.sideBySide && clickDock.firstActive === again.m1 && focusIn && besideInBar(result.appBarClickBeside.bar, ex.lookup.M.name, ex.lookup.MM.name), JSON.stringify(result.appBarClickBeside));
 
     // P-2026-10-25-1355 COSA 1: the boundary between canvas and tab is rc-dock's divider, 7px to grab over the two
     // panels' edges around its 1px line (kills: the 1px divider, a drag only on its exact pixel); dragged, the tab widens.
@@ -1071,6 +1120,8 @@ async function main(): Promise<void> {
         result.dividerDragged = div2;
         note('the divider after a drag of 150px to the left, started 2px right of its line', div2);
         check('dragged 150px to the left, the generator tab widens by about 150px and the canvas stays beside it', div2.found && Math.abs(div2.tabWidth - div1.tabWidth - 150) <= 12 && (await page.evaluate(BESIDE(again.m1, leftTab)) as any).sideBySide, JSON.stringify({ before: div1.tabWidth, after: div2.tabWidth }));
+        const barDragged = await page.evaluate(PANEL_BAR(leftTab)) as any;
+        check('the drag resizes content only: the dragged panel still has no tab bar, its content the whole panel (P-2026-10-25-1510)', noPanelBar(barDragged), JSON.stringify(barDragged));
         await crop(page, 'divider_after.png', { ...area, x: div2.line - 220 }, 0);
     }
 
@@ -1111,7 +1162,7 @@ async function main(): Promise<void> {
         const selBox = await page.evaluate(BOX(`${PANE(again.m1)}.querySelector('.react-flow__node.selected')`)) as any;
         result.findingFragment = { selected: sel, beside: fragBeside, dock: fragDock, node: selBox };
         note('a fragment click from the app-bar placement', result.findingFragment);
-        check('a fragment click from the app-bar placement ends with canvas and tab side by side (kills: canvas tab activated over the code)', fragBeside.found && fragBeside.panels && fragBeside.visible && fragBeside.sideBySide && fragDock.firstActive === again.m1 && !fragDock.first.includes(leftTab) && genEntries(fragBar).length === 0, JSON.stringify({ beside: fragBeside, dock: fragDock }));
+        check('a fragment click from the app-bar placement ends with canvas and tab side by side (kills: canvas tab activated over the code)', fragBeside.found && fragBeside.panels && fragBeside.visible && fragBeside.sideBySide && fragDock.firstActive === again.m1 && !fragDock.first.includes(leftTab) && besideInBar(fragBar, ex.lookup.M.name, ex.lookup.MM.name), JSON.stringify({ beside: fragBeside, dock: fragDock, bar: genEntries(fragBar) }));
         const selIn = !!selBox && fragBeside.found && selBox.w > 0 && selBox.x >= fragBeside.canvas.x && selBox.x + selBox.w <= fragBeside.canvas.x + fragBeside.canvas.w;
         check('after the fragment click the element is selected on the canvas, visible beside the code', !!sel && sel.length === 1 && sel[0] === fragElement && selIn, JSON.stringify({ selected: sel, node: selBox, canvas: fragBeside.canvas }));
         await crop(page, 'finding_fragment_beside.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
@@ -1193,10 +1244,25 @@ async function main(): Promise<void> {
     // P-2026-10-25-1441, unchanged on a full-width canvas: the generator tab closed, a selection from elsewhere (the
     // tree's SELECT_NODE event) of a vertex panned off the left edge puts it one third into the visible canvas, as the
     // window-based centre did when React Flow spans the window.
-    await page.evaluate(String.raw`(async () => (await import('/src/components/abstract/DockManager.tsx')).default.closeTab(${JSON.stringify(leftTab)}))()`);
+    // P-2026-10-25-1510: closed from its app-bar entry while beside, the split goes and the canvas takes the full width.
+    const railBeforeClose = await page.evaluate(RAIL) as any;
+    const closeBeside = await page.evaluate(CLICK(`document.querySelector('.appbar-tabs .appbar-tab--generator.appbar-tab--beside .appbar-tab__close')`)) as any;
     await wait(page, 1500);
     const flowF = await page.evaluate(FLOW(again.m1)) as any;
     note('the canvas, full width, the generator tab closed', flowF);
+    const closedDock = await page.evaluate(DOCKED) as any;
+    const closedBar = genEntries(await page.evaluate(APPBAR) as any[]);
+    const railAfterClose = await page.evaluate(RAIL) as any;
+    const panelsLeft = await page.evaluate(String.raw`(async () => {
+      const d = (await import('/src/components/abstract/DockManager.tsx')).default.dock;
+      const walk = (n) => n.tabs ? (n.tabs.length ? 1 : 0) : (n.children || []).reduce((s, c) => s + walk(c), 0);
+      return { panels: walk(d.getLayout().dockbox), codegenPanels: document.querySelectorAll('.dock-panel.dock-style-codegen').length };
+    })()`) as any;
+    result.appBarCloseBeside = { clicked: closeBeside, dock: closedDock, bar: closedBar, flow: flowF, panelsLeft, rail: { before: railBeforeClose, after: railAfterClose } };
+    check('closed from the app bar while beside: the dock tab gone, no entry left, the split removed, the canvas the dock\'s width (kills: only the entry removed)',
+        !!closeBeside?.found && !closedDock.all.includes(leftTab) && closedBar.length === 0 && !!flowF && flowF.box.w >= 1200 && panelsLeft.codegenPanels === 0, JSON.stringify(result.appBarCloseBeside));
+    check('closed from the app bar, the Properties/Tree rail is back (P-2026-10-25-0925)', !!railAfterClose && railAfterClose.shown, JSON.stringify({ before: railBeforeClose, after: railAfterClose }));
+    await crop(page, 'appbar_close_full_width.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
     const vF0 = revealId ? await page.evaluate(VERTEX(again.m1, revealId)) as any : null;
     if (flowF && vF0) await panBy(page, again.m1, -Math.ceil(vF0.box.x + vF0.box.w - flowF.box.x + 80), 0);
     const vF1 = revealId ? await page.evaluate(VERTEX(again.m1, revealId)) as any : null;
