@@ -36,6 +36,7 @@ const wait = (page: Page, ms: number) => page.waitForTimeout(ms);
 
 const SLATE_400 = 'rgb(148, 163, 184)';
 const ERROR_RED = 'rgb(185, 28, 28)';
+const SLATE_900 = 'rgb(15, 23, 42)';
 const DEPTH = 8;
 const NESTED = '(' + Array.from({ length: DEPTH }, (_, i) => `forall x${i} in instances: `).join('') + 'x0.name).size';
 
@@ -146,15 +147,15 @@ await wait(page, 600);
 const e2 = await readLast(page);
 meas('plain entry', e2);
 check('plain expression: value 2, not muted', e2.input === '1 + 1' && e2.output === '2' && !/--timed-out/.test(e2.rowClass || ''), { input: e2.input, output: e2.output, row: e2.rowClass });
+check('plain entry keeps its slate-900 colour', e2.color === SLATE_900, { color: e2.color });
 await ta.fill('1 +');
 await ta.press('Enter');
 await wait(page, 600);
 const e3 = await readLast(page);
 meas('parse error entry', e3);
-// The error class, not the red: `.jodie-messages code` (JodieWindow.css) paints every code-entry output #334155
-// !important, so the error red never rendered before this lane either. Measured, not asserted.
 check('parse error: error style kept', /--error/.test(e3.rowClass || '') && /--error/.test(e3.entryClass || '') && e3.askButton === true, { output: e3.output, row: e3.rowClass, entry: e3.entryClass });
-meas('parse error colour (red expected, pre-existing override)', { color: e3.color, red: e3.color === ERROR_RED });
+// The red beats `.jodie-messages code` (#334155 !important) for error output only (P-2026-10-25-1020).
+check('parse error renders red', e3.color === ERROR_RED, { color: e3.color });
 result.entries = [e1, e2, e3];
 
 meas('page errors', errors.slice(0, 5));
