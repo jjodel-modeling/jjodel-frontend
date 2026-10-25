@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (codegen tab placement; no critical-zone file)
 Depends: P-2026-10-25-1200
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane codegen · 007c4e106 · bench 7/7 · crops in the lane folder
 Corregge: P-2026-10-25-1200
 Request: Alfonso, 2026-10-25 13:05, in the project chat: «aprendo il canvas con un modello e cliccando su code, riappare il tab del generatore senza affiancare il modello»
 
