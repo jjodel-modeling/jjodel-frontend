@@ -51,6 +51,10 @@
  * click from there opens the canvas and the tab moves beside it, the selection beside the code (crop
  * finding_fragment_beside.png).
  *
+ * P-2026-10-25-1355: beside the canvas the boundary is rc-dock's divider, 7px to grab around its 1px line; a drag of
+ * 150px from 2px off the line widens the tab by as much (crops divider_before.png, divider_after.png); a box with no
+ * generator panel keeps the 1px divider.
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
@@ -265,6 +269,22 @@ const HEADER = (tabId: string) => String.raw`(() => {
   };
 })()`;
 const visibleHeader = (h: any) => !!h && h.inDom && h.visible && h.close && /^Default · /.test(h.title);
+
+/** The dock divider left of the generator tab's panel: shown, its width, which points 3px off its line grab it (P-2026-10-25-1355). */
+const DIVIDER = (tabId: string) => String.raw`(() => {
+  const t = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${tabId}"]');
+  const panel = t && t.closest('.dock-panel');
+  const d = panel && panel.previousElementSibling;
+  if (!d || !d.classList.contains('dock-divider')) return { found: false };
+  const r = d.getBoundingClientRect(), p = panel.getBoundingClientRect(), cs = getComputedStyle(d);
+  const line = r.x + r.width / 2, y = r.y + r.height / 2;
+  const at = (x) => { const e = document.elementFromPoint(x, y); return !!e && (e === d || d.contains(e)); };
+  return { found: true, display: cs.display, width: Math.round(r.width * 10) / 10, cursor: cs.cursor, line, y, hit: [line - 3, line, line + 3].map(at), tabWidth: Math.round(p.width) };
+})()`;
+/** Every divider of a dock box that holds no generator panel: shown or not, and its width (P-2026-10-25-1355). */
+const PLAIN_DIVIDERS = String.raw`(() => [...document.querySelectorAll('.not-strip > .dock-layout .dock-hbox > .dock-divider')]
+  .filter((d) => ![...d.parentElement.children].some((c) => c.classList.contains('dock-style-codegen')))
+  .map((d) => ({ display: getComputedStyle(d).display, basis: getComputedStyle(d).flexBasis, width: Math.round(d.getBoundingClientRect().width * 10) / 10 })))()`;
 
 /** The Properties/Tree rail: its box while on screen, and the canvas inset it publishes (P-2026-10-25-0925). */
 const RAIL = String.raw`(() => {
@@ -978,6 +998,28 @@ async function main(): Promise<void> {
     check('after the pill the app bar shows the canvas tab active and lists no generator tab', genEntries(pillBar).length === 0 && pillActive.length === 1 && !/appbar-tab--generator/.test(pillActive[0].cls), JSON.stringify(pillBar));
     await crop(page, 'finding_pill_beside.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
 
+    // P-2026-10-25-1355 COSA 1: the boundary between canvas and tab is rc-dock's divider, 7px to grab over the two
+    // panels' edges around its 1px line (kills: the 1px divider, a drag only on its exact pixel); dragged, the tab widens.
+    const div1 = await page.evaluate(DIVIDER(leftTab)) as any;
+    result.divider = div1;
+    note('the divider beside the generator tab', div1);
+    check('the boundary beside the generator tab is rc-dock\'s divider, shown, 7px, grabbed 3px either side of its line', div1.found && div1.display !== 'none' && div1.width >= 6.5 && div1.hit.every(Boolean) && div1.cursor === 'ew-resize', JSON.stringify(div1));
+    if (div1.found) {
+        const area = { x: div1.line - 220, y: div1.y - 160, w: 440, h: 320 };
+        await page.mouse.move(div1.line + 2, div1.y);
+        await wait(page, 300);
+        await crop(page, 'divider_before.png', area, 0);
+        await page.mouse.down();
+        await page.mouse.move(div1.line - 148, div1.y, { steps: 10 });
+        await page.mouse.up();
+        await wait(page, 600);
+        const div2 = await page.evaluate(DIVIDER(leftTab)) as any;
+        result.dividerDragged = div2;
+        note('the divider after a drag of 150px to the left, started 2px right of its line', div2);
+        check('dragged 150px to the left, the generator tab widens by about 150px and the canvas stays beside it', div2.found && Math.abs(div2.tabWidth - div1.tabWidth - 150) <= 12 && (await page.evaluate(BESIDE(again.m1, leftTab)) as any).sideBySide, JSON.stringify({ before: div1.tabWidth, after: div2.tabWidth }));
+        await crop(page, 'divider_after.png', { ...area, x: div2.line - 220 }, 0);
+    }
+
     // Back to the app bar: the project page brought forward, GENERATORS moves the tab into the first panel (COSA 2);
     // then a fragment click opens the model's canvas and the tab moves beside it, the selection beside the code (COSA 3).
     await page.evaluate(String.raw`(async () => (await import('/src/components/abstract/DockManager.tsx')).default.activateProjectSummary())()`);
@@ -1020,6 +1062,24 @@ async function main(): Promise<void> {
         check('after the fragment click the element is selected on the canvas, visible beside the code', !!sel && sel.length === 1 && sel[0] === fragElement && selIn, JSON.stringify({ selected: sel, node: selBox, canvas: fragBeside.canvas }));
         await crop(page, 'finding_fragment_beside.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
     }
+
+    // P-2026-10-25-1355: a box with no generator panel keeps rc-dock's 1px divider (kills: every divider widened). The
+    // generator tab closed, the metamodel's tab docked right of the canvas.
+    await page.evaluate(String.raw`(async () => {
+      const dm = (await import('/src/components/abstract/DockManager.tsx')).default;
+      dm.closeTab(${JSON.stringify(leftTab)});
+      await new Promise((r) => setTimeout(r, 400));
+      await dm.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(again.mm)}));
+      await new Promise((r) => setTimeout(r, 800));
+      const d = dm.dock, tab = d.find(${JSON.stringify(again.mm)}), canvas = d.find(${JSON.stringify(again.m1)});
+      if (tab && canvas && canvas.parent) d.dockMove(tab, canvas.parent, 'right');
+    })()`);
+    await wait(page, 800);
+    const plain = await page.evaluate(PLAIN_DIVIDERS) as any[];
+    const plainDock = await page.evaluate(LAYOUT) as any;
+    result.plainDividers = { dividers: plain, layout: plainDock };
+    note('the dividers of a box with no generator panel', result.plainDividers);
+    check('a box with no generator panel keeps rc-dock\'s 1px divider', plain.length > 0 && plain.every((d: any) => d.basis === '1px' && d.width <= 1), JSON.stringify(result.plainDividers));
 }
 
 try {
