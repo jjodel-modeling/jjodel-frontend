@@ -114,6 +114,35 @@ export function refactoringsForArtifact<S extends Pick<DProjectScript, 'level' |
     return scripts.filter(s => compatibleModels([artifact], readTarget(s)).length > 0);
 }
 
+export const OPEN_ARTIFACT_TOOLTIP = 'Open a model or metamodel';
+
+/** A menu entry as the Tools menu and the artifact tab's menu draw it. */
+export interface RefactoringMenuEntry {
+    label: string;
+    disabled: boolean;
+    title?: string;
+}
+
+/**
+ * «Run refactoring on <name>…» under Tools (R-JJD-17), from the artifact of the active tab and the
+ * Refactorings compatible with it: disabled with the reason when there is no artifact or no Refactoring.
+ */
+export function toolsRefactoringEntry(artifact: Pick<TargetCandidate, 'name' | 'isMetamodel'> | null | undefined,
+                                      compatible: ReadonlyArray<unknown>): RefactoringMenuEntry {
+    if (!artifact) return { label: 'Run refactoring…', disabled: true, title: OPEN_ARTIFACT_TOOLTIP };
+    const label = `Run refactoring on ${artifact.name}…`;
+    if (!compatible.length) {
+        return { label, disabled: true, title: `No refactoring for this ${artifact.isMetamodel ? 'metamodel' : 'model'}` };
+    }
+    return { label, disabled: false };
+}
+
+/** One Refactoring in the list of either menu: an empty one is listed disabled. */
+export function refactoringChoice(r: Pick<DProjectScript, 'name' | 'text'>): RefactoringMenuEntry {
+    const empty = !(r.text || '').trim();
+    return { label: r.name, disabled: empty, title: empty ? 'This refactoring is empty' : undefined };
+}
+
 /** The target as the Refactoring tab shows it under the title. */
 export function targetLabel(target: RefactoringTarget, metamodelName?: string): string {
     if (target.level === 'M2') return 'Metamodel';

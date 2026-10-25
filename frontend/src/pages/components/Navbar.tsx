@@ -68,6 +68,8 @@ import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { isConsumerMode } from '../../components/environment/consumerMode';
 import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
 import RunRefactoringMenu from '../../components/scripts/RunRefactoringMenu';
+import { projectRefactoringsFor, projectTargetCandidates, runScriptOnModel } from '../../components/scripts/scriptFiles';
+import { refactoringChoice, toolsRefactoringEntry } from '../../components/scripts/projectScripts';
 import { DOCUMENT_TYPES, DocumentTypeEntry } from '../../constants/documentTypes';
 
 
@@ -407,7 +409,7 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
         let hasSubItems = (!i.disabled && slength > 0) || isUndo;
 
         return (
-            <li className={hasSubItems ? "hoverable" : ""} key={i.id||i.name} tabIndex={0} onClick={()=>i.function?.()} id={i.id ? 'navbar_'+i.id : undefined}>
+            <li className={hasSubItems ? "hoverable" : ""} key={i.id||i.name} tabIndex={0} onClick={()=>i.function?.()} id={i.id ? 'navbar_'+i.id : undefined} title={i.title}>
                 <label className={`highlight ${i.disabled ? 'disabled' : ''}`}>
                     <span>{i.icon || <i className="bi bi-app hidden"/>} {i.jsx || <span>{i.name}</span>}</span>
                     {!i.disabled && slength > 0 ?
@@ -456,6 +458,7 @@ type MenuEntry = {
     subItems?: (MenuEntry|undefined|null)[],
     disabled?: boolean;
     section?: boolean;  // renders `name` as a non-interactive section label (uppercase via CSS)
+    title?: string;     // native tooltip, e.g. the reason a disabled entry is disabled
 } | null;
 
 /* File › New › Model lists at most this many metamodels; above it, the most recent ones plus More… (handoff §6). */
@@ -1409,6 +1412,21 @@ function NavbarComponent(props: AllProps) {
     }
 
     const isActiveTabModel = getActiveModelTab()?.isModel === true;
+
+    // Tools › «Run refactoring on <name>…» (R-JJD-17): the artifact of the active tab and the Refactorings
+    // the tab's right-click menu lists for it, run by the same request function.
+    const activeArtifactId = project ? getActiveModelTab()?.id : undefined;
+    const activeArtifact = activeArtifactId ? projectTargetCandidates().find(c => c.id === activeArtifactId) : undefined;
+    const activeRefactorings = activeArtifact ? projectRefactoringsFor(activeArtifact.id) : [];
+    const runRefactoring = toolsRefactoringEntry(activeArtifact, activeRefactorings);
+    const runRefactoringEntry: MenuEntry = {id: 'tools_run_refactoring', name: runRefactoring.label,
+        icon: <i className="bi bi-arrow-repeat" />, disabled: runRefactoring.disabled, title: runRefactoring.title,
+        subItems: runRefactoring.disabled || !activeArtifact ? undefined : activeRefactorings.map(r => {
+            const choice = refactoringChoice(r);
+            return {id: 'tools_run_refactoring_' + r.id, name: choice.label, disabled: choice.disabled, title: choice.title,
+                icon: <i className="bi bi-arrow-repeat" />,
+                function: choice.disabled ? undefined : () => { void runScriptOnModel(r.text, activeArtifact.id); }};
+        })};
     const isDashboard = !project;
     const isProject = !!project;
     const isFavorite = project?.isFavorite;
@@ -1597,6 +1615,8 @@ function NavbarComponent(props: AllProps) {
            in editor with no metamodels shows only empty-state hint */
         (isDashboard || !props.advanced || consumer) ? null : {name: 'Tools',
             subItems: [
+                runRefactoringEntry,
+                {name: 'divisor'},
                 ...(metamodels.length === 0 ? [
                     {name: 'No metamodel tools', disabled: true, icon: <i className="bi bi-tools" />}
                 ] : []),
