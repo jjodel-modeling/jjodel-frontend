@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: fast (rendering of the M2 ghost preview on the real canvas)
 Depends: P-2026-10-25-0040
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane jjodie-ui-gin · ac2e84ea6 · verifica visiva passata (probe refactoring-side-by-side 30/30, crop gin_previewing.png)
 Corregge: 2026-10-24 16:00
 Request: Alfonso, 2026-10-25 ~01:10 («procedi con la lane veloce in /lane auto»), after the crop `~/.jjodel-lanes/P-2026-10-25-0040/sbs_previewing.png`
 Model: claude-opus-5-5
