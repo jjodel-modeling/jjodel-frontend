@@ -9,7 +9,8 @@
  * per feature, computed here from `planEffects` over `buildPlanWorld` on the open model; one amber line with the count
  * and the first warning; Fix warnings enabled, Edit script and Open as file enabled with their S5 titles (P-2026-10-24-0505); the
  * canvas preview bar showing the same N as the chips and N ghost nodes; `Show script` revealing the code; a TypeScript
- * block and a jjscript block in a reply without an M1 scope unchanged (Run still there); no console errors.
+ * block unchanged (no card, no Run); the M2 reply has a card of its own, its chips from the planner on the metamodel
+ * (P-2026-10-25-1120, after the M2 preview lanes); no console errors.
  *
  * Fixture: scene_1_DemoPEST.jjodel (as jjodie-s3c-jjel-live.ts); the first M1 model whose pane draws a canvas.
  * Real app, own dev server (never 3000, 3001, 3003), light theme.
@@ -112,9 +113,12 @@ const BUILD_SCRIPT = (modelId: string) => `(async () => {
   return { script, plan, classes: concrete.map(c => c.name), ref: ref ? ref.name : null };
 })()`;
 
-const READ_CARD = `(() => {
+/** The card of the reply whose bubble holds `marker`: since the M2 preview lanes an M2 reply has a card of its own. */
+const M1_REPLY = 'Here is the script';
+const M2_REPLY = 'A metamodel script';
+const READ_CARD = (marker: string = M1_REPLY) => `(() => {
   const cards = [...document.querySelectorAll('.jodie-window .jj-script-card')];
-  const card = cards[0];
+  const card = cards.find(c => (c.closest('.jodie-message-bubble')?.textContent || '').includes(${JSON.stringify(marker)}));
   if (!card) return { count: 0 };
   const cs = (e) => e ? getComputedStyle(e) : null;
   const warn = card.querySelector('.jj-script-card__warnings');
@@ -203,15 +207,15 @@ if (target) {
     const tsBlock = '```typescript\nconst a = 1;\nconst b = 2;\n```';
     const m2Script = '```jjscript\ncreate class S2Probe\ncreate attribute x : EString in S2Probe\n```';
     note(await inject(page, [
-        { id: 'msg_s2_m2', content: 'A metamodel script:\n\n' + m2Script, jjodieScope: { level: 'M2', metamodelId: target.mm || '', metamodelName: 'probe' } },
-        { id: 'msg_s2_card', content: 'Here is the script:\n\n```jjscript\n' + built.script + '\n```\n\nAnd a helper:\n\n' + tsBlock, jjodieScope: scope },
+        { id: 'msg_s2_m2', content: M2_REPLY + ':\n\n' + m2Script, jjodieScope: { level: 'M2', metamodelId: target.mm || '', metamodelName: 'probe' } },
+        { id: 'msg_s2_card', content: M1_REPLY + ':\n\n```jjscript\n' + built.script + '\n```\n\nAnd a helper:\n\n' + tsBlock, jjodieScope: scope },
     ]));
     await wait(page, 2500);
 
-    const c: any = await page.evaluate(READ_CARD);
+    const c: any = await page.evaluate(READ_CARD());
     meas('card', c);
     const geo: any = await page.evaluate(`(() => {
-      const card = document.querySelector('.jodie-window .jj-script-card');
+      const card = [...document.querySelectorAll('.jodie-window .jj-script-card')].find(c => (c.closest('.jodie-message-bubble')?.textContent || '').includes(${JSON.stringify(M1_REPLY)}));
       const box = (sel) => { const e = sel === '' ? card : card.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { l: +r.left.toFixed(1), r: +r.right.toFixed(1), w: +r.width.toFixed(1), sw: e.scrollWidth, cw: e.clientWidth }; };
       const bubble = card.closest('.jodie-message-bubble').getBoundingClientRect();
       const win = document.querySelector('.jodie-window').getBoundingClientRect();
@@ -221,7 +225,7 @@ if (target) {
     const within = (x: any) => !!x && x.l >= geo.card.l - 0.5 && x.r <= geo.card.r + 0.5;
     check('card within its bubble and the window', geo.card.l >= geo.bubble[0] - 0.5 && geo.card.r <= geo.bubble[1] + 0.5 && geo.card.r <= geo.win[1] + 0.5, geo);
     check('warning line truncated inside the card, disclosure inside the card', within(geo.warn) && geo.warn.sw > geo.warn.cw && within(geo.disclosure), { warn: geo.warn, disc: geo.disclosure, card: geo.card });
-    check('one script card (the M1 reply only)', c.count === 1, c.count);
+    check('two script cards, one per reply (M1 and M2)', c.count === 2, c.count);
     check('no Run button and no open code block for the card', !c.runInCard && !c.openBlockInBubble, { run: c.runInCard, open: c.openBlockInBubble });
     check('status planned', c.status === 'planned' && c.statusText === 'Planned', { s: c.status, t: c.statusText });
     check('name from the first comment, line count', c.name === 'S2 probe script' && c.lines === `${built.script.split('\n').length} lines`, { n: c.name, l: c.lines });
@@ -243,7 +247,26 @@ if (target) {
     })()`);
     meas('other blocks', others);
     check('TypeScript block unchanged (no card, no Run)', others.some((o: any) => o.lang === 'TYPESCRIPT' && !o.run), others);
-    check('jjscript in an M2 reply keeps the open block and Run', others.some((o: any) => o.lang === 'JJSCRIPT' && o.run), others);
+    check('no open jjscript block with Run in either reply', !others.some((o: any) => o.lang === 'JJSCRIPT'), others);
+
+    // The M2 reply: its own card, chips from the planner on the metamodel (P-2026-10-24-1600).
+    const m2: any = await page.evaluate(READ_CARD(M2_REPLY));
+    meas('M2 card', m2);
+    const m2Plan: any = await page.evaluate(`(async () => {
+      const pw = await import('/src/jjscript/executor/planWorld.ts');
+      const pl = await import('/src/jjscript/executor/effectsPlanner.ts');
+      const st = await import('/src/joiner/index.ts');
+      return pl.planEffects(${JSON.stringify(m2Script.replace(/^```jjscript\n|\n```$/g, ''))}, pw.buildPlanWorld(st.store.getState().idlookup, ${JSON.stringify(target.mm || '')}));
+    })()`);
+    const m2Created = new Map<string, number>();
+    for (const x of m2Plan?.created ?? []) m2Created.set(x.metaclass, (m2Created.get(x.metaclass) ?? 0) + 1);
+    const m2Refs = new Map<string, number>();
+    for (const r of m2Plan?.references ?? []) if ((r.operator === '=' || r.operator === '+=') && r.target !== null) m2Refs.set(r.feature, (m2Refs.get(r.feature) ?? 0) + 1);
+    const wantM2Chips = [...[...m2Created].map(([k, n]) => `+${n} ${k}`), ...[...m2Refs].map(([k, n]) => `+${n} ${k}`)];
+    meas('M2 planner', { created: m2Plan?.created?.length, chips: wantM2Chips, warnings: m2Plan?.warnings, error: m2Plan?.error });
+    check('M2 card: planned, no Run, no open block', m2.status === 'planned' && !m2.runInCard && !m2.openBlockInBubble, { s: m2.status, run: m2.runInCard, open: m2.openBlockInBubble });
+    check('M2 card: chips equal the planner on the metamodel', wantM2Chips.length > 0 && JSON.stringify(m2.chips) === JSON.stringify(wantM2Chips), { card: m2.chips, planner: wantM2Chips });
+    check('M2 card is not the previewed one (the M1 reply is newest)', m2.previewing === false, '');
 
     // Preview: the newest card asked for it on mount.
     const bar: any = await page.evaluate(READ_BAR);
@@ -251,9 +274,10 @@ if (target) {
     check('preview bar shows the same N as the chips', bar.bar && bar.count === `+${N} ${N === 1 ? 'object' : 'objects'}`, { bar: bar.count, N });
     check('preview bar warning count equals the card', bar.bar && bar.warnings === `${plan.warnings.length} ${plan.warnings.length === 1 ? 'warning' : 'warnings'}`, bar.warnings);
     check('N ghost nodes on the canvas', bar.ghosts === N, { ghosts: bar.ghosts, N });
-    check('card marked as the previewed script', (await page.evaluate(READ_CARD) as any).previewing === true, '');
+    check('card marked as the previewed script', (await page.evaluate(READ_CARD()) as any).previewing === true, '');
 
-    // Discard, then a click on the card brings the preview back.
+    // Discard, then a click on the M1 card brings the preview back.
+    const m1Card = page.locator('.jodie-window .jodie-message-bubble', { hasText: M1_REPLY }).locator('.jj-script-card');
     const motion = await page.evaluate(`(async () => { const out = []; for (let i = 0; i < 6; i++) { const b = document.querySelector('.jj-preview-bar')?.getBoundingClientRect(); out.push(b ? [+b.left.toFixed(1), +b.top.toFixed(1), +b.width.toFixed(1)] : null); await new Promise(r => setTimeout(r, 120)); } return { rects: out, requests: window.__s2Requests }; })()`) as any;
     meas('bar motion before Discard', motion);
     check('the card asked for the preview once (no request loop)', motion.requests === 1, motion.requests);
@@ -266,21 +290,21 @@ if (target) {
     check('a Playwright click on Discard lands', !discardErr, discardErr || '');
     await wait(page, 800);
     const gone: any = await page.evaluate(READ_BAR);
-    await page.locator('.jodie-window .jj-script-card__summary').first().click();
+    await m1Card.locator('.jj-script-card__summary').click();
     await wait(page, 1500);
     const back: any = await page.evaluate(READ_BAR);
     check('Discard clears it, a click on the card previews again', !gone.bar && back.bar && back.count === bar.count, { gone: gone.bar, back: back.count });
 
-    const card = page.locator('.jodie-window .jj-script-card').first();
+    const card = m1Card;
     await card.scrollIntoViewIfNeeded();
     const cb = await card.boundingBox();
     await page.screenshot({ path: join(OUT, 's2-card.png'), clip: { x: cb!.x - 8, y: cb!.y - 8, width: cb!.width + 16, height: cb!.height + 16 } });
     const pane = await page.locator(paneSel(target.id)).boundingBox();
     if (pane) await page.screenshot({ path: join(OUT, 's2-canvas-preview.png'), clip: { x: pane.x, y: pane.y, width: pane.width, height: Math.min(pane.height, 640) } });
 
-    await page.locator('.jodie-window .jj-script-card__disclosure').first().click();
+    await m1Card.locator('.jj-script-card__disclosure').click();
     await wait(page, 500);
-    const o: any = await page.evaluate(READ_CARD);
+    const o: any = await page.evaluate(READ_CARD());
     meas('card open', { d: o.disclosure, e: o.expanded, shown: o.codeShown });
     check('Show script reveals the code (S1b block, Copy, no Run)', o.codeShown && o.expanded === 'true' && o.disclosure === 'Hide script' && (o.codeText || '').includes('S2a1') && !o.runInCard, { shown: o.codeShown, e: o.expanded, run: o.runInCard });
     const ob = await card.boundingBox();
