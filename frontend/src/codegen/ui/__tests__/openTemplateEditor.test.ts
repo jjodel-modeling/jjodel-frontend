@@ -1,7 +1,8 @@
 /**
  * openTemplateEditor and canvasSelection's dock helpers — the generator tab docked beside the canvas, and moved
- * beside it when a fragment click brings the canvas forward in its panel (P-2026-10-24-1515). rc-dock's `dock` is a
- * fake with the same `find`/`dockMove`/`getLayout` contract. Mutations each test kills are in its name; the bench is
+ * beside it when a fragment click brings the canvas forward in its panel (P-2026-10-24-1515); one placement rule from
+ * a shown canvas, back to the first panel with none (P-2026-10-25-1310). rc-dock's `dock` is a fake with the same
+ * `find`/`dockMove`/`getLayout` contract, a middle drop activating the tab as rc-dock's does. Mutations each test kills are in its name; the bench is
  * in the commit body.
  */
 
@@ -13,6 +14,7 @@ const lookup = vi.hoisted(() => ({ idlookup: {} as Record<string, any> }));
 
 vi.mock('../../../components/abstract/DockManager', () => ({ default: fake }));
 vi.mock('../../../components/environment/consumerMode', () => ({ isConsumerMode: () => false }));
+vi.mock('../../../events/registry', () => ({ JjodelEvents: { SELECT_NODE: 'select-node' } }));
 vi.mock('../../../joiner', () => ({ LPointerTargetable: { fromPointer: (x: unknown) => x }, store: { getState: () => lookup } }));
 vi.mock('../TemplateEditorTab', async () => {
     const { generatorTabId } = await vi.importActual<typeof import('../generatorTabs')>('../generatorTabs');
@@ -29,7 +31,7 @@ vi.mock('../TemplateEditorTab', async () => {
 });
 
 import { openTemplateEditor } from '../openTemplateEditor';
-import { BESIDE_SHARE, generatorTabsOf, keepBeside, panelOf } from '../canvasSelection';
+import { BESIDE_SHARE, generatorTabsOf, keepBeside, panelOf, selectOnModelCanvas } from '../canvasSelection';
 import { GENERATOR_GROUP } from '../generatorTabs';
 
 type Panel = { id: string; tabs: any[]; size: number; parent?: any; activeId?: string };
@@ -51,9 +53,13 @@ function fakeDock(...panels: string[][]) {
         updateTab: vi.fn(),
         dockMove(tab: any, target: Panel, direction: string) {
             dock.moves.push([tab.id, target.id, direction]);
-            for (const p of dockbox.children as Panel[]) p.tabs = p.tabs.filter(t => t.id !== tab.id);
+            for (const p of dockbox.children as Panel[]) {
+                p.tabs = p.tabs.filter(t => t.id !== tab.id);
+                if (p.activeId === tab.id) p.activeId = undefined;
+            }
             if (direction === 'middle') {
                 target.tabs.push(tab);
+                target.activeId = tab.id;
                 tab.parent = target;
             } else {
                 const panel: Panel = { id: `p${dockbox.children.length}`, tabs: [tab], size: target.size, parent: dockbox };
@@ -66,6 +72,13 @@ function fakeDock(...panels: string[][]) {
     return dock;
 }
 
+/** The tab `id` shown in its panel, as a click on it leaves it. */
+function show(dock: ReturnType<typeof fakeDock>, id: string): void {
+    panelOf(dock as any, id)!.activeId = id;
+}
+
+const shownIn = (dock: ReturnType<typeof fakeDock>, id: string) => { const p = panelOf(dock as any, id)!; return p.activeId ?? p.tabs[0]?.id; };
+
 beforeEach(() => {
     fake.dock = null;
     rail.collapse.mockClear();
@@ -76,6 +89,7 @@ beforeEach(() => {
 describe('openTemplateEditor', () => {
     it('every opening, new or brought forward, arms the rail collapse (kills: no collapse on opening) (P-2026-10-25-0925)', () => {
         fake.dock = fakeDock(['project_summary', 'M1']);
+        show(fake.dock, 'M1');
         expect(openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1')).toBe(true);
         expect(openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1')).toBe(true);
         expect(rail.collapse).toHaveBeenCalledTimes(2);
@@ -83,6 +97,7 @@ describe('openTemplateEditor', () => {
 
     it('docks a new tab right of the canvas panel, at 45 % (kills: middle kept)', () => {
         const dock = fakeDock(['project_summary', 'M1']);
+        show(dock, 'M1');
         fake.dock = dock;
         expect(openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1')).toBe(true);
         expect(dock.moves).toEqual([['codegen_tpl_MM', 'p0', 'right']]);
@@ -152,12 +167,43 @@ describe('openTemplateEditor', () => {
         expect(dock.moves).toEqual([['codegen_tpl_MM', 'p1', 'right']]);
     });
 
-    it('only activates an open tab, wherever it is (kills: an open tab moved)', () => {
-        const dock = fakeDock(['M1', 'codegen_tpl_MM']);
+    it('a pill opening moves a tab of the main panel beside the shown canvas, which stays active (kills: only activated) (P-2026-10-25-1310)', () => {
+        const dock = fakeDock(['project_summary', 'M1', 'codegen_tpl_MM']);
+        show(dock, 'M1');
+        fake.dock = dock;
+        openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1');
+        expect(dock.moves).toEqual([['codegen_tpl_MM', 'p0', 'right']]);
+        expect(panelOf(dock as any, 'codegen_tpl_MM')).not.toBe(panelOf(dock as any, 'M1'));
+        expect(shownIn(dock, 'M1')).toBe('M1');
+        expect(dock.updateTab).toHaveBeenCalledWith('codegen_tpl_MM', null, true);
+    });
+
+    it('a tab already beside the canvas is only activated (kills: moved every time) (P-2026-10-25-1310)', () => {
+        const dock = fakeDock(['project_summary', 'M1'], ['codegen_tpl_MM']);
+        show(dock, 'M1');
         fake.dock = dock;
         openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1');
         expect(dock.moves).toEqual([]);
         expect(dock.updateTab).toHaveBeenCalledWith('codegen_tpl_MM', null, true);
+    });
+
+    it('from GENERATORS with the project page shown, a tab beside a hidden canvas goes back to the first panel (kills: left beside the project page) (P-2026-10-25-1310)', () => {
+        const dock = fakeDock(['project_summary', 'M1'], ['codegen_tpl_MM']);
+        show(dock, 'project_summary');
+        fake.dock = dock;
+        lookup.idlookup = { M1: { className: 'DModel', instanceof: 'MM' } };
+        openTemplateEditor('MM', 'Turnstile');
+        expect(dock.moves).toEqual([['codegen_tpl_MM', 'p0', 'middle']]);
+        expect(dock.updateTab).toHaveBeenCalledWith('codegen_tpl_MM', null, true);
+    });
+
+    it('a second generator asked for from the shown canvas does not join the first one in the canvas\'s panel (kills: siblings\' panel over the canvas) (P-2026-10-25-1310)', () => {
+        const dock = fakeDock(['project_summary', 'M1', 'codegen_tpl_MM']);
+        show(dock, 'M1');
+        fake.dock = dock;
+        openTemplateEditor('MM', 'Turnstile', null, 'g2', 'M1');
+        expect(dock.moves).toEqual([['codegen_tpl_MM_g2', 'p0', 'right']]);
+        expect(shownIn(dock, 'M1')).toBe('M1');
     });
 });
 
@@ -179,5 +225,32 @@ describe('keepBeside', () => {
         const dock = fakeDock(['M1'], ['codegen_tpl_MM']);
         expect(keepBeside(dock as any, 'codegen_tpl_MM', 'M1')).toBe(false);
         expect(dock.moves).toEqual([]);
+    });
+});
+
+describe('selectOnModelCanvas', () => {
+    it('a fragment click from the app-bar placement ends with canvas and tab side by side, the canvas docked after open2 resolves (kills: canvas tab activated over the code; move tried only once) (P-2026-10-25-1310)', async () => {
+        const dock = fakeDock(['project_summary', 'codegen_tpl_MM']);
+        show(dock, 'codegen_tpl_MM');
+        fake.dock = dock;
+        (fake as any).open2 = async () => {
+            setTimeout(() => {
+                const first = dock.getLayout().dockbox.children[0];
+                const tab = { id: 'M1', parent: first, content: null };
+                first.tabs.push(tab);
+                first.activeId = 'M1';
+            }, 20);
+        };
+        vi.stubGlobal('document', { querySelector: () => null });
+        vi.stubGlobal('CSS', { escape: (x: string) => x });
+        try {
+            await selectOnModelCanvas({}, 'M1', 'E1', 300, { tabId: 'codegen_tpl_MM', metamodelId: 'MM' });
+        } finally {
+            vi.unstubAllGlobals();
+            delete (fake as any).open2;
+        }
+        expect(panelOf(dock as any, 'codegen_tpl_MM')).not.toBe(panelOf(dock as any, 'M1'));
+        expect(shownIn(dock, 'M1')).toBe('M1');
+        expect(shownIn(dock, 'codegen_tpl_MM')).toBe('codegen_tpl_MM');
     });
 });

@@ -13,6 +13,11 @@
  * Beside the canvas (P-2026-10-24-1515): the generator tab is docked in a split to the right of the canvas's panel,
  * and a click that brings a canvas forward in the generator tab's own panel moves the tab to such a split first, so
  * the code stays on screen. rc-dock's public API only (`find`, `dockMove`, `getLayout`); no change to DockManager.
+ *
+ * One rule for placement (P-2026-10-25-1310): an open generator tab asked for while a canvas is shown moves beside it
+ * when it shares the canvas's panel, also when it was first opened in the app bar with no canvas docked; with no canvas
+ * shown it goes back to the first panel, which the app bar lists (`shownCanvas`, `placeOpenTab`). A fragment click
+ * moves it once the model's canvas is docked, which `DockManager.open2` may leave for after it resolves.
  */
 
 import type { BoxData, DockLayout, LayoutData, PanelData, TabData } from 'rc-dock';
@@ -99,6 +104,46 @@ export function keepBeside(dock: DockLayout, id: string, canvasId: string, sibli
     return dockBeside(dock, tab, canvasId);
 }
 
+/**
+ * The canvas `besideId` while its panel shows a canvas, the tab itself or another model's editor; `null` when the
+ * panel shows the project page, a generator tab or anything else, or `besideId` is null or not docked
+ * (P-2026-10-25-1310).
+ */
+export function shownCanvas(dock: DockLayout, besideId: string | null, lookup: Lookup): string | null {
+    if (besideId === null) return null;
+    const panel = panelOf(dock, besideId);
+    const shown = panel ? panel.activeId ?? panel.tabs[0]?.id : undefined;
+    return shown !== undefined && (shown === besideId || lookup[shown]?.className === 'DModel') ? besideId : null;
+}
+
+/**
+ * Brings the open generator tab `id` forward where it belongs (P-2026-10-25-1310): with a canvas shown, out of the
+ * canvas's panel when it shares it (`keepBeside`), left where it is otherwise; with none, into the first panel of the
+ * dock box, which the app bar lists, when it sits in another panel of the dock box. Activated in either case; the
+ * canvas stays active in its own panel. True when it moved.
+ */
+export function placeOpenTab(dock: DockLayout, id: string, canvasId: string | null, siblings: (tabId: string) => boolean = () => false): boolean {
+    let moved = false;
+    if (canvasId !== null) moved = keepBeside(dock, id, canvasId, siblings);
+    else {
+        const first = dock.getLayout()?.dockbox?.children?.[0];
+        const panel = panelOf(dock, id);
+        if (first && 'tabs' in first && panel && panel !== first && inDockbox(dock, panel)) {
+            dock.dockMove(dock.find(id) as TabData, first, 'middle');
+            moved = true;
+        }
+    }
+    dock.updateTab(id, null, true);
+    return moved;
+}
+
+/** Whether `panel` is one of the dock box's panels (not a floating or maximised one). */
+function inDockbox(dock: DockLayout, panel: PanelData): boolean {
+    const walk = (node: BoxData | PanelData | undefined): boolean =>
+        !!node && ('tabs' in node ? node === panel : (node.children ?? []).some(walk));
+    return walk(dock.getLayout()?.dockbox);
+}
+
 const pause = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 /**
@@ -114,10 +159,18 @@ export async function selectOnModelCanvas(
     } catch (error) {
         console.warn('[canvasSelection] the model tab could not be opened', modelId, error);
     }
-    if (keepVisible !== null && DockManager.dock) keepBeside(DockManager.dock, keepVisible.tabId, modelId, generatorTabsOf(keepVisible.metamodelId));
+    // The canvas may be docked after open2 resolves: the move waits for it (P-2026-10-25-1310).
+    let placed = keepVisible === null;
+    const place = (): void => {
+        const dock = DockManager.dock;
+        if (placed || keepVisible === null || !dock || !panelOf(dock, modelId)) return;
+        placed = true;
+        keepBeside(dock, keepVisible.tabId, modelId, generatorTabsOf(keepVisible.metamodelId));
+    };
     const end = Date.now() + waitMs;
     let pick: CanvasPick | null = null;
     for (;;) {
+        place();
         const pane = modelPane(modelId);
         const nodes = idsIn(pane, '.react-flow__node[data-id]');
         pick = pickOnCanvas(lookup, nodes, idsIn(pane, '.react-flow__edge[data-id]'), elementId);

@@ -28,6 +28,11 @@
  * bar beside the project and model tabs (Navbar.tsx `syncTabs`), full width when selected. The app bar imports no
  * generator module, so the tab carries its title and its close (`AppBarTabHooks`), kept by rc-dock as it moves.
  *
+ * One rule for placement (P-2026-10-25-1310): the canvas counts only while its panel shows a canvas
+ * (canvasSelection.ts `shownCanvas`). Asked for with one shown, an open tab that shares the canvas's panel, as one
+ * first opened in the app bar does, moves beside it, and a new one goes beside it; with none shown, an open tab goes
+ * back to the first panel and a new one joins it, both listed by the app bar. A tab already beside is only activated.
+ *
  * Reached only from the Code panel's lazy chunk and the left bar's dynamic import (scripts/gates/check-codegen-lazy.ts).
  */
 
@@ -41,7 +46,7 @@ import TemplateEditorTab, {
 } from './TemplateEditorTab';
 import { GENERATOR_GROUP, besideTarget, generatorTabTitle, rememberGenerator } from './generatorTabs';
 import type { AppBarTabHooks } from './generatorTabs';
-import { dockBeside, findPanel, generatorTabsOf } from './canvasSelection';
+import { dockBeside, findPanel, generatorTabsOf, panelOf, placeOpenTab, shownCanvas } from './canvasSelection';
 import { DEFAULT_GENERATOR_ID, GEN_GENERATORS_KEY, decodeGenerators } from '../engine/generatorCodec';
 import { GEN_TEMPLATES_KEY } from '../engine/templateCodec';
 
@@ -66,8 +71,21 @@ export function openTemplateEditor(
     rememberGenerator(metamodelId, generatorId);
     collapseRailOnOpen();
 
+    const docked: string[] = [];
+    const walk = (node: BoxData | PanelData | undefined): void => {
+        if (!node) return;
+        if ('tabs' in node) node.tabs.forEach(t => { if (t.id !== undefined) docked.push(t.id); });
+        else (node.children ?? []).forEach(walk);
+    };
+    walk(dock.getLayout()?.dockbox);
+    const first = dock.getLayout()?.dockbox?.children?.[0];
+    const shownFirst = first && 'tabs' in first ? first.activeId ?? first.tabs[0]?.id : undefined;
+    const lookup = (store.getState() as any)?.idlookup ?? {};
+    const canvas = shownCanvas(dock, besideTarget(metamodelId, model, docked, shownFirst, lookup), lookup);
+    const ofMetamodel = generatorTabsOf(metamodelId);
+
     if (dock.find(id)) {
-        dock.updateTab(id, null, true);
+        placeOpenTab(dock, id, canvas, ofMetamodel);
         selectInTemplateTab(metamodelId, template, generatorId);
         if (model) chooseModelInTemplateTab(metamodelId, model, generatorId);
         return true;
@@ -92,23 +110,16 @@ export function openTemplateEditor(
         title: React.createElement(TemplateTabTitle, { metamodelId, name: metamodelName, generatorId }),
         content: React.createElement(TemplateEditorTab, { metamodelId, initial: template, generatorId, model: model ?? null }),
     };
-    const siblings = findPanel(dock, generatorTabsOf(metamodelId));
-    if (siblings) {
-        dock.dockMove(tab, siblings, 'middle');
-        return true;
+    if (canvas !== null) {
+        // The siblings' panel, unless it is the canvas's own: a new tab there would cover the canvas.
+        const canvasPanel = panelOf(dock, canvas);
+        const siblings = findPanel(dock, t => ofMetamodel(t) && panelOf(dock, t) !== canvasPanel);
+        if (siblings) {
+            dock.dockMove(tab, siblings, 'middle');
+            return true;
+        }
+        if (dockBeside(dock, tab, canvas)) return true;
     }
-    const docked: string[] = [];
-    const walk = (node: BoxData | PanelData | undefined): void => {
-        if (!node) return;
-        if ('tabs' in node) node.tabs.forEach(t => { if (t.id !== undefined) docked.push(t.id); });
-        else (node.children ?? []).forEach(walk);
-    };
-    walk(dock.getLayout()?.dockbox);
-    const first = dock.getLayout()?.dockbox?.children?.[0];
-    const shownFirst = first && 'tabs' in first ? first.activeId ?? first.tabs[0]?.id : undefined;
-    const lookup = (store.getState() as any)?.idlookup ?? {};
-    const beside = besideTarget(metamodelId, model, docked, shownFirst, lookup);
-    if (beside !== null && dockBeside(dock, tab, beside)) return true;
     if (!first) return false;
     dock.dockMove(tab, first, 'middle');
     return true;
