@@ -128,6 +128,7 @@ import { simPillVisible } from './sim/simRoleStatus';
 import { getSimRun, useSimVersion } from './sim/simRunState';
 import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
 import { appendPreview, buildPreviewElements, drawnNodes, isPreviewId, measureObstacles } from './preview/previewElements';
+import { PreviewEdge } from './preview/PreviewEdge';
 import { installScriptPreviewListener, useScriptPreview } from './preview/scriptPreviewStore';
 import { PreviewBar } from './preview/PreviewBar';
 import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
@@ -191,6 +192,7 @@ const edgeTypes: EdgeTypes = {
     inheritance: UnifiedEdge,
     composition: UnifiedEdge,       // M1: containment edge
     instanceRef: UnifiedEdge,       // M1: non-containment reference
+    preview: PreviewEdge,           // M2 ghost edge on its own orthogonal route (P-2026-10-25-1005)
 };
 
 // ---------------------------------------------------------------------------

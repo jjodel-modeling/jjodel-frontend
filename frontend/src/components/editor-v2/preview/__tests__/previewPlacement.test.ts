@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLACEMENT_CLEARANCE, compartmentBelow, findFreeSpot, strikeOnRow, tooClose, type PlacementBox } from '../previewPlacement';
+import { PLACEMENT_CLEARANCE, compartmentBelow, facesAcross, findFreeSpot, strikeOnRow, tooClose, type PlacementBox } from '../previewPlacement';
 
 const anchor: PlacementBox = { x: 100, y: 100, width: 200, height: 100 };
 const W = 180;
@@ -49,6 +49,23 @@ describe('findFreeSpot', () => {
         for (const w of walls) expect(tooClose(at(spot), w)).toBe(false);
         // Two slide steps from a straight spot (one step still touches the right wall): right, 80 px down.
         expect(spot).toEqual({ x: 380, y: 180 });
+    });
+
+    it('tie-break within one slide: the free spot that faces the anchor across a shared band goes first', () => {
+        // P-2026-10-25-1005. Every straight spot taken; one slide down both the right spot (8 px of shared
+        // height) and the below spot (160 px of shared width) are free: below wins, its ghost edge runs straight.
+        const a = { x: 0, y: 0, width: 200, height: 48 };
+        const taken = [
+            a,
+            { x: 280, y: -80, width: 180, height: 70 },
+            { x: -80, y: 72, width: 70, height: 48 },
+            { x: -1000, y: -1000, width: 850, height: 2000 },
+            { x: -1000, y: -1000, width: 2000, height: 910 },
+        ];
+        const spot = findFreeSpot(a, 180, 48, taken)!;
+        expect(spot).toEqual({ x: 40, y: 72 });
+        expect(facesAcross(spot, 180, 48, a)).toBe(true);
+        expect(facesAcross({ x: 280, y: 40 }, 180, 48, a)).toBe(false);
     });
 
     it('returns null when nothing within the slide range is free', () => {

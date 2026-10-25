@@ -5,7 +5,7 @@ Chat: C-2026-10-24-0020
 Front: jjodie-ui
 Lane: fast (rendering of ghost edges in the M2 preview)
 Depends: P-2026-10-25-0110
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane jjodie-ui-gen · af2309645, 7445bc4f4 · verifica visiva passata (probe refactoring-side-by-side 33/33, jjodie-m2-preview all pass, crop gen_previewing.png)
 Corregge: 2026-10-25 01:10
 Request: Alfonso, 2026-10-25 ~10:00 («Procedi», on the curve of the dashed generalization edge of a ghost class)
 Model: claude-opus-5-5

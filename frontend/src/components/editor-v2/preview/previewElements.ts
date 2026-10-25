@@ -40,6 +40,7 @@ import type { Edge, Node } from '@xyflow/react';
 import { effectLevel, type EffectsPlan, type PlannedCreate, type PlanWorld } from '../../../jjscript/executor/effectsPlanner';
 import { parse } from '../../../jjscript/parser/parser';
 import { compartmentBelow, findFreeSpot, strikeOnRow, tooClose, type PlacementBox, type RowOffset } from './previewPlacement';
+import { routeGhostEdge } from './previewRoute';
 
 export const PREVIEW_ID_PREFIX = 'jjpreview:';
 
@@ -345,13 +346,18 @@ function buildM2Preview(plan: EffectsPlan, world: PlanWorld, drawn: readonly Dra
         }
         pushAt(id, label, { ...position, width: PREVIEW_NODE_WIDTH, height }, holder);
     };
-    const pushEdge = (source: string | undefined, target: string | undefined, label: string, containment: boolean) => {
+    const pushEdge = (source: string | undefined, target: string | undefined, label: string, containment: boolean, generalization: boolean = false) => {
         if (!source || !target) return;
+        // P-2026-10-25-1005: orthogonal, end on the facing sides, clear of the other boxes where it can;
+        // the plain edge only when an end has no box (a nested node) or the two boxes touch.
+        const s = boxOf.get(source), t = boxOf.get(target);
+        const route = s && t ? routeGhostEdge(s, t, Array.from(boxOf.entries()).filter(([k]) => k !== source && k !== target).map(([, b]) => b)) : null;
         edges.push({
             id: `${PREVIEW_ID_PREFIX}edge:${edges.length + 1}`,
             source,
             target,
-            type: 'default',
+            type: route ? 'preview' : 'default',
+            ...(route ? { data: { points: route.points, generalization } } : {}),
             label,
             className: containment ? 'jj-preview-edge jj-preview-edge--containment' : 'jj-preview-edge',
             selectable: false,
@@ -415,7 +421,7 @@ function buildM2Preview(plan: EffectsPlan, world: PlanWorld, drawn: readonly Dra
         if (c.metaclass !== 'Reference' || !c.typeId) continue;
         pushEdge(nodeOf.get(holderOf.get(c.id) ?? ''), nodeOf.get(c.typeId), c.name, !!c.containment);
     }
-    for (const g of generalizations) pushEdge(nodeOf.get(g.childId), nodeOf.get(g.parentId), 'extends', false);
+    for (const g of generalizations) pushEdge(nodeOf.get(g.childId), nodeOf.get(g.parentId), 'extends', false, true);
     return { nodes, edges };
 }
 

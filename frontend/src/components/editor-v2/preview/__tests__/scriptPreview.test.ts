@@ -325,6 +325,13 @@ describe('buildPreviewElements on M2 (P-2026-10-24-1600)', () => {
             ['vPerson', `${PREVIEW_ID_PREFIX}planned:2`, 'pets', 'jj-preview-edge jj-preview-edge--containment'],
             [`${PREVIEW_ID_PREFIX}planned:2`, `${PREVIEW_ID_PREFIX}planned:1`, 'extends', 'jj-preview-edge'],
         ]);
+        // P-2026-10-25-1005: every end has a box, so each edge takes its orthogonal route; only the
+        // generalization carries the triangle.
+        expect(edges.map((e) => [e.type, (e.data as any)?.generalization])).toEqual([['preview', false], ['preview', false], ['preview', true]]);
+        for (const e of edges) {
+            const pts = (e.data as any).points as { x: number; y: number }[];
+            for (let i = 1; i < pts.length; i++) expect(pts[i].x === pts[i - 1].x || pts[i].y === pts[i - 1].y).toBe(true);
+        }
     });
 
     it('a warned line marks the node that holds the row', async () => {

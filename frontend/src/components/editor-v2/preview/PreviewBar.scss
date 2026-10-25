@@ -153,6 +153,13 @@
         stroke-dasharray: 6 4;
     }
 
+    // The hollow triangle of a ghost generalization (P-2026-10-25-1005).
+    .jj-preview-edge-marker {
+        fill: var(--color-edge-marker-fill, var(--color-bg-primary));
+        stroke: var(--color-canvas-accent);
+        stroke-width: 1;
+    }
+
     .react-flow__edge-text {
         fill: var(--color-text-secondary);
         font-size: 11px;
