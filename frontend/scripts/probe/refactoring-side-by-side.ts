@@ -82,8 +82,10 @@ const READ_CANVAS = (panelId: string) => `(() => {
     }
   }
   const labels = [...p.querySelectorAll('.edge-label, .edge-end-label')].map(l => { const r = l.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }).filter(r => r.w > 0);
+  // P-2026-10-25-1005: the ghost edges as drawn, their path points in screen space, the marker at their end.
+  const ghostPaths = [...p.querySelectorAll('.react-flow__edge.jj-preview-edge')].map(e => { const path = e.querySelector('path.react-flow__edge-path'); if (!path) return null; const m = path.getScreenCTM(); const d = path.getAttribute('d') || ''; const nums = d.match(/-?[\\d.]+/g) || []; const pts = []; for (let i = 0; i + 1 < nums.length; i += 2) { const x = +nums[i], y = +nums[i + 1]; pts.push(m ? [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f] : [x, y]); } return { id: e.getAttribute('data-id'), d, pts, marker: path.getAttribute('marker-end') }; }).filter(Boolean);
   const pal = p.querySelector('.editor-v2-palette');
-  return { pos, rects, named, rows, zoom, samples, labels, paletteWidth: pal ? Math.round(pal.getBoundingClientRect().width) : null, ghosts, ghostEdges: p.querySelectorAll('.react-flow__edge.jj-preview-edge').length, canvasBar: !!p.querySelector('.jj-preview-bar'), nodes: Object.keys(pos).length };
+  return { pos, rects, named, rows, zoom, samples, labels, ghostPaths, paletteWidth: pal ? Math.round(pal.getBoundingClientRect().width) : null, ghosts, ghostEdges: p.querySelectorAll('.react-flow__edge.jj-preview-edge').length, canvasBar: !!p.querySelector('.jj-preview-bar'), nodes: Object.keys(pos).length };
 })()`;
 
 const browser = await chromium.launch();
@@ -237,6 +239,31 @@ check('removed attribute: a red strike on its row, y within the row +-2 px',
     && Math.abs((strike.rect.y + strike.rect.h / 2) - (ownerRow.rect.y + ownerRow.rect.h / 2)) <= 2 && Math.abs(strike.rect.x - ownerRow.rect.x) <= 2 && Math.abs(strike.rect.w - ownerRow.rect.w) <= 2,
   { strike: strike?.rect, row: ownerRow?.rect });
 check('ghost edges drawn (generalization)', (canvas?.ghostEdges || 0) >= 1, canvas?.ghostEdges);
+// P-2026-10-25-1005: the ghost generalization routed like a real one: orthogonal, at most two bends, the hollow
+// triangle, the ends on the facing sides, no segment through the ghost or its parent.
+const genEdge = (canvas?.ghostPaths || []).find((g: any) => !!g.marker);
+const gpts: number[][] = genEdge?.pts || [];
+const orthogonal = !!genEdge && !/[CQSTA]/i.test(genEdge.d) && gpts.every((q, i) => i === 0 || Math.abs(q[0] - gpts[i - 1][0]) < 0.5 || Math.abs(q[1] - gpts[i - 1][1]) < 0.5);
+const segThrough = (r: any) => !!r && gpts.some((q, i) => {
+  if (i === 0) return false;
+  const [a, b] = [gpts[i - 1], q];
+  const x0 = r.x + 1, x1 = r.x + r.w - 1, y0 = r.y + 1, y1 = r.y + r.h - 1;
+  return Math.max(a[0], b[0]) > x0 && Math.min(a[0], b[0]) < x1 && Math.max(a[1], b[1]) > y0 && Math.min(a[1], b[1]) < y1;
+});
+const sideOf = (q: number[] | undefined, r: any) => !q || !r ? null
+  : Math.abs(q[0] - r.x) <= 2 ? 'left' : Math.abs(q[0] - (r.x + r.w)) <= 2 ? 'right' : Math.abs(q[1] - r.y) <= 2 ? 'top' : Math.abs(q[1] - (r.y + r.h)) <= 2 ? 'bottom' : null;
+const facing = (a: any, b: any) => !a || !b ? [] : [b.x >= a.x + a.w - 1 ? 'right' : '', b.x + b.w <= a.x + 1 ? 'left' : '', b.y >= a.y + a.h - 1 ? 'bottom' : '', b.y + b.h <= a.y + 1 ? 'top' : ''].filter(Boolean);
+const genSides = { source: sideOf(gpts[0], added?.rect), target: sideOf(gpts[gpts.length - 1], owner) };
+const throughGhost = segThrough(added?.rect), throughOwner = segThrough(owner);
+meas('ghost generalization route', { d: genEdge?.d, bends: Math.max(0, gpts.length - 2), orthogonal, throughGhost, throughOwner, sides: genSides, facing: { ghost: facing(added?.rect, owner), owner: facing(owner, added?.rect) }, ghost: added?.rect, owner });
+check('ghost generalization: orthogonal, hollow triangle, at most two bends', orthogonal && !!genEdge?.marker && gpts.length - 2 <= 2, { d: genEdge?.d, marker: genEdge?.marker });
+check('ghost generalization: no segment through the ghost or its parent', !!genEdge && !throughGhost && !throughOwner, { throughGhost, throughOwner });
+check('ghost generalization: ends on the facing sides', !!genSides.source && !!genSides.target && facing(added?.rect, owner).includes(genSides.source) && facing(owner, added?.rect).includes(genSides.target), genSides);
+if (added && owner) {
+  const x0 = Math.min(added.rect.x, owner.x) - 40, y0 = Math.min(added.rect.y, owner.y) - 40;
+  const x1 = Math.max(added.rect.x + added.rect.w, owner.x + owner.w) + 40, y1 = Math.max(added.rect.y + added.rect.h, owner.y + owner.h) + 80;
+  await page.screenshot({ path: join(OUT, 'gen_previewing.png'), clip: { x: Math.max(0, x0), y: Math.max(0, y0), width: x1 - Math.max(0, x0), height: y1 - Math.max(0, y0) } });
+}
 check('no canvas bar; the bar in the tab with Discard and Apply', canvas?.canvasBar === false && (await page.locator(`${TAB} .rfa-bar button`, { hasText: 'Apply' }).count()) === 1 && (await page.locator(`${TAB} .rfa-bar button`, { hasText: 'Discard' }).count()) === 1, canvas?.canvasBar);
 check('class positions unchanged by the preview', samePos(before?.pos, canvas?.pos), null);
 const hit = (a: any, b: any) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
