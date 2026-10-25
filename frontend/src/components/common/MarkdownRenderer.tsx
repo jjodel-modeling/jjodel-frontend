@@ -9,6 +9,7 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ScriptBlock, isJjScriptCode, ScriptLineResult } from '../../jjscript';
+import { JJSCRIPT_HIGHLIGHT_STYLE, jjscriptAstGenerator } from '../../jjscript/editor/jjscriptHighlighter';
 import { isConsumerMode } from '../environment/consumerMode';
 import { ConsumerProposal } from '../Jodie/ConsumerProposal';
 import { ScriptCard, ScriptCardContext } from '../Jodie/ScriptCard';
@@ -41,6 +42,9 @@ const jjodieCodeTheme = {
         fontSize: '13px',
     },
 };
+
+// A JjScript block takes the script editor's token colours (P-2026-10-25-1020).
+const jjscriptCodeTheme = { ...jjodieCodeTheme, ...JJSCRIPT_HIGHLIGHT_STYLE };
 
 // Mapping for non-standard languages or aliases
 const languageAliases: Record<string, string> = {
@@ -110,6 +114,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
     }
 
     const asScriptCard = !!scriptCardContext && isScriptCardBlock(language, code, isJjScriptCode);
+    const asJjScript = couldBeJjScript || language === 'jjscript' || language === 'jjs';
 
     // If in JjScript mode, render ScriptBlock with integrated close button
     if (jjscriptMode && !asScriptCard) {
@@ -169,8 +174,9 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, code, onJjScriptExecute
 
             {/* Code with syntax highlighting */}
             <SyntaxHighlighter
-                style={jjodieCodeTheme}
-                language={language}
+                style={asJjScript ? jjscriptCodeTheme : jjodieCodeTheme}
+                language={asJjScript ? 'jjscript' : language}
+                astGenerator={asJjScript ? jjscriptAstGenerator : undefined}
                 PreTag="div"
                 className="md-code-content"
                 showLineNumbers={showLineNumbers}
