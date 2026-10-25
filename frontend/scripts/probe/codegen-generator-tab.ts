@@ -55,6 +55,11 @@
  * 150px from 2px off the line widens the tab by as much (crops divider_before.png, divider_after.png); a box with no
  * generator panel keeps the 1px divider.
  *
+ * P-2026-10-25-1441: the canvas narrowed to about 528px beside the tab, a fragment whose vertex starts off-screen selects
+ * it and brings it inside React Flow's own viewport, same zoom (crop reveal_narrow.png); panned a little and clicked again,
+ * the viewport stays; the tab closed, a SELECT_NODE from elsewhere puts an off-screen vertex one third into the full-width
+ * canvas (crop reveal_fullwidth.png).
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
@@ -285,6 +290,55 @@ const DIVIDER = (tabId: string) => String.raw`(() => {
 const PLAIN_DIVIDERS = String.raw`(() => [...document.querySelectorAll('.not-strip > .dock-layout .dock-hbox > .dock-divider')]
   .filter((d) => ![...d.parentElement.children].some((c) => c.classList.contains('dock-style-codegen')))
   .map((d) => ({ display: getComputedStyle(d).display, basis: getComputedStyle(d).flexBasis, width: Math.round(d.getBoundingClientRect().width * 10) / 10 })))()`;
+
+/** React Flow in the model's pane: its box, the viewport transform, the right inset, the window (P-2026-10-25-1441). */
+const FLOW = (m1Id: string) => String.raw`(() => {
+  const p = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m1Id}"]');
+  const rf = p && p.querySelector('.react-flow');
+  if (!rf || p.offsetParent === null) return null;
+  const r = rf.getBoundingClientRect(), vp = rf.querySelector('.react-flow__viewport');
+  const inset = parseFloat(getComputedStyle(document.body).getPropertyValue('--jj-canvas-right-inset')) || 0;
+  return { box: { x: r.x, y: r.y, w: r.width, h: r.height }, transform: vp ? vp.style.transform : null, inset, win: { w: innerWidth, h: innerHeight } };
+})()`;
+/** The vertex of a model element in the pane: its node id, box, and whether it is selected (P-2026-10-25-1441). */
+const VERTEX = (m1Id: string, elementId: string) => String.raw`(() => {
+  const p = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m1Id}"]');
+  if (!p) return null;
+  const lk = window.windoww.store.getState().idlookup;
+  const n = [...p.querySelectorAll('.react-flow__node[data-id]')].find((x) => ((lk[x.getAttribute('data-id')] || {}).model || x.getAttribute('data-id')) === ${JSON.stringify(elementId)});
+  if (!n) return null;
+  const r = n.getBoundingClientRect();
+  return { id: n.getAttribute('data-id'), box: { x: r.x, y: r.y, w: r.width, h: r.height }, selected: n.classList.contains('selected') };
+})()`;
+/** A vertex box fully inside the part of React Flow's box the right inset leaves uncovered, 1px of tolerance. */
+const insideFlow = (v: any, f: any) => !!v && !!f && v.box.w > 0 && v.box.x >= f.box.x - 1 && v.box.y >= f.box.y - 1
+    && v.box.x + v.box.w <= f.box.x + f.box.w - f.inset + 1 && v.box.y + v.box.h <= f.box.y + f.box.h + 1;
+const zoomOf = (t: string | null) => { const m = /scale\(([\d.]+)\)/.exec(t || ''); return m ? Number(m[1]) : null; };
+
+/** Pans the model's canvas by a drag on an empty point of React Flow's pane (panOnDrag), from the side opposite to dx. */
+async function panBy(page: Page, m1Id: string, dx: number, dy: number): Promise<boolean> {
+    const at = await page.evaluate(String.raw`(() => {
+      const p = document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-${m1Id}"]');
+      const rf = p && p.querySelector('.react-flow');
+      if (!rf) return null;
+      const r = rf.getBoundingClientRect();
+      const xs = [];
+      for (let x = r.x + 30; x < r.x + r.width - 30; x += 20) xs.push(x);
+      if (${dx} < 0) xs.reverse();
+      for (const x of xs) for (let y = r.y + 60; y < r.y + r.height - 60; y += 20) {
+        const e = document.elementFromPoint(x, y);
+        if (e && e.classList.contains('react-flow__pane')) return { x, y };
+      }
+      return null;
+    })()`) as { x: number; y: number } | null;
+    if (!at) return false;
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.down();
+    await page.mouse.move(at.x + dx, at.y + dy, { steps: 12 });
+    await page.mouse.up();
+    await wait(page, 500);
+    return true;
+}
 
 /** The Properties/Tree rail: its box while on screen, and the canvas inset it publishes (P-2026-10-25-0925). */
 const RAIL = String.raw`(() => {
@@ -1061,6 +1115,110 @@ async function main(): Promise<void> {
         const selIn = !!selBox && fragBeside.found && selBox.w > 0 && selBox.x >= fragBeside.canvas.x && selBox.x + selBox.w <= fragBeside.canvas.x + fragBeside.canvas.w;
         check('after the fragment click the element is selected on the canvas, visible beside the code', !!sel && sel.length === 1 && sel[0] === fragElement && selIn, JSON.stringify({ selected: sel, node: selBox, canvas: fragBeside.canvas }));
         await crop(page, 'finding_fragment_beside.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+    }
+
+    // P-2026-10-25-1441, Alfonso's sequence on the narrowed canvas (1355 measured React Flow 528px wide beside the tab):
+    // a fragment whose vertex starts off-screen selects it and brings it inside React Flow's own viewport, same zoom
+    // (kills: the window-based centre, fitView used); panned a little and clicked again, the vertex already inside, the
+    // viewport stays (kills: move on every select).
+    const flow0 = await page.evaluate(FLOW(again.m1)) as any;
+    const divN = await page.evaluate(DIVIDER(leftTab)) as any;
+    if (flow0 && divN.found) {
+        await page.mouse.move(divN.line, divN.y);
+        await page.mouse.down();
+        await page.mouse.move(flow0.box.x + 528, divN.y, { steps: 12 });
+        await page.mouse.up();
+        await wait(page, 800);
+    }
+    const flowN = await page.evaluate(FLOW(again.m1)) as any;
+    note('the canvas narrowed beside the tab', flowN);
+    check('the canvas is narrowed to about 528px beside the tab', !!flowN && Math.abs(flowN.box.w - 528) <= 24 && (await page.evaluate(BESIDE(again.m1, leftTab)) as any).sideBySide, JSON.stringify(flowN && flowN.box));
+    const objectIds = await page.evaluate(String.raw`(() => {
+      const t = ${TAB(leftTab)}, lk = window.windoww.store.getState().idlookup;
+      if (!t) return [];
+      return [...new Set([...t.querySelectorAll('.codegen-pane__code .code-span--model[data-origin-id]')].map((s) => s.getAttribute('data-origin-id')))]
+        .filter((id) => (lk[id] || {}).className === 'DObject');
+    })()`) as string[];
+    let revealId: string | null = null;
+    for (const id of objectIds) {
+        const v = await page.evaluate(VERTEX(again.m1, id)) as any;
+        if (v && !insideFlow(v, flowN)) { revealId = id; break; }
+    }
+    if (!revealId && flowN) {
+        // None off-screen: the canvas panned right until an object's vertex lies past the right edge.
+        for (const id of objectIds) {
+            const v = await page.evaluate(VERTEX(again.m1, id)) as any;
+            if (!v) continue;
+            await panBy(page, again.m1, Math.ceil(flowN.box.x + flowN.box.w - v.box.x + 80), 0);
+            revealId = id;
+            break;
+        }
+    }
+    const vBefore = revealId ? await page.evaluate(VERTEX(again.m1, revealId)) as any : null;
+    const fBefore = await page.evaluate(FLOW(again.m1)) as any;
+    note('the revealId vertex before the fragment click', { revealId, vertex: vBefore, transform: fBefore && fBefore.transform });
+    check('a fragment\'s vertex starts outside the narrowed canvas', !!vBefore && !insideFlow(vBefore, fBefore), JSON.stringify({ vertex: vBefore && vBefore.box, flow: fBefore && fBefore.box }));
+    if (revealId && vBefore) {
+        const clickTarget = () => page.evaluate(String.raw`(() => {
+          const s = ${TAB(leftTab)}.querySelector('.codegen-pane__code .code-span--model[data-origin-id="${revealId}"]');
+          if (!s) return false;
+          s.scrollIntoView({ block: 'center' });
+          s.click();
+          return true;
+        })()`);
+        await clickTarget();
+        await wait(page, 1500);
+        const vAfter = await page.evaluate(VERTEX(again.m1, revealId)) as any;
+        const fAfter = await page.evaluate(FLOW(again.m1)) as any;
+        const selCount = await page.evaluate(`${PANE(again.m1)}.querySelectorAll('.react-flow__node.selected').length`) as number;
+        result.revealNarrow = { revealId, before: { vertex: vBefore, flow: fBefore }, after: { vertex: vAfter, flow: fAfter, selected: selCount } };
+        note('after the fragment click on the narrowed canvas', result.revealNarrow.after);
+        check('the fragment click selects the vertex, only it, and brings it inside the narrowed canvas (kills: window-based centre)',
+            !!vAfter && vAfter.selected && selCount === 1 && insideFlow(vAfter, fAfter), JSON.stringify({ vertex: vAfter, flow: fAfter && fAfter.box, selected: selCount }));
+        check('the reveal keeps the zoom (kills: fitView used)', !!fAfter && zoomOf(fBefore.transform) !== null && zoomOf(fBefore.transform) === zoomOf(fAfter.transform), JSON.stringify({ before: fBefore.transform, after: fAfter && fAfter.transform }));
+        await crop(page, 'reveal_narrow.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+        // Panned 40px right and 30px down, the vertex still inside, then the same fragment again.
+        await panBy(page, again.m1, 40, 30);
+        const vMoved = await page.evaluate(VERTEX(again.m1, revealId)) as any;
+        const fMoved = await page.evaluate(FLOW(again.m1)) as any;
+        await clickTarget();
+        await wait(page, 1200);
+        const fAgain = await page.evaluate(FLOW(again.m1)) as any;
+        const vAgain = await page.evaluate(VERTEX(again.m1, revealId)) as any;
+        result.revealAgain = { panned: { vertex: vMoved, transform: fMoved && fMoved.transform }, after: { vertex: vAgain, transform: fAgain && fAgain.transform } };
+        check('the vertex panned but still inside, the same fragment again leaves the viewport where it was (kills: move on every select)',
+            insideFlow(vMoved, fMoved) && !!fAgain && fAgain.transform === fMoved.transform && !!vAgain && vAgain.selected, JSON.stringify(result.revealAgain));
+    }
+
+    // P-2026-10-25-1441, unchanged on a full-width canvas: the generator tab closed, a selection from elsewhere (the
+    // tree's SELECT_NODE event) of a vertex panned off the left edge puts it one third into the visible canvas, as the
+    // window-based centre did when React Flow spans the window.
+    await page.evaluate(String.raw`(async () => (await import('/src/components/abstract/DockManager.tsx')).default.closeTab(${JSON.stringify(leftTab)}))()`);
+    await wait(page, 1500);
+    const flowF = await page.evaluate(FLOW(again.m1)) as any;
+    note('the canvas, full width, the generator tab closed', flowF);
+    const vF0 = revealId ? await page.evaluate(VERTEX(again.m1, revealId)) as any : null;
+    if (flowF && vF0) await panBy(page, again.m1, -Math.ceil(vF0.box.x + vF0.box.w - flowF.box.x + 80), 0);
+    const vF1 = revealId ? await page.evaluate(VERTEX(again.m1, revealId)) as any : null;
+    const fF1 = await page.evaluate(FLOW(again.m1)) as any;
+    check('full width: the generator tab closed, the canvas takes the dock width again and the vertex starts off its left edge', !!fF1 && fF1.box.w >= 1200 && !!vF1 && !insideFlow(vF1, fF1), JSON.stringify({ flow: fF1, vertex: vF1 && vF1.box }));
+    if (vF1 && fF1) {
+        await page.evaluate(String.raw`(async () => {
+          const { JjodelEvents } = await import('/src/events/registry.ts');
+          window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, { detail: { nodeId: ${JSON.stringify(vF1.id)}, modelId: ${JSON.stringify(again.m1)} } }));
+        })()`);
+        await wait(page, 1200);
+        const vF2 = await page.evaluate(VERTEX(again.m1, revealId!)) as any;
+        const fF2 = await page.evaluate(FLOW(again.m1)) as any;
+        const cx = vF2 ? vF2.box.x + vF2.box.w / 2 : NaN, cy = vF2 ? vF2.box.y + vF2.box.h / 2 : NaN;
+        const flowThird = { x: fF2.box.x + (fF2.box.w - fF2.inset) / 3, y: fF2.box.y + fF2.box.h / 3 };
+        const windowThird = { x: fF2.box.x + (fF2.win.w - fF2.inset) / 3, y: fF2.box.y + fF2.win.h / 3 };
+        result.revealFull = { vertex: vF2, flow: fF2, centre: { x: cx, y: cy }, flowThird, windowThird };
+        note('full width: the centre against the flow third and the window-based third of 6ca598d5f', { centre: { x: cx, y: cy }, flowThird, windowThird, delta: { x: cx - windowThird.x, y: cy - windowThird.y } });
+        check('full width: a selection from elsewhere selects the vertex, inside the visible canvas, centred one third into it, same zoom',
+            !!vF2 && vF2.selected && insideFlow(vF2, fF2) && Math.abs(cx - flowThird.x) <= 2 && Math.abs(cy - flowThird.y) <= 2 && zoomOf(fF1.transform) === zoomOf(fF2.transform),
+            JSON.stringify(result.revealFull));
+        await crop(page, 'reveal_fullwidth.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
     }
 
     // P-2026-10-25-1355: a box with no generator panel keeps rc-dock's 1px divider (kills: every divider widened). The
