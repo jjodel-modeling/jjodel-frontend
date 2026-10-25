@@ -616,7 +616,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
     };
 
     return (
-        <div className="codegen-tpl" ref={rootRef} onKeyDown={onKeyDown} onPointerDownCapture={() => rememberGenerator(metamodelId, generatorId)}>
+        <div className="codegen-tpl" ref={rootRef} tabIndex={-1} onKeyDown={onKeyDown} onPointerDownCapture={() => rememberGenerator(metamodelId, generatorId)}>
             <aside className="codegen-tpl__side">
                 <div className="codegen-tpl__side-title">Generator</div>
                 <div className="codegen-tpl__generator">

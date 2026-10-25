@@ -33,6 +33,9 @@
  * first opened in the app bar does, moves beside it, and a new one goes beside it; with none shown, an open tab goes
  * back to the first panel and a new one joins it, both listed by the app bar. A tab already beside is only activated.
  *
+ * One tab bar (P-2026-10-25-1510): beside the canvas the app bar lists the tab too, next to the canvas tab, and the
+ * panel shows its content only (TemplateEditorTab.scss).
+ *
  * Reached only from the Code panel's lazy chunk and the left bar's dynamic import (scripts/gates/check-codegen-lazy.ts).
  */
 

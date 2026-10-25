@@ -28,7 +28,9 @@ import type { TemplateTarget } from './codeOrigins';
 
 /**
  * The dock group of a generator tab (P-2026-10-25-1045). Not `models`: the app bar hides the tab bar of every `models`
- * panel (navbar.scss) and lists only the tabs it resolves, so a generator tab there had no header at all.
+ * panel (navbar.scss) and lists only the tabs it resolves, so a generator tab there had no header at all. Beside the
+ * canvas the app bar lists it too and its panel's bar is hidden in turn, the group scoping that rule and the divider's
+ * (TemplateEditorTab.scss, P-2026-10-25-1510).
  */
 export const GENERATOR_GROUP = 'codegen';
 
