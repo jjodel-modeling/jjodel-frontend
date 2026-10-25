@@ -230,3 +230,16 @@ empties this file. The active log is not touched by this lane.
 **Prompt document name**: 2026-10-24 16:30
 
 **Ticket** (P-2026-10-24-1630): not done, optional item 5: collapsing the Properties rail, its translateX(100%) slides over the generator tab for 250 ms before unmount (cosmetic). Splitter fixed in this lane: the columns' paddings sat outside the flex share, a 50 px drag moved 45 px and the clamp stopped at 204 px; the probe's keyboard check focused the hidden second tab's splitter. Over five files (RC-11): the ten of 826a0f6bc above; PropertiesWithTreeView.tsx was outside 1515's DOVE, authorised by the chat. Unattended (RC-21): the prompt's fix subject is 85 characters, over the 72 of 6.2; 1515's own subject was used.
+
+## 2026-10-25 — feat(codegen): syntax colouring of the generated text (P-2026-10-24-1516)
+**Prompt**: Alfonso's visual check of 2026-10-24 asked for syntax highlighting of the generated code. Monaco's tokenizer on the shown file, language from the extension among registered ids; the linesOf pieces cut at token boundaries keeping their provenance (ui/codeTokens.ts colourLines); seven classes coloured from the Template Editor's theme; plain text and texts over the 1,000,000-character budget uncoloured.
+**Files touched**: feat 4cc4da0b6: frontend/src/codegen/ui/codeTokens.ts (new), ui/__tests__/codeTokens.test.ts (new), ui/GeneratorPane.tsx, ui/TemplateEditorTab.scss, frontend/scripts/probe/codegen-generator-tab.ts. docs: docs/log-inbox/codegen.md, the Status line of 1516
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 8/8. Probe on 3134 43 PASS 0 FAIL; crops preview_coloured.png, preview_hovered.png in ~/.jjodel-lanes/P-2026-10-24-1516/crops. Unattended (RC-21): colours inline from jjtlTheme, not SCSS rules (rule 28 forbids defining CSS variables, a fixed palette drifts); the pane's hover is one band, the per-piece outline boxed every token; probe on 3134, 3133 held by 1630's vite (left running). codeLines.ts unchanged.
+**Prompt document name**: 2026-10-24 15:16

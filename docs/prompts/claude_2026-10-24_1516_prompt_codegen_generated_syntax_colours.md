@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (codegen UI only)
 Depends: P-2026-10-24-1515
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane codegen · 4cc4da0b6 · bench 8/8 · crops in the lane folder
 Corregge: none
 Request: Alfonso, 2026-10-24 15:08, in the project chat, after his visual check of `cg-generators` (kept locally as `request.md`)
 
