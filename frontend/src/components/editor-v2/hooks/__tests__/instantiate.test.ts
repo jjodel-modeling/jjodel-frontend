@@ -3,6 +3,7 @@ import {
     BOX_METRICS, creationOptions, instanceBoxSize, instanceName, layoutTargets, modelObjectIds, objectRecord, ontoReadView,
     layoutLanded, readOntoBindings, seedLanded, synthesisPlan, syncSlotsPlan, viewCentre, type NodeLayoutWrite,
     type SlotSyncPlan, type SynthesisPlan,
+    instanceRows, materializePlan,
 } from '../instantiate';
 
 // A UML subset as D records: the metamodel of the notation file §2 (only what the record reaches) and the library
@@ -359,5 +360,120 @@ describe('the layout of a new node (tickets (a) and (c), P-2026-10-21-1016)', ()
         expect(layoutLanded(get, writes)).toBe(false);
         expect(layoutLanded(get, [{ vertex: 'V2', write: { target: 'scalars', patch: { x: 1 } } }])).toBe(false);
         expect(layoutLanded(get, [])).toBe(true);
+    });
+});
+
+describe('S3b: ghost rows and orphan rows (instanceRows, materializePlan)', () => {
+    // The library's dune : Book with one slot per feature of its closure, each with its value; a Magazine instance.
+    const library = () => {
+        const u = uml();
+        const { obj, val } = u;
+        const instance = (id: string, cls: string, features: string[]) => {
+            obj(id, 'InstanceSpecification');
+            val(id, 'r_InstanceSpecification_classifier', [cls]);
+            for (const f of features) {
+                const sid = `${id}_${f}`;
+                obj(sid, 'Slot', val(id, 'r_InstanceSpecification_slots', [sid]));
+                val(sid, 'r_Slot_definingFeature', [f]);
+                const vid = `${sid}_v`;
+                obj(vid, 'LiteralString', val(sid, 'r_Slot_values', [vid]));
+            }
+        };
+        instance('dune', 'Book', ['p_Book_isbn', 'p_Book_genre', 'p_Publication_title', 'p_Publication_year']);
+        instance('wired', 'Magazine', ['p_Magazine_issue', 'p_Publication_title', 'p_Publication_year']);
+        return u;
+    };
+    const addPages = (u: ReturnType<typeof uml>) => {
+        const id = 'p_Book_pages';
+        u.obj(id, 'Property', u.val('Book', 'r_Class_ownedAttributes', [id]));
+        u.db[id].name = 'pages';
+        u.val(id, 'r_TypedElement_type', ['Integer']);
+        u.val(id, 'a_Property_defaultValue', ['320']);
+    };
+    const asPlan = (p: SlotSyncPlan | { error: string } | null): SlotSyncPlan => {
+        if (p === null || 'error' in p) throw new Error(p === null ? 'no plan' : p.error);
+        return p;
+    };
+
+    it('1: the library with dune\'s four slots has no ghost and no orphan', () => {
+        const u = library();
+        expect(instanceRows(u.get, 'dune', null)).toEqual({ ghosts: [], orphans: {}, hidden: [] });
+        expect(instanceRows(u.get, 'wired', null)).toEqual({ ghosts: [], orphans: {}, hidden: [] });
+    });
+
+    it('2: pages added to Book gives dune one ghost named pages, and the Magazine instance none', () => {
+        const u = library();
+        addPages(u);
+        expect(instanceRows(u.get, 'dune', null)!.ghosts).toEqual([{ feature: 'p_Book_pages', name: 'pages', text: null }]);
+        expect(instanceRows(u.get, 'wired', null)!.ghosts).toEqual([]);
+    });
+
+    it('3: the Property isbn deleted leaves one orphan, «Its feature is gone», and no ghost isbn', () => {
+        const u = library();
+        delete u.db.p_Book_isbn;
+        u.db['Book.r_Class_ownedAttributes'].values = u.db['Book.r_Class_ownedAttributes'].values.filter((v: string) => v !== 'p_Book_isbn');
+        u.db['dune_p_Book_isbn.r_Slot_definingFeature'].values = [];
+        expect(instanceRows(u.get, 'dune', null)).toEqual({ ghosts: [], orphans: { dune_p_Book_isbn: 'Its feature is gone' }, hidden: [] });
+    });
+
+    it('4: a slot of Magazine\'s issue on dune is an orphan, «issue is not a feature of Book»', () => {
+        const u = library();
+        u.obj('dune_issue', 'Slot', u.val('dune', 'r_InstanceSpecification_slots', ['dune_issue']));
+        u.val('dune_issue', 'r_Slot_definingFeature', ['p_Magazine_issue']);
+        expect(instanceRows(u.get, 'dune', null)).toEqual({ ghosts: [], orphans: { dune_issue: 'issue is not a feature of Book' }, hidden: [] });
+    });
+
+    it('5: a cleared pointer with the Property kept gives a ghost isbn and an orphan slot both', () => {
+        const u = library();
+        u.db['dune_p_Book_isbn.r_Slot_definingFeature'].values = [];
+        expect(instanceRows(u.get, 'dune', null)).toEqual({
+            ghosts: [{ feature: 'p_Book_isbn', name: 'isbn', text: null }],
+            orphans: { dune_p_Book_isbn: 'Its feature is gone' },
+            hidden: [],
+        });
+    });
+
+    it('6: a model with no bindings, and a link instance, give null', () => {
+        const u = library();
+        u.obj('borrowing', 'InstanceSpecification');
+        u.val('borrowing', 'r_InstanceSpecification_classifier', ['Holdings']);
+        expect(instanceRows(u.get, 'borrowing', null)).toBeNull();
+        delete u.db.MM._state;
+        expect(instanceRows(u.get, 'dune', null)).toBeNull();
+    });
+
+    it('7: materializePlan writes the typed text, not the default; empty text, a covered feature, a literal, a non-parsing text', () => {
+        const u = library();
+        addPages(u);
+        expect(asPlan(materializePlan(u.get, u.object as any, 'dune', 'p_Book_pages', '300')).slots).toEqual([
+            { feature: 'p_Book_pages', seed: { definingFeature: 'p_Book_pages' }, value: { metaclass: 'LiteralInteger', seed: { value: 300 } } },
+        ]);
+        expect(materializePlan(u.get, u.object as any, 'dune', 'p_Book_pages', '  ')).toBeNull();
+        expect(materializePlan(u.get, u.object as any, 'dune', 'p_Book_isbn', '42')).toEqual({ error: 'isbn has a slot already' });
+        // Decision 3: a text that does not parse for the feature's type is a String value.
+        expect(asPlan(materializePlan(u.get, u.object as any, 'dune', 'p_Book_pages', 'abc')).slots[0].value)
+            .toEqual({ metaclass: 'LiteralString', seed: { value: 'abc' } });
+        u.db['dune.r_InstanceSpecification_slots'].values = u.db['dune.r_InstanceSpecification_slots'].values
+            .filter((v: string) => v !== 'dune_p_Book_genre');
+        expect(asPlan(materializePlan(u.get, u.object as any, 'dune', 'p_Book_genre', 'fiction')).slots[0].value)
+            .toEqual({ metaclass: 'InstanceValue', seed: { instance: 'fiction' } });
+    });
+
+    it('8: an in-flight slot covers its feature: no ghost, not an orphan, hidden until its feature lands', () => {
+        const u = library();
+        addPages(u);
+        // Listed, its defining feature not landed yet (the seed comes 600 ms after the create).
+        u.obj('dune_new', 'Slot', u.val('dune', 'r_InstanceSpecification_slots', ['dune_new']));
+        u.val('dune_new', 'r_Slot_definingFeature', []);
+        const flight = { features: ['p_Book_pages'], slots: { dune_new: 'p_Book_pages' }, materializing: null };
+        expect(instanceRows(u.get, 'dune', flight)).toEqual({ ghosts: [], orphans: {}, hidden: ['dune_new'] });
+        // Landed: drawn as a real row.
+        u.db['dune_new.r_Slot_definingFeature'].values = ['p_Book_pages'];
+        expect(instanceRows(u.get, 'dune', flight)).toEqual({ ghosts: [], orphans: {}, hidden: [] });
+        // A materialization keeps its ghost, with the typed text, and its slot hidden until the run ends.
+        const writing = { ...flight, materializing: { feature: 'p_Book_pages', text: '300' } };
+        expect(instanceRows(u.get, 'dune', writing)).toEqual({
+            ghosts: [{ feature: 'p_Book_pages', name: 'pages', text: '300' }], orphans: {}, hidden: ['dune_new'],
+        });
     });
 });

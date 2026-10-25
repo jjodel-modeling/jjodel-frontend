@@ -245,6 +245,13 @@ function plannedValue(get: DGet, view: OntoReadView, binding: OntoBinding, model
     if (binding.defaultValue === undefined || binding.featureType === undefined) return null;
     const raw = view.attributeValue(feature, binding.defaultValue);
     if (raw === undefined || raw === null || String(raw) === '') return null;
+    return valueOfText(get, view, binding, modelId, feature, String(raw));
+}
+
+/** The value object that holds the text `raw` for `feature`, typed by the feature's type: its default, or the text a
+ *  ghost row is given (S3b). `null` when the type gives no value kind or the text does not parse for it. */
+function valueOfText(get: DGet, view: OntoReadView, binding: OntoBinding, modelId: string, feature: string, raw: string): PlannedValue | null {
+    if (binding.featureType === undefined) return null;
     const type = view.referenceTargets(feature, binding.featureType)[0];
     if (type === undefined) return null;
     const kind = valueKindFor(get, view, binding, type);
@@ -254,10 +261,10 @@ function plannedValue(get: DGet, view: OntoReadView, binding: OntoBinding, model
     if (!isId(metaclass) || !isId(field)) return null;
     if (kind.when === 'instance') {
         const target = modelObjectIds(get, modelId).find(id =>
-            view.referenceTargets(id, binding.typeReference)[0] === type && get(id)?.name === String(raw));
+            view.referenceTargets(id, binding.typeReference)[0] === type && get(id)?.name === raw);
         return target !== undefined ? { metaclass, seed: { [field]: target } } : null;
     }
-    const value = typedDefault(get, kind.field, String(raw));
+    const value = typedDefault(get, kind.field, raw);
     return value !== undefined ? { metaclass, seed: { [field]: value } } : null;
 }
 
@@ -342,6 +349,120 @@ export function syncSlotsPlan(get: DGet, binding: OntoBinding, instanceId: strin
     return {
         modelId, instance: instanceId, slotKey: roles.slotKey, slotMetaclass: roles.slotMetaclass, valueKey: roles.valueKey,
         slots: missing.map(feature => plannedSlot(get, view, binding, modelId, roles, feature)),
+    };
+}
+
+// ── Ghost rows and orphan rows (S3b, R-OI-3) ────────────────────────────────────────────────────────────────────────
+
+/** A ghost row: a feature of the closure with no slot, drawn by name; no store object stands behind it. */
+export interface GhostRow {
+    feature: string;
+    name: string;
+    /** The text a materialization in flight is writing into it, `null` otherwise. */
+    text: string | null;
+}
+
+/** What the binding adds to, and marks on, the rows of an instance's node. */
+export interface InstanceRows {
+    /** The missing features, in closure order. */
+    ghosts: GhostRow[];
+    /** Every orphan slot by id, with why it is one: the S3a problem's own description. */
+    orphans: Record<string, string>;
+    /** The slots of a run in flight not to draw yet (see `InstanceFlight`). */
+    hidden: string[];
+}
+
+/** A single-entry memo of the last bag decoded: the read runs on every node at every dispatch (S3b report, Q2 «Cost»). */
+let bindingsMemo: { bag: unknown; bindings: OntoBinding[] } | null = null;
+
+function memoBindings(get: DGet, modelId: string): OntoBinding[] {
+    const metamodel = get(modelId)?.instanceof;
+    const bag = isId(metamodel) ? get(metamodel)?._state?.[ONTO_BINDINGS_KEY] : undefined;
+    if (bag === undefined || bag === null) return [];
+    if (bindingsMemo !== null && bindingsMemo.bag === bag) return bindingsMemo.bindings;
+    const decoded = decodeOntoBindings(bag);
+    bindingsMemo = { bag, bindings: decoded.ok ? decoded.value.bindings : [] };
+    return bindingsMemo.bindings;
+}
+
+/**
+ * The ghost rows and the orphan marks of `instanceId` under its `object` record (S3a D4), `null` when the model has no
+ * bindings or the instance is not under that record (a link, S4). While a run is in flight on the instance (`flight`),
+ * the features it makes are no ghosts, its slots are no orphans and stay hidden until their defining feature has landed,
+ * and the ghost a materialization writes keeps the typed text until the run ends. Pure over `get` and `flight`.
+ */
+export function instanceRows(get: DGet, instanceId: string, flight: InstanceFlight | null = instanceFlight(instanceId)): InstanceRows | null {
+    const modelId = modelOf(get, instanceId);
+    if (modelId === undefined) return null;
+    const bindings = memoBindings(get, modelId);
+    if (bindings.length === 0) return null;
+    const view = ontoReadView(get);
+    const record = recordFor(view, bindings, instanceId);
+    if (record?.name !== OBJECT_RECORD || record.slotContainer === undefined || record.definingFeature === undefined) return null;
+    const classifier = view.referenceTargets(instanceId, record.typeReference)[0];
+    if (classifier === undefined) return null;
+    const diff = slotDiff(view, record, instanceId);
+    const name = (id: string) => String(get(id)?.name ?? id);
+    const running = flight?.features ?? [];
+    const runSlots = flight?.slots ?? {};
+    const writing = flight?.materializing ?? null;
+
+    // The ghost being written stays where it was once its slot has landed: the closure gives its place.
+    const missing = writing && !diff.missing.includes(writing.feature)
+        ? featureClosure(view, record, classifier).features.filter(f => f === writing.feature || diff.missing.includes(f))
+        : diff.missing;
+    const ghosts = missing
+        .filter(f => f === writing?.feature || !running.includes(f))
+        .map(f => ({ feature: f, name: name(f), text: f === writing?.feature ? writing.text : null }));
+    const orphans: Record<string, string> = {};
+    for (const { slot, feature } of diff.orphans) {
+        if (slot in runSlots) continue;
+        orphans[slot] = feature === null ? 'Its feature is gone' : `${name(feature)} is not a feature of ${name(classifier)}`;
+    }
+    const hidden = Object.keys(runSlots).filter(slot => runSlots[slot] === writing?.feature
+        || view.referenceTargets(slot, record.definingFeature!)[0] !== runSlots[slot]);
+    return { ghosts, orphans, hidden };
+}
+
+/**
+ * The value object for the text typed into a ghost row: typed by the feature's type, else a String value (S3b, decision
+ * 3), so the write is not refused (R-VAL-4) and S3a's value-type problem reports it. `null` when the record has no
+ * String kind either.
+ */
+function valueOfTypedText(get: DGet, view: OntoReadView, binding: OntoBinding, modelId: string, feature: string, text: string): PlannedValue | null {
+    const typed = valueOfText(get, view, binding, modelId, feature, text);
+    // `typedDefault` reads any text as a Boolean: a typed text is one only when it says true or false.
+    const parses = typed !== null
+        && Object.values(typed.seed).every(v => typeof v !== 'boolean' || /^(true|false)$/i.test(text));
+    if (parses) return typed;
+    const kind = (binding.valueKinds ?? []).find(k => k.when === 'primitive:String');
+    const metaclass = kind ? get(kind.create)?.name : undefined;
+    const field = kind ? get(kind.field)?.name : undefined;
+    return isId(metaclass) && isId(field) ? { metaclass, seed: { [field]: text } } : null;
+}
+
+/**
+ * What `materializeSlot` will create: one slot of `featureId` on `instanceId`, holding the value `text` asks for. `null`
+ * when the text is empty: nothing to write, as an edit that changed nothing. An error when the feature is no longer
+ * missing (someone made its slot meanwhile: the row redraws real) or no value kind holds the text. Pure.
+ */
+export function materializePlan(
+    get: DGet, binding: OntoBinding, instanceId: string, featureId: string, text: string,
+): SlotSyncPlan | { error: string } | null {
+    const raw = text.trim();
+    if (raw === '') return null;
+    const view = ontoReadView(get);
+    const modelId = modelOf(get, instanceId);
+    if (modelId === undefined) return { error: 'the instance is in no model' };
+    const roles = slotRoles(get, binding);
+    if (!roles) return { error: 'the slot roles do not resolve' };
+    const featureName = String(get(featureId)?.name ?? featureId);
+    if (!slotDiff(view, binding, instanceId).missing.includes(featureId)) return { error: `${featureName} has a slot already` };
+    const value = roles.valueKey !== null ? valueOfTypedText(get, view, binding, modelId, featureId, raw) : null;
+    if (!value) return { error: `no value of ${featureName} holds «${raw}»` };
+    return {
+        modelId, instance: instanceId, slotKey: roles.slotKey, slotMetaclass: roles.slotMetaclass, valueKey: roles.valueKey,
+        slots: [{ feature: featureId, seed: { [roles.definingKey]: featureId }, value }],
     };
 }
 
@@ -567,10 +688,50 @@ async function layoutInstanceNode(
  */
 let inFlight = 0;
 
-/** True while an `instantiate` or a `syncSlots` is running. */
+/** True while an `instantiate`, a `syncSlots` or a `materializeSlot` is running. */
 export function instantiationInFlight(): boolean {
     return inFlight > 0;
 }
+
+/**
+ * A run in flight on one instance, for its node (S3b, decision D5): a run lists each slot before its defining feature
+ * lands (the seed, 600 ms after the create), so a read in between would draw the slot as an orphan and its feature as a
+ * ghost. `instanceRows` reads this instead.
+ */
+export interface InstanceFlight {
+    /** The features the run makes a slot for. */
+    features: string[];
+    /** The slots the run has made so far, each with the feature it is for. */
+    slots: Record<string, string>;
+    /** The ghost a materialization is writing, with the typed text. */
+    materializing: { feature: string; text: string } | null;
+}
+
+const flights = new Map<string, InstanceFlight>();
+const flightListeners = new Set<() => void>();
+
+/** The run in flight on `instanceId`, `null` when none is; a new object at every change, for `useSyncExternalStore`. */
+export function instanceFlight(instanceId: string): InstanceFlight | null {
+    return flights.get(instanceId) ?? null;
+}
+
+/** Called at every change of a flight: the end of a run is not a store change, so a node subscribes here too. */
+export function subscribeInstanceFlights(listener: () => void): () => void {
+    flightListeners.add(listener);
+    return () => { flightListeners.delete(listener); };
+}
+
+function setFlight(instance: string, flight: InstanceFlight | null): void {
+    if (flight) flights.set(instance, flight);
+    else if (!flights.delete(instance)) return;
+    for (const listener of Array.from(flightListeners)) listener();
+}
+
+/** The created-slot callback of `createSlots` for a run on `instance`. */
+const flightSlot = (instance: string) => (slot: string, feature: string): void => {
+    const flight = flights.get(instance);
+    if (flight) setFlight(instance, { ...flight, slots: { ...flight.slots, [slot]: feature } });
+};
 
 /** The modules of the write half, loaded on first use. */
 async function writeModules() {
@@ -605,6 +766,7 @@ export async function instantiate(classifierId: string, record: OntoBinding, pla
         // After the last write has landed (`seedLanded`, `layoutLanded`): the store sends actions on its update timer,
         // so one macrotask (P-2026-10-21-1041) was not enough and the node layout pushed an entry of its own.
         history.endUndoGroup(group);
+        if (result.instance) setFlight(result.instance, null);
         inFlight--;
     }
     result.ok = result.problems.length === 0;
@@ -629,21 +791,62 @@ export async function syncSlots(instanceId: string, record: OntoBinding): Promis
         result.ok = true;
         return result;
     }
+    await addSlots({ modules, createInstance, history, get }, plan, record, result, null);
+    return result;
+}
+
+/**
+ * Materialize a ghost row (S3b, R-OI-3): one slot of `featureId` on `instanceId` holding the value `text` asks for
+ * (`materializePlan`), appended to its slot list, the node grown to hold it (D6). One undo entry, by the same group and
+ * waits as «Sync slots». Empty text writes nothing and is a success.
+ */
+export async function materializeSlot(instanceId: string, featureId: string, text: string): Promise<InstantiateResult> {
+    const w = await writeModules();
+    const result: InstantiateResult = { ok: false, instance: instanceId, slots: [], values: [], problems: [] };
+    const modelId = modelOf(w.get, instanceId);
+    const record = modelId !== undefined ? instanceObjectRecord(w.get, modelId, instanceId) : null;
+    if (!record) {
+        result.problems.push('the instance is under no object record');
+        return result;
+    }
+    const plan = materializePlan(w.get, record, instanceId, featureId, text);
+    if (plan === null) {
+        result.ok = true;
+        return result;
+    }
+    if ('error' in plan) {
+        result.problems.push(plan.error);
+        return result;
+    }
+    await addSlots(w, plan, record, result, { feature: featureId, text: text.trim() });
+    return result;
+}
+
+/**
+ * The write of «Sync slots» and of a materialization: the planned slots and values in one undo group, the wait for their
+ * seeds, then the node grown to hold every slot (grow-only, S3a D6); the instance in flight throughout.
+ */
+async function addSlots(
+    w: Awaited<ReturnType<typeof writeModules>>, plan: SlotSyncPlan, record: OntoBinding, result: InstantiateResult,
+    materializing: InstanceFlight['materializing'],
+): Promise<void> {
+    const instanceId = plan.instance;
     inFlight++;
-    const group = history.beginUndoGroup();
+    setFlight(instanceId, { features: plan.slots.map(s => s.feature), slots: {}, materializing });
+    const group = w.history.beginUndoGroup();
     try {
         const seeded: Seeded = [];
-        await createSlots(createInstance, get, plan, plan.slots, record, result, seeded);
-        await waitSeeded(get, seeded, result);
-        const total = (featureValue(get, instanceId, record.slotContainer!)?.values ?? []).filter(isId).length;
-        const laid = await layoutInstanceNode(modules, get, instanceId, total, undefined, true);
+        await createSlots(w.createInstance, w.get, plan, plan.slots, record, result, seeded, flightSlot(instanceId));
+        await waitSeeded(w.get, seeded, result);
+        const total = (featureValue(w.get, instanceId, record.slotContainer!)?.values ?? []).filter(isId).length;
+        const laid = await layoutInstanceNode(w.modules, w.get, instanceId, total, undefined, true);
         if (laid) result.problems.push(laid);
     } finally {
-        history.endUndoGroup(group);
+        w.history.endUndoGroup(group);
+        setFlight(instanceId, null);
         inFlight--;
     }
     result.ok = result.problems.length === 0;
-    return result;
 }
 
 /** Every create with the seed `addObject` writes after it, awaited before the group closes. */
@@ -667,6 +870,7 @@ async function createSlots(
     createInstance: typeof import('./createAdapter').createInstance, get: DGet,
     plan: { modelId: string; instance: string; slotKey: string; slotMetaclass: string; valueKey: string | null },
     planned: readonly PlannedSlot[], record: OntoBinding, result: InstantiateResult, seeded: Seeded,
+    onSlot?: (slot: string, feature: string) => void,
 ): Promise<void> {
     const instance = plan.instance;
     for (const slotPlan of planned) {
@@ -676,6 +880,8 @@ async function createSlots(
             continue;
         }
         const slotId = slot.id;
+        // Before it is listed: the node never draws it as an orphan (S3b, the in-flight record).
+        onSlot?.(slotId, slotPlan.feature);
         result.slots.push(slotId);
         seeded.push([slotId, slotPlan.seed]);
         // In the owner's list before the next one, so the list keeps the closure order.
@@ -714,6 +920,8 @@ async function synthesize(
     }
     const instance = made.id;
     result.instance = instance;
+    // In flight before its node can draw: a new instance shows no ghost row at any time.
+    setFlight(instance, { features: plan.slots.map(s => s.feature), slots: {}, materializing: null });
     seeded.push([instance, plan.instanceSeed]);
     if (plan.slotKey === null || record.slotContainer === undefined) {
         await settle(0);
@@ -727,6 +935,6 @@ async function synthesize(
     }
 
     const target = { modelId: plan.modelId, instance, slotKey: plan.slotKey, slotMetaclass: plan.slotMetaclass!, valueKey: plan.valueKey };
-    await createSlots(createInstance, get, target, plan.slots, record, result, seeded);
+    await createSlots(createInstance, get, target, plan.slots, record, result, seeded, flightSlot(instance));
     await settle(result.slots.length);
 }
