@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (codegen panel chrome and the app bar's tab list; no critical-zone file)
 Depends: P-2026-10-25-1441
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane codegen · 214e5484e · bench 5/5 · crops in the lane folder
 Corregge: P-2026-10-25-1045, P-2026-10-25-1310
 Request: Alfonso, 2026-10-25 15:05-15:06, in the project chat: «il meccanismo di resize non deve comprendere il tab»; confirmed «Esatto» on the chat's reading: the tab belongs in the top bar with «Turnstile» and «demoESM», like every other tab, and beside the canvas only the generator's content remains, resizable, with no second tab bar
 
