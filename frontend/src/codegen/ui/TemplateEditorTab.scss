@@ -17,13 +17,9 @@
 
 // Beside the canvas the app bar lists the generator tab (Navbar.tsx `syncTabs`, P-2026-10-25-1510): its panel shows
 // the content only, no rc-dock tab bar and no maximize control, so the divider resizes content against the canvas.
-// The same scope as the first panel's rule (navbar.scss, `dock-style-models`).
-.not-strip .dock-panel.dock-style-codegen > .dock-bar {
+// The same scope as the first panel's rule (navbar.scss, `dock-style-models`); rc-dock nests the bar in `.dock`.
+.not-strip .dock-panel.dock-style-codegen .dock-bar {
     display: none;
-}
-
-.not-strip .dock-panel.dock-style-codegen > .dock-content-holder {
-    height: 100%;
 }
 
 // The boundary between the canvas and a generator panel beside it (P-2026-10-25-1355): rc-dock's divider, 1px wide in
