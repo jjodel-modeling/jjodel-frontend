@@ -10,6 +10,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import MegamodelContextMenu, { type MenuItem } from '../megamodel/MegamodelContextMenu';
 import { projectRefactoringsFor, runScriptOnModel } from './scriptFiles';
+import { refactoringChoice } from './projectScripts';
 
 export interface RunRefactoringMenuProps {
     modelId: string;
@@ -37,14 +38,10 @@ const RunRefactoringMenu: React.FC<RunRefactoringMenuProps> = ({ modelId, x, y, 
             title: refactorings.length ? undefined : NO_REFACTORING_TOOLTIP,
             action: () => { toList.current = true; setStage('list'); },
         }]
-        : refactorings.map(r => {
-            const empty = !(r.text || '').trim();
-            return {
-                label: r.name, icon: 'bi-arrow-repeat', disabled: empty,
-                title: empty ? 'This refactoring is empty' : undefined,
-                action: () => { void runScriptOnModel(r.text, modelId); },
-            };
-        });
+        : refactorings.map(r => ({
+            ...refactoringChoice(r), icon: 'bi-arrow-repeat',
+            action: () => { void runScriptOnModel(r.text, modelId); },
+        }));
 
     return <MegamodelContextMenu key={stage} x={x} y={y} items={items} onClose={stage === 'root' ? closeRoot : onClose} />;
 };
