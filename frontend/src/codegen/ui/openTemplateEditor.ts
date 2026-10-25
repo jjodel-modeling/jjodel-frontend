@@ -24,6 +24,10 @@
  * metamodel, and with none docked the tab goes right of the project page (generatorTabs.ts `besideTarget`), never
  * stacked over it in the first panel, whose tab bar the app bar replaces.
  *
+ * In the app bar (P-2026-10-25-1200): with no canvas docked the tab joins the first panel after all, listed by the app
+ * bar beside the project and model tabs (Navbar.tsx `syncTabs`), full width when selected. The app bar imports no
+ * generator module, so the tab carries its title and its close (`AppBarTabHooks`), kept by rc-dock as it moves.
+ *
  * Reached only from the Code panel's lazy chunk and the left bar's dynamic import (scripts/gates/check-codegen-lazy.ts).
  */
 
@@ -33,11 +37,13 @@ import DockManager from '../../components/abstract/DockManager';
 import { isConsumerMode } from '../../components/environment/consumerMode';
 import { store } from '../../joiner';
 import TemplateEditorTab, {
-    TemplateTabTitle, chooseModelInTemplateTab, collapseRailOnOpen, selectInTemplateTab, templateTabId,
+    TemplateTabTitle, chooseModelInTemplateTab, collapseRailOnOpen, requestCloseTemplateTab, selectInTemplateTab, templateTabId,
 } from './TemplateEditorTab';
-import { GENERATOR_GROUP, besideTarget, rememberGenerator } from './generatorTabs';
+import { GENERATOR_GROUP, besideTarget, generatorTabTitle, rememberGenerator } from './generatorTabs';
+import type { AppBarTabHooks } from './generatorTabs';
 import { dockBeside, findPanel, generatorTabsOf } from './canvasSelection';
-import { DEFAULT_GENERATOR_ID } from '../engine/generatorCodec';
+import { DEFAULT_GENERATOR_ID, GEN_GENERATORS_KEY, decodeGenerators } from '../engine/generatorCodec';
+import { GEN_TEMPLATES_KEY } from '../engine/templateCodec';
 
 /** The left bar's «+ New generator» reaches the tab's creation through this module's dynamic import (R-GEN-42). */
 export { createGenerator } from './TemplateEditorTab';
@@ -67,7 +73,18 @@ export function openTemplateEditor(
         return true;
     }
 
-    const tab: TabData = {
+    const appBar: AppBarTabHooks = {
+        appBarTitle: () => {
+            const mm = (store.getState() as any)?.idlookup?.[metamodelId];
+            if (!mm) return null;
+            const key = (v: unknown) => (typeof v === 'string' ? v : v === undefined || v === null ? v : String(v));
+            const generators = decodeGenerators(key(mm._state?.[GEN_TEMPLATES_KEY]), key(mm._state?.[GEN_GENERATORS_KEY])).generators;
+            return generatorTabTitle(typeof mm.name === 'string' && mm.name ? mm.name : metamodelName, generators, generatorId);
+        },
+        requestClose: () => requestCloseTemplateTab(id),
+    };
+    const tab: TabData & AppBarTabHooks = {
+        ...appBar,
         id,
         group: GENERATOR_GROUP,
         closable: false,

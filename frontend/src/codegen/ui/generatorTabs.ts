@@ -14,7 +14,8 @@
  * - The Properties/Tree rail collapses when an opened generator tab sits beside the canvas, and comes back as it was
  *   when none does; a reopen by the user is kept (P-2026-10-25-0925).
  * - A generator tab is in its own dock group, so its tab bar shows; a new one goes beside a canvas of the metamodel, else
- *   beside the project page, never over it (P-2026-10-25-1045).
+ *   beside the canvas the first panel shows (P-2026-10-25-1045); with no canvas docked it joins the first panel, listed
+ *   in the app bar beside the project and model tabs (P-2026-10-25-1200).
  * - A hovered fragment longer than three lines highlights the hovered line only, its extent a gutter bar (P-2026-10-25-1045).
  *
  * Pure but for the session memory: no React, no store.
@@ -33,8 +34,8 @@ export const GENERATOR_GROUP = 'codegen';
 
 /**
  * The docked tab a new generator tab of `metamodelId` goes beside: the model asked for, else the metamodel, else a
- * docked model conforming to it, else the tab the first panel shows (the project page), so the tab never covers it.
- * `null` when nothing is docked (P-2026-10-25-1045).
+ * docked model conforming to it, else the canvas the first panel shows (P-2026-10-25-1045). `null` when no canvas is
+ * docked: the tab then joins the first panel and the app bar lists it, as it lists the model tabs (P-2026-10-25-1200).
  */
 export function besideTarget(
     metamodelId: string,
@@ -46,7 +47,24 @@ export function besideTarget(
     if (model !== undefined && docked.includes(model)) return model;
     if (docked.includes(metamodelId)) return metamodelId;
     const conforming = docked.find(id => lookup[id]?.className === 'DModel' && lookup[id].instanceof === metamodelId);
-    return conforming ?? shownFirst ?? null;
+    if (conforming !== undefined) return conforming;
+    return shownFirst !== undefined && lookup[shownFirst]?.className === 'DModel' ? shownFirst : null;
+}
+
+/**
+ * What a generator tab carries for the app bar (P-2026-10-25-1200), which is eager and imports no generator module:
+ * its title, `<generator> · <metamodel>`, `null` once the metamodel or the generator is gone, and its close, which
+ * asks before dropping unsaved drafts as the title's close does.
+ */
+export interface AppBarTabHooks {
+    readonly appBarTitle: () => string | null;
+    readonly requestClose: () => void;
+}
+
+/** The app-bar title of a generator tab: `<generator> · <metamodel>`, `null` when either is gone. */
+export function generatorTabTitle(metamodelName: string | null, generators: readonly { readonly id: string; readonly name: string }[], generatorId: string): string | null {
+    const generator = generators.find(g => g.id === generatorId);
+    return metamodelName === null || !generator ? null : `${generator.name} · ${metamodelName}`;
 }
 
 /** The dock tab id of a generator of a metamodel. */

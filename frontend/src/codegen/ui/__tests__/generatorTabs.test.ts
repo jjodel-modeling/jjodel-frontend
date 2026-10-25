@@ -8,7 +8,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
     armRailCollapse, checkOffered, forgetGenerators, forgetRail, generatorBeside, generatorTabId, launchGenerator, noTemplates, paneGeneration,
     railShown, railStep, rememberGenerator, runOffered, saveGeneratorTemplates, templateToSelect,
-    besideTarget, fragmentExtents, hoverScope,
+    besideTarget, fragmentExtents, generatorTabTitle, hoverScope,
 } from '../generatorTabs';
 import { generateGenerator } from '../../engine/generateFiles';
 import type { GeneratorRecord } from '../../engine/generatorCodec';
@@ -243,11 +243,30 @@ describe('hoverScope (P-2026-10-25-1045)', () => {
 describe('besideTarget (P-2026-10-25-1045)', () => {
     const lookup = { M2: { className: 'DModel', instanceof: 'MM' }, X: { className: 'DModel', instanceof: 'OTHER' } };
 
-    it('the model asked for, then the metamodel, then a conforming model, then the project page (kills: order swapped)', () => {
+    it('the model asked for, then the metamodel, then a conforming model, then the canvas shown first (kills: order swapped)', () => {
         expect(besideTarget('MM', 'M1', ['project_summary', 'MM', 'M1'], 'project_summary', lookup)).toBe('M1');
         expect(besideTarget('MM', 'M1', ['project_summary', 'MM'], 'project_summary', lookup)).toBe('MM');
         expect(besideTarget('MM', undefined, ['project_summary', 'X', 'M2'], 'project_summary', lookup)).toBe('M2');
-        expect(besideTarget('MM', undefined, ['project_summary', 'X'], 'project_summary', lookup)).toBe('project_summary');
+        expect(besideTarget('MM', undefined, ['project_summary', 'X'], 'X', lookup)).toBe('X');
         expect(besideTarget('MM', undefined, [], undefined, lookup)).toBeNull();
+    });
+
+    it('no canvas shown: null, the tab joins the first panel and the app bar, not a split beside the project page (kills: project page kept) (P-2026-10-25-1200)', () => {
+        expect(besideTarget('MM', undefined, ['project_summary'], 'project_summary', lookup)).toBeNull();
+        expect(besideTarget('MM', 'M1', ['project_summary', 'X'], 'project_summary', lookup)).toBeNull();
+    });
+});
+
+describe('generatorTabTitle (P-2026-10-25-1200)', () => {
+    const generators = [{ id: 'default', name: 'default' }, { id: 'g2', name: 'java' }];
+
+    it('<generator> · <metamodel> of the tab\'s generator (kills: the default\'s name for every tab)', () => {
+        expect(generatorTabTitle('Turnstile', generators, 'g2')).toBe('java · Turnstile');
+        expect(generatorTabTitle('Turnstile', generators, 'default')).toBe('default · Turnstile');
+    });
+
+    it('null once the generator or the metamodel is gone, a ghost the app bar drops (kills: a placeholder title)', () => {
+        expect(generatorTabTitle('Turnstile', generators, 'gone')).toBeNull();
+        expect(generatorTabTitle(null, generators, 'g2')).toBeNull();
     });
 });

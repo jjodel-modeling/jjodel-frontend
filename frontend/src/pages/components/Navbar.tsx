@@ -1718,7 +1718,7 @@ function NavbarComponent(props: AllProps) {
                     const id = tab.id || '';
                     let title = '';
                     let type = 'project';
-                    const closable = tab.closable !== false;
+                    let closable = tab.closable !== false;
 
                     // Determine type and title from tab ID
                     if (id.startsWith('DockComponent_rightbar_')) {
@@ -1758,6 +1758,17 @@ function NavbarComponent(props: AllProps) {
                         // it rather than print a placeholder (the model branch's rule).
                         if (!rawModel) return null;
                         title = `${rawModel.name || 'Unnamed'} Instances`;
+                    } else if (id.startsWith('codegen_tpl_')) {
+                        // A generator tab (codegen, P-2026-10-25-1200), docked here when no canvas
+                        // was. This file is eager and imports no generator module: the tab carries
+                        // its title and its close (openTemplateEditor.ts). rc-dock's own close is
+                        // off on it, its close asks before dropping drafts, so the strip offers it.
+                        // A tab with no title (metamodel or generator gone) is a ghost.
+                        type = 'generator';
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return null;
+                        title = named;
+                        closable = true;
                     } else if (id.startsWith('vp_')) {
                         type = 'viewpoint';
                         // Extract title from React element or look up viewpoint
@@ -1851,7 +1862,10 @@ function NavbarComponent(props: AllProps) {
 
     const handleTabClose = useCallback((tabId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        DockManager.closeTab(tabId);
+        // A tab that asks before closing (a generator tab, P-2026-10-25-1200) closes through itself.
+        const docked: any = DockManager.dock?.find(tabId);
+        if (typeof docked?.requestClose === 'function') docked.requestClose();
+        else DockManager.closeTab(tabId);
     }, []);
 
     // Tab type badge letter or icon
@@ -1866,6 +1880,7 @@ function NavbarComponent(props: AllProps) {
             // that opens it from the project rail.
             case 'manager': return { letter: '', icon: 'bi-table', className: 'appbar-tab__badge--model' };
             case 'viewpoint': return { letter: 'V', className: 'appbar-tab__badge--viewpoint' };
+            case 'generator': return { letter: '', icon: 'bi-code-slash', className: 'appbar-tab__badge--generator' };
             default: return { letter: '', className: '' };
         }
     };
@@ -1878,6 +1893,7 @@ function NavbarComponent(props: AllProps) {
             case 'transformation': return 'JjTL Transformation';
             case 'viewpoint': return 'Viewpoint';
             case 'manager': return 'Instance manager';
+            case 'generator': return 'Generator';
             default: return '';
         }
     };

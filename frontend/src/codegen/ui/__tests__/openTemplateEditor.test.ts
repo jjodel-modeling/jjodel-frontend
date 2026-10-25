@@ -8,7 +8,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 
 const fake = vi.hoisted(() => ({ dock: null as any }));
-const rail = vi.hoisted(() => ({ collapse: vi.fn() }));
+const rail = vi.hoisted(() => ({ collapse: vi.fn(), close: vi.fn() }));
 const lookup = vi.hoisted(() => ({ idlookup: {} as Record<string, any> }));
 
 vi.mock('../../../components/abstract/DockManager', () => ({ default: fake }));
@@ -23,6 +23,7 @@ vi.mock('../TemplateEditorTab', async () => {
         selectInTemplateTab: () => true,
         templateTabId: generatorTabId,
         collapseRailOnOpen: rail.collapse,
+        requestCloseTemplateTab: rail.close,
         createGenerator: () => null,
     };
 });
@@ -68,6 +69,7 @@ function fakeDock(...panels: string[][]) {
 beforeEach(() => {
     fake.dock = null;
     rail.collapse.mockClear();
+    rail.close.mockClear();
     lookup.idlookup = {};
 });
 
@@ -104,12 +106,33 @@ describe('openTemplateEditor', () => {
         expect(dock.moves).toEqual([['codegen_tpl_MM_g2', 'p1', 'middle']]);
     });
 
-    it('with no canvas docked, goes right of the project page, not over it (kills: stacked in the first panel) (P-2026-10-25-1045)', () => {
+    it('with no canvas docked, joins the first panel, which the app bar lists, not a split beside the project page (kills: right of the project page kept) (P-2026-10-25-1200)', () => {
         const dock = fakeDock(['project_summary']);
         fake.dock = dock;
         expect(openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1')).toBe(true);
+        expect(dock.moves).toEqual([['codegen_tpl_MM', 'p0', 'middle']]);
+        expect(panelOf(dock as any, 'codegen_tpl_MM')).toBe(dock.getLayout().dockbox.children[0]);
+    });
+
+    it('with a canvas of another metamodel shown first, still opens beside it (kills: always the first panel with no canvas of the metamodel) (P-2026-10-25-1200)', () => {
+        const dock = fakeDock(['X']);
+        fake.dock = dock;
+        lookup.idlookup = { X: { className: 'DModel', instanceof: 'OTHER' } };
+        openTemplateEditor('MM', 'Turnstile');
         expect(dock.moves).toEqual([['codegen_tpl_MM', 'p0', 'right']]);
-        expect(panelOf(dock as any, 'project_summary')).not.toBe(panelOf(dock as any, 'codegen_tpl_MM'));
+    });
+
+    it('the tab carries the app bar\'s title and close: <generator> · <metamodel>, null when gone, the close through the tab (kills: close only hides the entry; ghost title) (P-2026-10-25-1200)', () => {
+        const dock = fakeDock(['project_summary']);
+        fake.dock = dock;
+        lookup.idlookup = { MM: { className: 'DModel', name: 'Turnstile', _state: {} } };
+        openTemplateEditor('MM', 'Turnstile');
+        const tab = dock.find('codegen_tpl_MM');
+        expect(tab.appBarTitle()).toBe('Default · Turnstile');
+        tab.requestClose();
+        expect(rail.close).toHaveBeenCalledWith('codegen_tpl_MM');
+        lookup.idlookup = {};
+        expect(tab.appBarTitle()).toBeNull();
     });
 
     it('a new tab is in the generator group, not models, whose tab bar the app bar hides (kills: header hidden) (P-2026-10-25-1045)', () => {

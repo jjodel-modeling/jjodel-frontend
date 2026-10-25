@@ -172,6 +172,16 @@ export interface TemplateTabTitleProps {
     readonly generatorId?: string;
 }
 
+/**
+ * Closes a generator tab as its title's close does: through the open tab, which asks before dropping unsaved drafts,
+ * else straight from the dock. The app bar reaches it through the tab's `requestClose` (P-2026-10-25-1200).
+ */
+export function requestCloseTemplateTab(tabId: string): void {
+    const tab = openTabs.get(tabId);
+    if (tab) tab.requestClose();
+    else DockManager.closeTab(tabId);
+}
+
 export function TemplateTabTitle({ metamodelId, name, generatorId = DEFAULT_GENERATOR_ID }: TemplateTabTitleProps): React.ReactElement {
     const tabId = templateTabId(metamodelId, generatorId);
     const dirty = useSyncExternalStore(subscribeDirty, () => dirtyCounts.get(tabId) ?? 0);
@@ -179,9 +189,7 @@ export function TemplateTabTitle({ metamodelId, name, generatorId = DEFAULT_GENE
     const generatorName = useMemo(() => decodeGenerators(rawT, rawG).generators.find(g => g.id === generatorId)?.name ?? generatorId, [rawT, rawG, generatorId]);
     const close = (e: React.SyntheticEvent) => {
         e.stopPropagation();
-        const tab = openTabs.get(tabId);
-        if (tab) tab.requestClose();
-        else DockManager.closeTab(tabId);
+        requestCloseTemplateTab(tabId);
     };
     return (
         <div className="tab-title active-on-mouseenter codegen-tpl-title">
