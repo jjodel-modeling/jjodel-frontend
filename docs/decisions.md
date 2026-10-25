@@ -6689,8 +6689,8 @@ procedi con l'implementazione»; 01:14 «S6 ok», «Apply ok» on A1 and A2 of t
   the Refactoring tab only; `.script-tab__target` and `.script-tab__model` stay for the rf1 probe. Log:
   `docs/log-inbox/jjodie-ui-rfa.md`. Follow-up P-2026-10-25-0005: one Preview label, no empty editor gutter, launcher
   aligned with the docked panel.
-- **R-JJD-16** (2026-10-25, P-2026-10-25-0020/0040, provisional, unattended; amends R-JJD-15 on Alfonso's request of
-  2026-10-25 ~00:12, awaiting his acknowledgement; evidence: measured, verified: none, reversible: trunk).
+- **R-JJD-16** (2026-10-25, provisional, unattended, evidence: measured, verified: none, reversible: trunk).
+  P-2026-10-25-0020/0040; amends R-JJD-15 on Alfonso's request of 2026-10-25 ~00:12, awaiting his acknowledgement.
   **The Refactoring tab sits beside its target's own tab** (the metamodel tab for M2, the model tab for M1) in a dock
   split, editor 40 / canvas 60, ratio in `localStorage['jjodel.refactoring.splitRatio']`; never a second instance.
   Its preview is published to the shared `scriptPreviewStore` with an `owner` and drawn on that real canvas; the
