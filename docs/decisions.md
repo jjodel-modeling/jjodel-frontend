@@ -6728,6 +6728,11 @@ Alfonso as recommended, evidence: read, verified: none, reversible: trunk (docs 
 
 Open, not decided by these rows (questions 3 and 4 of the report): whether Jjodie's Run and the script editor's Run
 open an undo group too, and whether a filled slot left behind when a superclass is removed is a bug or intended.
+- **R-JJD-17** (2026-10-25, decided by Alfonso 09:43, evidence: read, verified: none, reversible: trunk).
+  **«Run refactoring» lives in the main menu under Tools**, enabled only when it applies: the label names the active
+  artifact («Run refactoring on <name>…»), it lists the Refactorings compatible with that artifact (R-JJD-14), and with
+  none it stays visible but disabled with the reason. Tools stays Advanced-only, so in Basic mode a Refactoring is run
+  from its own tab (`Run on`) or the right-click on the artifact tab, which stays as a shortcut. No «⋯» icon on the tabs.
 
 ## Superate
 
