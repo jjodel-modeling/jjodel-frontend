@@ -9,10 +9,11 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 
 const fake = vi.hoisted(() => ({ dock: null as any }));
 const rail = vi.hoisted(() => ({ collapse: vi.fn() }));
+const lookup = vi.hoisted(() => ({ idlookup: {} as Record<string, any> }));
 
 vi.mock('../../../components/abstract/DockManager', () => ({ default: fake }));
 vi.mock('../../../components/environment/consumerMode', () => ({ isConsumerMode: () => false }));
-vi.mock('../../../joiner', () => ({ LPointerTargetable: { fromPointer: (x: unknown) => x } }));
+vi.mock('../../../joiner', () => ({ LPointerTargetable: { fromPointer: (x: unknown) => x }, store: { getState: () => lookup } }));
 vi.mock('../TemplateEditorTab', async () => {
     const { generatorTabId } = await vi.importActual<typeof import('../generatorTabs')>('../generatorTabs');
     return {
@@ -28,6 +29,7 @@ vi.mock('../TemplateEditorTab', async () => {
 
 import { openTemplateEditor } from '../openTemplateEditor';
 import { BESIDE_SHARE, generatorTabsOf, keepBeside, panelOf } from '../canvasSelection';
+import { GENERATOR_GROUP } from '../generatorTabs';
 
 type Panel = { id: string; tabs: any[]; size: number; parent?: any; activeId?: string };
 
@@ -66,6 +68,7 @@ function fakeDock(...panels: string[][]) {
 beforeEach(() => {
     fake.dock = null;
     rail.collapse.mockClear();
+    lookup.idlookup = {};
 });
 
 describe('openTemplateEditor', () => {
@@ -101,11 +104,29 @@ describe('openTemplateEditor', () => {
         expect(dock.moves).toEqual([['codegen_tpl_MM_g2', 'p1', 'middle']]);
     });
 
-    it('falls back to the first panel when no canvas is docked (kills: the fallback dropped)', () => {
+    it('with no canvas docked, goes right of the project page, not over it (kills: stacked in the first panel) (P-2026-10-25-1045)', () => {
         const dock = fakeDock(['project_summary']);
         fake.dock = dock;
         expect(openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1')).toBe(true);
-        expect(dock.moves).toEqual([['codegen_tpl_MM', 'p0', 'middle']]);
+        expect(dock.moves).toEqual([['codegen_tpl_MM', 'p0', 'right']]);
+        expect(panelOf(dock as any, 'project_summary')).not.toBe(panelOf(dock as any, 'codegen_tpl_MM'));
+    });
+
+    it('a new tab is in the generator group, not models, whose tab bar the app bar hides (kills: header hidden) (P-2026-10-25-1045)', () => {
+        const dock = fakeDock(['project_summary']);
+        fake.dock = dock;
+        openTemplateEditor('MM', 'Turnstile');
+        const tab = dock.find('codegen_tpl_MM');
+        expect(GENERATOR_GROUP).not.toBe('models');
+        expect(tab.group).toBe(GENERATOR_GROUP);
+    });
+
+    it('with a conforming model\'s canvas docked, goes beside it, not beside the project page (kills: always the first panel) (P-2026-10-25-1045)', () => {
+        const dock = fakeDock(['project_summary'], ['M2']);
+        fake.dock = dock;
+        lookup.idlookup = { M2: { className: 'DModel', instanceof: 'MM' } };
+        openTemplateEditor('MM', 'Turnstile');
+        expect(dock.moves).toEqual([['codegen_tpl_MM', 'p1', 'right']]);
     });
 
     it('only activates an open tab, wherever it is (kills: an open tab moved)', () => {

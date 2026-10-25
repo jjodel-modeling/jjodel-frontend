@@ -13,6 +13,9 @@
  * - A generator with no template is empty, not wrong: nothing is generated (P-2026-10-24-0318).
  * - The Properties/Tree rail collapses when an opened generator tab sits beside the canvas, and comes back as it was
  *   when none does; a reopen by the user is kept (P-2026-10-25-0925).
+ * - A generator tab is in its own dock group, so its tab bar shows; a new one goes beside a canvas of the metamodel, else
+ *   beside the project page, never over it (P-2026-10-25-1045).
+ * - A hovered fragment longer than three lines highlights the hovered line only, its extent a gutter bar (P-2026-10-25-1045).
  *
  * Pure but for the session memory: no React, no store.
  */
@@ -21,6 +24,30 @@ import { DEFAULT_GENERATOR_ID, generatorsPatch } from '../engine/generatorCodec'
 import type { GeneratorRecord, GeneratorTarget } from '../engine/generatorCodec';
 import type { TemplateRecord } from '../engine/templates';
 import type { TemplateTarget } from './codeOrigins';
+
+/**
+ * The dock group of a generator tab (P-2026-10-25-1045). Not `models`: the app bar hides the tab bar of every `models`
+ * panel (navbar.scss) and lists only the tabs it resolves, so a generator tab there had no header at all.
+ */
+export const GENERATOR_GROUP = 'codegen';
+
+/**
+ * The docked tab a new generator tab of `metamodelId` goes beside: the model asked for, else the metamodel, else a
+ * docked model conforming to it, else the tab the first panel shows (the project page), so the tab never covers it.
+ * `null` when nothing is docked (P-2026-10-25-1045).
+ */
+export function besideTarget(
+    metamodelId: string,
+    model: string | undefined,
+    docked: readonly string[],
+    shownFirst: string | undefined,
+    lookup: Readonly<Record<string, any>>,
+): string | null {
+    if (model !== undefined && docked.includes(model)) return model;
+    if (docked.includes(metamodelId)) return metamodelId;
+    const conforming = docked.find(id => lookup[id]?.className === 'DModel' && lookup[id].instanceof === metamodelId);
+    return conforming ?? shownFirst ?? null;
+}
 
 /** The dock tab id of a generator of a metamodel. */
 export function generatorTabId(metamodelId: string, generatorId: string = DEFAULT_GENERATOR_ID): string {
@@ -86,6 +113,34 @@ export function paneGeneration<T>(generator: { readonly templates: readonly unkn
 /** The template «go to template» selects: the one the fragment names, while listed; `null` otherwise. */
 export function templateToSelect(names: readonly string[], target: TemplateTarget | null): string | null {
     return target !== null && names.includes(target.template) ? target.template : null;
+}
+
+// ── The hover of a fragment in the generated text (P-2026-10-25-1045) ────────
+
+/** The most lines a fragment spans and still highlights whole; a longer one highlights the hovered line only. */
+export const FRAGMENT_WHOLE_LINES = 3;
+
+/** The first and last line (1-based) a fragment writes text on. */
+export interface FragmentExtent { readonly first: number; readonly last: number }
+
+/** Every fragment's extent over the map's entries that write text (a zero-width entry writes nothing, codeLines.ts). */
+export function fragmentExtents<F>(map: readonly { readonly fragment: F; readonly line: number; readonly start: number; readonly end: number }[]): Map<F, FragmentExtent> {
+    const extents = new Map<F, FragmentExtent>();
+    for (const e of map) {
+        if (e.end <= e.start) continue;
+        const x = extents.get(e.fragment);
+        extents.set(e.fragment, x ? { first: Math.min(x.first, e.line), last: Math.max(x.last, e.line) } : { first: e.line, last: e.line });
+    }
+    return extents;
+}
+
+/**
+ * What a hover on line `hoveredLine` of a fragment of extent `extent` highlights: the whole fragment when it spans at
+ * most `FRAGMENT_WHOLE_LINES` lines, no bar; else that line only, and the extent as a bar in the gutter.
+ */
+export function hoverScope(extent: FragmentExtent | undefined, hoveredLine: number): { readonly lines: FragmentExtent; readonly bar: FragmentExtent | null } {
+    if (!extent || extent.last - extent.first + 1 <= FRAGMENT_WHOLE_LINES) return { lines: extent ?? { first: hoveredLine, last: hoveredLine }, bar: null };
+    return { lines: { first: hoveredLine, last: hoveredLine }, bar: extent };
 }
 
 // ── The rail beside a generator tab (P-2026-10-25-0925) ───────────────────────

@@ -15,6 +15,24 @@
     max-width: none;
 }
 
+// The project page, Documentation, a transformation, a viewpoint and canvas-only mode zero every panel right of the
+// first and stretch the first, all !important (abstract/style.scss, the body attributes below). A generator panel beside
+// the first is lifted and takes the share `dockBeside` gives it (P-2026-10-25-1045); the :has() outranks those rules.
+body[data-active-tab="documentation"],
+body[data-editor-type="summary"],
+body[data-editor-type="transformation"],
+body[data-editor-type="viewpoint"],
+body[data-layout-mode="canvas-only"] {
+    .dock-hbox > .dock-panel:not(:first-child):has(.codegen-tpl.codegen-tpl) {
+        flex: 0 0 45% !important;
+        width: auto !important;
+        min-width: 1px !important;
+        max-width: none !important;
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
 .codegen-tpl {
     display: flex;
     height: 100%;
@@ -582,6 +600,12 @@
         outline: none;
         background: var(--color-canvas-accent-subtle);
         box-shadow: inset 0 1px 0 var(--color-canvas-accent), inset 0 -1px 0 var(--color-canvas-accent);
+    }
+
+    // The extent of a hovered fragment longer than three lines, only its hovered line outlined (P-2026-10-25-1045): a
+    // thin bar at the gutter's right edge, over its opaque ground.
+    &__gutter--extent {
+        box-shadow: inset -2px 0 0 var(--color-canvas-accent);
     }
 
     // Over the canvas of another dock tab: fixed to the viewport, never in the way of a click.

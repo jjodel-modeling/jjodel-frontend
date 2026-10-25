@@ -8,6 +8,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
     armRailCollapse, checkOffered, forgetGenerators, forgetRail, generatorBeside, generatorTabId, launchGenerator, noTemplates, paneGeneration,
     railShown, railStep, rememberGenerator, runOffered, saveGeneratorTemplates, templateToSelect,
+    besideTarget, fragmentExtents, hoverScope,
 } from '../generatorTabs';
 import { generateGenerator } from '../../engine/generateFiles';
 import type { GeneratorRecord } from '../../engine/generatorCodec';
@@ -207,5 +208,46 @@ describe('the rail beside a generator tab (P-2026-10-25-0925)', () => {
         expect(railStep(false, open)).toBeNull();
         armRailCollapse();
         expect(railStep(true, open)).toEqual({ kind: 'collapse' });
+    });
+});
+
+describe('hoverScope (P-2026-10-25-1045)', () => {
+    // One entry per line: fragment A on lines 10..39 (30 lines), fragment B on lines 3..4, a zero-width C on line 50.
+    const map = [
+        ...Array.from({ length: 30 }, (_, i) => ({ fragment: 'A', line: 10 + i, start: 0, end: 5 })),
+        { fragment: 'B', line: 3, start: 2, end: 8 },
+        { fragment: 'B', line: 4, start: 0, end: 1 },
+        { fragment: 'C', line: 50, start: 4, end: 4 },
+    ];
+    const extents = fragmentExtents(map);
+
+    it('a 30-line fragment highlights the hovered line only, plus a gutter bar over its extent (kills: whole block highlighted)', () => {
+        expect(extents.get('A')).toEqual({ first: 10, last: 39 });
+        expect(hoverScope(extents.get('A'), 23)).toEqual({ lines: { first: 23, last: 23 }, bar: { first: 10, last: 39 } });
+    });
+
+    it('a 2-line fragment highlights both lines, no bar (kills: threshold applied to every fragment)', () => {
+        expect(hoverScope(extents.get('B'), 4)).toEqual({ lines: { first: 3, last: 4 }, bar: null });
+    });
+
+    it('a 3-line fragment is still whole, a 4-line one is not (kills: off by one at the threshold)', () => {
+        expect(hoverScope({ first: 5, last: 7 }, 6).bar).toBeNull();
+        expect(hoverScope({ first: 5, last: 8 }, 6).bar).toEqual({ first: 5, last: 8 });
+    });
+
+    it('a zero-width entry writes no line (kills: error fragments counted)', () => {
+        expect(extents.has('C')).toBe(false);
+    });
+});
+
+describe('besideTarget (P-2026-10-25-1045)', () => {
+    const lookup = { M2: { className: 'DModel', instanceof: 'MM' }, X: { className: 'DModel', instanceof: 'OTHER' } };
+
+    it('the model asked for, then the metamodel, then a conforming model, then the project page (kills: order swapped)', () => {
+        expect(besideTarget('MM', 'M1', ['project_summary', 'MM', 'M1'], 'project_summary', lookup)).toBe('M1');
+        expect(besideTarget('MM', 'M1', ['project_summary', 'MM'], 'project_summary', lookup)).toBe('MM');
+        expect(besideTarget('MM', undefined, ['project_summary', 'X', 'M2'], 'project_summary', lookup)).toBe('M2');
+        expect(besideTarget('MM', undefined, ['project_summary', 'X'], 'project_summary', lookup)).toBe('project_summary');
+        expect(besideTarget('MM', undefined, [], undefined, lookup)).toBeNull();
     });
 });

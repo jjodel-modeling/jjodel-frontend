@@ -17,7 +17,8 @@
  * A generator with no template shows one neutral empty state in every mode, and nothing is generated (P-2026-10-24-0318).
  *
  * Provenance both ways (R-GEN-41). Hovering a span outlines every span of its fragment and names its origin under the
- * text. A click on a model span selects its element on the model's canvas, opening the model's tab first
+ * text; a fragment longer than three lines (the JS runtime, one opaque fragment of hundreds) outlines the hovered line
+ * only, its extent a bar in the gutter (P-2026-10-25-1045, generatorTabs.ts `hoverScope`). A click on a model span selects its element on the model's canvas, opening the model's tab first
  * (canvasSelection.ts); an element drawn as an edge selects the edge's source and is outlined here. Alt+click on any
  * span, or the gutter control of a hovered line, leads to the template that produced it (`onGoToTemplate`). A canvas
  * selection (`CANVAS_ELEMENT_SELECTED`) links the spans whose origin is the selected element, or one of its instances
@@ -44,7 +45,7 @@ import { linesOf } from './codeLines';
 import { COLOUR_MAX_CHARS, colourLines, languageOf, tokenStyles } from './codeTokens';
 import { jjtlTheme } from '../../jjtl/editor/jjtlTheme';
 import { elementAt, elementName, originText, templateTarget } from './codeOrigins';
-import { checkOffered, generatorTabId, noTemplates, paneGeneration, runOffered } from './generatorTabs';
+import { checkOffered, fragmentExtents, generatorTabId, hoverScope, noTemplates, paneGeneration, runOffered } from './generatorTabs';
 import { selectOnModelCanvas } from './canvasSelection';
 import type { GeneratorRecord } from '../engine/generatorCodec';
 import type { GeneratorResult } from '../engine/generateFiles';
@@ -164,7 +165,8 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
     const [scenarioName, setScenarioName] = useState<string | null>(null);
     const [checking, setChecking] = useState(false);
     const [checked, setChecked] = useState<CheckOutcome | null>(null);
-    const [hover, setHover] = useState<TextFragment | null>(null);
+    // The hovered fragment and the line of the span under the mouse: a long fragment highlights that line only.
+    const [hover, setHover] = useState<{ readonly fragment: TextFragment; readonly line: number } | null>(null);
     const [hoverLine, setHoverLine] = useState<number | null>(null);
     const [linked, setLinked] = useState<string | null>(null);
     const [edgeOutline, setEdgeOutline] = useState<string | null>(null);
@@ -333,6 +335,8 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
         return result && tokens && tokens.code === result.code && tokens.language === language ? colourLines(plain, tokens.lines) : plain;
     }, [result, tokens, language]);
     const fragmentIndex = useMemo(() => new Map<TextFragment, number>((result?.text.fragments ?? []).map((f, i) => [f, i])), [result]);
+    const extents = useMemo(() => fragmentExtents(result?.map ?? []), [result]);
+    const scope = hover !== null ? hoverScope(extents.get(hover.fragment), hover.line) : null;
     const runError = mode === 'run' && outcome && !outcome.response.ok ? outcome.response.error : null;
     const errorLine = runError && result && outcome && outcome.code === result.code ? runError.line : null;
     const errorElement = runError && runError.line !== null && outcome ? elementAt(outcome.map, runError.line, runError.column) : null;
@@ -356,7 +360,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
 
     const spanClass = (e: TextMapEntry): string => {
         let c = `code-span code-span--${e.origin.kind}`;
-        if (hover !== null && e.fragment === hover) c += ' code-span--hover';
+        if (hover !== null && scope !== null && e.fragment === hover.fragment && e.line >= scope.lines.first && e.line <= scope.lines.last) c += ' code-span--hover';
         // A selected class links the spans of its instances (R-GEN-21).
         if (linked !== null && e.origin.kind === 'model'
             && (e.origin.elementId === linked || lookupNow[e.origin.elementId]?.instanceof === linked)) c += ' code-span--linked';
@@ -366,7 +370,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
     // The fragment the gutter control of a line leads to: the hovered one on that line, else the line's first with a template.
     const lineTarget = (i: number): TextFragment | null => {
         const entries = lines[i]?.map(p => p.entry).filter((e): e is TextMapEntry => e !== null) ?? [];
-        if (hover !== null && entries.some(e => e.fragment === hover) && templateTarget(hover.origin)) return hover;
+        if (hover !== null && entries.some(e => e.fragment === hover.fragment) && templateTarget(hover.fragment.origin)) return hover.fragment;
         return entries.find(e => templateTarget(e.origin) !== null)?.fragment ?? null;
     };
 
@@ -561,7 +565,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                                 key={i}
                                 onMouseEnter={() => setHoverLine(i)}
                             >
-                                <span className="codegen-panel__gutter codegen-pane__gutter">
+                                <span className={`codegen-panel__gutter codegen-pane__gutter${scope?.bar && i + 1 >= scope.bar.first && i + 1 <= scope.bar.last ? ' codegen-pane__gutter--extent' : ''}`}>
                                     {jump ? (
                                         <button
                                             type="button"
@@ -589,7 +593,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
                                             data-fragment={fragmentIndex.get(p.entry.fragment)}
                                             data-origin-id={p.entry.origin.kind === 'model' ? p.entry.origin.elementId : undefined}
                                             data-template={templateTarget(p.entry.origin)?.template}
-                                            onMouseEnter={() => setHover(p.entry!.fragment)}
+                                            onMouseEnter={() => setHover({ fragment: p.entry!.fragment, line: p.entry!.line })}
                                             onMouseLeave={() => setHover(null)}
                                             onClick={e => onSpanClick(e, p.entry!)}
                                         >
@@ -604,7 +608,7 @@ export default function GeneratorPane({ metamodelId, generator, model = null, on
             )}
             {!empty && <div className="codegen-panel__origin" aria-live="polite">
                 {notice ?? (hover
-                    ? originText(lookupNow, hover.origin)
+                    ? originText(lookupNow, hover.fragment.origin)
                     : 'Hover a span for its origin; click a model value to select it on the canvas, Alt+click to go to its template.')}
             </div>}
             {edgeBox && createPortal(

@@ -19,18 +19,24 @@
  * Every opening, of a new tab or of one brought forward, collapses the Properties/Tree rail once the tab is beside the
  * canvas (P-2026-10-25-0925, TemplateEditorTab.tsx `collapseRailOnOpen`).
  *
+ * A real tab (P-2026-10-25-1045): the group is `GENERATOR_GROUP`, not `models`, so its panel shows rc-dock's tab bar
+ * with the title and its close control; the canvas it docks beside may also be a docked model conforming to the
+ * metamodel, and with none docked the tab goes right of the project page (generatorTabs.ts `besideTarget`), never
+ * stacked over it in the first panel, whose tab bar the app bar replaces.
+ *
  * Reached only from the Code panel's lazy chunk and the left bar's dynamic import (scripts/gates/check-codegen-lazy.ts).
  */
 
 import React from 'react';
-import type { TabData } from 'rc-dock';
+import type { BoxData, PanelData, TabData } from 'rc-dock';
 import DockManager from '../../components/abstract/DockManager';
 import { isConsumerMode } from '../../components/environment/consumerMode';
+import { store } from '../../joiner';
 import TemplateEditorTab, {
     TemplateTabTitle, chooseModelInTemplateTab, collapseRailOnOpen, selectInTemplateTab, templateTabId,
 } from './TemplateEditorTab';
-import { rememberGenerator } from './generatorTabs';
-import { dockBeside, findPanel, generatorTabsOf, panelOf } from './canvasSelection';
+import { GENERATOR_GROUP, besideTarget, rememberGenerator } from './generatorTabs';
+import { dockBeside, findPanel, generatorTabsOf } from './canvasSelection';
 import { DEFAULT_GENERATOR_ID } from '../engine/generatorCodec';
 
 /** The left bar's «+ New generator» reaches the tab's creation through this module's dynamic import (R-GEN-42). */
@@ -63,7 +69,7 @@ export function openTemplateEditor(
 
     const tab: TabData = {
         id,
-        group: 'models',
+        group: GENERATOR_GROUP,
         closable: false,
         cached: true,
         title: React.createElement(TemplateTabTitle, { metamodelId, name: metamodelName, generatorId }),
@@ -74,10 +80,19 @@ export function openTemplateEditor(
         dock.dockMove(tab, siblings, 'middle');
         return true;
     }
-    const canvas = [model, metamodelId].find(c => c !== undefined && panelOf(dock, c) !== null);
-    if (canvas !== undefined && dockBeside(dock, tab, canvas)) return true;
-    const target = dock.getLayout()?.dockbox?.children?.[0];
-    if (!target) return false;
-    dock.dockMove(tab, target, 'middle');
+    const docked: string[] = [];
+    const walk = (node: BoxData | PanelData | undefined): void => {
+        if (!node) return;
+        if ('tabs' in node) node.tabs.forEach(t => { if (t.id !== undefined) docked.push(t.id); });
+        else (node.children ?? []).forEach(walk);
+    };
+    walk(dock.getLayout()?.dockbox);
+    const first = dock.getLayout()?.dockbox?.children?.[0];
+    const shownFirst = first && 'tabs' in first ? first.activeId ?? first.tabs[0]?.id : undefined;
+    const lookup = (store.getState() as any)?.idlookup ?? {};
+    const beside = besideTarget(metamodelId, model, docked, shownFirst, lookup);
+    if (beside !== null && dockBeside(dock, tab, beside)) return true;
+    if (!first) return false;
+    dock.dockMove(tab, first, 'middle');
     return true;
 }

@@ -33,6 +33,11 @@
  * beside_selection.png); moved into the canvas panel the rail comes back; a reload does not persist the collapse; the
  * last tab closed, the rail is back as it was (crop layout_closed.png).
  *
+ * P-2026-10-25-1045: beside the canvas the tab has its header, title and close control (crop header_beside.png); a hover
+ * inside the JS runtime, one fragment of hundreds of lines, outlines the hovered line only, the extent a gutter bar, no
+ * text selected (crop runtime_hover.png); with the project page active, GENERATORS in the left bar opens the tab with
+ * its header right of the page, the page still on screen (crop header_leftbar.png).
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
@@ -231,6 +236,23 @@ const BESIDE = (m1Id: string, tabId: string) => String.raw`(() => {
   };
 })()`;
 
+/** The tab header of a dock tab: in the DOM, laid out, in the viewport, its title and close control (P-2026-10-25-1045). */
+const HEADER = (tabId: string) => String.raw`(() => {
+  const t = document.querySelector('[role="tab"][id$="-tab-${tabId}"]');
+  if (!t) return { inDom: false };
+  const r = t.getBoundingClientRect();
+  const bar = t.closest('.dock-bar');
+  const close = t.querySelector('.codegen-tpl-title__close');
+  const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+  return {
+    inDom: true, box: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) },
+    visible: r.width > 0 && r.height > 0 && r.x >= 0 && r.x + r.width <= innerWidth + 1 && r.y >= 0 && !!bar && getComputedStyle(bar).display !== 'none' && !!hit && t.contains(hit),
+    title: (t.textContent || '').trim(), close: !!close && close.getBoundingClientRect().width > 0,
+    panel: (t.closest('.dock-panel') || {}).className || null,
+  };
+})()`;
+const visibleHeader = (h: any) => !!h && h.inDom && h.visible && h.close && /^Default · /.test(h.title);
+
 /** The Properties/Tree rail: its box while on screen, and the canvas inset it publishes (P-2026-10-25-0925). */
 const RAIL = String.raw`(() => {
   const r = document.querySelector('.properties-tree-overlay:not(.properties-tree-overlay--collapsed)');
@@ -334,6 +356,11 @@ async function main(): Promise<void> {
     note('the canvas and the tab once open', beside);
     check('the tab opens beside the canvas: two panels, both visible, side by side, the tab about 45 %',
         beside.found && beside.panels && beside.visible && beside.sideBySide && Math.abs(beside.share - 0.45) < 0.06, JSON.stringify(beside));
+    const headBeside = await page.evaluate(HEADER(tabId)) as any;
+    result.headerBeside = headBeside;
+    note('the tab header beside the canvas', headBeside);
+    check('beside the canvas the tab has its header: in the DOM, visible, «Default · <metamodel>», its close control (P-2026-10-25-1045)', visibleHeader(headBeside), JSON.stringify(headBeside));
+    if (beside.found) await crop(page, 'header_beside.png', { x: beside.canvas.x, y: Math.max(0, beside.tab.y - 60), w: beside.tab.x + beside.tab.w - beside.canvas.x, h: 260 }, 0);
     const railOpen = await poll<any>(page, `(() => { const r = ${RAIL}; return r.shown ? null : r; })()`, 5000);
     result.railBeside = railOpen;
     check('opened from the pill beside the canvas, the Properties/Tree rail is collapsed, inset 0px (P-2026-10-25-0925)', !!railOpen && railOpen.inset === '0px', JSON.stringify(railOpen ?? await page.evaluate(RAIL)));
@@ -397,14 +424,57 @@ async function main(): Promise<void> {
           const f = s.getAttribute('data-fragment');
           const same = [...${tab}.querySelectorAll('.codegen-pane__code .code-span[data-fragment="' + f + '"]')];
           const classes = [...new Set(same.map((x) => [...x.classList].find((c) => c.startsWith('code-tok--'))))].filter(Boolean);
-          return { fragment: f, pieces: same.length, classes, hovered: same.filter((x) => x.classList.contains('code-span--hover')).length, others: ${tab}.querySelectorAll('.code-span--hover').length };
+          // In scope (P-2026-10-25-1045): every piece of a fragment of three lines at most, else the pieces of the hovered line.
+          const lineOf = (x) => x.closest('[data-line]').getAttribute('data-line');
+          const lines = new Set(same.map(lineOf)).size;
+          const scoped = lines <= 3 ? same : same.filter((x) => lineOf(x) === lineOf(s));
+          return { fragment: f, pieces: same.length, lines, scoped: scoped.length, classes, hovered: scoped.filter((x) => x.classList.contains('code-span--hover')).length, others: ${tab}.querySelectorAll('.code-span--hover').length };
         })()`) as any;
         note('a coloured fragment hovered', hovered);
-        check('hovering a fragment cut into coloured pieces outlines every piece of it, and only them', hovered.pieces >= 2 && hovered.hovered === hovered.pieces && hovered.others === hovered.pieces, JSON.stringify(hovered));
+        check('hovering a fragment cut into coloured pieces outlines every piece in scope (whole up to 3 lines, else the hovered line), and only them', hovered.pieces >= 2 && hovered.scoped >= 2 && hovered.hovered === hovered.scoped && hovered.others === hovered.scoped, JSON.stringify(hovered));
         await crop(page, 'preview_hovered.png', codeBox);
         await page.mouse.move(0, 0);
     } else {
         check('a coloured fragment on screen to hover', false, '');
+    }
+    // P-2026-10-25-1045: inside the JS runtime, one fragment of hundreds of lines, a hover outlines the hovered line only
+    // and draws the fragment's extent as a bar in the gutter.
+    const runtimeAt = await page.evaluate(String.raw`(() => {
+      const code = ${tab}.querySelector('.codegen-pane__code');
+      const by = new Map();
+      code.querySelectorAll('.code-span[data-fragment]').forEach((x) => { const f = x.getAttribute('data-fragment'); const l = +x.closest('[data-line]').getAttribute('data-line'); const e = by.get(f) || { first: l, last: l }; by.set(f, { first: Math.min(e.first, l), last: Math.max(e.last, l) }); });
+      const [f, ext] = [...by.entries()].sort((a, b) => (b[1].last - b[1].first) - (a[1].last - a[1].first))[0] || [];
+      if (!f) return null;
+      const line = ext.first + 6;
+      const row = code.querySelector('[data-line="' + line + '"]');
+      code.scrollTop = Math.max(0, row.offsetTop - 120);
+      const s = row.querySelector('.code-span[data-fragment="' + f + '"]');
+      if (!s) return null;
+      const r = s.getBoundingClientRect();
+      return { fragment: f, first: ext.first, last: ext.last, line, x: r.x + Math.min(20, r.width / 2), y: r.y + r.height / 2 };
+    })()`) as any;
+    note('the runtime fragment', runtimeAt);
+    if (runtimeAt) {
+        await page.mouse.move(runtimeAt.x, runtimeAt.y);
+        await wait(page, 200);
+        const rh = await page.evaluate(String.raw`(() => {
+          const code = ${tab}.querySelector('.codegen-pane__code');
+          const hov = [...code.querySelectorAll('.code-span--hover')];
+          const bars = [...code.querySelectorAll('.codegen-pane__gutter--extent')].map((g) => +g.closest('[data-line]').getAttribute('data-line'));
+          const g = code.querySelector('.codegen-pane__gutter--extent');
+          return { hoveredLines: [...new Set(hov.map((x) => +x.closest('[data-line]').getAttribute('data-line')))], bars: bars.length, barFirst: bars[0], barLast: bars[bars.length - 1], barShadow: g ? getComputedStyle(g).boxShadow : null, selection: String(getSelection()).length };
+        })()`) as any;
+        result.runtimeHover = rh;
+        note('a hover inside the runtime', rh);
+        check('a hover inside the runtime outlines the hovered line only (P-2026-10-25-1045)', rh.hoveredLines.length === 1 && rh.hoveredLines[0] === runtimeAt.line, JSON.stringify(rh.hoveredLines));
+        check('the runtime fragment\'s extent is a bar over its lines in the gutter, the text not selected', rh.bars === runtimeAt.last - runtimeAt.first + 1 && rh.barFirst === runtimeAt.first && rh.barLast === runtimeAt.last && !!rh.barShadow && rh.barShadow !== 'none' && rh.selection === 0, JSON.stringify(rh));
+        await crop(page, 'runtime_hover.png', await page.evaluate(BOX(`${tab}.querySelector('.codegen-pane__code')`)) as any);
+        await page.mouse.click(runtimeAt.x, runtimeAt.y);
+        await wait(page, 200);
+        check('a click inside the runtime selects no text', (await page.evaluate(`String(getSelection()).length`)) === 0, '');
+        await page.mouse.move(0, 0);
+    } else {
+        check('a runtime fragment on screen to hover', false, '');
     }
     if (sc) {
         const sw = await page.evaluate(SPLIT(tab)) as any;
@@ -744,6 +814,35 @@ async function main(): Promise<void> {
     note('the rail after the last generator tab closed', railFinal);
     check('the last generator tab closed, the rail is back as it was: x 1200, 400x877, inset 408px', !!railClosed && onePanelRail(railFinal), JSON.stringify(railFinal));
     await crop(page, 'layout_closed.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+
+    // P-2026-10-25-1045: the project page active, the generator opened from GENERATORS in the left bar: a dock tab with
+    // its header, right of the project page, which stays on screen.
+    // The project opened afresh, the left bar on screen.
+    await page.goto(`${URL}/?open=${encodeURIComponent(pid)}#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
+    check('the project opens afresh', !!(await poll(page, LOADED(ex.lookup.MM.name, ex.lookup.M.name), 120000)), '');
+    await wait(page, 3000);
+    // The project page brought forward as the project rail brings it (DockManager.activateProjectSummary).
+    await page.evaluate(String.raw`(async () => (await import('/src/components/abstract/DockManager.tsx')).default.activateProjectSummary())()`);
+    await wait(page, 1000);
+    // The fixture's bags are not saved with the project: written again, so GENERATORS lists the default.
+    const reinstalled = await page.evaluate(INSTALL(again)) as any;
+    check('the fixture is installed again on the fresh project', reinstalled.missing.length === 0, reinstalled.missing);
+    await poll(page, `document.body.getAttribute('data-editor-type') === 'summary'`, 10000);
+    await wait(page, 800);
+    note('the project page active', await page.evaluate(`({ editorType: document.body.getAttribute('data-editor-type'), active: (document.querySelector('.appbar-tab--active') || {}).className || null })`));
+    note('the GENERATORS entries', await page.evaluate(`({ entries: [...document.querySelectorAll('.psb-section--generators .psb-item[data-generator]')].map((e) => e.getAttribute('data-generator') + ':' + (e.offsetParent !== null)), sections: [...document.querySelectorAll('.psb-section')].map((e) => e.className.replace('psb-section', '').trim() + ':' + (e.offsetParent !== null)), left: !!document.querySelector('.psb-section') })`));
+    await page.evaluate(CLICK(`document.querySelector('.psb-section--generators .psb-item[data-generator]')`));
+    const leftTab = `codegen_tpl_${again.mm}`;
+    await poll(page, `!!(${TAB(leftTab)} && ${TAB(leftTab)}.offsetParent !== null)`, 20000);
+    await wait(page, 1500);
+    const headLeft = await page.evaluate(HEADER(leftTab)) as any;
+    const pageBox = await page.evaluate(BOX(`document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-project_summary"]')`)) as any;
+    const tabBox = await page.evaluate(BOX(TAB(leftTab))) as any;
+    result.headerLeftBar = { header: headLeft, page: pageBox, tab: tabBox };
+    note('opened from the left bar on the project page', result.headerLeftBar);
+    check('opened from the left bar with the project page active: a dock tab whose header is in the DOM and visible (P-2026-10-25-1045)', visibleHeader(headLeft), JSON.stringify(headLeft));
+    check('the tab is right of the project page, which stays on screen, not under it', !!pageBox && !!tabBox && pageBox.w > 200 && tabBox.w > 200 && pageBox.x + pageBox.w <= tabBox.x + 2, JSON.stringify({ page: pageBox, tab: tabBox }));
+    await crop(page, 'header_leftbar.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
 }
 
 try {
