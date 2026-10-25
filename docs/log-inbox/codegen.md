@@ -271,3 +271,18 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: crops header_beside.png, header_leftbar.png, runtime_hover.png checked by the chat (RC-23); Alfonso's re-check pending
 **Notes**: Gates: typecheck 0, build 0, vitest src/codegen 2240 passed, check:codegen-lazy --on all green; probe 58 PASS 0 FAIL; bench 8/8. Unattended (RC-25, provisional): (1) generator tabs in their own dock group `codegen` with rc-dock's title and close; (2) with no canvas docked the tab opens in a right split of the project page (45 %), not as an app-bar tab beside the project and model tabs: the app bar needs Navbar.tsx, outside DOVE, a deviation from the prompt flagged for Alfonso; (3) beside-target order: model asked > metamodel > a docked conforming model > the first panel's tab; (4) CSS lift in TemplateEditorTab.scss for the five body modes; (5) FRAGMENT_WHOLE_LINES = 3, a longer fragment highlights the hovered line plus a gutter extent bar, a click selects no text.
 **Prompt document name**: 2026-10-25 10:45
+
+## 2026-10-25 — fix(codegen): generator tab in the app bar when no canvas is docked (P-2026-10-25-1200)
+**Prompt**: With no canvas docked the generator opened right of the narrow project page. It now joins the first dock panel, listed in the app bar beside the project and model tabs (bi-code-slash, «<generator> · <metamodel>», active state, close), full width when selected; with a canvas docked it stays beside it (1515/1045, rail 0925); moves between the two placements leave no ghost or duplicate
+**Files touched**: fix 93cbd14fd: frontend/src/codegen/ui/generatorTabs.ts, ui/openTemplateEditor.ts, ui/TemplateEditorTab.tsx, ui/__tests__/generatorTabs.test.ts, ui/__tests__/openTemplateEditor.test.ts, frontend/src/pages/components/Navbar.tsx, navbar.scss; test 115cdbddd: frontend/scripts/probe/codegen-generator-tab.ts; docs: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-25_1200_prompt_codegen_generator_in_app_bar.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-25 10:45
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: crops appbar_generator.png, appbar_project.png, beside_unchanged.png in ~/.jjodel-lanes/P-2026-10-25-1200/crops for the chat (RC-23)
+**Notes**: Gates: typecheck 0, build 0, vitest src/codegen 2245 passed, codegen-lazy --on green, check:scripts pass; probe 68/68 on 3133; bench 7/7 (6 unit, 1 probe). Layer Impact on Navbar.tsx: view only, syncTabs learns codegen_tpl_ ids from the tab's appBarTitle/requestClose, no import. Unattended (RC-25, provisional): hooks on the TabData; a canvas the first panel shows counts as docked; slate badge.
+**Prompt document name**: 2026-10-25 12:00
+
+**Ticket** (P-2026-10-25-1200): after a reload the dock restores the model tab but no generator tab (probe MEAS «the dock after the reload»: generators []), not fixed here (COSA 3). The app-bar title truncates to «Default · Demo…» under the strip's tab width, a perceptual item for Alfonso.

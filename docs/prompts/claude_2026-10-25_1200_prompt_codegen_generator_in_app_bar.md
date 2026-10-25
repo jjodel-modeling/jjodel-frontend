@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (codegen tab placement plus the app bar's tab list; no critical-zone file)
 Depends: P-2026-10-25-1045
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane codegen · 93cbd14fd · bench 7/7 · crops in the lane folder
 Corregge: P-2026-10-25-1045
 Request: Alfonso, 2026-10-25 11:56, in the project chat: «procedi in /lane auto» on the chat's recommendation to put the generator tab in the app bar (his direction of 2026-10-23: «la template come un tab esattamente come tutto il resto»)
 
