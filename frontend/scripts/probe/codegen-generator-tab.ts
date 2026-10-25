@@ -38,6 +38,13 @@
  * text selected (crop runtime_hover.png); with the project page active, GENERATORS in the left bar opens the tab with
  * its header right of the page, the page still on screen (crop header_leftbar.png).
  *
+ * P-2026-10-25-1200 (supersedes the placement right of the project page): with no canvas docked the tab opened from
+ * GENERATORS is a tab of the first panel, listed in the app bar with bi-code-slash, «Default · <metamodel>», active,
+ * its close, full width (crop appbar_generator.png); the project page active again, the entry stays (crop
+ * appbar_project.png); the entry selects it, its close removes the dock tab. With a canvas docked it opens beside, no
+ * app-bar entry (crop beside_unchanged.png); moved into the first panel and out by hand, one tab, listed only inside.
+ * The dock after the reload is reported (generator tabs restored or not), not fixed.
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
@@ -815,12 +822,31 @@ async function main(): Promise<void> {
     check('the last generator tab closed, the rail is back as it was: x 1200, 400x877, inset 408px', !!railClosed && onePanelRail(railFinal), JSON.stringify(railFinal));
     await crop(page, 'layout_closed.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
 
-    // P-2026-10-25-1045: the project page active, the generator opened from GENERATORS in the left bar: a dock tab with
-    // its header, right of the project page, which stays on screen.
+    // P-2026-10-25-1200 (supersedes the 1045 placement right of the project page): the project page active and no
+    // canvas docked, the generator opened from GENERATORS in the left bar is a tab of the first panel, listed in the
+    // app bar beside the project and model tabs, full width when selected; closed from the app bar it leaves the dock.
     // The project opened afresh, the left bar on screen.
     await page.goto(`${URL}/?open=${encodeURIComponent(pid)}#/project?id=${pid}`, { waitUntil: 'domcontentloaded', timeout: 300000 });
     check('the project opens afresh', !!(await poll(page, LOADED(ex.lookup.MM.name, ex.lookup.M.name), 120000)), '');
     await wait(page, 3000);
+    // Reload (prompt COSA 3): which generator tabs the restored dock holds, reported, not fixed here.
+    const DOCKED = String.raw`(async () => {
+      const d = (await import('/src/components/abstract/DockManager.tsx')).default.dock;
+      const walk = (n) => n.tabs ? n.tabs.map((t) => t.id) : (n.children || []).flatMap(walk);
+      const first = d.getLayout().dockbox.children[0];
+      return { all: walk(d.getLayout().dockbox), first: first && first.tabs ? first.tabs.map((t) => t.id) : null, firstActive: first ? first.activeId : null, panels: walk(d.getLayout().dockbox).length };
+    })()`;
+    const afterReload = await page.evaluate(DOCKED) as any;
+    result.reloadDock = afterReload;
+    note('the dock after the reload (generator tabs restored?)', { generators: afterReload.all.filter((id: string) => id.startsWith('codegen_tpl_')), all: afterReload.all });
+    // No canvas docked: every model and metamodel tab closed, as a user closes them.
+    await page.evaluate(String.raw`(async () => {
+      const dm = (await import('/src/components/abstract/DockManager.tsx')).default;
+      const walk = (n) => n.tabs ? n.tabs.map((t) => t.id) : (n.children || []).flatMap(walk);
+      const lookup = window.windoww.store.getState().idlookup || {};
+      walk(dm.dock.getLayout().dockbox).filter((id) => id.startsWith('codegen_tpl_') || (lookup[id] && lookup[id].className === 'DModel')).forEach((id) => dm.closeTab(id));
+      await new Promise((r) => setTimeout(r, 300));
+    })()`);
     // The project page brought forward as the project rail brings it (DockManager.activateProjectSummary).
     await page.evaluate(String.raw`(async () => (await import('/src/components/abstract/DockManager.tsx')).default.activateProjectSummary())()`);
     await wait(page, 1000);
@@ -829,20 +855,80 @@ async function main(): Promise<void> {
     check('the fixture is installed again on the fresh project', reinstalled.missing.length === 0, reinstalled.missing);
     await poll(page, `document.body.getAttribute('data-editor-type') === 'summary'`, 10000);
     await wait(page, 800);
-    note('the project page active', await page.evaluate(`({ editorType: document.body.getAttribute('data-editor-type'), active: (document.querySelector('.appbar-tab--active') || {}).className || null })`));
-    note('the GENERATORS entries', await page.evaluate(`({ entries: [...document.querySelectorAll('.psb-section--generators .psb-item[data-generator]')].map((e) => e.getAttribute('data-generator') + ':' + (e.offsetParent !== null)), sections: [...document.querySelectorAll('.psb-section')].map((e) => e.className.replace('psb-section', '').trim() + ':' + (e.offsetParent !== null)), left: !!document.querySelector('.psb-section') })`));
+    const noCanvas = await page.evaluate(DOCKED) as any;
+    const lookupKinds = await page.evaluate(`(() => { const l = window.windoww.store.getState().idlookup || {}; return ${JSON.stringify(noCanvas.all)}.filter((id) => l[id] && l[id].className === 'DModel'); })()`) as string[];
+    check('no canvas docked before the opening', lookupKinds.length === 0, JSON.stringify({ docked: noCanvas.all, canvases: lookupKinds }));
+    note('the GENERATORS entries', await page.evaluate(`({ entries: [...document.querySelectorAll('.psb-section--generators .psb-item[data-generator]')].map((e) => e.getAttribute('data-generator') + ':' + (e.offsetParent !== null)) })`));
     await page.evaluate(CLICK(`document.querySelector('.psb-section--generators .psb-item[data-generator]')`));
     const leftTab = `codegen_tpl_${again.mm}`;
     await poll(page, `!!(${TAB(leftTab)} && ${TAB(leftTab)}.offsetParent !== null)`, 20000);
     await wait(page, 1500);
-    const headLeft = await page.evaluate(HEADER(leftTab)) as any;
+    const APPBAR = String.raw`(() => [...document.querySelectorAll('.appbar-tabs .appbar-tab')].map((b) => ({
+      cls: b.className, name: (b.querySelector('.appbar-tab__name') || {}).textContent || '', active: b.classList.contains('appbar-tab--active'),
+      icon: !!b.querySelector('.appbar-tab__badge .bi-code-slash'), close: !!b.querySelector('.appbar-tab__close'),
+      visible: b.offsetParent !== null && b.getBoundingClientRect().width > 0 })))()`;
+    const genEntries = (bar: any[]) => bar.filter((t: any) => /appbar-tab--generator/.test(t.cls));
+    const inMain = await page.evaluate(DOCKED) as any;
+    const bar1 = await page.evaluate(APPBAR) as any[];
+    const fullBox = await page.evaluate(BOX(TAB(leftTab))) as any;
+    result.appBar = { dock: inMain, bar: bar1, tab: fullBox };
+    note('no canvas docked, opened from the left bar', result.appBar);
+    check('with no canvas docked the tab is in the first panel, active, one panel only (kills: right of the project page kept)', !!inMain.first && inMain.first.includes(leftTab) && inMain.firstActive === leftTab && inMain.all.filter((id: string) => id === leftTab).length === 1, JSON.stringify(inMain));
+    const g1 = genEntries(bar1);
+    check('the app bar lists the generator tab once: bi-code-slash, «Default · <metamodel>», active, its close (kills: ghost filter kept)', g1.length === 1 && g1[0].visible && g1[0].icon && g1[0].close && g1[0].active && g1[0].name === `Default · ${ex.lookup.MM.name}`, JSON.stringify(g1));
+    check('the generator tab in the first panel shows no rc-dock header of its own (the app bar is its header)', !(await page.evaluate(HEADER(leftTab)) as any)?.visible, JSON.stringify(await page.evaluate(HEADER(leftTab))));
+    await crop(page, 'appbar_generator.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+    // The project page brought forward again: the generator's entry stays, not active; the page is on screen.
+    await page.evaluate(String.raw`(async () => (await import('/src/components/abstract/DockManager.tsx')).default.activateProjectSummary())()`);
+    await wait(page, 1200);
+    const bar2 = await page.evaluate(APPBAR) as any[];
+    const g2 = genEntries(bar2);
     const pageBox = await page.evaluate(BOX(`document.querySelector('[role="tabpanel"][aria-labelledby$="-tab-project_summary"]')`)) as any;
-    const tabBox = await page.evaluate(BOX(TAB(leftTab))) as any;
-    result.headerLeftBar = { header: headLeft, page: pageBox, tab: tabBox };
-    note('opened from the left bar on the project page', result.headerLeftBar);
-    check('opened from the left bar with the project page active: a dock tab whose header is in the DOM and visible (P-2026-10-25-1045)', visibleHeader(headLeft), JSON.stringify(headLeft));
-    check('the tab is right of the project page, which stays on screen, not under it', !!pageBox && !!tabBox && pageBox.w > 200 && tabBox.w > 200 && pageBox.x + pageBox.w <= tabBox.x + 2, JSON.stringify({ page: pageBox, tab: tabBox }));
-    await crop(page, 'header_leftbar.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+    check('the project page active again: the generator entry stays, not active, the page on screen', g2.length === 1 && !g2[0].active && !!pageBox && pageBox.w > 1000, JSON.stringify({ bar: g2, page: pageBox }));
+    // Full width: the generator, selected, takes the box the project page takes, not a split of it.
+    check('selected, the generator is full width: the project page\'s box, to the viewport\'s right edge', !!pageBox && !!fullBox && Math.abs(fullBox.x - pageBox.x) <= 2 && Math.abs(fullBox.w - pageBox.w) <= 4 && fullBox.x + fullBox.w >= 1600 - 4, JSON.stringify({ page: pageBox, tab: fullBox }));
+    await crop(page, 'appbar_project.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+    // Back through the app bar: its entry selects the tab.
+    await page.evaluate(CLICK(`document.querySelector('.appbar-tabs .appbar-tab--generator')`));
+    await wait(page, 1000);
+    const g3 = genEntries(await page.evaluate(APPBAR) as any[]);
+    check('the app-bar entry selects the generator tab again', g3.length === 1 && g3[0].active && !!(await page.evaluate(`(${TAB(leftTab)} || {}).offsetParent !== null`)), JSON.stringify(g3));
+    // Closed from the app bar: the dock tab is gone, and the entry with it.
+    await page.evaluate(CLICK(`document.querySelector('.appbar-tabs .appbar-tab--generator .appbar-tab__close')`));
+    await wait(page, 1500);
+    const afterClose = await page.evaluate(DOCKED) as any;
+    const g4 = genEntries(await page.evaluate(APPBAR) as any[]);
+    check('closed from the app bar, the dock tab is removed and the entry gone (kills: close only hides the entry)', !afterClose.all.includes(leftTab) && g4.length === 0, JSON.stringify({ dock: afterClose.all, bar: g4 }));
+
+    // Canvas docked: beside, unchanged (1515/1045), and no entry in the app bar; moved by hand into the first panel it
+    // is listed once, moved out again it is not, never a duplicate dock tab.
+    await page.evaluate(String.raw`(async () => { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(again.m1)})); })()`);
+    await poll(page, `(() => { const p = ${PANE(again.m1)}; return !!p && p.offsetParent !== null && p.querySelectorAll('.react-flow__node').length > 0; })()`, 30000);
+    await page.evaluate(String.raw`(async () => { const o = await import('/src/codegen/ui/openTemplateEditor.ts'); o.openTemplateEditor(${JSON.stringify(again.mm)}, ${JSON.stringify(ex.lookup.MM.name)}, null, 'default', ${JSON.stringify(again.m1)}); })()`);
+    await wait(page, 1500);
+    const besideLast = await page.evaluate(BESIDE(again.m1, leftTab)) as any;
+    const headLast = await page.evaluate(HEADER(leftTab)) as any;
+    const dockBeside = await page.evaluate(DOCKED) as any;
+    const g5 = genEntries(await page.evaluate(APPBAR) as any[]);
+    result.besideLast = { beside: besideLast, header: headLast, dock: dockBeside, bar: g5 };
+    note('a canvas docked, the tab opened again', result.besideLast);
+    check('with a canvas docked the tab opens beside it, its own header, not in the first panel (kills: always the main panel)', besideLast.found && besideLast.panels && besideLast.sideBySide && visibleHeader(headLast) && !dockBeside.first.includes(leftTab), JSON.stringify({ beside: besideLast, first: dockBeside.first }));
+    check('beside, the app bar has no generator entry (no ghost)', g5.length === 0, JSON.stringify(g5));
+    if (besideLast.found) await crop(page, 'beside_unchanged.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+    const MOVE = (dir: string) => String.raw`(async () => {
+      const d = (await import('/src/components/abstract/DockManager.tsx')).default.dock;
+      const first = d.getLayout().dockbox.children[0];
+      d.dockMove(d.find(${JSON.stringify(leftTab)}), d.find(first.id) || first, ${JSON.stringify(dir)});
+      await new Promise((r) => setTimeout(r, 1500));
+    })()`;
+    await page.evaluate(MOVE('middle'));
+    const movedIn = await page.evaluate(DOCKED) as any;
+    const g6 = genEntries(await page.evaluate(APPBAR) as any[]);
+    check('moved into the first panel by hand: one dock tab, listed once in the app bar', movedIn.all.filter((id: string) => id === leftTab).length === 1 && movedIn.first.includes(leftTab) && g6.length === 1 && g6[0].name === `Default · ${ex.lookup.MM.name}`, JSON.stringify({ dock: movedIn.all, bar: g6 }));
+    await page.evaluate(MOVE('right'));
+    const movedOut = await page.evaluate(DOCKED) as any;
+    const g7 = genEntries(await page.evaluate(APPBAR) as any[]);
+    check('moved out again: one dock tab, no app-bar entry', movedOut.all.filter((id: string) => id === leftTab).length === 1 && !movedOut.first.includes(leftTab) && g7.length === 0, JSON.stringify({ dock: movedOut.all, bar: g7 }));
 }
 
 try {
