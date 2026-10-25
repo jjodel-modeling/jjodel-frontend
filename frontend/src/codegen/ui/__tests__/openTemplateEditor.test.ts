@@ -8,6 +8,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 
 const fake = vi.hoisted(() => ({ dock: null as any }));
+const rail = vi.hoisted(() => ({ collapse: vi.fn() }));
 
 vi.mock('../../../components/abstract/DockManager', () => ({ default: fake }));
 vi.mock('../../../components/environment/consumerMode', () => ({ isConsumerMode: () => false }));
@@ -20,6 +21,7 @@ vi.mock('../TemplateEditorTab', async () => {
         chooseModelInTemplateTab: () => true,
         selectInTemplateTab: () => true,
         templateTabId: generatorTabId,
+        collapseRailOnOpen: rail.collapse,
         createGenerator: () => null,
     };
 });
@@ -63,9 +65,17 @@ function fakeDock(...panels: string[][]) {
 
 beforeEach(() => {
     fake.dock = null;
+    rail.collapse.mockClear();
 });
 
 describe('openTemplateEditor', () => {
+    it('every opening, new or brought forward, arms the rail collapse (kills: no collapse on opening) (P-2026-10-25-0925)', () => {
+        fake.dock = fakeDock(['project_summary', 'M1']);
+        expect(openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1')).toBe(true);
+        expect(openTemplateEditor('MM', 'Turnstile', null, 'default', 'M1')).toBe(true);
+        expect(rail.collapse).toHaveBeenCalledTimes(2);
+    });
+
     it('docks a new tab right of the canvas panel, at 45 % (kills: middle kept)', () => {
         const dock = fakeDock(['project_summary', 'M1']);
         fake.dock = dock;

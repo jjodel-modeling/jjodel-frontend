@@ -6,8 +6,8 @@
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import {
-    checkOffered, forgetGenerators, generatorTabId, launchGenerator, noTemplates, paneGeneration, rememberGenerator, runOffered, saveGeneratorTemplates,
-    templateToSelect,
+    armRailCollapse, checkOffered, forgetGenerators, forgetRail, generatorBeside, generatorTabId, launchGenerator, noTemplates, paneGeneration,
+    railShown, railStep, rememberGenerator, runOffered, saveGeneratorTemplates, templateToSelect,
 } from '../generatorTabs';
 import { generateGenerator } from '../../engine/generateFiles';
 import type { GeneratorRecord } from '../../engine/generatorCodec';
@@ -21,7 +21,7 @@ import type { Origin, TextMapEntry, TextFragment } from '../../engine/text';
 const main: TemplateRecord = { name: 'main', params: [], body: '"m"' };
 const row: TemplateRecord = { name: 'row', params: ['r'], body: '"r"' };
 
-beforeEach(() => forgetGenerators());
+beforeEach(() => { forgetGenerators(); forgetRail(); });
 
 describe('generatorTabId', () => {
     it('the default keeps the Template Editor id, another generator has its own (kills: one id for all generators)', () => {
@@ -161,5 +161,51 @@ describe('pickOnCanvas', () => {
     it('an element drawn as an edge: the edge and its source vertex; none when drawn by neither', () => {
         expect(pickOnCanvas(lookup, ['v1', 'v2'], ['e1'], 's1')).toEqual({ kind: 'edge', edgeId: 'e1', nodeId: 'v1' });
         expect(pickOnCanvas(lookup, ['v1'], ['e1'], 'nothing')).toBeNull();
+    });
+});
+
+describe('the rail beside a generator tab (P-2026-10-25-0925)', () => {
+    const canvas = { tabs: [{ id: 'mm1' }, { id: 'm1' }], activeId: 'm1' };
+    const gen = { tabs: [{ id: generatorTabId('mm1') }], activeId: generatorTabId('mm1') };
+    const beside = { dockbox: { children: [canvas, gen] } };
+    const open = { tree: true, inspector: true };
+    const shut = { tree: false, inspector: false };
+
+    it('beside: shown in its own panel next to the canvas panel, its canvas in front or not; not in the canvas panel, not alone (kills: any open generator counts)', () => {
+        expect(generatorBeside(beside)).toBe(true);
+        expect(generatorBeside({ dockbox: { children: [{ tabs: [{ id: 'm1' }, { id: generatorTabId('mm1') }], activeId: generatorTabId('mm1') }] } })).toBe(false);
+        expect(generatorBeside({ dockbox: { children: [{ tabs: [{ id: 'm1' }, { id: generatorTabId('mm1') }], activeId: 'm1' }] } })).toBe(false);
+        expect(generatorBeside({ dockbox: { children: [canvas, { tabs: [{ id: 'x' }, ...gen.tabs], activeId: 'x' }] } })).toBe(false);
+        expect(generatorBeside({ dockbox: { children: [gen] } })).toBe(false);
+        const g1 = generatorTabId('mm1', 'g1');
+        expect(generatorBeside({ dockbox: { children: [{ tabs: [{ id: 'm1' }, { id: g1 }], activeId: g1 }, gen] } })).toBe(true);
+        expect(generatorBeside(null)).toBe(false);
+    });
+
+    it('opening a generator tab beside the canvas collapses the rail (kills: no collapse)', () => {
+        armRailCollapse();
+        expect(railStep(false, open)).toBeNull();
+        expect(railStep(true, open)).toEqual({ kind: 'collapse' });
+    });
+
+    it('closing it restores the previous state, open or closed (kills: always reopened)', () => {
+        armRailCollapse();
+        expect(railStep(true, { tree: false, inspector: true })).toEqual({ kind: 'collapse' });
+        expect(railStep(true, shut)).toBeNull();
+        expect(railStep(false, shut)).toEqual({ kind: 'restore', zones: { tree: false, inspector: true } });
+        expect(railStep(false, { tree: false, inspector: true })).toBeNull();
+        armRailCollapse();
+        expect(railStep(true, shut)).toBeNull();
+        expect(railStep(false, shut)).toBeNull();
+    });
+
+    it('a manual reopen is kept (kills: re-collapse on every render)', () => {
+        armRailCollapse();
+        expect(railStep(true, open)).toEqual({ kind: 'collapse' });
+        railShown();
+        expect(railStep(true, open)).toBeNull();
+        expect(railStep(false, open)).toBeNull();
+        armRailCollapse();
+        expect(railStep(true, open)).toEqual({ kind: 'collapse' });
     });
 });

@@ -36,9 +36,14 @@
  * over a conforming model, its generation errors of the edited template still Monaco markers here; «go to template»
  * from a fragment selects that template here and reveals the producing range when the origin gives it. The paragraph
  * on the preview above describes S3; the entry select gave way to the generator's declared files.
+ *
+ * Beside the canvas (P-2026-10-25-0925): while an opened generator tab sits beside the canvas the Properties/Tree rail
+ * is collapsed, by the topbar's own `toggleRail`, and it comes back as it was when no generator tab is beside any
+ * more; a reopen by the user is kept until the next opening (`useRailBeside` below, the rules in generatorTabs.ts).
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { flushSync } from 'react-dom';
 import { shallowEqual, useSelector } from 'react-redux';
 import { LPointerTargetable, Monaco, monaco, store } from '../../joiner';
 import { buildEvalContext } from '../../jjscript';
@@ -58,7 +63,10 @@ import { previewMarkers, previewTemplates } from './templatePreview';
 import { buildCompletionContext, setTemplateCompletionContext } from './templateCompletion';
 import type { DraftEdit, Drafts } from './templateDrafts';
 import { elementName } from './codeOrigins';
-import { generatorTabId, rememberGenerator, saveGeneratorTemplates, templateToSelect } from './generatorTabs';
+import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
+import {
+    armRailCollapse, forgetRail, generatorBeside, generatorTabId, railShown, railStep, rememberGenerator, saveGeneratorTemplates, templateToSelect,
+} from './generatorTabs';
 import { openTemplateEditor } from './openTemplateEditor';
 import GeneratorPane from './GeneratorPane';
 import { ColumnSplitter, SPLIT_MIN_PX, readSplitRatio } from './splitter';
@@ -220,6 +228,88 @@ function frameWidth(el: Element | null | undefined): number {
     return [cs.paddingLeft, cs.paddingRight, cs.borderLeftWidth, cs.borderRightWidth].reduce((n, v) => n + (parseFloat(v) || 0), 0);
 }
 
+// ── The rail beside the tab (P-2026-10-25-0925) ──────────────────────────────
+
+/** The rail's state and its own controls, as the tabs' provider gives them. */
+interface RailControls {
+    readonly tree: boolean;
+    readonly inspector: boolean;
+    readonly toggleRail: () => void;
+    readonly show: () => void;
+    readonly showInspector: () => void;
+}
+
+/** The controls of the last rendered tab: every tab reads the same provider. */
+let railControls: RailControls | null = null;
+let mountedTabs = 0;
+
+/** Applies the rail's step for the dock as it is now (generatorTabs.ts `railStep`). */
+function settleRail(c: RailControls): void {
+    const dock = DockManager.dock;
+    const step = railStep(!!dock && generatorBeside(dock.getLayout()), { tree: c.tree, inspector: c.inspector });
+    if (step?.kind === 'collapse') c.toggleRail();
+    else if (step?.kind === 'restore') {
+        if (step.zones.tree) c.show();
+        if (step.zones.inspector) c.showInspector();
+    }
+}
+
+/**
+ * A reload or a close while the rail is auto-collapsed: its zones come back first, synchronously, so the keys the
+ * provider stores them under keep the user's state and nothing of the auto-collapse is persisted.
+ */
+function restoreOnLeave(): void {
+    const c = railControls;
+    if (!c) return;
+    const step = railStep(false, { tree: c.tree, inspector: c.inspector });
+    if (step?.kind !== 'restore') return;
+    flushSync(() => {
+        if (step.zones.tree) c.show();
+        if (step.zones.inspector) c.showInspector();
+    });
+}
+
+/** An opening of a generator tab (openTemplateEditor.ts): the rail collapses once the tab is beside the canvas. */
+export function collapseRailOnOpen(): void {
+    armRailCollapse();
+    // A tab already on screen beside the canvas does not resize: settle once the dock has rendered the opening.
+    setTimeout(() => { if (railControls) settleRail(railControls); }, 0);
+}
+
+/**
+ * The rail collapses while an opened generator tab is beside the canvas, the way the topbar's control collapses it
+ * (`toggleRail`), and comes back as it was when none is. A tab is shown, hidden, moved and resized as its root
+ * resizes; a closed tab settles after it has left the dock. A reopen by the user drops the memory (`railShown`).
+ */
+function useRailBeside(rootRef: React.RefObject<HTMLElement>): void {
+    const { isVisible, isInspectorVisible, isRailVisible, toggleRail, show, showInspector } = useTreeViewPanel();
+    const live = useRef<RailControls>({ tree: isVisible, inspector: isInspectorVisible, toggleRail, show, showInspector });
+    live.current = { tree: isVisible, inspector: isInspectorVisible, toggleRail, show, showInspector };
+    railControls = live.current;
+    useEffect(() => {
+        if (isRailVisible) railShown();
+    }, [isRailVisible]);
+    useEffect(() => {
+        if (mountedTabs++ === 0) window.addEventListener('pagehide', restoreOnLeave);
+        const el = rootRef.current;
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => settleRail(live.current));
+        if (el && observer) observer.observe(el);
+        return () => {
+            observer?.disconnect();
+            mountedTabs--;
+            const last = live.current;
+            setTimeout(() => {
+                settleRail(last);
+                if (mountedTabs === 0) {
+                    window.removeEventListener('pagehide', restoreOnLeave);
+                    forgetRail();
+                    railControls = null;
+                }
+            }, 0);
+        };
+    }, []);
+}
+
 interface Item {
     /** The draft key: the stored name, or the base name of a draft whose template is gone. */
     readonly key: string;
@@ -246,6 +336,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
     // The editor column's share of the width right of the list, against the right pane (P-2026-10-24-1515).
     const [split, setSplit] = useState(() => readSplitRatio());
     const rootRef = useRef<HTMLDivElement>(null);
+    useRailBeside(rootRef);
     const mainRef = useRef<HTMLElement>(null);
     const splitArea = useCallback(() => {
         const root = rootRef.current?.getBoundingClientRect();

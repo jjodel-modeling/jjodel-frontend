@@ -16,6 +16,9 @@
  * generators, else to a split right of the panel that holds the model's (or metamodel's) editor tab, about 45 % of
  * the width (canvasSelection.ts `dockBeside`), else to the first panel as before.
  *
+ * Every opening, of a new tab or of one brought forward, collapses the Properties/Tree rail once the tab is beside the
+ * canvas (P-2026-10-25-0925, TemplateEditorTab.tsx `collapseRailOnOpen`).
+ *
  * Reached only from the Code panel's lazy chunk and the left bar's dynamic import (scripts/gates/check-codegen-lazy.ts).
  */
 
@@ -23,7 +26,9 @@ import React from 'react';
 import type { TabData } from 'rc-dock';
 import DockManager from '../../components/abstract/DockManager';
 import { isConsumerMode } from '../../components/environment/consumerMode';
-import TemplateEditorTab, { TemplateTabTitle, chooseModelInTemplateTab, selectInTemplateTab, templateTabId } from './TemplateEditorTab';
+import TemplateEditorTab, {
+    TemplateTabTitle, chooseModelInTemplateTab, collapseRailOnOpen, selectInTemplateTab, templateTabId,
+} from './TemplateEditorTab';
 import { rememberGenerator } from './generatorTabs';
 import { dockBeside, findPanel, generatorTabsOf, panelOf } from './canvasSelection';
 import { DEFAULT_GENERATOR_ID } from '../engine/generatorCodec';
@@ -47,6 +52,7 @@ export function openTemplateEditor(
     if (!dock || !metamodelId) return false;
     const id = templateTabId(metamodelId, generatorId);
     rememberGenerator(metamodelId, generatorId);
+    collapseRailOnOpen();
 
     if (dock.find(id)) {
         dock.updateTab(id, null, true);

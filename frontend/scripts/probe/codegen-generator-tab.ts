@@ -28,6 +28,11 @@
  * P-2026-10-24-1516: Preview is coloured by Monaco's tokenizer, every provenance span keeps its fragment, a hover outlines
  * every piece of the fragment (crops preview_coloured.png, preview_hovered.png), the span clicked on the canvas is coloured.
  *
+ * P-2026-10-25-0925: with no generator tab the rail is the one-panel rail of 1630; opened from the pill beside the canvas
+ * the rail collapses, the selected vertex after a fragment click lies inside the visible canvas (crop
+ * beside_selection.png); moved into the canvas panel the rail comes back; a reload does not persist the collapse; the
+ * last tab closed, the rail is back as it was (crop layout_closed.png).
+ *
  * Crops, light theme, in ~/.jjodel-lanes/P-2026-10-24-0045/crops/ (CGT_CROPS), with their sizes printed.
  *
  * Run:  ~/.local/bin/node frontend/scripts/lane-run.mjs probe <worktree> frontend/scripts/probe/codegen-generator-tab.ts \
@@ -226,6 +231,21 @@ const BESIDE = (m1Id: string, tabId: string) => String.raw`(() => {
   };
 })()`;
 
+/** The Properties/Tree rail: its box while on screen, and the canvas inset it publishes (P-2026-10-25-0925). */
+const RAIL = String.raw`(() => {
+  const r = document.querySelector('.properties-tree-overlay:not(.properties-tree-overlay--collapsed)');
+  const b = r ? r.getBoundingClientRect() : null;
+  return { shown: !!b && b.width > 0, box: b ? { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) } : null, inset: document.body.style.getPropertyValue('--jj-canvas-right-inset') };
+})()`;
+/** Every dock panel: its tabs and the one it shows. */
+const LAYOUT = String.raw`(async () => {
+  const d = (await import('/src/components/abstract/DockManager.tsx')).default.dock;
+  const walk = (n) => n.tabs ? [{ tabs: n.tabs.map((t) => t.id.slice(-24)), active: (n.activeId || '').slice(-24) }] : (n.children || []).flatMap(walk);
+  return walk(d.getLayout().dockbox);
+})()`;
+/** The one-panel rail of P-2026-10-24-1630 on the Turnstile model: overlay x 1200, 400×877, inset 408px. */
+const onePanelRail = (r: any) => !!r && r.shown && r.box.x === 1200 && r.box.w === 400 && r.box.h === 877 && r.inset === '408px';
+
 /** The editor column's share of the width right of the template list, and the splitter (P-2026-10-24-1515). */
 const SPLIT = (tab: string) => String.raw`(() => {
   const t = ${tab};
@@ -294,6 +314,10 @@ async function main(): Promise<void> {
     await poll(page, `(() => { const p = ${pane}; return !!p && p.querySelectorAll('.react-flow__node').length > 0; })()`, 60000);
     await wait(page, 2000);
     check('the Code pill is on the model\'s editor', !!(await poll(page, `!!(${pane} && ${pane}.querySelector('.codegen-pill button'))`, 30000)), '');
+    const railAlone = await page.evaluate(RAIL) as any;
+    result.railAlone = railAlone;
+    note('the rail with no generator tab', railAlone);
+    check('with no generator tab the rail is the one-panel rail of 1630: x 1200, 400x877, inset 408px (P-2026-10-25-0925)', onePanelRail(railAlone), JSON.stringify(railAlone));
     await page.evaluate(CLICK(`${pane}.querySelector('.codegen-pill button')`));
     const tabId = `codegen_tpl_${mm}`;
     const tab = TAB(tabId);
@@ -310,7 +334,9 @@ async function main(): Promise<void> {
     note('the canvas and the tab once open', beside);
     check('the tab opens beside the canvas: two panels, both visible, side by side, the tab about 45 %',
         beside.found && beside.panels && beside.visible && beside.sideBySide && Math.abs(beside.share - 0.45) < 0.06, JSON.stringify(beside));
-    check('the Properties/Tree rail covers the canvas, not the generator tab', !!beside.rail && beside.railOnCanvas, JSON.stringify({ rail: beside.rail, canvas: beside.canvas, tab: beside.tab }));
+    const railOpen = await poll<any>(page, `(() => { const r = ${RAIL}; return r.shown ? null : r; })()`, 5000);
+    result.railBeside = railOpen;
+    check('opened from the pill beside the canvas, the Properties/Tree rail is collapsed, inset 0px (P-2026-10-25-0925)', !!railOpen && railOpen.inset === '0px', JSON.stringify(railOpen ?? await page.evaluate(RAIL)));
     check('no floating editor panel is left on the canvas', !(await page.evaluate(`!!(${pane}.querySelector('.codegen-panel'))`)), '');
     await wait(page, 500);
     await crop(page, 'rail_beside.png', beside.found ? { x: beside.canvas.x, y: Math.min(beside.canvas.y, beside.tab.y), w: beside.tab.x + beside.tab.w - beside.canvas.x, h: Math.max(beside.canvas.h, beside.tab.h) } : null, 0);
@@ -548,6 +574,10 @@ async function main(): Promise<void> {
         const kept = await page.evaluate(BESIDE(m1, tabId)) as any;
         result.besideAfterClick = kept;
         check('after a fragment click the code view is still on screen beside the canvas, the rail on the canvas', kept.found && kept.panels && kept.visible && kept.sideBySide && kept.railOnCanvas, JSON.stringify(kept));
+        const inCanvas = !!nodeBox && kept.found && nodeBox.w > 0 && nodeBox.x >= kept.canvas.x && nodeBox.y >= kept.canvas.y
+            && nodeBox.x + nodeBox.w <= kept.canvas.x + kept.canvas.w && nodeBox.y + nodeBox.h <= kept.canvas.y + kept.canvas.h
+            && (!kept.rail || nodeBox.x + nodeBox.w <= kept.rail.x);
+        check('after a fragment click the selected vertex lies inside the visible canvas, no rail over it (P-2026-10-25-0925)', inCanvas, JSON.stringify({ node: nodeBox, canvas: kept.canvas, rail: kept.rail }));
         await crop(page, 'beside_selection.png', kept.found ? { x: kept.canvas.x, y: Math.min(kept.canvas.y, kept.tab.y), w: kept.tab.x + kept.tab.w - kept.canvas.x, h: Math.max(kept.canvas.h, kept.tab.h) } : null, 0);
 
         // The tab moved by hand into the canvas's own panel: a fragment click moves it to a right split first.
@@ -560,6 +590,12 @@ async function main(): Promise<void> {
           return d.find(${JSON.stringify(m1)}).parent === d.find(${JSON.stringify(tabId)}).parent;
         })()`);
         check('the tab can be stacked by hand in the canvas panel', stacked === true, String(stacked));
+        note('the dock layout stacked', await page.evaluate(LAYOUT));
+        await wait(page, 600);
+        const railStacked = await page.evaluate(`[localStorage.getItem('jjodel_treeview_visible'), localStorage.getItem('jjodel_property_panel_visible')]`) as string[];
+        result.railStacked = railStacked;
+        check('stacked on the canvas while the other generator tab stays beside the canvas panel, the rail stays collapsed (P-2026-10-25-0925)',
+            railStacked.join() === 'false,false', JSON.stringify(railStacked));
         await poll(page, `!!(${tab} && ${tab}.offsetParent !== null && ${tab}.querySelector('[data-probe-pick="1"]'))`, 5000);
         await page.evaluate(CLICK(`document.querySelector('[data-probe-pick="1"]')`));
         await wait(page, 1500);
@@ -664,6 +700,12 @@ async function main(): Promise<void> {
     check('the project loads again after the reload', !!again, JSON.stringify(again));
     if (!again) return;
     await wait(page, 2000);
+    // Reloaded while auto-collapsed (the pill menu opened the second generator beside the canvas): nothing persisted.
+    const railReloaded = await page.evaluate(RAIL) as any;
+    result.railReloaded = railReloaded;
+    note('the rail after the reload', railReloaded);
+    check('a reload while auto-collapsed does not persist the collapse: the rail zones are stored shown (P-2026-10-25-0925)',
+        await page.evaluate(`localStorage.getItem('jjodel_property_panel_visible') === 'true' && localStorage.getItem('jjodel_treeview_visible') === 'true'`) as boolean, JSON.stringify(railReloaded));
     await page.evaluate(String.raw`(async () => { const o = await import('/src/codegen/ui/openTemplateEditor.ts'); o.openTemplateEditor(${JSON.stringify(again.mm)}, ${JSON.stringify(ex.lookup.MM.name)}, null, 'default'); })()`);
     const tabAgain = TAB(`codegen_tpl_${again.mm}`);
     await poll(page, `!!(${tabAgain} && ${tabAgain}.offsetParent !== null)`, 20000);
@@ -672,6 +714,36 @@ async function main(): Promise<void> {
     result.splitReload = { before: s2, after: s3 };
     note('the split before and after the reload', { before: s2?.ratio, after: s3?.ratio, stored: s3?.stored });
     check('after a reload the tab keeps the dragged ratio', !!s2 && !!s3 && Math.abs(s3.ratio - s2.ratio) < 0.01 && s3.stored === s2.stored, JSON.stringify({ before: s2?.ratio, after: s3?.ratio }));
+
+    // P-2026-10-25-0925: the model's canvas and the tab beside it, then the tab closed: the rail comes back as it was.
+    // The tab open after the reload is closed first, so the opening on the model docks a new one beside its canvas.
+    const CLOSE_ALL = String.raw`(async () => {
+      const dm = (await import('/src/components/abstract/DockManager.tsx')).default;
+      const d = dm.dock;
+      const walk = (n) => n.tabs ? n.tabs.map((t) => t.id) : (n.children || []).flatMap(walk);
+      walk(d.getLayout().dockbox).filter((id) => id.startsWith('codegen_tpl_')).forEach((id) => dm.closeTab(id));
+      await new Promise((r) => setTimeout(r, 300));
+      return walk(d.getLayout().dockbox).filter((id) => id.startsWith('codegen_tpl_')).length;
+    })()`;
+    await page.evaluate(CLOSE_ALL);
+    await page.evaluate(String.raw`(async () => { const dm = await import('/src/components/abstract/DockManager.tsx'); await dm.default.open2(window.LPointerTargetable.fromPointer(${JSON.stringify(again.m1)})); })()`);
+    await poll(page, `(() => { const p = ${PANE(again.m1)}; return !!p && p.offsetParent !== null && p.querySelectorAll('.react-flow__node').length > 0; })()`, 30000);
+    await page.evaluate(String.raw`(async () => { const o = await import('/src/codegen/ui/openTemplateEditor.ts'); o.openTemplateEditor(${JSON.stringify(again.mm)}, ${JSON.stringify(ex.lookup.MM.name)}, null, 'default', ${JSON.stringify(again.m1)}); })()`);
+    await wait(page, 1500);
+    const besideAgain = await page.evaluate(BESIDE(again.m1, `codegen_tpl_${again.mm}`)) as any;
+    const railAgain = await page.evaluate(RAIL) as any;
+    note('the dock and the rail, the tab opened again beside the canvas', { dock: await page.evaluate(DOCK(again.m1)), rail: railAgain });
+    check('opened again beside the canvas, the rail is collapsed', besideAgain.found && besideAgain.panels && besideAgain.sideBySide && !railAgain.shown, JSON.stringify({ beside: besideAgain.found && besideAgain.panels, rail: railAgain }));
+    await crop(page, 'layout_beside_again.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
+    const closed = await page.evaluate(CLOSE_ALL);
+    check('every generator tab closes', closed === 0, String(closed));
+    const railClosed = await poll<any>(page, `(() => { const r = ${RAIL}; return r.shown && r.box.w === 400 ? r : null; })()`, 5000);
+    await wait(page, 600);
+    const railFinal = await page.evaluate(RAIL) as any;
+    result.railClosed = railFinal;
+    note('the rail after the last generator tab closed', railFinal);
+    check('the last generator tab closed, the rail is back as it was: x 1200, 400x877, inset 408px', !!railClosed && onePanelRail(railFinal), JSON.stringify(railFinal));
+    await crop(page, 'layout_closed.png', { x: 0, y: 0, w: 1600, h: 1000 }, 0);
 }
 
 try {
