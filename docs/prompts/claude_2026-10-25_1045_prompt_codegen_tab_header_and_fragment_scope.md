@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (codegen UI; two findings of Alfonso's visual check)
 Depends: P-2026-10-25-0925
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane codegen · 21cbf99e6 · bench 8/8 · crops in the lane folder · committed by the chat after the context ceiling
 Corregge: P-2026-10-24-1515, P-2026-10-24-1516
 Request: Alfonso, 2026-10-25 10:41, in the project chat: «il generator non ha un tab e se seleziono un frammento si seleziona tutto» (screenshot)
 
