@@ -5,7 +5,7 @@ Chat: C-2026-10-23-2009
 Front: codegen
 Lane: full (small; codegen tab and the Properties panel's collapse state, no critical-zone file)
 Depends: P-2026-10-24-1516
-Status: da eseguire
+Status: eseguito 2026-10-25 · lane codegen · dd1b87b96 · bench 9/9 · crops in the lane folder
 Corregge: P-2026-10-24-1515
 Request: Alfonso, 2026-10-25 09:21, in the project chat: «chiusura automatica» (chosen over a narrower split)
 
