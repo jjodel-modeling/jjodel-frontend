@@ -6,7 +6,8 @@
  *   above, at the first position whose rect keeps `PLACEMENT_CLEARANCE` from every taken box (a
  *   node, an edge label, a sample of an edge, another ghost). When all four straight spots are
  *   taken the search slides along the sides, nearest first. Deterministic: the same input gives the
- *   same spot.
+ *   same spot. Among the free spots of one slide, one that shares a band with the anchor wide
+ *   enough for a straight ghost edge goes first (P-2026-10-25-1005, tie-break only).
  * - `compartmentBelow`: the rows added to an existing class, flush under its node.
  * - `strikeOnRow`: the overlay of a removed row, from the row's offset inside its node.
  */
@@ -34,6 +35,16 @@ export function tooClose(a: PlacementBox, b: PlacementBox, clearance: number = P
         && a.y < b.y + b.height + clearance && b.y < a.y + a.height + clearance;
 }
 
+/** The band two facing boxes share must leave room for a straight edge away from the corners. */
+const STRAIGHT_BAND = 16;
+
+/** True when a `width` x `height` box at `p` shares with `anchor` a band wide enough for a straight edge. */
+export function facesAcross(p: { x: number; y: number }, width: number, height: number, anchor: PlacementBox): boolean {
+    const xOverlap = Math.min(p.x + width, anchor.x + anchor.width) - Math.max(p.x, anchor.x);
+    const yOverlap = Math.min(p.y + height, anchor.y + anchor.height) - Math.max(p.y, anchor.y);
+    return Math.max(xOverlap, yOverlap) > STRAIGHT_BAND;
+}
+
 /** The first free spot for a `width` x `height` box next to `anchor`; null when none within the slide range. */
 export function findFreeSpot(
     anchor: PlacementBox,
@@ -44,6 +55,7 @@ export function findFreeSpot(
 ): { x: number; y: number } | null {
     for (let k = 0; k <= SLIDE_STEPS; k++) {
         const slides = k === 0 ? [0] : [k * SLIDE_STEP, -k * SLIDE_STEP];
+        const hits: { x: number; y: number }[] = [];
         for (const d of slides) {
             const spots = [
                 { x: anchor.x + anchor.width + SIDE_GAP_X, y: anchor.y + d },
@@ -51,9 +63,11 @@ export function findFreeSpot(
                 { x: anchor.x - SIDE_GAP_X - width, y: anchor.y + d },
                 { x: anchor.x + d, y: anchor.y - SIDE_GAP_Y - height },
             ];
-            const hit = spots.find((p) => !taken.some((t) => tooClose({ ...p, width, height }, t, clearance)));
-            if (hit) return hit;
+            for (const p of spots) if (!taken.some((t) => tooClose({ ...p, width, height }, t, clearance))) hits.push(p);
         }
+        // Tie-break among the free spots of one slide (P-2026-10-25-1005): one that faces the anchor
+        // across a shared band, so that the ghost edge runs straight, before the first in order.
+        if (hits.length > 0) return hits.find((p) => facesAcross(p, width, height, anchor)) ?? hits[0];
     }
     return null;
 }
