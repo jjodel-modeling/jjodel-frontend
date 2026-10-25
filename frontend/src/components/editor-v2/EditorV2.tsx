@@ -127,7 +127,7 @@ import SimulationPanel from './sim/SimulationPanel';
 import { simPillVisible } from './sim/simRoleStatus';
 import { getSimRun, useSimVersion } from './sim/simRunState';
 import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
-import { appendPreview, buildPreviewElements, drawnNodes, isPreviewId } from './preview/previewElements';
+import { appendPreview, buildPreviewElements, drawnNodes, isPreviewId, measureObstacles } from './preview/previewElements';
 import { installScriptPreviewListener, useScriptPreview } from './preview/scriptPreviewStore';
 import { PreviewBar } from './preview/PreviewBar';
 import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
@@ -1716,6 +1716,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // filtered out of getNodes/getEdges and of every handler below. Same arrays as before when there is no preview.
     useEffect(() => installScriptPreviewListener(() => (store.getState() as any).idlookup ?? {}), []);
     const scriptPreview = useScriptPreview(modelid);
+    // The ghosts read the rows, edge labels and edges the canvas has drawn (P-2026-10-25-0110): one more pass
+    // two frames after a new preview, when the DOM shows what the first pass was computed before.
+    const [previewLayoutPass, setPreviewLayoutPass] = useState(0);
+    useEffect(() => {
+        if (!scriptPreview) return;
+        let second = 0;
+        const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => setPreviewLayoutPass((n) => n + 1)); });
+        return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
+    }, [scriptPreview]);
     const canvasElements = useMemo(() => {
         if (!scriptPreview) return flowElements;
         const idlookup = (store.getState() as any).idlookup ?? {};
@@ -1723,8 +1732,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const model = idlookup[nodeId]?.model;
             return typeof model === 'string' && model ? model : undefined;
         });
-        return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn, scriptPreview.script));
-    }, [flowElements, scriptPreview]);
+        return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn, scriptPreview.script, measureObstacles(drawn)));
+    }, [flowElements, scriptPreview, previewLayoutPass]);
 
     // Persist the merged session override of a synthetic edge on the hidden
     // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
@@ -5007,6 +5016,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     allClasses={modeInfo.allClasses}
                     selectedDObjectId={lastSelectedModelElement ?? null}
                     onItemActivate={onPaletteActivate}
+                    collapsed={!!scriptPreview?.owner}
                 />
                 <div className="editor-v2__main">
                     <Toolbar

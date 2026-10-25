@@ -67,7 +67,23 @@ const READ_CANVAS = (panelId: string) => `(() => {
     const r = n.getBoundingClientRect(); if (r.width > 0 && !n.closest('.react-flow__node[data-id] .react-flow__node')) rects.push({ x: r.x, y: r.y, w: r.width, h: r.height });
   }
   const ghosts = [...p.querySelectorAll('.react-flow__node.jj-preview-node')].map(n => { const c = getComputedStyle(n); const r = n.getBoundingClientRect(); return { id: n.getAttribute('data-id'), text: n.innerText.trim(), cls: n.className, border: c.borderTopStyle + ' ' + c.borderTopColor, deco: c.textDecorationLine, rect: { x: r.x, y: r.y, w: r.width, h: r.height } }; });
-  return { pos, rects, ghosts, ghostEdges: p.querySelectorAll('.react-flow__edge.jj-preview-edge').length, canvasBar: !!p.querySelector('.jj-preview-bar'), nodes: Object.keys(pos).length };
+  // P-2026-10-25-0110: the class boxes by name, the rows as drawn, the edges and their labels in screen space, the palette.
+  const named = {};
+  for (const n of p.querySelectorAll('.react-flow__node:not(.jj-preview-node)')) { const nm = n.querySelector('.mm-node__name'); if (!nm) continue; const r = n.getBoundingClientRect(); named[nm.textContent.trim()] = { x: r.x, y: r.y, w: r.width, h: r.height }; }
+  const rows = [...p.querySelectorAll('.react-flow__node:not(.jj-preview-node) .mm-field')].map(el => { const r = el.getBoundingClientRect(); return { owner: el.closest('.react-flow__node')?.querySelector('.mm-node__name')?.textContent.trim(), name: el.querySelector('.mm-field__name')?.textContent.trim(), rect: { x: r.x, y: r.y, w: r.width, h: r.height } }; });
+  const vp = p.querySelector('.react-flow__viewport');
+  const zoom = vp ? new DOMMatrixReadOnly(getComputedStyle(vp).transform).a : 1;
+  const samples = [];
+  for (const e of p.querySelectorAll('.react-flow__edge')) {
+    if ((e.getAttribute('data-id') || '').startsWith('jjpreview:')) continue;
+    for (const path of e.querySelectorAll('path.react-flow__edge-path')) {
+      const len = path.getTotalLength(); const m = path.getScreenCTM(); if (!m) continue;
+      for (let at = 0; at <= len; at += 8) { const q = path.getPointAtLength(at); samples.push([Math.round(m.a * q.x + m.c * q.y + m.e), Math.round(m.b * q.x + m.d * q.y + m.f)]); }
+    }
+  }
+  const labels = [...p.querySelectorAll('.edge-label, .edge-end-label')].map(l => { const r = l.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }).filter(r => r.w > 0);
+  const pal = p.querySelector('.editor-v2-palette');
+  return { pos, rects, named, rows, zoom, samples, labels, paletteWidth: pal ? Math.round(pal.getBoundingClientRect().width) : null, ghosts, ghostEdges: p.querySelectorAll('.react-flow__edge.jj-preview-edge').length, canvasBar: !!p.querySelector('.jj-preview-bar'), nodes: Object.keys(pos).length };
 })()`;
 
 const browser = await chromium.launch();
@@ -206,15 +222,39 @@ dock = await page.evaluate(READ_DOCK(tabId, scene.esm));
 canvas = await page.evaluate(READ_CANVAS(dock.target?.id || ''));
 meas('ghosts', canvas?.ghosts);
 const added = (canvas?.ghosts || []).find((g: any) => /class RsbNew/.test(g.text));
-const removed = (canvas?.ghosts || []).find((g: any) => /jj-preview-node--removed/.test(g.cls));
+const rowsGhost = (canvas?.ghosts || []).find((g: any) => /rsbExtra/.test(g.text));
+const strike = (canvas?.ghosts || []).find((g: any) => /jj-preview-strike/.test(g.cls));
+const owner = canvas?.named?.[scene.cls];
+const ownerRow = (canvas?.rows || []).find((r: any) => r.owner === scene.cls && r.name === scene.attr);
 check('ghost class on the real canvas, dashed cyan', !!added && /^dashed rgb\(6, 182, 212\)$/.test(added.border), added);
-check('removal struck through on the real canvas', !!removed && removed.deco === 'line-through' && removed.text.includes(scene.attr), removed);
-check('ghost edges drawn (generalization, rows)', (canvas?.ghostEdges || 0) >= 2, canvas?.ghostEdges);
+// 1. Features inside their class: the added row flush under its owner, dashed cyan; the removed row struck where it is drawn.
+check('added attribute: a compartment snapped under its class (same x and width, top at its bottom), dashed cyan',
+  !!rowsGhost && !!owner && /^dashed rgb\(6, 182, 212\)$/.test(rowsGhost.border) && Math.abs(rowsGhost.rect.x - owner.x) <= 1 && Math.abs(rowsGhost.rect.w - owner.w) <= 1 && Math.abs(rowsGhost.rect.y - (owner.y + owner.h)) <= 1,
+  { ghost: rowsGhost?.rect, owner });
+meas('row mapping', { owner, ghostRow: rowsGhost?.rect, removedRow: ownerRow?.rect, strike: strike?.rect });
+check('removed attribute: a red strike on its row, y within the row +-2 px',
+  !!strike && !!ownerRow
+    && Math.abs((strike.rect.y + strike.rect.h / 2) - (ownerRow.rect.y + ownerRow.rect.h / 2)) <= 2 && Math.abs(strike.rect.x - ownerRow.rect.x) <= 2 && Math.abs(strike.rect.w - ownerRow.rect.w) <= 2,
+  { strike: strike?.rect, row: ownerRow?.rect });
+check('ghost edges drawn (generalization)', (canvas?.ghostEdges || 0) >= 1, canvas?.ghostEdges);
 check('no canvas bar; the bar in the tab with Discard and Apply', canvas?.canvasBar === false && (await page.locator(`${TAB} .rfa-bar button`, { hasText: 'Apply' }).count()) === 1 && (await page.locator(`${TAB} .rfa-bar button`, { hasText: 'Discard' }).count()) === 1, canvas?.canvasBar);
 check('class positions unchanged by the preview', samePos(before?.pos, canvas?.pos), null);
 const hit = (a: any, b: any) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-const overlapping = (canvas?.ghosts || []).filter((g: any) => (canvas?.rects || []).some((r: any) => hit(g.rect, r)));
+const shrink = (r: any) => ({ x: r.x + 1, y: r.y + 1, w: r.w - 2, h: r.h - 2 });
+const overlapping = (canvas?.ghosts || []).filter((g: any) => !/jj-preview-strike/.test(g.cls) && (canvas?.rects || []).some((r: any) => hit(shrink(g.rect), r)));
 check('no ghost over a class', overlapping.length === 0, overlapping.map((g: any) => g.text));
+// 2. The new class in free space: clear of every edge sample and edge label, and of the other ghosts (12 px of the 24 flow px: the sampling step).
+const zoom = canvas?.zoom || 1;
+const pad = 12 * zoom;
+const near = (r: any, x: number, y: number) => x > r.x - pad && x < r.x + r.w + pad && y > r.y - pad && y < r.y + r.h + pad;
+const onEdge = added ? (canvas?.samples || []).filter(([x, y]: number[]) => near(added.rect, x, y)).length : -1;
+const onLabel = added ? (canvas?.labels || []).filter((l: any) => hit({ x: added.rect.x - pad, y: added.rect.y - pad, w: added.rect.w + 2 * pad, h: added.rect.h + 2 * pad }, l)).length : -1;
+const onGhost = added ? (canvas?.ghosts || []).filter((g: any) => g !== added && hit({ x: added.rect.x - pad, y: added.rect.y - pad, w: added.rect.w + 2 * pad, h: added.rect.h + 2 * pad }, g.rect)).length : -1;
+meas('new class rect', { rect: added?.rect, zoom, edgeSamplesNear: onEdge, labelsNear: onLabel, ghostsNear: onGhost });
+check('the new class intersects no node, edge, edge label or ghost', !!added && onEdge === 0 && onLabel === 0 && onGhost === 0, { onEdge, onLabel, onGhost });
+// 3. No palette while previewing beside.
+meas('palette width while previewing', canvas?.paletteWidth);
+check('the target palette is collapsed while previewing', canvas?.paletteWidth === 0, canvas?.paletteWidth);
 const sP = await page.evaluate(readMm) as any;
 check('nothing runs before Apply', !sP.hasNew && sP.hasAttr && sP.undo === s0.undo, sP);
 await page.screenshot({ path: join(OUT, 'sbs_previewing.png') });
@@ -223,9 +263,18 @@ await page.screenshot({ path: join(OUT, 'sbs_previewing.png') });
 await page.evaluate(`(() => { const m = window.monaco; const x = m.editor.getModels().filter(x => x.getLanguageId() === 'jjscript').pop(); x.setValue(${JSON.stringify(SCRIPT.split('\n').slice(0, 2).join('\n'))}); })()`);
 await wait(page, 1500);
 let canvasR: any = await page.evaluate(READ_CANVAS(dock.target?.id || ''));
-check('editing while previewing re-plans on the canvas', !!canvasR && !(canvasR.ghosts || []).some((g: any) => /--removed/.test(g.cls)) && (canvasR.ghosts || []).some((g: any) => /RsbNew/.test(g.text)), canvasR?.ghosts?.map((g: any) => g.text));
+check('editing while previewing re-plans on the canvas', !!canvasR && !(canvasR.ghosts || []).some((g: any) => /jj-preview-strike/.test(g.cls)) && (canvasR.ghosts || []).some((g: any) => /RsbNew/.test(g.text)), canvasR?.ghosts?.map((g: any) => g.text));
 await page.evaluate(`(() => { const m = window.monaco; const x = m.editor.getModels().filter(x => x.getLanguageId() === 'jjscript').pop(); x.setValue(${JSON.stringify(SCRIPT)}); })()`);
 await wait(page, 1500);
+
+// Discard restores the palette; Preview again for the Apply below.
+await page.locator(`${TAB} .rfa-bar button`, { hasText: 'Discard' }).click();
+await wait(page, 1200);
+const canvasD: any = await page.evaluate(READ_CANVAS(dock.target?.id || ''));
+meas('palette width after Discard', canvasD?.paletteWidth);
+check('Discard restores the palette and clears the ghosts', (canvasD?.paletteWidth || 0) > 100 && (canvasD?.ghosts || []).length === 0, { width: canvasD?.paletteWidth, ghosts: canvasD?.ghosts?.length });
+await page.locator(`${TAB} .script-tab__toolbar button`, { hasText: 'Preview' }).click();
+await wait(page, 2000);
 
 // Apply, then one Cmd+Z.
 phase = 'apply';
@@ -237,6 +286,8 @@ meas('metamodel after Apply', s1);
 check('Apply changed the metamodel, one undo entry', s1.hasNew && s1.hasExtra && !s1.hasAttr && s1.undo === s0.undo + 1, { s0, s1 });
 canvasR = await page.evaluate(READ_CANVAS(dock.target?.id || ''));
 check('Apply cleared the ghosts', (canvasR?.ghosts || []).length === 0, canvasR?.ghosts?.length);
+meas('palette width after Apply', canvasR?.paletteWidth);
+check('Apply restores the palette', (canvasR?.paletteWidth || 0) > 100, canvasR?.paletteWidth);
 phase = 'undo';
 await page.evaluate(`document.activeElement && document.activeElement.blur && document.activeElement.blur()`);
 await page.mouse.click(5, 990).catch(() => undefined);
