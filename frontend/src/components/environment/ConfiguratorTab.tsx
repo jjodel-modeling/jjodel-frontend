@@ -138,8 +138,25 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
     /** «New» returned no instance. Shown instead of a silent button; cleared on the next try. */
     const [createFailed, setCreateFailed] = useState(false);
 
-    // Clear the instance selection when the type changes.
-    useEffect(() => { setSelectedInstanceId(null); setCreateFailed(false); }, [selectedTypeId]);
+    /** R-CFG-9 — the instance selected last on each type, for the session (not persisted). Written
+     *  when the selection changes, never in the commit where only the type did, so an instance is
+     *  never filed under the wrong type. */
+    const lastByTypeRef = useRef<Record<string, string>>({});
+    useEffect(() => {
+        if (selectedTypeId && selectedInstanceId) lastByTypeRef.current[selectedTypeId] = selectedInstanceId;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedInstanceId]);
+
+    // When the type changes, select again the instance selected last on it, if it is still one of the
+    // type's instances and the role does not hide its type; otherwise clear the selection.
+    useEffect(() => {
+        const last = selectedTypeId ? lastByTypeRef.current[selectedTypeId] : undefined;
+        const keep = !!last && instances.some((row) => row.id === last)
+            && resolveTypePermission(profile, (idlookup as any)?.[last!]?.instanceof) !== 'hidden';
+        setSelectedInstanceId(keep ? last! : null);
+        setCreateFailed(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedTypeId]);
 
     /** The models the selected type lives in. «New» creates in the first one; the list shows
      *  the instances of all of them. Empty = the project has no model of that metamodel. */

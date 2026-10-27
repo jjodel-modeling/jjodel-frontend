@@ -220,7 +220,8 @@ export function ConfiguratorPanel({
         });
     }, []);
 
-    /** The expanded child cards, by child id, for the life of the panel on this subject. */
+    /** The expanded cards, for the life of the panel on this subject: a child by its id, a reference
+     *  row by `ref:<owner>:<key>:<raw index>` (R-CFG-6). */
     const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
     useEffect(() => { setExpanded(new Set()); }, [subjectId]);
     const toggleExpanded = useCallback((childId: string) => {
@@ -368,7 +369,14 @@ export function ConfiguratorPanel({
                     <span className={`cfg-panel__status${projectModified ? ' cfg-panel__status--unsaved' : ''}`} role="status">
                         {saveStatus(projectModified)}
                     </span>
-                    <button type="button" className="cfg-panel__save" title="Save the project (Ctrl/Cmd+S)" disabled={saving} onClick={save}>
+                    {/* R-CFG-9: the primary action while the project has unsaved changes, neutral once saved. */}
+                    <button
+                        type="button"
+                        className={`cfg-panel__save${projectModified ? ' cfg-panel__save--unsaved' : ''}`}
+                        title="Save the project (Ctrl/Cmd+S)"
+                        disabled={saving}
+                        onClick={save}
+                    >
                         <i className="bi bi-floppy" aria-hidden="true" />
                         Save
                     </button>
