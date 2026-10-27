@@ -1,0 +1,36 @@
+{
+ "schema": 1,
+ "chat": "C-2026-01-01-0900",
+ "model": "claude-fable-5-1",
+ "source": "fixture",
+ "launch": {
+  "at": 1767300000,
+  "calls": 10,
+  "input": 10,
+  "cacheRead": 1000,
+  "cacheCreation": 500,
+  "output": 100,
+  "totalIn": 1510,
+  "ctxMax": 100000,
+  "ctxLast": 100000
+ },
+ "close": {
+  "at": 1767300000,
+  "calls": 14,
+  "input": 16,
+  "cacheRead": 3000,
+  "cacheCreation": 1500,
+  "output": 300,
+  "totalIn": 4516,
+  "ctxMax": 100000,
+  "ctxLast": 100000
+ },
+ "delta": {
+  "calls": 4,
+  "input": 6,
+  "cacheRead": 2000,
+  "cacheCreation": 1000,
+  "output": 200,
+  "totalIn": 3006
+ }
+}

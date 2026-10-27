@@ -28,6 +28,12 @@ const CLOSE_REMINDER =
     '---\n' +
     `${REMINDER_LINE}: exactly one of those four words, nothing else on that line (RC-20). A question with a recommendation also carries one line \`Recommended: <one line>\` (RC-21). The \`**Outcome**\` field of a log entry is not this line.\n`;
 
+// AM-5 (P-2026-10-18-1205): the two blocks start injects after the prompt, here for a
+// worktree with no docs/decisions.md and a prompt with no Depends: and no Front:.
+const noInjection = (worktree: string) =>
+    '## Decisions in scope (injected by lane-run, AM-5)\n\nnone: no docs/decisions.md in ' + worktree + '\n\n' +
+    '## Log entries in scope (injected by lane-run, AM-5)\n\nnone: the prompt names no `Depends:` Prompt-ID and no `Front:`\n';
+
 const FAKE_CLAUDE = `#!/bin/sh
 {
   echo "--- call"
@@ -162,7 +168,7 @@ describe('lane-run start', () => {
         expect(r.status, r.stderr).toBe(0);
         expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
         const [c] = calls(l);
-        expect(c.args).toEqual(['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions']);
+        expect(c.args).toEqual(['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', '--effort', 'high']);
         expect(c.cwd).toBe(l.worktree);
         expect(c.stdin).toContain(`Prompt-ID: ${ID}`);
         expect(c.path.split(':')[0]).toBe(dirname(process.execPath));
@@ -287,7 +293,7 @@ describe('lane-run resume', () => {
         expect(r.stdout).toContain(`session: ${SESSION}`);
         expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
         const c = calls(l)[1];
-        expect(c.args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions']);
+        expect(c.args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', '--effort', 'high']);
         expect(c.cwd).toBe(l.worktree);
         expect(c.stdin).toContain('GO Phase 2');
         const after = readFileSync(join(dir, 'log.jsonl'), 'utf8');
@@ -319,7 +325,7 @@ describe('lane-run keeps a copy of every input', () => {
         expect(laneRun(l, ['start', l.worktree, 'prompt.md']).status).toBe(0);
         const dir = laneDir(l);
         expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
-        expect(readFileSync(join(dir, 'input-1.md'), 'utf8')).toBe(PROMPT + '\n' + CLOSE_REMINDER);
+        expect(readFileSync(join(dir, 'input-1.md'), 'utf8')).toBe(PROMPT + '\n' + noInjection(l.worktree) + '\n' + CLOSE_REMINDER);
         writeFileSync(join(l.home, 'go.md'), `[${ID}] GO from a file\n`);
         const r = laneRun(l, ['resume', ID, join(l.home, 'go.md')]);
         expect(r.status, r.stderr).toBe(0);
@@ -432,7 +438,7 @@ describe('lane-run resume --text and -', () => {
         expect(readFileSync(join(dir, 'msg-1.md'), 'utf8')).toBe(`[${ID}] GO inline one\n`);
         expect(readFileSync(join(dir, 'msg-2.md'), 'utf8')).toBe(`[${ID}] GO inline two\n`);
         const c = calls(l);
-        expect(c[1].args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions']);
+        expect(c[1].args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', '--effort', 'high']);
         expect(c[1].stdin).toContain('GO inline one');
         expect(c[2].stdin).toContain('GO inline two');
         expect(c[1].cwd).toBe(l.worktree);
@@ -959,7 +965,7 @@ describe('lane-run: every lane input closes with the RC-20 reminder', () => {
         const dir = laneDir(l);
         expect(waitFor(join(dir, 'exit.txt'))).toBe(true);
         expect(readFileSync(join(l.worktree, 'prompt.md'), 'utf8')).toBe(before);
-        expect(readFileSync(join(dir, 'input-1.md'), 'utf8')).toBe(PROMPT + '\n' + CLOSE_REMINDER);
+        expect(readFileSync(join(dir, 'input-1.md'), 'utf8')).toBe(PROMPT + '\n' + noInjection(l.worktree) + '\n' + CLOSE_REMINDER);
         const [c] = calls(l);
         expect(count(c.stdin)).toBe(1);
     });
@@ -1493,7 +1499,7 @@ describe('lane-run start, the model tier (RC-32)', () => {
         const r = laneRun(s.l, ['resume', ID, '--text', `[${ID}] GO`], { env: { LANE_RUN_LIGHT_MODEL: LIGHT } });
         expect(r.status, r.stderr).toBe(0);
         expect(waitFor(join(laneDir(s.l), 'exit.txt'))).toBe(true);
-        expect(calls(s.l)[1].args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions']);
+        expect(calls(s.l)[1].args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', '--effort', 'high']);
     });
 
     test('kills "a merge session not forced heavy", "the tier not in the trailer": merge --launch runs heavy for a merge that falls back, and says so in the prompt commit', () => {
@@ -2050,7 +2056,7 @@ describe('lane-run start --auto (RC-36)', () => {
         expect(r.status, r.stderr).toBe(0);
         expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
         const [c] = calls(l);
-        expect(c.args).toEqual(['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', ...AUTO_FLAGS]);
+        expect(c.args).toEqual(['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', ...AUTO_FLAGS, '--effort', 'high']);
         expect(c.ghtoken).toBe('unset');
         expect(c.githubtoken).toBe('unset');
         expect(c.goahead).toBe('unset');
@@ -2074,7 +2080,7 @@ describe('lane-run start --auto (RC-36)', () => {
         expect(r.status, r.stderr).toBe(0);
         expect(waitFor(join(laneDir(l), 'exit.txt'))).toBe(true);
         const c = calls(l)[1];
-        expect(c.args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', ...AUTO_FLAGS]);
+        expect(c.args).toEqual(['-p', '--resume', SESSION, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'bypassPermissions', ...AUTO_FLAGS, '--effort', 'high']);
         expect(c.ghtoken).toBe('unset');
         expect(c.githubtoken).toBe('unset');
         expect(c.ghconfig).toBe(join(laneDir(l), 'gh-empty'));

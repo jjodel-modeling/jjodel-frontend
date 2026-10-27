@@ -112,6 +112,8 @@ export const AIEvents = {
   PROVIDER_CHANGED: 'ai-provider-changed',
   SETTINGS_CHANGED: 'ai-settings-changed',
   PROMPT_CHANGED: 'prompt-changed',
+  /** A provider's live model catalog was fetched and merged into `AI[provider].versions`. detail: { provider } */
+  MODELS_UPDATED: 'ai-models-updated',
 } as const;
 
 // ─── Jjodie chat agent ─────────────────────────────────────────

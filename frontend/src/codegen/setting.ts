@@ -18,9 +18,17 @@ import { JjodelEvents } from '../events/registry';
 /** The localStorage key of the setting (0 hits before this slice, discovery §E.2). */
 export const CODEGEN_SETTING_KEY = 'jjodel.experimental.codegen';
 
-/** The setting: on only when the key holds `'true'`; off with no key, no storage, or a storage that throws. */
+/**
+ * The setting: on only when the build carries the flag and the key holds `'true'`; off with no key, no storage, or a
+ * storage that throws. The flag (P-2026-10-12-0012, release 3.1): `VITE_CODEGEN=true` at build time, unset in 3.1 and
+ * in vitest; read on every call, so `vi.stubEnv` reaches it. Written as the bare text `import.meta.env.VITE_CODEGEN`:
+ * Vite's build replaces that form with a literal and vitest's env replacer matches that text, while a cast such as
+ * `(import.meta as any).env` or a `?.` is seen by neither. tsconfig has no vite/client types, hence the ts-ignore.
+ */
 export function getCodegenEnabled(): boolean {
     try {
+        // @ts-ignore -- `env` is not on ImportMeta for tsc here (vite-env.d.ts); see above.
+        if (import.meta.env.VITE_CODEGEN !== 'true') return false;
         return typeof localStorage !== 'undefined' && localStorage.getItem(CODEGEN_SETTING_KEY) === 'true';
     } catch {
         return false;

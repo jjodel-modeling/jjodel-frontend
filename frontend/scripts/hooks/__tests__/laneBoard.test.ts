@@ -1,10 +1,11 @@
 import { describe, test, expect, afterAll } from 'vitest';
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createContext, runInContext } from 'node:vm';
 
 // lane-board.mjs: how far a running lane has got (P-2026-10-05-1705). The pure part
 // (milestones, the API shape, the log reader, the estimate) is imported; the board
@@ -590,7 +591,7 @@ function exitedLane(root: string, id: string, outcome: string, resolved: boolean
 
 /** The board as launchd runs it, against a lanes folder with two running lanes (one a direct merge) and four exited.
  *  `stub` writes the fake lane-run from the status table; by default it prints the table and exits 0. */
-async function board(stub?: (table: string[], root: string) => string): Promise<{ port: number; root: string }> {
+async function board(stub?: (table: string[], root: string) => string): Promise<{ port: number; root: string; repo: string }> {
     const root = tmp();
     // launcherOf reads `git log --all` of JJODEL_REPO: an empty repo here, never a real checkout.
     const repo = tmp();
@@ -624,6 +625,12 @@ async function board(stub?: (table: string[], root: string) => string): Promise<
         'P-2026-10-05-0500   exited   done     20 min',
     ];
     writeFileSync(fake, stub ? stub(table, root) : table.map((l) => 'console.log(' + JSON.stringify(l) + ');').join('\n') + '\n');
+    return { port: await listen(root, repo), root, repo };
+}
+
+/** One more board process on a lanes folder board() made: it reads the caches that folder holds. */
+async function listen(root: string, repo: string): Promise<number> {
+    const fake = join(root, 'fake-lane-run.mjs');
     const port = await freePort();
     const child = spawn(process.execPath, [SCRIPT, '--port', String(port), '--refresh', '30'], {
         env: { ...process.env, JJODEL_LANES: root, LANE_RUN: fake, LANE_BOARD_PORT: '', JJODEL_REPO: repo, LANE_BOARD_CACHE: join(root, 'timeline-cache.json') },
@@ -635,7 +642,7 @@ async function board(stub?: (table: string[], root: string) => string): Promise<
         child.stdout!.on('data', (b) => { if (String(b).includes('lane-board on')) { clearTimeout(t); res(); } });
         child.on('exit', (code) => { clearTimeout(t); rej(new Error('board exited ' + code)); });
     });
-    return { port, root };
+    return port;
 }
 
 describe('the board: /api and the page', () => {
@@ -697,8 +704,10 @@ describe('the board: /api and the page', () => {
         expect(live.left).toBe(Number(d.load[0]) > 20 ? 'about 34 min' : 'about 23 min');
         expect('progress' in old).toBe(false);
         expect(Object.keys(old).sort()).toEqual([
-            'chain', 'chat', 'chatUrl', 'chatUrlFrom', 'chatUrlVia', 'day', 'end', 'id', 'kind', 'lane', 'launcher', 'left',
-            'live', 'minutes', 'outcome', 'phase', 'recent', 'start', 'state', 't', 'tier', 'title', 'work', 'worktree',
+            'archChat', 'archIn', 'archOpen', 'archOut', 'archTotal',
+            'chain', 'chat', 'chatUrl', 'chatUrlFrom', 'chatUrlVia', 'ctxMax', 'day', 'end', 'id', 'kind', 'lane', 'launcher', 'left',
+            'live', 'minutes', 'outcome', 'phase', 'recent', 'start', 'state', 't', 'tier', 'title', 'tokensIn', 'tokensOut', 'tokensSub',
+            'tokensTotal', 'work', 'worktree',
         ]);
 
         // R1: no Progress column; the Phase cell draws the segments, the n/m and the phase text.
@@ -780,4 +789,167 @@ describe('the board: /api and the page', () => {
         expect(s.error).toBe('lane-run: status failed');
         expect(s.refreshing).toBe(false);
     }, 45_000);
+});
+
+// ── tokens (P-2026-10-18-1045): the B1 lanes of lane-usage, served by the board ──
+// A: exited, two models, subagents, three readings, alone; B: exited, standard tier, one reading; C: running, no result yet.
+const UA = 'P-2026-01-01-1000', UB = 'P-2026-01-01-1100', UC = 'P-2026-01-02-0900';
+const HOUR = 3600000;
+
+/** board() with the lane-usage fixtures copied in, A and B apart in time so A is alone, and in the status table. */
+function usageBoard() {
+    return board((table, root) => {
+        cpSync(join(HERE, 'fixtures', 'lane-usage'), root, { recursive: true });
+        const day = Date.now() - 24 * HOUR;
+        const lane = (id: string, start: number, end: number | null) => {
+            writeFileSync(join(root, id, 'input-1.md'), '# Prompt: usage\n\nPrompt-ID: ' + id + '\nLane: fast\n');
+            writeFileSync(join(root, id, 'started.txt'), String(start));
+            if (end === null) return;
+            writeFileSync(join(root, id, 'exit.txt'), '0\n');
+            utimesSync(join(root, id, 'exit.txt'), end / 1000, end / 1000);
+        };
+        lane(UA, day, day + HOUR);
+        lane(UB, day + 2 * HOUR, day + 3 * HOUR);
+        lane(UC, Date.now() - 60000, null);
+        const rows = [...table, UC + '   running  none     1 min', UB + '   exited   done     60 min', UA + '   exited   done     60 min'];
+        return rows.map((l) => 'console.log(' + JSON.stringify(l) + ');').join('\n') + '\n';
+    });
+}
+
+/** The page's inline script run in a bare context, for its table(): the DOM it touches at load is stubbed. */
+function pageContext(page: string) {
+    const script = /<script>([\s\S]*)<\/script><\/body>/.exec(page)![1];
+    const el = (): Ev => ({ innerHTML: '', textContent: '', hidden: false, title: '', className: '', dataset: {}, style: {},
+        classList: { toggle() {} }, addEventListener() {}, querySelector: () => el(), querySelectorAll: () => [] });
+    const ctx = createContext({
+        document: { getElementById: () => el(), querySelector: () => el(), querySelectorAll: () => [], title: '' }, window: {},
+        localStorage: { getItem: () => null, setItem() {} }, fetch: () => new Promise(() => {}), setInterval: () => 0, setTimeout: () => 0, clearTimeout() {},
+        location: { href: 'http://127.0.0.1/' }, URL,
+    });
+    runInContext(script, ctx);
+    return ctx;
+}
+
+/** The header texts and, for one lane, the five token cells of a table() rendering. */
+function tokenCells(html: string, id: string) {
+    const heads = [...html.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
+    const row = html.split('<tr>').find((r) => r.includes('<td class="id">' + id))!;
+    const cells = [...row.matchAll(/<td[^>]*>.*?<\/td>/g)].map((m) => m[0]);
+    const at = heads.indexOf('In');
+    return { heads, cells: cells.slice(at, at + 5) };
+}
+
+describe('tokens: abbr and tokenGroups', () => {
+
+    test('abbr: n/a, the integer below 1000, one decimal with k, M, B, and a rounding that reaches the next unit moves to it (units or rounding dropped)', async () => {
+        const { abbr } = await load();
+        expect([null, undefined, 0, 999, 1000, 12345, 3_100_000, 999_950, 2_500_000_000].map(abbr))
+            .toEqual(['n/a', 'n/a', '0', '999', '1.0k', '12.3k', '3.1M', '1.0M', '2.5B']);
+    });
+
+    test('tokenGroups: median of an even count, sum, lanes at the thresholds, the 7-day delta of the alone lanes only (alone filter or median dropped)', async () => {
+        const { tokenGroups } = await load();
+        const t = (tier: string, total: number, ctx: number, a200: number, a250: number, delta: number | null, alone: boolean | null) =>
+            ({ tokens: { tier, model: 'claude-opus-5-5', tokensTotal: total, ctxMax: ctx, at200k: a200, at250k: a250, sevenDayDelta: delta, alone } });
+        const lanes = [t('heavy', 100, 10, 1, 0, 0.02, true), t('heavy', 300, 30, 0, 0, 0.5, false), t('heavy', 200, 20, 2, 1, 0.01, true),
+            t('heavy', 400, 40, 0, 0, null, true), t('light', 50, 5, 0, 0, null, null), { tokens: null }, { tokens: { tier: 'light', tokensTotal: null } }];
+        expect(tokenGroups(lanes, 'tier')).toEqual([
+            { key: 'heavy', lanes: 4, totalMedian: 250, totalSum: 1000, ctxMaxMedian: 25, at200k: 2, at250k: 1, aloneDelta7d: 0.03, aloneLanes: 2, archLanes: 0, archSum: 0, archMedian: null, archRatio: null },
+            { key: 'light', lanes: 1, totalMedian: 50, totalSum: 50, ctxMaxMedian: 5, at200k: 0, at250k: 0, aloneDelta7d: 0, aloneLanes: 0, archLanes: 0, archSum: 0, archMedian: null, archRatio: null },
+        ]);
+        expect(tokenGroups(lanes, 'model').map((g: Ev) => [g.key, g.lanes])).toEqual([['claude-opus-5-5', 5]]);
+    });
+
+    test('tokenGroups: Arch sum and median over the closed lanes that carry it, the ratio over the lanes that carry both (open counted nowhere, ratio over all lanes, median dropped)', async () => {
+        const { tokenGroups } = await load();
+        const a = (total: number, arch: number | null, open = false) =>
+            ({ tokens: { tier: 'heavy', model: 'm', tokensTotal: total, ctxMax: 1, at200k: 0, at250k: 0, sevenDayDelta: null, alone: null },
+                arch: arch === null && !open ? null : { archIn: null, archOut: null, archTotal: arch, archChat: 'C-x', archOpen: open } });
+        // Carrying both: 1000 -> 100, 3000 -> 500, 2000 -> 200 (even count of three: median 200). The open lane and the lane without a file carry no Arch.
+        const lanes = [a(1000, 100), a(3000, 500), a(2000, 200), a(9000, null, true), a(8000, null)];
+        const [g] = tokenGroups(lanes, 'tier');
+        expect(g).toMatchObject({ lanes: 5, archLanes: 3, archSum: 800, archMedian: 200 });
+        expect(g.archRatio).toBeCloseTo(800 / 6000, 10);
+        const four = tokenGroups([...lanes.slice(0, 3), a(4000, 400)], 'tier')[0];
+        expect(four).toMatchObject({ archLanes: 4, archSum: 1200, archMedian: 300 });
+    });
+});
+
+describe('tokens: /api, the Lanes tab and /api/insights', () => {
+    test('/api carries tokensIn, tokensOut, tokensTotal, ctxMax and tokensSub as integers, null without a log (In from the classes, Out from modelUsage, Sub kept out of In)', async () => {
+        const { port } = await usageBoard();
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const tk = (id: string) => { const r = d.rows.find((x: Ev) => x.id === id); return [r.tokensIn, r.tokensOut, r.tokensTotal, r.ctxMax, r.tokensSub]; };
+        // A: input 5, cache_read 530000, cache_creation 30000; modelUsage output 900 + 400 + 50; subagents 1512 + 2004.
+        expect(tk(UA)).toEqual([560005, 1350, 561355, 255003, 3516]);
+        expect(tk(UB)).toEqual([52004, 60, 52064, 52004, 0]);
+        expect(tk(UC)).toEqual([23001, null, 23001, 23001, 0]);
+        expect(tk('P-2026-10-05-0800')).toEqual([null, null, null, null, null]);
+    });
+
+    test('the Lanes tab: In, Out, Total, Ctx max after Span in both variants, abbreviated, the integer in the title, n/a without usage (cells or columns dropped)', async () => {
+        const { port } = await usageBoard();
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const ctx = pageContext(await (await fetch('http://127.0.0.1:' + port + '/')).text());
+        const render = (live: boolean) => runInContext('table(' + JSON.stringify(d.rows.filter((r: Ev) => r.live === live)) + ',' + live + ')', ctx) as string;
+        const closed = render(false), running = render(true);
+        const cell = (title: string, text: string) => '<td class="lfx-num" title="' + title + '">' + text + '</td>';
+        const a = tokenCells(closed, UA);
+        expect(a.heads.slice(a.heads.indexOf('Span'), a.heads.indexOf('Span') + 7)).toEqual(['Span', 'In', 'Out', 'Total', 'Arch', 'Ctx max', 'Worktree']);
+        // A: architect.json closed, delta totalIn 3006 + output 200; the title carries the exact integers and the chat.
+        expect(a.cells).toEqual([cell('560005 · subagents: 3516 tokens', '560.0k'), cell('1350', '1.4k'), cell('561355', '561.4k'), cell('in 3006 · out 200 · total 3206 · chat C-2026-01-01-0900', '3.2k'), cell('255003', '255.0k')]);
+        expect(tokenCells(closed, 'P-2026-10-05-0800').cells).toEqual([cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a')]);
+        // B: architect.json without close.
+        expect(tokenCells(closed, UB).cells[3]).toBe(cell('open · chat C-2026-01-01-0900', 'open'));
+        const c = tokenCells(running, UC);
+        expect(c.heads.slice(c.heads.indexOf('Span'), c.heads.indexOf('Span') + 7)).toEqual(['Span', 'In', 'Out', 'Total', 'Arch', 'Ctx max', 'Left']);
+        // C: no architect.json.
+        expect(c.cells).toEqual([cell('23001 · subagents: 0 tokens', '23.0k'), cell('', 'n/a'), cell('23001', '23.0k'), cell('', 'n/a'), cell('23001', '23.0k')]);
+    });
+
+    test('/api carries archIn, archOut, archTotal, archChat and archOpen: integers for a closed file, open without close, null without the file (fields or open flag dropped)', async () => {
+        const { port } = await usageBoard();
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const ar = (id: string) => { const r = d.rows.find((x: Ev) => x.id === id); return [r.archIn, r.archOut, r.archTotal, r.archChat, r.archOpen]; };
+        expect(ar(UA)).toEqual([3006, 200, 3206, 'C-2026-01-01-0900', false]);
+        expect(ar(UB)).toEqual([null, null, null, 'C-2026-01-01-0900', true]);
+        expect(ar(UC)).toEqual([null, null, null, null, false]);
+    });
+
+    test('/api/insights: per lane the raw tokens with alone, and tokenGroups over the closed lanes gives two tiers (tokens or alone left out of insights)', async () => {
+        const { port } = await usageBoard();
+        const ins = await (await fetch('http://127.0.0.1:' + port + '/api/insights')).json();
+        const a = ins.lanes.find((l: Ev) => l.id === UA).tokens;
+        expect(a).toMatchObject({ tokensTotal: 561355, ctxMax: 255003, at200k: 2, at250k: 1, sevenDayDelta: 0.05, alone: true, tier: 'heavy', model: 'claude-opus-5-5' });
+        expect(a).toMatchObject({ tokensTotal: 561355 });
+        expect(ins.lanes.find((l: Ev) => l.id === UA).arch).toMatchObject({ archIn: 3006, archOut: 200, archTotal: 3206, archChat: 'C-2026-01-01-0900', archOpen: false });
+        expect(ins.lanes.find((l: Ev) => l.id === UB).arch).toMatchObject({ archTotal: null, archOpen: true });
+        expect(ins.lanes.find((l: Ev) => l.id === UC).arch).toBeNull();
+        const { tokenGroups } = await load();
+        const closed = ins.lanes.filter((l: Ev) => [UA, UB].includes(l.id));
+        expect(tokenGroups(closed, 'tier')).toEqual([
+            { key: 'heavy', lanes: 1, totalMedian: 561355, totalSum: 561355, ctxMaxMedian: 255003, at200k: 1, at250k: 1, aloneDelta7d: 0.05, aloneLanes: 1, archLanes: 1, archSum: 3206, archMedian: 3206, archRatio: 3206 / 561355 },
+            // B is open: it carries no Arch figure.
+            { key: 'standard', lanes: 1, totalMedian: 52064, totalSum: 52064, ctxMaxMedian: 52004, at200k: 0, at250k: 0, aloneDelta7d: 0, aloneLanes: 0, archLanes: 0, archSum: 0, archMedian: null, archRatio: null },
+        ]);
+        const page = await (await fetch('http://127.0.0.1:' + port + '/')).text();
+        expect(page).toContain('const tokenGroups=function tokenGroups(');
+    });
+
+    test('the usage cache: a log of the same size and mtime is read from usage-cache.json, a changed mtime recomputes it (cache key or cache dropped)', async () => {
+        const { port, root, repo } = await usageBoard();
+        await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const file = join(root, 'usage-cache.json');
+        const tokensIn = async (p: number) => (await (await fetch('http://127.0.0.1:' + p + '/api')).json()).rows.find((r: Ev) => r.id === UA).tokensIn;
+        const plant = () => { const c = JSON.parse(readFileSync(file, 'utf8')); c[UA].v.tokensIn = 7; writeFileSync(file, JSON.stringify(c)); };
+        // A hit: a second board on the same folder serves the planted value, so it did not read the log.
+        plant();
+        expect(await tokensIn(await listen(root, repo))).toBe(7);
+        // A miss: the same planted value under a log whose mtime moved is recomputed from the log.
+        plant();
+        const t = (Date.now() - HOUR) / 1000;
+        utimesSync(join(root, UA, 'log.jsonl'), t, t);
+        expect(await tokensIn(await listen(root, repo))).toBe(560005);
+        expect(JSON.parse(readFileSync(file, 'utf8'))[UA].v.tokensIn).toBe(560005);
+    });
 });

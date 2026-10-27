@@ -112,7 +112,7 @@ Everything is behind authentication, and the persistence backend
 - `user` — the offline user in the exact shape `AuthApi.offline()` writes
   (`src/pages/Auth.tsx:660` -> `DUser.offline()`, `src/joiner/classes.ts:2734`)
 - `offline: true` — so `src/redux/reducer/reducer.ts:1513` skips the token check
-- `jjodel_welcome_3_seen` — `WelcomeModal`'s backdrop otherwise swallows clicks
+- `jjodel_welcome_3_seen` and `jjodel_welcome_3_1_seen` — `WelcomeModal`'s backdrop otherwise swallows clicks
 - `jjodel.interfaceMode` — `basic` or `advanced`
 
 The project is then created through the real UI and opened by URL,
