@@ -220,7 +220,8 @@ export function ConfiguratorPanel({
         });
     }, []);
 
-    /** The expanded child cards, by child id, for the life of the panel on this subject. */
+    /** The expanded cards, for the life of the panel on this subject: a child by its id, a reference
+     *  row by `ref:<owner>:<key>:<raw index>` (R-CFG-6). */
     const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
     useEffect(() => { setExpanded(new Set()); }, [subjectId]);
     const toggleExpanded = useCallback((childId: string) => {
