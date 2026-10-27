@@ -48,3 +48,16 @@ order** (RC-12) and empties this file. The active log is not touched by this lan
 **Prompt document name**: 2026-10-20 11:23
 
 **Ticket** (found by the probe, not this lane's, not investigated): after a reload of the stand-alone link (`&profile=`) on the probe's fixture, a `.loader-spinner` (`span.spinner-animated` inside `div.loader-spinner`) sits on top of the page centre over `div.configurator__detail`: measured by `elementsFromPoint(720, 450)` after NAV_MS in every K arm (Phase 1 run 4, step 0, steps 1-4); in Phase 1 run 3 a pointer click on an instance row waited 45 s and timed out against it, while DOM clicks (the same handlers) work. The project was saved with the model editor open in the dock.
+
+## 2026-10-27 — merge: fix/187-tmaog-round1 into staging (P-2026-10-27-1438)
+**Prompt**: `claude_2026-10-27_1438_prompt_merge_fix-187-tmaog-round1.md`, a direct merge by `lane-run merge --direct`, no session: `fix/187-tmaog-round1` at `dfab20207` into `staging`, merge base `26c2814ef`, 7 commits on the branch side.
+**Files touched**: merge `1beb964eb`: 11 files from the branch side (`docs/discovery/discovery_2026-10-20_187_tmaog_round1.md`, `docs/log-inbox/configurator-panel.md`, `docs/prompts/claude_2026-10-20_1123_prompt_187_tmaog_round1.md`, `frontend/src/components/environment/ConfiguratorTab.tsx`, `frontend/src/components/environment/configurator/ConfiguratorPanel.tsx`, `frontend/src/components/environment/configurator/PanelComponents.tsx`, `frontend/src/components/environment/configurator/__tests__/panelModel.test.ts`, `frontend/src/components/environment/configurator/configuratorPanel.scss`, and 3 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1beb964eb` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9359 tests in 383 files, 9 red at import, hooks 847; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato: sonde della chat sul tree unito (vite 3190, staging 1beb964eb): chat_187d_independent 10/10, chat_187_independent 12/12, chat_186b_independent 9/9 ALL GREEN, nessun errore di pagina
+**Notes**: Rollback tag `pre-fix/187-tmaog-round1` on `dacdb8a31` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-27-1438/result.json`.
+**Prompt document name**: 2026-10-27 14:38
