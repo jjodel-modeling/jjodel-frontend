@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "entries": [
+    {
+      "glob": "frontend/src/components/editor-v2/**",
+      "docs": ["frontend/src/components/editor-v2/CLAUDE.md"],
+      "why": "editor-v2 rules: TRANSACTION near sync, race-window guard, Step 4, bucket keys, store access"
+    },
+    {
+      "glob": "frontend/src/jjel/**",
+      "docs": ["frontend/src/jjel/CLAUDE.md"],
+      "why": "JjEL language rules"
+    },
+    {
+      "glob": "frontend/src/jjscript/**",
+      "docs": ["frontend/src/jjscript/CLAUDE.md"],
+      "why": "JjScript language rules"
+    },
+    {
+      "glob": "frontend/src/jjtl/**",
+      "docs": ["frontend/src/jjtl/CLAUDE.md"],
+      "why": "JjTL language rules and the syntax-change checklist"
+    },
+    {
+      "glob": "frontend/src/model/**",
+      "docs": ["frontend/src/model/CLAUDE.md"],
+      "why": "model rules: father vs forward links, uri, containment, identity slot, className, persistence"
+    },
+    {
+      "glob": "frontend/src/redux/**",
+      "docs": ["frontend/src/redux/CLAUDE.md"],
+      "why": "VersionFixer and jsxString persistence"
+    },
+    {
+      "glob": "frontend/src/services/export/**",
+      "docs": ["frontend/src/services/export/CLAUDE.md"],
+      "why": "Ecore and XMI import/export rules"
+    },
+    {
+      "glob": "frontend/src/styles/**",
+      "docs": ["frontend/src/styles/CLAUDE.md"],
+      "why": "design system and tokens"
+    }
+  ]
+}

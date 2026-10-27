@@ -94,7 +94,7 @@ const REGISTER = [
     '',
     '- **RC-14** (2026-09-21): **No source.** Text.',
     '- **R-X-1** (2026-09-27, provisional, evidence: nonsense): **Bad header.**',
-    '- **R-A** (2026-09-27): a near miss.',
+    '- **R-E/E-1** (2026-09-27): a near miss.',
     '',
 ].join('\n');
 

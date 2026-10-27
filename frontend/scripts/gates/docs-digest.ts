@@ -9,13 +9,18 @@
  *
  * Row grammar. A row is a line `- **<ID>** (<fields>)<sep> <text>` where <ID>
  * matches ROW_ID, <fields> is a date YYYY-MM-DD followed by any of `provisional`,
- * `unattended`, `evidence: measured|read|inferred`, `verified: agent|none`,
+ * `unattended`, `evidence: measured|read|inferred`, `verified: agent|none|probe`,
  * `reversible: branch|trunk|persisted`, and <sep> is `:`, `.` or ` —` (the
  * older series). A ratified row may carry free-text fields (`«D9» nel prompt`),
  * kept as annotations; a provisional row may not, and the three keyed fields go
- * together or not at all. The section of a row is the nearest `## ` or `### `
- * heading; its title the opening `**…**` of the text, else the first sentence,
- * clamped to TITLE_MAX characters.
+ * together or not at all. The parenthesis may wrap onto the continuation lines;
+ * the row keeps the line it starts on. Inside the bold the ID may carry a date,
+ * `**R-B-3 (2026-08-05)**`, which tells apart two series sharing a sigla and
+ * stands for the parenthesis when there is none, and a qualifier after `,` or a
+ * space, `**D-4-5, emendata**`, which makes a row only when the parenthesis
+ * follows. The section of a row is the nearest `## ` or `### ` heading; its
+ * title the opening `**…**` of the text, else the first sentence, clamped to
+ * TITLE_MAX characters.
  *
  * Confidence: `ratified` without `provisional`; otherwise high = measured and
  * agent; medium = measured and none, or read and agent; low = inferred, or read
@@ -37,7 +42,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 export type Evidence = 'measured' | 'read' | 'inferred';
-export type Verified = 'agent' | 'none';
+export type Verified = 'agent' | 'none' | 'probe';
 export type Reversible = 'branch' | 'trunk' | 'persisted';
 export type Confidence = 'high' | 'medium' | 'low' | 'ratified' | 'unmarked';
 
@@ -53,6 +58,10 @@ export interface Row {
     reversible: Reversible | null;
     /** Free-text fields of a ratified row, verbatim. */
     annotations: string[];
+    /** The date inside the bold, `R-B-3 (2026-08-05)`: the disambiguator of a shared sigla. */
+    idDate?: string;
+    /** What follows the ID inside the bold, `, emendata`, verbatim. */
+    qualifier?: string;
     /** Text of the nearest preceding `## ` or `### ` heading, '' before the first. */
     section: string;
     /** 1-based line of that heading, 0 before the first: the section's identity. */
@@ -79,18 +88,26 @@ export const MANUAL_MARKER = '<!-- digest:manual -->';
 export const MANUAL_STUB = '\n## For Alfonso\n\n(hand-written by the chat: RC-26 items, deviations, tickets)\n';
 export const TITLE_MAX = 120;
 
-/** `RC-30`, `R-SIM-77`, `R-EDGE-1`, `R-VAL-3`, `R-MCID-1`. */
-const ROW_ID = 'R[A-Z]*-?[A-Z]*-?\\d+';
-/** A line that opens a row: the ID of the grammar in bold at column 0. */
-const ROW_START = new RegExp(`^- \\*\\*(${ROW_ID})\\*\\*`);
-/** Shaped like a row, ID outside the grammar (`R-A`, `R-B9-bis`): skipped, and said so. */
+/**
+ * `RC-30`, `R-SIM-77`, `R-EDGE-1`, `R-VAL-3`, `R-MCID-1`, `R-B9-bis`; `D-UI-10`,
+ * `D-4-1`, `D-5-2`, `U-6`; the sigla-only `R-A`..`R-H` and `H-B`.
+ */
+const ROW_ID = 'R[A-Z]*-?[A-Z]*-?\\d+(?:-bis)?|D-UI-\\d+|D-\\d+-\\d+|U-\\d+|R-[A-H]|H-[A-Z]';
+/**
+ * A line that opens a row: the ID of the grammar in bold at column 0, then an
+ * optional ` (YYYY-MM-DD)` and an optional qualifier, inside the same bold.
+ */
+const ROW_START = new RegExp(`^- \\*\\*(${ROW_ID})(?: \\((\\d{4}-\\d{2}-\\d{2})\\))?((?:,| )[^*]*)?\\*\\*`);
+/** Shaped like a row, ID outside the grammar (`R-E/E-1`, `R-2/3.6`): skipped, and said so. */
 const NEAR_MISS = /^- \*\*R[A-Z]*-[^*]*\*\* \(/;
+/** A bold list item under a `## Serie` heading that is not a row is skipped, and said so. */
+const BOLD_ITEM = /^- \*\*/;
 const DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 const HEADING = /^#{2,3} (.*)$/;
 
 const VOCABULARY = {
     evidence: ['measured', 'read', 'inferred'],
-    verified: ['agent', 'none'],
+    verified: ['agent', 'none', 'probe'],
     reversible: ['branch', 'trunk', 'persisted'],
 } as const;
 type Key = keyof typeof VOCABULARY;
@@ -108,9 +125,12 @@ interface Header {
     rest: string;
 }
 
-/** The header of one row, or the reason it cannot be read. */
-function parseHeader(lineText: string, id: string): Header | string {
-    const after = lineText.slice(`- **${id}**`.length);
+/**
+ * The header of one row from the text after its closing bold, or the reason it
+ * cannot be read. `idDate` stands for the parenthesis when there is none.
+ */
+function parseHeader(after: string, idDate: string | undefined): Header | string {
+    if (!after.startsWith(' (') && idDate !== undefined) after = ` (${idDate})${after}`;
     if (!after.startsWith(' (')) return 'no parenthesis with a date after the ID';
     const close = after.indexOf(')');
     if (close === -1) return 'the parenthesis does not close on the header line';
@@ -118,8 +138,12 @@ function parseHeader(lineText: string, id: string): Header | string {
     if (!sep) return 'the separator after the parenthesis is not `:`, `.` or ` —`';
 
     const fields = after.slice(2, close).split(',').map((f) => f.trim());
-    const [date, ...rest] = fields;
+    const [first, ...rest] = fields;
+    // A time of day after the date (`2026-08-08 mattina`) is kept as an annotation.
+    const dated = /^(\S+)\s+(.+)$/.exec(first);
+    const date = dated && DATE.test(dated[1]) ? dated[1] : first;
     if (!DATE.test(date)) return `the first field is not a date YYYY-MM-DD: \`${date}\``;
+    if (date !== first) rest.unshift(first.slice(date.length).trim());
 
     const h: Header = {
         date,
@@ -174,6 +198,26 @@ function titleOf(text: string): string {
     return `${cut}...`;
 }
 
+interface Start {
+    id: string;
+    idDate: string | undefined;
+    qualifier: string | undefined;
+    /** The text after the closing bold. */
+    after: string;
+}
+
+/** The ID part of a line that opens a row, or null. A qualified ID opens one only before the parenthesis. */
+function rowStart(line: string): Start | null {
+    const m = ROW_START.exec(line);
+    if (!m) return null;
+    const after = line.slice(m[0].length);
+    if (m[3] !== undefined && !after.startsWith(' (')) return null;
+    return { id: m[1], idDate: m[2], qualifier: m[3], after };
+}
+
+/** True from a line that may continue a list item: not blank, not a heading, not the next item. */
+const continues = (l: string): boolean => !(l.trim() === '' || l.startsWith('#') || l.startsWith('- '));
+
 /**
  * Every row of the register, in file order. Throws HeaderParseError listing
  * every header it cannot read, not the first only.
@@ -192,10 +236,22 @@ export function parseRows(text: string): Row[] {
             sectionLine = i + 1;
             continue;
         }
-        const start = ROW_START.exec(lines[i]);
+        const start = rowStart(lines[i]);
         if (!start) continue;
 
-        const h = parseHeader(lines[i], start[1]);
+        // A parenthesis that does not close on the header line runs on through
+        // the continuation lines until it closes.
+        let after = start.after;
+        let last = i;
+        if (after.startsWith(' (') && !after.includes(')')) {
+            for (let j = i + 1; j < lines.length && continues(lines[j]); j++) {
+                after = `${after} ${lines[j].trim()}`;
+                last = j;
+                if (lines[j].includes(')')) break;
+            }
+            if (!after.includes(')')) last = i;
+        }
+        const h = parseHeader(after, start.idDate);
         if (typeof h === 'string') {
             failures.push({ line: i + 1, text: lines[i], reason: h });
             continue;
@@ -203,13 +259,15 @@ export function parseRows(text: string): Row[] {
         // The text runs on through the continuation lines, up to a blank line,
         // a heading or the next list item.
         const body = [h.rest];
-        for (let j = i + 1; j < lines.length; j++) {
+        for (let j = last + 1; j < lines.length; j++) {
             const l = lines[j];
-            if (l.trim() === '' || l.startsWith('#') || l.startsWith('- ')) break;
+            if (!continues(l)) break;
             body.push(l.trim());
         }
         rows.push({
-            id: start[1],
+            id: start.id,
+            ...(start.idDate !== undefined ? { idDate: start.idDate } : {}),
+            ...(start.qualifier !== undefined ? { qualifier: start.qualifier } : {}),
             line: i + 1,
             date: h.date,
             provisional: h.provisional,
@@ -227,11 +285,17 @@ export function parseRows(text: string): Row[] {
     return rows;
 }
 
-/** 1-based lines shaped like a row whose ID is outside the grammar. */
+/**
+ * 1-based lines that are not rows but look like one: shaped like a row with an
+ * ID outside the grammar, or a bold list item under a `## Serie` heading.
+ */
 export function nearMisses(text: string): number[] {
     const out: number[] = [];
+    let serie = false;
     text.split('\n').forEach((l, i) => {
-        if (NEAR_MISS.test(l) && !ROW_START.test(l)) out.push(i + 1);
+        if (l.startsWith('## ')) serie = l.startsWith('## Serie ');
+        if (rowStart(l)) return;
+        if (NEAR_MISS.test(l) || (serie && BOLD_ITEM.test(l))) out.push(i + 1);
     });
     return out;
 }
@@ -240,8 +304,10 @@ export function confidence(row: Row): Confidence {
     if (!row.provisional) return 'ratified';
     const { evidence: e, verified: v } = row;
     if (e === null || v === null) return 'unmarked';
-    if (e === 'measured') return v === 'agent' ? 'high' : 'medium';
-    if (e === 'read') return v === 'agent' ? 'medium' : 'low';
+    // A probe is a check the agent ran: `probe` reads as `agent`.
+    const checked = v === 'agent' || v === 'probe';
+    if (e === 'measured') return checked ? 'high' : 'medium';
+    if (e === 'read') return checked ? 'medium' : 'low';
     return 'low';
 }
 

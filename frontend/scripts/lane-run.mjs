@@ -7,7 +7,7 @@
  * says so (merge, with --launch, moves the prompt it rendered into the tree and
  * commits it alone).
  *
- *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--no-draw "<reason>"] [--auto] [--request <file>]
+ *   start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--no-draw "<reason>"] [--auto] [--request <file>] [--effort <level>]
  *                runs `claude -p` in <worktree> with the prompt file on stdin
  *                (the path as given, absolute or relative to the caller's
  *                directory, then relative to the worktree; refused, naming both,
@@ -36,7 +36,27 @@
  *                the path, when the file is missing or empty. A prompt whose
  *                header has no `Request:` line, started without --request, gets
  *                one warning line and runs; a merge prompt gets none.
- *   resume <Prompt-ID> <message-file> | --text "<message>" | -
+ *                Effort (AM-7): every run passes `--effort <level>`; heavy runs
+ *                xhigh with --critical-zone-goahead, a CLAUDE.md 3.2 file named
+ *                in DOVE, or `visual bug` on its Lane line, high otherwise; light
+ *                runs high; --effort (start, resume, merge --launch, chain)
+ *                overrides it. runs.jsonl in the lane folder gets one line per
+ *                launch, {at, kind: start|resume|merge|chain, session, tier,
+ *                requestedModel, effort, reason, injectedBytes, logFrom}, which
+ *                status completes once with effectiveModel (the `init` of its
+ *                part of the log), outcome and exit (docs/harness/gates.md).
+ *                Injection (AM-5): before the draw and before anything is
+ *                written, start reads the worktree's docs/decisions.md and appends
+ *                to the input, after the prompt and before the reminder, `##
+ *                Decisions in scope` (the rows of `npm run decisions -- <IDs>
+ *                --no-related`, the related rows at depth one, the IDs `not
+ *                found`) and `## Log entries in scope` (the headers of `npm run
+ *                log:find -- --prompt <Depends> --front <Front> --limit 10`, the
+ *                Depends entries in full, dropped above 40,000 characters). The
+ *                IDs are the prompt's tokens the register has, and the
+ *                `<SERIES>-<n>` tokens of its series. A CLI failure other than
+ *                an ID not found refuses the start.
+ *   resume <Prompt-ID> <message-file> | --text "<message>" | - [--effort <level>]
  *                `claude -p --resume <session id>` with the message on stdin, in
  *                the worktree recorded at start: a resume runs in the caller's
  *                directory otherwise (discovery report of P-2026-09-26-1640,
@@ -62,7 +82,9 @@
  *                assistant text in the log, a suffix after the word tolerated,
  *                `unparsed: <line>` when that line names no outcome, `none` while
  *                the lane runs (the line belongs to an earlier turn); the elapsed
- *                time of the last run. Once the lane has exited, a warning line
+ *                time of the last run; the runs.jsonl lines (`runs: none`
+ *                without the file): its count, the effort and the requested and
+ *                effective models of the last run, completed first. Once the lane has exited, a warning line
  *                for each discovery report it wrote (its log's Write and Edit
  *                calls, else the commits carrying its Prompt-ID) whose brief, `## 0.
  *                Answer in brief`, is missing, not the first section, or above 40
@@ -108,8 +130,8 @@
  *                and exits with the probe's code. The default config is
  *                frontend/scripts/smoke/_tmp_lane_vite_<port>.config.ts, written
  *                when absent in the shape of the chat's _tmp_chat_vite configs.
- *   merge <branch> --into <trunk> [--at <rev>] [--chat <id>] [--launch [--governance-goahead]]
- *   merge --trunk-into <branch> [--from <trunk>] [--at <rev>] [--chat <id>] [--launch [--governance-goahead]]
+ *   merge <branch> --into <trunk> [--at <rev>] [--chat <id>] [--launch [--governance-goahead]] [--effort <level>]
+ *   merge --trunk-into <branch> [--from <trunk>] [--at <rev>] [--chat <id>] [--launch [--governance-goahead]] [--effort <level>]
  *                run from the worktree of the side that receives the merge (the
  *                trunk; the branch for --trunk-into, RC-14). Measures the merge
  *                base, `git merge-tree` conflicts, the files changed on each side
@@ -162,7 +184,7 @@
  *                both are named in result.json and the merge commit body.
  *                A failed precondition falls back, saying why: the
  *                rendered prompt is launched with --launch, parked without.
- *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] [--no-draw "<reason>"] [--request <file>]
+ *   chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] [--no-draw "<reason>"] [--request <file>] [--effort <level>]
  *                validates every prompt (a header Prompt-ID, no id twice, no lane
  *                folder yet; one in the tree committed, one outside it not yet in
  *                docs/prompts/), writes ~/.jjodel-lanes/chain-<first Prompt-ID>/
@@ -276,7 +298,11 @@
  * this script, so the lane's own gates do not meet the node 16 of a bare shell.
  * LANE_RUN_NOW=YYYY-MM-DDTHH:mm stands in for the clock (the tests), and
  * LANE_RUN_NPM for the npm of the gates (else the one beside this node), and
- * LANE_RUN_LIGHT_MODEL for LIGHT_MODEL (empty or `null`: no light model).
+ * LANE_RUN_LIGHT_MODEL for LIGHT_MODEL (empty or `null`: no light model), and
+ * LANE_RUN_GATES for the gates/ folder of the two CLIs of the injection. The
+ * light model is otherwise env.JJODEL_LIGHT_MODEL of the worktree's
+ * .claude/settings.json (AM-1), else LIGHT_MODEL, which a light start names in
+ * one line; the requested model of a heavy run is that file's `model`.
  *
  * Plain ES module, nothing outside node:*, like the hooks beside it.
  * Exit codes: 0 done, 1 the launched session failed to start (a probe's
@@ -294,7 +320,7 @@ import {
 import { get as httpGet } from 'node:http';
 import { homedir, tmpdir } from 'node:os';
 import { basename, delimiter, dirname, extname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { CRITICAL_FILES } from './hooks/critical-zone.mjs';
 import {
     FRONT_FROM, closeFrontMilestones, frontProblem, inFrontScope, isGoMessage, loadBoard, loadFronts, promptLink, promptWorktree, trackLane, trackingConfig, trackingDir,
@@ -381,6 +407,7 @@ function laneFiles(id) {
         auto: join(dir, 'auto.json'),
         request: join(dir, 'request.md'),
         resolved: join(dir, 'resolved.txt'),
+        runs: join(dir, 'runs.jsonl'),
     };
 }
 
@@ -456,11 +483,19 @@ function keepInput(f, input) {
  * The file `launch` feeds on stdin: `input` unchanged for a non-file (the
  * /dev/null of a direct-run merge), else its text with CLOSE_REMINDER appended,
  * written to a scratch file in the lane folder so the worktree's prompt file and
- * any message file the chat passed are never written to.
+ * any message file the chat passed are never written to. `extra`, the blocks a
+ * start injects (AM-5), goes after the text and before the reminder, which
+ * stays the last thing the session reads: a reminder the text ends with moves
+ * below the blocks.
  */
-function closingInput(f, input) {
+function closingInput(f, input, extra = '') {
     if (!existsSync(input) || !statSync(input).isFile()) return input;
-    const text = readFileSync(input, 'utf8');
+    let text = readFileSync(input, 'utf8');
+    if (extra) {
+        const end = text.trimEnd();
+        const body = end.endsWith(CLOSE_REMINDER.trimEnd()) ? end.slice(0, end.length - CLOSE_REMINDER.trimEnd().length) : text;
+        text = body.replace(/\s*$/, '\n') + '\n' + extra;
+    }
     const withReminder = withCloseReminder(text);
     if (withReminder === text) return input;
     const path = join(f.dir, 'stdin.md');
@@ -468,9 +503,9 @@ function closingInput(f, input) {
     return path;
 }
 
-function launch(f, claude, cwd, input, args, goAhead = null, auto = null) {
+function launch(f, claude, cwd, input, args, goAhead = null, auto = null, extra = '') {
     if (existsSync(f.exit)) unlinkSync(f.exit);
-    const stdin = closingInput(f, input);
+    const stdin = closingInput(f, input, extra);
     keepInput(f, stdin);
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
     if (goAhead) env.JJODEL_CRITICAL_ZONE_GOAHEAD = goAhead;
@@ -598,7 +633,9 @@ function doveTargets(dove) {
 
 /**
  * The rule of RC-32: the tier a prompt runs, whether the rule forces it, and
- * why, from the header, DOVE and the command, never from free text. Forced
+ * why, with the model and the effort of that tier (withRouting; chooseTier and
+ * the draw may change the tier, and start computes the effort of the tier it
+ * runs), from the header, DOVE and the command, never from free text. Forced
  * heavy: the critical-zone go-ahead, a merge session, the governance go-ahead,
  * a critical-zone name in the header or DOVE, a governance file in DOVE,
  * `Lane: full`, a discovery whose DOVE writes outside docs/. Light: `Lane: fast`
@@ -609,7 +646,7 @@ function tierRule(text, ctx) {
     const lane = (/^Lane:\s*([A-Za-z-]+)/m.exec(header) || [])[1] || '';
     const targets = dove === null ? [] : doveTargets(dove);
     const docsOnly = targets.length > 0 && targets.every((p) => p.startsWith('docs/'));
-    const forced = (reason) => ({ tier: 'heavy', forced: true, reason });
+    const forced = (reason) => withRouting({ tier: 'heavy', forced: true, reason }, text, ctx);
     if (ctx.goahead) return forced('--critical-zone-goahead');
     if (ctx.merge) return forced('a merge that falls back to a session');
     if (ctx.governanceGoahead) return forced('--governance-goahead');
@@ -619,17 +656,90 @@ function tierRule(text, ctx) {
     if (gov) return forced('DOVE writes ' + gov);
     if (lane === 'full') return forced('Lane: full');
     if (lane === 'discovery' && targets.length > 0 && !docsOnly) return forced('Lane: discovery writes outside docs/');
-    if ((lane === 'fast' || lane === 'discovery') && docsOnly) return { tier: 'light', forced: false, reason: 'Lane: ' + lane + ', DOVE writes docs only' };
-    return {
+    if ((lane === 'fast' || lane === 'discovery') && docsOnly) return withRouting({ tier: 'light', forced: false, reason: 'Lane: ' + lane + ', DOVE writes docs only' }, text, ctx);
+    return withRouting({
         tier: 'heavy', forced: false,
         reason: 'in doubt: ' + (lane ? 'Lane: ' + lane : 'no Lane line') + (dove === null ? ', no DOVE' : targets.length ? ', DOVE writes outside docs/' : ', DOVE names no path'),
-    };
+    }, text, ctx);
 }
 
-/** The light model: LANE_RUN_LIGHT_MODEL when set, else LIGHT_MODEL; null when empty or `null`. */
+/** A verdict of the rule with the model and the effort of its tier (AM-1, AM-7). */
+function withRouting(rule, text, ctx) {
+    return { ...rule, model: rule.tier === 'light' ? lightModel() : pinModel(), effort: laneEffort(text, ctx, rule.tier).effort };
+}
+
+// ── effort and model per launch (AM-1, AM-7) ─────────────────────────────────
+
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+/** The six files of CLAUDE.md 3.2 by name: one of them in DOVE runs a heavy lane at xhigh (AM-7). */
+const SECTION_32_NAMES = CRITICAL_FILES.map((p) => basename(p));
+
+// The tree whose .claude/settings.json the launch reads (the pin, env.JJODEL_LIGHT_MODEL): the worktree
+// the lane runs in, set by start and chain before the tier is chosen; one command per process.
+let settingsTree = REPO;
+
+/** `<settingsTree>/.claude/settings.json`, parsed; {} when it is missing or does not parse. */
+function laneSettings() {
+    const path = join(settingsTree, '.claude', 'settings.json');
+    try {
+        const s = JSON.parse(readFileSync(path, 'utf8'));
+        return s && typeof s === 'object' ? s : {};
+    } catch {
+        return {};
+    }
+}
+
+/** The pin a heavy lane runs: the `model` of the settings, null when there is none (the run passes no --model all the same, RC-16). */
+function pinModel() {
+    const m = laneSettings().model;
+    return typeof m === 'string' && m.trim() !== '' ? m.trim() : null;
+}
+
+/**
+ * The effort of a launch (AM-7): heavy runs xhigh for the critical zone (the
+ * go-ahead, a CLAUDE.md 3.2 file named in DOVE) and for a visual bug (its Lane
+ * line), high otherwise; light runs high. --effort overrides it at the call site.
+ */
+function laneEffort(text, ctx, tier) {
+    if (tier !== 'heavy') return { effort: 'high', why: 'light' };
+    const { header, dove } = promptParts(text);
+    if (ctx.goahead) return { effort: 'xhigh', why: '--critical-zone-goahead' };
+    const cz = SECTION_32_NAMES.find((n) => (dove || '').includes(n));
+    if (cz) return { effort: 'xhigh', why: 'DOVE names ' + cz };
+    if (/^Lane:.*\bvisual bug\b/im.test(header)) return { effort: 'xhigh', why: 'Lane: visual bug' };
+    return { effort: 'high', why: 'heavy' };
+}
+
+/** `--effort <level>`: one of EFFORTS, refused otherwise; null when the flag is absent. */
+function effortOption(rest) {
+    const v = option(rest, '--effort');
+    if (v !== null && !EFFORTS.includes(v)) refuse('--effort takes ' + EFFORTS.join(', ') + ': ' + v);
+    return v;
+}
+
+/**
+ * The light model and where it comes from: LANE_RUN_LIGHT_MODEL when set (the
+ * tests), else env.JJODEL_LIGHT_MODEL of the settings (AM-1), else LIGHT_MODEL;
+ * the model null when empty or `null`.
+ */
+function lightModelChoice() {
+    const env = laneSettings().env;
+    const fromSettings = env && typeof env.JJODEL_LIGHT_MODEL === 'string' ? env.JJODEL_LIGHT_MODEL.trim() : null;
+    let raw = LIGHT_MODEL;
+    let source = 'constant';
+    if ('LANE_RUN_LIGHT_MODEL' in process.env) {
+        raw = process.env.LANE_RUN_LIGHT_MODEL.trim();
+        source = 'LANE_RUN_LIGHT_MODEL';
+    } else if (fromSettings !== null) {
+        raw = fromSettings;
+        source = 'settings';
+    }
+    return { model: raw && raw !== 'null' ? raw : null, source };
+}
+
+/** The light model (lightModelChoice); null when none is set. */
 function lightModel() {
-    const raw = 'LANE_RUN_LIGHT_MODEL' in process.env ? process.env.LANE_RUN_LIGHT_MODEL.trim() : LIGHT_MODEL;
-    return raw && raw !== 'null' ? raw : null;
+    return lightModelChoice().model;
 }
 
 /** The tier a lane runs: the rule, or --tier where the rule does not force; the model it passes, and the line printed and kept in tier.txt. */
@@ -859,10 +969,202 @@ function settleTier(plan) {
     return drawnLine(plan.id, entry.tier, entry.n, source);
 }
 
+// ── runs.jsonl: one line per launch (AM-7) ───────────────────────────────────
+
+/** The lines of runs.jsonl as written, and the last one parsed (null when it does not parse); null when the file is absent. */
+function readRuns(f) {
+    if (!existsSync(f.runs)) return null;
+    const lines = readFileSync(f.runs, 'utf8').split('\n').filter((l) => l.trim() !== '');
+    let last = null;
+    try {
+        last = lines.length ? JSON.parse(lines[lines.length - 1]) : null;
+    } catch {
+        last = null;
+    }
+    return { lines, last: last && typeof last === 'object' ? last : null };
+}
+
+/**
+ * The last line of runs.jsonl, completed once its run has exited: the model of
+ * the first `init` event of its part of the log (from logFrom), its last
+ * `Outcome:` word, its exit code, and the session when the line had none. Written
+ * back once, atomically: a line that holds `exit` is never written again.
+ */
+function completeRun(f) {
+    const runs = readRuns(f);
+    if (!runs || !runs.last) return null;
+    const run = runs.last;
+    if ('exit' in run || !existsSync(f.exit)) return run;
+    const from = Number.isInteger(run.logFrom) ? run.logFrom : 0;
+    const init = events(f.log, from).find((e) => e && e.type === 'system' && e.subtype === 'init' && typeof e.model === 'string');
+    const line = lastOutcome(f.log, from);
+    const m = line === null ? null : OUTCOME.exec(line);
+    run.session = run.session || readTrim(f.session) || null;
+    run.effectiveModel = init ? init.model : null;
+    run.outcome = line === null ? 'none' : m ? m[1] : 'unparsed';
+    run.exit = readTrim(f.exit) || null;
+    const tmp = f.runs + '.tmp';
+    writeFileSync(tmp, [...runs.lines.slice(0, -1), JSON.stringify(run)].join('\n') + '\n');
+    renameSync(tmp, f.runs);
+    return run;
+}
+
+function appendRun(f, run) {
+    appendFileSync(f.runs, JSON.stringify(run) + '\n');
+}
+
+// ── the reads injected at start (AM-5) ───────────────────────────────────────
+
+// Above this many characters the --full bodies of the log block are dropped; the decisions stay.
+const INJECT_MAX = 40000;
+const DECISIONS_HEADING = '## Decisions in scope (injected by lane-run, AM-5)';
+const LOG_HEADING = '## Log entries in scope (injected by lane-run, AM-5)';
+const LOG_LIMIT = '10';
+// A token that may name a decision, with the date of a dated sigla after it. Which tokens are
+// IDs is the register's to say, through decisions-query.ts (findRows, seriesOf), not this pattern's.
+const ID_TOKEN = /(?<![A-Za-z0-9-])([A-Z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+)(?![A-Za-z0-9-])(?:\s*\((\d{4}-\d{2}-\d{2})\))?/g;
+
+/** The gates/ folder of the two CLIs: LANE_RUN_GATES (the tests), else the one beside this script. */
+const gatesDir = () => (process.env.LANE_RUN_GATES ? resolve(process.env.LANE_RUN_GATES) : join(dirname(SELF), 'gates'));
+
+/** A gate CLI run the way its npm script runs it, from the worktree. */
+function gateCli(name, args, cwd) {
+    const r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '--experimental-strip-types', join(gatesDir(), name), ...args], {
+        cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+    });
+    return { status: r.status, out: r.stdout || '', err: (r.stderr || '') + (r.error ? r.error.message : '') };
+}
+
+/** Fail closed (AM-5): a lane must not start half-briefed. */
+function injectionFailed(what, detail) {
+    refuse('the injection (AM-5) failed, the lane is not started: ' + what + (detail ? ': ' + detail.trim().split('\n').slice(0, 3).join(' | ') : ''));
+}
+
+/**
+ * The decision IDs the prompt cites, in order, each once: every token that is a
+ * row ID of the worktree's register, and every `<SERIES>-<n>` token of a series
+ * the register has (an ID it does not have, listed as `not found`). A dated
+ * sigla keeps its date. null when the worktree has no docs/decisions.md.
+ */
+async function citedDecisions(worktree, text) {
+    const file = join(worktree, 'docs', 'decisions.md');
+    if (!existsSync(file)) return null;
+    let q;
+    let reg;
+    try {
+        q = await import(pathToFileURL(join(dirname(SELF), 'gates', 'decisions-query.ts')).href);
+        reg = q.loadRegister(readFileSync(file, 'utf8'));
+    } catch (err) {
+        injectionFailed('the register ' + file + ' was not read', err && err.message ? err.message : String(err));
+    }
+    const series = new Set(reg.rows.map((r) => q.seriesOf(r.id)));
+    const ids = [];
+    for (const [, id, date] of text.matchAll(ID_TOKEN)) {
+        const known = q.findRows(reg, id).length > 0;
+        if (!known && !(/-\d+(?:-bis)?$/.test(id) && series.has(q.seriesOf(id)))) continue;
+        const arg = known && date ? id + ' (' + date + ')' : id;
+        if (!ids.includes(arg)) ids.push(arg);
+    }
+    return ids;
+}
+
+/** The `not found: <ID>` lines of a decisions run, or null when its stderr holds anything else. */
+function notFoundLines(err) {
+    const lines = err.split('\n').filter((l) => l.trim() !== '');
+    const missing = lines.filter((l) => l.startsWith('not found: ')).map((l) => l.slice('not found: '.length).trim());
+    return missing.length === lines.length ? missing : null;
+}
+
+/** The decisions block: the rows of `npm run decisions -- <IDs> --no-related`, the related rows at depth one, each once, and the IDs not found. */
+async function decisionsBlock(worktree, text) {
+    const out = [DECISIONS_HEADING, ''];
+    const ids = await citedDecisions(worktree, text);
+    if (ids === null) return { text: [...out, 'none: no docs/decisions.md in ' + worktree].join('\n') + '\n', rows: 0, missing: [] };
+    if (!ids.length) return { text: [...out, 'none: the prompt cites no ID of the register'].join('\n') + '\n', rows: 0, missing: [] };
+    const r = gateCli('decisions-query.ts', ['--root', worktree, ...ids, '--no-related'], worktree);
+    const missing = notFoundLines(r.err);
+    // Exit 1 with only `not found:` lines: an ID the register does not have; the launch proceeds.
+    if (!(r.status === 0 || (r.status === 1 && missing !== null && missing.length > 0))) injectionFailed('npm run decisions exited ' + r.status, r.err);
+    out.push('Query: `npm run decisions -- ' + ids.join(' ') + ' --no-related`', '', r.out.trimEnd() || 'none: no row printed');
+    const found = ids.filter((x) => !(missing || []).includes(x));
+    let rows = 0;
+    if (found.length) {
+        const j = gateCli('decisions-query.ts', ['--root', worktree, ...found, '--json'], worktree);
+        let results = null;
+        try {
+            results = j.status === 0 ? JSON.parse(j.out) : null;
+        } catch {
+            results = null;
+        }
+        if (!Array.isArray(results)) injectionFailed('npm run decisions --json exited ' + j.status, j.err);
+        rows = results.length;
+        const seen = new Set(results.map((x) => x.id));
+        const related = [];
+        for (const x of results) {
+            for (const rel of x.related) {
+                if (seen.has(rel.id)) continue;
+                seen.add(rel.id);
+                related.push('-- ' + rel.relation + ' of ' + x.id + ': ' + rel.id + '\n' + rel.row);
+            }
+        }
+        out.push('', '### Related rows, depth one', '', related.length ? related.join('\n\n') : 'none');
+    }
+    if (missing && missing.length) out.push('', 'not found: ' + missing.join(', '));
+    return { text: out.join('\n') + '\n', rows, missing: missing || [] };
+}
+
+/** A log:find run: its output, '' on no hit (exit 1, nothing on stderr); any other exit stops the launch. */
+function logFind(worktree, args) {
+    const r = gateCli('log-find.ts', ['--root', worktree, ...args], worktree);
+    if (r.status === 0) return r.out.trimEnd();
+    if (r.status === 1 && r.err.trim() === '') return '';
+    injectionFailed('npm run log:find exited ' + r.status, r.err);
+}
+
+/** The log block: the headers of the entries of the `Depends:` Prompt-IDs and the `Front:`, then those of `Depends:` in full (`full` false drops them). */
+function logBlock(worktree, text) {
+    const head = [LOG_HEADING, ''];
+    const dep = /^Depends:(.*)$/m.exec(promptParts(text).header);
+    const depends = dep ? [...new Set(dep[1].match(/P-\d{4}-\d{2}-\d{2}-\d{4}/g) || [])] : [];
+    const front = parseFrontLine(text);
+    if (!depends.length && !front) return { head: [...head, 'none: the prompt names no `Depends:` Prompt-ID and no `Front:`'].join('\n') + '\n', full: '', entries: 0 };
+    const criteria = [...depends.flatMap((d) => ['--prompt', d]), ...(front ? ['--front', front] : [])];
+    const q = [...criteria, '--limit', LOG_LIMIT];
+    const headers = logFind(worktree, q);
+    head.push('Query: `npm run log:find -- ' + q.join(' ') + '`', '', headers || 'none: no entry matches');
+    const entries = headers.split('\n').filter((l) => /^\S+:\d+ /.test(l)).length;
+    let full = '';
+    if (depends.length) {
+        const fq = [...depends.flatMap((d) => ['--prompt', d]), '--full', '--limit', LOG_LIMIT];
+        const body = logFind(worktree, fq);
+        full = ['', '### The entries of `Depends:` ' + depends.join(', ') + ', in full', '', 'Query: `npm run log:find -- ' + fq.join(' ') + '`', '', body || 'none: no entry matches'].join('\n') + '\n';
+    }
+    return { head: head.join('\n') + '\n', full, entries };
+}
+
+/**
+ * The two blocks start appends to the lane input (AM-5), the decisions first;
+ * above INJECT_MAX characters the --full bodies of the log block are dropped.
+ * Any CLI failure but an ID not found refuses the start.
+ */
+async function injection(worktree, text) {
+    const d = await decisionsBlock(worktree, text);
+    const l = logBlock(worktree, text);
+    let all = d.text + '\n' + l.head + l.full;
+    let trimmed = false;
+    if (all.length > INJECT_MAX && l.full) {
+        all = d.text + '\n' + l.head + '\n(the full text of the `Depends:` entries is dropped: the injection was above ' + INJECT_MAX + ' characters)\n';
+        trimmed = true;
+    }
+    return { text: all, bytes: Buffer.byteLength(all), rows: d.rows, missing: d.missing, entries: l.entries, trimmed };
+}
+
 async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
-    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--no-draw "<reason>"] [--auto] [--request <file>]');
+    if (!worktreeArg || !promptArg) refuse('usage: lane-run start <worktree> <prompt-file> [--critical-zone-goahead <Prompt-ID>] [--tier heavy|light] [--no-draw "<reason>"] [--auto] [--request <file>] [--effort <level>]');
     const worktree = resolve(worktreeArg);
     if (!existsSync(worktree) || !statSync(worktree).isDirectory()) refuse('not a directory: ' + worktree);
+    settingsTree = worktree;
+    const effortOverride = effortOption(rest);
     // As given (absolute, or relative to the caller's directory), then relative to the worktree.
     const tried = [...new Set([resolve(promptArg), resolve(worktree, promptArg)])];
     const promptFile = tried.find((p) => existsSync(p) && statSync(p).isFile());
@@ -896,7 +1198,14 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
     const f = laneFiles(id);
     if (existsSync(f.session)) refuse(id + ' already has a session (' + readTrim(f.session) + '): use resume');
     if (isRunning(f)) refuse(id + ' is running');
+    // AM-5: the cited decisions and log entries, read before the draw and before anything is written (fail closed).
+    const injected = await injection(worktree, text);
     const tier = settleTier(plan);
+    // AM-7: the effort of the tier the lane runs, --effort over it.
+    const routed = laneEffort(text, { ...ctx, goahead: Boolean(goAhead) }, tier.tier);
+    const effort = effortOverride || routed.effort;
+    const effortWhy = effortOverride ? '--effort' : routed.why;
+    const light = tier.tier === 'light' ? lightModelChoice() : null;
     mkdirSync(f.dir, { recursive: true });
     writeFileSync(f.worktree, worktree + '\n');
     writeFileSync(f.prompt, promptFile + '\n');
@@ -912,10 +1221,21 @@ async function start(worktreeArg, promptArg, rest = [], ctx = {}) {
         mkdirSync(autoRun.ghConfigDir, { recursive: true });
         writeFileSync(f.auto, JSON.stringify(autoRun, null, 2) + '\n');
     }
-    launch(f, claude, worktree, promptFile, ['-p', ...FLAGS, ...(autoRun ? AUTO_FLAGS : []), ...(tier.model ? ['--model', tier.model] : [])], goAhead, autoRun);
+    // A start after a failed one (no session) completes the earlier run's line before its exit.txt goes.
+    completeRun(f);
+    const args = ['-p', ...FLAGS, ...(autoRun ? AUTO_FLAGS : []), '--effort', effort, ...(tier.model ? ['--model', tier.model] : [])];
+    launch(f, claude, worktree, promptFile, args, goAhead, autoRun, injected.text);
+    appendRun(f, {
+        at: ledgerTime(clock()), kind: ctx.merge ? 'merge' : ctx.kind === 'chain' ? 'chain' : 'start', session: null, tier: tier.tier,
+        requestedModel: tier.model || pinModel(), effort, reason: tier.reason + '; effort: ' + effortWhy, injectedBytes: injected.bytes, logFrom: from,
+    });
     console.log('prompt: ' + promptFile);
     console.log('tier: ' + tier.line);
     console.log('draw: ' + tier.draw);
+    console.log('effort: ' + effort + ' (' + effortWhy + ')');
+    if (light && light.source === 'constant') console.log('light model: constant (settings env not set, B7)');
+    console.log('injected: ' + injected.bytes + ' bytes (' + injected.rows + ' decision rows' + (injected.missing.length ? ', not found: ' + injected.missing.join(', ') : '') + '; ' + injected.entries + ' log entries)');
+    if (injected.trimmed) console.log('injected: trimmed to headers');
     if (request) console.log('request: ' + f.request);
     if (unnamed) console.log('warning: ' + promptFile + ': no `Request:` line in the header and no --request; the request is not recorded (P13, RC-43)');
     if (autoRun) console.log('auto: ' + AUTO_FLAGS.join(' ') + '; GH_TOKEN and GITHUB_TOKEN removed; GH_CONFIG_DIR ' + autoRun.ghConfigDir);
@@ -975,7 +1295,23 @@ function resume(idArg, rest) {
     if (!worktree) refuse(id + ' has no worktree.txt: the lane directory is incomplete');
     if (isRunning(f)) refuse(id + ' is still running: wait for its exit before resuming');
     if (text === null && !existsSync(resolve(messageArg))) refuse('no message file: ' + resolve(messageArg));
+    const effortOverride = effortOption(rest.slice(text === null || messageArg === '-' ? 1 : 2));
     const claude = findClaude();
+    // AM-7: --effort, else the effort of the lane's last run, else the rule on its prompt and tier.txt.
+    const prior = completeRun(f);
+    const tierName = readTrim(f.tier).split(' ')[0];
+    let effort = effortOverride;
+    let effortWhy = '--effort';
+    if (!effort && prior && EFFORTS.includes(prior.effort)) {
+        effort = prior.effort;
+        effortWhy = 'the last run of runs.jsonl';
+    }
+    if (!effort) {
+        const p = findLanePrompt(f, id);
+        const r = p && TIERS.includes(tierName) ? laneEffort(readFileSync(p, 'utf8'), { goahead: existsSync(f.goahead) }, tierName) : { effort: 'high', why: 'heavy' };
+        effort = r.effort;
+        effortWhy = r.why + ', no runs.jsonl';
+    }
     let message;
     if (text !== null) {
         message = writeMessage(f, text);
@@ -987,17 +1323,23 @@ function resume(idArg, rest) {
     // An automatic lane keeps the flags and environment of --auto and never gets a go-ahead (RC-36).
     const autoRun = readAuto(f);
     const goAhead = !autoRun && existsSync(f.goahead) ? readTrim(f.goahead) : null;
-    launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS, ...(autoRun ? AUTO_FLAGS : [])], goAhead || null, autoRun);
+    const from = existsSync(f.log) ? statSync(f.log).size : 0;
+    launch(f, claude, worktree, message, ['-p', '--resume', session, ...FLAGS, ...(autoRun ? AUTO_FLAGS : []), '--effort', effort], goAhead || null, autoRun);
+    appendRun(f, {
+        at: ledgerTime(clock()), kind: 'resume', session, tier: TIERS.includes(tierName) ? tierName : null,
+        requestedModel: null, effort, reason: 'resume passes no --model, the session keeps its own; effort: ' + effortWhy, logFrom: from,
+    });
+    console.log('effort: ' + effort + ' (' + effortWhy + ')');
     console.log('log: ' + f.log);
     console.log('session: ' + session);
     trackCard(id, { launched: true });
     return 0;
 }
 
-/** The last line of the assistant text that starts with `Outcome:`, parsed or not. */
-function lastOutcome(path) {
+/** The last line of the assistant text that starts with `Outcome:`, parsed or not; from a byte offset of the log on. */
+function lastOutcome(path, from = 0) {
     let last = null;
-    for (const e of events(path)) {
+    for (const e of events(path, from)) {
         if (!e || e.type !== 'assistant' || !e.message || !Array.isArray(e.message.content)) continue;
         for (const block of e.message.content) {
             if (!block || block.type !== 'text' || typeof block.text !== 'string') continue;
@@ -1054,6 +1396,7 @@ function status(idArg, rest) {
     }
     console.log('elapsed: ' + s.minutes + ' min, limit ' + limit + ' min');
     console.log('session: ' + (readTrim(f.session) || '-'));
+    for (const line of runLines(f)) console.log(line);
     console.log('log: ' + f.log);
     trackCard(id, { limit });
     if (s.state !== 'exited') return 0;
@@ -1069,6 +1412,24 @@ function status(idArg, rest) {
         console.log('warning: ' + relative(tree, promptFile) + ': `Status: da eseguire` after `Outcome: ' + closed[1] + '`; the closure commit owes the flip (P16, RC-17)');
     }
     return 0;
+}
+
+/** The runs.jsonl lines of status, its last line completed first (AM-7): `runs: none` for a lane without the file. Never refuses. */
+function runLines(f) {
+    let run;
+    try {
+        run = completeRun(f);
+    } catch (err) {
+        return ['runs: unreadable (' + (err && err.message ? err.message : String(err)) + ')'];
+    }
+    const runs = readRuns(f);
+    if (!runs || !runs.lines.length) return ['runs: none'];
+    if (!run) return ['runs: ' + runs.lines.length + ', the last line does not parse'];
+    return [
+        'runs: ' + runs.lines.length + ', last ' + run.kind + ' at ' + run.at,
+        'effort: ' + (run.effort || '-'),
+        'model: requested ' + (run.requestedModel || '-') + ', effective ' + (run.effectiveModel || '-'),
+    ];
 }
 
 // The brief of a discovery report (P16, rule 5 of P-2026-09-27-2330): it opens the report, at most 40 lines.
@@ -1120,6 +1481,7 @@ function statusAll(rest) {
     const ids = existsSync(root) ? readdirSync(root).filter((n) => PROMPT_ID.test(n) && !chained.has(n) && statSync(join(root, n)).isDirectory()) : [];
     const rows = [['id', 'state', 'outcome', 'elapsed']];
     for (const id of ids.sort().reverse()) {
+        runLines(laneFiles(id));
         const s = laneState(laneFiles(id), limit);
         const m = s.outcome === null ? null : OUTCOME.exec(s.outcome);
         rows.push([id, s.state, s.outcome === null ? 'none' : s.resolved !== null ? 'resolved' : m ? m[1] : 'unparsed', s.minutes + ' min']);
@@ -1673,8 +2035,8 @@ function mergeValues(m, o, id, when, findings, goahead = null) {
 function parseMerge(rest) {
     const o = { launch: false, governanceGoahead: false, direct: false };
     const positional = [];
-    const valued = { '--into': 'into', '--trunk-into': 'trunkInto', '--from': 'from', '--at': 'at', '--chat': 'chat', '--tier': 'tier' };
-    const usage = 'usage: lane-run merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>], with [--at <rev>] [--chat <id>] [--direct] [--launch [--governance-goahead]] [--tier heavy]';
+    const valued = { '--into': 'into', '--trunk-into': 'trunkInto', '--from': 'from', '--at': 'at', '--chat': 'chat', '--tier': 'tier', '--effort': 'effort' };
+    const usage = 'usage: lane-run merge <branch> --into <trunk> | merge --trunk-into <branch> [--from <trunk>], with [--at <rev>] [--chat <id>] [--direct] [--launch [--governance-goahead]] [--tier heavy] [--effort <level>]';
     for (let i = 0; i < rest.length; i++) {
         const a = rest[i];
         if (a === '--launch') o.launch = true;
@@ -1688,6 +2050,7 @@ function parseMerge(rest) {
         else positional.push(a);
     }
     if (o.tier !== undefined && o.tier !== 'heavy') refuse('--tier ' + o.tier + ': a merge session runs heavy (RC-32)');
+    if (o.effort !== undefined && !EFFORTS.includes(o.effort)) refuse('--effort takes ' + EFFORTS.join(', ') + ': ' + o.effort);
     if (o.trunkInto) {
         if (positional.length || o.into) refuse(usage);
         return { ...o, mode: 'trunk-into', branch: o.trunkInto, trunk: o.from || DEFAULT_TRUNK };
@@ -1793,7 +2156,7 @@ async function merge(rest) {
     git(o.top, ['add', '--', rel]);
     git(o.top, ['commit', '-q', ...message.flatMap((x) => ['-m', x]), '--', rel]);
     console.log('launch: committed ' + shortSha(o.top, 'HEAD'));
-    return start(o.top, file, [], { merge: true, governanceGoahead: Boolean(goahead) });
+    return start(o.top, file, o.effort ? ['--effort', o.effort] : [], { merge: true, governanceGoahead: Boolean(goahead) });
 }
 
 // ── merge --direct ───────────────────────────────────────────────────────────
@@ -2288,9 +2651,9 @@ function chainStatus(id) {
  */
 function chain(rest) {
     if (rest[0] === '--stop') return chainStop(rest[1]);
-    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] [--no-draw "<reason>"] [--request <file>] | chain --stop <chain-id>';
+    const usage = 'usage: lane-run chain <worktree> <prompt-1> [<prompt-2> ...] [--merge-after [--into <trunk>]] [--limit <minutes>] [--chat <id>] [--tier heavy|light] [--no-draw "<reason>"] [--request <file>] [--effort <level>] | chain --stop <chain-id>';
     const positional = [];
-    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null, tier: null, noDraw: null, request: null };
+    const o = { mergeAfter: false, into: null, limit: DEFAULT_LIMIT_MINUTES, chat: null, tier: null, noDraw: null, request: null, effort: null };
     for (let i = 0; i < rest.length; i++) {
         const a = rest[i];
         if (a === '--merge-after') o.mergeAfter = true;
@@ -2307,6 +2670,10 @@ function chain(rest) {
         } else if (a === '--limit') {
             o.limit = limitOption(rest.slice(i));
             i++;
+        } else if (a === '--effort') {
+            // AM-7: the effort of every lane of the chain, passed to each start.
+            o.effort = effortOption(rest.slice(i));
+            i++;
         } else if (a.startsWith('--')) refuse('unknown option for chain: ' + a + '; ' + usage);
         else positional.push(a);
     }
@@ -2320,6 +2687,7 @@ function chain(rest) {
     const top = t.out.trim();
     const branch = git(top, ['branch', '--show-current']).out.trim();
     if (!branch) refuse(top + ' is on a detached HEAD: a chain runs on a branch');
+    settingsTree = top;
 
     const lanes = [];
     for (const p of positional.slice(1)) {
@@ -2356,7 +2724,7 @@ function chain(rest) {
     mkdirSync(cf.dir, { recursive: true });
     if (o.request) copyFileSync(o.request, cf.request);
     writeJson(cf.json, {
-        id, worktree: top, branch, state: 'running', position: 0, created: Date.now(), limit: o.limit, chat: o.chat, tier: o.tier, noDraw: o.noDraw,
+        id, worktree: top, branch, state: 'running', position: 0, created: Date.now(), limit: o.limit, chat: o.chat, tier: o.tier, noDraw: o.noDraw, effort: o.effort,
         request: o.request ? cf.request : null, lanes, mergeAfter: into ? { into, state: 'queued' } : null, stoppedAt: null, supervisor: null,
     });
     const env = { ...process.env, PATH: dirname(process.execPath) + delimiter + (process.env.PATH || '') };
@@ -2419,7 +2787,9 @@ async function chainRun(id) {
         let code;
         try {
             // Every lane gets the chain's copy of the request (RC-43); the caller's file may be gone by now.
-            code = await start(c.worktree, promptFile, [...(c.tier ? ['--tier', c.tier] : []), ...(c.noDraw ? ['--no-draw', c.noDraw] : []), ...(c.request ? ['--request', c.request] : [])]);
+            code = await start(c.worktree, promptFile, [
+                ...(c.tier ? ['--tier', c.tier] : []), ...(c.noDraw ? ['--no-draw', c.noDraw] : []), ...(c.request ? ['--request', c.request] : []), ...(c.effort ? ['--effort', c.effort] : []),
+            ], { kind: 'chain' });
         } catch (err) {
             return stop(lane.id, 'start refused: ' + (err && err.message ? err.message : String(err)));
         }

@@ -292,6 +292,8 @@ Source: `docs/ratifiche/claude_ratifiche_2026-10-03_issue_driven_auto_lanes.md`,
 - **RC-46** (2026-10-11, recommended by chat `C-2026-10-11-1735` from the discovery of P-2026-10-11-1745, approved by Alfonso 2026-10-11 18:16, evidence: measured, verified: agent, reversible: trunk): **No mod reaches a lane unless the harness names it.** A loaded Claude Code mod overrides the deny list and the `PreToolUse` hooks and runs host commands no permission layer sees (report s2, s5). `lane-run start` and `resume` refuse to launch when the environment carries `CLAUDE_CODE_PLUGIN_DIRS` or when the fold would hold a hooks module the harness did not name; lane sessions are refused writes to `~/.claude/settings.json`, `~/.claude/plugins/` and any `.claude-plugin/` under a skills folder. `cc-plugin-sec-default` is not seated now; seating it is a system-wide change for a later lane Alfonso authorises. Memo: `docs/ratifiche/claude_ratifiche_2026-10-11_claude_code_mods.md`.
 - **RC-47** (2026-10-11, recommended by chat `C-2026-10-11-1735` from the discovery of P-2026-10-11-1745, approved by Alfonso 2026-10-11 18:16, evidence: measured, verified: agent, reversible: trunk): **The lane discipline is checked by one repo-held mod, after RC-46.** `lane-run` loads exactly one mod from the repo with `--plugin-dir`. It blocks a message whose Prompt-ID differs from the session's or is missing (P13, at `prompt.submit`), blocks once a final message without an `Outcome:` line (at `classic.Stop`), and flags, never rewrites, a reply without the `[P-… · session …]` prefix. Every gating hook carries a refusing `.catch`, so the mod fails closed. The same mod writes per-turn `usage` and `session.measure` into the lane folder for the CAIN dataset, with no export of its own. Supersedes the planned `Stop` hook. Memo as RC-46.
 - **RC-48** (2026-10-12, decided by Juri in chat `C-2026-10-12-1955`, «risolvere una volta per tutte i 14 errori di baseline», evidence: measured, verified: none, reversible: trunk): **The typecheck baseline is zero.** `npm run typecheck` exits 0: P-2026-10-12-2000 and P-2026-10-12-2001 cleared the 14 errors the baseline had carried (7 files, 8 lines: in six files only types change and the production bundle is byte-identical, `b3f44be17`; `src/api/data.ts` gains one imported name and the Ecore import of a datatype measures equal before and after, `315c62715`). From here an `error TS` line is a red gate, on a lane and on a merge, and no list of known errors is kept again: `CLAUDE.md` §2 and §17, `docs/HARNESS-DOCS.md` §6 and the two merge templates say so (P-2026-10-12-2002). The typecheck gate of a direct merge compares error sets and is unchanged: against an empty set it is the same test.
+- **RC-49** (2026-10-16, ratified by Alfonso under RC-26, his text dated 2026-10-15 and delivered to lane P-2026-10-15-1725 on 2026-10-16 09:37, evidence: measured, verified: none, reversible: trunk): **Lean context and model routing: what is approved, what waits.** On the report `docs/discovery/discovery_2026-10-15_lean_context_model_routing.md` (§4 to §7). (1) The harness stays on the subscription: Phase 2 is governed by usage against the plan limits, not by list-price dollars, which stay as relative weights between cost lines only (report §7.2). (2) Approved now: B0 first (the leftovers of P-2026-10-13-1930); AM-1 (the three model IDs in one place), AM-5 (decisions and log read by ID, file, front and Prompt-ID instead of the last N entries and the whole register), AM-7 (effort per tier); the read-only subagents `Explore` and `explorer` run on Sonnet 5.5. (3) Approved with a condition: `general-purpose` on Sonnet after the B1 measurement; AM-2 and AM-3 after RC-45 closes, subject to Alfonso's veto on the RC-45 report; AM-6 and B5 only after B4 and a passing `check:triggers`. (4) Deferred, to be reconsidered after B1: AM-4 (Haiku reporter) and the benchmark of report §5.7. (5) Accepted in principle, threshold and text still to be ratified: AM-8, a context ceiling per lane session with a handoff file and a fresh restart (proposed 200k soft, 250k hard, report §7.3), and AM-9, one slice per session (report §7.4). This row records the approval and applies nothing: the text of AM-1, AM-5 and AM-7 enters the normative documents only in the batch the report assigns it (§7.5), and RC-16, RC-20, RC-32 and RC-45 are unchanged until then. Input: `docs/archivio/claude_2026-10-15_nota_concentrazione_costi_sessioni.md` (`ba192edb0`).
+- **RC-50** (2026-10-18, approved by Alfonso 2026-10-18 12:29 «sono d'accordo con le tue proposte, rendile subito operative», recommended by a project chat outside the harness front, evidence: measured, verified: none, reversible: trunk): **The context ceiling of AM-8 (RC-49) also applies to the architect.** Every project chat measures its own context from its transcript (last call, input + cache_read + cache_creation, deduplicated by `message.id`) at each lane launch or close and before any long piece of work. Above about 300k tokens per call it writes the checkpoint of its own section of `sessione_CORRENTE.md`, asks Alfonso for a new chat on the same front and opens no further lane. The 60% rule stays only for chats without a measurable transcript. Evidence: chat `C-2026-10-17-1757` measured on 2026-10-18 a per-call context of 641k and 55M input tokens against 3M to 8M per executor lane (`architect.json` in the lane folders). Recorded by a chat other than the front owner, at Alfonso's request (exception to the one-chat-per-front rule of 2026-09-19).
 
 ## Serie R-EDGE — connessioni del canvas tra classificatori (decisioni 2026-09-27)
 
@@ -5960,6 +5962,34 @@ unreached, «Role» in the UI all stand). Decided by Juri in chat `C-2026-10-14-
 `P-2026-10-14-1101`: «non voglio gli endpoint a livello di dashboard. deve stare in un menu dedicato», then the top
 bar among three options.
 
+R-CFG-6..9 below: @tmaog's test of the two merged lanes on beta (#187 issuecomment of 2026-10-18, #186 of
+2026-10-17), read by the chat on 2026-10-20; R-CFG-7..9 decided by Juri in chat `C-2026-10-14-1020` the same day.
+
+**R-CFG-6** (2026-10-20, provisional, unattended (RC-25), evidence: read, verified: none, reversible: trunk) —
+**The element on screen shows its direct components extended, at any depth.** Whatever element is the body of the
+Configurator's panel (the selected row or the one reached by «open»), each element its components hold, references
+and compositions alike, renders as a card with its Identity and Attributes editable and its own Components
+simplified (name and summary); a multi-valued component lists its elements as rows that expand into that card. The
+level below stays simplified. Supersedes, for the Configurator, the depth rule of 12c (`rendersInline` at depth 0
+only) and the compact card of a reference at the extended level. Source: @tmaog's «[ISSUE] Correct behavior» on
+#187 and his mockup (screen 3).
+
+**R-CFG-7** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**Every single-valued reference of the Configurator shows a remove (×), required ones included.** It unlinks and
+never deletes (R-REF-3 semantics); a required slot left empty is reported by the validation. Juri chose it over the
+recommendation (optional ones only). The Data Manager keeps R-REF-3.
+
+**R-CFG-8** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**The Endpoints window gets «Cancel» beside «Done», and arrows beside its tabs.** «Cancel» closes without saving,
+as Escape and the close button do today: the changes stay in the project, unsaved. Arrows ‹ › move to the previous
+and next tab, beside the click and the keyboard.
+
+**R-CFG-9** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**The stand-alone link keeps `&profile=<id>`.** @tmaog asked whether it should read `&role=`; Juri keeps the
+parameter (R-CFG-4 stands). Also adopted from the same test, no decision needed: the Save button changes colour
+while the project has unsaved changes, and the Configurator remembers the instance selected for each type when the
+user switches type and comes back.
+
 ## R-GEN: model-to-text code generation, the pilot (ratifications 2026-10-10)
 
 Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
@@ -6157,6 +6187,14 @@ him and the three open questions of the report. No `irVersion` bump, no VersionF
   Auto layout a lane's record is compared on position and stack extent only (its cross size is computed). Open:
   partitions packed edge to edge, and a child moved out of a `none` container framed again after the drop (inbox
   tickets of P-2026-10-11-1156).
+
+## R-REL — release scope (decision 2026-10-11)
+
+- **R-REL-1** (2026-10-11, ratified by Alfonso 2026-10-12 «ok alle raccomandazioni, procedi in lane auto», evidence: measured, verified: none, reversible: trunk).
+  **3.1.0 ships now from the trunk with `origin/staging` absorbed and without the code generator (hidden behind the
+  `VITE_CODEGEN` build flag); the generator ships in 3.2.** Amends R-GEN-1's «no separate 3.1 tag». Evidence:
+  `docs/discovery/discovery_2026-10-11_release_3_1_scope.md` (D1, D3, D4), the lanes that carried it out
+  (P-2026-10-12-0010 staging absorbed, P-2026-10-12-0012 the build flag) and the version commit (P-2026-10-12-0115).
 
 ## Superate
 

@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init","model":"claude-sonnet-5-5","session_id":"s-b"}
+{"type":"rate_limit_event","rate_limit_info":{"status":"allowed","isUsingOverage":false,"overageStatus":"rejected","unifiedWindows":{"five_hour":{"utilization":0.15,"resetsAt":1767261600},"seven_day":{"utilization":0.31,"resetsAt":1767700000}}}}
+{"type":"assistant","parent_tool_use_id":null,"message":{"id":"msg_b1","model":"claude-sonnet-5-5","usage":{"input_tokens":4,"cache_read_input_tokens":50000,"cache_creation_input_tokens":2000,"output_tokens":5}}}
+{"type":"result","subtype":"success","modelUsage":{"claude-sonnet-5-5":{"outputTokens":60}}}
