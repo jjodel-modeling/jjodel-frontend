@@ -1,0 +1,361 @@
+{
+  "schema_version": "1",
+  "cases": [
+    {
+      "id": "synthetic-collision",
+      "record": {
+        "schema_version": "1",
+        "activation": "applicable",
+        "requirement": {
+          "ref": {
+            "source": "declaration",
+            "start": 0,
+            "quote": "Requirement: preserve order; valid A then B; reject B then A. Proposed strategy uses only line occurrence coverage, ignores order and has no other inputs."
+          }
+        },
+        "strategy": {
+          "ref": {
+            "source": "declaration",
+            "start": 0,
+            "quote": "Requirement: preserve order; valid A then B; reject B then A. Proposed strategy uses only line occurrence coverage, ignores order and has no other inputs."
+          }
+        },
+        "counterexample": {
+          "ref": {
+            "source": "invalid",
+            "start": 0,
+            "quote": "B\nA"
+          }
+        },
+        "expected_result": {
+          "ref": {
+            "source": "declaration",
+            "start": 0,
+            "quote": "Requirement: preserve order; valid A then B; reject B then A. Proposed strategy uses only line occurrence coverage, ignores order and has no other inputs."
+          },
+          "valid": "accept",
+          "invalid": "reject"
+        },
+        "sources": [
+          {
+            "id": "valid",
+            "text": "A\nB",
+            "origin": "synthetic:valid",
+            "sha256": "23519a43c66b4c342f25b32e09797ec5f3fc0be388cd8243fb3449afbdce4013"
+          },
+          {
+            "id": "invalid",
+            "text": "B\nA",
+            "origin": "synthetic:invalid",
+            "sha256": "6879d17926f4091df4e4c4c75f907adfdfdaa9b81a4b16747b257dd8a696f8d0"
+          },
+          {
+            "id": "declaration",
+            "text": "Requirement: preserve order; valid A then B; reject B then A. Proposed strategy uses only line occurrence coverage, ignores order and has no other inputs.",
+            "origin": "synthetic:declaration",
+            "sha256": "2ea827518ae892a23e63a18e5dad97eeb7848671002a3df7fe081139ae072bf4"
+          }
+        ],
+        "rule": {
+          "name": "projection_collision",
+          "projection": "line_occurrence_coverage",
+          "valid": {
+            "source": "valid",
+            "start": 0,
+            "quote": "A\nB"
+          },
+          "invalid": {
+            "source": "invalid",
+            "start": 0,
+            "quote": "B\nA"
+          },
+          "reference": {
+            "source": "valid",
+            "start": 0,
+            "quote": "A\nB"
+          },
+          "support": {
+            "faithful_projection": {
+              "status": "attested",
+              "ref": {
+                "source": "declaration",
+                "start": 0,
+                "quote": "Requirement: preserve order; valid A then B; reject B then A. Proposed strategy uses only line occurrence coverage, ignores order and has no other inputs."
+              }
+            },
+            "different_expected_results": {
+              "status": "attested",
+              "ref": {
+                "source": "declaration",
+                "start": 0,
+                "quote": "Requirement: preserve order; valid A then B; reject B then A. Proposed strategy uses only line occurrence coverage, ignores order and has no other inputs."
+              }
+            },
+            "no_other_information": {
+              "status": "attested",
+              "ref": {
+                "source": "declaration",
+                "start": 0,
+                "quote": "Requirement: preserve order; valid A then B; reject B then A. Proposed strategy uses only line occurrence coverage, ignores order and has no other inputs."
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "historical-2001",
+      "record": {
+        "schema_version": "1",
+        "activation": "applicable",
+        "requirement": {
+          "ref": {
+            "source": "pre-coding-prompt-excerpts",
+            "start": 0,
+            "quote": "   - On the real history of this repository: `447e4239b` is refused (it names the spliced lines); `e2448cf61` passes; the rotation `559eb82c5` passes; one real batch-closure commit passes (find one with `git log --diff-filter=D -- docs/log-inbox` and name it in the report).\n3. Compare lines as text after stripping trailing whitespace only. A line that moves within the same file (removed at one position, added identical at another) counts as unchanged, so that the newest-first reordering of R-RAIL-45 is not refused. No new dependency."
+          }
+        },
+        "strategy": {
+          "ref": {
+            "source": "pre-coding-prompt-excerpts",
+            "start": 0,
+            "quote": "   - On the real history of this repository: `447e4239b` is refused (it names the spliced lines); `e2448cf61` passes; the rotation `559eb82c5` passes; one real batch-closure commit passes (find one with `git log --diff-filter=D -- docs/log-inbox` and name it in the report).\n3. Compare lines as text after stripping trailing whitespace only. A line that moves within the same file (removed at one position, added identical at another) counts as unchanged, so that the newest-first reordering of R-RAIL-45 is not refused. No new dependency."
+          }
+        },
+        "counterexample": {
+          "ref": {
+            "source": "bad-retained-lines",
+            "start": 0,
+            "quote": "## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)\n**Prompt**: `claude_2026-09-26_2350_prompt_log_fold_rotate.md`, fast lane, exclusive on `~/jjodel-release` (RC-12). The active log sat at 40 with 19 entries waiting in the inboxes: fold and rotate with `npm run log:rotate`, verbatim, and close on the way the `P1..P15` ticket and the unwritten `bash-guard` observation of P-2026-09-26-2245.\n**Files touched**: `13ebde1e6`: `CLAUDE.md` (lines 14 and 108), `AGENTS.md` (regenerated, the same two lines), `docs/log-inbox/harness.md` (one ticket). `c5a669c2e`, script-written: `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`, `docs/log-inbox/harness.md`, `simulation.md`, `versionfixer.md`. This commit: this entry, the archive (second rotation), the prompt's Status line.\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Regressions**: no. Dry run at `6d0eaf9fc`: fold 19, move 19, nothing refused. Write at `13ebde1e6`: harness 10, simulation 5, versionfixer 5 folded (20), 20 moved, active 40, archive 1202 to 1222; each inbox keeps its preamble, archive +445/-0 above its previous first entry, log preambles unchanged. This entry makes 41; one more `--rotate --write` moves the oldest, 40 again. `check:docs` 4/4 at each commit; `check:agents` green.\n**Out-of-scope changes**: no\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Notes**: Closed: `CLAUDE.md still cites P1..P15` by `13ebde1e6`. Written down: `bash-guard reads the merge state from the payload cwd only` (ticket, low, open). The first `git commit` hit the settings `ask`, not granted; resumed on Alfonso's word. The fold drops the blank line after an inbox's last entry: headings with none above, log plus archive, 54 before, 56 after; `check:docs` does not see it.\n**Prompt document name**: 2026-09-26 23:50\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Out-of-scope changes**: no\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required"
+          }
+        },
+        "expected_result": {
+          "ref": {
+            "source": "pre-coding-prompt-excerpts",
+            "start": 0,
+            "quote": "   - On the real history of this repository: `447e4239b` is refused (it names the spliced lines); `e2448cf61` passes; the rotation `559eb82c5` passes; one real batch-closure commit passes (find one with `git log --diff-filter=D -- docs/log-inbox` and name it in the report).\n3. Compare lines as text after stripping trailing whitespace only. A line that moves within the same file (removed at one position, added identical at another) counts as unchanged, so that the newest-first reordering of R-RAIL-45 is not refused. No new dependency."
+          },
+          "valid": "accept",
+          "invalid": "reject"
+        },
+        "sources": [
+          {
+            "id": "before-entry",
+            "text": "## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)\n**Prompt**: `claude_2026-09-26_2350_prompt_log_fold_rotate.md`, fast lane, exclusive on `~/jjodel-release` (RC-12). The active log sat at 40 with 19 entries waiting in the inboxes: fold and rotate with `npm run log:rotate`, verbatim, and close on the way the `P1..P15` ticket and the unwritten `bash-guard` observation of P-2026-09-26-2245.\n**Files touched**: `13ebde1e6`: `CLAUDE.md` (lines 14 and 108), `AGENTS.md` (regenerated, the same two lines), `docs/log-inbox/harness.md` (one ticket). `c5a669c2e`, script-written: `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`, `docs/log-inbox/harness.md`, `simulation.md`, `versionfixer.md`. This commit: this entry, the archive (second rotation), the prompt's Status line.\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Regressions**: no. Dry run at `6d0eaf9fc`: fold 19, move 19, nothing refused. Write at `13ebde1e6`: harness 10, simulation 5, versionfixer 5 folded (20), 20 moved, active 40, archive 1202 to 1222; each inbox keeps its preamble, archive +445/-0 above its previous first entry, log preambles unchanged. This entry makes 41; one more `--rotate --write` moves the oldest, 40 again. `check:docs` 4/4 at each commit; `check:agents` green.\n**Out-of-scope changes**: no\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Notes**: Closed: `CLAUDE.md still cites P1..P15` by `13ebde1e6`. Written down: `bash-guard reads the merge state from the payload cwd only` (ticket, low, open). The first `git commit` hit the settings `ask`, not granted; resumed on Alfonso's word. The fold drops the blank line after an inbox's last entry: headings with none above, log plus archive, 54 before, 56 after; `check:docs` does not see it.\n**Prompt document name**: 2026-09-26 23:50",
+            "origin": "git:888ea9a9d87a25399df7943c1b7cfedf31d12267:docs/claude-code-log.md",
+            "sha256": "69f6778b151d4cbed98a4448828b07dbf4a7a42346540459192a1949f8e361f3"
+          },
+          {
+            "id": "bad-retained-lines",
+            "text": "## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)\n**Prompt**: `claude_2026-09-26_2350_prompt_log_fold_rotate.md`, fast lane, exclusive on `~/jjodel-release` (RC-12). The active log sat at 40 with 19 entries waiting in the inboxes: fold and rotate with `npm run log:rotate`, verbatim, and close on the way the `P1..P15` ticket and the unwritten `bash-guard` observation of P-2026-09-26-2245.\n**Files touched**: `13ebde1e6`: `CLAUDE.md` (lines 14 and 108), `AGENTS.md` (regenerated, the same two lines), `docs/log-inbox/harness.md` (one ticket). `c5a669c2e`, script-written: `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`, `docs/log-inbox/harness.md`, `simulation.md`, `versionfixer.md`. This commit: this entry, the archive (second rotation), the prompt's Status line.\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Regressions**: no. Dry run at `6d0eaf9fc`: fold 19, move 19, nothing refused. Write at `13ebde1e6`: harness 10, simulation 5, versionfixer 5 folded (20), 20 moved, active 40, archive 1202 to 1222; each inbox keeps its preamble, archive +445/-0 above its previous first entry, log preambles unchanged. This entry makes 41; one more `--rotate --write` moves the oldest, 40 again. `check:docs` 4/4 at each commit; `check:agents` green.\n**Out-of-scope changes**: no\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Notes**: Closed: `CLAUDE.md still cites P1..P15` by `13ebde1e6`. Written down: `bash-guard reads the merge state from the payload cwd only` (ticket, low, open). The first `git commit` hit the settings `ask`, not granted; resumed on Alfonso's word. The fold drops the blank line after an inbox's last entry: headings with none above, log plus archive, 54 before, 56 after; `check:docs` does not see it.\n**Prompt document name**: 2026-09-26 23:50\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Out-of-scope changes**: no\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required",
+            "origin": "git:447e4239bbc4b044bf42421bd4a0a718f84ed3b8:docs/claude-code-log.md#matching-before-entry-lines",
+            "sha256": "f571ff1d68a19bdd80509e4030377e3efd76cb3cb6c4b25f36b505a6be161ece"
+          },
+          {
+            "id": "pre-coding-prompt-excerpts",
+            "text": "   - On the real history of this repository: `447e4239b` is refused (it names the spliced lines); `e2448cf61` passes; the rotation `559eb82c5` passes; one real batch-closure commit passes (find one with `git log --diff-filter=D -- docs/log-inbox` and name it in the report).\n3. Compare lines as text after stripping trailing whitespace only. A line that moves within the same file (removed at one position, added identical at another) counts as unchanged, so that the newest-first reordering of R-RAIL-45 is not refused. No new dependency.",
+            "origin": "git:dd1d9906fb458f95940c2336b46028de15d8fbb9:docs/prompts/claude_2026-09-28_2001_prompt_log_addonly_gate.md",
+            "sha256": "6925cc110966f5cfb97e75f5e93f73b4312577680156d41daee028f2cb7d34ce"
+          }
+        ],
+        "rule": {
+          "name": "projection_collision",
+          "projection": "line_occurrence_coverage",
+          "valid": {
+            "source": "before-entry",
+            "start": 0,
+            "quote": "## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)\n**Prompt**: `claude_2026-09-26_2350_prompt_log_fold_rotate.md`, fast lane, exclusive on `~/jjodel-release` (RC-12). The active log sat at 40 with 19 entries waiting in the inboxes: fold and rotate with `npm run log:rotate`, verbatim, and close on the way the `P1..P15` ticket and the unwritten `bash-guard` observation of P-2026-09-26-2245.\n**Files touched**: `13ebde1e6`: `CLAUDE.md` (lines 14 and 108), `AGENTS.md` (regenerated, the same two lines), `docs/log-inbox/harness.md` (one ticket). `c5a669c2e`, script-written: `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`, `docs/log-inbox/harness.md`, `simulation.md`, `versionfixer.md`. This commit: this entry, the archive (second rotation), the prompt's Status line.\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Regressions**: no. Dry run at `6d0eaf9fc`: fold 19, move 19, nothing refused. Write at `13ebde1e6`: harness 10, simulation 5, versionfixer 5 folded (20), 20 moved, active 40, archive 1202 to 1222; each inbox keeps its preamble, archive +445/-0 above its previous first entry, log preambles unchanged. This entry makes 41; one more `--rotate --write` moves the oldest, 40 again. `check:docs` 4/4 at each commit; `check:agents` green.\n**Out-of-scope changes**: no\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Notes**: Closed: `CLAUDE.md still cites P1..P15` by `13ebde1e6`. Written down: `bash-guard reads the merge state from the payload cwd only` (ticket, low, open). The first `git commit` hit the settings `ask`, not granted; resumed on Alfonso's word. The fold drops the blank line after an inbox's last entry: headings with none above, log plus archive, 54 before, 56 after; `check:docs` does not see it.\n**Prompt document name**: 2026-09-26 23:50"
+          },
+          "invalid": {
+            "source": "bad-retained-lines",
+            "start": 0,
+            "quote": "## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)\n**Prompt**: `claude_2026-09-26_2350_prompt_log_fold_rotate.md`, fast lane, exclusive on `~/jjodel-release` (RC-12). The active log sat at 40 with 19 entries waiting in the inboxes: fold and rotate with `npm run log:rotate`, verbatim, and close on the way the `P1..P15` ticket and the unwritten `bash-guard` observation of P-2026-09-26-2245.\n**Files touched**: `13ebde1e6`: `CLAUDE.md` (lines 14 and 108), `AGENTS.md` (regenerated, the same two lines), `docs/log-inbox/harness.md` (one ticket). `c5a669c2e`, script-written: `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`, `docs/log-inbox/harness.md`, `simulation.md`, `versionfixer.md`. This commit: this entry, the archive (second rotation), the prompt's Status line.\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Regressions**: no. Dry run at `6d0eaf9fc`: fold 19, move 19, nothing refused. Write at `13ebde1e6`: harness 10, simulation 5, versionfixer 5 folded (20), 20 moved, active 40, archive 1202 to 1222; each inbox keeps its preamble, archive +445/-0 above its previous first entry, log preambles unchanged. This entry makes 41; one more `--rotate --write` moves the oldest, 40 again. `check:docs` 4/4 at each commit; `check:agents` green.\n**Out-of-scope changes**: no\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Notes**: Closed: `CLAUDE.md still cites P1..P15` by `13ebde1e6`. Written down: `bash-guard reads the merge state from the payload cwd only` (ticket, low, open). The first `git commit` hit the settings `ask`, not granted; resumed on Alfonso's word. The fold drops the blank line after an inbox's last entry: headings with none above, log plus archive, 54 before, 56 after; `check:docs` does not see it.\n**Prompt document name**: 2026-09-26 23:50\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Smoke visivo**: non applicabile\n**Outcome**: ✅ completed\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Out-of-scope changes**: no\n**Layer Impact Report**: not-required\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Layer Impact Report**: not-required"
+          },
+          "reference": {
+            "source": "before-entry",
+            "start": 0,
+            "quote": "## 2026-09-26 — chore: fold the inboxes and rotate the log at 40, close two harness tickets (P-2026-09-26-2350)\n**Prompt**: `claude_2026-09-26_2350_prompt_log_fold_rotate.md`, fast lane, exclusive on `~/jjodel-release` (RC-12). The active log sat at 40 with 19 entries waiting in the inboxes: fold and rotate with `npm run log:rotate`, verbatim, and close on the way the `P1..P15` ticket and the unwritten `bash-guard` observation of P-2026-09-26-2245.\n**Files touched**: `13ebde1e6`: `CLAUDE.md` (lines 14 and 108), `AGENTS.md` (regenerated, the same two lines), `docs/log-inbox/harness.md` (one ticket). `c5a669c2e`, script-written: `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`, `docs/log-inbox/harness.md`, `simulation.md`, `versionfixer.md`. This commit: this entry, the archive (second rotation), the prompt's Status line.\n**Outcome**: ✅ completed\n**Corregge**: —\n**Causa**: —\n**Regressions**: no. Dry run at `6d0eaf9fc`: fold 19, move 19, nothing refused. Write at `13ebde1e6`: harness 10, simulation 5, versionfixer 5 folded (20), 20 moved, active 40, archive 1202 to 1222; each inbox keeps its preamble, archive +445/-0 above its previous first entry, log preambles unchanged. This entry makes 41; one more `--rotate --write` moves the oldest, 40 again. `check:docs` 4/4 at each commit; `check:agents` green.\n**Out-of-scope changes**: no\n**Layer Impact Report**: not-required\n**Smoke visivo**: non applicabile\n**Notes**: Closed: `CLAUDE.md still cites P1..P15` by `13ebde1e6`. Written down: `bash-guard reads the merge state from the payload cwd only` (ticket, low, open). The first `git commit` hit the settings `ask`, not granted; resumed on Alfonso's word. The fold drops the blank line after an inbox's last entry: headings with none above, log plus archive, 54 before, 56 after; `check:docs` does not see it.\n**Prompt document name**: 2026-09-26 23:50"
+          },
+          "support": {
+            "faithful_projection": {
+              "status": "attested",
+              "ref": {
+                "source": "pre-coding-prompt-excerpts",
+                "start": 275,
+                "quote": "3. Compare lines as text after stripping trailing whitespace only. A line that moves within the same file (removed at one position, added identical at another) counts as unchanged, so that the newest-first reordering of R-RAIL-45 is not refused. No new dependency."
+              }
+            },
+            "different_expected_results": {
+              "status": "attested",
+              "ref": {
+                "source": "pre-coding-prompt-excerpts",
+                "start": 0,
+                "quote": "   - On the real history of this repository: `447e4239b` is refused (it names the spliced lines); `e2448cf61` passes; the rotation `559eb82c5` passes; one real batch-closure commit passes (find one with `git log --diff-filter=D -- docs/log-inbox` and name it in the report)."
+              }
+            },
+            "no_other_information": {
+              "status": "attested",
+              "ref": {
+                "source": "pre-coding-prompt-excerpts",
+                "start": 275,
+                "quote": "3. Compare lines as text after stripping trailing whitespace only. A line that moves within the same file (removed at one position, added identical at another) counts as unchanged, so that the newest-first reordering of R-RAIL-45 is not refused. No new dependency."
+              }
+            }
+          }
+        },
+        "identity_refs": {
+          "task": "P-2026-09-28-2001"
+        },
+        "temporal_evidence": {
+          "kind": "retrospective_preimplementation_sources",
+          "ref": {
+            "source": "pre-coding-prompt-excerpts",
+            "start": 0,
+            "quote": "   - On the real history of this repository: `447e4239b` is refused (it names the spliced lines); `e2448cf61` passes; the rotation `559eb82c5` passes; one real batch-closure commit passes (find one with `git log --diff-filter=D -- docs/log-inbox` and name it in the report).\n3. Compare lines as text after stripping trailing whitespace only. A line that moves within the same file (removed at one position, added identical at another) counts as unchanged, so that the newest-first reordering of R-RAIL-45 is not refused. No new dependency."
+          }
+        }
+      },
+      "provenance": {
+        "purpose": "calibration, not independent validation",
+        "original_sha256": {
+          "before_log": "5386ebd0536dab7eb4f12021ac15e3c42d7ac503bdd54507dbf3e5f33b14c125",
+          "bad_log": "d710ab262b85906b0fee29c14a210dd5b20a48236f386197abbacbdf80918dc0",
+          "initial_prompt": "fbab2a182229c8b48d5926c80ed77fe13f464d99d0b4fd6d762e7487f4f1363c"
+        },
+        "extraction": {
+          "before_entry_lines": [
+            31,
+            42
+          ],
+          "bad_selected_line_numbers": [
+            31,
+            32,
+            33,
+            37,
+            38,
+            39,
+            50,
+            51,
+            52,
+            63,
+            76,
+            77,
+            78,
+            89,
+            102,
+            115,
+            128,
+            129,
+            130,
+            141,
+            154,
+            167,
+            180,
+            181,
+            182,
+            193,
+            194,
+            195,
+            206,
+            207,
+            208,
+            223,
+            224,
+            225,
+            226,
+            227,
+            228,
+            229,
+            230,
+            231,
+            259,
+            260,
+            261,
+            272,
+            277,
+            285,
+            290,
+            305,
+            306,
+            307,
+            318,
+            319,
+            320,
+            323,
+            324,
+            342,
+            343,
+            344,
+            347,
+            348,
+            355,
+            360,
+            375,
+            380,
+            381,
+            389,
+            390,
+            391,
+            394,
+            416,
+            421,
+            429,
+            448,
+            449,
+            450,
+            453,
+            454,
+            462,
+            463,
+            464,
+            489,
+            490,
+            491,
+            494,
+            502,
+            503,
+            504,
+            508,
+            517,
+            522,
+            544,
+            545,
+            546,
+            557,
+            558,
+            559,
+            573,
+            574,
+            575,
+            578,
+            587,
+            588,
+            589,
+            627,
+            628,
+            629,
+            632,
+            643,
+            644,
+            645,
+            647,
+            648,
+            662,
+            663,
+            664,
+            667
+          ],
+          "selection": "all lines of bad log whose trailing-space-normalized text occurs in before entry; original order and duplicates retained",
+          "prompt_excerpt_lines": [
+            32,
+            35
+          ]
+        },
+        "entry_contiguous_in_bad": false,
+        "pre_coding_ancestry_verified": true,
+        "projection_scope": "old-entry line coverage; added lines ignored, as required by add-only criterion",
+        "semantic_limit": "faithfulness/completeness are explicit analyst attestations supported by prompt excerpts, not machine-proven natural-language meaning"
+      }
+    }
+  ]
+}
