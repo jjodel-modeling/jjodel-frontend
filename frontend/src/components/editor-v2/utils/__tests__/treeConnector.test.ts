@@ -5,6 +5,7 @@ import {
     parsePathPoints,
     parsePathSubPaths,
     TREE_BUS_CORNER_RADIUS,
+    TREE_BUS_DROP,
     treeBusCornerRadius,
     treeBranchAnchor,
     treeChildBox,
@@ -301,16 +302,17 @@ describe('after a drag — every child keeps its branch', () => {
     });
 
     it('a child dragged above the bus still has its branch — it just enters from the other side', () => {
-        // Red dragged above the parent: it becomes the closest child, so the bus
-        // moves up with it, above the parent's own edge.
+        // Red dragged above the parent. The bus used to move up with it, above the
+        // parent's own edge (110), and the trunk then reached the parent moving down:
+        // the triangle turned away from it (R-VP-18). It now drops under the parent.
         const boxes = [kid(120, 460), kid(400, 40), kid(680, 460)];
         const { g, anchors } = treeOf(boxes);
         const busY = g.junction!.y;
 
-        expect(busY).toBe(110);            // 180 + (40 - 180) / 2
-        expect(busY).toBeLessThan(PARENT_BOTTOM);
+        expect(busY).toBe(PARENT_BOTTOM + TREE_BUS_DROP);  // no childBottom given here
+        expect(busY).toBeGreaterThan(PARENT_BOTTOM);
         // The moved child hangs above the bus, the others below: both are branches.
-        expect(busByChildX(g.barAndBranchesPath).get(470)).toEqual([{ x: 470, y: 40 }, { x: 470, y: 110 }]);
+        expect(busByChildX(g.barAndBranchesPath).get(470)).toEqual([{ x: 470, y: 40 }, { x: 470, y: busY }]);
         eachChildReachesTheBus(g, anchors);
     });
 
@@ -399,5 +401,76 @@ describe('treeBusCornerRadius — the clamp on short segments', () => {
         expect(r).toBe(2.5);
         expect(roundManhattanPath('M ' + pts.map(p => `${p.x} ${p.y}`).join(' L '), r))
             .toBe(`M 400 ${CHILD_Y} L 400 ${BAR_Y + 2.5} A 2.5 2.5 0 0 1 402.5 ${BAR_Y} L 405 ${BAR_Y}`);
+    });
+});
+
+// Children on the parent's row, as the default placement puts a class and its
+// subclasses: the midpoint between the parent's bottom handle and the children's top
+// handles lies ABOVE that handle, so the trunk reached it moving down and the hollow
+// triangle turned away from the parent, its base under the box (measured 2026-09-29 on
+// DemoPEST, P-2026-09-29-1332: tip 5px under State, 41% of it hidden).
+describe('children beside the parent — the trunk still rises into the parent', () => {
+    // DemoPEST in flow px: State 50..190 x 50..92, bottom handle at (155, 96); Initial
+    // and Terminal on the same row, top handles at y 50, bottoms at 92.
+    const PX = 155;
+    const PY = 96;
+    const beside = (x: number, id: string, bottom?: number): TreeBranch => ({ childX: x, childY: 50, childBottom: bottom, edgeId: id });
+    const row = [beside(520, 'initial', 92), beside(920, 'terminal', 92)];
+    const trunkEnd = (d: string) => { const p = parsePathPoints(d); return { from: p[p.length - 2], to: p[p.length - 1] }; };
+    const barYOf = (d: string) => parsePathPoints(d)[0].y;
+
+    it('the last trunk segment ends on the parent handle, moving up', () => {
+        const { from, to } = trunkEnd(computeTreeConnectorPath(PX, PY, row).trunkPath);
+        expect(to).toEqual({ x: PX, y: PY });
+        expect(from.x).toBe(PX);
+        expect(from.y).toBeGreaterThan(PY);
+    });
+
+    it('the bus runs TREE_BUS_DROP under the lower of the parent handle and the children', () => {
+        expect(barYOf(computeTreeConnectorPath(PX, PY, row).trunkPath)).toBe(PY + TREE_BUS_DROP);
+        // A child taller than the parent pushes the bus under its own bottom.
+        const tall = [beside(520, 'initial', 92), beside(920, 'terminal', 140)];
+        expect(barYOf(computeTreeConnectorPath(PX, PY, tall).trunkPath)).toBe(140 + TREE_BUS_DROP);
+    });
+
+    it('with no bottom known, the bus still drops under the parent handle', () => {
+        const blind = [beside(520, 'initial'), beside(920, 'terminal')];
+        expect(barYOf(computeTreeConnectorPath(PX, PY, blind).trunkPath)).toBe(PY + TREE_BUS_DROP);
+    });
+
+    it('a bottom that is not a finite number stands aside for the child top', () => {
+        // Before this lane the height of a top-anchored child was never read, so a
+        // non-finite one could not reach the geometry; through Math.max it would turn
+        // the whole bus into NaN, and the tree would not paint.
+        const odd = [beside(520, 'initial', NaN), beside(920, 'terminal', Infinity)];
+        const g = computeTreeConnectorPath(PX, PY, odd);
+        expect(barYOf(g.trunkPath)).toBe(PY + TREE_BUS_DROP);
+        expect(g.barAndBranchesPath).not.toMatch(/NaN|Infinity/);
+    });
+
+    it('a child whose top is level with the parent handle counts as beside it', () => {
+        // The midpoint would be the handle itself: a trunk of zero length, no direction.
+        const level = [
+            { childX: 520, childY: PY, childBottom: PY + 42, edgeId: 'a' },
+            { childX: 920, childY: PY, childBottom: PY + 42, edgeId: 'b' },
+        ];
+        expect(barYOf(computeTreeConnectorPath(PX, PY, level).trunkPath)).toBe(PY + 42 + TREE_BUS_DROP);
+    });
+
+    it('every branch starts on its child handle and lands on the bus', () => {
+        const g = computeTreeConnectorPath(PX, PY, row);
+        const barY = PY + TREE_BUS_DROP;
+        const subs = busByChildX(g.barAndBranchesPath);
+        for (const b of row) {
+            const pts = subs.get(b.childX)!;
+            expect(pts[0]).toEqual({ x: b.childX, y: 50 });
+            expect(pts[1]).toEqual({ x: b.childX, y: barY });
+        }
+        expect(busSpan(g.barAndBranchesPath)).toEqual({ min: PX + g.trunkElbowRadius!, max: 920 });
+    });
+
+    it('children below the parent keep the midpoint bus, whatever their bottom', () => {
+        const below = [{ ...child(400, 'e1'), childBottom: 380 }, { ...child(600, 'e2'), childBottom: 380 }];
+        expect(barYOf(computeTreeConnectorPath(500, PARENT_Y, below).trunkPath)).toBe(BAR_Y);
     });
 });

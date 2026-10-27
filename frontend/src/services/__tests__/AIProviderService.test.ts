@@ -80,3 +80,226 @@ describe('AIProviderService Custom model selection', () => {
         expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string).model).toBe('deepseek-reasoner');
     });
 });
+
+// The OpenAI-compatible connection test names its failure as the catalog does (P-2026-10-18-1525),
+// so Settings can tell a rejected key from a rate limit, an outage or an unreachable server.
+describe('testOpenAICompatible failure kinds', () => {
+    beforeEach(() => {
+        vi.resetModules();
+        const storage = new Map<string, string>();
+        vi.stubGlobal('localStorage', {
+            getItem: (key: string) => storage.get(key) ?? null,
+            setItem: (key: string, value: string) => storage.set(key, value),
+        });
+        vi.stubGlobal('fetch', vi.fn());
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    async function testDeepSeek() {
+        const { AI, AIProvider } = await import('../../types/jodie');
+        const { AIProviderService } = await import('../AIProviderService');
+        localStorage.setItem(AI.DeepSeek.storageKey, JSON.stringify({
+            name: AIProvider.DeepSeek, apiKey: 'sk-test', model: 'deepseek-chat', enabled: true,
+        }));
+        const result = await AIProviderService.testConnection(AIProvider.DeepSeek);
+        return { result, disables: AIProviderService.failureDisablesProvider(result) };
+    }
+
+    it.each([
+        [401, 'auth', true], [403, 'auth', true], [429, 'rate', false],
+        [500, 'server', false], [529, 'server', false], [404, 'other', false],
+    ])('reads HTTP %i as %s', async (status, failure, disables) => {
+        vi.mocked(fetch).mockResolvedValueOnce({
+            ok: false, status, text: async () => JSON.stringify({ error: { message: 'nope' } }),
+        } as Response);
+        expect(await testDeepSeek()).toEqual({ result: { success: false, failure, error: 'nope' }, disables });
+    });
+
+    it('reads a rejected fetch as network', async () => {
+        vi.mocked(fetch).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        const { result, disables } = await testDeepSeek();
+        expect(result).toMatchObject({ success: false, failure: 'network' });
+        expect(disables).toBe(false);
+    });
+});
+
+// #179: a Gemini configuration saved before 2026-08-05 carries `gemini-2.0-flash-exp`, which
+// Google answers with 404. Storage is seeded either before the import, when JodieConfig.load runs
+// the load-time migration, or after it, to exercise the read-time resolution on its own.
+describe('#179 retired models: the test and the chat call the same current model', () => {
+    const GEMINI_KEY = 'jjodie_provider_gemini';
+    const CHAT_KEY = 'jjodel_provider_chat';
+    let storage: Map<string, string>;
+
+    beforeEach(() => {
+        vi.resetModules();
+        storage = new Map<string, string>();
+        vi.stubGlobal('localStorage', {
+            getItem: (key: string) => storage.get(key) ?? null,
+            setItem: vi.fn((key: string, value: string) => storage.set(key, value)),
+        });
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ candidates: [{ content: { parts: [{ text: 'Hi' }] } }] }),
+        }));
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    function seed(geminiModel: string, chat?: { providerId: string; modelId?: string }) {
+        storage.set(GEMINI_KEY, JSON.stringify({ name: 'Gemini', apiKey: 'AIza-test', model: geminiModel, enabled: true }));
+        if (chat) storage.set(CHAT_KEY, JSON.stringify({ ...chat, updatedAt: 0 }));
+    }
+
+    async function load() {
+        const jodie = await import('../../types/jodie');
+        const { AIProviderService } = await import('../AIProviderService');
+        // Positive control: the keys seeded above are the ones the code reads.
+        expect(jodie.AI.Gemini.storageKey).toBe(GEMINI_KEY);
+        expect(`${jodie.AI.STORAGE_PREFIX}chat`).toBe(CHAT_KEY);
+        const current = Object.keys(jodie.AI.Gemini.versions).filter(k => !jodie.AI.Gemini.versions[k].deprecated);
+        return { ...jodie, AIProviderService, first: current[0], last: current[current.length - 1] };
+    }
+
+    const calledModel = (call: number): string =>
+        /\/models\/([^:]+):generateContent/.exec(vi.mocked(fetch).mock.calls[call][0] as string)![1];
+
+    /** A Gemini `GET /v1beta/models` answer listing `ids` (documented shape). */
+    const modelList = (ids: string[]) => ({
+        ok: true, status: 200,
+        json: async () => ({ models: ids.map(id => ({ name: `models/${id}`, displayName: id, inputTokenLimit: 1_048_576, supportedGenerationMethods: ['generateContent'] })) }),
+    } as unknown as Response);
+
+    it('moves a deprecated or unlisted Gemini id to the first current entry', async () => {
+        const { AI, resolveCurrentModelId, first, last } = await load();
+        expect(AI.Gemini.versions['gemini-2.0-flash-exp'].deprecated).toBe(true);
+        expect(Object.keys(AI.Gemini.versions)[0]).toBe(first);
+        expect(resolveCurrentModelId('Gemini', 'gemini-2.0-flash-exp')).toBe(first);
+        expect(resolveCurrentModelId('Gemini', 'gemini-3.5-flash')).toBe(first); // dropped by 790a146c7
+        expect(resolveCurrentModelId('Gemini', last)).toBe(last);
+    });
+
+    it('leaves other providers alone: deprecated and unlisted ids stay, the legacy map applies', async () => {
+        const { resolveCurrentModelId } = await load();
+        expect(resolveCurrentModelId('Claude', 'claude-3-opus-latest')).toBe('claude-3-opus-latest');
+        expect(resolveCurrentModelId('DeepSeek', 'deepseek-reasoner')).toBe('deepseek-reasoner');
+        expect(resolveCurrentModelId('Claude', 'claude-sonnet-4-20250514')).toBe('claude-sonnet-4-6');
+    });
+
+    it('tests the key by listing the models, with no model id, the key in a header', async () => {
+        const { AIProviderService, first } = await load();
+        seed('gemini-2.0-flash-exp');
+        vi.mocked(fetch).mockResolvedValueOnce(modelList([first]));
+        expect(await AIProviderService.testConnection('Gemini')).toEqual({ success: true });
+        const [url, init] = vi.mocked(fetch).mock.calls[0];
+        expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000');
+        expect((init as RequestInit).method).toBe('GET');
+        expect((init as RequestInit).headers).toEqual({ 'x-goog-api-key': 'AIza-test' });
+    });
+
+    it('checks the model the chat calls against the list, and the chat calls that model', async () => {
+        const { AIConfig, AIProviderService, first, last } = await load();
+        expect(last).not.toBe(first);
+        seed('gemini-2.0-flash-exp', { providerId: 'Gemini', modelId: last });
+        vi.mocked(fetch).mockResolvedValueOnce(modelList([first]));
+        const result = await AIProviderService.testConnection('Gemini');
+        expect(result.success).toBe(true);
+        expect(result.warning).toContain(`"${last}"`);
+        await AIProviderService.chat('Hello', 'Gemini', [], undefined, undefined, undefined, AIConfig.getPreferredModel('chat'));
+        expect(calledModel(1)).toBe(last);
+    });
+
+    it('shows a retired chat pick as the model the call uses', async () => {
+        const { AIConfig, first } = await load();
+        seed('gemini-2.0-flash-exp', { providerId: 'Gemini', modelId: 'gemini-3.5-flash' });
+        expect(AIConfig.getPreferredModel('chat')).toBe(first);
+    });
+
+    it('migrates saved models at load and records the one it replaced', async () => {
+        seed('gemini-2.0-flash-exp', { providerId: 'Gemini', modelId: 'gemini-3.5-flash' });
+        const { first } = await load();
+        const cfg = JSON.parse(storage.get(GEMINI_KEY)!);
+        expect(cfg.model).toBe(first);
+        expect(cfg.replacedModel).toBe('gemini-2.0-flash-exp');
+        expect(cfg.apiKey).toBe('AIza-test');
+        expect(JSON.parse(storage.get(CHAT_KEY)!).modelId).toBe(first);
+    });
+
+    it('writes nothing on a load that finds nothing to move', async () => {
+        seed('gemini-2.0-flash-exp');
+        const { AIConfig } = await load();
+        vi.mocked(localStorage.setItem).mockClear();
+        AIConfig.retireModels();
+        expect(localStorage.setItem).not.toHaveBeenCalled();
+        expect(JSON.parse(storage.get(GEMINI_KEY)!).replacedModel).toBe('gemini-2.0-flash-exp');
+    });
+
+    it('keeps the saved models of the other providers at load', async () => {
+        storage.set('jjodie_provider_deepseek', JSON.stringify({ name: 'DeepSeek', apiKey: 'sk-x', model: 'deepseek-reasoner' }));
+        storage.set('jjodie_provider_claude', JSON.stringify({ name: 'Claude', apiKey: 'sk-ant-x', model: 'claude-3-opus-latest' }));
+        await load();
+        expect(JSON.parse(storage.get('jjodie_provider_deepseek')!)).toEqual({ name: 'DeepSeek', apiKey: 'sk-x', model: 'deepseek-reasoner' });
+        expect(JSON.parse(storage.get('jjodie_provider_claude')!)).toEqual({ name: 'Claude', apiKey: 'sk-ant-x', model: 'claude-3-opus-latest' });
+    });
+
+    it('reads a bad key (400 API_KEY_INVALID) as a rejected key, not the API JSON', async () => {
+        const { AIProviderService, last } = await load();
+        seed(last);
+        vi.mocked(fetch).mockResolvedValueOnce({
+            ok: false, status: 400,
+            text: async () => JSON.stringify({ error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' } }),
+        } as unknown as Response);
+        const result = await AIProviderService.testConnection('Gemini');
+        expect(result).toMatchObject({ success: false, failure: 'auth' });
+        expect(result.error).toContain('Google AI Studio');
+        expect(result.error).not.toContain('{');
+    });
+});
+
+describe('#179 with a live catalog: a missing model is flagged and kept, never swapped', () => {
+    const GEMINI_KEY = 'jjodie_provider_gemini';
+    const CHAT_KEY = 'jjodel_provider_chat';
+    let storage: Map<string, string>;
+
+    beforeEach(() => {
+        vi.resetModules();
+        storage = new Map<string, string>();
+        vi.stubGlobal('localStorage', {
+            getItem: (key: string) => storage.get(key) ?? null,
+            setItem: vi.fn((key: string, value: string) => storage.set(key, value)),
+        });
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    async function seedLive(saved: string, live: string[]) {
+        const { writeCatalogCache, parseGeminiModels, orderCatalog } = await import('../aiModelCatalog');
+        storage.set(GEMINI_KEY, JSON.stringify({ name: 'Gemini', apiKey: 'AIza-test', model: saved, enabled: true }));
+        storage.set(CHAT_KEY, JSON.stringify({ providerId: 'Gemini', modelId: saved, updatedAt: 0 }));
+        writeCatalogCache('Gemini', 'AIza-test', orderCatalog(parseGeminiModels({ models: live.map(id => ({ name: `models/${id}`, displayName: id, supportedGenerationMethods: ['generateContent'] })) })));
+        const jodie = await import('../../types/jodie');
+        const { AIProviderService } = await import('../AIProviderService');
+        return { ...jodie, AIProviderService };
+    }
+
+    it('keeps a saved Gemini model the live list lacks, at load and on every read', async () => {
+        const { AI, AIConfig, AIProviderService, hasLiveCatalog, resolveCurrentModelId } = await seedLive('gemini-2.0-flash-exp', ['gemini-2.5-flash', 'gemini-2.5-pro']);
+        expect(hasLiveCatalog('Gemini')).toBe(true);
+        expect(resolveCurrentModelId('Gemini', 'gemini-2.0-flash-exp')).toBe('gemini-2.0-flash-exp');
+        expect(AIConfig.getPreferredModel('chat')).toBe('gemini-2.0-flash-exp');
+        expect(AIProviderService.effectiveModel('Gemini')).toBe('gemini-2.0-flash-exp');
+        expect(AI.Gemini.versions['gemini-2.0-flash-exp']).toMatchObject({ unavailable: true });
+        const cfg = JSON.parse(storage.get(GEMINI_KEY)!);
+        expect(cfg.model).toBe('gemini-2.0-flash-exp');
+        expect(cfg.replacedModel).toBeUndefined();
+        expect(JSON.parse(storage.get(CHAT_KEY)!).modelId).toBe('gemini-2.0-flash-exp');
+    });
+
+    it('control: the same saved model is still retired on the static list', async () => {
+        storage.set(GEMINI_KEY, JSON.stringify({ name: 'Gemini', apiKey: 'AIza-test', model: 'gemini-2.0-flash-exp', enabled: true }));
+        const { hasLiveCatalog } = await import('../../types/jodie');
+        expect(hasLiveCatalog('Gemini')).toBe(false);
+        expect(JSON.parse(storage.get(GEMINI_KEY)!).replacedModel).toBe('gemini-2.0-flash-exp');
+    });
+});

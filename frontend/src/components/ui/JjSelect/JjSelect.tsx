@@ -173,6 +173,7 @@ export function JjSelect<
         <Select<Option, IsMulti, Group>
             menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
             className={'jj-select'}
+            classNamePrefix={'jj-select'}
             menuPosition="fixed"
             maxMenuHeight={440}
             isSearchable={true}

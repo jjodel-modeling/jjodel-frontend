@@ -6,10 +6,35 @@
 import {
     JjelValue,
     JjelFunction,
+    JjelTextHost,
     EvaluationContext,
     createFunction,
+    isBitVector,
     isJjelFunction
 } from '../context';
+import { BitVectorDefect, compareBitVectors, noTruthValue, toVerilog } from './bitvectors';
+
+/**
+ * Truthiness of a predicate result: `Boolean(v)`, as the bare `if (v)` it
+ * replaces, except that a bit-vector has none (R-BV, defect).
+ */
+function holds(v: JjelValue): boolean {
+    if (isBitVector(v)) throw noTruthValue(v);
+    return Boolean(v);
+}
+
+/**
+ * Key for `distinct`, `distinctBy`, `groupBy`: `JSON.stringify`, with a
+ * bit-vector tagged so it never collides with the string of its Verilog form.
+ * The replacer reads `this[k]`, the value before `toJSON`.
+ */
+function keyOf(value: JjelValue): string {
+    return JSON.stringify(value, function (this: Record<string, unknown>, k: string, v: unknown) {
+        const original = this[k];
+        if (isBitVector(original)) return { '\u0000bv': toVerilog(original) };
+        return v;
+    });
+}
 
 // ============================================
 // COLLECTION METHODS
@@ -28,7 +53,7 @@ export function filter(
 
     for (const item of array) {
         const matches = predicate.call([item], ctx);
-        if (matches) {
+        if (holds(matches)) {
             result.push(item);
         }
     }
@@ -85,7 +110,7 @@ export function first(
     }
 
     for (const item of array) {
-        if (predicate.call([item], ctx!)) {
+        if (holds(predicate.call([item], ctx!))) {
             return item;
         }
     }
@@ -107,7 +132,7 @@ export function last(
     }
 
     for (let i = array.length - 1; i >= 0; i--) {
-        if (predicate.call([array[i]], ctx!)) {
+        if (holds(predicate.call([array[i]], ctx!))) {
             return array[i];
         }
     }
@@ -125,7 +150,7 @@ export function any(
     ctx: EvaluationContext
 ): boolean {
     for (const item of array) {
-        if (predicate.call([item], ctx)) {
+        if (holds(predicate.call([item], ctx))) {
             return true;
         }
     }
@@ -142,7 +167,7 @@ export function all(
     ctx: EvaluationContext
 ): boolean {
     for (const item of array) {
-        if (!predicate.call([item], ctx)) {
+        if (!holds(predicate.call([item], ctx))) {
             return false;
         }
     }
@@ -176,7 +201,7 @@ export function count(
 
     let c = 0;
     for (const item of array) {
-        if (predicate.call([item], ctx!)) {
+        if (holds(predicate.call([item], ctx!))) {
             c++;
         }
     }
@@ -217,7 +242,7 @@ export function distinct(array: JjelValue[]): JjelValue[] {
     const seen = new Set<string>();
 
     for (const item of array) {
-        const key = JSON.stringify(item);
+        const key = keyOf(item);
         if (!seen.has(key)) {
             seen.add(key);
             result.push(item);
@@ -240,7 +265,7 @@ export function distinctBy(
     const seen = new Set<string>();
 
     for (const item of array) {
-        const key = JSON.stringify(keySelector.call([item], ctx));
+        const key = keyOf(keySelector.call([item], ctx));
         if (!seen.has(key)) {
             seen.add(key);
             result.push(item);
@@ -313,7 +338,7 @@ export function takeWhile(
     const result: JjelValue[] = [];
 
     for (const item of array) {
-        if (!predicate.call([item], ctx)) break;
+        if (!holds(predicate.call([item], ctx))) break;
         result.push(item);
     }
 
@@ -332,7 +357,7 @@ export function skipWhile(
     const result: JjelValue[] = [];
 
     for (const item of array) {
-        if (skipping && predicate.call([item], ctx)) continue;
+        if (skipping && holds(predicate.call([item], ctx))) continue;
         skipping = false;
         result.push(item);
     }
@@ -370,7 +395,7 @@ export function groupBy(
 
     for (const item of array) {
         const key = keySelector.call([item], ctx);
-        const keyStr = JSON.stringify(key);
+        const keyStr = keyOf(key);
 
         if (!groups.has(keyStr)) {
             groups.set(keyStr, { key, items: [] });
@@ -386,7 +411,18 @@ export function groupBy(
  * Example: names.join(", ")
  */
 export function join(array: JjelValue[], separator: string = ''): string {
-    return array.map(v => String(v)).join(separator);
+    return array.map(v => isBitVector(v) ? toVerilog(v) : String(v)).join(separator);
+}
+
+/**
+ * join(separator) from a context with a Text host (R-GEN-10): the host joins
+ * when an item or the separator is a Text; otherwise `join`, unchanged.
+ */
+export function joinWithTextHost(array: JjelValue[], separator: JjelValue = '', host: JjelTextHost): JjelValue {
+    if (host.isText(separator) || array.some(v => host.isText(v))) {
+        return host.join(array, separator);
+    }
+    return join(array, separator as string);
 }
 
 /**
@@ -402,6 +438,9 @@ export function sum(
 
     for (const item of array) {
         const value = selector ? selector.call([item], ctx!) : item;
+        if (isBitVector(value)) {
+            throw new BitVectorDefect("'sum' and 'avg' do not take bit-vectors: add them with '+'");
+        }
         if (typeof value === 'number') {
             total += value;
         }
@@ -503,6 +542,11 @@ function compare(a: JjelValue, b: JjelValue): number {
     if (a === null) return -1;
     if (b === null) return 1;
 
+    // sortBy, min, max: a bit-vector orders only against its own width and signedness.
+    if (isBitVector(a) || isBitVector(b)) {
+        return compareBitVectors('ordering', a, b);
+    }
+
     if (typeof a === 'number' && typeof b === 'number') {
         return a - b;
     }
@@ -587,5 +631,6 @@ export function getCollectionMethod(name: string): ((...args: any[]) => JjelValu
         at
     };
 
-    return methods[name];
+    // Own keys only: an inherited name (`constructor`, `toString`...) is no method (R-GEN-29).
+    return Object.prototype.hasOwnProperty.call(methods, name) ? methods[name] : undefined;
 }

@@ -16,25 +16,43 @@ import {
     boundProposalInputs,
     ENGINE_ROLE_KEYS,
     eventRoleWarning,
+    hasSemanticType,
     incompleteConfigurationMessage,
     invalidEngineRoles,
     missingEngineRoles,
     PANEL_PROFILE_IDS,
+    profileBindings,
     profilePatch,
     profileSummary,
     profileSummaryText,
+    profileVerdict,
     ROLE_SPECS,
+    SEMANTIC_TYPE_OPTIONS,
+    semanticTypeCurrent,
+    semanticTypePatch,
+    SIM_ENABLED_KEY,
+    simEnabledPatch,
+    simPillVisible,
+    simulationEnabled,
+    staleEventWarning,
+    stateColumns,
     storedProfile,
+    VERDICT_LABEL,
 } from '../simRoleStatus';
 import type { ProfileSummary, Roles } from '../simRoleStatus';
+import { draftPatch, draftProposals, draftStatus, isFirstOpen, matchLine, withProfileName, withRoleMode } from '../simRolesDraft';
+import type { DraftInput } from '../simRolesDraft';
 import { largestInitialMarking } from '../modelMarkings';
 import type { BoundEstimate } from '../modelMarkings';
 import { netStcFromRoles } from '../../../../model/simulation/netCompile';
 import { encodeStateAttributes } from '../../../../model/simulation/stateAttributesCodec';
 import { systemProfile } from '../../../../model/simulation/simProfiles';
 import { roleDescriptor } from '../../../../model/simulation/roleCatalog';
+import { encodeProfile } from '../../../../model/simulation/profileCodec';
+import { SKETCH_TYPE } from '../../../../model/simulation/profileBinder';
+import { overlapVerdict } from '../../../../model/simulation/stcFromRoles';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
-import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
+import type { MetamodelSketch, ProfileBindings, RoleBinding, SketchAttribute, SketchClass, SketchReference } from '../../../../model/simulation/profileBinder';
 
 /** A runnable control-flow bag: an initial rule, a source rule, the next state. */
 const CF: Roles = { simInitial: 'C_Initial', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
@@ -191,6 +209,16 @@ describe('messages', () => {
         expect(eventRoleWarning(['Event'], null)).toBe('Events disabled. Missing: Event.');
         expect(eventRoleWarning(['Trigger'], '')).toBe('Events disabled. Missing on the metamodel: Trigger.');
     });
+
+    it('a stale simEvent warns, naming both classes (S7); equal, absent or no Trigger bound warns of nothing', () => {
+        const names: Record<string, string> = { C_Old: 'Old', C_New: 'New' };
+        const of = (id: string) => names[id] ?? id;
+        expect(staleEventWarning('C_Old', 'C_New', of)).toBe("Stored event class Old is ignored: the run uses New, the Trigger's type.");
+        expect(staleEventWarning('C_Old', 'C_Old', of)).toBeNull();
+        expect(staleEventWarning(undefined, 'C_New', of)).toBeNull();
+        expect(staleEventWarning('C_Old', undefined, of)).toBeNull();
+        expect(staleEventWarning(undefined, undefined, of)).toBeNull();
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -231,9 +259,129 @@ const B2NET_BINDINGS: ProfileBindings = {
     arc: bound('C_Arc'), arcSource: bound('R_src'), arcTarget: bound('R_tgt'), arcWeight: none, inhibitorArc: none,
 };
 
-describe('the panel presets (R-SIM-79, A2)', () => {
-    it('lists Petri net, Flowchart / Activity, State machine, Extended state machine; DFA, NFA, Moore, Mealy wait for R-SIM-50/51', () => {
-        expect(PANEL_PROFILE_IDS).toEqual(['petri', 'flowchart', 'stateMachine', 'extendedStateMachine']);
+describe('the panel presets (R-SIM-79, A2; R-SIM-95)', () => {
+    it('lists the eight system presets, DFA, NFA, Moore and Mealy after Extended state machine (killed by dropping the four ids)', () => {
+        // The panel's Profile select and the dialog's header select both map this list.
+        expect(PANEL_PROFILE_IDS).toEqual(['petri', 'flowchart', 'stateMachine', 'extendedStateMachine', 'dfa', 'nfa', 'moore', 'mealy']);
+        expect(PANEL_PROFILE_IDS.map(id => systemProfile(id)?.name)).toEqual([
+            'Petri net (P/T)', 'Flowchart / Activity', 'State machine', 'Extended state machine', 'DFA', 'NFA', 'Moore machine', 'Mealy machine',
+        ]);
+    });
+});
+
+describe('the Accepting and output rows (R-SIM-91, R-SIM-92; P-2026-09-29-0300)', () => {
+    const spec = (key: string) => ROLE_SPECS.find(s => s.key === key);
+
+    it('Accepting is a class row, State output and Transition output attribute rows closing the list, labels from the catalog (killed by dropping a row)', () => {
+        expect(spec('simAccepting')).toEqual({
+            key: 'simAccepting', label: roleDescriptor('accepting').label, kind: 'class', placeholder: 'Select a metaclass',
+        });
+        expect(spec('simStateOutput')).toEqual({
+            key: 'simStateOutput', label: roleDescriptor('stateOutput').label, kind: 'attribute', placeholder: 'Select an attribute',
+        });
+        expect(spec('simTransitionOutput')).toEqual({
+            key: 'simTransitionOutput', label: roleDescriptor('transitionOutput').label, kind: 'attribute', placeholder: 'Select an attribute',
+        });
+        expect(ROLE_SPECS.slice(-2).map(s => s.key)).toEqual(['simStateOutput', 'simTransitionOutput']);
+        // control: Activity final still follows Terminal (the G6 test above), Accepting comes after it
+        const keys = ROLE_SPECS.map(s => s.key);
+        expect(keys.indexOf('simAccepting')).toBe(keys.indexOf('simActivityFinal') + 1);
+    });
+
+    it('the Reset overlap check sees Accepting: the roles the panel copies by ROLE_SPECS key carry it (killed by dropping the row)', () => {
+        const lookup: Record<string, any> = {
+            C_State: { className: 'DClass', extends: [] }, C_Init: { className: 'DClass', extends: ['C_State'] },
+            C_Trans: { className: 'DClass', extends: [] }, C_Event: { className: 'DClass', extends: [] },
+        };
+        const bag: Record<string, string> = {
+            simNode: 'C_State', simInitial: 'C_Init', simTransition: 'C_Trans', simTrigger: 'R_trigger', simEvent: 'C_Event', simAccepting: 'C_Trans',
+        };
+        // mapStateToProps (SimulationPanel.tsx): one role per ROLE_SPECS key, the set ones only
+        const roles = Object.fromEntries(ROLE_SPECS.filter(s => bag[s.key]).map(s => [s.key, bag[s.key]]));
+        expect(overlapVerdict(lookup, roles, ['C_State', 'C_Init', 'C_Trans', 'C_Event']))
+            .toEqual({ overlap: { classId: 'C_Trans', sorts: ['node', 'transition'] }, refuse: true });
+        // control: Accepting on a subclass of State is no overlap
+        expect(overlapVerdict(lookup, { ...roles, simAccepting: 'C_Init' }, ['C_State', 'C_Init', 'C_Trans', 'C_Event'])).toBeNull();
+    });
+
+    it('none of the three is an engine role: missing and invalid are the same with and without them (R-SIM-28 as for Terminal)', () => {
+        for (const bag of [{}, CF, PETRI, { ...CF, simInitial: undefined }]) {
+            const withThree = { ...bag, simAccepting: 'C_Acc', simStateOutput: 'A_out', simTransitionOutput: 'A_tout' };
+            expect(missingEngineRoles(withThree)).toEqual(missingEngineRoles(bag));
+            expect(invalidEngineRoles(withThree)).toEqual(invalidEngineRoles(bag));
+        }
+    });
+});
+
+describe('DFA, NFA, Moore and Mealy on a plain metamodel (P-2026-09-29-0300, discovery §3.6, §3.8)', () => {
+    const { string: ESTRING } = SKETCH_TYPE;
+    const C = (id: string, supers: string[] = []): SketchClass => ({ id, name: id, abstract: false, supers });
+    const A = (owner: string, name: string, type: string): SketchAttribute => ({ id: `${owner}.${name}`, name, owner, type });
+    const R = (owner: string, name: string, type: string, composition = false): SketchReference => (
+        { id: `${owner}.${name}`, name, owner, type, composition, aggregation: false }
+    );
+    const CONTROL = [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State'), R('Transition', 'event', 'Symbol')];
+    /** DemoDFA, its accepting class named `accepting` (the binder's /accept|final/) or `Good` (no match). */
+    const dfaSketch = (accepting: string): MetamodelSketch => ({
+        classes: [C('State'), C('Initial', ['State']), C(accepting, ['State']), C('Transition'), C('Symbol')],
+        attributes: [],
+        references: CONTROL,
+    });
+    /** The turnstile with one EString on State and one on Transition, named `name` (the binder's /^out/ or not). */
+    const turnSketch = (name: string): MetamodelSketch => ({
+        classes: [C('State'), C('Initial', ['State']), C('Transition'), C('Symbol')],
+        attributes: [A('State', name, ESTRING), A('Transition', name, ESTRING)],
+        references: CONTROL,
+    });
+    const text = (id: string, bag: Record<string, unknown>, sketch: MetamodelSketch) => {
+        const p = systemProfile(id) as SimProfile;
+        return profileSummaryText(profileSummary(p, bag, profileBindings(p, sketch, bag), null, sketch), x => x);
+    };
+
+    it('DFA and NFA: «Missing: Accepting.» while no class is named like one; the class picked in the row makes it Checkable (probe C)', () => {
+        for (const [id, name] of [['dfa', 'DFA'], ['nfa', 'NFA']]) {
+            const before = text(id, {}, dfaSketch('Good'));
+            expect(before).toMatchObject({ status: `${name} · Not checkable after Apply`, missing: 'Missing: Accepting.' });
+            const picked = text(id, { simAccepting: 'Good' }, dfaSketch('Good'));
+            expect(picked).toMatchObject({ status: `${name} · Checkable after Apply`, missing: null });
+            // control: a class named like one is proposed by Apply
+            expect(text(id, {}, dfaSketch('Accepting')).proposals).toContain('Accepting → Accepting');
+        }
+    });
+
+    it('Moore and Mealy: «Missing: State output.» / «Missing: Transition output.» on an attribute not named out…; picked, Checkable', () => {
+        const cases: Array<[string, string, string, string]> = [
+            ['moore', 'Moore machine', 'State output', 'simStateOutput'],
+            ['mealy', 'Mealy machine', 'Transition output', 'simTransitionOutput'],
+        ];
+        for (const [id, name, label, key] of cases) {
+            expect(text(id, {}, turnSketch('lamp'))).toMatchObject({ status: `${name} · Not checkable after Apply`, missing: `Missing: ${label}.` });
+            const owner = id === 'moore' ? 'State' : 'Transition';
+            expect(text(id, { [key]: `${owner}.lamp` }, turnSketch('lamp'))).toMatchObject({ status: `${name} · Checkable after Apply`, missing: null });
+            // control: an attribute named out… is proposed by Apply
+            expect(text(id, {}, turnSketch('output')).proposals).toContain(`${label} → ${owner}.output`);
+        }
+    });
+
+    it('the four demo presets propose none of the three keys on a metamodel that offers them all; DFA, Moore and Mealy propose theirs', () => {
+        const sketch: MetamodelSketch = {
+            // `End` for Terminal: a class named Final would match Accepting's /accept|final/ too
+            classes: [C('State'), C('Initial', ['State']), C('End', ['State']), C('Accepting', ['State']), C('Transition'), C('Symbol')],
+            attributes: [A('State', 'output', ESTRING), A('Transition', 'output', ESTRING)],
+            references: CONTROL,
+        };
+        const keysOf = (id: string) => {
+            const p = systemProfile(id) as SimProfile;
+            return profileSummary(p, {}, profileBindings(p, sketch, {}), null, sketch).proposals.map(x => x.key);
+        };
+        const three = ['simAccepting', 'simStateOutput', 'simTransitionOutput'];
+        for (const id of ['petri', 'flowchart', 'stateMachine', 'extendedStateMachine']) {
+            for (const k of three) expect({ id, k, has: keysOf(id).includes(k) }).toEqual({ id, k, has: false });
+        }
+        expect(keysOf('stateMachine')).toContain('simNode');
+        expect(keysOf('dfa')).toContain('simAccepting');
+        expect(keysOf('moore')).toContain('simStateOutput');
+        expect(keysOf('mealy')).toContain('simTransitionOutput');
     });
 });
 
@@ -260,6 +408,239 @@ describe('storedProfile (R-SIM-55, D6)', () => {
             expect(s.profile.name).toBe('Custom');
         }
     });
+});
+
+describe('the gate of the Simulation pill: the Simulation toggle (P-2026-09-29-1225, R-SIM-99, amends R-SIM-97)', () => {
+    // The lookup the panel reads: a metamodel, an M1 of it, and an M1 with no metamodel.
+    const lookupWith = (mmState: Record<string, unknown>, m1State: Record<string, unknown> = {}) => ({
+        mm: { id: 'mm', _state: mmState },
+        m1: { id: 'm1', instanceof: 'mm', _state: m1State },
+        orphan: { id: 'orphan', _state: { simEnabled: true, simProfile: 'stateMachine' } },
+    });
+    const ON = { simEnabled: true };
+    /** A metamodel saved under R-SIM-97: a Semantic type, no toggle. */
+    const LEGACY = { simProfile: 'stateMachine', simNode: 'State' };
+
+    it('Basic mode hides the pill on M2 and on an M1, toggle on or legacy (killed by dropping the advanced term)', () => {
+        for (const bag of [ON, LEGACY, { ...LEGACY, simEnabled: true }]) {
+            const lookup = lookupWith(bag);
+            expect(simPillVisible(false, lookup, 'mm', false)).toBe(false);
+            expect(simPillVisible(false, lookup, 'm1', true)).toBe(false);
+            // control: the same lookup in Advanced shows it
+            expect(simPillVisible(true, lookup, 'mm', false)).toBe(true);
+        }
+    });
+
+    it('Advanced with the toggle off or absent hides it, role keys set or not (killed by dropping the bag term)', () => {
+        for (const bag of [{}, { simEnabled: false }, { simNode: 'State', simTransition: 'Transition' },
+            { simEnabled: false, simNode: 'State' }, { simProfile: '' }, { simProfile: null }]) {
+            const lookup = lookupWith(bag);
+            expect(simPillVisible(true, lookup, 'mm', false)).toBe(false);
+            expect(simPillVisible(true, lookup, 'm1', true)).toBe(false);
+        }
+    });
+
+    it('Advanced with the toggle on shows it on the M2 and on an M1 of it, no Semantic type needed (killed by gating on simProfile, as R-SIM-97 did)', () => {
+        expect(simPillVisible(true, lookupWith(ON), 'mm', false)).toBe(true);
+        expect(simPillVisible(true, lookupWith(ON), 'm1', true)).toBe(true);
+        expect(simulationEnabled(ON)).toBe(true);
+    });
+
+    it('an M1 reads its metamodel\'s toggle, never its own bag (killed by reading the M1\'s own bag)', () => {
+        expect(simPillVisible(true, lookupWith({}, ON), 'm1', true)).toBe(false);
+        expect(simPillVisible(true, lookupWith({ simEnabled: false }, ON), 'm1', true)).toBe(false);
+        expect(simPillVisible(true, lookupWith(ON, { simEnabled: false }), 'm1', true)).toBe(true);
+    });
+
+    it('legacy: simProfile set and no simEnabled keeps the pill, so a project saved under R-SIM-97 keeps it (killed by dropping the fallback)', () => {
+        expect(simPillVisible(true, lookupWith(LEGACY), 'mm', false)).toBe(true);
+        expect(simPillVisible(true, lookupWith(LEGACY), 'm1', true)).toBe(true);
+        expect(simulationEnabled(LEGACY)).toBe(true);
+        expect(simulationEnabled({ simProfile: '' })).toBe(false);
+        expect(simulationEnabled({ simEnabled: null, simProfile: 'petri' })).toBe(true);
+        expect(simulationEnabled(undefined)).toBe(false);
+    });
+
+    it('the toggle wins over the legacy rule: off with a Semantic type hides the pill (killed by reading `simEnabled || simProfile`)', () => {
+        const off = { ...LEGACY, simEnabled: false };
+        expect(simPillVisible(true, lookupWith(off), 'mm', false)).toBe(false);
+        expect(simPillVisible(true, lookupWith(off), 'm1', true)).toBe(false);
+        expect(simulationEnabled(off)).toBe(false);
+    });
+
+    it('an M1 with no metamodel, or an unknown id, shows nothing', () => {
+        const lookup = lookupWith(ON);
+        expect(simPillVisible(true, lookup, 'orphan', true)).toBe(false);
+        expect(simPillVisible(true, lookup, 'nope', false)).toBe(false);
+        expect(simPillVisible(true, lookup, 'nope', true)).toBe(false);
+    });
+
+    it('\'\' is no Semantic type; an unreadable value and a user profile are (killed by treating \'\' as set)', () => {
+        expect(hasSemanticType({ simProfile: '' })).toBe(false);
+        expect(hasSemanticType({ simProfile: null })).toBe(false);
+        expect(hasSemanticType({ simProfile: undefined })).toBe(false);
+        expect(hasSemanticType({})).toBe(false);
+        expect(hasSemanticType(undefined)).toBe(false);
+        // D6: the panel's «not readable» line stays reachable
+        expect(hasSemanticType({ simProfile: '{not json' })).toBe(true);
+        expect(hasSemanticType({ simProfile: encodeProfile(withProfileName(SM, 'Mine')) })).toBe(true);
+        expect(hasSemanticType({ simProfile: 'petri' })).toBe(true);
+    });
+});
+
+describe('the Simulation toggle of the Semantic Type Class section (P-2026-09-29-1225, R-SIM-99)', () => {
+    /** The merge of `set_state` (joiner/classes.ts): a key given as undefined is removed, the others merged. */
+    const setState = (bag: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> => {
+        const out: Record<string, unknown> = { ...bag };
+        for (const [k, v] of Object.entries(patch)) {
+            if (v === undefined) delete out[k];
+            else out[k] = v;
+        }
+        return out;
+    };
+    const ROLES = { simNode: 'State', simInitial: 'Initial', simTransition: 'Transition', simNextState: 'Transition.nextState' };
+    const TYPED = { ...ROLES, simProfile: 'stateMachine' };
+
+    it('on writes simEnabled true alone, in one state assignment (killed by the toggle writing simProfile too)', () => {
+        expect(SIM_ENABLED_KEY).toBe('simEnabled');
+        expect(simEnabledPatch(true)).toEqual({ simEnabled: true });
+    });
+
+    it('off writes false, not a removal, so its undo is a value change (killed by removing the key)', () => {
+        // The undo of a removed `_state` key does not restore it (ticket of P-2026-09-29-1106); a value change it does.
+        expect(simEnabledPatch(false)).toEqual({ simEnabled: false });
+        // Removing the key would fall back to the legacy rule and show the pill of a typed metamodel again.
+        const off = setState({ ...TYPED, simEnabled: true }, simEnabledPatch(false));
+        expect(off).toEqual({ ...TYPED, simEnabled: false });
+        expect(simulationEnabled(off)).toBe(false);
+    });
+
+    it('the toggle leaves the roles and the Semantic type alone, both ways (killed by clearing the sim* keys)', () => {
+        const on = setState(TYPED, simEnabledPatch(true));
+        expect(on).toEqual({ ...TYPED, simEnabled: true });
+        expect(setState(on, simEnabledPatch(false))).toEqual({ ...TYPED, simEnabled: false });
+        expect(setState(setState(on, simEnabledPatch(false)), simEnabledPatch(true))).toEqual(on);
+    });
+
+    it('on with no Semantic type: the pill shows, the first-open picker is reachable, the M2 face reads Custom · Not checkable', () => {
+        const bag = setState({}, simEnabledPatch(true));
+        expect(simPillVisible(true, { mm: { id: 'mm', _state: bag } }, 'mm', false)).toBe(true);
+        expect(isFirstOpen(bag)).toBe(true);
+        expect(storedProfile(bag)).toMatchObject({ custom: true, readable: true });
+        const s = profileSummary(storedProfile(bag).profile, bag, null);
+        expect(profileSummaryText(s, nameOf).status).toBe('Custom · Not checkable');
+        // control: a Semantic type chosen in the configuration closes the picker, as before R-SIM-97
+        expect(isFirstOpen({ ...bag, simProfile: 'stateMachine' })).toBe(false);
+    });
+});
+
+// The Semantic type field left the Properties with R-SIM-99 (P-2026-09-29-1225); its pure helpers stay (TODO: cleanup
+// in simRoleStatus.ts) and so do their tests.
+describe('the Semantic type field of the metamodel\'s Properties (P-2026-09-29-1106, R-SIM-97)', () => {
+    /** The merge of `set_state` (joiner/classes.ts): a key given as undefined is removed, the others merged. */
+    const setState = (bag: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> => {
+        const out: Record<string, unknown> = { ...bag };
+        for (const [k, v] of Object.entries(patch)) {
+            if (v === undefined) delete out[k];
+            else out[k] = v;
+        }
+        return out;
+    };
+    const ROLES = { simNode: 'State', simInitial: 'Initial', simTransition: 'Transition', simNextState: 'Transition.nextState' };
+
+    it('lists the eight presets of the panel\'s Profile select, in its order and with its names', () => {
+        expect(SEMANTIC_TYPE_OPTIONS.map(o => o.value)).toEqual([...PANEL_PROFILE_IDS]);
+        expect(SEMANTIC_TYPE_OPTIONS.map(o => o.label)).toEqual(PANEL_PROFILE_IDS.map(id => systemProfile(id)?.name));
+    });
+
+    it('a preset writes simProfile alone, in one state assignment, the value the panel\'s Apply writes', () => {
+        const patch = semanticTypePatch('stateMachine');
+        expect(patch).toEqual({ simProfile: 'stateMachine' });
+        expect(patch.simProfile).toBe(encodeProfile(systemProfile('stateMachine') as SimProfile));
+        expect(setState(ROLES, patch)).toEqual({ ...ROLES, simProfile: 'stateMachine' });
+    });
+
+    it('None removes simProfile only and keeps the role bag (D3; killed by clearing every sim* key)', () => {
+        const patch = semanticTypePatch(null);
+        expect(Object.keys(patch)).toEqual(['simProfile']);
+        expect(patch.simProfile).toBeUndefined();
+        const typed = { ...ROLES, simProfile: 'stateMachine' };
+        const none = setState(typed, patch);
+        expect(none).toEqual(ROLES);
+        expect(hasSemanticType(none)).toBe(false);
+        // choosing the preset again restores the bag
+        expect(setState(none, semanticTypePatch('stateMachine'))).toEqual(typed);
+    });
+
+    it('shows None, a listed preset, or the panel\'s name of a value off the list (a user profile, an unreadable one)', () => {
+        expect(semanticTypeCurrent(undefined)).toBeNull();
+        expect(semanticTypeCurrent('')).toBeNull();
+        expect(semanticTypeCurrent('petri')).toEqual({ value: 'petri', label: 'Petri net (P/T)', listed: true });
+        expect(semanticTypeCurrent(encodeProfile(withProfileName(SM, 'Mine')))).toMatchObject({ label: 'Mine', listed: false });
+        expect(semanticTypeCurrent('{not json')).toMatchObject({ label: 'Custom', listed: false });
+    });
+});
+
+describe('the dialog opened on a Semantic type proposes what the picker path proposes (discovery 2026-09-29 §5)', () => {
+    // The four demo metamodels (demo script §2), as the discovery's probe sketched them.
+    const C = (id: string, supers: string[] = [], abstract = false): SketchClass => ({ id, name: id, abstract, supers });
+    const A = (owner: string, name: string, type: string): SketchAttribute => ({ id: `${owner}.${name}`, name, owner, type });
+    const R = (owner: string, name: string, type: string, composition = false): SketchReference => (
+        { id: `${owner}.${name}`, name, owner, type, composition, aggregation: false }
+    );
+    const PEST: MetamodelSketch = {
+        classes: [C('State'), C('Initial', ['State']), C('Terminal', ['State']), C('Transition'), C('Event')],
+        attributes: [],
+        references: [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State'), R('Transition', 'event', 'Event')],
+    };
+    const PETRI_NET: MetamodelSketch = {
+        classes: [C('PNode', [], true), C('Place', ['PNode']), C('Transition', ['PNode']), C('Arc'), C('InhibitorArc', ['Arc'])],
+        attributes: [A('Place', 'tokens', SKETCH_TYPE.int), A('Transition', 'guard', SKETCH_TYPE.expression), A('Arc', 'weight', SKETCH_TYPE.int)],
+        references: [R('Arc', 'src', 'PNode'), R('Arc', 'tgt', 'PNode')],
+    };
+    const ESM_MM: MetamodelSketch = {
+        classes: PEST.classes,
+        attributes: [A('Event', 'name', SKETCH_TYPE.string), A('Transition', 'guard', SKETCH_TYPE.expression),
+            A('Transition', 'effect', SKETCH_TYPE.action), A('State', 'entry', SKETCH_TYPE.action)],
+        references: PEST.references,
+    };
+    const FLOW_B: MetamodelSketch = {
+        classes: [C('ActivityNode'), ...['InitialNode', 'Activity', 'Decision', 'Fork', 'Join', 'FinalNode'].map(n => C(n, ['ActivityNode'])), C('ControlFlow')],
+        attributes: [A('ControlFlow', 'guard', SKETCH_TYPE.expression), A('ControlFlow', 'effect', SKETCH_TYPE.action)],
+        references: [R('ControlFlow', 'source', 'ActivityNode'), R('ControlFlow', 'target', 'ActivityNode')],
+    };
+    const SCENES: Array<[string, 'stateMachine' | 'petri' | 'extendedStateMachine' | 'flowchart', MetamodelSketch, string]> = [
+        ['2.1 PEST', 'stateMachine', PEST, '7 of 10'],
+        ['2.2 Petri', 'petri', PETRI_NET, '9 of 10'],
+        ['2.3 ESM', 'extendedStateMachine', ESM_MM, '10 of 13'],
+        ['2.4 Flow B', 'flowchart', FLOW_B, '10 of 13'],
+    ];
+    // The dialog's input (SimRolesModal.tsx): today the picker sets the preset; after Properties, the stored profile.
+    const input = (profile: SimProfile, bag: Record<string, unknown>, sketch: MetamodelSketch, writeProfile: boolean): DraftInput => ({
+        profile, bag, bindings: profileBindings(profile, sketch, bag), edits: {}, declarations: null, matchOff: false, writeProfile,
+    });
+    const line = (i: DraftInput) => { const m = matchLine(i.bindings); return m ? `${m.matched} of ${m.total}` : null; };
+
+    for (const [label, id, sketch, match] of SCENES) {
+        it(`${label}: ${match}, the same proposals and the same patch but for simProfile, no picker`, () => {
+            const today = input(systemProfile(id) as SimProfile, {}, sketch, true);
+            const bag = semanticTypePatch(id);
+            const stored = storedProfile(bag);
+            const next = input(stored.profile, bag, sketch, !stored.custom);
+            expect(isFirstOpen({})).toBe(true);
+            expect(isFirstOpen(bag)).toBe(false);
+            expect(line(today)).toBe(match);
+            expect(line(next)).toBe(match);
+            expect(draftProposals(next)).toEqual(draftProposals(today));
+            expect(draftStatus(next, sketch).status).toBe('checkable');
+            const { simProfile, ...rest } = draftPatch(today);
+            expect(simProfile).toBe(id);
+            expect(draftPatch(next)).toEqual(rest);
+            // the M2 face before Apply: the preset, pending, not «Custom · Not checkable»
+            const summary = profileSummary(stored.profile, bag, next.bindings, null, sketch);
+            expect(summary).toMatchObject({ name: systemProfile(id)?.name, status: 'checkable', pending: true });
+        });
+    }
 });
 
 describe('profileSummary and its text (R-SIM-77, R-SIM-79)', () => {
@@ -507,7 +888,8 @@ describe('the declarations hint (R-SIM-81, G9)', () => {
     const DECLS = encodeStateAttributes([
         { name: 'coins', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' },
     ]);
-    const HINT = 'Declare the state attributes the actions write:';
+    // R-SIM-94: the metamodel cannot see its models' declarations, so the hint says where a global goes.
+    const HINT = "Declare the state attributes the actions write (a model's globals go in its State…):";
 
     it('Action bound and no declarations: the hint, whether Action is set or only proposed', () => {
         const proposed = profileSummary(ESM, {}, WITH_ACTION);
@@ -528,10 +910,213 @@ describe('the declarations hint (R-SIM-81, G9)', () => {
         expect(profileSummaryText(s, nameOf).declare).toBeNull();
     });
 
+    it('an unreadable declarations value shows nothing, not the hint for an empty one (S8; killed by treating unreadable as empty)', () => {
+        const s = profileSummary(ESM, { simAction: 'A_effect', simStateAttributes: 'not json' }, TURN);
+        expect(s.declareHint).toBe(false);
+        expect(profileSummaryText(s, nameOf).declare).toBeNull();
+    });
+
     it('no hint with no action role bound (killed by showing the hint without Action, Entry or Exit)', () => {
         const s = profileSummary(ESM, {}, TURN);
         expect(s.declareHint).toBe(false);
         expect(profileSummaryText(s, nameOf).declare).toBeNull();
         expect(profileSummary(SM, {}, TURN).declareHint).toBe(false);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// One verdict for the panel's badge and the dialog's pill (P-2026-09-28-0140,
+// docs/discovery/discovery_2026-09-28_sim_badge_pill.md §4)
+// ---------------------------------------------------------------------------
+
+describe('the panel badge and the dialog pill read one verdict (P-2026-09-28-0140)', () => {
+    const { string: ESTRING, expression: EXPR } = SKETCH_TYPE;
+    const C = (id: string, supers: string[] = []): SketchClass => ({ id, name: id, abstract: false, supers });
+    const A = (owner: string, name: string, type: string): SketchAttribute => ({ id: `${owner}.${name}`, name, owner, type });
+    const R = (owner: string, name: string, type: string, composition = false): SketchReference => (
+        { id: `${owner}.${name}`, name, owner, type, composition, aggregation: false }
+    );
+    /** PEST SM as profileBinder.test.ts reconstructs it, plus Timed ⊂ Transition with its own guard, and an unrelated class. */
+    const SKETCH: MetamodelSketch = {
+        classes: [C('State'), C('Initial', ['State']), C('Final', ['State']), C('Transition'), C('Timed', ['Transition']), C('Event'), C('Other')],
+        attributes: [A('Transition', 'guard', EXPR), A('Timed', 'when', EXPR), A('Other', 'label', ESTRING)],
+        references: [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State'), R('Transition', 'event', 'Event')],
+    };
+    /** What Apply of State machine leaves on this sketch (the binder's bag, report §4). */
+    const APPLIED = {
+        simNode: 'State', simInitial: 'Initial', simTerminal: 'Final', simTransition: 'Transition', simOwnedTransitions: 'State.transitions',
+        simNextState: 'Transition.nextState', simTrigger: 'Transition.event', simGuard: 'Transition.guard', simProfile: 'stateMachine',
+    };
+    const MINE = withProfileName(withRoleMode(SM, 'terminal', false), 'Mine');
+    const { simProfile: _stored, ...CUSTOM_BAG } = APPLIED;
+    const { simNextState: _next, ...NO_NEXT } = APPLIED;
+
+    /** The panel, SimulationPanel.tsx: the stored profile, its bindings, the summary with the sketch, the badge's word. */
+    function panel(bag: Record<string, unknown>, sketch: MetamodelSketch | null = SKETCH) {
+        const selected = storedProfile(bag).profile;
+        const summary = profileSummary(selected, bag, profileBindings(selected, sketch, bag), null, sketch);
+        return { word: profileSummaryText(summary, nameOf).badge, status: summary.status, pending: summary.pending };
+    }
+
+    /** The dialog opened on the stored profile, SimRolesModal.tsx: a pristine draft, the pill's word. */
+    function dialog(bag: Record<string, unknown>, sketch: MetamodelSketch | null = SKETCH) {
+        const stored = storedProfile(bag);
+        const input: DraftInput = {
+            profile: stored.profile, bag, bindings: profileBindings(stored.profile, sketch, bag), edits: {},
+            declarations: null, matchOff: false, writeProfile: !stored.custom, estimate: null,
+        };
+        const status = draftStatus(input, sketch).status;
+        return { word: VERDICT_LABEL[status], status, pending: Object.keys(draftPatch(input)).length > 0 };
+    }
+
+    it('the words of the three verdicts are one table (killed by a label written twice and changed once)', () => {
+        expect(VERDICT_LABEL).toEqual({ checkable: 'Checkable', warnings: 'Checkable with warnings', notCheckable: 'Not checkable' });
+    });
+
+    it('controls: the applied bag, an empty State machine bag and a Custom bag read the same on both sides', () => {
+        expect(panel(APPLIED)).toEqual({ word: 'Checkable', status: 'checkable', pending: false });
+        expect(dialog(APPLIED)).toEqual({ word: 'Checkable', status: 'checkable', pending: false });
+        expect(panel({ simProfile: 'stateMachine' })).toMatchObject({ word: 'Checkable', pending: true });
+        expect(dialog({ simProfile: 'stateMachine' })).toMatchObject({ word: 'Checkable', pending: true });
+        expect(panel(CUSTOM_BAG).word).toBe('Checkable');
+        expect(dialog(CUSTOM_BAG).word).toBe('Checkable');
+    });
+
+    it('a warning binding reads «Checkable with warnings» on both sides, a system profile and Custom (killed by a summary that drops the sketch)', () => {
+        const warn = { ...APPLIED, simGuard: 'Timed.when' };
+        expect(panel(warn)).toMatchObject({ word: 'Checkable with warnings', status: 'warnings' });
+        expect(dialog(warn)).toMatchObject({ word: 'Checkable with warnings', status: 'warnings' });
+        expect(profileSummaryText(profileSummary(SM, warn, profileBindings(SM, SKETCH), null, SKETCH), nameOf).status)
+            .toBe('State machine · Checkable with warnings');
+        const custom = { ...CUSTOM_BAG, simGuard: 'Timed.when' };
+        expect(panel(custom).word).toBe('Checkable with warnings');
+        expect(dialog(custom).word).toBe('Checkable with warnings');
+    });
+
+    it('an incompatible binding, or the id of a deleted class, reads «Not checkable» on both sides (killed by a verdict that ignores incompatible)', () => {
+        for (const bag of [{ ...APPLIED, simInitial: 'Other' }, { ...APPLIED, simInitial: 'C_gone' }]) {
+            expect(panel(bag)).toMatchObject({ word: 'Not checkable', status: 'notCheckable' });
+            expect(dialog(bag)).toMatchObject({ word: 'Not checkable', status: 'notCheckable' });
+            // nothing is missing: the verdict alone decides
+            expect(profileVerdict(SM, bag, SKETCH).missing).toEqual([]);
+        }
+    });
+
+    it('a user profile is bound on both sides: a required key left unset is proposed, Checkable after Apply (killed by binding system profiles only)', () => {
+        const bag = { ...NO_NEXT, simProfile: encodeProfile(MINE) };
+        expect(panel(bag)).toEqual({ word: 'Checkable', status: 'checkable', pending: true });
+        expect(dialog(bag)).toEqual({ word: 'Checkable', status: 'checkable', pending: true });
+    });
+
+    it('a user profile once applied is pending on neither side (killed by a decoded derived mode that re-encodes in another order)', () => {
+        const bag = { ...APPLIED, simProfile: encodeProfile(MINE) };
+        expect(panel(bag)).toEqual({ word: 'Checkable', status: 'checkable', pending: false });
+        expect(dialog(bag)).toEqual({ word: 'Checkable', status: 'checkable', pending: false });
+    });
+
+    it('profileBindings: Custom and a missing sketch bind nothing; a system and a user profile are bound', () => {
+        expect(profileBindings(storedProfile(CUSTOM_BAG).profile, SKETCH)).toBeNull();
+        expect(profileBindings(SM, null)).toBeNull();
+        expect(profileBindings(SM, SKETCH)?.node).toEqual(expect.objectContaining({ status: 'bound', value: 'State' }));
+        expect(profileBindings(MINE, SKETCH)?.nextState).toEqual(expect.objectContaining({ status: 'bound', value: 'Transition.nextState' }));
+    });
+
+    it('a kept Node reaches the dependent proposals through profileBindings, the panel\'s and the dialog\'s call site (S6; killed by dropping the bag argument)', () => {
+        const bag = { simNode: 'Other', simProfile: 'stateMachine' };
+        const b = profileBindings(SM, SKETCH, bag);
+        // Node keeps its own guess: what makes the bag's Other a "kept" value in the first place.
+        expect(b?.node).toEqual(expect.objectContaining({ status: 'bound', value: 'State' }));
+        expect(b?.initial?.status).toBe('none');
+        expect(b?.ownedTransitions?.status).toBe('none');
+        const s = profileSummary(SM, bag, b, null, SKETCH);
+        expect(s.kept).toEqual([{ role: 'node', key: 'simNode', label: 'Node', value: 'Other', proposed: 'State' }]);
+        expect(s.proposals.map(p => p.key)).not.toContain('simInitial');
+        expect(s.proposals.map(p => p.key)).not.toContain('simOwnedTransitions');
+    });
+
+    it('a kept Transition reaches Guard and Trigger the same way (S6; killed by deriving them from the binder\'s own Transition)', () => {
+        const bag = { simTransition: 'Other', simProfile: 'stateMachine' };
+        const b = profileBindings(SM, SKETCH, bag);
+        expect(b?.transition).toEqual(expect.objectContaining({ status: 'bound', value: 'Transition' }));
+        expect(b?.guard?.status).toBe('none');
+        expect(b?.trigger?.status).toBe('none');
+    });
+
+    it('without a sketch the summary keeps the reading before the verdicts: no «with warnings» (the callers that pass none)', () => {
+        const warn = { ...APPLIED, simGuard: 'Timed.when' };
+        expect(profileSummary(SM, warn, profileBindings(SM, SKETCH)).status).toBe('checkable');
+        expect(panel(warn, null).word).toBe('Checkable');
+        expect(dialog(warn, null).word).toBe('Checkable');
+    });
+});
+
+describe('R-SIM-90: the summary of a list of attributes (P-2026-09-29-0010)', () => {
+    const ESM = systemProfile('extendedStateMachine') as SimProfile;
+    const WITH_GUARD: ProfileBindings = { ...TURN, guard: bound('A_g') };
+    const names: Record<string, string> = { A_g: 'Trans.guard', A_h: 'Trans.cond' };
+    const named = (id: string) => names[id] ?? nameOf(id);
+
+    it('a list is kept over the binder\'s one attribute, and the line names each attribute (mutant: the list printed raw)', () => {
+        const s = profileSummary(ESM, { simGuard: '["A_g","A_h"]' }, WITH_GUARD);
+        expect(s.kept.map(k => [k.key, k.value, k.proposed])).toEqual([['simGuard', '["A_g","A_h"]', 'A_g']]);
+        expect(profileSummaryText(s, named).kept).toBe('Kept: Guard (Trans.guard, Trans.cond).');
+        // control: the binder's attribute stored as the plain id is not «kept»
+        expect(profileSummary(ESM, { simGuard: 'A_g' }, WITH_GUARD).kept).toEqual([]);
+    });
+
+    it('the declarations hint reads a list of Action attributes as bound', () => {
+        expect(profileSummary(ESM, { simAction: '["A_effect","A_more"]' }, TURN).declareHint).toBe(true);
+    });
+
+    it('the verdict of the badge and the pill: one incompatible attribute of a list is Not checkable, one warning «with warnings» (mutant: the first element\'s verdict)', () => {
+        const { string: ESTRING, expression: EXPR } = SKETCH_TYPE;
+        const C = (id: string, supers: string[] = []): SketchClass => ({ id, name: id, abstract: false, supers });
+        const A = (owner: string, name: string, type: string): SketchAttribute => ({ id: `${owner}.${name}`, name, owner, type });
+        const R = (owner: string, name: string, type: string, composition = false): SketchReference => (
+            { id: `${owner}.${name}`, name, owner, type, composition, aggregation: false }
+        );
+        const SKETCH: MetamodelSketch = {
+            classes: [C('State'), C('Initial', ['State']), C('Transition'), C('Timed', ['Transition']), C('Other')],
+            attributes: [A('Transition', 'guard', EXPR), A('Transition', 'cond', ESTRING), A('Timed', 'when', EXPR), A('Other', 'label', ESTRING)],
+            references: [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State')],
+        };
+        const bag = {
+            simNode: 'State', simInitial: 'Initial', simTransition: 'Transition', simOwnedTransitions: 'State.transitions',
+            simNextState: 'Transition.nextState',
+        };
+        const status = (guard: string) => profileVerdict(SM, { ...bag, simGuard: guard }, SKETCH).status;
+        expect(status('["Transition.guard","Transition.cond"]')).toBe('checkable');
+        expect(status('["Transition.guard","Timed.when"]')).toBe('warnings');
+        expect(status('["Transition.guard","Other.label"]')).toBe('notCheckable');
+        // control: the incompatible attribute alone
+        expect(status('Other.label')).toBe('notCheckable');
+    });
+});
+
+describe('the State page: two columns, globals first, one group per metaclass (R-SIM-103)', () => {
+    const row = (name: string, metaclass: string | null, space: 'semantic' | 'presentation' = 'semantic') => (
+        { name, metaclass, space, domain: space === 'semantic' ? { kind: 'boolean' as const } : null, initial: 'false' }
+    );
+    // A metaclass row first, so a column in order of first appearance would put State before the globals.
+    const ROWS = [
+        row('visits', 'C_State'), row('coins', null), row('heat', 'C_State', 'presentation'), row('fired', 'C_Trans'),
+        row('paid', null), row('glow', null, 'presentation'), row('seen', 'C_State'), row('count', 'C_Trans', 'presentation'),
+    ];
+
+    it('abstract: the globals, then State and Transition in order of first appearance; rows by index (killed by first appearance alone)', () => {
+        expect(stateColumns(ROWS).abstract).toEqual([
+            { metaclass: null, rows: [1, 4] }, { metaclass: 'C_State', rows: [0, 6] }, { metaclass: 'C_Trans', rows: [3] },
+        ]);
+    });
+
+    it('concrete: the presentation rows only, the model\'s own first (killed by putting a row in both columns)', () => {
+        expect(stateColumns(ROWS).concrete).toEqual([
+            { metaclass: null, rows: [5] }, { metaclass: 'C_State', rows: [2] }, { metaclass: 'C_Trans', rows: [7] },
+        ]);
+    });
+
+    it('a column with no row has no group; no row, no group at all', () => {
+        expect(stateColumns([row('coins', null)])).toEqual({ abstract: [{ metaclass: null, rows: [0] }], concrete: [] });
+        expect(stateColumns([])).toEqual({ abstract: [], concrete: [] });
     });
 });

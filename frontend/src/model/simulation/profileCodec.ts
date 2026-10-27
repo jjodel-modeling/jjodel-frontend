@@ -44,11 +44,13 @@ function readMode(raw: unknown): RoleMode | null {
             if (typeof note !== 'string') return null;
             if (value !== undefined && !(typeof value === 'number' && Number.isFinite(value))) return null;
             if (from !== undefined && !isRoleId(from)) return null;
+            // The order of RoleMode and of the system rows, so a decoded profile re-encodes to the stored string
+            // and an applied user profile is not pending again (P-2026-09-28-0140).
             return {
                 mode: 'derived',
-                note,
                 ...(value !== undefined ? { value } : {}),
                 ...(from !== undefined ? { from } : {}),
+                note,
             };
         }
         default:

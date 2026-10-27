@@ -108,6 +108,49 @@ describe('descendantsOf - the containment closure the core does not delete', () 
         expect(descendantsOf(fixture(), 'ghost')).toEqual([]);
     });
 
+    // R-NEST-2 / R-NEST-5 (#174): an aggregation keeps re-fathering, so an element whose father
+    // is an aggregation slot is owned by it and goes with the container; an element the same slot
+    // merely LISTS (appendValue, father elsewhere) is shared and stays. A slot with no feature
+    // (shapeless) follows the same father test.
+    const withAggregation = () => {
+        const idlookup = fixture();
+        idlookup.f_team = { id: 'f_team', className: 'DReference', name: 'team', composition: false, aggregation: true, lowerBound: 0, upperBound: -1 };
+        idlookup.pal = { id: 'pal', className: 'DObject', name: 'pal', instanceof: 'c_Item', father: 'v_box_team', features: ['v_pal_items'], pointedBy: [] };
+        idlookup.palkid = { id: 'palkid', className: 'DObject', name: 'palkid', instanceof: 'c_Item', father: 'v_pal_items', features: [], pointedBy: [] };
+        idlookup.v_pal_items = { id: 'v_pal_items', className: 'DValue', father: 'pal', instanceof: 'f_items', values: ['palkid'] };
+        idlookup.v_box_team = { id: 'v_box_team', className: 'DValue', father: 'box', instanceof: 'f_team', values: ['pal', 'far'] };
+        idlookup.loose = { id: 'loose', className: 'DObject', name: 'loose', instanceof: 'c_Item', father: 'v_box_free', features: [], pointedBy: [] };
+        idlookup.v_box_free = { id: 'v_box_free', className: 'DValue', father: 'box', values: ['loose', 'w1'] };
+        idlookup.box.features = ['v_box_items', 'v_box_team', 'v_box_free'];
+        return idlookup;
+    };
+
+    it('takes the element an aggregation fathered, and NOT the one it only lists', () => {
+        const found = descendantsOf(withAggregation(), 'box').map(d => d.id);
+        expect(found).toContain('pal');
+        expect(found).not.toContain('far');
+    });
+
+    it('takes the element a shapeless slot fathered, and NOT the one it only lists', () => {
+        const found = descendantsOf(withAggregation(), 'box');
+        expect(found.map(d => d.id)).toContain('loose');
+        expect(found.map(d => d.id)).not.toContain('w1');
+        expect(found.find(d => d.id === 'loose')).toMatchObject({ childKey: '', depth: 1 });
+    });
+
+    it('descends below an aggregation child through its own composition', () => {
+        const found = descendantsOf(withAggregation(), 'box');
+        expect(found.find(d => d.id === 'palkid')).toMatchObject({ childKey: 'items', depth: 2 });
+        expect(found.find(d => d.id === 'pal')).toMatchObject({ childKey: 'team', depth: 1 });
+    });
+
+    it('a composition takes every DObject it lists, whatever its father', () => {
+        const idlookup = fixture();
+        // «New … & link» on a composition: a root (father the model) that the slot lists.
+        idlookup.v_box_items.values = ['mid', 'other', 'far'];
+        expect(descendantsOf(idlookup, 'box').map(d => d.id)).toContain('far');
+    });
+
     it('stops on a containment cycle instead of looping', () => {
         const idlookup = fixture();
         // A corrupt model: leaf contains box, which already contains leaf.

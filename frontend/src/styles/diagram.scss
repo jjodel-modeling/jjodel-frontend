@@ -777,43 +777,6 @@
 }
 
 
-/* ----------------------------------------
-   DARK THEME OVERRIDES
-   Adjustments for dark mode
-   ---------------------------------------- */
-
-[data-theme="dark"] {
-  .class,
-  .enumerator,
-  .package {
-    background: var(--color-node-bg, var(--color-bg-secondary, #2a2a3c));
-    border-color: var(--color-node-border, var(--color-border-primary, #3a3a4c));
-
-    > .header {
-      background: var(--color-bg-tertiary, #1e1e2e);
-      border-color: var(--color-border-secondary, #3a3a4c);
-    }
-  }
-
-  .label-text {
-    background-color: var(--color-bg-secondary, #2a2a3c);
-    border-color: var(--color-border-secondary, #3a3a4c);
-    color: var(--color-text-secondary, #a0a0b0);
-  }
-
-  [data-nodetype="EdgePoint"] {
-    .edgePoint,
-    > div {
-      background-color: var(--color-bg-secondary, #2a2a3c);
-      border-color: var(--color-accent, #7FA88A);
-    }
-  }
-
-  [data-nodetype="Edge"] path {
-    stroke: var(--color-border-secondary, #4a4a5c);
-  }
-}
-
 
 /* ----------------------------------------
    EDGE & EDGEPOINT POSITIONING

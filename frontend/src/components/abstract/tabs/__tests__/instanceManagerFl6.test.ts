@@ -130,9 +130,14 @@ describe('FL6 — la riga espandibile', () => {
         expect(cell.slice(0, end)).toContain('aria-hidden');
     });
 
-    it('il click sulla riga resta selectOnly: selezione ed espansione insieme', () => {
-        expect(TSX).toContain('onClick={() => selectOnly(row.id)}');
+    it('il click sulla riga passa da clickRow: la riga selezionata apre e chiude il vicinato', () => {
+        // #158 P5, field test 2026-09-29: tutta la riga, non solo il chevron.
+        expect(TSX).toContain('onClick={() => clickRow(row.id)}');
         expect(TSX).toContain('aria-expanded={isExpanded}');
+        const body = TSX.slice(TSX.indexOf('const clickRow'));
+        const fn = body.slice(0, body.indexOf('\n    };'));
+        expect(fn).toContain('if (id === subjectId && alsoSelected.length === 0) { setShowNeighborhood(v => !v); return; }');
+        expect(fn).toContain('selectOnly(id);');
     });
 
     it('il click su un vicino passa dallo STESSO corpo degli altri emettitori', () => {
@@ -232,6 +237,20 @@ describe('FL6 — l\'header della form', () => {
         expect(TSX).toContain('{subjectStep.cls}');
     });
 
+    it('#173 — nome e permesso della testata sono quelli dell\'elemento a schermo', () => {
+        // Durante un drill-in la testata nominava la riga selezionata sopra la form di
+        // D01, e il Delete lo offriva col permesso della riga.
+        expect(TSX).toContain('const subjectStep = navStepOf(idlookup, formSubjectId ?? subjectId);');
+        expect(TSX).toContain("permOfInstance(formSubjectId ?? subjectId) === 'edit';");
+    });
+
+    it('#173 — la barra «Add» conta gli slot dell\'elemento a schermo: la cardinalita\' e\' la sua', () => {
+        // Forma e conteggi della barra: due letture dello stesso owner, quella di
+        // `subjectShape` e quella di `childSlots`.
+        expect(TSX.match(/const ownerId = formSubjectId \?\? subjectId;/g)?.length).toBe(2);
+        expect(TSX).toContain('const count = childSlotCount(ownerId, child.key);');
+    });
+
     it('il badge «Unsaved changes» e\' andato via con 10c (deviazione A3)', () => {
         // FL6 lo asseriva PRESENTE. 10c lo toglie, e non e' una regressione: A3
         // dice «dove la board mostra Save/Discard, non costruirli», e quel badge
@@ -252,7 +271,10 @@ describe('FL6 — l\'header della form', () => {
     });
 
     it('Delete e\' quello di 12d: apre la preflight, non cancella', () => {
-        expect(TSX).toContain('onClick={() => openDelete(subjectId)}');
+        // #173 — sull'elemento a schermo (`formSubjectId`), non sulla riga selezionata:
+        // durante un drill-in il Delete della testata cancellava la riga sotto la form di D01.
+        expect(TSX).toContain('onClick={() => openDelete(formSubjectId ?? subjectId)}');
+        expect(TSX).not.toContain('onClick={() => openDelete(subjectId)}');
         const open = TSX.slice(TSX.indexOf('const openDelete'));
         expect(open.slice(0, open.indexOf('\n    };'))).toContain('preflightFor(');
     });

@@ -38,6 +38,7 @@
 
 import { EvaluationContext, isJjelFunction } from '../../jjel/evaluator';
 import type { JjelValue } from '../../jjel/evaluator';
+import { registerBitVectorConstructors } from '../../jjel/evaluator/evaluator';
 import type { JjelStateAccess } from '../../jjel/evaluator/context';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
 import type { SimStateAccess } from './netTypes';
@@ -135,9 +136,13 @@ export function freezeSnapshot(
         }
     }
 
+    // `bits`/`sbits` only: no other global builtin enters, so none shadows a model name (R-BV-8).
+    const base = new EvaluationContext(record);
+    registerBitVectorConstructors(base);
+
     return Object.freeze({
         modelId: model.id,
-        base: new EvaluationContext(record),
+        base,
         handleById,
         model: Object.freeze({ __type: 'Model', id: model.id, name: model.name }) as JjelValue,
     });

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;fill:#0f172a}
+.sm{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:500;fill:#0f172a}
+.eb{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;fill:#64748b}
+.at{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#64748b}
+.mk{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:600;fill:#0f172a}
+.mk0{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:500;fill:#94a3b8}
+</style><marker id="hpb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker><marker id="ipb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 184 180 L 253 180" marker-end="url(#hpb)"/>
+<path d="M 327 180 L 395 180" marker-end="url(#hpb)"/>
+<path d="M 444 180 L 513 180" marker-end="url(#hpb)"/>
+<path d="M 550 165 C 550 90, 160 90, 160 155" marker-end="url(#hpb)"/>
+<path d="M 550 195 L 550 315" marker-end="url(#hpb)"/>
+<path d="M 574 340 L 771 340" marker-end="url(#hpb)"/>
+<path d="M 810 204 L 810 325" marker-end="url(#hpb)"/>
+<path d="M 810 355 L 810 435" marker-end="url(#hpb)"/>
+<path d="M 834 460 Q 940 460 940 335" marker-end="url(#hpb)"/>
+<path d="M 940 305 Q 940 180 835 180" marker-end="url(#hpb)"/>
+<path d="M 526 344 Q 290 344 290 197" marker-end="url(#ipb)"/>
+</g>
+<circle cx="160" cy="180" r="24" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="420" cy="180" r="24" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="550" cy="340" r="24" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="810" cy="180" r="24" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="810" cy="460" r="24" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="mk" x="160" y="185" text-anchor="middle">1</text>
+<text class="mk0" x="420" y="185" text-anchor="middle">0</text>
+<text class="mk" x="550" y="345" text-anchor="middle">2</text>
+<text class="mk" x="810" y="185" text-anchor="middle">1</text>
+<text class="mk0" x="810" y="465" text-anchor="middle">0</text>
+<rect x="254" y="166" width="72" height="28" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<rect x="514" y="166" width="72" height="28" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<rect x="772" y="326" width="76" height="28" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<rect x="906" y="306" width="68" height="28" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="sm" x="290" y="184" text-anchor="middle">produce</text>
+<text class="sm" x="550" y="184" text-anchor="middle">deliver</text>
+<text class="sm" x="810" y="344" text-anchor="middle">consume</text>
+<text class="sm" x="940" y="324" text-anchor="middle">release</text>
+<text class="sm" x="160" y="224" text-anchor="middle">ready</text>
+<text class="sm" x="420" y="224" text-anchor="middle">wait</text>
+<text class="sm" x="550" y="386" text-anchor="middle">buffer</text>
+<text class="sm" x="810" y="146" text-anchor="middle">idle</text>
+<text class="sm" x="810" y="506" text-anchor="middle">using</text>
+<text class="lbl" x="672" y="330" text-anchor="middle">2</text>
+<text class="lbl" x="368" y="316" text-anchor="middle">3</text>
+</svg>

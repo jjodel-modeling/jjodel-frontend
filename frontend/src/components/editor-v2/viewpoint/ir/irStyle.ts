@@ -10,6 +10,7 @@
  */
 
 import type { NodeViewIR } from './irTypes';
+import { BAR_SIZE } from './shapeRegistry';
 
 const STYLE_TAG_ID = 'ir-views-css';
 
@@ -201,6 +202,71 @@ const BASE_CSS = `
 /* Keyboard reachability is not a hover state: an icon focused by Tab has to be visible,
    or the affordance exists only for a pointer. Same rule as the native branch. */
 .ir-node-content .ir-row__inspect:focus-visible { opacity: 1; outline: 1px solid #0ea5e9; outline-offset: 1px; }
+/* bar (R-VP-16, the Petri transition): a thin solid box at a fixed size (BAR_SIZE,
+   shapeRegistry.ts), not after its content. The floors are lifted on the box and on the
+   wrapper (instanceNode.scss: min-width 200px, overflow hidden), and nothing clips: the
+   label is centred on the bar and, when the bar is too small to hold it, drawn over it
+   and past its ends, with a halo in the surface colour so it reads on the bar and off
+   it. An explicit size (ir-sized, a manual resize) fills the box as on every form.
+   Appended after every other rule, so the rules above stay byte-identical. */
+.ir-node-content.ir-shape--bar { width: ${BAR_SIZE.w}px; height: ${BAR_SIZE.h}px; min-width: 0; min-height: 0; border-radius: 0; overflow: visible; }
+.mm-node.ir-sized > .ir-node-content.ir-shape--bar { width: 100%; height: 100%; }
+.mm-node:has(> .ir-node-content.ir-shape--bar) { min-width: 0; min-height: 0; overflow: visible; }
+.ir-node-content.ir-shape--bar > .ir-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: none; overflow: visible; margin: 0; padding: 0; text-shadow: 0 0 2px var(--color-inode-surface), 0 0 2px var(--color-inode-surface), 0 0 3px var(--color-inode-surface); }
+/* Outside label (R-VP-15 (1), P-2026-09-29-1245): position 'outside' draws the label past the
+   box, on the side its anchor names (n above, s below, w left, e right; IRNodeContent emits
+   ir-label--anchor-*), 8px from the edge and centred on it. Absolute, so it enters neither the
+   content-hug box nor the max-content measure of useContentSize: the symbol keeps its size and
+   edges, handles and selection keep the box. It stays a child of the shape, so it dims, hides
+   and moves with it. The two clips it would meet, the shape's own and the wrapper's
+   (instanceNode.scss: .mm-node.mm-object overflow hidden), are lifted only on a node that
+   carries one; every other node keeps both. The label rules sit at (0,4,0) and come last: they
+   must beat the in-flow rule of the SVG-painted forms (0,4,0, by order) and the bar's centred
+   label (0,3,0), so each sets all four offsets. The halo is the bar's, in the colour of the
+   canvas the label now sits on. The inline editor takes its own width, not 90% of the box.
+   Appended after every other rule, so the rules above stay byte-identical. */
+.ir-node-content:has(> .ir-label--outside) { overflow: visible; }
+.mm-node:has(> .ir-node-content > .ir-label--outside) { overflow: visible; }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-n,
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-s,
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-w,
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-e { position: absolute; z-index: 1; margin: 0; padding: 0; max-width: none; overflow: visible; text-shadow: 0 0 2px var(--canvas-bg), 0 0 2px var(--canvas-bg), 0 0 3px var(--canvas-bg); }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-n { top: auto; bottom: calc(100% + 8px); left: 50%; right: auto; transform: translateX(-50%); text-align: center; }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-s { top: calc(100% + 8px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%); text-align: center; }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-w { top: 50%; bottom: auto; left: auto; right: calc(100% + 8px); transform: translateY(-50%); text-align: right; }
+.ir-node-content > .ir-label.ir-label--outside.ir-label--anchor-e { top: 50%; bottom: auto; left: calc(100% + 8px); right: auto; transform: translateY(-50%); text-align: left; }
+.ir-node-content > .ir-label__input.ir-label--outside { width: auto; min-width: 80px; }
+/* Entry mark (R-VP-22): drawn past the box on its left (IRNodeContent places it inline). The two
+   clips it would meet, the shape's and the wrapper's, are lifted only on a node that carries one,
+   as for the outside label. Appended after every other rule, so the rules above stay byte-identical. */
+.ir-node-content:has(> .ir-entry-svg) { overflow: visible; }
+.mm-node:has(> .ir-node-content > .ir-entry-svg) { overflow: visible; }
+/* Q3 (P-2026-10-03-1304): a bar that declares a thickness paints its ink turned inside a square box
+   (IRNodeContent, inline). The box takes no pointer, the ink does, and the handles keep their own rules:
+   the hit area, the hover and the drag start are the ink's. !important because React Flow writes
+   pointer-events inline on its node. Appended after every other rule, so the rules above stay byte-identical. */
+.react-flow__node:has(.ir-node-content.ir-bar-ink) { pointer-events: none !important; }
+.ir-node-content.ir-bar-ink { pointer-events: auto; }
+/* Header band (R-GV-5, spec addendum 2026-10-10 §2.3): a graphVertex's band on its declared side, out of the flow,
+   its labels centred in it; a vertical label reads bottom to top. The rule line takes the border colour (inline when
+   authored). A container that declares a layout is a frame under the edges and drops the card shadow. A partition
+   after the first drops its leading border (irContainment PARTITION_NEXT_CLASS), so two lanes share one line; the
+   inline authored border would win without !important. Appended after every other rule, so the rules above stay
+   byte-identical. */
+.ir-node-content .ir-header-band { position: absolute; top: 0; left: 0; z-index: 1; box-sizing: border-box; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 0 solid var(--border-default); pointer-events: none; }
+.ir-node-content .ir-header-band--w { bottom: 0; border-right-width: 1px; }
+.ir-node-content .ir-header-band--n { right: 0; border-bottom-width: 1px; }
+.ir-node-content .ir-header-band .ir-label--header { font-weight: 600; padding: var(--ir-pad-y); max-width: 100%; max-height: 100%; }
+.ir-node-content .ir-header-band .ir-label--vertical { writing-mode: vertical-rl; transform: rotate(180deg); }
+.ir-node-content.ir-layout { box-shadow: none; }
+.react-flow__node.ir-partition-next-v .ir-node-content { border-top-color: transparent !important; }
+.react-flow__node.ir-partition-next-h .ir-node-content { border-left-color: transparent !important; }
+/* Partition separator (S2b, spec addendum 2026-10-10 §11): with \`separator: 'dashed'\` every partition before the
+   last draws its trailing border, the line it shares with the next, dashed and 1px whatever the view's own border
+   (irContainment PARTITION_DASHED_CLASS): UML orthogonal regions. Appended after every other rule, so the rules
+   above stay byte-identical. */
+.react-flow__node.ir-partition-sep-dashed-v .ir-node-content { border-bottom: 1px dashed var(--border-default) !important; }
+.react-flow__node.ir-partition-sep-dashed-h .ir-node-content { border-right: 1px dashed var(--border-default) !important; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

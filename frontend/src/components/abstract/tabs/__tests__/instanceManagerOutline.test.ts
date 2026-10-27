@@ -110,7 +110,9 @@ describe('10b — un solo evento di create, e il motore non sa da dove viene', (
         expect(TSX).toContain('onClick={() => openCreate(classShape.key, null, null)}');
         // 2026-09-28 — la barra dei figli vive in `InstanceDetail` ed emette `onCreate`,
         // che il tab collega a `openCreate`: la porta resta una.
-        expect(TSX).toContain('onClick={() => onCreate(child.of, subjectId, child.key)}');
+        // #173 — sull'elemento a schermo, non sulla riga: sotto la form di D01 la barra
+        // creava figli nella riga selezionata.
+        expect(TSX).toContain('onClick={() => onCreate(child.of, formSubjectId ?? subjectId, child.key)}');
         expect(TSX).toContain('onCreate={openCreate}');
         const outlineCreate = TSX.slice(TSX.indexOf('const outlineCreate'));
         expect(outlineCreate.slice(0, outlineCreate.indexOf('\n    };')))
@@ -158,7 +160,7 @@ describe('10b — una sola selezione, condivisa da tutte le superfici', () => {
         expect(TSX).toContain("node.id === subjectId ? ' instance-manager__outline-node--selected' : ''");
         expect(TSX).toContain("row.id === subjectId ? 'instance-manager__tr--selected'");
         expect(TSX).toContain('const isExpanded = row.id === subjectId');
-        expect(TSX).toContain('<IRForm objectId={formSubjectId ?? subjectId} host="manager" />');
+        expect(TSX).toContain('<IRForm objectId={formSubjectId ?? subjectId} host="manager" permissionOf={permissionOf} hostReferences={hostReferencesOf(formSubjectId ?? subjectId)} />');
         expect(TSX).toContain('egoInputOf(idlookup, subjectId, shapeCtx.shape())');
     });
 

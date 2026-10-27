@@ -9,24 +9,30 @@
  * All fixtures are plain D-layer shapes (idlookup records); no store, no React.
  */
 import { describe, it, expect } from 'vitest';
-import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash } from '../irCompile';
+import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash, resolveLabelAnchor, resolveTextStyle } from '../irCompile';
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
 import { getIRIndex, pinAccepts, resolveIRView, resolveRowView } from '../irResolveCore';
-import { defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID, withMigratedHash } from '../irDefaults';
+import { defaultEdgeViewIR, defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID, structuralHash, withMigratedHash } from '../irDefaults';
 import {
     buildContainmentModel,
     computeHidden,
+    computeRowHiddenChildren,
+    computeViewHidden,
     containmentChildren,
     decorateEdges,
     decorateNodes,
     liftEndpoint,
+    resolveChildrenChannel,
+    resolveVisualParents,
     rowRenderedChildren,
 } from '../irContainment';
 import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
 import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, deriveIRInteraction, matchConnectRules } from '../irInteraction';
-import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
+import type { AnyViewIR, EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
+import { applyPresetToShape, NOTATION_CATALOG } from '../notationCatalog';
+import { validateIR } from '../irValidate';
 import { CONTAINER_ENDPOINT } from '../irTypes';
 import { resolveCompiledCornerRadius, resolveCornerRadius } from '../shapeRegistry';
 
@@ -1620,6 +1626,45 @@ describe('isMigratedDefaultView — migratedHash stamp (P-2026-09-24-1455)', () 
     });
 });
 
+describe('structuralHash ignores ir.generated (slice D, P-2026-09-30-0255, R-IRN-33)', () => {
+    // `generated` is the provenance a derivation writes on its views (irTypes.ts): it describes the ir,
+    // as `migratedFrom` does, and is not part of it. The derivation stamps `generated.hash` with this
+    // function, so a stamped view must hash to its stamp.
+    const GEN = { by: 'derive-2', notation: 'stateMachine', role: 'node', hash: '123' };
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+    it('a view with and without generated hash alike, whatever generated holds', () => {
+        const ir = defaultObjectViewIR();
+        expect(structuralHash({ ...ir, generated: GEN })).toBe(structuralHash(ir));
+        expect(structuralHash({ ...ir, generated: { ...GEN, hash: 'other', role: undefined } })).toBe(structuralHash(ir));
+        const edge = defaultEdgeViewIR();
+        expect(structuralHash({ ...edge, generated: GEN })).toBe(structuralHash(edge));
+    });
+
+    it('does not mask a real edit: the control moves the hash', () => {
+        const ir = defaultObjectViewIR();
+        expect(structuralHash({ ...ir, generated: GEN, priority: 7 })).not.toBe(structuralHash({ ...ir, generated: GEN }));
+    });
+
+    it('is the stamp withMigratedHash writes: generated does not enter it', () => {
+        const ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' };
+        expect(withMigratedHash({ ...ir, generated: GEN }).migratedHash).toBe(withMigratedHash(ir).migratedHash);
+    });
+
+    it('a stamped migrated default that later carries generated still delegates, and an edit still does not', () => {
+        const ir = persisted(withMigratedHash({ ...defaultObjectViewIR(), migratedFrom: 'classic-default' }));
+        const tagged = { ...ir, generated: GEN } as unknown as VertexViewIR;
+        expect(isMigratedDefaultView(compileView('V_gen_stamp', tagged))).toBe(true);
+        expect(isMigratedDefaultView(compileView('V_gen_stamp_edit', { ...tagged, priority: 7 } as VertexViewIR))).toBe(false);
+    });
+
+    it('irHash is unchanged for an ir without the key, and moves with it (the compile cache keeps them apart)', () => {
+        const ir = defaultObjectViewIR();
+        expect(irHash(persisted(ir))).toBe(irHash(ir));
+        expect(irHash({ ...ir, generated: GEN } as VertexViewIR)).not.toBe(irHash(ir));
+    });
+});
+
 describe('layout persistence (discovery 2026-07-19)', () => {
     const edgeIR = (over: Partial<EdgeViewIR['edge']>): EdgeViewIR => ({
         irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],
@@ -1910,5 +1955,957 @@ describe('compile di TS2, stile tipografico delle righe (2026-08-25)', () => {
         clearCompileCache();
         expect(compileView('v_same_id', withStyle).fieldCompartments[0].rowStyle).toBeDefined();
         expect(compileView('v_same_id', without).fieldCompartments[0].rowStyle).toBeUndefined();
+    });
+});
+
+describe('defaultSize round-trip (P-2026-09-29-1230)', () => {
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+    it('survives a save (JSON round trip) and reaches compiled.ir verbatim', () => {
+        clearCompileCache();
+        const ir = persisted(vertexIR({ defaultSize: { width: 120, height: 60 } }));
+        expect(ir.defaultSize).toEqual({ width: 120, height: 60 });
+        expect((compileView('v_dsize_rt', ir).ir as VertexViewIR).defaultSize).toEqual({ width: 120, height: 60 });
+    });
+
+    it('keeps a single axis as a single axis: the other is not materialized', () => {
+        const ir = persisted(vertexIR({ defaultSize: { width: 120 } }));
+        expect(ir.defaultSize).toEqual({ width: 120 });
+        expect('height' in (ir.defaultSize as object)).toBe(false);
+    });
+
+    it('moves the irHash, so an edit recompiles instead of hitting the cache', () => {
+        const a = vertexIR({ defaultSize: { width: 120, height: 60 } });
+        const b = vertexIR({ defaultSize: { width: 200, height: 60 } });
+        expect(irHash(a)).not.toBe(irHash(vertexIR({})));
+        expect(irHash(a)).not.toBe(irHash(b));
+    });
+
+    it('a view whose default was set and then dropped hashes as one that never had it', () => {
+        const { defaultSize: _dropped, ...rest } = vertexIR({ defaultSize: { width: 120, height: 60 } });
+        expect('defaultSize' in rest).toBe(false);
+        expect(irHash(rest as VertexViewIR)).toBe(irHash(vertexIR({})));
+    });
+});
+
+describe('outside label: compile per position and anchor (P-2026-09-29-1245)', () => {
+    const persisted = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+    /** One literal label at `position`, the anchor written only when given. */
+    const withLabel = (position: string, anchor?: unknown): VertexViewIR => vertexIR({
+        shape: {
+            form: 'circle',
+            labels: [{ position, ...(anchor !== undefined ? { anchor } : {}), source: { from: 'literal', text: 'p1' } }],
+        } as unknown as VertexViewIR['shape'],
+    });
+
+    it('an inside position compiles as before: the position verbatim and no anchor key at all', () => {
+        for (const position of ['top', 'center', 'inside', 'bottom']) {
+            clearCompileCache();
+            const l = compileView(`v_lout_${position}`, withLabel(position)).labels[0];
+            expect(l.position, position).toBe(position);
+            expect(Object.keys(l).sort(), position).toEqual(['editsName', 'position', 'style', 'text', 'visible']);
+        }
+    });
+
+    it('an inside position drops a stray anchor: only outside carries one', () => {
+        clearCompileCache();
+        expect('anchor' in compileView('v_lout_stray', withLabel('top', 'e')).labels[0]).toBe(false);
+    });
+
+    it('outside with no anchor compiles below (s)', () => {
+        clearCompileCache();
+        const l = compileView('v_lout_default', withLabel('outside')).labels[0];
+        expect(l.position).toBe('outside');
+        expect(l.anchor).toBe('s');
+    });
+
+    it('outside with each anchor compiles that anchor, and the text is untouched', () => {
+        for (const anchor of ['n', 'e', 's', 'w']) {
+            clearCompileCache();
+            const l = compileView(`v_lout_${anchor}`, withLabel('outside', anchor)).labels[0];
+            expect(l.anchor, anchor).toBe(anchor);
+            expect(l.text(makeDrawReadCtx({}), 'x'), anchor).toBe('p1');
+        }
+    });
+
+    it('the render is permissive: an unknown anchor draws below instead of dropping the label (R-B9-bis)', () => {
+        for (const bad of ['nw', 'north', '', null, 3]) {
+            clearCompileCache();
+            expect(compileView(`v_lout_bad_${String(bad)}`, withLabel('outside', bad)).labels[0].anchor, String(bad)).toBe('s');
+            expect(resolveLabelAnchor(bad), String(bad)).toBe('s');
+        }
+        expect(resolveLabelAnchor(undefined)).toBe('s');
+        expect(resolveLabelAnchor('w')).toBe('w');
+    });
+
+    it('survives a save (JSON round trip) byte-identical, and each anchor moves the irHash', () => {
+        const ir = withLabel('outside', 'e');
+        const saved = persisted(ir);
+        expect(JSON.stringify(saved)).toBe(JSON.stringify(ir));
+        clearCompileCache();
+        expect(compileView('v_lout_rt', saved).labels[0].anchor).toBe('e');
+        const hashes = new Set(['n', 'e', 's', 'w'].map(a => irHash(withLabel('outside', a))));
+        expect(hashes.size).toBe(4);
+        // Below written explicitly and below by absence render the same, but are two IRs.
+        expect(irHash(withLabel('outside', 's'))).not.toBe(irHash(withLabel('outside')));
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Slice C2 (P-2026-09-30-0150, R-VP-20): five optional keys, persisted for good (R-B9)
+// ---------------------------------------------------------------------------
+
+/** Every fixture view the lane can build without the store, by name: the three factory defaults and each
+ *  catalogue preset applied to a bare vertex, as the Symbol Editor applies it. */
+function c2FixtureViews(): Record<string, AnyViewIR> {
+    const out: Record<string, AnyViewIR> = {
+        defaultObjectViewIR: defaultObjectViewIR(), defaultRowViewIR: defaultRowViewIR(), defaultEdgeViewIR: defaultEdgeViewIR(),
+    };
+    for (const p of NOTATION_CATALOG) out[`preset:${p.id}`] = vertexIR({ shape: applyPresetToShape({ form: 'rect' }, p) });
+    return out;
+}
+/** The irHash of every fixture view, measured on the C1 tip (3ec98d486, code as ddfb24dc1) before C2. */
+const C2_FIXTURE_HASHES: Record<string, string> = {
+    'defaultObjectViewIR': '-314148633',
+    'defaultRowViewIR': '-1158849889',
+    'defaultEdgeViewIR': '-732930928',
+    'preset:base-rect': '482407916',
+    'preset:base-rounded': '-524465073',
+    'preset:base-stadium': '1124639029',
+    'preset:base-ellipse': '-383863476',
+    'preset:base-circle': '-1907700816',
+    'preset:base-diamond': '-112831686',
+    'preset:base-parallelogram': '-647933567',
+    'preset:base-hexagon': '1615947368',
+    'preset:base-cylinder': '2044353656',
+    'preset:bpmn-start-event': '-1907700816',
+    'preset:bpmn-intermediate-event': '130830642',
+    'preset:bpmn-end-event': '647571570',
+    'preset:bpmn-message-event': '-531433890',
+    'preset:bpmn-timer-event': '-2001644148',
+    'preset:bpmn-signal-event': '-1399481450',
+    'preset:bpmn-error-event': '-857205372',
+    'preset:bpmn-exclusive-gateway': '969879586',
+    'preset:bpmn-parallel-gateway': '2047479502',
+    'preset:bpmn-inclusive-gateway': '1855780860',
+    'preset:bpmn-complex-gateway': '1170747920',
+    'preset:bpmn-task': '-524465073',
+    'preset:bpmn-service-task': '-1079518146',
+    'preset:bpmn-user-task': '-2050309930',
+    'preset:bpmn-script-task': '1731101310',
+    'preset:bpmn-loop-task': '1490739353',
+    'preset:bpmn-multi-instance-task': '916731623',
+    'preset:uml-state': '-524465073',
+    'preset:uml-initial-state': '2065333181',
+    'preset:uml-final-state': '-672891225',
+    'preset:uml-shallow-history': '230321746',
+    'preset:uml-deep-history': '2055229405',
+    'preset:uml-choice': '-112831686',
+    'preset:uml-flow-final': '1072773208',
+    'preset:uml-fork-join': '-216406663',
+    'preset:uml-use-case': '-383863476',
+    'preset:flow-process': '482407916',
+    'preset:flow-decision': '-112831686',
+    'preset:petri-place': '-1907700816',
+    'preset:petri-marked-place': '-672891225',
+    'preset:petri-transition': '-216406663',
+    'preset:er-entity': '482407916',
+    'preset:er-weak-entity': '1695007470',
+    'preset:er-relationship': '-112831686',
+    'preset:er-identifying-relationship': '-768030212',
+    'preset:er-attribute': '-383863476',
+    'preset:er-derived-attribute': '-1591158502',
+    'preset:er-multivalued-attribute': '-1122144690',
+    'preset:goal-goal': '1124639029',
+    'preset:goal-softgoal': '1895274005',
+    'preset:goal-task': '1615947368',
+    'preset:goal-resource': '482407916',
+    'preset:goal-actor': '-1907700816',
+    'preset:goal-agent': '391996245',
+    'preset:goal-role': '-1373657129',
+    'preset:goal-belief': '-383863476',
+    'preset:goal-obstacle': '-647933567',
+};
+/** The compiled shape of the defaults, key by key, measured on the C1 tip before C2. */
+const C2_COMPILED_KEYS: Record<string, string[]> = {
+    view: ['badges', 'borderColor', 'borderStyle', 'borderWidth', 'containment', 'cornerRadius', 'crossPaths', 'dependencySet', 'fieldCompartments', 'fill', 'form', 'formSpec', 'ir', 'kind', 'labels', 'marker', 'padding', 'predicate', 'priority', 'text', 'viewId'],
+    compartment: ['id', 'rowStyle', 'segments', 'separator', 'source', 'visible'],
+    label: ['editsName', 'position', 'style', 'text', 'visible'],
+    labelStyle: ['color', 'fontSize', 'underline'],
+    edge: ['crossPaths', 'dependencySet', 'ir', 'isObjectAsEdge', 'labelPlacement', 'labelText', 'lineColor', 'lineStyle', 'lineWidth', 'persistWaypoints', 'predicate', 'priority', 'reference', 'routing', 'sourceExpr', 'sourceIsContainer', 'targetExpr', 'targetIsContainer', 'terminations', 'viewId'],
+    row: ['crossPaths', 'dependencySet', 'ir', 'kind', 'predicate', 'priority', 'style', 'template', 'viewId', 'visible'],
+};
+
+describe('C2 keys absent: an IR without them is the IR it was (R-VP-20, R-IRN-32)', () => {
+    it('irHash of every fixture view is the one measured on the C1 tip', () => {
+        const got = Object.fromEntries(Object.entries(c2FixtureViews()).map(([k, v]) => [k, irHash(v)]));
+        expect(Object.keys(got).length).toBeGreaterThan(10);
+        expect(got).toEqual(C2_FIXTURE_HASHES);
+    });
+
+    it('the compiled defaults carry no new field: the key lists measured on the C1 tip', () => {
+        clearCompileCache();
+        const v = compileView('c2_keys_v', defaultObjectViewIR());
+        const e = compileEdgeView('c2_keys_e', { ...defaultEdgeViewIR(), edge: { labels: { center: { from: 'literal', text: 'x' } } } });
+        const r = compileRowView('c2_keys_r', defaultRowViewIR());
+        const got: Record<string, string[]> = {
+            view: Object.keys(v).sort(),
+            compartment: Object.keys(v.fieldCompartments[0]).sort(),
+            label: Object.keys(v.labels[0]).sort(),
+            labelStyle: Object.keys(v.labels[0].style!).sort(),
+            edge: Object.keys(e).sort(),
+            row: Object.keys(r).sort(),
+        };
+        expect(got).toEqual(C2_COMPILED_KEYS);
+    });
+});
+
+/** A vertex carrying the three vertex keys, and an edge carrying the two edge keys. */
+function c2Vertex(): VertexViewIR {
+    return vertexIR({
+        shape: {
+            form: 'rounded',
+            text: { textTransform: 'lowercase' },
+            labels: [{ position: 'top', source: { from: 'literal', text: 'State' }, style: { fontSize: 10, letterSpacing: 0.08, textTransform: 'uppercase' } }],
+        },
+        fieldCompartments: [{
+            id: 'attributes', source: { from: 'attributes', exclude: ['name'] },
+            rowFormat: { segments: [{ kind: 'literal', text: 'attr ', style: { color: 'var(--color-inode-quiet)' } }, { kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] },
+            separator: true,
+        }],
+    });
+}
+function c2Edge(over: Partial<EdgeViewIR['edge']> = {}): EdgeViewIR {
+    return {
+        irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['State'], reference: 'next',
+        edge: {
+            labels: {
+                template: [{ from: 'literal', text: 'to ' }, { from: 'intrinsic', prop: 'name' }],
+                style: { fontSize: 12, fontWeight: 'medium', color: 'var(--color-inode-quiet)', letterSpacing: 0.02 },
+            },
+            ...over,
+        },
+    };
+}
+
+describe('C2 keys present: persisted, validated, hashed apart (R-VP-20)', () => {
+    it('survive a save (JSON round trip) byte-identical, validate, and compile the same', () => {
+        for (const ir of [c2Vertex(), c2Edge()] as AnyViewIR[]) {
+            const saved = JSON.parse(JSON.stringify(ir));
+            expect(JSON.stringify(saved)).toBe(JSON.stringify(ir));
+            expect(irHash(saved)).toBe(irHash(ir));
+            clearCompileCache();
+            expect(validateIR(`c2_rt_${ir.kind}`, saved)).toEqual({ ok: true });
+        }
+    });
+
+    it('each key moves the irHash, so an edit recompiles instead of hitting the cache', () => {
+        const base = vertexIR({ shape: { form: 'rounded', labels: [{ position: 'top', source: { from: 'literal', text: 'S' } }] } });
+        const variants: VertexViewIR[] = [
+            vertexIR({ shape: { form: 'rounded', labels: [{ position: 'top', source: { from: 'literal', text: 'S' }, style: { letterSpacing: 0.08 } }] } }),
+            vertexIR({ shape: { form: 'rounded', labels: [{ position: 'top', source: { from: 'literal', text: 'S' }, style: { textTransform: 'uppercase' } }] } }),
+            vertexIR({ ...base, fieldCompartments: [{ id: 'a', source: { from: 'attributes', exclude: ['name'] }, rowFormat: { segments: [{ kind: 'name' }] } }] }),
+            vertexIR({ ...base, fieldCompartments: [{ id: 'a', source: { from: 'attributes' }, rowFormat: { segments: [{ kind: 'literal', text: 'a', style: { fontSize: 9 } }] } }] }),
+        ];
+        const hashes = new Set([base, ...variants].map(v => irHash(v)));
+        expect(hashes.size).toBe(5);
+        const e0 = c2Edge({ labels: { center: { from: 'literal', text: 'x' } } });
+        const e1 = c2Edge({ labels: { center: { from: 'literal', text: 'x' }, template: [{ from: 'literal', text: 'x' }] } });
+        const e2 = c2Edge({ labels: { center: { from: 'literal', text: 'x' }, style: {} } });
+        expect(new Set([e0, e1, e2].map(irHash)).size).toBe(3);
+    });
+});
+
+describe('C2 compile and resolve: letterSpacing and textTransform (R-VP-20 (1))', () => {
+    it('a declared axis resolves to CSS: letter-spacing in em, text-transform verbatim', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('c2_ls', c2Vertex());
+        expect(cv.labels[0].style!.letterSpacing!(ctx, 's1')).toBe(0.08);
+        expect(cv.labels[0].style!.textTransform!(ctx, 's1')).toBe('uppercase');
+        expect(resolveTextStyle(cv.labels[0].style, ctx, 's1')).toEqual({ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase' });
+        // On the node root too: the cascade carries it to every surface (irStyle.ts inherit).
+        expect(resolveTextStyle(cv.text, ctx, 's1')).toEqual({ textTransform: 'lowercase' });
+    });
+
+    it('absent: no compiled axis and no CSS property', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('c2_ls_absent', vertexIR({ shape: { form: 'rect', labels: [{ position: 'top', source: { from: 'literal', text: 'S' }, style: { fontSize: 10 } }] } }));
+        expect('letterSpacing' in cv.labels[0].style!).toBe(false);
+        expect('textTransform' in cv.labels[0].style!).toBe(false);
+        expect(resolveTextStyle(cv.labels[0].style, ctx, 's1')).toEqual({ fontSize: '10px' });
+    });
+
+    it('zero and a negative spacing are authored values and are emitted', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        for (const [n, css] of [[0, '0em'], [-0.02, '-0.02em']] as [number, string][]) {
+            const cv = compileView(`c2_ls_${n}`, vertexIR({ shape: { form: 'rect', text: { letterSpacing: n } } }));
+            expect(resolveTextStyle(cv.text, ctx, 's1'), String(n)).toEqual({ letterSpacing: css });
+        }
+    });
+
+    it('the render is permissive: a value outside the vocabulary is not emitted, the view still compiles (R-B9-bis)', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        for (const bad of [{ letterSpacing: '0.08' }, { letterSpacing: Number.NaN }, { letterSpacing: Infinity }, { textTransform: 'capitalize' }, { textTransform: 7 }]) {
+            const cv = compileView(`c2_bad_${JSON.stringify(bad)}`, vertexIR({ shape: { form: 'rect', text: bad as never } }));
+            expect(resolveTextStyle(cv.text, ctx, 's1'), JSON.stringify(bad)).toBeUndefined();
+        }
+    });
+});
+
+describe('C2 compile: the attributes exclude and the literal segment style (R-VP-20 (2), (3))', () => {
+    it('exclude is compiled onto the attributes compartment, verbatim', () => {
+        clearCompileCache();
+        const fc = compileView('c2_ex', c2Vertex()).fieldCompartments[0];
+        expect(fc.source).toBe('attributes');
+        expect(fc.exclude).toEqual(['name']);
+    });
+
+    it('absent, or on another source, no exclude key is compiled', () => {
+        clearCompileCache();
+        expect('exclude' in compileView('c2_ex_absent', defaultObjectViewIR()).fieldCompartments[0]).toBe(false);
+        const refs = vertexIR({ fieldCompartments: [{ id: 'r', source: { from: 'references', exclude: ['next'] } as never, rowFormat: { segments: [{ kind: 'name' }] } }] });
+        expect('exclude' in compileView('c2_ex_refs', refs).fieldCompartments[0]).toBe(false);
+    });
+
+    it('a literal segment style is compiled at its index; the other segments have none', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const fc = compileView('c2_seg', c2Vertex()).fieldCompartments[0];
+        expect(fc.segmentStyles).toHaveLength(4);
+        expect(resolveTextStyle(fc.segmentStyles![0], ctx, 's1')).toEqual({ color: 'var(--color-inode-quiet)' });
+        expect(fc.segmentStyles!.slice(1)).toEqual([undefined, undefined, undefined]);
+        // The segments themselves are passed through unchanged.
+        expect(fc.segments[0]).toEqual({ kind: 'literal', text: 'attr ', style: { color: 'var(--color-inode-quiet)' } });
+    });
+
+    it('no literal style, no segmentStyles key', () => {
+        clearCompileCache();
+        expect('segmentStyles' in compileView('c2_seg_absent', defaultObjectViewIR()).fieldCompartments[0]).toBe(false);
+    });
+
+    it('a conditional axis in a segment style extends the view\'s dependency set', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('c2_seg_cond', vertexIR({
+            fieldCompartments: [{
+                id: 'a', source: { from: 'attributes' },
+                rowFormat: { segments: [{ kind: 'literal', text: 'x', style: { color: { when: { op: 'exists', path: '$isInitial.value' }, then: 'red' } } }] },
+            }],
+        }));
+        expect(cv.dependencySet).toContain('isInitial');
+        expect(resolveTextStyle(cv.fieldCompartments[0].segmentStyles![0], ctx, 's1')).toEqual({ color: 'red' });
+        expect(resolveTextStyle(cv.fieldCompartments[0].segmentStyles![0], ctx, 's3')).toBeUndefined();
+    });
+});
+
+describe('C2 compile: the edge label template and style (R-VP-20 (4), (5))', () => {
+    it('the template is the centre label, segments concatenated, and wins over center', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileEdgeView('c2_tpl', c2Edge({ labels: { center: { from: 'literal', text: 'center' }, template: [{ from: 'literal', text: 'weight = ' }, { from: 'path', expr: '$tags.values[1]' }] } }));
+        expect(cv.labelText!(ctx, 's1')).toBe('weight = b');
+        expect(cv.dependencySet).toContain('tags');
+    });
+
+    it('an empty value draws nothing and takes its caption, the literal right before it; the other literals stay', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const tpl = compileEdgeView('c2_tpl_empty', c2Edge({ labels: { template: [{ from: 'literal', text: 'weight = ' }, { from: 'path', expr: '$isInitial.value' }] } }));
+        expect(tpl.labelText!(ctx, 's3')).toBe('');
+        expect(tpl.labelText!(ctx, 's2')).toBe('weight = false');
+        const stereo = compileEdgeView('c2_tpl_stereo', c2Edge({ labels: { template: [{ from: 'literal', text: '«Inhibitor»' }, { from: 'literal', text: ' weight = ' }, { from: 'path', expr: '$isInitial.value' }] } }));
+        expect(stereo.labelText!(ctx, 's3')).toBe('«Inhibitor»');
+        expect(stereo.labelText!(ctx, 's2')).toBe('«Inhibitor» weight = false');
+        // A literal after a value is not a caption: it stays when the value is empty.
+        const after = compileEdgeView('c2_tpl_after', c2Edge({ labels: { template: [{ from: 'path', expr: '$isInitial.value' }, { from: 'literal', text: ' ok' }] } }));
+        expect(after.labelText!(ctx, 's3')).toBe(' ok');
+    });
+
+    it('a template of literals only always draws', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const lit = compileEdgeView('c2_tpl_lit', c2Edge({ labels: { template: [{ from: 'literal', text: '«Dependency»' }] } }));
+        expect(lit.labelText!(ctx, 's3')).toBe('«Dependency»');
+    });
+
+    it('an empty or malformed template falls back to center, permissively (R-B9-bis)', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        for (const bad of [[], {}, 'x']) {
+            const cv = compileEdgeView(`c2_tpl_bad_${JSON.stringify(bad)}`, c2Edge({ labels: { center: { from: 'literal', text: 'center' }, template: bad as never } }));
+            expect(cv.labelText!(ctx, 's1'), JSON.stringify(bad)).toBe('center');
+        }
+    });
+
+    it('absent: the centre label as before, and no labelStyle key', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileEdgeView('c2_tpl_absent', c2Edge({ labels: { center: { from: 'intrinsic', prop: 'name' } } }));
+        // The intrinsic name reads the identity slot first (model/CLAUDE.md §3.12): `idle`.
+        expect(cv.labelText!(ctx, 's1')).toBe('idle');
+        expect('labelStyle' in cv).toBe(false);
+    });
+
+    it('the label style is compiled, and resolves to CSS', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileEdgeView('c2_lstyle', c2Edge());
+        expect(resolveTextStyle(cv.labelStyle, ctx, 's1')).toEqual({ fontSize: '12px', fontWeight: 500, color: 'var(--color-inode-quiet)', letterSpacing: '0.02em' });
+    });
+
+    it('irEdgeViews carries the resolved style on data.irLabelStyle, and the template text on the label', () => {
+        const { idlookup, edges } = edgeWorld();
+        const state = { viewpoint: 'VP', viewelements: ['V_c2'], idlookup: { ...idlookup, V_c2: { id: 'V_c2', viewpoint: 'VP', ir: c2Edge() } } };
+        const ctx = makeDrawReadCtx(state.idlookup);
+        const index = getIRIndex(state, 'sig_edge_c2')!;
+        const de = decorateReferenceEdges(edges as any, new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]), index, ctx, state.idlookup);
+        const next = de.find(e => e.id === 'e_next')!;
+        expect(next.label).toBe('to S1');
+        expect((next.data as any).irLabelText).toBe('to S1');
+        expect((next.data as any).irLabelStyle).toEqual({ fontSize: '12px', fontWeight: 500, color: 'var(--color-inode-quiet)', letterSpacing: '0.02em' });
+    });
+
+    it('irEdgeViews: a declared empty style is still the halo label ({}); no style, no irLabelStyle key at all', () => {
+        const { idlookup, edges } = edgeWorld();
+        const views = { V_c2a: c2Edge({ labels: { center: { from: 'literal', text: 'n' }, style: {} } }), V_c2b: c2Edge({ labels: { center: { from: 'literal', text: 'n' } } }) };
+        for (const [vid, ir] of Object.entries(views)) {
+            const state = { viewpoint: 'VP', viewelements: [vid], idlookup: { ...idlookup, [vid]: { id: vid, viewpoint: 'VP', ir } } };
+            const ctx = makeDrawReadCtx(state.idlookup);
+            const de = decorateReferenceEdges(edges as any, new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]), getIRIndex(state, `sig_${vid}`)!, ctx, state.idlookup);
+            const data = de.find(e => e.id === 'e_next')!.data as any;
+            if (vid === 'V_c2a') expect(data.irLabelStyle).toEqual({});
+            else expect('irLabelStyle' in data).toBe(false);
+        }
+    });
+});
+
+/**
+ * R-GV invariant (P-2026-10-10-0105 S1): a graphVertex view that declares none of the R-GV keys compiles and
+ * builds its containment model exactly as before the slice. Written and run green on the code BEFORE the slice
+ * (HEAD b7d131729), then kept green after it: the literals below are what that code produced.
+ */
+describe('graphVertex without R-GV keys: compile and containment unchanged (R-GV invariant)', () => {
+    const COMPILED_KEYS = ['badges', 'borderColor', 'borderStyle', 'borderWidth', 'containment', 'cornerRadius',
+        'crossPaths', 'dependencySet', 'fieldCompartments', 'fill', 'form', 'formSpec', 'ir', 'kind', 'labels',
+        'marker', 'padding', 'predicate', 'priority', 'text', 'viewId'];
+    const CONTAINMENT_KEYS = ['childFilter', 'collapsedBadge', 'collapsedFill', 'collapsedForm', 'collapsible'];
+    const fixtures: Array<[string, GraphVertexViewIR]> = [
+        ['gv_region', { irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Region'], shape: { form: 'rect' }, containment: { collapsible: true } }],
+        ['gv_collapsed', {
+            irVersion: '1.2', kind: 'graphVertex', metaclasses: ['B'],
+            shape: { form: 'rounded', fill: '#ffffff', labels: [{ position: 'center', source: { from: 'intrinsic', prop: 'name' } }] },
+            containment: { collapsible: true, collapsed: { form: 'cylinder', fill: '#eeeeee', badge: { icon: 'x', position: 'tr', visible: true } } },
+        }],
+        ['gv_package', {
+            irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Package'],
+            shape: { form: 'rect', labels: [{ position: 'top', source: { from: 'path', expr: '$name.value' } }] },
+            containment: { childFilter: { op: 'isKind', class: 'State' } },
+        }],
+        ['gv_bare', { irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Pkg'], shape: { form: 'rect' } } as unknown as GraphVertexViewIR],
+    ];
+
+    it('compiles to the same key lists, dependency set and containment values', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        for (const [id, ir] of fixtures) {
+            const cv = compileView(id, ir);
+            expect(Object.keys(cv).sort(), id).toEqual(COMPILED_KEYS);
+            expect(Object.keys(cv.containment!).sort(), id).toEqual(CONTAINMENT_KEYS);
+            expect(cv.visible, id).toBeUndefined();
+            expect(cv.crossPaths, id).toEqual([]);
+            expect(cv.labels.map(l => Object.keys(l).sort()), id).toEqual((ir.shape.labels ?? []).map(() => ['editsName', 'position', 'style', 'text', 'visible']));
+        }
+        const [region, collapsed, pkg, bare] = fixtures.map(([id, ir]) => compileView(id, ir));
+        expect(region.dependencySet).toEqual([]);
+        expect(pkg.dependencySet).toEqual(['name']);
+        expect(region.containment!.collapsible).toBe(true);
+        expect(bare.containment!.collapsible).toBe(true);
+        expect(region.containment!.collapsedForm).toBeNull();
+        expect(collapsed.containment!.collapsedForm!(ctx, 's1')).toBe('cylinder');
+        expect(collapsed.containment!.collapsedFill!(ctx, 's1')).toBe('#eeeeee');
+        expect(collapsed.containment!.collapsedBadge!.icon(ctx, 's1')).toBe('x');
+        expect(pkg.containment!.childFilter(ctx, 's1')).toBe(true);
+        expect(pkg.containment!.childFilter(ctx, 's2')).toBe(true);   // FinalState is a State
+        expect(region.containment!.childFilter(ctx, 's1')).toBe(true);
+    });
+
+    it('builds the same containment model on the composition world', () => {
+        const { model } = containmentWorld();
+        expect([...model.containers.keys()]).toEqual(['r1', 'r2']);
+        expect([...model.containers.values()]).toEqual([
+            { objectId: 'r1', vertexId: 'Vr1', collapsible: true },
+            { objectId: 'r2', vertexId: 'Vr2', collapsible: true },
+        ]);
+        expect([...model.childrenOf.entries()]).toEqual([['r1', ['s_a', 's_b']], ['r2', ['s_c']]]);
+        expect([...model.parentOf.entries()]).toEqual([['s_a', 'r1'], ['s_b', 'r1'], ['s_c', 'r2']]);
+        expect([...model.containerOf!.entries()]).toEqual([['s_a', 'r1'], ['s_b', 'r1'], ['s_c', 'r2']]);
+        expect([...model.objByVertex.entries()]).toEqual([['Vr1', 'r1'], ['Vr2', 'r2'], ['Va', 's_a'], ['Vb', 's_b'], ['Vc', 's_c'], ['Vx', 'ext']]);
+    });
+});
+
+/** The OMG BPMN 2.0 views of the discovery report §G2 and the spec addendum 2026-10-10 §10 (R-GV, S1 fixture). */
+const BPMN_VIEWS: Record<string, AnyViewIR> = {
+    V_process: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Process'], exclusive: true, label: 'Process (not drawn)', visible: false, shape: { form: 'rect' } },
+    V_laneset: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['LaneSet'], exclusive: true, label: 'LaneSet (not drawn)', visible: false, shape: { form: 'rect' } },
+    V_pool_lanes: {
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Participant'], exclusive: true, label: 'Pool with lanes', priority: 1,
+        predicate: { op: 'not', arg: { op: 'empty', path: '$processRef.value.$laneSets.values' } },
+        shape: { form: 'rect', fill: '#ffffff', border: { width: 1.5 },
+            labels: [{ position: 'header', orientation: 'vertical', source: { from: 'intrinsic', prop: 'name' } }] },
+        containment: {
+            children: '$processRef.value.$laneSets.values[0].$lanes.values',
+            childFilter: { op: 'isKind', class: 'Lane' },
+            layout: { mode: 'partitions', axis: 'vertical', header: { side: 'w', size: 30 } },
+            membership: { mode: 'forbid' }, edges: 'hide', collapsible: false,
+        },
+    },
+    V_pool_free: {
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Participant'], exclusive: true, label: 'Pool without lanes',
+        shape: { form: 'rect', fill: '#ffffff', border: { width: 1.5 },
+            labels: [{ position: 'header', orientation: 'vertical', source: { from: 'intrinsic', prop: 'name' } }] },
+        containment: {
+            children: '$processRef.value.$flowElements.values',
+            childFilter: { op: 'isKind', class: 'FlowNode' },
+            layout: { mode: 'free', header: { side: 'w', size: 30 } },
+            membership: { mode: 'reparent' }, edges: 'hide', collapsible: true,
+        },
+    },
+    V_lane: {
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Lane'], exclusive: true, label: 'Lane',
+        shape: { form: 'rect', fill: '#ffffff', border: { width: 1 },
+            labels: [{ position: 'header', orientation: 'vertical', source: { from: 'intrinsic', prop: 'name' } }] },
+        containment: {
+            children: '$flowNodeRefs.values',
+            childFilter: { op: 'isKind', class: 'FlowNode' },
+            layout: { mode: 'free', header: { side: 'w', size: 30 } },
+            membership: { mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } },
+            edges: 'hide', collapsible: false,
+        },
+    },
+    V_lane_sub: {
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Lane'], exclusive: true, label: 'Lane with sub-lanes', priority: 1,
+        predicate: { op: 'exists', path: '$childLaneSet.value' },
+        shape: { form: 'rect', fill: '#ffffff', border: { width: 1 },
+            labels: [{ position: 'header', orientation: 'vertical', source: { from: 'intrinsic', prop: 'name' } }] },
+        containment: {
+            children: '$childLaneSet.value.$lanes.values',
+            childFilter: { op: 'isKind', class: 'Lane' },
+            layout: { mode: 'partitions', axis: 'vertical', header: { side: 'w', size: 30 } },
+            membership: { mode: 'forbid' }, edges: 'hide', collapsible: false,
+        },
+    },
+    V_task: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['Task'], exclusive: true, label: 'Task',
+        shape: { form: 'rounded', labels: [{ position: 'center', source: { from: 'intrinsic', prop: 'name' } }] } },
+    V_start: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['StartEvent'], exclusive: true, label: 'Start event',
+        defaultSize: { width: 36, height: 36 },
+        shape: { form: 'circle', border: { width: 1.5 }, labels: [{ position: 'outside', anchor: 's', source: { from: 'intrinsic', prop: 'name' } }] } },
+    V_end: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['EndEvent'], exclusive: true, label: 'End event',
+        defaultSize: { width: 36, height: 36 },
+        shape: { form: 'circle', border: { width: 3 }, labels: [{ position: 'outside', anchor: 's', source: { from: 'intrinsic', prop: 'name' } }] } },
+    V_xor: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['ExclusiveGateway'], exclusive: true, label: 'Exclusive gateway',
+        defaultSize: { width: 50, height: 50 },
+        shape: { form: 'diamond', marker: 'x', labels: [{ position: 'outside', anchor: 'n', source: { from: 'intrinsic', prop: 'name' } }] } },
+    V_seqflow: { irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['SequenceFlow'], exclusive: true, label: 'Sequence flow',
+        edge: { source: '$sourceRef.value', target: '$targetRef.value', line: { style: 'solid', width: 1.5 },
+            terminations: { targetEnd: 'closedArrow' }, routing: 'orthogonal', labels: { center: { from: 'intrinsic', prop: 'name' } } } },
+    V_msgflow: { irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['MessageFlow'], exclusive: true, label: 'Message flow',
+        edge: { source: '$sourceRef.value', target: '$targetRef.value', line: { style: 'dashed', width: 1 },
+            terminations: { sourceEnd: 'hollowCircle', targetEnd: 'openArrow' }, routing: 'orthogonal', labels: { center: { from: 'intrinsic', prop: 'name' } } } },
+};
+
+/**
+ * BPMN world in the root form (R-GV-10): every object has a vertex. One pool, one process, one LaneSet with lanes
+ * L1 and L2. L1 lists t1 and g1, L2 lists t2 and t1 (t1 is claimed twice); t3 is in no lane; sf1 is a SequenceFlow;
+ * `nested` sits in flowElements with no vertex. `nodeOrder` is the canvas order.
+ */
+function bpmnWorld(sig: string, opts: { nodeOrder?: string[]; extraViews?: Record<string, AnyViewIR>; patch?: Record<string, any> } = {}) {
+    const cls = (id: string, name: string, ext: string[] = []) => ({ id, name, extends: ext });
+    const ref = (id: string, name: string, composition: boolean) => ({ id, name, className: 'DReference', composition });
+    const obj = (id: string, c: string, features: string[] = []) => ({ id, name: id, instanceof: c, features });
+    const slot = (id: string, r: string, values: unknown[]) => ({ id, instanceof: r, values });
+    const idlookup: Record<string, any> = {
+        C_Participant: cls('C_Participant', 'Participant'), C_Process: cls('C_Process', 'Process'),
+        C_LaneSet: cls('C_LaneSet', 'LaneSet'), C_Lane: cls('C_Lane', 'Lane'),
+        C_FlowElement: cls('C_FlowElement', 'FlowElement'), C_FlowNode: cls('C_FlowNode', 'FlowNode', ['C_FlowElement']),
+        C_Task: cls('C_Task', 'Task', ['C_FlowNode']), C_Xor: cls('C_Xor', 'ExclusiveGateway', ['C_FlowNode']),
+        C_SeqFlow: cls('C_SeqFlow', 'SequenceFlow', ['C_FlowElement']),
+        R_processRef: ref('R_processRef', 'processRef', false), R_flowElements: ref('R_flowElements', 'flowElements', true),
+        R_laneSets: ref('R_laneSets', 'laneSets', true), R_lanes: ref('R_lanes', 'lanes', true),
+        R_flowNodeRefs: ref('R_flowNodeRefs', 'flowNodeRefs', false), R_childLaneSet: ref('R_childLaneSet', 'childLaneSet', true),
+        pool: obj('pool', 'C_Participant', ['s_pool_proc']), s_pool_proc: slot('s_pool_proc', 'R_processRef', ['proc']),
+        proc: obj('proc', 'C_Process', ['s_proc_fe', 's_proc_ls']),
+        s_proc_fe: slot('s_proc_fe', 'R_flowElements', ['t1', 't2', 't3', 'g1', 'sf1', 'nested']),
+        s_proc_ls: slot('s_proc_ls', 'R_laneSets', ['ls']),
+        ls: obj('ls', 'C_LaneSet', ['s_ls_lanes']), s_ls_lanes: slot('s_ls_lanes', 'R_lanes', ['L1', 'L2']),
+        L1: obj('L1', 'C_Lane', ['s_L1_refs']), s_L1_refs: slot('s_L1_refs', 'R_flowNodeRefs', ['t1', 'g1']),
+        L2: obj('L2', 'C_Lane', ['s_L2_refs']), s_L2_refs: slot('s_L2_refs', 'R_flowNodeRefs', ['t2', 't1']),
+        t1: obj('t1', 'C_Task'), t2: obj('t2', 'C_Task'), t3: obj('t3', 'C_Task'), g1: obj('g1', 'C_Xor'),
+        sf1: obj('sf1', 'C_SeqFlow'), nested: obj('nested', 'C_Task'),
+        ...(opts.patch ?? {}),
+    };
+    const objects = ['pool', 'proc', 'ls', 'L1', 'L2', 't1', 't2', 't3', 'g1', 'sf1'];
+    for (const o of objects) idlookup['V' + o] = { id: 'V' + o, model: o };
+    const order = opts.nodeOrder ?? objects;
+    const nodes: any[] = order.map(o => ({ id: 'V' + o, type: 'objectNode', position: { x: 0, y: 0 }, data: {} }));
+    const views = { ...BPMN_VIEWS, ...(opts.extraViews ?? {}) };
+    for (const [vid, ir] of Object.entries(views)) idlookup[vid] = { id: vid, viewpoint: 'VP', ir };
+    const state = { viewpoint: 'VP', viewelements: Object.keys(views), idlookup };
+    const ctx = makeDrawReadCtx(idlookup);
+    const index = getIRIndex(state, sig)!;
+    const model = buildContainmentModel(nodes as any, idlookup, index, ctx);
+    return { idlookup, ctx, index, model, nodes };
+}
+
+describe('R-GV keys compile (spec addendum 2026-10-10 §2)', () => {
+    const gv = (containment: any, extra: any = {}): GraphVertexViewIR => ({
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Lane'], shape: { form: 'rect' }, containment, ...extra,
+    });
+    it('compiles a declared channel into steps and adds its features to the dependency set', () => {
+        clearCompileCache();
+        const cv = compileView('gv_ch', gv({ children: '$processRef.value.$laneSets.values[0].$lanes.values' }));
+        expect(cv.containment!.channel).toEqual({
+            expr: '$processRef.value.$laneSets.values[0].$lanes.values',
+            steps: [{ feature: 'processRef', take: 'value' }, { feature: 'laneSets', take: 0 }, { feature: 'lanes', take: 'values' }],
+        });
+        expect(cv.dependencySet).toEqual(['processRef', 'laneSets', 'lanes']);
+        expect(cv.crossPaths.length).toBe(1);
+    });
+    it('throws on a channel that is not a PathExpr, as a bad label path does', () => {
+        clearCompileCache();
+        expect(() => compileView('gv_bad', gv({ children: 'container' }))).toThrow(/invalid PathExpr step/);
+        expect(() => compileView('gv_bad2', gv({ children: '$a.value?.$b' }))).toThrow(/forbidden construct/);
+    });
+    it('ignores an empty or non-string channel (absent)', () => {
+        clearCompileCache();
+        expect('channel' in compileView('gv_e1', gv({ children: '' })).containment!).toBe(false);
+        expect('channel' in compileView('gv_e2', gv({ children: 3 })).containment!).toBe(false);
+    });
+    it('normalizes layout permissively and keeps declared values', () => {
+        clearCompileCache();
+        expect(compileView('gv_l1', gv({ layout: { mode: 'partitions', axis: 'horizontal', header: { side: 'n', size: 28 }, padding: 6 } })).containment!.layout)
+            .toEqual({ mode: 'partitions', axis: 'horizontal', header: { side: 'n', size: 28 }, padding: 6 });
+        expect(compileView('gv_l2', gv({ layout: { mode: 'grid', axis: 'diagonal', header: { side: 'e', size: 10 }, padding: -1 } })).containment!.layout)
+            .toEqual({ mode: 'free', axis: 'vertical', header: null, padding: 0 });
+        expect(compileView('gv_l3', gv({ layout: { mode: 'free', header: { side: 'w', size: 0 } } })).containment!.layout!.header).toBeNull();
+        expect(compileView('gv_l4', gv({ layout: { mode: 'free', header: { side: 'w', size: Infinity } } })).containment!.layout!.header).toBeNull();
+        expect(compileView('gv_l5', gv({ layout: 'partitions' })).containment!.layout).toBeUndefined();
+    });
+    it('keeps frame only as self on free and separator only as dashed on partitions, else leaves the key out (S2b)', () => {
+        clearCompileCache();
+        expect(compileView('gv_f1', gv({ layout: { mode: 'free', frame: 'self', padding: 16 } })).containment!.layout)
+            .toEqual({ mode: 'free', axis: 'vertical', header: null, padding: 16, frame: 'self' });
+        expect(compileView('gv_f2', gv({ layout: { mode: 'free', frame: 'hull' } })).containment!.layout).toEqual({ mode: 'free', axis: 'vertical', header: null, padding: 0 });
+        expect(compileView('gv_f3', gv({ layout: { mode: 'partitions', frame: 'self' } })).containment!.layout!.frame).toBeUndefined();
+        expect(compileView('gv_f4', gv({ layout: { mode: 'free', frame: 'other' } })).containment!.layout!.frame).toBeUndefined();
+        expect(compileView('gv_s1', gv({ layout: { mode: 'partitions', separator: 'dashed' } })).containment!.layout)
+            .toEqual({ mode: 'partitions', axis: 'vertical', header: null, padding: 0, separator: 'dashed' });
+        expect(compileView('gv_s2', gv({ layout: { mode: 'partitions', separator: 'solid' } })).containment!.layout!.separator).toBeUndefined();
+        expect(compileView('gv_s3', gv({ layout: { mode: 'free', separator: 'dashed' } })).containment!.layout!.separator).toBeUndefined();
+    });
+    it('normalizes membership permissively and keeps a well-formed create', () => {
+        clearCompileCache();
+        expect(compileView('gv_m1', gv({ membership: { mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } } })).containment!.membership)
+            .toEqual({ mode: 'reference', create: { ownerKind: 'Process', feature: 'flowElements' } });
+        expect(compileView('gv_m2', gv({ membership: { mode: 'teleport', create: { ownerKind: '', feature: 'x' } } })).containment!.membership)
+            .toEqual({ mode: 'none' });
+        expect(compileView('gv_m3', gv({ membership: { mode: 'forbid', create: { ownerKind: 'P' } } })).containment!.membership)
+            .toEqual({ mode: 'forbid' });
+        expect(compileView('gv_m4', gv({ membership: null })).containment!.membership).toBeUndefined();
+    });
+    it('keeps a known edges value only', () => {
+        clearCompileCache();
+        expect(compileView('gv_x1', gv({ edges: 'hide' })).containment!.edges).toBe('hide');
+        expect(compileView('gv_x2', gv({ edges: 'show' })).containment!.edges).toBe('show');
+        expect('edges' in compileView('gv_x3', gv({ edges: 'none' })).containment!).toBe(false);
+    });
+    it('compiles visible on a graphVertex (R-GV-9)', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('gv_vis', gv({}, { visible: false }));
+        expect(cv.visible!(ctx, 's1')).toBe(false);
+        const cond = compileView('gv_vis2', gv({}, { visible: { when: { op: 'eq', left: '$isInitial.value', right: { kind: 'boolean', value: true } }, then: true, else: false } }));
+        expect(cond.visible!(ctx, 's1')).toBe(true);
+        expect(cond.visible!(ctx, 's2')).toBe(false);
+        expect(cond.dependencySet).toEqual(['isInitial']);
+    });
+    it('sets a header label orientation only when known and on a header label', () => {
+        clearCompileCache();
+        const shape = (labels: any[]) => ({ irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Lane'], shape: { form: 'rect', labels }, containment: { layout: { mode: 'free', header: { side: 'w', size: 30 } } } }) as GraphVertexViewIR;
+        const lit = { from: 'literal', text: 'L' } as const;
+        const cv = compileView('gv_o', shape([
+            { position: 'header', orientation: 'vertical', source: lit },
+            { position: 'header', source: lit },
+            { position: 'header', orientation: 'sideways', source: lit },
+            { position: 'top', orientation: 'vertical', source: lit },
+        ]));
+        expect(cv.labels.map(l => l.orientation)).toEqual(['vertical', undefined, undefined, undefined]);
+        expect('orientation' in cv.labels[1]).toBe(false);
+        expect(cv.labels[0].position).toBe('header');
+    });
+});
+
+describe('R-GV children channel and single visual parent (irContainment)', () => {
+    it('resolves the pool channel through processRef, laneSets[0] and lanes, and the lanes through flowNodeRefs', () => {
+        const { model } = bpmnWorld('sig_gv_bpmn_1');
+        expect([...model.containers.keys()]).toEqual(['pool', 'L1', 'L2']);
+        expect(model.childrenOf.get('pool')).toEqual(['L1', 'L2']);
+        expect(model.parentOf.get('L1')).toBe('pool');
+        expect(model.parentOf.get('L2')).toBe('pool');
+    });
+    it('records what a single-hop channel slot holds before the filter (S3), and nothing for a multi-hop one', () => {
+        const patch = { s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['t1', 'g1', 'sf1'] } };
+        const { model } = bpmnWorld('sig_gv_ch_values', { patch });
+        expect(model.childrenOf.get('L1')).toEqual(['t1', 'g1']);
+        expect([...(model.containers.get('L1')!.channelValues ?? [])]).toEqual(['t1', 'g1', 'sf1']);
+        expect(model.containers.get('pool')!.channelValues).toBeUndefined();
+    });
+    it('gives a twice-claimed node to the first claimant in canvas order when the depths tie', () => {
+        const a = bpmnWorld('sig_gv_bpmn_2a').model;
+        expect(a.parentOf.get('t1')).toBe('L1');
+        expect(a.childrenOf.get('L1')).toEqual(['t1', 'g1']);
+        expect(a.childrenOf.get('L2')).toEqual(['t2']);
+        expect([...a.multiClaimed!.entries()]).toEqual([['t1', ['L1', 'L2']]]);
+        const b = bpmnWorld('sig_gv_bpmn_2b', { nodeOrder: ['pool', 'proc', 'ls', 'L2', 'L1', 't1', 't2', 't3', 'g1', 'sf1'] }).model;
+        expect(b.parentOf.get('t1')).toBe('L2');
+        expect(b.childrenOf.get('L2')).toEqual(['t2', 't1']);
+        expect(b.childrenOf.get('L1')).toEqual(['g1']);
+        expect([...b.multiClaimed!.entries()]).toEqual([['t1', ['L2', 'L1']]]);
+    });
+    it('gives a node to the innermost claimant whatever the canvas order (a parent lane and its sub-lane)', () => {
+        // Lp lists t1 in flowNodeRefs and owns a childLaneSet whose lane S1 lists t1 too. Lp's view is the leaf view
+        // here (V_lane_sub is dropped), so both Lp and S1 claim t1: S1 is deeper and wins, even before Lp on canvas.
+        const patch = {
+            s_ls_lanes: { id: 's_ls_lanes', instanceof: 'R_lanes', values: ['Lp'] },
+            Lp: { id: 'Lp', name: 'Lp', instanceof: 'C_Lane', features: ['s_Lp_refs', 's_Lp_cls'] },
+            s_Lp_refs: { id: 's_Lp_refs', instanceof: 'R_flowNodeRefs', values: ['t1', 'S1'] },
+            s_Lp_cls: { id: 's_Lp_cls', instanceof: 'R_childLaneSet', values: ['cls'] },
+            cls: { id: 'cls', name: 'cls', instanceof: 'C_LaneSet', features: ['s_cls_lanes'] },
+            s_cls_lanes: { id: 's_cls_lanes', instanceof: 'R_lanes', values: ['S1'] },
+            S1: { id: 'S1', name: 'S1', instanceof: 'C_Lane', features: ['s_S1_refs'] },
+            s_S1_refs: { id: 's_S1_refs', instanceof: 'R_flowNodeRefs', values: ['t1'] },
+            VLp: { id: 'VLp', model: 'Lp' }, VS1: { id: 'VS1', model: 'S1' },
+        };
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), containment: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR).containment, childFilter: undefined } } } as Record<string, AnyViewIR>;
+        const views = { ...BPMN_VIEWS, ...extraViews };
+        delete (views as any).V_lane_sub;
+        const run = (sig: string, order: string[]) => {
+            const idlookup: Record<string, any> = { ...bpmnWorld(sig + '_base').idlookup, ...patch };
+            for (const k of Object.keys(idlookup)) if (idlookup[k]?.viewpoint === 'VP') delete idlookup[k];
+            for (const [vid, ir] of Object.entries(views)) idlookup[vid] = { id: vid, viewpoint: 'VP', ir };
+            const state = { viewpoint: 'VP', viewelements: Object.keys(views), idlookup };
+            const nodes = order.map(o => ({ id: 'V' + o, type: 'objectNode', position: { x: 0, y: 0 }, data: {} }));
+            return buildContainmentModel(nodes as any, idlookup, getIRIndex(state, sig)!, makeDrawReadCtx(idlookup));
+        };
+        for (const [sig, order] of [['sig_gv_inner_a', ['pool', 'Lp', 'S1', 't1']], ['sig_gv_inner_b', ['S1', 't1', 'Lp', 'pool']]] as const) {
+            const m = run(sig, [...order]);
+            expect(m.parentOf.get('Lp'), sig).toBe('pool');
+            expect(m.parentOf.get('S1'), sig).toBe('Lp');
+            expect(m.parentOf.get('t1'), sig).toBe('S1');
+            expect(m.multiClaimed!.get('t1'), sig).toEqual(order.indexOf('Lp') < order.indexOf('S1') ? ['Lp', 'S1'] : ['S1', 'Lp']);
+        }
+    });
+    it('a container listing itself or a node twice claims it once, and does not lose its rank', () => {
+        // The pool claims no lane here, so L1 and L2 are both roots (depth 0). L1 lists itself and t1 twice; L2 lists
+        // t1. A self-claim must not make L1 a claimed container (it would drop to depth -1 and lose t1 to L2).
+        const patch = {
+            s_ls_lanes: { id: 's_ls_lanes', instanceof: 'R_lanes', values: [] },
+            s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['L1', 't1', 't1', 'g1'] },
+            s_L2_refs: { id: 's_L2_refs', instanceof: 'R_flowNodeRefs', values: ['t1'] },
+        };
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), containment: { children: '$flowNodeRefs.values' } } } as Record<string, AnyViewIR>;
+        const { model } = bpmnWorld('sig_gv_self_dup', { patch, extraViews });
+        expect(model.parentOf.get('t1')).toBe('L1');
+        expect(model.parentOf.has('L1')).toBe(false);
+        expect(model.childrenOf.get('L1')).toEqual(['t1', 'g1']);
+        expect([...model.multiClaimed!.entries()]).toEqual([['t1', ['L1', 'L2']]]);
+    });
+    it('lists unclaimed flow nodes: in the process, with a node, passing the lane filter, in no lane', () => {
+        const { model } = bpmnWorld('sig_gv_bpmn_3');
+        // t3 is in no lane; sf1 fails isKind FlowNode; nested has no vertex; t1, t2, g1 are claimed.
+        expect([...model.unclaimed!]).toEqual(['t3']);
+    });
+    it('exposes the slots every declared channel reads, hops included', () => {
+        const { model } = bpmnWorld('sig_gv_bpmn_4');
+        expect([...model.channelSlots!].sort()).toEqual(['s_L1_refs', 's_L2_refs', 's_ls_lanes', 's_pool_proc', 's_proc_ls'].sort());
+    });
+    it('a default composition channel contributes no unclaimed even where its child is listed by another owner', () => {
+        // Malformed on purpose: s_a sits in r1's composition slot and in the slot of `owner`, a plain object walked
+        // first, whose slot also lists s_x. A declared channel would report s_x; the default channel of r1 must not.
+        const base = containmentWorld().idlookup;
+        const idlookup: Record<string, any> = {
+            ...base,
+            C_Owner: { id: 'C_Owner', name: 'Owner', extends: [] },
+            owner: { id: 'owner', name: 'owner', instanceof: 'C_Owner', features: ['vo'] },
+            vo: { id: 'vo', instanceof: 'R_states', values: ['s_a', 's_x'] },
+            s_x: { id: 's_x', name: 'X', instanceof: 'C_State', features: [] },
+            Vo: { id: 'Vo', model: 'owner' }, Vsx: { id: 'Vsx', model: 's_x' },
+        };
+        const nodes = ['Vo', 'Vr1', 'Vr2', 'Va', 'Vb', 'Vc', 'Vsx'].map(id => ({ id, type: 'objectNode', position: { x: 0, y: 0 }, data: {} }));
+        const state = { viewpoint: 'VP', viewelements: ['V_region'], idlookup };
+        const m = buildContainmentModel(nodes as any, idlookup, getIRIndex(state, 'sig_gv_default_unclaimed')!, makeDrawReadCtx(idlookup));
+        expect(m.containerOf!.get('s_a')).toBe('owner');
+        expect(m.unclaimed!.size).toBe(0);
+    });
+    it('a default composition channel contributes no unclaimed and no slots', () => {
+        const { model } = containmentWorld();
+        expect(model.unclaimed!.size).toBe(0);
+        expect(model.channelSlots!.size).toBe(0);
+        expect(model.multiClaimed!.size).toBe(0);
+    });
+    it('breaks a claim cycle: one link is left out, and computeHidden and liftEndpoint terminate', () => {
+        // L1 lists L2, L2 lists L1 (a malformed reference channel): no root reaches them; the second link is refused.
+        const patch = {
+            s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['L2', 't1'] },
+            s_L2_refs: { id: 's_L2_refs', instanceof: 'R_flowNodeRefs', values: ['L1'] },
+            s_ls_lanes: { id: 's_ls_lanes', instanceof: 'R_lanes', values: [] },
+        };
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), containment: { children: '$flowNodeRefs.values' } } } as Record<string, AnyViewIR>;
+        const { model } = bpmnWorld('sig_gv_cycle', { patch, extraViews });
+        const links = ['L1', 'L2'].filter(l => model.parentOf.has(l));
+        expect(links).toEqual(['L2']);
+        expect(model.parentOf.get('L2')).toBe('L1');
+        expect(model.parentOf.get('t1')).toBe('L1');
+        const hidden = computeHidden(model, new Set(['L1']));
+        expect([...hidden].sort()).toEqual(['L2', 't1']);
+        expect(liftEndpoint('t1', model, hidden)).toBe('L1');
+    });
+    it('a claimant on a cycle (depth -1) loses to a root claimant even when it comes first on canvas', () => {
+        // Lc1 and Lc2 claim each other (no root reaches them) and Lc1 also lists t1; the root lane Lr lists t1 too.
+        const patch = {
+            s_ls_lanes: { id: 's_ls_lanes', instanceof: 'R_lanes', values: [] },
+            L1: { id: 'L1', name: 'L1', instanceof: 'C_Lane', features: ['s_L1_refs'] },
+            s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['L2', 't1'] },
+            s_L2_refs: { id: 's_L2_refs', instanceof: 'R_flowNodeRefs', values: ['L1'] },
+            Lr: { id: 'Lr', name: 'Lr', instanceof: 'C_Lane', features: ['s_Lr_refs'] },
+            s_Lr_refs: { id: 's_Lr_refs', instanceof: 'R_flowNodeRefs', values: ['t1'] },
+            VLr: { id: 'VLr', model: 'Lr' },
+        };
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), containment: { children: '$flowNodeRefs.values' } } } as Record<string, AnyViewIR>;
+        const { model } = bpmnWorld('sig_gv_cycle_rank', { patch, extraViews, nodeOrder: ['L1', 'L2', 'Lr', 't1', 'pool'] });
+        expect(model.parentOf.get('t1')).toBe('Lr');
+        expect(model.multiClaimed!.get('t1')).toEqual(['L1', 'Lr']);
+    });
+});
+
+describe('resolveChildrenChannel (R-GV-1)', () => {
+    const steps = (expr: string) => {
+        clearCompileCache();
+        return compileView('ch_' + expr, { irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['X'], shape: { form: 'rect' }, containment: { children: expr } }).containment!.channel!.steps;
+    };
+    it('reads the whole terminal list, the first value, or values[N]', () => {
+        const { idlookup } = bpmnWorld('sig_gv_ch_1');
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.values')).childIds).toEqual(['t2', 't1']);
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.value')).childIds).toEqual(['t2']);
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.values[1]')).childIds).toEqual(['t1']);
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.values[0]')).childIds).toEqual(['t2']);
+        expect(resolveChildrenChannel(idlookup, 'L2', steps('$flowNodeRefs.values[5]')).childIds).toEqual([]);
+    });
+    it('navigates a hop by its index, and dead-ends on a whole-list hop', () => {
+        const patch = {
+            s_proc_ls: { id: 's_proc_ls', instanceof: 'R_laneSets', values: ['ls', 'ls2'] },
+            ls2: { id: 'ls2', name: 'ls2', instanceof: 'C_LaneSet', features: ['s_ls2_lanes'] },
+            s_ls2_lanes: { id: 's_ls2_lanes', instanceof: 'R_lanes', values: ['L2'] },
+        };
+        const { idlookup } = bpmnWorld('sig_gv_ch_2', { patch });
+        expect(resolveChildrenChannel(idlookup, 'pool', steps('$processRef.value.$laneSets.values[1].$lanes.values'))).toEqual({
+            childIds: ['L2'], slotIds: ['s_pool_proc', 's_proc_ls', 's_ls2_lanes'],
+        });
+        expect(resolveChildrenChannel(idlookup, 'pool', steps('$processRef.value.$laneSets.value.$lanes.values')).childIds).toEqual(['L1', 'L2']);
+        // A whole-list hop cannot navigate: no children, and the slots read up to the dead end are still reported.
+        expect(resolveChildrenChannel(idlookup, 'pool', steps('$processRef.value.$laneSets.values.$lanes.values'))).toEqual({
+            childIds: [], slotIds: ['s_pool_proc', 's_proc_ls'],
+        });
+    });
+    it('drops values that are not elements, and reads a proxy-shaped value by its id', () => {
+        const patch = { s_L1_refs: { id: 's_L1_refs', instanceof: 'R_flowNodeRefs', values: ['t1', 'ghost', null, 7, { id: 'g1' }] } };
+        const { idlookup } = bpmnWorld('sig_gv_ch_3', { patch });
+        expect(resolveChildrenChannel(idlookup, 'L1', steps('$flowNodeRefs.values')).childIds).toEqual(['t1', 'g1']);
+    });
+    it('stops at a dead end instead of reading on from the object it stopped on', () => {
+        const { idlookup } = bpmnWorld('sig_gv_ch_5');
+        // proc's laneSets cannot be navigated as a whole list; proc also has flowElements, which must not be read.
+        expect(resolveChildrenChannel(idlookup, 'proc', steps('$laneSets.values.$flowElements.values'))).toEqual({
+            childIds: [], slotIds: ['s_proc_ls'],
+        });
+    });
+    it('reads nothing from a missing slot', () => {
+        const { idlookup } = bpmnWorld('sig_gv_ch_4');
+        expect(resolveChildrenChannel(idlookup, 't1', steps('$flowNodeRefs.values'))).toEqual({ childIds: [], slotIds: [] });
+        expect(resolveChildrenChannel(idlookup, 'pool', steps('$nope.value.$lanes.values'))).toEqual({ childIds: [], slotIds: [] });
+    });
+});
+
+describe('resolveVisualParents (R-GV-2), pure', () => {
+    it('sets no parent for an unclaimed container and keeps a parent map that is a forest', () => {
+        const { parentOf, multiClaimed } = resolveVisualParents([
+            { containerId: 'A', children: ['B', 'x'], order: 0 },
+            { containerId: 'B', children: ['x', 'y'], order: 1 },
+            { containerId: 'C', children: ['y'], order: 2 },
+        ]);
+        expect([...parentOf.entries()]).toEqual([['B', 'A'], ['x', 'B'], ['y', 'B']]);
+        expect([...multiClaimed.entries()]).toEqual([['x', ['A', 'B']], ['y', ['B', 'C']]]);
+    });
+    it('refuses a self-closing link', () => {
+        const { parentOf } = resolveVisualParents([{ containerId: 'A', children: ['A'], order: 0 }]);
+        expect(parentOf.size).toBe(0);
+    });
+});
+
+describe('the §G2 BPMN views compile and validate clean (R-GV, spec addendum §10)', () => {
+    it('every view validates with no error and no warning', () => {
+        for (const [vid, ir] of Object.entries(BPMN_VIEWS)) {
+            clearCompileCache();
+            expect(validateIR(vid, ir), vid).toEqual({ ok: true });
+        }
+    });
+    it('the pool and lane views resolve by predicate and priority (D-b, R-GV-12)', () => {
+        const { index, ctx, idlookup } = bpmnWorld('sig_gv_bpmn_5');
+        expect(resolveIRView('pool', 'C_Participant', index, ctx, idlookup)!.viewId).toBe('V_pool_lanes');
+        expect(resolveIRView('L1', 'C_Lane', index, ctx, idlookup)!.viewId).toBe('V_lane');
+        const noLanes = bpmnWorld('sig_gv_bpmn_6', { patch: { s_proc_ls: { id: 's_proc_ls', instanceof: 'R_laneSets', values: [] } } });
+        expect(resolveIRView('pool', 'C_Participant', noLanes.index, noLanes.ctx, noLanes.idlookup)!.viewId).toBe('V_pool_free');
+        // `nested` has no vertex and is claimed all the same, as a composition channel lists vertex-less children
+        // today: the hull draws only children with a node (IRContainmentHulls maps through vertexByObj).
+        expect(noLanes.model.childrenOf.get('pool')).toEqual(['t1', 't2', 't3', 'g1', 'nested']);
+    });
+});
+
+describe('D-c: a row of a graphVertex leaves its containment channel (R-GV-3, S2)', () => {
+    it('the row wins: hidden as a node, and out of the container it would have been drawn in', () => {
+        const base: Record<string, any> = containmentWorld().idlookup;
+        // s_a is a Special State: the row compartment takes it, the channel keeps the plain ones.
+        const idlookup: Record<string, any> = {
+            ...base,
+            C_Special: { id: 'C_Special', name: 'Special', extends: ['C_State'] },
+            s_a: { ...base.s_a, instanceof: 'C_Special' },
+        };
+        const regionView: GraphVertexViewIR = {
+            irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Region'], shape: { form: 'rect' },
+            fieldCompartments: [{ id: 'rows', source: { from: 'children', filter: { op: 'isKind', class: 'Special' } }, rowFormat: { segments: [] } }],
+            containment: { collapsible: true },
+        };
+        idlookup.V_region = { id: 'V_region', viewpoint: 'VP', ir: regionView };
+        const state = { viewpoint: 'VP', viewelements: ['V_region'], idlookup };
+        const ctx = makeDrawReadCtx(idlookup);
+        const index = getIRIndex(state, 'sig_gv_dc_rows')!;
+        const nodes: any[] = ['Vr1', 'Vr2', 'Va', 'Vb', 'Vc', 'Vx'].map(id => ({ id, type: 'objectNode', position: { x: 0, y: 0 }, data: {} }));
+        const model = buildContainmentModel(nodes, idlookup, index, ctx);
+        expect(model.childrenOf.get('r1')).toEqual(['s_b']);
+        expect(model.parentOf.has('s_a')).toBe(false);
+        expect(model.childrenOf.get('r2')).toEqual(['s_c']);
+        expect([...computeRowHiddenChildren(nodes, idlookup, index, ctx)]).toEqual(['s_a']);
+    });
+});
+
+describe('graphVertex visible: false is honoured by the containment pass (R-GV-9, S2)', () => {
+    it('hides the lanes whose view says so, and nothing else', () => {
+        const extraViews = { V_lane: { ...(BPMN_VIEWS.V_lane as GraphVertexViewIR), visible: false } } as Record<string, AnyViewIR>;
+        const { model, nodes, index, ctx, idlookup } = bpmnWorld('sig_gv_visible', { extraViews });
+        const hidden = computeViewHidden(nodes, model.objByVertex, index, ctx, idlookup);
+        expect([...hidden].sort()).toEqual(['L1', 'L2', 'ls', 'proc']);
     });
 });

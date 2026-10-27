@@ -168,11 +168,11 @@ describe('10d — nessun valore nuovo nel foglio', () => {
 
     it('il ruolo dell\'ombra e\' dichiarato in tokens/, non nel componente', () => {
         // Regola 28: le variabili CSS vivono in styles/tokens/, mai nel foglio
-        // del componente. Positivo di controllo: il ruolo esiste in entrambi i
-        // temi del file dei token, e il foglio lo LEGGE senza dichiararlo.
+        // del componente. Positivo di controllo: il ruolo esiste nel file dei
+        // token (un tema solo, D-UI-15), e il foglio lo LEGGE senza dichiararlo.
         const SHADOWS = readFileSync(
             resolve(__dirname, '../../../../styles/tokens/_shadows.scss'), 'utf8');
-        expect(SHADOWS.match(/--shadow-desk-card:/g)?.length).toBe(2);
+        expect(SHADOWS.match(/--shadow-desk-card:/g)?.length).toBe(1);
         expect(RULES).not.toMatch(/^\s*--shadow-desk-card:/m);
     });
 

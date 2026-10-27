@@ -23,6 +23,7 @@ import type { DState } from '../joiner';
 import { LPointerTargetable } from '../joiner';
 import StatusBarRightZone from './StatusBarRightZone';
 import { JjodelEvents } from '../events/registry';
+import { isConsumerMode } from './environment/consumerMode';
 import './StatusBar.scss';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -308,8 +309,14 @@ const StatusBar: React.FC = () => {
     // When JjTL editor is active, its own status bar takes over
     if (jjtlActive) return null;
 
+    // #157 — in the stand-alone (consumer) the left zone stays empty, as a fresh load of the
+    // link shows it: an editor tab the developer left open under the hidden Dock would
+    // otherwise keep its metamodel name and counts here. Read live, like the rest of the
+    // shell: ProjectDashboard re-renders this bar on hashchange.
+    const consumer = isConsumerMode();
+
     // Show editor info when in editor context and we have model data
-    const showEditor = context === 'editor' && activeModel;
+    const showEditor = !consumer && context === 'editor' && activeModel;
 
     return (
         <div className="app-statusbar" role="status">
@@ -373,7 +380,7 @@ const StatusBar: React.FC = () => {
                             </>
                         )}
                     </div>
-                ) : stats ? (
+                ) : stats && !consumer ? (
                     <>
                         <span className="app-statusbar__stat">
                             <strong>{stats.metamodels}</strong> metamodel{stats.metamodels !== 1 ? 's' : ''}

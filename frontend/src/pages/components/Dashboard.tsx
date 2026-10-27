@@ -45,6 +45,9 @@ import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
 import { JjodelEvents } from '../../events/registry';
+import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
+import { isConsumerMode } from '../../components/environment/consumerMode';
+import { JodieDockSlot } from '../../components/Jodie/JodieWindow';
 
 
 type UserProps = {
@@ -565,6 +568,17 @@ function ProjectDashboard(props: DashProps): any {
     const [hideLeftBar, setHideLeftBar] = useState(false);
     const tabTypeMapRef = useRef<Map<string, string>>(new Map());
 
+    // #157 R5 — consumer (a `?profile=` in the URL): the Configurator is the page. Read live from
+    // the hash and re-read on hashchange, like LeftBar and Navbar (F3-A), so removing the
+    // profile brings the developer project back without a reload.
+    const [, forceHashTick] = useState(0);
+    useEffect(() => {
+        const onHash = () => forceHashTick((t) => t + 1);
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+    }, []);
+    const consumer = isConsumerMode();
+
     // Hide project sidebar when metamodel, model, OR transformation editor tab
     // is active. Project structure (Metamodels/Models/Transforms/Viewpoints/Docs)
     // is redundant inside these editors: the top menus (File / Edit / Jjodel)
@@ -583,7 +597,7 @@ function ProjectDashboard(props: DashProps): any {
             const { editorType } = (e as CustomEvent).detail;
             try {
                 const layout = DockManager.dock?.getLayout();
-                const activeId = layout?.dockbox?.children?.[0]?.activeId;
+                const activeId = (layout?.dockbox?.children?.[0] as { activeId?: string } | undefined)?.activeId;
                 if (activeId) tabTypeMapRef.current.set(activeId, editorType);
             } catch { /* dock not ready */ }
             setHideLeftBar(isEditorTab(editorType));
@@ -633,15 +647,28 @@ function ProjectDashboard(props: DashProps): any {
             </>
         </Try>
         <Try><Navbar /></Try>
-        <div className={`dashboard-container two-column${hideLeftBar ? ' hide-leftbar' : ''}`}>
-            {!hideLeftBar && <LeftBar active={'Project'} project={project} />}
-            <div className="project-dock-wrapper">
+        {/* #157 — in consumer the LeftBar is always there (the Types column), so the grid keeps
+            its two columns even when a developer editor tab, opened before `&profile=`, set
+            hideLeftBar: one column would drop the Configurator page below the viewport. */}
+        <div className={`dashboard-container two-column${hideLeftBar && !consumer ? ' hide-leftbar' : ''}`}>
+            {(consumer || !hideLeftBar) && <LeftBar active={'Project'} project={project} />}
+            <div className={`project-dock-wrapper${consumer ? ' project-dock-wrapper--consumer' : ''}`}>
                 <Try><Dock /></Try>
                 {/* F2 floating panels (2026-07-29): Properties + Tree render as a floating
                     overlay over the full-width canvas (portaled to <body>). Sibling of
-                    <Dock/>, inside Redux + TreeViewPanelProvider — no context barrier. */}
-                <Try><PropertiesWithTreeView mode={'floating'} /></Try>
+                    <Dock/>, inside Redux + TreeViewPanelProvider — no context barrier.
+                    #157 — not mounted in consumer: the portal escapes the wrapper's
+                    `visibility`, and a tab left open by the developer would keep the
+                    metamodel's tree and Properties on screen. Its state lives in the
+                    provider, so it comes back as it was when `&profile=` is removed. */}
+                {!consumer && <Try><PropertiesWithTreeView mode={'floating'} /></Try>}
+                {/* #157 R5 — the consumer lands on the Configurator: it covers the Dock, which
+                    stays mounted underneath (`.project-dock-wrapper--consumer`). Nothing to close. */}
+                {consumer && <ConfiguratorTab variant="page" open onClose={() => {}} />}
             </div>
+            {/* R-JJD-1 — Jjodie docks here as the last grid column: the globally mounted
+                JodieWindow portals into this slot, so the editor shrinks beside it. */}
+            <JodieDockSlot />
             {/* TODO: Add contextual RightPanel for project view with:
                 - Overview: Rev, creation date, owner
                 - Quick Actions: "View Megamodel", "New Metamodel"

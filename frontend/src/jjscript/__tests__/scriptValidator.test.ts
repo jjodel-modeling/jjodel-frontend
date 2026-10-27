@@ -333,6 +333,36 @@ describe('validateScriptIntegrity — forward references', () => {
     });
 });
 
+// ============================================================================
+// THE CALL RUN MAKES (R-JS-4)
+// ============================================================================
+
+/**
+ * Since R-JS-4 Run calls `validateScriptIntegrity(code)` with no name set (`ScriptBlock.tsx`,
+ * `handleExecute`): a forward reference completes on pass 2 of R-JS-3 instead of being
+ * refused, while a malformed script is still refused before command 1. The function is
+ * unchanged, so these pin the contract Run now relies on; the call site itself is in a file
+ * that does not import under the bench (declared in the log entry).
+ */
+describe('validateScriptIntegrity — the call Run makes (R-JS-4)', () => {
+    it('does not refuse the Pipeline script, whose forward reference pass 2 resolves', () => {
+        expect(validateScriptIntegrity(PIPELINE_SCRIPT)).toEqual({ valid: true });
+    });
+
+    it('does not refuse a forward superclass either', () => {
+        const script = ['create class ALU extends FunctionalUnit', 'create class FunctionalUnit'].join('\n');
+        expect(validateScriptIntegrity(script).valid).toBe(true);
+    });
+
+    it('still refuses a syntax error before command 1, at its editor line', () => {
+        const script = ['// header', 'create class PipelineStage', 'set Person.name ='].join('\n');
+        const res = validateScriptIntegrity(script);
+        expect(res.valid).toBe(false);
+        expect(res.issue?.line).toBe(3);
+        expect(res.issue?.kind).toBe('malformed');
+    });
+});
+
 describe('collectClassifierNames', () => {
     it('reads every metamodel of the project, not only the first', () => {
         const names = collectClassifierNames([

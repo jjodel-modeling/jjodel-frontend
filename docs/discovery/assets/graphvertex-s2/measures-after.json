@@ -1,0 +1,815 @@
+{
+  "url": "http://localhost:3071",
+  "tag": "after",
+  "at": "2026-10-10T08:01:51.877Z",
+  "bpmn": {
+    "tag": "after",
+    "ids": {
+      "collab": {
+        "obj": "Pointer1791619422932_USER_104",
+        "vertex": "Pointer1791619422935_USER_109"
+      },
+      "shopProc": {
+        "obj": "Pointer1791619423191_USER_110",
+        "vertex": "Pointer1791619423191_USER_115"
+      },
+      "custProc": {
+        "obj": "Pointer1791619423446_USER_116",
+        "vertex": "Pointer1791619423446_USER_121"
+      },
+      "laneSet": {
+        "obj": "Pointer1791619423723_USER_122",
+        "vertex": "Pointer1791619423723_USER_126"
+      },
+      "shop": {
+        "obj": "Pointer1791619424022_USER_127",
+        "vertex": "Pointer1791619424023_USER_131"
+      },
+      "customer": {
+        "obj": "Pointer1791619424319_USER_132",
+        "vertex": "Pointer1791619424319_USER_136"
+      },
+      "supplier": {
+        "obj": "Pointer1791619424635_USER_137",
+        "vertex": "Pointer1791619424635_USER_141"
+      },
+      "sales": {
+        "obj": "Pointer1791619424946_USER_142",
+        "vertex": "Pointer1791619424947_USER_147"
+      },
+      "warehouse": {
+        "obj": "Pointer1791619425218_USER_148",
+        "vertex": "Pointer1791619425218_USER_153"
+      },
+      "start": {
+        "obj": "Pointer1791619425520_USER_154",
+        "vertex": "Pointer1791619425521_USER_157"
+      },
+      "check": {
+        "obj": "Pointer1791619425842_USER_158",
+        "vertex": "Pointer1791619425843_USER_161"
+      },
+      "gw": {
+        "obj": "Pointer1791619426122_USER_162",
+        "vertex": "Pointer1791619426123_USER_166"
+      },
+      "ship": {
+        "obj": "Pointer1791619426444_USER_167",
+        "vertex": "Pointer1791619426445_USER_170"
+      },
+      "end": {
+        "obj": "Pointer1791619426733_USER_171",
+        "vertex": "Pointer1791619426733_USER_174"
+      },
+      "place": {
+        "obj": "Pointer1791619427052_USER_175",
+        "vertex": "Pointer1791619427052_USER_178"
+      },
+      "receive": {
+        "obj": "Pointer1791619427335_USER_179",
+        "vertex": "Pointer1791619427336_USER_182"
+      },
+      "sf1": {
+        "obj": "Pointer1791619427666_USER_183",
+        "vertex": "Pointer1791619427666_USER_188"
+      },
+      "sf2": {
+        "obj": "Pointer1791619427955_USER_189",
+        "vertex": "Pointer1791619427956_USER_194"
+      },
+      "sf3": {
+        "obj": "Pointer1791619428254_USER_195",
+        "vertex": "Pointer1791619428254_USER_200"
+      },
+      "sf4": {
+        "obj": "Pointer1791619428561_USER_201",
+        "vertex": "Pointer1791619428562_USER_206"
+      },
+      "mf1": {
+        "obj": "Pointer1791619428864_USER_207",
+        "vertex": "Pointer1791619428865_USER_212"
+      },
+      "pack": {
+        "obj": "Pointer1791619469841_USER_353",
+        "vertex": "Pointer1791619469841_USER_356"
+      }
+    },
+    "nodes": [
+      {
+        "id": "Pointer1791619424023_USER_131",
+        "name": "Shop",
+        "x": 100,
+        "y": 100,
+        "w": 900,
+        "h": 360,
+        "z": "-2000",
+        "cls": "ir-node-content ir-shape--rect ir-layout",
+        "band": "ir-header-band ir-header-band--w|30x356",
+        "bandLabel": "Shop|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+      },
+      {
+        "id": "Pointer1791619424319_USER_136",
+        "name": "Customer",
+        "x": 100,
+        "y": 520,
+        "w": 900,
+        "h": 200,
+        "z": "-2000",
+        "cls": "ir-node-content ir-shape--rect ir-layout",
+        "band": "ir-header-band ir-header-band--w|30x196",
+        "bandLabel": "Customer|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+      },
+      {
+        "id": "Pointer1791619424635_USER_141",
+        "name": "Supplier",
+        "x": 100,
+        "y": 780,
+        "w": 900,
+        "h": 40,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rect",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791619424947_USER_147",
+        "name": "Sales",
+        "x": 130,
+        "y": 100,
+        "w": 870,
+        "h": 180,
+        "z": "-1999",
+        "cls": "ir-node-content ir-shape--rect ir-layout",
+        "band": "ir-header-band ir-header-band--w|30x176",
+        "bandLabel": "Sales|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+      },
+      {
+        "id": "Pointer1791619425218_USER_153",
+        "name": "Warehouse",
+        "x": 130,
+        "y": 280,
+        "w": 870,
+        "h": 180,
+        "z": "-1999",
+        "cls": "ir-node-content ir-shape--rect ir-layout",
+        "band": "ir-header-band ir-header-band--w|30x176",
+        "bandLabel": "Warehouse|vertical-rl|matrix(-1, 0, 0, -1, 0, 0)"
+      },
+      {
+        "id": "Pointer1791619425521_USER_157",
+        "name": "Order received",
+        "x": 190,
+        "y": 172,
+        "w": 36,
+        "h": 36,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--circle",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791619425843_USER_161",
+        "name": "Check order",
+        "x": 300,
+        "y": 160,
+        "w": 140,
+        "h": 60,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rounded",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791619426123_USER_166",
+        "name": "In stock?",
+        "x": 530,
+        "y": 165,
+        "w": 50,
+        "h": 50,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--diamond",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791619426445_USER_170",
+        "name": "Ship",
+        "x": 500,
+        "y": 340,
+        "w": 140,
+        "h": 60,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rounded",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791619426733_USER_174",
+        "name": "Shipped",
+        "x": 720,
+        "y": 352,
+        "w": 36,
+        "h": 36,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--circle",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791619427052_USER_178",
+        "name": "Place order",
+        "x": 250,
+        "y": 590,
+        "w": 140,
+        "h": 60,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rounded",
+        "band": null,
+        "bandLabel": null
+      },
+      {
+        "id": "Pointer1791619427336_USER_182",
+        "name": "Receive goods",
+        "x": 600,
+        "y": 590,
+        "w": 140,
+        "h": 60,
+        "z": "0",
+        "cls": "ir-node-content ir-shape--rounded",
+        "band": null,
+        "bandLabel": null
+      }
+    ],
+    "edges": [
+      {
+        "id": "irobj_Pointer1791619427666_USER_183",
+        "source": "Pointer1791619425521_USER_157",
+        "target": "Pointer1791619425843_USER_161"
+      },
+      {
+        "id": "irobj_Pointer1791619427955_USER_189",
+        "source": "Pointer1791619425843_USER_161",
+        "target": "Pointer1791619426123_USER_166"
+      },
+      {
+        "id": "irobj_Pointer1791619428254_USER_195",
+        "source": "Pointer1791619426123_USER_166",
+        "target": "Pointer1791619426445_USER_170"
+      },
+      {
+        "id": "irobj_Pointer1791619428561_USER_201",
+        "source": "Pointer1791619426445_USER_170",
+        "target": "Pointer1791619426733_USER_174"
+      },
+      {
+        "id": "irobj_Pointer1791619428864_USER_207",
+        "source": "Pointer1791619427052_USER_178",
+        "target": "Pointer1791619425843_USER_161"
+      }
+    ],
+    "stored": {
+      "collab": {
+        "x": 1300,
+        "y": 100,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "shopProc": {
+        "x": 1300,
+        "y": 220,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "custProc": {
+        "x": 1300,
+        "y": 340,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "laneSet": {
+        "x": 1300,
+        "y": 460,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "shop": {
+        "x": 100,
+        "y": 100,
+        "w": 900,
+        "h": 360,
+        "isResized": true,
+        "lvp": null
+      },
+      "customer": {
+        "x": 100,
+        "y": 520,
+        "w": 900,
+        "h": 200,
+        "isResized": true,
+        "lvp": null
+      },
+      "supplier": {
+        "x": 100,
+        "y": 780,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "sales": {
+        "x": 1100,
+        "y": 520,
+        "w": 200,
+        "h": 180,
+        "isResized": true,
+        "lvp": null
+      },
+      "warehouse": {
+        "x": 1100,
+        "y": 760,
+        "w": 200,
+        "h": 180,
+        "isResized": true,
+        "lvp": null
+      },
+      "start": {
+        "x": 190,
+        "y": 172,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "check": {
+        "x": 300,
+        "y": 160,
+        "w": 140,
+        "h": 60,
+        "isResized": true,
+        "lvp": null
+      },
+      "gw": {
+        "x": 530,
+        "y": 165,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "ship": {
+        "x": 500,
+        "y": 340,
+        "w": 140,
+        "h": 60,
+        "isResized": true,
+        "lvp": null
+      },
+      "end": {
+        "x": 720,
+        "y": 352,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "place": {
+        "x": 250,
+        "y": 590,
+        "w": 140,
+        "h": 60,
+        "isResized": true,
+        "lvp": null
+      },
+      "receive": {
+        "x": 600,
+        "y": 590,
+        "w": 140,
+        "h": 60,
+        "isResized": true,
+        "lvp": null
+      },
+      "sf1": {
+        "x": 1300,
+        "y": 580,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "sf2": {
+        "x": 1300,
+        "y": 640,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "sf3": {
+        "x": 1300,
+        "y": 700,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "sf4": {
+        "x": 1300,
+        "y": 760,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      },
+      "mf1": {
+        "x": 1300,
+        "y": 820,
+        "w": 200,
+        "h": 80,
+        "isResized": false,
+        "lvp": null
+      }
+    },
+    "problems": [
+      {
+        "v": "Pointer1791619426123_USER_166",
+        "p": [
+          "conformance:Conformance:0"
+        ]
+      }
+    ],
+    "errors": [],
+    "problemsPhase": {
+      "problems": {
+        "collab": [],
+        "shopProc": [],
+        "custProc": [],
+        "laneSet": [],
+        "shop": [],
+        "customer": [],
+        "supplier": [],
+        "sales": [],
+        "warehouse": [],
+        "start": [],
+        "check": [],
+        "gw": [
+          {
+            "kind": "conformance",
+            "title": "Conformance",
+            "related": [],
+            "detail": [
+              "invalid_name_format: Object \"In stock?\" can only contain letters, digits, spaces, apostrophes, or the $ _ symbols"
+            ]
+          }
+        ],
+        "ship": [
+          {
+            "kind": "containment",
+            "title": "Claimed by 2 containers",
+            "related": [
+              "Pointer1791619424947_USER_147",
+              "Pointer1791619425218_USER_153"
+            ],
+            "detail": []
+          }
+        ],
+        "end": [],
+        "place": [],
+        "receive": [],
+        "sf1": [],
+        "sf2": [],
+        "sf3": [],
+        "sf4": [],
+        "mf1": [],
+        "pack": [
+          {
+            "kind": "containment",
+            "title": "In no container",
+            "related": [],
+            "detail": []
+          }
+        ]
+      },
+      "edges": [
+        {
+          "id": "irobj_Pointer1791619427666_USER_183",
+          "source": "Pointer1791619425521_USER_157",
+          "target": "Pointer1791619425843_USER_161"
+        },
+        {
+          "id": "irobj_Pointer1791619427955_USER_189",
+          "source": "Pointer1791619425843_USER_161",
+          "target": "Pointer1791619426123_USER_166"
+        },
+        {
+          "id": "irobj_Pointer1791619428254_USER_195",
+          "source": "Pointer1791619426123_USER_166",
+          "target": "Pointer1791619426445_USER_170"
+        },
+        {
+          "id": "irobj_Pointer1791619428561_USER_201",
+          "source": "Pointer1791619426445_USER_170",
+          "target": "Pointer1791619426733_USER_174"
+        },
+        {
+          "id": "irobj_Pointer1791619428864_USER_207",
+          "source": "Pointer1791619427052_USER_178",
+          "target": "Pointer1791619425843_USER_161"
+        }
+      ]
+    }
+  },
+  "hull": {
+    "tag": "after",
+    "ids": {
+      "r1": {
+        "obj": "Pointer1791619529293_USER_29",
+        "vertex": "Pointer1791619529295_USER_33"
+      },
+      "r2": {
+        "obj": "Pointer1791619529576_USER_34",
+        "vertex": "Pointer1791619529576_USER_38"
+      },
+      "a": {
+        "obj": "Pointer1791619529882_USER_39",
+        "vertex": "Pointer1791619529883_USER_42"
+      },
+      "b": {
+        "obj": "Pointer1791619530183_USER_43",
+        "vertex": "Pointer1791619530184_USER_46"
+      },
+      "c": {
+        "obj": "Pointer1791619530485_USER_47",
+        "vertex": "Pointer1791619530485_USER_50"
+      },
+      "d": {
+        "obj": "Pointer1791619530783_USER_51",
+        "vertex": "Pointer1791619530784_USER_54"
+      },
+      "x": {
+        "obj": "Pointer1791619531080_USER_55",
+        "vertex": "Pointer1791619531081_USER_58"
+      }
+    },
+    "errors": [],
+    "Hulls": {
+      "nodes": [
+        {
+          "id": "Pointer1791619529295_USER_33",
+          "name": "region1",
+          "x": 100,
+          "y": 100,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rect",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619529576_USER_38",
+          "name": "region2",
+          "x": 700,
+          "y": 100,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rect",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619529883_USER_42",
+          "name": "A",
+          "x": 120,
+          "y": 260,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619530184_USER_46",
+          "name": "B",
+          "x": 380,
+          "y": 260,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619530485_USER_50",
+          "name": "C",
+          "x": 120,
+          "y": 420,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619530784_USER_54",
+          "name": "D",
+          "x": 720,
+          "y": 300,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619531081_USER_58",
+          "name": "EXT",
+          "x": 400,
+          "y": 600,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        }
+      ],
+      "hulls": [
+        {
+          "transform": "translate(76px, 54px)",
+          "w": 528,
+          "h": 432,
+          "name": "region1"
+        },
+        {
+          "transform": "translate(676px, 54px)",
+          "w": 268,
+          "h": 312,
+          "name": "region2"
+        }
+      ],
+      "edges": [
+        {
+          "id": "Pointer1791619531389_USER_59",
+          "source": "Pointer1791619529295_USER_33",
+          "target": "Pointer1791619529883_USER_42"
+        },
+        {
+          "id": "Pointer1791619531692_USER_60",
+          "source": "Pointer1791619529295_USER_33",
+          "target": "Pointer1791619530184_USER_46"
+        },
+        {
+          "id": "Pointer1791619531997_USER_61",
+          "source": "Pointer1791619529295_USER_33",
+          "target": "Pointer1791619530485_USER_50"
+        },
+        {
+          "id": "Pointer1791619532314_USER_62",
+          "source": "Pointer1791619529576_USER_38",
+          "target": "Pointer1791619530784_USER_54"
+        }
+      ]
+    },
+    "Collapsed": {
+      "nodes": [
+        {
+          "id": "Pointer1791619529295_USER_33",
+          "name": "region1",
+          "x": 100,
+          "y": 100,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619529576_USER_38",
+          "name": "region2",
+          "x": 700,
+          "y": 100,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619529883_USER_42",
+          "name": "A",
+          "x": 120,
+          "y": 260,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619530184_USER_46",
+          "name": "B",
+          "x": 380,
+          "y": 260,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619530485_USER_50",
+          "name": "C",
+          "x": 120,
+          "y": 420,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619530784_USER_54",
+          "name": "D",
+          "x": 720,
+          "y": 300,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        },
+        {
+          "id": "Pointer1791619531081_USER_58",
+          "name": "EXT",
+          "x": 400,
+          "y": 600,
+          "w": 200,
+          "h": 42,
+          "z": "0",
+          "cls": "ir-node-content ir-shape--rounded",
+          "band": null,
+          "bandLabel": null
+        }
+      ],
+      "hulls": [
+        {
+          "transform": "translate(76px, 54px)",
+          "w": 528,
+          "h": 432,
+          "name": "region1"
+        },
+        {
+          "transform": "translate(676px, 54px)",
+          "w": 268,
+          "h": 312,
+          "name": "region2"
+        }
+      ],
+      "edges": [
+        {
+          "id": "Pointer1791619531389_USER_59",
+          "source": "Pointer1791619529295_USER_33",
+          "target": "Pointer1791619529883_USER_42"
+        },
+        {
+          "id": "Pointer1791619531692_USER_60",
+          "source": "Pointer1791619529295_USER_33",
+          "target": "Pointer1791619530184_USER_46"
+        },
+        {
+          "id": "Pointer1791619531997_USER_61",
+          "source": "Pointer1791619529295_USER_33",
+          "target": "Pointer1791619530485_USER_50"
+        },
+        {
+          "id": "Pointer1791619532314_USER_62",
+          "source": "Pointer1791619529576_USER_38",
+          "target": "Pointer1791619530784_USER_54"
+        }
+      ]
+    }
+  },
+  "checks": {
+    "pass": 12,
+    "fail": 0
+  }
+}

@@ -15,18 +15,30 @@ import {
     ChatState,
     TAIProvider, AIConfig, AI, JodieConfig,
     ConsoleMode, CodeFlavor, CodeEntry, isChatEntry,
-    CONSOLE_MODES, ConsoleModeSwitchVia, JjodieScope
+    CONSOLE_MODES, ConsoleModeSwitchVia, JjodieScope, ConsoleEntry
 } from '../../types/jodie';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
-import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
+import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { JjodieContextService, ActiveArtifact } from '../../services/JjodieContext';
 import { getActiveModel, getActiveMetamodel, getActiveLevel, setActiveArtifactCache } from '../../jjscript/executor/utils';
 import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
+import { findProfile } from '../../joiner/environmentConfig';
+import { activeProfileId, isConsumerMode } from '../environment/consumerMode';
+import {
+    consumerSelectionLine,
+    describeConsumerSelection,
+    filterContextForProfile,
+    getConsumerSelection,
+    resolveConsumerArtifact,
+    withConsumerSelection,
+} from '../environment/consumerJodieContext';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { consoleLanguageRegistry } from './console/languageRegistry';
 import type { ConsoleContext } from './console/types';
+import { consumerHelpText } from './consumerVoice';
+import { gateReply } from './reservedIdentifierGate';
 import './JodieWindow.css';
 
 // Generate unique message ID
@@ -40,6 +52,27 @@ function generateMessageId(): string {
 const jjodieProvider = consoleLanguageRegistry.get('jjodie')!;
 const jjscriptProvider = consoleLanguageRegistry.get('jjscript')!;
 const jjelProvider = consoleLanguageRegistry.get('jjel')!;
+
+/**
+ * A reply whose JjScript declares a reserved identifier gets one repair turn through the model
+ * before it is shown (`reservedIdentifierGate.ts`, P-2026-10-10-0045). The repair turn sees the
+ * conversation, the input and the offending reply; none of them is added to the chat, which
+ * shows the gated reply only.
+ */
+async function gateReservedIdentifiers(entries: ConsoleEntry[], input: string, ctx: ConsoleContext): Promise<ConsoleEntry[]> {
+    return Promise.all(entries.map(async entry => {
+        if (!isChatEntry(entry) || entry.role !== 'assistant' || !entry.content) return entry;
+        const gate = await gateReply(entry.content, async request => {
+            const userTurn: ChatMessage = { id: ctx.makeId(), kind: 'chat', role: 'user', content: input, timestamp: Date.now() };
+            const history = [...(ctx.history ?? []), userTurn, entry];
+            const { entries: repaired } = await jjodieProvider.run(request, { ...ctx, history, images: undefined, documents: undefined });
+            const reply = repaired.find(isChatEntry);
+            if (!reply) throw new Error('the repair turn returned no reply');
+            return reply.content;
+        });
+        return gate.content === entry.content ? entry : { ...entry, content: gate.content };
+    }));
+}
 
 // localStorage key for the code-flavor switcher. The console mode itself is no
 // longer persisted (2b.3): it boots to 'jjodie' and is sticky only in-memory;
@@ -76,6 +109,35 @@ function useLocalStorageString<T extends string>(key: string, defaultValue: T): 
     return [value, set];
 }
 
+/**
+ * #168 J1, J2 — context and scope in the stand-alone consumer (`?profile=`). The artefact is the
+ * Configurator's selection, never the hidden Dock's tab: `getActiveLevel` and its siblings read a
+ * state the consumer cannot see (on a fresh load nothing, after a developer session a metamodel).
+ * The context passes through the profile's filter with the selection inside it; the scope is
+ * stamped as for the developer: M1, the model's metamodel, the model.
+ */
+function consumerContextBundle(project: LProject): { text?: string; scope?: JjodieScope } {
+    const idlookup = (store.getState() as any).idlookup ?? {};
+    const modelIds = (((project as any).models ?? []) as Array<{ id: string } | null>)
+        .map((m) => m?.id)
+        .filter((id): id is string => typeof id === 'string');
+    const selection = getConsumerSelection();
+    const activeArtifact = resolveConsumerArtifact(selection, idlookup, modelIds);
+    const raw = JjodieContextService.getContextJSON(project, activeArtifact);
+    const profile = findProfile(idlookup, activeProfileId());
+    const text = raw
+        ? JSON.stringify(filterContextForProfile(withConsumerSelection(JSON.parse(raw), idlookup, selection), idlookup, profile), null, 2)
+        : undefined;
+    const shown = JjodieContextService.resolveMetamodelScope(project, activeArtifact);
+    const scope: JjodieScope | undefined = text && shown && activeArtifact ? {
+        level: 'M1',
+        metamodelId: shown.id,
+        metamodelName: shown.name ?? 'Unnamed',
+        modelId: activeArtifact.id,
+    } : undefined;
+    return { text, scope };
+}
+
 export function Jodie(): JSX.Element {
     const navigate = useNavigate();
     const settingsModal = useSettingsModalSafe();
@@ -110,15 +172,40 @@ export function Jodie(): JSX.Element {
     // Root ref used by the Cmd+J listener to detect "focus is inside Jjodie".
     const jodieRootRef = useRef<HTMLDivElement>(null);
 
+    // #168 J7 — `isConsumerMode()` reads the hash live, but Jodie re-renders only on its own state:
+    // re-render on a hash change (the header, the input and the welcome read the mode at render),
+    // and in the consumer go back to natural language. Same tick as Navbar.tsx and LeftBar.tsx.
+    const [, forceHashTick] = useState(0);
+    useEffect(() => {
+        const onHash = () => {
+            forceHashTick((t) => t + 1);
+            if (isConsumerMode()) setConsoleMode('jjodie');
+        };
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+    }, []);
+
     // using state just for caching, so user/userName are not re-computed.
     const user = useMemo(()=> (L.fromPointer(DUser.current) as LUser), []);
     const userName = useMemo(() => `${user.name || ''} ${user.surname || ''}`.trim(), []);
-    const activeVersion = useMemo(() => AI.getActiveVersion(activeProvider), [activeProvider]);
+    // Re-read the active model's capabilities when a live catalog lands (AIProviderService.refreshModels).
+    const [modelsTick, setModelsTick] = useState(0);
+    useEffect(() => {
+        const onModels = () => setModelsTick(t => t + 1);
+        window.addEventListener(AIEvents.MODELS_UPDATED, onModels);
+        return () => window.removeEventListener(AIEvents.MODELS_UPDATED, onModels);
+    }, []);
+    const activeVersion = useMemo(() => AI.getActiveVersion(activeProvider), [activeProvider, modelsTick]);
     const state = store.getState();
 
     // Counter bumped on EDITOR_TYPE_CHANGE — drives projectContext re-evaluation
     // when the active editor tab changes (independent of redux state churn).
     const [editorChangeCounter, setEditorChangeCounter] = useState(0);
+
+    // #168 J1 — bumped on CONFIGURATOR_SELECTION_CHANGED, so the context follows the consumer's
+    // selection; the last selection said in the chat, so it is said once.
+    const [consumerSelectionCounter, setConsumerSelectionCounter] = useState(0);
+    const lastSelectionRef = useRef<string | undefined>(undefined);
 
     // Tracks the last artefact for which a context-switch notice was injected,
     // so we don't emit duplicates on tab events that don't actually change focus.
@@ -136,6 +223,9 @@ export function Jodie(): JSX.Element {
         const project = user.project;
         if (!project) return {};
         try {
+            // #168 J1, J2: in the stand-alone consumer the Configurator's selection is the
+            // artefact and the profile filters the context.
+            if (isConsumerMode()) return consumerContextBundle(project as LProject);
             // The level decides which resolver runs, never the other way round. Asking for the
             // model first used to answer with the M1 model of an earlier selection while a
             // metamodel was on screen, stamping the reply M1 and making every `create` in it
@@ -173,7 +263,7 @@ export function Jodie(): JSX.Element {
             return { text, scope };
         }
         catch (err) { console.warn('Could not get project context:', err); return {}; }
-    }, [state.idlookup.clonedCounter, editorChangeCounter]);
+    }, [state.idlookup.clonedCounter, editorChangeCounter, consumerSelectionCounter]);
     const projectContext = projectContextBundle.text;
     const projectScope = projectContextBundle.scope;
 
@@ -218,6 +308,10 @@ export function Jodie(): JSX.Element {
 
             setEditorChangeCounter(c => c + 1);
 
+            // #168 J1: in the consumer the artefact is the Configurator's selection, which says
+            // itself when it changes; no notice about a tab the consumer cannot see.
+            if (isConsumerMode()) return;
+
             const newModel = getActiveModel();
             const newMeta = getActiveMetamodel();
             const newName = newModel?.name ?? newMeta?.name;
@@ -250,6 +344,42 @@ export function Jodie(): JSX.Element {
         };
         window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
         return () => window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
+    }, []);
+
+    // #168 J1 — the Configurator's selection changed: refresh the context and, with a
+    // conversation open, say what Jodie now looks at, in the consumer's words.
+    useEffect(() => {
+        const handler = () => {
+            setConsumerSelectionCounter(c => c + 1);
+            if (!isConsumerMode()) return;
+            const described = describeConsumerSelection(getConsumerSelection(), store.getState().idlookup);
+            // The key moves only when the line is written: a selection made with an empty chat
+            // is said at the next change, never skipped in silence. Read before the updater, so
+            // the updater gives the same answer however many times React calls it.
+            const lastSaid = lastSelectionRef.current;
+            setChatState(prev => {
+                const line = consumerSelectionLine(described, lastSaid, prev.messages?.length ?? 0);
+                if (!line || !described) return prev;
+                lastSelectionRef.current = described.key;
+                return {
+                    ...prev,
+                    messages: [
+                        ...prev.messages,
+                        {
+                            id: generateMessageId(),
+                            kind: 'chat',
+                            role: 'assistant',
+                            // `*…*`, not `_…_`: MarkdownMessage renders as markdown only what its
+                            // `hasMarkdownSyntax` recognises, and its italic is the asterisk.
+                            content: `*${line}*`,
+                            timestamp: Date.now(),
+                        }
+                    ]
+                };
+            });
+        };
+        window.addEventListener(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, handler);
+        return () => window.removeEventListener(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, handler);
     }, []);
 
     // Listen for notifications popover toggle (hide Jodie while open)
@@ -324,6 +454,8 @@ export function Jodie(): JSX.Element {
     // goes through here so it announces itself on the bus — groundwork for 2b.3,
     // no consumer yet. Programmatic promotions use setConsoleMode directly.
     const setMode = useCallback((next: ConsoleMode, via?: ConsoleModeSwitchVia) => {
+        // #168 J7: the consumer has natural language only.
+        if (isConsumerMode() && next !== 'jjodie') return;
         if (consoleMode !== next) {
             window.dispatchEvent(new CustomEvent(JjodieEvents.CONSOLE_MODE_CHANGE, {
                 detail: { from: consoleMode, to: next, via },
@@ -347,9 +479,14 @@ export function Jodie(): JSX.Element {
             const isCmdJ = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j';
             const isCtrlDot = e.ctrlKey && !e.metaKey && (e.key === '.' || e.code === 'Period');
             if (!isCmdJ && !isCtrlDot) return;
+            // #168 J7: no modes to cycle in the consumer; the keys are left alone.
+            if (isConsumerMode()) return;
 
             const target = e.target as HTMLElement | null;
-            const focusInJjodie = !!jodieRootRef.current && !!target && jodieRootRef.current.contains(target);
+            // The docked window is portaled into the dashboard grid (R-JJD-1), outside the root.
+            const focusInJjodie = !!target && (
+                (!!jodieRootRef.current && jodieRootRef.current.contains(target)) || !!target.closest('.jodie-window')
+            );
             const isEditable = !!target && !!target.closest('input, textarea, [contenteditable], .monaco-editor');
             if (isEditable && !focusInJjodie) return;
 
@@ -378,6 +515,8 @@ export function Jodie(): JSX.Element {
     // Promotion: from a Jjodie chat reply with a code block, switch to Code mode
     // and prefill the input with the extracted snippet (no auto-run).
     const handleTestInCode = useCallback((code: string, _language: string | null) => {
+        // #168 J7: the consumer has no console mode (the button is not rendered there either).
+        if (isConsumerMode()) return;
         // TODO stadio 3: when JS flavor is enabled, route 'js'/'javascript' tags to flavor 'js'.
         // For now everything goes to JjEL; JS-tagged snippets may show JjEL syntax errors,
         // which the user can refine in place.
@@ -403,7 +542,8 @@ export function Jodie(): JSX.Element {
             id: generateMessageId(),
             kind: 'chat',
             role: 'assistant',
-            content: CONSOLE_HELP_TEXT,
+            // #168 J7: the consumer reads what it can ask, not the modes.
+            content: isConsumerMode() ? consumerHelpText() : CONSOLE_HELP_TEXT,
             timestamp: Date.now(),
         };
         setChatState(prev => ({ ...prev, messages: [...prev.messages, helpMessage] }));
@@ -449,7 +589,8 @@ export function Jodie(): JSX.Element {
     // Send message
     const handleSendMessage = useCallback(async (content: string, images?: ChatImage[], documents?: ChatDocument[]) => {
         // Explicit JjScript mode routes ALL input to the jjscript provider.
-        if (consoleMode === 'jjscript') {
+        // #168 J7: never in the consumer, whatever mode a developer session left behind.
+        if (consoleMode === 'jjscript' && !isConsumerMode()) {
             // Add user message
             const userMessage: ChatMessage = {
                 id: generateMessageId(),
@@ -505,7 +646,8 @@ export function Jodie(): JSX.Element {
         // Jjodie mode: if the input parses as a complete JjScript command, OFFER
         // to run it — never execute and never call the LLM until the user taps a
         // button. Deterministic (strict parse), not silent.
-        if (jjscriptProvider.detect?.(content)) {
+        // #168 J7: in the consumer there is no offer; the input is a question for the AI.
+        if (!isConsumerMode() && jjscriptProvider.detect?.(content)) {
             const offerMessage: ChatMessage = {
                 id: generateMessageId(),
                 kind: 'chat',
@@ -593,13 +735,15 @@ export function Jodie(): JSX.Element {
                 activeProvider: providerToUse,
                 history,
                 projectContext,
-                ragInitialized,
+                // #168: no RAG in the consumer, its index covers every class, hidden ones included.
+                ragInitialized: ragInitialized && !isConsumerMode(),
                 images,
                 documents,
             };
             const { entries } = await jjodieProvider.run(content, ctx);
+            const gated = await gateReservedIdentifiers(entries, content, ctx);
             // Stamp the reply with the scope its context showed (projectContextBundle).
-            const scoped = entries.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
+            const scoped = gated.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
 
             setChatState(prev => ({
                 ...prev,
@@ -638,11 +782,13 @@ export function Jodie(): JSX.Element {
                 activeProvider,
                 history,
                 projectContext,
-                ragInitialized,
+                // #168: no RAG in the consumer, its index covers every class, hidden ones included.
+                ragInitialized: ragInitialized && !isConsumerMode(),
             };
             const { entries } = await jjodieProvider.run(input, ctx);
+            const gated = await gateReservedIdentifiers(entries, input, ctx);
             // Stamp the reply with the scope its context showed (projectContextBundle).
-            const scoped = entries.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
+            const scoped = gated.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
             setChatState(prev => ({
                 ...prev,
                 messages: [...prev.messages, ...scoped],

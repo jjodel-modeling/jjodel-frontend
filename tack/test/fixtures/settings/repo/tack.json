@@ -1,0 +1,6 @@
+{
+  "$schema": "https://tack.dev/contract/v1/settings.json",
+  "limits": { "laneMinutes": 120 },
+  "load": { "threshold": 16 },
+  "budget": { "dailyUsd": 40 }
+}

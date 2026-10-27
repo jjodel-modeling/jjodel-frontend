@@ -19,7 +19,9 @@ import type { JjelExpression } from '../../../jjel/types/ast';
 import { freezeSnapshot } from '../guardContext';
 import { compileAction, foldActionTarget, judgeActionTarget } from '../actionEvaluator';
 import type { CompiledAction } from '../actionEvaluator';
-import { checkActionSubset, checkActionValue, checkGuard, checkTargetName } from '../stcChecks';
+import {
+    checkActionSubset, checkActionValue, checkElse, checkEventFeature, checkEventRead, checkGuard, checkInputTarget, checkTargetName, checkTriggerPosition, eventReads, inputReads,
+} from '../stcChecks';
 import type { StcScope } from '../stcChecks';
 import type { ActionSite, StateAttributeDecl } from '../netTypes';
 
@@ -179,5 +181,145 @@ describe('A0 and G0 stay clean through every rule', () => {
             expect([text, checkActionSubset(c), checkTargetName(c, s), checkActionValue(c, TC, foldActionTarget(c, TC, s.snapshot), s)]).toEqual([text, null, null, null]);
         }
         expect(guard('model.[paid]')).toBeNull();
+    });
+});
+
+describe('R7: an else with no sibling (R-SIM-87, amends R-SIM-31(1), P-2026-09-28-0100)', () => {
+    it('an else whose sibling list is empty is a defect; with a sibling, or not an else, none (mutants: every else; no else)', () => {
+        expect(checkElse({ elseOf: [] })).toEqual({
+            reason: 'else-alone', detail: 'else with no sibling: no other transition has its preset and its triggers, so it is always true', short: 'else, no sibling',
+        });
+        expect(checkElse({ elseOf: ['t2'] })).toBeNull();
+        expect(checkElse({ elseOf: null })).toBeNull();
+    });
+});
+
+describe('R-SIM-88: the input reads of a guard or an action, folded as R2 folds (P-2026-09-28-0034)', () => {
+    const ASK: StateAttributeDecl = { name: 'ask', metaclass: 'C_State', space: 'semantic', domain: { kind: 'boolean' }, input: true };
+    const ANSWER: StateAttributeDecl = { name: 'answer', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, input: true };
+    /** The ESM scope with `ask` an input of both states and `answer` a global input. */
+    const withInputs = (): StcScope => {
+        const s = scope();
+        const on = (...decls: StateAttributeDecl[]) => new Map(decls.map(d => [d.name, d]));
+        const declared = new Map([['Mx', on(COINS, PAID, ANSWER)], ['TCx', on(COLOR)], ['TPx', on(COLOR)], ['Lx', on(LEVEL, ASK)], ['Ux', on(LEVEL, ASK)]]);
+        return { ...s, net: { ...s.net, attributes: [COINS, PAID, COLOR, LEVEL, ASK, ANSWER], declared } };
+    };
+    const reads = (text: string, site = 'TPx') => inputReads(expr(text), site, withInputs()).map(r => `${r.element}.${r.attr}`);
+
+    it('a read whose object folds names that element, once (mutant: the object never folded, every owner asked)', () => {
+        expect(reads('locked.[ask]')).toEqual(['Lx.ask']);
+        expect(reads('self.nextState.[ask] and not self.nextState.[ask]')).toEqual(['Ux.ask']);
+        expect(reads('model.[answer] > 1')).toEqual(['Mx.answer']);
+    });
+
+    it('a read whose object reads σ asks every owner of the name as an input (mutant: such a read skipped)', () => {
+        expect(reads('(if model.[coins] > 0 then locked else unlocked).[ask]')).toEqual(['Lx.ask', 'Ux.ask']);
+    });
+
+    it('controls: a stored, derived, marked or node read, and an input name folded onto an element that does not declare it, ask nothing', () => {
+        for (const text of ['model.[coins] > 0', 'model.[paid]', 'locked.[marked]', 'node.[color] == 1', 'self.[ask]']) expect([text, reads(text)]).toEqual([text, []]);
+    });
+
+    it('the read carries the domain; R1, R2 and R6 accept a declared input (H6 of the report)', () => {
+        expect(inputReads(expr('model.[answer] > 1'), 'TPx', withInputs())[0]).toEqual({ element: 'Mx', attr: 'answer', domain: { kind: 'range', min: 0, max: 3 } });
+        for (const text of ['locked.[ask]', 'model.[answer] > 1']) expect([text, checkGuard(expr(text), 'TPx', withInputs())]).toEqual([text, null]);
+    });
+
+    it('a target the run resolves whose name only an input has is read-only (mutant: left to the run)', () => {
+        expect(checkInputTarget(action('(if model.[coins] > 0 then locked else unlocked).[ask] := true'), withInputs()))
+            .toEqual({ reason: 'read-only', detail: "'ask' is an input and cannot be assigned", short: "assigns input 'ask'" });
+        // control: a stored name
+        expect(checkInputTarget(action('(if model.[coins] > 0 then locked else unlocked).[level] := lo'), withInputs())).toBeNull();
+    });
+});
+
+describe('R-SIM-144 P3: a read of event where no event is bound (P-2026-10-10-1630)', () => {
+    const named = { nameOf: (id: string) => NAMES[id] ?? id };
+    const onArc = (text: string, untriggered: string | null) => checkEventRead(expr(text), { role: 'guard', untriggered }, named);
+
+    it('a guard of a transition without a trigger that reads event is the defect event, named by that transition (mutant: the trigger ignored, never a defect)', () => {
+        expect(onArc('event.amount > 0', 'TPx')).toEqual({
+            reason: 'event', detail: 'reads event, but tp has no trigger: event is null in its step', short: 'reads event, no trigger',
+        });
+    });
+
+    it('every form counts: event == null, event.[x], event alone, inside a lambda (mutant: only a member read counted)', () => {
+        for (const text of ['event == null', 'event.[coins] > 0', 'event', '[1, 2].all(x => event == null)']) {
+            expect([text, onArc(text, 'TPx')?.reason]).toEqual([text, 'event']);
+        }
+    });
+
+    it('controls: on a triggered transition none; a feature named event on self is not the root (mutant: any name event counted)', () => {
+        expect(onArc('event.amount > 0', null)).toBeNull();
+        expect(onArc('self.event == "x"', 'TPx')).toBeNull();
+        expect(onArc('model.[coins] > 0', 'TPx')).toBeNull();
+    });
+
+    it('an entry or an exit action that reads event is the defect, whatever the arc (mutant: entry judged as a transition action)', () => {
+        const a = action('model.[coins] := event.amount').action;
+        expect(checkEventRead(a, { role: 'entry' }, named)).toEqual({
+            reason: 'event', detail: 'an entry action cannot read event: what a node does on entry does not depend on the path that reached it',
+            short: 'reads event in entry',
+        });
+        expect(checkEventRead(a, { role: 'exit' }, named)?.short).toBe('reads event in exit');
+        expect(checkEventRead(action('model.[coins] := 1').action, { role: 'exit' }, named)).toBeNull();
+        // an action's target counts as a read too
+        expect(checkEventRead(action('event.[coins] := 1').action, { role: 'transition', untriggered: 'TCx' }, named)?.short).toBe('reads event, no trigger');
+        expect(checkEventRead(action('event.[coins] := 1').action, { role: 'transition', untriggered: null }, named)).toBeNull();
+    });
+});
+
+describe('R-SIM-144 P4: event.a looked up on the trigger\'s declared type (P-2026-10-10-1630)', () => {
+    const typed = { event: { name: 'Coin', features: new Set(['amount', 'home']) } };
+
+    it('a name the type does not have is the defect event-feature, whose short never reads undeclared (mutant: reason undeclared)', () => {
+        const d = checkEventFeature(expr('event.bonus > 0'), typed);
+        expect(d).toEqual({ reason: 'event-feature', detail: "'bonus' is not a feature of Coin, the type of the trigger", short: 'event.bonus: not on Coin' });
+        expect(d?.short?.startsWith("undeclared '")).toBe(false);
+        expect(checkEventFeature(expr('event?.bonus == null'), typed)?.reason).toBe('event-feature');
+    });
+
+    it('controls: a feature of the type and the four handle keys pass; no type, no check (mutant: handle keys refused)', () => {
+        for (const text of ['event.amount > 1', 'event.home == locked', 'event.name == "coin"', 'event.id == "c"', 'event.instanceOf == null', 'event.parent == null']) {
+            expect([text, checkEventFeature(expr(text), typed)]).toEqual([text, null]);
+        }
+        expect(checkEventFeature(expr('event.bonus > 0'), {})).toBeNull();
+        expect(checkEventFeature(expr('self.bonus > 0'), typed)).toBeNull();
+    });
+
+    it('eventReads lists the names read on event, once each, in order; not state reads, not self (mutant: the state read listed)', () => {
+        expect(eventReads(expr('event.amount + event.home.x + event?.amount > event.[coins]'))).toEqual(['amount', 'home']);
+        expect(eventReads(action('model.[coins] := event.amount').action)).toEqual(['amount']);
+        expect(eventReads(expr('self.amount > 0'))).toEqual([]);
+    });
+});
+
+describe('R-SIM-147: a trigger that fork or join fusion drops is the defect trigger-position (P-2026-10-20-0031)', () => {
+    const kinds: Record<string, 'fork' | 'join' | 'both'> = { F: 'fork', J: 'join', B: 'both' };
+    const kindOf = (id: string) => kinds[id] ?? null;
+    const named = { nameOf: (id: string) => id.toLowerCase() };
+    const on = (...edges: string[]) => (edge: string) => edges.includes(edge);
+
+    it('a fork: each triggered out edge, named with the fork and its choice edge, the edge into it (mutant: the choice edge reported)', () => {
+        const t = { id: 'F', origin: ['e1', 'F', 'e2', 'e3'] };
+        expect(checkTriggerPosition(t, kindOf, on('e1', 'e3'), named)).toEqual([{
+            edge: 'e3',
+            defect: { reason: 'trigger-position', detail: 'its trigger is ignored: fork f takes the trigger of its choice edge, e1, the edge into it', short: 'trigger ignored by fork f' },
+        }]);
+        expect(checkTriggerPosition({ id: 'F#e1', origin: t.origin }, kindOf, on('e2', 'e3'), named).map(x => x.edge)).toEqual(['e2', 'e3']);
+    });
+
+    it('a join: each triggered in edge, the choice edge being the edge out of it (mutant: join read as fork)', () => {
+        const t = { id: 'J', origin: ['e1', 'e2', 'J', 'e3'] };
+        expect(checkTriggerPosition(t, kindOf, on('e2', 'e3'), named)).toEqual([{
+            edge: 'e2',
+            defect: { reason: 'trigger-position', detail: 'its trigger is ignored: join j takes the trigger of its choice edge, e3, the edge out of it', short: 'trigger ignored by join j' },
+        }]);
+    });
+
+    it('controls: a trigger on the choice edge only, a node both fork and join (the union of its triggers), a plain edge (mutants: both judged; plain judged)', () => {
+        expect(checkTriggerPosition({ id: 'F', origin: ['e1', 'F', 'e2'] }, kindOf, on('e1'), named)).toEqual([]);
+        expect(checkTriggerPosition({ id: 'B', origin: ['e1', 'B', 'e2'] }, kindOf, on('e1', 'e2'), named)).toEqual([]);
+        expect(checkTriggerPosition({ id: 'e1', origin: ['e1'] }, kindOf, on('e1'), named)).toEqual([]);
     });
 });

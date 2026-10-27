@@ -39,7 +39,7 @@ import {
     GraphSize, L,
     LGraphElement,
     LModelElement,
-    LObject, Log,
+    LoadAction, LObject, Log,
     LogicContext,
     LOperation,
     LPackage,
@@ -243,7 +243,8 @@ export class DState extends DPointerTargetable{
     static init_editor(store?: DState): void {
         this.fixcolors();
         TRANSACTION('init jodel state', ()=>{
-            const viewpoint = DViewPoint.newVP('Default', (vp)=>{
+            // No Default viewpoint for a project the batch's state lacks (E1, P-2026-10-05-1648): see projectMissingFromBatch.
+            const viewpoint = projectMissingFromBatch() ? undefined : DViewPoint.newVP('Default', (vp)=>{
                 vp.palette = {
                     'border-': U.hexToPalette('#a3a3a3')
                 }
@@ -321,7 +322,7 @@ otherwise you would click the edge container instead of the graph-elements benea
 .edges { z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 `
             }, true, Defaults.Pointer_ViewPointDefault);
-            Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
+            Log.exDev(!!viewpoint && viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
             // R-IRN-15: the seed no longer creates the twenty-one default views. The `Default`
             // viewpoint above is still created, empty, on purpose: see R-IRN-15 in docs/decisions.md.
             // `makeDefaultGraphViews` stays in place, uncalled, for reversibility.
@@ -356,6 +357,20 @@ otherwise you would click the edge container instead of the graph-elements benea
     }
 }
 
+
+// Constructors.DViewPoint links a new viewpoint to LProject.getProject(), the URL's project as the live store
+// resolves it. On an in-page open the reset's empty LOAD is still pending in the batch while the live store holds
+// the project: the link would target a path the reduced state lacks, and the reducer would roll the whole
+// «init jodel state» batch back («Invalid action path 0», E1, P-2026-10-05-1648). The batch lands on that LOAD's
+// state, or on the store's when no LOAD is pending.
+function projectMissingFromBatch(): boolean {
+    const project = LProject.getProject();
+    if (!project) return false;
+    const pending: GObject[] = windoww.transactionStatus?.pendingActions || [];
+    const load = pending.filter(a => a.className === LoadAction.cname).pop();
+    const state: DState | undefined = load ? load.value : store.getState();
+    return !state?.idlookup?.[project.id];
+}
 
 function makeDefaultGraphViews(vp: DViewPoint): DViewElement[] {
 

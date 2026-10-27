@@ -23,6 +23,17 @@
  * judge incompatible (S10), a warning or an incompatible bound value marked
  * beside its select, and the pill reads the verdicts («with warnings»).
  *
+ * Guard, Action, Entry and Exit hold a list (R-SIM-90): the select keeps the
+ * first attribute, the others are 24 px tags on the same line, each with its
+ * remove button, and a 24 px «+» select adds one, offered only when the
+ * metamodel has two or more compatible candidates. The control stays 32 px
+ * high: a long list is clipped to `+n`, never wrapped.
+ *
+ * The «State» page (R-SIM-103, P-2026-10-03-0041), «Data» until then: the
+ * declarations in two columns, abstract and concrete (`Declarations`), so the
+ * dialog is wide (`sim-roles-modal--wide`) whatever is open, and nothing moves
+ * between the roles and the State page.
+ *
  * Portaled onto `document.body` from the panel, which holds every input it
  * reads (D4), at the stacking level of the other modals
  * (SymbolEditorModal.scss). React events bubble through the React tree, not
@@ -31,24 +42,34 @@
  * otherwise receive them.
  */
 
-import { ReactElement, SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactElement, SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import { DState, LPointerTargetable, store } from '../../../joiner';
 import {
-    PANEL_PROFILE_IDS, boundProposalBag, boundProposalInputs, invalidEngineRoles, storedProfile,
+    PANEL_PROFILE_IDS, PROFILE_KEY, VERDICT_LABEL, boundProposalBag, boundProposalInputs, invalidEngineRoles, profileBindings, stateColumns,
+    storedProfile,
 } from './simRoleStatus';
+import type { StateGroup } from './simRoleStatus';
 import { boundEstimate, boundEstimateSignature } from './modelMarkings';
 import {
-    bagWithEdits, boundHelp, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus, isFirstOpen,
-    isModified, matchLine, roleBadge, roleSections, roleSwitch, rowValue, withProfileName, withRoleMode,
+    bagWithEdits, boundHelp, compatibleIds, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus,
+    isFirstOpen, isModified, multiRow, multiRowLabels, pillTitle, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
+    withAdded, withPrimary, withProfileName, withRemoved, withRoleMode,
 } from './simRolesDraft';
-import type { DraftEdits, DraftInput, RoleBadge } from './simRolesDraft';
-import { bindProfile } from '../../../model/simulation/profileBinder';
-import { bindingVerdicts, currentVerdicts } from '../../../model/simulation/bindingCompat';
+import type { DraftEdits, DraftInput, MultiRow, RoleBadge, RowValue } from './simRolesDraft';
+import { bindingVerdicts } from '../../../model/simulation/bindingCompat';
 import { roleDescriptor } from '../../../model/simulation/roleCatalog';
 import { systemProfile, validateProfile } from '../../../model/simulation/simProfiles';
-import { encodeStateAttributes, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
+import { defaultInitialOf, encodeStateAttributes, initialFollowingDomain, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
+import type { Domain } from '../../../model/simulation/netTypes';
+import { declarationForm, formPatch, spacePatch } from './simInputs';
+import { assignedRoles } from './simLabels';
+import { runBag } from './simBridge';
+import {
+    declarationKind, metamodelModels, rowUsage, stateAccessPath, stateRowFlags, stateUses, usageLabel, usageTexts,
+} from './simStateUsage';
+import type { DeclarationKind, StateUse, UsageText } from './simStateUsage';
 import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
 import type { BindingVerdicts } from '../../../model/simulation/bindingCompat';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
@@ -79,7 +100,7 @@ export interface SimRolesModalProps {
     eventClassName: string;
     /** The preset picked in the panel's select and not applied, `null` for the stored profile. */
     initialPreset: string | null;
-    /** Open on the Data section with its Add attribute focused (the summary's declarations hint, R-SIM-81(3)). */
+    /** Open on the State section with its Add attribute focused (the summary's declarations hint, R-SIM-81(3)). */
     openOnData: boolean;
     /** The panel's reason for an overlap (R-SIM-16). */
     describeOverlap: (overlap: RoleOverlap) => string;
@@ -155,50 +176,93 @@ function freshName(rows: readonly StateAttributeRecord[]): string {
     for (let n = 1; ; n++) if (!rows.some(r => r.name === `x${n}`)) return `x${n}`;
 }
 
+/** A domain edit of a stored row carries its initial along; a derived or an input row has none (R-SIM-72, R-SIM-88). */
+function domainPatch(row: StateAttributeRecord, domain: Domain, initial: string): Partial<StateAttributeRecord> {
+    return row.equation !== undefined || row.input === true ? { domain } : { domain, initial };
+}
+
 /** One cell typed into its row (the rules of the panel's table, lane C1 and C2). */
 function patchOf(row: StateAttributeRecord, field: DeclField, typed: string): Partial<StateAttributeRecord> | null {
     switch (field) {
         case 'name': return { name: typed.trim() };
         case 'initial': return { initial: typed.trim() };
         case 'equation': return { equation: typed.trim() };
-        // A derived row has no initial (R-SIM-72); back to stored, the equation goes.
-        case 'form': return typed === 'derived' ? { initial: '', equation: row.equation ?? '' } : { equation: undefined };
+        // A derived row has no initial (R-SIM-72); back to stored, the equation goes; an input has neither (R-SIM-88).
+        case 'form': return formPatch(row, typed);
         case 'metaclass': return { metaclass: typed === '' ? null : typed };
-        // Presentation has no domain (R-SIM-18); back to semantic, a domain is needed.
-        case 'space': return typed === 'presentation' ? { space: 'presentation', domain: null } : { space: 'semantic', domain: row.domain ?? { kind: 'boolean' } };
-        case 'kind':
-            return {
-                domain: typed === 'range' ? { kind: 'range', min: 0, max: 1 }
-                    : typed === 'enum' ? { kind: 'enum', literals: [] } : { kind: 'boolean' },
-            };
-        case 'literals': return { domain: { kind: 'enum', literals: typed.split(',').map(x => x.trim()).filter(x => x !== '') } };
+        // Presentation has no domain (R-SIM-18); back to semantic, a domain is needed and a stored row's initial follows it.
+        case 'space': return spacePatch(row, typed);
+        // The initial follows the domain: a new kind starts at its default, a bound or a literal keeps a value still inside.
+        case 'kind': {
+            const domain: Domain = typed === 'range' ? { kind: 'range', min: 0, max: 1 }
+                : typed === 'enum' ? { kind: 'enum', literals: [] } : { kind: 'boolean' };
+            return domainPatch(row, domain, defaultInitialOf(domain));
+        }
+        case 'literals': {
+            const domain: Domain = { kind: 'enum', literals: typed.split(',').map(x => x.trim()).filter(x => x !== '') };
+            return domainPatch(row, domain, initialFollowingDomain(row.initial, row.domain, domain));
+        }
         case 'min':
         case 'max': {
             const n = Number(typed);
             if (typed.trim() === '' || !Number.isFinite(n) || row.domain?.kind !== 'range') return null;
-            return { domain: { kind: 'range', min: field === 'min' ? n : row.domain.min, max: field === 'max' ? n : row.domain.max } };
+            const domain: Domain = { kind: 'range', min: field === 'min' ? n : row.domain.min, max: field === 'max' ? n : row.domain.max };
+            return domainPatch(row, domain, initialFollowingDomain(row.initial, row.domain, domain));
         }
     }
 }
 
-interface DeclarationsProps {
+export interface DeclarationsProps {
     rows: StateAttributeRecord[];
     classes: SimRoleOption[];
     onChange: (rows: StateAttributeRecord[]) => void;
     /** The row whose name takes the focus after Add attribute. */
     focusRow: number | null;
     onFocused: () => void;
+    /**
+     * A model's table (R-SIM-94, SimDataModal.tsx): the metaclass select offers Global only, and a row a stored
+     * record binds to a metaclass shows it as not allowed, so the user can set it back to Global.
+     */
+    globalsOnly?: boolean;
+    /**
+     * The declarations in scope outside the table (a model's: the metamodel's it does not shadow,
+     * `modelDeclarationScope`): their presentation names count for E-NODE, their equations for «Read by».
+     */
+    context?: readonly StateAttributeRecord[];
+    /** The texts of the bound features, read on row selection only (R-SIM-103): never on a store change. */
+    readTexts?: () => readonly UsageText[];
 }
 
+const NO_DECLARATIONS: readonly StateAttributeRecord[] = [];
+
+/** The kind chip's title (R-SIM-102). */
+const KIND_TITLE: Record<DeclarationKind, string> = {
+    VAR: 'VAR: stored, assigned by actions',
+    DEFINE: 'DEFINE: derived from its equation, never assigned',
+    IVAR: 'IVAR: an input, asked at each press that reads it',
+};
+
 /**
- * The declarations as rows of two fixed lines (D9): name, metaclass, stored or
- * derived, remove; space, domain, its bounds or literals, then the initial
- * value or the equation. A text cell commits into the draft on blur or Enter,
- * a select on change; Escape drops the cell's edit; focusing a text cell
- * selects its text, so a prefilled cell is replaced by typing.
+ * The State page (R-SIM-103): the declarations in two columns, abstract (σ,
+ * semantic) and concrete (`node`, presentation), between them the arrow «σ is
+ * read one way»; in each column the model's own group first, then one group
+ * per metaclass (`stateColumns`). A row keeps its two fixed lines (D9): name,
+ * metaclass, stored, derived or input (R-SIM-88), remove; space, domain, its
+ * bounds or literals, then the initial value, the equation, or for an input a
+ * void cell. A third line names it: its kind as nuXmv does (`VAR`, `DEFINE`,
+ * `IVAR`), its access path, and E-NODE before Apply. The access path selects
+ * the row, which opens «Written by» and «Read by» (`rowUsage`), computed then
+ * and only then. A text cell commits into the draft on blur or Enter, a
+ * select on change; Escape drops the cell's edit; focusing a text cell selects
+ * its text, so a prefilled cell is replaced by typing. Exported for the
+ * model's State dialog (R-SIM-94), which shows it with `globalsOnly`; on the
+ * metamodel's, `Global` is the default of every model that declares none.
  */
-function Declarations({ rows, classes, onChange, focusRow, onFocused }: DeclarationsProps): ReactElement {
+export function Declarations({
+    rows, classes, onChange, focusRow, onFocused, globalsOnly = false, context = NO_DECLARATIONS, readTexts,
+}: DeclarationsProps): ReactElement {
     const [cells, setCells] = useState<Record<string, string>>({});
+    const [selected, setSelected] = useState<number | null>(null);
     const ref = useRef<HTMLDivElement>(null);
     const keyOf = (i: number, f: DeclField) => `${i}:${f}`;
     const drop = (key: string) => setCells(c => {
@@ -217,6 +281,15 @@ function Declarations({ rows, classes, onChange, focusRow, onFocused }: Declarat
         onFocused();
     }, [focusRow, rows.length, onFocused]);
 
+    // E-NODE before Apply: the check of Reset, on the draft (compileDerived).
+    const flags = useMemo(() => stateRowFlags(rows, context), [rows, context]);
+    const usage = useMemo(
+        () => (selected !== null && rows[selected] && readTexts
+            ? rowUsage(stateUses(readTexts(), [...rows, ...context]), rows[selected])
+            : null),
+        [selected, rows, context, readTexts],
+    );
+
     const commit = (i: number, f: DeclField, typed: string | undefined): void => {
         const row = rows[i];
         const patch = row && typed !== undefined ? patchOf(row, f, typed) : null;
@@ -225,10 +298,10 @@ function Declarations({ rows, classes, onChange, focusRow, onFocused }: Declarat
     };
     const shown = (i: number, f: DeclField, stored: string) => cells[keyOf(i, f)] ?? stored;
 
-    const text = (i: number, f: DeclField, stored: string, aria: string, placeholder: string, extra: string, data?: Record<string, string>) => (
+    const text = (i: number, f: DeclField, stored: string, aria: string, placeholder: string, extra: string, data?: Record<string, string>, more = '') => (
         <input
             type="text"
-            className={`sim-roles-modal__input sim-roles-modal__decl-${extra}`}
+            className={`sim-roles-modal__input sim-roles-modal__decl-${extra}${more}`}
             aria-label={aria}
             placeholder={placeholder}
             title={shown(i, f, stored) || undefined}
@@ -246,90 +319,213 @@ function Declarations({ rows, classes, onChange, focusRow, onFocused }: Declarat
     const choose = (i: number, f: DeclField, value: string) => commit(i, f, value);
 
     if (rows.length === 0) {
-        return <div className="sim-roles-modal__empty">No attributes. Add one to use it in guards, actions and equations.</div>;
+        return (
+            <div className="sim-roles-modal__empty">
+                {globalsOnly
+                    ? 'No globals. Add one to read it as model.[name] in guards, actions and equations.'
+                    : 'No attributes. Add one to use it in guards, actions and equations.'}
+            </div>
+        );
     }
-    return (
-        <div ref={ref}>
-            {rows.map((r, i) => {
-                const n = i + 1;
-                const semantic = r.space !== 'presentation';
-                const kind = r.domain?.kind ?? '';
-                const derived = r.equation !== undefined;
-                return (
-                    <div className="sim-roles-modal__decl" key={i}>
-                        <div className="sim-roles-modal__decl-line sim-roles-modal__decl-line--first">
-                            {text(i, 'name', r.name, `Name of state attribute ${n}`, 'name', 'name', { 'data-decl-name': String(i) })}
-                            <select
-                                className="sim-roles-modal__select"
-                                aria-label={`Metaclass of state attribute ${n}`}
-                                value={r.metaclass ?? ''}
-                                onChange={e => choose(i, 'metaclass', e.target.value)}
-                            >
+
+    /** The uses of one list, or what stands for none; the model named when they come from more than one. */
+    const uses = (list: readonly StateUse[], none: string, models: boolean) => (list.length === 0
+        ? <span className="sim-roles-modal__usage-none">{none}</span>
+        : list.map((u, k) => (
+            <span className="sim-roles-modal__usage-item" key={k} title={`${u.model ? `${u.model}: ` : ''}${u.text}`}>
+                {`${models && u.model ? `${u.model} · ` : ''}${usageLabel(u)}`}
+            </span>
+        )));
+
+    const declaration = (i: number): ReactElement => {
+        const r = rows[i];
+        const n = i + 1;
+        const semantic = r.space !== 'presentation';
+        const kind = r.domain?.kind ?? '';
+        const form = declarationForm(r);
+        const derived = form === 'derived';
+        const input = form === 'input';
+        const nuxmv = declarationKind(r);
+        const path = stateAccessPath(r);
+        const flag = flags.get(i);
+        const on = selected === i && usage !== null;
+        const models = on && new Set([...usage.written, ...usage.read].map(u => u.model).filter(m => m !== '')).size > 1;
+        return (
+            <div className={`sim-roles-modal__decl${on ? ' sim-roles-modal__decl--selected' : ''}`} key={i}>
+                <div className="sim-roles-modal__decl-line sim-roles-modal__decl-line--first">
+                    {text(i, 'name', r.name, `Name of state attribute ${n}`, 'name', 'name', { 'data-decl-name': String(i) },
+                        derived ? ' sim-roles-modal__decl-name--define' : '')}
+                    <select
+                        className="sim-roles-modal__select"
+                        aria-label={`Metaclass of state attribute ${n}`}
+                        title={globalsOnly ? 'A model declares globals only; an attribute of a metaclass is declared in the metamodel' : undefined}
+                        value={r.metaclass ?? ''}
+                        onChange={e => choose(i, 'metaclass', e.target.value)}
+                    >
+                        {globalsOnly ? (
+                            <>
                                 <option value="">Global</option>
+                                {r.metaclass && <option value={r.metaclass}>A metaclass: not in a model</option>}
+                            </>
+                        ) : (
+                            <>
+                                <option value="">Global (default for models)</option>
                                 {r.metaclass && !classes.some(c => c.id === r.metaclass) && <option value={r.metaclass}>Unknown metaclass</option>}
                                 {classes.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}
-                            </select>
-                            <select
-                                className="sim-roles-modal__select"
-                                aria-label={`Stored or derived, state attribute ${n}`}
-                                value={derived ? 'derived' : 'stored'}
-                                onChange={e => choose(i, 'form', e.target.value)}
-                            >
-                                <option value="stored">stored</option>
-                                <option value="derived">derived</option>
-                            </select>
-                            <button
-                                type="button"
-                                className="sim-roles-modal__icon-btn"
-                                title="Remove"
-                                aria-label={`Remove state attribute ${n}`}
-                                onClick={() => onChange(rows.filter((_, j) => j !== i))}
-                            >
-                                <i className="bi bi-x-lg" />
-                            </button>
+                            </>
+                        )}
+                    </select>
+                    <select
+                        className="sim-roles-modal__select"
+                        aria-label={`Form of state attribute ${n}`}
+                        value={form}
+                        onChange={e => choose(i, 'form', e.target.value)}
+                    >
+                        <option value="stored">stored</option>
+                        <option value="derived">derived</option>
+                        <option value="input">input</option>
+                    </select>
+                    <button
+                        type="button"
+                        className="sim-roles-modal__icon-btn"
+                        title="Remove"
+                        aria-label={`Remove state attribute ${n}`}
+                        onClick={() => { setSelected(null); onChange(rows.filter((_, j) => j !== i)); }}
+                    >
+                        <i className="bi bi-x-lg" />
+                    </button>
+                </div>
+                <div className="sim-roles-modal__decl-line sim-roles-modal__decl-line--second">
+                    <select
+                        className="sim-roles-modal__select"
+                        aria-label={`Space of state attribute ${n}`}
+                        value={semantic ? 'semantic' : 'presentation'}
+                        disabled={input}
+                        onChange={e => choose(i, 'space', e.target.value)}
+                    >
+                        <option value="semantic">semantic</option>
+                        <option value="presentation">presentation</option>
+                    </select>
+                    {/* Presentation has no domain: the cells stay, hidden, so the row keeps its layout. An input is
+                        semantic (R-SIM-88): its space select is off. */}
+                    <select
+                        className={`sim-roles-modal__select${semantic ? '' : ' sim-roles-modal__hidden'}`}
+                        aria-label={`Domain of state attribute ${n}`}
+                        aria-hidden={!semantic}
+                        tabIndex={semantic ? undefined : -1}
+                        value={kind}
+                        onChange={e => choose(i, 'kind', e.target.value)}
+                    >
+                        {kind === '' && <option value="" disabled>domain</option>}
+                        <option value="boolean">boolean</option>
+                        <option value="range">range</option>
+                        <option value="enum">enum</option>
+                    </select>
+                    {semantic && r.domain?.kind === 'range' ? (
+                        <>
+                            {text(i, 'min', String(r.domain.min), `Minimum of state attribute ${n}`, 'min', 'bound')}
+                            {text(i, 'max', String(r.domain.max), `Maximum of state attribute ${n}`, 'max', 'bound')}
+                        </>
+                    ) : semantic && r.domain?.kind === 'enum' ? (
+                        text(i, 'literals', r.domain.literals.join(', '), `Literals of state attribute ${n}`, 'A, B', 'literals')
+                    ) : (
+                        <span className="sim-roles-modal__decl-void" title={semantic ? 'Only for range and enum' : 'Presentation has no domain'} />
+                    )}
+                    {/* The equation takes the place of the initial value, in the same cell (R-SIM-76); an input
+                        has neither, and the cell stays void so the row keeps its layout (R-SIM-88). */}
+                    {input
+                        ? <span className="sim-roles-modal__decl-void sim-roles-modal__decl-void--value" title="An input has no initial value: it is asked at each step that reads it" />
+                        : derived
+                            ? text(i, 'equation', r.equation ?? '', `Equation of state attribute ${n}, a JjEL expression`, 'equation', 'value')
+                            : text(i, 'initial', r.initial, `Initial value of state attribute ${n}, a JjEL literal`, 'initial', 'value')}
+                </div>
+                {/* The row's name as the engine reads it: its kind, its access path (which selects it), E-NODE. */}
+                <div className="sim-roles-modal__decl-meta">
+                    <span
+                        className={`sim-roles-modal__decl-kind sim-roles-modal__decl-kind--${semantic ? 'semantic' : 'presentation'} sim-roles-modal__decl-kind--${nuxmv.toLowerCase()}`}
+                        title={KIND_TITLE[nuxmv]}
+                    >
+                        {nuxmv}
+                    </span>
+                    <button
+                        type="button"
+                        className={`sim-roles-modal__path sim-roles-modal__path--${semantic ? 'semantic' : 'presentation'}`}
+                        aria-pressed={on}
+                        aria-label={`What writes and reads state attribute ${n}, ${path}`}
+                        title={on ? 'Close Written by and Read by' : `What writes and reads ${path}`}
+                        onClick={() => setSelected(on ? null : i)}
+                    >
+                        {path}
+                    </button>
+                    {flag && (
+                        <span className="sim-roles-modal__decl-flag" title={flag} aria-label={flag}>
+                            <i className="bi bi-exclamation-circle-fill" />
+                            E-NODE
+                        </span>
+                    )}
+                </div>
+                {on && (
+                    <div className="sim-roles-modal__usage" aria-label={`Written by and Read by of ${path}`}>
+                        <div className="sim-roles-modal__usage-line">
+                            <span className="sim-roles-modal__usage-label">Written by</span>
+                            {uses(usage.written, derived ? 'never: its equation gives it' : input ? 'the press that reads it' : 'nothing', models)}
                         </div>
-                        <div className="sim-roles-modal__decl-line sim-roles-modal__decl-line--second">
-                            <select
-                                className="sim-roles-modal__select"
-                                aria-label={`Space of state attribute ${n}`}
-                                value={semantic ? 'semantic' : 'presentation'}
-                                onChange={e => choose(i, 'space', e.target.value)}
+                        <div className="sim-roles-modal__usage-line">
+                            <span
+                                className="sim-roles-modal__usage-label"
+                                title={semantic ? undefined : 'Guards, actions and equations; the views that draw it come with node.[x] in the viewpoints (R-SIM-108)'}
                             >
-                                <option value="semantic">semantic</option>
-                                <option value="presentation">presentation</option>
-                            </select>
-                            {/* Presentation has no domain: the cells stay, hidden, so the row keeps its layout. */}
-                            <select
-                                className={`sim-roles-modal__select${semantic ? '' : ' sim-roles-modal__hidden'}`}
-                                aria-label={`Domain of state attribute ${n}`}
-                                aria-hidden={!semantic}
-                                tabIndex={semantic ? undefined : -1}
-                                value={kind}
-                                onChange={e => choose(i, 'kind', e.target.value)}
-                            >
-                                {kind === '' && <option value="" disabled>domain</option>}
-                                <option value="boolean">boolean</option>
-                                <option value="range">range</option>
-                                <option value="enum">enum</option>
-                            </select>
-                            {semantic && r.domain?.kind === 'range' ? (
-                                <>
-                                    {text(i, 'min', String(r.domain.min), `Minimum of state attribute ${n}`, 'min', 'bound')}
-                                    {text(i, 'max', String(r.domain.max), `Maximum of state attribute ${n}`, 'max', 'bound')}
-                                </>
-                            ) : semantic && r.domain?.kind === 'enum' ? (
-                                text(i, 'literals', r.domain.literals.join(', '), `Literals of state attribute ${n}`, 'A, B', 'literals')
-                            ) : (
-                                <span className="sim-roles-modal__decl-void" title={semantic ? 'Only for range and enum' : 'Presentation has no domain'} />
-                            )}
-                            {/* The equation takes the place of the initial value, in the same cell (R-SIM-76). */}
-                            {derived
-                                ? text(i, 'equation', r.equation ?? '', `Equation of state attribute ${n}, a JjEL expression`, 'equation', 'value')
-                                : text(i, 'initial', r.initial, `Initial value of state attribute ${n}, a JjEL literal`, 'initial', 'value')}
+                                Read by
+                            </span>
+                            {uses(usage.read, 'nothing', models)}
                         </div>
                     </div>
-                );
-            })}
+                )}
+            </div>
+        );
+    };
+
+    const groupName = (metaclass: string | null): string => (metaclass === null
+        ? 'Globals'
+        : classes.find(c => c.id === metaclass)?.name ?? (globalsOnly ? 'A metaclass: not in a model' : 'Unknown metaclass'));
+
+    const columns = stateColumns(rows);
+    const column = (space: 'semantic' | 'presentation', groups: readonly StateGroup[]): ReactElement => (
+        <div className={`sim-roles-modal__column sim-roles-modal__column--${space}`} role="group" aria-label={space === 'semantic' ? 'Abstract state' : 'Concrete state'}>
+            <div className="sim-roles-modal__column-head">
+                <span className={`sim-roles-modal__glyph sim-roles-modal__glyph--${space}`}>{space === 'semantic' ? 'σ' : 'node'}</span>
+                {space === 'semantic' ? 'Abstract' : 'Concrete'}
+            </div>
+            {groups.length === 0 ? (
+                <div className="sim-roles-modal__empty">
+                    {space === 'semantic' ? 'No semantic state.' : 'No presentation state. A row set to presentation is read as node.[name].'}
+                </div>
+            ) : groups.map(g => (
+                <div className="sim-roles-modal__group" key={g.metaclass ?? ''}>
+                    {/* A model's dialog heads its table «Globals» already: its own group has no heading of its own. */}
+                    {!(globalsOnly && g.metaclass === null) && (
+                        <div className="sim-roles-modal__group-head">
+                            <span className="sim-roles-modal__group-name">{groupName(g.metaclass)}</span>
+                            <span className="sim-roles-modal__count">{g.rows.length}</span>
+                        </div>
+                    )}
+                    {g.rows.map(declaration)}
+                </div>
+            ))}
+        </div>
+    );
+
+    return (
+        <div className="sim-roles-modal__columns" ref={ref}>
+            {column('semantic', columns.abstract)}
+            <div
+                className="sim-roles-modal__arrow"
+                title="A presentation equation may read σ; a semantic equation that reads node is E-NODE (R-SIM-18)"
+            >
+                <i className="bi bi-arrow-right" />
+                <span>σ is read one way</span>
+            </div>
+            {column('presentation', columns.concrete)}
         </div>
     );
 }
@@ -366,9 +562,10 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const profile: SimProfile = draftProfile ?? (preset ? systemProfile(preset) : undefined) ?? stored.profile;
     // «Custom» is bound against nothing (D7 of the profiles lane); a user profile is, as its preset.
     const custom = profile.id === CUSTOM_ID;
+    // bag carries a kept Node or Transition into the roles that depend on it (S6).
     const bindings: ProfileBindings | null = useMemo(
-        () => (!custom && sketch ? bindProfile(profile, sketch) : null),
-        [custom, profile, sketch],
+        () => profileBindings(profile, sketch, bag),
+        [profile, sketch, bag],
     );
     const edited = useMemo(() => bagWithEdits(bag, edits), [bag, edits]);
 
@@ -399,14 +596,29 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     // S11a on the bag as Apply would leave it: the selects' candidates and the verdict of each bound value.
     const after = draftBag(input);
     const verdicts: BindingVerdicts | null = sketch ? bindingVerdicts(profile, after, sketch) : null;
-    const status = draftStatus(input, verdicts ? currentVerdicts(verdicts) : undefined);
+    // The verdict: profileVerdict, which the panel's badge reads too (P-2026-09-28-0140).
+    const status = draftStatus(input, sketch);
     const sections = roleSections(profile, edited);
     const defects = validateProfile(profile);
-    const match = matchLine(bindings);
+    // The roles assigned now, by hand, stored or proposed: a manual assign or clear moves the line (P-2026-10-03-1630).
+    const match = assignedRoles(input, proposals);
     const help = boundHelp(proposals);
     // The actions write state attributes and none is declared: the first firing would halt (R-SIM-81(3), G9).
-    const declareHint = ['simAction', 'simEntry', 'simExit'].some(k => typeof after[k] === 'string' && after[k] !== '') && rows.length === 0;
+    // Unreadable (D6) shows nothing, not the hint for an empty declaration (S8); a draft's rows are always readable.
+    const rowsReadable = declRows !== null || storedRows.readable;
+    const declareHint = ['simAction', 'simEntry', 'simExit'].some(k => typeof after[k] === 'string' && after[k] !== '') && rowsReadable && rows.length === 0;
     const pending = Object.keys(patch).length > 0;
+    // «Written by» and «Read by» (R-SIM-103): the texts of the features the bag as Apply leaves it binds, over the models
+    // of the metamodel, read from the store on row selection only. The key holds what the texts depend on, the profile
+    // included (a role turned off has no key in the run bag), so the reader changes only with it.
+    const usageKey = JSON.stringify(['simGuard', 'simAction', 'simEntry', 'simExit', PROFILE_KEY].map(k => after[k] ?? null));
+    const readTexts = useCallback((): readonly UsageText[] => {
+        const lookup: any = (store.getState() as any).idlookup ?? {};
+        const [simGuard, simAction, simEntry, simExit, simProfile] = JSON.parse(usageKey);
+        const raw: Record<string, unknown> = { simGuard, simAction, simEntry, simExit, [PROFILE_KEY]: simProfile };
+        for (const k of Object.keys(raw)) if (raw[k] === null) delete raw[k];
+        return usageTexts(lookup, runBag(raw, lookup), metamodelModels(lookup, configModelId));
+    }, [usageKey, configModelId]);
     const pristine = preset === initialPreset && draftProfile === null && Object.keys(edits).length === 0 && declRows === null && !matchOff;
 
     // Escape closes without writing: from inside, the root's onKeyDown (which stops the event there, so it never
@@ -418,7 +630,7 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     }, [onClose]);
     useEffect(() => { dialogRef.current?.focus(); }, []);
 
-    // The declarations hint opens the dialog on Data, its Add attribute in view and focused (R-SIM-81(3)).
+    // The declarations hint opens the dialog on State, its Add attribute in view and focused (R-SIM-81(3)).
     useEffect(() => {
         if (!openOnData || firstOpen) return;
         const add = dataRef.current?.querySelector<HTMLButtonElement>('.sim-roles-modal__add');
@@ -483,22 +695,85 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
             : <span className="sim-roles-modal__badge" />;
     };
 
+    /** An option's name, its verdict marked when it is not ok (S10). */
+    const optionName = (id: string, verdict: string | undefined): string =>
+        `${nameOf(id)}${verdict === 'warn' ? ' (warning)' : verdict === 'incompatible' ? ' (incompatible)' : ''}`;
+
+    /**
+     * The other attributes of a multi row and its «+» select (R-SIM-90). A tag's remove button
+     * takes Enter and Space as a click, and Delete or Backspace; the focus then goes back to the
+     * row's select, which stays. The «+» keeps its slot while hidden, so nothing moves.
+     */
+    const multiControls = (r: RoleId, key: string, v: RowValue, row: MultiRow, compatOf: (id: string) => string | undefined): ReactElement => {
+        const names = multiRowLabels(label(r));
+        const remove = (e: SyntheticEvent<HTMLButtonElement>, id: string): void => {
+            e.currentTarget.closest('.sim-roles-modal__control')?.querySelector<HTMLSelectElement>('select')?.focus();
+            setEdit(key, withRemoved(v.value, id));
+        };
+        return (
+            <>
+                {row.others.length > 0 && (
+                    <div className="sim-roles-modal__attrs" role="list" aria-label={names.strip}>
+                        {row.shown.map(id => (
+                            <span className={`sim-roles-modal__attr sim-roles-modal__attr--${v.source}`} role="listitem" key={id} title={nameOf(id)}>
+                                <span className="sim-roles-modal__attr-name" title={nameOf(id)}>{nameOf(id)}</span>
+                                <button
+                                    type="button"
+                                    className="sim-roles-modal__attr-remove"
+                                    aria-label={names.remove(nameOf(id))}
+                                    title={names.remove(nameOf(id))}
+                                    onClick={e => remove(e, id)}
+                                    onKeyDown={e => { if (removesTag(e.key)) { e.preventDefault(); remove(e, id); } }}
+                                >
+                                    <i className="bi bi-x" />
+                                </button>
+                            </span>
+                        ))}
+                        {row.more.length > 0 && (
+                            <span className="sim-roles-modal__attr-more" role="listitem" title={names.more(row.more.map(nameOf))}>+{row.more.length}</span>
+                        )}
+                    </div>
+                )}
+                {row.plus && (
+                    <select
+                        className={`sim-roles-modal__attr-add${row.plusShown ? '' : ' sim-roles-modal__hidden'}`}
+                        aria-label={names.add}
+                        title={names.add}
+                        aria-hidden={!row.plusShown}
+                        tabIndex={row.plusShown ? undefined : -1}
+                        disabled={!row.plusShown}
+                        value=""
+                        onChange={e => { if (e.target.value) setEdit(key, withAdded(v.value, e.target.value)); }}
+                    >
+                        <option value="">+</option>
+                        {row.addable.map(id => <option value={id} key={id}>{optionName(id, compatOf(id))}</option>)}
+                    </select>
+                )}
+            </>
+        );
+    };
+
     const bindingRow = (r: RoleId, prefix?: string, note?: string | null): ReactElement => {
         const key = roleDescriptor(r).key as string;
         const v = rowValue(key, input, proposals);
         const compat = verdicts?.[r];
         const byName = (a: SimRoleOption, b: SimRoleOption) => a.name.localeCompare(b.name);
+        // R-SIM-90: a multi role's select holds the first attribute, the tags the others.
+        const multi = roleDescriptor(r).multi
+            ? multiRow(v.value, compat ? compatibleIds(compat) : listOf(r, profile.shape, options).map(o => o.id))
+            : null;
+        const primary = multi ? multi.primary : v.value;
         // S10: the candidates S11a does not judge incompatible, the bound value always; the lists of the panel without a sketch.
         const all: SimRoleOption[] = compat
-            ? compatibleOptions(compat, v.value)
-                .map(o => ({ id: o.id, name: `${nameOf(o.id)}${o.verdict === 'warn' ? ' (warning)' : o.verdict === 'incompatible' ? ' (incompatible)' : ''}` }))
-                .sort((a, b) => (a.id === v.value ? -1 : b.id === v.value ? 1 : byName(a, b)))
+            ? compatibleOptions(compat, primary)
+                .map(o => ({ id: o.id, name: optionName(o.id, o.verdict) }))
+                .sort((a, b) => (a.id === primary ? -1 : b.id === primary ? 1 : byName(a, b)))
             : (() => {
                 const list = listOf(r, profile.shape, options);
-                return v.value && !list.some(o => o.id === v.value) ? [{ id: v.value, name: nameOf(v.value) }, ...list] : list;
+                return primary && !list.some(o => o.id === primary) ? [{ id: primary, name: nameOf(primary) }, ...list] : list;
             })();
         const why = v.source === 'proposed' ? bindings?.[r]?.why : undefined;
-        const judged = v.value ? compat?.candidates.find(c => c.id === v.value) ?? compat?.current ?? null : null;
+        const judged = rowVerdict(compat, v.value, nameOf);
         return (
             <div className="sim-roles-modal__row" key={r}>
                 <div className="sim-roles-modal__role">
@@ -509,18 +784,19 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                 <div className="sim-roles-modal__value">
                     <div className="sim-roles-modal__control">
                     <select
-                        className={`sim-roles-modal__select sim-roles-modal__select--${v.source}${v.value ? '' : ' sim-roles-modal__select--empty'}`}
+                        className={`sim-roles-modal__select sim-roles-modal__select--${v.source}${primary ? '' : ' sim-roles-modal__select--empty'}`}
                         aria-label={label(r)}
-                        title={why ? `Proposed: ${nameOf(v.value)}. ${why}` : undefined}
-                        value={v.value}
-                        onChange={e => setEdit(key, e.target.value)}
+                        title={why ? `Proposed: ${nameOf(primary)}. ${why}` : undefined}
+                        value={primary}
+                        onChange={e => setEdit(key, multi ? withPrimary(v.value, e.target.value) : e.target.value)}
                     >
                         <option value="">{placeholderOf(r)}</option>
                         {all.map(o => <option value={o.id} key={o.id}>{o.name}</option>)}
                     </select>
+                    {multi && multiControls(r, key, v, multi, id => compat?.candidates.find(c => c.id === id)?.verdict)}
                     {/* A fixed slot: a verdict appearing never moves the row (S11a). */}
                     <span className="sim-roles-modal__verdict">
-                        {judged && judged.verdict !== 'ok' && (
+                        {judged && (
                             <i
                                 className={`bi ${judged.verdict === 'warn' ? 'bi-exclamation-triangle-fill sim-roles-modal__verdict--warn' : 'bi-exclamation-circle-fill sim-roles-modal__verdict--error'}`}
                                 title={`${judged.verdict === 'warn' ? 'Warning' : 'Incompatible'}: ${judged.why}`}
@@ -590,8 +866,8 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
     const base = profile.system ? profile.id : profile.basedOn ?? '';
     const presetValue = preset ?? (PANEL_PROFILE_IDS.some(id => id === base) ? base : '');
     const modified = isModified(profile);
-    const statusText = status.status === 'checkable' ? 'Checkable' : status.status === 'warnings' ? 'Checkable with warnings' : 'Not checkable';
-    const statusTitle = status.missing.length > 0 ? `Missing: ${status.missing.join(', ')}.` : 'Every required role is bound.';
+    const statusText = VERDICT_LABEL[status.status];
+    const statusTitle = pillTitle(status, verdicts);
     const dataMode = profile.modes.stateAttributes;
     const dataOff = dataMode.mode === 'off';
     const dataOffReason = dataMode.mode === 'off' ? dataMode.reason : '';
@@ -702,8 +978,8 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                     </>
                 ) : (
                     <>
-                        <span title="Matched from the metamodel's structure, then by name; Apply writes the proposals on the roles not set.">
-                            {`${match.matched} of ${match.total} roles matched`}
+                        <span title="Set here, stored, or matched from the metamodel's structure, then by name; Apply writes the proposals on the roles not set.">
+                            {`${match.assigned} of ${match.total} roles assigned`}
                         </span>
                         <span>·</span>
                         <button type="button" className="sim-roles-modal__link" onClick={() => setMatchOff(true)}>Undo</button>
@@ -808,10 +1084,10 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                         <button type="button" className="sim-roles-modal__fold sim-roles-modal__fold--data" aria-expanded={dataOpen} onClick={() => setDataOpen(o => !o)}>
                             <i className={`bi bi-chevron-${dataOpen ? 'down' : 'right'}`} />
                             <i className="bi bi-database" />
-                            <span className="sim-roles-modal__fold-title">Data</span>
+                            <span className="sim-roles-modal__fold-title">State</span>
                             <span className="sim-roles-modal__count">{rows.length}</span>
                             <span className="sim-roles-modal__data-note">
-                                {declareHint ? 'Declare the state attributes the actions write' : dataNeeded ?? (dataOff ? dataOffReason : '')}
+                                {declareHint ? "Declare the state attributes the actions write (a model's globals go in its State…)" : dataNeeded ?? (dataOff ? dataOffReason : '')}
                             </span>
                         </button>
                         {dataOff && roleSwitch(profile, 'stateAttributes') === 'on' && (
@@ -831,7 +1107,10 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
                         <div className="sim-roles-modal__warning">The stored declarations are not readable. Adding an attribute replaces them.</div>
                     )}
                     {dataOpen && (
-                        <Declarations rows={rows} classes={options.allClasses} onChange={setDeclRows} focusRow={focusRow} onFocused={() => setFocusRow(null)} />
+                        <Declarations
+                            rows={rows} classes={options.allClasses} onChange={setDeclRows} focusRow={focusRow} onFocused={() => setFocusRow(null)}
+                            readTexts={readTexts}
+                        />
                     )}
                 </div>
             </div>
@@ -880,7 +1159,7 @@ export function SimRolesModal(props: SimRolesModalProps): ReactElement {
             onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') onClose(); }} onKeyUp={stop} onMouseDown={stop} onMouseUp={stop} onClick={stop} onDoubleClick={stop}
             onPointerDown={stop} onPointerUp={stop} onContextMenu={stop} onWheel={stop}
         >
-            <div className="sim-roles-modal" role="dialog" aria-modal="true" aria-labelledby="sim-roles-modal-title" tabIndex={-1} ref={dialogRef}>
+            <div className="sim-roles-modal sim-roles-modal--wide" role="dialog" aria-modal="true" aria-labelledby="sim-roles-modal-title" tabIndex={-1} ref={dialogRef}>
                 {header}
                 {firstOpen ? picker : roles}
             </div>

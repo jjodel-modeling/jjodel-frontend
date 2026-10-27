@@ -1,4 +1,5 @@
 # #157 — Fase 0a: entità `DEnvironmentConfig` / `DRole` (schema + read/write, niente UI)
+Status: eseguito 2026-09-23 · staging (Juri Di Rocco, #157), outside this harness; line added at reintegration by the chat (P-2026-10-01-2240)
 
 **Data**: 2026-09-23 12:00
 **Corsia**: completa (RC-3) — nuova entità persistita, tocca `joiner/classes.ts` + `joiner/index.ts`.

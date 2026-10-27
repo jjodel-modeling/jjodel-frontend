@@ -60,6 +60,10 @@ export class Parser {
     private current: number = 0;
     private errors: ParseError[] = [];
     private originalInput: string = '';
+    /** Number of block bodies being parsed; inside one, a bare 'end' closes the block. */
+    private blockDepth: number = 0;
+    /** Strict parse (detect): a standalone do block must reach its 'end'. */
+    private strict: boolean = false;
 
     /**
      * Parse input string into AST
@@ -70,6 +74,8 @@ export class Parser {
         this.current = 0;
         this.errors = [];
         this.originalInput = input;
+        this.blockDepth = 0;
+        this.strict = opts?.strict === true;
 
         // Skip leading newlines
         while (this.check('NEWLINE')) {
@@ -174,7 +180,9 @@ export class Parser {
         if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
             token.value.toLowerCase() === 'do') {
             this.advance(); // consume 'do'
-            const commands = this.parseBlockBody();
+            // Only under strict: validateScriptIntegrity parses a multi-line block one line
+            // at a time, and its first line is a bare 'do'.
+            const commands = this.parseBlockBody('do', this.strict);
             const args: BlockArgs = { command: 'block', commands };
             return { type: 'Command', command: 'block', args, position };
         }
@@ -286,6 +294,41 @@ export class Parser {
         // Parse options
         const options = this.parseCreateOptions(elementType);
 
+        // M1 (R-JS-9): the container of an instance, `in <Parent>.<reference>`. The documented
+        // order puts it after the instance name, where the option loop stops; the order with the
+        // container before the name is read above. The reference is mandatory: the slot is never
+        // inferred. A qualified class name never takes the place of the container.
+        if (elementType === 'instance') {
+            if (!parent && this.matchKeyword('in')) {
+                parent = this.parseQualifiedNameToken();
+            }
+            if (parent && !parent.member) {
+                throw new Error(
+                    "Expected 'in <Parent>.<reference>' after the instance. " +
+                    "Syntax: create instance of <ClassName> \"<instanceName>\" in <Parent>.<reference>"
+                );
+            }
+            // #175: the parse is non-strict, so a token left here was dropped in silence: the
+            // instance was auto-named, or born at the root without its `in`. A command ends at a
+            // newline, the end of input, `;`, `end` (a block) or the next command.
+            const rest = this.peek();
+            const ends = this.isAtEnd() || this.check('NEWLINE') || this.check('COMMAND') || this.checkKeyword('end')
+                || (this.check('PUNCTUATION') && rest.value === ';');
+            if (!ends) {
+                throw new Error(
+                    `Unexpected '${rest.value}' after the instance. A name with spaces goes in quotes: ` +
+                    "create instance of <ClassName> \"<instanceName>\" [in <Parent>.<reference>]"
+                );
+            }
+            return {
+                command: 'create',
+                elementType,
+                name: typeof name === 'string' ? name : name.segments[name.segments.length - 1],
+                parent,
+                options
+            };
+        }
+
         return {
             command: 'create',
             elementType,
@@ -342,10 +385,17 @@ export class Parser {
             // M1: instance name as positional STRING after class name
             // e.g., "create instance Customer \"Alice\"" — Alice is the instance name.
             // Reuses options.defaultValue as the carrier (read by executeCreateInstance).
-            if (elementType === 'instance' && this.check('STRING') && !options.defaultValue) {
-                options.defaultValue = { kind: 'string', value: this.advance().value };
-                hasOptions = true;
-                continue;
+            // #175: or as a bare identifier (`create instance of Customer Alice`), never `end`, which
+            // closes a block. An instance takes no other option, so anything else ends the loop and
+            // parseCreateCommand reads `in` or refuses what is left.
+            if (elementType === 'instance') {
+                const bare = this.check('IDENTIFIER') && this.peek().value.toLowerCase() !== 'end';
+                if (!options.defaultValue && (this.check('STRING') || bare)) {
+                    options.defaultValue = { kind: 'string', value: this.advance().value };
+                    hasOptions = true;
+                    continue;
+                }
+                break;
             }
 
             // type: TypeName
@@ -541,7 +591,8 @@ export class Parser {
             throw new Error("Expected 'to' or 'as' after target in rename command");
         }
 
-        const newName = this.expectIdentifier('new name');
+        // #175: quoted as `create instance` takes it, or bare.
+        const newName = this.check('STRING') ? this.advance().value : this.expectIdentifier('new name');
 
         return { command: 'rename', target, newName, elementType };
     }
@@ -589,7 +640,18 @@ export class Parser {
     // ============================================
 
     private parseAddCommand(): AddArgs {
-        const elementType = this.parseElementType();
+        // #175: `add p1 to s.ref` reads like a link, but `add` creates. Say which form links.
+        const first = this.peek();
+        let elementType: ElementType;
+        try {
+            elementType = this.parseElementType();
+        } catch (e) {
+            if (['IDENTIFIER', 'QUALIFIED_NAME', 'STRING'].includes(first.type) && this.peekNext()?.value.toLowerCase() === 'to') {
+                throw new Error(`${(e as Error).message} — to add the existing '${first.value}' to a reference: ` +
+                    `set <Instance>.<reference> += ${first.value}`);
+            }
+            throw e;
+        }
         const name = this.expectIdentifier('element name');
 
         // Expect 'to'
@@ -895,7 +957,7 @@ export class Parser {
         this.skipNewlines();
 
         // Parse body — single command or multiple commands until 'end'
-        const body = this.parseBlockOrCommand();
+        const body = this.parseBlockOrCommand('let');
 
         return { command: 'let', bindings, body };
     }
@@ -994,10 +1056,13 @@ export class Parser {
 
     /**
      * Parse multiple commands separated by ';' or newlines until 'end' keyword.
-     * Consumes the 'end' keyword.
+     * Consumes the 'end' keyword. `opener` names the block kind in errors; with
+     * `requireEnd`, reaching end of input without the 'end' is an error.
      */
-    private parseBlockBody(): CommandNode[] {
+    private parseBlockBody(opener: string, requireEnd: boolean = false): CommandNode[] {
         const commands: CommandNode[] = [];
+        let closed = false;
+        this.blockDepth++;
 
         while (!this.isAtEnd() && !this.check('EOF')) {
             this.skipNewlines();
@@ -1012,12 +1077,24 @@ export class Parser {
             // Stop at 'end' keyword
             if (this.checkKeyword('end')) {
                 this.advance(); // consume 'end'
+                closed = true;
                 break;
             }
 
-            commands.push(this.parseCommand());
+            // A non-command word comes back as an eval node built by remainingInput(),
+            // which consumes no token: pushing it again would never reach 'end'.
+            const before = this.current;
+            const command = this.parseCommand();
+            if (this.current === before) {
+                throw new Error(`Unexpected '${this.peek().value}' in ${opener} block`);
+            }
+            commands.push(command);
         }
 
+        if (requireEnd && !closed) {
+            throw new Error(`Expected 'end' to close ${opener} block`);
+        }
+        this.blockDepth--;
         return commands;
     }
 
@@ -1027,12 +1104,12 @@ export class Parser {
      * If the next meaningful token starts a command and 'end' appears later, collects
      * all commands until 'end'. Otherwise parses a single command.
      */
-    private parseBlockOrCommand(): CommandNode {
+    private parseBlockOrCommand(opener: string): CommandNode {
         this.skipNewlines();
 
         // Check if this is a multi-command block (look for 'end' keyword ahead)
         if (this.hasEndAhead()) {
-            const commands = this.parseBlockBody();
+            const commands = this.parseBlockBody(opener);
             if (commands.length === 1) return commands[0];
             const position = commands.length > 0
                 ? commands[0].position
@@ -1125,7 +1202,7 @@ export class Parser {
         }
 
         // Parse body — single command or multiple commands until 'end'
-        const body = this.parseBlockOrCommand();
+        const body = this.parseBlockOrCommand('forall');
 
         return { command: 'forall', variable, collectionExpr, filterExpr, body };
     }
@@ -1166,8 +1243,10 @@ export class Parser {
     private parseEvalCommand(): EvalArgs {
         // Everything after "eval" is the JjEL expression
         // Reconstruct from remaining tokens
+        // Inside a block, stop before the bare 'end' token that closes it.
         const parts: string[] = [];
-        while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+        while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF') &&
+               !(this.blockDepth > 0 && this.checkKeyword('end'))) {
             parts.push(this.advance().value);
         }
         const expression = parts.join(' ').trim();

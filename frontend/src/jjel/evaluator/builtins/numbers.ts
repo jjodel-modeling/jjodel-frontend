@@ -306,5 +306,6 @@ export function getNumberMethod(name: string): ((...args: any[]) => JjelValue) |
         div
     };
 
-    return methods[name];
+    // Own keys only: an inherited name (`constructor`, `toString`...) is no method (R-GEN-29).
+    return Object.prototype.hasOwnProperty.call(methods, name) ? methods[name] : undefined;
 }

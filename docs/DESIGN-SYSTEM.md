@@ -3,6 +3,8 @@
 > **Single source of truth** for visual design decisions across the entire Jjodel application.
 > Referenced by `CLAUDE.md`. All components must conform to this document.
 > Last updated: 2026-03-14
+>
+> **No dark theme (D-UI-15, 2026-10-04, final).** Jjodel ships the light theme only. Every "dark" column, row or value below is history: it binds nothing, and no new token, ramp or component gets a dark value.
 
 ---
 
@@ -465,7 +467,7 @@ When a new visual element is needed:
 
 If a new artifact type is added to the Megamodel:
 1. Assign a color ramp from the existing palette (prefer unused ramps)
-2. Define all 6 stops (bg-light, bg-dark, mid, strong, text-light, text-dark)
+2. Define the light stops (bg-light, mid, strong, text-light); no dark stops (D-UI-15)
 3. Choose an icon (letter or Bootstrap Icon)
 4. Add entries to §2.2 and §3.4
 5. Update the `EdgeType` union if new relationships are introduced

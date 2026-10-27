@@ -106,6 +106,13 @@
         // configuration. (`text-decoration: underline` itself is inherited from
         // the .mm-object rule in EditorV2.scss.)
         text-underline-offset: 3px;
+        // That rule also sets `overflow: hidden` for the ellipsis, which clips at
+        // the padding box: at 14px and `line-height: normal` the box ends about
+        // 3.4px under the baseline, so an underline 3px under it was cut away
+        // (0 pixels painted, measured 2026-09-29, R-VP-18). The padding makes
+        // room for it, the negative margin gives the height back to the header.
+        padding-bottom: 4px;
+        margin-bottom: -4px;
     }
 
     // 20×20 square before the name, single-letter glyph from entityMeta.ts.
@@ -670,6 +677,19 @@
             background: var(--color-inode-selected-header-bg);
             border-bottom-color: var(--color-inode-selected-header-border);
         }
+    }
+
+    // An IR-rendered node wears this wrapper too, but the shape inside it
+    // (`.ir-node-content`, irStyle.ts) carries its own radius, clip and shadow, and
+    // paints its ring and band up to 5px outside its box. The shape fills the
+    // wrapper, so the `overflow: hidden` above cut all of it: the ring and band
+    // while selected, and at rest the corners of a shape whose radius is under the
+    // wrapper's 7px padding-box arc (rect 4, an authored 0 to 6) and its resting
+    // shadow. The IR branch mounts no accent bar, so there is nothing to clip.
+    // Lifted at rest as well as selected, so rest and selection differ by the ring
+    // and band only. (0,3,0) beats (0,2,0).
+    &:has(> .ir-node-content) {
+        overflow: visible;
     }
 
     // ── Singleton ────────────────────────────────────────────────────────────

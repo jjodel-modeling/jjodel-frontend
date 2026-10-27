@@ -93,11 +93,21 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P16); see §1.
 The model is named in one place only: `model` in `.claude/settings.json`. Run `claude update` if a session opens on another model, or if the installed Claude Code does not know the pinned ID. The `Model:` trailer of a commit records the model the session banner shows, not this file (`docs/PROTOCOL.md` P6).
 
 Effort is set with `/effort` and persists across sessions:
-- **Default: xhigh** — the working level for all real tasks, including the critical zone (§3) and visual-bug diagnosis (§5).
-- Step down to **high / medium** only for trivial, out-of-critical-zone work (a CSS tweak, a doc fix, a single `str_replace`).
+- **Default: high** — the working level for real tasks (`effortLevel` in `.claude/settings.json`).
+- **xhigh** for critical-zone work (§3) and visual-bug diagnosis (§5): set it with `/effort xhigh` at the start of such a task, and lower it back to `high` afterwards.
+- **medium** for trivial work outside the critical zone (a CSS tweak, a doc fix, a single `str_replace`).
 - **Never max** unless the prompt explicitly asks for it.
 
-Note: switching model can reset effort to the model's default (high). If a session opens at high, set `/effort xhigh` before working.
+Note: switching model can reset effort to the model's default (high), which is also the project default; a critical-zone or visual-bug task still sets `/effort xhigh` before working.
+
+### 0.1 Output discipline
+
+Tool output is context, and context is most of a session's cost (token audit 2026-09-07 to 2026-10-12, P-2026-10-13-1930).
+- Read code with the Read tool and `offset`/`limit`, never `cat` or a wide `sed -n`. Keep searches bounded: `grep -r` with `-l`, `-c` or `-m N`, or piped into `head -n N`.
+- Run builds, tests and type-checks through the quiet runner: `node scripts/run-quiet.mjs LABEL -- npm run build` from `frontend/`. It keeps the whole log in `.agent-logs/` at the repo root and prints the exit code, the error lines and the tail; read the log with Read and `offset`/`limit`.
+- The hook `frontend/scripts/hooks/output-budget.mjs` denies the unbounded forms: `cat`/`less`/`more` on a file; `sed -n` without a range or over 120 lines; recursive `grep` or `rg` without `-l`, `-c` or `-m N` (N ≤ 50); `git show` and `git diff` without `--stat`, `--name-only` or a path; `git log` without `-n N` (N ≤ 30); builds, tests and type-checks outside the runner. A later `| head -n N` or `| tail -n N` (N ≤ 80), `| wc` or `| grep -c` bounds the first four, and so does stdout sent to a file.
+- `# allow-large-output` in a command lets it through and is logged in `.agent-logs/guard-overrides.log`. It is for exceptional cases, and the reply says why it was needed.
+- For broad searches and long logs prefer the `explorer` subagent (`.claude/agents/explorer.md`): it returns conclusions with `file:line`, not file contents.
 
 ---
 
@@ -130,7 +140,7 @@ Committed behavior represents verified state. A modification never degrades it.
 - Do not commit instrumentation (`console.log`, `[diagN]` blocks). These are removed in a dedicated cleanup commit after the fix is confirmed.
 
 **Test before considering a task done**
-- `npm run typecheck` must pass without introducing new errors. A known baseline of pre-existing errors exists; verify your change does not increase the count.
+- `npm run typecheck` must exit 0. There is no baseline of pre-existing errors (§17).
 - `npm run build` must pass.
 - If tests exist for the touched area, `npm run test` must pass for those files.
 
@@ -603,7 +613,7 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 
 Verification gates before commit:
 - `npm run build` must pass (exit 0, only the pre-existing chunk-size warning).
-- `npm run typecheck` must pass without introducing new errors. Baseline: **14** pre-existing errors, listed by file and code because line numbers drift: `src/api/data.ts` TS2304 ×2 and TS2322; `src/common/Dummy.ts` TS2307; `src/components/editor-v2/EditorV2.tsx` TS2339; `src/components/forEndUser/Measurable.tsx` TS2552, TS7053 ×4 and TS2345; `src/components/Jodie/ChatMessages.tsx` TS2322; `src/components/project/ProjectEditor.tsx` TS2769; `src/pages/components/Dashboard.tsx` TS2339. Verify your change does not increase the count.
+- `npm run typecheck` must exit 0, with no `error TS` line. The baseline is **zero** from 2026-10-12: P-2026-10-12-2000 and P-2026-10-12-2001 cleared the 14 errors it had carried (RC-48, `docs/decisions.md`). An error on your tree is yours, or a regression of the tip that you prove by running the typecheck on the tip; it is never recorded as pre-existing, and no list of known errors is kept here again. Fix it or stop.
 - `npm run test` where the touched area has tests. The suite has known failures: nine files fail at import with `ReferenceError: window is not defined` (through the `monaco-editor` import) and collect no test: `src/jjscript/__tests__/context-binding.test.ts`; `src/jjtl/__tests__/abstract-target.test.ts`, `ai-prompt-sanitization.test.ts`, `circular-refs.test.ts`, `executor-bridge.test.ts`, `executor-llayer.test.ts`, `forall-mapping.test.ts`, `source-alias.test.ts`; `src/utils/__tests__/UDComparator.test.ts`. Do not treat any other red as pre-existing without checking.
 - `npm run check:agents` must pass when you touch any `CLAUDE.md`. It regenerates every `AGENTS.md` into a temp directory and compares it byte for byte with the committed one. When red, run `npm run gen:agents` and include the regenerated files in the same commit — never hand-edit them.
 - `npm run check:docs` must pass when you touch `CLAUDE.md`, `docs/PROTOCOL.md`, `docs/claude-code-log.md` or a lane inbox `docs/log-inbox/*.md`. It verifies that the §21.2 entry-format block is byte-identical to `docs/PROTOCOL.md` P9, and that recent entries, in the active log and in the inboxes alike, carry the fields of their type (`Corregge` and `Causa` for a task; `Ticket`, `Priority` and `Found in` for a ticket). If a recent entry uses prose instead of the strict format, note it in `**Notes**` rather than failing the gate.
@@ -634,7 +644,6 @@ These anti-patterns are consolidated in the canonical **NON-NEGOTIABLE RULES** b
 ### 20.2 Best practices
 
 - ✅ Accessibility (WCAG)
-- ✅ Dark mode support
 - ✅ Lazy loading where appropriate
 - ✅ Memoization for performance
 - ✅ `console.log` with prefixes `[Component]` for debug — **remove before commit**
@@ -665,6 +674,8 @@ Claude Code maintains `docs/claude-code-log.md` as an add-only operational log: 
 ```
 
 This block is the canonical format, mirrored verbatim in `docs/PROTOCOL.md` P9.
+
+The `**Outcome**` field above belongs to the log entry only. It is not the closing line of a session: every final message (hard stop, question, closing report) ends with one line `Outcome: done | hard-stop | question | blocked`, one of those four words and no other (RC-20, `docs/PROTOCOL.md`). `lane-run` reads that line; any other word, `completed` included, reads `unparsed`.
 
 A **ticket** is an entry of its own type, for a finding that has to be found on its own and outlives the lane that made it. The heading is `## YYYY-MM-DD — ticket: short description` (the colon form, from 2026-09-24) and the fields are four, not twelve:
 

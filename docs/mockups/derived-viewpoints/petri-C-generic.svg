@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;fill:#0f172a}
+.sm{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:500;fill:#0f172a}
+.eb{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;fill:#64748b}
+.at{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#64748b}
+.mk{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:600;fill:#0f172a}
+.mk0{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:500;fill:#94a3b8}
+</style><marker id="hpc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker><marker id="ipc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 170 160 L 209 160" marker-end="url(#hpc)"/>
+<path d="M 310 160 L 349 160" marker-end="url(#hpc)"/>
+<path d="M 450 160 L 489 160" marker-end="url(#hpc)"/>
+<path d="M 540 128 V 88 H 120 V 127" marker-end="url(#hpc)"/>
+<path d="M 540 192 L 540 307" marker-end="url(#hpc)"/>
+<path d="M 590 340 L 749 340" marker-end="url(#hpc)"/>
+<path d="M 800 192 L 800 307" marker-end="url(#hpc)"/>
+<path d="M 800 372 L 800 467" marker-end="url(#hpc)"/>
+<path d="M 850 500 H 960 V 373" marker-end="url(#hpc)"/>
+<path d="M 960 308 V 160 H 851" marker-end="url(#hpc)"/>
+<path d="M 490 356 H 260 V 193" marker-end="url(#hpc)"/>
+</g>
+<rect x="70" y="128" width="100" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="120" y="148" text-anchor="middle">PLACE</text>
+<text class="nm" x="120" y="166" text-anchor="middle">ready</text>
+<text class="at" x="120" y="182" text-anchor="middle">tokens = 1</text>
+<rect x="210" y="128" width="100" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="260" y="154" text-anchor="middle">TRANSITION</text>
+<text class="nm" x="260" y="173" text-anchor="middle">produce</text>
+<rect x="350" y="128" width="100" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="400" y="148" text-anchor="middle">PLACE</text>
+<text class="nm" x="400" y="166" text-anchor="middle">wait</text>
+<text class="at" x="400" y="182" text-anchor="middle">tokens = 0</text>
+<rect x="490" y="128" width="100" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="540" y="154" text-anchor="middle">TRANSITION</text>
+<text class="nm" x="540" y="173" text-anchor="middle">deliver</text>
+<rect x="490" y="308" width="100" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="540" y="328" text-anchor="middle">PLACE</text>
+<text class="nm" x="540" y="346" text-anchor="middle">buffer</text>
+<text class="at" x="540" y="362" text-anchor="middle">tokens = 2</text>
+<rect x="750" y="308" width="100" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="800" y="334" text-anchor="middle">TRANSITION</text>
+<text class="nm" x="800" y="353" text-anchor="middle">consume</text>
+<rect x="750" y="128" width="100" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="800" y="148" text-anchor="middle">PLACE</text>
+<text class="nm" x="800" y="166" text-anchor="middle">idle</text>
+<text class="at" x="800" y="182" text-anchor="middle">tokens = 1</text>
+<rect x="750" y="468" width="100" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="800" y="488" text-anchor="middle">PLACE</text>
+<text class="nm" x="800" y="506" text-anchor="middle">using</text>
+<text class="at" x="800" y="522" text-anchor="middle">tokens = 0</text>
+<rect x="910" y="308" width="100" height="64" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="960" y="334" text-anchor="middle">TRANSITION</text>
+<text class="nm" x="960" y="353" text-anchor="middle">release</text>
+<text class="lbl" x="670" y="330" text-anchor="middle">weight = 2</text>
+<text class="lbl" x="375" y="374" text-anchor="middle">«InhibitorArc» weight = 3</text>
+</svg>

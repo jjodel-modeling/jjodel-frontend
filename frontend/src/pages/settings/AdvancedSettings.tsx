@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { setCodegenEnabled, useCodegenEnabled } from '../../codegen/setting';
 
 type SettingProps = {
     onDirtyChange?: (...a:any)=>any
 }
+
+// The code generator build flag (P-2026-10-12-0012): `VITE_CODEGEN=true` at build time, unset in 3.1. The bare text
+// `import.meta.env.X` is the form Vite replaces with a literal; tsconfig has no vite/client types, hence the ts-ignore.
+// @ts-ignore
+const CODEGEN_BUILD: boolean = import.meta.env.VITE_CODEGEN === 'true';
 
 export function AdvancedSettings(props: SettingProps) {
     const [debugMode, setDebugMode] = useState(() => {
@@ -11,6 +17,7 @@ export function AdvancedSettings(props: SettingProps) {
     });
 
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const codegenEnabled = useCodegenEnabled();
 
     const toggleDebugMode = (enabled: boolean) => {
         setDebugMode(enabled);
@@ -77,6 +84,30 @@ export function AdvancedSettings(props: SettingProps) {
                     </div>
                 </label>
             </div>
+
+            {/* Experimental (R-GEN-2): off by default; with it off no module of the generator loads. Shown only in a
+                build with VITE_CODEGEN=true (P-2026-10-12-0012): 3.1 ships without it. */}
+            {CODEGEN_BUILD && (
+                <>
+                    <div className="settings-divider" />
+
+                    <div className="settings-group">
+                        <label className="settings-label">Experimental</label>
+
+                        <label className="settings-checkbox">
+                            <input
+                                type="checkbox"
+                                checked={codegenEnabled}
+                                onChange={(e) => setCodegenEnabled(e.target.checked)}
+                            />
+                            <div className="checkbox-content">
+                                <span className="checkbox-label">Code generation</span>
+                                <span className="checkbox-description">Show the Code panel in the model editor: templates over the metamodel, generated text linked to the model</span>
+                            </div>
+                        </label>
+                    </div>
+                </>
+            )}
 
             <div className="settings-divider" />
 

@@ -12,7 +12,7 @@
  * directly when JjOM changes externally.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { Node, Edge } from '@xyflow/react';
 import {
@@ -45,12 +45,14 @@ import {
     clearCanvasEdgePairs,
     isSingletonSuppressed,
 } from '../sync/syncState';
+import { vertexChildrenHash } from '../sync/vertexSnapshot';
 import { collectPendingVertexObjects, collectMissingM1Edges } from '../sync/m1EdgeGate';
 import {
     classifyRefEdgeReconcile,
     isM2ReferenceEdge,
     type RefEdgeSnapshot,
 } from '../utils/refEdgeReconcile';
+import { samePlainData, mergeSyncedEdge } from '../utils/syncPatchIdentity';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -88,6 +90,10 @@ type SetEdges = React.Dispatch<React.SetStateAction<Edge[]>>;
 
 // Empty array constant to avoid re-creating on every render
 const EMPTY_ARRAY: string[] = [];
+
+// Delay of the re-run after an id was skipped by the anti-bounce check: the window of
+// `syncState.ts` (BOUNCE_WINDOW_MS, 300 ms, not exported) plus a margin.
+const ANTI_BOUNCE_RERUN_MS = 350;
 
 // ---------------------------------------------------------------------------
 // Custom equality for per-element selectors
@@ -206,13 +212,16 @@ function isEdgeClassName(className: string | undefined): boolean {
  */
 function deduplicateInheritanceEdges(edges: Edge[]): Edge[] {
     const seen = new Set<string>();
-    return edges.filter(e => {
+    const kept = edges.filter(e => {
         if (e.type !== 'inheritance') return true;
         const key = `inh:${e.source}→${e.target}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
     });
+    // The input itself when nothing was dropped, so a patch that changes nothing
+    // hands back the array it received (P-2026-10-02-1450, T9).
+    return kept.length === edges.length ? edges : kept;
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +277,10 @@ export function useJjomSync(
     // ── Previous D-object references for diffing ───────────────────────
     const prevElementsRef = useRef<Map<string, any>>(new Map());
     const prevSubElementsRef = useRef<string[]>(EMPTY_ARRAY);
+
+    // ── Anti-bounce re-run: one tick after the window when a run skipped a changed id ──
+    const [antiBounceTick, setAntiBounceTick] = useState(0);
+    const antiBounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     // ── Initialization flag ────────────────────────────────────────────
     const initializedRef = useRef(false);
@@ -1070,72 +1083,11 @@ export function useJjomSync(
                     const modelElem = state.idlookup[modelId] as any;
                     if (modelElem) {
                         result.set(`model:${id}`, modelElem);
-                        // Lightweight hash of children properties (attr names,
-                        // types, bounds, feature values, etc.). Changes when any
-                        // child is updated in Redux. A single number entry per
-                        // vertex — avoids infinite re-render loops.
-                        let ch = 0;
-                        for (const key of ['attributes', 'references', 'operations', 'literals', 'features']) {
-                            const arr = modelElem[key];
-                            if (!Array.isArray(arr)) continue;
-                            for (const childId of arr) {
-                                if (typeof childId !== 'string') continue;
-                                const child = state.idlookup[childId] as any;
-                                if (!child) continue;
-                                const n = child.name ?? '';
-                                for (let i = 0; i < n.length; i++) {
-                                    ch = ((ch << 5) - ch + n.charCodeAt(i)) | 0;
-                                }
-                                // Include type pointer and bounds
-                                const t = (typeof child.type === 'string' ? child.type : child.type?.id ?? '');
-                                for (let i = 0; i < t.length; i++) {
-                                    ch = ((ch << 5) - ch + t.charCodeAt(i)) | 0;
-                                }
-                                ch = (ch * 31 + (child.lowerBound ?? 0)) | 0;
-                                ch = (ch * 31 + (child.upperBound ?? 0)) | 0;
-                                ch = (ch * 31 + (child.abstract ? 1 : 0)) | 0;
-                                ch = (ch * 31 + (child.composition ? 1 : 0)) | 0;
-                                // Include feature values (DValue.values) for M1 instance nodes
-                                const vals = child.values;
-                                if (Array.isArray(vals)) {
-                                    for (const v of vals) {
-                                        const vs = String(v ?? '');
-                                        for (let j = 0; j < vs.length; j++) {
-                                            ch = ((ch << 5) - ch + vs.charCodeAt(j)) | 0;
-                                        }
-                                    }
-                                }
-                                ch = (ch * 31 + 7) | 0; // separator
-                            }
-                        }
-                        // M1 co-evolution: hash enum literals from the metaclass so
-                        // that changes to enumerations trigger a re-sync.
-                        const instOfPtr = modelElem.instanceof;
-                        const metaclassId = typeof instOfPtr === 'string' ? instOfPtr
-                            : (Array.isArray(instOfPtr) ? instOfPtr[0] : null);
-                        if (metaclassId && typeof metaclassId === 'string') {
-                            const mc = state.idlookup[metaclassId] as any;
-                            if (mc?.attributes) {
-                                for (const mAttrId of mc.attributes) {
-                                    if (typeof mAttrId !== 'string') continue;
-                                    const mAttr = state.idlookup[mAttrId] as any;
-                                    const mTypeId = typeof mAttr?.type === 'string' ? mAttr.type : null;
-                                    if (!mTypeId) continue;
-                                    const mType = state.idlookup[mTypeId] as any;
-                                    if (mType?.className === 'DEnumerator' && Array.isArray(mType.literals)) {
-                                        for (const litId of mType.literals) {
-                                            if (typeof litId !== 'string') continue;
-                                            const lit = state.idlookup[litId] as any;
-                                            const ln = lit?.name ?? '';
-                                            for (let k = 0; k < ln.length; k++) {
-                                                ch = ((ch << 5) - ch + ln.charCodeAt(k)) | 0;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        result.set(`ch:${id}`, ch);
+                        // Content hash of everything else the vertex's node renders
+                        // (children, slot features and types, reference target names,
+                        // ghost ancestry). A single number entry per vertex — avoids
+                        // infinite re-render loops. See sync/vertexSnapshot.ts.
+                        result.set(`ch:${id}`, vertexChildrenHash(state.idlookup as any, modelElem));
                     }
                 }
             }
@@ -1317,21 +1269,25 @@ export function useJjomSync(
 
         // --- Property changes on existing elements ---
         const prevElements = prevElementsRef.current;
+        let antiBounceDeferred = false;
         for (const id of subElementIds) {
             if (!prevIds.has(id)) continue;
-            if (isCanvasUpdated(id)) continue; // anti-bounce (drag positions only)
 
             const dElement = elementSnapshots.get(id);
             const prevD = prevElements.get(id);
             const currModel = elementSnapshots.get(`model:${id}`);
-            // damiano: this is wrong. it is sometimes taking newElement instead. source of isSingleton bug
-            let prevModel = prevElements.get(`model:${id}`);
-            // forcing to update by giving it a different object, until it gets a better fix.
-            prevModel = {} as any;
+            const prevModel = prevElements.get(`model:${id}`);
             const currHash = elementSnapshots.get(`ch:${id}`);
             const prevHash = prevElements.get(`ch:${id}`);
-            
-            if (prevD === dElement && prevModel === currModel && currHash === prevHash) continue;
+            const unchanged = prevD === dElement && prevModel === currModel && currHash === prevHash;
+
+            if (isCanvasUpdated(id)) { // anti-bounce (drag positions only)
+                // Its old entries stay in prevElements (below), so the re-run scheduled after
+                // the window compares it again.
+                if (!unchanged) antiBounceDeferred = true;
+                continue;
+            }
+            if (unchanged) continue;
 
             try {
                 const lProxy: any = LPointerTargetable.fromPointer(id);
@@ -1381,7 +1337,10 @@ export function useJjomSync(
                         // Only patch data if something actually changed — avoids
                         // creating a new node reference that triggers RF re-measurement
                         // and cascading re-renders (the "rename loop" bug).
-                        if (!existing || !shallowDataEqual(existing.data, rfNode.data)) {
+                        // The structural test reaches what the shallow one cannot (a
+                        // reference's `type`, an object's `features`): without it, an
+                        // unchanged vertex was patched after every render (T9).
+                        if (!existing || !(shallowDataEqual(existing.data, rfNode.data) || samePlainData(existing.data, rfNode.data))) {
                             patchedNodeData.set(id, rfNode.data);
                         }
                     }
@@ -1416,6 +1375,14 @@ export function useJjomSync(
         }
         prevElementsRef.current = nextPrev;
         prevSubElementsRef.current = subElementIds;
+
+        // One re-run after the anti-bounce window for the ids skipped above (no run per render).
+        if (antiBounceDeferred && antiBounceTimerRef.current === undefined) {
+            antiBounceTimerRef.current = setTimeout(() => {
+                antiBounceTimerRef.current = undefined;
+                setAntiBounceTick(t => t + 1);
+            }, ANTI_BOUNCE_RERUN_MS);
+        }
 
         // ── Surgical push to React Flow ──────────────────────────────
         // Instead of replacing ALL nodes (which triggers re-measurement
@@ -1499,43 +1466,20 @@ export function useJjomSync(
                 }
 
                 if (_patchedEdges.size > 0) {
-                    result = result.map(e => {
+                    // The merge (handles, local routing, jjomRefId, kind) lives in
+                    // syncPatchIdentity.ts and hands back `e` itself when it would
+                    // change nothing; the array is kept when no edge changed, so an
+                    // identical patch does not re-render the editor (T9).
+                    let changed = false;
+                    const mapped = result.map(e => {
                         const newEdge = _patchedEdges.get(e.id);
                         if (!newEdge) return e;
-                        const merged = { ...newEdge };
-                        if (e.sourceHandle) merged.sourceHandle = e.sourceHandle;
-                        if (e.targetHandle) merged.targetHandle = e.targetHandle;
-                        const existingData = (e.data as any) ?? {};
-                        const mergedData = (merged.data as any) ?? {};
-                        // Preserve local routing customizations that are not
-                        // persisted in JjOM and would otherwise be lost after
-                        // incremental sync patches.
-                        if (existingData.waypoints !== undefined && mergedData.waypoints === undefined) {
-                            mergedData.waypoints = existingData.waypoints;
-                        }
-                        if (existingData.sourceAnchor && !mergedData.sourceAnchor) {
-                            mergedData.sourceAnchor = existingData.sourceAnchor;
-                        }
-                        if (existingData.targetAnchor && !mergedData.targetAnchor) {
-                            mergedData.targetAnchor = existingData.targetAnchor;
-                        }
-                        merged.data = mergedData;
-                        const existingJjomRefId = (e.data as any)?.jjomRefId;
-                        if (existingJjomRefId && !(merged.data as any)?.jjomRefId) {
-                            (merged.data as any).jjomRefId = existingJjomRefId;
-                        }
-                        const existingRef = (e.data as any)?.reference;
-                        const newRef = (merged.data as any)?.reference;
-                        if (existingRef && newRef && newRef.kind === 'association' && existingRef.kind !== 'association') {
-                            (merged.data as any).reference = {
-                                ...newRef,
-                                kind: existingRef.kind,
-                                containment: existingRef.containment,
-                            };
-                        }
+                        const merged = mergeSyncedEdge(e, newEdge);
+                        if (merged !== e) changed = true;
                         rfEdgeCache.current.set(e.id, merged);
                         return merged;
                     });
+                    if (changed) result = mapped;
                 }
 
                 if (_addedEdges.length > 0) {
@@ -1546,12 +1490,13 @@ export function useJjomSync(
             });
             scheduleFlush();
         }
-    }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush, Date.now()]);
-    // todo: remove Date.now() from dependencies, it forces update to fix singleton issue but it's sub-optimal
+    }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush, antiBounceTick]);
 
     // ── Cleanup on unmount ─────────────────────────────────────────────
     useEffect(() => {
         return () => {
+            if (antiBounceTimerRef.current !== undefined) clearTimeout(antiBounceTimerRef.current);
+            antiBounceTimerRef.current = undefined;
             clearAllCanvasUpdated();
             clearSyncModes();
             clearDropCreated();

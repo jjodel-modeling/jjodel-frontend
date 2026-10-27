@@ -92,6 +92,14 @@ class Report{
     }
 }
 
+/** Holds TryComponent's full fallback: if that throws, it renders `plain` instead, and the error stops here. */
+class TryFallbackGuard extends React.Component<{plain: ReactNode, children: ReactNode}, {failed: boolean}> {
+    state = {failed: false};
+    static getDerivedStateFromError() { return {failed: true}; }
+    componentDidCatch(error: Error): void { console.error("<Try /> fallback failed, showing the plain message:", error); }
+    render() { return this.state.failed ? this.props.plain : this.props.children; }
+}
+
 class TryComponent extends React.Component<AllProps, State> {
     static cname: string = "TryComponent";
     static mailRecipients = ["damiano.divincenzo@student.univaq.it"];
@@ -200,7 +208,12 @@ class TryComponent extends React.Component<AllProps, State> {
                 <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank" rel="noreferrer">open an issue</a></li>
             </ul>
         </div>
-        return DefaultView.error(visibleMessage, "unhandled", undefined, undefined, undefined, (e)=> this.reset(e));
+        // The full fallback is a <Measurable draggable> that throws on mount on a project page; unguarded, its
+        // error reached this boundary, which rendered it again: 53 catches, "Maximum update depth exceeded" and an
+        // empty #root (P-2026-09-30-1540). The guard catches it below this boundary and shows the plain message.
+        return <TryFallbackGuard plain={visibleMessage}>
+            {DefaultView.error(visibleMessage, "unhandled", undefined, undefined, undefined, (e)=> this.reset(e))}
+        </TryFallbackGuard>;
     }
 
     decompress() {

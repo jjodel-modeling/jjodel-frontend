@@ -72,8 +72,10 @@ When the user is editing an M1 model (instance level, not metamodel level), use 
 \`\`\`jjscript
 create instance of ClassName
 create instance of ClassName "instanceName"
+create instance of ClassName "instanceName" in parentName.containmentReference
 \`\`\`
 Pass a quoted instance name when you need to reference the instance later (set, delete, cross-read). Without it, a unique name based on the class is generated automatically.
+An instance of a class reached through a containment reference is created inside its container with \`in parentName.containmentReference\` (the reference name is mandatory), on a line after the one that creates the parent. Never attach it afterwards with \`set parentName.containmentReference += ...\`.
 
 **M1 setting attribute values:**
 \`\`\`jjscript
@@ -96,22 +98,15 @@ delete instance instanceName
 **Notes on M1:**
 - Always use the \`of\` keyword: \`create instance of <ClassName>\`. The form without \`of\` is not accepted.
 - Pass an explicit \`"name"\` after the class so the instance can be addressed later by that name.
-- Class must already exist in the active metamodel. Mixed M2 + M1 scripts are valid: declare the class first, then instantiate.
+- Class must already exist in the active metamodel. M2 and M1 commands do not mix in one script: class commands run in a metamodel editor, instance commands in a model editor.
 - Strings must be double-quoted; integers and booleans literal as-is; enum literals as \`EnumName.LITERAL\`.
 
-**Mixed M2 + M1 example:**
+**M1 example** (a metamodel where \`State\` contains \`transitions\` of \`Transition\`, and \`Transition\` has the plain reference \`nextState: State\`):
 \`\`\`jjscript
-create class Person
-create attribute name in Person type String
-create attribute age in Person type int
-
-create instance of Person "alice"
-set alice.name = "Alice"
-set alice.age = 30
-
-create instance of Person "bob"
-set bob.name = "Bob"
-set bob.age = alice.age + 5
+create instance of State "idle"
+create instance of State "cooking"
+create instance of Transition "tStart" in idle.transitions
+set tStart.nextState = cooking
 \`\`\`
 
 ### PRIMITIVE TYPES

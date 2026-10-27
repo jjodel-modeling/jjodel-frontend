@@ -1,0 +1,12 @@
+key,value
+ref,e49ec777e
+incidentsRef,10ac68007
+cutoff,2026-10-18T20:20:12.000Z
+lanes,375
+lanesSkippedRunning,2
+lanesSkippedAfterCutoff,2
+lanesSkippedNoCalls,166
+prompts,619
+logEntries,1949
+logTasks,1801
+incidents,22

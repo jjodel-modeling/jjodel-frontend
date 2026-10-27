@@ -307,7 +307,10 @@ describe('through the core: one parallel assignment, sites by role', () => {
 
 // ── the worked examples, now as JjEL text end to end on the pure core ────────
 
-const CLASSES: Record<string, string[]> = { C_Node: [], C_Init: ['C_Node'], C_End: ['C_Node'], C_Tr: [], C_Ev: [] };
+const CLASSES: Record<string, string[]> = {
+    C_Node: [], C_Init: ['C_Node'], C_End: ['C_Node'], C_Tr: [], C_Ev: [],
+    C_ActionElement: [], C_ProcessNode: ['C_Node', 'C_ActionElement'],
+};
 
 interface Spec { [id: string]: { cls: string; slots?: Record<string, unknown[]> } }
 
@@ -425,5 +428,32 @@ describe('Ex2: the turnstile with an entry action, in JjEL', () => {
         expect(back.label.assignments).toEqual([]);
         const two = step(net, { state: back.next.state, event: 'coin' }, 'tCoin', NO_GUARDS, actions);
         expect(two.kind === 'fired' && read(two.next.state)).toEqual([2, 1]);
+    });
+});
+
+describe('Ex3: Entry bound to a mixin owner\'s feature, ProcessNode extends Node and ActionElement (R-SIM-89)', () => {
+    // Start -t1-> Plain (C_Node, no ActionElement slot); Start -t2-> Proc (C_ProcessNode, carries AE_action).
+    const stc = netStcFromRoles({
+        simInitial: 'C_Init', simOwnedTransitions: 'R_out', simNextState: 'R_next', simEntry: 'AE_action',
+    })!;
+    const { net, snap, texts } = compileSpec(stc, {
+        Start: { cls: 'C_Init', slots: { R_out: ['t1', 't2'] } },
+        Plain: { cls: 'C_Node' },
+        Proc: { cls: 'C_ProcessNode', slots: { AE_action: ['model.[hit] := model.[hit] + 1'] } },
+        t1: { cls: 'C_Tr', slots: { R_next: ['Plain'] } },
+        t2: { cls: 'C_Tr', slots: { R_next: ['Proc'] } },
+    }, [semantic('hit', null, 9)]);
+    // Read the entry text off each instance's own slots (as the bridge does): a
+    // class outside ActionElement's lineage never carries the AE_action slot.
+    const entryActions = new Map([...texts('AE_action')].map(
+        ([id, v]) => [actionSiteKey({ element: id, role: 'entry' }), compileActions([v === undefined ? undefined : String(v)])],
+    ));
+    const actions = makeActionOracle(snap, net, entryActions);
+
+    it('a plain Node instance runs with no entry assignment; a ProcessNode instance runs with the mixin\'s (killed by suppressing the action on an unrelated owner, or by running it regardless of the instance\'s own slot)', () => {
+        const toPlain = step(net, { state: net.initial, event: null }, 't1', NO_GUARDS, actions);
+        expect(toPlain.kind === 'fired' && toPlain.label.assignments).toEqual([]);
+        const toProc = step(net, { state: net.initial, event: null }, 't2', NO_GUARDS, actions);
+        expect(toProc.kind === 'fired' && toProc.label.assignments).toEqual([{ element: 'M', attr: 'hit', value: 1 }]);
     });
 });

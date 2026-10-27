@@ -1,0 +1,3 @@
+{
+  "notifications": { "events": { "lane_done": { "enabled": false }, "lane_started": { "enabled": true, "scope": { "kind": "fronts", "values": ["tack"] }, "channels": ["desktop"] } } }
+}

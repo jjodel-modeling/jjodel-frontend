@@ -1,0 +1,1 @@
+{ "name": "jjbare", "version": "0.1.0", "description": "Scratch probe, P-2026-10-11-1745: a guard with no .catch that throws or hangs before it denies." }

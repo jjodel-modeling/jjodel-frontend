@@ -1,0 +1,62 @@
+[
+  {
+    "id": "SG-1",
+    "name": "Low cognitive load",
+    "description": "The modeler sees only what the task at hand needs. CLAUDE.md §8.8 makes Basic mode the default and asks to hide complexity until needed; docs/DESIGN-SYSTEM.md §4.2 requires every panel to support Basic/Advanced, Basic showing essential controls only. Rows serve it when they gate a surface on Redux state.advanced (R-RAIL-12, R-RAIL-13, R-SIM-97), keep a disclosure closed by default (R-RAIL-24), give one place and one name to one thing, or keep a concern out of the surfaces it would crowd (R-VAL-1: rules next to the class properties «aumenta il carico cognitivo»). They hurt it when they add concepts, controls or modes the user must hold in mind, or two readings of the same thing. Scope: the users of the product (modeler, language engineer, demo audience); the cost borne by the developer and the harness is SG-7."
+  },
+  {
+    "id": "SG-2",
+    "name": "No layout shift",
+    "description": "What is on screen does not move or resize because some state changed elsewhere. docs/DESIGN-SYSTEM.md §4.3: components use fixed dimensions, no reflow on state change, visibility toggled without collapsing the box. Rows serve it when they fix chrome heights in one token source (D-UI-12), keep every tab mounted so a switch does not remount or move focus (R-A), or persist node positions and human-chosen sizes per exclusive viewpoint so a reload or a viewpoint switch does not rearrange the canvas (R-LAY-1, R-LAY-4). They hurt it when content-dependent sizes, late-arriving data or conditional mounts move what the user is looking at. Scope: chrome, panels and canvas geometry."
+  },
+  {
+    "id": "SG-3",
+    "name": "Demo readiness",
+    "description": "The MODELS 2026 simulator demo in Malaga runs as scripted: its four scenes (state machine, Petri net, ESM, Flow B) reach the readings docs/demo/models_2026_simulator_demo.md quotes. The script header still carries the first calendar (demo 2026-10-04, build frozen 2026-10-01 evening); the checkpoint docs/sessioni/sessione_2026-09-30_2.md §3 moved the merge freeze to 2026-10-07, and R-VP-48 and R-VP-60 cite that freeze. Rows serve it when they add or fix what a scene shows (R-SIM-80..R-SIM-82), bring a surface into the demo build before the freeze (R-SIM-85, R-SIM-90), protect the scenes from regressions (RC-31 re-runs the four scenes on every merge before the freeze) or keep risky work after the demo (RC-39). RC-26 makes anything that changes what the demo shows wait for Alfonso. Rows hurt it when they move a scene-critical surface late or defer a capability a scene uses."
+  },
+  {
+    "id": "SG-4",
+    "name": "Reversibility",
+    "description": "A change can be taken back, at two levels. For the user's edits: one undo stack per editing mode with one step per gesture (R-UNDO-1, R-UNDO-5), saved projects that keep opening unchanged after a change (additive optional keys and no migration: R-SIM-90, R-SIM-134; no destructive migration now: R-EDGE-3), and deletion of persisted data gated on Alfonso (RC-26). For decisions: provisional rows that a veto reverts (RC-25), a rollback tag before each merge (RC-31), and the reversible: field the recent rows carry. A decision declared final with its reserve removed (D-UI-15) is the opposite pole. The reversible: header field alone is metadata, not a contribution."
+  },
+  {
+    "id": "SG-5",
+    "name": "Determinism of the simulation engine",
+    "description": "The same net, initial state and inputs give the same run and the same trace. The engine steps by interleaving with an explicit selector, one firing per step, quiescence and discarded events recorded as steps (R-SIM-7, R-SIM-21); guards stay pure and every external choice (modal, random, scenario) is a selector policy, so nondeterminism is visible as such instead of hidden in an expression (R-SIM-25); actions are parallel assignments read on the previous state (R-SIM-17, R-SIM-21). Rows hurt it when an outcome depends on wall-clock timing, on the iteration order of a container, or on unseeded randomness. Scope: the simulator (R-SIM rows and the JjEL and JjScript evaluation it calls), not the editor's rendering."
+  },
+  {
+    "id": "SG-6",
+    "name": "Fidelity to the formalism",
+    "description": "What the tool executes or checks is the semantics of the formalism the user models, not an approximation of it. For the simulator: the Petri transition is the nucleus, with the standard enabling and firing rule (R-SIM-21), state machines and flowcharts are special cases compiled into it (R-SIM-22, R-SIM-25), and the step semantics the spec excludes is replaced, not kept beside (R-SIM-7). By extension, the metamodeling formalism the user also models: a model conforms to its metamodel, and two metaclasses of different metamodels stay distinct under the same name (R-MCID-1). Rows hurt it when a shortcut makes the executed or checked behaviour differ from the formalism's, or when a presentation concern changes a semantic one."
+  },
+  {
+    "id": "SG-7",
+    "name": "Cost of the harness",
+    "description": "The human time and the tokens that the process around the code costs: prompts, lanes, gates, logs, ratifications, discovery reports, round trips to Alfonso. RC-18 sets a measured budget (at most one lane in four touching only harness paths), RC-17 cut the lane closure to one docs commit after measuring up to five, RC-32 runs the lighter model when the activity allows, and the 500-character Notes cap of CLAUDE.md §21.2 is a token budget. An R- row contributes when its text speaks to that cost: it adds or removes a step, a gate, a document, a commit or a wait for Alfonso, or it states a rule whose purpose is to stop rework that earlier lanes measured. Lower cost is the satisfied direction: a row that lowers it helps."
+  },
+  {
+    "id": "SG-8",
+    "name": "Learnability",
+    "description": "A user who has not met a feature yet can find it and tell what it does from what the screen shows. docs/DESIGN-SYSTEM.md §5 and §7 fix one interaction pattern and one naming convention per kind of thing, so what is learnt on one surface holds on the next, and D-5-1 makes InfoTooltip the one shared help primitive. Rows serve it when they add a hint or a declared empty state that says what to do (R-IRN-38: a disabled toggle with «a one-line hint»; R-SIM-98: «Choose a transition»; R-DMV-5: «stato vuoto dichiarato»), when one gesture or one name works the same way across surfaces, or when a feature sits where the user looks for it. They hurt it when a capability is reachable only through a hidden gesture or a mode the user must already know, when the same thing has two names or two behaviours on two surfaces, or when a feature is there but cannot be found where it is needed (R-SIM-97: the pill shows «only in Advanced mode»; R-VAL-19-bis: in an empty project «nessuno dei tre concern si vede proprio quando la scoperta servirebbe»). Scope: the first encounters with a feature, for modeler, language engineer and demo audience. Boundary with SG-1: SG-1 is what a user who knows the tool must hold in mind at a given moment, SG-8 is what it costs to get to know it, so hiding a control in Advanced can help SG-1 and hurt SG-8."
+  },
+  {
+    "id": "SG-9",
+    "name": "Expressive power of the languages and notations",
+    "description": "What the user can state in the languages and notations the tool offers: JjEL, JjTL, JjScript, the simulation profiles, and the notations a viewpoint can draw. CLAUDE.md §12.6 fixes the boundary of each language and records a restriction as a design decision (JjEL has no forAll; the boolean quantifier is coll.all). Rows serve it when they add a construct or lift a restriction: state access .[x] in guards (R-SIM-40), inhibitor arcs compiled into guard conjuncts (R-SIM-30), the container endpoint (R-B13), the derived notations Statechart, Flowchart, ER, Petri net and Activity (R-VP-22, R-VP-23, R-VP-24, R-VP-26), invariants and breakpoints over a run (R-SIM-137). They hurt it when they remove, restrict or defer a construct (R-SIM-55: «Esclusi: stati gerarchici, regioni ortogonali, history»; R-J7: the profile is «l'unico punto di estensione della grammatica delle espressioni»), or when a notation cannot draw what the metamodel holds. Scope: the languages and notations as the user writes and reads them. Boundary: SG-6 asks whether what is expressed executes or is checked as the formalism says, SG-9 asks how much can be expressed; SG-1 asks how much the user must hold in mind, so a new construct can help SG-9 and hurt SG-1."
+  },
+  {
+    "id": "SG-10",
+    "name": "Performance on large models",
+    "description": "The editor, the sync layer, the validators and the simulator stay responsive as the model and the run grow. CLAUDE.md §20.2 lists lazy loading and memoization among the best practices. Rows serve it when they cut a wait and measure it (R-JS-11: a set «went from 522-549 ms to 1 ms»), keep a context lazy (R-J5) or a module out of the bundle until it is enabled (R-GEN-2: «no module of the generator is loaded (lazy chunk)»), or narrow what re-renders on a change (R-MK-5: «NON DEVE re-renderizzare per feature fuori dal set»). They hurt it when they accept a wait or a cost that grows with the model (R-DEL-4: a delete cascade measured at «23.75 ms a 200k», the cheaper option declined; R-JS-2: «a bare name that lives only in another metamodel waits 500 ms»; R-MK-6: a simulation step «re-renderizza tutti i nodi la cui view legge marked»). Scope: the time and memory the user waits on while editing, loading, validating and simulating; build time and the time of the harness are SG-7."
+  },
+  {
+    "id": "SG-11",
+    "name": "Maintainability of the code base",
+    "description": "The code base can grow without the cost of the next change growing with it: little duplication, low coupling, a critical zone that does not widen. CLAUDE.md sets the rules: do not over-engineer simple features (rule 6), mark rather than remove code that only looks unused (rule 9), keep the critical zone of §3.1 guarded, and move pure logic into a module a test can import (§5, frontend/src/model/nameLookup.ts as the worked example). Rows serve it when they extract a pure module that tests import instead of copying (R-C: «i test importano il modulo, mai mirror per copia»; R-SIM-15: «condiviso, non copiato»; R-LAY-16: «un resolver unico»), give one source to one value (R-IRN-36: «una sola fonte per il colore del bordo»; R-STR-4: «nessuno stato duplicato»), or remove code a census proved dead. They hurt it when they duplicate logic (R-IRN-20: the adapter body «va duplicato nel test e le due copie possono divergere»), couple two literals by hand (R-IRN-31: «accoppiato a mano»), or add a file, a branch or a reader to the critical zone. Scope: the product code under frontend/src and what it costs to change it. Boundary with SG-7: SG-11 is the code itself, SG-7 is the process around it (prompts, lanes, gates, logs, reports)."
+  },
+  {
+    "id": "SG-12",
+    "name": "Integrity of saved projects",
+    "description": "What the user saved comes back complete and well formed: no loss or corruption on save, load, export, import or migration. CLAUDE.md rule 14 makes a VersionFixer migration owed when the default view source changes, and the note on P8 in docs/PROTOCOL.md records that the smoke never opens a saved project, so that path is checked by hand. Rows serve it when they close a measured loss (R-SIM-75: «Chiude la perdita di dati misurata»), make a new key round-trip byte for byte (R-SIM-123, R-SIM-134, R-SIM-137), measure save, export, import and reopen (R-SIM-116), or keep persisted a distinction that JSON would drop (R-IRN-11). They hurt it when a write loses or corrupts a persisted value, when a migration carries a stale form into every migrated project (R-IRN-33), or when an ill-formed saved form is left unmigrated (R-EDGE-3). Scope: the persisted project (the state SaveManager writes and reads, the .jjodel file, Ecore and XMI import and export), not viewer preferences that are lost on reload by design. Boundary with SG-4: SG-4 asks whether a change can be taken back, SG-12 whether what is saved is what comes back, so a row that keeps an old form opening by not migrating it can help SG-4 and hurt SG-12."
+  }
+]

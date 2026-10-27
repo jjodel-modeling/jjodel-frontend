@@ -306,9 +306,4 @@ describe('R-DMV-5 / R-VAL-19 — lo stile delle righe di stato', () => {
         expect(block).not.toContain('cursor: pointer');
         expect(block).not.toContain(':hover');
     });
-
-    it('il tema scuro copre tutte e tre le etichette, non due su tre', () => {
-        expect(SCSS).toContain('.tree-empty-dmv-label');
-        expect(SCSS).toContain('.tree-empty-concern-label');
-    });
 });

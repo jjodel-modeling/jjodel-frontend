@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;fill:#0f172a}
+.sm{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:500;fill:#0f172a}
+.eb{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;fill:#64748b}
+.at{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#64748b}
+.mk{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:600;fill:#0f172a}
+.mk0{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:500;fill:#94a3b8}
+</style><marker id="hfc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker><marker id="ifc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 400 80 L 400 111" marker-end="url(#hfc)"/>
+<path d="M 400 168 L 400 199" marker-end="url(#hfc)"/>
+<path d="M 400 256 L 400 287" marker-end="url(#hfc)"/>
+<path d="M 400 344 L 400 391" marker-end="url(#hfc)"/>
+<path d="M 300 420 H 216 V 316 H 329" marker-end="url(#hfc)"/>
+<path d="M 470 316 L 599 316" marker-end="url(#hfc)"/>
+<path d="M 670 344 L 670 391" marker-end="url(#hfc)"/>
+</g>
+<rect x="330" y="24" width="140" height="56" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="400" y="46" text-anchor="middle">START</text>
+<text class="nm" x="400" y="65" text-anchor="middle">begin</text>
+<rect x="330" y="112" width="140" height="56" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="400" y="134" text-anchor="middle">INPUT</text>
+<text class="nm" x="400" y="153" text-anchor="middle">read n</text>
+<rect x="330" y="200" width="140" height="56" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="400" y="222" text-anchor="middle">PROCESS</text>
+<text class="nm" x="400" y="241" text-anchor="middle">i := 0,  s := 0</text>
+<rect x="330" y="288" width="140" height="56" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="400" y="310" text-anchor="middle">DECISION</text>
+<text class="nm" x="400" y="329" text-anchor="middle">i &lt; n</text>
+<rect x="300" y="392" width="200" height="56" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="400" y="414" text-anchor="middle">PROCESS</text>
+<text class="nm" x="400" y="433" text-anchor="middle">s := s + i,  i := i + 1</text>
+<rect x="600" y="288" width="140" height="56" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="670" y="310" text-anchor="middle">OUTPUT</text>
+<text class="nm" x="670" y="329" text-anchor="middle">print s</text>
+<rect x="600" y="392" width="140" height="56" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text class="eb" x="670" y="414" text-anchor="middle">END</text>
+<text class="nm" x="670" y="433" text-anchor="middle">end</text>
+<text class="lbl" x="412" y="372" text-anchor="start">guard = true</text>
+<text class="lbl" x="534" y="306" text-anchor="middle">guard = false</text>
+</svg>

@@ -379,7 +379,7 @@ function NodeEditorComponent(props: AllProps) {
             </div>
 
             {/* Section: Transform */}
-            <Section title="TRANSFORM" icon="arrows-move" defaultOpen={true}>
+            <Section title="Transform" icon="arrows-move" defaultOpen={true}>
                 <div className="node-editor__grid">
                     {/* Position */}
                     {asVertex && !isGraphVertex && (
@@ -574,7 +574,7 @@ function NodeEditorComponent(props: AllProps) {
 
             {/* Section: Relationships */}
             {hasRelationships && (
-                <Section title="RELATIONSHIPS" icon="diagram-2" defaultOpen={true}>
+                <Section title="Relationships" icon="diagram-2" defaultOpen={true}>
                     {/* Super element */}
                     {hasFather && (
                         <div className="node-editor__relationship">
@@ -652,7 +652,7 @@ function NodeEditorComponent(props: AllProps) {
             {/* Section: Anchors (for vertices) */}
             {(isVertex || isGraph) && (
                 <Section
-                    title="ANCHORS"
+                    title="Anchors"
                     icon="bullseye"
                     defaultOpen={true}
                     badge={anchorEntries.length > 0 ? `${anchorEntries.length} points` : undefined}

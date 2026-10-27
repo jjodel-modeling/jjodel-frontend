@@ -293,19 +293,40 @@ export function validateNameUniqueness(
  * Full-model scan. For each LObject whose name collides with at least one
  * sibling in its namespace, the map contains the list of colliding siblings.
  *
- * Complexity O(N × M) worst-case (N = total objects, M = namespace size);
- * acceptable for models up to ~1000 objects. Indexing by namespace key is
- * future work.
+ * The namespace depends on the father alone, so each father's namespace is
+ * resolved and grouped by name once (P-2026-10-21-0030): O(N + Σ namespace sizes)
+ * instead of one namespace and one `filter` per object (29,996 name reads per
+ * rename commit on a 407-object model). `Map` keys compare names like `===`
+ * (strings, `undefined`), so a group is exactly what the per-object `filter` kept,
+ * in the same order; the object itself is then dropped by id, as `excludeId` did.
  */
 export function detectDuplicateNames(model: LModel, opts: NamespaceOptions = {}): Map<string, LObject[]> {
     const result = new Map<string, LObject[]>();
     const all = (model.allSubObjects ?? []) as LObject[];
     // COMMITTED state by default: see `NamespaceOptions.includePending`.
     const includePending = opts.includePending === true;
+    const groupsByFather = new Map<string, Map<unknown, LObject[]>>();
     for (const obj of all) {
         if (!obj) continue;
-        const siblings = getSiblingNamespace(obj, {includePending});
-        const colliding = siblings.filter(s => s.name === obj.name);
+        const father = obj.father as LModelElement | undefined;
+        const fatherId = idOf(father);
+        let colliding: LObject[];
+        if (!fatherId) {
+            // No father id to share a namespace under: the per-object rule, unchanged.
+            colliding = getSiblingNamespace(obj, {includePending}).filter(s => s.name === obj.name);
+        } else {
+            let groups = groupsByFather.get(fatherId);
+            if (!groups) {
+                groups = new Map<unknown, LObject[]>();
+                for (const s of getNamespaceOf(father, undefined, {includePending})) {
+                    const group = groups.get(s.name);
+                    if (group) group.push(s);
+                    else groups.set(s.name, [s]);
+                }
+                groupsByFather.set(fatherId, groups);
+            }
+            colliding = (groups.get(obj.name) ?? []).filter(s => s.id !== obj.id);
+        }
         if (colliding.length > 0) {
             result.set(obj.id, colliding);
         }

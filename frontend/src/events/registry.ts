@@ -53,9 +53,15 @@ export const JjodelEvents = {
   // R-VAL. Apre l'ambiente di authoring delle regole su un metamodello.
   // detail: { metamodelId: string; metamodelName?: string }.
   VALIDATION_RULES_OPEN: 'jjodel:validation-rules-open',
+  // Slice D (P-2026-09-30-0255). Opens the «Derive viewpoint» dialog on a metamodel.
+  // detail: { metamodelId: string }.
+  DERIVE_VIEWPOINT_OPEN: 'jjodel:derive-viewpoint-open',
   // Project
   NEW_PROJECT: 'jjodel:new-project',
   CREATE_MODEL: 'jjodel:createModel',
+  // P-2026-10-19-1618. Opens the New model dialog of the open project.
+  // detail (optional): { metamodelId?: string } preselects that metamodel.
+  OPEN_NEW_MODEL_DIALOG: 'jjodel:open-new-model-dialog',
   CREATE_VIEWPOINT: 'jjodel:createViewpoint',
   SHARE_PROJECT: 'jjodel:shareProject',
   // SAVE2. Il progetto e' stato persistito. detail: { timestamp: number|null }.
@@ -73,11 +79,12 @@ export const JjodelEvents = {
   EXPORT_CANVAS: 'jjodel:export-canvas',
   // Layout
   LAYOUT_MODE_CHANGE: 'jjodel:layout-mode-change',
-  // Theme
-  THEME_CHANGED: 'jjodel:theme-changed',
   // Notifications
   TOAST: 'jjodel:toast',
   TOAST_PREFS_CHANGED: 'jjodel:toast-prefs-changed',
+  // P-2026-10-10-1825 (R-GEN-2). The experimental code generation setting changed in this tab
+  // (codegen/setting.ts). detail: { enabled: boolean }.
+  EXPERIMENTAL_CODEGEN_CHANGED: 'jjodel:experimental-codegen-changed',
   HISTORY_CHANGED: 'jjodel:history-changed',
   GUARD_VIOLATION: 'jjodel:guard-violation',
   NOTIFICATIONS_POPOVER_TOGGLE: 'jjodel:notifications-popover-toggle',
@@ -90,6 +97,14 @@ export const JjodelEvents = {
   IMPORT_SUMMARY_SHOW: 'jjodel:import-summary-show',
   // Symbol editor modal (D15): launch only; closing is local state of the modal
   SYMBOL_EDITOR_OPEN: 'jjodel:symbol-editor-open',
+  // P-2026-10-24-0155 (R-JJD-3). React Flow's selected nodes changed in an EditorV2 canvas, at most
+  // once per animation frame and only when the list differs. detail: CanvasSelectionDetail
+  // { modelId, nodeIds, elementIds } (components/editor-v2/utils/canvasSelection.ts), in selection order.
+  CANVAS_SELECTION_CHANGED: 'jjodel:canvas-selection-changed',
+  // P-2026-10-24-0225 (R-JJD-2). Plan an M1 script and show its ghost preview on the canvas of the
+  // model. detail: ScriptPreviewRequest { script, modelId } (components/editor-v2/preview/scriptPreviewStore.ts);
+  // an empty script clears the preview.
+  SCRIPT_PREVIEW_REQUEST: 'jjodel:script-preview-request',
 } as const;
 
 // ─── JjScript ───────────────────────────────────────────────────
@@ -108,6 +123,8 @@ export const AIEvents = {
   PROVIDER_CHANGED: 'ai-provider-changed',
   SETTINGS_CHANGED: 'ai-settings-changed',
   PROMPT_CHANGED: 'prompt-changed',
+  /** A provider's live model catalog was fetched and merged into `AI[provider].versions`. detail: { provider } */
+  MODELS_UPDATED: 'ai-models-updated',
 } as const;
 
 // ─── Jjodie chat agent ─────────────────────────────────────────
@@ -121,6 +138,18 @@ export const JjodieEvents = {
 export const EnvGenEvents = {
   CONFIG_CHANGED: 'envgen-config-changed',
   OPEN_WIZARD: 'envgen-open-wizard',
+  /** #157 R5 — the consumer's left column picks a type for the Configurator page. detail: { typeId } */
+  CONFIGURATOR_SELECT_TYPE: 'envgen-configurator-select-type',
+  /** #157 R5 — the Configurator page says which type is on screen, for the column. detail: { typeId } */
+  CONFIGURATOR_TYPE_CHANGED: 'envgen-configurator-type-changed',
+  /** #168 J1 — the Configurator page says what is on screen, for Jodie. detail: { typeId, instanceId, modelId }
+   *  (`ConsumerSelection`), or null when the page unmounts; the last one is also kept by
+   *  `getConsumerSelection()` (components/environment/consumerJodieContext.ts). */
+  CONFIGURATOR_SELECTION_CHANGED: 'envgen-configurator-selection-changed',
+  /** #168 J4 — show an element in the Configurator page: its row, or the row of its nearest
+   *  top-level ancestor drilled down to it (`configuratorTargetOf`, components/Jodie/consumerProposalModel.ts).
+   *  Sent by Jodie's proposal after «Apply». detail: { instanceId } */
+  CONFIGURATOR_SELECT_INSTANCE: 'envgen-configurator-select-instance',
 } as const;
 
 // ─── Avatar ─────────────────────────────────────────────────────

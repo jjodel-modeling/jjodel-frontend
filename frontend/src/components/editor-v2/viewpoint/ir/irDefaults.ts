@@ -278,17 +278,21 @@ let factoryHashes: Set<string> | null = null;
 const delegationCache = new WeakMap<object, boolean>();
 
 /**
- * Hash of the SEMANTIC identity of an ir: key order canonicalized, and the three
+ * Hash of the SEMANTIC identity of an ir: key order canonicalized, and the four
  * keys that describe the ir instead of being part of it removed — `migratedFrom`
- * (where it came from), `authoringMetaclassPins` (see isMigratedDefaultView below)
- * and `migratedHash` (the stamp itself: a stamp that entered the hash it is compared
- * against could never match).
+ * (where it came from), `authoringMetaclassPins` (see isMigratedDefaultView below),
+ * `migratedHash` (the stamp itself: a stamp that entered the hash it is compared
+ * against could never match) and `generated` (the provenance a derivation writes,
+ * whose `hash` is this function's value, for the same reason; slice D,
+ * P-2026-09-30-0255). Exported for that stamp: one function for the stamp and for
+ * whatever compares with it.
  */
-function structuralHash(ir: object): string {
+export function structuralHash(ir: object): string {
     const structural: Record<string, unknown> = { ...ir };
     delete structural.migratedFrom;
     delete structural.authoringMetaclassPins;
     delete structural.migratedHash;
+    delete structural.generated;
     return irHash(canonicalize(structural) as VertexViewIR);
 }
 

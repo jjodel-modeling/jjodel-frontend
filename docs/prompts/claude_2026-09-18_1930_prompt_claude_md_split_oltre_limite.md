@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-18-1930
 Chat: C-2026-09-18-1930
-Status: da eseguire
+Status: superato 2026-09-18 · emendato da P-2026-09-18-2110, che ha portato lo split sul tronco (068d59367) · flip 2026-09-30 dalla chat
 Date: 2026-09-18 19:30 (Europe/Rome)
 Type: chore (docs only, four phases, one commit per phase)
 Branch: `validation-skeleton` in `/Users/alfonso/jjodel`, measured at `b3c6b6976`

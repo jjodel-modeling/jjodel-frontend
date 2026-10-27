@@ -1,6 +1,6 @@
 import { describe, test, expect, afterAll } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, realpathSync, rmSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, realpathSync, rmSync, appendFileSync, lstatSync, readlinkSync, symlinkSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,12 +57,21 @@ exit \${FAKE_EXIT:-0}
 // starting `test(` of each test file (the files named, else every *.test.ts
 // under the cwd), a file holding FAKE_IMPORT_FAIL red at import, one holding
 // FAKE_FAILED_TEST with a failed test; any other script exits 0 unless named in
-// FAKE_RED. Every call is recorded in npm.txt with its cwd.
+// FAKE_RED. Every call is recorded in npm.txt with its cwd, and in nm.txt with
+// what its cwd holds at node_modules (none, dir:<real path>, link:<real path>).
 const fakeNpm = () => `#!${process.execPath}
 const fs = require('fs');
 const path = require('path');
 const args = process.argv.slice(2);
 fs.appendFileSync(path.join(process.env.FAKE_STATE, 'npm.txt'), fs.realpathSync(process.cwd()) + ' ' + args.join(' ') + '\\n');
+const nm = (() => {
+  try {
+    return (fs.lstatSync('node_modules').isSymbolicLink() ? 'link:' : 'dir:') + fs.realpathSync('node_modules');
+  } catch {
+    return 'none';
+  }
+})();
+fs.appendFileSync(path.join(process.env.FAKE_STATE, 'nm.txt'), fs.realpathSync(process.cwd()) + ' ' + args[1] + ' ' + nm + '\\n');
 const red = (process.env.FAKE_RED || '').split(',').filter(Boolean);
 if (args[0] !== 'run') process.exit(99);
 const script = args[1];
@@ -99,6 +108,15 @@ if (script === 'test') {
 process.exit(red.includes(script) ? 1 : 0);
 `;
 
+// The fake launchctl: every call recorded in launchctl.txt; FAKE_LAUNCHCTL_FAIL
+// makes it print that text on stderr and exit 1. Every lab puts it first on the
+// PATH and names it in LANE_RUN_LAUNCHCTL, so no test reaches the real agent.
+const FAKE_LAUNCHCTL = `#!/bin/sh
+echo "$*" >> "$FAKE_STATE/launchctl.txt"
+if [ -n "$FAKE_LAUNCHCTL_FAIL" ]; then echo "$FAKE_LAUNCHCTL_FAIL" >&2; exit 1; fi
+exit 0
+`;
+
 const dirs: string[] = [];
 afterAll(() => {
     for (const d of dirs) rmSync(d, { recursive: true, force: true });
@@ -124,8 +142,10 @@ function lab(): Lab {
     for (const d of [home, bin, state, fake]) mkdirSync(d, { recursive: true });
     writeFileSync(join(bin, 'claude'), FAKE_CLAUDE);
     writeFileSync(join(bin, 'npm'), fakeNpm());
+    writeFileSync(join(bin, 'launchctl'), FAKE_LAUNCHCTL);
     chmodSync(join(bin, 'claude'), 0o755);
     chmodSync(join(bin, 'npm'), 0o755);
+    chmodSync(join(bin, 'launchctl'), 0o755);
     const env: Record<string, string> = {
         HOME: home,
         PATH: `${bin}:/usr/bin:/bin:/usr/sbin`,
@@ -133,6 +153,7 @@ function lab(): Lab {
         FAKE_SESSION: SESSION,
         FAKE_DIR: fake,
         LANE_RUN_NPM: join(bin, 'npm'),
+        LANE_RUN_LAUNCHCTL: join(bin, 'launchctl'),
         LANE_RUN_NOW: NOW,
         ...GIT_ENV,
     };
@@ -224,6 +245,7 @@ interface RepoOpts {
     failedTest?: boolean;
     dirtyWorktree?: boolean;
     twoInboxes?: boolean;
+    board?: boolean;
 }
 
 interface RepoLab {
@@ -246,7 +268,8 @@ interface RepoLab {
  * appended (unionEdit), R-X-2 added on both sides (probeClash), a type error on
  * the branch (tscError), a failing test on the branch (failedTest), a tracked
  * change in the branch worktree (dirtyWorktree), an entry in a second inbox on
- * the branch (twoInboxes).
+ * the branch (twoInboxes), a file under frontend/scripts/lane-board/ on the
+ * branch (board).
  */
 function repoLab(o: RepoOpts = {}): RepoLab {
     const l = lab();
@@ -274,6 +297,7 @@ function repoLab(o: RepoOpts = {}): RepoLab {
     if (o.conflict) code['frontend/src/a.ts'] = TEN.replace('l5', 'FEAT');
     if (o.bothCode) code['frontend/src/a.ts'] = TEN.replace('l1\n', 'FEAT1\n');
     if (o.tscError) code['frontend/tsc-errors.txt'] = TSC + 'src/b.ts(1,1): error TS2322: Type y.\n';
+    if (o.board) code['frontend/scripts/lane-board/lane-board.mjs'] = '// the board\n';
     commitFiles(l, repo, 'feat: the code', code);
     if (o.governance) commitFiles(l, repo, 'docs: a rule on the branch', { 'CLAUDE.md': '# rules\n\nA branch rule.\n' });
     const branchTip = commitFiles(l, repo, 'docs: the feat rows', {
@@ -338,7 +362,7 @@ describe('lane-run merge --direct', { timeout: 60000 }, () => {
         expect(res.ok).toBe(true);
         expect(res.merge).toBe(gitIn(l, repo, ['rev-parse', 'HEAD']));
         expect(res.tag).toBe('pre-feat');
-        expect(res.gates.map((g: { name: string }) => g.name)).toEqual(['typecheck', 'typecheck:scripts', 'vitest', 'build', 'check:docs', 'check:agents', 'check:scripts']);
+        expect(res.gates.map((g: { name: string }) => g.name)).toEqual(['typecheck', 'typecheck:scripts', 'vitest', 'build', 'check:docs', 'check:agents', 'check:scripts', 'check:addonly']);
         expect(res.gates.every((g: { ok: boolean }) => g.ok)).toBe(true);
         expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
         const s = laneRun(l, ['status', NEW_ID]);
@@ -432,6 +456,28 @@ describe('lane-run merge --direct', { timeout: 60000 }, () => {
         expect(laneRun(r.l, ['status', NEW_ID]).stdout).toContain('outcome: Outcome: blocked');
     });
 
+    test('kills "check:addonly ignored", "the merge commit kept on an addonly violation", "a second rollback path invented": check:addonly red resets the trunk to its pre-merge tip, unlike every other gate', () => {
+        const r = repoLab();
+        expect(directMerge(r, { FAKE_RED: 'check:addonly' }).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(readFileSync(join(laneDir(r.l), 'exit.txt'), 'utf8').trim()).toBe('1');
+        const res = result(r.l);
+        expect(res.outcome).toBe('blocked');
+        expect(res.merge).toBe(null);
+        expect(res.gates.find((g: { name: string }) => g.name === 'check:addonly').ok).toBe(false);
+        expect(res.gates.find((g: { name: string }) => g.name === 'build').ok).toBe(true);
+        expect(res.reason).toContain('reset');
+        expect(res.reason).toContain(r.trunkTip);
+        const { l, repo } = r;
+        // The reset lands on the SAME tip the rollback tag already recorded (RC-31): no
+        // second rollback mechanism, and the prompt-file commit is undone with it.
+        expect(gitIn(l, repo, ['rev-parse', 'HEAD'])).toBe(r.trunkTip);
+        expect(gitIn(l, repo, ['rev-parse', 'pre-feat'])).toBe(r.trunkTip);
+        expect(existsSync(join(repo, MERGE_FILE))).toBe(false);
+        expect(gitIn(l, repo, ['status', '--porcelain'])).toBe('');
+        expect(laneRun(l, ['status', NEW_ID]).stdout).toContain('outcome: Outcome: blocked');
+    });
+
     test('kills "typecheck judged by its exit code": a new type error on the branch is red although tsc exits 2 on both sides', () => {
         const r = repoLab({ tscError: true });
         expect(directMerge(r).status).toBe(0);
@@ -474,6 +520,195 @@ describe('lane-run merge --direct', { timeout: 60000 }, () => {
         expect(out.stdout).toContain('direct: falls back');
         expect(out.stdout).toContain('code files changed on both sides');
         expect(gitIn(r.l, r.wt, ['rev-parse', 'HEAD'])).toBe(r.branchTip);
+    });
+});
+
+// ── merge --direct: the node_modules of the trees the gates run in (P14) ─────
+
+/** A shared node_modules in the main worktree repo/, excluded from git as the real one is ignored. */
+function sharedModules(r: RepoLab): string {
+    const p = join(r.repo, 'frontend', 'node_modules');
+    mkdirSync(p, { recursive: true });
+    writeFileSync(join(p, 'marker'), 'shared\n');
+    mkdirSync(join(r.repo, '.git', 'info'), { recursive: true });
+    appendFileSync(join(r.repo, '.git', 'info', 'exclude'), '/frontend/node_modules\n');
+    return p;
+}
+
+const nmCalls = (l: Lab) => (existsSync(join(l.state, 'nm.txt')) ? readFileSync(join(l.state, 'nm.txt'), 'utf8').trim().split('\n') : []);
+const lstatOf = (p: string) => {
+    try {
+        return lstatSync(p);
+    } catch {
+        return null;
+    }
+};
+
+describe('lane-run merge --direct, the node_modules link (P14)', { timeout: 60000 }, () => {
+    test('kills "the link not created before the incoming gate", "the link left after the gates", "the link not in result.json", "the link not in the commit body": a branch worktree with no node_modules runs the incoming vitest through a link to the shared one, removed after the gates', () => {
+        const r = repoLab();
+        const shared = sharedModules(r);
+        const link = join(r.wt, 'frontend', 'node_modules');
+        expect(directMerge(r).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(nmCalls(r.l)).toContain(`${join(r.wt, 'frontend')} test link:${shared}`);
+        expect(lstatOf(link)).toBe(null);
+        const res = result(r.l);
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.nodeModules).toEqual([{ tree: r.repo, state: 'present' }, { tree: r.wt, state: 'created', target: shared, removed: true }]);
+        const body = gitIn(r.l, r.repo, ['log', '-1', '--format=%b']);
+        expect(body).toContain(`node_modules: ${link} was missing; linked to ${shared} for the gates, the link removed after them (P14).`);
+        expect(body.indexOf('node_modules: ')).toBeLessThan(body.indexOf('Model: none'));
+        expect(gitIn(r.l, r.wt, ['status', '--porcelain'])).toBe('');
+    });
+
+    test('kills "a directory replaced by a link", "a directory left unreported": a node_modules directory in the branch worktree is left as it is and named in result.json and the commit body', () => {
+        const r = repoLab();
+        const shared = sharedModules(r);
+        const own = join(r.wt, 'frontend', 'node_modules');
+        mkdirSync(own, { recursive: true });
+        writeFileSync(join(own, 'marker'), 'own\n');
+        expect(directMerge(r).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(lstatOf(own)?.isDirectory()).toBe(true);
+        expect(readFileSync(join(own, 'marker'), 'utf8')).toBe('own\n');
+        expect(nmCalls(r.l)).toContain(`${join(r.wt, 'frontend')} test dir:${own}`);
+        const res = result(r.l);
+        expect(res.nodeModules[1]).toEqual({ tree: r.wt, state: 'left', detail: `a directory, not a link to ${shared}` });
+        expect(gitIn(r.l, r.repo, ['log', '-1', '--format=%b'])).toContain(`node_modules: ${own} left as it is: a directory, not a link to ${shared} (P14).`);
+    });
+
+    test('kills "a link it did not create removed", "a present link relinked": a link to the shared node_modules already in the branch worktree is used and kept', () => {
+        const r = repoLab();
+        const shared = sharedModules(r);
+        const link = join(r.wt, 'frontend', 'node_modules');
+        symlinkSync(shared, link);
+        expect(directMerge(r).status).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(lstatOf(link)?.isSymbolicLink()).toBe(true);
+        expect(readlinkSync(link)).toBe(shared);
+        const res = result(r.l);
+        expect(res.nodeModules).toEqual([{ tree: r.repo, state: 'present' }, { tree: r.wt, state: 'present' }]);
+        expect(gitIn(r.l, r.repo, ['log', '-1', '--format=%b'])).not.toContain('node_modules:');
+    });
+
+    test('kills "the receiving branch tree not linked in trunk-into", "the shared path hard-coded": a trunk-into merge runs its gates in the branch worktree through a link to the main worktree\'s node_modules', () => {
+        const r = repoLab();
+        const shared = sharedModules(r);
+        const link = join(r.wt, 'frontend', 'node_modules');
+        const out = laneRun(r.l, ['merge', '--trunk-into', 'feat', '--from', 'trunk', '--direct'], { cwd: r.wt });
+        expect(out.status, out.stderr).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        expect(nmCalls(r.l)).toContain(`${join(r.wt, 'frontend')} typecheck link:${shared}`);
+        expect(nmCalls(r.l).filter((x) => x.includes(' none'))).toEqual([]);
+        expect(lstatOf(link)).toBe(null);
+        expect(result(r.l).nodeModules).toEqual([{ tree: r.wt, state: 'created', target: shared, removed: true }]);
+    });
+});
+
+// ── merge --direct, the lane board restart ───────────────────────────────────
+
+const KICKSTART = `kickstart -k gui/${process.getuid?.() ?? 0}/io.jjodel.lane-board`;
+const launchctlCalls = (l: Lab) => (existsSync(join(l.state, 'launchctl.txt')) ? readFileSync(join(l.state, 'launchctl.txt'), 'utf8').trim().split('\n') : []);
+
+/** A plist in the shape of ~/Library/LaunchAgents/io.jjodel.lane-board.plist, running `script`; its path. */
+function boardPlist(l: Lab, script: string): string {
+    const path = join(l.root, 'io.jjodel.lane-board.plist');
+    writeFileSync(path, '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0"><dict>\n<key>Label</key><string>io.jjodel.lane-board</string>\n' +
+        `<key>ProgramArguments</key><array><string>/opt/homebrew/bin/node</string><string>${script}</string><string>--refresh</string><string>30</string></array>\n` +
+        '<key>RunAtLoad</key><true/><key>KeepAlive</key><true/>\n</dict></plist>\n');
+    return path;
+}
+
+/** A server in a process of its own (the suite blocks while it waits), answering 200 on /api; its url and its process. */
+function boardServer(l: Lab) {
+    const portFile = join(l.state, 'board-port.txt');
+    const child = spawn(process.execPath, ['-e', `const s = require('http').createServer((q, r) => { r.statusCode = q.url === '/api' ? 200 : 404; r.end('{}'); });
+s.listen(0, '127.0.0.1', () => require('fs').writeFileSync(${JSON.stringify(portFile)}, String(s.address().port)));`], { stdio: 'ignore' });
+    if (!waitFor(portFile, 10000)) throw new Error('the board server did not start');
+    return { url: `http://127.0.0.1:${readFileSync(portFile, 'utf8').trim()}/api`, child };
+}
+
+/** A direct merge of feat into trunk run to the end of its worker; its result.json. */
+function boardMerge(r: RepoLab, env: Record<string, string> = {}) {
+    const out = directMerge(r, env);
+    expect(out.status, out.stderr).toBe(0);
+    expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+    return result(r.l);
+}
+
+const repoBoard = (r: RepoLab) => join(r.repo, 'frontend', 'scripts', 'lane-board', 'lane-board.mjs');
+const summaryText = (l: Lab) => readFileSync(join(laneDir(l), 'log.jsonl'), 'utf8');
+
+describe('lane-run merge --direct, the lane board restart (P-2026-10-18-1752)', { timeout: 60000 }, () => {
+    test('kills "the diff not read", "the restart before the gates pass": a merge that leaves frontend/scripts/lane-board/ alone, and a board merge with a red gate, never call launchctl', () => {
+        const r = repoLab();
+        const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, repoBoard(r)) });
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.board).toBe(null);
+        expect(launchctlCalls(r.l)).toEqual([]);
+        expect(summaryText(r.l)).not.toContain('board: ');
+
+        const red = repoLab({ board: true });
+        const redRes = boardMerge(red, { LANE_RUN_BOARD_PLIST: boardPlist(red.l, repoBoard(red)), FAKE_RED: 'build' });
+        expect(redRes.outcome).toBe('blocked');
+        expect(redRes.board).toBe(null);
+        expect(launchctlCalls(red.l)).toEqual([]);
+    });
+
+    test('kills "no kickstart", "the wrong service target", "no wait for /api", "restarted not recorded", "no summary line": a board merge whose plist runs this tree kickstarts the agent and records restarted with the seconds', () => {
+        const r = repoLab({ board: true });
+        const server = boardServer(r.l);
+        try {
+            const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, repoBoard(r)), LANE_RUN_BOARD_URL: server.url });
+            expect(res.outcome).toBe('hard-stop');
+            expect(launchctlCalls(r.l)).toEqual([KICKSTART]);
+            expect(res.board.state).toBe('restarted');
+            expect(res.board.script).toBe(repoBoard(r));
+            expect(typeof res.board.seconds).toBe('number');
+            expect(res.board.seconds).toBeLessThan(30);
+            expect(summaryText(r.l)).toContain('board: restarted io.jjodel.lane-board');
+        } finally {
+            server.child.kill();
+        }
+    });
+
+    test('kills "any plist restarted", "the other checkout not named": a board merge whose plist runs another checkout records not-running-here with that script and calls nothing', () => {
+        const r = repoLab({ board: true });
+        const elsewhere = join(r.l.root, 'other', 'frontend', 'scripts', 'lane-board', 'lane-board.mjs');
+        const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, elsewhere) });
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.board).toEqual({ state: 'not-running-here', script: elsewhere });
+        expect(launchctlCalls(r.l)).toEqual([]);
+        expect(summaryText(r.l)).toContain(elsewhere);
+    });
+
+    test('kills "the plist path outside HOME", "a missing plist read as a failure": with no plist under ~/Library/LaunchAgents the board merge records no-agent and calls nothing', () => {
+        const r = repoLab({ board: true });
+        const res = boardMerge(r);
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.board.state).toBe('no-agent');
+        expect(res.board.detail).toContain(join(r.l.home, 'Library', 'LaunchAgents', 'io.jjodel.lane-board.plist'));
+        expect(launchctlCalls(r.l)).toEqual([]);
+    });
+
+    test('kills "a failed kickstart fails the merge", "the stderr line dropped", "a silent board": a kickstart that exits 1 records failed with its stderr line, the merge stays hard-stop', () => {
+        const r = repoLab({ board: true });
+        const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, repoBoard(r)), FAKE_LAUNCHCTL_FAIL: 'Could not find service in domain' });
+        expect(res.outcome).toBe('hard-stop');
+        expect(res.ok).toBe(true);
+        expect(launchctlCalls(r.l)).toEqual([KICKSTART]);
+        expect(res.board).toEqual({ state: 'failed', script: repoBoard(r), detail: 'Could not find service in domain' });
+        expect(summaryText(r.l)).toContain('board: restart failed: Could not find service in domain');
+    });
+
+    test('kills "restarted without an answer": a kickstart after which /api never answers 200 within the wait records failed, the merge stays hard-stop', () => {
+        const r = repoLab({ board: true });
+        const res = boardMerge(r, { LANE_RUN_BOARD_PLIST: boardPlist(r.l, repoBoard(r)), LANE_RUN_BOARD_URL: 'http://127.0.0.1:1/api', LANE_RUN_BOARD_WAIT_MS: '300' });
+        expect(res.outcome).toBe('hard-stop');
+        expect(launchctlCalls(r.l)).toEqual([KICKSTART]);
+        expect(res.board.state).toBe('failed');
+        expect(res.board.detail).toContain('http://127.0.0.1:1/api did not answer 200');
     });
 });
 
@@ -541,6 +776,26 @@ describe('lane-run go on a direct merge', { timeout: 60000 }, () => {
         expect(again.stderr).toContain('already closed');
         expect(gitIn(m.l, m.repo, ['rev-parse', 'HEAD'])).toBe(closed);
         expect(calls(m.l)).toEqual([]);
+    });
+
+    test('kills "the take-trunk closure flips nothing", "the take-trunk Status names the wrong lane", "no warning before the closure", "the warning after it": a direct trunk-into merge warns while its prompt reads da eseguire, and go flips it in the branch worktree', () => {
+        const r = repoLab();
+        const out = laneRun(r.l, ['merge', '--trunk-into', 'feat', '--from', 'trunk', '--direct'], { cwd: r.wt });
+        expect(out.status, out.stderr).toBe(0);
+        expect(waitFor(join(laneDir(r.l), 'exit.txt'))).toBe(true);
+        const mergeSha = gitIn(r.l, r.wt, ['rev-parse', 'HEAD']);
+        const before = laneRun(r.l, ['status', NEW_ID]).stdout.split('\n').filter((x) => x.startsWith('warning:'));
+        expect(before).toEqual([`warning: ${TAKE_FILE}: \`Status: da eseguire\` after \`Outcome: hard-stop\`; the closure commit owes the flip (P16, RC-17)`]);
+        const g = laneRun(r.l, ['go', NEW_ID, '--smoke', SMOKE]);
+        expect(g.status, g.stderr).toBe(0);
+        expect(gitIn(r.l, r.wt, ['rev-parse', 'HEAD^'])).toBe(mergeSha);
+        expect(gitIn(r.l, r.wt, ['show', '--name-only', '--format=', 'HEAD']).split('\n').sort()).toEqual(['docs/log-inbox/lane.md', TAKE_FILE]);
+        expect(readFileSync(join(r.wt, TAKE_FILE), 'utf8').split('\n').filter((x) => x.startsWith('Status:'))).toEqual([
+            `Status: eseguito 2026-09-27 · lane feat · ${short(mergeSha)} · verifica visiva passata 2026-09-27 (${SMOKE})`,
+        ]);
+        const after = laneRun(r.l, ['status', NEW_ID]);
+        expect(after.stdout).toContain('outcome: Outcome: done');
+        expect(after.stdout).not.toContain('warning:');
     });
 
     test('kills "an inbox guessed among two", "--front ignored": a branch that writes two inboxes needs --front, which names the file', () => {
@@ -767,5 +1022,58 @@ describe('lane-run chain, the model tier', { timeout: 60000 }, () => {
         expect(k[1].args).not.toContain('--model');
         expect(gitIn(c.l, c.wt, ['log', '-1', '--format=%b', `--grep=add prompt ${A}`])).toContain('lane tier light (Lane: fast, DOVE writes docs only)');
         expect(readFileSync(join(c.l.lanes, A, 'tier.txt'), 'utf8')).toContain('light (claude-light-test)');
+    });
+});
+
+describe('lane-run chain --request (RC-43)', { timeout: 60000 }, () => {
+    const REQUEST = 'The words of the request, kept out of every tree.\n';
+
+    test('kills "the request not kept in the chain folder", "the request not forwarded to the lanes", "only the first lane gets the request", "a lane reads the caller\'s file, not the chain\'s copy": the same request.md in the chain folder and in both lane folders, the caller\'s file gone before the second lane starts', () => {
+        const c = chainLab();
+        const req = join(c.l.root, 'request.txt');
+        writeFileSync(req, REQUEST);
+        writeFileSync(join(c.l.fake, A + '.hold'), '');
+        const out = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B], '--request', req]);
+        expect(out.status, out.stderr).toBe(0);
+        expect(waitFor(join(c.l.lanes, A, 'session.txt'))).toBe(true);
+        rmSync(req);
+        writeFileSync(join(c.l.fake, A + '.release'), '');
+        expect(chainEnd(c.l)).toBe(true);
+        const ch = chainJson(c.l);
+        expect(ch.state, JSON.stringify(ch.stoppedAt)).toBe('done');
+        for (const dir of [chainDir(c.l), join(c.l.lanes, A), join(c.l.lanes, B)]) expect(readFileSync(join(dir, 'request.md'), 'utf8'), dir).toBe(REQUEST);
+        expect(readFileSync(join(chainDir(c.l), 'chain.log'), 'utf8')).not.toContain('no `Request:` line');
+    });
+
+    test('kills "a missing request found only by the first lane", "an empty request accepted", "--request without a value accepted": each is refused before the chain folder or any lane exists', () => {
+        const c = chainLab();
+        const missing = join(c.l.root, 'missing.txt');
+        const empty = join(c.l.root, 'empty.txt');
+        writeFileSync(empty, ' \n');
+        const cases: [string[], string][] = [
+            [['--request', missing], '--request: no request file: ' + missing],
+            [['--request', empty], '--request: the request file is empty: ' + empty],
+            [['--request'], '--request needs a value'],
+        ];
+        for (const [args, said] of cases) {
+            const r = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B], ...args]);
+            expect(r.status, said).toBe(2);
+            expect(r.stderr).toContain(said);
+            expect(existsSync(chainDir(c.l))).toBe(false);
+            expect(existsSync(join(c.l.lanes, A))).toBe(false);
+        }
+        expect(calls(c.l)).toEqual([]);
+        expect(existsSync(c.files[A])).toBe(true);
+    });
+
+    test('kills "a request.md written without --request", "the start warning lost in a chain": a chain without --request leaves no request.md, and each lane warns once on its prompt without a Request: line', () => {
+        const c = chainLab();
+        const out = laneRun(c.l, ['chain', c.wt, c.files[A], c.files[B]]);
+        expect(out.status, out.stderr).toBe(0);
+        expect(chainEnd(c.l)).toBe(true);
+        expect(chainJson(c.l).state).toBe('done');
+        for (const dir of [chainDir(c.l), join(c.l.lanes, A), join(c.l.lanes, B)]) expect(existsSync(join(dir, 'request.md')), dir).toBe(false);
+        const warnings = readFileSync(join(chainDir(c.l), 'chain.log'), 'utf8').split('\n').filter((x) => x.includes('no `Request:` line'));
+        expect(warnings).toHaveLength(2);
     });
 });

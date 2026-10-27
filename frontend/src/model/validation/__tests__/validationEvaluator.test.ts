@@ -272,7 +272,7 @@ describe('§F le regole spente, quelle rotte, quelle sospette', () => {
     });
 
     it('un corpo che non compila e\' un difetto della REGOLA, e non gira su nessuna istanza', () => {
-        const r = run([rule({ id: 'rotta', body: 'coll.forAll(x => x.p)' })]);
+        const r = run([rule({ id: 'rotta', body: 'coll.forAll(x => x.p' })]);
         expect(r.defects).toHaveLength(1);
         expect(r.defects[0]).toMatchObject({ ruleId: 'rotta', kind: 'parse-error' });
         expect(r.violations).toHaveLength(0);

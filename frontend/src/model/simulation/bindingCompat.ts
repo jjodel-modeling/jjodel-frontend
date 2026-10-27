@@ -20,7 +20,9 @@
  *   superclass of it warns (every instance would play the role);
  * - owner: a feature is declared on the lineage of the class whose instances
  *   the role reads (Node, Transition, Arc, the event class); on a proper
- *   subclass of it it warns (the other instances do not carry it);
+ *   subclass of it it warns (the other instances do not carry it); on an
+ *   unrelated class it warns too when a common concrete subclass exists (a
+ *   mixin owner, R-SIM-89), else it is incompatible;
  * - reference type: Next state and Source lead to Node, Owned transitions to
  *   Transition, a wider type warns; an arc end covers Node and Transition, one
  *   of them warns; Trigger leads to a class unrelated to both (R-SIM-16), else
@@ -32,7 +34,10 @@
  *   an EString, Action, Entry and Exit an Action or an EString (R-SIM-44).
  *
  * A context role unset, or set to what is not a class of the sketch, skips the
- * rules that need it: the missing role is `checkability`'s to report.
+ * rules that need it: the missing role is `checkability`'s to report. The value
+ * of a `multi` role (Guard, Action, Entry, Exit; R-SIM-90) is a list: each
+ * attribute is judged on its own, and the role takes its worst verdict, since
+ * the engine reads every one of them.
  * Multiplicity is not judged: the sketch carries no upper bound. The overlap of
  * the sorts stays with `overlapVerdict` (R-SIM-16), but for Trigger's type.
  *
@@ -41,7 +46,7 @@
  * warnings» summary come with the modal lane.
  */
 
-import { ROLE_CATALOG, roleDescriptor } from './roleCatalog';
+import { ROLE_CATALOG, roleDescriptor, roleValues } from './roleCatalog';
 import type { RoleBindingKind, RoleId } from './roleCatalog';
 import { SKETCH_TYPE } from './profileBinder';
 import type { MetamodelSketch, SketchAttribute, SketchClass, SketchReference } from './profileBinder';
@@ -58,8 +63,13 @@ export interface CandidateVerdict {
 export interface RoleCompatibility {
     /** Every element of the role's sort in the sketch, in sketch order. */
     readonly candidates: readonly CandidateVerdict[];
-    /** The bag's value, judged by the same rules; `null` when the key is unset. */
+    /**
+     * The bag's value, judged by the same rules; `null` when the key is unset. For a `multi` role
+     * (R-SIM-90), its worst attribute: incompatible above warn above ok, the first of the worst in list order.
+     */
     readonly current: CandidateVerdict | null;
+    /** R-SIM-90: every attribute of a `multi` role's value, judged, in list order; absent when unset or single-valued. */
+    readonly currents?: readonly CandidateVerdict[];
 }
 
 export type BindingVerdicts = { readonly [K in RoleId]?: RoleCompatibility };
@@ -146,6 +156,14 @@ class Index {
         return this.isKind(a, b) || this.isKind(b, a);
     }
 
+    /** A concrete class that is a kind of both `a` and `b` (mixin owners, R-SIM-89). */
+    hasCommonConcreteSubclass(a: string, b: string): boolean {
+        for (const c of this.classes.values()) {
+            if (!c.abstract && this.isKind(c.id, a) && this.isKind(c.id, b)) return true;
+        }
+        return false;
+    }
+
     /** A class by name, a feature as `Owner.name`, a type pointer without its prefix. */
     name(id: string): string {
         const f = this.references.get(id) ?? this.attributes.get(id);
@@ -171,6 +189,13 @@ function contextsOf(ix: Index, bag: Readonly<Record<string, unknown>>): Partial<
 }
 
 interface Issue { readonly verdict: 'warn' | 'incompatible'; readonly why: string }
+
+const VERDICT_RANK: Readonly<Record<BindingVerdict, number>> = { ok: 0, warn: 1, incompatible: 2 };
+
+/** The worst of `verdicts`, the first of the worst in order (R-SIM-90); `verdicts` is not empty. */
+function worstOf(verdicts: readonly CandidateVerdict[]): CandidateVerdict {
+    return verdicts.reduce((worst, v) => (VERDICT_RANK[v.verdict] > VERDICT_RANK[worst.verdict] ? v : worst));
+}
 
 function verdictOf(id: string, issues: readonly Issue[]): CandidateVerdict {
     const verdict: BindingVerdict = issues.some(i => i.verdict === 'incompatible') ? 'incompatible' : issues.length > 0 ? 'warn' : 'ok';
@@ -207,6 +232,8 @@ function judge(
     if (owner && !ix.isKind(owner, feature.owner)) {
         if (ix.isKind(feature.owner, owner)) {
             warn(`${name} is declared on ${ix.name(feature.owner)}, a subclass of ${ix.name(owner)}: other ${ix.name(owner)} instances do not carry it`);
+        } else if (ix.hasCommonConcreteSubclass(owner, feature.owner)) {
+            warn(`${name} is declared on ${ix.name(feature.owner)}: only ${ix.name(owner)} instances that are also ${ix.name(feature.owner)} carry it`);
         } else {
             bad(`${name} is not a feature of ${ix.name(owner)}`);
         }
@@ -276,8 +303,15 @@ export function bindingVerdicts(
             ? sketch.classes
             : sort === 'reference' ? sketch.references : sketch.attributes;
         const value = bag[d.key];
+        const candidates = pool.map(e => judge(ix, profile, d.id, sort, e.id, cx));
+        if (d.multi) {
+            // R-SIM-90: each attribute of the list on its own; the role reads the worst.
+            const currents = roleValues(value).map(id => judge(ix, profile, d.id, sort, id, cx));
+            out[d.id] = currents.length === 0 ? { candidates, current: null } : { candidates, current: worstOf(currents), currents };
+            continue;
+        }
         out[d.id] = {
-            candidates: pool.map(e => judge(ix, profile, d.id, sort, e.id, cx)),
+            candidates,
             current: typeof value === 'string' && value !== '' ? judge(ix, profile, d.id, sort, value, cx) : null,
         };
     }

@@ -9,6 +9,8 @@ import {
     U
 } from "../joiner";
 import { AIEvents } from '../events/registry';
+import { CATALOG_PROVIDERS, cachedModelsFor, capabilitiesFor } from '../services/aiModelCatalog';
+import type { CatalogFailure, CatalogModel } from '../services/aiModelCatalog';
 
 // Provider logo imports
 import openaiLogo from '../assets/icons/providers/openai.svg';
@@ -121,6 +123,30 @@ export function resolveLegacyModelId(provider: TAIProvider, modelId: string | un
 }
 
 /**
+ * Providers whose static registry lists every model their endpoint still serves (#179); retirement
+ * stops once a live catalog exists (hasLiveCatalog). For them a
+ * deprecated entry, or an id no longer in the list, is a retired model: Google answers 404 for
+ * `gemini-2.0-flash-exp`, the default that every Gemini configuration saved before 2026-08-05
+ * still carries. The other providers keep unlisted ids (user-pulled Ollama tags, Custom
+ * endpoints, ids such as `deepseek-reasoner`) and their deprecated entries stay selectable.
+ */
+const RETIRING_PROVIDERS: TAIProvider[] = ['Gemini'];
+
+/**
+ * The id `provider` is actually called with for `modelId`: the legacy map first, then, for a
+ * provider of RETIRING_PROVIDERS, a retired model moves to the first non-deprecated entry of the
+ * registry. Returns the input unchanged when nothing applies.
+ */
+export function resolveCurrentModelId(provider: TAIProvider, modelId: string | undefined): string | undefined {
+    const id = resolveLegacyModelId(provider, modelId);
+    // A live catalog lists what the key can use: a missing model is flagged and kept, never swapped.
+    if (!id || !RETIRING_PROVIDERS.includes(provider) || hasLiveCatalog(provider)) return id;
+    const versions = AI[provider]?.versions ?? {};
+    if (versions[id] && !versions[id].deprecated) return id;
+    return Object.keys(versions).find(k => !versions[k].deprecated) ?? id;
+}
+
+/**
  * True when `modelId` is a known model of `provider` (present in its version registry).
  */
 export function isModelOfProvider(provider: TAIProvider, modelId: string | undefined): boolean {
@@ -137,6 +163,18 @@ export function isForeignModel(provider: TAIProvider, modelId: string | undefine
     if (!modelId) return false;
     if (isModelOfProvider(provider, modelId)) return false;
     return ALL_AI_PROVIDERS.some(p => p !== provider && !!AI[p]?.versions?.[modelId]);
+}
+
+/**
+ * Base URL of the Jjodel AI proxy Worker (source: cloudflare-worker/). The production Worker in
+ * every mode; VITE_AI_PROXY_URL overrides it, e.g. http://localhost:8787 in
+ * frontend/.env.development.local for a local `wrangler dev`.
+ */
+export function getProxyBase(): string {
+    const PROXY_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
+    // @ts-ignore -- `env` is not on ImportMeta for tsc here (vite-env.d.ts), as in codegen/setting.ts.
+    const override: string | undefined = import.meta.env?.VITE_AI_PROXY_URL;
+    return override ? override.trim().replace(/\/+$/, '') : PROXY_URL;
 }
 
 @RuntimeAccessible('AI')
@@ -166,6 +204,8 @@ export class AI{
     keyUrl: string;
     storageKey: string;
     versions: Dictionary<string, AIVersion> = {};
+    /** The static `.add(...)` seed, kept aside when a live catalog replaces `versions` (applyModelCatalog). */
+    staticVersions?: Dictionary<string, AIVersion>;
     // version?: string;
     endpoint!: string;
     proxy?: string;
@@ -204,17 +244,13 @@ export class AI{
         return this;
     }
     getEndpoint(): string {
-        // Proxy endpoints for providers that don't support CORS
-        // Update the subdomain after deploying the Cloudflare Worker
-        const PROXY_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
-        const PROXY_LOCAL_URL = 'http://localhost:8787';
         if (!this.proxy) return this.endpoint;
         /*switch (this.name) {
             case AIProvider.Claude:
             case AIProvider.Gemini:
             default: return '';
         }*/
-        return (window.location.hostname === 'localhost' ? PROXY_LOCAL_URL : PROXY_URL) + this.proxy;
+        return getProxyBase() + this.proxy;
     }
     hasVision(version?: string): boolean{
         let model = version && this.versions[version];
@@ -249,6 +285,13 @@ export class AIVersion {
      * provider-dependent. Used by UI to surface capability badges.
      */
     contextWindow?: number;
+    /** Live catalog only: family key ('opus', 'sonnet', ...) and rank within it, higher is newer. */
+    family?: string;
+    rank?: number;
+    /** 'live' from the provider's models endpoint, 'static' from the `.add(...)` seed; unset = static, no live list. */
+    source?: 'live' | 'static';
+    /** A static entry the live catalog does not list: kept so a saved selection on it is flagged, not swapped. */
+    unavailable?: boolean;
     constructor(label: string, pdf: boolean = false, vision: boolean = false, deprecated: boolean = false, contextWindow?: number) {
         this.label = label;
         this.capabilities = {pdf, vision};
@@ -398,6 +441,57 @@ AI.Claude.authScheme   = 'x-api-key';
 AI.Gemini.authScheme   = 'query-key';
 AI.Ollama.authScheme   = 'none';
 
+/**
+ * Replace `provider`'s registry with a live catalog (services/aiModelCatalog.ts). Live models come
+ * first, in catalog order (the newest of each family first, so the first key stays a current
+ * model); a static entry the catalog does not list is kept and flagged `unavailable`, never
+ * dropped, so a saved selection on it is shown to the user instead of being swapped. Static
+ * capability flags win over the prefix table for an id present in both. Re-applying replaces the
+ * previous live list: the static seed is kept aside on the first call.
+ */
+export function applyModelCatalog(provider: TAIProvider, models: CatalogModel[]): void {
+    const llm = AI[provider];
+    if (!llm) return;
+    if (!llm.staticVersions) llm.staticVersions = llm.versions;
+    const statics = llm.staticVersions;
+    const next: Dictionary<string, AIVersion> = {};
+    for (const m of models) {
+        const seed = statics[m.id];
+        const caps = capabilitiesFor(m.id);
+        const v = new AIVersion(m.label, seed ? seed.capabilities.pdf : caps.pdf, seed ? seed.capabilities.vision : caps.vision,
+            false, m.contextWindow ?? seed?.contextWindow ?? caps.contextWindow);
+        v.family = m.family;
+        v.rank = m.rank;
+        v.source = 'live';
+        next[m.id] = v;
+    }
+    for (const id of Object.keys(statics)) {
+        if (next[id]) continue;
+        const s = statics[id];
+        const v = new AIVersion(s.label, s.capabilities.pdf, s.capabilities.vision, s.deprecated, s.contextWindow);
+        v.source = 'static';
+        v.unavailable = true;
+        next[id] = v;
+    }
+    llm.versions = next;
+}
+
+/** True when `provider`'s registry comes from a live catalog, false on the static fallback. */
+export function hasLiveCatalog(provider: TAIProvider): boolean {
+    return Object.values(AI[provider]?.versions ?? {}).some(v => v.source === 'live');
+}
+
+// Sync merge at module load: a cached catalog for the saved key replaces the static list before
+// JodieConfig and its migrations read `versions`. The key is read raw, AIConfig is not defined yet.
+for (const provider of CATALOG_PROVIDERS) {
+    try {
+        const raw = localStorage.getItem(AI[provider].storageKey);
+        const apiKey: string | undefined = raw ? JSON.parse(raw)?.apiKey : undefined;
+        const cached = cachedModelsFor(provider, apiKey);
+        if (cached && cached.models.length) applyModelCatalog(provider, cached.models);
+    } catch { /* no storage or malformed config: keep the static list */ }
+}
+
 AI.GPT.bi_icon = 'openai'; // chat-dots bubble speech generic candidate
 AI.Claude.bi_icon = 'claude';
 AI.DeepSeek.bi_icon = 'robot'; // missing
@@ -424,6 +518,12 @@ export class AIConfig{
     /** Outcome of the most recent connection test for the current key: true=passed, false=failed,
      *  undefined=not tested (or invalidated by a credential edit). Drives the Settings status pill. */
     lastTestOk?: boolean;
+    /** Kind of failure of that test, set only when `lastTestOk` is false ('auth', 'rate', 'network',
+     *  'server', 'other'); cleared with it. Names the failure in the Settings row tooltip. */
+    lastTestFailure?: CatalogFailure;
+    /** The retired model this provider was moved off at load (#179, `retireModels`). Settings
+     *  names it until a connection test passes on the current one. */
+    replacedModel?: string;
     messages: ChatMessage[] = [];
     isOpen: boolean = false;
     isMinimized: boolean = false;
@@ -513,7 +613,8 @@ export class AIConfig{
     }
 
     /**
-     * Returns the per-feature model selection, resolving legacy IDs through the map.
+     * Returns the per-feature model selection, resolving legacy IDs through the map and retired
+     * ones to a current model (#179), so a menu shows the model the call will use.
      * Returns undefined when no model has been chosen for this feature.
      * Callers should fall back to the provider's AIConfig.model if they need a concrete ID.
      */
@@ -523,7 +624,7 @@ export class AIConfig{
             if (!stored) return undefined;
             const pref: ProviderPreference = JSON.parse(stored);
             if (!pref.modelId) return undefined;
-            const resolved = resolveLegacyModelId(pref.providerId as TAIProvider, pref.modelId);
+            const resolved = resolveCurrentModelId(pref.providerId as TAIProvider, pref.modelId);
             // Integrity guard: a stored modelId that belongs to a different provider than
             // pref.providerId is a corrupted preference — ignore it so callers fall back to
             // the provider's own default model (prevents a provider/model mismatch on send).
@@ -645,6 +746,60 @@ export class AIConfig{
         }
     }
 
+    /**
+     * Moves persisted models that the registry no longer serves onto current ones (#179): the
+     * per-feature picks and each provider's AIConfig.model, through `resolveCurrentModelId`.
+     * No sentinel, unlike migrateLegacyModelIds: the model list changes from release to release,
+     * and a run that finds nothing to move writes nothing. The provider's config keeps the id it
+     * left in `replacedModel`, so Settings can say which model was replaced.
+     */
+    static retireModels(): void {
+        try {
+            const replaced: Partial<Record<TAIProvider, string>> = {};
+
+            // 1. Per-feature preferences (jjodel_provider_<feature>)
+            const features: AIFeature[] = ['documentation', 'chat', 'scriptblock', 'mappings', 'explain'];
+            for (const feature of features) {
+                const key = `${AI.STORAGE_PREFIX}${feature}`;
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                try {
+                    const pref: ProviderPreference = JSON.parse(raw);
+                    if (!pref.modelId) continue;
+                    const provider = pref.providerId as TAIProvider;
+                    const current = resolveCurrentModelId(provider, pref.modelId);
+                    if (current && current !== pref.modelId) {
+                        replaced[provider] = pref.modelId;
+                        pref.modelId = current;
+                        pref.updatedAt = Date.now();
+                        localStorage.setItem(key, JSON.stringify(pref));
+                    }
+                } catch { /* skip malformed entries */ }
+            }
+
+            // 2. Per-provider AIConfig.model (stored under AI[provider].storageKey)
+            for (const provider of ALL_AI_PROVIDERS) {
+                const llm = AI[provider];
+                if (!llm?.storageKey) continue;
+                const raw = localStorage.getItem(llm.storageKey);
+                if (!raw) continue;
+                try {
+                    const cfg = JSON.parse(raw);
+                    const current = resolveCurrentModelId(provider, cfg?.model);
+                    if (current && current !== cfg.model) {
+                        replaced[provider] = cfg.model;
+                        cfg.model = current;
+                    }
+                    else if (!replaced[provider]) continue;
+                    cfg.replacedModel = replaced[provider];
+                    localStorage.setItem(llm.storageKey, JSON.stringify(cfg));
+                } catch { /* skip malformed entries */ }
+            }
+        } catch (e) {
+            console.warn('[jodie] retireModels failed:', e);
+        }
+    }
+
     static migrateGlobalDefaultToPerFeature(): void {
         const SENTINEL_KEY = 'jjodel_migration:global_to_per_feature';
         try {
@@ -755,6 +910,8 @@ export class JodieConfig {
     providers: Dictionary<TAIProvider, ProviderConfig>;
     position?: { x: number; y: number };
     size?: { width: number; height: number };
+    /** Width in px of the docked panel (R-JJD-1). `position` and `size` belong to the retired floating window. */
+    dockWidth?: number;
     appVersion: string =  '1.0.0';
 
     constructor() {
@@ -789,6 +946,9 @@ export class JodieConfig {
         AIConfig.migrateLegacyModelIds();
         // (3) Repair per-feature prefs whose modelId belongs to a different provider.
         AIConfig.sanitizeForeignFeatureModels();
+        // (4) Move models the registry no longer serves onto current ones (#179). Not sentinel-
+        // protected: it runs on every load and writes only when it moves something.
+        AIConfig.retireModels();
 
         let data: GObject<JodieConfig>;
         if (!json) json = localStorage.getItem(AI.STORAGE_GLOBAL_CONFIG);
@@ -937,6 +1097,8 @@ export interface CodeEntry {
     warnings?: CodeWarning[];
     /** Raw JjEL value when ok, retained for the inline inspector. */
     rawValue?: unknown;
+    /** The evaluation hit its deadline (R-JJD-9): the error text renders muted. */
+    timedOut?: boolean;
 }
 
 /**

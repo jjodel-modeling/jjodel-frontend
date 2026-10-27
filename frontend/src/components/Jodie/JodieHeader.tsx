@@ -3,13 +3,15 @@
  * Window title bar with controls and metamodel indicator
  */
 
-import { useState, useEffect } from 'react';
-import { ProviderModelSelector } from '../common/ProviderModelSelector';
-import { TAIProvider, AIProvider, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CONSOLE_MODES, CONSOLE_MODE_LABELS } from '../../types/jodie';
+import { useState, useEffect, useRef, KeyboardEvent } from 'react';
+import { TAIProvider, AIProvider, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor } from '../../types/jodie';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
-import { JjodelEvents } from '../../events/registry';
+import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { getActiveModel } from '../../jjscript/executor/utils';
+import { isConsumerMode } from '../environment/consumerMode';
+import { describeConsumerSelection, getConsumerSelection } from '../environment/consumerJodieContext';
+import { consumerFocusLabel } from './consumerVoice';
 
 
 interface JodieHeaderProps {
@@ -140,6 +142,42 @@ function useMetamodelContext(): MetamodelContext {
     return context;
 }
 
+/** #168 J7 — what the consumer is looking at in the Configurator, as the chat line says it. */
+function readConsumerFocus(): { text: string; title: string } | null {
+    if (!isConsumerMode()) return null;
+    try {
+        return consumerFocusLabel(describeConsumerSelection(getConsumerSelection(), (store.getState() as any).idlookup));
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * The consumer's focus, refreshed when the Configurator publishes a selection, when the store
+ * changes (a rename) and when the hash changes (`&profile=` added or removed).
+ */
+function useConsumerFocus(): { text: string; title: string } | null {
+    const [focus, setFocus] = useState(() => readConsumerFocus());
+
+    useEffect(() => {
+        const refresh = () => {
+            const next = readConsumerFocus();
+            setFocus(prev => (prev?.text === next?.text && prev?.title === next?.title ? prev : next));
+        };
+        refresh();
+        const unsubscribe = store.subscribe(refresh);
+        window.addEventListener(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, refresh);
+        window.addEventListener('hashchange', refresh);
+        return () => {
+            unsubscribe();
+            window.removeEventListener(EnvGenEvents.CONFIGURATOR_SELECTION_CHANGED, refresh);
+            window.removeEventListener('hashchange', refresh);
+        };
+    }, []);
+
+    return focus;
+}
+
 export function JodieHeader({
     activeProvider,
     onProviderChange,
@@ -159,9 +197,53 @@ export function JodieHeader({
     canClearCurrentMode,
 }: JodieHeaderProps): JSX.Element {
     const context = useMetamodelContext();
+    // #168 J7: the consumer has one mode and sees its focus, not a metamodel.
+    const consumer = isConsumerMode();
+    const consumerFocus = useConsumerFocus();
     const aliveTitle = isAlive
         ? 'AI provider connected'
         : 'No AI provider configured. Open Settings to add one.';
+
+    // S1b (R-JJD-1): header actions other than new conversation and close live in the overflow menu.
+    const [overflowOpen, setOverflowOpen] = useState(false);
+    const overflowRef = useRef<HTMLDivElement>(null);
+    const overflowItems: { key: string; label: string; title: string; icon: string; className: string; onSelect: () => void }[] = [];
+    if (onResetPosition) {
+        overflowItems.push({
+            key: 'reset',
+            label: 'Reset panel width',
+            title: 'Reset the Jjodie panel to its default width',
+            icon: 'bi-arrow-counterclockwise',
+            className: 'jodie-reset-btn',
+            onSelect: onResetPosition,
+        });
+    }
+
+    useEffect(() => {
+        if (!overflowOpen) return;
+        // Focus the first item so the menu is keyboard reachable as soon as it opens.
+        overflowRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+        const handlePointerDown = (e: PointerEvent) => {
+            if (!overflowRef.current?.contains(e.target as Node)) setOverflowOpen(false);
+        };
+        document.addEventListener('pointerdown', handlePointerDown, true);
+        return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+    }, [overflowOpen]);
+
+    const handleOverflowKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+        const items = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+        const index = items.indexOf(document.activeElement as HTMLButtonElement);
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            setOverflowOpen(false);
+            overflowRef.current?.querySelector<HTMLButtonElement>('.jodie-overflow-btn')?.focus();
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const step = e.key === 'ArrowDown' ? 1 : -1;
+            items[(index + step + items.length) % items.length]?.focus();
+        }
+    };
 
     return (
         <>
@@ -179,35 +261,20 @@ export function JodieHeader({
                             aria-label={aliveTitle}
                         />
                     </span>
-                    <ProviderModelSelector
-                        feature="chat"
-                        compact
-                        onNavigateToSettings={onOpenSettings}
-                    />
-                </div>
-
-                {/* Console mode switcher — segmented pill, always visible.
-                    All three options shown → active highlight moves, no layout shift. */}
-                <div className="jodie-mode-switch" role="tablist" aria-label="Console mode">
-                    {CONSOLE_MODES.map(m => (
-                        <button
-                            key={m}
-                            type="button"
-                            role="tab"
-                            aria-selected={consoleMode === m}
-                            className={`jodie-mode-switch__opt${consoleMode === m ? ' jodie-mode-switch__opt--active' : ''}`}
-                            onClick={() => onConsoleModeChange(m, 'pill')}
-                            title={`Switch to ${CONSOLE_MODE_LABELS[m]} (Cmd+J / Ctrl+.)`}
-                        >
-                            {CONSOLE_MODE_LABELS[m]}
-                        </button>
-                    ))}
                 </div>
             </div>
 
-            {/* Metamodel Context Indicator */}
+            {/* Metamodel Context Indicator. #168 J7: in the consumer, the focus of the
+                Configurator in the chat line's words, or nothing. */}
             <div className="jodie-header-center">
-                {context.hasProject ? (
+                {consumer ? (
+                    consumerFocus && (
+                        <div className="jodie-metamodel-indicator" title={consumerFocus.title}>
+                            <i className="bi bi-eye" />
+                            <span className="jodie-metamodel-name">{consumerFocus.text}</span>
+                        </div>
+                    )
+                ) : context.hasProject ? (
                     context.metamodelName ? (
                         <div className="jodie-metamodel-indicator" title={`Target: ${context.metamodelName}${context.metamodelCount > 1 ? ` (${context.metamodelCount} metamodels)` : ''}`}>
                             <i className="bi bi-diagram-3" />
@@ -236,33 +303,44 @@ export function JodieHeader({
             <div className="jodie-header-right">
                 {onClearCurrentMode && (
                     <button
-                        className="jodie-header-btn"
+                        className="jodie-header-btn jodie-new-conversation-btn"
                         onClick={onClearCurrentMode}
-                        title={consoleMode === 'jjel' ? 'Clear console history' : 'Clear chat history'}
-                        aria-label={consoleMode === 'jjel' ? 'Clear console history' : 'Clear chat history'}
+                        title="New conversation"
+                        aria-label="New conversation"
                     >
-                        <i className="bi bi-eraser" />
+                        <i className="bi bi-pencil-square" />
                     </button>
                 )}
-                {onResetPosition && (
-                    <button
-                        className="jodie-header-btn jodie-reset-btn"
-                        onClick={onResetPosition}
-                        title="Reset position and size"
-                        aria-label="Reset Jjodie window to default position and size"
-                    >
-                        <i className="bi bi-arrow-counterclockwise" />
-                    </button>
-                )}
-                {onToggleFullscreen && (
-                    <button
-                        className={`jodie-header-btn ${isFullscreen ? 'jodie-fullscreen-exit-btn' : 'jodie-fullscreen-btn'}`}
-                        onClick={onToggleFullscreen}
-                        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                        aria-label={isFullscreen ? 'Exit fullscreen mode' : 'Enter fullscreen mode'}
-                    >
-                        <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-arrows-fullscreen'}`} />
-                    </button>
+                {overflowItems.length > 0 && (
+                    <div className="jodie-overflow" ref={overflowRef}>
+                        <button
+                            className="jodie-header-btn jodie-overflow-btn"
+                            onClick={() => setOverflowOpen(o => !o)}
+                            title="More actions"
+                            aria-label="More actions"
+                            aria-haspopup="menu"
+                            aria-expanded={overflowOpen}
+                        >
+                            <i className="bi bi-three-dots" />
+                        </button>
+                        {overflowOpen && (
+                            <div className="jodie-overflow-menu" role="menu" onKeyDown={handleOverflowKeyDown}>
+                                {overflowItems.map(item => (
+                                    <button
+                                        key={item.key}
+                                        type="button"
+                                        role="menuitem"
+                                        className={`jodie-overflow-item ${item.className}`}
+                                        onClick={() => { setOverflowOpen(false); item.onSelect(); }}
+                                        title={item.title}
+                                    >
+                                        <i className={`bi ${item.icon}`} />
+                                        <span>{item.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 )}
                 <button
                     className="jodie-header-btn jodie-close-btn"
@@ -274,13 +352,6 @@ export function JodieHeader({
             </div>
         </div>
 
-        {consoleMode === 'jjel' && (
-            <div className="jodie-code-subrow">
-                <div className="jodie-code-scope" title="Variables available in JjEL expressions">
-                    scope: self, model, classes
-                </div>
-            </div>
-        )}
         </>
     );
 }

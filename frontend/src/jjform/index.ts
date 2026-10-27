@@ -164,6 +164,7 @@ export type { Crumb, NavState, NavStep } from './nav';
 
 export {
     INLINE_DEPTH_LIMIT,
+    backOf,
     breadcrumbOf,
     crumbLabel,
     currentOf,
@@ -173,6 +174,7 @@ export {
     navFor,
     rendersInline,
     rootOf,
+    survivorOf,
     truncateTo,
 } from './nav';
 
@@ -241,6 +243,9 @@ export {
 
 export type { OptionGroupLike, OptionLike } from './optionColor';
 export { OPTION_COLOR_SLOTS, optionSlot, optionSlotClass } from './optionColor';
+
+export type { RefRowAction, RefSlotControls, RefSlotReads, RefSlotRow } from './refSlot';
+export { hasRowMenu, refSlotControls } from './refSlot';
 
 export type {
     Density,

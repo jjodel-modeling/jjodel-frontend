@@ -22,12 +22,18 @@
  */
 
 import { defaultEdgeViewIR, defaultObjectViewIR } from './irDefaults';
+import { graphVertexSeedIR } from './irCreationSeed';
 import type { AnyViewIR, RowViewIR } from './irTypes';
 
-/** The three kinds with an authoring panel; graphVertex is not authorable (R-6). */
-export type AuthorableIRKind = 'vertex' | 'row' | 'edge';
+/**
+ * The kinds with an authoring panel. `graphVertex` joined on 2026-10-10 (R-GV-11, amending R-6 and R-IRN-4) and
+ * follows the same contract as the other three: vertex <-> graphVertex keeps the shared fields and moves everything
+ * else through the stash, so the vertex a graphVertex goes back to carries no `containment`, and the graphVertex
+ * it left waits in its own slot (P-2026-10-10-1156).
+ */
+export type AuthorableIRKind = 'vertex' | 'row' | 'edge' | 'graphVertex';
 
-const AUTHORABLE_KINDS: readonly AuthorableIRKind[] = ['vertex', 'row', 'edge'];
+const AUTHORABLE_KINDS: readonly AuthorableIRKind[] = ['vertex', 'row', 'edge', 'graphVertex'];
 
 /**
  * Per-kind slots holding the kind-specific fields of an abandoned ir (everything
@@ -38,6 +44,8 @@ export interface IRKindStash {
     vertex?: Record<string, unknown>;
     row?: Record<string, unknown>;
     edge?: Record<string, unknown>;
+    /** Added with R-GV-11 (2026-10-10): optional, so a stash persisted before it reads as before. */
+    graphVertex?: Record<string, unknown>;
 }
 
 export interface IRKindConversion {
@@ -64,6 +72,7 @@ const isSharedKey = (k: string): boolean => (SHARED_KEYS as readonly string[]).i
 function seedForKind(kind: AuthorableIRKind): AnyViewIR {
     switch (kind) {
         case 'vertex': return defaultObjectViewIR();
+        case 'graphVertex': return graphVertexSeedIR();
         case 'edge': return defaultEdgeViewIR();
         case 'row': {
             const seed: RowViewIR = {
@@ -109,7 +118,7 @@ export function convertIRKind(
         if (k === 'kind' || isSharedKey(k) || v === undefined) continue;
         departing[k] = v;
     }
-    if (current.kind === 'vertex' || current.kind === 'row' || current.kind === 'edge') {
+    if (current.kind === 'vertex' || current.kind === 'row' || current.kind === 'edge' || current.kind === 'graphVertex') {
         nextStash[current.kind] = departing;
     }
 

@@ -381,17 +381,19 @@
      ============================================ */
   &.two-column {
     display: grid;
-    grid-template-columns: 240px 1fr;
+    // Last column: the docked Jjodie slot (R-JJD-1). `auto` sizes it to the panel the
+    // JodieWindow portals in, and to 0 when Jjodie is closed (the slot is then empty).
+    grid-template-columns: 240px 1fr auto;
     grid-template-rows: 1fr;
     flex-flow: unset;
 
     // Hide project sidebar when metamodel editor is active
     &.hide-leftbar {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr auto;
     }
 
     @media (max-width: 768px) {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr auto;
 
       .leftbar {
         position: fixed;
@@ -425,6 +427,18 @@
     /* Override Dock's inline height: 100vh to fit grid cell */
     > div {
       height: 100% !important;
+    }
+  }
+
+  /* #157 R5 — consumer: the Configurator page lies over the Dock. The Dock stays mounted and
+     laid out underneath (ProjectEditor lives in it, and removing &profile= brings it back
+     without a reload) but is neither painted nor reachable: visibility, not a z-index race
+     with rc-dock's own layers (up to 400). */
+  .project-dock-wrapper--consumer {
+    position: relative;
+
+    > :not(.configurator-page) {
+      visibility: hidden;
     }
   }
 
@@ -860,15 +874,14 @@ project-card .tip {
       color: var(--color-text-primary);
     }
 
+    // Handoff §2.4 (P-2026-10-19-1616): slate-100 fill, 600 weight; no left bar (Alfonso, 2026-10-19 16:56).
     &.active {
-      background-color: var(--color-bg-primary);
-      color: #0ea5e9; // cyan brand
+      background-color: var(--color-slate-100);
+      color: var(--color-text-primary);
       font-weight: var(--font-semibold);
-      border: 0.5px solid var(--color-border-primary);
-      border-radius: 5px;
 
       .bi {
-        color: #0ea5e9;
+        color: var(--color-slate-700);
       }
     }
   }
@@ -1126,6 +1139,21 @@ project-card .tip {
       &--m { background: #fef3c7; color: #92400e; }
       &--T { background: #dcfce7; color: #15803d; }
       &--V { background: #fce7f3; color: #9d174d; }
+      &--S { background: #cffafe; color: #0e7490; }
+    }
+
+    /* Inline rename of a SCRIPTS row (S6b): takes the place of .psb-item-name. */
+    .psb-rename-input {
+      flex: 1;
+      min-width: 0;
+      height: 20px;
+      padding: 0 4px;
+      border: 1px solid #0ea5e9;
+      border-radius: 3px;
+      font: inherit;
+      color: inherit;
+      background: #fff;
+      outline: none;
     }
 
     .psb-item-name {

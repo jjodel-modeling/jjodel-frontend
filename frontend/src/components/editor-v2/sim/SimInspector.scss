@@ -1,0 +1,557 @@
+// The run inspector (R-SIM-105, R-SIM-106; P-2026-10-03-0120), painted by SimInspector.tsx.
+//
+// A sibling of the simulation panel inside `.editor-switch-container`, positioned as the panel is
+// (simulation-panel.scss): `position: absolute` on the editor's box, z-index 850 inside the dock's
+// stacking context, so it hides with its editor's tab. Geometry from the discovery 2026-10-02 §1:
+// right of the panel (280 + 288 + 16 = left 584), bottom 16 as the panel, 400 wide, clamped clear of
+// the MiniMap (202 wide as painted, its 200 and a 1 px border each side, measured by the lane probe, at
+// `right: inset + 16`, plus a 16 gutter: 234; the discovery's 232 left 14) and of the rail, whose width
+// plus 8 is `--jj-canvas-right-inset`, set on <body> by PropertiesWithTreeView. That variable is
+// READ here, never defined (design-system rule); every colour is a design-system token.
+//
+// The visual key of R-SIM-102: σ solid slate with the glyph σ (`sim-state-glyph`), node the viewpoint
+// pink family dashed, a value changed by the step shown tinted with the run's cyan (--color-sim-sigma-*).
+//
+// ICON COLOUR — declared on the icon, with a `:hover` twin, as simulation-panel.scss explains.
+
+// The trace scrolls in an area six rows tall at every step, so the card does not grow with the run
+// (P-2026-10-03-1015). A row is 22 px, its min-height, measured by the lane probe: border-box, the 16 px
+// `live` chip plus 2 + 2 padding and 1 + 1 border.
+$sim-inspector-trace-row: 22px;
+$sim-inspector-trace-rows: 6;
+
+.sim-inspector {
+    position: absolute;
+    left: 584px;
+    bottom: 16px;
+    z-index: 850;
+    display: flex;
+    flex-direction: column;
+    width: 400px;
+    max-width: calc(100% - 584px - var(--jj-canvas-right-inset, 0px) - 234px);
+    // Never over the editor's toolbar (`--jj-toolbar-height`, read): its top stays 16 px under it.
+    max-height: calc(100% - var(--jj-toolbar-height, 40px) - 32px);
+    overflow: hidden;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+    color: var(--color-text-primary);
+    font-family: inherit;
+
+    // -- header -----------------------------------------------------------------
+    &__header {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+
+        > .bi,
+        > .bi:hover {
+            font-size: 12px;
+            line-height: 1;
+            color: var(--color-text-placeholder);
+        }
+    }
+
+    &__title {
+        flex: 0 0 auto;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    &__subtitle {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    // The header's icons: the dialog of the invariants and breakpoints (R-SIM-137), then close; one size, one hover.
+    &__tool,
+    &__close {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
+    // -- «Viewing step n» (R-SIM-106) ----------------------------------------------
+    &__viewing {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--color-sim-sigma-border);
+        background: var(--color-sim-sigma-bg);
+        color: var(--color-sim-sigma-fg);
+        font-size: 11px;
+    }
+
+    &__viewing-text {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    &__live {
+        flex: 0 0 auto;
+        height: 22px;
+        padding: 0 8px;
+        border: none;
+        border-radius: 4px;
+        background: var(--color-accent);
+        color: var(--color-text-inverse);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-accent-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+    }
+
+    // -- body ---------------------------------------------------------------------
+    &__body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 4px 12px 12px;
+    }
+
+    &__section {
+        padding: 8px 0;
+
+        & + & {
+            border-top: 1px solid var(--color-border-secondary);
+        }
+    }
+
+    // node, the concrete state: the viewpoint pink, dashed, in its own box.
+    &__section--presentation {
+        margin: 8px 0;
+        padding: 8px;
+        border: 1px dashed var(--color-opt-4-border);
+        border-radius: 6px;
+
+        & + .sim-inspector__section {
+            border-top: none;
+        }
+    }
+
+    &__section-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+
+        .bi,
+        .bi:hover {
+            font-size: 12px;
+            line-height: 1;
+            color: var(--color-text-tertiary);
+        }
+    }
+
+    &__step {
+        margin-left: auto;
+        font-weight: 500;
+        letter-spacing: 0;
+        text-transform: none;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__group-head {
+        margin: 6px 0 2px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+    }
+
+    &__chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    &__instance {
+        margin-bottom: 4px;
+    }
+
+    &__instance-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 20px;
+        font-size: 11px;
+        color: var(--color-text-secondary);
+    }
+
+    // A marked instance (R-SIM-105): flagged in the run's cyan, as the sim-active outline.
+    &__marked {
+        padding: 0 5px;
+        border-radius: 999px;
+        background: var(--color-sim-token-bg);
+        color: var(--color-sim-token-fg);
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 16px;
+    }
+
+    // -- rows -----------------------------------------------------------------------
+    &__row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 22px;
+        padding-left: 8px;
+        font-size: 11px;
+    }
+
+    &__name {
+        flex: 0 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        font-family: var(--font-mono);
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        // A DEFINE is never assigned: its name in italics (R-SIM-102), with room for the italic's overhang under the clip.
+        &--define {
+            padding-right: 0.2em;
+            font-style: italic;
+        }
+    }
+
+    &__row--undeclared &__name {
+        color: var(--color-text-tertiary);
+        text-decoration: underline dotted;
+    }
+
+    &__section--presentation &__name {
+        color: var(--color-opt-4-fg);
+    }
+
+    // A range's domain bar: the value's place between min and max.
+    &__bar {
+        position: relative;
+        flex: 0 0 48px;
+        height: 4px;
+        overflow: hidden;
+        border-radius: 2px;
+        background: var(--color-border-primary);
+
+        &--out {
+            background: var(--color-error);
+        }
+    }
+
+    &__fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        background: var(--color-accent);
+    }
+
+    &__value {
+        margin-left: auto;
+        padding: 0 4px;
+        border-radius: 3px;
+        font-family: var(--font-mono);
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+
+        // Changed by the step shown (R-SIM-102): the run's cyan, `before → after`.
+        &--changed {
+            background: var(--color-sim-sigma-bg);
+            color: var(--color-sim-sigma-fg);
+            box-shadow: inset 0 0 0 1px var(--color-sim-sigma-border);
+        }
+
+        // An input, asked at the press that reads it.
+        &--input {
+            font-style: italic;
+            color: var(--color-text-tertiary);
+        }
+
+        // R-SIM-137: an invariant false on the step shown, in the error pair; a breakpoint true, in the warning pair.
+        &--violated {
+            background: var(--color-error-subtle);
+            color: var(--color-error-text);
+        }
+
+        &--reached {
+            background: var(--color-warning-subtle);
+            color: var(--color-warning-text);
+        }
+
+        // What the watch fails to compile or to read: named on one line, in full in the row's title.
+        &--defect {
+            min-width: 0;
+            overflow: hidden;
+            font-family: inherit;
+            font-style: italic;
+            color: var(--color-error-text);
+            text-overflow: ellipsis;
+        }
+    }
+
+    // A past step shown (R-SIM-102's «past step»): the values that did not change read quieter.
+    &__body--past .sim-inspector__value:not(.sim-inspector__value--changed) {
+        color: var(--color-text-tertiary);
+    }
+
+    &__row-actions {
+        display: inline-flex;
+        flex: 0 0 auto;
+        gap: 2px;
+    }
+
+    &__toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        &[aria-pressed="true"] {
+            color: var(--color-text-primary);
+        }
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    &__empty {
+        padding: 4px 0;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-text-tertiary);
+    }
+
+    // -- the trace (R-SIM-106) ------------------------------------------------------------
+    &__trace {
+        height: $sim-inspector-trace-rows * $sim-inspector-trace-row;
+        margin: 0;
+        padding: 0;
+        overflow-y: auto;
+        // A commit keeps the rows a reader scrolled to in place: SimInspector.tsx does it, not the browser's anchoring.
+        overflow-anchor: none;
+        // The scrollbar's room is kept from the first step, so the rows do not narrow at the seventh.
+        scrollbar-gutter: stable;
+        list-style: none;
+    }
+
+    &__trace-step {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        min-height: $sim-inspector-trace-row;
+        padding: 2px 6px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        // Inside the row: the scroll area clips what lies outside it.
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: -2px;
+        }
+
+        // The step the canvas shows: the run's cyan, as an active indicator.
+        &--shown {
+            border-color: var(--color-sim-sigma-border);
+            background: var(--color-sim-sigma-bg);
+            color: var(--color-sim-sigma-fg);
+        }
+    }
+
+    &__trace-n {
+        flex: 0 0 24px;
+        color: var(--color-text-tertiary);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__trace-text {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    // R-SIM-137: a step of the trace where an invariant or a breakpoint hit. Under the step, (0,2,0), so the colour
+    // outranks the global `i.bi` one (0,1,1), as the ICON COLOUR note above asks.
+    &__trace-step &__trace-hit,
+    &__trace-step &__trace-hit:hover {
+        flex: 0 0 auto;
+        font-size: 10px;
+        line-height: 1;
+        color: var(--color-warning-text);
+    }
+
+    &__trace-live {
+        flex: 0 0 auto;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: var(--color-bg-hover);
+        color: var(--color-text-secondary);
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 16px;
+    }
+
+    // -- scenarios (R-SIM-139) -------------------------------------------------------------
+    // «Save as scenario» in the trace's head: the header's icon, its glyph at the header's size and colour rather than
+    // the section head's (0,3,0 over 0,2,0); refused, it reads quieter and its title says why. Its 20 px box overhangs
+    // the 12 px line by 4 px each way, so the head, and the card, keep their height.
+    &__section-head &__tool {
+        margin: -4px 0;
+    }
+
+    &__section-head &__tool .bi,
+    &__section-head &__tool .bi:hover {
+        font-size: 11px;
+        color: inherit;
+    }
+
+    &__tool:disabled {
+        opacity: 0.4;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: default;
+    }
+
+    &__scenario + &__scenario {
+        margin-top: 2px;
+    }
+
+    // The last result of a replay, under its scenario: passed quiet, failed in the error text, diverged in the warning
+    // text, one line, in full in its title.
+    &__scenario-result {
+        padding: 0 8px 2px 8px;
+        overflow: hidden;
+        font-size: 11px;
+        line-height: 16px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        &--failed {
+            color: var(--color-error-text);
+        }
+
+        &--diverged {
+            color: var(--color-warning-text);
+        }
+    }
+}
+
+// The «Invariants and breakpoints» dialog (SimWatchesModal.tsx, R-SIM-137): the roles dialog's shell and controls
+// (SimRolesModal.scss), its rows here, in the sheet of the card that opens it. Under `.sim-roles-modal` as every rule
+// of that sheet, so it outranks the global form rules. One line of 32 px per row, name, kind, expression and remove,
+// and a fixed 16 px line under it for what the row fails to compile, so a defect moves no row.
+.sim-roles-modal .sim-watches-modal {
+    &__row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 0;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__line {
+        display: grid;
+        grid-template-columns: 160px 120px minmax(0, 1fr) 32px;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+    }
+}
+
+.sim-roles-modal .sim-roles-modal__input.sim-watches-modal__text {
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
+}

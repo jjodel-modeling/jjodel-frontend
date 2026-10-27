@@ -201,7 +201,7 @@ function RendererInspector({
                                     <>
                                         {' · '}
                                         <button type="button" className="inode-inspector__inline-link" onClick={openFormTab}>
-                                            Open the Form tab
+                                            Open the Layout tab
                                         </button>
                                     </>
                                 )}

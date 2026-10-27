@@ -1,0 +1,1223 @@
+{
+  "url": "http://localhost:3085",
+  "at": "2026-10-20T22:11:27.245Z",
+  "metamodel": {
+    "classes": [
+      {
+        "n": "NamedElement",
+        "abs": true,
+        "ext": [],
+        "refs": []
+      },
+      {
+        "n": "PackageableElement",
+        "abs": true,
+        "ext": [
+          "NamedElement"
+        ],
+        "refs": []
+      },
+      {
+        "n": "Package",
+        "abs": false,
+        "ext": [
+          "PackageableElement"
+        ],
+        "refs": [
+          "packagedElements:PackageableElement:comp:*"
+        ]
+      },
+      {
+        "n": "Type",
+        "abs": true,
+        "ext": [
+          "PackageableElement"
+        ],
+        "refs": []
+      },
+      {
+        "n": "Classifier",
+        "abs": true,
+        "ext": [
+          "Type"
+        ],
+        "refs": [
+          "generalizations:Generalization:comp:*"
+        ]
+      },
+      {
+        "n": "Class",
+        "abs": false,
+        "ext": [
+          "Classifier"
+        ],
+        "refs": [
+          "ownedAttributes:Property:comp:*",
+          "ownedOperations:Operation:comp:*"
+        ]
+      },
+      {
+        "n": "DataType",
+        "abs": false,
+        "ext": [
+          "Classifier"
+        ],
+        "refs": []
+      },
+      {
+        "n": "PrimitiveType",
+        "abs": false,
+        "ext": [
+          "DataType"
+        ],
+        "refs": []
+      },
+      {
+        "n": "Enumeration",
+        "abs": false,
+        "ext": [
+          "DataType"
+        ],
+        "refs": [
+          "ownedLiterals:EnumerationLiteral:comp:*"
+        ]
+      },
+      {
+        "n": "Association",
+        "abs": false,
+        "ext": [
+          "Classifier"
+        ],
+        "refs": [
+          "memberEnds:Property:*",
+          "ownedEnds:Property:comp:*"
+        ]
+      },
+      {
+        "n": "Generalization",
+        "abs": false,
+        "ext": [],
+        "refs": [
+          "specific:Classifier",
+          "general:Classifier"
+        ]
+      },
+      {
+        "n": "TypedElement",
+        "abs": true,
+        "ext": [
+          "NamedElement"
+        ],
+        "refs": [
+          "type:Type"
+        ]
+      },
+      {
+        "n": "MultiplicityElement",
+        "abs": true,
+        "ext": [],
+        "refs": []
+      },
+      {
+        "n": "Property",
+        "abs": false,
+        "ext": [
+          "TypedElement",
+          "MultiplicityElement"
+        ],
+        "refs": [
+          "association:Association"
+        ]
+      },
+      {
+        "n": "Operation",
+        "abs": false,
+        "ext": [
+          "NamedElement"
+        ],
+        "refs": [
+          "ownedParameters:Parameter:comp:*",
+          "type:Type"
+        ]
+      },
+      {
+        "n": "Parameter",
+        "abs": false,
+        "ext": [
+          "TypedElement",
+          "MultiplicityElement"
+        ],
+        "refs": []
+      },
+      {
+        "n": "InstanceSpecification",
+        "abs": false,
+        "ext": [
+          "PackageableElement"
+        ],
+        "refs": [
+          "classifier:Classifier",
+          "slots:Slot:comp:*"
+        ]
+      },
+      {
+        "n": "EnumerationLiteral",
+        "abs": false,
+        "ext": [
+          "InstanceSpecification"
+        ],
+        "refs": []
+      },
+      {
+        "n": "Slot",
+        "abs": false,
+        "ext": [],
+        "refs": [
+          "definingFeature:Property",
+          "values:ValueSpecification:comp:*"
+        ]
+      },
+      {
+        "n": "ValueSpecification",
+        "abs": true,
+        "ext": [
+          "TypedElement"
+        ],
+        "refs": []
+      },
+      {
+        "n": "LiteralInteger",
+        "abs": false,
+        "ext": [
+          "ValueSpecification"
+        ],
+        "refs": []
+      },
+      {
+        "n": "LiteralString",
+        "abs": false,
+        "ext": [
+          "ValueSpecification"
+        ],
+        "refs": []
+      },
+      {
+        "n": "LiteralBoolean",
+        "abs": false,
+        "ext": [
+          "ValueSpecification"
+        ],
+        "refs": []
+      },
+      {
+        "n": "LiteralNull",
+        "abs": false,
+        "ext": [
+          "ValueSpecification"
+        ],
+        "refs": []
+      },
+      {
+        "n": "InstanceValue",
+        "abs": false,
+        "ext": [
+          "ValueSpecification"
+        ],
+        "refs": [
+          "instance:InstanceSpecification"
+        ]
+      }
+    ],
+    "attrs": {
+      "NamedElement.name": {
+        "type": "EString",
+        "d": "none"
+      },
+      "Classifier.isAbstract": {
+        "type": "EBoolean",
+        "d": "none"
+      },
+      "MultiplicityElement.lower": {
+        "type": "EInt",
+        "d": "ok"
+      },
+      "MultiplicityElement.upper": {
+        "type": "EInt",
+        "d": "ok"
+      },
+      "Property.visibility": {
+        "type": "VisibilityKind",
+        "d": "none"
+      },
+      "Property.aggregation": {
+        "type": "AggregationKind",
+        "d": "none"
+      },
+      "Property.isDerived": {
+        "type": "EBoolean",
+        "d": "none"
+      },
+      "Property.defaultValue": {
+        "type": "EString",
+        "d": "none"
+      },
+      "Operation.visibility": {
+        "type": "VisibilityKind",
+        "d": "none"
+      },
+      "LiteralInteger.value": {
+        "type": "EInt",
+        "d": "none"
+      },
+      "LiteralString.value": {
+        "type": "EString",
+        "d": "none"
+      },
+      "LiteralBoolean.value": {
+        "type": "EBoolean",
+        "d": "none"
+      }
+    },
+    "bounds": [
+      "NamedElement.name 1..1 : EString",
+      "Package.packagedElements 0..-1 : PackageableElement contains",
+      "Classifier.isAbstract 1..1 : EBoolean",
+      "Classifier.generalizations 0..-1 : Generalization contains",
+      "Class.ownedAttributes 0..-1 : Property contains",
+      "Class.ownedOperations 0..-1 : Operation contains",
+      "Enumeration.ownedLiterals 0..-1 : EnumerationLiteral contains",
+      "Association.memberEnds 2..2 : Property",
+      "Association.ownedEnds 0..-1 : Property contains",
+      "Generalization.specific 1..1 : Classifier",
+      "Generalization.general 1..1 : Classifier",
+      "TypedElement.type 0..1 : Type",
+      "MultiplicityElement.lower 1..1 : EInt",
+      "MultiplicityElement.upper 1..1 : EInt",
+      "Property.visibility 1..1 : VisibilityKind",
+      "Property.aggregation 1..1 : AggregationKind",
+      "Property.isDerived 1..1 : EBoolean",
+      "Property.defaultValue 0..1 : EString",
+      "Property.association 0..1 : Association",
+      "Operation.visibility 1..1 : VisibilityKind",
+      "Operation.ownedParameters 0..-1 : Parameter contains",
+      "Operation.type 0..1 : Type",
+      "InstanceSpecification.classifier 1..1 : Classifier",
+      "InstanceSpecification.slots 0..-1 : Slot contains",
+      "Slot.definingFeature 1..1 : Property",
+      "Slot.values 0..-1 : ValueSpecification contains",
+      "LiteralInteger.value 1..1 : EInt",
+      "LiteralString.value 1..1 : EString",
+      "LiteralBoolean.value 1..1 : EBoolean",
+      "InstanceValue.instance 1..1 : InstanceSpecification"
+    ]
+  },
+  "ids": {
+    "pkg": {
+      "obj": "Pointer1792534416151_USER_174",
+      "vertex": "Pointer1792534416152_USER_178"
+    },
+    "String": {
+      "obj": "Pointer1792534416540_USER_179",
+      "vertex": "Pointer1792534416542_USER_184"
+    },
+    "Integer": {
+      "obj": "Pointer1792534416836_USER_185",
+      "vertex": "Pointer1792534416837_USER_190"
+    },
+    "Boolean": {
+      "obj": "Pointer1792534417132_USER_191",
+      "vertex": "Pointer1792534417133_USER_196"
+    },
+    "Genre": {
+      "obj": "Pointer1792534417470_USER_197",
+      "vertex": "Pointer1792534417471_USER_203"
+    },
+    "lit_fiction": {
+      "obj": "Pointer1792534417727_USER_204",
+      "vertex": "Pointer1792534417728_USER_209"
+    },
+    "lit_science": {
+      "obj": "Pointer1792534418062_USER_210",
+      "vertex": "Pointer1792534418063_USER_215"
+    },
+    "lit_history": {
+      "obj": "Pointer1792534418370_USER_216",
+      "vertex": "Pointer1792534418371_USER_221"
+    },
+    "Publication": {
+      "obj": "Pointer1792534418667_USER_222",
+      "vertex": "Pointer1792534418668_USER_229"
+    },
+    "p_Publication_title": {
+      "obj": "Pointer1792534418932_USER_230",
+      "vertex": "Pointer1792534418934_USER_241"
+    },
+    "p_Publication_year": {
+      "obj": "Pointer1792534419291_USER_242",
+      "vertex": "Pointer1792534419293_USER_253"
+    },
+    "op_Publication_age": {
+      "obj": "Pointer1792534419592_USER_254",
+      "vertex": "Pointer1792534419594_USER_260"
+    },
+    "Book": {
+      "obj": "Pointer1792534419902_USER_261",
+      "vertex": "Pointer1792534419903_USER_268"
+    },
+    "p_Book_isbn": {
+      "obj": "Pointer1792534420205_USER_269",
+      "vertex": "Pointer1792534420207_USER_280"
+    },
+    "p_Book_genre": {
+      "obj": "Pointer1792534420518_USER_281",
+      "vertex": "Pointer1792534420520_USER_292"
+    },
+    "Magazine": {
+      "obj": "Pointer1792534420823_USER_293",
+      "vertex": "Pointer1792534420824_USER_300"
+    },
+    "p_Magazine_issue": {
+      "obj": "Pointer1792534421082_USER_301",
+      "vertex": "Pointer1792534421083_USER_312"
+    },
+    "Library": {
+      "obj": "Pointer1792534421444_USER_313",
+      "vertex": "Pointer1792534421445_USER_320"
+    },
+    "p_Library_name": {
+      "obj": "Pointer1792534421702_USER_321",
+      "vertex": "Pointer1792534421704_USER_332"
+    },
+    "Member": {
+      "obj": "Pointer1792534422051_USER_333",
+      "vertex": "Pointer1792534422052_USER_340"
+    },
+    "p_Member_name": {
+      "obj": "Pointer1792534422309_USER_341",
+      "vertex": "Pointer1792534422311_USER_352"
+    },
+    "p_Member_active": {
+      "obj": "Pointer1792534422674_USER_353",
+      "vertex": "Pointer1792534422678_USER_364"
+    },
+    "op_Member_borrow": {
+      "obj": "Pointer1792534422980_USER_365",
+      "vertex": "Pointer1792534422981_USER_371"
+    },
+    "par_Member_borrow_b": {
+      "obj": "Pointer1792534423288_USER_372",
+      "vertex": "Pointer1792534423289_USER_378"
+    },
+    "gen_Book": {
+      "obj": "Pointer1792534423621_USER_379",
+      "vertex": "Pointer1792534423622_USER_383"
+    },
+    "gen_Magazine": {
+      "obj": "Pointer1792534423878_USER_384",
+      "vertex": "Pointer1792534423879_USER_388"
+    },
+    "Holdings": {
+      "obj": "Pointer1792534424321_USER_389",
+      "vertex": "Pointer1792534424322_USER_396"
+    },
+    "end_Holdings_library": {
+      "obj": "Pointer1792534424819_USER_397",
+      "vertex": "Pointer1792534424820_USER_408"
+    },
+    "end_Holdings_holdings": {
+      "obj": "Pointer1792534425082_USER_409",
+      "vertex": "Pointer1792534425084_USER_420"
+    },
+    "Membership": {
+      "obj": "Pointer1792534425454_USER_421",
+      "vertex": "Pointer1792534425455_USER_428"
+    },
+    "end_Membership_libraries": {
+      "obj": "Pointer1792534426057_USER_429",
+      "vertex": "Pointer1792534426058_USER_440"
+    },
+    "end_Membership_members": {
+      "obj": "Pointer1792534426661_USER_441",
+      "vertex": "Pointer1792534426663_USER_452"
+    },
+    "Borrowing": {
+      "obj": "Pointer1792534427258_USER_453",
+      "vertex": "Pointer1792534427260_USER_460"
+    },
+    "end_Borrowing_borrower": {
+      "obj": "Pointer1792534427876_USER_461",
+      "vertex": "Pointer1792534427878_USER_472"
+    },
+    "end_Borrowing_loans": {
+      "obj": "Pointer1792534428492_USER_473",
+      "vertex": "Pointer1792534428494_USER_484"
+    },
+    "cityLib": {
+      "obj": "Pointer1792534429104_USER_485",
+      "vertex": "Pointer1792534429105_USER_490"
+    },
+    "slot_cityLib_name": {
+      "obj": "Pointer1792534429654_USER_491",
+      "vertex": "Pointer1792534429655_USER_495"
+    },
+    "val_cityLib_name": {
+      "obj": "Pointer1792534430315_USER_496",
+      "vertex": "Pointer1792534430316_USER_501"
+    },
+    "dune": {
+      "obj": "Pointer1792534430928_USER_502",
+      "vertex": "Pointer1792534430929_USER_507"
+    },
+    "slot_dune_title": {
+      "obj": "Pointer1792534431470_USER_508",
+      "vertex": "Pointer1792534431471_USER_512"
+    },
+    "val_dune_title": {
+      "obj": "Pointer1792534432143_USER_513",
+      "vertex": "Pointer1792534432144_USER_518"
+    },
+    "slot_dune_year": {
+      "obj": "Pointer1792534432764_USER_519",
+      "vertex": "Pointer1792534432765_USER_523"
+    },
+    "val_dune_year": {
+      "obj": "Pointer1792534433351_USER_524",
+      "vertex": "Pointer1792534433352_USER_529"
+    },
+    "slot_dune_isbn": {
+      "obj": "Pointer1792534433949_USER_530",
+      "vertex": "Pointer1792534433950_USER_534"
+    },
+    "val_dune_isbn": {
+      "obj": "Pointer1792534434559_USER_535",
+      "vertex": "Pointer1792534434560_USER_540"
+    },
+    "slot_dune_genre": {
+      "obj": "Pointer1792534435173_USER_541",
+      "vertex": "Pointer1792534435174_USER_545"
+    },
+    "val_dune_genre": {
+      "obj": "Pointer1792534435774_USER_546",
+      "vertex": "Pointer1792534435775_USER_551"
+    },
+    "history": {
+      "obj": "Pointer1792534436391_USER_552",
+      "vertex": "Pointer1792534436392_USER_557"
+    },
+    "slot_history_title": {
+      "obj": "Pointer1792534436913_USER_558",
+      "vertex": "Pointer1792534436914_USER_562"
+    },
+    "val_history_title": {
+      "obj": "Pointer1792534437595_USER_563",
+      "vertex": "Pointer1792534437596_USER_568"
+    },
+    "slot_history_year": {
+      "obj": "Pointer1792534438207_USER_569",
+      "vertex": "Pointer1792534438208_USER_573"
+    },
+    "val_history_year": {
+      "obj": "Pointer1792534438842_USER_574",
+      "vertex": "Pointer1792534438843_USER_579"
+    },
+    "slot_history_isbn": {
+      "obj": "Pointer1792534439449_USER_580",
+      "vertex": "Pointer1792534439450_USER_584"
+    },
+    "val_history_isbn": {
+      "obj": "Pointer1792534440053_USER_585",
+      "vertex": "Pointer1792534440054_USER_590"
+    },
+    "slot_history_genre": {
+      "obj": "Pointer1792534440728_USER_591",
+      "vertex": "Pointer1792534440729_USER_595"
+    },
+    "val_history_genre": {
+      "obj": "Pointer1792534441659_USER_596",
+      "vertex": "Pointer1792534441660_USER_601"
+    },
+    "nature": {
+      "obj": "Pointer1792534442505_USER_602",
+      "vertex": "Pointer1792534442506_USER_607"
+    },
+    "slot_nature_title": {
+      "obj": "Pointer1792534442767_USER_608",
+      "vertex": "Pointer1792534442767_USER_612"
+    },
+    "val_nature_title": {
+      "obj": "Pointer1792534443490_USER_613",
+      "vertex": "Pointer1792534443491_USER_618"
+    },
+    "slot_nature_year": {
+      "obj": "Pointer1792534444373_USER_619",
+      "vertex": "Pointer1792534444374_USER_623"
+    },
+    "val_nature_year": {
+      "obj": "Pointer1792534445317_USER_624",
+      "vertex": "Pointer1792534445318_USER_629"
+    },
+    "slot_nature_issue": {
+      "obj": "Pointer1792534446172_USER_630",
+      "vertex": "Pointer1792534446173_USER_634"
+    },
+    "val_nature_issue": {
+      "obj": "Pointer1792534447160_USER_635",
+      "vertex": "Pointer1792534447161_USER_640"
+    },
+    "alice": {
+      "obj": "Pointer1792534448004_USER_641",
+      "vertex": "Pointer1792534448005_USER_646"
+    },
+    "slot_alice_name": {
+      "obj": "Pointer1792534448809_USER_647",
+      "vertex": "Pointer1792534448810_USER_651"
+    },
+    "val_alice_name": {
+      "obj": "Pointer1792534449069_USER_652",
+      "vertex": "Pointer1792534449069_USER_657"
+    },
+    "slot_alice_active": {
+      "obj": "Pointer1792534449832_USER_658",
+      "vertex": "Pointer1792534449832_USER_662"
+    },
+    "val_alice_active": {
+      "obj": "Pointer1792534450734_USER_663",
+      "vertex": "Pointer1792534450735_USER_668"
+    },
+    "holdings1": {
+      "obj": "Pointer1792534451638_USER_669",
+      "vertex": "Pointer1792534451639_USER_674"
+    },
+    "slot_holdings1_0": {
+      "obj": "Pointer1792534452558_USER_675",
+      "vertex": "Pointer1792534452559_USER_679"
+    },
+    "val_holdings1_0": {
+      "obj": "Pointer1792534453430_USER_680",
+      "vertex": "Pointer1792534453431_USER_685"
+    },
+    "slot_holdings1_1": {
+      "obj": "Pointer1792534454310_USER_686",
+      "vertex": "Pointer1792534454311_USER_690"
+    },
+    "val_holdings1_1": {
+      "obj": "Pointer1792534455185_USER_691",
+      "vertex": "Pointer1792534455186_USER_696"
+    },
+    "holdings2": {
+      "obj": "Pointer1792534456155_USER_697",
+      "vertex": "Pointer1792534456156_USER_702"
+    },
+    "slot_holdings2_0": {
+      "obj": "Pointer1792534457099_USER_703",
+      "vertex": "Pointer1792534457100_USER_707"
+    },
+    "val_holdings2_0": {
+      "obj": "Pointer1792534458006_USER_708",
+      "vertex": "Pointer1792534458007_USER_713"
+    },
+    "slot_holdings2_1": {
+      "obj": "Pointer1792534458924_USER_714",
+      "vertex": "Pointer1792534458925_USER_718"
+    },
+    "val_holdings2_1": {
+      "obj": "Pointer1792534459817_USER_719",
+      "vertex": "Pointer1792534459818_USER_724"
+    },
+    "holdings3": {
+      "obj": "Pointer1792534460748_USER_725",
+      "vertex": "Pointer1792534460749_USER_730"
+    },
+    "slot_holdings3_0": {
+      "obj": "Pointer1792534461651_USER_731",
+      "vertex": "Pointer1792534461652_USER_735"
+    },
+    "val_holdings3_0": {
+      "obj": "Pointer1792534462574_USER_736",
+      "vertex": "Pointer1792534462575_USER_741"
+    },
+    "slot_holdings3_1": {
+      "obj": "Pointer1792534463465_USER_742",
+      "vertex": "Pointer1792534463466_USER_746"
+    },
+    "val_holdings3_1": {
+      "obj": "Pointer1792534464430_USER_747",
+      "vertex": "Pointer1792534464431_USER_752"
+    },
+    "membership1": {
+      "obj": "Pointer1792534464702_USER_753",
+      "vertex": "Pointer1792534464703_USER_758"
+    },
+    "slot_membership1_0": {
+      "obj": "Pointer1792534466405_USER_759",
+      "vertex": "Pointer1792534466406_USER_763"
+    },
+    "val_membership1_0": {
+      "obj": "Pointer1792534467443_USER_764",
+      "vertex": "Pointer1792534467444_USER_769"
+    },
+    "slot_membership1_1": {
+      "obj": "Pointer1792534468677_USER_770",
+      "vertex": "Pointer1792534468678_USER_774"
+    },
+    "val_membership1_1": {
+      "obj": "Pointer1792534469894_USER_775",
+      "vertex": "Pointer1792534469895_USER_780"
+    },
+    "borrowing1": {
+      "obj": "Pointer1792534471170_USER_781",
+      "vertex": "Pointer1792534471171_USER_786"
+    },
+    "slot_borrowing1_0": {
+      "obj": "Pointer1792534472296_USER_787",
+      "vertex": "Pointer1792534472297_USER_791"
+    },
+    "val_borrowing1_0": {
+      "obj": "Pointer1792534473590_USER_792",
+      "vertex": "Pointer1792534473591_USER_797"
+    },
+    "slot_borrowing1_1": {
+      "obj": "Pointer1792534474724_USER_798",
+      "vertex": "Pointer1792534474725_USER_802"
+    },
+    "val_borrowing1_1": {
+      "obj": "Pointer1792534476022_USER_803",
+      "vertex": "Pointer1792534476023_USER_808"
+    }
+  },
+  "viewpoints": {
+    "UML class diagram": {
+      "vpId": "Pointer1792534701210_USER_983",
+      "made": [
+        "View for Class:vertex",
+        "View for Enumeration:vertex",
+        "View for PrimitiveType:vertex",
+        "View for DataType:vertex",
+        "View for Generalization:edge",
+        "View for Association:edge",
+        "View for Association:edge",
+        "View for Association:edge",
+        "View for Association:edge",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Property:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for Operation:row",
+        "View for EnumerationLiteral:row",
+        "View for Package:vertex",
+        "View for Property:vertex",
+        "View for Operation:vertex",
+        "View for Parameter:vertex",
+        "View for EnumerationLiteral:vertex",
+        "View for InstanceSpecification:vertex",
+        "View for Slot:vertex",
+        "View for LiteralInteger:vertex",
+        "View for LiteralString:vertex",
+        "View for LiteralBoolean:vertex",
+        "View for LiteralNull:vertex",
+        "View for InstanceValue:vertex"
+      ]
+    },
+    "UML object diagram": {
+      "vpId": "Pointer1792534788734_USER_1410",
+      "made": [
+        "View for InstanceSpecification:vertex",
+        "View for InstanceSpecification:edge",
+        "View for Slot:row",
+        "View for Slot:row",
+        "View for Slot:row",
+        "View for Package:vertex",
+        "View for Class:vertex",
+        "View for DataType:vertex",
+        "View for PrimitiveType:vertex",
+        "View for Enumeration:vertex",
+        "View for Association:vertex",
+        "View for Generalization:vertex",
+        "View for Property:vertex",
+        "View for Operation:vertex",
+        "View for Parameter:vertex",
+        "View for EnumerationLiteral:vertex",
+        "View for Slot:vertex",
+        "View for LiteralInteger:vertex",
+        "View for LiteralString:vertex",
+        "View for LiteralBoolean:vertex",
+        "View for LiteralNull:vertex",
+        "View for InstanceValue:vertex"
+      ]
+    }
+  },
+  "classDiagram": {
+    "nodes": [
+      "String 1080,80 140x56",
+      "Integer 1080,200 140x56",
+      "Boolean 1080,320 140x56",
+      "Genre 420,700 200x120",
+      "Publication 480,80 260x100",
+      "Book 420,420 220x82",
+      "Magazine 760,420 220x64",
+      "Library 60,80 220x64",
+      "Member 60,420 260x100"
+    ],
+    "edges": [
+      "irobj_Pointer1792534423621_USER_379 Book->Publication",
+      "irobj_Pointer1792534423878_USER_384 Magazine->Publication",
+      "irobj_Pointer1792534424321_USER_389 Library->Publication",
+      "irobj_Pointer1792534425454_USER_421 Library->Member",
+      "irobj_Pointer1792534427258_USER_453 Member->Book"
+    ],
+    "book": {
+      "labels": [
+        {
+          "text": "Book",
+          "tag": "span",
+          "cls": "ir-label ir-label--top",
+          "fontStyle": "normal",
+          "fontWeight": "700",
+          "decoration": "none",
+          "inlineDecoration": "",
+          "parentDecoration": "none",
+          "parentCls": "ir-node-content ir-shape--rect"
+        }
+      ],
+      "rows": [
+        "- isbn : String",
+        "- genre : Genre"
+      ],
+      "compartments": 1
+    },
+    "member": {
+      "labels": [
+        {
+          "text": "Member",
+          "tag": "span",
+          "cls": "ir-label ir-label--top",
+          "fontStyle": "normal",
+          "fontWeight": "700",
+          "decoration": "none",
+          "inlineDecoration": "",
+          "parentDecoration": "none",
+          "parentCls": "ir-node-content ir-shape--rect"
+        }
+      ],
+      "rows": [
+        "- name : String",
+        "- active : Boolean",
+        "+ borrow(b : Book) : Boolean"
+      ],
+      "compartments": 1
+    },
+    "publication": {
+      "labels": [
+        {
+          "text": "Publication",
+          "tag": "span",
+          "cls": "ir-label ir-label--top",
+          "fontStyle": "italic",
+          "fontWeight": "700",
+          "decoration": "none",
+          "inlineDecoration": "",
+          "parentDecoration": "none",
+          "parentCls": "ir-node-content ir-shape--rect"
+        }
+      ],
+      "rows": [
+        "+ title : String",
+        "# year : Integer",
+        "+ age() : Integer"
+      ],
+      "compartments": 1
+    },
+    "genre": {
+      "labels": [
+        {
+          "text": "«enumeration»",
+          "tag": "span",
+          "cls": "ir-label ir-label--top",
+          "fontStyle": "normal",
+          "fontWeight": "400",
+          "decoration": "none",
+          "inlineDecoration": "",
+          "parentDecoration": "none",
+          "parentCls": "ir-node-content ir-shape--rect"
+        },
+        {
+          "text": "Genre",
+          "tag": "span",
+          "cls": "ir-label ir-label--top",
+          "fontStyle": "normal",
+          "fontWeight": "700",
+          "decoration": "none",
+          "inlineDecoration": "",
+          "parentDecoration": "none",
+          "parentCls": "ir-node-content ir-shape--rect"
+        }
+      ],
+      "rows": [
+        "fiction",
+        "science",
+        "history"
+      ],
+      "compartments": 1
+    },
+    "markers": [
+      {
+        "id": "irobj_Pointer1792534423621_USER_379",
+        "markers": [
+          [
+            null,
+            "url(#ir-triangle-hollow-irobj_Pointer1792534423621_USER_379)"
+          ]
+        ]
+      },
+      {
+        "id": "irobj_Pointer1792534423878_USER_384",
+        "markers": [
+          [
+            null,
+            "url(#ir-triangle-hollow-irobj_Pointer1792534423878_USER_384)"
+          ]
+        ]
+      },
+      {
+        "id": "irobj_Pointer1792534424321_USER_389",
+        "markers": [
+          [
+            "url(#ir-diamond-filled-irobj_Pointer1792534424321_USER_389)",
+            null
+          ]
+        ]
+      },
+      {
+        "id": "irobj_Pointer1792534425454_USER_421",
+        "markers": [
+          [
+            "url(#ir-diamond-hollow-irobj_Pointer1792534425454_USER_421)",
+            null
+          ]
+        ]
+      },
+      {
+        "id": "irobj_Pointer1792534427258_USER_453",
+        "markers": []
+      }
+    ],
+    "endLabels": [
+      {
+        "text": "1",
+        "role": false,
+        "near": "Library"
+      },
+      {
+        "text": "0..*",
+        "role": false,
+        "near": "Publication"
+      },
+      {
+        "text": "library",
+        "role": true,
+        "near": "Library"
+      },
+      {
+        "text": "holdings",
+        "role": true,
+        "near": "Publication"
+      },
+      {
+        "text": "1..*",
+        "role": false,
+        "near": "Library"
+      },
+      {
+        "text": "0..*",
+        "role": false,
+        "near": "Member"
+      },
+      {
+        "text": "libraries",
+        "role": true,
+        "near": "Library"
+      },
+      {
+        "text": "members",
+        "role": true,
+        "near": "Member"
+      },
+      {
+        "text": "0..1",
+        "role": false,
+        "near": "Member"
+      },
+      {
+        "text": "0..3",
+        "role": false,
+        "near": "Book"
+      },
+      {
+        "text": "borrower",
+        "role": true,
+        "near": "Member"
+      },
+      {
+        "text": "loans",
+        "role": true,
+        "near": "Book"
+      }
+    ]
+  },
+  "objectDiagram": {
+    "nodes": [
+      "cityLib 1800,80 300x84",
+      "dune 1460,420 300x138",
+      "history 1800,420 300x138",
+      "nature 2140,420 300x120",
+      "alice 1460,80 300x102"
+    ],
+    "edges": [
+      "irobj_Pointer1792534451638_USER_669 cityLib->dune",
+      "irobj_Pointer1792534456155_USER_697 cityLib->history",
+      "irobj_Pointer1792534460748_USER_725 cityLib->nature",
+      "irobj_Pointer1792534464702_USER_753 cityLib->alice",
+      "irobj_Pointer1792534471170_USER_781 alice->dune"
+    ],
+    "dune": {
+      "labels": [
+        {
+          "text": "dune",
+          "tag": "span",
+          "cls": "ir-label ir-label--top",
+          "fontStyle": "normal",
+          "fontWeight": "400",
+          "decoration": "underline",
+          "inlineDecoration": "underline",
+          "parentDecoration": "none",
+          "parentCls": "ir-node-content ir-shape--rect"
+        },
+        {
+          "text": "Book",
+          "tag": "span",
+          "cls": "ir-label ir-label--top",
+          "fontStyle": "normal",
+          "fontWeight": "400",
+          "decoration": "underline",
+          "inlineDecoration": "underline",
+          "parentDecoration": "none",
+          "parentCls": "ir-node-content ir-shape--rect"
+        }
+      ],
+      "rows": [
+        "title = Dune",
+        "year = 1965",
+        "isbn = 978-0441013593",
+        "genre = fiction"
+      ],
+      "compartments": 1
+    },
+    "endLabels": [
+      {
+        "text": "library",
+        "role": true,
+        "near": "cityLib"
+      },
+      {
+        "text": "holdings",
+        "role": true,
+        "near": "dune"
+      },
+      {
+        "text": "library",
+        "role": true,
+        "near": "cityLib"
+      },
+      {
+        "text": "holdings",
+        "role": true,
+        "near": "history"
+      },
+      {
+        "text": "library",
+        "role": true,
+        "near": "cityLib"
+      },
+      {
+        "text": "holdings",
+        "role": true,
+        "near": "nature"
+      },
+      {
+        "text": "libraries",
+        "role": true,
+        "near": "alice"
+      },
+      {
+        "text": "members",
+        "role": true,
+        "near": "cityLib"
+      },
+      {
+        "text": "borrower",
+        "role": true,
+        "near": "alice"
+      },
+      {
+        "text": "loans",
+        "role": true,
+        "near": "dune"
+      }
+    ]
+  },
+  "rules": {
+    "example": [],
+    "seeds": [
+      {
+        "rule": "O1",
+        "label": "nature classified by Publication",
+        "findings": [
+          {
+            "rule": "O1",
+            "sev": "error",
+            "at": "nature",
+            "msg": "classified by abstract Class Publication"
+          }
+        ],
+        "undone": true
+      },
+      {
+        "rule": "O5",
+        "label": "the year of dune as a LiteralString",
+        "findings": [
+          {
+            "rule": "O5",
+            "sev": "error",
+            "at": "dune",
+            "msg": "year : Integer holds a LiteralString"
+          }
+        ],
+        "undone": true
+      },
+      {
+        "rule": "O7",
+        "label": "a second Member bob with a Borrowing link to dune",
+        "findings": [
+          {
+            "rule": "O4",
+            "sev": "warning",
+            "at": "bob",
+            "msg": "no slot for name"
+          },
+          {
+            "rule": "O7",
+            "sev": "error",
+            "at": "bob",
+            "msg": "0 Membership links at end members, libraries is 1..-1"
+          },
+          {
+            "rule": "O7",
+            "sev": "error",
+            "at": "dune",
+            "msg": "2 Borrowing links at end loans, borrower is 0..1"
+          }
+        ],
+        "undone": true
+      },
+      {
+        "rule": "C1",
+        "label": "a generalization from Publication to Book",
+        "findings": [
+          {
+            "rule": "C1",
+            "sev": "error",
+            "at": "Publication",
+            "msg": "is among its own ancestors"
+          },
+          {
+            "rule": "C1",
+            "sev": "error",
+            "at": "Book",
+            "msg": "is among its own ancestors"
+          },
+          {
+            "rule": "O4",
+            "sev": "warning",
+            "at": "nature",
+            "msg": "no slot for isbn"
+          },
+          {
+            "rule": "O4",
+            "sev": "warning",
+            "at": "nature",
+            "msg": "no slot for genre"
+          }
+        ],
+        "undone": true
+      },
+      {
+        "rule": "C7",
+        "label": "the library end of Holdings with upper -1",
+        "findings": [
+          {
+            "rule": "C7",
+            "sev": "error",
+            "at": "Holdings",
+            "msg": "composite end holdings, opposite library upper -1"
+          }
+        ],
+        "undone": true
+      }
+    ]
+  },
+  "errors": [],
+  "roundTrip": {
+    "imported": {
+      "id": "Pointer1792534877045_USER_2",
+      "name": "UML class and object diagrams copy"
+    },
+    "counts": {
+      "UML class diagram": {
+        "nodes": 9,
+        "edges": 5
+      },
+      "UML object diagram": {
+        "nodes": 5,
+        "edges": 5
+      }
+    },
+    "errors": []
+  },
+  "checks": {
+    "pass": 32,
+    "fail": 0
+  }
+}

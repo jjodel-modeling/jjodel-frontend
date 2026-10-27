@@ -11,6 +11,7 @@ import {
 import { resolveElement } from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject } from '../utils';
+import { executeRemoveInstance } from './instance';
 
 import {
     SetFieldAction,
@@ -43,6 +44,12 @@ export async function executeRemove(
         // Special case: "remove extends from ChildClass" - clear all inheritance
         if (target.segments.length === 1 && target.segments[0] === '__extends__') {
             return executeRemoveExtends(from, project);
+        }
+
+        // M1 routing (#175): in an M1 model editor, 'remove' takes an instance out of a reference
+        // slot, as `set <Owner>.<reference> -= <Instance>`.
+        if (context.level === 'M1') {
+            return executeRemoveInstance(args, context, project);
         }
 
         // Resolve both elements

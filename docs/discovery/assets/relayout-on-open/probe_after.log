@@ -1,0 +1,45 @@
+probe=/Users/alfonso/jjodel-w-relayout/frontend/scripts/probe/nested-vertices.ts
+CFG=/Users/alfonso/jjodel-w-relayout/frontend/scripts/smoke/_tmp_lane_vite_3155.config.ts
+url=http://localhost:3155/
+server=200
+PASS  project created  Pointer1791626951401_USER_2
+PASS  metamodel imported  [{"id":"Pointer1791626966423_USER_4","name":"statemachine"}]
+PASS  M1 model imported  [{"id":"Pointer1791626971427_USER_30","name":"sample-StateMachine"}]
+MEAS  E1 D-layer before open  {"objectsLength":10,"graphs":[],"shapes":{"root":1,"hybrid":9}}
+PASS  E1 canvas mounted  
+MEAS  E1 object  StateMachine_0 (name slot Heater):StateMachine father=DModel inObjects=true vertices=1 shape=root
+MEAS  E1 object  State_0 (name slot Idle):State father=DValue (StateMachine_0.states) inObjects=true vertices=1 shape=hybrid
+MEAS  E1 object  State_1 (name slot Running):State father=DValue (StateMachine_0.states) inObjects=true vertices=1 shape=hybrid
+MEAS  E1 object  State_0 (name slot Warmup):State father=DValue (State_1.substates) inObjects=true vertices=1 shape=hybrid
+MEAS  E1 object  State_1 (name slot Steady):State father=DValue (State_1.substates) inObjects=true vertices=1 shape=hybrid
+MEAS  E1 object  State_2 (name slot Off):State father=DValue (StateMachine_0.states) inObjects=true vertices=1 shape=hybrid
+MEAS  E1 object  State_3 (name slot Broken):State father=DValue (StateMachine_0.states) inObjects=true vertices=1 shape=hybrid
+MEAS  E1 object  Transition_0 (name slot start):Transition father=DValue (StateMachine_0.transitions) inObjects=true vertices=1 shape=hybrid
+MEAS  E1 object  Transition_1 (name slot stop):Transition father=DValue (StateMachine_0.transitions) inObjects=true vertices=1 shape=hybrid
+MEAS  E1 object  Transition_2 (name slot fault):Transition father=DValue (StateMachine_0.transitions) inObjects=true vertices=1 shape=hybrid
+MEAS  E1 counts  {"dobjects":10,"objectsLength":10,"shapes":{"root":1,"rootWithVertex":1,"hybrid":9,"hybridWithVertex":9},"rfNodes":10,"rfEdges":18,"edgesByType":{"react-flow__edge-instanceRef":9,"react-flow__edge-composition":9},"graphs":[{"id":"Pointer1791626971427_USER_30_graph1","style":null,"subElements":0},{"id":"Pointer1791626971427_USER_30_graph2","style":"v2-flow","subElements":28}]}
+MEAS  E1 verdict A2 (nodes == DObjects)  10 nodes vs 10 DObjects
+MEAS  E2 command  {"line":"create instance of State \"ProbeChild\" in Running.substates","success":true,"message":"Created instance 'ProbeChild' of State in Running.substates"}
+MEAS  E2 node count  before 10, after 10; edges before 18, after 18
+MEAS  E2 new object  ProbeChild:State father=DValue (State_1.substates) inObjects=false vertices=0 shape=nested
+MEAS  E3 sentinel  {"id":"Pointer1791626977672_USER_118","object":"State_0","from":"141,530","to":"781,1010","rec":{"x":781,"y":1010},"layoutKey":"__abstract__","moved":true}
+PASS  E3 saved (before E3a)  
+MEAS  E3a canvas mounted right after reload, before opening  0
+MEAS  E3a vertices before / after the open  10 / 10
+MEAS  E3a ProbeChild after reopen  vertices=0 shape=nested
+MEAS  E3a positions  {"compared":10,"moved":[],"missing":[],"sentinel":{"id":"Pointer1791626977672_USER_118","object":"State_0","x":781,"y":1010,"seed":{"x":50,"y":50},"rec":{"x":781,"y":1010},"recRaw":"{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"}}
+MEAS  E3b canvas mounted right after reload, before the create  0
+MEAS  E3b command  {"line":"create instance of State \"ProbeRoot\"","success":true,"message":"Created instance 'ProbeRoot' of State"}
+MEAS  E3b ProbeRoot before the open  vertices=0 shape=root
+PASS  E3b saved (before the open)  
+MEAS  E3b canvas mounted right after the second reload  0
+MEAS  E3b ProbeRoot after the open  vertices=1 shape=root
+MEAS  E3b node count before / after the open  10 / 11
+MEAS  E3b positions of pre-existing nodes  {"compared":10,"movedCount":0,"moved":[],"missing":[],"sentinelBefore":{"id":"Pointer1791626977672_USER_118","object":"State_0","x":781,"y":1010,"seed":{"x":50,"y":50},"rec":{"x":781,"y":1010},"recRaw":"{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"},"sentinelAfter":{"id":"Pointer1791626977672_USER_118","object":"State_0","x":781,"y":1010,"seed":{"x":50,"y":50},"rec":{"x":781,"y":1010},"recRaw":"{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"}}
+MEAS  E3b layout records of pre-existing nodes  {"compared":10,"changedCount":0,"changed":[],"sentinelRecBefore":"{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}","sentinelRecAfter":"{\"x\":781,\"y\":1010,\"w\":200,\"h\":120,\"isResized\":false}"}
+MEAS  pageErrors  0
+MEAS  consoleErrors  7
+MEAS  json  /Users/alfonso/jjodel-w-relayout/docs/discovery/assets/relayout-on-open/probe_after.json
+FAILURES 0
+EXIT=0
+end=2026-10-10T10:11:22.902Z

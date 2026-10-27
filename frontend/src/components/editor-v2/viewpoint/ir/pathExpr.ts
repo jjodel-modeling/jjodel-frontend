@@ -12,10 +12,14 @@
  * change what the user reads.
  *
  * Pure by contract: no React, no Redux, no runtime import from editor-v2. The
- * only dependency is the PathExpr type alias, erased at build.
+ * only dependencies are the PathExpr type alias, erased at build, and the JjEL
+ * parser with its reserved names (pure, no imports outside jjel/), which
+ * presentationAttrOf asks instead of carrying a grammar of its own.
  */
 
 import type { PathExpr } from './irTypes';
+import { parseExpressionStrict } from '../../../../jjel/parser/parser';
+import { STATE_RESERVED } from '../../../../jjel/stateReserved';
 
 /** Constructs forbidden in PathExpr (spec v1.1 §PathExpr). */
 export const FORBIDDEN_PATH = /\?\.|\?\?|[?:()]/;
@@ -81,4 +85,27 @@ export function singleHopOf(expr: string): { feature: string; take: 'value' | 'v
     const step = parsed.steps[0];
     if (!step.feature) return null;
     return { feature: step.feature, take: step.take };
+}
+
+/**
+ * The presentation attribute `expr` reads when it is `node.[x]` (R-SIM-108, R-SIM-18), or null.
+ *
+ * Asked of the JjEL parser itself, strict, not of a regex: the IR then accepts exactly what the
+ * engine accepts (`node.[ heat ]` yes, `node.[if]` no; a regex built from STATE_RESERVED
+ * disagreed on those two, discovery 2026-10-02 §2.1). Not a PathExpr step: STEP_RE and
+ * parsePathExpr do not move, so `node.[x]` enters no union and no grammar (R-J7, R-MK-1), and
+ * every caller of parsePathExpr keeps refusing it. Non-throwing, like singleHopOf.
+ */
+export function presentationAttrOf(expr: string): string | null {
+    if (typeof expr !== 'string') return null;
+    let parsed: ReturnType<typeof parseExpressionStrict>;
+    try {
+        parsed = parseExpressionStrict(expr);
+    } catch {
+        return null;
+    }
+    const e = parsed.expression;
+    if (!e || parsed.errors.length > 0 || e.type !== 'StateAccess') return null;
+    const root = e.object;
+    return root.type === 'Identifier' && root.name === STATE_RESERVED.presentationRoot ? e.attribute : null;
 }

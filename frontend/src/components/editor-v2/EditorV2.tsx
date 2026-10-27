@@ -40,6 +40,11 @@ import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnch
 import { hydrateCollapsed, isCollapsed } from './viewpoint/ir/irCollapseState';
 import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView, resolveIRView } from './viewpoint/ir/irResolveCore';
 import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
+import { descendantsOf, setDragPointer } from './viewpoint/ir/irContainment';
+import {
+    compositionSlotFor, containedInSlot, createOwnerSlotOf, isRootFathered, nextValues, ownerSlotForNewObject, planDrop,
+    resolveDropTarget, slotAccepts, terminalSlotOf, type DropCandidate, type MembershipEnd, type MembershipOp,
+} from './viewpoint/ir/irMembership';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
@@ -47,9 +52,13 @@ import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeometricAnchorsForAllEdges } from './hooks/useAutoAnchor';
 import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/edgeLanes';
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
+import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
+import { clientCentre } from './utils/canvasCentre';
+import { orderSelection, sameIdList, resolveElementIds, type CanvasSelectionDetail } from './utils/canvasSelection';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
-import { fitPadding, getCanvasRightInset } from './viewportInset';
+import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
+import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
@@ -84,6 +93,8 @@ import {
     syncDeleteVertex,
     syncDeleteEdge,
     syncDeleteReferenceById,
+    resolveObjectAsEdge,
+    syncDeleteObjectAsEdge,
     syncCreateClass,
     syncCreateEnum,
     syncCreatePackage,
@@ -99,17 +110,29 @@ import {
     setModelUri,
     reconcileJjomAfterUndoRedo,
 } from './sync/canvasToJjom';
-import { computeElkLayout } from './utils/elkLayout';
+import { computeElkLayout, computeElkAutoLayout, setElkRoutes, measureOutsideLabels, CLASS_VIEW_PROFILE, type ElkLayoutProfile, type ElkLabelInput, type ElkRoute } from './utils/elkLayout';
+import { computeContainedAutoLayout } from './utils/elkContainers';
+import { DERIVED_LAYOUT_KEY, DERIVED_ROLE_PREFIX } from './viewpoint/derive/notations';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
-import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
+import { POLYMETRIC_MIN_METACLASSES, countPolymetricMetaclasses } from '../polymetric/polymetricMetrics';
+import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
 import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
+import { simPillVisible } from './sim/simRoleStatus';
+import { getSimRun, useSimVersion } from './sim/simRunState';
+import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
+import { appendPreview, buildPreviewElements, drawnNodes, isPreviewId, measureObstacles } from './preview/previewElements';
+import { PreviewEdge } from './preview/PreviewEdge';
+import { installScriptPreviewListener, useScriptPreview } from './preview/scriptPreviewStore';
+import { PreviewBar } from './preview/PreviewBar';
+import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
+import { isConsumerMode } from '../environment/consumerMode';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
@@ -169,6 +192,7 @@ const edgeTypes: EdgeTypes = {
     inheritance: UnifiedEdge,
     composition: UnifiedEdge,       // M1: containment edge
     instanceRef: UnifiedEdge,       // M1: non-containment reference
+    preview: PreviewEdge,           // M2 ghost edge on its own orthogonal route (P-2026-10-25-1005)
 };
 
 // ---------------------------------------------------------------------------
@@ -363,6 +387,98 @@ export interface EditorV2Props {
 }
 
 /**
+ * Error boundary around the React Flow canvas (P-2026-10-01-1655). A render loop in the
+ * canvas («Maximum update depth exceeded», thrown from React Flow's StoreUpdater) used to
+ * reach the tab's `<Try>`, which replaced the whole editor pane. Caught here, it costs the
+ * canvas only: toolbar, rail and tabs stay, and «Reload canvas» mounts React Flow again
+ * from the editor's state, which nothing here touched.
+ */
+class CanvasErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+    state: { error: Error | null } = { error: null };
+
+    static getDerivedStateFromError(error: Error) {
+        return { error };
+    }
+
+    componentDidCatch(error: Error, info: React.ErrorInfo) {
+        console.error('[EditorV2] canvas error, caught inside the canvas:', error, info?.componentStack);
+    }
+
+    render() {
+        const { error } = this.state;
+        if (!error) return this.props.children;
+        return (
+            <div className="editor-v2__canvas-error" role="alert" style={{ padding: 24, textAlign: 'center' }}>
+                <p>The canvas stopped: {String(error.message ?? error).split('\n')[0].slice(0, 160)}</p>
+                <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => this.setState({ error: null })}>
+                    Reload canvas
+                </button>
+            </div>
+        );
+    }
+}
+
+// Code generation (P-2026-10-10-1825, R-GEN-2): the one way into src/codegen/ beyond setting.ts. The lazy gate
+// (scripts/gates/check-codegen-lazy.ts) fails on any static import of the generator from the entry.
+// Only under the build flag (P-2026-10-12-0012): without `VITE_CODEGEN=true` Vite turns the literal below into
+// `undefined === 'true'`, and Rollup drops the dynamic import and the panel's chunk; the runner worker file is still
+// emitted by Vite, named by no chunk, so never fetched (the gate's off mode). The bare text `import.meta.env.X` is the
+// form Vite replaces; tsconfig has no vite/client types (vite-env.d.ts), hence the ts-ignore.
+// @ts-ignore
+const CODEGEN_BUILD: boolean = import.meta.env.VITE_CODEGEN === 'true';
+const CodePanel = CODEGEN_BUILD ? React.lazy(() => import('../../codegen/ui/CodePanel')) : null;
+
+/** The Simulation pill's own slot (simulation-panel.scss `.sim-panel`), for the Code pill when there is no Simulation pill. */
+const SIM_SLOT_LEFT = 'calc(200px + 16px + 48px + 16px)';
+
+/**
+ * The «Code» pill, and the code panel in its place once pressed: 8px right of the Simulation panel's box, chip or
+ * open panel, followed as it opens, closes and grows; in the Simulation pill's slot when there is none. The chip is
+ * the Simulation chip's (`sim-panel__chip`), so the two read as a pair; the place is inline, no stylesheet loads here.
+ */
+function CodegenSlot({ modelid, isMetamodel }: { modelid: string; isMetamodel: boolean }) {
+    const anchor = useRef<HTMLDivElement>(null);
+    const [open, setOpen] = useState(false);
+    const [left, setLeft] = useState<number | null>(null);
+    useLayoutEffect(() => {
+        const host = anchor.current?.parentElement;
+        if (!host) return;
+        let sim: HTMLElement | null = null;
+        const resize = new ResizeObserver(() => place());
+        const place = () => {
+            const next = host.querySelector<HTMLElement>(':scope > .sim-panel');
+            if (next !== sim) {
+                if (sim) resize.unobserve(sim);
+                sim = next;
+                if (sim) resize.observe(sim);
+            }
+            setLeft(sim ? sim.offsetLeft + sim.offsetWidth + 8 : null);
+        };
+        const children = new MutationObserver(place);
+        children.observe(host, { childList: true });
+        place();
+        return () => { children.disconnect(); resize.disconnect(); };
+    }, []);
+    const place = left === null ? SIM_SLOT_LEFT : `${left}px`;
+    return (
+        <div ref={anchor} style={{ display: 'contents' }}>
+            {open && CodePanel ? (
+                <React.Suspense fallback={null}>
+                    <CodePanel modelid={modelid} isMetamodel={isMetamodel} left={place} onClose={() => setOpen(false)} />
+                </React.Suspense>
+            ) : (
+                <div className="codegen-pill" style={{ position: 'absolute', left: place, bottom: 24, zIndex: 850 }}>
+                    <button type="button" className="sim-panel__chip" title="Code generation" onClick={() => setOpen(true)}>
+                        <i className="bi bi-code-slash" />
+                        <span>Code</span>
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/**
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
@@ -403,11 +519,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 
                 // Re-apply selection to the preserved edge ID
                 // This ensures selection survives Redux patches from useJjomSync
+                // An edge whose flag is already the forced one keeps its object, and the
+                // array its reference when none moves (P-2026-10-01-1655): rebuilt on
+                // every call, it turned an updater that returned its input into a new
+                // state, voiding every equality guard upstream of this wrapper.
                 if (selectedEdgeIdRef.current) {
-                    return deduped.map(e => ({
-                        ...e,
-                        selected: e.id === selectedEdgeIdRef.current,
-                    }));
+                    const sel = selectedEdgeIdRef.current;
+                    let moved = false;
+                    const reselected = deduped.map(e => {
+                        if (e.selected === (e.id === sel)) return e;
+                        moved = true;
+                        return { ...e, selected: e.id === sel };
+                    });
+                    return moved ? reselected : deduped;
                 }
                 return deduped;
             });
@@ -465,16 +589,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
-            // If the graph was just auto-created, apply ELK layout first
-            if (justCreatedGraphRef.current) {
-                justCreatedGraphRef.current = false;
-                if (autoLayoutRef.current) {
-                    await autoLayoutRef.current();
-                    // The M1 reference edges materialize asynchronously AFTER this first
-                    // layout; watch for them and re-run the layout once when they land.
-                    armReLayoutRef.current?.();
-                    return; // autoLayout already does fitView + distribution
-                }
+            // If the graph was just auto-created, apply ELK layout first. The flag is raised by any
+            // creating populate run, so the layout runs only on a graph no vertex of which has a layout
+            // record yet; otherwise the new vertices keep their default placement and nothing else moves
+            // (utils/autoLayoutOnOpen, P-2026-10-10-1155).
+            const createdOnOpen = justCreatedGraphRef.current;
+            justCreatedGraphRef.current = false;
+            if (autoLayoutRef.current && shouldAutoLayoutOnOpen(createdOnOpen, graphId, store.getState()?.idlookup ?? {})) {
+                await autoLayoutRef.current();
+                // The M1 reference edges materialize asynchronously AFTER this first
+                // layout; watch for them and re-run the layout once when they land.
+                armReLayoutRef.current?.();
+                return; // autoLayout already does fitView + distribution
             }
             // Restore-if-present, fit otherwise. A stored viewport already came in
             // through `defaultViewport`, so there is nothing to re-apply here — the
@@ -496,6 +622,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // M1/M2 mode detection — resolves metamodel classes, rootable classes, hierarchy
     const modeInfo = useEditorMode(modelid);
     const isModelMode = modeInfo.mode === 'model';
+    // The Simulation pill: Advanced mode and the metamodel's Simulation toggle (P-2026-09-29-1225, R-SIM-99). A boolean
+    // per dispatch; Redux `advanced`, not isAdvancedMode(), which reads localStorage and is not reactive in this tab.
+    const simPill = useSelector((state: any) => !!modelid && simPillVisible(!!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
+    // The Code pill (R-GEN-2): the experimental setting, then the rule of codegen/setting.ts, a boolean per dispatch.
+    const codegenEnabled = useCodegenEnabled();
+    const codePill = useSelector((state: any) => !!modelid && codePillVisible(codegenEnabled, !!state.advanced, state.idlookup ?? {}, modelid, isModelMode));
 
     // Orphan feature co-evolution: soft-delete + restore by attribute name
     useOrphanFeatures(modelid, nodes);
@@ -622,10 +754,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
     const jjomSelection = useJjomSelection(modelid, isJjomMode, highlightModeActive, assignHighlight);
 
-    const { screenToFlowPosition, getNodes, getNode, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    const { screenToFlowPosition, getNodes: getFlowNodes, getNode, getEdges: getFlowEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    // The ghost preview's synthetic nodes and edges (S4b, R-JJD-2) are on React Flow's arrays but
+    // are no canvas state: every reader below (layout, distribution, history, gestures) sees the
+    // canvas without them, so none of them can be laid out, snapshotted or written back.
+    const getNodes = useCallback(() => getFlowNodes().filter((n) => !isPreviewId(n.id)), [getFlowNodes]);
+    const getEdges = useCallback(() => getFlowEdges().filter((e) => !isPreviewId(e.id)), [getFlowEdges]);
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
+    // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
+    const fitViewOptions = useFitViewOptions();
 
     const {
         activeEditorId,
@@ -911,9 +1050,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Mirror of the IR interaction plan for stable-dep callbacks (same pattern as modeInfoRef).
     const irPlanRef = useRef<IRInteractionPlan | null>(null);
 
-    // Theme state — follows global ThemeService (synced with Navbar/Settings)
-    const [theme] = useTheme();
-
     // Notation mode state with localStorage persistence
     const VALID_NOTATIONS: NotationMode[] = ['uml', 'simplified', 'compact', 'wireframe', 'er'];
     const [notation, setNotation] = useState<NotationMode>(() => {
@@ -1021,14 +1157,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Polymetric view modal (triggered via Tools menu CustomEvent)
     const [polymetricOpen, setPolymetricOpen] = useState(false);
+    // Small-metamodel guard (P-2026-10-19-1745): same count PolymetricView renders
+    const [polymetricGuardOpen, setPolymetricGuardOpen] = useState(false);
 
     useEffect(() => {
         const handlePolymetric = () => {
-            if (modelid) setPolymetricOpen(true);
+            if (!modelid) return;
+            if (!isModelMode && countPolymetricMetaclasses(modelid) < POLYMETRIC_MIN_METACLASSES) {
+                setPolymetricGuardOpen(true);
+                return;
+            }
+            setPolymetricOpen(true);
         };
         window.addEventListener(JjodelEvents.OPEN_POLYMETRIC, handlePolymetric);
         return () => window.removeEventListener(JjodelEvents.OPEN_POLYMETRIC, handlePolymetric);
-    }, [modelid]);
+    }, [modelid, isModelMode]);
 
     // History for undo/redo
     const { takeSnapshot, undo, redo, canUndo, canRedo } = useHistory(getNodes, getEdges);
@@ -1256,7 +1399,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 type: e.type,
             })),
             positions,
-            currentNodes.filter(n => !n.hidden).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0),
+            // A node the run hides keeps its box (P-2026-10-04-0935), so the lanes do not move with the events.
+            currentNodes.filter(occupiesCanvas).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0),
         )));
 
         return edgeList.map(edge => {
@@ -1428,6 +1572,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
 
+    // Publish React Flow's multi-selection (R-JJD-3): one emission per animation frame at most,
+    // none when the ordered list is unchanged. Read-only: `_lastSelected` and selectElement are
+    // untouched, so single selection works as before.
+    const publishedSelectionRef = useRef<string[]>([]);
+    const selectionFrameRef = useRef<number | null>(null);
+    const selectedNodesRef = useRef(selectedNodes);
+    selectedNodesRef.current = selectedNodes;
+    useEffect(() => {
+        if (selectionFrameRef.current !== null) return;
+        selectionFrameRef.current = requestAnimationFrame(() => {
+            selectionFrameRef.current = null;
+            const prev = publishedSelectionRef.current;
+            const next = orderSelection(prev, selectedNodesRef.current.map((n) => n.id));
+            if (sameIdList(prev, next)) return;
+            publishedSelectionRef.current = next;
+            const detail: CanvasSelectionDetail = {
+                modelId: modelid ?? '',
+                nodeIds: next,
+                elementIds: resolveElementIds(next, (store.getState() as any).idlookup),
+            };
+            window.dispatchEvent(new CustomEvent(JjodelEvents.CANVAS_SELECTION_CHANGED, { detail }));
+        });
+    }, [selectedNodes, modelid]);
+    useEffect(() => () => {
+        if (selectionFrameRef.current !== null) cancelAnimationFrame(selectionFrameRef.current);
+        selectionFrameRef.current = null;
+        if (publishedSelectionRef.current.length === 0) return;
+        publishedSelectionRef.current = [];
+        const detail: CanvasSelectionDetail = { modelId: modelid ?? '', nodeIds: [], elementIds: [] };
+        window.dispatchEvent(new CustomEvent(JjodelEvents.CANVAS_SELECTION_CHANGED, { detail }));
+    }, [modelid]);
+
     // Canonical selection channel — `_lastSelected.modelElement` is written by both
     // flow (`useJjomSelection.selectElement`) and classic (`graphElement.select` /
     // `onMouseDown`). Used to drive PalettePanel's context-aware sections so the
@@ -1500,6 +1676,66 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // the active viewpoint has IR graphVertex views. Pass-through (same array
     // references) otherwise — zero cost for non-IR sessions.
     const irContainment = useIRContainment(stableNodes, stableEdges);
+    // The containment model of the last decoration, read by the graphVertex gestures (S3, R-GV-8) in the drag-end,
+    // resize, drop and connect paths below.
+    const irContainmentRef = useRef(irContainment);
+    irContainmentRef.current = irContainment;
+
+    /**
+     * Membership slot edits of a graphVertex gesture (S3, R-GV-8): an append through the L-proxy `.values` setter, as
+     * handleReconnect writes a slot, a removal by value (LIR §4). The caller wraps them in ONE SetField-only
+     * TRANSACTION (no creator inside, §3.3): one composite action, one undo (docs/lir/lir_2026-10-10_graphvertex_s3.md
+     * §1). An op that would change nothing is skipped.
+     */
+    const applyMembershipOps = useCallback((ops: MembershipOp[]) => {
+        for (const op of ops) {
+            const owner: any = LPointerTargetable.fromPointer(op.slot.ownerId as any);
+            const slot = owner?.['$' + op.slot.feature];
+            if (!slot) continue;
+            const next = nextValues(slot.__raw?.values ?? [], op);
+            if (!next) continue;
+            // A removal goes by value: `set_values` cannot shrink a list (its excess '-=' carries no value and
+            // the reducer reports no change), so a shorter array would leave the old tail in place. An append keeps
+            // the L setter, which re-fathers on a containment slot (setValueAtPosition).
+            if (op.op === 'remove') SetFieldAction.new(slot.id, 'values', op.value as any, '-=', true);
+            else slot.values = next;
+        }
+    }, []);
+
+    // The run's events are not drawn while a run of this model exists (R-SIM-16, R-SIM-29; P-2026-10-04-0935):
+    // flagged hidden on the arrays handed to React Flow only, so nothing is written, laid out or persisted. Keyed on
+    // the run's alphabet, which a step keeps: a step recomputes nothing, and Stop gives back the arrays of before.
+    useSimVersion();
+    const simEvents = modelid ? getSimRun(modelid)?.alphabet : undefined;
+    const flowElements = useMemo(
+        () => hideRunEvents(irContainment.nodes, irContainment.edges, simEvents,
+            nodeId => (store.getState() as any).idlookup?.[nodeId]?.model),
+        [irContainment.nodes, irContainment.edges, simEvents],
+    );
+
+    // Ghost preview of a planned script (S4b, R-JJD-2): synthetic nodes and edges appended to the arrays handed to
+    // React Flow, as the run's events are hidden above. No D-object, never draggable or selectable, ids prefixed and
+    // filtered out of getNodes/getEdges and of every handler below. Same arrays as before when there is no preview.
+    useEffect(() => installScriptPreviewListener(() => (store.getState() as any).idlookup ?? {}), []);
+    const scriptPreview = useScriptPreview(modelid);
+    // The ghosts read the rows, edge labels and edges the canvas has drawn (P-2026-10-25-0110): one more pass
+    // two frames after a new preview, when the DOM shows what the first pass was computed before.
+    const [previewLayoutPass, setPreviewLayoutPass] = useState(0);
+    useEffect(() => {
+        if (!scriptPreview) return;
+        let second = 0;
+        const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => setPreviewLayoutPass((n) => n + 1)); });
+        return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
+    }, [scriptPreview]);
+    const canvasElements = useMemo(() => {
+        if (!scriptPreview) return flowElements;
+        const idlookup = (store.getState() as any).idlookup ?? {};
+        const drawn = drawnNodes(flowElements.nodes, (nodeId) => {
+            const model = idlookup[nodeId]?.model;
+            return typeof model === 'string' && model ? model : undefined;
+        });
+        return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn, scriptPreview.script, measureObstacles(drawn)));
+    }, [flowElements, scriptPreview, previewLayoutPass]);
 
     // Persist the merged session override of a synthetic edge on the hidden
     // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
@@ -1991,6 +2227,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 } else {
                     writeSlot(lObject, match.sourceRef.name, srcObjectId);
                     writeSlot(lObject, match.targetRef.name, tgtObjectId);
+                    // The edge object belongs where its source's container chain says (R-GV-8, spec addendum §6.1;
+                    // S3): a SequenceFlow in its Process's flowElements, not at the root. SetField-only, no creator.
+                    const idl = (store.getState() as any).idlookup ?? {};
+                    const owner = ownerSlotForNewObject(idl, irContainmentRef.current.model, srcObjectId);
+                    const edgeObjectId: string | undefined = lObject?.id;
+                    if (owner && edgeObjectId && slotAccepts(idl, owner, match.edgeClass.id)) {
+                        TRANSACTION('graphVertex edge object owner', () => {
+                            applyMembershipOps([{ op: 'append', slot: owner, value: edgeObjectId }]);
+                        });
+                    }
                 }
                 const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? match.edgeClass.name;
                 const newNode: Node = {
@@ -2008,7 +2254,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             };
             setTimeout(() => writeSlotsAndMount(0), 0);
         },
-        [pendingM1Connection, graphId, getNodes, setNodes, takeSnapshot]
+        [pendingM1Connection, graphId, getNodes, setNodes, takeSnapshot, applyMembershipOps]
     );
     handleObjectEdgeSelectedRef.current = handleObjectEdgeSelected;
 
@@ -2135,20 +2381,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         takeSnapshot();
     }, [takeSnapshot]);
 
-    // Handle drop from palette
-    const onDrop = useCallback(
-        (event: React.DragEvent) => {
-            event.preventDefault();
-
-            const rawType = event.dataTransfer.getData('application/reactflow');
-            if (!rawType) return;
-
+    // Create a palette element at a client point: the body of the palette drop, shared by the
+    // drop (at the cursor) and by a click or Enter/Space on a palette entry (at the canvas centre).
+    const createFromPalette = useCallback(
+        (rawType: string, metaclassId: string | undefined, client: { x: number; y: number }) => {
             // Members must be dropped on nodes, not canvas
             if (['attribute', 'operation', 'literal'].includes(rawType)) return;
 
             const position = screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
+                x: client.x,
+                y: client.y,
             });
 
             // Center node under cursor instead of placing top-left at cursor
@@ -2168,7 +2410,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
                 // M1: objectNode from palette
                 if (rawType === 'objectNode') {
-                    const metaclassId = event.dataTransfer.getData('metaclassId');
                     if (!metaclassId) return;
                     const mi = modeInfoRef.current;
                     const metaclass = mi.allClasses.find(c => c.id === metaclassId);
@@ -2182,6 +2423,48 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     // semantics when no compatible container is under the cursor.
                     const cursorFlow = { x: position.x + defaultNodeWidth / 2, y: position.y + defaultNodeHeight / 2 };
                     const containerNode = findIRDropContainerAt(cursorFlow);
+                    // A container whose view names a creation owner (R-GV-8, spec addendum §6.1; S3): the new object is
+                    // created as the canvas creates any root (bare, its own TRANSACTION), then, once it resolves, appended
+                    // to the owner's slot and to the container's channel slot in one SetField-only TRANSACTION.
+                    if (containerNode) {
+                        const model = irContainmentRef.current.model;
+                        const containerObjectId = model.objByVertex.get(containerNode.id);
+                        const info = containerObjectId ? model.containers.get(containerObjectId) : undefined;
+                        const create = info?.membership?.mode === 'reference' ? info.membership.create : undefined;
+                        if (containerObjectId && info?.channelSteps && create) {
+                            const idl = (store.getState() as any).idlookup ?? {};
+                            const terminal = terminalSlotOf(idl, containerObjectId, info.channelSteps);
+                            const owner = createOwnerSlotOf(idl, model.containerOf, containerObjectId, create);
+                            if (terminal && owner && slotAccepts(idl, terminal, metaclassId) && slotAccepts(idl, owner, metaclassId)) {
+                                takeSnapshot();
+                                const created = syncCreateObject(graphId, metaclassId, position.x, position.y);
+                                if (!created) return;
+                                markDropCreated(created);
+                                const name = (LPointerTargetable.fromPointer(created as any) as any)?.model?.name ?? className;
+                                setNodes((nds) => [...nds, {
+                                    id: created, type: 'objectNode', position,
+                                    data: { label: name, instanceOfClassName: className, instanceOfClassId: metaclassId, features: [], autoEdit: true } as ObjectNodeData,
+                                }]);
+                                // The creation commits in a microtask (as in handleObjectEdgeSelected): bounded retry.
+                                const appendWhenReady = (attempt: number) => {
+                                    const objectId: string | undefined = (LPointerTargetable.fromPointer(created as any) as any)?.model?.id;
+                                    if (!objectId || !(store.getState() as any).idlookup?.[objectId]) {
+                                        if (attempt < 40) setTimeout(() => appendWhenReady(attempt + 1), 25);
+                                        return;
+                                    }
+                                    TRANSACTION('graphVertex create in container', () => {
+                                        applyMembershipOps([
+                                            { op: 'append', slot: owner, value: objectId },
+                                            { op: 'append', slot: terminal, value: objectId },
+                                        ]);
+                                    });
+                                    scheduleLayoutSave();
+                                };
+                                setTimeout(() => appendWhenReady(0), 0);
+                                return;
+                            }
+                        }
+                    }
                     if (containerNode) {
                         const containerData = containerNode.data as ObjectNodeData;
                         const containerMeta = mi.allClasses.find(c => c.id === containerData.instanceOfClassId);
@@ -2194,7 +2477,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         }
                         if (compatRefs.length > 1) {
                             setPendingContainmentDrop({
-                                position: { x: event.clientX, y: event.clientY },
+                                position: { x: client.x, y: client.y },
                                 flowPosition: position,
                                 containerNodeId: containerNode.id,
                                 childClass: metaclass,
@@ -2336,7 +2619,31 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
             setNodes((nds) => [...nds, newNode]);
         },
-        [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes]
+        [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes, applyMembershipOps, scheduleLayoutSave]
+    );
+
+    // Handle drop from palette
+    const onDrop = useCallback(
+        (event: React.DragEvent) => {
+            event.preventDefault();
+
+            const rawType = event.dataTransfer.getData('application/reactflow');
+            if (!rawType) return;
+
+            createFromPalette(rawType, event.dataTransfer.getData('metaclassId') || undefined, { x: event.clientX, y: event.clientY });
+        },
+        [createFromPalette]
+    );
+
+    // Click or Enter/Space on a palette entry: the drop at the centre of the canvas the overlay leaves
+    // visible, on the drop's grid.
+    const onPaletteActivate = useCallback(
+        (type: string, metaclassId?: string) => {
+            const canvas = editorContainerRef.current;
+            if (!canvas) return;
+            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+        },
+        [createFromPalette]
     );
 
     // Allow drop — with M1 cursor feedback for non-rootable classes
@@ -2399,11 +2706,29 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         event.dataTransfer.dropEffect = 'move';
     }, []);
 
+    // Delete an object rendered as an edge (`irobj_<objectId>`, P-2026-10-04-0130): the edge IS the M1
+    // object, deleted with its hidden vertex and that vertex's edges (syncDeleteObjectAsEdge). No React
+    // Flow filter here: the sync drops them when their ids leave subElements, and a local filter of the
+    // hidden vertex was measured to send the canvas into an update-depth loop (report §10).
+    const deleteObjectAsEdge = useCallback(
+        (edgeId: string) => {
+            const target = resolveObjectAsEdge(edgeId, (store.getState() as any).idlookup);
+            if (!target) return;
+            takeSnapshot();
+            setSyntheticEdgeSelected(edgeId, false);
+            if (isJjomMode) syncDeleteObjectAsEdge(target.objectId);
+        },
+        [takeSnapshot, isJjomMode]
+    );
+
     // Delete selected nodes and edges
     const deleteSelected = useCallback(() => {
         const selectedNodes = getNodes().filter((n) => n.selected);
-        const selectedEdges = getEdges().filter((e) => e.selected);
+        // A selected object-as-edge is an M1 object, not an edge: it leaves with its object.
+        const objectAsEdges = getEdges().filter((e) => e.selected && e.id.startsWith('irobj_'));
+        const selectedEdges = getEdges().filter((e) => e.selected && !e.id.startsWith('irobj_'));
 
+        for (const e of objectAsEdges) deleteObjectAsEdge(e.id);
         if (selectedNodes.length === 0 && selectedEdges.length === 0) return;
 
         // In JjOM mode, route classNode deletions through co-evolution
@@ -2452,7 +2777,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 )
             ));
         }
-    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, applyDistribution, isJjomMode, handleClassRemoval]);
+    }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, applyDistribution, isJjomMode, handleClassRemoval, deleteObjectAsEdge]);
 
     // Delete specific node by ID
     const deleteNode = useCallback(
@@ -2811,6 +3136,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
             clearSyntheticEdgeSelection();
             setSyntheticEdgeSelected(edge.id, true);
+            jjomSelection.onObjectAsEdgeClick(edge.id);
             return;
         }
         clearSyntheticEdgeSelection();
@@ -2832,6 +3158,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
             clearSyntheticEdgeSelection();
             setSyntheticEdgeSelected(edgeId, true);
+            jjomSelection.onObjectAsEdgeClick(edgeId);
             return;
         }
         clearSyntheticEdgeSelection();
@@ -3125,7 +3452,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     label: 'Add reference',
                     icon: 'bi-link-45deg',
                     onClick: () => {
-                        const lClass: any = LPointerTargetable.fromPointer(node.id)?.model;
+                        const lClass: any = (LPointerTargetable.fromPointer(node.id) as any)?.model;
                         if (!lClass || typeof lClass.addReference !== 'function') return;
                         // Unique name among the class's existing references
                         // (mirror canvasToJjom.ts uniqueName via raw store lookup).
@@ -3368,6 +3695,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const isInheritance = edge?.type === 'inheritance';
             const edgeData = edge?.data as ReferenceEdgeData | InheritanceEdgeData | undefined;
             const hasWaypoints = edgeData?.waypoints && edgeData.waypoints.length > 0;
+            // An object-as-edge (`irobj_<objectId>`) is an M1 object, not a reference or an inheritance,
+            // and it already has its view: its menu resets the route it keeps in the IR session store
+            // (handleEdgeChange's synthetic branch) and deletes the object (P-2026-10-04-0130).
+            const objectAsEdge = resolveObjectAsEdge(contextMenu.edgeId, (store.getState() as any).idlookup);
+            if (objectAsEdge) {
+                return [
+                    ...(hasWaypoints ? [{
+                        label: 'Reset routing',
+                        icon: 'bi-arrow-counterclockwise',
+                        onClick: () => handleEdgeChange(contextMenu.edgeId!, { data: { waypoints: [] } }),
+                    }] : []),
+                    {
+                        label: `Delete ${objectAsEdge.metaclassName}`,
+                        icon: 'bi-trash',
+                        danger: true,
+                        onClick: () => deleteObjectAsEdge(contextMenu.edgeId!),
+                    },
+                ];
+            }
             // Resolved ONCE for the «Create edge view» entry below: gate and destination from
             // the same answer, so the view cannot land anywhere but where the entry promised.
             const edgeViewVp = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
@@ -3580,11 +3926,161 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     }, [activeController]);
     const handleToggleSnap = useCallback(() => setSnapEnabled((prev) => !prev), []);
 
-    // Auto-layout handler: compute ELK layout, apply to RF, sync to JjOM
-    const handleAutoLayout = useCallback(async () => {
+    // Auto-layout handler: compute ELK layout, apply to RF, sync to JjOM.
+    // `full` is the toolbar's (P-2026-10-01-2215 Phase 2): real sizes, labels, the viewpoint's profile, the 8 px grid
+    // and ELK's routes. Without it (the first open, the late-edge re-layout) the layout is today's, unchanged.
+    const handleAutoLayout = useCallback(async (opts?: { full?: boolean }) => {
         const currentNodes = getNodes();
         const currentEdges = getEdges();
         if (currentNodes.length === 0) return;
+
+        if (opts?.full) {
+            const state: any = store.getState();
+            const lookup = state?.idlookup ?? {};
+            const vpState: Record<string, unknown> = (typeof state?.viewpoint === 'string' && lookup[state.viewpoint]?._state) || {};
+            // The profile the derived viewpoint was derived with; a metamodel without one takes the class view's;
+            // any other canvas keeps today's strategy (null).
+            let profile: ElkLayoutProfile | null = null;
+            const stored = vpState[DERIVED_LAYOUT_KEY];
+            if (typeof stored === 'string') {
+                try { profile = JSON.parse(stored) as ElkLayoutProfile; } catch { profile = null; }
+            }
+            if (!profile && modelid && lookup[modelid]?.isMetamodel) profile = CLASS_VIEW_PROFILE;
+            const classOf = new Map(currentNodes.map(n => [n.id, (n.data as any)?.instanceOfClassId as string | undefined]));
+            const roleOf = (nodeId: string) => {
+                const classId = classOf.get(nodeId);
+                const role = classId ? vpState[`${DERIVED_ROLE_PREFIX}${classId}`] : undefined;
+                return typeof role === 'string' ? role : undefined;
+            };
+            // The labels as drawn (label divs carry no edge id; the edge's markup stays as it is): a centre label to the
+            // edge whose own label text it shows, the nearest drawn path breaking a tie; an end label to the nearest
+            // path, by the nearer end of it. Hidden ones (M1 hover) stay out.
+            const labelMap = new Map<string, ElkLabelInput[]>();
+            const container = editorContainerRef.current;
+            const textOfEdge = new Map(currentEdges.map(e => {
+                const d = e.data as { reference?: { name?: string }; referenceName?: string } | undefined;
+                return [e.id, String(e.label || d?.reference?.name || d?.referenceName || '').trim()] as const;
+            }));
+            if (container) {
+                const paths: Array<{ id: string; pts: DOMPoint[] }> = [];
+                container.querySelectorAll<SVGGElement>('g.react-flow__edge').forEach(g => {
+                    const id = g.getAttribute('data-id');
+                    const p = g.querySelector<SVGPathElement>('path.reference-edge, path.inheritance-edge');
+                    if (!id || !p) return;
+                    const len = p.getTotalLength();
+                    const n = Math.max(2, Math.ceil(len / 6));
+                    const m = p.getScreenCTM();
+                    if (!m) return;
+                    const pts: DOMPoint[] = [];
+                    for (let i = 0; i <= n; i++) pts.push(p.getPointAtLength((len * i) / n).matrixTransform(m));
+                    paths.push({ id, pts });
+                });
+                container.querySelectorAll<HTMLElement>('.react-flow__edgelabel-renderer .edge-label, .react-flow__edgelabel-renderer .edge-cardinality, .react-flow__edgelabel-renderer .edge-end-label').forEach(el => {
+                    const text = (el.textContent ?? '').trim();
+                    if (!text || !el.offsetWidth || !el.offsetHeight) return;
+                    const ink = (el.querySelector('.edge-label__text') as HTMLElement | null) ?? el;
+                    const check = (ink as any).checkVisibility;
+                    if (typeof check === 'function' && !check.call(ink, { opacityProperty: true, visibilityProperty: true })) return;
+                    const r = el.getBoundingClientRect();
+                    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+                    let best: { id: string; d: number; atStart: boolean } | null = null;
+                    const isCentre = el.classList.contains('edge-label');
+                    const sameText = isCentre ? paths.filter(p => textOfEdge.get(p.id) === text) : [];
+                    for (const { id, pts } of sameText.length ? sameText : paths) {
+                        pts.forEach((q, i) => {
+                            const d = Math.hypot(q.x - cx, q.y - cy);
+                            if (!best || d < best.d) best = { id, d, atStart: i < pts.length / 2 };
+                        });
+                    }
+                    if (!best) return;
+                    const { id, atStart } = best as { id: string; d: number; atStart: boolean };
+                    const kind: ElkLabelInput['kind'] = isCentre ? 'center' : atStart ? 'source' : 'target';
+                    const list = labelMap.get(id) ?? [];
+                    if (list.some(l => l.kind === kind)) return;
+                    list.push({ kind, text, width: el.offsetWidth, height: el.offsetHeight });
+                    labelMap.set(id, list);
+                });
+            }
+
+            // The vertices' outside labels (R-VP-53), measured on the same container: ELK reserves their room.
+            const outsideMap = container ? measureOutsideLabels(container) : new Map();
+            // Across graphVertex containers (S6): bottom-up by container, each laid-out container a block one level up;
+            // with no container that declares a layout, today's flat run (utils/elkContainers.ts).
+            const layoutKey = getActiveLayoutKey();
+            const result = await computeContainedAutoLayout(currentNodes, currentEdges, {
+                profile, roleOf, labelsOf: id => labelMap.get(id), outsideLabelsOf: id => outsideMap.get(id),
+                containment: irContainmentRef.current.model,
+                storedOf: v => { const r = readVertexLayout(lookup[v] ?? {}, layoutKey); return { w: r.w, h: r.h, isResized: !!r.isResized }; },
+            });
+            const placed = currentNodes.map(n => {
+                const p = result.positions.get(n.id);
+                return p ? { ...n, position: p } : n;
+            });
+            setNodes(placed);
+            // A box the layout grew travels with its position, one record per vertex: written by two calls in one tick,
+            // the size write took back the position (P-2026-10-11-1156, LIR 2026-10-11 §1). The size batch is left for a
+            // resized vertex the layout did not move.
+            const moved = placed.filter(n => result.positions.has(n.id)).map(n => {
+                const s = result.sizes.get(n.id);
+                return { id: n.id, x: n.position.x, y: n.position.y, ...(s ? { w: s.w, h: s.h } : {}) };
+            });
+            if (moved.length > 0) syncPositionBatchToJjom(moved);
+            // A partition or a container sized by hand that its content outgrew (S6): its new size, still by hand. The
+            // presentation pass reads boxes off the records, which land a dispatch later: once they show the new sizes
+            // (bounded retry), those nodes are handed back with a new `data` (the stabilizer above lets a node through on
+            // its data's identity, not on a copy of the node) so the pass runs on them.
+            if (result.sizes.size > 0) {
+                const unmoved = [...result.sizes].filter(([v]) => !result.positions.has(v));
+                if (unmoved.length > 0) syncSizeBatchToJjom(unmoved.map(([vertexId, s]) => ({ vertexId, w: s.w, h: s.h })));
+                const redraw = (attempt: number) => {
+                    const idl = (store.getState() as any).idlookup ?? {};
+                    const landed = [...result.sizes].every(([v, s]) => {
+                        const r = readVertexLayout(idl[v] ?? {}, layoutKey);
+                        return Math.abs(r.w - s.w) < 0.5 && Math.abs(r.h - s.h) < 0.5;
+                    });
+                    if (!landed && attempt < 40) { setTimeout(() => redraw(attempt + 1), 25); return; }
+                    setNodes(nds => nds.map(n => (result.sizes.has(n.id) ? { ...n, data: { ...n.data } } : n)));
+                };
+                setTimeout(() => redraw(0), 0);
+            }
+
+            // Routes for the edges the layout owns: not pinned (mirrors the recalc below), no manual waypoints.
+            const unpinned = currentEdges.filter(e => {
+                const d = e.data as { sourceAnchor?: AnchorConfig; targetAnchor?: AnchorConfig } | undefined;
+                return d?.sourceAnchor?.mode !== 'pinned' && d?.targetAnchor?.mode !== 'pinned';
+            });
+            const routed = new Map<string, ElkRoute>();
+            for (const e of unpinned) {
+                const r = result.routes.get(e.id);
+                const wps = (e.data as any)?.waypoints;
+                if (r && !(Array.isArray(wps) && wps.length > 0)) routed.set(e.id, r);
+            }
+            setElkRoutes(currentEdges.map(e => e.id), routed);
+            // Sides: from the route where there is one (Q5), else geometry on the final rects, as below.
+            const placedRects = new Map(placed.map(n => [n.id, getNodeRect(n)]));
+            const geometric = computeGeometricAnchorsForAllEdges(unpinned.filter(e => !routed.has(e.id)), placedRects);
+            const unpinnedIds = new Set(unpinned.map(e => e.id));
+            setEdges(eds => applyDistribution(eds.map(edge => {
+                if (!unpinnedIds.has(edge.id)) return edge;
+                const route = routed.get(edge.id);
+                const a = route ? { sourceHandle: route.sourceSide, targetHandle: route.targetSide } : geometric.get(edge.id);
+                if (!a) return edge;
+                const sidesChanged = edge.sourceHandle?.split('-')[0] !== a.sourceHandle || edge.targetHandle?.split('-')[0] !== a.targetHandle;
+                return {
+                    ...edge,
+                    sourceHandle: `${a.sourceHandle}-0`,
+                    targetHandle: `${a.targetHandle}-0`,
+                    data: {
+                        ...edge.data,
+                        sourceAnchor: { mode: 'auto', side: a.sourceHandle } as AnchorConfig,
+                        targetAnchor: { mode: 'auto', side: a.targetHandle } as AnchorConfig,
+                        ...(sidesChanged ? { waypoints: [] } : {}),
+                    },
+                };
+            })));
+            requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
+            return;
+        }
 
         const layoutedNodes = await computeElkLayout(currentNodes, currentEdges);
         setNodes(layoutedNodes);
@@ -3635,8 +4131,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             return applyDistribution(recomputed);
         });
         requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
-    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution]);
+    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid]);
     autoLayoutRef.current = handleAutoLayout;
+    // The toolbar's button runs the full layout; the first open and the re-layout keep autoLayoutRef's (P-2026-10-01-2215).
+    const handleToolbarAutoLayout = useCallback(() => handleAutoLayout({ full: true }), [handleAutoLayout]);
 
     // ── Re-run auto-layout once late M1 edges materialize (S4b) ──────────────
     // handleAutoLayout runs ~50ms after mount, before the async M1 reference edges reach
@@ -3789,6 +4287,121 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         [setEdges, takeSnapshot]
     );
 
+    // ── graphVertex gestures (R-GV-8, P-2026-10-10-0105 S3, docs/lir/lir_2026-10-10_graphvertex_s3.md) ──────────
+    /** Where each node stood when its drag began (snap back, container delta); cleared at its drag end. */
+    const gvDragStartRef = useRef(new Map<string, { x: number; y: number }>());
+
+    /** The cursor of a node drag, in flow coordinates, for the follow test of the presentation pass (R-GV-17: a frame
+     *  follows its child while the pointer stays within a band of the box it had before the drag). */
+    const handleNodeDragPointer = useCallback((event: React.MouseEvent) => {
+        setDragPointer(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    }, [screenToFlowPosition]);
+    const handleNodeDragPointerEnd = useCallback(() => setDragPointer(null), []);
+
+    /**
+     * What a single-node drag end does under the graphVertex rules; null = today's behaviour. A lane under a
+     * `partitions` container goes back (its place is computed, R-GV-6); a container that declares a layout carries its
+     * descendants; any other node is planned from the membership modes of the container that draws it and the
+     * container under its centre that accepts it (irMembership.resolveDropTarget, planDrop).
+     */
+    const resolveGraphVertexDragEnd = useCallback((change: { id: string; position: { x: number; y: number } }):
+        | { kind: 'snap'; to: { x: number; y: number } }
+        | { kind: 'edit'; ops: MembershipOp[] }
+        | { kind: 'container'; objectId: string; dx: number; dy: number }
+        | null => {
+        const model = irContainmentRef.current.model;
+        if (model.containers.size === 0) return null;
+        const objectId = model.objByVertex.get(change.id);
+        if (!objectId) return null;
+        const start = gvDragStartRef.current.get(change.id);
+        const parent = model.parentOf.get(objectId);
+        if (parent !== undefined && model.containers.get(parent)?.layout?.mode === 'partitions') return start ? { kind: 'snap', to: start } : null;
+        if (model.containers.get(objectId)?.layout) {
+            if (!start) return null;
+            const dx = change.position.x - start.x;
+            const dy = change.position.y - start.y;
+            return dx === 0 && dy === 0 ? null : { kind: 'container', objectId, dx, dy };
+        }
+        const state: any = store.getState();
+        const idlookup = state.idlookup ?? {};
+        const index = getIRIndex(state, computeIRSignature(state));
+        if (!index) return null;
+        const readCtx = makeReadCtx(idlookup);
+        const rendered = getNodes();
+        const byId = new Map(rendered.map(n => [n.id, n] as const));
+        const self = byId.get(change.id);
+        const centre = {
+            x: change.position.x + ((self?.measured?.width ?? self?.width ?? 0) as number) / 2,
+            y: change.position.y + ((self?.measured?.height ?? self?.height ?? 0) as number) / 2,
+        };
+        const depthOf = (o: string) => {
+            let d = 0;
+            const seen = new Set<string>();
+            for (let c = model.parentOf.get(o); c !== undefined && !seen.has(c); c = model.parentOf.get(c)) { seen.add(c); d++; }
+            return d;
+        };
+        const candidates: DropCandidate[] = [];
+        let order = 0;
+        for (const [cid, info] of model.containers) {
+            const n = byId.get(info.vertexId);
+            order++;
+            if (!n || n.hidden) continue;
+            candidates.push({
+                containerId: cid, depth: depthOf(cid), order,
+                box: { x: n.position.x, y: n.position.y, w: (n.measured?.width ?? n.width ?? 0) as number, h: (n.measured?.height ?? n.height ?? 0) as number },
+            });
+        }
+        const accepts = (cid: string) => {
+            const cls = idlookup[cid]?.instanceof;
+            if (typeof cls !== 'string') return false;
+            const cv = resolveIRView(cid, cls, index, readCtx, idlookup);
+            try { return !!cv?.containment && cv.containment.childFilter(readCtx, objectId) !== false; } catch { return false; }
+        };
+        const target = resolveDropTarget(centre, candidates, accepts, new Set([objectId, ...descendantsOf(model, objectId)]));
+        const classId: unknown = idlookup[objectId]?.instanceof;
+        const endOf = (cid: string): MembershipEnd => {
+            const info = model.containers.get(cid)!;
+            const mode = info.membership?.mode ?? 'none';
+            const terminal = info.channelSteps ? terminalSlotOf(idlookup, cid, info.channelSteps)
+                : mode === 'reparent' && typeof classId === 'string' ? compositionSlotFor(idlookup, cid, classId) : null;
+            const createOwner = info.membership?.create ? createOwnerSlotOf(idlookup, model.containerOf, cid, info.membership.create) : null;
+            return { containerId: cid, mode, terminal, createOwner };
+        };
+        const plan = planDrop({
+            objectId,
+            source: parent !== undefined ? endOf(parent) : null,
+            target: target !== null ? endOf(target) : null,
+            containedIn: containedInSlot(idlookup, model.containerOf, objectId),
+            rootFather: isRootFathered(idlookup, objectId),
+        });
+        if (plan.kind === 'move') return null;
+        if (plan.kind === 'snapBack') return start ? { kind: 'snap', to: start } : null;
+        // A slot whose type does not take the object's class refuses the edit: back to where it was.
+        if (typeof classId === 'string' && plan.ops.some(op => op.op === 'append' && !slotAccepts(idlookup, op.slot, classId))) {
+            return start ? { kind: 'snap', to: start } : null;
+        }
+        return { kind: 'edit', ops: plan.ops };
+    }, [getNodes]);
+
+    /** The two sizes a partition's resize writes at its end (S3, spec addendum §7.5): itself and the next partition, as
+     *  the presentation pass shows them (the live border, the neighbour compensated). Empty for any other node. */
+    const pairedPartitionSizes = useCallback((vertexId: string): Array<{ vertexId: string; w: number; h: number }> => {
+        const model = irContainmentRef.current.model;
+        const objectId = model.objByVertex.get(vertexId);
+        const parent = objectId !== undefined ? model.parentOf.get(objectId) : undefined;
+        if (parent === undefined || model.containers.get(parent)?.layout?.mode !== 'partitions') return [];
+        const rendered = new Map(getNodes().map(n => [n.id, n] as const));
+        const kids = (model.childrenOf.get(parent) ?? [])
+            .map(k => model.vertexByObj.get(k))
+            .filter((v): v is string => v !== undefined && !!rendered.get(v) && !rendered.get(v)!.hidden);
+        const i = kids.indexOf(vertexId);
+        if (i === -1) return [];
+        return kids.slice(i, i + 2).map(v => {
+            const n = rendered.get(v)!;
+            return { vertexId: v, w: (n.width ?? n.measured?.width ?? 0) as number, h: (n.height ?? n.measured?.height ?? 0) as number };
+        });
+    }, [getNodes]);
+
     // Take snapshot on node changes (drag end, resize end)
     const handleNodesChange = useCallback(
         (changes: any[]) => {
@@ -3821,6 +4434,48 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 (c) => c.type === 'dimensions' && (c as any).resizing !== undefined
             );
 
+            // graphVertex gestures (S3): the start of each drag, then, at a single-node drag end, what the drop does.
+            // A snap back rewrites the change itself, so the node lands where it started and nothing is written.
+            for (const c of changes) {
+                if (c.type === 'position' && c.dragging === true && !gvDragStartRef.current.has(c.id)) {
+                    const n = getNodes().find((m) => m.id === c.id);
+                    if (n) gvDragStartRef.current.set(c.id, { x: n.position.x, y: n.position.y });
+                }
+            }
+            let gvDrop: ReturnType<typeof resolveGraphVertexDragEnd> = null;
+            if (hasDragEnd) {
+                const ends = changes.filter((c: any) => c.type === 'position' && c.dragging === false && c.position);
+                if (isJjomMode && ends.length === 1) gvDrop = resolveGraphVertexDragEnd(ends[0]);
+                if (gvDrop?.kind === 'snap') ends[0].position = { ...gvDrop.to };
+                // A container lands with its record moved by the drag delta, not where its box was dropped: the box may be
+                // drawn off the record, grown by its children (R-GV-17), and the record keeps what was set by hand. The
+                // presentation pass draws the box from there; the write below takes this position.
+                if (gvDrop?.kind === 'container') {
+                    const own = irContainmentRef.current.model.vertexByObj.get(gvDrop.objectId);
+                    const src = own !== undefined ? (store.getState() as any).idlookup?.[own] : undefined;
+                    if (own === ends[0].id && src) {
+                        const rec = readVertexLayout(src, getActiveLayoutKey());
+                        ends[0].position = { x: rec.x + gvDrop.dx, y: rec.y + gvDrop.dy };
+                    }
+                }
+                for (const c of ends) gvDragStartRef.current.delete(c.id);
+            }
+
+            // React may replay a state updater on a rebase, when an update of lower priority (useJjomSync's batched
+            // patch, flushed in a frame) waits ahead of it: each replay that builds new arrays is a new state, the
+            // canvas re-renders on it and replays again, until the update depth limit (S3, measured on the BPMN
+            // fixture). The same input hands back the same output, so a replay settles.
+            const replaySafe = <T extends object>(fn: (prev: T) => T) => {
+                const seen = new WeakMap<T, T>();
+                return (prev: T): T => {
+                    const hit = seen.get(prev);
+                    if (hit) return hit;
+                    const out = fn(prev);
+                    seen.set(prev, out);
+                    return out;
+                };
+            };
+
             if (hasDragEnd || hasResize) {
                 takeSnapshot();
 
@@ -3852,7 +4507,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     }
                 }
 
-                setEdges((currentEdges) => {
+                setEdges(replaySafe((currentEdges: Edge[]) => {
                     const now = Date.now();
                     const edgesToRecalculate = currentEdges.filter(
                         (e) => (movedNodeIds.has(e.source) || movedNodeIds.has(e.target))
@@ -3907,7 +4562,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     });
 
                     return applyDistribution(deduped);
-                });
+                }));
             }
 
             // Phase 3: sync position/size changes to JjOM
@@ -3919,14 +4574,34 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         (c: any) => c.type === 'position' && c.dragging === false && c.position
                     );
                     const lazyUpdates = dragEndChanges.filter(
-                        (c: any) => getSyncMode(c.id) === 'lazy'
+                        (c: any) => getSyncMode(c.id) === 'lazy' && gvDrop?.kind !== 'snap'
                     );
-                    if (lazyUpdates.length > 0) {
-                        syncPositionBatchToJjom(
-                            lazyUpdates.map((c: any) => ({
-                                id: c.id, x: c.position.x, y: c.position.y,
-                            })),
-                        );
+                    const positionWrites = lazyUpdates.map((c: any) => ({ id: c.id, x: c.position.x, y: c.position.y }));
+                    // A container that declares a layout carries every descendant by its own delta (S3): records written
+                    // in the same batch, base nodes moved at once so nothing waits for the sync.
+                    if (gvDrop?.kind === 'container') {
+                        const model = irContainmentRef.current.model;
+                        const idl = (store.getState() as any).idlookup ?? {};
+                        const key = getActiveLayoutKey();
+                        const moved = new Map<string, { x: number; y: number }>();
+                        for (const d of descendantsOf(model, gvDrop.objectId)) {
+                            const v = model.vertexByObj.get(d);
+                            if (!v || !idl[v]) continue;
+                            const rec = readVertexLayout(idl[v], key);
+                            moved.set(v, { x: rec.x + gvDrop.dx, y: rec.y + gvDrop.dy });
+                        }
+                        for (const [id, p] of moved) positionWrites.push({ id, ...p });
+                        if (moved.size > 0) setNodes(replaySafe((nds: Node[]) => nds.map((n) => moved.has(n.id) ? { ...n, position: moved.get(n.id)! } : n)));
+                    }
+                    if (gvDrop?.kind === 'edit') {
+                        // The position and the membership in ONE composite action: one undo restores both (LIR §1).
+                        const ops = gvDrop.ops;
+                        TRANSACTION('graphVertex membership', () => {
+                            if (positionWrites.length > 0) syncPositionBatchToJjom(positionWrites);
+                            applyMembershipOps(ops);
+                        });
+                    } else if (positionWrites.length > 0) {
+                        syncPositionBatchToJjom(positionWrites);
                     }
                     // Faithful mode: flush any pending RAF-throttled writes
                     for (const c of dragEndChanges) {
@@ -3960,11 +4635,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 if (hasResize) {
                     let sizeSynced = false;
                     for (const c of changes.filter((ch: any) => ch.type === 'dimensions' && ch.resizing)) {
+                        // A partition is written once, paired with its neighbour, at the end of the gesture (S3).
+                        if (pairedPartitionSizes(c.id).length > 0) continue;
                         const node = getNodes().find((n) => n.id === c.id);
                         const w = c.dimensions?.width ?? node?.measured?.width;
                         const h = c.dimensions?.height ?? node?.measured?.height;
                         if (w !== undefined && h !== undefined) {
                             syncSizeToJjom(c.id, w, h);
+                            sizeSynced = true;
+                        }
+                    }
+                    for (const c of changes.filter((ch: any) => ch.type === 'dimensions' && ch.resizing === false)) {
+                        const pair = pairedPartitionSizes(c.id);
+                        if (pair.length > 0) {
+                            syncSizeBatchToJjom(pair);
                             sizeSynced = true;
                         }
                     }
@@ -4027,7 +4711,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 isProcessingNodesChangeRef.current = false;
             }
         },
-        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave, dispatchReLayout]
+        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave, dispatchReLayout,
+            resolveGraphVertexDragEnd, pairedPartitionSizes, applyMembershipOps, setNodes]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
@@ -4141,6 +4826,41 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         document.addEventListener('mouseup', onMouseUp);
     }, []);
 
+    // Ghost preview ids (S4b) never reach a handler: their changes, clicks, menus and connections are dropped here.
+    const handleCanvasNodesChange = useCallback((changes: any[]) => {
+        const own = changes.filter((c) => !isPreviewId(c?.id ?? c?.item?.id));
+        if (own.length > 0) handleNodesChange(own);
+    }, [handleNodesChange]);
+    const handleCanvasEdgesChange = useCallback((changes: EdgeChange[]) => {
+        const own = changes.filter((c) => !isPreviewId((c as any)?.id ?? (c as any)?.item?.id));
+        if (own.length > 0) onEdgesChange(own);
+    }, [onEdgesChange]);
+    const handleCanvasConnect = useCallback((connection: Connection) => {
+        if (isPreviewId(connection.source) || isPreviewId(connection.target)) return;
+        onConnect(connection);
+    }, [onConnect]);
+    const isValidCanvasConnection = useCallback((connection: Edge | Connection) =>
+        !isPreviewId(connection.source) && !isPreviewId(connection.target) && isValidConnection(connection),
+    [isValidConnection]);
+    const handleCanvasReconnect = useCallback((oldEdge: Edge, connection: Connection) => {
+        if (isPreviewId(oldEdge.id) || isPreviewId(connection.source) || isPreviewId(connection.target)) return;
+        handleReconnect(oldEdge, connection);
+    }, [handleReconnect]);
+    const handleCanvasNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+        if (!isPreviewId(node.id)) jjomSelection.onNodeClick(event, node);
+    }, [jjomSelection]);
+    const handleCanvasEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+        if (!isPreviewId(edge.id)) onEdgeClick(event, edge);
+    }, [onEdgeClick]);
+    const handleCanvasNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+        if (isPreviewId(node.id)) { event.preventDefault(); return; }
+        onNodeContextMenu(event, node);
+    }, [onNodeContextMenu]);
+    const handleCanvasEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+        if (isPreviewId(edge.id)) { event.preventDefault(); return; }
+        onEdgeContextMenu(event, edge);
+    }, [onEdgeContextMenu]);
+
     // Canvas inner JSX — extracted so the same React Flow tree can be embedded
     // either in the standalone `.editor-v2__canvas` (flow / no-viewpoint) or
     // inside the `.editor-split-flow` pane (split mode).
@@ -4148,23 +4868,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={irContainment.nodes}
-                edges={irContainment.edges}
-                onNodesChange={handleNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
+                nodes={canvasElements.nodes}
+                edges={canvasElements.edges}
+                onNodesChange={handleCanvasNodesChange}
+                onNodeDrag={handleNodeDragPointer}
+                onNodeDragStop={handleNodeDragPointerEnd}
+                onEdgesChange={handleCanvasEdgesChange}
+                onConnect={handleCanvasConnect}
                 onConnectEnd={onConnectEnd}
-                isValidConnection={isValidConnection}
-                onReconnect={handleReconnect}
+                isValidConnection={isValidCanvasConnection}
+                onReconnect={handleCanvasReconnect}
                 onReconnectStart={handleReconnectStart}
                 edgesReconnectable={true}
                 reconnectRadius={20}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
-                onNodeContextMenu={onNodeContextMenu}
-                onEdgeContextMenu={onEdgeContextMenu}
-                onNodeClick={jjomSelection.onNodeClick}
-                onEdgeClick={onEdgeClick}
+                onNodeContextMenu={handleCanvasNodeContextMenu}
+                onEdgeContextMenu={handleCanvasEdgeContextMenu}
+                onNodeClick={handleCanvasNodeClick}
+                onEdgeClick={handleCanvasEdgeClick}
                 onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
@@ -4173,7 +4895,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onMove={handleMove}
                 onMoveEnd={saveViewport}
                 fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
-                fitViewOptions={{ padding: fitPadding(), maxZoom: 1 }}
+                fitViewOptions={fitViewOptions}
                 defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
@@ -4193,8 +4915,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     <defs>
                         <pattern id="dot-grid-pattern" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
                             <circle cx="12" cy="12" r="1"
-                                fill={theme === 'dark' ? '#334155' : '#cbd5e1'}
-                                fillOpacity={theme === 'dark' ? 0.6 : 0.55}
+                                fill="#cbd5e1"
+                                fillOpacity={0.55}
                             />
                         </pattern>
                     </defs>
@@ -4221,17 +4943,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     style={{ position: 'absolute', margin: 0, right: 'calc(var(--jj-canvas-right-inset, 0px) + 16px)', bottom: '16px', borderRadius: '4px', opacity: 0.8 }}
                     nodeStrokeWidth={3}
                     nodeColor={(node) => {
-                        if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';
+                        if (node.type === 'classNode') return '#0284c7';
                         if (node.type === 'enumNode') return '#7c3aed';
-                        if (node.type === 'packageNode') return theme === 'dark' ? '#64748b' : '#94a3b8';
-                        if (node.type === 'objectNode') return theme === 'dark' ? '#f59e0b' : '#d97706';
-                        return theme === 'dark' ? '#334155' : '#e2e8f0';
+                        if (node.type === 'packageNode') return '#94a3b8';
+                        if (node.type === 'objectNode') return '#d97706';
+                        return '#e2e8f0';
                     }}
                     bgColor="var(--color-minimap-bg)"
                     maskColor="var(--minimap-mask)"
                 />
                 )}
             </ReactFlow>
+
+            {/* A preview another view drives (the Refactoring tab, P-2026-10-25-0020) keeps its bar there. */}
+            {scriptPreview && !scriptPreview.owner && <PreviewBar preview={scriptPreview} />}
 
             {pendingConnection && (
                 <EdgeTypePopup
@@ -4280,7 +5005,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
+            <div className={`editor-v2 theme-light notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <SimCheckProblemSync modelid={modelid} graphId={graphId} />
@@ -4292,13 +5017,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     undeclaredClasses={irPalette.undeclared}
                     allClasses={modeInfo.allClasses}
                     selectedDObjectId={lastSelectedModelElement ?? null}
+                    onItemActivate={onPaletteActivate}
+                    collapsed={!!scriptPreview?.owner}
                 />
                 <div className="editor-v2__main">
                     <Toolbar
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
                         onFitView={handleFitView}
-                        onAutoLayout={handleAutoLayout}
+                        onAutoLayout={handleToolbarAutoLayout}
                         onDuplicateSelected={duplicateSelected}
                         onDeleteSelected={deleteSelected}
                         onUndo={handleUndo}
@@ -4371,7 +5098,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                     style={{ position: 'relative' }}
                                     onMouseDownCapture={() => setActive('flow')}
                                 >
-                                    {flowCanvas}
+                                    <CanvasErrorBoundary>{flowCanvas}</CanvasErrorBoundary>
                                 </div>
                             </div>
                         </div>
@@ -4382,7 +5109,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             style={{ position: 'relative' }}
                             onMouseDownCapture={() => setActive('flow')}
                         >
-                            {flowCanvas}
+                            <CanvasErrorBoundary>{flowCanvas}</CanvasErrorBoundary>
                         </div>
                     )}
 
@@ -4412,8 +5139,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     document.body,
                 )}
 
+                {modelid && createPortal(
+                    <ConfirmDialog
+                        isOpen={polymetricGuardOpen}
+                        title="Small metamodel"
+                        message={`This metamodel has fewer than ${POLYMETRIC_MIN_METACLASSES} metaclasses. The polymetric rendering is not informative at this size.`}
+                        confirmText="Open anyway"
+                        cancelText="Cancel"
+                        variant="info"
+                        onConfirm={() => { setPolymetricGuardOpen(false); setPolymetricOpen(true); }}
+                        onCancel={() => setPolymetricGuardOpen(false)}
+                    />,
+                    document.body,
+                )}
+
                 {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
-                {modelid && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
+                {/* Gated (R-SIM-97, R-SIM-99): unmounting clears the run of this model (SimulationPanel's cleanup). */}
+                {modelid && simPill && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
+                {/* R-GEN-23: no Code pill in consumer mode, decided here so codegen/setting.ts imports nothing. */}
+                {CODEGEN_BUILD && modelid && codePill && !isConsumerMode() && <CodegenSlot modelid={modelid} isMetamodel={!isModelMode} />}
 
             </div>
         </EditorContext.Provider>

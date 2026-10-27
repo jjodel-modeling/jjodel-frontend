@@ -35,6 +35,7 @@ import {
 } from '../../model/megamodelPersistence';
 import {VersionFixer} from "../../redux/VersionFixer";
 import { markProjectSaved } from "../../common/libraries/lastSaved";
+import {compressToUTF16} from "async-lz-string";
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
@@ -89,8 +90,16 @@ class ProjectsApi {
 
     // NB: returned value is not yet persistent, and is a dto in case of online getone
     static async getOne(id: DProject['id']): Promise<null|DProject> {
-        if(U.isOffline()) return Offline.getOne(id);
-        else return await Online.getOne(id);
+        const project = U.isOffline() ? Offline.getOne(id) : await Online.getOne(id);
+        // An empty state is a new project only when the record claims no content. One that lists models, or counted
+        // them at a save, lost its state: opening it as new mounted the editor on pointers no state holds, and the
+        // page went white. The throw lands in stateInitializer's catch: the error screen (P-2026-09-30-1540).
+        if (project && isEmptyState(project.state) && claimsContent(project)) {
+            throw new Error('The saved state of this project is empty, but the project lists '
+                + (project.metamodels?.length || project.metamodelsNumber || 0) + ' metamodel(s) and '
+                + (project.models?.length || project.modelsNumber || 0) + ' model(s). Nothing was loaded.');
+        }
+        return project;
     }
 
 
@@ -122,7 +131,14 @@ class ProjectsApi {
             Log.ww('ProjectsApi.save: not saving a project whose open failed', {id: project.id, loadError: failed});
             return {...project.__raw} as DProject;
         }
-        const dProject = {...project.__raw} as DProject;
+        // F2. Copy the live project, not `project.__raw`. The Cmd+S handler holds the
+        // `LProject` of Navbar's last render, and once the reducer has copied the project
+        // along the path that proxy's target is a detached object: `compressedState`
+        // wrote it over the live entry, and a viewpoint added in between was lost
+        // (P-2026-09-29-2120). `__raw` remains the fallback for a project that is not in
+        // `idlookup`.
+        const liveProject = (store.getState() as GObject).idlookup?.[project.id] as DProject | undefined;
+        const dProject = {...(liveProject ?? project.__raw)} as DProject;
         dProject.lastModified = Date.now();
         dProject.viewpointsNumber = project.viewpoints.length;
         dProject.metamodelsNumber = project.metamodels.length;
@@ -143,6 +159,13 @@ class ProjectsApi {
         // console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
 
         const state = await U.compressedState(dProject);
+        // A state is never saved empty: an empty string reads back as a new project with no content
+        // (P-2026-09-30-1540). Refused before the write, the version bump and the dirty-flag reset.
+        if (isEmptyState(state)) {
+            Log.ee('ProjectsApi.save: the serialized state is empty, not saved; the stored copy is kept', {id: dProject.id});
+            U.alert('e', 'Not saved', 'The project serialized to an empty state. The stored copy was kept.');
+            return dProject;
+        }
         dProject.state = state;
         const persisted = U.isOffline() ? await Offline.save(dProject) : await Online.save(dProject);
 
@@ -232,7 +255,12 @@ class ProjectsApi {
     }
 
 
-    static async importFromText(content: string, name: string = '', date: number = Date.now()) {
+    /**
+     * `clone` makes the import a gallery clone (P-2026-10-18-1800): the project takes `name` as it is, without the
+     * import's « copy» suffix, and the call resolves once the project is stored, with its new id. Without it, `name`
+     * stays unused, as the file drop that passes the file's name expects.
+     */
+    static async importFromText(content: string, name: string = '', date: number = Date.now(), clone?: { clonedFrom: string }): Promise<DProject['id']> {
         const json = JSON.parse(content) as Record<string, unknown>;
 
         // Extract and register the megamodel (user-defined edges) for this project.
@@ -249,7 +277,7 @@ class ProjectsApi {
         let resp_replace = 'Replace';
         let resp_dup = 'Duplicate';
         let response: string = resp_dup;
-        TRANSACTION('import project', async ()=>{
+        const done = TRANSACTION('import project', async ()=>{
             // console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
             let dialogDuplicate: boolean = false;
             if (dialogDuplicate && state.projects.includes(project.id)) {
@@ -262,6 +290,7 @@ class ProjectsApi {
             if (response === resp_dup) {
                 let ret = duplicateProject(project);
                 project = await ret;
+                if (clone) project = await asClone(project, name, clone.clonedFrom);
             }
             if (response === resp_replace){
                 let old = L.from(project.id);
@@ -274,6 +303,8 @@ class ProjectsApi {
             else await Online.import(project);
             CreateElementAction.new(project);
             })
+        if (clone) await done;
+        return project.id;
         }
 
 
@@ -299,6 +330,48 @@ class ProjectsApi {
 
 
 
+}
+
+/* Gallery clone (P-2026-10-18-1800). The chosen name replaces the « copy» one duplicateProject gave, made unique
+ * with (1), (2) against the workspace; the catalog id goes on the DProject entry inside the state blob, because the
+ * online DTO drops the unknown top-level fields. */
+async function asClone(project: DProject, name: string, clonedFrom: string): Promise<DProject> {
+    const state = store.getState();
+    const taken = new Set<string>([
+        ...state.projects.map(p => (state.idlookup[p] as DProject | undefined)?.name || ''),
+        ...(Storage.read<DProject[]>('projects') || []).map(p => p.name || ''),
+    ]);
+    const base = name.trim() || project.name;
+    let unique = base;
+    for (let i = 1; taken.has(unique); i++) unique = `${base} (${i})`;
+    const blob = JSON.parse(await U.decompressState(project.state));
+    const entry = blob.idlookup[project.id];
+    if (entry) {
+        entry.name = unique;
+        entry._clonedFrom = clonedFrom;
+    }
+    project.name = unique;
+    project.state = await compressToUTF16(JSON.stringify(blob));
+    return project;
+}
+
+/* Empty-state guard (P-2026-09-30-1540). Every saved state holds the project's own entry with `state: ''`
+ * (`U.compressedState`), so after an open the store's entry has an empty state; a write that spreads that entry
+ * (the in-editor favorite, `LeftBar.tsx:190`, `Navbar.tsx:1438`) emptied the stored record: measured 21850 -> 0. */
+function isEmptyState(state: unknown): boolean { return typeof state !== 'string' || state.length === 0; }
+
+/** The record lists content only a saved state can hold. Viewpoints are left out: defaults are in every state. */
+function claimsContent(p: Partial<DProject>): boolean {
+    return !!(p.metamodels?.length || p.models?.length || (p.metamodelsNumber || 0) > 0 || (p.modelsNumber || 0) > 0);
+}
+
+/** A record never replaces a stored non-empty state with an empty one: the stored state is kept. */
+function keepStoredState<T extends {id: string, state?: unknown}>(projects: DProject[], record: T): T {
+    if (!isEmptyState(record.state)) return record;
+    const stored = projects.find(p => p.id === record.id);
+    if (!stored || isEmptyState(stored.state)) return record;
+    Log.ww('Offline: a write with an empty state kept the stored one', {id: record.id});
+    return {...record, state: stored.state};
 }
 
 class Offline {
@@ -358,7 +431,7 @@ class Offline {
     static async favorite(project: DProject): Promise<void> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
-        Storage.write('projects', [...filtered, {...project, isFavorite: !project.isFavorite}]);
+        Storage.write('projects', [...filtered, keepStoredState(projects, {...project, isFavorite: !project.isFavorite})]);
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
 
@@ -373,7 +446,7 @@ class Offline {
         const filtered = projects.filter(p => p.id !== project.id);
         // console.log('[DEBUG Offline.updateTags] Filtered projects (without current):', filtered);
 
-        const updatedProject = {...project, tags};
+        const updatedProject = keepStoredState(projects, {...project, tags});
         // console.log('[DEBUG Offline.updateTags] Updated project to save:', updatedProject);
 
         const newProjectsList = [...filtered, updatedProject];

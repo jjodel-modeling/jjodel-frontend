@@ -40,6 +40,12 @@ import { waitForDependencies } from './elementWaiter';
 import { checkBoundScope } from './scopeGuard';
 import { getMetamodelById } from './resolvers';
 import { getProject } from './utils';
+import { checkCommandPermission, containedTypes, instanceType, metaclassesNamed, rememberCreated } from './permissionGuard';
+import type { GuardCommand, GuardType } from './permissionGuard';
+import { resolveTargetModel, resolveInstanceHandle } from './commands/instance';
+import { activeProfileId } from '../../components/environment/consumerMode';
+import { findProfile } from '../../joiner/environmentConfig';
+import { store } from '../../joiner';
 
 // ============================================
 // EXECUTOR CLASS
@@ -49,6 +55,8 @@ export class JjScriptExecutor {
     private context: ExecutionContext;
     private undoStack: (() => void)[] = [];
     private redoStack: (() => void)[] = [];
+    /** The metaclass of each instance a guarded `create` made, by id, until the store has it (#176). */
+    private createdTypes = new Map<string, GuardType>();
 
     constructor(projectId: string, modelId?: string, targetMetamodelId?: string, level?: 'M1' | 'M2', scopeBound?: boolean) {
         this.context = {
@@ -66,11 +74,8 @@ export class JjScriptExecutor {
      * Execute a JjScript command string
      */
     async execute(input: string): Promise<ExecutionResult> {
-        const _tParseStart = performance.now(); // TEMP-DISCOVERY
         // Parse the input
         const parseResult = parse(input);
-        (this as any)._tParseMs = performance.now() - _tParseStart; // TEMP-DISCOVERY
-        (this as any)._tLastInput = input; // TEMP-DISCOVERY
 
         if (!parseResult.success || !parseResult.ast) {
             return {
@@ -97,23 +102,38 @@ export class JjScriptExecutor {
     async executeAST(ast: CommandNode, contextOverride?: ExecutionContext): Promise<ExecutionResult> {
         const context = contextOverride || this.context;
         const startTime = Date.now();
-        const _tTotalStart = performance.now(); // TEMP-DISCOVERY
-        let _waitMs = 0; // TEMP-DISCOVERY
-        let _applyMs = 0; // TEMP-DISCOVERY
 
         try {
             // PRE-CHECK: Wait for dependencies before executing
             const dependencies = extractDependencies(ast);
             if (dependencies.length > 0) {
-                const _tWaitStart = performance.now(); // TEMP-DISCOVERY
                 const waitResult = await waitForDependencies(dependencies, context);
-                _waitMs = performance.now() - _tWaitStart; // TEMP-DISCOVERY
                 if (!waitResult.allResolved) {
                     const missing = waitResult.unresolved.map(d => `${d.name.raw} (${d.role})`).join(', ');
                     console.warn(`[JjScript] Unresolved dependencies after ${waitResult.waitedMs}ms: ${missing}`);
                     // Don't fail here - let the command handler produce the proper error message
                 } else if (waitResult.waitedMs > 0) {
                     // console.log(`[JjScript] Dependencies resolved after ${waitResult.waitedMs}ms`);
+                }
+            }
+
+            // A stand-alone environment (#157) carries a profile in the URL, and the profile decides
+            // what a script may change (#168 J5, `permissionGuard.ts`). After the wait, so the check
+            // resolves names against the state the handler will see; before the scope check, so the
+            // profile's refusal is the one the viewer reads. No profile: nothing is resolved here.
+            const profileId = activeProfileId();
+            let guarded: GuardCommand | undefined;
+            if (profileId) {
+                const profile = findProfile((store.getState() as any).idlookup, profileId);
+                guarded = describeForGuard(ast, context, this.createdTypes);
+                const refusal = checkCommandPermission(guarded, { profileId, profile });
+                if (refusal) {
+                    return {
+                        success: false,
+                        command: ast.command,
+                        message: refusal.message,
+                        errors: [{ code: refusal.code, message: refusal.message, suggestion: refusal.suggestion }]
+                    };
                 }
             }
 
@@ -138,7 +158,6 @@ export class JjScriptExecutor {
 
             let result: ExecutionResult;
 
-            const _tApplyStart = performance.now(); // TEMP-DISCOVERY
             switch (ast.command) {
                 case 'create':
                     result = await executeCreate(ast.args as any, context);
@@ -212,14 +231,11 @@ export class JjScriptExecutor {
                     };
             }
 
-            _applyMs = performance.now() - _tApplyStart; // TEMP-DISCOVERY
+            // The type a create was checked against stands in for `instanceof` until the store has it.
+            if (guarded) rememberCreated(this.createdTypes, guarded, result);
 
             // Record in main history (always on this.context, not override)
             this.recordHistory(ast, result);
-
-            // TEMP-DISCOVERY: per-command executor breakdown (parse in execute(), wait = pre-check poll, apply = synchronous handler/dispatch)
-            const _parseMs = (this as any)._tParseMs ?? 0; // TEMP-DISCOVERY
-            console.log(`[JjScript-TIMING] cmd=${ast.command} parse=${_parseMs.toFixed(1)} wait=${_waitMs.toFixed(1)} apply=${_applyMs.toFixed(1)} total=${(_parseMs + (performance.now() - _tTotalStart)).toFixed(1)} in="${((this as any)._tLastInput ?? '').slice(0, 60)}"`); // TEMP-DISCOVERY
 
             return result;
         } catch (error) {
@@ -318,6 +334,87 @@ export class JjScriptExecutor {
     clearHistory(): void {
         this.context.history = [];
     }
+}
+
+// ============================================
+// PROFILE GUARD ADAPTER
+// ============================================
+
+/**
+ * The command as `checkCommandPermission` reads it: the names it touches, resolved the way the
+ * M1 handlers resolve them (`commands/instance.ts`), so the type checked is the type written.
+ * Resolves only at M1 and only for `create instance` / `set` / `rename` / `delete`; a name that
+ * does not resolve travels as the handler's own sentence, and the guard refuses it.
+ */
+function describeForGuard(ast: CommandNode, context: ExecutionContext, created: ReadonlyMap<string, GuardType>): GuardCommand {
+    const args: any = ast.args;
+    const cmd: GuardCommand = { command: ast.command, level: context.level, elementType: args?.elementType };
+    if (context.level !== 'M1') return cmd;
+
+    const project = getProject(context);
+    if (ast.command === 'create') {
+        if (args?.elementType !== 'instance') return cmd;
+        const metamodel = project ? getMetamodelById(project, context.targetMetamodelId ?? '') : null;
+        if (!metamodel) {
+            cmd.creates = { unresolved: 'No metamodel of conformity in context' };
+        } else {
+            const types = metaclassesNamed(metamodel, args.name);
+            cmd.creates = types.length > 0 ? types : { unresolved: `Class '${args.name}' not found in metamodel` };
+        }
+        // `create instance … in <Parent>.<reference>` (R-JS-9): the parent, by the same lookup as
+        // `resolveContainerSlot` in `commands/instance.ts`.
+        if (args.parent) {
+            const model = project ? resolveTargetModel(context, project) : null;
+            const handle = (args.parent.segments ?? []).join('::');
+            cmd.container = model
+                ? instanceType(resolveInstanceHandle(model, handle), handle, created)
+                : { unresolved: 'No active M1 model' };
+        }
+        return cmd;
+    }
+    if (ast.command !== 'set' && ast.command !== 'rename' && ast.command !== 'delete') return cmd;
+    if (args?.elementType !== undefined && args.elementType !== 'instance') return cmd;
+
+    const model = project ? resolveTargetModel(context, project) : null;
+    if (!model) {
+        cmd.subject = { unresolved: 'No active M1 model' };
+        return cmd;
+    }
+    // Same spelling as the handlers (`instance.ts`, executeSet/Rename/DeleteInstance).
+    const instanceName = args.target.segments.join('::') || args.target.raw;
+    const resolved = resolveInstanceHandle(model, instanceName);
+    cmd.subject = instanceType(resolved, instanceName, created);
+
+    // A `delete` touches what the instance contains too (#157, 2026-10-04): read from the store
+    // the guard already reads the profile from, through the containment the L-layer names.
+    if (ast.command === 'delete' && resolved.ok && typeof resolved.value?.id === 'string') {
+        cmd.cascade = containedTypes((store.getState() as any).idlookup, resolved.value.id);
+    }
+
+    // A `set` writes a link when the property is a reference (an attribute of the same name wins,
+    // as in `classifyMetaclassProperty`) and the value names an instance: a string literal or,
+    // like the handler, anything that is not a literal, by its `raw`. `null` unlinks, and any
+    // other literal is refused by the handler (TYPE_MISMATCH): neither links to anything.
+    if (ast.command === 'set' && resolved.ok) {
+        const metaclass: any = resolved.value?.instanceof;
+        const attributes: any[] = metaclass?.allAttributes ?? metaclass?.attributes ?? [];
+        const references: any[] = metaclass?.allReferences ?? metaclass?.references ?? [];
+        const reference = references.find((r) => r?.name === args.property);
+        const isReference = !attributes.some((a) => a?.name === args.property) && !!reference;
+        const value: any = args.value;
+        const isLiteral = !!value && typeof value === 'object' && 'kind' in value
+            && ['string', 'number', 'boolean', 'null', 'array', 'enumLiteral'].includes(value.kind);
+        const links = isReference && (!isLiteral || value.kind === 'string');
+        if (links) {
+            const targetName = isLiteral ? value.value : value?.raw;
+            cmd.linkTarget = typeof targetName === 'string'
+                ? instanceType(resolveInstanceHandle(model, targetName), targetName, created)
+                : { unresolved: `Reference '${args.property}' expects an instance name` };
+            // `LReference.containment` is `composition || aggregation`: such a link re-fathers the target.
+            cmd.linkIsContainment = !!reference?.containment;
+        }
+    }
+    return cmd;
 }
 
 // ============================================

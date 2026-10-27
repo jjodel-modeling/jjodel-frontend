@@ -3,7 +3,10 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveLegacyModelId, isForeignModel, getAICompany} from '../types/jodie';
+import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveCurrentModelId, isForeignModel, getAICompany, applyModelCatalog, getProxyBase} from '../types/jodie';
+import {AIEvents} from '../events/registry';
+import {CATALOG_PROVIDERS, failureFromStatus, fetchCatalog, needsRefresh, writeCatalogCache} from './aiModelCatalog';
+import type {CatalogFailure, CatalogFetchResult, CatalogProvider} from './aiModelCatalog';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
 
@@ -16,6 +19,17 @@ import { PromptContext } from '../types/prompts';
  * the connection-test calls).
  */
 const CHAT_MAX_OUTPUT_TOKENS = 8192;
+
+/**
+ * Outcome of a connection test. `failure` says what kind of failure it was ('auth' disables the
+ * provider in Settings, the others do not); `warning` qualifies a passing test.
+ */
+export interface ConnectionTestResult {
+    success: boolean;
+    error?: string;
+    failure?: CatalogFailure;
+    warning?: string;
+}
 
 export class AIProviderService {
     /**
@@ -54,24 +68,8 @@ export class AIProviderService {
         const keyError = this.validateKeyCoherence(provider, config);
         if (keyError) throw new Error(keyError);
 
-        // The Custom registry entry is a selector placeholder, not an endpoint model ID.
-        // Resolve it against the current configuration, including already-persisted preferences.
-        if (provider === AIProvider.Custom && model === 'custom') model = undefined;
-
-        // Resolve effective model: explicit param > per-provider config. Run through legacy ID map
-        // so stale identifiers (e.g. persisted before a rename) reach the current canonical form.
-        let effectiveModel = resolveLegacyModelId(provider, model ?? config.model) ?? config.model ?? '';
-        // Guard the provider/model pairing: a model belonging to a *different* provider (e.g. a
-        // per-feature "chat" model chosen under OpenAI while the active provider is Claude) must
-        // never be sent — it yields a cryptic 404. Fall back to the provider's own model.
-        // Custom has no model registry — any user-supplied model is valid (e.g. an OpenAI-compatible
-        // proxy serving 'gpt-4o' or 'mistral-large-latest'), so it must bypass the foreign-model guard.
-        if (effectiveModel && provider !== AIProvider.Custom && isForeignModel(provider, effectiveModel)) {
-            let own = resolveLegacyModelId(provider, config.model) ?? config.model ?? '';
-            if (!own || isForeignModel(provider, own)) own = Object.keys(llm?.versions ?? {})[0] ?? '';
-            console.warn(`[AIProviderService] Discarding model "${effectiveModel}" — not a ${provider} model; using "${own}" instead.`);
-            effectiveModel = own;
-        }
+        // Same resolution as the connection test (#179), so a green test means this model answers.
+        const effectiveModel = this.effectiveModel(provider, model);
         if (!effectiveModel.trim()) {
             throw new Error(`No model selected for ${provider}. Please choose a model in Settings.`);
         }
@@ -108,6 +106,46 @@ export class AIProviderService {
             default:
                 throw new Error(`Unsupported provider: ${provider}`);
         }
+    }
+
+    /**
+     * The model `provider` is called with when `requested` is asked for. `chat` and
+     * `testConnection` both resolve here (#179).
+     */
+    static effectiveModel(provider: TAIProvider, requested?: string): string {
+        const config = AIConfig.get(provider);
+        const llm = AI[provider];
+
+        // The Custom registry entry is a selector placeholder, not an endpoint model ID.
+        // Resolve it against the current configuration, including already-persisted preferences.
+        if (provider === AIProvider.Custom && requested === 'custom') requested = undefined;
+
+        // Resolve effective model: explicit param > per-provider config. Run through the legacy ID
+        // map so stale identifiers (e.g. persisted before a rename) reach the current canonical
+        // form, and move a retired model (#179) onto a current one.
+        let effectiveModel = resolveCurrentModelId(provider, requested ?? config?.model) ?? config?.model ?? '';
+        // Guard the provider/model pairing: a model belonging to a *different* provider (e.g. a
+        // per-feature "chat" model chosen under OpenAI while the active provider is Claude) must
+        // never be sent — it yields a cryptic 404. Fall back to the provider's own model.
+        // Custom has no model registry — any user-supplied model is valid (e.g. an OpenAI-compatible
+        // proxy serving 'gpt-4o' or 'mistral-large-latest'), so it must bypass the foreign-model guard.
+        if (effectiveModel && provider !== AIProvider.Custom && isForeignModel(provider, effectiveModel)) {
+            let own = resolveCurrentModelId(provider, config?.model) ?? config?.model ?? '';
+            if (!own || isForeignModel(provider, own)) own = Object.keys(llm?.versions ?? {})[0] ?? '';
+            console.warn(`[AIProviderService] Discarding model "${effectiveModel}" — not a ${provider} model; using "${own}" instead.`);
+            effectiveModel = own;
+        }
+        return effectiveModel;
+    }
+
+    /**
+     * The model the Jodie chat calls `provider` with: the chat's own pick when the chat points at
+     * this provider, the provider's model otherwise. The connection test checks the key against
+     * it (#179), so a green test means the chat works with that key, and a red one that it does not.
+     */
+    static chatModel(provider: TAIProvider): string {
+        const requested = AIConfig.getPreferred('chat') === provider ? AIConfig.getPreferredModel('chat') : undefined;
+        return this.effectiveModel(provider, requested);
     }
 
     /**
@@ -669,9 +707,10 @@ export class AIProviderService {
     }
 
     /**
-     * Test if a provider's API key is valid
+     * Test if a provider's API key is valid, with the model the chat calls it with (#179):
+     * key and effective model together, so the test and the chat cannot disagree.
      */
-    static async testConnection(provider: TAIProvider): Promise<{ success: boolean; error?: string }> {
+    static async testConnection(provider: TAIProvider): Promise<ConnectionTestResult> {
         try {
             const config = AIConfig.get(provider);
             const llm = AI[provider];
@@ -681,43 +720,45 @@ export class AIProviderService {
             // Ollama doesn't require API key, other providers do
             if (!config.isConfigured()) return { success: false, error: 'API key not configured' };
 
+            const model = this.chatModel(provider);
+
             // Claude/Gemini keep their dedicated tests; the OpenAI-compatible providers route
             // through the shared testOpenAICompatible, preserving each provider's success criterion
             // and 401/404/network hints via parameters.
             switch (provider) {
                 case AIProvider.Claude:
-                    return await this.testClaude(config.apiKey, config.model);
+                    return await this.testClaude(config.apiKey, model);
                 case AIProvider.Gemini:
-                    return await this.testGemini(config.apiKey, config.model);
+                    return await this.testGemini(config.apiKey, model);
                 case AIProvider.GPT:
-                    return await this.testOpenAICompatible(AI.GPT.getEndpoint(), AI.GPT.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
-                        expectedKeyPrefix: 'sk-',
-                        invalidKeyHint: 'Invalid API key. Please check your key in the OpenAI Dashboard.',
-                    });
+                    if (!config.apiKey.startsWith('sk-')) {
+                        return { success: false, failure: 'auth', error: 'Invalid API key format. Keys should start with "sk-"' };
+                    }
+                    return await this.testWithCatalog(AIProvider.GPT, 'OpenAI', 'api.openai.com', config.apiKey, model);
                 case AIProvider.DeepSeek:
-                    return await this.testOpenAICompatible(AI.DeepSeek.getEndpoint(), AI.DeepSeek.authScheme, config.apiKey, config.model, { max_tokens: 10 });
+                    return await this.testOpenAICompatible(AI.DeepSeek.getEndpoint(), AI.DeepSeek.authScheme, config.apiKey, model, { max_tokens: 10 });
                 case AIProvider.Mistral:
-                    return await this.testOpenAICompatible(AI.Mistral.getEndpoint(), AI.Mistral.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                    return await this.testOpenAICompatible(AI.Mistral.getEndpoint(), AI.Mistral.authScheme, config.apiKey, model, { max_tokens: 10 }, {
                         invalidKeyHint: 'Invalid API key. Please check your key in the Mistral Console.',
                     });
                 case AIProvider.Groq:
-                    return await this.testOpenAICompatible(AI.Groq.getEndpoint(), AI.Groq.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                    return await this.testOpenAICompatible(AI.Groq.getEndpoint(), AI.Groq.authScheme, config.apiKey, model, { max_tokens: 10 }, {
                         invalidKeyHint: 'Invalid API key. Please check your key in the Groq Console.',
                     });
                 case AIProvider.Kimi:
-                    return await this.testOpenAICompatible(AI.Kimi.getEndpoint(), AI.Kimi.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                    return await this.testOpenAICompatible(AI.Kimi.getEndpoint(), AI.Kimi.authScheme, config.apiKey, model, { max_tokens: 10 }, {
                         invalidKeyHint: 'Invalid API key. Please check your key in the Moonshot AI Console.',
                     });
                 case AIProvider.Ollama: {
                     const endpoint = config.baseUrl ? this.resolveChatCompletionsUrl(config.baseUrl) : AI.Ollama.endpoint;
-                    return await this.testOpenAICompatible(endpoint, AI.Ollama.authScheme, '', config.model, { stream: false }, {
-                        notFoundHint: `Model "${config.model}" not found. Make sure it's pulled in Ollama.`,
+                    return await this.testOpenAICompatible(endpoint, AI.Ollama.authScheme, '', model, { stream: false }, {
+                        notFoundHint: `Model "${model}" not found. Make sure it's pulled in Ollama.`,
                         networkErrorHint: `Cannot connect to Ollama at ${endpoint}. Make sure Ollama is running.`,
                     });
                 }
                 case AIProvider.Custom: {
                     if (!config.baseUrl || !config.baseUrl.trim()) return { success: false, error: 'Custom provider requires a Base URL.' };
-                    return await this.testOpenAICompatible(this.resolveChatCompletionsUrl(config.baseUrl), AI.Custom.authScheme, config.apiKey, config.model, { max_tokens: 10 });
+                    return await this.testOpenAICompatible(this.resolveChatCompletionsUrl(config.baseUrl), AI.Custom.authScheme, config.apiKey, model, { max_tokens: 10 });
                 }
                 case AIProvider.Llama:
                     return { success: false, error: 'Llama is not yet supported (no endpoint configured).' };
@@ -735,127 +776,105 @@ export class AIProviderService {
     }
 
     /**
-     * Test Claude API connection
+     * Test Claude API connection: list the key's models (`GET /v1/models`, no fixed model id). A
+     * success also refreshes the live catalog; a selected model the key is not offered is a
+     * warning on a passing test, never a swap.
      */
-    private static async testClaude(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            // Validate API key format
-            if (!apiKey.startsWith('sk-ant-')) {
-                return {
-                    success: false,
-                    error: 'Invalid API key format. Claude API keys should start with "sk-ant-"',
-                };
-            }
+    private static async testClaude(apiKey: string, model: string): Promise<ConnectionTestResult> {
+        // Validate API key format
+        if (!apiKey.startsWith('sk-ant-')) {
+            return {
+                success: false,
+                failure: 'auth',
+                error: 'Invalid API key format. Claude API keys should start with "sk-ant-"',
+            };
+        }
 
-            // Use proxy endpoint to avoid CORS issues
-            const proxyUrl = AI.Claude.getEndpoint();
+        return this.testWithCatalog(AIProvider.Claude, 'Anthropic', 'api.anthropic.com', apiKey, model);
+    }
 
-            const response = await fetch(proxyUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                },
-                body: JSON.stringify({
-                    model,
-                    max_tokens: 10,
-                    messages: [{ role: 'user', content: 'Hi' }],
-                }),
-            });
+    /**
+     * Connection test by catalog: list the key's models (no fixed model id), refresh the live
+     * catalog on success, and warn, never swap, when the selected model is not in the list.
+     */
+    private static async testWithCatalog(provider: CatalogProvider, company: string, host: string, apiKey: string, model: string): Promise<ConnectionTestResult> {
+        const result = await this.loadCatalog(provider, apiKey);
+        if (!result.ok) return { success: false, failure: result.failure, error: this.catalogErrorMessage(company, host, result) };
+        if (model && !result.models.some(m => m.id === model)) {
+            return { success: true, warning: `Key OK, but the selected model "${model}" is not offered to this key. Pick another ${provider} model.` };
+        }
+        return { success: true };
+    }
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMsg = `API Error (${response.status})`;
+    // ── Live model catalogs (services/aiModelCatalog.ts) ─────────────────────────
 
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    if (errorJson.error?.message) {
-                        errorMsg = errorJson.error.message;
-                    } else if (errorJson.message) {
-                        errorMsg = errorJson.message;
-                    } else if (errorJson.error) {
-                        errorMsg = typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error);
-                    }
-                } catch {
-                    errorMsg += `: ${errorText.substring(0, 150)}`;
+    private static inFlight: Partial<Record<CatalogProvider, Promise<CatalogFetchResult>>> = {};
+
+    /**
+     * Fetch `provider`'s catalog for `apiKey`, cache it, merge it into the registry and dispatch
+     * AIEvents.MODELS_UPDATED. Concurrent calls for the same provider share one request.
+     */
+    private static loadCatalog(provider: CatalogProvider, apiKey: string): Promise<CatalogFetchResult> {
+        const pending = this.inFlight[provider];
+        if (pending) return pending;
+        const run = (async (): Promise<CatalogFetchResult> => {
+            const result = await fetchCatalog(provider, apiKey, getProxyBase());
+            if (result.ok && result.models.length) {
+                writeCatalogCache(provider, apiKey, result.models);
+                applyModelCatalog(provider, result.models);
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent(AIEvents.MODELS_UPDATED, { detail: { provider } }));
                 }
-
-                // Helpful hints based on status code
-                if (response.status === 401) {
-                    errorMsg = 'Invalid API key. Please check your key in the Anthropic Console.';
-                } else if (response.status === 429) {
-                    errorMsg = 'Rate limit exceeded. Please try again in a moment.';
-                } else if (response.status === 400) {
-                    errorMsg = 'Bad request. The model may be incorrect or unavailable.';
-                } else if (response.status === 403) {
-                    errorMsg = 'Access denied. Origin not allowed by proxy.';
-                }
-
-                return { success: false, error: errorMsg };
             }
+            return result;
+        })();
+        this.inFlight[provider] = run;
+        return run.finally(() => { delete this.inFlight[provider]; });
+    }
 
-            await response.json();
-            return { success: true };
-        } catch (error) {
-            const errorMessage = (error as Error).message;
+    /**
+     * Refresh `provider`'s live catalog when it is missing, for another key, or older than 24 h
+     * (`force` skips the check). Resolves to null when there is nothing to do: not a catalog
+     * provider, no key, or a fresh cache.
+     */
+    static async refreshModels(provider: TAIProvider, force: boolean = false): Promise<CatalogFetchResult | null> {
+        if (!(CATALOG_PROVIDERS as string[]).includes(provider)) return null;
+        const apiKey = AIConfig.get(provider)?.apiKey;
+        if (!apiKey) return null;
+        if (!force && !needsRefresh(provider as CatalogProvider, apiKey)) return null;
+        return this.loadCatalog(provider as CatalogProvider, apiKey);
+    }
 
-            if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-                return {
-                    success: false,
-                    error: 'Network error. The proxy service may be unavailable.',
-                };
-            }
+    /**
+     * Whether a failed connection test disables the provider in Settings: only a rejected key
+     * does. A rate limit, a network or CORS failure or a provider outage says nothing about the
+     * key; a test that does not classify its failure keeps the old behaviour (disable).
+     */
+    static failureDisablesProvider(result: ConnectionTestResult): boolean {
+        return !result.success && (!result.failure || result.failure === 'auth');
+    }
 
-            return { success: false, error: `Connection error: ${errorMessage}` };
+    /** The message a failed catalog fetch shows, by kind of failure. */
+    private static catalogErrorMessage(company: string, host: string, result: Extract<CatalogFetchResult, { ok: false }>): string {
+        switch (result.failure) {
+            case 'auth':
+                if (company === 'Google') return 'Invalid API key or key not allowed. Check your key in Google AI Studio.';
+                return result.status === 403
+                    ? `This key is not allowed to list models (403). Check its permissions in the ${company} Console.`
+                    : `Invalid API key. Please check your key in the ${company} Console.`;
+            case 'rate': return 'Rate limit exceeded. Please try again in a moment.';
+            case 'network': return `Cannot reach ${host} or the Jjodel proxy (network or CORS).`;
+            case 'server': return `${company} error (${result.status}). Please try again later.`;
+            default: return `API Error (${result.status})${result.message ? ': ' + result.message : ''}`;
         }
     }
 
     /**
-     * Test Gemini API connection (via proxy)
+     * Test Gemini API connection: list the key's models (`GET /v1beta/models`, key in the
+     * x-goog-api-key header), with the Worker route as fallback on a network or CORS failure.
      */
-    private static async testGemini(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            // Use proxy endpoint to avoid CORS issues
-            const proxyUrl = `${AI.Gemini.getEndpoint()}/${model}:generateContent?key=${apiKey}`;
-            const response = await fetch(proxyUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: 'Hi' }] }],
-                    generationConfig: { maxOutputTokens: 10 },
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMsg = `API Error (${response.status})`;
-
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
-                } catch {
-                    errorMsg += `: ${errorText.substring(0, 150)}`;
-                }
-
-                if (response.status === 400 || response.status === 403) {
-                    errorMsg = 'Invalid API key or model. Check your key in Google AI Studio.';
-                }
-
-                return { success: false, error: errorMsg };
-            }
-
-            await response.json();
-            return { success: true };
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            if (errorMessage.includes('Failed to fetch')) {
-                return { success: false, error: 'Network error. The proxy service may be unavailable.' };
-            }
-            return { success: false, error: `Connection error: ${errorMessage}` };
-        }
+    private static async testGemini(apiKey: string, model: string): Promise<ConnectionTestResult> {
+        return this.testWithCatalog(AIProvider.Gemini, 'Google', 'generativelanguage.googleapis.com', apiKey, model);
     }
 
     /**
@@ -863,6 +882,8 @@ export class AIProviderService {
      * Kimi, Ollama, Custom). POSTs a minimal "Hi" probe and treats any 2xx as success. Per-provider
      * differences are passed as options: an optional key-prefix format check, and 401/404/network
      * hint overrides. Body shape varies via `bodyExtras` ({max_tokens:10} vs {stream:false}).
+     * Every failure carries its kind, classified by HTTP status as the catalog does; a fetch that
+     * rejects (DNS, CORS, connection refused) is 'network'.
      */
     private static async testOpenAICompatible(
         endpoint: string,
@@ -876,11 +897,13 @@ export class AIProviderService {
             notFoundHint?: string;
             networkErrorHint?: string;
         }
-    ): Promise<{ success: boolean; error?: string }> {
+    ): Promise<ConnectionTestResult> {
+        let response: Response | undefined;
         try {
             if (opts?.expectedKeyPrefix && !apiKey.startsWith(opts.expectedKeyPrefix)) {
                 return {
                     success: false,
+                    failure: 'auth',
                     error: `Invalid API key format. Keys should start with "${opts.expectedKeyPrefix}"`,
                 };
             }
@@ -888,7 +911,7 @@ export class AIProviderService {
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             if (authScheme === 'bearer') headers['Authorization'] = `Bearer ${apiKey}`;
 
-            const response = await fetch(endpoint, {
+            response = await fetch(endpoint, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Hi' }], ...bodyExtras }),
@@ -908,17 +931,20 @@ export class AIProviderService {
                 if (response.status === 401 && opts?.invalidKeyHint) errorMsg = opts.invalidKeyHint;
                 if (response.status === 404 && opts?.notFoundHint) errorMsg = opts.notFoundHint;
 
-                return { success: false, error: errorMsg };
+                return { success: false, failure: failureFromStatus(response.status, errorText), error: errorMsg };
             }
 
             await response.json();
             return { success: true };
         } catch (error) {
             const errorMessage = (error as Error).message;
+            // No response yet: fetch itself rejected, so the provider was not reached. After an
+            // answer (an unreadable body), the provider was reached and the kind is unknown.
+            const failure: CatalogFailure = response ? 'other' : 'network';
             if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-                return { success: false, error: opts?.networkErrorHint || 'Network error. Check your internet connection.' };
+                return { success: false, failure, error: opts?.networkErrorHint || 'Network error. Check your internet connection.' };
             }
-            return { success: false, error: `Connection error: ${errorMessage}` };
+            return { success: false, failure, error: `Connection error: ${errorMessage}` };
         }
     }
 

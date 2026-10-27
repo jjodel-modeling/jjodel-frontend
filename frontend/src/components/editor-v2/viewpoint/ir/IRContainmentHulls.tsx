@@ -39,6 +39,8 @@ function IRContainmentHulls({ nodes, model, names }: IRContainmentHullsProps) {
 
     const hulls: HullRect[] = [];
     for (const [objectId, info] of model.containers) {
+        // A container that declares a layout (R-GV-5) is its own frame, header band included: no hull around it.
+        if (info.layout) continue;
         const containerNode = byId.get(info.vertexId);
         if (!containerNode || containerNode.hidden) continue;
         // Collapsed containers draw no hull

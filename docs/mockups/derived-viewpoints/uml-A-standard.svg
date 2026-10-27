@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;fill:#0f172a}
+.sm{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:500;fill:#0f172a}
+.eb{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;fill:#64748b}
+.at{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#64748b}
+.rw{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#0f172a}
+.it{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;font-style:italic;fill:#0f172a}
+.mk{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:600;fill:#0f172a}
+.mk0{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:500;fill:#94a3b8}
+</style><marker id="hua" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker><marker id="iua" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></marker><marker id="oua" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 1 L9 5 L0 9" fill="none" stroke="#334155" stroke-width="1.3" stroke-linejoin="round"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 264 126 L 419 126"/>
+<path d="M 410 360 V 280 H 630 V 360"/>
+<path d="M 520 280 V 209"/>
+<path d="M 800 126 L 621 126" marker-end="url(#oua)"/>
+</g>
+<rect x="60" y="80" width="180" height="92" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="nm" x="150" y="101" text-anchor="middle">Library</text>
+<line x1="60" y1="112" x2="240" y2="112" stroke="#334155" stroke-width="1"/>
+<text class="rw" x="70" y="132">- name : String</text>
+<line x1="60" y1="142" x2="240" y2="142" stroke="#334155" stroke-width="1"/>
+<text class="rw" x="70" y="162">+ count() : Integer</text>
+<rect x="420" y="80" width="200" height="114" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="it" x="520" y="101" text-anchor="middle">Item</text>
+<line x1="420" y1="112" x2="620" y2="112" stroke="#334155" stroke-width="1"/>
+<text class="rw" x="430" y="132">- title : String</text>
+<text class="rw" x="430" y="154">- year : Integer</text>
+<line x1="420" y1="164" x2="620" y2="164" stroke="#334155" stroke-width="1"/>
+<text class="rw" x="430" y="184">+ isAvailable() : Boolean</text>
+<rect x="800" y="80" width="180" height="92" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="nm" x="890" y="101" text-anchor="middle">Member</text>
+<line x1="800" y1="112" x2="980" y2="112" stroke="#334155" stroke-width="1"/>
+<text class="rw" x="810" y="132">- name : String</text>
+<line x1="800" y1="142" x2="980" y2="142" stroke="#334155" stroke-width="1"/>
+<text class="rw" x="810" y="162">+ borrow(i : Item)</text>
+<rect x="320" y="360" width="180" height="72" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="nm" x="410" y="381" text-anchor="middle">Book</text>
+<line x1="320" y1="392" x2="500" y2="392" stroke="#334155" stroke-width="1"/>
+<text class="rw" x="330" y="412">- isbn : String</text>
+<line x1="320" y1="422" x2="500" y2="422" stroke="#334155" stroke-width="1"/>
+<rect x="540" y="360" width="180" height="72" rx="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<text class="nm" x="630" y="381" text-anchor="middle">DVD</text>
+<line x1="540" y1="392" x2="720" y2="392" stroke="#334155" stroke-width="1"/>
+<text class="rw" x="550" y="412">- minutes : Integer</text>
+<line x1="540" y1="422" x2="720" y2="422" stroke="#334155" stroke-width="1"/>
+<polygon points="240,126 252,120 264,126 252,132" fill="#334155" stroke="#334155" stroke-width="1.5" stroke-linejoin="round"/>
+<polygon points="520,194 511,209 529,209" fill="#ffffff" stroke="#334155" stroke-width="1.5" stroke-linejoin="round"/>
+<text class="lbl" x="256" y="116" text-anchor="start">1</text>
+<text class="lbl" x="404" y="116" text-anchor="end">0..*</text>
+<text class="lbl" x="404" y="144" text-anchor="end">items</text>
+<text class="lbl" x="636" y="116" text-anchor="start">0..3</text>
+<text class="lbl" x="784" y="116" text-anchor="end">0..1</text>
+<text class="lbl" x="710" y="144" text-anchor="middle">borrows</text>
+</svg>

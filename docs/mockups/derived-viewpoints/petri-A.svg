@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" style="position: absolute; left: 0; top: 0">
+<defs><style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#0f172a}
+.grid{background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px);background-size:16px 16px}
+.lbl{font-family:Inter,system-ui,sans-serif;font-size:12px;font-weight:500;fill:#475569;paint-order:stroke;stroke:#ffffff;stroke-width:4px;stroke-linejoin:round}
+.nm{font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:600;fill:#0f172a}
+.sm{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:500;fill:#0f172a}
+.eb{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;fill:#64748b}
+.at{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:#64748b}
+.mk{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:600;fill:#0f172a}
+.mk0{font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:500;fill:#94a3b8}
+</style><marker id="hpa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1 L9 5 L0 9 Z" fill="#334155"/></marker><marker id="ipa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><circle cx="5" cy="5" r="4" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></marker></defs>
+<g fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 182 180 L 284 180" marker-end="url(#hpa)"/>
+<path d="M 296 180 L 397 180" marker-end="url(#hpa)"/>
+<path d="M 442 180 L 544 180" marker-end="url(#hpa)"/>
+<path d="M 550 157 C 550 80, 160 80, 160 157" marker-end="url(#hpa)"/>
+<path d="M 550 203 L 550 317" marker-end="url(#hpa)"/>
+<path d="M 572 340 L 787 340" marker-end="url(#hpa)"/>
+<path d="M 810 202 L 810 334" marker-end="url(#hpa)"/>
+<path d="M 810 346 L 810 437" marker-end="url(#hpa)"/>
+<path d="M 832 460 Q 940 460 940 343" marker-end="url(#hpa)"/>
+<path d="M 940 297 Q 940 180 833 180" marker-end="url(#hpa)"/>
+<path d="M 528 344 Q 290 344 290 204" marker-end="url(#ipa)"/>
+</g>
+<circle cx="160" cy="180" r="22" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="420" cy="180" r="22" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="550" cy="340" r="22" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="810" cy="180" r="22" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="810" cy="460" r="22" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+<circle cx="160" cy="180" r="4" fill="#334155"/>
+<circle cx="543" cy="340" r="4" fill="#334155"/>
+<circle cx="557" cy="340" r="4" fill="#334155"/>
+<circle cx="810" cy="180" r="4" fill="#334155"/>
+<rect x="285" y="158" width="10" height="44" fill="#334155"/>
+<rect x="545" y="158" width="10" height="44" fill="#334155"/>
+<rect x="788" y="335" width="44" height="10" fill="#334155"/>
+<rect x="935" y="298" width="10" height="44" fill="#334155"/>
+<text class="sm" x="160" y="222" text-anchor="middle">ready</text>
+<text class="sm" x="420" y="222" text-anchor="middle">wait</text>
+<text class="sm" x="550" y="384" text-anchor="middle">buffer</text>
+<text class="sm" x="810" y="148" text-anchor="middle">idle</text>
+<text class="sm" x="810" y="502" text-anchor="middle">using</text>
+<text class="lbl" x="290" y="146" text-anchor="middle">produce</text>
+<text class="lbl" x="563" y="176" text-anchor="start">deliver</text>
+<text class="lbl" x="842" y="344" text-anchor="start">consume</text>
+<text class="lbl" x="953" y="324" text-anchor="start">release</text>
+<text class="lbl" x="680" y="330" text-anchor="middle">2</text>
+<text class="lbl" x="368" y="316" text-anchor="middle">3</text>
+</svg>

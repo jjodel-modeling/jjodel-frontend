@@ -18,14 +18,3 @@
   margin-top: 2px;
   color: var(--color-slate-400);
 }
-
-/* Dark mode support */
-html[data-theme="dark"] {
-  .helpText {
-    color: var(--color-text-secondary);
-  }
-
-  .helpText i {
-    color: var(--color-text-placeholder);
-  }
-}

@@ -3,7 +3,8 @@
  * Tokenizes JjScript input into a stream of tokens
  */
 
-import { Token, TokenType, COMMANDS, ELEMENT_TYPES, KEYWORDS } from '../types';
+import { Token, TokenType } from '../types';
+import { JJSCRIPT_COMMAND_SET, JJSCRIPT_ELEMENT_TYPE_SET, JJSCRIPT_KEYWORD_SET } from '../reservedIdentifiers';
 
 // ============================================
 // LEXER CLASS
@@ -367,14 +368,17 @@ export class Lexer {
         // "Attribute" (PascalCase) → identifier (class name)
         // This allows class names like "Attribute", "Class", "Reference" etc.
 
+        // The word lists live in `reservedIdentifiers.ts` (P-2026-10-10-0045); `Set.has` is the
+        // exact match `Array.includes` was.
+
         // Commands (case-sensitive: only lowercase)
-        if (COMMANDS.includes(value as any)) {
+        if (JJSCRIPT_COMMAND_SET.has(value)) {
             return 'COMMAND';
         }
 
         // Element types (case-sensitive: only lowercase)
         // Handles: class, attribute, reference, etc.
-        if (ELEMENT_TYPES.includes(value as any)) {
+        if (JJSCRIPT_ELEMENT_TYPE_SET.has(value)) {
             return 'KEYWORD';
         }
 
@@ -385,7 +389,7 @@ export class Lexer {
 
         // Keywords (case-sensitive: only lowercase)
         // Handles: to, from, in, type, extends, etc.
-        if (KEYWORDS.includes(value)) {
+        if (JJSCRIPT_KEYWORD_SET.has(value)) {
             return 'KEYWORD';
         }
 

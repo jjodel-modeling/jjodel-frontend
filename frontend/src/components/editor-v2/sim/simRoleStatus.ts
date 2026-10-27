@@ -8,12 +8,15 @@
  */
 
 import { STATE_ATTRIBUTES_KEY, stateAttributeRows } from '../../../model/simulation/stateAttributesCodec';
-import { ROLE_CATALOG, roleDescriptor } from '../../../model/simulation/roleCatalog';
+import type { StateAttributeRecord } from '../../../model/simulation/stateAttributesCodec';
+import { ROLE_CATALOG, roleDescriptor, roleValues } from '../../../model/simulation/roleCatalog';
 import type { RoleId } from '../../../model/simulation/roleCatalog';
-import { checkability } from '../../../model/simulation/simProfiles';
-import type { RequiredItem, SimProfile, SystemProfileId } from '../../../model/simulation/simProfiles';
+import { checkability, systemProfile } from '../../../model/simulation/simProfiles';
+import type { Checkability, CheckabilityStatus, RequiredItem, SimProfile, SystemProfileId } from '../../../model/simulation/simProfiles';
 import { decodeProfile, encodeProfile, inferCustomProfile } from '../../../model/simulation/profileCodec';
-import type { ProfileBindings } from '../../../model/simulation/profileBinder';
+import { bindProfile } from '../../../model/simulation/profileBinder';
+import type { MetamodelSketch, ProfileBindings } from '../../../model/simulation/profileBinder';
+import { bindingVerdicts, currentVerdicts } from '../../../model/simulation/bindingCompat';
 import { overlapVerdict } from '../../../model/simulation/stcFromRoles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import { withDerivedEventRole } from '../../../model/simulation/netCompile';
@@ -30,6 +33,7 @@ export type RoleKey =
     | 'simInitialMarking'
     | 'simTerminal'
     | 'simActivityFinal'
+    | 'simAccepting'
     | 'simBound'
     | 'simTransition'
     | 'simGuard'
@@ -48,7 +52,9 @@ export type RoleKey =
     | 'simInhibitorArc'
     | 'simEvent'
     | 'simTrigger'
-    | 'simEventIdentifier';
+    | 'simEventIdentifier'
+    | 'simStateOutput'
+    | 'simTransitionOutput';
 
 /**
  * `number`: a value, not a pointer; written as a digit string (`simBound`, R-SIM-37).
@@ -72,6 +78,8 @@ export const ROLE_SPECS: RoleSpec[] = [
     { key: 'simTerminal', label: 'Terminal', kind: 'class', placeholder: 'Select a metaclass' },
     // R-SIM-53, which the engine reads from lane E1 on: a row, so a key left by a Flowchart Apply is seen and cleared (G6).
     { key: 'simActivityFinal', label: 'Activity final', kind: 'class', placeholder: 'Select a metaclass' },
+    // R-SIM-50, read by the engine since lane S4 (R-SIM-91): a row, so the Reset overlap check sees it (R-SIM-16).
+    { key: 'simAccepting', label: 'Accepting', kind: 'class', placeholder: 'Select a metaclass' },
     { key: 'simBound', label: 'Bound', kind: 'number', placeholder: '1' },
     { key: 'simTransition', label: 'Transition', kind: 'class', placeholder: 'Select a metaclass' },
     // The Data group (R-SIM-52, R-SIM-69): the guard, and the `Action [0..*]` features by site role.
@@ -97,6 +105,9 @@ export const ROLE_SPECS: RoleSpec[] = [
     { key: 'simEvent', label: 'Event', kind: 'class', placeholder: 'Select a metaclass' },
     { key: 'simTrigger', label: 'Trigger', kind: 'reference', placeholder: 'Select a reference' },
     { key: 'simEventIdentifier', label: 'Event identifier', kind: 'attribute', placeholder: 'name (default)' },
+    // The role-bound outputs (R-SIM-51, R-SIM-92): Moore's of the marked state, Mealy's of the fired transition.
+    { key: 'simStateOutput', label: 'State output', kind: 'attribute', placeholder: 'Select an attribute' },
+    { key: 'simTransitionOutput', label: 'Transition output', kind: 'attribute', placeholder: 'Select an attribute' },
 ];
 
 /**
@@ -182,16 +193,33 @@ export function eventRoleWarning(missing: readonly string[], metamodelName: stri
     return `Events disabled. Missing${where}: ${missing.join(', ')}.`;
 }
 
+/**
+ * The warning line of a stored `simEvent` the run ignores (S7, R-SIM-38): the
+ * event class is always the Trigger's declared type, derived on every read, so
+ * a `simEvent` left over from before that rule is never used. `null` when there
+ * is nothing to warn about: no stored value, no derived class (no Trigger
+ * bound), or the two already agree. `nameOf` resolves a class pointer the way
+ * the panel already does (name, falling back to the id).
+ */
+export function staleEventWarning(stored: string | undefined, derived: string | undefined, nameOf: (id: string) => string): string | null {
+    if (!stored || !derived || stored === derived) return null;
+    return `Stored event class ${nameOf(stored)} is ignored: the run uses ${nameOf(derived)}, the Trigger's type.`;
+}
+
 // ---------------------------------------------------------------------------
 // The profile row of the M2 face (R-SIM-77..79)
 // ---------------------------------------------------------------------------
 
 /**
- * The presets the panel lists, in the order of the memo table (R-SIM-79, A2).
- * DFA, NFA, Moore and Mealy stay hidden until R-SIM-50 and R-SIM-51 are in the
- * engine: nothing reads Accepting or the outputs yet.
+ * The presets the panel's Profile select and the dialog's header select list,
+ * in the order of the memo table (R-SIM-79, A2): the eight system profiles.
+ * DFA, NFA, Moore and Mealy come last, since the engine reads Accepting and the
+ * outputs (R-SIM-91, R-SIM-92) and before the freeze (R-SIM-95). The first-open
+ * picker of the dialog keeps its own shorter list (SimRolesModal.tsx `KINDS`).
  */
-export const PANEL_PROFILE_IDS: readonly SystemProfileId[] = ['petri', 'flowchart', 'stateMachine', 'extendedStateMachine'];
+export const PANEL_PROFILE_IDS: readonly SystemProfileId[] = [
+    'petri', 'flowchart', 'stateMachine', 'extendedStateMachine', 'dfa', 'nfa', 'moore', 'mealy',
+];
 
 /** The `simProfile` key of the bag (R-SIM-55). */
 export const PROFILE_KEY = 'simProfile';
@@ -218,6 +246,131 @@ export function storedProfile(bag: Readonly<Record<string, unknown>>): StoredPro
         : { profile: inferCustomProfile(bag).profile, custom: true, readable: false };
 }
 
+// ---------------------------------------------------------------------------
+// The Semantic type and the gate of the pill (P-2026-09-29-1106, R-SIM-97)
+// ---------------------------------------------------------------------------
+
+/**
+ * A bag has a «Semantic type» when its `simProfile` is set: not undefined, null
+ * or '', the first test of `storedProfile` and of `isFirstOpen`. An unreadable
+ * value (D6) and a user profile count as set, so the panel's «not readable»
+ * line stays reachable.
+ */
+export function hasSemanticType(bag: Readonly<Record<string, unknown>> | null | undefined): boolean {
+    const raw = bag?.[PROFILE_KEY];
+    return raw !== undefined && raw !== null && raw !== '';
+}
+
+/** The `simEnabled` key of the metamodel's bag: the Simulation toggle of the Semantic Type Class section (R-SIM-99). */
+export const SIM_ENABLED_KEY = 'simEnabled';
+
+/**
+ * The Simulation toggle of a metamodel's bag (P-2026-09-29-1225, R-SIM-99):
+ * `simEnabled` when it is a boolean; otherwise, a bag saved under R-SIM-97 with
+ * no toggle, on when it has a Semantic type (`simEnabled ?? !!simProfile`), so a
+ * project saved then keeps its pill. `false` wins over a Semantic type.
+ */
+export function simulationEnabled(bag: Readonly<Record<string, unknown>> | null | undefined): boolean {
+    const raw = bag?.[SIM_ENABLED_KEY];
+    return typeof raw === 'boolean' ? raw : hasSemanticType(bag);
+}
+
+/**
+ * The write of the toggle: one `state` assignment, so one TRANSACTION and one
+ * undo step (`set_state`, joiner/classes.ts), `simEnabled` alone. Off writes
+ * `false` rather than removing the key: the undo of a removed `_state` key does
+ * not restore it (the ticket of P-2026-09-29-1106), and a removed key would
+ * fall back to the legacy rule.
+ */
+export function simEnabledPatch(on: boolean): { simEnabled: boolean } {
+    return { simEnabled: on };
+}
+
+/**
+ * The Simulation pill is mounted only in Advanced mode (Redux `state.advanced`)
+ * and when the metamodel's Simulation toggle is on (R-SIM-99, amending
+ * R-SIM-97, which gated on the Semantic type): the M2 itself, or the
+ * `instanceof` of an M1, the bag the panel reads (SimulationPanel.tsx
+ * `mapStateToProps`). Read once, at the mount site in EditorV2.tsx, so
+ * unmounting clears a run (the panel's cleanup, `simClear`).
+ */
+export function simPillVisible(
+    advanced: boolean, lookup: Readonly<Record<string, any>>, modelid: string, isModelMode: boolean,
+): boolean {
+    if (!advanced) return false;
+    const dModel = lookup[modelid];
+    const configModelId: string | null = isModelMode
+        ? (typeof dModel?.instanceof === 'string' ? dModel.instanceof : null)
+        : (dModel ? modelid : null);
+    return configModelId !== null && simulationEnabled(lookup[configModelId]?._state);
+}
+
+// TODO: cleanup — the Semantic type field left the Properties with R-SIM-99 (P-2026-09-29-1225): the three helpers
+// below have no reader in the app, only their tests.
+
+/** The options of the Semantic type field after None: the panel's presets, in its order and with its names. */
+export const SEMANTIC_TYPE_OPTIONS: ReadonlyArray<{ readonly value: SystemProfileId; readonly label: string }> =
+    PANEL_PROFILE_IDS.map(id => ({ value: id, label: systemProfile(id)?.name ?? id }));
+
+/**
+ * What the field shows for a stored `simProfile`: `null` for None; a preset of
+ * the list; otherwise (a user profile, an unreadable value) the name the
+ * panel's Profile select shows, as a current option off the list.
+ */
+export function semanticTypeCurrent(raw: unknown): { value: string; label: string; listed: boolean } | null {
+    const bag = { [PROFILE_KEY]: raw };
+    if (!hasSemanticType(bag)) return null;
+    const preset = SEMANTIC_TYPE_OPTIONS.find(o => o.value === raw);
+    return preset ? { ...preset, listed: true } : { value: String(raw), label: storedProfile(bag).profile.name, listed: false };
+}
+
+/**
+ * The write of the field: one `state` assignment, so one TRANSACTION and one
+ * undo step (`set_state`, joiner/classes.ts), the key the panel's and the
+ * dialog's Apply write. None (`null`) removes `simProfile` alone and keeps the
+ * role keys (D3), so choosing the preset again restores the bag.
+ */
+export function semanticTypePatch(id: SystemProfileId | null): { simProfile: string | undefined } {
+    return { simProfile: id ?? undefined };
+}
+
+/**
+ * The bindings a profile proposes from: the binder over the metamodel sketch,
+ * for every profile but «Custom», which nothing is bound against (D7 of the
+ * profiles lane). A user profile is bound as its preset (S11c). The panel and
+ * the dialog read this one rule (P-2026-09-28-0140). `bag`, when given, is the
+ * values already set, so a kept Node or Transition carries into the roles that
+ * depend on it (S6), not the binder's own guess.
+ */
+export function profileBindings(
+    profile: SimProfile, sketch: MetamodelSketch | null | undefined, bag?: Readonly<Record<string, unknown>>,
+): ProfileBindings | null {
+    return profile.id !== CUSTOM_ID && sketch ? bindProfile(profile, sketch, bag) : null;
+}
+
+/** The id `inferCustomProfile` gives «Custom» (profileCodec.ts). */
+const CUSTOM_ID = 'custom';
+
+/**
+ * The verdict of a bag as Apply leaves it: `checkability` with the S11a
+ * verdicts of its bound values (R-SIM-48; bindingCompat.ts), so a warning
+ * reads «with warnings» and an incompatible value «Not checkable». Without a
+ * sketch, no verdicts: the reading before S11a. The panel's badge and the
+ * dialog's pill read this one function (P-2026-09-28-0140).
+ */
+export function profileVerdict(
+    profile: SimProfile, after: Readonly<Record<string, unknown>>, sketch: MetamodelSketch | null | undefined,
+): Checkability {
+    return checkability(profile, after, sketch ? currentVerdicts(bindingVerdicts(profile, after, sketch)) : undefined);
+}
+
+/** The words of a verdict, the badge's and the pill's. */
+export const VERDICT_LABEL = {
+    checkable: 'Checkable',
+    warnings: 'Checkable with warnings',
+    notCheckable: 'Not checkable',
+} as const satisfies Readonly<Record<CheckabilityStatus, string>>;
+
 export interface ProfileProposal {
     readonly role: RoleId; readonly key: string; readonly label: string; readonly value: string;
     /** Why, for a proposal that is not the binder's: the Bound (R-SIM-81). */
@@ -228,8 +381,12 @@ export interface ProfileKept { readonly role: RoleId; readonly key: string; read
 
 export interface ProfileSummary {
     readonly name: string;
-    /** `checkability` on the bag as Apply leaves it, with no verdicts: never «with warnings» (D5). */
-    readonly status: 'checkable' | 'notCheckable';
+    /**
+     * `profileVerdict` on the bag as Apply leaves it: with a sketch, the S11a
+     * verdicts count, the dialog's pill (P-2026-09-28-0140; D5's «never with
+     * warnings» held until the compatibility check existed).
+     */
+    readonly status: CheckabilityStatus;
     /** The required items still missing, as labels; an either-item reads «A or B». */
     readonly missing: readonly string[];
     /** What Apply writes: the bound values of the unset keys of `edit` roles, in catalog order. */
@@ -351,17 +508,21 @@ const ACTION_KEYS: readonly RoleKey[] = ['simAction', 'simEntry', 'simExit'];
  * `largestMarking` is the source of the Bound proposal (R-SIM-81): the panel
  * passes `boundEstimate` over `boundProposalBag` (modelMarkings.ts, G12(b)); a
  * number is `largestInitialMarking` alone, the reading before the amendment.
+ * `sketch`, when given, lets the S11a verdicts into the status (`profileVerdict`).
  */
 export function profileSummary(
     profile: SimProfile,
     bag: Readonly<Record<string, unknown>>,
     bindings: ProfileBindings | null,
     largestMarking?: number | BoundEstimate | null,
+    sketch?: MetamodelSketch | null,
 ): ProfileSummary {
     const proposals = bindings ? proposalsOf(profile, bag, bindings, largestMarking) : [];
     const after: Record<string, unknown> = { ...bag };
     for (const p of proposals) after[p.key] = p.value;
-    const verdict = checkability(profile, after);
+    const verdict = profileVerdict(profile, after, sketch);
+    // Unreadable (D6) shows nothing, not the hint for an empty declaration (S8).
+    const stateRows = stateAttributeRows(isSetKey(after, STATE_ATTRIBUTES_KEY) ? after[STATE_ATTRIBUTES_KEY] as string : undefined);
     const choices: ProfileChoice[] = [];
     const kept: ProfileKept[] = [];
     const setButOff: string[] = [];
@@ -375,28 +536,36 @@ export function profileSummary(
         const b = bindings?.[d.id];
         if (mode !== 'edit' || !b) continue;
         if (b.status === 'candidates' && !isSetKey(bag, d.key)) choices.push({ role: d.id, key: d.key, label: d.label, values: b.values });
-        if (b.status === 'bound' && isSetKey(bag, d.key) && bag[d.key] !== b.value) {
-            kept.push({ role: d.id, key: d.key, label: d.label, value: bag[d.key] as string, proposed: b.value });
+        if (b.status === 'bound' && isSetKey(bag, d.key)) {
+            // R-SIM-90: a list is kept unless it is the binder's one attribute.
+            const stored = keptValues(d.id, bag[d.key] as string);
+            if (!(stored.length === 1 && stored[0] === b.value)) {
+                kept.push({ role: d.id, key: d.key, label: d.label, value: bag[d.key] as string, proposed: b.value });
+            }
         }
     }
     return {
         name: profile.name,
-        status: verdict.status === 'notCheckable' ? 'notCheckable' : 'checkable',
+        status: verdict.status,
         missing: verdict.missing.map(itemLabel),
         proposals,
         choices,
         kept,
         setButOff,
         pending: bindings !== null && (proposals.length > 0 || bag[PROFILE_KEY] !== encodeProfile(profile)),
-        declareHint: ACTION_KEYS.some(k => isSetKey(after, k))
-            && stateAttributeRows(isSetKey(after, STATE_ATTRIBUTES_KEY) ? after[STATE_ATTRIBUTES_KEY] as string : undefined).rows.length === 0,
+        declareHint: ACTION_KEYS.some(k => isSetKey(after, k)) && stateRows.readable && stateRows.rows.length === 0,
     };
+}
+
+/** The elements of a kept value: every attribute of a `multi` role (R-SIM-90), else the value itself. */
+function keptValues(role: RoleId, value: string): string[] {
+    return roleDescriptor(role).multi ? roleValues(value) : [value];
 }
 
 export interface ProfileSummaryText {
     /** «State machine · Checkable», «… after Apply» while something is pending. */
     readonly status: string;
-    readonly badge: 'Checkable' | 'Not checkable';
+    readonly badge: 'Checkable' | 'Checkable with warnings' | 'Not checkable';
     readonly missing: string | null;
     /** «Not checkable: choose …» (R-SIM-77): the roles left to the user, with their candidates. */
     readonly choose: string | null;
@@ -411,7 +580,7 @@ export interface ProfileSummaryText {
 
 /** The text of the summary; `nameOf` names a class or feature by id. */
 export function profileSummaryText(summary: ProfileSummary, nameOf: (id: string) => string): ProfileSummaryText {
-    const badge = summary.status === 'checkable' ? 'Checkable' : 'Not checkable';
+    const badge = VERDICT_LABEL[summary.status];
     return {
         status: `${summary.name} · ${badge}${summary.pending ? ' after Apply' : ''}`,
         badge,
@@ -421,9 +590,10 @@ export function profileSummaryText(summary: ProfileSummary, nameOf: (id: string)
             : null,
         // A parameter (Bound) is a number, not an element to name.
         proposals: summary.proposals.map(p => `${p.label} → ${roleDescriptor(p.role).kind === 'int' ? p.value : nameOf(p.value)}`),
-        kept: summary.kept.length > 0 ? `Kept: ${summary.kept.map(k => `${k.label} (${nameOf(k.value)})`).join(', ')}.` : null,
+        kept: summary.kept.length > 0 ? `Kept: ${summary.kept.map(k => `${k.label} (${keptValues(k.role, k.value).map(nameOf).join(', ')})`).join(', ')}.` : null,
         setButOff: summary.setButOff.length > 0 ? `Set but off: ${summary.setButOff.join(', ')}.` : null,
-        declare: summary.declareHint ? 'Declare the state attributes the actions write:' : null,
+        // R-SIM-94: the metamodel cannot see its models' declarations, so the hint says where a global goes.
+        declare: summary.declareHint ? "Declare the state attributes the actions write (a model's globals go in its State…):" : null,
     };
 }
 
@@ -453,4 +623,44 @@ export function profilePatch(
     const verdict = overlapVerdict(lookup, withDerivedEventRole({ ...bag, ...patch }, lookup), classIds);
     if (verdict?.refuse) return { kind: 'refused', overlap: verdict.overlap };
     return { kind: 'write', patch, overlap: verdict?.overlap ?? null };
+}
+
+// ---------------------------------------------------------------------------
+// The State page of the roles dialog and of the model's dialog (R-SIM-103)
+// ---------------------------------------------------------------------------
+
+/** One group of a column: the rows of one owner, by index into the table; `metaclass` `null` for the model's own. */
+export interface StateGroup {
+    readonly metaclass: string | null;
+    readonly rows: readonly number[];
+}
+
+/** The two columns: abstract (semantic, σ) and concrete (presentation, `node`), never mixed (R-SIM-102). */
+export interface StateColumns {
+    readonly abstract: readonly StateGroup[];
+    readonly concrete: readonly StateGroup[];
+}
+
+/**
+ * The rows of the table in two columns, each with the model's own group first
+ * (the globals `model`), then one group per metaclass in the order its first
+ * row appears; rows by their index, so a row keeps its number («state
+ * attribute n») wherever it is drawn. A group exists only with a row.
+ */
+export function stateColumns(rows: readonly Pick<StateAttributeRecord, 'metaclass' | 'space'>[]): StateColumns {
+    const column = (space: 'semantic' | 'presentation'): StateGroup[] => {
+        const groups = new Map<string | null, number[]>();
+        rows.forEach((r, i) => {
+            if ((r.space === 'presentation') !== (space === 'presentation')) return;
+            const list = groups.get(r.metaclass) ?? [];
+            if (list.length === 0) groups.set(r.metaclass, list);
+            list.push(i);
+        });
+        const own = groups.get(null);
+        return [
+            ...(own ? [{ metaclass: null, rows: own }] : []),
+            ...[...groups].filter(([m]) => m !== null).map(([metaclass, list]) => ({ metaclass, rows: list })),
+        ];
+    };
+    return { abstract: column('semantic'), concrete: column('presentation') };
 }

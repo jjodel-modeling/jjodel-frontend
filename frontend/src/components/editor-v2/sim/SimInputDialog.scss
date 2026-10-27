@@ -1,0 +1,49 @@
+// SimInputDialog — the values of the inputs a press reads (R-SIM-88; P-2026-09-28-0034).
+//
+// The shell is the Simulation roles dialog's: the root carries `.sim-roles-modal`
+// and every header, body, footer and button class of SimRolesModal.scss. Only the
+// size and the rows are its own: 400 wide, as tall as its rows, the body scrolling
+// past six of them. Design-system tokens only; no variable is DEFINED here (Rule 28).
+
+.sim-roles-modal.sim-input-dialog {
+    width: 400px;
+    height: auto;
+
+    .sim-roles-modal__body {
+        max-height: 256px;
+        padding: 8px 24px;
+    }
+
+    .sim-input-dialog__row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 168px;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 4px 0;
+    }
+
+    .sim-input-dialog__label {
+        overflow: hidden;
+        font-family: var(--font-mono, monospace);
+        font-size: 12px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        color: var(--color-text-primary);
+    }
+
+    .sim-input-dialog__chips {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+
+        .sim-roles-modal__chip {
+            text-align: center;
+        }
+    }
+
+    .sim-input-dialog__number {
+        font-family: var(--font-mono, monospace);
+        font-size: 12px;
+    }
+}

@@ -3,6 +3,8 @@
  * Manages variable bindings and scope during expression evaluation
  */
 
+import type { ASTLocation, JjelExpression } from '../types/ast';
+
 // ============================================
 // VALUE TYPES
 // ============================================
@@ -17,7 +19,30 @@ export type JjelValue =
     | string
     | JjelValue[]
     | JjelObject
-    | JjelFunction;
+    | JjelFunction
+    | JjelBitVector;
+
+/**
+ * Fixed-width two-state bit-vector (R-BV). `bits` is canonical unsigned,
+ * 0 <= bits < 2^width; `signed` is an interpretation used by comparisons,
+ * `sext`, `ashr`, `toNumber` and printing. Built only by `bits`/`sbits` and
+ * the operations of `builtins/bitvectors.ts`; it never enters the D-layer.
+ */
+export interface JjelBitVector {
+    readonly __type: 'BitVector';
+    readonly width: number;
+    readonly signed: boolean;
+    readonly bits: bigint;
+}
+
+/**
+ * Shape check, so a structured-cloned vector (no prototype) still counts.
+ */
+export function isBitVector(value: unknown): value is JjelBitVector {
+    return value !== null && typeof value === 'object'
+        && (value as { __type?: unknown }).__type === 'BitVector'
+        && typeof (value as { bits?: unknown }).bits === 'bigint';
+}
 
 /**
  * Object with properties (e.g., model elements)
@@ -40,7 +65,8 @@ export function isJjelFunction(value: JjelValue): value is JjelFunction {
 }
 
 export function isJjelObject(value: JjelValue): value is JjelObject {
-    return value !== null && typeof value === 'object' && !Array.isArray(value) && !isJjelFunction(value);
+    return value !== null && typeof value === 'object' && !Array.isArray(value) && !isJjelFunction(value)
+        && !isBitVector(value);
 }
 
 // ============================================
@@ -118,6 +144,8 @@ export class TypeRegistry {
                 return Array.isArray(value);
             case 'Object':
                 return isJjelObject(value);
+            case 'BitVector':
+                return isBitVector(value);
             case 'Null':
                 return value === null;
             default:
@@ -246,6 +274,58 @@ export interface JjelStateAccess {
     readPresentation(attr: string): JjelValue | undefined;
 }
 
+/**
+ * One part of an interpolated string as a `JjelTextHost` receives it
+ * (R-GEN-10): the literal text between holes, unescaped, or a hole with its value.
+ */
+export type JjelTextPart =
+    | { kind: 'text'; value: string }
+    | {
+        kind: 'hole';
+        /** What the hole evaluated to, through `evaluateHole` when the host has it. */
+        value: JjelValue;
+        /** The hole's expression, its locations absolute in the template's source. */
+        expr: JjelExpression;
+        /** `expr.location`: where the hole's expression sits in the template's source. */
+        location?: ASTLocation;
+        /**
+         * `value` by JjEL's interpolation rules (null is '', an array is its
+         * items joined by ', '); a Text, alone or inside an array, goes through
+         * the host's `stringify`. Lazy: a value nobody renders is never rendered.
+         */
+        render(): string;
+    };
+
+/**
+ * Text values for templates (R-GEN-10). Slice S2 implements it in
+ * `frontend/src/codegen/engine/`; JjEL only consults it, and only from a
+ * context that has it (`EvaluationContext.textHost`):
+ * - an interpolated string: always, through `interpolate`;
+ * - `+`, `join` and the rendering of an interpolation hole: only when a Text is involved.
+ * A Text is whatever `isText` recognises; JjEL never looks inside one.
+ */
+export interface JjelTextHost {
+    /** Whether `value` is a Text of this host. */
+    isText(value: JjelValue): boolean;
+    /**
+     * The value of an interpolated string, built from its parts in source
+     * order; `expr` is the `InterpolatedString` node, with its location.
+     */
+    interpolate(parts: JjelTextPart[], expr: JjelExpression): JjelValue;
+    /** `left + right`, where at least one operand is a Text. */
+    concat(left: JjelValue, right: JjelValue): JjelValue;
+    /** `items.join(separator)`, where an item or the separator is a Text. */
+    join(items: JjelValue[], separator: JjelValue): JjelValue;
+    /** A Text as a plain string, where an interpolation hole renders one. */
+    stringify(text: JjelValue): string;
+    /**
+     * Optional: runs around the evaluation of each hole, in source order, and
+     * returns the hole's value. Lets the host tell the reads of one hole from
+     * the next and turn a hole that throws into a value. Absent: `evaluate()`.
+     */
+    evaluateHole?(expr: JjelExpression, evaluate: () => JjelValue): JjelValue;
+}
+
 // ============================================
 // EVALUATION CONTEXT
 // ============================================
@@ -276,6 +356,25 @@ export class EvaluationContext {
      * `.[a]` throws. Inherited by children, like `diagnostics`.
      */
     stateAccess?: JjelStateAccess;
+    /**
+     * Text values for templates (R-GEN-10). `undefined`: an interpolation is a
+     * plain string and `+`, `join` take their usual path. Set only by the code
+     * generator. Inherited by children, like `stateAccess`.
+     */
+    textHost?: JjelTextHost;
+    /**
+     * Called on every member read that finds its property, `o.p` and the dual
+     * form `o.p()`, with the value read (R-GEN-10). A missing property calls
+     * nothing. Set only by the code generator. Inherited by children, like `stateAccess`.
+     */
+    readObserver?: (target: JjelObject, property: string, value: JjelValue) => void;
+    /**
+     * Optional time bound (R-JJD-3), an absolute `Date.now()` value in ms.
+     * `JjelEvaluator.evaluate` throws `JjelTimeoutError` once the clock is
+     * past it. `undefined`: no bound, no clock read. Inherited by children,
+     * like `stateAccess`.
+     */
+    deadline?: number;
 
     constructor(
         initialBindings?: Record<string, JjelValue>,
@@ -354,6 +453,11 @@ export class EvaluationContext {
         child.ambiguousInstances = this.ambiguousInstances;
         // Propagate the state hook so `.[a]` reads inside forall/lambda scopes.
         child.stateAccess = this.stateAccess;
+        // Propagate the template hooks so lambdas and forall see them (R-GEN-10).
+        child.textHost = this.textHost;
+        child.readObserver = this.readObserver;
+        // Propagate the time bound so lambdas and forall bodies stop too (R-JJD-3).
+        child.deadline = this.deadline;
         child.pushScope();
 
         if (bindings) {
@@ -434,6 +538,7 @@ export function toJjelValue(value: unknown): JjelValue {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') return value;
     if (Array.isArray(value)) return value.map(toJjelValue);
+    if (isBitVector(value)) return value;
     if (typeof value === 'object') {
         const result: JjelObject = {};
         for (const [k, v] of Object.entries(value)) {
@@ -454,6 +559,7 @@ export function fromJjelValue(value: JjelValue): unknown {
     if (typeof value === 'string') return value;
     if (Array.isArray(value)) return value.map(fromJjelValue);
     if (isJjelFunction(value)) return undefined; // Functions don't convert
+    if (isBitVector(value)) return value;
     if (isJjelObject(value)) {
         const result: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(value)) {

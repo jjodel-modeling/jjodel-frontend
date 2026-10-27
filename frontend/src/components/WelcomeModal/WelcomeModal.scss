@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10001; // above the minimized Jodie button (Jodie/JodieWindow.css, z-index 10000)
   padding: 20px;
   animation: wm-fadeIn 0.22s ease;
 }
@@ -18,7 +18,7 @@
 
 .wm-modal {
   width: 100%;
-  max-width: 680px;
+  max-width: 760px;
   border-radius: 16px;
   overflow: hidden;
   box-shadow:
@@ -26,7 +26,7 @@
     0 24px 64px rgba(0, 0, 0, 0.24),
     0 0 0 1px rgba(0, 0, 0, 0.09);
   animation: wm-slideUp 0.34s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 92vh;
+  max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
 }
@@ -169,6 +169,11 @@
 
     .wm-featured-arrow { color: #6b7280; transform: translateX(2px); }
   }
+
+  &--static {
+    cursor: default;
+    &:hover { border-color: #e5e7eb; box-shadow: none; }
+  }
 }
 
 .wm-featured-top {
@@ -186,6 +191,7 @@
 
   &--jjtl { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
   &--new  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  &--sim  { background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; }
 }
 
 .wm-featured-arrow {
@@ -204,6 +210,9 @@
 }
 
 // ── MONACO-STYLE CODE BLOCK ───────────────────────────────────────────────────
+// TODO: cleanup. Since the 3.1 screen only .wm-code-wrap and .wm-code-body are
+// used (as the frame of the Petri net); line numbers, scroll and token colours
+// have no consumer.
 
 .wm-code-wrap {
   border: 1px solid #e2e8f0;
@@ -274,6 +283,85 @@
 .wm-op  { color: #64748b; }
 .wm-lit { color: #15803d; }
 
+// ── PETRI NET ILLUSTRATION (3.1 featured) ─────────────────────────────────────
+
+.wm-petri {
+  flex: 1;
+  display: flex; align-items: center;
+  padding: 7px 16px 19px;
+  line-height: 1;
+}
+
+.wm-petri-place {
+  position: relative;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px #64748b; // a ring, not a border: the label offsets match the transitions'
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.wm-petri-token {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #334155;
+}
+
+.wm-petri-trans {
+  position: relative;
+  width: 7px; height: 24px;
+  border-radius: 1px;
+  background: #cbd5e1;
+  flex-shrink: 0;
+
+  &--enabled {
+    background: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
+  }
+}
+
+.wm-petri-label {
+  position: absolute;
+  top: calc(100% + 4px); left: 50%;
+  transform: translateX(-50%);
+  font-size: 9.5px; color: #64748b;
+  white-space: nowrap;
+}
+
+.wm-petri-arc {
+  position: relative;
+  width: 30px; height: 1.5px;
+  margin: 0 3px;
+  background: #94a3b8;
+  flex-shrink: 0;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: -1px; top: 50%;
+    transform: translateY(-50%);
+    border-left: 5px solid #94a3b8;
+    border-top: 3.5px solid transparent;
+    border-bottom: 3.5px solid transparent;
+  }
+}
+
+.wm-petri-state {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: #64748b;
+  white-space: nowrap;
+
+  &::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #16a34a;
+  }
+}
+
 .wm-pills {
   display: flex; gap: 5px; flex-wrap: wrap;
   margin-top: 10px;
@@ -299,6 +387,11 @@
   grid-template-columns: 1fr 1fr;
   gap: 9px;
   margin-bottom: 20px;
+
+  &--three {
+    grid-template-columns: repeat(3, 1fr);
+    margin-bottom: 12px;
+  }
 }
 
 .wm-card {
@@ -353,6 +446,7 @@
   font-size: 12px; color: #6b7280; line-height: 1.5;
 }
 
+// TODO: cleanup. The language list below has no consumer since the 3.1 screen.
 .wm-lang-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .wm-lang-row  { display: flex; align-items: baseline; gap: 7px; }
 
@@ -369,6 +463,28 @@
 }
 
 .wm-lang-desc { font-size: 11.5px; color: #6b7280; line-height: 1.4; }
+
+// ── RECALL OF 3.0 ─────────────────────────────────────────────────────────────
+
+.wm-recall {
+  border-top: 1px solid #f3f4f6;
+  padding: 10px 0 4px;
+}
+
+.wm-recall-label {
+  font-size: 9.5px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: #9ca3af; margin-bottom: 7px;
+}
+
+.wm-recall-items { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.wm-recall-item {
+  font-size: 10px; color: #6b7280;
+  background: #fafafa; border: 1px solid #f1f2f4;
+  padding: 1px 7px; border-radius: 20px;
+  white-space: nowrap;
+}
 
 // ── FOOTER ────────────────────────────────────────────────────────────────────
 

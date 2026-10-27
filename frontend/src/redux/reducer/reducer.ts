@@ -71,6 +71,7 @@ import {SaveManager} from "../../components/topbar/SaveManager";
 import Api from "../../api/api";
 import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
 import {JjodelEvents} from "../../events/registry";
+import { registerSystemViews } from '../../common/defaultViewsRegistry';
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -468,7 +469,9 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                 derivedActions.push(
                     Action.parse(SetRootFieldAction.create(statefoldername, elem.id,'[]', true)));
                 if (!Array.isArray(elem.pointedBy)) elem.pointedBy = [];
-                elem.pointedBy.push(PointedBy.new(statefoldername));
+                // The folder entry is added by the derived pointer action above (`PointedBy.add`, in this batch or at
+                // its end); pushing it here too gave every new element two of them (ticket F8, P-2026-10-24-1350).
+                // elem.pointedBy.push(PointedBy.new(statefoldername));
                 /*if (false && action.isPointer) {
                     if (Array.isArray(action.value)) {
                         const ptr: Pointer[] = action.value;
@@ -502,8 +505,12 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
 
     // destrutturo solo i nodi intermedi e solo la prima volta che li incontro (richiede le azioni ordinate in base al path)
 
+    // The previous action whose copies the next one reuses must be the last one that CHANGED the state: a no-op
+    // returns the state it got and drops its copies, so reusing its path would write into the previous state
+    // (P-2026-10-03-1632: a slot write's no-op `isMirage` made `values.N` land in it, and undo lost the write).
+    let lastApplied: ParsedAction = undefined as any;
     for (let i = 0; i < actions.length; i++) {
-        const prevAction: ParsedAction = actions[i-1];
+        const prevAction: ParsedAction = lastApplied;
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
         // if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
@@ -540,12 +547,17 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             case SetFieldAction.type:
                 let tmp: false | DState = deepCopyButOnlyFollowingPath(newState, action, prevAction, action.value);
                 if (!tmp) return oldState; // rollback due to invalid action in transaction
+                if (tmp !== newState) lastApplied = action;
                 newState = tmp;
                 break;
         }
 
         // and that's all, the reducer is really simple as actions are really simple.
     }
+
+    // A pointedBy parked by this batch (a pointer to an element the batch creates later in path order) is resolved
+    // here, so it lands in this batch's delta and not in the next action's (R-JJD-12, P-2026-10-24-1350).
+    if (PendingPointedByPaths.all.length) newState = PendingPointedByPaths.getSolveableActions2(newState, oldState);
 
     // effetti collaterali, aggiornamento di ridondanze
     newState = updateRedundancies_OBSOLETE(newState, oldState, Action.possibleInconsistencies);
@@ -1103,17 +1115,69 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
     // initialize default views map
     if (typeof Defaults.defaultViewPointsMap[Defaults.Pointer_ViewPointDefault] !== 'object') {
-        for (let k in ret.idlookup) {
-            let e = ret.idlookup[k];
-            if (!e || typeof e !== 'object') continue;
-            let v: DViewElement|DViewPoint = e as any;
-            if (v.className.includes('DViewPoint')) Defaults.defaultViewPointsMap[k] = v;
-            if (v.className.includes('DViewElement')) Defaults.defaultViewsMap[k] = v;
-        }
+        // Only Pointer_View* records: on an in-page open the guard is still open and the state holds user views.
+        registerSystemViews(ret.idlookup as any, Defaults.defaultViewPointsMap, Defaults.defaultViewsMap);
     }
 
     return ret;
 
+}
+
+/**
+ * Undo group (R-JJD-6): the deltas a user pushes between `beginUndoGroup` and `endUndoGroup` become one
+ * undo entry, so one undo reverts a whole script Apply. While the group is open every delta of that user is
+ * pushed as its own entry (no merge into an entry below the mark, no drop, no MAX_HISTORY shift); the end
+ * folds the entries since the mark with `composeUndoDeltas`. A nested begin only counts; an end without a
+ * begin, and a group that pushed fewer than two entries, leave the history as it is.
+ * The caller flushes the pending 300 ms COMMIT before calling end, or its deltas land after the group.
+ */
+let undoGroup: { depth: number; user: Pointer<DUser>; mark: number } | null = null;
+
+export function beginUndoGroup(user: Pointer<DUser> = DUser.current): void {
+    if (undoGroup) { undoGroup.depth++; return; }
+    undoGroup = { depth: 1, user, mark: statehistory[user]?.undoable.length ?? 0 };
+}
+
+export function endUndoGroup(): void {
+    if (!undoGroup || --undoGroup.depth > 0) return;
+    const { user, mark } = undoGroup;
+    undoGroup = null;
+    const history = statehistory[user];
+    if (!history) return;
+    const start = Math.min(mark, history.undoable.length);
+    if (history.undoable.length - start < 2) return;
+    const grouped = history.undoable.splice(start);
+    let merged: GObject = grouped[0];
+    for (let i = 1; i < grouped.length; i++) merged = composeUndoDeltas(merged, grouped[i]);
+    merged.timestamp = grouped[grouped.length - 1].timestamp;
+    for (const d of grouped) U.arrayRemoveAll(statehistory.all.undoable, d);
+    history.undoable.push(merged);
+    statehistory.all.undoable.push(merged);
+    while (history.undoable.length > MAX_HISTORY) history.undoable.shift();
+    while (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
+}
+
+/**
+ * One undo delta out of two consecutive ones: `older` restores S0 from S1, `newer` restores S1 from S2, the
+ * result restores S0 from S2. Per key the older value wins, unless both are nested deltas: then they compose.
+ * Not `U.objectMergeInPlace`: it is shallow (the second `idlookup` would be dropped whole) and its `??` takes
+ * a restored `undefined` or `null` for a missing key.
+ */
+function composeUndoDeltas(older: GObject, newer: GObject): GObject {
+    const own = (o: GObject, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+    const isObj = (v: unknown) => v !== null && typeof v === 'object';
+    const ret: GObject = {};
+    for (const k in newer) if (own(newer, k)) ret[k] = newer[k];
+    for (const k in older) {
+        if (!own(older, k)) continue;
+        ret[k] = own(newer, k) && isObj(older[k]) && isObj(newer[k]) ? composeUndoDeltas(older[k], newer[k]) : older[k];
+    }
+    if (Array.isArray(older) || Array.isArray(newer) || older.__jjObjDiffIsArr || newer.__jjObjDiffIsArr) {
+        ret.__jjObjDiffIsArr = true;
+        if ('length' in older) ret.length = older.length;
+        else if ('length' in newer) ret.length = newer.length;
+    }
+    return ret;
 }
 
 function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DState {
@@ -1202,6 +1266,11 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
             if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();
+            if (undoGroup && undoGroup.user === action.sender) {
+                statehistory[action.sender].undoable.push(delta);
+                statehistory.all.undoable.push(delta);
+                return ret;
+            }
             let pastDelta = statehistory[action.sender].undoable[statehistory.all.undoable.length-1];
             const allowMerge = true; // switch for debugging
             let isRelevantChange = isRelevantChangeCheck(delta as GObject<DState>, pastDelta as GObject<DState>);

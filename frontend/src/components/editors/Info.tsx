@@ -18,7 +18,7 @@ import {FakeStateProps, int, windoww} from '../../joiner/types';
 
 import JsonViewer from '../shared/JsonViewer';
 import React, {Component, Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
-import {connect} from 'react-redux';
+import {connect, useSelector} from 'react-redux';
 import './editors.scss';
 import './info.scss';
 import './info-improvements.scss';
@@ -35,6 +35,8 @@ import { useInterfaceMode } from '../../hooks/useInterfaceMode';
 import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
 import { resolveEntityType, entityLetter } from '../../common/entityMeta';
 import DisplayAnnotations from '../editor-v2/nodes/DisplayAnnotations';
+import { simEnabledPatch, simulationEnabled } from '../editor-v2/sim/simRoleStatus';
+import { InfoReferenceSlots } from './InfoReferenceSlots';
 
 // Collapsible section for properties panel grouping
 function CollapsibleSection(props: { title: string; defaultOpen?: boolean; headerRight?: React.ReactNode; children: React.ReactNode }) {
@@ -101,7 +103,7 @@ function InheritanceSection(props: {
     const { isAdvanced: globalAdvanced } = useInterfaceMode();
 
     return (
-        <CollapsibleSection title="INHERITANCE">
+        <CollapsibleSection title="Inheritance">
             <PropertiesToggle data={lclass} field={'abstract'} label="Abstract"
                 tooltip="Cannot be instantiated directly; must be subclassed" />
             <div className="jj-divider" />
@@ -318,6 +320,38 @@ function TypeSelect(props: { data: LModelElement }) {
     );
 }
 
+// «Simulation» toggle of a metamodel's Semantic Type Class section (P-2026-09-29-1225, R-SIM-99, amends R-SIM-97): it
+// mounts the Simulation pill in Advanced mode (simPillVisible, simRoleStatus.ts). The simulation model (the preset,
+// the role binding) is chosen in the pill's configuration, not here. The row is PropertiesToggle's, on a bag key.
+//   - read:  the bag from the store, so an undo shows at once; no `simEnabled` reads the legacy rule (simProfile set)
+//   - write: `state = { simEnabled }`, one TRANSACTION and one undo step; off writes `false`, not a removal, since the
+//            undo of a removed `_state` key does not restore it (ticket of P-2026-09-29-1106)
+function SimulationToggle(props: { modelId: Pointer }) {
+    const { modelId } = props;
+    const value = useSelector((s: DState) => simulationEnabled((s as any).idlookup?.[modelId]?._state));
+
+    const handleChange = (checked: boolean) => {
+        const lmm: any = LPointerTargetable.fromPointer(modelId);
+        if (lmm) lmm.state = simEnabledPatch(checked);
+    };
+
+    const handleRowClick = (e: React.MouseEvent) => {
+        // Avoid double-trigger if user clicked directly on the toggle button
+        if ((e.target as HTMLElement).closest('button[role="switch"]')) return;
+        handleChange(!value);
+    };
+
+    return (
+        <div className="jj-toggle-row" onClick={handleRowClick}>
+            <span className="jj-toggle-row__label">
+                Simulation
+                <InfoTooltip text="Shows the Simulation pill on this metamodel and its models; the simulation model is chosen in its configuration" />
+            </span>
+            <Toggle checked={value} onChange={handleChange} size="xs" />
+        </div>
+    );
+}
+
 // Contents list for Metamodel — classes, enums, packages
 function MetamodelContents(props: { data: LModel; onInternalNavigate?: (sel: { node: string; view: string; modelElement: string }) => void }) {
     const { data } = props;
@@ -478,13 +512,17 @@ class builder {
                 </div>
             )}
 
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
-            <CollapsibleSection title="DEPENDENCIES">
+            {l.isMetamodel && advanced && <CollapsibleSection title="Semantic type class">
+                <SimulationToggle modelId={l.id} />
+            </CollapsibleSection>}
+
+            <CollapsibleSection title="Dependencies">
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Depends from models</b>
+                    <b className={'info-field-label'}>Depends from models</b>
                     <JjSelect
                         isMulti={true}
                         options={multiselectOptions as any}
@@ -498,7 +536,7 @@ class builder {
                 </label>
             </CollapsibleSection>
 
-            {l.isMetamodel && <CollapsibleSection title="CONTENTS">
+            {l.isMetamodel && <CollapsibleSection title="Contents">
                 <MetamodelContents data={l} onInternalNavigate={onInternalNavigate} />
             </CollapsibleSection>}
         </>);
@@ -506,7 +544,7 @@ class builder {
 
     static package(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
                 <div className="jj-field">
                     <div className="jj-field-label">Uri</div>
@@ -531,7 +569,7 @@ class builder {
         let hasDependencies = (lclass.model as any)?.__raw?.dependencies?.length > 0;
 
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
@@ -543,7 +581,7 @@ class builder {
     }
     static enum(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
                 {advanced && <PropertiesToggle data={data} field={'serializable'} label="Serializable" />}
             </CollapsibleSection>
@@ -553,11 +591,11 @@ class builder {
     static feature(data: LModelElement, advanced: boolean, skipTitle: boolean = false,
                    leadingFlags: FlagDef[] = [], trailingFlags: FlagDef[] = []): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
-            <CollapsibleSection title="TYPE &amp; BOUNDS">
+            <CollapsibleSection title="Type &amp; bounds">
                 <div className="jj-field">
                     <div className="jj-field-label">Type <span className="jj-field-required">*</span></div>
                     <TypeSelect data={data} />
@@ -584,7 +622,7 @@ class builder {
                 value, and a reference has none. They are metamodel facts — they
                 govern every instance of the class — so the surface is here and
                 not in the FormSpec authoring of the Form tab. */}
-            <CollapsibleSection title="DISPLAY" defaultOpen={false}>
+            <CollapsibleSection title="Display" defaultOpen={false}>
                 <DisplayAnnotations
                     featureId={(data as any)?.id ?? null}
                     typeName={getTypeName(data)}
@@ -605,11 +643,11 @@ class builder {
     }
     static operation(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
-            <CollapsibleSection title="RETURN">
+            <CollapsibleSection title="Return">
                 <div className="jj-field">
                     <div className="jj-field-label">Return type</div>
                     <TypeSelect data={data} />
@@ -619,11 +657,11 @@ class builder {
     }
     static literal(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            <CollapsibleSection title="GENERAL">
+            <CollapsibleSection title="General">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
-            <CollapsibleSection title="VALUE">
+            <CollapsibleSection title="Value">
                 <div className="jj-field">
                     <div className="jj-field-label">Ordinal</div>
                     <PropertiesNumberInput data={data} field={'ordinal'} min={0} />
@@ -686,14 +724,14 @@ class builder {
             )}
 
             {/* Force Type section */}
-            {tab && <CollapsibleSection title="TYPE">
+            {tab && <CollapsibleSection title="Type">
                 {this.forceConform(object)}
             </CollapsibleSection>}
 
             {/* Slots section — attributes and containment. Non-containment references
                 moved to REFERENCES below (opzione Y), so they are listed once. */}
             {slotFeatures.length > 0 && (
-                <CollapsibleSection title="SLOTS">
+                <CollapsibleSection title="Slots">
                     {slotFeatures.map(f => <div id={`Object-${f.id}`} key={f.id}>
                         {this.value(f, topics, advanced, mode)}
                     </div>)}
@@ -701,7 +739,7 @@ class builder {
             )}
 
             {slotFeatures.length === 0 && object.features.length === 0 && tab && (
-                <CollapsibleSection title="SLOTS">
+                <CollapsibleSection title="Slots">
                     <div className="jj-slot-empty" style={{padding: '10px 16px'}}>No slots defined</div>
                 </CollapsibleSection>
             )}
@@ -778,78 +816,11 @@ class builder {
         };
 
         return (
-            <CollapsibleSection title="REFERENCES" defaultOpen={false}>
-                {slots.map(slot => {
-                    const isRequiredSingle = slot.upper === 1 && slot.lower >= 1;
-                    const belowUpper = slot.upper === -1 || slot.targets.length < slot.upper;
-                    return (
-                        <div className="jj-ref-slot" key={slot.key}>
-                            <div className="jj-ref-slot-head">
-                                <span className="jj-ref-slot-name">{slot.name}</span>
-                                <span className="jj-ref-slot-mult">[{slot.lower}..{slot.upper === -1 ? '*' : slot.upper}]</span>
-                            </div>
-
-                            {slot.targets.map(t => (
-                                <div className="jj-slot-value-row jj-ref-row" key={t.rawIndex + ':' + t.id}>
-                                    <select
-                                        className="jj-slot-value-select"
-                                        value={t.id}
-                                        onChange={e => writeAt(slot.lv, t.rawIndex, e.target.value)}
-                                    >
-                                        {/* A single optional ref clears via "-----"; a multivalued
-                                            one clears via the «×», so no empty option there. */}
-                                        {!slot.multi && !isRequiredSingle && <option value="undefined">-----</option>}
-                                        {slot.lv.validTargetsJSX}
-                                    </select>
-                                    <button
-                                        type="button"
-                                        className="jj-ref-open"
-                                        title="Open the referenced element — edits the shared instance"
-                                        onClick={() => openTarget(t.id)}
-                                    >
-                                        <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
-                                    </button>
-                                    {!isRequiredSingle && (
-                                        <button
-                                            type="button"
-                                            className="jj-slot-value-delete"
-                                            title="Remove this reference"
-                                            onClick={() => writeAt(slot.lv, t.rawIndex, 'undefined')}
-                                        >×</button>
-                                    )}
-                                </div>
-                            ))}
-
-                            {/* Empty single ref: a select to set it. */}
-                            {!slot.multi && slot.targets.length === 0 && (
-                                <div className="jj-slot-value-row jj-ref-row">
-                                    <select
-                                        className="jj-slot-value-select"
-                                        value="undefined"
-                                        onChange={e => writeAt(slot.lv, 0, e.target.value)}
-                                    >
-                                        <option value="undefined">-----</option>
-                                        {slot.lv.validTargetsJSX}
-                                    </select>
-                                </div>
-                            )}
-
-                            {/* Multivalued add: append the chosen target. */}
-                            {slot.multi && belowUpper && (
-                                <div className="jj-slot-value-row jj-ref-row jj-ref-row--add">
-                                    <select
-                                        className="jj-slot-value-select"
-                                        value="undefined"
-                                        onChange={e => appendTarget(slot.lv, e.target.value)}
-                                    >
-                                        <option value="undefined">+ add {slot.name}…</option>
-                                        {slot.lv.validTargetsJSX}
-                                    </select>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+            <CollapsibleSection title="References" defaultOpen={false}>
+                {/* The body is a component of its own so that it is evaluated only when the section is
+                    open: CollapsibleSection mounts children only while open, and each slot reads
+                    validTargetsJSX, a scan of the whole model (P-2026-10-20-1830). */}
+                <InfoReferenceSlots slots={slots} openTarget={openTarget} writeAt={writeAt} appendTarget={appendTarget} />
             </CollapsibleSection>
         );
     }
@@ -1117,7 +1088,7 @@ class builder {
             </label>
             {valueslist}
             {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <label className={'mt-2 input-container'}>
-                <b className={'me-2'}>Topic</b>
+                <b className={'info-field-label'}>Topic</b>
                 <select className={'my-auto ms-auto select'} defaultValue={value.topic} onChange={e => value.topic = e.target.value}>
                     <optgroup label={'topics'}>
                         <option value={''}>------</option>

@@ -45,16 +45,23 @@
 .sim-panel {
     position: absolute;
     // Clear of the 200px palette rail (EditorV2.scss .editor-v2-palette) AND of the
-    // minimized Jodie button: 200px rail + 30px Jodie offset + 58px Jodie width +
-    // 16px gutter (Jodie/JodieWindow.css:871-878 and :918-923, `.jodie-minimized`,
-    // fixed at bottom 100px, z-index 10000). Jodie sits outside the dock, and the
-    // dock is a stacking context (`.pinnable-dock-root`, `transform-style:
-    // preserve-3d`, DockManagerStyles.scss:133), so no z-index here can lift the
-    // panel over it: at `200px + 16px` the button covered the Reset button of the
-    // open panel. Moving the Jodie geometry means moving this offset too.
-    left: calc(200px + 30px + 58px + 16px);
+    // minimized Jodie button: 200px rail + 16px Jodie offset + 48px Jodie width +
+    // 16px gutter (Jodie/JodieWindow.css, the editor rule of `.jodie-minimized`,
+    // fixed, its bottom 16px above the editor's bottom edge, z-index 10000). Jodie
+    // sits outside the dock, and the dock is a stacking context (`.pinnable-dock-root`,
+    // `transform-style: preserve-3d`, DockManagerStyles.scss:133), so no z-index here
+    // can lift the panel over it: at `200px + 16px` the button covered the Reset
+    // button of the open panel. Moving the Jodie geometry means moving this offset too.
+    left: calc(200px + 16px + 48px + 16px);
     bottom: 16px;
     z-index: 850;
+
+    // The closed chip (32px) on Jodie's centre line: 24px up puts both centres 40px
+    // above the editor's bottom edge (P-2026-09-29-1106, R-SIM-97, D1). The open
+    // panel keeps bottom 16px.
+    &--closed {
+        bottom: 24px;
+    }
     font-family: inherit;
     color: var(--color-text-primary);
 
@@ -140,6 +147,38 @@
         font-size: 12px;
         font-weight: 600;
         color: var(--color-text-primary);
+    }
+
+    // The run inspector's button (R-SIM-105), beside Collapse and in its vocabulary; pressed while the card shows.
+    &__expand {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        &:hover,
+        &[aria-pressed="true"] {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 1px;
+        }
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
     }
 
     &__collapse {
@@ -260,8 +299,8 @@
         }
     }
 
-    // TODO: cleanup — unused since the roles moved into SimRolesModal (P-2026-09-27-1740).
-    // The bound (k): the one role that is a value, not a pointer. Same box as the select.
+    // The panel's number box: Play's step limit k in the Choices row (R-SIM-101); before the roles moved into
+    // SimRolesModal (P-2026-09-27-1740) it held the bound (k), the one role that is a value. Same box as the select.
     &__input {
         flex: 1 1 auto;
         min-width: 0;
@@ -315,6 +354,18 @@
     // measured 2026-09-27. Light computes `none`, so restating it at (0,2,0) changes dark only.
     & &__select {
         background-image: none;
+    }
+
+    // -- open: the run policy (M1, R-SIM-101) --------------------------------
+    // Choices and Play's step limit k in one row. The global number-input rule (styles/components/_form-system.scss,
+    // `input[type="number"]`, specificity 0,1,1) outranks `__input` (0,1,0) and makes it 36px with a 14px font, as it
+    // did in the declarations table: inside the row the box is restated at (0,2,0), 24px as the select beside it.
+    &__policy &__input {
+        flex: 0 0 56px;
+        height: 24px;
+        padding: 0 4px;
+        font-size: 11px;
+        line-height: normal;
     }
 
     // -- open: run controls (M1) --------------------------------------------
@@ -491,6 +542,42 @@
         }
     }
 
+    // Cancel and Random in one row, Random right of Cancel (R-SIM-100): no taller than Cancel, so the list keeps its height.
+    &__choice-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    // Random draws one of the options (R-SIM-100): a text button in Cancel's vocabulary, its icon at the text's 11 px.
+    &__random {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 11px;
+        text-decoration: underline;
+        cursor: pointer;
+
+        i {
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    }
+
     // A refused role write or run start: the reason, in the error text token.
     &__hint--error {
         color: var(--color-error-text);
@@ -520,21 +607,178 @@
         -webkit-line-clamp: 2;
         line-clamp: 2;
         white-space: normal;
+        // The halt line takes this from `--line`; the state-attributes hint (P-2026-10-03-1420) does not carry
+        // `--line`, so a third row of a long profile name would paint over the heading below without it.
+        overflow: hidden;
         box-sizing: content-box;
         height: 3em;
     }
 
+    // TODO: cleanup — unused since the marking line and the Output line became the Marking chips and a Watch row
+    // (P-2026-10-03-0120, R-SIM-104).
     // The run's marking and σ (R-SIM-82): the line the audience reads, in the primary text token.
     &__hint--marking {
         color: var(--color-text-primary);
+    }
+
+    // -- open: the state above the buttons (M1, R-SIM-104) ------------------------
+    // Watch: one row per pinned attribute, one line each whatever the value, so a step changes no height.
+    &__watch {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 0 0 8px;
+    }
+
+    &__watch-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 20px;
+        min-width: 0;
+        font-size: 11px;
+    }
+
+    &__watch-name {
+        flex: 0 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        font-family: var(--font-mono);
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        // A DEFINE is never assigned: its name in italics (R-SIM-102). The italic leans past the advance width and
+        // the clip cut the ascender of the last letter (`paid` painted `paiɑ`, lane probe crop): room on the right.
+        &--define {
+            padding-right: 0.2em;
+            font-style: italic;
+        }
+    }
+
+    // A pinned presentation attribute: node's pink (R-SIM-102).
+    &__watch-row--presentation &__watch-name {
+        color: var(--color-opt-4-fg);
+    }
+
+    // A range's domain bar: the value's place between min and max; out of the domain in the error token.
+    &__watch-bar {
+        position: relative;
+        flex: 0 0 48px;
+        height: 4px;
+        overflow: hidden;
+        border-radius: 2px;
+        background: var(--color-border-primary);
+
+        &--out {
+            background: var(--color-error);
+        }
+    }
+
+    &__watch-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        background: var(--color-accent);
+    }
+
+    &__watch-value {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin-left: auto;
+        padding: 0 4px;
+        overflow: hidden;
+        border-radius: 3px;
+        font-family: var(--font-mono);
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-variant-numeric: tabular-nums;
+
+        // Changed by the last step (R-SIM-102): the run's cyan, `before → after`.
+        &--changed {
+            background: var(--color-sim-sigma-bg);
+            color: var(--color-sim-sigma-fg);
+            box-shadow: inset 0 0 0 1px var(--color-sim-sigma-border);
+        }
+    }
+
+    // Marking: one chip per marked place, `×n` from two tokens; the marking line is the title.
+    &__chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 0 0 8px;
+    }
+
+    &__marking-chip {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--color-sim-token-bg);
+        color: var(--color-sim-token-fg);
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+
+        &--empty {
+            border: 1px solid var(--color-sim-token-empty-border);
+            background: var(--color-sim-token-empty-bg);
+            color: var(--color-sim-token-empty-fg);
+        }
+    }
+
+    // The input chip of an event whose press asks an input (R-SIM-104): the IVAR kind, at the event's size.
+    &__event-chip {
+        height: 16px;
+        margin-left: 2px;
     }
 
     &__status {
         display: flex;
         align-items: center;
         gap: 8px;
+        height: 20px;
         padding-top: 8px;
         border-top: 1px solid var(--color-border-secondary);
+        // The pill's 20 px, under the padding and the border: one line whatever it carries (R-SIM-104).
+        box-sizing: content-box;
+    }
+
+    // The status pill (R-SIM-104): the dot and the status word, one shape, never shrunk.
+    &__status-pill {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 6px;
+        height: 20px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--color-bg-tertiary);
+        white-space: nowrap;
+    }
+
+    // `step n · seed s · last step`, or a refused Reset, or the interruption, in the same place (R-SIM-66, R-SIM-104).
+    &__status-line {
+        flex: 1 1 0;
+        min-width: 48px;
+        overflow: hidden;
+        font-size: 11px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        &--error {
+            color: var(--color-error-text);
+        }
+
+        &--warning {
+            color: var(--color-warning-text);
+        }
     }
 
     &__status-text {
@@ -560,9 +804,10 @@
         }
     }
 
-    // The reason after the status, on the row's one line; the full text is the row's `title`.
+    // The reason after the status, on the row's one line; the full text is the row's `title`. It shares the line
+    // with the status line since R-SIM-104: it takes its own width first, and the line what is left.
     &__status-reason {
-        flex: 1;
+        flex: 0 1 auto;
         min-width: 0;
         font-size: 11px;
         color: var(--color-text-tertiary);
@@ -648,7 +893,8 @@
         color: var(--color-text-tertiary);
     }
 
-    // The verdict of R-SIM-79: Checkable or Not checkable, never «with warnings» (D5).
+    // The verdict of R-SIM-79 with the S11a verdicts, the dialog's pill's (P-2026-09-28-0140): Checkable, Checkable
+    // with warnings, Not checkable. The warnings colours are the pill's (SimRolesModal.scss `&__pill--warnings`).
     &__badge {
         display: inline-flex;
         align-items: center;
@@ -662,6 +908,11 @@
         &--checkable {
             background: var(--color-success-muted);
             color: var(--color-text-primary);
+        }
+
+        &--warnings {
+            background: var(--color-warning-muted);
+            color: var(--color-warning-text);
         }
 
         &--not-checkable {
@@ -910,6 +1161,81 @@
     }
 }
 
+// The visual key of the run's state (R-SIM-102, P-2026-10-03-0120), shared by the panel, the run inspector
+// (SimInspector.tsx) and the canvas layer (SimCanvasLayer.tsx), all mounted by the panel, so this sheet is loaded with
+// them. The kind chip names an attribute as nuXmv does, `VAR`, `DEFINE`, `IVAR`, as the dialogs' chip
+// (SimRolesModal.scss `__decl-kind`); the glyph is σ's solid slate, or node's viewpoint pink, dashed. Tokens only:
+// `--color-accent` is slate-700 in light and slate-400 in dark, `--color-text-inverse` the text on it in both.
+.sim-state-chip {
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: 16px;
+    padding: 0 4px;
+    border: 1px solid var(--color-border-primary);
+    border-radius: 3px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: 0.02em;
+
+    // R-SIM-102, as the dialogs paint it after the chat's check of Lane B (a57092326): VAR slate (above), DEFINE the
+    // entity palette's operation pair, IVAR its model pair; a concrete chip the dashed pink, in its kind's text colour.
+    &--define {
+        border-color: transparent;
+        background: var(--color-entity-operation-bg);
+        color: var(--color-entity-operation-fg);
+    }
+
+    &--ivar {
+        border-color: transparent;
+        background: var(--color-entity-model-bg);
+        color: var(--color-entity-model-fg);
+    }
+
+    &--presentation {
+        border: 1px dashed var(--color-opt-4-fg);
+        background: var(--color-opt-4-bg);
+        color: var(--color-text-secondary);
+    }
+
+    &--presentation#{&}--define {
+        color: var(--color-entity-operation-fg);
+    }
+}
+
+.sim-state-glyph {
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border: 1px solid var(--color-accent);
+    border-radius: 4px;
+    background: var(--color-accent);
+    color: var(--color-text-inverse);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+
+    &--presentation {
+        border-style: dashed;
+        border-color: var(--color-opt-4-fg);
+        background: var(--color-opt-4-bg);
+        color: var(--color-opt-4-fg);
+    }
+}
+
 // Active instance on the canvas (R-SIM-3): the class is appended to the node
 // wrapper by ObjectNode when the node's DObject is in the run-state singleton.
 // The interpreter and the IR dependency set are untouched. Kept in this
@@ -919,4 +1245,102 @@
     outline: 2px solid #0ea5e9;
     outline-offset: 2px;
     box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.18);
+}
+
+// The timeline slider (R-SIM-142, P-2026-10-05-2350, SimTimeline.tsx): one row under the transport row, from step 1,
+// so the panel at step 0 is as it was. A range over the run's steps and «Continue from here», which keeps its box at
+// live, hidden, so the range never changes width when the thumb leaves live. Styled by hand: the native track has no
+// room for the notches, which are the input's own background, one 1 px line per step drawn inline (SimTimeline.tsx);
+// the box below centres them under the thumb's stops, which run from half a thumb (6 px) to the width less half a thumb.
+.sim-timeline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 0 8px;
+
+    &__range {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 20px;
+        margin: 0;
+        padding: 0;
+        appearance: none;
+        -webkit-appearance: none;
+        background-color: transparent;
+        // The notches' colour, through `currentColor`.
+        color: var(--color-border-primary);
+        cursor: pointer;
+
+        &--notched {
+            background-repeat: no-repeat;
+            background-position: 5.5px center;
+            background-size: calc(100% - 11px) 8px;
+        }
+
+        &::-webkit-slider-runnable-track {
+            height: 2px;
+            border-radius: 1px;
+            background: var(--color-border-primary);
+        }
+
+        &::-moz-range-track {
+            height: 2px;
+            border-radius: 1px;
+            background: var(--color-border-primary);
+        }
+
+        &::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            margin-top: -5px;
+            border: none;
+            border-radius: 50%;
+            background: var(--color-accent);
+        }
+
+        &::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border: none;
+            border-radius: 50%;
+            background: var(--color-accent);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    }
+
+    &__continue {
+        flex: 0 0 auto;
+        height: 20px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        // At live: hidden, its box kept.
+        &--live {
+            visibility: hidden;
+        }
+    }
 }

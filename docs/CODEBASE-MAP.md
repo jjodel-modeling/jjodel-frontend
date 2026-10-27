@@ -34,6 +34,9 @@ frontend/src/
 └── pages/
 ```
 
+At the repo root, outside `frontend/`: `cloudflare-worker/` is the source of the deployed AI proxy
+Worker (`jjodel-ai-proxy`), the only copy of it; see its README before moving or deleting it.
+
 ---
 
 ## 19. Key files reference

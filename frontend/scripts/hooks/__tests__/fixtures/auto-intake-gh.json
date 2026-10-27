@@ -1,0 +1,241 @@
+{
+  "_comment": "Recorded with gh api (GET) on 2026-10-03 by P-2026-10-03-1705 Phase 1 against jjodel-modeling/jjodel-frontend; trimmed to the fields auto-intake reads. The tests derive their scenarios from these shapes.",
+  "events126": [
+    {
+      "id": 29087680273,
+      "node_id": "LE_lADOJ9ybAs8AAAABLxRycs8AAAAGxcLHEQ",
+      "event": "labeled",
+      "actor": {
+        "login": "rik1599",
+        "id": 31370173,
+        "type": "User"
+      },
+      "created_at": "2026-08-06T21:22:32Z",
+      "label": {
+        "name": "bug",
+        "color": "d73a4a"
+      }
+    },
+    {
+      "id": 29087687433,
+      "node_id": "UNLE_lADOJ9ybAs8AAAABLxRycs8AAAAGxcLjCQ",
+      "event": "unlabeled",
+      "actor": {
+        "login": "rik1599",
+        "id": 31370173,
+        "type": "User"
+      },
+      "created_at": "2026-08-06T21:22:49Z",
+      "label": {
+        "name": "bug",
+        "color": "d73a4a"
+      }
+    },
+    {
+      "id": 29087687454,
+      "node_id": "LE_lADOJ9ybAs8AAAABLxRycs8AAAAGxcLjHg",
+      "event": "labeled",
+      "actor": {
+        "login": "rik1599",
+        "id": 31370173,
+        "type": "User"
+      },
+      "created_at": "2026-08-06T21:22:49Z",
+      "label": {
+        "name": "enhancement",
+        "color": "a2eeef"
+      }
+    },
+    {
+      "id": 29088019558,
+      "node_id": "CE_lADOJ9ybAs8AAAABLxRycs8AAAAGxcf0Zg",
+      "event": "closed",
+      "actor": {
+        "login": "rik1599",
+        "id": 31370173,
+        "type": "User"
+      },
+      "created_at": "2026-08-06T21:36:21Z"
+    }
+  ],
+  "events128": [
+    {
+      "id": 29127077059,
+      "node_id": "LE_lADOJ9ybAs8AAAABL3yxEM8AAAAGyBvsww",
+      "event": "labeled",
+      "actor": {
+        "login": "rik1599",
+        "id": 31370173,
+        "type": "User"
+      },
+      "created_at": "2026-08-07T15:36:18Z",
+      "label": {
+        "name": "bug",
+        "color": "d73a4a"
+      }
+    },
+    {
+      "id": 31394743089,
+      "node_id": "REFE_lADOJ9ybAs8AAAABL3yxEM8AAAAHT0XDMQ",
+      "event": "referenced",
+      "actor": {
+        "login": "jdirocco",
+        "id": 7288605,
+        "type": "User"
+      },
+      "created_at": "2026-09-18T14:06:36Z"
+    },
+    {
+      "id": 31394772988,
+      "node_id": "MEE_lADOJ9ybAs8AAAABL3yxEM8AAAAHT0Y3_A",
+      "event": "mentioned",
+      "actor": {
+        "login": "rik1599",
+        "id": 31370173,
+        "type": "User"
+      },
+      "created_at": "2026-09-18T14:07:08Z"
+    },
+    {
+      "id": 31394773064,
+      "node_id": "SE_lADOJ9ybAs8AAAABL3yxEM8AAAAHT0Y4SA",
+      "event": "subscribed",
+      "actor": {
+        "login": "rik1599",
+        "id": 31370173,
+        "type": "User"
+      },
+      "created_at": "2026-09-18T14:07:08Z"
+    },
+    {
+      "id": 31396173823,
+      "node_id": "SIAE_lADOJ9ybAs8AAAABL3yxEM8AAAAHT1uX_w",
+      "event": "sub_issue_added",
+      "actor": {
+        "login": "jdirocco",
+        "id": 7288605,
+        "type": "User"
+      },
+      "created_at": "2026-09-18T14:30:40Z"
+    },
+    {
+      "id": 31447475637,
+      "node_id": "REFE_lADOJ9ybAs8AAAABL3yxEM8AAAAHUmpltQ",
+      "event": "referenced",
+      "actor": {
+        "login": "apierantonio",
+        "id": 17876100,
+        "type": "User"
+      },
+      "created_at": "2026-09-19T14:30:11Z"
+    },
+    {
+      "id": 31514305171,
+      "node_id": "CE_lADOJ9ybAs8AAAABL3yxEM8AAAAHVmYikw",
+      "event": "closed",
+      "actor": {
+        "login": "rik1599",
+        "id": 31370173,
+        "type": "User"
+      },
+      "created_at": "2026-09-21T08:32:26Z"
+    }
+  ],
+  "events53": [
+    {
+      "id": 24374697518,
+      "node_id": "RTE_lADOJ9ybAs78m7RezwAAAAWs2F4u",
+      "event": "renamed",
+      "actor": {
+        "login": "jean-malm-mdh",
+        "id": 60971564,
+        "type": "User"
+      },
+      "created_at": "2026-04-10T09:26:53Z",
+      "rename": {
+        "from": "Jjscript console - create attribute command only adds strings",
+        "to": "Jjscript console - `create attribute` command only creates string attributes"
+      }
+    },
+    {
+      "id": 24763294500,
+      "node_id": "AE_lADOJ9ybAs78m7RezwAAAAXEAeMk",
+      "event": "assigned",
+      "actor": {
+        "login": "apierantonio",
+        "id": 17876100,
+        "type": "User"
+      },
+      "created_at": "2026-04-22T16:13:29Z"
+    },
+    {
+      "id": 24770297997,
+      "node_id": "CE_lADOJ9ybAs78m7RezwAAAAXEbMCN",
+      "event": "closed",
+      "actor": {
+        "login": "apierantonio",
+        "id": 17876100,
+        "type": "User"
+      },
+      "created_at": "2026-04-22T20:02:34Z"
+    }
+  ],
+  "issue169": {
+    "number": 169,
+    "title": "CSS issues in more action submenus",
+    "body": "Both in stable and in beta\n<img width=\"1964\" height=\"644\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/34f29acf-b451-4137-9f7d-e013d408c819\" />",
+    "state": "open",
+    "user": {
+      "login": "rik1599"
+    },
+    "labels": [],
+    "created_at": "2026-10-02T07:09:01Z",
+    "updated_at": "2026-10-02T07:09:01Z"
+  },
+  "pr83": {
+    "number": 83,
+    "title": "model list update fix",
+    "body": null,
+    "state": "closed",
+    "user": {
+      "login": "DamianoNaraku"
+    },
+    "labels": [],
+    "created_at": "2026-05-21T14:17:57Z",
+    "updated_at": "2026-05-22T06:41:40Z",
+    "pull_request": {
+      "url": "https://api.github.com/repos/jjodel-modeling/jjodel-frontend/pulls/83",
+      "html_url": "https://github.com/jjodel-modeling/jjodel-frontend/pull/83",
+      "diff_url": "https://github.com/jjodel-modeling/jjodel-frontend/pull/83.diff",
+      "patch_url": "https://github.com/jjodel-modeling/jjodel-frontend/pull/83.patch",
+      "merged_at": "2026-05-22T06:41:40Z"
+    }
+  },
+  "graphql136": {
+    "data": {
+      "repository": {
+        "issue": {
+          "number": 136,
+          "lastEditedAt": "2026-08-10T13:56:01Z"
+        }
+      }
+    }
+  },
+  "graphqlUnedited": {
+    "data": {
+      "repository": {
+        "issue": {
+          "lastEditedAt": null
+        }
+      }
+    }
+  },
+  "emptyLabelListing": [
+    []
+  ],
+  "ghUnauthenticated": {
+    "status": 4,
+    "stdout": "",
+    "stderr": "To get started with GitHub CLI, please run:  gh auth login\nAlternatively, populate the GH_TOKEN environment variable with a GitHub API authentication token.\n"
+  }
+}

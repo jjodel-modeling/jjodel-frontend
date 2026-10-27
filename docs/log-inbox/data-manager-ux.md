@@ -6,15 +6,28 @@ order** (RC-12) and empties this file. The active log is not touched by this lan
 
 ---
 
-## 2026-09-28 — feat(#158): Data Manager, Back, side panes, reference sections and summaries, closable neighborhood
-**Prompt**: chat di Juri: branch per la issue #158 (field-test @tmaog, 5 punti sul Data Manager), piano e risoluzione in dettaglio. Referto: `discovery_2026-09-28_158_data_manager_ux.md` (`69cdf6586`).
-**Files touched**: `frontend/src/components/abstract/tabs/`: `InstanceManagerTab.tsx` e `instanceManagerTab.scss` (`c25eb749d` P1, `f8c682f81` P2, `5c3384fef` P3, `9d3d559f4` P4, `a510b26d5` P5); `instanceTable.ts` e `__tests__/instanceTable.test.ts` (`9d3d559f4`); `__tests__/instanceManagerFl6.test.ts` e `__tests__/instanceManager10c.test.ts` (`a510b26d5`). Docs: il referto, questa inbox.
-**Outcome**: ⚠️ partial
+## 2026-10-13 — fix(#172): a reference row shows Open once
+**Prompt**: `claude_2026-10-13_1300_prompt_172_open_once.md`, fast lane, director Juri (chat `C-2026-10-13-1256`): #172 reopened by @tmaog on 2026-10-13, on a row of a reference section «Open» is on screen twice, as the glyph of the card and as the first item of the row's menu. The second of his two proposals, R-REF-7: the card draws the glyph only on a row that has no menu.
+**Files touched**: `6036179cf`: `docs/decisions.md` (the row R-REF-7). `4288e509c`: `frontend/src/components/abstract/tabs/InstanceDetail.tsx` (`RefSlotsSection`, the line of the card's glyph and its comment, +3 −1). Docs: this inbox, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-10 15:45
+**Causa**: (d)
+**Regressions**: no — measured: the probe of the corrected lane, `_tmp_172_probe.ts` `MODE=after STEP=3`, 92/92 and no page error, its 271 output lines and its gesture table identical to the run of 2026-10-12 once the pointer ids are masked (both hosts, subject and inline child, a profile, an authored view); `scripts/smoke/run.ts` 12 passed, 0 failed, 3 skipped; typecheck exit 0, no `error TS`; vitest 9037 passed in 361 files, the nine known files red at import and nothing else; build exit 0; check:docs 5/5, check:addonly and check:scripts green. Not measured: the criterion on the stand-alone page under a profile (a row the profile locks has no menu and keeps the glyph by the same expression: read, not run).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Juri's visual GO of 2026-10-13 in chat `C-2026-10-13-1256`, given after he looked at this tree's dev server (port 3172) himself. Before it the chat's independent probe (`172b_independent.mts`, its own assertions, real gestures, fixture MM172), as the GO reports it: BEFORE on staging `7e774497c` 9/9, glyph + menu button = 2 on the 7 rows that have a menu and 1 on the read-only row, Data Manager and Configurator; AFTER on `4288e509c` 12/12, 1 on all 8 rows of the subject, on the 2 of the inline child and on the 8 of the Configurator, no icon at all in a card whose row has a menu, the read-only row keeps one painted arrow, a click and Enter on the card and the menu's Open still open the target, card 25 px tall and name at +9 before and after, no page error. The lane's own probe, `_tmp_172b_probe.ts` on this tree's dev server (port 3172), fixture MM172, read from the DOM. BEFORE on `7e774497c`, 13/13: glyphs in the card + menu buttons = 2 on every row that has a menu (Data Manager, 7 of the 8 rows of the subject and the 2 of the inline child `Phase_0`; Configurator, 9 of 10), 1 on the read-only row `frozen`. AFTER on `4288e509c`, 21/21: 1 on every row (8, 2 and 10 rows), 0 glyphs on the rows of `goal`, `teacher`, `learners`, `rooms`; `frozen` keeps its glyph and has no menu button; a click on the card of `goal` opens `G1` and Back returns; its menu lists «Open» first and the item opens `G1`; the card of `goal` is 25 px tall and its name starts at x=798 before and after, so no style rule; one console error (`init_dash`, at the fixture) in both runs, no page error.
+**Notes**: Decision R-REF-7 (provisional, RC-25). No unit test and no source-text test: the section does not import under node (declared by P-2026-10-10-1545); the probe is the measure (P11). The doubling passed the corrected lane because none of its 92 probe arms reads the card's glyph (second cause: (a), R-REF-3 did not say what becomes of the glyph once Open is in the menu). Probe logs and the BEFORE table: `~/.jjodel-lanes/P-2026-10-13-1300/`.
+**Prompt document name**: 2026-10-13 13:00
+
+## 2026-10-13 — merge: fix/172-open-once into staging (P-2026-10-13-1433)
+**Prompt**: `claude_2026-10-13_1433_prompt_merge_fix-172-open-once.md`, a direct merge by `lane-run merge --direct`, no session: `fix/172-open-once` at `abb74f276` into `staging`, merge base `7e774497c`, 4 commits on the branch side.
+**Files touched**: merge `0780366c3`: 4 files from the branch side (`docs/decisions.md`, `docs/log-inbox/data-manager-ux.md`, `docs/prompts/claude_2026-10-13_1300_prompt_172_open_once.md`, `frontend/src/components/abstract/tabs/InstanceDetail.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
 **Corregge**: —
-**Causa**: (a)
-**Regressions**: unknown — `npx tsc --noEmit` output COMPLETO **14**, l'insieme di §17, dopo ogni commit; vitest `src/components/abstract/tabs` + `src/jjform` 789 passati (776 + 13); `npm run build` exit 0. UI non esercitata a runtime.
-**Out-of-scope changes**: yes — 6 file di codice, sopra la soglia di 5 (RC-11): i 5 del referto più `instanceManager10c.test.ts`, copia di non-regressione dell'asserto FL6 che P5 cambia, non elencata nel referto.
-**Layer Impact Report**: not-required — nessun file di §3.2; `viewpoint/ir/` solo letto (`resolveIRView`, `resolveFormSpec`).
-**Smoke visivo**: non eseguito — Playwright assente da `node_modules` di questo checkout; checklist in 7 passi nel referto §6.
-**Notes**: Partial su P4: il riassunto sta nella sezione dei riferimenti (host), non dentro il campo di selezione, che è critical zone (`viewpoint/ir/widgets/`) e attende go-ahead (referto §7). Configurazione = `FormSpec.basic` del target, nessun flag nel metamodello. Banchi di mutazione: `referenceSummary` 9/10 (1 equivalente), asserti FL6 3/3. Il toggle del vicinato non è eseguito da nessun test (il tab non importa sotto node).
-**Prompt document name**: 2026-09-28 (chat)
+**Causa**: —
+**Regressions**: no. Gates on `0780366c3` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9037 tests in 370 files, 9 red at import, hooks 681; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato: chat, unattended: the chat's independent probe (172b_independent.mts) rerun on the merged tree 0780366c3 on port 3190, 12/12, no page error: glyph + menu button = 1 on all 8 rows of the subject in the Data Manager, on the 2 of the inline child and on the 8 of the Configurator, no icon in a card whose row has a menu, the read-only row keeps one painted arrow, a click and Enter on the card and the menu's Open open the target; Juri's visual GO of 2026-10-13 was given on the lane tree
+**Notes**: Rollback tag `pre-fix/172-open-once` on `7e774497c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-13-1433/result.json`.
+**Prompt document name**: 2026-10-13 14:33

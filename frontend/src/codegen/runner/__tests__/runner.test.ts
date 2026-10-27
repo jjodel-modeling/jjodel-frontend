@@ -1,0 +1,465 @@
+/**
+ * runner — the sandboxed runner of the JavaScript target profile (R-GEN-6,
+ * discovery 2026-10-10 §F.4, P-2026-10-10-0950).
+ *
+ * The vitest environment is `node` and has no `Worker` (vitest.config.ts), so
+ * the transport is faked and nothing else is: `FakeWorker` hands each request
+ * to the worker's own `executeRun`, which loads the code as a real ES module
+ * (a `data:` URL, where the browser worker uses a `blob:` one) and runs the
+ * calls; `runInWorker` measures the position of an error from the real V8
+ * stack. A real worker in a real browser is the probe's
+ * (`frontend/scripts/probe/codegen-runner.ts`). Each test name says which
+ * break kills it; the bench is in the commit message.
+ */
+
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { DEFAULT_TIMEOUT_MS, STARTUP_TIMEOUT_MS, WORKER_READY, framesOf } from '../protocol';
+import type { RunRequest, RunResponse, WorkerReply } from '../protocol';
+import { runInWorker } from '../runner';
+import type { RunnerErrorEvent, RunnerWorker } from '../runner';
+import { ESCAPE_GLOBALS, NETWORK_GLOBALS, bootWorker, executeRun, shadowEscapes, shadowNetwork } from '../runner.worker';
+import type { ModuleLoader } from '../runner.worker';
+
+let loads = 0;
+
+/** A real ES module from the code: a fresh URL per load, so no module state survives between runs. */
+const dataLoader: ModuleLoader = code => {
+    const url = 'data:text/javascript;base64,' + Buffer.from(`${code}\n// load ${++loads}\n`).toString('base64');
+    return { url, module: import(/* @vite-ignore */ url) };
+};
+
+type Behaviour = 'execute' | 'silent' | ((w: FakeWorker, request: RunRequest) => void);
+
+/**
+ * The transport of a Worker, and nothing else: no structured clone, so the worker's own clone is what a test sees.
+ * Like a real worker it posts `ready` once its script has run (`readyAfter` ms after creation, `null` never; 0 is the
+ * next microtask), and a message that reaches it earlier waits until then.
+ */
+class FakeWorker implements RunnerWorker {
+    onmessage: ((ev: { data: unknown }) => void) | null = null;
+    onerror: ((ev: RunnerErrorEvent) => void) | null = null;
+    terminated = 0;
+    readonly posted: unknown[] = [];
+    private ready = false;
+    private readonly waiting: RunRequest[] = [];
+
+    constructor(private readonly behaviour: Behaviour, private readonly unshadowed: readonly string[] = [], readyAfter: number | null = 0) {
+        if (readyAfter === 0) queueMicrotask(() => this.becomeReady());
+        else if (readyAfter !== null) setTimeout(() => this.becomeReady(), readyAfter);
+    }
+
+    private becomeReady(): void {
+        if (this.terminated > 0) return;
+        this.ready = true;
+        this.onmessage?.({ data: WORKER_READY });
+        for (const request of this.waiting.splice(0)) this.handle(request);
+    }
+
+    postMessage(message: unknown): void {
+        this.posted.push(message);
+        if (!this.ready) this.waiting.push(message as RunRequest);
+        else this.handle(message as RunRequest);
+    }
+
+    private handle(request: RunRequest): void {
+        if (this.behaviour === 'silent') return;
+        if (this.behaviour === 'execute') {
+            void executeRun(request, dataLoader, this.unshadowed).then(reply => this.deliver(reply));
+            return;
+        }
+        this.behaviour(this, request);
+    }
+
+    /** A terminated worker delivers nothing. */
+    deliver(reply: WorkerReply): void {
+        if (this.terminated === 0) this.onmessage?.({ data: reply });
+    }
+
+    terminate(): void {
+        this.terminated++;
+    }
+}
+
+function factory(
+    behaviour: Behaviour = 'execute',
+    unshadowed: readonly string[] = [],
+    readyAfter: number | null = 0,
+): { create: () => RunnerWorker; workers: FakeWorker[] } {
+    const workers: FakeWorker[] = [];
+    return {
+        workers,
+        create: () => {
+            const w = new FakeWorker(behaviour, unshadowed, readyAfter);
+            workers.push(w);
+            return w;
+        },
+    };
+}
+
+/** Starts a run and exposes its answer once there is one; for the tests that drive fake timers. */
+function startRun(request: RunRequest, create: () => RunnerWorker): { answer: RunResponse | null } {
+    const out: { answer: RunResponse | null } = { answer: null };
+    void runInWorker(request, create).then(r => { out.answer = r; });
+    return out;
+}
+
+function errorOf(r: RunResponse) {
+    if (r.ok) throw new Error(`expected an error, got ${JSON.stringify(r)}`);
+    return r.error;
+}
+
+afterEach(() => {
+    vi.useRealTimers();
+});
+
+const MODULE = [
+    'export function inc(x) { return x + 1; }',
+    'export function pair(a, b) { return [a, b]; }',
+    'export async function later(x) { return x * 10; }',
+    'const box = { n: 0 };',
+    'export function bump() { box.n++; return box; }',
+    'export function fn() { return () => 1; }',
+].join('\n');
+
+describe('runInWorker: the protocol over a worker', () => {
+    it('a sequence of calls answers one result per call, in order', async () => {
+        const f = factory();
+        const r = await runInWorker({ code: MODULE, calls: [{ fn: 'inc', args: [1] }, { fn: 'inc', args: [41] }, { fn: 'pair', args: ['a', 2] }] }, f.create);
+        expect(r).toEqual({ ok: true, results: [2, 42, ['a', 2]] });
+        expect(f.workers[0].posted).toEqual([{ code: MODULE, calls: [{ fn: 'inc', args: [1] }, { fn: 'inc', args: [41] }, { fn: 'pair', args: ['a', 2] }] }]);
+    });
+
+    it('each result is the value at its call, not at the end of the run (mutant: the per-call clone dropped)', async () => {
+        const r = await runInWorker({ code: MODULE, calls: [{ fn: 'bump', args: [] }, { fn: 'bump', args: [] }] }, factory().create);
+        expect(r).toEqual({ ok: true, results: [{ n: 1 }, { n: 2 }] });
+    });
+
+    it('an async export is awaited', async () => {
+        const r = await runInWorker({ code: MODULE, calls: [{ fn: 'later', args: [4] }] }, factory().create);
+        expect(r).toEqual({ ok: true, results: [40] });
+    });
+
+    it('no calls is an empty list of results', async () => {
+        expect(await runInWorker({ code: MODULE, calls: [] }, factory().create)).toEqual({ ok: true, results: [] });
+    });
+
+    it('a runtime error carries the generated line and column and the index of its call (mutant: position not measured)', async () => {
+        const code = [
+            'export function ok() { return 1; }',
+            'export function boom(x) {',
+            '  const y = x * 2;',
+            '  throw new Error("boom " + y);',
+            '}',
+        ].join('\n');
+        const e = errorOf(await runInWorker({ code, calls: [{ fn: 'ok', args: [] }, { fn: 'boom', args: [3] }] }, factory().create));
+        expect(e.kind).toBe('runtime');
+        expect(e.call).toBe(1);
+        expect(e.message).toContain('boom 6');
+        expect([e.line, e.column]).toEqual([4, 9]);
+        expect(e.frames[0]).toEqual({ line: 4, column: 9 });
+    });
+
+    it('the frames list every generated frame, innermost first', async () => {
+        const code = [
+            'function inner() {',
+            '  return null.x;',
+            '}',
+            'export function outer() {',
+            '  return inner();',
+            '}',
+        ].join('\n');
+        const e = errorOf(await runInWorker({ code, calls: [{ fn: 'outer', args: [] }] }, factory().create));
+        expect(e.frames.map(f => f.line)).toEqual([2, 5]);
+    });
+
+    it('a thrown value that is not an Error has no position', async () => {
+        const e = errorOf(await runInWorker({ code: 'export function f() { throw "plain"; }', calls: [{ fn: 'f', args: [] }] }, factory().create));
+        expect(e).toMatchObject({ kind: 'runtime', message: 'plain', line: null, column: null, frames: [], call: 0 });
+    });
+
+    it('code that does not parse is a load error', async () => {
+        const e = errorOf(await runInWorker({ code: 'export function f( {', calls: [{ fn: 'f', args: [] }] }, factory().create));
+        expect(e.kind).toBe('load');
+        expect(e.call).toBeUndefined();
+    });
+
+    it('a call to a name the module does not export is an export error', async () => {
+        const e = errorOf(await runInWorker({ code: MODULE, calls: [{ fn: 'inc', args: [1] }, { fn: 'nope', args: [] }] }, factory().create));
+        expect(e).toMatchObject({ kind: 'export', call: 1 });
+    });
+
+    it('a result that cannot be cloned is a result error', async () => {
+        const e = errorOf(await runInWorker({ code: MODULE, calls: [{ fn: 'fn', args: [] }] }, factory().create));
+        expect(e).toMatchObject({ kind: 'result', call: 0 });
+    });
+
+    it('a reply ends the run and terminates its worker: one worker per run', async () => {
+        const f = factory();
+        await runInWorker({ code: MODULE, calls: [{ fn: 'inc', args: [1] }] }, f.create);
+        await runInWorker({ code: MODULE, calls: [{ fn: 'inc', args: [2] }] }, f.create);
+        expect(f.workers).toHaveLength(2);
+        expect(f.workers.map(w => w.terminated)).toEqual([1, 1]);
+    });
+
+    it('the timeout terminates the worker and answers timeout (mutant: terminate removed)', async () => {
+        const f = factory('silent');
+        const started = Date.now();
+        const e = errorOf(await runInWorker({ code: 'export function spin() { while (true) {} }', calls: [{ fn: 'spin', args: [] }], timeoutMs: 40 }, f.create));
+        expect(e).toMatchObject({ kind: 'timeout', line: null, column: null });
+        expect(e.message).toContain('40');
+        expect(f.workers[0].terminated).toBe(1);
+        expect(Date.now() - started).toBeGreaterThanOrEqual(35);
+    });
+
+    it('the default timeout is 2000 ms', async () => {
+        vi.useFakeTimers();
+        expect(DEFAULT_TIMEOUT_MS).toBe(2000);
+        const f = factory('silent');
+        let settled: RunResponse | null = null;
+        void runInWorker({ code: MODULE, calls: [] }, f.create).then(r => { settled = r; });
+        await vi.advanceTimersByTimeAsync(1999);
+        expect(settled).toBeNull();
+        expect(f.workers[0].terminated).toBe(0);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(settled).toMatchObject({ ok: false, error: { kind: 'timeout' } });
+        expect(f.workers[0].terminated).toBe(1);
+    });
+
+    it('a worker that is ready later than the timeout still runs a fast program: the clock starts at ready (mutant: timer started at creation)', async () => {
+        const f = factory('execute', [], 400);
+        const r = await runInWorker({ code: MODULE, calls: [{ fn: 'inc', args: [1] }], timeoutMs: 250 }, f.create);
+        expect(r).toEqual({ ok: true, results: [2] });
+        expect(f.workers[0].terminated).toBe(1);
+    });
+
+    it('the program timeout is measured from readiness: a loop is stopped timeoutMs after ready, not after creation (mutant: timer started at creation)', async () => {
+        vi.useFakeTimers();
+        const f = factory('silent', [], 60);
+        const run = startRun({ code: MODULE, calls: [], timeoutMs: 40 }, f.create);
+        await vi.advanceTimersByTimeAsync(59);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].posted).toEqual([]);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(f.workers[0].posted).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(39);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].terminated).toBe(0);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(run.answer).toMatchObject({ ok: false, error: { kind: 'timeout' } });
+        expect(f.workers[0].terminated).toBe(1);
+    });
+
+    it('a worker that never becomes ready is terminated at the start-up bound, and the error says the runner did not start (mutant: start-up bound removed)', async () => {
+        vi.useFakeTimers();
+        expect(STARTUP_TIMEOUT_MS).toBe(30000);
+        const f = factory('execute', [], null);
+        const run = startRun({ code: MODULE, calls: [{ fn: 'inc', args: [1] }], timeoutMs: 40 }, f.create);
+        await vi.advanceTimersByTimeAsync(STARTUP_TIMEOUT_MS - 1);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].terminated).toBe(0);
+        await vi.advanceTimersByTimeAsync(1);
+        const e = errorOf(run.answer as RunResponse);
+        expect(e).toMatchObject({ kind: 'worker', line: null, column: null });
+        expect(e.message).toContain('did not start');
+        expect(e.message).toContain(String(STARTUP_TIMEOUT_MS));
+        expect(e.message).not.toContain('did not finish');
+        expect(f.workers[0].terminated).toBe(1);
+    });
+
+    it('the start-up bound is not the program timeout: a short timeoutMs does not cut a slow start (mutant: timeoutMs used for the start-up)', async () => {
+        vi.useFakeTimers();
+        const f = factory('silent', [], 5000);
+        const run = startRun({ code: MODULE, calls: [], timeoutMs: 100 }, f.create);
+        await vi.advanceTimersByTimeAsync(4999);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].terminated).toBe(0);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(f.workers[0].posted).toHaveLength(1);
+    });
+
+    it('once the worker is ready the start-up bound no longer applies: a program may run past it (mutant: start-up bound not cleared at ready)', async () => {
+        vi.useFakeTimers();
+        const f = factory('silent', [], 0);
+        const run = startRun({ code: MODULE, calls: [], timeoutMs: 2 * STARTUP_TIMEOUT_MS }, f.create);
+        await vi.advanceTimersByTimeAsync(STARTUP_TIMEOUT_MS + 1);
+        expect(run.answer).toBeNull();
+        expect(f.workers[0].terminated).toBe(0);
+        await vi.advanceTimersByTimeAsync(STARTUP_TIMEOUT_MS - 1);
+        const e = errorOf(run.answer as RunResponse);
+        expect(e.kind).toBe('timeout');
+        expect(e.message).toContain('did not finish');
+    });
+
+    it('a second ready is ignored: the request is sent once and the clock is not restarted', async () => {
+        vi.useFakeTimers();
+        const f = factory('silent', [], 0);
+        const run = startRun({ code: MODULE, calls: [], timeoutMs: 100 }, f.create);
+        await vi.advanceTimersByTimeAsync(60);
+        f.workers[0].onmessage?.({ data: WORKER_READY });
+        await vi.advanceTimersByTimeAsync(39);
+        expect(run.answer).toBeNull();
+        await vi.advanceTimersByTimeAsync(1);
+        expect(run.answer).toMatchObject({ ok: false, error: { kind: 'timeout' } });
+        expect(f.workers[0].posted).toHaveLength(1);
+    });
+
+    it('a reply after the timeout is ignored', async () => {
+        const f = factory((w, request) => {
+            setTimeout(() => w.onmessage?.({ data: { ok: true, results: ['late'] } }), 60);
+            void request;
+        });
+        const r = await runInWorker({ code: MODULE, calls: [], timeoutMs: 10 }, f.create);
+        expect(errorOf(r).kind).toBe('timeout');
+        await new Promise(res => setTimeout(res, 80));
+        expect(f.workers[0].terminated).toBe(1);
+    });
+
+    it('an error event of the worker answers at once, with its position only when it comes from the generated code', async () => {
+        const fromCode = factory(w => w.onerror?.({ message: 'Uncaught TypeError: x', filename: 'blob:http://localhost/abc', lineno: 3, colno: 5 }));
+        const e1 = errorOf(await runInWorker({ code: MODULE, calls: [] }, fromCode.create));
+        expect(e1).toMatchObject({ kind: 'worker', line: 3, column: 5 });
+        expect(fromCode.workers[0].terminated).toBe(1);
+
+        const fromScript = factory(w => w.onerror?.({ message: 'failed to load', filename: 'http://localhost/runner.worker.js', lineno: 1, colno: 1 }));
+        expect(errorOf(await runInWorker({ code: MODULE, calls: [] }, fromScript.create))).toMatchObject({ kind: 'worker', line: null, column: null });
+    });
+
+    it('a worker whose sandbox left a network global reachable refuses to run', async () => {
+        const e = errorOf(await runInWorker({ code: MODULE, calls: [{ fn: 'inc', args: [1] }] }, factory('execute', ['fetch']).create));
+        expect(e.kind).toBe('sandbox');
+        expect(e.message).toContain('fetch');
+    });
+});
+
+describe('framesOf: positions from a stack', () => {
+    const url = 'blob:http://localhost:3080/1f2e-33';
+
+    it('reads V8 and Firefox frames of the generated module only', () => {
+        const v8 = `TypeError: x\n    at inner (${url}:7:13)\n    at ${url}:9:3\n    at run (http://localhost:3080/runner.worker.js:40:2)`;
+        expect(framesOf(v8, url)).toEqual([{ line: 7, column: 13 }, { line: 9, column: 3 }]);
+        const firefox = `inner@${url}:7:13\nouter@${url}:9:3\nrun@http://localhost:3080/runner.worker.js:40:2`;
+        expect(framesOf(firefox, url)).toEqual([{ line: 7, column: 13 }, { line: 9, column: 3 }]);
+    });
+
+    it('without a stack or a url there is no frame', () => {
+        expect(framesOf(undefined, url)).toEqual([]);
+        expect(framesOf('Error: x', undefined)).toEqual([]);
+    });
+});
+
+describe('the sandbox: network globals', () => {
+    it('names the eight globals of the discovery (§F.4)', () => {
+        expect([...NETWORK_GLOBALS].sort()).toEqual(
+            ['BroadcastChannel', 'EventSource', 'WebSocket', 'WebTransport', 'XMLHttpRequest', 'fetch', 'importScripts', 'indexedDB'],
+        );
+    });
+
+    it('shadowNetwork removes every one from the scope and its prototype chain (mutant: shadowing removed)', () => {
+        const base: any = { fetch() { return 1; }, XMLHttpRequest: function XHR() {} };
+        Object.defineProperty(base, 'indexedDB', { get: () => ({}), configurable: true, enumerable: true });
+        const middle: any = Object.create(base);
+        middle.WebSocket = function WS() {};
+        const scope: any = Object.create(middle);
+        scope.EventSource = function ES() {};
+        scope.importScripts = () => undefined;
+        scope.BroadcastChannel = function BC() {};
+        Object.defineProperty(scope, 'WebTransport', { value: function WT() {}, writable: true, configurable: false });
+
+        expect(shadowNetwork(scope)).toEqual([]);
+        for (const name of NETWORK_GLOBALS) expect(typeof scope[name], name).toBe('undefined');
+    });
+
+    it('a global that can be neither deleted nor shadowed is reported, so the worker refuses to run', () => {
+        const scope: any = {};
+        Object.defineProperty(scope, 'fetch', { value: () => 1, writable: false, configurable: false });
+        expect(shadowNetwork(scope)).toEqual(['fetch']);
+    });
+
+    it('importing the worker module outside a worker shadows nothing: node keeps its fetch', () => {
+        expect(typeof (globalThis as any).fetch).toBe('function');
+    });
+});
+
+describe('the sandbox: nested workers, caches and storage (S7, R-GEN-30)', () => {
+    /** A scope shaped like a worker's: the constructors own, `caches` and `navigator` getters on the prototype, `storage` on the navigator's. */
+    function workerLike() {
+        const proto: any = {};
+        Object.defineProperty(proto, 'caches', { get: () => ({ add() {} }), configurable: true, enumerable: true });
+        const navProto: any = {};
+        Object.defineProperty(navProto, 'storage', { get: () => ({ persist() {} }), configurable: true, enumerable: true });
+        const nav = Object.create(navProto);
+        Object.defineProperty(proto, 'navigator', { get: () => nav, configurable: true, enumerable: true });
+        const scope: any = Object.create(proto);
+        scope.Worker = function W() {};
+        scope.SharedWorker = function SW() {};
+        return { scope, nav, navProto };
+    }
+
+    it('names the three globals of the discovery (2026-10-23 §4.3)', () => {
+        expect([...ESCAPE_GLOBALS].sort()).toEqual(['SharedWorker', 'Worker', 'caches']);
+    });
+
+    it('shadowEscapes removes Worker, SharedWorker, caches and navigator.storage (mutant: shadowEscapes not called, or the navigator skipped)', () => {
+        const { scope, nav, navProto } = workerLike();
+        expect(shadowEscapes(scope)).toEqual([]);
+        for (const name of ESCAPE_GLOBALS) expect(typeof scope[name], name).toBe('undefined');
+        expect(nav.storage).toBeUndefined();
+        expect(Object.prototype.hasOwnProperty.call(navProto, 'storage')).toBe(false);
+        expect(scope.navigator).toBe(nav);
+    });
+
+    it('a navigator.storage that can be neither deleted nor shadowed is reported by that name', () => {
+        const nav: any = {};
+        Object.defineProperty(nav, 'storage', { value: {}, writable: false, configurable: false });
+        Object.preventExtensions(nav);
+        expect(shadowEscapes({ navigator: nav })).toEqual(['navigator.storage']);
+    });
+
+    it('bootWorker removes the four names before ready', () => {
+        const { scope, nav } = workerLike();
+        const seen: unknown[] = [];
+        scope.postMessage = () => { seen.push([scope.Worker, scope.SharedWorker, scope.caches, nav.storage]); };
+        scope.onmessage = null;
+        bootWorker(scope);
+        expect(seen).toEqual([[undefined, undefined, undefined, undefined]]);
+    });
+
+    it('a worker whose navigator.storage stays reachable refuses to run', async () => {
+        const nav: any = {};
+        Object.defineProperty(nav, 'storage', { value: {}, writable: false, configurable: false });
+        Object.preventExtensions(nav);
+        const replies: any[] = [];
+        const scope: any = { navigator: nav, onmessage: null, postMessage: (m: unknown) => { replies.push(m); } };
+        bootWorker(scope);
+        scope.onmessage({ data: { code: MODULE, calls: [] } });
+        await vi.waitFor(() => expect(replies).toHaveLength(2));
+        expect(replies[1]).toMatchObject({ ok: false, kind: 'sandbox', message: 'The sandbox could not remove navigator.storage: nothing ran.' });
+    });
+});
+
+describe('bootWorker: the ready message', () => {
+    /** A scope with the globals the sandbox removes, whose `postMessage` logs what the scope looked like when it was called. */
+    function scopeWithLog() {
+        const log: { message: unknown; fetch: string; postMessage: string }[] = [];
+        const scope: any = { fetch: () => 1, XMLHttpRequest: function XHR() {}, onmessage: null };
+        scope.postMessage = (message: unknown) => {
+            log.push({ message, fetch: typeof scope.fetch, postMessage: typeof scope.postMessage });
+        };
+        return { scope, log };
+    }
+
+    it('posts ready once, with the network and postMessage already removed, before it has been sent anything (mutant: ready posted before the shadowing)', () => {
+        const { scope, log } = scopeWithLog();
+        bootWorker(scope, dataLoader);
+        expect(log).toEqual([{ message: { ready: true }, fetch: 'undefined', postMessage: 'undefined' }]);
+        expect(typeof scope.onmessage).toBe('function');
+    });
+
+    it('the reply of the run follows ready, and leaves by the captured postMessage (mutant: ready never posted)', async () => {
+        const { scope, log } = scopeWithLog();
+        bootWorker(scope, dataLoader);
+        scope.onmessage({ data: { code: MODULE, calls: [{ fn: 'inc', args: [1] }] } });
+        await vi.waitFor(() => expect(log).toHaveLength(2));
+        expect(log.map(l => l.message)).toEqual([{ ready: true }, { ok: true, results: [2] }]);
+    });
+});

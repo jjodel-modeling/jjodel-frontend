@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Bash|Edit", "hooks": [ { "type": "command", "command": "node -e \"let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);require('fs').appendFileSync(process.env.JJPROBE_SETTINGS_OUT||'/tmp/jjodel-mods-probe/out/settings-hook.log',JSON.stringify({t:Date.now(),ev:'settings.PreToolUse(probe logger)',tool:j.tool_name,cmd:(j.tool_input||{}).command,mode:j.permission_mode})+'\\n')})\"", "timeout": 10 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "node -e \"let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);require('fs').appendFileSync(process.env.JJPROBE_SETTINGS_OUT||'/tmp/jjodel-mods-probe/out/settings-hook.log',JSON.stringify({t:Date.now(),ev:'settings.Stop(probe logger)',active:j.stop_hook_active})+'\\n')})\"", "timeout": 10 } ] }
+    ]
+  }
+}

@@ -105,6 +105,182 @@
     line-height: 1.4;
     color: #64748b;
   }
+
+  // «Color by metaclass» base colour (R-VP-27): the native swatch in the frame of
+  // .wp-field__input, the hex beside it as a caption. `[type="color"]` lifts the rule
+  // to (0,2,0) over the global `input[type="color"]` 24px box of style.scss.
+  &__color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__color[type="color"] {
+    width: 48px;
+    height: 36px;
+    margin: 0;
+    padding: 3px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+
+    &:hover {
+      border-color: #cbd5e1;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: #334155;
+      box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.1);
+    }
+
+    &:disabled {
+      background: #f1f5f9;
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    &::-webkit-color-swatch {
+      border: none;
+      border-radius: 4px;
+    }
+  }
+
+  &__color-hex {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 11px;
+    color: #64748b;
+  }
+}
+
+// ---------- Metaclass colours (R-VP-39) ----------
+// The metaclass dropdown, 160px wide whatever the name, and beside it the twelve pastel
+// swatches as a 6x2 grid exactly as tall as the dropdown (36px): nothing moves when the
+// selection or a colour changes. 160 + 8 + 116 = 284px fits the narrowest rail (360px less
+// the 32px padding of .workbench-properties).
+.wp-metaclass-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wp-metaclass-select {
+  width: 160px;
+  flex: none;
+}
+
+// Two rules of the shared sheets reach this JjSelect and are undone here, at (0,2,x):
+// `_form-system.scss` gives `.jj-select` 20px of padding-bottom (the control measured 56px
+// tall, the grid off its middle), and react-select's inner search input takes the global
+// input chrome, drawn as two bars beside the caret while the menu is open. The rail's own
+// fix (`viewapplyto.scss`, the `.jj-field .jj-select input` rule) does not reach this
+// panel, which has no `.jj-field`.
+.wp-metaclass-row .wp-metaclass-select {
+  padding-bottom: 0;
+
+  input,
+  input:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+// The swatch and the name of an option, in the menu and in the control. The name is
+// clipped, never wrapped, so the control keeps its width and height.
+.wp-metaclass-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+
+  &__swatch {
+    width: 10px;
+    height: 10px;
+    flex: none;
+    border-radius: 2px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    box-sizing: border-box;
+  }
+
+  &__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.wp-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 16px);
+  grid-auto-rows: 16px;
+  gap: 4px;
+  height: 36px;
+  flex: none;
+}
+
+// The current colour is marked by an outline, which takes no layout space.
+.wp-swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 3px;
+  box-sizing: border-box;
+  cursor: pointer;
+
+  // The class doubled, and the focused state named: after a click the current swatch is
+  // focused, and Bootstrap's reboot `button:focus:not(:focus-visible) { outline: 0 }` (0,2,1)
+  // dropped the marker exactly when it was set.
+  &.wp-swatch--current,
+  &.wp-swatch--current:focus:not(:focus-visible) {
+    outline: 2px solid #334155;
+    outline-offset: 1px;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.35);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.wp-metaclass-resets {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  height: 16px;
+}
+
+// A text button (11px), the «Reset» links under the swatches.
+.wp-text-button {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 11px;
+  line-height: 16px;
+  color: #334155;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    color: #94a3b8;
+    cursor: default;
+  }
 }
 
 // ---------- Toggle row ----------

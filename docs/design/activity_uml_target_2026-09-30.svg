@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="740" viewBox="0 0 600 740" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M1,1 L9,5 L1,9" fill="none" stroke="#334155" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .edge { fill: none; stroke: #334155; stroke-width: 1.4; stroke-linejoin: round; }
+      .action { fill: #ffffff; stroke: #334155; stroke-width: 1.4; }
+      .ctrl { fill: #ffffff; stroke: #334155; stroke-width: 1.4; }
+      .bar { fill: #334155; }
+      .lbl { font-size: 14px; font-weight: 500; fill: #0f172a; text-anchor: middle; }
+      .guard { font-family: "JetBrains Mono", Menlo, Consolas, monospace; font-size: 11.5px; fill: #334155; }
+      .gbg { fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect width="600" height="740" fill="#ffffff"/>
+
+  <!-- initial node -->
+  <circle cx="300" cy="40" r="11" fill="#334155"/>
+  <path class="edge" d="M300,51 L300,94" marker-end="url(#arr)"/>
+
+  <!-- merge node -->
+  <polygon class="ctrl" points="300,96 314,110 300,124 286,110"/>
+  <path class="edge" d="M300,124 L300,166" marker-end="url(#arr)"/>
+
+  <!-- action: work -->
+  <rect class="action" x="230" y="168" width="140" height="44" rx="12"/>
+  <text class="lbl" x="300" y="195">work</text>
+  <path class="edge" d="M300,212 L300,254" marker-end="url(#arr)"/>
+
+  <!-- action: step (currently marked) -->
+  <rect class="action" x="230" y="256" width="140" height="44" rx="12" style="stroke:#0ea5e9;stroke-width:2"/>
+  <text class="lbl" x="300" y="283">step</text>
+  <!-- token: inside the node, never on its border -->
+  <circle cx="248" cy="278" r="6" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5"/>
+  <path class="edge" d="M300,300 L300,344" marker-end="url(#arr)"/>
+
+  <!-- decision node -->
+  <polygon class="ctrl" points="300,346 314,360 300,374 286,360"/>
+
+  <!-- loop back: decision -> merge -->
+  <path class="edge" d="M314,360 L440,360 L440,110 L316,110" marker-end="url(#arr)"/>
+  <rect class="gbg" x="448" y="226" width="96" height="18"/>
+  <text class="guard" x="452" y="239">[count &lt; 2]</text>
+
+  <!-- exit: decision -> fork -->
+  <path class="edge" d="M300,374 L300,434" marker-end="url(#arr)"/>
+  <rect class="gbg" x="308" y="394" width="104" height="18"/>
+  <text class="guard" x="312" y="407">[count &gt;= 2]</text>
+
+  <!-- fork -->
+  <rect class="bar" x="200" y="436" width="200" height="6" rx="1"/>
+  <path class="edge" d="M222,442 L222,494" marker-end="url(#arr)"/>
+  <path class="edge" d="M378,442 L378,494" marker-end="url(#arr)"/>
+
+  <!-- parallel actions -->
+  <rect class="action" x="156" y="496" width="132" height="44" rx="12"/>
+  <text class="lbl" x="222" y="523">left</text>
+  <rect class="action" x="312" y="496" width="132" height="44" rx="12"/>
+  <text class="lbl" x="378" y="523">right</text>
+
+  <!-- join -->
+  <path class="edge" d="M222,540 L222,592" marker-end="url(#arr)"/>
+  <path class="edge" d="M378,540 L378,592" marker-end="url(#arr)"/>
+  <rect class="bar" x="200" y="594" width="200" height="6" rx="1"/>
+  <path class="edge" d="M300,600 L300,650" marker-end="url(#arr)"/>
+
+  <!-- final node -->
+  <circle cx="300" cy="664" r="12" fill="#ffffff" stroke="#334155" stroke-width="1.6"/>
+  <circle cx="300" cy="664" r="7" fill="#334155"/>
+
+  <!-- legend -->
+  <g transform="translate(40,712)" font-size="11" fill="#64748b">
+    <circle cx="6" cy="-4" r="5" fill="#f59e0b"/>
+    <text x="18" y="0">token (marking)</text>
+    <rect x="130" y="-12" width="22" height="14" rx="4" fill="#fff" stroke="#0ea5e9" stroke-width="2"/>
+    <text x="160" y="0">enabled / active node</text>
+    <polygon points="300,-12 307,-5 300,2 293,-5" fill="#fff" stroke="#334155" stroke-width="1.2"/>
+    <text x="314" y="0">decision / merge</text>
+  </g>
+</svg>

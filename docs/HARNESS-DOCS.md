@@ -112,7 +112,7 @@ una catena di rework e sparisce dalla misura del tasso di successo al primo colp
 194 prompt archiviati portano l'orario: è un debito noto, e vale per i nuovi.
 
 **Structure** (header amended 2026-09-26, RC-20 and RC-21): the header fields of P13 (`Prompt-ID`, `Chat`,
-`Lane`, `Status`), the protocol line, the worktree preconditions and the Lane discipline block, then COSA, DOVE,
+`Lane`, `Depends`, `Front`, `Status`), the protocol line, the worktree preconditions and the Lane discipline block, then COSA, DOVE,
 COME, RIFERIMENTI. Shared clauses are cited by number, never copied.
 
 ```
@@ -121,6 +121,8 @@ COME, RIFERIMENTI. Shared clauses are cited by number, never copied.
 Prompt-ID: P-YYYY-MM-DD-HHmm
 Chat: C-YYYY-MM-DD-HHmm
 Lane: fast | full (<RC-3 trigger>)
+Depends: none | P-YYYY-MM-DD-HHmm[, P-…]
+Front: <slug of an open front of docs/harness/fronts.json> (P13)
 Status: da eseguire
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
@@ -397,9 +399,9 @@ I documenti generati sono verificati da un gate, non dalla disciplina (ratifica 
 
 | Comando | Cosa verifica | Stato al 2026-08-18 |
 |---|---|---|
-| `npm run check:docs` | **A**: identità byte a byte del blocco di formato fra `CLAUDE.md` §21.2 e `PROTOCOL.md` P9. **B**: campi delle entry di log dal 2026-08-02 in poi, con tassonomia e forma dei valori. **C**: tetto di 500 caratteri su `Notes`, entry dal 2026-08-19 in poi, più la telemetria di dimensione del log | 3/3, 0 warning |
+| `npm run check:docs` | **A**: identità byte a byte del blocco di formato fra `CLAUDE.md` §21.2 e `PROTOCOL.md` P9. **B**: campi delle entry di log dal 2026-08-02 in poi, con tassonomia e forma dei valori. **C**: tetto di 500 caratteri su `Notes`, entry dal 2026-08-19 in poi, più la telemetria di dimensione del log. **E**: ogni prompt da `P-2026-10-11-0000` in poi, i prompt di merge esclusi, nomina un fronte di `docs/harness/fronts.json` aperto, o chiuso non prima della data del prompt (P13, RC-44) | 3/3, 0 warning |
 | `npm run check:agents` | rigenera in una temp di sistema e confronta con **tutti** i file prodotti dal generatore (`AGENTS.md` e `frontend/src/jjtl/AGENTS.md`), mai il solo root | da eseguire dopo ogni tocco a un `CLAUDE.md` |
-| `npm run typecheck` | `tsc --noEmit`. Baseline: 14, elencati per file e codice in `CLAUDE.md` §17 (misurata il 2026-09-24) | verde rispetto alla baseline |
+| `npm run typecheck` | `tsc --noEmit`. Baseline: zero dal 2026-10-12 (RC-48; `CLAUDE.md` §17): nessun errore pre-esistente | verde = exit 0 |
 | `npx vitest run` | test unitari | 1315 passed; nove suite non collezionano per `window is not defined`, note |
 | `npm run build` | build di produzione | verde |
 | `npm run smoke` | cinque asserzioni su stati noti: console pulita, larghezza del canvas sopra soglia, nodi renderizzati sopra zero, nessun `position: fixed` che interseca la status bar, nessun figlio clippato oltre tolleranza | implementato; i prompt che non lo usano dichiarano la deroga |
@@ -426,7 +428,7 @@ PDF alongside).
 ```
 Alfonso asks for a feature, a fix or a gate
    → chat writes the DISCOVERY PROMPT, committed         docs/prompts/
-       (Prompt-ID, Chat, Lane, Status: da eseguire; report path and name inside)
+       (Prompt-ID, Chat, Lane, Depends, Status: da eseguire; report path and name inside)
    → chat launches the session                          lane-run start <worktree> <prompt-file>
    → Claude Code runs Phase 1 read-only
    → Claude Code writes the DISCOVERY REPORT, commits    docs/discovery/
@@ -474,6 +476,14 @@ chat measures the merge                              lane-run merge <branch> --i
 check one after the other; a lane that does not end `done` stops the chain, and `chain.json` in
 `~/.jjodel-lanes/chain-<first Prompt-ID>/` says where and why. With `--merge-after` a finished chain ends with
 `merge --direct` into the trunk, parked on a fallback.
+
+**Card** (2026-10-10, RC-44, `P-2026-10-10-1532`): every lane in the front rule's scope has a card on the board of
+`docs/harness/fronts.json`, an issue of `jjodel-modeling/jjodel-lanes` in Project 2 with its front as milestone.
+- `lane-run track <Prompt-ID> | --sync [--dry-run]`: `--sync`, from any worktree, projects every prompt committed on a branch and every lane folder at or after `FRONT_FROM`, creates the missing cards (Ready for a prompt not started), heals fail-open misses, and closes the milestone of a closed front; `--dry-run` writes nothing.
+- `lane-run resolve <Prompt-ID> --why "<text>" [--by <name>]` (`P-2026-10-10-2020`, from `P-2026-10-05-1720`): on a lane that exited `Outcome: blocked`, writes `resolved.txt` in its folder once, one line `YYYY-MM-DD HH:MM · <who> · <why>`; refused on a running lane, on any other outcome, on a lane already resolved, and without `--why`. `status <id>` then prints `outcome: resolved` with `recorded: <the Outcome line>` and `resolved: <the line>`, and `status --all` prints `resolved`. The card projects a resolved lane like a done one (Status flipped: Done, closed; otherwise In review + `closure-owed`); `resolve` re-projects it and prints its `card:` line, failing open (RC-15).
+- The `card:` line: `start`, `resume`, `status <id>` (so `wait`), the chain supervisor and `go` on a direct merge print the issue URL and column, or why there is none (`tracking off`, `none: <reason>`, `tracking skipped: <gh error>`); the lane goes on either way (RC-15).
+- The enable switch: tracking runs only when `~/.jjodel-lanes/_tracking/config.json` exists (its `gh` names the binary; `LANE_TRACK_GH` overrides it for the tests).
+- `~/.jjodel-lanes/_tracking/` holds the card files `<Prompt-ID>.json` and the cached Project ids. It is not a `P-…` folder because every `P-…` folder is a lane to `status --all`, and `chain` and `merge` refuse an id that has one (report `P-2026-10-10-1330` §0 point 4).
 
 **Corsia veloce**: cadono discovery report, memo e ratifica; il prompt sta sotto le 80 righe, la
 verifica preventiva sta in dieci righe dentro l'entry di log, la verifica visiva si raggruppa in un

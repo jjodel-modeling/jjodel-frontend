@@ -26,12 +26,13 @@ import {ComponentsTab} from "./data/ComponentsTab";
 import {VertexAuthoringPanel} from "../../editor-v2/viewpoint/authoring/VertexAuthoringPanel";
 import {RowAuthoringPanel} from "../../editor-v2/viewpoint/authoring/RowAuthoringPanel";
 import {EdgeAuthoringPanel} from "../../editor-v2/viewpoint/authoring/EdgeAuthoringPanel";
+import {GraphVertexAuthoringPanel} from "../../editor-v2/viewpoint/authoring/GraphVertexAuthoringPanel";
 import {EnableIRPanel} from "../../editor-v2/viewpoint/authoring/EnableIRPanel";
-import {SymbolCard} from "../../editor-v2/viewpoint/authoring/SymbolCard";
 import {HelpText} from "../../ui";
 import {JjodelEvents} from "../../../events/registry";
 import {
     IR_TAB_LABELS,
+    IR_TAB_TOOLTIPS,
     irTabsForKind,
     type IRAuthoringKind,
     type IRTabId
@@ -43,6 +44,10 @@ interface TabDescriptor {
     id: TabId;
     label: string;
     render: () => ReactElement;
+    /** Native tooltip of the tab button, where the label alone is ambiguous. */
+    tooltip?: string;
+    /** Set on a trigger tab: clicking it runs this instead of activating the tab. */
+    onActivate?: () => void;
 }
 
 function ViewDataComponent(props: AllProps) {
@@ -80,7 +85,7 @@ function ViewDataComponent(props: AllProps) {
     // slice 1.6 removes them. A view without an `ir` keeps the legacy bar untouched,
     // IR entry-point (EnableIRPanel) included.
     const irKind: IRAuthoringKind | undefined =
-        (ir?.kind === 'vertex' || ir?.kind === 'row' || ir?.kind === 'edge') ? ir.kind : undefined;
+        (ir?.kind === 'vertex' || ir?.kind === 'row' || ir?.kind === 'edge' || ir?.kind === 'graphVertex') ? ir.kind : undefined;
 
     // The authoritative controls of the legacy Apply-to tab move into the IR
     // `Applies to` body (R-H): this is what they need beyond the view itself, and it
@@ -97,8 +102,14 @@ function ViewDataComponent(props: AllProps) {
                 ? <VertexAuthoringPanel view={view} activeTab={id} identity={identity} />
                 : irKind === 'row'
                     ? <RowAuthoringPanel view={view} activeTab={id} identity={identity} />
-                    : <EdgeAuthoringPanel view={view} activeTab={id} identity={identity} />}
+                    : irKind === 'graphVertex'
+                        ? <GraphVertexAuthoringPanel view={view} activeTab={id} identity={identity} />
+                        : <EdgeAuthoringPanel view={view} activeTab={id} identity={identity} />}
         </Try>
+    );
+
+    const openSymbolEditor = () => window.dispatchEvent(
+        new CustomEvent(JjodelEvents.SYMBOL_EDITOR_OPEN, { detail: { viewId: view.id } })
     );
 
     // Build the tab list. Each `render` closure captures the current view/readonly
@@ -106,11 +117,12 @@ function ViewDataComponent(props: AllProps) {
     const tabs: TabDescriptor[] = irKind ? irTabsForKind(irKind, props.advanced).map((id) => ({
         id,
         label: IR_TAB_LABELS[id],
-        // The Symbol tab is the light identity card (D15), not an authoring body:
-        // the anatomy is re-hosted by SymbolEditorModal on the same panel.
-        render: () => id === 'ir-symbol'
-            ? <Try><SymbolCard view={view} /></Try>
-            : renderIRPanel(id),
+        tooltip: IR_TAB_TOOLTIPS[id],
+        // The Symbol tab is a trigger (P-2026-09-29-1826): it opens SymbolEditorModal,
+        // which re-hosts the anatomy on the same panel, and never becomes the active
+        // tab, so closing the modal leaves the author on the tab they were on.
+        onActivate: id === 'ir-symbol' ? openSymbolEditor : undefined,
+        render: () => renderIRPanel(id),
     })) : [
         {
             id: 'apply-to',
@@ -197,8 +209,9 @@ function ViewDataComponent(props: AllProps) {
     // compartments»). More than one instance of this panel can be mounted at once, so
     // the event is filtered on the view it names; a tab absent from the CURRENT list is
     // ignored rather than activated, which would leave every body hidden and the panel
-    // blank.
-    const tabIds = tabs.map(t => t.id).join(',');
+    // blank. A trigger tab is no content tab, so it is ignored here too: a request for
+    // it must not open the modal, nor select a tab with no body.
+    const tabIds = tabs.filter(t => !t.onActivate).map(t => t.id).join(',');
     useEffect(() => {
         const onTab = (e: Event) => {
             const detail = (e as CustomEvent<{ viewId?: string; tab?: string }>).detail;
@@ -211,8 +224,10 @@ function ViewDataComponent(props: AllProps) {
     }, [view.id, tabIds]);
 
     // Fallback: if the currently-active tab is not in the list (e.g. switched
-    // from a view to a viewpoint), snap to the first available.
-    const activeDescriptor = tabs.find(t => t.id === activeTab) ?? tabs[0];
+    // from a view to a viewpoint), snap to the first available. A trigger tab is never
+    // the active one: it falls back to the first content tab, and nothing opens on mount.
+    const activeDescriptor = tabs.find(t => t.id === activeTab && !t.onActivate)
+        ?? tabs.find(t => !t.onActivate) ?? tabs[0];
 
     // Who owns the way out is the host's business, not this panel's. Inside the
     // Properties card the way out is the Tree right above it — selecting anything
@@ -255,10 +270,21 @@ function ViewDataComponent(props: AllProps) {
                             type="button"
                             role="tab"
                             aria-selected={activeDescriptor.id === tab.id}
+                            aria-haspopup={tab.onActivate ? 'dialog' : undefined}
+                            title={tab.tooltip}
                             className={`view-editor-tab${activeDescriptor.id === tab.id ? ' active' : ''}`}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => tab.onActivate ? tab.onActivate() : setActiveTab(tab.id)}
                         >
                             {tab.label}
+                            {tab.onActivate && (
+                                <i
+                                    className="bi bi-box-arrow-up-right"
+                                    aria-hidden="true"
+                                    // `inherit` against the global `i.bi` colour (style.scss):
+                                    // the icon reads as part of the label, active or not.
+                                    style={{ fontSize: 11, lineHeight: 1, marginLeft: 4, color: 'inherit' }}
+                                />
+                            )}
                         </button>
                     ))}
                 </div>

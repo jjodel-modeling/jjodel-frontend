@@ -1,0 +1,49 @@
+[
+  {
+    "id": "MG-1",
+    "name": "Usability",
+    "description": "Jjodel is usable when a modeler or a language engineer gets the task done with what the screen shows, without holding hidden state in mind and without the screen moving under them. It is read through the load at the moment of use (SG-1), the stability of what is on screen (SG-2) and the cost of getting to know a feature (SG-8).",
+    "softgoals": [
+      "SG-1",
+      "SG-2",
+      "SG-8"
+    ]
+  },
+  {
+    "id": "MG-2",
+    "name": "Expressiveness",
+    "description": "Jjodel is expressive when its languages and notations let the user say what a domain needs, and what is said means what the formalism says. Expressive power (SG-9) measures how much can be stated; fidelity (SG-6) measures whether what is stated runs and is checked as the formalism defines it.",
+    "softgoals": [
+      "SG-6",
+      "SG-9"
+    ]
+  },
+  {
+    "id": "MG-3",
+    "name": "Scalability",
+    "description": "Jjodel scales when both the models and the code base can grow. A large model stays responsive while it is edited, validated and simulated (SG-10), and the next change to the code does not cost more because of the last one (SG-11).",
+    "softgoals": [
+      "SG-10",
+      "SG-11"
+    ]
+  },
+  {
+    "id": "MG-4",
+    "name": "Dependability",
+    "description": "Jjodel is dependable when the user's work survives what happens to it. A change can be taken back (SG-4), a simulation run repeats with the same result (SG-5), and a saved project comes back complete after save, load, import and migration (SG-12).",
+    "softgoals": [
+      "SG-4",
+      "SG-5",
+      "SG-12"
+    ]
+  },
+  {
+    "id": "MG-5",
+    "name": "Delivery",
+    "description": "Delivery is the project's ability to ship what it promised at a cost it can afford: the MODELS 2026 demo runs as scripted (SG-3), and the process around the code stays within its measured budget (SG-7). Its softgoals concern the project rather than the product, so a row can serve delivery while it costs a product goal.",
+    "softgoals": [
+      "SG-3",
+      "SG-7"
+    ]
+  }
+]

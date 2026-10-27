@@ -15,7 +15,7 @@ import { useSimVersion } from '../../sim/simRunState';
 import { type ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import type { CompiledRowView, CompiledView } from './irTypes';
-import { computeIRSignature, getIRIndex, resolveIRView, resolveRowView } from './irResolveCore';
+import { computeIRSignature, getIRIndex, objectSnapshotParts, resolveIRView, resolveRowView } from './irResolveCore';
 import { compileRowView } from './irCompile';
 import { defaultRowViewIR, IR_DEFAULT_ROW_VIEW_ID } from './irDefaults';
 import {
@@ -55,15 +55,10 @@ export function useIRView(vertexId: string, instanceOfClassId: string | null | u
         const lookup = state.idlookup;
         const objectId = lookup?.[vertexId]?.model;
         if (typeof objectId !== 'string') return '';
-        const dObject = lookup?.[objectId];
-        if (!dObject) return '';
-        const snap: string[] = [irSig, objectId, dObject.instanceof ?? ''];
-        if (Array.isArray(dObject.features)) {
-            for (const fid of dObject.features) {
-                const dv = lookup?.[fid];
-                if (dv && Array.isArray(dv.values)) snap.push(`${fid}=${JSON.stringify(dv.values)}`);
-            }
-        }
+        // Slot values plus the object's own name and its metaclass's name: an intrinsic
+        // label on a class without a `name` attribute has no slot that moves on a rename.
+        const snap = objectSnapshotParts(lookup, objectId, irSig);
+        if (!snap) return '';
         // Cross-object deps published by this node's previous render (spec v1.2
         // sez. 9): appending their value snapshot makes a change on a navigated
         // target's feature invalidate exactly this node.
@@ -162,15 +157,8 @@ export function useIRRowView(childObjectId: string): IRRowResolution | null {
         const irSig = computeIRSignature(state);
         if (!irSig) return '';
         const lookup = state.idlookup;
-        const dObject = lookup?.[childObjectId];
-        if (!dObject) return '';
-        const snap: string[] = [irSig, childObjectId, dObject.instanceof ?? ''];
-        if (Array.isArray(dObject.features)) {
-            for (const fid of dObject.features) {
-                const dv = lookup?.[fid];
-                if (dv && Array.isArray(dv.values)) snap.push(`${fid}=${JSON.stringify(dv.values)}`);
-            }
-        }
+        const snap = objectSnapshotParts(lookup, childObjectId, irSig);
+        if (!snap) return '';
         const crossSig = crossDepsSignature(lookup, childObjectId);
         return crossSig ? `${snap.join(';')};X${crossSig}` : snap.join(';');
     });

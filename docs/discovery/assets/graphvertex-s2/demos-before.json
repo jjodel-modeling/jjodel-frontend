@@ -1,0 +1,19 @@
+{
+  "scene_1_DemoPEST.jjodel": {
+    "kinds": {},
+    "objects": 11
+  },
+  "scene_2_DemoPetri.jjodel": {
+    "kinds": {},
+    "objects": 13
+  },
+  "scene_3_DemoESM.jjodel": {
+    "kinds": {},
+    "objects": 10
+  },
+  "scene_4_DemoFlowB.jjodel": {
+    "kinds": {},
+    "objects": 17
+  },
+  "_note": "IR views per kind in each demo export after import (kinds), and the DObject count as the control that the import ran. Run on the pre-S2 tree (P-2026-10-10-0105 S2, GV_ONLY=demos)."
+}

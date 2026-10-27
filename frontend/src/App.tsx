@@ -61,6 +61,7 @@ import ImportSummaryModal from './components/import/ImportSummaryModal';
 import SymbolEditorModal from './components/editor-v2/viewpoint/authoring/SymbolEditorModal';
 import ValidationResultsModal from './components/editor-v2/problems/ValidationResultsModal';
 import ValidationRulesModal from './components/validation/ValidationRulesModal';
+import DeriveViewpointDialog from './components/editor-v2/sim/DeriveViewpointDialog';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -161,6 +162,7 @@ function App(props: AllProps): JSX.Element {
                             <Route path={'archive'} element={<ArchivePage/>}/>
                             <Route path={'notes'} element={<NotesPage/>}/>
                             <Route path={'templates'} element={<TemplatePage/>}/>
+                            <Route path={'templates/:ref'} element={<TemplatePage/>}/>
                             <Route path={'explore'} element={<ExplorePage/>}/>
                             <Route path={'recent'} element={<RecentPage_Obsolete/>}/>
                             <Route path={'community'} element={<CommunityPage/>}/>
@@ -185,6 +187,7 @@ function App(props: AllProps): JSX.Element {
                 <Try><SymbolEditorModal/></Try>
                 <Try><ValidationResultsModal/></Try>
                 <Try><ValidationRulesModal/></Try>
+                <Try><DeriveViewpointDialog/></Try>
 
             </div>
         </TreeViewPanelProvider>

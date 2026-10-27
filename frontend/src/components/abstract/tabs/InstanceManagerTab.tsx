@@ -1893,6 +1893,14 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         setNav(null);
     };
 
+    /** #158 P5, field test 2026-09-29 — a click anywhere on the selected row opens and
+     *  closes its neighborhood, as the chevron does. On any other row, and on the
+     *  selected one while others are ticked too, it is still the selection. */
+    const clickRow = (id: string) => {
+        if (id === subjectId && alsoSelected.length === 0) { setShowNeighborhood(v => !v); return; }
+        selectOnly(id);
+    };
+
     /** #158 P5 — the chevron at the end of a row. On the selected row it closes or
      *  reopens the neighborhood and leaves the selection alone (closing it must not
      *  close the form under it); on any other row it selects that row AND shows its
@@ -2936,7 +2944,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                         }
                                         title={row.name || row.id}
                                         aria-expanded={isExpanded}
-                                        onClick={() => selectOnly(row.id)}
+                                        onClick={() => clickRow(row.id)}
                                     >
                                         {/* The checkbox is the gesture that ADDS to the
                                             selection; a plain click still means «this one».
@@ -2992,10 +3000,11 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                         {/* Il chevron era un INDICATORE, perche' un
                                             bersaglio annidato che rifacesse il click
                                             sulla riga lo avrebbe fatto due volte.
-                                            #158 P5 gli da' un gesto che la riga NON
-                                            ha: chiudere e riaprire il vicinato
-                                            (`toggleNeighborhood`). Il click sulla riga
-                                            resta la selezione, e non passa di qui. */}
+                                            #158 P5 gli da' il gesto di chiudere e
+                                            riaprire il vicinato (`toggleNeighborhood`);
+                                            dal 2026-10-01 la riga selezionata fa lo
+                                            stesso (`clickRow`), e il bottone ferma la
+                                            propagazione per non farlo due volte. */}
                                         <td className="instance-manager__td-chev">
                                             <button
                                                 type="button"

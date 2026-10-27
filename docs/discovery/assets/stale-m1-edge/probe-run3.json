@@ -1,0 +1,1955 @@
+{
+ "url": "http://localhost:3123",
+ "started": "2026-10-10T14:08:59.566Z",
+ "steps": [
+  {
+   "step": "R1 remove",
+   "returned": {
+    "success": true
+   },
+   "snaps": [
+    {
+     "at": 0,
+     "t": 1791641403874,
+     "values": [
+      "Pointer1791641385278_USER_101",
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 1,
+      "inSubElementsIds": [
+       "Pointer1791641392001_USER_138"
+      ],
+      "danglingInSubElements": 0,
+      "scanLive": 1,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": true,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "stateTotal": 18,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "propTotal": 18,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "storeTotal": 18,
+      "domPair": 1,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138"
+      ],
+      "domTotal": 18,
+      "srcHandles": [
+       "out:top-0",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138"
+     ]
+    },
+    {
+     "at": 1000,
+     "t": 1791641404875,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 1,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "stateTotal": 18,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "propTotal": 18,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "storeTotal": 18,
+      "domPair": 1,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138"
+      ],
+      "domTotal": 18,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138"
+     ]
+    },
+    {
+     "at": 5000,
+     "t": 1791641408874,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 1,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "stateTotal": 18,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "propTotal": 18,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "storeTotal": 18,
+      "domPair": 1,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138"
+      ],
+      "domTotal": 18,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "A1 add back",
+   "returned": {
+    "success": true
+   },
+   "snaps": [
+    {
+     "at": 0,
+     "t": 1791641408877,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 1,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "stateTotal": 18,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "propTotal": 18,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       }
+      ],
+      "storeTotal": 18,
+      "domPair": 1,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138"
+      ],
+      "domTotal": 18,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138"
+     ]
+    },
+    {
+     "at": 1000,
+     "t": 1791641409877,
+     "values": [
+      "Pointer1791641385278_USER_101",
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 1,
+      "inSubElementsIds": [
+       "Pointer1791641409078_USER_155"
+      ],
+      "danglingInSubElements": 1,
+      "scanLive": 1,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": true,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "stateTotal": 19,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "propTotal": 19,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "storeTotal": 19,
+      "domPair": 2,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155"
+      ],
+      "domTotal": 19,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155"
+     ]
+    },
+    {
+     "at": 5000,
+     "t": 1791641413878,
+     "values": [
+      "Pointer1791641385278_USER_101",
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 1,
+      "inSubElementsIds": [
+       "Pointer1791641409078_USER_155"
+      ],
+      "danglingInSubElements": 1,
+      "scanLive": 1,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": true,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "stateTotal": 19,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "propTotal": 19,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "storeTotal": 19,
+      "domPair": 2,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155"
+      ],
+      "domTotal": 19,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "R2 remove again",
+   "returned": {
+    "success": true
+   },
+   "snaps": [
+    {
+     "at": 0,
+     "t": 1791641413882,
+     "values": [
+      "Pointer1791641385278_USER_101",
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 1,
+      "inSubElementsIds": [
+       "Pointer1791641409078_USER_155"
+      ],
+      "danglingInSubElements": 1,
+      "scanLive": 1,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": true,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "stateTotal": 19,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "propTotal": 19,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "storeTotal": 19,
+      "domPair": 2,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155"
+      ],
+      "domTotal": 19,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155"
+     ]
+    },
+    {
+     "at": 1000,
+     "t": 1791641414882,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 2,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "stateTotal": 19,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "propTotal": 19,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "storeTotal": 19,
+      "domPair": 2,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155"
+      ],
+      "domTotal": 19,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1 [D gone]"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155"
+     ]
+    },
+    {
+     "at": 5000,
+     "t": 1791641418882,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 2,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "stateTotal": 19,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "propTotal": 19,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "storeTotal": 19,
+      "domPair": 2,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155"
+      ],
+      "domTotal": 19,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1 [D gone]"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "A2 add back again",
+   "returned": {
+    "success": true
+   },
+   "snaps": [
+    {
+     "at": 0,
+     "t": 1791641418925,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 2,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "stateTotal": 19,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "propTotal": 19,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       }
+      ],
+      "storeTotal": 19,
+      "domPair": 2,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155"
+      ],
+      "domTotal": 19,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1 [D gone]"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155"
+     ]
+    },
+    {
+     "at": 1000,
+     "t": 1791641419925,
+     "values": [
+      "Pointer1791641385278_USER_101",
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 1,
+      "inSubElementsIds": [
+       "Pointer1791641418977_USER_156"
+      ],
+      "danglingInSubElements": 2,
+      "scanLive": 1,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "inLookup": true,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "stateTotal": 20,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "propTotal": 20,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "storeTotal": 20,
+      "domPair": 3,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155",
+       "Pointer1791641418977_USER_156"
+      ],
+      "domTotal": 20,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1 [D gone]",
+       "out:top-2"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155",
+      "Pointer1791641418977_USER_156"
+     ]
+    },
+    {
+     "at": 5000,
+     "t": 1791641423926,
+     "values": [
+      "Pointer1791641385278_USER_101",
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 1,
+      "inSubElementsIds": [
+       "Pointer1791641418977_USER_156"
+      ],
+      "danglingInSubElements": 2,
+      "scanLive": 1,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "inLookup": true,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "stateTotal": 20,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "propTotal": 20,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "storeTotal": 20,
+      "domPair": 3,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155",
+       "Pointer1791641418977_USER_156"
+      ],
+      "domTotal": 20,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1 [D gone]",
+       "out:top-2"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155",
+      "Pointer1791641418977_USER_156"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "R3 remove a third time",
+   "returned": {
+    "success": true
+   },
+   "snaps": [
+    {
+     "at": 0,
+     "t": 1791641424005,
+     "values": [
+      "Pointer1791641385278_USER_101",
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 1,
+      "inSubElementsIds": [
+       "Pointer1791641418977_USER_156"
+      ],
+      "danglingInSubElements": 2,
+      "scanLive": 1,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "inLookup": true,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "stateTotal": 20,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "propTotal": 20,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "storeTotal": 20,
+      "domPair": 3,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155",
+       "Pointer1791641418977_USER_156"
+      ],
+      "domTotal": 20,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1 [D gone]",
+       "out:top-2"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155",
+      "Pointer1791641418977_USER_156"
+     ]
+    },
+    {
+     "at": 1000,
+     "t": 1791641425005,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 3,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "stateTotal": 20,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "propTotal": 20,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "storeTotal": 20,
+      "domPair": 3,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155",
+       "Pointer1791641418977_USER_156"
+      ],
+      "domTotal": 20,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1 [D gone]",
+       "out:top-2 [D gone]"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155",
+      "Pointer1791641418977_USER_156"
+     ]
+    },
+    {
+     "at": 5000,
+     "t": 1791641429004,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 3,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "stateTotal": 20,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "propTotal": 20,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "storeTotal": 20,
+      "domPair": 3,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155",
+       "Pointer1791641418977_USER_156"
+      ],
+      "domTotal": 20,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1 [D gone]",
+       "out:top-2 [D gone]"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155",
+      "Pointer1791641418977_USER_156"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "C1 scrub subElements",
+   "returned": "scrubbed 3",
+   "snaps": [
+    {
+     "at": 0,
+     "t": 1791641429009,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 3,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "inLookup": false,
+        "inSubElements": true,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "stateTotal": 20,
+      "prop": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "propTotal": 20,
+      "store": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "hidden": false,
+        "sourceHandle": "top-0",
+        "targetHandle": "bottom-0"
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "hidden": false,
+        "sourceHandle": "top-1",
+        "targetHandle": "right-0"
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "hidden": false,
+        "sourceHandle": "top-2",
+        "targetHandle": "right-1"
+       }
+      ],
+      "storeTotal": 20,
+      "domPair": 3,
+      "domPairIds": [
+       "Pointer1791641392001_USER_138",
+       "Pointer1791641409078_USER_155",
+       "Pointer1791641418977_USER_156"
+      ],
+      "domTotal": 20,
+      "srcHandles": [
+       "out:top-0 [D gone]",
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1",
+       "out:top-1 [D gone]",
+       "out:top-2 [D gone]"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155",
+      "Pointer1791641418977_USER_156"
+     ]
+    },
+    {
+     "at": 1000,
+     "t": 1791641430007,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 0,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": false,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": false,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "inLookup": false,
+        "inSubElements": false,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [],
+      "stateTotal": 17,
+      "prop": [],
+      "propTotal": 17,
+      "store": [],
+      "storeTotal": 17,
+      "domPair": 0,
+      "domPairIds": [],
+      "domTotal": 17,
+      "srcHandles": [
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155",
+      "Pointer1791641418977_USER_156"
+     ]
+    },
+    {
+     "at": 5000,
+     "t": 1791641434009,
+     "values": [
+      null,
+      "Pointer1791641385279_USER_107"
+     ],
+     "d": {
+      "inSubElements": 0,
+      "inSubElementsIds": [],
+      "danglingInSubElements": 0,
+      "scanLive": 0,
+      "known": [
+       {
+        "id": "Pointer1791641392001_USER_138",
+        "inLookup": false,
+        "inSubElements": false,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641409078_USER_155",
+        "inLookup": false,
+        "inSubElements": false,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       },
+       {
+        "id": "Pointer1791641418977_USER_156",
+        "inLookup": false,
+        "inSubElements": false,
+        "inSrcEdgesOut": true,
+        "inTgtEdgesIn": true
+       }
+      ]
+     },
+     "rf": {
+      "editorFound": true,
+      "hookIndex": 2,
+      "state": [],
+      "stateTotal": 17,
+      "prop": [],
+      "propTotal": 17,
+      "store": [],
+      "storeTotal": 17,
+      "domPair": 0,
+      "domPairIds": [],
+      "domTotal": 17,
+      "srcHandles": [
+       "out:bottom-0",
+       "out:left-0",
+       "out:left-1",
+       "in:left-0",
+       "in:top-0",
+       "in:bottom-0",
+       "in:top-1"
+      ]
+     },
+     "knownIds": [
+      "Pointer1791641392001_USER_138",
+      "Pointer1791641409078_USER_155",
+      "Pointer1791641418977_USER_156"
+     ]
+    }
+   ]
+  }
+ ],
+ "subject": {
+  "graphId": "Pointer1791641385266_USER_30_graph2",
+  "srcObj": "Pointer1791641385270_USER_45",
+  "srcName": "Running",
+  "valueId": "Pointer1791641385271_USER_53",
+  "refMeta": "Pointer1791641380264_USER_22",
+  "tgtObj": "Pointer1791641385278_USER_101",
+  "tgtName": "stop",
+  "index": 0,
+  "srcV": "Pointer1791641392000_USER_120",
+  "tgtV": "Pointer1791641392000_USER_132",
+  "values": [
+   "Pointer1791641385278_USER_101",
+   "Pointer1791641385279_USER_107"
+  ],
+  "modelId": "Pointer1791641385266_USER_30"
+ },
+ "baseline": {
+  "t": 1791641403832,
+  "values": [
+   "Pointer1791641385278_USER_101",
+   "Pointer1791641385279_USER_107"
+  ],
+  "d": {
+   "inSubElements": 1,
+   "inSubElementsIds": [
+    "Pointer1791641392001_USER_138"
+   ],
+   "danglingInSubElements": 0,
+   "scanLive": 1,
+   "known": [
+    {
+     "id": "Pointer1791641392001_USER_138",
+     "inLookup": true,
+     "inSubElements": true,
+     "inSrcEdgesOut": true,
+     "inTgtEdgesIn": true
+    }
+   ]
+  },
+  "rf": {
+   "editorFound": true,
+   "hookIndex": 2,
+   "state": [
+    {
+     "id": "Pointer1791641392001_USER_138",
+     "hidden": false,
+     "sourceHandle": "top-0",
+     "targetHandle": "bottom-0"
+    }
+   ],
+   "stateTotal": 18,
+   "prop": [
+    {
+     "id": "Pointer1791641392001_USER_138",
+     "hidden": false,
+     "sourceHandle": "top-0",
+     "targetHandle": "bottom-0"
+    }
+   ],
+   "propTotal": 18,
+   "store": [
+    {
+     "id": "Pointer1791641392001_USER_138",
+     "hidden": false,
+     "sourceHandle": "top-0",
+     "targetHandle": "bottom-0"
+    }
+   ],
+   "storeTotal": 18,
+   "domPair": 1,
+   "domPairIds": [
+    "Pointer1791641392001_USER_138"
+   ],
+   "domTotal": 18,
+   "srcHandles": [
+    "out:top-0",
+    "out:bottom-0",
+    "out:left-0",
+    "out:left-1",
+    "in:left-0",
+    "in:top-0",
+    "in:bottom-0",
+    "in:top-1"
+   ]
+  },
+  "knownIds": [
+   "Pointer1791641392001_USER_138"
+  ]
+ },
+ "finished": "2026-10-10T14:10:34.054Z",
+ "hookLogs": [
+  "1791641403978 [useM1ReferenceEdges] creating 0 DVoidEdge(s): []",
+  "1791641403978 [useM1ReferenceEdges] removing 1 stale DVoidEdge(s): [Object]",
+  "1791641409078 [useM1ReferenceEdges] creating 1 DVoidEdge(s): [Object]",
+  "1791641414189 [useM1ReferenceEdges] creating 0 DVoidEdge(s): []",
+  "1791641414189 [useM1ReferenceEdges] removing 1 stale DVoidEdge(s): [Object]",
+  "1791641418978 [useM1ReferenceEdges] creating 1 DVoidEdge(s): [Object]",
+  "1791641424078 [useM1ReferenceEdges] creating 0 DVoidEdge(s): []",
+  "1791641424078 [useM1ReferenceEdges] removing 1 stale DVoidEdge(s): [Object]"
+ ],
+ "pageErrors": [],
+ "consoleErrors": [
+  "init_dash"
+ ]
+}

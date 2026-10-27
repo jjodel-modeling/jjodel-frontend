@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+import { isConsumerMode } from '../environment/consumerMode';
 import './notification-widget.scss';
 
 interface NotificationPost {
@@ -18,7 +20,8 @@ interface QuickTipsState {
   pauseUntil: number | null;
 }
 
-const API_URL = 'https://jjodel-notifications.alfonso-pierantonio.workers.dev';
+// The host depends on the Cloudflare account's workers.dev subdomain and must change with it (the AI proxy in types/jodie.ts lives on the same subdomain).
+const API_URL = 'https://jjodel-notifications.alfonso99.workers.dev';
 
 const TIP_HIDE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
@@ -63,6 +66,8 @@ function isPauseActive(allTips: NotificationPost[], state: QuickTipsState, now: 
 }
 
 export const NotificationWidget: React.FC = () => {
+  // Templates page: no Quick tip (handoff §2.4, P-2026-10-19-1616); system notices stay.
+  const onTemplatesPage = /^\/templates(\/|$)/.test(useLocation().pathname);
   const [posts, setPosts] = useState<NotificationPost[]>([]);
   const [isVisible, setIsVisible] = useState(true);
   const [tipsQueue, setTipsQueue] = useState<NotificationPost[]>([]);
@@ -117,7 +122,7 @@ export const NotificationWidget: React.FC = () => {
   useEffect(() => {
     const shouldShow = isVisible && posts.length > 0 && !isLoading;
     const hasSystemNotice = posts.filter(p => p.category === 'system-notice' && !dismissedIds.includes(p.id)).length > 0;
-    const hasTipToShow = tipsQueue.length > 0 && queueIndex < tipsQueue.length;
+    const hasTipToShow = !isConsumerMode() && !onTemplatesPage && tipsQueue.length > 0 && queueIndex < tipsQueue.length;
     const isActuallyVisible = shouldShow && (hasSystemNotice || hasTipToShow);
 
     if (isActuallyVisible) {
@@ -129,7 +134,7 @@ export const NotificationWidget: React.FC = () => {
     return () => {
       document.body.removeAttribute('data-notification-visible');
     };
-  }, [isVisible, posts, isLoading, dismissedIds, tipsQueue, queueIndex]);
+  }, [isVisible, posts, isLoading, dismissedIds, tipsQueue, queueIndex, onTemplatesPage]);
 
   // Hide widget on auth page
   if (window.location.hash.includes('auth')) return null;
@@ -223,7 +228,10 @@ export const NotificationWidget: React.FC = () => {
   }
 
   // TIPS
-  if (tipsQueue.length > 0 && currentTip) {
+  // #168 J7 (D4): no Quick tip in the stand-alone consumer; system notices stay. A tip skipped here
+  // is not marked as seen (only Next and close do that), so the developer still gets it.
+  // The same holds on the Templates page.
+  if (!isConsumerMode() && !onTemplatesPage && tipsQueue.length > 0 && currentTip) {
     return (
       <div className="notification-widget is-tip">
         <div className="notification-header">

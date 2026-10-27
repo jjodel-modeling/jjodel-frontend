@@ -9,22 +9,30 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-    bagWithEdits, boundHelp, compatibleOptions, defectFix, draftApply, draftPatch, draftProposals, draftStatus, isFirstOpen,
-    isModified, matchLine, roleBadge, roleSections, roleSwitch, rowValue, withProfileName, withRoleMode,
+    bagWithEdits, boundHelp, compatibleIds, compatibleOptions, defectFix, draftApply, draftBag, draftPatch, draftProposals, draftStatus, isFirstOpen,
+    isModified, matchLine, MULTI_TAGS_SHOWN, multiRow, multiRowLabels, pillTitle, removesTag, roleBadge, roleSections, roleSwitch, rowValue, rowVerdict,
+    withAdded, withPrimary, withProfileName, withRemoved, withRoleMode,
 } from '../simRolesDraft';
 import type { DraftInput } from '../simRolesDraft';
-import { profilePatch, storedProfile } from '../simRoleStatus';
+import { profileBindings, profilePatch, storedProfile } from '../simRoleStatus';
 import type { BoundEstimate } from '../modelMarkings';
 import { systemProfile, validateProfile } from '../../../../model/simulation/simProfiles';
 import { decodeProfile, encodeProfile } from '../../../../model/simulation/profileCodec';
 import { ROLE_IDS } from '../../../../model/simulation/roleCatalog';
+import type { RoleId } from '../../../../model/simulation/roleCatalog';
 import type { SimProfile } from '../../../../model/simulation/simProfiles';
-import type { ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
+import type { MetamodelSketch, ProfileBindings, RoleBinding } from '../../../../model/simulation/profileBinder';
+import { bindingVerdicts } from '../../../../model/simulation/bindingCompat';
+import type { BindingVerdicts, RoleCompatibility } from '../../../../model/simulation/bindingCompat';
 
 const SM = systemProfile('stateMachine') as SimProfile;
 const ESM = systemProfile('extendedStateMachine') as SimProfile;
 const FLOW = systemProfile('flowchart') as SimProfile;
 const PETRI = systemProfile('petri') as SimProfile;
+const DFA = systemProfile('dfa') as SimProfile;
+const NFA = systemProfile('nfa') as SimProfile;
+const MOORE = systemProfile('moore') as SimProfile;
+const MEALY = systemProfile('mealy') as SimProfile;
 
 const bound = (value: string): RoleBinding => ({ status: 'bound', value, why: 'test' });
 const none: RoleBinding = { status: 'none', why: 'test' };
@@ -64,7 +72,10 @@ describe('roleSections: Required is requiredRoles (R-SIM-48), dependencies are �
         expect(s.parameters).toEqual([]);
         expect(s.optional).toEqual(['terminal', 'trigger', 'eventIdentifier', 'guard']);
         expect(s.derived).toEqual(['initialMarking', 'bound', 'event']);
-        expect(s.off).toEqual(['activityFinal', 'fork', 'join', 'arc', 'arcSource', 'arcTarget', 'arcWeight', 'inhibitorArc', 'action', 'entry', 'exit']);
+        expect(s.off).toEqual([
+            'accepting', 'activityFinal', 'fork', 'join', 'arc', 'arcSource', 'arcTarget', 'arcWeight', 'inhibitorArc', 'action', 'entry', 'exit',
+            'stateOutput', 'transitionOutput',
+        ]);
         expect(s.neededBy.trigger).toEqual(['event', 'eventIdentifier']);
         expect(s.neededBy.stateAttributes).toBeUndefined();
     });
@@ -92,13 +103,45 @@ describe('roleSections: Required is requiredRoles (R-SIM-48), dependencies are �
         }
     });
 
-    it('Accepting, State output, Transition output are hidden unless set (D8; killed by showing a feature nothing reads)', () => {
-        const s = roleSections(SM, {});
-        for (const r of ['accepting', 'stateOutput', 'transitionOutput'] as const) {
-            expect([...s.optional, ...s.derived, ...s.off]).not.toContain(r);
+    it('Accepting, State output, Transition output are ordinary rows: Not used in the four demo presets, set or not (killed by keeping UNREAD_ROLES)', () => {
+        for (const p of [SM, ESM, FLOW, PETRI]) {
+            const s = roleSections(p, {});
+            for (const r of ['accepting', 'stateOutput', 'transitionOutput'] as const) expect({ p: p.id, r, off: s.off.includes(r) }).toEqual({ p: p.id, r, off: true });
         }
-        // control: a set key shows, under Not used, since the preset turns it off
-        expect(roleSections(SM, { simAccepting: 'C_Acc' }).off).toContain('accepting');
+        // The closed fold of the dialog, «n derived · m not used» (discovery §3.7): three more not used each.
+        const fold = (p: SimProfile) => { const s = roleSections(p, {}); return [s.derived.length, s.off.length]; };
+        expect([SM, ESM, FLOW, PETRI].map(fold)).toEqual([[3, 14], [3, 11], [2, 12], [0, 16]]);
+        // control: a set key reads the same
+        expect(roleSections(SM, { simAccepting: 'C_Acc' }).off).toEqual(roleSections(SM, {}).off);
+    });
+
+    it('DFA, NFA, Moore, Mealy: the role they read is a Required row (probe A of P-2026-09-29-0239)', () => {
+        const cf: RoleId[][] = [['node'], ['initial'], ['transition'], ['ownedTransitions', 'source'], ['nextState'], ['trigger']];
+        const withAccepting = [['node'], ['initial'], ['accepting'], ...cf.slice(2)];
+        expect(roleSections(DFA, {}).required).toEqual(withAccepting);
+        expect(roleSections(NFA, {}).required).toEqual(withAccepting);
+        expect(roleSections(MOORE, {}).required).toEqual([...cf, ['stateOutput']]);
+        expect(roleSections(MEALY, {}).required).toEqual([...cf, ['transitionOutput']]);
+        // the other two are Not used there
+        expect(roleSections(DFA, {}).off).toEqual(expect.arrayContaining(['stateOutput', 'transitionOutput']));
+        expect(roleSections(MOORE, {}).off).toEqual(expect.arrayContaining(['accepting', 'transitionOutput']));
+    });
+
+    it('DFA in the dialog: the Accepting row lists the subclasses of State, and the one picked turns «Missing: Accepting.» into checkable (probe C)', () => {
+        const C = (id: string, supers: string[] = []) => ({ id, name: id, abstract: false, supers });
+        const R = (owner: string, name: string, type: string, composition = false) => ({ id: `${owner}.${name}`, name, owner, type, composition, aggregation: false });
+        const sketch: MetamodelSketch = {
+            classes: [C('State'), C('Initial', ['State']), C('Good', ['State']), C('Transition'), C('Symbol')],
+            attributes: [],
+            references: [R('State', 'transitions', 'Transition', true), R('Transition', 'nextState', 'State'), R('Transition', 'event', 'Symbol')],
+        };
+        const base = input({ profile: DFA, bindings: profileBindings(DFA, sketch, {}) });
+        expect(draftStatus(base, sketch)).toEqual({ status: 'notCheckable', missing: ['Accepting'] });
+        const compat = bindingVerdicts(DFA, draftBag(base), sketch).accepting;
+        expect(compatibleOptions(compat, '').map(o => [o.id, o.verdict])).toEqual([['State', 'warn'], ['Initial', 'ok'], ['Good', 'ok']]);
+        const picked = input({ ...base, edits: { simAccepting: 'Good' } });
+        expect(draftStatus(picked, sketch)).toEqual({ status: 'checkable', missing: [] });
+        expect(draftPatch(picked)).toMatchObject({ simAccepting: 'Good', simProfile: 'dfa' });
     });
 
     it('an either-item with both sides edit keeps both; with the other side derived, the edit side alone (killed by dropping the derived filter)', () => {
@@ -214,6 +257,42 @@ describe('draftStatus and the rows', () => {
     });
 });
 
+describe('pillTitle: the pill says why its verdict is what it is (ticket of P-2026-09-28-0140)', () => {
+    const judged = (verdict: 'ok' | 'warn' | 'incompatible', why: string): RoleCompatibility => ({ candidates: [], current: { id: 'X', verdict, why } });
+
+    it('nothing missing and every bound value ok, or no sketch: every required role is bound', () => {
+        expect(pillTitle({ status: 'checkable', missing: [] }, null)).toBe('Every required role is bound.');
+        expect(pillTitle({ status: 'checkable', missing: [] }, { node: judged('ok', '') })).toBe('Every required role is bound.');
+    });
+
+    it('an incompatible binding is named with its why (killed by the old title, «Every required role is bound.»)', () => {
+        const verdicts: BindingVerdicts = { node: judged('ok', ''), initial: judged('incompatible', 'Transition is not a kind of State') };
+        expect(pillTitle({ status: 'notCheckable', missing: [] }, verdicts)).toBe('Incompatible: Initial (Transition is not a kind of State).');
+    });
+
+    it('the warnings follow the incompatible ones, whatever the order of the roles (killed by one list in role order)', () => {
+        const verdicts: BindingVerdicts = {
+            node: judged('warn', 'every State would be Accepting'),
+            initial: judged('incompatible', 'Transition is not a kind of State'),
+            terminal: judged('incompatible', 'Event is not a kind of State'),
+        };
+        expect(pillTitle({ status: 'notCheckable', missing: [] }, verdicts)).toBe(
+            'Incompatible: Initial (Transition is not a kind of State); Terminal (Event is not a kind of State). Warning: Node (every State would be Accepting).',
+        );
+        expect(pillTitle({ status: 'warnings', missing: [] }, { node: judged('warn', 'w') })).toBe('Warning: Node (w).');
+    });
+
+    it('a role with no bound value is not judged: its candidates say nothing (killed by reading the candidates)', () => {
+        const verdicts: BindingVerdicts = { initial: { candidates: [{ id: 'C', verdict: 'incompatible', why: 'no' }], current: null } };
+        expect(pillTitle({ status: 'checkable', missing: [] }, verdicts)).toBe('Every required role is bound.');
+    });
+
+    it('what is missing comes first, then the verdicts (killed by dropping either)', () => {
+        expect(pillTitle({ status: 'notCheckable', missing: ['Node', 'Initial or Initial marking'] }, null)).toBe('Missing: Node, Initial or Initial marking.');
+        expect(pillTitle({ status: 'notCheckable', missing: ['Node'] }, { initial: judged('incompatible', 'i') })).toBe('Missing: Node. Incompatible: Initial (i).');
+    });
+});
+
 describe('boundHelp: the engine reasons (R-SIM-81(1) as amended, D2)', () => {
     it('the closed exploration proposes 4 on the demo net with its reason, verbatim (killed by a paraphrase or the largest initial marking)', () => {
         const d = input({ profile: PETRI, bindings: B2NET_BINDINGS, estimate: closed(4) });
@@ -234,11 +313,15 @@ describe('boundHelp: the engine reasons (R-SIM-81(1) as amended, D2)', () => {
 // ---------------------------------------------------------------------------
 
 describe('roleSwitch: the dialog offers only switches the validator accepts (R-SIM-47, R-SIM-48)', () => {
-    it('State machine: Terminal and Guard off, Fork on; Trigger (needed), Initial (required), Bound (derived), Arc (other shape), Accepting (unread) none (killed by offering a switch into a defect)', () => {
+    it('State machine: Terminal and Guard off, Fork on; Trigger (needed), Initial (required), Bound (derived), Arc (other shape) none (killed by offering a switch into a defect)', () => {
         expect(roleSwitch(SM, 'terminal')).toBe('off');
         expect(roleSwitch(SM, 'guard')).toBe('off');
         expect(roleSwitch(SM, 'fork')).toBe('on');
-        for (const r of ['trigger', 'initial', 'bound', 'arc', 'accepting', 'event', 'initialMarking'] as const) expect(roleSwitch(SM, r)).toBeNull();
+        for (const r of ['trigger', 'initial', 'bound', 'arc', 'event', 'initialMarking'] as const) expect(roleSwitch(SM, r)).toBeNull();
+        // Accepting and the outputs are read by the engine (R-SIM-91, R-SIM-92): switchable on (killed by keeping UNREAD_ROLES)
+        for (const r of ['accepting', 'stateOutput', 'transitionOutput'] as const) expect(roleSwitch(SM, r)).toBe('on');
+        // control: where the preset requires it, no switch
+        expect(roleSwitch(DFA, 'accepting')).toBeNull();
         // Every offered switch leaves a profile the validator accepts, but for the name.
         for (const r of ROLE_IDS) {
             const s = roleSwitch(SM, r);
@@ -319,5 +402,103 @@ describe('compatibleOptions (S10 over S11a)', () => {
         expect(compatibleOptions(compat, 'c').map(o => o.id)).toEqual(['a', 'b', 'c']);
         expect(compatibleOptions({ ...compat, current: { id: 'z', verdict: 'incompatible', why: 'gone' } }, 'z').map(o => o.id)).toEqual(['z', 'a', 'b']);
         expect(compatibleOptions(undefined, 'x')).toEqual([]);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// R-SIM-90: a multi row, the primary select and the other attributes as tags
+// ---------------------------------------------------------------------------
+
+describe('R-SIM-90: the multi row of Guard, Action, Entry and Exit (P-2026-09-29-0010)', () => {
+    const compat = (verdicts: Record<string, 'ok' | 'warn' | 'incompatible'>): RoleCompatibility => ({
+        candidates: Object.entries(verdicts).map(([id, verdict]) => ({ id, verdict, why: verdict === 'ok' ? '' : `${id} is wrong` })),
+        current: null,
+    });
+
+    it('the primary is the first attribute, the tags the others; the stored plain id is a row without tags', () => {
+        expect(multiRow('A', ['A', 'B'])).toMatchObject({ primary: 'A', others: [] });
+        expect(multiRow('["A","B","C"]', ['A', 'B', 'C'])).toMatchObject({ primary: 'A', others: ['B', 'C'] });
+        expect(multiRow('', ['A', 'B'])).toMatchObject({ primary: '', others: [] });
+    });
+
+    it('the «+» exists only with two or more candidates not incompatible; its options leave out the chosen ones (mutants: «+» with one candidate; a chosen one offered again)', () => {
+        const ids = compatibleIds(compat({ A: 'ok', B: 'warn', C: 'incompatible' }));
+        expect(ids).toEqual(['A', 'B']);
+        expect(multiRow('A', ids)).toMatchObject({ plus: true, addable: ['B'], plusShown: true });
+        // one compatible candidate, or none: no «+», the row reads as today (the four demo scenes)
+        expect(multiRow('A', compatibleIds(compat({ A: 'ok', C: 'incompatible' })))).toMatchObject({ plus: false });
+        expect(multiRow('', [])).toMatchObject({ plus: false });
+        // every candidate chosen: the slot stays, the select is hidden
+        expect(multiRow('["A","B"]', ids)).toMatchObject({ plus: true, addable: [], plusShown: false });
+    });
+
+    it('the «+» keeps its slot but is hidden while the primary is empty (no layout shift)', () => {
+        expect(multiRow('', ['A', 'B'])).toMatchObject({ plus: true, plusShown: false, addable: ['A', 'B'] });
+    });
+
+    it('at most MULTI_TAGS_SHOWN tags show, the rest are counted: the row never grows', () => {
+        expect(MULTI_TAGS_SHOWN).toBe(1);
+        const row = multiRow('["A","B","C","D"]', ['A', 'B', 'C', 'D']);
+        expect([row.shown, row.more]).toEqual([['B'], ['C', 'D']]);
+        expect(multiRow('["A","B"]', ['A', 'B'])).toMatchObject({ shown: ['B'], more: [] });
+    });
+
+    it('editing the list: set the primary, clear it and promote the first tag, add, remove (mutants: clearing drops the tags; a repeated add)', () => {
+        expect(withPrimary('', 'A')).toBe('A');
+        expect(withPrimary('A', 'B')).toBe('B');
+        expect(withPrimary('["A","B","C"]', 'D')).toBe('["D","B","C"]');
+        // a tag chosen as the primary moves there, no duplicate
+        expect(withPrimary('["A","B","C"]', 'C')).toBe('["C","B"]');
+        // cleared: the first tag becomes the primary
+        expect(withPrimary('["A","B","C"]', '')).toBe('["B","C"]');
+        expect(withPrimary('["A","B"]', '')).toBe('B');
+        expect(withPrimary('A', '')).toBe('');
+        expect(withAdded('A', 'B')).toBe('["A","B"]');
+        expect(withAdded('["A","B"]', 'B')).toBe('["A","B"]');
+        expect(withRemoved('["A","B","C"]', 'B')).toBe('["A","C"]');
+        expect(withRemoved('["A","B"]', 'B')).toBe('A');
+    });
+
+    it('Apply writes the plain id for one attribute, JSON for two or more, nothing for none, in one patch (mutant: a single element encoded as JSON)', () => {
+        const edit = (value: string) => (value === '' ? null : value);
+        const two = draftPatch(input({ profile: ESM, bag: { simGuard: 'A_g' }, edits: { simGuard: edit(withAdded('A_g', 'A_h')) } }));
+        expect(two.simGuard).toBe('["A_g","A_h"]');
+        const back = draftPatch(input({ profile: ESM, bag: { simGuard: '["A_g","A_h"]' }, edits: { simGuard: edit(withRemoved('["A_g","A_h"]', 'A_h')) } }));
+        expect(back.simGuard).toBe('A_g');
+        const cleared = draftPatch(input({ profile: ESM, bag: { simGuard: 'A_g' }, edits: { simGuard: edit(withPrimary('A_g', '')) } }));
+        expect('simGuard' in cleared && cleared.simGuard === undefined).toBe(true);
+        // control: a list edited back to the stored one writes nothing for the key
+        expect(draftPatch(input({ profile: ESM, bag: { simGuard: '["A_g","A_h"]' }, edits: { simGuard: edit(withAdded('A_g', 'A_h')) } }))).not.toHaveProperty('simGuard');
+    });
+
+    it('the accessible names: the strip, each remove button, the «+» select', () => {
+        const names = multiRowLabels('Guard');
+        expect(names.strip).toBe('Other Guard attributes');
+        expect(names.add).toBe('Add another Guard attribute');
+        expect(names.remove('Transition.cond')).toBe('Remove Transition.cond from Guard');
+        expect(names.more(['Transition.cond', 'Transition.when'])).toBe('Also: Transition.cond, Transition.when');
+    });
+
+    it('the keyboard: Delete and Backspace on a focused remove button remove the tag; Escape and the rest do not (Enter and Space click the button)', () => {
+        expect(removesTag('Delete')).toBe(true);
+        expect(removesTag('Backspace')).toBe(true);
+        for (const key of ['Escape', 'Tab', 'Enter', ' ', 'ArrowLeft', 'a']) expect(removesTag(key), key).toBe(false);
+    });
+
+    it('the verdict slot: one attribute as before; several, the worst with each attribute that is not ok named in the title (mutant: the first attribute\'s verdict)', () => {
+        const nameOf = (id: string) => `N.${id}`;
+        const one: RoleCompatibility = { ...compat({ A: 'ok', W: 'warn' }), current: { id: 'W', verdict: 'warn', why: 'W is wrong' }, currents: [{ id: 'W', verdict: 'warn', why: 'W is wrong' }] };
+        expect(rowVerdict(one, 'W', nameOf)).toEqual({ verdict: 'warn', why: 'W is wrong' });
+        expect(rowVerdict(one, 'A', nameOf)).toBeNull();
+        const many: RoleCompatibility = {
+            ...compat({ A: 'ok', W: 'warn', X: 'incompatible' }),
+            current: { id: 'X', verdict: 'incompatible', why: 'X is wrong' },
+            currents: [{ id: 'A', verdict: 'ok', why: '' }, { id: 'W', verdict: 'warn', why: 'W is wrong' }, { id: 'X', verdict: 'incompatible', why: 'X is wrong' }],
+        };
+        expect(rowVerdict(many, '["A","W","X"]', nameOf)).toEqual({ verdict: 'incompatible', why: 'N.W: W is wrong; N.X: X is wrong' });
+        const fine: RoleCompatibility = { ...many, current: { id: 'A', verdict: 'ok', why: '' }, currents: [{ id: 'A', verdict: 'ok', why: '' }, { id: 'B', verdict: 'ok', why: '' }] };
+        expect(rowVerdict(fine, '["A","B"]', nameOf)).toBeNull();
+        // no sketch, no verdict
+        expect(rowVerdict(undefined, 'A', nameOf)).toBeNull();
     });
 });

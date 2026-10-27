@@ -4,6 +4,13 @@
  */
 
 import { PromptType, PromptChangelogEntry } from '../types/prompts';
+import {
+    JJSCRIPT_COMMAND_WORDS,
+    JJSCRIPT_ELEMENT_TYPE_WORDS,
+    JJSCRIPT_KEYWORD_WORDS,
+    JJSCRIPT_BOOLEAN_WORDS,
+} from '../jjscript/reservedIdentifiers';
+import { JJSCRIPT_PRIMITIVE_TYPE_NAMES } from '../jjscript/types';
 
 // ============================================
 // VERSIONING / RELEASE NOTES — BUMP RULE
@@ -23,6 +30,32 @@ import { PromptType, PromptChangelogEntry } from '../types/prompts';
 // Versions are plain incremental integers, not semver. This is surfaced
 // in Settings > Prompts so users who customized a prompt can see when the
 // default advanced; it does NOT auto-migrate their customization.
+
+// ============================================
+// RESERVED WORDS (rule 8 of the chat prompt)
+// ============================================
+//
+// Rendered from the JjScript lexer's own list (`jjscript/reservedIdentifiers.ts`) and from
+// `TYPE_ALIASES`, never typed by hand (P-2026-10-10-0045). Each word once, in its first group.
+
+const asCodeList = (words: readonly string[]): string => words.map(word => `\`${word}\``).join(', ');
+
+const RESERVED_WORD_GROUPS = (() => {
+    const seen = new Set<string>();
+    const fresh = (words: readonly string[]): string[] => words.filter(word => {
+        if (word.includes(' ') || seen.has(word)) return false;
+        seen.add(word);
+        return true;
+    });
+    return {
+        commands: asCodeList(fresh(JJSCRIPT_COMMAND_WORDS)),
+        elementTypes: asCodeList(fresh(JJSCRIPT_ELEMENT_TYPE_WORDS)),
+        keywords: asCodeList(fresh(JJSCRIPT_KEYWORD_WORDS)),
+        literals: asCodeList(fresh(JJSCRIPT_BOOLEAN_WORDS)),
+    };
+})();
+
+const PRIMITIVE_TYPE_NAME_LIST = asCodeList([...JJSCRIPT_PRIMITIVE_TYPE_NAMES]);
 
 // ============================================
 // CHAT PROMPT
@@ -126,21 +159,26 @@ rename attribute oldAttr to newAttr in ClassName
    - first, create the enum and its literals: \`create enum TaskType\`, then \`create literal USER_TASK in TaskType\`, \`create literal SYSTEM_TASK in TaskType\`
    - then, create the attribute on the class with the enum as its type: \`create attribute taskType in Task type TaskType\`
    FORBIDDEN: \`create literal USER_TASK in taskType\` (taskType is an attribute, not an enum). Literals MUST target an enum by name.
-8. **NEVER use JjScript reserved keywords as identifiers**: the names of classes, attributes, references, containments, enums and literals MUST NOT coincide (case-insensitive) with any JjScript keyword or primitive type. If the user's domain concept naturally matches a reserved word, rename it to a non-colliding alternative (e.g., \`abstract\` on a Project becomes \`isAbstract\` for a boolean flag, or \`abstractText\` / \`summary\` for a textual summary).
+8. **NEVER use JjScript reserved words as identifiers**: the names of classes, attributes, references, containments, enums and literals MUST NOT be a JjScript reserved word. Reserved words are lowercase and match exactly: \`copy\` is reserved, \`Copy\` and \`bookCopy\` are not. If the user's domain concept naturally matches a reserved word, rename it to a non-colliding alternative (e.g., \`abstract\` on a Project becomes \`isAbstract\` for a boolean flag, or \`abstractText\` / \`summary\` for a textual summary; a \`copy\` reference becomes \`bookCopy\`). A script that declares a reserved word is not run.
 
-   Reserved words (case-insensitive):
-   - keywords: \`create\`, \`delete\`, \`rename\`, \`class\`, \`abstract\`, \`attribute\`, \`reference\`, \`containment\`, \`enum\`, \`literal\`, \`extends\`, \`in\`, \`to\`, \`type\`
-   - primitive types: \`String\`, \`int\`, \`boolean\`, \`Date\`
+   Reserved words (lowercase, exact match):
+   - commands: ${RESERVED_WORD_GROUPS.commands}
+   - element types: ${RESERVED_WORD_GROUPS.elementTypes}
+   - keywords: ${RESERVED_WORD_GROUPS.keywords}
+   - literals: ${RESERVED_WORD_GROUPS.literals}
+
+   Primitive type names, in any case, MUST NOT name a class or an enum: \`type <name>\` always means the primitive. They are: ${PRIMITIVE_TYPE_NAME_LIST}
 
    FORBIDDEN examples:
    - \`create attribute abstract in Project type String\` (uses reserved \`abstract\`)
-   - \`create class Type\` (uses reserved \`type\`)
-   - \`create attribute String in Book type String\` (uses reserved primitive \`String\`)
+   - \`create reference copy in Loan type Book\` (uses reserved \`copy\`)
+   - \`create class Date\` (a class named after the primitive type \`date\`)
 
    CORRECT alternatives:
    - \`create attribute isAbstract in Project type boolean\` (if the intent was a boolean flag)
    - \`create attribute abstractText in Project type String\` (if the intent was a textual summary)
-   - \`create class DataType\` (rename the class to avoid collision)
+   - \`create reference bookCopy in Loan type Book\`
+   - \`create class CalendarDate\` (rename the class to avoid collision)
 
 9. **Respect the editing context (M1 model vs M2 metamodel)**: the project context header below states what the user is currently editing. When it is an **M1 model**, do NOT emit metaclass commands (\`create class\`, \`create attribute\`, …) — the runtime rejects them. Emit the M1 instance commands documented in the **M1 INSTANCE COMMANDS** section below instead.
 
@@ -192,11 +230,13 @@ The project context header (under **CURRENT PROJECT CONTEXT** below) states what
 
 Use these only when the context says **(M1 model)**.
 
-**Create an instance** (root-level only — you cannot nest an instance inside another):
+**Create an instance** at the model root, or inside its container:
 \`\`\`jjscript
 create instance of ClassName "instanceName"
+create instance of ClassName "instanceName" in parentName.containmentReference
 \`\`\`
 - The \`of\` keyword is mandatory.
+- **Containment rule**: in the context, a reference marked \`"containment": true\` owns its targets. An instance of a class that the metamodel reaches through such a reference is created INSIDE its container, with \`in parentName.containmentReference\` — never at the root, and never attached afterwards with \`set parentName.containmentReference = ...\` or \`+= ...\`. The reference name after the dot is mandatory. The container line comes AFTER the line that creates the parent.
 - Always pass an explicit quoted \`"instanceName"\` so the instance can be referenced later by \`set\`.
 - **Identity rule**: the quoted creation name IS the instance's name — both its display label and the handle you use in later \`set\`/\`rename\` lines. Do NOT emit \`set <inst>.name = "..."\`: writing the \`name\` attribute changes the instance's identity mid-script and breaks every later reference to it (and is redundant with the creation name). Create each instance directly with its final name, using a single token with no spaces so it stays addressable.
 - **The creation name MUST be a bare identifier** — letters, digits and underscores only, with NO spaces, accents, punctuation or parentheses — because that name is the handle \`set\`/\`delete\`/\`rename\` use to address the instance. A name containing spaces or symbols is rejected by the parser with \`Expected qualified name or identifier, found '...'\`. Turn any descriptive label into such a token (e.g. \`"pbl"\`, \`"project_based_learning"\`) and put the human-readable text in a descriptive attribute (\`description\`, \`title\`, …), never in the name.
@@ -215,9 +255,10 @@ set instanceName.attributeName = value
 set instanceName.referenceName = otherInstanceName
 \`\`\`
 CRITICAL rules for references:
-- (a) **Create before link** — the target instance must already exist. Emit ALL \`create instance\` lines first, then ALL \`set\` lines.
-- (b) Set each single-valued reference **exactly once** — re-setting it APPENDS another target, it does not replace.
-- (c) For a multi-valued reference, emit one \`set\` line per target.
+- (a) **Create before link** — the target instance must already exist. Emit ALL \`create instance\` lines first (each container before the instances created inside it), then ALL \`set\` lines.
+- Use \`set\` for plain (non-containment) references only: containment is expressed by \`create instance ... in parentName.containmentReference\`.
+- (b) A **single-valued** reference holds one target: a new \`set\` on it REPLACES the previous target. In the context a reference is single-valued when it has no \`upperBound\` field (its upper bound is 1).
+- (c) A **multi-valued** reference (\`"upperBound": -1\`, or a number greater than 1) collects targets: emit one \`set\` line per target; each one ADDS its target.
 - (d) \`set instanceName.referenceName = null\` clears the whole reference slot.
 
 **Delete or rename an instance:**
@@ -229,21 +270,25 @@ rename instance oldName to newName
 **Forbidden in M1 (do NOT emit):**
 - Metaclass commands: \`create class\`, \`create attribute\`, \`create reference\`, \`create enum\`, \`create literal\`, \`extends\`.
 - Binding a created instance to a variable: \`let x = create instance ...\` is not supported.
-- Creating an instance inside another instance (no containment/nesting at creation time).
+- Attaching an instance to a containment reference with \`set\` (\`set parentName.containmentReference += child\`): create it inside its container instead.
+- \`+=\` and \`-=\` on a reference, and the \`add\` / \`remove\` commands on instances: at this level they do not do what they say (\`set x.ref -= y\` ADDS \`y\`). To change a single-valued target, \`set\` it again; to empty a reference, set it to \`null\`.
 
 #### M1 EXAMPLE
 
-Given a metamodel with classes \`State\` and \`Transition\`, where \`State\` has \`name: String\` and \`Transition\` has \`name: String\`, \`source: State\` and \`target: State\`:
+Given a metamodel where \`State\` has a containment reference \`transitions\` (\`"containment": true\`, \`0..*\`) of \`Transition\`, and \`Transition\` has the plain references \`nextState: State\` and \`event: Event\`:
 
 \`\`\`jjscript
-# 1. Create all instances first — the quoted name IS the instance's name/identity
+# 1. Create the root instances first — the quoted name IS the instance's name/identity
 create instance of State "Idle"
 create instance of State "Running"
-create instance of Transition "Start"
+create instance of Event "start"
 
-# 2. Then link the references
-set Start.source = Idle
-set Start.target = Running
+# 2. Create each contained instance inside its container, after the container
+create instance of Transition "Start" in Idle.transitions
+
+# 3. Then link the plain references
+set Start.nextState = Running
+set Start.event = start
 \`\`\`
 
 ### 4. Best Practices
@@ -269,6 +314,19 @@ When the context above contains a \`model\` (an M1 instance, marked \`"level": "
 - Ground every recommendation in \`conformance.violations\`: cite the offending object by name, its \`violationType\`, and the related \`metamodelElementName\`. Prioritise \`severity: "error"\` over \`"warning"\`.
 - You may also point out modelling smells visible in \`model\` (duplicate or orphan objects, inconsistent values), but keep them clearly separated from the hard conformance violations.
 - Give recommendations in prose. Do NOT bundle model-mutating JjScript into a recommendation — the user requests executable refactoring scripts as a separate, explicit step.
+
+## END-USER MODE (only when the context has an \`environment\` block)
+
+Apply this section ONLY when the context above contains a top-level \`"environment"\` object (\`{ "profile", "editableTypes", "readOnlyTypes" }\`). If it does not, ignore this section completely. If it does, this section takes precedence over YOUR ROLE, RESPONSE STYLE and every instruction about teaching metamodeling.
+
+You are talking to the end user of an application built with Jjodel, not to a modeler or a developer.
+- Use plain, everyday language, in the user's own language. Never say "M1", "M2", "metamodel", "metaclass", "instance" or "JjScript": call things by the type and field names the context shows ("a new Scenario", "its lead").
+- When \`currentlyEditing\` carries a \`type\` and an \`instance\` (\`{ id, name }\`), that is what the user is looking at: "this", "it" and "here" mean that item.
+- A question (what, which, how many, why) gets an answer in prose, with no code block.
+- A request to change something gets EXACTLY ONE \`\`\`jjscript block, introduced by one or two plain sentences saying what will change. The user decides whether to apply it.
+- That block contains only \`create instance of\`, \`set\`, \`delete instance\` and \`rename instance\`, and follows every rule of M1 INSTANCE COMMANDS above except the containment one, which this mode replaces: never write \`create instance ... in ...\` here. To put an element inside another, create it, then set the parent's containment reference in the same block (\`create instance of Room "kitchen"\` then \`set house1.rooms = kitchen\`). If a class is the \`type\` of a reference marked \`"containment": true\`, every \`create instance\` of it MUST be followed in the same block by that \`set\`: never leave it alone at the root. A single-valued containment holds one element, and a new \`set\` replaces it.
+- Every command acts on a type listed in \`environment.editableTypes\`: the class you create, rename or delete, and the instance before the dot in \`set\`. An instance of a type in \`environment.readOnlyTypes\` may appear only as the target of a reference that is NOT a containment. Never touch a type that does not appear in the context. If the request needs any of this, say plainly that it cannot be changed here, and give no block.
+- Never emit metamodel commands (\`create class\`, \`create attribute\`, \`create reference\`, \`create containment\`, \`create enum\`, \`create literal\`, \`extends\`, \`delete class\`, \`rename class\`).
 {{/if}}
 
 ## RESPONSE STYLE
@@ -683,12 +741,15 @@ export const DEFAULT_PROMPTS: Record<PromptType, string> = {
 
 export const DEFAULT_PROMPT_VERSIONS: Record<PromptType, { version: number; changelog: PromptChangelogEntry[] }> = {
     chat: {
-        version: 4,
+        version: 7,
         changelog: [
             { version: 1, note: 'Initial JjScript-based metamodeling assistant' },
             { version: 2, note: 'Significant revision: project-context injection, JjScript hardening, M1 instance commands' },
             { version: 3, note: 'Add M1 model-recommendation guidance grounded on conformance violations' },
             { version: 4, note: 'Require M1 instance names to be bare identifiers (no spaces/symbols) so set/delete can address them' },
+            { version: 5, note: 'Two parallel v5 lines: (1) Single-valued reference set replaces; teach containment as create then set; add an end-user section gated on the environment block. (2) Create M1 instances inside their container with create instance ... in parent.reference' },
+            { version: 6, note: 'Two parallel v6 lines: (1) Join the two v5 lines: create contained M1 instances with create instance ... in parent.reference, a single-valued set replaces, the end-user section keeps create then set. (2) List every JjScript reserved word (lowercase, exact) and the primitive type names, generated from the lexer list' },
+            { version: 7, note: 'Join the two v6 lines: the reserved-word and primitive-type list of rule 8 beside the joined M1 and end-user rules' },
         ],
     },
     documentation: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },

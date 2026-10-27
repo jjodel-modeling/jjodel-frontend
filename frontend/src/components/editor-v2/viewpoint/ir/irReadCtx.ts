@@ -40,6 +40,27 @@ export interface ReadCtx {
      * imports — the function is injected by makeReadCtx, which is impure already.
      */
     isMarked(elementId: string): boolean;
+    /**
+     * The presentation attribute `attr` of the element, as the simulation run that
+     * knows it shows it: what `node.[attr]` reads in a view (R-SIM-108, R-SIM-18).
+     * `undefined` when no run knows the element or its configuration has no such
+     * value, and the view gives its own default (`else`, `default`, `exists`).
+     *
+     * Read-only, and not model data: like the marking, it lives in the run-state
+     * singleton outside Redux and is injected by makeReadCtx. Optional (rule 11):
+     * a ReadCtx without it reads `undefined`, which is what the compiled accessor
+     * returns through `?.`.
+     */
+    getPresentation?(elementId: string, attr: string): unknown;
+    /**
+     * True when a simulation run is active on the model the element belongs to:
+     * the source the `simActive` predicate reads (P-2026-10-19-0930). The model is
+     * found by walking `father` up to the DModel, so a nested object and a slot
+     * answer for their model; an element of another model, or of none, is false.
+     * Optional (rule 11), and like the marking injected by makeReadCtx: a ReadCtx
+     * without it reads false.
+     */
+    isRunActive?(elementId: string): boolean;
 }
 
 type Idlookup = Record<string, any>;
@@ -136,6 +157,17 @@ function metaclassIdOf(idlookup: Idlookup, elementId: string): string | null {
     return typeof inst === 'string' ? inst : null;
 }
 
+/** The DModel an element belongs to, by walking `father` (the idiom of simBridge.collectModelObjectIds); null when
+ *  the walk ends elsewhere. Bounded like it, so a cycle in stale data ends the walk. */
+function modelIdOf(idlookup: Idlookup, elementId: string): string | null {
+    let owner = idlookup[elementId];
+    for (let depth = 0; owner && depth < 40; depth++) {
+        if (owner.className === 'DModel') return typeof owner.id === 'string' ? owner.id : null;
+        owner = typeof owner.father === 'string' ? idlookup[owner.father] : null;
+    }
+    return null;
+}
+
 /**
  * D-layer direct backend ('draw'): raw values, no proxy coercion.
  *
@@ -146,10 +178,19 @@ function metaclassIdOf(idlookup: Idlookup, elementId: string): string | null {
  * neutral element of a total predicate, and applies only to direct draw
  * constructions (the tests); production always goes through makeReadCtx, which
  * injects isSimActive.
+ *
+ * `getPresentation` is injected beside it for the same reason (R-SIM-108);
+ * without it every presentation read answers `undefined`, the absent value.
+ *
+ * `hasRun` too (P-2026-10-19-0930): whether a model, by DModel id, has a run.
+ * The walk from the element to its model is here, on the lookup; the run-state is
+ * asked only for the model. Without it no element is in a run.
  */
 export function makeDrawReadCtx(
     idlookup: Idlookup,
     isMarked: (elementId: string) => boolean = () => false,
+    getPresentation: (elementId: string, attr: string) => unknown = () => undefined,
+    hasRun: (modelId: string) => boolean = () => false,
 ): ReadCtx {
     const getValue = (elementId: string, featureName: string): unknown => {
         const dValue = findFeatureRaw(idlookup, elementId, featureName);
@@ -185,6 +226,11 @@ export function makeDrawReadCtx(
             return navigateRefHop(idlookup, elementId, featureName, take);
         },
         isMarked,
+        getPresentation,
+        isRunActive(elementId) {
+            const modelId = modelIdOf(idlookup, elementId);
+            return modelId !== null && hasRun(modelId);
+        },
     };
 }
 

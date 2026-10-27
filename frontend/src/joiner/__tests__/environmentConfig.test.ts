@@ -9,6 +9,11 @@ import {
     isTypeEditable,
     visibleTopLevelTypes,
     DEFAULT_TYPE_PERMISSION,
+    metamodelOfClass,
+    modelsForType,
+    topLevelReason,
+    restrictDeleteForProfile,
+    CASCADE_LOCKED_REASON,
 } from '../environmentConfig';
 
 // A plain idlookup, the shape the store persists — no D-layer classes, so this suite
@@ -146,5 +151,129 @@ describe('visibleTopLevelTypes', () => {
 describe('defaults', () => {
     it('the default type permission is edit', () => {
         expect(DEFAULT_TYPE_PERMISSION).toBe('edit');
+    });
+});
+
+// #157, field test 2026-09-29 («AIM Pro»): two metamodels, a model of only one of them.
+function multiModelFixture() {
+    const idlookup: Record<string, any> = {
+        mmScenario: { className: 'DModel', id: 'mmScenario', isMetamodel: true },
+        mmEducators: { className: 'DModel', id: 'mmEducators', isMetamodel: true },
+        pkgS: { className: 'DPackage', id: 'pkgS', father: 'mmScenario' },
+        pkgE: { className: 'DPackage', id: 'pkgE', father: 'mmEducators' },
+        pkgE2: { className: 'DPackage', id: 'pkgE2', father: 'pkgE' },
+        Scenario: { className: 'DClass', id: 'Scenario', father: 'pkgS' },
+        Educator: { className: 'DClass', id: 'Educator', father: 'pkgE' },
+        Nested: { className: 'DClass', id: 'Nested', father: 'pkgE2' },
+        learningphase: { className: 'DModel', id: 'learningphase', isMetamodel: false, instanceof: 'mmScenario' },
+        scenario2: { className: 'DModel', id: 'scenario2', isMetamodel: false, instanceof: 'mmScenario' },
+    };
+    return idlookup;
+}
+
+describe('metamodelOfClass', () => {
+    it('walks the package chain up to the metamodel, nested packages included', () => {
+        const idlookup = multiModelFixture();
+        expect(metamodelOfClass(idlookup, 'Scenario')).toBe('mmScenario');
+        expect(metamodelOfClass(idlookup, 'Nested')).toBe('mmEducators');
+    });
+    it('is null for an unknown class or a broken chain', () => {
+        const idlookup = multiModelFixture();
+        expect(metamodelOfClass(idlookup, 'nope')).toBeNull();
+        idlookup.Orphan = { className: 'DClass', id: 'Orphan', father: 'gone' };
+        expect(metamodelOfClass(idlookup, 'Orphan')).toBeNull();
+    });
+});
+
+describe('modelsForType', () => {
+    it('keeps only the models of the class\'s metamodel, in project order', () => {
+        const idlookup = multiModelFixture();
+        const models = ['learningphase', 'scenario2'];
+        expect(modelsForType(idlookup, models, 'Scenario')).toEqual(['learningphase', 'scenario2']);
+        expect(modelsForType(idlookup, ['scenario2', 'learningphase'], 'Scenario')).toEqual(['scenario2', 'learningphase']);
+    });
+    it('is empty for a type whose metamodel has no model — not the first model of the project', () => {
+        const idlookup = multiModelFixture();
+        expect(modelsForType(idlookup, ['learningphase', 'scenario2'], 'Educator')).toEqual([]);
+    });
+    it('finds the model once the project has one', () => {
+        const idlookup = multiModelFixture();
+        idlookup.educators1 = { className: 'DModel', id: 'educators1', isMetamodel: false, instanceof: 'mmEducators' };
+        expect(modelsForType(idlookup, ['learningphase', 'educators1'], 'Educator')).toEqual(['educators1']);
+        expect(modelsForType(idlookup, ['learningphase', 'educators1'], 'Nested')).toEqual(['educators1']);
+    });
+});
+
+// #157 R3 — the class as the L-layer reports it (LClass.rootable and the flags that explain it).
+describe('topLevelReason', () => {
+    const composedBy = (...owners: string[]) => owners.map((name) => ({ father: { name } }));
+    it('a rootable class can be a top-level type', () => {
+        expect(topLevelReason({ rootable: true })).toBeNull();
+    });
+    it('the metamodel\'s explicit rootable wins over being composed', () => {
+        expect(topLevelReason({ rootable: true, isComposedBy: composedBy('Scenario') })).toBeNull();
+    });
+    it('an abstract or interface class has no instances of its own', () => {
+        expect(topLevelReason({ rootable: false, abstract: true })).toBe('abstract, it has no instances of its own');
+        expect(topLevelReason({ rootable: false, interface: true })).toBe('abstract, it has no instances of its own');
+    });
+    it('a composed class names its containers, once each', () => {
+        expect(topLevelReason({ rootable: false, isComposedBy: composedBy('Scenario') })).toBe('created inside Scenario');
+        expect(topLevelReason({ rootable: false, isComposedBy: composedBy('Domain', 'Domain', 'Cluster') })).toBe('created inside Domain, Cluster');
+    });
+    it('a singleton, and a class the metamodel keeps off the root', () => {
+        expect(topLevelReason({ rootable: false, isSingleton: true })).toBe('a singleton');
+        expect(topLevelReason({ rootable: false })).toBe('not allowed at the model root by its metamodel');
+    });
+    it('no class, a reason rather than a pass', () => {
+        expect(topLevelReason(null)).toBe('unknown metaclass');
+    });
+});
+
+describe('restrictDeleteForProfile (#157, 2026-10-04)', () => {
+    // Exact class per instance, as the Configurator resolves it.
+    const perms: Record<string, 'edit' | 'read' | 'hidden'> = { phase: 'read', vault: 'hidden', step: 'edit', ref_ok: 'edit', ref_hidden: 'hidden', ref_read: 'read' };
+    const perm = (id: string) => perms[id] ?? 'edit';
+    const pre = (descendants: string[], referencedBy: string[], blocked: string | null = null, canReassign = true) => ({
+        blocked,
+        canReassign,
+        descendants: descendants.map((id) => ({ id, name: id })),
+        referencedBy: referencedBy.map((instanceId) => ({ instanceId, featureKey: 'f' })),
+    });
+    const ids = (xs: Array<{ id?: string; instanceId?: string }>) => xs.map((x) => x.id ?? x.instanceId);
+
+    it('a read element in the cascade blocks the delete with the profile reason', () => {
+        expect(restrictDeleteForProfile(pre(['step', 'phase'], []), perm).blocked).toBe(CASCADE_LOCKED_REASON);
+    });
+    it('a hidden element in the cascade blocks it too, and is not listed', () => {
+        const r = restrictDeleteForProfile(pre(['step', 'vault'], []), perm);
+        expect(r.blocked).toBe(CASCADE_LOCKED_REASON);
+        expect(ids(r.descendants)).toEqual(['step']);
+    });
+    it('the reason names no type', () => {
+        expect(CASCADE_LOCKED_REASON).not.toMatch(/Vault|Phase/);
+    });
+    it('CONTROL: a cascade of editable elements is not blocked, and keeps every entry', () => {
+        const r = restrictDeleteForProfile(pre(['step'], ['ref_ok', 'ref_read']), perm);
+        expect(r.blocked).toBeNull();
+        expect(ids(r.descendants)).toEqual(['step']);
+        expect(ids(r.referencedBy)).toEqual(['ref_ok', 'ref_read']);
+        expect(r.canReassign).toBe(true);
+    });
+    it('a hidden referrer leaves the list, so the plan neither reassigns nor clears it', () => {
+        expect(ids(restrictDeleteForProfile(pre([], ['ref_ok', 'ref_hidden']), perm).referencedBy)).toEqual(['ref_ok']);
+    });
+    it('reassign is offered only while a referrer is left', () => {
+        expect(restrictDeleteForProfile(pre([], ['ref_hidden']), perm).canReassign).toBe(false);
+        expect(restrictDeleteForProfile(pre([], ['ref_ok'], null, false), perm).canReassign).toBe(false);
+    });
+    it('a reason already there wins (the singleton comes from the metamodel)', () => {
+        expect(restrictDeleteForProfile(pre(['phase'], [], 'Scenario is a singleton'), perm).blocked).toBe('Scenario is a singleton');
+    });
+    it('the input is not changed', () => {
+        const input = pre(['vault'], ['ref_hidden']);
+        restrictDeleteForProfile(input, perm);
+        expect(ids(input.descendants)).toEqual(['vault']);
+        expect(ids(input.referencedBy)).toEqual(['ref_hidden']);
     });
 });

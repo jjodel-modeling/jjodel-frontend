@@ -15,6 +15,22 @@
  * - R5: a right side that folds to a non-scalar, or to a value outside the
  *   target's domain.
  * - R6: a guard that is a `.[x]` read of a non-boolean declaration.
+ * - R7: an `else` with no sibling (R-SIM-87, amends R-SIM-31(1)), always true.
+ *
+ * R-SIM-88 (P-2026-09-28-0034) adds, beside the rules, what the bridge asks
+ * before a step: `inputReads`, the input reads of an expression folded as R2
+ * folds; and `checkInputTarget`, a target the run resolves whose name only an
+ * input has (a folded one is the bridge's, as for a derived target).
+ *
+ * R-SIM-144 (P-2026-10-10-1630) adds the reads of the root `event`: P3
+ * (`checkEventRead`), a read where no event is bound, and P4
+ * (`checkEventFeature`), `event.a` on a name the trigger's declared type does
+ * not have; `eventReads` lists the names read on `event`, for the bridge's
+ * unset warning.
+ *
+ * R-SIM-147 (P-2026-10-20-0031) adds `checkTriggerPosition`: a trigger on an
+ * out edge of a fork, or on an in edge of a join, which fusion drops, since a
+ * fused transition takes the trigger of its choice edge (R-SIM-31(3)).
  *
  * Every rule is a certainty before the run: the texts are those the run would
  * give when it meets the same text. What depends on σ or the event stays the
@@ -32,12 +48,14 @@ import { describeType, firstAbsence } from '../jjelTriState';
 import { buildGuardContext } from './guardContext';
 import type { SimSnapshot } from './guardContext';
 import { checkGuardSubset } from './subsetChecker';
-import { inDomain } from './netStep';
+import { isBitVector } from '../../jjel/evaluator/context';
+import { inDomain, wordWidth } from './netStep';
 import type { CompiledAction, FoldedTarget } from './actionEvaluator';
-import type { ActionSite, CompiledNet, Domain, SimValue } from './netTypes';
+import type { ActionSite, CompiledNet, Domain, InputRead, NetTransition, SimValue } from './netTypes';
 
 /** The reasons of a rule, a subset of the bridge's `CompileDefect['reason']`. */
-export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value';
+export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value' | 'else-alone' | 'read-only' | 'event' | 'event-feature'
+    | 'trigger-position';
 
 export interface StcDefect {
     readonly reason: StcDefectReason;
@@ -49,9 +67,14 @@ export interface StcDefect {
 /** What the rules read: M frozen, the declarations, the places, and a name for an element. */
 export interface StcScope {
     readonly snapshot: SimSnapshot;
-    readonly net: Pick<CompiledNet, 'attributes' | 'declared' | 'places'>;
+    readonly net: Pick<CompiledNet, 'attributes' | 'declared' | 'places' | 'widths'>;
     /** Never the id: the line and the title name elements (R-SIM-62). */
     readonly nameOf: (id: string) => string;
+    /**
+     * R-SIM-144 (P4): the trigger's declared type, by name, and the names of the features it and its
+     * ancestors declare; absent without the event role, and then `event.a` is not checked.
+     */
+    readonly event?: { readonly name: string; readonly features: ReadonlySet<string> };
 }
 
 /** Path B, as for guards and actions: no context at construction, so no builtins. */
@@ -118,7 +141,7 @@ function fold(e: JjelExpression, site: string, snapshot: SimSnapshot): Folded | 
 }
 
 function isSimValue(value: JjelValue): value is SimValue {
-    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string';
+    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string' || isBitVector(value);
 }
 
 function elementId(value: JjelValue): string | null {
@@ -237,9 +260,169 @@ export function checkActionValue(c: CompiledAction, site: ActionSite, target: Fo
         return { reason: 'value', detail: `the value is ${type}, not a boolean, a number or a string`, short: `value is ${type}` };
     }
     const decl = target === null ? undefined : scope.net.declared.get(target.element)?.get(target.attr);
-    if (target === null || !decl || inDomain(v.value, decl.domain)) return null;
+    if (target === null || !decl || inDomain(v.value, decl.domain, wordWidth(scope.net, target.element, target.attr))) return null;
     return {
         reason: 'value', detail: `${target.attr} of ${scope.nameOf(target.element)} would be ${String(v.value)}, outside its domain`,
         short: `${target.attr} = ${String(v.value)}, outside its domain`,
     };
+}
+
+/**
+ * R7 (R-SIM-87, amends R-SIM-31(1)): an `else` with no sibling, no other
+ * transition with its preset and its triggers. Its guard, the negation of an
+ * empty disjunction, is always true; the run keeps it so, and the defect only
+ * says it. `elseOf` is `null` on a transition that is not an `else`.
+ */
+export function checkElse(t: Pick<NetTransition, 'elseOf'>): StcDefect | null {
+    if (t.elseOf === null || t.elseOf.length > 0) return null;
+    return { reason: 'else-alone', detail: 'else with no sibling: no other transition has its preset and its triggers, so it is always true', short: 'else, no sibling' };
+}
+
+/** R-SIM-88: the defect of an assignment to an input, whichever way the target is known. */
+export function inputTarget(attr: string): StcDefect {
+    return { reason: 'read-only', detail: `'${attr}' is an input and cannot be assigned`, short: `assigns input '${attr}'` };
+}
+
+/**
+ * R-SIM-88 on a target the run resolves (it reads σ or the event): when every
+ * declaration of its name is an input, the assignment can only halt `read-only`.
+ */
+export function checkInputTarget(c: CompiledAction, scope: StcScope): StcDefect | null {
+    if (c.action === null) return null;
+    const attr = c.action.target.attribute;
+    const decls = scope.net.attributes.filter(d => d.name === attr);
+    return decls.length > 0 && decls.every(d => d.input === true) ? inputTarget(attr) : null;
+}
+
+/**
+ * R-SIM-88: the input reads of one expression attached to `site`, in pre-order,
+ * each (element, name) once. A read whose object folds (no σ, no event, no bound
+ * variable) names the element it folds to, and counts when that element declares
+ * the name as an input; any other read of an input's name counts every element
+ * that declares it as an input, since the run may read any of them. `node.[x]`
+ * is presentation, never an input; an input without a domain is a declaration
+ * defect and is not asked.
+ */
+export function inputReads(expr: JjelExpression, site: string, scope: StcScope): InputRead[] {
+    const names = new Set(scope.net.attributes.filter(d => d.input === true).map(d => d.name));
+    if (names.size === 0) return [];
+    const out: InputRead[] = [];
+    const seen = new Set<string>();
+    const add = (element: string, attr: string) => {
+        const decl = scope.net.declared.get(element)?.get(attr);
+        if (decl?.input !== true || decl.domain === null) return;
+        const key = `${element}\u0000${attr}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push({ element, attr, domain: decl.domain });
+    };
+    walk(expr, NONE, (e, bound) => {
+        if (e.type !== 'StateAccess' || !names.has(e.attribute)) return;
+        if (e.object.type === 'Identifier' && e.object.name === STATE_RESERVED.presentationRoot) return;
+        if (folds(e.object, bound)) {
+            const object = fold(e.object, site, scope.snapshot);
+            const id = object?.ok ? elementId(object.value) : null;
+            if (id !== null) add(id, e.attribute);
+            return;
+        }
+        for (const element of scope.net.declared.keys()) add(element, e.attribute);
+    });
+    return out;
+}
+
+/** The root of the event that fired the step (R-SIM-14, R-SIM-42). */
+const EVENT = 'event';
+
+/** R-SIM-144 (P4): the keys every pool handle has whatever its class, so `event.a` may always read them. */
+const HANDLE_KEYS: ReadonlySet<string> = new Set(['name', 'id', 'instanceOf', 'parent']);
+
+/**
+ * R-SIM-144 (P3): where a guard or an action sits, as far as `event` goes. A guard or a transition
+ * action names `untriggered`, a transition carrying the site that has no trigger, `null` when every one
+ * has; an entry or an exit action never has an event of its own.
+ */
+export type EventSite =
+    | { readonly role: 'guard' | 'transition'; readonly untriggered: string | null }
+    | { readonly role: 'entry' | 'exit' };
+
+/** Whether `node` (an expression, or an action: its target and its value) reads the root `event`, in any form. */
+function readsEvent(node: unknown): boolean {
+    let found = false;
+    walk(node, NONE, (e, bound) => {
+        if (e.type === 'Identifier' && e.name === EVENT && !bound.has(EVENT)) found = true;
+    });
+    return found;
+}
+
+/**
+ * R-SIM-144 (P3): a read of `event`, in any form (`event.a`, `event.[x]`, `event == null`), where no
+ * event is bound: in a guard or a transition action of a transition without a trigger, where `event` is
+ * `null` in the step, or in an entry or an exit action, where what a node does would depend on the path.
+ * The run is unchanged: such a read still fails, or reads `null`, when it is evaluated.
+ */
+export function checkEventRead(node: unknown, site: EventSite, scope: Pick<StcScope, 'nameOf'>): StcDefect | null {
+    if ('untriggered' in site) {
+        if (site.untriggered === null || !readsEvent(node)) return null;
+        return { reason: 'event', detail: `reads event, but ${scope.nameOf(site.untriggered)} has no trigger: event is null in its step`, short: 'reads event, no trigger' };
+    }
+    if (!readsEvent(node)) return null;
+    return {
+        reason: 'event',
+        detail: `an ${site.role} action cannot read event: what a node does on ${site.role} does not depend on the path that reached it`,
+        short: `reads event in ${site.role}`,
+    };
+}
+
+/** R-SIM-144: the names `node` reads on `event` (`event.a`, `event?.a`), each once, in pre-order; never a state read `event.[x]`. */
+export function eventReads(node: unknown): string[] {
+    const out: string[] = [];
+    walk(node, NONE, (e, bound) => {
+        if (e.type !== 'MemberAccess' && e.type !== 'NullSafeMemberAccess') return;
+        if (e.object.type !== 'Identifier' || e.object.name !== EVENT || bound.has(EVENT)) return;
+        if (!out.includes(e.property)) out.push(e.property);
+    });
+    return out;
+}
+
+/**
+ * R-SIM-144 (P4): `event.a` where `a` is neither a feature of the trigger's declared type or of its
+ * ancestors (R-SIM-38, no downcast) nor a key of the handle. Its short never starts `undeclared '`, so
+ * the Reset line does not offer to declare it as a global (`undeclaredGlobals`, R-SIM-94).
+ */
+export function checkEventFeature(node: unknown, scope: Pick<StcScope, 'event'>): StcDefect | null {
+    const type = scope.event;
+    if (!type) return null;
+    const a = eventReads(node).find(name => !type.features.has(name) && !HANDLE_KEYS.has(name));
+    if (a === undefined) return null;
+    return { reason: 'event-feature', detail: `'${a}' is not a feature of ${type.name}, the type of the trigger`, short: `event.${a}: not on ${type.name}` };
+}
+
+/** R-SIM-147: what a pseudo node is, as the compiler fuses it; `both` takes the union of its edges' triggers. */
+export type PseudoKind = 'fork' | 'join' | 'both';
+
+/**
+ * R-SIM-147: the edges of a fused transition whose trigger fusion drops, each with its defect. A fork
+ * takes the trigger of the edge into it, a join that of the edge out of it (R-SIM-31(3), the choice
+ * edge); the trigger of any other edge of it is never read. A node both fork and join, and a plain
+ * edge, drop none. The run is unchanged: the trigger stays ignored, only reported.
+ */
+export function checkTriggerPosition(
+    t: Pick<NetTransition, 'id' | 'origin'>, kindOf: (id: string) => PseudoKind | null, triggered: (edge: string) => boolean,
+    scope: Pick<StcScope, 'nameOf'>,
+): { readonly edge: string; readonly defect: StcDefect }[] {
+    const node = t.id.split('#')[0];
+    const at = t.origin.indexOf(node);
+    const kind = at < 0 ? null : kindOf(node);
+    if (kind !== 'fork' && kind !== 'join') return [];
+    const choice = kind === 'fork' ? t.origin[0] : t.origin[t.origin.length - 1];
+    const dropped = kind === 'fork' ? t.origin.slice(at + 1) : t.origin.slice(0, at);
+    const where = kind === 'fork' ? 'into' : 'out of';
+    return dropped.filter(triggered).map(edge => ({
+        edge,
+        defect: {
+            reason: 'trigger-position',
+            detail: `its trigger is ignored: ${kind} ${scope.nameOf(node)} takes the trigger of its choice edge, ${scope.nameOf(choice)}, the edge ${where} it`,
+            short: `trigger ignored by ${kind} ${scope.nameOf(node)}`,
+        },
+    }));
 }

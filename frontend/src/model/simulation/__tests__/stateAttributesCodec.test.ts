@@ -11,9 +11,12 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-    decodeStateAttributes, encodeStateAttributes, parseInitialLiteral, stateAttributeRows, STATE_ATTRIBUTES_KEY,
+    decodeStateAttributes, defaultInitialOf, encodeStateAttributes, initialFollowingDomain, mergeDeclarations, parseInitialLiteral,
+    stateAttributeRows, STATE_ATTRIBUTES_KEY,
 } from '../stateAttributesCodec';
 import type { StateAttributeRecord } from '../stateAttributesCodec';
+import { inDomain } from '../netStep';
+import type { Domain } from '../netTypes';
 
 const VISITS: StateAttributeRecord = { name: 'visits', metaclass: 'C_Place', space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' };
 const COLOR: StateAttributeRecord = { name: 'color', metaclass: 'C_PTr', space: 'presentation', domain: null, initial: "'grey'" };
@@ -224,5 +227,215 @@ describe('lane C2: a record carries initial or equation, never both (P-2026-09-2
         expect(back.decls.map(d => [d.name, d.initial, d.equation])).toEqual([
             ['visits', 1, undefined], ['total', undefined, 'p1.[visits] + p2.[visits]'], ['busy', undefined, 'self.[visits] > 0'],
         ]);
+    });
+});
+
+describe('R-SIM-88: an input record, neither initial nor equation (P-2026-09-28-0034)', () => {
+    const DECISION: StateAttributeRecord = { name: 'decision', metaclass: 'C_Dec', space: 'semantic', domain: { kind: 'boolean' }, initial: '', input: true };
+
+    it('encode: an input record writes `"input":true` last, with no initial and no equation (mutant: the input written as initial)', () => {
+        expect(encodeStateAttributes([F, DECISION])).toBe(
+            '{"v":1,"attrs":['
+            + '{"name":"f","metaclass":null,"space":"semantic","domain":{"kind":"boolean"},"initial":"false"},'
+            + '{"name":"decision","metaclass":"C_Dec","space":"semantic","domain":{"kind":"boolean"},"input":true}]}');
+    });
+
+    it('decode: an input is a declaration with `input` and no initial (mutant: the input record a defect)', () => {
+        const { decls, defects } = decodeStateAttributes(encodeStateAttributes([F, DECISION]));
+        expect(defects).toEqual([]);
+        expect(decls[1]).toEqual({ name: 'decision', metaclass: 'C_Dec', space: 'semantic', domain: { kind: 'boolean' }, input: true });
+        expect(decls[1]).not.toHaveProperty('initial');
+        // control: a stored record has no input
+        expect(decls[0]).not.toHaveProperty('input');
+    });
+
+    it('exclusivity of three: input with initial or equation is `exclusive`; on presentation, or not `true`, a record defect (mutant: exclusivity of two only)', () => {
+        const out = decodeStateAttributes(stored([
+            { ...F, input: true },
+            { name: 'd', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, equation: 'true', input: true },
+            { name: 'p', metaclass: null, space: 'presentation', domain: null, input: true },
+            { name: 'q', metaclass: null, space: 'semantic', domain: { kind: 'boolean' }, input: 1 },
+            { name: 'ok', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, input: true },
+        ]));
+        expect(out.decls.map(d => d.name)).toEqual(['ok']);
+        expect(out.defects).toEqual([
+            { index: 0, name: 'f', code: 'exclusive', message: 'input and initial' },
+            { index: 1, name: 'd', code: 'exclusive', message: 'input and equation' },
+            { index: 2, name: 'p', code: 'record', message: 'an input is semantic' },
+            { index: 3, name: 'q', code: 'record', message: 'bad input' },
+        ]);
+    });
+
+    it('the rows carry input, and the round trip through them keeps it (mutant: the rows drop input)', () => {
+        const raw = encodeStateAttributes([F, DECISION]);
+        const { rows } = stateAttributeRows(raw);
+        expect(rows[1]).toEqual(DECISION);
+        expect(rows[0]).not.toHaveProperty('input');
+        expect(encodeStateAttributes(rows)).toBe(raw);
+    });
+});
+
+describe("R-SIM-94: the model's globals merged over the metamodel's (P-2026-09-29-0110)", () => {
+    const COUNT: StateAttributeRecord = { name: 'count', metaclass: null, space: 'semantic', domain: { kind: 'range', min: 0, max: 3 }, initial: '0' };
+    const COUNT5: StateAttributeRecord = { ...COUNT, domain: { kind: 'range', min: 0, max: 5 } };
+    const decoded = (records: unknown[] | undefined) => decodeStateAttributes(records === undefined ? undefined : stored(records));
+
+    it("no model key: the metamodel's declarations as they are, the same objects in the same order (the demo's fallback)", () => {
+        const mm = decoded([VISITS, F, MODE]);
+        const out = mergeDeclarations(mm, decoded(undefined));
+        expect(out.decls).toEqual(mm.decls);
+        expect(out.decls.map(d => d.name)).toEqual(['visits', 'f', 'mode']);
+        expect(out.defects).toEqual([]);
+    });
+
+    it("a metamodel global is the default of a model that does not declare it: both lists kept, the model's after (mutant: the model's list dropped)", () => {
+        const out = mergeDeclarations(decoded([F]), decoded([COUNT]));
+        expect(out.decls.map(d => [d.name, d.metaclass])).toEqual([['f', null], ['count', null]]);
+        expect(out.defects).toEqual([]);
+    });
+
+    it("the model's record shadows the metamodel's global of the same name, with no defect (mutant: no shadow, both kept and compileNet says twice)", () => {
+        const out = mergeDeclarations(decoded([COUNT5, F]), decoded([COUNT]));
+        expect(out.decls.map(d => d.name)).toEqual(['f', 'count']);
+        expect(out.decls.find(d => d.name === 'count')?.domain).toEqual({ kind: 'range', min: 0, max: 3 });
+        expect(out.defects).toEqual([]);
+    });
+
+    it('a metaclass-bound metamodel record is never shadowed by a model global of the same name (mutant: shadowing by name alone)', () => {
+        const bound = { ...VISITS, name: 'count' };
+        const out = mergeDeclarations(decoded([bound]), decoded([COUNT]));
+        expect(out.decls.map(d => [d.name, d.metaclass])).toEqual([['count', 'C_Place'], ['count', null]]);
+    });
+
+    it("a model record naming a metaclass is a record defect at its index in the model's key, left out (mutant: kept as a declaration)", () => {
+        const out = mergeDeclarations(decoded([F]), decoded([COUNT, VISITS]));
+        expect(out.decls.map(d => d.name)).toEqual(['f', 'count']);
+        expect(out.defects).toEqual([{ index: 1, name: 'visits', code: 'record', message: 'a model declares globals only' }]);
+    });
+
+    it('the record index skips the records the decoder already dropped (mutant: the index of the decoded list)', () => {
+        const model = decoded([{ name: 'broken' }, COUNT, { ...VISITS, name: 'v' }]);
+        expect(model.defects.map(d => d.index)).toEqual([0]);
+        const out = mergeDeclarations(decoded(undefined), model);
+        expect(out.defects).toEqual([{ index: 2, name: 'v', code: 'record', message: 'a model declares globals only' }]);
+    });
+
+    it("a model key that is not readable merges nothing and shadows nothing: its defect stays the decoder's", () => {
+        const model = decodeStateAttributes('not json');
+        const out = mergeDeclarations(decoded([COUNT5]), model);
+        expect(out.decls.map(d => d.domain)).toEqual([{ kind: 'range', min: 0, max: 5 }]);
+        expect(out.defects).toEqual([]);
+    });
+
+    it('pure: neither input is mutated', () => {
+        const mm = decoded([COUNT5, F]);
+        const model = decoded([COUNT, VISITS]);
+        const before = JSON.stringify([mm, model]);
+        mergeDeclarations(mm, model);
+        expect(JSON.stringify([mm, model])).toBe(before);
+    });
+});
+
+describe('defaultInitialOf: the initial value a domain starts at', () => {
+    const range = (min: number, max: number): Domain => ({ kind: 'range', min, max });
+    const enumOf = (...literals: string[]): Domain => ({ kind: 'enum', literals });
+
+    it('a boolean starts at false (mutant: true)', () => {
+        expect(defaultInitialOf({ kind: 'boolean' })).toBe('false');
+    });
+
+    it('a range starts at its minimum, not its maximum, written as an integer literal; a negative one keeps its sign (mutants: max, abs)', () => {
+        expect(defaultInitialOf(range(0, 100))).toBe('0');
+        expect(defaultInitialOf(range(5, 100))).toBe('5');
+        expect(defaultInitialOf(range(-3, 5))).toBe('-3');
+    });
+
+    it('an enumeration starts at its first literal as a bare identifier, not the last or a quoted one (mutants: last, quoted)', () => {
+        expect(defaultInitialOf(enumOf('A', 'B', 'C'))).toBe('A');
+        expect(defaultInitialOf(enumOf('B', 'A'))).toBe('B');
+    });
+
+    it('an enumeration with no literals yet starts at the empty text, which stays a defect until it has one', () => {
+        expect(defaultInitialOf(enumOf())).toBe('');
+        expect(parseInitialLiteral('')).toBeNull();
+    });
+
+    it('every default parses with parseInitialLiteral and is a value of its own domain, the empty enumeration apart', () => {
+        const cases: [Domain, unknown][] = [
+            [{ kind: 'boolean' }, false], [range(0, 100), 0], [range(-3, 5), -3], [enumOf('A', 'B', 'C'), 'A'],
+        ];
+        for (const [domain, value] of cases) {
+            const parsed = parseInitialLiteral(defaultInitialOf(domain));
+            expect([domain, parsed]).toEqual([domain, value]);
+            expect(inDomain(parsed as boolean | number | string, domain)).toBe(true);
+        }
+    });
+
+    it('the encoded record of a default is a record the decoder reads without a defect (the default is what a row stores)', () => {
+        for (const domain of [{ kind: 'boolean' }, range(-3, 5), enumOf('A', 'B')] as Domain[]) {
+            const row: StateAttributeRecord = { name: 'x', metaclass: null, space: 'semantic', domain, initial: defaultInitialOf(domain) };
+            expect(decodeStateAttributes(encodeStateAttributes([row])).defects).toEqual([]);
+        }
+    });
+});
+
+describe('initialFollowingDomain: an edit of a bound or a literal carries the initial along', () => {
+    const range = (min: number, max: number): Domain => ({ kind: 'range', min, max });
+    const enumOf = (...literals: string[]): Domain => ({ kind: 'enum', literals });
+
+    it('the initial that is the previous default follows the new minimum: 0..100 at 0, min set to 5, gives 5 (mutant: the previous-default clause dropped)', () => {
+        expect(initialFollowingDomain('0', range(0, 100), range(5, 100))).toBe('5');
+        // the default is also a value of the new domain here: only the previous-default clause moves it
+        expect(initialFollowingDomain('0', range(0, 100), range(-3, 100))).toBe('-3');
+    });
+
+    it('a value typed inside the new domain is kept: 7 with min 5 set to 2 stays 7 (mutant: always the default)', () => {
+        expect(initialFollowingDomain('7', range(5, 100), range(2, 100))).toBe('7');
+        expect(initialFollowingDomain('7', range(0, 100), range(0, 50))).toBe('7');
+    });
+
+    it('a value that the new domain leaves out becomes the new default: 7 with max set to 5 gives 0, with min set to 9 gives 9 (mutant: the not-a-value clause dropped)', () => {
+        expect(initialFollowingDomain('7', range(0, 100), range(0, 5))).toBe('0');
+        expect(initialFollowingDomain('7', range(0, 100), range(9, 100))).toBe('9');
+    });
+
+    it('an edit that leaves the default where it was changes nothing: the max of 0..100 at 0', () => {
+        expect(initialFollowingDomain('0', range(0, 100), range(0, 50))).toBe('0');
+    });
+
+    it('an enumeration follows its first literal and keeps a literal that is still there (mutants: first literal ignored, literal not checked)', () => {
+        expect(initialFollowingDomain('A', enumOf('A', 'B'), enumOf('X', 'A'))).toBe('X');
+        expect(initialFollowingDomain('B', enumOf('A', 'B'), enumOf('B', 'C'))).toBe('B');
+        expect(initialFollowingDomain('A', enumOf('A', 'B'), enumOf('B', 'C'))).toBe('B');
+        expect(initialFollowingDomain('', enumOf(), enumOf('A', 'B'))).toBe('A');
+    });
+
+    it('an enumeration that loses every literal goes back to the empty text', () => {
+        expect(initialFollowingDomain('A', enumOf('A', 'B'), enumOf())).toBe('');
+    });
+
+    it('a text that is no JjEL literal is not a value of any domain, so it takes the default (mutant: parse failure kept)', () => {
+        expect(initialFollowingDomain('', range(0, 100), range(5, 100))).toBe('5');
+        expect(initialFollowingDomain('1 +', range(0, 100), range(0, 50))).toBe('0');
+    });
+
+    it('a text of the wrong type is not a value: a boolean text under a range, a number under an enumeration', () => {
+        expect(initialFollowingDomain('false', range(0, 100), range(2, 100))).toBe('2');
+        expect(initialFollowingDomain('1', enumOf('A', 'B'), enumOf('B', 'A'))).toBe('B');
+    });
+
+    it('no previous domain has no previous default: the typed value inside stays, a value outside takes the default', () => {
+        expect(initialFollowingDomain('7', null, range(0, 10))).toBe('7');
+        expect(initialFollowingDomain('x', null, range(0, 10))).toBe('0');
+    });
+
+    it('every result of a range edit is a value of the new domain when the new domain has one', () => {
+        for (const [initial, prev, next] of [
+            ['0', range(0, 100), range(5, 100)], ['7', range(5, 100), range(2, 100)], ['7', range(0, 100), range(0, 5)],
+            ['-3', range(-3, 5), range(0, 5)],
+        ] as [string, Domain, Domain][]) {
+            const out = parseInitialLiteral(initialFollowingDomain(initial, prev, next));
+            expect([initial, next, out !== null && inDomain(out, next)]).toEqual([initial, next, true]);
+        }
     });
 });

@@ -4,7 +4,6 @@
  * This page displays all design tokens visually.
  * Useful for:
  * - Verifying token values
- * - Testing dark/light themes
  * - Sharing design system with team
  * - Documentation reference
  *
@@ -12,27 +11,14 @@
  * Add a route in your router: /test-tokens
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import './tokenPreview.scss';
 
 export function TokenPreview() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
-  // Toggle theme
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
-
   return (
     <div className="token-preview">
-      {/* Header with theme toggle */}
       <header className="preview-header">
         <h1>Jjodel Design Tokens</h1>
-        <button onClick={toggleTheme} className="theme-toggle">
-          {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
-        </button>
       </header>
 
       <div className="preview-content">

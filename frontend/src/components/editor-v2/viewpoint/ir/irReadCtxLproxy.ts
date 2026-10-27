@@ -7,9 +7,12 @@
 
 import { LPointerTargetable } from '../../../../joiner';
 import { IR_READ_BACKEND, makeDrawReadCtx, type ReadCtx } from './irReadCtx';
-import { isSimActive } from '../../sim/simRunState';
+import { getSimPresentation, getSimRun, isSimActive } from '../../sim/simRunState';
 
 type Idlookup = Record<string, any>;
+
+/** Whether a model has a run, Reset to Stop (P-2026-10-19-0930): what `simActive` asks the run-state, by DModel id. */
+const hasSimRun = (modelId: string): boolean => getSimRun(modelId) !== undefined;
 
 /**
  * L-proxy backend ('lproxy'): reads through LObject/LValue proxies.
@@ -18,7 +21,7 @@ type Idlookup = Record<string, any>;
  * Falls back to the draw backend when the proxy throws on stale data.
  */
 export function makeLproxyReadCtx(idlookup: Idlookup): ReadCtx {
-    const draw = makeDrawReadCtx(idlookup, isSimActive);
+    const draw = makeDrawReadCtx(idlookup, isSimActive, getSimPresentation, hasSimRun);
     return {
         getValue(elementId, featureName) {
             try {
@@ -50,15 +53,20 @@ export function makeLproxyReadCtx(idlookup: Idlookup): ReadCtx {
         // The marking is not a slot value either: it is the run-state singleton,
         // read identically whichever backend is active (R-MK-4).
         isMarked: draw.isMarked,
+        // Presentation too (R-SIM-108): the run's σ, never a slot.
+        getPresentation: draw.getPresentation,
+        // And whether a run shows the element's model (P-2026-10-19-0930): the walk is structural.
+        isRunActive: draw.isRunActive,
     };
 }
 
 /**
- * The single injection point of the marking source (R-MK-4). This module already
- * imports the joiner, so importing the run-state singleton costs nothing here,
- * while irReadCtx.ts keeps its zero-import contract. The 6 call sites of
- * makeReadCtx are untouched: the dependency is resolved inside, not threaded.
+ * The single injection point of the marking source (R-MK-4) and of the
+ * presentation reader (R-SIM-108), and of the run check of `simActive`. This module already imports the joiner, so
+ * importing the run-state singleton costs nothing here, while irReadCtx.ts keeps
+ * its zero-import contract. The 6 call sites of makeReadCtx are untouched: the
+ * dependency is resolved inside, not threaded.
  */
 export function makeReadCtx(idlookup: Idlookup): ReadCtx {
-    return IR_READ_BACKEND === 'lproxy' ? makeLproxyReadCtx(idlookup) : makeDrawReadCtx(idlookup, isSimActive);
+    return IR_READ_BACKEND === 'lproxy' ? makeLproxyReadCtx(idlookup) : makeDrawReadCtx(idlookup, isSimActive, getSimPresentation, hasSimRun);
 }
