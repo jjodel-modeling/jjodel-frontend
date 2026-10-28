@@ -50,7 +50,17 @@ import { addChildReason, crumbLabel, newInstanceReason } from '../../../jjform';
 import type { RefShape, RefSlotControls, RefSlotRow } from '../../../jjform';
 import { ComponentPicker } from './ComponentPicker';
 import { DiagLine, FieldTitle, ObjectFields, SectionHead, problemsAttr, useFolds, useObjectModel, usePanelEnv } from './PanelFields';
-import { canUnlink, componentKind, createControl, newTargetAt, orderComponents, summaryLine } from './panelModel';
+import { canUnlink, componentKind, createControl, newTargetAt, orderComponents, summaryLine, type SectionKey } from './panelModel';
+import { fieldPresentationOf, sanitizeDeclarations, type FieldPresentation } from '../../../joiner/environmentConfig';
+
+/** #186: the kept declarations of a role's CSS entry, as an inline style; undefined when none is left. */
+function inlineStyle(text: string | undefined): React.CSSProperties | undefined {
+    const css = sanitizeDeclarations(text);
+    return css.text ? (css.style as React.CSSProperties) : undefined;
+}
+
+/** The RENDER of «Customize element» shows every section open, whatever this browser remembers. */
+const NO_FOLDS: Set<SectionKey> = new Set();
 
 /** Shown when the host refuses a write without saying why, as `IRFormField` words it. */
 const UNSTATED_REFUSAL = 'The model refused this change';
@@ -59,7 +69,7 @@ const UNSTATED_REFUSAL = 'The model refused this change';
 type Via = { id: string; key: string } | null;
 
 /** One component of an element: the feature, its label in the view, whether the author hides it. */
-type Component = { key: string; ref: RefShape; label: string; authorHidden: boolean };
+type Component = { key: string; ref: RefShape; label: string; authorHidden: boolean; pres: FieldPresentation | null };
 
 /** The label of an element as the breadcrumb prints it («PhA: Phase»). */
 function labelOf(idlookup: Record<string, any>, id: string, cls: string): string {
@@ -75,7 +85,10 @@ export function ObjectView({ objectId, depth, via }: { objectId: string; depth: 
     const model = useObjectModel(objectId, env.profileReads);
     const clsName = env.shapeCtx.classOf(objectId);
     const cls = clsName ? env.shapeCtx.shape().classes[clsName] ?? null : null;
-    const [folds, toggle] = useFolds(cls?.id ?? null);
+    const [remembered, toggle] = useFolds(cls?.id ?? null);
+    const folds = env.preview ? NO_FOLDS : remembered;
+    // #186: the active role's presentation of this element's exact class.
+    const presentation = cls && env.presentationOf ? env.presentationOf(cls.id) : null;
     const readOnly = env.permOfInstance(objectId) !== 'edit';
 
     const spec = model?.spec;
@@ -90,7 +103,8 @@ export function ObjectView({ objectId, depth, via }: { objectId: string; depth: 
                 .map(r => ({
                     key: r.key,
                     ref: r,
-                    label: spec?.labels?.[r.key] ?? r.key,
+                    pres: fieldPresentationOf(presentation, r.key),
+                    label: fieldPresentationOf(presentation, r.key)?.label ?? spec?.labels?.[r.key] ?? r.key,
                     authorHidden: !!spec?.hidden?.includes(r.key) || spec?.features?.[r.key] === 'hidden',
                 })),
             slotOrder,
@@ -123,7 +137,7 @@ export function ObjectView({ objectId, depth, via }: { objectId: string; depth: 
                     Read only for this role
                 </p>
             )}
-            <ObjectFields objectId={objectId} model={model} readOnly={readOnly} diagnostics={diagnostics} folds={folds} onToggle={toggle} />
+            <ObjectFields objectId={objectId} model={model} readOnly={readOnly} diagnostics={diagnostics} folds={folds} onToggle={toggle} presentation={presentation} />
             {components.length > 0 && (
                 <section className="cfg-panel__section" data-section="components">
                     <SectionHead title="Components" folded={componentsFolded} onToggle={() => toggle('components')} />
@@ -148,6 +162,9 @@ type OpenPicker = { anchor: DOMRect; opener: HTMLElement; row: number | null };
 function ReferenceSlot({ objectId, comp, diagnostics, depth, via }: { objectId: string; comp: Component; diagnostics: FieldDiagnostic[]; depth: number; via: Via }) {
     const env = usePanelEnv();
     const { ref, label, authorHidden } = comp;
+    // #186: the role's CSS of the cards and of the separators between entries («interline»).
+    const cardCss = inlineStyle(comp.pres?.cardStyle);
+    const lineCss = inlineStyle(comp.pres?.lineStyle);
     const [refusal, setRefusal] = useState<string | null>(null);
     const [picker, setPicker] = useState<OpenPicker | null>(null);
     useEffect(() => { setRefusal(null); setPicker(null); }, [objectId]);
@@ -292,7 +309,7 @@ function ReferenceSlot({ objectId, comp, diagnostics, depth, via }: { objectId: 
     const extendsRow = (row: RefSlotRow) => extendedLevel && !row.broken && row.value !== objectId;
     /** The compact card of one target: name, key fields, ×, open, and the picker of a single slot. */
     const compactCard = (row: RefSlotRow) => (
-        <div className={`cfg-panel__ref-card${row.broken ? ' cfg-panel__ref-card--broken' : ''}`} key={row.index} data-row={row.index} role="group" aria-labelledby={titleId}>
+        <div className={`cfg-panel__ref-card${row.broken ? ' cfg-panel__ref-card--broken' : ''}`} key={row.index} data-row={row.index} role="group" aria-labelledby={titleId} style={cardCss}>
             <div className="cfg-panel__ref-main">
                 <span className="cfg-panel__ref-name">{row.broken ? row.value : (navStepOf(env.idlookup, row.value)?.name || nameOf(row))}</span>
                 {summaryOf(row) && <span className="cfg-panel__ref-summary">{summaryOf(row)}</span>}
@@ -312,7 +329,7 @@ function ReferenceSlot({ objectId, comp, diagnostics, depth, via }: { objectId: 
         const body = single || env.isExpanded(expandKey);
         const summary = body ? '' : summaryOf(row);
         return (
-            <div className={`cfg-panel__child${body ? ' cfg-panel__child--open' : ''}`} key={row.index} data-row={row.index} data-child={row.value}>
+            <div className={`cfg-panel__child${body ? ' cfg-panel__child--open' : ''}`} key={row.index} data-row={row.index} data-child={row.value} style={cardCss}>
                 <div className="cfg-panel__child-head">
                     {!single && (
                         <button type="button" className="cfg-panel__icon" aria-expanded={body} aria-label={`${body ? 'Collapse' : 'Expand'} ${name}`} title={body ? 'Collapse' : 'Expand'} onClick={() => env.toggleExpanded(expandKey)}>
@@ -328,7 +345,7 @@ function ReferenceSlot({ objectId, comp, diagnostics, depth, via }: { objectId: 
                     {row.actions.includes('change') && chevron(row.index)}
                 </div>
                 {body && (
-                    <div className="cfg-panel__child-body">
+                    <div className="cfg-panel__child-body" style={lineCss}>
                         <ObjectView objectId={row.value} depth={depth + 1} via={{ id: row.value, key: ref.key }} />
                     </div>
                 )}
@@ -353,10 +370,11 @@ function ReferenceSlot({ objectId, comp, diagnostics, depth, via }: { objectId: 
                 typeName={ref.of}
                 readOnly={ref.readOnly}
                 dirty={env.isDirty(objectId, ref.key)}
+                showType={comp.pres?.showType !== false}
             />
             <DiagLine shown={shown} />
             {single && rows.length === 0 ? (
-                <div className="cfg-panel__ref-card cfg-panel__ref-card--empty" role="group" aria-labelledby={titleId}>
+                <div className="cfg-panel__ref-card cfg-panel__ref-card--empty" role="group" aria-labelledby={titleId} style={cardCss}>
                     <span className="cfg-panel__none">(none selected)</span>
                     {emptySingleOffers && chevron(null)}
                 </div>
@@ -366,9 +384,9 @@ function ReferenceSlot({ objectId, comp, diagnostics, depth, via }: { objectId: 
                     {!single && addTarget}
                 </div>
             ) : single ? rows.map(compactCard) : (
-                <div className="cfg-panel__ref-list" role="group" aria-labelledby={titleId}>
+                <div className="cfg-panel__ref-list" role="group" aria-labelledby={titleId} style={cardCss}>
                     {rows.map(row => (
-                        <div className={`cfg-panel__ref-row${row.broken ? ' cfg-panel__ref-row--broken' : ''}`} key={row.index} data-row={row.index}>
+                        <div className={`cfg-panel__ref-row${row.broken ? ' cfg-panel__ref-row--broken' : ''}`} key={row.index} data-row={row.index} style={lineCss}>
                             <div className="cfg-panel__ref-main">
                                 <span className="cfg-panel__ref-name">{nameOf(row)}</span>
                                 {summaryOf(row) && <span className="cfg-panel__ref-summary">{summaryOf(row)}</span>}
@@ -423,6 +441,8 @@ function CompositionSlot({ objectId, comp, readOnly, diagnostics, depth, via }: 
 }) {
     const env = usePanelEnv();
     const { ref, label } = comp;
+    const cardCss = inlineStyle(comp.pres?.cardStyle);
+    const lineCss = inlineStyle(comp.pres?.lineStyle);
 
     // #157 step B: a child of a type the role hides is not listed.
     const ids = childrenIn(env.idlookup, objectId, ref.key).filter(id => env.permOfInstance(id) !== 'hidden');
@@ -454,7 +474,7 @@ function CompositionSlot({ objectId, comp, readOnly, diagnostics, depth, via }: 
         const canDelete = !!env.openDelete && !readOnly && env.permOfInstance(id) === 'edit';
         const summary = body ? '' : summaryLine(env.summaryOf(id));
         return (
-            <div className={`cfg-panel__child${body ? ' cfg-panel__child--open' : ''}`} key={id} data-child={id}>
+            <div className={`cfg-panel__child${body ? ' cfg-panel__child--open' : ''}`} key={id} data-child={id} style={cardCss}>
                 <div className="cfg-panel__child-head">
                     {expandable && (
                         <button type="button" className="cfg-panel__icon" aria-expanded={body} aria-label={`${body ? 'Collapse' : 'Expand'} ${name}`} title={body ? 'Collapse' : 'Expand'} onClick={() => env.toggleExpanded(id)}>
@@ -475,7 +495,7 @@ function CompositionSlot({ objectId, comp, readOnly, diagnostics, depth, via }: 
                     </button>
                 </div>
                 {body && (
-                    <div className="cfg-panel__child-body">
+                    <div className="cfg-panel__child-body" style={lineCss}>
                         <ObjectView objectId={id} depth={depth + 1} via={{ id, key: ref.key }} />
                     </div>
                 )}
@@ -500,11 +520,12 @@ function CompositionSlot({ objectId, comp, readOnly, diagnostics, depth, via }: 
                 typeName={ref.of}
                 readOnly={ref.readOnly}
                 dirty={env.isDirty(objectId, ref.key)}
+                showType={comp.pres?.showType !== false}
             />
             <DiagLine shown={diagnostics} />
             <div className="cfg-panel__children" role="group" aria-labelledby={titleId}>
                 {single && ids.length === 0 ? (
-                    <div className="cfg-panel__ref-card cfg-panel__ref-card--empty">
+                    <div className="cfg-panel__ref-card cfg-panel__ref-card--empty" style={cardCss}>
                         <span className="cfg-panel__none">(none added)</span>
                         {createButton('New', `New ${ref.of} in ${label}`)}
                     </div>

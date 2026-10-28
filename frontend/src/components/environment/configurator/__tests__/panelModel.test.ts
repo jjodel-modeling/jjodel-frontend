@@ -12,6 +12,7 @@ import {
     orderComponents,
     parseFolds,
     partitionFields,
+    roleRendering,
     saveStatus,
     serializeFolds,
     summaryLine,
@@ -198,5 +199,36 @@ describe('summaryLine', () => {
     it('joins the key fields of an element as label: text', () => {
         expect(summaryLine([{ label: 'description', text: 'Learn X' }, { label: 'minutes', text: '30' }])).toBe('description: Learn X · minutes: 30');
         expect(summaryLine([])).toBe('');
+    });
+});
+
+// #186 «Customize element» (P-2026-10-17-1053): how the role's widget renders through the form's own widgets.
+describe('roleRendering', () => {
+    const str = { typeName: 'EString', isEnum: false, isMultivalued: false, isReadOnly: false, derivedWidget: 'text' };
+    const num = { typeName: 'EInt', isEnum: false, isMultivalued: false, isReadOnly: false, derivedWidget: 'number' };
+    it('a string: input forces the plain text cell, textarea the growing box, dropdown the panel\'s dropdown', () => {
+        expect(roleRendering('input', str)).toEqual({ widget: 'text', cellWidget: 'text' });
+        expect(roleRendering('textarea', str)).toEqual({ widget: 'text', multiline: true });
+        expect(roleRendering('dropdown', str)).toEqual({ widget: 'text', dropdown: 'string' });
+    });
+    it('a number: the stepper, the number input (the stepper without its buttons: a text field would write a string), the number dropdown', () => {
+        expect(roleRendering('stepper', num)).toEqual({ widget: 'number', cellWidget: 'number' });
+        expect(roleRendering('number-input', num)).toEqual({ widget: 'number', cellWidget: 'number', numberInput: true });
+        expect(roleRendering('number-dropdown', num)).toEqual({ widget: 'number', dropdown: 'number' });
+    });
+    it('no widget, an unknown one, or one of the other family: what the panel renders without a presentation', () => {
+        expect(roleRendering(undefined, str)).toBeNull();
+        expect(roleRendering('select', str)).toBeNull();
+        expect(roleRendering('stepper', str)).toBeNull();
+        expect(roleRendering('input', num)).toBeNull();
+    });
+    it('a choice the field does not offer: an enum, a multi-valued or read-only field, a type without choices', () => {
+        expect(roleRendering('dropdown', { ...str, isEnum: true, derivedWidget: 'select' })).toBeNull();
+        expect(roleRendering('input', { ...str, isMultivalued: true })).toBeNull();
+        expect(roleRendering('number-input', { ...num, isReadOnly: true })).toBeNull();
+        expect(roleRendering('input', { ...str, typeName: 'EChar' })).toBeNull();
+    });
+    it('a stale presentation: a string choice on a field whose type became numeric renders the number widget of today', () => {
+        expect(roleRendering('textarea', { ...str, derivedWidget: 'number' })).toBeNull();
     });
 });

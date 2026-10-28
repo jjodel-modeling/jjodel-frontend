@@ -55,6 +55,7 @@ import { ObjectView } from './PanelComponents';
 import { issuesText, saveStatus } from './panelModel';
 import type { Crumb, NavState, RefShape, RefSlotControls } from '../../../jjform';
 import type { DetailPermission } from '../../abstract/tabs/InstanceDetail';
+import type { TypePresentation } from '../../../joiner/environmentConfig';
 import '../../editor-v2/viewpoint/ir/irFormStyle.scss';
 import './configuratorPanel.scss';
 
@@ -77,11 +78,17 @@ export interface ConfiguratorPanelProps {
     onCreateAndLink?: (targetCls: string, sourceId: string, refKey: string, at?: number) => void;
     /** The viewer's permission on a metaclass, by DClass id. Absent: everything `edit`. */
     permissionOf?: (classId: string) => DetailPermission;
+    /** #186: the active role's presentation of a metaclass, by DClass id. Absent (no role, the
+     *  developer overlay): nothing presented. */
+    presentationOf?: (classId: string) => TypePresentation | null;
+    /** #186: the RENDER of «Customize element»: no Save and no Delete, every section open. The host
+     *  makes it inert. */
+    preview?: boolean;
 }
 
 export function ConfiguratorPanel({
     modelid, subjectId, nav, setNav, scrollRef,
-    openDelete, onCreate, onCreateAndLink, permissionOf,
+    openDelete, onCreate, onCreateAndLink, permissionOf, presentationOf, preview,
 }: ConfiguratorPanelProps) {
     const idlookup = useSelector((state: any) => state?.idlookup);
     // A save from anywhere (this Save, Ctrl/Cmd+S, the autosave) re-renders the status.
@@ -279,7 +286,7 @@ export function ConfiguratorPanel({
     };
     const onScreenId = formSubjectId ?? subjectId;
     const subjectStep = navStepOf(idlookup, onScreenId);
-    const canDelete = !!openDelete && permOfInstance(onScreenId) === 'edit';
+    const canDelete = !preview && !!openDelete && permOfInstance(onScreenId) === 'edit';
 
     const preset = useMemo(() => resolveFormTheme(), []);
     const env: PanelEnv = {
@@ -302,6 +309,8 @@ export function ConfiguratorPanel({
         openDelete,
         onCreate,
         onCreateAndLink,
+        presentationOf,
+        preview,
     };
 
     return (
@@ -366,20 +375,23 @@ export function ConfiguratorPanel({
                         </span>
                     )}
                     <span className="cfg-panel__head-spacer" />
-                    <span className={`cfg-panel__status${projectModified ? ' cfg-panel__status--unsaved' : ''}`} role="status">
-                        {saveStatus(projectModified)}
-                    </span>
-                    {/* R-CFG-9: the primary action while the project has unsaved changes, neutral once saved. */}
-                    <button
-                        type="button"
-                        className={`cfg-panel__save${projectModified ? ' cfg-panel__save--unsaved' : ''}`}
-                        title="Save the project (Ctrl/Cmd+S)"
-                        disabled={saving}
-                        onClick={save}
-                    >
-                        <i className="bi bi-floppy" aria-hidden="true" />
-                        Save
-                    </button>
+                    {/* #186: the RENDER of «Customize element» saves nothing. */}
+                    {!preview && (<>
+                        <span className={`cfg-panel__status${projectModified ? ' cfg-panel__status--unsaved' : ''}`} role="status">
+                            {saveStatus(projectModified)}
+                        </span>
+                        {/* R-CFG-9: the primary action while the project has unsaved changes, neutral once saved. */}
+                        <button
+                            type="button"
+                            className={`cfg-panel__save${projectModified ? ' cfg-panel__save--unsaved' : ''}`}
+                            title="Save the project (Ctrl/Cmd+S)"
+                            disabled={saving}
+                            onClick={save}
+                        >
+                            <i className="bi bi-floppy" aria-hidden="true" />
+                            Save
+                        </button>
+                    </>)}
                     {canDelete && openDelete && (
                         <button
                             type="button"

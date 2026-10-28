@@ -218,6 +218,27 @@
 
     &__field { min-width: 0; }
 
+    // #186 «Customize element»: a role's «number input» is the stepper without its two buttons (a
+    // text field would write the number as a string).
+    &__field--number-input .ir-field__stepper-btn { display: none; }
+
+    // #186: the text properties a role's CSS declares on a field also reach its title and its
+    // control, one property per rule, so a field without them renders as before.
+    @each $prop in color, font-family, font-size, font-style, font-weight, letter-spacing, text-decoration, text-transform {
+        &__field[data-cfg-text~="#{$prop}"] :is(.cfg-panel__label, .cfg-panel__type, .cfg-panel__cardinality, input, select, textarea) {
+            #{$prop}: inherit;
+        }
+    }
+
+    // #186: the role's dropdown, and the free entry beside it when «Other…» is chosen.
+    &__dropdown {
+        display: flex;
+        gap: var(--space-2);
+        min-width: 0;
+
+        > * { flex: 1 1 0; min-width: 0; }
+    }
+
     &__diag {
         display: flex;
         align-items: center;

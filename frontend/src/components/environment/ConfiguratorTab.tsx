@@ -29,7 +29,7 @@ import {
     resolveTypePermission,
 } from '../../joiner';
 import { addChildReason, newDraft, paletteAttr } from '../../jjform';
-import { metamodelOfClass, modelsForType, restrictDeleteForProfile, topLevelReason } from '../../joiner/environmentConfig';
+import { metamodelOfClass, modelsForType, restrictDeleteForProfile, topLevelReason, typePresentationOf } from '../../joiner/environmentConfig';
 import { instancesOfClass, modelIdOfObject } from '../abstract/tabs/instanceManagerModel';
 import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
 import { applyCreate, childSlotCount } from '../editor-v2/hooks/createAdapter';
@@ -256,6 +256,8 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
         (classId: string): DetailPermission => resolveTypePermission(profile, classId),
         [profile],
     );
+    /** #186 (R-CFG-3): the role's presentation of a metaclass, from `?profile=`. Stable per profile. */
+    const presentationOf = useCallback((classId: string) => typePresentationOf(profile, classId), [profile]);
 
     /** The Data Manager's form palette, so the detail is painted as it is there. */
     const palette = useSelector((s: any) => paletteAttr(s?.idlookup?.[DATA_MANAGER_VIEWPOINT_ID]?.formPalette));
@@ -565,6 +567,8 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
                                                 // absent rule as «no profile», and keeps the developer's
                                                 // containment pickers as they were.
                                                 permissionOf={profile ? permissionOf : undefined}
+                                                // #186: the active role's presentation; the developer overlay has none.
+                                                presentationOf={profile ? presentationOf : undefined}
                                             />
                                         </div>
                                     </div>
