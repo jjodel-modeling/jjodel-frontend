@@ -28,6 +28,19 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-10-29 — fix: JjTL nested `-> feature { forall }` inside a forall-created object
+**Prompt**: apply `micron-proto/jjodel-patch/jjtl-nested-feature-forall.diff` (3 hunks): `executeCreationMapping` takes `extraBindings` and forwards them to `runForAll`/`executeObjectCreation`; `executeObjectCreation` routes `attrMapping.objectCreation` through `executeCreationMapping` and continues. One new describe proving placement in the feature and outer-variable binding in the inner `such that`.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/executor/__tests__/nested-creation-into-features.test.ts` (`f8bb8a5c4`, branch `jjtl-nested-feature-forall`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npx vitest run src/jjtl`: 152 passed, 0 failed; the same 7 files red at import (`window is not defined`). `npm run typecheck` exit 2, 14 errors on full output, 0 in `jjtl/` (control `Measurable` → 6); the 19 casing errors do not arise at the worktree path.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.2 file touched.
+**Smoke visivo**: non applicabile — executor only.
+**Notes**: Bench: both new tests fail on the unpatched executor (pluralization warning "guessed 'ops' ... not a feature of 'ops'"; `c.ops.map is not a function`) and pass patched. The patch was already present as uncommitted WIP in the main checkout (same blob `4a5b2a7`); left untouched there.
+**Prompt document name**: 2026-10-29 (chat prompt, no document)
+
 ## 2026-09-23 — docs: discovery on JjScript class name resolution (P-2026-09-23-1600)
 **Prompt**: `claude_2026-09-23_1600_jjscript_name_resolution_discovery.md`, Phase 1 read-only: how JjScript resolves class names (Q1-Q7), after four defects Alfonso reported on a Book/BookCopy script run into metamodel_2 while metamodel_1 holds Book. Static reading plus a live probe on :3000 (session scratchpad, not committed).
 **Files touched**: `docs/discovery/discovery_2026-09-23_jjscript_name_resolution.md` (new, `9ae6d942b`). This entry and the prompt's `Status` line in their own commit.
