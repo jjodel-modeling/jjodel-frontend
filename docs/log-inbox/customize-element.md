@@ -33,3 +33,16 @@ order** (RC-12) and empties this file. The active log is not touched by this lan
 **Prompt document name**: 2026-10-17 10:53
 
 **Ticket** (P-2026-10-17-1053, chat's independent probe, priority low): «Done» of the popup writes the presentation in memory only; the Endpoints window's «Done», or Save, saves it. Closing the window with ×, Escape or Cancel leaves it unsaved, and a new tab does not see the customization. A UX choice left to Juri: save at the popup's «Done», or say so in its text.
+
+## 2026-10-29 — merge: feat/186-customize-element into staging (P-2026-10-29-1720)
+**Prompt**: `claude_2026-10-29_1720_prompt_merge_feat-186-customize-element.md`, a direct merge by `lane-run merge --direct`, no session: `feat/186-customize-element` at `b1d105144` into `staging`, merge base `a334addac`, 12 commits on the branch side.
+**Files touched**: merge `b5e914168`: 19 files from the branch side (`docs/discovery/discovery_2026-10-17_186_customize_element.md`, `docs/lir/lir_2026-10-17_186_type_presentation.md`, `docs/log-inbox/customize-element.md`, `docs/prompts/claude_2026-10-17_1053_prompt_186_customize_element.md`, `docs/prompts/claude_2026-10-27_1449_prompt_feat-186-customize-element_take_trunk.md`, `frontend/src/components/envgen/steps/ProfilesStep.tsx`, `frontend/src/components/environment/ConfiguratorTab.tsx`, `frontend/src/components/environment/configurator/ConfiguratorPanel.tsx`, and 11 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b5e914168` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 9410 tests in 383 files, 9 red at import, hooks 847; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: passato: sonde della chat sul tree unito (vite 3190, staging b5e914168): chat_186c_independent 13/13 (lettori in schede nuove), chat_187d_independent 10/10, chat_187_independent 12/12, chat_186b_independent 9/9 ALL GREEN, nessun errore di pagina
+**Notes**: Rollback tag `pre-feat/186-customize-element` on `a334addac` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-29-1720/result.json`.
+**Prompt document name**: 2026-10-29 17:20
