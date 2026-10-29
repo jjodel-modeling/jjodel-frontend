@@ -25,6 +25,7 @@ import {
 import { SegmentedControl } from '../../ui/SegmentedControl/SegmentedControl';
 import { Input } from '../../ui/Input/Input';
 import { getStandaloneEnvironmentUrl, copyToClipboard } from '../../../utils/shareUtils';
+import { CustomizeElementModal } from '../../environment/configurator/CustomizeElementModal';
 
 const PERMISSION_OPTIONS = [
     { value: 'edit', label: 'Editable' },
@@ -37,6 +38,8 @@ export const ProfilesStep: React.FC = () => {
     const [newProfileName, setNewProfileName] = useState('');
     const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
     const [linkCopied, setLinkCopied] = useState(false);
+    /** #186 task 2: the type whose «Customize element» popup is open, and the button that opened it. */
+    const [customizing, setCustomizing] = useState<{ classId: string; opener: HTMLElement } | null>(null);
 
     const projectId = (U.getProjectID_URL() || '') as string;
 
@@ -191,6 +194,23 @@ export const ProfilesStep: React.FC = () => {
                                         {g.ids.map((cid) => (
                                             <div key={cid} className="envgen-perm-row">
                                                 <span className="envgen-perm-row__name">{shortNameById[cid] || cid}</span>
+                                                {/* #186 task 2: the type's presentation for this role; nothing to
+                                                    customize on a type the role hides. The reason sits on the
+                                                    wrapper: a disabled button takes no pointer event. */}
+                                                <span
+                                                    className="cfg-custom__open-wrap"
+                                                    title={resolveTypePermission(selectedProfile, cid) === 'hidden' ? 'Hidden for this role: nothing to customize' : undefined}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        className="envgen-btn envgen-btn--secondary cfg-custom__open"
+                                                        disabled={resolveTypePermission(selectedProfile, cid) === 'hidden'}
+                                                        aria-label={`Customize element ${shortNameById[cid] || cid}`}
+                                                        onClick={(e) => setCustomizing({ classId: cid, opener: e.currentTarget })}
+                                                    >
+                                                        <i className="bi bi-palette" aria-hidden="true" /> Customize element
+                                                    </button>
+                                                </span>
                                                 <SegmentedControl
                                                     options={PERMISSION_OPTIONS}
                                                     value={resolveTypePermission(selectedProfile, cid)}
@@ -205,6 +225,14 @@ export const ProfilesStep: React.FC = () => {
                         </div>
                     )}
                 </div>
+            )}
+            {customizing && selectedProfile && (
+                <CustomizeElementModal
+                    profileId={selectedProfile.id}
+                    classId={customizing.classId}
+                    opener={customizing.opener}
+                    onClose={() => setCustomizing(null)}
+                />
             )}
         </div>
     );
