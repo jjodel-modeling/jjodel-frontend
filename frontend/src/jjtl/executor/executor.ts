@@ -1817,6 +1817,7 @@ export class JjtlExecutor {
         mapping: AttributeMappingAST,
         sourceInstance: any,
         targetInstance: any,
+        extraBindings?: Record<string, JjelValue>,
     ): Promise<any> {
         const ownerClassName = targetInstance?.__type || targetInstance?.className || '';
         const shape = this.classifyCreation(mapping, ownerClassName);
@@ -1845,7 +1846,7 @@ export class JjtlExecutor {
                 const results: any[] = [];
                 for (const item of mapping.objectCreation!.body || []) {
                     if (item.type === 'ForAllMapping') {
-                        results.push(...await this.runForAll(item as ForAllMappingAST, sourceInstance));
+                        results.push(...await this.runForAll(item as ForAllMappingAST, sourceInstance, extraBindings));
                     } else {
                         this.warnings.push(
                             `'-> ${shape.featureName} { ... }' (${ruleContext}) mixes a forall with a ` +
@@ -1859,7 +1860,7 @@ export class JjtlExecutor {
 
             case 'featureCreation': {
                 const created = fromJjelValue(
-                    await this.executeObjectCreation(mapping.objectCreation!, sourceInstance)
+                    await this.executeObjectCreation(mapping.objectCreation!, sourceInstance, extraBindings)
                 );
                 targetInstance[shape.featureName] = created;
                 return created;
@@ -1993,7 +1994,12 @@ export class JjtlExecutor {
                 let value: JjelValue;
 
                 if (attrMapping.objectCreation) {
-                    value = await this.executeObjectCreation(attrMapping.objectCreation, sourceInstance, extraBindings);
+                    // `-> feature { ... }` inside a created object: the same placement as at rule level
+                    // (one object, or one per element of a forall, into that feature), with the enclosing
+                    // forall variables still bound. Before this, the body fell into the wrapper path and
+                    // `-> ops { forall ... }` built an object typed `ops` with pluralized sub-lists.
+                    await this.executeCreationMapping(attrMapping, sourceInstance, newObject, extraBindings);
+                    continue;
                 } else if (attrMapping.expression !== undefined) {
                     value = await this.evaluateExpressionAsync(attrMapping.expression, ctx);
                     if (attrMapping.valueMapping && attrMapping.valueMapping.length > 0) {

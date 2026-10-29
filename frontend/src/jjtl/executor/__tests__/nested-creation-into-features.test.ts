@@ -397,3 +397,51 @@ describe('provenance and counters', () => {
         expect((table.columns as any).__ref_result).toBeUndefined();
     });
 });
+
+describe('-> feature { forall ... } nested inside a forall-created object', () => {
+    const WITH_OPS = {
+        classes: [
+            RELATIONAL.classes[0],
+            {
+                className: 'DClass', name: 'Column',
+                allAttributes: [{ name: 'name' }],
+                allReferences: [{ name: 'ops', composition: true, type: { name: 'Op' } }],
+            },
+            { className: 'DClass', name: 'Op', allAttributes: [{ name: 'name' }], allReferences: [] },
+        ],
+    };
+
+    const NESTED = `Entity -> Table {
+    -> columns {
+        forall a in ownedAttributes -> Column {
+            name := a.name
+            -> ops {
+                forall b in ownedAttributes such that b.name != a.name -> Op {
+                    name := b.name
+                }
+            }
+        }
+    }
+}
+`;
+
+    it('places the inner list in the feature, typed after the created class', async () => {
+        const result = await run(NESTED, FULL, WITH_OPS);
+
+        expect(result.success).toBe(true);
+        expect(result.warnings).toEqual([]);
+        const table = result.targetModel!.instances.get('Table')![0];
+        expect(table.columns).toHaveLength(2);
+        for (const col of table.columns) {
+            expect(Array.isArray(col.ops)).toBe(true);
+            expect(col.ops.every((o: any) => o.__type === 'Op')).toBe(true);
+        }
+    });
+
+    it('reads the outer forall variable in the inner such-that', async () => {
+        const result = await run(NESTED, FULL, WITH_OPS);
+
+        const table = result.targetModel!.instances.get('Table')![0];
+        expect(table.columns.map((c: any) => c.ops.map((o: any) => o.name))).toEqual([['age'], ['ssn']]);
+    });
+});
