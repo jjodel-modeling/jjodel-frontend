@@ -267,7 +267,7 @@ export function capabilitiesFor(id: string): { pdf: boolean; vision: boolean; co
 
 // ── Fetch ───────────────────────────────────────────────────────────────────
 
-function failureFromStatus(status: number, message: string = ''): CatalogFailure {
+export function failureFromStatus(status: number, message: string = ''): CatalogFailure {
     if (status === 401 || status === 403) return 'auth';
     // Gemini answers a bad key with 400 API_KEY_INVALID («API key not valid»).
     if (status === 400 && /api[ _]?key/i.test(message)) return 'auth';

@@ -17,4 +17,7 @@
   --jj-appbar-height: 50px;      /* .nav-container.appbar */
   --jj-toolbar-height: 40px;     /* .editor-v2-toolbar */
   --jj-statusbar-height: 32px;   /* .app-statusbar */
+  /* Width of the docked Jjodie column (R-JJD-1). Written on `body` by JodieWindow while it is
+     docked, reset to 0px when it closes; the Properties rail moves left by it. */
+  --jj-jodie-dock-width: 0px;
 }

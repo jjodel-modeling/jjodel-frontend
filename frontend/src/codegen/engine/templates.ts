@@ -2,8 +2,9 @@
  * templates — template records registered as JjEL builtins (slice S2, R-GEN-4, R-GEN-12; spec §4, discovery §A.3,
  * §B.1, U1).
  *
- * A template is a stored record `{name, params, body}`: the body is a JjEL expression parsed by `parseTemplate`,
- * usually one interpolated string, and its value is a Text. Each record becomes a builtin of the one evaluation
+ * A template is a stored record `{name, params, body, mode?}`: the body is a JjEL expression parsed by `parseTemplate`,
+ * usually one interpolated string, or in text mode the inside of one, parsed by `parseTemplateText` (S5, R-GEN-25,
+ * R-GEN-26); its value is a Text. Each record becomes a builtin of the one evaluation
  * context of a generation (the JjTL helper precedent, `jjtl/executor/executor.ts`), so templates call each other
  * and themselves with no definition syntax. A call evaluates the body in a child of that context with the
  * parameters bound, missing arguments `null`: a template sees the globals and its parameters, never its caller's
@@ -19,22 +20,41 @@
  * the throw into one error fragment (origin.ts) instead of a stack overflow. 64 is far above the containment depth
  * of a model a template walks, and about a tenth of the depth at which the stack runs out: without the bound, a
  * template that calls itself once per level overflowed above 625 levels under vitest's node (measured in S2).
+ * Depth does not bound fan-out (two self-calls per level stay under 64 and make 2^64 calls): each call is also a
+ * checkpoint of the generation's budget (text.ts, R-GEN-28), for the time before it runs and the output after.
  *
  * Pure: JjEL, the guard subset checker and the engine.
  */
 
-import { JjelTokenType, createFunction, parseTemplate, tokenize } from '../../jjel';
-import type { EvaluationContext, JjelEvaluator, JjelExpression, JjelValue } from '../../jjel';
+import { JjelTokenType, createFunction, parseTemplate, parseTemplateText, tokenize } from '../../jjel';
+import type { EvaluationContext, JjelEvaluator, JjelExpression, JjelParserResult, JjelValue } from '../../jjel';
 import { checkGuardSubset } from '../../model/simulation/subsetChecker';
 import type { OriginHost, TemplateSources } from './origin';
+import { GenerationBudget } from './text';
 import type { TemplatePosition, Text } from './text';
+
+/**
+ * How a body is read (R-GEN-25): `text`, the inside of one interpolated string (`parseTemplateText`), or `expression`,
+ * a JjEL expression (`parseTemplate`). A record with no mode is an expression, so every template saved before the
+ * field keeps its parse and its output.
+ */
+export type TemplateMode = 'text' | 'expression';
 
 /** A template as stored (templateCodec.ts) and as the panel edits it. `target` names the target language, when set. */
 export interface TemplateRecord {
     readonly name: string;
     readonly params: readonly string[];
     readonly body: string;
+    readonly mode?: TemplateMode;
     readonly target?: string;
+}
+
+/** The mode of a record: absent reads `expression`. */
+export const modeOf = (record: { readonly mode?: TemplateMode }): TemplateMode => (record.mode === 'text' ? 'text' : 'expression');
+
+/** The parse of a body in its mode: the one dispatch of the engine and of the editor's markers (R-GEN-26). */
+export function parseTemplateBody(record: { readonly body: string; readonly mode?: TemplateMode }): JjelParserResult {
+    return modeOf(record) === 'text' ? parseTemplateText(record.body) : parseTemplate(record.body);
 }
 
 /** Nested template calls at most: one more is an error. */
@@ -72,7 +92,8 @@ function positionIn(body: string, template: string, line: number, column: number
 
 /**
  * Registers `records` as builtins of `root`, the context of the generation, evaluated by `evaluator` with `host`
- * as its Text host; their sources go to `sources`, for the positions of holes and literal text.
+ * as its Text host; their sources go to `sources`, for the positions of holes and literal text. `budget` is the
+ * generation's, the one `host` checks.
  */
 export function registerTemplates(
     records: readonly TemplateRecord[],
@@ -80,6 +101,7 @@ export function registerTemplates(
     evaluator: JjelEvaluator,
     host: OriginHost,
     sources: TemplateSources,
+    budget: GenerationBudget = new GenerationBudget(),
 ): TemplateSet {
     const problems: TemplateProblem[] = [];
     const compiled = new Map<string, { record: TemplateRecord; expr: JjelExpression | null }>();
@@ -100,7 +122,7 @@ export function registerTemplates(
             problems.push({ ...start, message: `Template name '${name}' is a JjEL builtin` });
             continue;
         }
-        const parsed = parseTemplate(record.body);
+        const parsed = parseTemplateBody(record);
         let expr: JjelExpression | null = parsed.expression;
         if (parsed.errors.length > 0 || !expr) {
             for (const e of parsed.errors) problems.push({ ...positionIn(record.body, name, e.line, e.column), message: e.message });
@@ -116,7 +138,7 @@ export function registerTemplates(
                 });
             }
             if (refused.length > 0) expr = null;
-            else sources.register(name, record.body, expr);
+            else sources.register(name, record.body, expr, modeOf(record));
         }
         compiled.set(name, { record, expr });
     }
@@ -125,15 +147,19 @@ export function registerTemplates(
         const entry = compiled.get(name);
         if (!entry) throw new Error(`No template named '${name}'`);
         if (!entry.expr) throw new Error(`Template '${name}' has errors and cannot be called`);
+        const at: TemplatePosition = { template: name, offset: 0, line: 1, column: 1 };
+        budget.checkpoint(at);
         if (depth >= MAX_TEMPLATE_DEPTH) {
             throw new Error(`Template '${name}' called more than ${MAX_TEMPLATE_DEPTH} levels deep: the recursion has no end`);
         }
         depth++;
+        budget.enter(at);
         try {
             const bindings: Record<string, JjelValue> = {};
             entry.record.params.forEach((p, i) => { bindings[p] = args[i] ?? null; });
-            return host.toText(evaluator.evaluate(entry.expr, root.child(bindings)));
+            return budget.measure(host.toText(evaluator.evaluate(entry.expr, root.child(bindings))));
         } finally {
+            budget.leave();
             depth--;
         }
     };

@@ -246,6 +246,14 @@ function compilePredicate(p: Predicate | undefined, deps: Set<string>): Compiled
                 return target !== null && ctx.isMarked(target);
             };
         }
+        case 'simActive': {
+            // Not a feature either: whether a run shows the element's model changes at Reset
+            // and at Stop, which bump the run-state version, so it declares the 'mark' channel
+            // as `marked` does (simReset and simClear, simRunState.ts). Total: a ReadCtx
+            // without the reader is false.
+            channelSink?.add('mark');
+            return (ctx, id) => ctx.isRunActive?.(id) === true;
+        }
         default: {
             const { op } = p as any;
             const left = compileOperand((p as any).left, deps);

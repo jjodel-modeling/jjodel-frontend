@@ -1,0 +1,29 @@
+// Commit linkage: which unit a commit belongs to.
+// Canonical form is the trailer `Unit: <id>`; the subject suffix ` (<id>)` is read as an alias.
+// The id syntax is the trace source's (collectors/active.mjs).
+import { traceSource } from '../collectors/active.mjs';
+
+const ID = traceSource.ids.unit.source.slice(1, -1);
+const TRAILER = new RegExp(`^Unit:[ \\t]*(${ID})[ \\t]*$`, 'm');
+const SUBJECT_SUFFIX = new RegExp(`\\((${ID})\\)[ \\t]*$`);
+
+/** The unit id a commit message links to and the form that matched ('trailer' or 'suffix'), or null. */
+export function unitLinkFromCommit(message) {
+  const trailer = TRAILER.exec(message);
+  if (trailer) return { unit: trailer[1], form: 'trailer' };
+  const subject = message.split('\n', 1)[0];
+  const suffix = SUBJECT_SUFFIX.exec(subject);
+  return suffix ? { unit: suffix[1], form: 'suffix' } : null;
+}
+
+const ANY_ID = new RegExp(`(?<![A-Za-z0-9-])${ID}(?![A-Za-z0-9])`, 'g');
+
+/** Every distinct unit id a commit message names, anywhere in its subject or body. */
+export function promptIdsOf(message) {
+  return [...new Set(message.match(ANY_ID) ?? [])];
+}
+
+/** Returns the unit id a commit message links to, or null. The trailer wins over the suffix. */
+export function unitFromCommit(message) {
+  return unitLinkFromCommit(message)?.unit ?? null;
+}

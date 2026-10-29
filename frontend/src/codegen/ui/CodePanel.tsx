@@ -28,12 +28,17 @@
  * the edge outlined by this panel's own overlay (R-GEN-14). A canvas selection (`CANVAS_ELEMENT_SELECTED`, a vertex
  * or an edge id) gives `code-span--linked` to exactly the spans whose origin is the selected element, by id.
  *
+ * On a metamodel editor (`isMetamodel`, R-GEN-19, P-2026-10-23-1910) the templates are the editor's own, and Output,
+ * Run and Check act on a model chosen among the project's models conforming to it (conformingModels.ts), the first
+ * preselected; with none, Output explains why it is empty. The canvas holds classes, so a click on a model value
+ * selects its metaclass, and a selected class links the spans of its instances (R-GEN-21).
+ *
  * Keys typed in the panel stop at its root: EditorV2's `onKeyDown` deletes the selection on Backspace unless the
  * target is an INPUT or a SELECT, and a template body is a TEXTAREA.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { shallowEqual, useSelector } from 'react-redux';
 import { useReactFlow } from '@xyflow/react';
 import { DUser, LPointerTargetable, store } from '../../joiner';
 import { buildEvalContext } from '../../jjscript';
@@ -48,6 +53,10 @@ import { runOracle } from '../oracle/oracle';
 import { decodeStoredScenarios, storedScenariosRaw } from '../oracle/storedScenarios';
 import TemplateEditor from './TemplateEditor';
 import { checkView } from './checkView';
+import { displayJson } from './displayJson';
+import { conformingModels } from './conformingModels';
+import { openTemplateEditor } from './openTemplateEditor';
+import { linesOf } from './codeLines';
 import type { GenerateResult } from '../engine/generate';
 import type { TemplateRecord } from '../engine/templates';
 import type { ModelOrigin, Origin, TextFragment, TextMapEntry } from '../engine/text';
@@ -61,6 +70,11 @@ export interface CodePanelProps {
     /** The CSS `left` of the panel, where the pill was. */
     readonly left: string;
     readonly onClose: () => void;
+    /**
+     * The editor is a metamodel's (R-GEN-19): `modelid` is then the metamodel, whose templates the panel edits, and
+     * Output, Run and Check act on a model chosen among the project's models conforming to it (conformingModels.ts).
+     */
+    readonly isMetamodel?: boolean;
 }
 
 type Lookup = Record<string, any>;
@@ -86,6 +100,9 @@ function evalGlobals(lookup: Lookup, modelid: string) {
 /** The tooltip of «Check» when the model has no stored scenario. */
 const NO_SCENARIO = 'Record a scenario in the simulator first.';
 
+/** The tooltip of Generate, Run and Check on a metamodel no model conforms to. */
+const NO_MODEL = 'Create a model of this metamodel first.';
+
 /** An element's name for a reader: its `name`, else its class and id. */
 function elementName(lookup: Lookup, id: string): string {
     const d = lookup[id];
@@ -94,7 +111,7 @@ function elementName(lookup: Lookup, id: string): string {
 
 function transformationText(o: ModelOrigin): string {
     const t = o.transformation;
-    return t.args && t.args.length > 0 ? `${t.name}(${t.args.map(a => JSON.stringify(a)).join(', ')})` : t.name;
+    return t.args && t.args.length > 0 ? `${t.name}(${t.args.map(a => displayJson(a)).join(', ')})` : t.name;
 }
 
 /** What the origin bar says of a fragment. */
@@ -119,36 +136,6 @@ function freshName(templates: readonly TemplateRecord[]): string {
     let n = templates.length + 1;
     while (taken.has(`template${n}`)) n++;
     return `template${n}`;
-}
-
-/** One rendered piece of a line: plain text (an indentation prefix) or the span of a map entry. */
-interface Piece {
-    readonly text: string;
-    readonly entry: TextMapEntry | null;
-}
-
-/** The lines of the code, each cut at its map entries; a zero-width entry (an error fragment) writes nothing. */
-function linesOf(code: string, map: readonly TextMapEntry[]): Piece[][] {
-    const texts = code.split('\n');
-    if (texts.length > 1 && texts[texts.length - 1] === '') texts.pop();
-    const byLine = new Map<number, TextMapEntry[]>();
-    for (const e of map) {
-        if (e.end <= e.start) continue;
-        const list = byLine.get(e.line);
-        if (list) list.push(e);
-        else byLine.set(e.line, [e]);
-    }
-    return texts.map((text, i) => {
-        const pieces: Piece[] = [];
-        let at = 0;
-        for (const e of byLine.get(i + 1) ?? []) {
-            if (e.start > at) pieces.push({ text: text.slice(at, e.start), entry: null });
-            pieces.push({ text: text.slice(e.start, e.end), entry: e });
-            at = e.end;
-        }
-        if (at < text.length) pieces.push({ text: text.slice(at), entry: null });
-        return pieces;
-    });
 }
 
 /**
@@ -185,7 +172,7 @@ interface Box {
     readonly height: number;
 }
 
-export default function CodePanel({ modelid, left, onClose }: CodePanelProps): React.ReactElement {
+export default function CodePanel({ modelid, left, onClose, isMetamodel = false }: CodePanelProps): React.ReactElement {
     const rf = useReactFlow();
     const rootRef = useRef<HTMLDivElement>(null);
     const codeRef = useRef<HTMLPreElement>(null);
@@ -193,16 +180,26 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
     useEffect(() => () => { mounted.current = false; }, []);
 
     const metamodelId = useSelector((state: any) => {
+        if (isMetamodel) return modelid;
         const mm = state.idlookup?.[modelid]?.instanceof;
         return typeof mm === 'string' ? mm : null;
     });
+    // On a metamodel, the models to generate from; the choice is the panel's, not persisted, and follows the list.
+    const models = useSelector(
+        (state: any) => (isMetamodel ? conformingModels(state.idlookup ?? {}, projectIdOfUser(), modelid) : []),
+        shallowEqual,
+    );
+    const [chosenModel, setChosenModel] = useState<string | null>(null);
+    const targetId: string | null = isMetamodel
+        ? (chosenModel !== null && models.includes(chosenModel) ? chosenModel : models[0] ?? null)
+        : modelid;
     const raw = useSelector((state: any) => {
         const v = metamodelId ? state.idlookup?.[metamodelId]?._state?.[GEN_TEMPLATES_KEY] : undefined;
         return typeof v === 'string' ? v : v === undefined || v === null ? v : String(v);
     }) as string | null | undefined;
     const decoded = useMemo(() => decodeTemplates(raw), [raw]);
     const templates = decoded.templates;
-    const scenariosRaw = useSelector((state: any) => storedScenariosRaw(state.idlookup ?? {}, modelid));
+    const scenariosRaw = useSelector((state: any) => (targetId ? storedScenariosRaw(state.idlookup ?? {}, targetId) : undefined));
     const scenarios = useMemo(() => decodeStoredScenarios(scenariosRaw), [scenariosRaw]);
 
     const [tab, setTab] = useState<Tab>('templates');
@@ -240,7 +237,7 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
 
     const addTemplate = () => {
         const name = freshName(templates);
-        save([...templates, { name, params: [], body: '""' }]);
+        save([...templates, { name, params: [], body: '', mode: 'text' }]);
         setSelected(name);
     };
 
@@ -249,21 +246,21 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
         setOutcome(null);
         setChecked(null);
         setHover(null);
-        if (entryName === null) {
+        if (entryName === null || targetId === null) {
             setResult(null);
             setFailure(null);
             return;
         }
         const lookup: Lookup = (store.getState() as any).idlookup ?? {};
         try {
-            const globals = evalGlobals(lookup, modelid);
-            setResult(generate(globals, lookup, modelid, templates, entryName));
+            const globals = evalGlobals(lookup, targetId);
+            setResult(generate(globals, lookup, targetId, templates, entryName));
             setFailure(null);
         } catch (error) {
             setResult(null);
             setFailure(error instanceof Error ? error.message : String(error));
         }
-    }, [entryName, modelid, templates]);
+    }, [entryName, targetId, templates]);
 
     // On the Output tab, the text follows the templates and the entry; a model edit waits for «Generate».
     useEffect(() => {
@@ -289,7 +286,7 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
     };
 
     const check = async () => {
-        if (!result || result.hasErrors || !timeoutValid || !scenario) return;
+        if (!result || result.hasErrors || !timeoutValid || !scenario || targetId === null) return;
         const { code, map } = result;
         const chosen = scenario;
         setChecking(true);
@@ -298,7 +295,7 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
         const lookup: Lookup = (store.getState() as any).idlookup ?? {};
         let oracle: OracleResult;
         try {
-            oracle = await runOracle({ lookup, modelId: modelid, globals: evalGlobals(lookup, modelid), scenario: chosen, code, map, timeoutMs });
+            oracle = await runOracle({ lookup, modelId: targetId, globals: evalGlobals(lookup, targetId), scenario: chosen, code, map, timeoutMs });
         } catch (error) {
             // runOracle never rejects; the model's record can throw, as it can for «Generate».
             oracle = { ok: false, kind: 'model', step: 0, message: error instanceof Error ? error.message : String(error), sim: [], gen: [] };
@@ -313,21 +310,24 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
         setLinked(elementId);
         setNotice(null);
         const lookup: Lookup = (store.getState() as any).idlookup ?? {};
-        const node = rf.getNodes().find(n => lookup[n.id]?.model === elementId || n.id === elementId);
+        // R-GEN-21: a metamodel's canvas draws classes, so a model value selects its element's metaclass.
+        const metaclass = lookup[elementId]?.instanceof;
+        const onCanvas = isMetamodel && typeof metaclass === 'string' && metaclass ? metaclass : elementId;
+        const node = rf.getNodes().find(n => lookup[n.id]?.model === onCanvas || n.id === onCanvas);
         if (node) {
             setEdgeOutline(null);
             window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, { detail: { nodeId: node.id, modelId: modelid } }));
             return;
         }
         // R-GEN-14: an element drawn as an edge; its source node is selected, the edge outlined here.
-        const edge = rf.getEdges().find(e => resolveEdgeSelectionTarget(e.id, lookup)?.modelElementId === elementId);
+        const edge = rf.getEdges().find(e => resolveEdgeSelectionTarget(e.id, lookup)?.modelElementId === onCanvas);
         if (edge) {
             setEdgeOutline(edge.id);
             window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, { detail: { nodeId: edge.source, modelId: modelid } }));
             return;
         }
         setEdgeOutline(null);
-        setNotice(`${elementName(lookup, elementId)} is not on the canvas.`);
+        setNotice(`${elementName(lookup, onCanvas)} is not on the canvas.`);
     };
 
     // Canvas to code: the selected vertex's element, or the element an edge stands for.
@@ -387,7 +387,10 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
     const errorElement = runError && runError.line !== null && outcome ? elementAt(outcome.map, runError.line, runError.column) : null;
     const view = checked ? checkView(checked.result, checked.scenario, id => elementName(lookupNow, id)) : null;
     const checkElement = view?.status === 'failure' && view.line !== null && checked ? elementAt(checked.map, view.line, null) : null;
-    const checkTitle = scenario === null
+    const noModel = isMetamodel && targetId === null;
+    const checkTitle = noModel
+        ? NO_MODEL
+        : scenario === null
         ? NO_SCENARIO
         : result?.hasErrors ? 'Fix the generation errors first' : `Run the module on ${scenario.name} and compare it with the simulator, step by step`;
 
@@ -400,7 +403,9 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
     const spanClass = (e: TextMapEntry): string => {
         let c = `code-span code-span--${e.origin.kind}`;
         if (hover !== null && e.fragment === hover) c += ' code-span--hover';
-        if (linked !== null && e.origin.kind === 'model' && e.origin.elementId === linked) c += ' code-span--linked';
+        // On a metamodel the canvas selection is a class (R-GEN-21): the spans of its instances are linked.
+        if (linked !== null && e.origin.kind === 'model'
+            && (e.origin.elementId === linked || (isMetamodel && lookupNow[e.origin.elementId]?.instanceof === linked))) c += ' code-span--linked';
         return c;
     };
 
@@ -454,6 +459,16 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
                                 <i className="bi bi-plus-lg" />
                                 <span>New template</span>
                             </button>
+                            <button
+                                type="button"
+                                className="codegen-panel__add"
+                                disabled={!metamodelId}
+                                title="Edit the templates in a tab of their own, with Monaco"
+                                onClick={() => { if (metamodelId) openTemplateEditor(metamodelId, elementName(lookupNow, metamodelId), current?.name ?? null); }}
+                            >
+                                <i className="bi bi-box-arrow-up-right" />
+                                <span>Open editor</span>
+                            </button>
                         </div>
                         {current && (
                             <TemplateEditor
@@ -468,12 +483,32 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
                             />
                         )}
                         <div className="codegen-panel__help">
-                            A template is a JjEL expression, usually one string with {'${…}'} holes; templates call each other by name.
+                            A template is text with {'${…}'} holes, or in expression mode a JjEL expression; templates call each other by name.
                             They are stored in the metamodel, and the .ecore export does not keep them.
                         </div>
                     </div>
                 ) : (
                     <div className="codegen-panel__body codegen-panel__body--output">
+                        {isMetamodel && (
+                            <div className="codegen-panel__row">
+                                <span className="codegen-panel__label">Model</span>
+                                <select
+                                    className="codegen-panel__select"
+                                    aria-label="Model"
+                                    value={targetId ?? ''}
+                                    disabled={models.length === 0}
+                                    onChange={e => setChosenModel(e.target.value)}
+                                >
+                                    {models.length === 0 && <option value="">No model</option>}
+                                    {models.map(id => <option key={id} value={id}>{elementName(lookupNow, id)}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        {noModel && (
+                            <div className="codegen-panel__hint codegen-panel__hint--empty" role="status">
+                                {`No model conforms to ${elementName(lookupNow, modelid)}: create one to generate, run and check.`}
+                            </div>
+                        )}
                         <div className="codegen-panel__row">
                             <span className="codegen-panel__label">Entry</span>
                             <select
@@ -484,7 +519,13 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
                             >
                                 {templates.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                             </select>
-                            <button type="button" className="codegen-panel__button" title="Generate again from the model" onClick={runGenerate}>
+                            <button
+                                type="button"
+                                className="codegen-panel__button"
+                                title={noModel ? NO_MODEL : 'Generate again from the model'}
+                                disabled={noModel}
+                                onClick={runGenerate}
+                            >
                                 <i className="bi bi-arrow-repeat" />
                                 <span>Generate</span>
                             </button>
@@ -535,7 +576,7 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
                                 type="button"
                                 className="codegen-panel__button codegen-panel__button--primary"
                                 disabled={!canRun}
-                                title={result?.hasErrors ? 'Fix the generation errors first' : `Run the module and call its ${RUN_ENTRY}()`}
+                                title={noModel ? NO_MODEL : result?.hasErrors ? 'Fix the generation errors first' : `Run the module and call its ${RUN_ENTRY}()`}
                                 onClick={() => { void run(); }}
                             >
                                 <i className="bi bi-play-fill" />
@@ -579,7 +620,7 @@ export default function CodePanel({ modelid, left, onClose }: CodePanelProps): R
                         {outcome && outcome.response.ok && (
                             <div className="codegen-panel__result">
                                 <div className="codegen-panel__label">{`${RUN_ENTRY}() returned, ${outcome.ms} ms`}</div>
-                                <pre className="codegen-panel__value">{JSON.stringify(outcome.response.results[0] ?? null, null, 2) ?? 'undefined'}</pre>
+                                <pre className="codegen-panel__value">{displayJson(outcome.response.results[0] ?? null, 2) ?? 'undefined'}</pre>
                             </div>
                         )}
                         {runError && (

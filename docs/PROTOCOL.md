@@ -289,7 +289,9 @@ The rules below still bind every tree that hosts more than one session.
   launching chat passes them to `lane-run start --request <file>`, which keeps them as
   `~/.jjodel-lanes/<Prompt-ID>/request.md`. Merge prompts rendered by `lane-run` are exempt. The line is
   new from 2026-10-10; earlier prompts are not amended. The lane board shows the request first in a
-  lane's detail (`frontend/scripts/lane-board/`). Decided RC-43.
+  lane's detail (`frontend/scripts/lane-board/`). Decided RC-43. A chat that commits from the Mac shell
+  starts `Request:` with its own URL or adds its `Claude-Session:` trailer to the commit; `lane-run start`
+  refuses a prompt with neither (P-2026-10-19-2105).
 - **Every prompt names its front.** The header of a prompt in `docs/prompts/` carries `Front: <slug>`,
   the slug of a front of `docs/harness/fronts.json`. A front is a milestone-like unit of work with a
   verifiable exit; `maintenance` (work outside every other front) and `harness` are permanent. Merge
@@ -301,6 +303,8 @@ The rules below still bind every tree that hosts more than one session.
   front. It decides with a `Recommended:` line, and Alfonso can veto in the digest. A front closes with
   `state: closed` and `closedOn` in the registry, which then fails only prompts dated after `closedOn`;
   lane-run's GitHub sync closes its milestone. Decided RC-44.
+- **A prompt with several slices declares them** by `## Slice <n>` sections or a `Slices:` header; one slice
+  runs per session (RC-52).
 - **Every prompt file carries a Status line, flipped once, in the lane's closure commit.** The header
   of a prompt in `docs/prompts/` holds `Status: da eseguire`. After its code commit, the lane writes the
   Status flip, its log or inbox entry and the visual-check line into its worktree and does not commit
@@ -447,6 +451,10 @@ after it (P8). The figure is `docs/harness/lane-lifecycle-bpmn.svg`; the sequenc
   and the explicit go-ahead in the resumed text, or is opened by Alfonso by hand.
 - **Time limit.** A session still running after 90 minutes, or after the limit its prompt declares, is `blocked`:
   the chat reports it and does not resume it on its own.
+- **Context ceiling (RC-51).** At 200,000 tokens of context a lane session writes its handoff and ends `hard-stop`;
+  at 250,000 the hook leaves only the handoff writes. Until B8a it continues as a new lane, never by a plain resume.
+- **One slice per session (RC-52).** Slice n+1 starts from the committed result of slice n, never from its
+  transcript; until B8a the chat writes one prompt per slice.
 - **Rework.** After a failed visual GO the chat resumes the same session with a new Phase 2 prompt that
   `Corregge` the old one. When the cause is in the analysis, the chat says so and opens a new discovery, declared.
 - **Before a merge.** A session that reports `done` while the Status line of its prompt is not flipped is an

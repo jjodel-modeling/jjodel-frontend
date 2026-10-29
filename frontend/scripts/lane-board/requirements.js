@@ -36,58 +36,63 @@
   // The balance: a label of 200 px, then a track of TRACK_W px for both sides of every bar; MX_W, a matrix column.
   const TRACK_W = 720, SEG_GAP = 2, MX_W = 120;
 
+  // The look of the «Lane Monitor Desktop» design (P-2026-10-19-1157): the Lanes tab's compact table (id over title,
+  // status as a dot and a word, mono tags), the board's tokens only, so the theme chosen in the sidebar repaints it.
   const css = `
-  .rq-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:8px 0 12px}
-  .rq-bar label{font-size:12px;color:var(--muted);display:inline-flex;gap:6px;align-items:center}
-  .rq-bar select{font:inherit;font-size:12px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
-  .rq-shown{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-  .rq-head{margin:0 0 4px}.rq-note{color:var(--muted);font-size:12px;margin:0 0 12px}
-  .rq-ms{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--line);background:var(--bg)}
-  .rq-st-ratified{color:var(--ok)}.rq-st-provisional{color:var(--warn)}.rq-st-superseded{color:var(--muted)}
-  .rq-yes{color:var(--ok);font-weight:600;cursor:help}.rq-no{color:var(--muted)}
-  .rq-c{display:inline-block;font-size:10px;font-weight:600;padding:0 5px;border-radius:4px;margin:0 3px 2px 0;border:1px solid currentColor;cursor:help}
+  .rq-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 12px}
+  .rq-bar label{height:28px;font-size:12px;color:var(--t-text2);display:inline-flex;gap:6px;align-items:center;padding:0 4px 0 9px;border:1px solid var(--t-line2);border-radius:6px;background:var(--t-panel)}
+  .rq-bar label:focus-within{border-color:var(--t-accent)}
+  .rq-bar select{font:inherit;font-size:12px;background:transparent;color:var(--t-text);border:0;padding:2px 2px;outline:0;cursor:pointer}.rq-bar select option{background:var(--t-panel2);color:var(--t-text)}
+  .rq-shown{margin-left:auto;font-size:12px;color:var(--t-muted);font-variant-numeric:tabular-nums}.rq-shown b{color:var(--t-text);font-weight:500}
+  .rq-head{margin:0 0 6px;color:var(--t-text2)}.rq-head b{font-weight:500}.rq-note{color:var(--t-muted);font-size:12px;margin:0 0 12px}
+  .rq-ms{display:flex;align-items:center;height:34px;font-size:11.5px;font-weight:500;color:var(--t-text2);padding:0 16px;border-bottom:1px solid var(--t-line2);background:var(--t-head)}
+  table.rq-t .pill{color:var(--t-text2);font-size:11.5px}.pill.rq-st-ratified::before{background:var(--ok)}.pill.rq-st-provisional::before{background:var(--warn)}.pill.rq-st-superseded::before{background:var(--t-muted)}
+  .rq-yes{font:11.5px ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--ok);cursor:help}.rq-no{font:11.5px ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--t-muted)}
+  table.rq-t td:nth-child(2):not(.id):not(.mx-c){font:12px ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--t-text2)}
+  .rq-c{display:inline-block;font:10.5px/1.5 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;padding:0 4px;border-radius:4px;margin:0 3px 2px 0;background:var(--t-tag);color:var(--t-text2);cursor:help;white-space:nowrap}
+  .rq-c.rq-help{background:color-mix(in srgb,var(--ok) 14%,transparent)}.rq-c.rq-hurt{background:color-mix(in srgb,var(--bad) 14%,transparent)}
   .rq-help{color:var(--ok)}.rq-hurt{color:var(--bad)}
-  .rq-tot{font-size:11px;margin-left:4px}
-  .rq-why{margin:0;padding:8px 12px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line)}
+  .rq-tot{font:11px ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;margin-left:6px}
+  .rq-why{margin:0;padding:8px 16px;color:var(--t-muted);font-size:12px;border-bottom:1px solid var(--t-line)}
   table.rq-t{table-layout:fixed;width:100%;min-width:900px}table.rq-t th,table.rq-t td{overflow:hidden;overflow-wrap:anywhere}
   table.rq-t .pill{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}table.rq-t .title{max-width:none}
   #req summary:has(>.rq-desc){display:grid;grid-template-columns:auto auto minmax(0,1fr);column-gap:16px;row-gap:2px;align-items:baseline}
-  .rq-desc{grid-column:2/4;grid-row:2;display:block;min-width:0;height:16px;line-height:16px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rq-about{margin:0;padding:8px 12px;font-size:12px;border-bottom:1px solid var(--line)}
-  .rq-drift{margin:0;padding:4px 12px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--line)}
-  .sb-mg{margin:0 0 16px}.sb-mg h3{font-size:13px;font-weight:600;margin:12px 0 2px}
-  .sb-mgd{margin:0 0 8px;font-size:12px;color:var(--muted);max-width:920px}
+  .rq-desc{grid-column:2/4;grid-row:2;display:block;min-width:0;height:16px;line-height:16px;font-size:12px;color:var(--t-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rq-about{margin:0;padding:10px 16px;font-size:12.5px;line-height:1.55;color:var(--t-text2);border-bottom:1px solid var(--t-line)}
+  .rq-drift{margin:0;padding:4px 16px;font-size:11.5px;color:var(--t-muted);border-bottom:1px solid var(--t-line)}
+  .sb-mg{margin:0 0 16px;overflow-x:auto}.sb-mg h3{font-size:13px;font-weight:500;margin:12px 0 2px}
+  .sb-mgd{margin:0 0 8px;font-size:12px;color:var(--t-muted);max-width:920px}
   .sb-sg{margin:0 0 4px}
   .sb-row{display:flex;align-items:center;height:36px}
   .sb-lab{flex:none;width:200px;box-sizing:border-box;padding-right:12px;min-width:0}
   .sb-lab b,.sb-n{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:16px}
-  .sb-lab b{font-size:12px;font-weight:600}.sb-n{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .sb-lab b{font-size:12px;font-weight:500}.sb-n{font:10.5px ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--t-muted);font-variant-numeric:tabular-nums}
   .sb-bar{display:flex;align-items:center;height:24px}
   .sb-l{flex:none;display:flex;justify-content:flex-end}
-  .sb-ax{flex:none;width:1px;height:24px;background:var(--fg)}
+  .sb-ax{flex:none;width:1px;height:24px;background:var(--t-line3)}
   .sb-r{flex:none;display:flex;gap:2px}
   .sb-hurt,.sb-seg{flex:none;display:block;height:14px}
-  .sb-hurt{background:#e34948;border-radius:4px 0 0 4px}
-  .sb-seg{cursor:pointer}.sb-seg:last-child{border-radius:0 4px 4px 0}
-  .sb-b0{background:#2a78d6}.sb-b1{background:#86b6ef}
-  .sb-on{box-shadow:0 0 0 2px var(--fg)}
+  .sb-hurt{background:var(--bad);border-radius:3px 0 0 3px}
+  .sb-seg{cursor:pointer}.sb-seg:last-child{border-radius:0 3px 3px 0}
+  .sb-b0{background:var(--ok)}.sb-b1{background:color-mix(in srgb,var(--ok) 55%,var(--card))}
+  .sb-on{box-shadow:0 0 0 2px var(--t-accent)}
   .sb-chips{display:flex;flex-wrap:wrap;gap:2px 4px;padding-left:200px}
-  .sb-chip,.cx-chip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;line-height:14px;padding:0 4px;border-radius:3px;cursor:help;white-space:nowrap}
-  .sb-chip{background:#fde8e8;color:var(--bad)}.cx-chip{background:var(--bg);border:1px solid var(--line)}
-  .sb-open{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;margin:6px 0 12px;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px}
-  .sb-col{min-width:0}.sb-lh{margin:0 0 4px;font-size:12px;font-weight:600}
-  .sb-li,.mx-li{display:grid;column-gap:8px;align-items:baseline;font-size:12px;line-height:20px;border-top:1px solid var(--line)}
+  .sb-chip,.cx-chip{font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;font-size:10.5px;line-height:14px;padding:0 4px;border-radius:3px;cursor:help;white-space:nowrap}
+  .sb-chip{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}.cx-chip{background:var(--t-tag);color:var(--t-text2)}
+  .sb-open{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;margin:6px 0 12px;padding:10px 14px;background:var(--t-panel);border:1px solid var(--t-line2);border-radius:10px}
+  .sb-col{min-width:0}.sb-lh{margin:0 0 4px;font-size:12px;font-weight:500}
+  .sb-li,.mx-li{display:grid;column-gap:8px;align-items:baseline;font-size:12px;line-height:20px;border-top:1px solid var(--t-line)}
   .sb-li{grid-template-columns:96px minmax(0,1fr) 48px 64px}.mx-li{grid-template-columns:96px minmax(0,1fr) 280px}
-  .sb-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .sb-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sb-k,.sb-e{font-size:11px;color:var(--muted)}
-  table.rq-t th.mx-th{text-align:center}
-  table.rq-t td.mx-c{text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;color:#0f172a;cursor:pointer}
-  .mx-s1{background:#cde2fb}.mx-s2{background:#b7d3f6}.mx-s3{background:#9ec5f4}.mx-s4{background:#86b6ef}.mx-s5{background:#6da7ec}
-  table.rq-t td.mx-on{box-shadow:inset 0 0 0 2px var(--fg)}
-  .mx-open{margin:8px 0 12px;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px}
-  .mx-h{margin:0 0 6px;font-size:12px}
-  .cx-li{display:grid;grid-template-columns:200px 16px 200px 56px minmax(0,1fr);column-gap:8px;align-items:baseline;padding:6px 12px;font-size:12px;border-bottom:1px solid var(--line);cursor:help}
-  .cx-sg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cx-to{color:var(--muted)}
+  .sb-id{font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sb-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t-text2)}.sb-k,.sb-e{font:10.5px ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;color:var(--t-muted)}
+  table.rq-t th.mx-th{text-align:center}.rq-mx-wrap{overflow-x:auto}
+    table.rq-t td.mx-c{text-align:center;white-space:nowrap;font:12px ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--t-text);cursor:pointer}
+  table.rq-t td.mx-s1{background:color-mix(in srgb,var(--accent) 10%,var(--card))}table.rq-t td.mx-s2{background:color-mix(in srgb,var(--accent) 20%,var(--card))}table.rq-t td.mx-s3{background:color-mix(in srgb,var(--accent) 30%,var(--card))}table.rq-t td.mx-s4{background:color-mix(in srgb,var(--accent) 42%,var(--card))}table.rq-t td.mx-s5{background:color-mix(in srgb,var(--accent) 55%,var(--card))}
+  table.rq-t td.mx-on{box-shadow:inset 0 0 0 2px var(--t-accent)}
+  .mx-open{margin:8px 0 12px;padding:10px 14px;background:var(--t-panel);border:1px solid var(--t-line2);border-radius:10px}
+  .mx-h{margin:0 0 6px;font-size:12px}.mx-h b{font-weight:500}
+  .cx-li{display:grid;grid-template-columns:200px 16px 200px 56px minmax(0,1fr);column-gap:8px;align-items:baseline;padding:6px 16px;font-size:12px;border-bottom:1px solid var(--t-line);cursor:help}
+  .cx-sg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cx-to{color:var(--t-muted)}
   .cx-w{display:flex;flex-wrap:wrap;gap:2px 4px}
   `;
 
@@ -247,7 +252,7 @@
     const max = Math.max(0, ...grid.flat().map((c) => c.help.length + c.hurt.length));
     let h = '<h2>Clusters by macro goal</h2><p class="rq-note">Per cluster, its realized rows that help (+) and that hurt (−) any softgoal of a macro goal; a row counts once on each side of a cell. ' +
       'The darker the cell, the more rows. Click a cell to list its rows.</p>';
-    h += '<table class="rq-t">' + colgroup([0].concat(cols.map(() => MX_W))) + '<thead><tr><th>Cluster</th>' + cols.map((c) => '<th class="mx-th" title="' + esc(c.tip) + '">' + esc(c.head) + '</th>').join('') + '</tr></thead><tbody>';
+    h += '<div class="rq-mx-wrap"><table class="rq-t">' + colgroup([0].concat(cols.map(() => MX_W))) + '<thead><tr><th>Cluster</th>' + cols.map((c) => '<th class="mx-th" title="' + esc(c.tip) + '">' + esc(c.head) + '</th>').join('') + '</tr></thead><tbody>';
     groups.forEach((g, i) => {
       h += '<tr><td title="' + esc(g.key) + '">' + esc(undash(g.name)) + '</td>';
       cols.forEach((col, j) => {
@@ -260,7 +265,7 @@
       });
       h += '</tr>';
     });
-    h += '</tbody></table>';
+    h += '</tbody></table></div>';
     const cut = mxOpen.indexOf('|');
     const gi = cut < 0 ? -1 : groups.findIndex((g) => g.key === mxOpen.slice(0, cut));
     const ci = cut < 0 ? -1 : cols.findIndex((c) => c.key === mxOpen.slice(cut + 1));

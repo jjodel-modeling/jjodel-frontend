@@ -20,7 +20,7 @@ import { freezeSnapshot } from '../guardContext';
 import { compileAction, foldActionTarget, judgeActionTarget } from '../actionEvaluator';
 import type { CompiledAction } from '../actionEvaluator';
 import {
-    checkActionSubset, checkActionValue, checkElse, checkEventFeature, checkEventRead, checkGuard, checkInputTarget, checkTargetName, eventReads, inputReads,
+    checkActionSubset, checkActionValue, checkElse, checkEventFeature, checkEventRead, checkGuard, checkInputTarget, checkTargetName, checkTriggerPosition, eventReads, inputReads,
 } from '../stcChecks';
 import type { StcScope } from '../stcChecks';
 import type { ActionSite, StateAttributeDecl } from '../netTypes';
@@ -291,5 +291,35 @@ describe('R-SIM-144 P4: event.a looked up on the trigger\'s declared type (P-202
         expect(eventReads(expr('event.amount + event.home.x + event?.amount > event.[coins]'))).toEqual(['amount', 'home']);
         expect(eventReads(action('model.[coins] := event.amount').action)).toEqual(['amount']);
         expect(eventReads(expr('self.amount > 0'))).toEqual([]);
+    });
+});
+
+describe('R-SIM-147: a trigger that fork or join fusion drops is the defect trigger-position (P-2026-10-20-0031)', () => {
+    const kinds: Record<string, 'fork' | 'join' | 'both'> = { F: 'fork', J: 'join', B: 'both' };
+    const kindOf = (id: string) => kinds[id] ?? null;
+    const named = { nameOf: (id: string) => id.toLowerCase() };
+    const on = (...edges: string[]) => (edge: string) => edges.includes(edge);
+
+    it('a fork: each triggered out edge, named with the fork and its choice edge, the edge into it (mutant: the choice edge reported)', () => {
+        const t = { id: 'F', origin: ['e1', 'F', 'e2', 'e3'] };
+        expect(checkTriggerPosition(t, kindOf, on('e1', 'e3'), named)).toEqual([{
+            edge: 'e3',
+            defect: { reason: 'trigger-position', detail: 'its trigger is ignored: fork f takes the trigger of its choice edge, e1, the edge into it', short: 'trigger ignored by fork f' },
+        }]);
+        expect(checkTriggerPosition({ id: 'F#e1', origin: t.origin }, kindOf, on('e2', 'e3'), named).map(x => x.edge)).toEqual(['e2', 'e3']);
+    });
+
+    it('a join: each triggered in edge, the choice edge being the edge out of it (mutant: join read as fork)', () => {
+        const t = { id: 'J', origin: ['e1', 'e2', 'J', 'e3'] };
+        expect(checkTriggerPosition(t, kindOf, on('e2', 'e3'), named)).toEqual([{
+            edge: 'e2',
+            defect: { reason: 'trigger-position', detail: 'its trigger is ignored: join j takes the trigger of its choice edge, e3, the edge out of it', short: 'trigger ignored by join j' },
+        }]);
+    });
+
+    it('controls: a trigger on the choice edge only, a node both fork and join (the union of its triggers), a plain edge (mutants: both judged; plain judged)', () => {
+        expect(checkTriggerPosition({ id: 'F', origin: ['e1', 'F', 'e2'] }, kindOf, on('e1'), named)).toEqual([]);
+        expect(checkTriggerPosition({ id: 'B', origin: ['e1', 'B', 'e2'] }, kindOf, on('e1', 'e2'), named)).toEqual([]);
+        expect(checkTriggerPosition({ id: 'e1', origin: ['e1'] }, kindOf, on('e1'), named)).toEqual([]);
     });
 });

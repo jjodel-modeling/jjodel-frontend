@@ -1,0 +1,17 @@
+{
+  "name": "tack",
+  "version": "0.1.0",
+  "description": "Project-agnostic monitor for agent-assisted development harnesses",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "tack": "bin/tack.mjs"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

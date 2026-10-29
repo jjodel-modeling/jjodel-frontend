@@ -47,6 +47,7 @@ import type { CompiledAction } from '../../../model/simulation/actionEvaluator';
 import { compileDerived, makeDerivedOracle } from '../../../model/simulation/derivedEvaluator';
 import type { CompiledDerived } from '../../../model/simulation/derivedEvaluator';
 import { SimSnapshotError, freezeSnapshot } from '../../../model/simulation/guardContext';
+import { isBitVector } from '../../../jjel/evaluator/context';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
 import { compileGuard } from '../../../model/simulation/guardEvaluator';
 import type { CompiledGuard } from '../../../model/simulation/guardEvaluator';
@@ -62,7 +63,7 @@ import type { SimProfile } from '../../../model/simulation/simProfiles';
 import { STATE_ATTRIBUTES_KEY, decodeStateAttributes, mergeDeclarations } from '../../../model/simulation/stateAttributesCodec';
 import { elementIdTable, jsString } from './identifiers';
 import type { JsElement, JsIdTable } from './identifiers';
-import { JS_RUNTIME, printActions, printGuard, toJsState } from './printer';
+import { JS_RUNTIME, bitVectorLiteral, printActions, printGuard, toJsState } from './printer';
 import type { JsPrintContext, JsState } from './printer';
 
 type Lookup = Record<string, any>;
@@ -274,11 +275,15 @@ function propertyKey(k: string): string {
     return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(k) ? k : jsString(k);
 }
 
-/** A value of σ as a JavaScript literal: the value `JSON.parse` gave back from `JSON.stringify`, strings in single quotes. */
-function valueLiteral(v: unknown): string {
+/**
+ * A value of σ as a JavaScript literal: the value `JSON.parse` gave back from `JSON.stringify`, strings in single
+ * quotes; a bit-vector as the call that rebuilds it, `$bv(8, false, 0xffn)` (R-BV-9).
+ */
+export function valueLiteral(v: unknown): string {
     if (typeof v === 'string') return jsString(v);
     if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'null';
     if (typeof v === 'boolean') return String(v);
+    if (isBitVector(v)) return bitVectorLiteral(v);
     if (Array.isArray(v)) return `[${v.map(valueLiteral).join(', ')}]`;
     if (v !== null && typeof v === 'object') return objectLiteral(Object.entries(v).map(([k, x]) => [propertyKey(k), valueLiteral(x)] as const));
     return 'null';

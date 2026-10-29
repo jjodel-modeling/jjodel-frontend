@@ -15,6 +15,11 @@ import { createM2 } from './Navbar';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
 import { activeProfileId, isConsumerMode } from '../../components/environment/consumerMode';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { deleteProjectScript, readProjectScripts, renameProjectScript } from '../../components/scripts/scriptFiles';
+import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
+import { SCRIPT_EXTENSION } from '../../components/scripts/projectScripts';
+import type { DProjectScript } from '../../joiner/classes';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
@@ -45,6 +50,8 @@ type ItemProps = {
     dot?: boolean;
     onClick?: MouseEventHandler;
     active?: boolean;
+    // The dashboard page this item leads to is the one shown: active style plus aria-current.
+    current?: boolean;
     count?: number;
     muted?: boolean;
     danger?: boolean;
@@ -59,13 +66,13 @@ const Item = (props: ItemProps) => {
     const cls = [
         'item',
         props.dot ? 'red-dot' : '',
-        props.active ? 'active' : '',
+        props.active || props.current ? 'active' : '',
         props.muted ? 'item--muted' : '',
         props.danger ? 'item--danger' : '',
     ].filter(Boolean).join(' ');
 
     return (
-        <div onClick={finalaction} className={cls}>
+        <div onClick={finalaction} className={cls} aria-current={props.current ? 'page' : undefined}>
             {props.icon && props.icon}&nbsp;<span>{props.children}</span>
             {props.count !== undefined && <span className="item-count">{props.count}</span>}
         </div>
@@ -100,6 +107,9 @@ const Menu = (props: MenuProps) => {
         </div>
     );
 }
+
+/** The SCRIPTS list of a project with none, one reference for every render (S6b). */
+const NO_SCRIPTS: DProjectScript[] = [];
 
 function LeftBar(props: LeftBarProps): JSX.Element {
 
@@ -300,6 +310,40 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const consumerTypes = consumerTypesKey
         ? consumerTypesKey.split('\u0002').map((row) => { const [id, name] = row.split('\u0001'); return { id, name }; })
         : [];
+    // S6b (R-JJD-5): the project's script files. One empty array for "none", so the selector
+    // does not hand back a new reference on every store change.
+    const pScripts: DProjectScript[] = useSelector((state: any) => {
+        const list = readProjectScripts(state);
+        return list.length ? list : NO_SCRIPTS;
+    });
+    const [scriptMenu, setScriptMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+    const [renamingScriptId, setRenamingScriptId] = useState<string | null>(null);
+    const [scriptRenameValue, setScriptRenameValue] = useState('');
+    const [deletingScript, setDeletingScript] = useState<DProjectScript | null>(null);
+    const [refactoringDialogOpen, setRefactoringDialogOpen] = useState(false);
+    useEffect(() => {
+        if (!scriptMenu) return;
+        const close = () => setScriptMenu(null);
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+        document.addEventListener('click', close);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('click', close);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [scriptMenu]);
+    const startScriptRename = (sc: DProjectScript) => {
+        setScriptMenu(null);
+        setRenamingScriptId(sc.id);
+        setScriptRenameValue(sc.name.endsWith(SCRIPT_EXTENSION) ? sc.name.slice(0, -SCRIPT_EXTENSION.length) : sc.name);
+    };
+    const commitScriptRename = () => {
+        if (!renamingScriptId) return;
+        const sc = pScripts.find(x => x.id === renamingScriptId);
+        // An empty name keeps the old one: the pure rename would turn it into `script.jjs`.
+        if (sc && scriptRenameValue.trim()) renameProjectScript(sc.id, scriptRenameValue);
+        setRenamingScriptId(null);
+    };
     const [shownTypeId, setShownTypeId] = useState<string | null>(null);
     useEffect(() => {
         const onShown = (e: Event) => setShownTypeId((e as CustomEvent).detail?.typeId ?? null);
@@ -373,6 +417,95 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         <span>{newLabel}</span>
                     </div>
                 </div>
+            </div>
+        );
+    };
+
+    /**
+     * SCRIPTS (S6b): the markup of `renderSection`, plus what a script row needs and the other
+     * rows do not: a context menu with Rename and Delete, and an inline rename field.
+     */
+    const renderScriptsSection = () => {
+        const isCollapsed = !!collapsedSections['scripts'];
+        const menuScript = scriptMenu ? pScripts.find(x => x.id === scriptMenu.id) : undefined;
+        return (
+            <div className={`psb-section${isCollapsed ? ' collapsed' : ''}`} data-psb-section="scripts">
+                <div className="psb-section-header" onClick={() => toggleSection('scripts')}>
+                    <span className="psb-section-label">Refactorings</span>
+                    <i className="bi bi-chevron-down psb-chevron" />
+                </div>
+                <div className="psb-section-body">
+                    {pScripts.map(sc => (
+                        <div
+                            key={sc.id}
+                            className="psb-item"
+                            data-script-id={sc.id}
+                            onClick={() => { if (renamingScriptId !== sc.id) DockManager.openScript(sc.id); }}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const menuW = 160, menuH = 80;
+                                setScriptMenu({
+                                    id: sc.id,
+                                    x: Math.min(e.clientX, window.innerWidth - menuW - 8),
+                                    y: Math.min(e.clientY, window.innerHeight - menuH - 8),
+                                });
+                            }}
+                            title={sc.name}
+                        >
+                            <span className="psb-badge psb-badge--S">R</span>
+                            {renamingScriptId === sc.id ? (
+                                <input
+                                    className="psb-rename-input"
+                                    autoFocus
+                                    value={scriptRenameValue}
+                                    aria-label="Refactoring name"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => setScriptRenameValue(e.target.value)}
+                                    onBlur={commitScriptRename}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') commitScriptRename();
+                                        else if (e.key === 'Escape') setRenamingScriptId(null);
+                                    }}
+                                />
+                            ) : (
+                                <span className="psb-item-name">{sc.name}</span>
+                            )}
+                            <i className="bi bi-arrow-right psb-item-arrow" />
+                        </div>
+                    ))}
+                    {/* R-JJD-14: the same dialog as the «+» artifact menu, which asks the target level. */}
+                    <div className="psb-new" onClick={() => setRefactoringDialogOpen(true)}>
+                        <i className="bi bi-plus" />
+                        <span>New refactoring</span>
+                    </div>
+                </div>
+                {scriptMenu && menuScript && (
+                    <div
+                        className="tree-node__context-menu psb-script-menu"
+                        style={{ position: 'fixed', top: scriptMenu.y, left: scriptMenu.x, zIndex: 9999 }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="tree-node__context-item" onClick={() => startScriptRename(menuScript)}>
+                            <i className="bi bi-pencil" />
+                            <span>Rename</span>
+                        </div>
+                        <div className="tree-node__context-item" onClick={() => { setScriptMenu(null); setDeletingScript(menuScript); }}>
+                            <i className="bi bi-trash3" />
+                            <span>Delete</span>
+                        </div>
+                    </div>
+                )}
+                <ConfirmDialog
+                    isOpen={!!deletingScript}
+                    title="Delete refactoring"
+                    message={`Delete "${deletingScript?.name ?? ''}"? This cannot be undone.`}
+                    confirmText="Delete"
+                    variant="danger"
+                    onConfirm={() => { if (deletingScript) deleteProjectScript(deletingScript.id); setDeletingScript(null); }}
+                    onCancel={() => setDeletingScript(null)}
+                />
+                <NewRefactoringDialog isOpen={refactoringDialogOpen} onClose={() => setRefactoringDialogOpen(false)} />
             </div>
         );
     };
@@ -461,6 +594,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     'New transform',
                 )}
 
+                {!consumer && renderScriptsSection()}
+
                 {!consumer && renderSection(
                     'viewpoints', 'Viewpoints', 'V',
                     pViewpoints.map(v => ({ id: v.id, name: v.name })),
@@ -520,11 +655,11 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* Main Navigation - Workspace */}
                 <Menu>
-                    <Item action={'allProjects'} icon={<i className="bi bi-folder" />}>All projects</Item>
+                    <Item action={'allProjects'} icon={<i className="bi bi-folder" />} current={active === 'All' && currentFilter === 'all'}>All projects</Item>
                 </Menu>
 
-                {/* Filters Section - Quick access to filtered views (synced with toolbar) */}
-                <Menu title={'Filters'} mode={'collapsable'}>
+                {/* Filters Section - Quick access to filtered views (synced with toolbar); not on Templates (handoff §2.4) */}
+                {active !== 'Templates' && <Menu title={'Filters'} mode={'collapsable'}>
                     <Item
                         action={() => handleFilterChange('private')}
                         icon={<i className="bi bi-lock" />}
@@ -540,7 +675,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         icon={<i className="bi bi-people" />}
                         active={currentFilter === 'collaborative'}
                     >Collaborative</Item>
-                </Menu>
+                </Menu>}
 
                 {/* Favorites Section */}
                 <Menu title={'Favorites'} mode={'collapsable'}>
@@ -555,8 +690,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
                 {/* Browse Section - Templates & Explore (moved from navbar tabs) */}
                 <Menu title={'Browse'} mode={'collapsable'}>
-                    <Item action={'templates'} icon={<i className="bi bi-grid-3x3-gap" />}>Templates</Item>
-                    <Item action={'explore'} icon={<i className="bi bi-compass" />}>Explore</Item>
+                    <Item action={'templates'} icon={<i className="bi bi-grid-3x3-gap" />} current={active === 'Templates'}>Templates</Item>
+                    <Item action={'explore'} icon={<i className="bi bi-compass" />} current={active === 'Explore'}>Explore</Item>
                 </Menu>
 
                 {/* Recently Modified - ONLY show if projects exist */}

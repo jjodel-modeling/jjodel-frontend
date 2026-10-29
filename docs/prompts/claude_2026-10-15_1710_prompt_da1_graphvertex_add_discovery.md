@@ -6,7 +6,7 @@ Front: release-3-2
 Lane: full (Phase 1, read-only; may lead into the IR, the 2.230 step and the canvas sync)
 Depends: P-2026-10-12-0115
 Request: none (Alfonso, 2026-10-15 17:08, "affrontiamo il problema in 1"; D-A1 of the release 3.1 reports)
-Status: da eseguire
+Status: eseguito 2026-10-15 · lane da1-disc · 71c07b6fd · inbox entry e45998ecd, verifica visiva non applicabile (read-only Phase 1, no UI change, 37 probe crops in the lane folder); the fix of the report is named in P-2026-10-16-1000 (Depends)
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply.
 

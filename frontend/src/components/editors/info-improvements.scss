@@ -858,7 +858,9 @@ select.form-select {
     min-height: 28px;
   }
 
-  > b.me-2 {
+  // Semantic hook for the inline field label ("Depends from models", "Topic"), was
+  // `b.me-2` (Bootstrap utility as styling hook) until P-2026-10-19-1830.
+  > .info-field-label {
     font-family: var(--font-sans);
     font-size: 13px !important;
     font-weight: 400 !important;

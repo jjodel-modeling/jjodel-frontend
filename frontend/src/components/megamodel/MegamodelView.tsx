@@ -30,6 +30,8 @@ import {
     getPort, spreadAnchors, routePoints, buildRoundedPath, labelMidpoint, computeAdaptiveSides,
 } from './MegamodelEdge';
 import { Defaults, isDataManagerViewpointId } from '../../joiner';
+import { placeScriptNodes, scriptLinks, type MegamodelScriptInput } from './megamodelScripts';
+import { uniqueScriptName } from '../scripts/projectScripts';
 import './MegamodelView.scss';
 
 // The viewpoints Jjodel seeds itself are excluded from the megamodel, through
@@ -57,6 +59,8 @@ export interface MegamodelViewProps {
     megamodel: Megamodel;
     projectId?: string;
     viewpoints?: Array<{ id: string; name: string; isOverlay?: boolean }>;
+    /** The project's script files (S6b, R-JJD-5), listed as nodes linked to their model. */
+    scripts?: MegamodelScriptInput[];
     artifactStats?: ArtifactStats[];
     onClose: () => void;
     onOpenNode?: (nodeId: string, nodeKind: MmNodeKind) => void;
@@ -127,6 +131,7 @@ function buildGraph(
     megamodel: Megamodel,
     viewpoints: MegamodelViewProps['viewpoints'],
     statsMap: Map<string, ArtifactStats>,
+    scripts: MegamodelScriptInput[] = [],
 ): { nodes: MmNode[]; edges: MmEdge[] } {
     const nodeMap = new Map<string, MmNode>();
 
@@ -171,6 +176,22 @@ function buildGraph(
         }
     }
 
+    // Script files (S6b): nodes of the kind `script` artifacts already map to, after the others
+    const presentIds = new Set(nodeMap.keys());
+    for (const s of scripts) {
+        if (nodeMap.has(s.id)) continue;
+        nodeMap.set(s.id, {
+            id: s.id,
+            kind: artifactTypeToKind('script'),
+            name: s.name || 'Unnamed',
+            badgeLabel: 'R',
+            typeLabel: 'Refactoring',
+            x: 0, y: 0,
+            stats: {},
+            status: DEFAULT_STATUS,
+        });
+    }
+
     // Build edges + detect generated models
     const edges: MmEdge[] = [];
     const generatedModels = new Map<string, { transformationName: string; timestamp?: number }>();
@@ -206,6 +227,27 @@ function buildGraph(
         }
     }
 
+    // A script runs on its model: drawn as the model being an input of it
+    for (const link of scriptLinks(scripts, presentIds)) {
+        const styleDef = EDGE_STYLES.inputOf;
+        const sides = edgeSides('inputOf');
+        edges.push({
+            id: link.id,
+            from: link.from,
+            to: link.to,
+            type: 'inputOf',
+            label: styleDef.label,
+            style: {
+                color: styleDef.color,
+                dasharray: styleDef.dasharray,
+                strokeWidth: styleDef.strokeWidth,
+                opacity: styleDef.opacity,
+            },
+            fromSide: sides.fromSide,
+            toSide: sides.toSide,
+        });
+    }
+
     // Mark generated model nodes
     for (const [modelId, genInfo] of generatedModels) {
         const node = nodeMap.get(modelId);
@@ -236,10 +278,18 @@ function mapEdgeType(type: MegaEdge['type']): MmEdgeType | null {
 
 // ─── Layout helper ───────────────────────────────────────────────────────────
 
-function applyLayout(nodes: MmNode[], edges: MmEdge[]): MmNode[] {
-    const positions = computeMegamodelLayout(nodes, edges);
+function applyLayout(nodes: MmNode[], edges: MmEdge[], scriptIds: Set<string> = new Set()): MmNode[] {
+    // Script nodes stay out of the layout, so the other nodes land where they would without them
+    const base = nodes.filter(n => !scriptIds.has(n.id));
+    const baseEdges = edges.filter(e => !scriptIds.has(e.from) && !scriptIds.has(e.to));
+    const positions = computeMegamodelLayout(base, baseEdges);
+    const scriptPositions = placeScriptNodes(
+        base.map(n => positions.get(n.id) ?? n),
+        nodes.filter(n => scriptIds.has(n.id)).map(n => n.id),
+        NODE_W, NODE_H,
+    );
     return nodes.map(n => {
-        const pos = positions.get(n.id);
+        const pos = positions.get(n.id) ?? scriptPositions.get(n.id);
         return pos ? { ...n, x: pos.x, y: pos.y } : n;
     });
 }
@@ -358,7 +408,7 @@ interface ContextMenuState {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const MegamodelView: React.FC<MegamodelViewProps> = ({
-    megamodel, projectId, viewpoints, artifactStats, onClose, onOpenNode,
+    megamodel, projectId, viewpoints, scripts, artifactStats, onClose, onOpenNode,
     onDeleteNode, onRenameNode, onDuplicateNode, onRunTransformation,
     onCreateMetamodel, onCreateModel, onImport, onExport, onExportFull,
 }) => {
@@ -435,6 +485,8 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         return map;
     }, [artifactStats]);
 
+    const scriptIds = useMemo(() => new Set((scripts || []).map(s => s.id)), [scripts]);
+
     // ── Fit-to-view helper (used only by explicit "Fit to view" button) ────
     const fitToView = useCallback((laid: MmNode[]) => {
         if (!containerRef.current || laid.length === 0) return;
@@ -480,7 +532,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
 
     // ── Build graph and run dagre layout ──────────────────────────────────────
     useEffect(() => {
-        const { nodes: builtNodes, edges: builtEdges } = buildGraph(megamodel, viewpoints, statsMap);
+        const { nodes: builtNodes, edges: builtEdges } = buildGraph(megamodel, viewpoints, statsMap, scripts);
         if (builtNodes.length === 0) {
             setNodes([]);
             setEdges(builtEdges);
@@ -504,7 +556,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
             // If some nodes are new (no saved position), run layout on just those
             // but keep saved positions for existing ones
             if (hasNewNodes) {
-                const fullLayout = applyLayout(builtNodes, builtEdges);
+                const fullLayout = applyLayout(builtNodes, builtEdges, scriptIds);
                 laid = laid.map(n => {
                     if (savedPositions[n.id]) return n; // keep saved position
                     const layoutNode = fullLayout.find(ln => ln.id === n.id);
@@ -513,7 +565,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
             }
         } else {
             // No saved positions — run auto-layout
-            laid = applyLayout(builtNodes, builtEdges);
+            laid = applyLayout(builtNodes, builtEdges, scriptIds);
         }
 
         setNodes(laid);
@@ -522,7 +574,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
 
         // Center at 1:1 zoom after layout (need a frame for containerRef to have dimensions)
         requestAnimationFrame(() => centerAtZoom1(laid));
-    }, [megamodel, viewpoints, statsMap, centerAtZoom1, projectId]);
+    }, [megamodel, viewpoints, scripts, scriptIds, statsMap, centerAtZoom1, projectId]);
 
     // ── Node map for fast lookup ──────────────────────────────────────────────
     const nodeMap = useMemo(() => {
@@ -719,13 +771,15 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         const node = nodeMap.get(nodeId);
         if (!node) return;
         if (newName !== node.name && newName.trim()) {
-            // Update local node name for immediate feedback
+            // Update local node name for immediate feedback; a script file shows the `.jjs`
+            // name the rename stores (S6c)
+            const shown = scriptIds.has(nodeId) ? uniqueScriptName(newName, scripts || [], nodeId) : newName.trim();
             setNodes(prev => prev.map(n =>
-                n.id === nodeId ? { ...n, name: newName.trim() } : n
+                n.id === nodeId ? { ...n, name: shown } : n
             ));
             onRenameNode?.(nodeId, node.kind, newName.trim());
         }
-    }, [nodeMap, onRenameNode]);
+    }, [nodeMap, onRenameNode, scriptIds, scripts]);
 
     // ── Delete with confirmation ─────────────────────────────────────────────
     const showDeleteConfirmation = useCallback((nodeId: string) => {
@@ -800,12 +854,13 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                         onDuplicateNode?.(contextMenu.nodeId, contextMenu.nodeKind);
                     }
                 },
-                disabled: !onDuplicateNode,
+                // A script file is not duplicated from here (S6b)
+                disabled: !onDuplicateNode || scriptIds.has(contextMenu.nodeId ?? ''),
             },
         ];
 
-        // Add "Run transformation" for transformation nodes
-        if (contextMenu.nodeKind === 'transformation') {
+        // Add "Run transformation" for transformation nodes (a script runs from its tab)
+        if (contextMenu.nodeKind === 'transformation' && !scriptIds.has(contextMenu.nodeId ?? '')) {
             items.push({ separator: true, label: '', icon: '', action: () => {} });
             items.push({
                 label: 'Run transformation',
@@ -835,7 +890,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         return items;
     }, [contextMenu, onOpenNode, onClose, onRenameNode, onDuplicateNode, onDeleteNode,
         onRunTransformation, onCreateMetamodel, onCreateModel, onImport,
-        startRenaming, showDeleteConfirmation]);
+        startRenaming, showDeleteConfirmation, scriptIds]);
 
     // ── Zoom (imperative listener for { passive: false }) ──────────────────
     useEffect(() => {
@@ -858,12 +913,12 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         if (nodes.length === 0) return;
         // Clear saved positions so layout is fresh
         if (projectId) clearPositions(projectId);
-        const laid = applyLayout(nodes, edges);
+        const laid = applyLayout(nodes, edges, scriptIds);
         setNodes(laid);
         // Save the new auto-layout positions
         if (projectId) savePositions(projectId, laid);
         requestAnimationFrame(() => centerAtZoom1(laid));
-    }, [nodes, edges, centerAtZoom1, projectId]);
+    }, [nodes, edges, scriptIds, centerAtZoom1, projectId]);
 
     // ── Arrow markers ─────────────────────────────────────────────────────────
     const markerColors = useMemo(() => {

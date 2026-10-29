@@ -39,6 +39,7 @@
 
 import { parseAction } from '../../jjel/parser';
 import { JjelEvaluator, isJjelObject } from '../../jjel/evaluator';
+import { isBitVector } from '../../jjel/evaluator/context';
 import type { EvaluationContext, JjelValue, JjelWarning } from '../../jjel/evaluator';
 import type { JjelAction, JjelExpression } from '../../jjel/types/ast';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
@@ -132,8 +133,9 @@ function evaluate(expr: JjelExpression, ctx: EvaluationContext): Evaluated {
     return { ok: true, value: out.value };
 }
 
+/** A bit-vector is one too: a `word` attribute holds it, and `inDomain` checks its width (R-BV-7). */
 function isSimValue(value: JjelValue): value is SimValue {
-    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string';
+    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string' || isBitVector(value);
 }
 
 /** Whether an expression reads σ (`.[x]`) or names `event`: then its value is known only in the step. */

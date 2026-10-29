@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {"name":"dedup", "events":[
+      {"type":"system","subtype":"init","session_id":"s","model":"m"},
+      {"type":"assistant","session_id":"s","message":{"id":"a","model":"m","usage":{"input_tokens":2,"cache_read_input_tokens":10,"cache_creation_input_tokens":3,"output_tokens":1}}},
+      {"type":"assistant","session_id":"s","message":{"id":"a","model":"m","usage":{"input_tokens":2,"cache_read_input_tokens":10,"cache_creation_input_tokens":3,"output_tokens":1}}},
+      {"type":"result","session_id":"s","modelUsage":{"m":{"inputTokens":2,"cacheReadInputTokens":10,"cacheCreationInputTokens":3,"outputTokens":8}}}
+    ],"calls":1,"difference":{"input":0,"cacheRead":0,"cacheCreation":0},"total":23},
+    {"name":"missing-output", "events":[
+      {"type":"system","subtype":"init","session_id":"s"},
+      {"type":"assistant","message":{"id":"a","model":"m","usage":{"input_tokens":2,"cache_read_input_tokens":10,"cache_creation_input_tokens":3,"output_tokens":1}}}
+    ],"calls":1,"difference":null,"total":null}
+  ]
+}

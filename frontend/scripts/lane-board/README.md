@@ -13,15 +13,56 @@ caches, `~/.jjodel-lanes/board/timeline-cache.json` and, beside it, `usage-cache
 (best effort: if the directory is missing the write is skipped and finished lanes are
 read again); `req-trace.mjs` keeps its own cache in the system temp folder (below).
 
+## Look and theme (P-2026-10-19-1130)
+
+The page follows the design agreed on 2026-10-18 («Lane Monitor Desktop»), which takes Linear
+as its reference for principles only. The ground is near-black in dark mode, borders are quiet
+1 px lines, type is a compact 13 px, numbers are monospace with tabular figures, and a single
+indigo accent marks what is live. Colour is kept for state: done green, waiting amber, blocked
+red, hard-stop a dashed grey ring, running indigo. There are no gradients, no emoji and no
+webfont (the system stacks only, so the board works offline). A 232 px sidebar holds the product
+block with the trunk name, the four views (Lanes with the running count, Requirements with the
+register's row count), the six-pill strip as «By state», «Needs attention» from
+`/api/attention` (waiting and blocked filter the Lanes tab, stale is a count), and a footer with
+spend today, the load average, the port, the last sync and the theme control. Below 900 px the
+sidebar becomes a top bar. The Lanes tab opens with six KPI cells, each with its window: the five
+lane cells filter the tab as a pill does, and spend is a plain figure. An amber banner appears
+while lanes wait for a reply. The running lanes show as cards. The 24 h and earlier tables have ten
+columns that fit 1160 px: Window (Started → Ended), Elapsed over Span, Total over In / Out, Ctx max over Arch, Cost, the
+cut Worktree and Launched by, with State in the Outcome cell's title. Each value is in its row or its cell's title,
+and below 1100 px the table scrolls. A filter's view keeps the full table, `table()`. The theme is System by default (`prefers-color-scheme`). Light and Dark set
+`data-theme` on `<html>`, and the choice is kept in `localStorage` (`laneBoardTheme`). The tokens are the
+`--t-*` properties at the top of the style block; the old names (`--bg`, `--fg`, `--muted`,
+`--line`, `--card`, `--accent`, `--run`, `--ok`, `--warn`, `--hs`, `--bad`) alias them, so
+Timeline, Insights and Requirements follow the theme until their own restyle.
+
+Timeline, Insights and Requirements are in the same design (P-2026-10-19-1157). Their colours are
+tokens only: every colour the three scripts write is a `var(--…)` or a
+`color-mix(in srgb,var(--accent) N%,var(--card))`, SVG attributes included, and none of them reads
+`prefers-color-scheme`. So all four tabs follow the board's theme choice, and switching it
+repaints them without a reload. `question` paints in amber (`--warn`) as waiting does; `--q` is
+kept for the parallel-lanes overlay and the chain launcher, in the link indigo.
+
 ## The four tabs
 
 **Lanes.** A table of the running and blocked lanes: state, kind (from the `Lane:`
 line of the prompt) and tier, elapsed time, an estimate of the time left, the current
 phase (the last tool description in the lane's `log.jsonl`), the worktree and who
-launched it, and five token columns after Span (Tokens, below). The Phase cell draws the lane's progress on its first line and the phase
+launched it, five token columns after Span and a Cost column after Arch (Tokens, below). The Phase cell draws the lane's progress on its first line and the phase
 text, cut, on its second (next section). The estimate is a heuristic, not a promise: a
 measured median per kind, minus the elapsed time, corrected by the phase and the load
 average. Below it, the earlier lanes grouped by day, with their outcome.
+
+**Kind badge (P-2026-10-18-1428).** The Kind cell is a fixed-width pill per kind (`merge`,
+`fast`, `discovery`, `phase2`, a dashed `unknown` for an empty kind, a dashed `chain`), then
+`direct` for a `lane-run merge --direct` lane (its folder holds `direct.json`) and the tier.
+Hover or keyboard focus shows an overlay; a click pins it until Esc, a click outside or a click
+on another badge. Its lines come from `kindDetails(row, kindFacts(dir))`, built server side
+into the row's `kindInfo`: what the kind means and the prompt's `Lane:` line verbatim; how the
+lane ran (a direct merge: scripted, branch into trunk, the gates and outcome of `result.json`,
+`resolved.txt`; a session lane: tier, model and effort from the last line of `runs.jsonl`, or
+the `tier.txt` line without it, and the session id); and why a token cell reads n/a: no model
+ran for a direct merge, otherwise the missing file (`log.jsonl`, `architect.json`) named.
 
 **When the status is slow.** `/api`, the data of the Lanes tab and the strip, runs
 `lane-run status --all` as a child process, one run at a time, killed after 15 s, and keeps
@@ -89,7 +130,27 @@ The cells are abbreviated (`12.3k`, `3.1M`, en-US, one decimal) with the exact i
 the title, and read `n/a` when the lane has no per-call usage (a direct merge, a lane folder
 without `log.jsonl`); the fields are integers or `null`. The five columns are 72 px each in
 both variants; to keep Phase and Outcome their room, Worktree went from 144 to 112 px and
-the Lanes tab's page is 328 px wider than the other tabs (1608 px, `main.wide`).
+the Lanes tab's page is 328 px wider than the other tabs (1608 px, `main.wide`; 1672 px with Cost, below).
+
+### Cost and the day totals (P-2026-10-18-1750)
+
+The **Cost** column sits after Arch (64 px, so the Lanes tab's page is 1672 px). It is the largest
+`total_cost_usd` of the lane's `result` events (`costUSD` in `/api`; Claude Code reports it
+cumulative over the session and a resume restores it), at API list price, not what the
+subscription costs. The per-model costs of `modelUsage` add up to it, subagent model included, so
+subagents are in. The architect chat is not. The cell reads `$` and two decimals, `<$0.01` below a
+cent, empty when the lane has no `result` with a cost (chains included); the title carries the full
+value and the number of sessions (`init` events, `sessions` in `/api`).
+
+`/api` also carries `spendByDay`, `{ 'YYYY-MM-DD': usd }` summed over all lanes. The delta of each
+cost event is its increase over the previous event of the same log (a decrease is a new session and
+the delta is the value itself), and it lands on the local day of the end of the turn the event
+closes; an event that closes no turn (a task notification) lands on the end of the preceding turn,
+and a lane without input files has one turn. Each Earlier-lanes summary appends the spend of its
+day, which is not the sum of the rows under it (a lane started the day before can add to it), and
+the meta line appends `today`. The cost events of a log are cached in `usage-cache.json` under
+`cost:<Prompt-ID>`, keyed by the size and mtime of `log.jsonl`; the days are worked out from them
+and the lane's turns on every read.
 
 The Insights **Tokens** section groups the closed lanes of the range by tier (the first word
 of `tier.txt`) and by model (the first `init`): lane count, median and sum of Total, median
@@ -274,6 +335,65 @@ override them.
   and the lists have fixed widths too, and a bar row a fixed height: an opened list or cell
   adds content below and never moves a bar, an axis or a matrix column.
 
+## The menu bar app's routes (P-2026-10-18-2320)
+
+Two routes serve the Lane Monitor menu bar app (`tools/lane-monitor-app/`, slices S2 to S5
+of discovery P-2026-10-18-2255), which is their client. Both are matched on the path, so a
+query string changes nothing, and neither sends a CORS header: the app polls from Rust, not
+from a web page.
+
+**`GET /api/attention`** answers which lanes wait for the operator, in under 2 KB, from the
+same snapshot as `/api` (no second `lane-run status` run). The app polls it, never `/api`.
+
+```json
+{
+  "v": 1, "now": 1792300000000, "stale": false, "board": "ok | refreshing | error: <one line>",
+  "waiting": 1, "blocked": 0, "running": 2, "staleCount": 12, "staleOldest": 1790960000000,
+  "items": [{ "id": "P-…", "kind": "hard-stop", "laneKind": "discovery", "title": "…", "chat": "C-…",
+              "chatUrl": "https://claude.ai/…", "firstLine": "…", "recommended": "…", "since": 1792298000000 }],
+  "runningItems": [{ "id": "P-…", "laneKind": "phase2", "title": "…", "phase": "…", "left": "about 20 min", "since": 1792299000000 }]
+}
+```
+
+The rule (`attentionOf`, exported and tested on rows):
+
+- A lane is a candidate when its strip pill is `question`, `blocked` or `hard-stop`
+  (`stripKey`); `resolved`, `done` and chains never are. A live lane over its limit is
+  `kind: "blocked"`.
+- A candidate is **closed** when (a) the `Status:` line of its prompt on the trunk ref
+  (`JJODEL_TRUNK`) no longer starts with `da eseguire`; or (b) a later lane (a higher
+  Prompt-ID) names it in the `Depends:` or `Corregge:` line of its header (`Corregge:` as a
+  Prompt-ID or as the prompt's `YYYY-MM-DD HH:mm`); or (c) a trunk commit later than its end
+  names it in its subject or body, `docs: add prompt` commits excepted. A closed verdict is
+  kept for the life of the process.
+- An open candidate is **waiting** up to `ATTENTION_STALE_H = 72` hours after `since`, and
+  **stale** after: stale lanes are only counted (`staleCount`, `staleOldest`), never listed.
+  `since` is the end of the lane's last turn; for a live lane over its limit, its start plus 90
+  minutes (`LIVE_LIMIT_MIN`), not the limit a prompt may declare.
+- `items` are ordered oldest first; `waiting`, `blocked` and `running` are the lengths of
+  `items`, of its `blocked` items and of `runningItems` (lanes only, not chains).
+- `firstLine` and `recommended` come from the lane's final message, the last `result` of its
+  `log.jsonl` (`firstLineOf`): the `[P-… · session …]` tag dropped; a `**Decision for you:**` or
+  `**Question for you:**` line when there is one; else the first sentence of the first paragraph
+  that is not `Outcome:` or `Recommended:`, or the clause after it when it ends on a colon; cut to
+  60 characters at a space with an ellipsis. `recommended` is the last `Recommended:` line, cut
+  the same way. A live lane over its limit reads `over its limit since <hh:mm>`.
+
+Cost: the trunk `Status:` of an open candidate is read at most once a minute, the trunk's
+`git log` once a minute from the oldest open candidate, a final message once per log size. The
+first call after a start reads the trunk prompt of every candidate (one `git show` each).
+
+**`GET /l/<Prompt-ID>`** is the link a chat posts: a small page that asks the OS for
+`jjodel-lanes://<Prompt-ID>` (the app takes it) and, if the page has neither lost focus nor
+been hidden after 1.5 s, replaces itself with the board's `/#lane=<Prompt-ID>`. A valid id that
+is not on the board still gets the page, which says so. Anything else under `/l/` (a short or
+long id, a trailing path, an encoded character) is `404`, `text/plain`.
+
+**`/#lane=<Prompt-ID>`** on the board's page selects the Lanes tab, clears the strip filter,
+opens the lane's day if it sits in Earlier lanes, scrolls its row into view and marks it until the
+next click. The row is found by its Kind badge's `data-id`. A lane that is not in the table
+reads one line saying so.
+
 ## Running it
 
 From the repository root:
@@ -327,10 +447,17 @@ an absolute script path; launchd does not expand `~`):
 </array>
 <key>RunAtLoad</key><true/>
 <key>KeepAlive</key><true/>
+<key>ProcessType</key><string>Interactive</string>
 <key>StandardOutPath</key><string>/Users/alfonso/.jjodel-lanes/board/board.log</string>
 <key>StandardErrorPath</key><string>/Users/alfonso/.jjodel-lanes/board/board.log</string>
 </dict></plist>
 ```
+
+`ProcessType` must be `Interactive`. Without it launchd spawns the agent as a daemon, its I/O is
+throttled, and every `lane-run status --all` child sits in disk wait past the 15 s kill: the board
+then shows no lanes and `/api` reports `lane-run status timed out after 15 s` (measured 2026-10-22,
+P-2026-10-22-1225: the same run takes 0.3 s from a shell). After editing the plist, `bootout` and
+`bootstrap` it; `kickstart` does not reread the file.
 
 ```bash
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.jjodel.lane-board.plist  # load and start
@@ -350,6 +477,8 @@ The launcher is read from the commit that added the lane's prompt to `docs/promp
 4. **Claude Code**: a `Co-Authored-By: Claude` or `Model:` trailer and no chat.
 5. **manual**: neither; the label is the commit author.
 6. **unknown**: no commit adds a prompt with that Prompt-ID.
+
+A row's chat link (`chatUrl`, `chatUrlFrom`) comes from the lane's own `Request:` line (`request`), else the `Claude-Session:` trailer of that commit (`commit`), else the `Request:` line of the trunk's copy of the prompt named in `prompt.txt` when its `Prompt-ID:` is the lane's (`prompt`, refreshed every 5 minutes), else the latest other lane that names the same `Chat:` id (`chat-id`).
 
 ## Exports
 

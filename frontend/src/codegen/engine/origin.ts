@@ -15,7 +15,9 @@
  * 4. literal: the text between holes carries its template position, recovered from `tokenize`, because the parts
  *    of an interpolated string carry none (S1).
  * A hole that throws is an error fragment at the hole's template position with the exception's message, and
- * generation goes on; `null` renders '' in a hole, in `+` and in a Text join (U10).
+ * generation goes on; `null` renders '' in a hole, in `+` and in a Text join (U10). The exception is the generation
+ * budget (text.ts, R-GEN-28): each hole is a time checkpoint, and once the budget has tripped the hole rethrows its
+ * stop instead of writing an error fragment; each Text built here is an output checkpoint.
  *
  * Each splice into a hole adds an indentation level with the hole line's leading whitespace (indent.ts).
  * Feature ids come from idlookup through a side table keyed by handle (`WeakMap`): a handle's `id` names its
@@ -26,9 +28,11 @@
 
 import { JjelTokenType, tokenize } from '../../jjel';
 import type { JjelExpression, JjelObject, JjelTextHost, JjelTextPart, JjelValue } from '../../jjel';
+import { isBitVector } from '../../jjel/evaluator/context';
+import { toVerilog } from '../../jjel/evaluator/builtins/bitvectors';
 import { holePrefixes } from './indent';
-import { EMPTY_TEXT, concatTexts, fragment, isText, makeText, renderText } from './text';
-import type { FeatureRead, IndentLevel, LiteralOrigin, Origin, Text, TextFragment, Transformation } from './text';
+import { EMPTY_TEXT, GenerationBudget, concatTexts, fragment, isText, makeText, renderText } from './text';
+import type { FeatureRead, IndentLevel, LiteralOrigin, Origin, TemplatePosition, Text, TextFragment, Transformation } from './text';
 
 type Lookup = Record<string, any>;
 
@@ -67,8 +71,8 @@ export class TemplateSources {
     private readonly holes = new WeakMap<object, SourceInfo>();
     private readonly strings = new WeakMap<object, { info: SourceInfo; spans: readonly LiteralSpan[] }>();
 
-    /** Registers the AST `expr` of `template`, parsed from `source`. */
-    register(template: string, source: string, expr: JjelExpression): void {
+    /** Registers the AST `expr` of `template`, parsed from `source` in `mode` (absent: an expression). */
+    register(template: string, source: string, expr: JjelExpression, mode?: 'text' | 'expression'): void {
         const lineStarts = [0];
         for (let i = 0; i < source.length; i++) if (source[i] === '\n') lineStarts.push(i + 1);
         const info: SourceInfo = { template, lineStarts };
@@ -82,7 +86,7 @@ export class TemplateSources {
             }
             const n = node as JjelExpression;
             if (n.type === 'InterpolatedString') {
-                this.strings.set(n, { info, spans: literalSpans(source, n) });
+                this.strings.set(n, { info, spans: literalSpans(source, n, mode === 'text' && n === expr) });
                 for (const part of n.parts) if (part.kind === 'expression') this.holes.set(part.expr, info);
             }
             for (const [key, value] of Object.entries(n)) if (key !== 'location') walk(value);
@@ -127,23 +131,25 @@ function literalOrigin(info: SourceInfo, offset: number): LiteralOrigin {
  * The literal parts of the string literal `node` in `source`, in AST order: its own source lexed again with the
  * `interpolation` option, its text tokens up to the closing quote, the empty ones dropped as the parser drops them.
  * The first token starts at the opening quote, the others right after a hole's `}`; an escape is two source
- * characters for one of the value.
+ * characters for one of the value. The root of a text body (`textBody`, R-GEN-26) is lexed with `textBody`: no
+ * quote, and the only escape is `\${`, three source characters for two of the value.
  */
-function literalSpans(source: string, node: JjelExpression): LiteralSpan[] {
+function literalSpans(source: string, node: JjelExpression, textBody = false): LiteralSpan[] {
     const start = node.location?.start.offset;
     const end = node.location?.end.offset;
     if (start === undefined || end === undefined) return [];
-    const { tokens } = tokenize(source.slice(start, end), { interpolation: true });
+    const { tokens } = tokenize(source.slice(start, end), textBody ? { textBody: true } : { interpolation: true });
     const spans: LiteralSpan[] = [];
     for (let i = 0; i < tokens.length; i++) {
         const tok = tokens[i];
         if (tok.type !== JjelTokenType.STRING_PART && tok.type !== JjelTokenType.STRING) continue;
         if (tok.value !== '') {
             const offsets: number[] = [];
-            let at = start + tok.start + (i === 0 ? 1 : 0);
+            let at = start + tok.start + (i === 0 && !textBody ? 1 : 0);
             for (let k = 0; k < tok.value.length; k++) {
                 offsets.push(at);
-                at += source[at] === '\\' ? 2 : 1;
+                if (!textBody) at += source[at] === '\\' ? 2 : 1;
+                else at += source[at] === '\\' && source[at + 1] === '$' && source[at + 2] === '{' ? 2 : 1;
             }
             spans.push({ value: tok.value, offsets });
         }
@@ -195,6 +201,8 @@ function plain(value: JjelValue): string {
     if (value === null || value === undefined) return '';
     if (typeof value === 'string') return value;
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    // Its Verilog form with its width, `8'hff`, as `stringify` prints it (R-BV-6): a vector's payload is a BigInt.
+    if (isBitVector(value)) return toVerilog(value);
     if (Array.isArray(value)) return value.map(plain).join(', ');
     try {
         return JSON.stringify(value) ?? '';
@@ -212,7 +220,7 @@ export class OriginHost implements JjelTextHost {
     private readonly features = new WeakMap<object, Map<string, string>>();
     private nextLevel = 1;
 
-    constructor(private readonly lookup: Lookup, private readonly sources: TemplateSources) {}
+    constructor(private readonly lookup: Lookup, private readonly sources: TemplateSources, private readonly budget: GenerationBudget = new GenerationBudget()) {}
 
     /** The `readObserver` of the template context: records the read in the hole being evaluated. */
     readonly observe = (target: JjelObject, property: string, value: JjelValue): void => {
@@ -224,6 +232,9 @@ export class OriginHost implements JjelTextHost {
     }
 
     evaluateHole(expr: JjelExpression, evaluate: () => JjelValue): JjelValue {
+        const at: TemplatePosition = this.sources.holePosition(expr) ?? { template: '', offset: -1, line: 0, column: 0 };
+        this.budget.checkpoint(at);
+        this.budget.enter(at);
         const reads: Read[] = [];
         this.frames.push(reads);
         let value: JjelValue = null;
@@ -235,7 +246,9 @@ export class OriginHost implements JjelTextHost {
         } finally {
             this.frames.pop();
             this.frames[this.frames.length - 1]?.push(...reads);
+            this.budget.leave();
         }
+        this.budget.rethrow();
         const text = failure ? this.errorText(expr, failure.error) : this.attribute(value, expr, reads);
         return text as unknown as JjelValue;
     }
@@ -253,15 +266,15 @@ export class OriginHost implements JjelTextHost {
                 for (const f of this.toText(part.value).fragments) fragments.push(fragment(f.text, f.origin, [level, ...f.indent]));
             }
         }
-        return makeText(fragments) as unknown as JjelValue;
+        return this.budget.measure(makeText(fragments)) as unknown as JjelValue;
     }
 
     concat(left: JjelValue, right: JjelValue): JjelValue {
-        return concatTexts([this.toText(left), this.toText(right)]) as unknown as JjelValue;
+        return this.budget.measure(concatTexts([this.toText(left), this.toText(right)])) as unknown as JjelValue;
     }
 
     join(items: JjelValue[], separator: JjelValue): JjelValue {
-        return this.joinTexts(items.map(v => this.toText(v)), this.toText(separator)) as unknown as JjelValue;
+        return this.budget.measure(this.joinTexts(items.map(v => this.toText(v)), this.toText(separator))) as unknown as JjelValue;
     }
 
     stringify(text: JjelValue): string {

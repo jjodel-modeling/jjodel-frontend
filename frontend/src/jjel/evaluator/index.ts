@@ -2,7 +2,7 @@
  * JjEL Evaluator - Public Exports
  */
 
-export { JjelEvaluator, JjelEvaluationError, evaluate } from './evaluator';
+export { JjelEvaluator, JjelEvaluationError, JjelTimeoutError, evaluate } from './evaluator';
 export {
     EvaluationContext,
     TypeRegistry,

@@ -17,6 +17,10 @@
  * and the printer's guards, actions and equations; `null` with `stc`. The context's Text host and read observer are
  * an `OriginHost`.
  *
+ * A generation has a budget (text.ts, R-GEN-28): 2000 ms and 1,000,000 output characters by default, `limits`
+ * overrides them and the clock. When it trips, the result has no code and one error more than the template
+ * problems, at the call or hole that tripped it.
+ *
  * Templates never write: JjEL has no assignment, and nothing here writes the lookup or the record.
  *
  * Pure: JjEL, the STC accessor and the engine.
@@ -30,8 +34,8 @@ import type { StcElement, StcView } from '../stcAccess';
 import { OriginHost, TemplateSources } from './origin';
 import { registerTemplates } from './templates';
 import type { TemplateRecord } from './templates';
-import { EMPTY_TEXT, fragment, makeText, renderText, textErrors } from './text';
-import type { Text, TemplatePosition, TextMapEntry } from './text';
+import { EMPTY_TEXT, GenerationBudget, fragment, makeText, renderText, textErrors } from './text';
+import type { GenerationLimits, Text, TemplatePosition, TextMapEntry } from './text';
 
 type Lookup = Record<string, any>;
 
@@ -74,6 +78,7 @@ export function generate(
     templates: readonly TemplateRecord[],
     entry: string,
     args: readonly JjelValue[] = [],
+    limits: GenerationLimits = {},
 ): GenerateResult {
     const handles = new Map<string, JjelValue>();
     const pool = globals.instances;
@@ -87,11 +92,12 @@ export function generate(
 
     const ctx = new EvaluationContext({ ...globals, stc: view ? stcValue(view) : null, target: view ? jsTarget(globals, lookup, modelId) : null });
     const sources = new TemplateSources();
-    const host = new OriginHost(lookup, sources);
+    const budget = new GenerationBudget(limits);
+    const host = new OriginHost(lookup, sources, budget);
     ctx.textHost = host;
     ctx.readObserver = host.observe;
     const evaluator = new JjelEvaluator(ctx);
-    const set = registerTemplates(templates, ctx, evaluator, host, sources);
+    const set = registerTemplates(templates, ctx, evaluator, host, sources, budget);
 
     const errors: GenerateError[] = set.problems.map(p => ({ template: p.template, offset: p.offset, line: p.line, column: p.column, message: p.message }));
     let text = EMPTY_TEXT;
@@ -104,6 +110,11 @@ export function generate(
             const message = error instanceof Error ? error.message : String(error);
             text = makeText([fragment('', { kind: 'error', template: entry, offset: 0, line: 1, column: 1, message })]);
         }
+    }
+    const stop = budget.stop;
+    if (stop) {
+        errors.push({ template: stop.template, offset: stop.offset, line: stop.line, column: stop.column, message: stop.message });
+        return { text: EMPTY_TEXT, code: '', map: [], errors, hasErrors: true };
     }
     for (const e of textErrors(text)) errors.push({ template: e.template, offset: e.offset, line: e.line, column: e.column, message: e.message });
 

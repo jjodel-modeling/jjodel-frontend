@@ -227,6 +227,19 @@ describe('the same defect on other batch shapes', () => {
         const s2 = dispatch(s1, undoAction());
         expect(plain(s2.idlookup.S1.values)).toEqual([2]);
     });
+
+    it('issue #67: `final` already true (no-op) then `isSingleton` on a class does not write into the previous class', () => {
+        // The shape `LClass.set_singleton` dispatches; sorted by path, the `final` no-op comes first.
+        const s0 = freshState();
+        s0.idlookup.C1 = { id: 'C1', className: 'DClass', name: 'Lock', final: true, isSingleton: false };
+        const class0 = s0.idlookup.C1;
+        const snapshot = JSON.stringify(s0);
+        const s1 = dispatch(s0, batch('Lock.isSingleton', [set('C1', 'isSingleton', true), set('C1', 'final', true)]));
+        expect(s1.idlookup.C1.isSingleton).toBe(true);
+        expect(class0.isSingleton).toBe(false);
+        expect(JSON.stringify(s0)).toBe(snapshot);
+        expect(s1.idlookup.C1).not.toBe(class0);
+    });
 });
 
 describe('controls: batches without a leading no-op behave as before', () => {

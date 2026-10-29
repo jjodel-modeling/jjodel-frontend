@@ -168,8 +168,20 @@ describe('codePillVisible', () => {
         expect(codePillVisible(false, false, lookup(STORED), 'M', true)).toBe(false);
     });
 
-    it('is hidden on a metamodel editor (kills: M2 accepted)', () => {
-        expect(codePillVisible(true, true, lookup(STORED), 'MM', false)).toBe(false);
+    it('shows on a metamodel editor in Advanced mode, templates or not (kills: M2 branch dropped)', () => {
+        expect(codePillVisible(true, true, lookup(STORED), 'MM', false)).toBe(true);
+        expect(codePillVisible(true, true, lookup(), 'MM', false)).toBe(true);
+        expect(codePillVisible(false, true, lookup(STORED), 'MM', false)).toBe(false);
+    });
+
+    it('shows on a metamodel editor in Basic mode only when that metamodel holds genTemplates (kills: M2 reading instanceof of the metamodel)', () => {
+        expect(codePillVisible(true, false, lookup(STORED), 'MM', false)).toBe(true);
+        expect(codePillVisible(true, false, lookup(), 'MM', false)).toBe(false);
+        expect(codePillVisible(true, false, lookup({ genTemplates: '' }), 'MM', false)).toBe(false);
+        // A metamodel whose `instanceof` names one with templates: its own key decides, not the other's.
+        const typed = { ...lookup(), MM: { className: 'DModel', id: 'MM', instanceof: 'OTHER' } };
+        expect(codePillVisible(true, false, typed, 'MM', false)).toBe(false);
+        expect(codePillVisible(true, false, lookup(STORED), 'MISSING', false)).toBe(false);
     });
 
     it('shows in Advanced mode on a model of any metamodel, templates or not (kills: Advanced ignored)', () => {

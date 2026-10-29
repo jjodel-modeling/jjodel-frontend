@@ -10,7 +10,7 @@ import {
 } from "../joiner";
 import { AIEvents } from '../events/registry';
 import { CATALOG_PROVIDERS, cachedModelsFor, capabilitiesFor } from '../services/aiModelCatalog';
-import type { CatalogModel } from '../services/aiModelCatalog';
+import type { CatalogFailure, CatalogModel } from '../services/aiModelCatalog';
 
 // Provider logo imports
 import openaiLogo from '../assets/icons/providers/openai.svg';
@@ -518,6 +518,9 @@ export class AIConfig{
     /** Outcome of the most recent connection test for the current key: true=passed, false=failed,
      *  undefined=not tested (or invalidated by a credential edit). Drives the Settings status pill. */
     lastTestOk?: boolean;
+    /** Kind of failure of that test, set only when `lastTestOk` is false ('auth', 'rate', 'network',
+     *  'server', 'other'); cleared with it. Names the failure in the Settings row tooltip. */
+    lastTestFailure?: CatalogFailure;
     /** The retired model this provider was moved off at load (#179, `retireModels`). Settings
      *  names it until a connection test passes on the current one. */
     replacedModel?: string;
@@ -907,6 +910,8 @@ export class JodieConfig {
     providers: Dictionary<TAIProvider, ProviderConfig>;
     position?: { x: number; y: number };
     size?: { width: number; height: number };
+    /** Width in px of the docked panel (R-JJD-1). `position` and `size` belong to the retired floating window. */
+    dockWidth?: number;
     appVersion: string =  '1.0.0';
 
     constructor() {
@@ -1092,6 +1097,8 @@ export interface CodeEntry {
     warnings?: CodeWarning[];
     /** Raw JjEL value when ok, retained for the inline inspector. */
     rawValue?: unknown;
+    /** The evaluation hit its deadline (R-JJD-9): the error text renders muted. */
+    timedOut?: boolean;
 }
 
 /**

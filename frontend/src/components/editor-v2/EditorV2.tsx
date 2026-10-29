@@ -53,8 +53,10 @@ import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeomet
 import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/edgeLanes';
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
+import { clientCentre } from './utils/canvasCentre';
+import { orderSelection, sameIdList, resolveElementIds, type CanvasSelectionDetail } from './utils/canvasSelection';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
-import { fitPadding, getCanvasRightInset } from './viewportInset';
+import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
 import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
@@ -117,13 +119,20 @@ import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSi
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
+import { POLYMETRIC_MIN_METACLASSES, countPolymetricMetaclasses } from '../polymetric/polymetricMetrics';
+import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
 import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
 import { simPillVisible } from './sim/simRoleStatus';
 import { getSimRun, useSimVersion } from './sim/simRunState';
 import { hideRunEvents, occupiesCanvas } from './sim/simHideEvents';
+import { appendPreview, buildPreviewElements, drawnNodes, isPreviewId, measureObstacles } from './preview/previewElements';
+import { PreviewEdge } from './preview/PreviewEdge';
+import { installScriptPreviewListener, useScriptPreview } from './preview/scriptPreviewStore';
+import { PreviewBar } from './preview/PreviewBar';
 import { codePillVisible, useCodegenEnabled } from '../../codegen/setting';
+import { isConsumerMode } from '../environment/consumerMode';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
@@ -183,6 +192,7 @@ const edgeTypes: EdgeTypes = {
     inheritance: UnifiedEdge,
     composition: UnifiedEdge,       // M1: containment edge
     instanceRef: UnifiedEdge,       // M1: non-containment reference
+    preview: PreviewEdge,           // M2 ghost edge on its own orthogonal route (P-2026-10-25-1005)
 };
 
 // ---------------------------------------------------------------------------
@@ -426,7 +436,7 @@ const SIM_SLOT_LEFT = 'calc(200px + 16px + 48px + 16px)';
  * open panel, followed as it opens, closes and grows; in the Simulation pill's slot when there is none. The chip is
  * the Simulation chip's (`sim-panel__chip`), so the two read as a pair; the place is inline, no stylesheet loads here.
  */
-function CodegenSlot({ modelid }: { modelid: string }) {
+function CodegenSlot({ modelid, isMetamodel }: { modelid: string; isMetamodel: boolean }) {
     const anchor = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
     const [left, setLeft] = useState<number | null>(null);
@@ -454,7 +464,7 @@ function CodegenSlot({ modelid }: { modelid: string }) {
         <div ref={anchor} style={{ display: 'contents' }}>
             {open && CodePanel ? (
                 <React.Suspense fallback={null}>
-                    <CodePanel modelid={modelid} left={place} onClose={() => setOpen(false)} />
+                    <CodePanel modelid={modelid} isMetamodel={isMetamodel} left={place} onClose={() => setOpen(false)} />
                 </React.Suspense>
             ) : (
                 <div className="codegen-pill" style={{ position: 'absolute', left: place, bottom: 24, zIndex: 850 }}>
@@ -744,10 +754,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
     const jjomSelection = useJjomSelection(modelid, isJjomMode, highlightModeActive, assignHighlight);
 
-    const { screenToFlowPosition, getNodes, getNode, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    const { screenToFlowPosition, getNodes: getFlowNodes, getNode, getEdges: getFlowEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    // The ghost preview's synthetic nodes and edges (S4b, R-JJD-2) are on React Flow's arrays but
+    // are no canvas state: every reader below (layout, distribution, history, gestures) sees the
+    // canvas without them, so none of them can be laid out, snapshotted or written back.
+    const getNodes = useCallback(() => getFlowNodes().filter((n) => !isPreviewId(n.id)), [getFlowNodes]);
+    const getEdges = useCallback(() => getFlowEdges().filter((e) => !isPreviewId(e.id)), [getFlowEdges]);
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
+    // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
+    const fitViewOptions = useFitViewOptions();
 
     const {
         activeEditorId,
@@ -1140,14 +1157,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Polymetric view modal (triggered via Tools menu CustomEvent)
     const [polymetricOpen, setPolymetricOpen] = useState(false);
+    // Small-metamodel guard (P-2026-10-19-1745): same count PolymetricView renders
+    const [polymetricGuardOpen, setPolymetricGuardOpen] = useState(false);
 
     useEffect(() => {
         const handlePolymetric = () => {
-            if (modelid) setPolymetricOpen(true);
+            if (!modelid) return;
+            if (!isModelMode && countPolymetricMetaclasses(modelid) < POLYMETRIC_MIN_METACLASSES) {
+                setPolymetricGuardOpen(true);
+                return;
+            }
+            setPolymetricOpen(true);
         };
         window.addEventListener(JjodelEvents.OPEN_POLYMETRIC, handlePolymetric);
         return () => window.removeEventListener(JjodelEvents.OPEN_POLYMETRIC, handlePolymetric);
-    }, [modelid]);
+    }, [modelid, isModelMode]);
 
     // History for undo/redo
     const { takeSnapshot, undo, redo, canUndo, canRedo } = useHistory(getNodes, getEdges);
@@ -1548,6 +1572,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
 
+    // Publish React Flow's multi-selection (R-JJD-3): one emission per animation frame at most,
+    // none when the ordered list is unchanged. Read-only: `_lastSelected` and selectElement are
+    // untouched, so single selection works as before.
+    const publishedSelectionRef = useRef<string[]>([]);
+    const selectionFrameRef = useRef<number | null>(null);
+    const selectedNodesRef = useRef(selectedNodes);
+    selectedNodesRef.current = selectedNodes;
+    useEffect(() => {
+        if (selectionFrameRef.current !== null) return;
+        selectionFrameRef.current = requestAnimationFrame(() => {
+            selectionFrameRef.current = null;
+            const prev = publishedSelectionRef.current;
+            const next = orderSelection(prev, selectedNodesRef.current.map((n) => n.id));
+            if (sameIdList(prev, next)) return;
+            publishedSelectionRef.current = next;
+            const detail: CanvasSelectionDetail = {
+                modelId: modelid ?? '',
+                nodeIds: next,
+                elementIds: resolveElementIds(next, (store.getState() as any).idlookup),
+            };
+            window.dispatchEvent(new CustomEvent(JjodelEvents.CANVAS_SELECTION_CHANGED, { detail }));
+        });
+    }, [selectedNodes, modelid]);
+    useEffect(() => () => {
+        if (selectionFrameRef.current !== null) cancelAnimationFrame(selectionFrameRef.current);
+        selectionFrameRef.current = null;
+        if (publishedSelectionRef.current.length === 0) return;
+        publishedSelectionRef.current = [];
+        const detail: CanvasSelectionDetail = { modelId: modelid ?? '', nodeIds: [], elementIds: [] };
+        window.dispatchEvent(new CustomEvent(JjodelEvents.CANVAS_SELECTION_CHANGED, { detail }));
+    }, [modelid]);
+
     // Canonical selection channel — `_lastSelected.modelElement` is written by both
     // flow (`useJjomSelection.selectElement`) and classic (`graphElement.select` /
     // `onMouseDown`). Used to drive PalettePanel's context-aware sections so the
@@ -1656,6 +1712,30 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             nodeId => (store.getState() as any).idlookup?.[nodeId]?.model),
         [irContainment.nodes, irContainment.edges, simEvents],
     );
+
+    // Ghost preview of a planned script (S4b, R-JJD-2): synthetic nodes and edges appended to the arrays handed to
+    // React Flow, as the run's events are hidden above. No D-object, never draggable or selectable, ids prefixed and
+    // filtered out of getNodes/getEdges and of every handler below. Same arrays as before when there is no preview.
+    useEffect(() => installScriptPreviewListener(() => (store.getState() as any).idlookup ?? {}), []);
+    const scriptPreview = useScriptPreview(modelid);
+    // The ghosts read the rows, edge labels and edges the canvas has drawn (P-2026-10-25-0110): one more pass
+    // two frames after a new preview, when the DOM shows what the first pass was computed before.
+    const [previewLayoutPass, setPreviewLayoutPass] = useState(0);
+    useEffect(() => {
+        if (!scriptPreview) return;
+        let second = 0;
+        const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => setPreviewLayoutPass((n) => n + 1)); });
+        return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
+    }, [scriptPreview]);
+    const canvasElements = useMemo(() => {
+        if (!scriptPreview) return flowElements;
+        const idlookup = (store.getState() as any).idlookup ?? {};
+        const drawn = drawnNodes(flowElements.nodes, (nodeId) => {
+            const model = idlookup[nodeId]?.model;
+            return typeof model === 'string' && model ? model : undefined;
+        });
+        return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn, scriptPreview.script, measureObstacles(drawn)));
+    }, [flowElements, scriptPreview, previewLayoutPass]);
 
     // Persist the merged session override of a synthetic edge on the hidden
     // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
@@ -2301,20 +2381,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         takeSnapshot();
     }, [takeSnapshot]);
 
-    // Handle drop from palette
-    const onDrop = useCallback(
-        (event: React.DragEvent) => {
-            event.preventDefault();
-
-            const rawType = event.dataTransfer.getData('application/reactflow');
-            if (!rawType) return;
-
+    // Create a palette element at a client point: the body of the palette drop, shared by the
+    // drop (at the cursor) and by a click or Enter/Space on a palette entry (at the canvas centre).
+    const createFromPalette = useCallback(
+        (rawType: string, metaclassId: string | undefined, client: { x: number; y: number }) => {
             // Members must be dropped on nodes, not canvas
             if (['attribute', 'operation', 'literal'].includes(rawType)) return;
 
             const position = screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
+                x: client.x,
+                y: client.y,
             });
 
             // Center node under cursor instead of placing top-left at cursor
@@ -2334,7 +2410,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
                 // M1: objectNode from palette
                 if (rawType === 'objectNode') {
-                    const metaclassId = event.dataTransfer.getData('metaclassId');
                     if (!metaclassId) return;
                     const mi = modeInfoRef.current;
                     const metaclass = mi.allClasses.find(c => c.id === metaclassId);
@@ -2402,7 +2477,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         }
                         if (compatRefs.length > 1) {
                             setPendingContainmentDrop({
-                                position: { x: event.clientX, y: event.clientY },
+                                position: { x: client.x, y: client.y },
                                 flowPosition: position,
                                 containerNodeId: containerNode.id,
                                 childClass: metaclass,
@@ -2545,6 +2620,30 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             setNodes((nds) => [...nds, newNode]);
         },
         [screenToFlowPosition, setNodes, takeSnapshot, isJjomMode, graphId, getNodes, applyMembershipOps, scheduleLayoutSave]
+    );
+
+    // Handle drop from palette
+    const onDrop = useCallback(
+        (event: React.DragEvent) => {
+            event.preventDefault();
+
+            const rawType = event.dataTransfer.getData('application/reactflow');
+            if (!rawType) return;
+
+            createFromPalette(rawType, event.dataTransfer.getData('metaclassId') || undefined, { x: event.clientX, y: event.clientY });
+        },
+        [createFromPalette]
+    );
+
+    // Click or Enter/Space on a palette entry: the drop at the centre of the canvas the overlay leaves
+    // visible, on the drop's grid.
+    const onPaletteActivate = useCallback(
+        (type: string, metaclassId?: string) => {
+            const canvas = editorContainerRef.current;
+            if (!canvas) return;
+            createFromPalette(type, metaclassId, clientCentre(canvas.getBoundingClientRect(), getCanvasRightInset()));
+        },
+        [createFromPalette]
     );
 
     // Allow drop — with M1 cursor feedback for non-rootable classes
@@ -4727,6 +4826,41 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         document.addEventListener('mouseup', onMouseUp);
     }, []);
 
+    // Ghost preview ids (S4b) never reach a handler: their changes, clicks, menus and connections are dropped here.
+    const handleCanvasNodesChange = useCallback((changes: any[]) => {
+        const own = changes.filter((c) => !isPreviewId(c?.id ?? c?.item?.id));
+        if (own.length > 0) handleNodesChange(own);
+    }, [handleNodesChange]);
+    const handleCanvasEdgesChange = useCallback((changes: EdgeChange[]) => {
+        const own = changes.filter((c) => !isPreviewId((c as any)?.id ?? (c as any)?.item?.id));
+        if (own.length > 0) onEdgesChange(own);
+    }, [onEdgesChange]);
+    const handleCanvasConnect = useCallback((connection: Connection) => {
+        if (isPreviewId(connection.source) || isPreviewId(connection.target)) return;
+        onConnect(connection);
+    }, [onConnect]);
+    const isValidCanvasConnection = useCallback((connection: Edge | Connection) =>
+        !isPreviewId(connection.source) && !isPreviewId(connection.target) && isValidConnection(connection),
+    [isValidConnection]);
+    const handleCanvasReconnect = useCallback((oldEdge: Edge, connection: Connection) => {
+        if (isPreviewId(oldEdge.id) || isPreviewId(connection.source) || isPreviewId(connection.target)) return;
+        handleReconnect(oldEdge, connection);
+    }, [handleReconnect]);
+    const handleCanvasNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+        if (!isPreviewId(node.id)) jjomSelection.onNodeClick(event, node);
+    }, [jjomSelection]);
+    const handleCanvasEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+        if (!isPreviewId(edge.id)) onEdgeClick(event, edge);
+    }, [onEdgeClick]);
+    const handleCanvasNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+        if (isPreviewId(node.id)) { event.preventDefault(); return; }
+        onNodeContextMenu(event, node);
+    }, [onNodeContextMenu]);
+    const handleCanvasEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+        if (isPreviewId(edge.id)) { event.preventDefault(); return; }
+        onEdgeContextMenu(event, edge);
+    }, [onEdgeContextMenu]);
+
     // Canvas inner JSX — extracted so the same React Flow tree can be embedded
     // either in the standalone `.editor-v2__canvas` (flow / no-viewpoint) or
     // inside the `.editor-split-flow` pane (split mode).
@@ -4734,25 +4868,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={flowElements.nodes}
-                edges={flowElements.edges}
-                onNodesChange={handleNodesChange}
+                nodes={canvasElements.nodes}
+                edges={canvasElements.edges}
+                onNodesChange={handleCanvasNodesChange}
                 onNodeDrag={handleNodeDragPointer}
                 onNodeDragStop={handleNodeDragPointerEnd}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
+                onEdgesChange={handleCanvasEdgesChange}
+                onConnect={handleCanvasConnect}
                 onConnectEnd={onConnectEnd}
-                isValidConnection={isValidConnection}
-                onReconnect={handleReconnect}
+                isValidConnection={isValidCanvasConnection}
+                onReconnect={handleCanvasReconnect}
                 onReconnectStart={handleReconnectStart}
                 edgesReconnectable={true}
                 reconnectRadius={20}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
-                onNodeContextMenu={onNodeContextMenu}
-                onEdgeContextMenu={onEdgeContextMenu}
-                onNodeClick={jjomSelection.onNodeClick}
-                onEdgeClick={onEdgeClick}
+                onNodeContextMenu={handleCanvasNodeContextMenu}
+                onEdgeContextMenu={handleCanvasEdgeContextMenu}
+                onNodeClick={handleCanvasNodeClick}
+                onEdgeClick={handleCanvasEdgeClick}
                 onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
@@ -4761,7 +4895,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onMove={handleMove}
                 onMoveEnd={saveViewport}
                 fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
-                fitViewOptions={{ padding: fitPadding(), maxZoom: 1 }}
+                fitViewOptions={fitViewOptions}
                 defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
@@ -4820,6 +4954,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 />
                 )}
             </ReactFlow>
+
+            {/* A preview another view drives (the Refactoring tab, P-2026-10-25-0020) keeps its bar there. */}
+            {scriptPreview && !scriptPreview.owner && <PreviewBar preview={scriptPreview} />}
 
             {pendingConnection && (
                 <EdgeTypePopup
@@ -4880,6 +5017,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     undeclaredClasses={irPalette.undeclared}
                     allClasses={modeInfo.allClasses}
                     selectedDObjectId={lastSelectedModelElement ?? null}
+                    onItemActivate={onPaletteActivate}
+                    collapsed={!!scriptPreview?.owner}
                 />
                 <div className="editor-v2__main">
                     <Toolbar
@@ -5000,10 +5139,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     document.body,
                 )}
 
+                {modelid && createPortal(
+                    <ConfirmDialog
+                        isOpen={polymetricGuardOpen}
+                        title="Small metamodel"
+                        message={`This metamodel has fewer than ${POLYMETRIC_MIN_METACLASSES} metaclasses. The polymetric rendering is not informative at this size.`}
+                        confirmText="Open anyway"
+                        cancelText="Cancel"
+                        variant="info"
+                        onConfirm={() => { setPolymetricGuardOpen(false); setPolymetricOpen(true); }}
+                        onCancel={() => setPolymetricGuardOpen(false)}
+                    />,
+                    document.body,
+                )}
+
                 {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
                 {/* Gated (R-SIM-97, R-SIM-99): unmounting clears the run of this model (SimulationPanel's cleanup). */}
                 {modelid && simPill && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
-                {CODEGEN_BUILD && modelid && codePill && <CodegenSlot modelid={modelid} />}
+                {/* R-GEN-23: no Code pill in consumer mode, decided here so codegen/setting.ts imports nothing. */}
+                {CODEGEN_BUILD && modelid && codePill && !isConsumerMode() && <CodegenSlot modelid={modelid} isMetamodel={!isModelMode} />}
 
             </div>
         </EditorContext.Provider>

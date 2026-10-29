@@ -51,9 +51,22 @@ import {
     JjelActionParserResult,
     ASTLocation,
     BinaryOperator,
+    JJEL_KEYWORDS,
 } from '../types';
 import { JjelLexer } from '../lexer';
 import { STATE_RESERVED } from '../stateReserved';
+
+/**
+ * Token types a member name after `.` or `?.` may have: an identifier or any
+ * keyword, so `x.and(y)`, `x.not()`, `self.in` are member access. The
+ * literal keywords `true`, `false`, `null` are not names: `x.true` stays an
+ * error (M12, R-SIM-17).
+ */
+const LITERAL_KEYWORD_TYPES = new Set<JjelTokenType>([JjelTokenType.TRUE, JjelTokenType.FALSE, JjelTokenType.NULL]);
+const MEMBER_NAME_TYPES: ReadonlySet<JjelTokenType> = new Set<JjelTokenType>([
+    JjelTokenType.IDENTIFIER,
+    ...Object.values(JJEL_KEYWORDS).filter(t => !LITERAL_KEYWORD_TYPES.has(t)),
+]);
 
 /**
  * `interpolation` builds `InterpolatedStringExpr` from the tokens of an
@@ -100,6 +113,23 @@ export class JjelParser {
             return { expression: null, errors: this.errors };
         }
         return result;
+    }
+
+    /**
+     * A text body (R-GEN-26): the tokens of a `textBody` lexer, always one
+     * `InterpolatedStringExpr`, also with no hole (one text part) or empty (no
+     * part), never a `Literal`; the input must end with it.
+     */
+    parseTextBody(): JjelParserResult {
+        try {
+            const expression = this.interpolatedString();
+            if (!this.isAtEnd()) {
+                throw this.error(this.peek(), `Unexpected '${this.peek().value}' after the end of the text`);
+            }
+            return { expression, errors: this.errors };
+        } catch (error) {
+            return { expression: null, errors: this.errors };
+        }
     }
 
     /**
@@ -388,8 +418,8 @@ export class JjelParser {
 
     /**
      * postfix = primary (
-     *     . IDENTIFIER (( argList ))?
-     *   | ?. IDENTIFIER (( argList ))?
+     *     . memberName (( argList ))?
+     *   | ?. memberName (( argList ))?
      *   | .[ IDENTIFIER ]
      *   | [ expression ]
      * )*
@@ -399,7 +429,7 @@ export class JjelParser {
 
         while (true) {
             if (this.match(JjelTokenType.DOT)) {
-                const propToken = this.consume(JjelTokenType.IDENTIFIER, "Expected property name after '.'");
+                const propToken = this.consumeMemberName("Expected property name after '.'");
 
                 if (this.match(JjelTokenType.LPAREN)) {
                     // Method call
@@ -422,7 +452,7 @@ export class JjelParser {
                     } as MemberAccessExpr;
                 }
             } else if (this.match(JjelTokenType.QUESTION_DOT)) {
-                const propToken = this.consume(JjelTokenType.IDENTIFIER, "Expected property name after '?.'");
+                const propToken = this.consumeMemberName("Expected property name after '?.'");
 
                 if (this.match(JjelTokenType.LPAREN)) {
                     // Null-safe method call
@@ -932,6 +962,12 @@ export class JjelParser {
         throw this.error(this.peek(), message);
     }
 
+    /** memberName = IDENTIFIER | keyword (see MEMBER_NAME_TYPES). */
+    private consumeMemberName(message: string): JjelToken {
+        if (!this.isAtEnd() && MEMBER_NAME_TYPES.has(this.peek().type)) return this.advance();
+        throw this.error(this.peek(), message);
+    }
+
     private error(token: JjelToken, message: string): Error {
         this.errors.push({
             message,
@@ -1055,6 +1091,31 @@ export function parseTemplate(source: string): JjelParserResult {
 
     const parser = new JjelParser(tokens, { interpolation: true });
     return parser.parseStrict();
+}
+
+/**
+ * Parse a template body in text mode (R-GEN-26): the whole source is the inside
+ * of one interpolated string (lexer option `textBody`), so the result is an
+ * `InterpolatedStringExpr` whose positions are already the body's own. Holes
+ * parse as in `parseTemplate`.
+ */
+export function parseTemplateText(source: string): JjelParserResult {
+    const lexer = new JjelLexer(source, { textBody: true });
+    const { tokens, errors: lexerErrors } = lexer.tokenize();
+
+    if (lexerErrors.length > 0) {
+        return {
+            expression: null,
+            errors: lexerErrors.map((e: JjelLexerError) => ({
+                message: e.message,
+                line: e.line,
+                column: e.column,
+            })),
+        };
+    }
+
+    const parser = new JjelParser(tokens, { interpolation: true });
+    return parser.parseTextBody();
 }
 
 /**

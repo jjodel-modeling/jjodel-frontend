@@ -26,9 +26,10 @@
       "slug": "codegen-pilot",
       "title": "Model-to-text generation pilot (R-GEN)",
       "exit": "the S1..S5 branches are ancestors of alfonso-frontend-jjtl, and S6 is merged or deferred to 3.2.x by a decision row (R-GEN-15)",
-      "state": "open",
+      "state": "closed",
       "openedOn": "2026-10-10",
-      "milestone": 3
+      "milestone": 3,
+      "closedOn": "2026-10-23"
     },
     {
       "slug": "simulator",
@@ -56,11 +57,87 @@
     },
     {
       "slug": "release-3-2",
-      "title": "Release 3.2 for the MDE course: freeze 2026-10-23, live 2026-10-26",
+      "title": "Release 3.2 for the MDE course: freeze 2026-10-27, tag and live 2026-10-29 (Alfonso, 2026-10-23); 3.1 ships first from the beta",
       "exit": "git tag -l 3.2.0 is non-empty and CHANGELOG.md has ## [3.2.0]",
       "state": "open",
       "openedOn": "2026-10-10",
       "milestone": 7
+    },
+    {
+      "slug": "notation-library",
+      "title": "Notation library and project gallery (R-LIB), 3.2 cut: gallery, Templates page, New model dialog, File › New",
+      "exit": "the gallery and Templates slices (S1, S2, L-B1..L-E) and the Templates mode fix P-2026-10-22-1150 are merged into alfonso-frontend-jjtl with their visual check passed; the sealed notations moved to notation-seal (R-LIB-23)",
+      "state": "closed",
+      "openedOn": "2026-10-18",
+      "milestone": 8,
+      "closedOn": "2026-10-22"
+    },
+    {
+      "slug": "tack",
+      "title": "Tack: the lane board extracted into a project-agnostic harness monitor (v0 discovery first)",
+      "exit": "the Tack v0 slices are planned and the extraction moves to its own repository, recorded by a decision row",
+      "state": "open",
+      "openedOn": "2026-10-19",
+      "milestone": 9,
+      "ownerChat": "C-2026-10-19-1748",
+      "ownerSince": "2026-10-19"
+    },
+    {
+      "slug": "shell-ui",
+      "title": "Shell visual consolidation: tokens, density, targets and contrast of topbar, toolbar, rails, status bar and menus",
+      "exit": "the shell lanes of the discovery plan are merged and the shell token layer is recorded by a decision row",
+      "state": "closed",
+      "openedOn": "2026-10-19",
+      "milestone": 10,
+      "closedOn": "2026-10-23"
+    },
+    {
+      "slug": "instance-of",
+      "title": "Ontological instantiation in one model: UML class and object diagrams, creation menu, slots, links (R-OI)",
+      "exit": "the slices of the P-2026-10-20-1835 plan are merged into alfonso-frontend-jjtl and R-OI-1..5 are no longer provisional in docs/decisions.md",
+      "state": "open",
+      "openedOn": "2026-10-20",
+      "ownerChat": "C-2026-10-20-1835",
+      "milestone": 11
+    },
+    {
+      "slug": "hw-notation",
+      "title": "Hardware design notation demonstrator: ISA, datapath and control views, bit-vector values in JjEL, Verilog generation with an external simulator as oracle (R-BV)",
+      "exit": "R-BV-1..6 are no longer provisional in docs/decisions.md, the bit-vector slices are merged into alfonso-frontend-jjtl, and the demonstrator project generates Verilog that an external simulator runs with the same trace as the Jjodel simulator",
+      "state": "open",
+      "openedOn": "2026-10-20",
+      "ownerChat": "C-2026-10-20-2055",
+      "milestone": 12
+    },
+    {
+      "slug": "notation-seal",
+      "title": "Sealed notations after 3.2: seal predicate, reducer guard, Notations page, New model from a sealed notation (R-LIB-1..4, R-LIB-8, R-LIB-22)",
+      "exit": "docs/library/catalog.json marks at least one R-LIB-4 sealed notation as available, the S6 guard runs in enforcing mode with the R-LIB-8 battery green, and the flow «new model from a sealed notation» passes its probe on alfonso-frontend-jjtl",
+      "state": "open",
+      "openedOn": "2026-10-22",
+      "ownerChat": "C-2026-10-22-1050",
+      "ownerSince": "2026-10-22",
+      "milestone": 13
+    },
+    {
+      "slug": "codegen",
+      "title": "Code generation after the pilot: generators as viewpoints, several per project, template authoring (R-GEN)",
+      "exit": "a decision row closes the front once the generator-as-viewpoint slices are merged into alfonso-frontend-jjtl, or a decision row defers them",
+      "state": "open",
+      "openedOn": "2026-10-23",
+      "ownerChat": "C-2026-10-23-2009",
+      "ownerSince": "2026-10-23",
+      "milestone": 14
+    },
+    {
+      "slug": "jjodie-ui",
+      "title": "Jjodie panel redesign: docked panel, script card, live JjEL on selection, ghost preview, editable scripts, script as file (3.3)",
+      "exit": "the jjodie-panel slices are merged into alfonso-frontend-jjtl after the 3.2 release, or a decision row defers them",
+      "state": "open",
+      "openedOn": "2026-10-24",
+      "ownerChat": "C-2026-10-24-0020",
+      "ownerSince": "2026-10-24",
+      "milestone": 15
     }
   ]
 }

@@ -5287,6 +5287,13 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return ret;
     }
 
+    // The inherited LPointerTargetable.get_name reads proxyObject.$name first, which on a model is the
+    // _defaultGetterM1 / _defaultGetterM2 scan of every sub-object's name, and then discards the result
+    // (its className is never 'LValue', model CLAUDE.md §3.13). Same value, without the scan (P-2026-10-21-0030).
+    protected get_name(c: Context): this['name'] {
+        return c.data.name || c.data.className;
+    }
+
     _defaultGetter(c: Context, key: string): any {
         //console.log("$getter 000", {key, ism1:!c.data.isMetamodel, ism:c.data.isMetamodel, data:c.data});
         if (!c.data.isMetamodel) return this._defaultGetterM1(c, key);

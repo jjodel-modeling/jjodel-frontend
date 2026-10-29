@@ -705,8 +705,8 @@ describe('the board: /api and the page', () => {
         expect('progress' in old).toBe(false);
         expect(Object.keys(old).sort()).toEqual([
             'archChat', 'archIn', 'archOpen', 'archOut', 'archTotal',
-            'chain', 'chat', 'chatUrl', 'chatUrlFrom', 'chatUrlVia', 'ctxMax', 'day', 'end', 'id', 'kind', 'lane', 'launcher', 'left',
-            'live', 'minutes', 'outcome', 'phase', 'recent', 'start', 'state', 't', 'tier', 'title', 'tokensIn', 'tokensOut', 'tokensSub',
+            'chain', 'chat', 'chatUrl', 'chatUrlFrom', 'chatUrlVia', 'costUSD', 'ctxMax', 'day', 'direct', 'end', 'id', 'kind', 'kindInfo', 'lane', 'launcher', 'left',
+            'live', 'minutes', 'outcome', 'phase', 'recent', 'sessions', 'start', 'state', 't', 'tier', 'title', 'tokensIn', 'tokensOut', 'tokensSub',
             'tokensTotal', 'work', 'worktree',
         ]);
 
@@ -822,7 +822,7 @@ function pageContext(page: string) {
     const el = (): Ev => ({ innerHTML: '', textContent: '', hidden: false, title: '', className: '', dataset: {}, style: {},
         classList: { toggle() {} }, addEventListener() {}, querySelector: () => el(), querySelectorAll: () => [] });
     const ctx = createContext({
-        document: { getElementById: () => el(), querySelector: () => el(), querySelectorAll: () => [], title: '' }, window: {},
+        document: { getElementById: () => el(), querySelector: () => el(), querySelectorAll: () => [], body: el(), title: '' }, window: {},
         localStorage: { getItem: () => null, setItem() {} }, fetch: () => new Promise(() => {}), setInterval: () => 0, setTimeout: () => 0, clearTimeout() {},
         location: { href: 'http://127.0.0.1/' }, URL,
     });
@@ -836,8 +836,46 @@ function tokenCells(html: string, id: string) {
     const row = html.split('<tr>').find((r) => r.includes('<td class="id">' + id))!;
     const cells = [...row.matchAll(/<td[^>]*>.*?<\/td>/g)].map((m) => m[0]);
     const at = heads.indexOf('In');
-    return { heads, cells: cells.slice(at, at + 5) };
+    // The Cost cell sits between Arch and Ctx max (P-2026-10-18-1750): left out, the helper keeps the five token cells.
+    return { heads, cells: cells.slice(at, at + 6).filter((_, i) => i !== heads.indexOf('Cost') - at) };
 }
+
+describe('the chat link: the trunk prompt after the lane\'s own Request', () => {
+    test('a lane whose input-1.md has no URL takes the trunk prompt\'s, its own URL still wins, a foreign Prompt-ID gives none (third source dropped or unguarded)', async () => {
+        const root = tmp();
+        const repo = tmp();
+        spawnSync('git', ['init', '-q', '-b', 'alfonso-frontend-jjtl', repo]);
+        mkdirSync(join(repo, 'docs', 'prompts'), { recursive: true });
+        const lanes: [string, string, string][] = [
+            ['P-2026-10-06-0900', 'Request: none (written before the backfill)', 'Request: https://claude.ai/code/session_TRUNK1 (Alfonso)'],
+            ['P-2026-10-06-1000', 'Request: https://claude.ai/code/session_OWN', 'Request: https://claude.ai/code/session_TRUNK2'],
+            ['P-2026-10-06-1100', 'Request: none (x)', 'Request: https://claude.ai/code/session_TRUNK3'],
+        ];
+        for (const [id, own, trunk] of lanes) {
+            const file = 'claude_' + id.slice(2, 12) + '_' + id.slice(13) + '_lane.md';
+            // The last lane's trunk file carries another Prompt-ID: not the lane's prompt.
+            const pid = id.endsWith('1100') ? 'P-2026-10-06-1101' : id;
+            writeFileSync(join(repo, 'docs', 'prompts', file), '# Prompt: ' + id + '\n\nPrompt-ID: ' + pid + '\n' + trunk + '\nLane: fast\n\n## COSA\n\nRequest: https://claude.ai/code/session_BODY\n');
+            const dir = join(root, id);
+            mkdirSync(dir);
+            writeFileSync(join(dir, 'input-1.md'), '# Prompt: ' + id + '\n\nPrompt-ID: ' + id + '\n' + own + '\nLane: fast\n');
+            writeFileSync(join(dir, 'prompt.txt'), '/tmp/jjodel-w-gone/docs/prompts/' + file + '\n');
+            writeFileSync(join(dir, 'exit.txt'), '0\n');
+        }
+        spawnSync('git', ['-C', repo, 'add', 'docs']);
+        spawnSync('git', ['-C', repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'prompts']);
+        const table = ['id                  state    outcome  elapsed', ...lanes.map(([id]) => id + '   exited   done     5 min')];
+        writeFileSync(join(root, 'fake-lane-run.mjs'), table.map((l) => 'console.log(' + JSON.stringify(l) + ');').join('\n') + '\n');
+        const port = await listen(root, repo);
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const link = (id: string) => { const r = d.rows.find((x: Ev) => x.id === id); return [r.chatUrl, r.chatUrlFrom]; };
+        expect(link('P-2026-10-06-0900')).toEqual(['https://claude.ai/code/session_TRUNK1', 'prompt']);
+        expect(link('P-2026-10-06-1000')).toEqual(['https://claude.ai/code/session_OWN', 'request']);
+        expect(link('P-2026-10-06-1100')).toEqual(['', '']);
+        const page = await (await fetch('http://127.0.0.1:' + port + '/')).text();
+        expect(page).toContain("prompt:'from the prompt on the trunk'");
+    });
+});
 
 describe('tokens: abbr and tokenGroups', () => {
 
@@ -895,14 +933,14 @@ describe('tokens: /api, the Lanes tab and /api/insights', () => {
         const closed = render(false), running = render(true);
         const cell = (title: string, text: string) => '<td class="lfx-num" title="' + title + '">' + text + '</td>';
         const a = tokenCells(closed, UA);
-        expect(a.heads.slice(a.heads.indexOf('Span'), a.heads.indexOf('Span') + 7)).toEqual(['Span', 'In', 'Out', 'Total', 'Arch', 'Ctx max', 'Worktree']);
+        expect(a.heads.slice(a.heads.indexOf('Span'), a.heads.indexOf('Span') + 8)).toEqual(['Span', 'In', 'Out', 'Total', 'Arch', 'Cost', 'Ctx max', 'Worktree']);
         // A: architect.json closed, delta totalIn 3006 + output 200; the title carries the exact integers and the chat.
         expect(a.cells).toEqual([cell('560005 · subagents: 3516 tokens', '560.0k'), cell('1350', '1.4k'), cell('561355', '561.4k'), cell('in 3006 · out 200 · total 3206 · chat C-2026-01-01-0900', '3.2k'), cell('255003', '255.0k')]);
         expect(tokenCells(closed, 'P-2026-10-05-0800').cells).toEqual([cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a'), cell('', 'n/a')]);
         // B: architect.json without close.
         expect(tokenCells(closed, UB).cells[3]).toBe(cell('open · chat C-2026-01-01-0900', 'open'));
         const c = tokenCells(running, UC);
-        expect(c.heads.slice(c.heads.indexOf('Span'), c.heads.indexOf('Span') + 7)).toEqual(['Span', 'In', 'Out', 'Total', 'Arch', 'Ctx max', 'Left']);
+        expect(c.heads.slice(c.heads.indexOf('Span'), c.heads.indexOf('Span') + 8)).toEqual(['Span', 'In', 'Out', 'Total', 'Arch', 'Cost', 'Ctx max', 'Left']);
         // C: no architect.json.
         expect(c.cells).toEqual([cell('23001 · subagents: 0 tokens', '23.0k'), cell('', 'n/a'), cell('23001', '23.0k'), cell('', 'n/a'), cell('23001', '23.0k')]);
     });
@@ -951,5 +989,312 @@ describe('tokens: /api, the Lanes tab and /api/insights', () => {
         utimesSync(join(root, UA, 'log.jsonl'), t, t);
         expect(await tokensIn(await listen(root, repo))).toBe(560005);
         expect(JSON.parse(readFileSync(file, 'utf8'))[UA].v.tokensIn).toBe(560005);
+    });
+});
+
+// ── the Kind badge (P-2026-10-18-1428): kindDetails on lane folders, and the badge in the Lanes tab ──
+describe('the Kind badge: kindDetails and the Lanes tab', () => {
+    const MERGE_LANE = 'full (merge; direct, lane-run merge --direct)';
+    /** A lane folder holding `files` (name to content, objects as JSON). */
+    const folder = (files: Record<string, unknown>) => {
+        const d = tmp();
+        for (const [k, v] of Object.entries(files)) writeFileSync(join(d, k), typeof v === 'string' ? v : JSON.stringify(v));
+        return d;
+    };
+    const row = (o: Ev = {}): Ev => ({ kind: 'merge', lane: MERGE_LANE, chain: false, tier: '', tokensIn: null, archTotal: null, archOpen: false, ...o });
+    const gates = (vitestOk: boolean) => [
+        { name: 'typecheck', ok: true, detail: '0 errors' },
+        { name: 'vitest', ok: vitestOk, detail: vitestOk ? '9250 tests' : '9237 tests, 1 failed' },
+        { name: 'build', ok: true, detail: 'exit 0' },
+    ];
+    const NO_MODEL = 'In, Out, Total, Ctx max: n/a, no model ran';
+
+    test('a direct merge: scripted, branch into trunk, the gates of result.json, n/a explained for tokens and Arch (direct branch, gates or the n/a lines dropped)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const d = folder({
+            'direct.json': { kind: 'direct', branch: 'ignored-when-result', trunk: 'x' }, 'log.jsonl': '{}\n',
+            'result.json': { kind: 'direct', branch: 'lane-run-routing', trunk: 'alfonso-frontend-jjtl', gates: gates(true), ok: true, outcome: 'hard-stop', reason: null },
+        });
+        expect(kindDetails(row(), kindFacts(d))).toEqual([
+            'merge: brings a lane branch into the trunk',
+            'Lane: ' + MERGE_LANE,
+            'How it ran: scripted: git merge and gates, no model session',
+            'lane-run-routing into alfonso-frontend-jjtl',
+            'Gates: typecheck ok · vitest ok · build ok',
+            'Result: hard-stop',
+            NO_MODEL,
+            'Arch: n/a, the chat records it only for session lanes',
+        ]);
+        // Running, before result.json: branch and trunk from direct.json, the gates not yet there.
+        const run = folder({ 'direct.json': { branch: 'lane-board-kind', trunk: 'alfonso-frontend-jjtl' } });
+        expect(kindDetails(row(), kindFacts(run)).slice(3, 5)).toEqual(['lane-board-kind into alfonso-frontend-jjtl', 'Gates: no result.json yet']);
+    });
+
+    test('a resolved direct merge: the red gate with its detail, the reason, and the text of resolved.txt (resolved.txt or the red detail dropped)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const d = folder({
+            'direct.json': {}, 'resolved.txt': '2026-10-18 13:05 · C-2026-10-17-1757 · vitest red was pre-existing on the trunk\n',
+            'result.json': { branch: 'lane-board-arch', trunk: 'alfonso-frontend-jjtl', gates: gates(false), outcome: 'blocked', reason: 'red gates: vitest; the merge commit stays' },
+        });
+        const lines = kindDetails(row(), kindFacts(d));
+        expect(lines).toContain('Gates: typecheck ok · vitest red (9237 tests, 1 failed) · build ok');
+        expect(lines).toContain('Result: blocked, red gates: vitest; the merge commit stays');
+        expect(lines).toContain('Resolved: 2026-10-18 13:05 · C-2026-10-17-1757 · vitest red was pre-existing on the trunk');
+        expect(lines).toContain(NO_MODEL);
+    });
+
+    test('a direct merge closed after its stop: the outcome at the merge and the closure sha; without closure the outcome alone (closure ignored, or printed without it)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const result = { branch: 'lane-run-routing', trunk: 'alfonso-frontend-jjtl', gates: gates(true), outcome: 'hard-stop', reason: null };
+        const closed = kindFacts(folder({ 'direct.json': {}, 'result.json': { ...result, closure: '6f21730ac6a4daa1187582e4799793135e46d26f' } }));
+        expect(kindDetails(row(), closed)[5]).toBe('Result: hard-stop at the merge, closed by 6f21730ac');
+        const open = kindFacts(folder({ 'direct.json': {}, 'result.json': { ...result, closure: null } }));
+        expect(kindDetails(row(), open)[5]).toBe('Result: hard-stop');
+    });
+
+    test('a session lane with runs.jsonl: tier, model and effort of its last line, the session id, tokens and Arch from their files (last line or effective model ignored)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const d = folder({
+            'runs.jsonl': JSON.stringify({ kind: 'start', tier: 'light', requestedModel: 'claude-sonnet-5-5', effort: 'medium' }) + '\n' +
+                JSON.stringify({ kind: 'resume', session: 'abc-123', tier: 'heavy', requestedModel: 'claude-opus-5-5', effectiveModel: 'claude-opus-5-5[1m]', effort: 'high' }) + '\n',
+            'tier.txt': 'heavy (settings pin): --tier heavy\n', 'architect.json': '{}', 'log.jsonl': '{}\n',
+        });
+        expect(kindDetails(row({ kind: 'fast', lane: 'fast', tier: 'heavy', tokensIn: 1200, archTotal: 300 }), kindFacts(d))).toEqual([
+            'fast: one module, one phase, closed by one docs commit (RC-17)',
+            'Lane: fast',
+            'How it ran: a Claude Code session started by lane-run',
+            'Tier heavy · model claude-opus-5-5[1m] · effort high (runs.jsonl, 2 launches)',
+            'Session: abc-123',
+            'In, Out, Total, Ctx max: the main session, from log.jsonl',
+            'Arch: from architect.json',
+        ]);
+    });
+
+    test('a session lane without runs.jsonl: the tier.txt line, the model of the log, session.txt, and the missing file named for tokens and Arch (missing-file lines collapsed to bare n/a, log model ignored)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const d = folder({ 'tier.txt': 'heavy (settings pin): --tier heavy\n', 'session.txt': '29b9f83e\n', 'log.jsonl': '{}\n' });
+        const r = row({ kind: 'phase2', lane: 'full (harness)', tier: 'heavy' });
+        expect(kindDetails(r, kindFacts(d)).slice(2)).toEqual([
+            'How it ran: a Claude Code session started by lane-run',
+            'Tier: heavy (settings pin): --tier heavy; no runs.jsonl, so model and effort are not recorded',
+            'Session: 29b9f83e',
+            'In, Out, Total, Ctx max: n/a, log.jsonl holds no call with message.usage yet',
+            'Arch: n/a, no architect.json in the lane folder',
+        ]);
+        const bare = kindFacts(folder({}));
+        expect(kindDetails(r, bare).slice(4)).toEqual(['Session: no session.txt', 'In, Out, Total, Ctx max: n/a, no log.jsonl in the lane folder', 'Arch: n/a, no architect.json in the lane folder']);
+        // The model of the log, when the board has one, stands in for the runs.jsonl line.
+        expect(kindDetails({ ...r, model: 'claude-opus-5-5' }, kindFacts(d))[3]).toBe('Tier: heavy (settings pin): --tier heavy · model claude-opus-5-5 (log.jsonl); no runs.jsonl, so effort is not recorded');
+        expect(kindDetails(r, kindFacts(d), false)[5]).toBe('In, Out, Total, Ctx max: n/a, lane-usage.mjs not found beside the board');
+        expect(kindDetails(row({ kind: 'phase2', archOpen: true }), kindFacts(d))[6]).toBe('Arch: open, architect.json not closed by the chat yet');
+    });
+
+    test('an empty kind reads unknown, with the Lane line or its absence; a chain says its lanes carry the kind (unknown fallback dropped)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const f = kindFacts(folder({}));
+        expect(kindDetails(row({ kind: '', lane: 'standard' }), f).slice(0, 2)).toEqual(['unknown: the Lane line matches no kind', 'Lane: standard']);
+        expect(kindDetails(row({ kind: '', lane: '' }), f)[1]).toBe('Lane: no Lane line in the prompt');
+        expect(kindDetails(row({ kind: '', lane: '', chain: true }), f)).toEqual(['chain: lanes run one after the other; each lane has its own kind', 'Lane: none, a chain has no prompt']);
+    });
+
+    test('negative: a session lane never gets the "no model ran" line, a merge run as a session included (the direct test widened to the merge kind)', async () => {
+        const { kindDetails, kindFacts } = await load();
+        const facts = [kindFacts(folder({})), kindFacts(folder({ 'log.jsonl': '{}\n', 'result.json': { gates: gates(true) } })), kindFacts(folder({ 'runs.jsonl': '{"tier":"heavy"}\n' }))];
+        for (const kind of ['merge', 'fast', 'discovery', 'phase2', '']) for (const f of facts) {
+            const lines = kindDetails(row({ kind }), f);
+            expect(lines).not.toContain(NO_MODEL);
+            expect(lines.join('\n')).not.toMatch(/no model ran|scripted/);
+        }
+    });
+
+    test('/api: direct and kindInfo per row; the Lanes tab draws a badge in every Kind cell, direct and the tier after it, the lines in data-kd, Kind 124 px (badge, suffix or width dropped)', async () => {
+        const { port } = await board();
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const by = (id: string) => d.rows.find((r: Ev) => r.id === id);
+        expect(by('P-2026-10-05-1000').direct).toBe(true);
+        expect(by('P-2026-10-05-1000').kindInfo).toContain(NO_MODEL);
+        expect(by('P-2026-10-05-0900').direct).toBe(false);
+        expect(by('P-2026-10-05-0900').kindInfo).not.toContain(NO_MODEL);
+        const page = await (await fetch('http://127.0.0.1:' + port + '/')).text();
+        expect(page).toContain('<div id="kd" role="tooltip" hidden></div>');
+        const ctx = pageContext(page);
+        for (const live of [true, false]) {
+            const html = runInContext('table(' + JSON.stringify(d.rows.filter((r: Ev) => r.live === live)) + ',' + live + ')', ctx) as string;
+            const heads = [...html.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
+            const widths = [...html.matchAll(/<col( style="width:(\d+)px")?>/g)].map((m) => m[2]);
+            expect(widths[heads.indexOf('Kind')]).toBe('124');
+            for (const tr of html.split('<tr>').slice(2)) {
+                const kindTd = [...tr.matchAll(/<td[^>]*>.*?<\/td>/g)].map((m) => m[0])[heads.indexOf('Kind')];
+                expect(kindTd).toMatch(/^<td class="lfx-cut"><button type="button" class="pill kb k-(merge|fast|discovery|phase2|unknown|chain)" data-id="[^"]+" data-kd="[^"]+" aria-describedby="kd">/);
+            }
+        }
+        const live = runInContext('table(' + JSON.stringify(d.rows.filter((r: Ev) => r.live)) + ',true)', ctx) as string;
+        const direct = live.split('<tr>').find((t) => t.includes('P-2026-10-05-1000'))!;
+        expect(direct).toContain('class="pill kb k-merge"');
+        expect(direct).toContain('<span class="ksx"> · direct</span>');
+        expect(direct).toContain('data-kd="merge: brings a lane branch into the trunk&#10;Lane: full (merge; direct)&#10;How it ran: scripted');
+        expect(live.split('<tr>').find((t) => t.includes('P-2026-10-05-0900'))).toContain('class="pill kb k-phase2"');
+        expect(live.split('<tr>').find((t) => t.includes('P-2026-10-05-0900'))).toContain('<span class="ksx"> · heavy</span>');
+    });
+});
+
+// ── cost (P-2026-10-18-1750): spend per day by turn, the Cost column and the day totals ──
+describe('cost: spendByDay and costEvents', () => {
+    const at = (d: number, h: number, m: number) => new Date(2026, 9, d, h, m).getTime();
+    const turn = (e: number) => ({ s: e - 60000, e });
+
+    test('the delta of an event is the increase over the previous event of the log, each on the day its turn ended (the cumulative value taken as a delta, or the day of another turn)', async () => {
+        const { spendByDay } = await load();
+        const turns = [turn(at(17, 10, 0)), turn(at(18, 10, 0)), turn(at(18, 12, 0))];
+        const r = spendByDay([{ usd: 1, turn: 0 }, { usd: 3, turn: 1 }, { usd: 6, turn: 2 }], turns);
+        expect(Object.keys(r).sort()).toEqual(['2026-10-17', '2026-10-18']);
+        expect(r['2026-10-17']).toBeCloseTo(1, 9);
+        expect(r['2026-10-18']).toBeCloseTo(5, 9);
+    });
+
+    test('a decrease of total_cost_usd is a new session and the delta is the value itself (the decrease clamped to zero, or subtracted)', async () => {
+        const { spendByDay } = await load();
+        const turns = [turn(at(18, 10, 0)), turn(at(18, 11, 0)), turn(at(18, 12, 0))];
+        const r = spendByDay([{ usd: 5, turn: 0 }, { usd: 2, turn: 1 }, { usd: 3, turn: 2 }], turns);
+        // 5, then a new session at 2 (+2), then 3 (+1).
+        expect(r['2026-10-18']).toBeCloseTo(8, 9);
+    });
+
+    test('an event that closes no turn lands on the day of the preceding turn, not of the next (notification attached to the following turn)', async () => {
+        const { spendByDay } = await load();
+        const turns = [turn(at(17, 22, 0)), turn(at(18, 9, 0))];
+        // costEvents gives a notification the index of the turn before it.
+        const r = spendByDay([{ usd: 1, turn: 0 }, { usd: 1.5, turn: 0 }, { usd: 3, turn: 1 }], turns);
+        expect(r['2026-10-17']).toBeCloseTo(1.5, 9);
+        expect(r['2026-10-18']).toBeCloseTo(1.5, 9);
+    });
+
+    test('a turn that ends after local midnight puts its delta on the next day (the day of the turn start, or a UTC day)', async () => {
+        const { spendByDay } = await load();
+        const turns = [{ s: at(17, 23, 30), e: at(18, 0, 20) }];
+        expect(spendByDay([{ usd: 2, turn: 0 }], turns)).toEqual({ '2026-10-18': 2 });
+        expect(spendByDay([{ usd: 2, turn: 0 }], [{ s: at(17, 23, 0), e: at(17, 23, 59) }])).toEqual({ '2026-10-17': 2 });
+    });
+
+    test('a lane without input files has one turn, every event lands on its end (an index past the last turn dropped)', async () => {
+        const { spendByDay } = await load();
+        const r = spendByDay([{ usd: 1, turn: 0 }, { usd: 2, turn: 1 }, { usd: 4, turn: 2 }], [turn(at(18, 15, 0))]);
+        expect(r).toEqual({ '2026-10-18': 4 });
+    });
+
+    test('no cost events, or no turns, give an empty object (a zero entry for a day)', async () => {
+        const { spendByDay } = await load();
+        expect(spendByDay([], [turn(at(18, 15, 0))])).toEqual({});
+        expect(spendByDay([{ usd: 1, turn: 0 }], [])).toEqual({});
+        expect(spendByDay([{ usd: 0, turn: 0 }], [turn(at(18, 15, 0))])).toEqual({});
+    });
+
+    test('costEvents: a turn without a cost still advances the turn index, a notification takes the preceding turn, init events count the sessions (index counted over cost events only)', async () => {
+        const { costEvents } = await load();
+        const log = [
+            { type: 'system', subtype: 'init' },
+            { type: 'result', num_turns: 3, result: 'a', total_cost_usd: 1 },
+            { type: 'result', num_turns: 2, result: 'b' },
+            { type: 'result', num_turns: 0, result: '', origin: { kind: 'task-notification' }, total_cost_usd: 1.25 },
+            { type: 'system', subtype: 'init' },
+            { type: 'result', num_turns: 4, result: 'c', total_cost_usd: 0.5 },
+        ].map((e) => JSON.stringify(e)).join('\n') + '\n';
+        expect(costEvents(Buffer.from(log))).toEqual({ events: [{ usd: 1, turn: 0 }, { usd: 1.25, turn: 1 }, { usd: 0.5, turn: 2 }], max: 1.25, sessions: 2 });
+        expect(costEvents(Buffer.from(''))).toEqual({ events: [], max: null, sessions: 0 });
+        expect(costEvents(null)).toEqual({ events: [], max: null, sessions: 0 });
+    });
+});
+
+describe('cost: /api, the Lanes tab and the day totals', () => {
+    const CL = 'P-2026-01-03-1000', CN = 'P-2026-01-03-1100';
+    const day = (d: Date) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const n = new Date();
+    const yesterday = day(new Date(n.getFullYear(), n.getMonth(), n.getDate() - 1)), today = day(n);
+
+    /** CL: two sessions, turn 1 ends 23:50:01 yesterday (cost 1.0), turn 2 ends 00:10:01 today (cumulative 2.5 after a restore). CN: no cost. */
+    function costBoard() {
+        return board((table, root) => {
+            const lane = (id: string, log: Ev[], inputs: Date[]) => {
+                mkdirSync(join(root, id));
+                inputs.forEach((d, i) => { const p = join(root, id, 'input-' + (i + 1) + '.md'); writeFileSync(p, '# Prompt: cost\n\nPrompt-ID: ' + id + '\nLane: fast\n'); utimesSync(p, d.getTime() / 1000, d.getTime() / 1000); });
+                writeFileSync(join(root, id, 'log.jsonl'), log.map((e) => JSON.stringify(e)).join('\n') + '\n');
+                writeFileSync(join(root, id, 'exit.txt'), '0\n');
+            };
+            const y = new Date(n.getFullYear(), n.getMonth(), n.getDate() - 1, 23, 50), t = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 0, 10);
+            lane(CL, [
+                { type: 'system', subtype: 'init', model: 'claude-opus-5-5' },
+                { type: 'result', duration_ms: 1000, num_turns: 2, result: 'Outcome: hard-stop', total_cost_usd: 1 },
+                { type: 'system', subtype: 'init', model: 'claude-opus-5-5' },
+                { type: 'result', duration_ms: 1000, num_turns: 2, result: 'Outcome: done', total_cost_usd: 2.5 },
+            ], [y, t]);
+            lane(CN, [{ type: 'result', duration_ms: 1000, num_turns: 2, result: 'Outcome: done' }], [y]);
+            return [...table, CN + '   exited   done     1 min', CL + '   exited   done     20 min'].map((l) => 'console.log(' + JSON.stringify(l) + ');').join('\n') + '\n';
+        });
+    }
+
+    test('/api: costUSD and sessions per lane (null without a cost), spendByDay summed over the lanes by the day each turn ended (max replaced by the last event, or the day of the lane start)', async () => {
+        const { port } = await costBoard();
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const r = (id: string) => d.rows.find((x: Ev) => x.id === id);
+        expect([r(CL).costUSD, r(CL).sessions]).toEqual([2.5, 2]);
+        expect(r(CN).costUSD).toBeNull();
+        expect(r('P-2026-10-05-0800').costUSD).toBeNull();
+        expect(d.spendByDay[yesterday]).toBeCloseTo(1, 9);
+        expect(d.spendByDay[today]).toBeCloseTo(1.5, 9);
+    });
+
+    test('the Lanes tab: a Cost column after Arch in both variants, $ and two decimals, <$0.01 below a cent, empty without a cost, value and sessions in the title (column dropped or moved)', async () => {
+        const { port } = await costBoard();
+        const ctx = pageContext(await (await fetch('http://127.0.0.1:' + port + '/')).text());
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const rows = d.rows.filter((r: Ev) => !r.live);
+        const html = runInContext('table(' + JSON.stringify(rows) + ',false)', ctx) as string;
+        const heads = [...html.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
+        expect(heads.slice(heads.indexOf('Arch'), heads.indexOf('Arch') + 3)).toEqual(['Arch', 'Cost', 'Ctx max']);
+        expect(html).toContain('<col style="width:64px">');
+        const cell = (id: string) => { const row = html.split('<tr>').find((x) => x.includes('<td class="id">' + id))!; return [...row.matchAll(/<td[^>]*>.*?<\/td>/g)].map((m) => m[0])[heads.indexOf('Cost')]; };
+        expect(cell(CL)).toBe('<td class="lfx-num" title="$2.5 · 2 sessions">$2.50</td>');
+        expect(cell(CN)).toBe('<td class="lfx-num" title=""></td>');
+        const small = { ...rows.find((r: Ev) => r.id === CL), costUSD: 0.004, sessions: 1 };
+        const one = runInContext('table(' + JSON.stringify([small]) + ',false)', ctx) as string;
+        expect(one).toContain('<td class="lfx-num" title="$0.004 · 1 session">&lt;$0.01</td>');
+        const live = runInContext('table(' + JSON.stringify([{ ...small, live: true, state: 'running' }]) + ',true)', ctx) as string;
+        expect([...live.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1])).toContain('Cost');
+    });
+
+    test('the header tip and the two day totals carry the wording of the prompt, and the day total is read from spendByDay, not summed from the rows (tip changed, or total summed from the shown rows)', async () => {
+        const { port } = await costBoard();
+        const page = await (await fetch('http://127.0.0.1:' + port + '/')).text();
+        const ctx = pageContext(page);
+        const d = await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const html = runInContext('table(' + JSON.stringify(d.rows.filter((r: Ev) => !r.live)) + ',false)', ctx) as string;
+        expect(html).toContain('title="List price at API rates: total_cost_usd as Claude Code reports it, cumulative over the lane\'s sessions. Not what the subscription costs. The architect chat is not included. Subagents included."');
+        runInContext('spendByDay=' + JSON.stringify({ '2026-01-03': 7.126, [today]: 0.004 }), ctx);
+        expect(runInContext('daySpend("2026-01-03")', ctx)).toBe('$7.13');
+        expect(runInContext('daySpend("' + today + '")', ctx)).toBe('<$0.01');
+        expect(runInContext('daySpend("2025-01-01")', ctx)).toBe('');
+        expect(page).toContain('Spend on this day at API list price, each turn counted on the day it ended. The architect chat is not included.');
+    });
+
+    test('the usage cache keeps the cost events beside the tokens: a log of the same size and mtime is not read again, a changed mtime is (cost cache dropped)', async () => {
+        const { port, root, repo } = await costBoard();
+        const t0 = (Date.now() - 2 * HOUR) / 1000;
+        utimesSync(join(root, CL, 'log.jsonl'), t0, t0);
+        await (await fetch('http://127.0.0.1:' + port + '/api')).json();
+        const file = join(root, 'usage-cache.json');
+        const cost = async (p: number) => (await (await fetch('http://127.0.0.1:' + p + '/api')).json()).rows.find((r: Ev) => r.id === CL).costUSD;
+        const plant = () => { const c = JSON.parse(readFileSync(file, 'utf8')); c['cost:' + CL].v.max = 9; writeFileSync(file, JSON.stringify(c)); };
+        plant();
+        expect(await cost(await listen(root, repo))).toBe(9);
+        // A miss on the size alone: the mtime put back to what the cache holds.
+        plant();
+        appendFileSync(join(root, CL, 'log.jsonl'), '\n');
+        utimesSync(join(root, CL, 'log.jsonl'), t0, t0);
+        expect(await cost(await listen(root, repo))).toBe(2.5);
+        // A miss on the mtime alone.
+        plant();
+        const t = (Date.now() - HOUR) / 1000;
+        utimesSync(join(root, CL, 'log.jsonl'), t, t);
+        expect(await cost(await listen(root, repo))).toBe(2.5);
     });
 });

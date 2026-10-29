@@ -38,6 +38,7 @@
 
 import type { ASTLocation, BinaryExpr, JjelExpression } from '../../jjel/types/ast';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
+import { literalArgument } from './stateAttributesCodec';
 
 export type SubsetSeverity = 'error' | 'warning' | 'not-verifiable';
 
@@ -77,6 +78,13 @@ export const NOT_VERIFIABLE_METHODS: ReadonlySet<string> = new Set([
     // string
     'matches',
 ]);
+
+/**
+ * Bit-vector methods with no nuXmv word operator (R-BV-8); every other one has one (`bvToSmv.ts`). Apart from
+ * the list above, which holds the methods of the four groups. `toNumber` has none either, but it is also a
+ * string method, and a shared name is never flagged.
+ */
+const NOT_VERIFIABLE_BITVECTOR_METHODS: ReadonlySet<string> = new Set(['toVerilog']);
 
 const SEVERITY: Record<SubsetCode, SubsetSeverity> = {
     'E-NODE': 'error', 'E-DATA': 'error', 'E-SHADOW': 'error', 'E-EAGER': 'error', 'E-NOELSE': 'error',
@@ -304,11 +312,13 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             return;
         case 'MethodCall':
         case 'NullSafeMethodCall':
-            if (NOT_VERIFIABLE_METHODS.has(e.method)) report(w, 'T-METHOD', `Not verifiable: \`${e.method}\` has no translation to nuXmv.`, e);
+            if (NOT_VERIFIABLE_METHODS.has(e.method) || NOT_VERIFIABLE_BITVECTOR_METHODS.has(e.method)) report(w, 'T-METHOD', `Not verifiable: \`${e.method}\` has no translation to nuXmv.`, e);
             plain(e.object);
             e.args.forEach(asArg);
             return;
         case 'FunctionCall':
+            // A bit-vector constant (R-BV-8): `bits(w, n)` / `sbits(w, n)` with literal arguments is a nuXmv word constant.
+            if ((e.name === 'bits' || e.name === 'sbits') && e.args.every(a => literalArgument(a) !== null)) return;
             report(w, 'E-CALL', `\`${e.name}(…)\` calls a function, and guards have none: builtins such as now() are not available.`, e);
             e.args.forEach(asArg);
             return;

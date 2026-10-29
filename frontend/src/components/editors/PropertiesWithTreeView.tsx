@@ -1078,7 +1078,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                                     aria-expanded={nodeOpen}
                                 >
                                     <i className={`bi bi-chevron-${nodeOpen ? 'down' : 'right'}`} aria-hidden="true" />
-                                    <span className="properties-node-section__label">NODE</span>
+                                    <span className="properties-node-section__label">Node</span>
                                     <span className="properties-node-section__rule" aria-hidden="true" />
                                 </button>
                                 {nodeOpen && (

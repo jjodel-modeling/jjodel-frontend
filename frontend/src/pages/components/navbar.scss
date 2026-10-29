@@ -480,9 +480,9 @@
 
   &>ul{
     background-color: var(--color-bg-elevated);
-    box-shadow: var(--shadow-dropdown);
-    border: 1px solid var(--color-border-primary);
-    border-radius: var(--radius-lg);
+    box-shadow: var(--shell-menu-shadow);
+    border: 1px solid var(--shell-border);
+    border-radius: var(--shell-radius-menu);
     padding: var(--space-2);
     list-style: none;
   }
@@ -506,10 +506,23 @@
     padding: var(--space-1) 0;
   }
 
+  /* Section label inside a submenu (File › New › Model: CONFORMING TO): a heading, not an item. */
+  ul li.section-label {
+    margin: 0 var(--space-1);
+    padding: var(--space-2) var(--space-3) var(--space-1);
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    cursor: default;
+    user-select: none;
+  }
+
   ul li hr {
     position: relative;
     border: none;
-    border-top: 1px solid var(--color-border-primary);
+    border-top: 1px solid var(--shell-border);
     width: calc(100% - var(--space-3));
     left: calc(var(--space-1) + var(--space-half));
     margin: var(--space-1) 0;
@@ -524,7 +537,7 @@
     width: calc(100% - var(--space-2));
     margin: 0 var(--space-1);
     padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-md);
+    border-radius: var(--shell-radius-control);
     transition: var(--transition-fast);
   }
 
@@ -582,7 +595,7 @@
 
   .highlight{
     /* Use consistent height */
-    min-height: 30px;
+    min-height: var(--shell-menu-item-height);
     display: flex;
     align-items: center;
 
@@ -615,7 +628,7 @@
 
     &:hover, &:focus-within{
       >label{
-        border-radius: var(--radius-md);
+        border-radius: var(--shell-radius-control);
         background-color: var(--color-accent);
         color: white;
 
@@ -644,14 +657,14 @@
       align-items: center;
 
       /* Use consistent padding with design tokens */
-      padding: var(--space-2) var(--space-3);
+      padding: 0 var(--space-3);
       width: 100%;
 
       /* Typography */
       font-family: var(--font-sans);
       font-size: var(--text-sm);
       font-weight: var(--font-normal);
-      color: var(--color-text-primary);
+      color: var(--shell-text-1);
 
       /* Transition */
       transition: var(--transition-fast);
@@ -690,7 +703,7 @@
           background: rgba(0, 0, 0, 0.06);
           border: 1px solid rgba(0, 0, 0, 0.1);
           border-radius: 4px;
-          color: #6b7280;
+          color: var(--shell-text-3);
           white-space: nowrap;
           line-height: 1.2;
           box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
@@ -853,7 +866,7 @@ $transition-menu: 150ms ease;
   color: $color-text-menu;
   background: transparent;
   border: none;
-  border-radius: $menu-item-radius;
+  border-radius: var(--shell-radius-control);
   cursor: pointer;
   transition: all $transition-menu;
 
@@ -1022,6 +1035,39 @@ $transition-menu: 150ms ease;
     transform: translateX(0);
     pointer-events: auto;
   }
+}
+
+// User menu panel on the shell menu treatment (S5). menu.scss paints it; the
+// portal puts it on document.body, outside every shell root, so each var() carries
+// the value the shell token aliases. `body >` outranks the (0,1,0)/(0,2,1) rules of
+// menu.scss whatever the load order. Density follows html[data-mode] (R-SHELL-2).
+body > .dropdown.dropdown--portal {
+  border: 1px solid var(--shell-border, var(--color-panel-border));
+  border-radius: var(--shell-radius-menu, var(--radius-md));
+  box-shadow: var(--shell-menu-shadow, 0 4px 12px rgba(15, 23, 42, 0.08));
+
+  > div.item {
+    height: var(--shell-menu-item-height, 36px);
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: var(--shell-radius-control, var(--radius-sm));
+  }
+
+  .user-header {
+    border-bottom-color: var(--shell-border, var(--color-panel-border));
+
+    .user-email {
+      color: var(--shell-text-3, var(--color-text-placeholder));
+    }
+  }
+
+  hr.divisor {
+    border-top-color: var(--shell-border, var(--color-panel-border));
+  }
+}
+
+html[data-mode="advanced"] body > .dropdown.dropdown--portal > div.item {
+  height: var(--shell-menu-item-height, 28px);
 }
 
 // Header Right Section
@@ -1452,7 +1498,7 @@ $transition-menu: 150ms ease;
 .nav-container.appbar {
   height: var(--jj-appbar-height) !important;
   padding: 0 16px 0 20px !important;
-  border-bottom: 0.5px solid var(--color-border-tertiary, #e2e8f0);
+  border-bottom: 1px solid var(--shell-border);
   box-shadow: none !important;
 
   // Compact logo
@@ -1475,11 +1521,12 @@ $transition-menu: 150ms ease;
   & span.menu-title {
     font-size: 12px !important;
     padding: 6px 8px !important;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--shell-text-2);
     font-weight: 500;
+    border-radius: var(--shell-radius-control);
 
     &:hover {
-      color: var(--color-text-primary);
+      color: var(--shell-text-1);
       background-color: var(--color-bg-secondary);
     }
   }
@@ -1489,6 +1536,7 @@ $transition-menu: 150ms ease;
     width: 28px;
     height: 28px;
     font-size: 11px;
+    font-weight: 500;
   }
 
   .user {
@@ -1540,10 +1588,10 @@ $transition-menu: 150ms ease;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
-  color: var(--color-text-primary);
+  color: var(--shell-text-1);
   background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 6px;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius-control);
   cursor: pointer;
 
   &:hover:not(:disabled) { border-color: var(--color-accent); }
@@ -1576,7 +1624,7 @@ $transition-menu: 150ms ease;
   flex-shrink: 0;
   cursor: pointer;
   transition: background 0.15s ease;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--shell-radius-control);
 
 
   &:hover {
@@ -1595,7 +1643,7 @@ $transition-menu: 150ms ease;
 .project-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-primary, #111418);
+  color: var(--shell-text-1);
   white-space: nowrap;
   max-width: 160px;
   overflow: hidden;
@@ -1623,7 +1671,7 @@ $transition-menu: 150ms ease;
   padding: 6px 10px;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--shell-radius-control);
   cursor: pointer;
   transition: all 150ms ease;
   flex-shrink: 1;
@@ -1686,9 +1734,9 @@ $transition-menu: 150ms ease;
     width: 16px;
     height: 16px;
     min-width: 16px;
-    border-radius: 3px;
-    font-size: 9px;
-    font-weight: 700;
+    border-radius: var(--shell-radius-control);
+    font-size: var(--shell-font-size-min);
+    font-weight: 500;
     flex-shrink: 0;
     line-height: 1;
     transition: width 0.15s ease, height 0.15s ease, min-width 0.15s ease, opacity 0.15s ease;
@@ -1733,7 +1781,7 @@ $transition-menu: 150ms ease;
   &__name {
     font-size: 12px;
     font-weight: 400;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--shell-text-2);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1746,13 +1794,13 @@ $transition-menu: 150ms ease;
     width: 14px;
     height: 14px;
     min-width: 14px;
-    font-size: 10px;
-    color: var(--color-text-placeholder, #94a3b8);
+    font-size: var(--shell-font-size-min);
+    color: var(--shell-text-3);
     opacity: 0;
     transition: opacity 150ms ease, color 150ms ease;
     flex-shrink: 0;
     line-height: 1;
-    border-radius: 2px;
+    border-radius: var(--shell-radius-control);
 
     &:hover {
       color: #ef4444;
@@ -1767,18 +1815,18 @@ $transition-menu: 150ms ease;
   align-items: center;
   padding: 3px 8px;
   background: var(--color-bg-secondary, #f1f5f9);
-  border: 0.5px solid var(--color-border-tertiary, #e2e8f0);
-  border-radius: 6px;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius-control);
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--shell-text-2);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
 
   &:hover {
     border-color: var(--color-text-tertiary, #94a3b8);
-    color: var(--color-text-primary, #475569);
+    color: var(--shell-text-1);
   }
 }
 
@@ -1821,7 +1869,7 @@ $transition-menu: 150ms ease;
   flex-shrink: 0;
   margin-left: 2px;
 
-  border-left: 0.5px solid var(--color-border-secondary, #e2e8f0);
+  border-left: 1px solid var(--shell-border);
   padding-left: 8px;
   margin-left: 8px;
 
@@ -1837,7 +1885,7 @@ $transition-menu: 150ms ease;
     //border: 0.5px solid var(--color-border-secondary, #e2e8f0);
     background-color: transparent;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--shell-radius-control);
     font-size: 16px;
     line-height: 1;
     color: var(--color-text-secondary, #64748b);
@@ -2022,7 +2070,7 @@ $transition-menu: 150ms ease;
   align-items: center;
   gap: 1px;
   padding: 3px;
-  border-radius: 10px;
+  border-radius: var(--shell-radius-control);
   background-color: #f1f5f9;
   flex-shrink: 0;
 
@@ -2030,24 +2078,26 @@ $transition-menu: 150ms ease;
     appearance: none;
     border: none;
     background: transparent;
-    color: #94a3b8;
+    color: var(--shell-text-3);
     font: inherit;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.2px;
     line-height: 1;
     padding: 4px 10px;
-    border-radius: 8px;
+    height: var(--shell-hit);
+    margin-block: -2px;
+    border-radius: var(--shell-radius-control);
     cursor: pointer;
     transition: background 150ms ease, color 150ms ease;
 
     &:hover:not(.appbar-mode-switch__opt--active) {
-      color: #475569;
+      color: var(--shell-text-2);
     }
 
     &--active {
       background-color: #ffffff;
-      color: #1e293b;
+      color: var(--shell-text-1);
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.10);
     }
   }
@@ -2065,4 +2115,37 @@ $transition-menu: 150ms ease;
 // Ensure content fills the full height when models tab bar is hidden
 .not-strip .dock-panel.dock-style-models > .dock-content-holder {
   height: 100% !important;
+}
+
+// ============================================
+// APP BAR — SHELL HIT BOXES AND MUTED ICONS (S2, R-SHELL-5)
+// ============================================
+// The tab close glyph is 14x14 inside a 30px tab: a transparent 24x24 box centred
+// on it carries the click without moving the tab. The tab clips its overflow, and
+// the box stays inside it (3px above and below, 5px into the gap and the padding).
+nav.nav-container .appbar-tab__close {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--shell-hit);
+    height: var(--shell-hit);
+    transform: translate(-50%, -50%);
+  }
+}
+
+// Advanced only: the icon-only buttons recede to the third text level and come
+// back on hover and keyboard focus. The glyph is painted by the global `i.bi`
+// rule, so the colour goes on the <i>, as in the editor toolbar (S4).
+html[data-mode="advanced"] nav.nav-container {
+  .new-document__btn:not(:disabled) i.bi {
+    color: var(--shell-text-3);
+  }
+
+  .new-document__btn:is(:hover, :focus-visible):not(:disabled) i.bi {
+    color: var(--shell-text-1);
+  }
 }

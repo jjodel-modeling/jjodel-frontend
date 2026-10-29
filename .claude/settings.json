@@ -61,9 +61,28 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/frontend/scripts/hooks/critical-zone.mjs\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/frontend/scripts/hooks/rule-trigger.mjs\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/frontend/scripts/hooks/context-ceiling.mjs\"",
+            "timeout": 10
           }
         ]
       }
     ]
+  },
+  "env": {
+    "JJODEL_LIGHT_MODEL": "claude-sonnet-5-5",
+    "JJODEL_REPORT_MODEL": "claude-haiku-5-5"
   }
 }

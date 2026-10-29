@@ -4,16 +4,19 @@
  *
  * In a worker, before anything else: capture `postMessage`, then remove the
  * network globals of `NETWORK_GLOBALS` from the global scope and its prototype
- * chain (`shadowNetwork`), and `postMessage` itself, so the generated code can
- * neither reach the network through them nor forge a reply. Then post `ready`:
+ * chain (`shadowNetwork`), then the names of `ESCAPE_GLOBALS` and the
+ * navigator's `storage` (`shadowEscapes`, R-GEN-30), and `postMessage` itself,
+ * so the generated code can neither reach the network through them nor forge a
+ * reply. Then post `ready`:
  * the main thread starts the program's clock on it and sends the request. On
  * that one message, load the code as an ES module from a `blob:` URL and run
  * the calls in order (`executeRun`). The main thread terminates the worker at
  * the timeout and after the reply: one worker per run (`runner.ts`).
  *
  * A worker has no DOM by construction. The network removal is best effort, not
- * a security boundary (U6): a dynamic `import()`, a nested `Worker` or the
- * prototype of the scope can still reach out, and a hard guarantee needs a CSP
+ * a security boundary (U6): a dynamic `import()` can still reach out (a nested
+ * `Worker`, `caches` and `navigator.storage` are removed since S7), and a hard
+ * guarantee needs a CSP
  * on this script's response (`connect-src 'none'`), which is a deployment
  * matter outside the pilot's files. If a name cannot be removed, nothing runs.
  *
@@ -28,6 +31,15 @@ import type { RunRequest, WorkerReply } from './protocol';
 export const NETWORK_GLOBALS = [
     'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'importScripts', 'WebTransport', 'BroadcastChannel', 'indexedDB',
 ] as const;
+
+/**
+ * The globals that start a fresh scope with the network or fetch through a cache
+ * (discovery 2026-10-23 §4.3, R-GEN-30): removed like the network ones.
+ */
+export const ESCAPE_GLOBALS = ['Worker', 'SharedWorker', 'caches'] as const;
+
+/** The members of the scope's `navigator` that reach persistent storage (R-GEN-30). */
+export const NAVIGATOR_MEMBERS = ['storage'] as const;
 
 /**
  * Removes each name from `scope` and from every object of its prototype chain;
@@ -62,6 +74,18 @@ export function shadowGlobals(scope: object, names: readonly string[]): string[]
 /** `shadowGlobals` over `NETWORK_GLOBALS`. */
 export function shadowNetwork(scope: object): string[] {
     return shadowGlobals(scope, NETWORK_GLOBALS);
+}
+
+/**
+ * `shadowGlobals` over `ESCAPE_GLOBALS` on `scope`, then over `NAVIGATOR_MEMBERS`
+ * on its `navigator` and that object's prototype chain. Returns the names still
+ * reached, the navigator's as `navigator.<name>`.
+ */
+export function shadowEscapes(scope: object): string[] {
+    const left = shadowGlobals(scope, ESCAPE_GLOBALS);
+    const nav = (scope as Record<string, unknown>).navigator;
+    if (nav === null || typeof nav !== 'object') return left;
+    return [...left, ...shadowGlobals(nav, NAVIGATOR_MEMBERS).map(name => `navigator.${name}`)];
 }
 
 /** Loads the code as an ES module: the URL at once, so a throw while loading can be placed; the namespace later. */
@@ -142,7 +166,7 @@ function inWorker(g: any): boolean {
 export function bootWorker(scope: WorkerScope, load: ModuleLoader = blobLoader): void {
     // Captured before the code can touch it, then removed, so only these messages leave the worker.
     const post = scope.postMessage.bind(scope);
-    const unshadowed = [...shadowNetwork(scope), ...shadowGlobals(scope, ['postMessage'])];
+    const unshadowed = [...shadowNetwork(scope), ...shadowEscapes(scope), ...shadowGlobals(scope, ['postMessage'])];
     let started = false;
     scope.onmessage = (ev: MessageEvent) => {
         if (started) return;

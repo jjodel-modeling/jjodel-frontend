@@ -23,6 +23,7 @@ import {
     Log,
 } from '../../joiner';
 import DockManager from '../abstract/DockManager';
+import { deleteProjectScript, readProjectScripts, renameProjectScript } from '../scripts/scriptFiles';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
@@ -33,6 +34,7 @@ import EndpointsWindow, { type EndpointsTab } from './EndpointsWindow';
 import { EcoreService, XMIService, JsonModelService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
 import { NewViewpointDialog } from './NewViewpointDialog';
+import { NewModelDialog } from '../NewModelDialog/NewModelDialog';
 import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
 import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
@@ -233,6 +235,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     );
     const [showNewTransformationDialog, setShowNewTransformationDialog] = useState(false);
     const [showNewViewpointDialog, setShowNewViewpointDialog] = useState(false);
+    // New model dialog (P-2026-10-19-1618): `undefined` when closed, else the metamodel to preselect.
+    const [newModelDialog, setNewModelDialog] = useState<{ metamodelId?: string } | undefined>(undefined);
 
     // Editing states
     const [isEditingName, setIsEditingName] = useState(false);
@@ -448,6 +452,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         const handler = () => setShowNewTransformationDialog(true);
         window.addEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
         return () => window.removeEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
+    }, []);
+
+    // Open New model dialog on request (OPEN_NEW_MODEL_DIALOG), optionally preselecting
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<{ metamodelId?: string } | undefined>).detail;
+            setNewModelDialog({ metamodelId: detail?.metamodelId });
+        };
+        window.addEventListener(JjodelEvents.OPEN_NEW_MODEL_DIALOG, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_NEW_MODEL_DIALOG, handler);
     }, []);
 
     // Open New Viewpoint dialog when the project rail requests it
@@ -1124,49 +1138,38 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         createM2(project);
     };
 
-    // Handle "+ New" button click for models
+    // Handle "+ New" button click for models: open the New model dialog (P-2026-10-19-1618),
+    // preselecting the only metamodel; with none the dialog shows its empty state.
     const handleNewModelClick = () => {
-        if (metamodels.length === 0) {
-            // No metamodels - button should be disabled, but handle just in case
-            return;
-        }
+        setShowMetamodelMenu(false);
+        setNewModelDialog({ metamodelId: metamodels.length === 1 ? metamodels[0].id : undefined });
+    };
 
-        if (metamodels.length === 1) {
-            // Only one metamodel - create model directly
-            createM1(project, metamodels[0]);
-            return;
-        }
-
-        // Multiple metamodels - show selection menu
-        setShowMetamodelMenu(!showMetamodelMenu);
+    const handleNewModelSubmit = (data: { metamodelId: string; name: string }) => {
+        const metamodel = metamodels.find(mm => mm.id === data.metamodelId);
+        setNewModelDialog(undefined);
+        if (metamodel) createM1(project, metamodel, true, data.name || undefined);
     };
 
     // Create model with selected metamodel
+    // TODO: cleanup — the picker no longer opens since the New model dialog (P-2026-10-19-1618).
     const handleCreateModel = (metamodel: LModel) => {
         setShowMetamodelMenu(false);
         createM1(project, metamodel);
     };
 
     // Create a model when the project rail requests it — same flow as this section's
-    // "+ New" button (0 metamodels: no-op; 1: create directly; N: open the picker).
+    // "+ New" button: the New model dialog (P-2026-10-19-1618).
     // Refs mirror the OPEN_TRANSFORMATION listener below: the effect is mounted once,
     // but the handler and the metamodel list change on every render.
     const handleNewModelClickRef = useRef(handleNewModelClick);
     handleNewModelClickRef.current = handleNewModelClick;
+    // TODO: cleanup — read only by the picker scroll this listener no longer does.
     const metamodelCountRef = useRef(metamodels.length);
     metamodelCountRef.current = metamodels.length;
     useEffect(() => {
         const handler = () => {
             handleNewModelClickRef.current();
-            // With N metamodels the picker renders inside this section, which may be
-            // scrolled out of view when the request comes from the rail. Wait a frame so
-            // the dropdown is committed before scrolling to it.
-            if (metamodelCountRef.current > 1) {
-                requestAnimationFrame(() => {
-                    document.getElementById('section-models')
-                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                });
-            }
         };
         window.addEventListener(JjodelEvents.CREATE_MODEL, handler);
         return () => window.removeEventListener(JjodelEvents.CREATE_MODEL, handler);
@@ -2970,6 +2973,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             {showMegamodelModal && (() => {
                 const megamodel = getRuntimeMegamodel(project.id);
                 if (!megamodel) return null;
+                // Script files (S6b): the store's own array, so the view's layout effect sees the
+                // same reference across renders; undefined when the project has none.
+                const projectScripts = readProjectScripts();
+                const isScript = (id: string) => projectScripts.some(s => s.id === id);
 
                 // Compute artifact stats for rich node cards
                 const artifactStats: ArtifactStats[] = [];
@@ -3030,10 +3037,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             name: vp.name || 'Unnamed',
                             isOverlay: vp.isOverlay,
                         }))}
+                        scripts={projectScripts.length ? projectScripts : undefined}
                         artifactStats={artifactStats}
                         onClose={() => setShowMegamodelModal(false)}
                         onOpenNode={(nodeId, nodeKind) => {
-                            if (nodeKind === 'metamodel' || nodeKind === 'model') {
+                            if (isScript(nodeId)) {
+                                DockManager.openScript(nodeId);
+                            } else if (nodeKind === 'metamodel' || nodeKind === 'model') {
                                 const lModel = metamodels.find(mm => mm.id === nodeId) || models.find(m => m.id === nodeId);
                                 if (lModel) DockManager.open2(lModel);
                             } else if (nodeKind === 'transformation') {
@@ -3042,7 +3052,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             }
                         }}
                         onDeleteNode={(nodeId, nodeKind) => {
-                            if (nodeKind === 'metamodel') {
+                            if (isScript(nodeId)) {
+                                deleteProjectScript(nodeId);
+                            } else if (nodeKind === 'metamodel') {
                                 const mm = metamodels.find(m => m.id === nodeId);
                                 if (mm) handleDeleteMetamodel(mm);
                             } else if (nodeKind === 'model') {
@@ -3066,6 +3078,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     m.name = newName;
                                     markDirty();
                                 }
+                            } else if (isScript(nodeId)) {
+                                renameProjectScript(nodeId, newName);
                             } else if (nodeKind === 'transformation') {
                                 handleRenameTransformation(nodeId, newName);
                             }
@@ -3125,6 +3139,21 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
                 existingNames={transformations.map(t => t.name)}
                 metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
+            />
+
+            {/* New Model Dialog */}
+            <NewModelDialog
+                isOpen={!!newModelDialog}
+                onClose={() => setNewModelDialog(undefined)}
+                onSubmit={handleNewModelSubmit}
+                metamodels={metamodels.map(mm => ({
+                    id: mm.id,
+                    name: mm.name || 'Unnamed',
+                    // By `instanceof`: `mm.models` is empty on imported and cloned projects (measured).
+                    modelCount: models.filter(m => m.instanceof?.id === mm.id).length,
+                }))}
+                takenNames={[...metamodels, ...models].map(m => m.name)}
+                initialMetamodelId={newModelDialog?.metamodelId}
             />
 
             {/* New Viewpoint Dialog */}

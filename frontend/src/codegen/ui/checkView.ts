@@ -9,9 +9,10 @@
  * rest counted; and the transition to link, with the line of its generated text, when the result carries an origin.
  * A failure is why no comparison was made, with the line of the generated text for a run that did not finish.
  *
- * Names come from the caller (`nameOf`), so the module reads no store. Pure: types only.
+ * Names come from the caller (`nameOf`), so the module reads no store. Pure: types and `displayJson` only.
  */
 
+import { displayJson } from './displayJson';
 import type { Divergence, OracleResult, TraceStep } from '../oracle/oracle';
 import type { ScenarioRecord } from '../../model/simulation/scenarioCodec';
 
@@ -73,7 +74,7 @@ function differences(a: unknown, b: unknown, keys: readonly string[] = []): Leaf
         const own = (r: Record<string, unknown>, k: string) => (Object.prototype.hasOwnProperty.call(r, k) ? r[k] : undefined);
         return all.flatMap(k => differences(own(ra, k), own(rb, k), [...keys, k]));
     }
-    if (Object.is(a, b) || (a !== undefined && b !== undefined && JSON.stringify(a) === JSON.stringify(b))) return [];
+    if (Object.is(a, b) || (a !== undefined && b !== undefined && displayJson(a) === displayJson(b))) return [];
     return [{ keys, expected: a, actual: b }];
 }
 
@@ -82,7 +83,7 @@ function valueText(v: unknown, place: boolean): string {
     if (v === undefined || v === null) return place ? '0' : 'none';
     if (typeof v === 'string') return JSON.stringify(v);
     if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-    return JSON.stringify(v) ?? String(v);
+    return displayJson(v) ?? String(v);
 }
 
 /** One differing value: `place <name>`, `<element>.<attr>`, `<element>.<attr> (derived)`, else the path. */

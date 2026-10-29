@@ -1000,7 +1000,12 @@ export function applyContainerLayout(
  * longer holds, and every edge of a pair but the last: after a membership edit the model deletes the old edge while the
  * canvas may keep it, and a move back adds a new edge for the same pair (one edge per pair, Rule 13). Dropped, not
  * hidden: a hidden edge still takes a handle slot on its ends (the object-as-edge synthesis counts it), and these pile
- * up with every move. Pure; returns `edges` itself when nothing changes.
+ * up with every move. Enclosed edges (R-GV-18, amends R-GV-4): after the channel step, a reference or composition edge
+ * (`instanceRef`, `composition`) is hidden as well when one end is a container whose view declares `edges: 'hide'`
+ * and the other end is an object that container encloses, its own claim or a deeper one up the `parentOf` chain, in
+ * either direction: the nesting already draws that relation (a node to the lane that holds it, a pool to the nodes
+ * of its lanes). Any channel counts, multi-hop included; a lost claim does not (it is not drawn inside). Edges between
+ * two objects of which neither encloses the other are untouched. Pure; returns `edges` itself when nothing changes.
  */
 export function suppressChannelEdges(edges: Edge[], model: ContainmentModel): Edge[] {
     const channelOf = (e: Edge): { src: string; tgt: string; info: ContainerInfo } | null => {
@@ -1016,16 +1021,35 @@ export function suppressChannelEdges(edges: Edge[], model: ContainmentModel): Ed
     const lastOfPair = new Map<string, number>();
     edges.forEach((e, i) => { if (channelOf(e)?.info.channelValues !== undefined) lastOfPair.set(`${e.source}→${e.target}`, i); });
     let changed = false;
+    // R-GV-18: `container` draws `obj` inside it, at any depth; `parentOf` holds no cycle (R-GV-2), `seen` bounds a bad one.
+    const encloses = (container: string, obj: string): boolean => {
+        const seen = new Set<string>();
+        for (let cur = model.parentOf.get(obj); cur !== undefined && !seen.has(cur); cur = model.parentOf.get(cur)) {
+            if (cur === container) return true;
+            seen.add(cur);
+        }
+        return false;
+    };
+    const hides = (objectId: string) => model.containers.get(objectId)?.edges === 'hide';
+    const enclosed = (e: Edge): Edge => {
+        if (e.hidden || (e.type !== 'instanceRef' && e.type !== 'composition')) return e;
+        const src = model.objByVertex.get(e.source);
+        const tgt = model.objByVertex.get(e.target);
+        if (src === undefined || tgt === undefined) return e;
+        if (!(hides(src) && encloses(src, tgt)) && !(hides(tgt) && encloses(tgt, src))) return e;
+        changed = true;
+        return { ...e, hidden: true };
+    };
     const out: Edge[] = [];
     edges.forEach((e, i) => {
         const ch = channelOf(e);
-        if (!ch) { out.push(e); return; }
+        if (!ch) { out.push(enclosed(e)); return; }
         const { src, tgt, info } = ch;
         if (info.channelValues !== undefined && (!info.channelValues.has(tgt) || lastOfPair.get(`${e.source}→${e.target}`) !== i)) {
             changed = true;
             return;
         }
-        if (e.hidden || (model.parentOf.get(tgt) !== src && !model.multiClaimed?.get(tgt)?.includes(src))) { out.push(e); return; }
+        if (e.hidden || (model.parentOf.get(tgt) !== src && !model.multiClaimed?.get(tgt)?.includes(src))) { out.push(enclosed(e)); return; }
         changed = true;
         out.push({ ...e, hidden: true });
     });

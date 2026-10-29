@@ -28,6 +28,10 @@
  * not have; `eventReads` lists the names read on `event`, for the bridge's
  * unset warning.
  *
+ * R-SIM-147 (P-2026-10-20-0031) adds `checkTriggerPosition`: a trigger on an
+ * out edge of a fork, or on an in edge of a join, which fusion drops, since a
+ * fused transition takes the trigger of its choice edge (R-SIM-31(3)).
+ *
  * Every rule is a certainty before the run: the texts are those the run would
  * give when it meets the same text. What depends on σ or the event stays the
  * run's to halt on (R-SIM-70), and a guard or an action judged here is still
@@ -44,12 +48,14 @@ import { describeType, firstAbsence } from '../jjelTriState';
 import { buildGuardContext } from './guardContext';
 import type { SimSnapshot } from './guardContext';
 import { checkGuardSubset } from './subsetChecker';
-import { inDomain } from './netStep';
+import { isBitVector } from '../../jjel/evaluator/context';
+import { inDomain, wordWidth } from './netStep';
 import type { CompiledAction, FoldedTarget } from './actionEvaluator';
 import type { ActionSite, CompiledNet, Domain, InputRead, NetTransition, SimValue } from './netTypes';
 
 /** The reasons of a rule, a subset of the bridge's `CompileDefect['reason']`. */
-export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value' | 'else-alone' | 'read-only' | 'event' | 'event-feature';
+export type StcDefectReason = 'undeclared' | 'unresolved' | 'locality' | 'subset' | 'value' | 'else-alone' | 'read-only' | 'event' | 'event-feature'
+    | 'trigger-position';
 
 export interface StcDefect {
     readonly reason: StcDefectReason;
@@ -61,7 +67,7 @@ export interface StcDefect {
 /** What the rules read: M frozen, the declarations, the places, and a name for an element. */
 export interface StcScope {
     readonly snapshot: SimSnapshot;
-    readonly net: Pick<CompiledNet, 'attributes' | 'declared' | 'places'>;
+    readonly net: Pick<CompiledNet, 'attributes' | 'declared' | 'places' | 'widths'>;
     /** Never the id: the line and the title name elements (R-SIM-62). */
     readonly nameOf: (id: string) => string;
     /**
@@ -135,7 +141,7 @@ function fold(e: JjelExpression, site: string, snapshot: SimSnapshot): Folded | 
 }
 
 function isSimValue(value: JjelValue): value is SimValue {
-    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string';
+    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string' || isBitVector(value);
 }
 
 function elementId(value: JjelValue): string | null {
@@ -254,7 +260,7 @@ export function checkActionValue(c: CompiledAction, site: ActionSite, target: Fo
         return { reason: 'value', detail: `the value is ${type}, not a boolean, a number or a string`, short: `value is ${type}` };
     }
     const decl = target === null ? undefined : scope.net.declared.get(target.element)?.get(target.attr);
-    if (target === null || !decl || inDomain(v.value, decl.domain)) return null;
+    if (target === null || !decl || inDomain(v.value, decl.domain, wordWidth(scope.net, target.element, target.attr))) return null;
     return {
         reason: 'value', detail: `${target.attr} of ${scope.nameOf(target.element)} would be ${String(v.value)}, outside its domain`,
         short: `${target.attr} = ${String(v.value)}, outside its domain`,
@@ -389,4 +395,34 @@ export function checkEventFeature(node: unknown, scope: Pick<StcScope, 'event'>)
     const a = eventReads(node).find(name => !type.features.has(name) && !HANDLE_KEYS.has(name));
     if (a === undefined) return null;
     return { reason: 'event-feature', detail: `'${a}' is not a feature of ${type.name}, the type of the trigger`, short: `event.${a}: not on ${type.name}` };
+}
+
+/** R-SIM-147: what a pseudo node is, as the compiler fuses it; `both` takes the union of its edges' triggers. */
+export type PseudoKind = 'fork' | 'join' | 'both';
+
+/**
+ * R-SIM-147: the edges of a fused transition whose trigger fusion drops, each with its defect. A fork
+ * takes the trigger of the edge into it, a join that of the edge out of it (R-SIM-31(3), the choice
+ * edge); the trigger of any other edge of it is never read. A node both fork and join, and a plain
+ * edge, drop none. The run is unchanged: the trigger stays ignored, only reported.
+ */
+export function checkTriggerPosition(
+    t: Pick<NetTransition, 'id' | 'origin'>, kindOf: (id: string) => PseudoKind | null, triggered: (edge: string) => boolean,
+    scope: Pick<StcScope, 'nameOf'>,
+): { readonly edge: string; readonly defect: StcDefect }[] {
+    const node = t.id.split('#')[0];
+    const at = t.origin.indexOf(node);
+    const kind = at < 0 ? null : kindOf(node);
+    if (kind !== 'fork' && kind !== 'join') return [];
+    const choice = kind === 'fork' ? t.origin[0] : t.origin[t.origin.length - 1];
+    const dropped = kind === 'fork' ? t.origin.slice(at + 1) : t.origin.slice(0, at);
+    const where = kind === 'fork' ? 'into' : 'out of';
+    return dropped.filter(triggered).map(edge => ({
+        edge,
+        defect: {
+            reason: 'trigger-position',
+            detail: `its trigger is ignored: ${kind} ${scope.nameOf(node)} takes the trigger of its choice edge, ${scope.nameOf(choice)}, the edge ${where} it`,
+            short: `trigger ignored by ${kind} ${scope.nameOf(node)}`,
+        },
+    }));
 }

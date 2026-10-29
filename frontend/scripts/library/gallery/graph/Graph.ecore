@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+                xmlns:xmi="http://www.omg.org/XMI"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+                name="Graph">
+  <!-- Edge.target is single-valued here, not as in the fixture src/__tests__/fixtures/xmi-m1/Graph.ecore: an edge is
+       drawn as one arc, and the gallery viewpoint draws each Edge object as one (P-2026-10-18-2300). -->
+  <eClassifiers xsi:type="ecore:EClass" name="Graph">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="nodes" upperBound="-1" containment="true" eType="#//Node"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="edges" upperBound="-1" containment="true" eType="#//Edge"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Node">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Edge">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="source" eType="#//Node"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="target" eType="#//Node"/>
+  </eClassifiers>
+</ecore:EPackage>
