@@ -6,7 +6,7 @@ Lane: full (more than three files; a D-layer class, `joiner/classes.ts`; a visua
 Depends: P-2026-10-14-1100, P-2026-10-14-1101
 Front: standalone-editor
 Request: https://github.com/jjodel-modeling/jjodel-frontend/issues/186 (Juri's words in chat are `request.md` in the lane folder, RC-43)
-Status: da eseguire
+Status: eseguito 2026-10-29 · lane customize-element · 57c5e8e27 · verifica visiva passata 2026-10-29
 Limite: 60 minuti per la Fase 1, 90 minuti per ogni passo della Fase 2
 
 Protocollo: docs/PROTOCOL.md, clauses P1..P16 apply (all, unless this prompt says otherwise).
