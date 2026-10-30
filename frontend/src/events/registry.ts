@@ -161,6 +161,8 @@ export const AvatarEvents = {
 export const SystemEvents = {
   INTERFACE_MODE_CHANGE: 'interfaceModeChange',
   JJTL_EXECUTION_RESULT: 'jjtl-execution-result',
+  /** STEP 6c ended: nested objects created and those not placed (NestedMaterializationReport). */
+  JJTL_NESTED_MATERIALIZED: 'jjtl-nested-materialized',
   TREEVIEW_SCROLL: 'treeview:scroll-to-element',
 } as const;
 
