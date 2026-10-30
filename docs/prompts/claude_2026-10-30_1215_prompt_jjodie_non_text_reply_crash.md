@@ -9,7 +9,8 @@ Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo derog
 Deroga: P4 non si applica (motivo: fast lane, the preliminary check goes inline in the log entry, max ten lines).
 
 Worktree: `~/jjodel-w-jjodiereply`, branch `jjodie-non-text-reply`, created from `alfonso-frontend-jjtl` at
-`3addb64cf`. Before anything else: `pwd`, branch, `git log -1` and `git status` are as stated here. Otherwise stop.
+the trunk commit whose subject starts with `docs(prompts): P-2026-10-30-1215` (code identical to `3addb64cf`).
+Before anything else: `pwd`, branch, `git log -1` and `git status` are as stated here. Otherwise stop.
 
 ## Lane discipline
 Every reply of this session opens with `[P-2026-10-30-1215 · session <id>]`.
