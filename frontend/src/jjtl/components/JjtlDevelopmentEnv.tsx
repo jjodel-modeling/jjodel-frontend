@@ -23,6 +23,7 @@ import { SystemEvents, JjodelEvents } from '../../events/registry';
 import '../styles/jjtl.scss';
 import { getGrammarRuleAtPosition } from '../utils/astToGrammar';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
+import type { NestedMaterializationReport } from '../../components/project/nestedMaterialization';
 
 export interface JjtlDevelopmentEnvProps {
     initialCode?: string;
@@ -266,6 +267,27 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     const clearOutput = useCallback(() => {
         setOutputMessages([]);
     }, []);
+
+    // Nested objects of the last run, reported by ProjectEditor when STEP 6c ends, seconds
+    // after the result: how many were created, and every one that was not placed, with its path.
+    useEffect(() => {
+        const MAX_LISTED = 20;
+        const handler = (e: Event) => {
+            const report = (e as CustomEvent<NestedMaterializationReport>).detail;
+            if (!report) return;
+            const notPlaced = report.unplaced.reduce((n, u) => n + u.count, 0);
+            addOutputMessage(`Nested objects in "${report.modelName}": ${report.created} created, ${notPlaced} not placed.`);
+            for (const u of report.unplaced.slice(0, MAX_LISTED)) {
+                addOutputMessage(`Not placed: ${u.path}${u.className ? ' (' + u.className + ')' : ''}, `
+                    + `${u.count} object(s): ${u.reason}`);
+            }
+            if (report.unplaced.length > MAX_LISTED) {
+                addOutputMessage(`... and ${report.unplaced.length - MAX_LISTED} more, listed in the browser console.`);
+            }
+        };
+        window.addEventListener(SystemEvents.JJTL_NESTED_MATERIALIZED, handler);
+        return () => window.removeEventListener(SystemEvents.JJTL_NESTED_MATERIALIZED, handler);
+    }, [addOutputMessage]);
 
     // Handle actual transformation execution from dialog
     const handleExecuteTransformation = useCallback(async (sourceModelId: string, outputModelName: string) => {
