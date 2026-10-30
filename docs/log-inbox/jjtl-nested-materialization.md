@@ -20,3 +20,16 @@ and in this order** (RC-12) and empties this file. The active log is not touched
 **Prompt document name**: 2026-10-30 14:40
 
 **Ticket** (known edge, left as is): a run whose only content is collection-step drops (no root attributes, references or nested creations) does not start the STEP 8 timer, so its unplaced values reach the browser console but not the output panel.
+
+## 2026-10-30 — merge: jjtl-nested-materialization into alfonso-frontend-jjtl (P-2026-10-30-2149)
+**Prompt**: `claude_2026-10-30_2149_prompt_merge_jjtl-nested-materialization.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-nested-materialization` at `80d016562` into `alfonso-frontend-jjtl`, merge base `37956343a`, 6 commits on the branch side.
+**Files touched**: merge `3e2ae556e`: 13 files from the branch side (`docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md`, `docs/discovery/discovery_2026-10-30_jjtl_nested_materialization_lir.md`, `docs/discovery/harness/probe_2026-10-30_jjtl_nested_materialization.mts`, `docs/log-inbox/jjtl-nested-materialization.md`, `docs/prompts/claude_2026-10-30_1335_prompt_jjtl_nested_materialization.md`, `docs/prompts/claude_2026-10-30_1440_prompt_jjtl_nested_materialization_continue.md`, `docs/prompts/claude_2026-10-30_1545_prompt_jjtl_nested_materialization_closure.md`, `frontend/src/components/project/ProjectEditor.tsx`, and 5 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3e2ae556e` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12149 tests in 449 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non applicabile, verified in the lane worktree (P-2026-10-30-1545)
+**Notes**: Rollback tag `pre-jjtl-nested-materialization` on `49a89c430` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-30-2149/result.json`.
+**Prompt document name**: 2026-10-30 21:49
