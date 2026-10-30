@@ -4206,6 +4206,17 @@ la scrittura sarebbe avvenuta. Referto:
 `docs/discovery/discovery_2026-08-30_s1b_ambiguita_dichiarata.md`.
 
 
+**R-S1-6** (2026-10-30) — **L'output di una trasformazione JjTL non passa dalla guardia di R-S1-2.** La guardia
+sul nome esplicito resta per i gesti dell'utente e per JjScript. Gli oggetti annidati che STEP 6c di
+`handleExecuteTransformation` materializza nascono senza nome (`{}`) e ricevono `name` per id insieme agli altri
+attributi, sul timer differito: l'output nell'app coincide oggetto per oggetto con quello dell'executor in node,
+fratelli omonimi compresi (riferimenti per nome come i `Ref` di un albero di espressioni). I duplicati che ne
+risultano si aprono come quelli preesistenti (R-S1-4) e chi risolve per nome dichiara l'ambiguita' (R-S1-5); le
+radici mantengono la regola attuale. Decisione di Alfonso, 2026-10-30 15:12, su
+`docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md` §8 (P-2026-10-30-1440). Fuori da questa
+decisione: la rinomina via slot `$name`, che oggi non passa dalla guardia (misurato nello stesso report), resta un
+ticket.
+
 ## Serie R-GT / R-M2 — tre micro fix di core (ratifiche 2026-08-30)
 
 A valle di `discovery_2026-08-30_gettype_finestra_parser.md` e
