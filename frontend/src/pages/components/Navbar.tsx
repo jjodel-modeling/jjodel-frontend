@@ -1722,7 +1722,7 @@ function NavbarComponent(props: AllProps) {
     const userInitials = userName.split(' ').map(n => n[0] || '').join('');
 
     // ─── Custom Tab Strip synced with DockManager ───
-    const [openTabs, setOpenTabs] = useState<Array<{id: string; title: string; type: string; active: boolean; closable: boolean}>>([]);
+    const [openTabs, setOpenTabs] = useState<Array<{id: string; title: string; type: string; active: boolean; closable: boolean; beside?: boolean}>>([]);
 
     // Sync tabs from DockManager on layout changes
     useEffect(() => {
@@ -1737,12 +1737,12 @@ function NavbarComponent(props: AllProps) {
                 const activeId = (modelsPanel as any).activeId || tabs[0]?.id;
                 const state = store.getState();
 
-                type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean };
+                type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean; beside?: boolean };
                 const tabList: TabListItem[] = (tabs.map((tab: any): TabListItem | null => {
                     const id = tab.id || '';
                     let title = '';
                     let type = 'project';
-                    const closable = tab.closable !== false;
+                    let closable = tab.closable !== false;
 
                     // Determine type and title from tab ID
                     if (id.startsWith('DockComponent_rightbar_')) {
@@ -1782,6 +1782,17 @@ function NavbarComponent(props: AllProps) {
                         // it rather than print a placeholder (the model branch's rule).
                         if (!rawModel) return null;
                         title = `${rawModel.name || 'Unnamed'} Instances`;
+                    } else if (id.startsWith('codegen_tpl_')) {
+                        // A generator tab (codegen, P-2026-10-25-1200), docked here when no canvas
+                        // was. This file is eager and imports no generator module: the tab carries
+                        // its title and its close (openTemplateEditor.ts). rc-dock's own close is
+                        // off on it, its close asks before dropping drafts, so the strip offers it.
+                        // A tab with no title (metamodel or generator gone) is a ghost.
+                        type = 'generator';
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return null;
+                        title = named;
+                        closable = true;
                     } else if (id.startsWith('vp_')) {
                         type = 'viewpoint';
                         // Extract title from React element or look up viewpoint
@@ -1817,13 +1828,31 @@ function NavbarComponent(props: AllProps) {
                     return { id, title, type, active: id === activeId, closable };
                 }) as (TabListItem | null)[]).filter((t): t is TabListItem => t !== null);
 
+                // A generator tab beside the canvas (codegen, P-2026-10-25-1510) sits in a panel of its
+                // own whose rc-dock tab bar is hidden: the strip lists it after the first panel's tabs,
+                // active while its panel shows it, as the canvas tab is. Same title and ghost rule as above.
+                const walkBeside = (node: any): void => {
+                    if (!node || node === modelsPanel) return;
+                    if (!('tabs' in node)) { (node.children || []).forEach(walkBeside); return; }
+                    const shown = node.activeId || node.tabs[0]?.id;
+                    node.tabs.forEach((tab: any) => {
+                        const id = tab.id || '';
+                        if (!id.startsWith('codegen_tpl_')) return;
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return;
+                        tabList.push({ id, title: named, type: 'generator', active: id === shown, closable: true, beside: true });
+                    });
+                };
+                walkBeside(layout?.dockbox);
+
                 setOpenTabs(prev => {
                     if (prev.length === tabList.length && prev.every((t, i) =>
                         t.id === tabList[i].id &&
                         t.title === tabList[i].title &&
                         t.active === tabList[i].active &&
                         t.type === tabList[i].type &&
-                        t.closable === tabList[i].closable
+                        t.closable === tabList[i].closable &&
+                        t.beside === tabList[i].beside
                     )) {
                         // Same content, same length: keep previous reference to skip Navbar re-render.
                         // syncTabs runs every 1s via setInterval; during pan or any idle period
@@ -1868,14 +1897,23 @@ function NavbarComponent(props: AllProps) {
         }
     }, []);
 
-    const handleTabClick = useCallback((tabId: string) => {
+    const handleTabClick = useCallback((tabId: string, beside?: boolean) => {
         if (!DockManager.dock) return;
         DockManager.dock.updateTab(tabId, null, true);
+        // Beside the canvas the layout stays and focus goes to the tab's content (its first
+        // [tabindex] element), so its keyboard shortcuts apply (P-2026-10-25-1510).
+        if (beside) {
+            const pane = document.querySelector(`[role="tabpanel"][aria-labelledby$="-tab-${CSS.escape(tabId)}"]`);
+            (pane?.querySelector('[tabindex]') as HTMLElement | null)?.focus({ preventScroll: true });
+        }
     }, []);
 
     const handleTabClose = useCallback((tabId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        DockManager.closeTab(tabId);
+        // A tab that asks before closing (a generator tab, P-2026-10-25-1200) closes through itself.
+        const docked: any = DockManager.dock?.find(tabId);
+        if (typeof docked?.requestClose === 'function') docked.requestClose();
+        else DockManager.closeTab(tabId);
     }, []);
 
     // Tab type badge letter or icon
@@ -1890,6 +1928,7 @@ function NavbarComponent(props: AllProps) {
             // that opens it from the project rail.
             case 'manager': return { letter: '', icon: 'bi-table', className: 'appbar-tab__badge--model' };
             case 'viewpoint': return { letter: 'V', className: 'appbar-tab__badge--viewpoint' };
+            case 'generator': return { letter: '', icon: 'bi-code-slash', className: 'appbar-tab__badge--generator' };
             default: return { letter: '', className: '' };
         }
     };
@@ -1902,6 +1941,7 @@ function NavbarComponent(props: AllProps) {
             case 'transformation': return 'JjTL Transformation';
             case 'viewpoint': return 'Viewpoint';
             case 'manager': return 'Instance manager';
+            case 'generator': return 'Generator';
             default: return '';
         }
     };
@@ -1925,6 +1965,12 @@ function NavbarComponent(props: AllProps) {
         tabsToShow.pop();
         tabsToShow.push(activeTab);
     }
+    // And a generator tab on screen beside the canvas, in place of the last tab not on screen.
+    visibleTabs.filter(t => t.beside && t.active && !tabsToShow.includes(t)).forEach(t => {
+        const off = tabsToShow.map(s => s.active).lastIndexOf(false);
+        if (off >= 0) tabsToShow.splice(off, 1);
+        tabsToShow.push(t);
+    });
 
     const [showOverflow, setShowOverflow] = useState(false);
     /** The right-click menu of a metamodel or model tab: «Run refactoring…» (R-JJD-14). */
@@ -2012,8 +2058,8 @@ function NavbarComponent(props: AllProps) {
                         return (
                             <button
                                 key={tab.id}
-                                className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}`}
-                                onClick={() => handleTabClick(tab.id)}
+                                className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}${tab.beside ? ' appbar-tab--beside' : ''}`}
+                                onClick={() => handleTabClick(tab.id, tab.beside)}
                                 onContextMenu={tab.type === 'metamodel' || tab.type === 'model' ? (e) => {
                                     e.preventDefault();
                                     setArtifactMenu({ modelId: tab.id, x: e.clientX, y: e.clientY });
@@ -2072,7 +2118,7 @@ function NavbarComponent(props: AllProps) {
                                             <button
                                                 key={tab.id}
                                                 className="appbar-tabs__overflow-item"
-                                                onClick={() => { handleTabClick(tab.id); setShowOverflow(false); }}
+                                                onClick={() => { handleTabClick(tab.id, tab.beside); setShowOverflow(false); }}
                                             >
                                                 {(badge.letter || badge.icon) && (
                                                     <span className={`appbar-tab__badge ${badge.className}`}>

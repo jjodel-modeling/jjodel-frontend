@@ -166,6 +166,56 @@
         gap: 8px;
     }
 
+    // -- launcher menu (G3): the generators, when there is more than one --------------------
+    &--menu {
+        width: 280px;
+    }
+
+    &__menu {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    &__menu-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 28px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: 1px;
+        }
+
+        &[aria-current="true"] {
+            border-color: var(--color-border-focus);
+        }
+    }
+
+    &__menu-last {
+        margin-left: auto;
+        font-size: 10px;
+        color: var(--color-text-placeholder);
+    }
+
+    // TODO: cleanup — since G3 (P-2026-10-24-0003) the panel edits no template: `__list` to `__body-input` and
+    // `__actions` have no element left (TemplateEditor.tsx, which used them, has no importer either).
     // -- templates --------------------------------------------------------------
     &__list {
         display: flex;

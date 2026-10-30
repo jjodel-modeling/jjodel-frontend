@@ -18,8 +18,10 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JjodelEvents } from '../../events/registry';
 import {
-    CODEGEN_SETTING_KEY, codePillVisible, getCodegenEnabled, setCodegenEnabled, subscribeCodegenEnabled, useCodegenEnabled,
+    CODEGEN_SETTING_KEY, codePillVisible, generatorEntries, getCodegenEnabled, setCodegenEnabled, subscribeCodegenEnabled,
+    useCodegenEnabled,
 } from '../setting';
+import { DEFAULT_GENERATOR_ID, DEFAULT_GENERATOR_NAME, decodeGenerators } from '../engine/generatorCodec';
 
 function fakeStorage(initial: Record<string, string> = {}): Storage {
     const m = new Map(Object.entries(initial));
@@ -196,6 +198,67 @@ describe('codePillVisible', () => {
         expect(codePillVisible(true, false, lookup({ genTemplates: '' }), 'M', true)).toBe(false);
         expect(codePillVisible(true, false, lookup(STORED), 'LOOSE', true)).toBe(false);
         expect(codePillVisible(true, false, lookup(STORED), 'MISSING', true)).toBe(false);
+    });
+
+    it('shows in Basic mode when the metamodel holds only genGenerators, on M1 and M2 (kills: genGenerators not read)', () => {
+        const GENS = { genGenerators: '{"v":1,"generators":[{"id":"g1","name":"doc","files":[],"target":"none","templates":[]}]}' };
+        expect(codePillVisible(true, false, lookup(GENS), 'M', true)).toBe(true);
+        expect(codePillVisible(true, false, lookup(GENS), 'MM', false)).toBe(true);
+        expect(codePillVisible(false, false, lookup(GENS), 'M', true)).toBe(false);
+        expect(codePillVisible(true, false, lookup({ genGenerators: '' }), 'M', true)).toBe(false);
+        expect(codePillVisible(true, false, lookup({ genGenerators: '', genTemplates: '' }), 'MM', false)).toBe(false);
+        expect(codePillVisible(true, false, lookup(GENS), 'LOOSE', true)).toBe(false);
+    });
+});
+
+describe('generatorEntries (R-GEN-42, P-2026-10-24-0004)', () => {
+    const TEMPLATES = '{"v":1,"templates":[{"name":"main","params":[],"body":"\\"x\\""}]}';
+    const GENS = JSON.stringify({ v: 1, generators: [
+        { id: 'g1', name: 'doc', files: [], target: 'none', templates: [] },
+        { id: 'default', name: 'Main JS' },
+        { id: 'g2', name: 'html', files: [], target: 'none', templates: [] },
+    ] });
+    const lookup = (state?: Record<string, unknown>) => ({ MM: { className: 'DModel', id: 'MM', ...(state ? { _state: state } : {}) } });
+
+    it('is empty with neither key, an empty key, or no metamodel (kills: a Default row on a metamodel with nothing)', () => {
+        expect(generatorEntries(lookup(), 'MM')).toEqual([]);
+        expect(generatorEntries(lookup({ simEnabled: true }), 'MM')).toEqual([]);
+        expect(generatorEntries(lookup({ genTemplates: '', genGenerators: '' }), 'MM')).toEqual([]);
+        expect(generatorEntries(lookup({ genTemplates: TEMPLATES }), 'MISSING')).toEqual([]);
+    });
+
+    it('gives the default alone, named Default, with templates and no genGenerators (kills: default missing)', () => {
+        expect(generatorEntries(lookup({ genTemplates: TEMPLATES }), 'MM')).toEqual([{ id: 'default', name: 'Default' }]);
+        expect(DEFAULT_GENERATOR_ID).toBe('default');
+        expect(DEFAULT_GENERATOR_NAME).toBe('Default');
+    });
+
+    it('puts the default first under its stored name, the others after in their order (kills: non-default names dropped; default not first)', () => {
+        const rows = generatorEntries(lookup({ genTemplates: TEMPLATES, genGenerators: GENS }), 'MM');
+        expect(rows).toEqual([{ id: 'default', name: 'Main JS' }, { id: 'g1', name: 'doc' }, { id: 'g2', name: 'html' }]);
+        // The codec lists the same generators in the same order: the bar and the tab's selector agree.
+        expect(decodeGenerators(TEMPLATES, GENS).generators.map(g => ({ id: g.id, name: g.name }))).toEqual(rows);
+        // genGenerators alone, the default unnamed in it: still first, named Default.
+        const only = JSON.stringify({ v: 1, generators: [{ id: 'g1', name: 'doc', files: [], target: 'none', templates: [] }] });
+        expect(generatorEntries(lookup({ genGenerators: only }), 'MM')).toEqual([{ id: 'default', name: 'Default' }, { id: 'g1', name: 'doc' }]);
+    });
+
+    it('returns the default on a key that does not parse or has no version 1 and no list (kills: parse error throws instead of returning the default; version not checked)', () => {
+        const v2 = JSON.stringify({ v: 2, generators: [{ id: 'g1', name: 'doc' }] });
+        for (const bad of ['{not json', '[]', v2, '{"v":1}', 'null']) {
+            expect(() => generatorEntries(lookup({ genTemplates: TEMPLATES, genGenerators: bad }), 'MM')).not.toThrow();
+            expect(generatorEntries(lookup({ genTemplates: TEMPLATES, genGenerators: bad }), 'MM')).toEqual([{ id: 'default', name: 'Default' }]);
+        }
+    });
+
+    it('drops a row with no id, no name or a taken id, as the codec does (kills: unnamed row listed; duplicate id listed)', () => {
+        const messy = JSON.stringify({ v: 1, generators: [
+            null, { name: 'noid' }, { id: 'g1', name: '' }, { id: 'g1', name: 'doc', files: [], target: 'none', templates: [] },
+            { id: 'g1', name: 'again', files: [], target: 'none', templates: [] }, { id: 'default', name: '' },
+        ] });
+        const rows = generatorEntries(lookup({ genTemplates: TEMPLATES, genGenerators: messy }), 'MM');
+        expect(rows).toEqual([{ id: 'default', name: 'Default' }, { id: 'g1', name: 'doc' }]);
+        expect(decodeGenerators(TEMPLATES, messy).generators.map(g => ({ id: g.id, name: g.name }))).toEqual(rows);
     });
 });
 

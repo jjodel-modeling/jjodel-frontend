@@ -130,3 +130,219 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Unattended: a param's class comes only from its call sites (forall over C.instances, fixpoint), never its name; `self` is unbound in a template, so `self.` offers nothing; a class name two classes share is left out. 23 tests, bench 12/12 killed. No existing expectation changed. Gates: typecheck, build, vitest codegen+editor-v2 6020 green, lazy on green. Visual check owed by the chat (RC-23).
 **Prompt document name**: 2026-10-23 23:00
+
+## 2026-10-24 — docs(decisions): R-GEN-19..43 to the register (P-2026-10-24-0000)
+**Prompt**: Port the R-GEN rows of 2026-10-23 into docs/decisions.md: 19..24 (authoring) and 25..30 (text mode) as provisional, unattended; 31..38 (generator viewpoint) as ratified «si su tutto», with 37 and 38 marked superseded; five new rows 39..43 (release boundary, generator tab, two-way provenance, left-bar GENERATORS section, slice order).
+**Files touched**: docs/decisions.md, docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-24_0000_prompt_codegen_decisions_port.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Rule texts copied from the reports, first sentence set in bold as the rule. No numbering collision: R-GEN-24 is the authoring report's, the text-mode report starts at 25. Rows 19..30 carry evidence read, verified none, reversible branch (the reports gave no values).
+**Prompt document name**: 2026-10-24 00:00
+
+## 2026-10-24 — feat(codegen): generator codec, genGenerators beside genTemplates (P-2026-10-24-0001)
+**Prompt**: G1 of 3.3: a pure codec for several generators per metamodel. `genTemplates` stays the default's list; `genGenerators` holds the others and the default's metadata. Readers, a one-delta Save patch, list helpers, tests with a mutation bench; the pill rule also reads `genGenerators`.
+**Files touched**: frontend/src/codegen/engine/generatorCodec.ts (new), frontend/src/codegen/engine/__tests__/generatorCodec.test.ts (new), frontend/src/codegen/setting.ts, frontend/src/codegen/__tests__/setting.test.ts, docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-24_0001_prompt_codegen_g1_generator_codec.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Feat f41de8b23, bench 6/6. Decided unattended: decoded records carry resolved metadata (root, files, target), written once genGenerators is first saved; the patch compares with the decoded keys, so bytes with defects or unknown fields survive an unchanged part; default name «Default»; addGenerator's file is `<name>.txt` with entry `main`; ids `g1`, `g2`.
+**Prompt document name**: 2026-10-24 00:01
+
+## 2026-10-24 — feat(codegen): generation per file with the generator's target (P-2026-10-24-0002)
+**Prompt**: G2 of 3.3: `generateGenerator` runs `generate` once per declared file of a generator, with that file's entry and the generator's target (`js` or none), the generator id on the result; the template name on every clickable fragment origin (R-GEN-41); tests with a mutation bench.
+**Files touched**: feat 8bdead3c5: frontend/src/codegen/engine/generateFiles.ts (new), frontend/src/codegen/engine/__tests__/generateFiles.test.ts (new), frontend/src/codegen/engine/generate.ts, frontend/src/codegen/engine/origin.ts, frontend/src/codegen/engine/text.ts, frontend/src/codegen/engine/__tests__/origin.test.ts, frontend/src/codegen/engine/__tests__/generate.test.ts; docs: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-24_0002_prompt_codegen_g2_generate_files.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 5/5. Out of DOVE: origin.test.ts and generate.test.ts, whose exact-shape origin expectations gained `template` (34 reds otherwise); nine files in all. Decided unattended: `template?` on ModelOrigin and OpaqueOrigin (text.ts:47-49), filled at origin.ts attribute/modelOrigin from the hole's position, absent when unknown; `generate` gains an optional last `target`, default `js`.
+**Prompt document name**: 2026-10-24 00:02
+
+**Ticket** (G4 input): opaque fragments built outside a hole (a `join` separator, a `+` operand, origin.ts `toText`/`opaque(', ')`) carry no template; a hole-level stamp would credit a called template's separators to its caller, so the right place is the template-call return in templates.ts, outside this lane's DOVE.
+
+## 2026-10-24 — ticket: codegen-panel.ts probe drives the removed floating panel
+**Ticket**: `frontend/scripts/probe/codegen-panel.ts` still drives the 3.2 floating Code panel, which G3 turned into a launcher (R-GEN-40): its phase on fails from «the pill opens the panel» onward. Port it to the generator tab, keeping the same assertions: templates written through the tab's list, Monaco and Save; Output becomes Preview; span-to-canvas and canvas-to-span links with the tab and the model's editor in separate dock tabs; Run modes; the scroll and gutter metrics of the code view re-measured on the pane. Phase off (`CGP_PHASE=base`) does not touch the panel and still applies. The checks that `codegen-check.ts` covered were ported by P-2026-10-24-0045; the new `codegen-generator-tab.ts` covers the tab.
+**Priority**: medium
+**Found in**: P-2026-10-24-0045
+
+## 2026-10-24 — feat(codegen): generator tab, panel as launcher, two-way provenance (P-2026-10-24-0003, P-2026-10-24-0045)
+**Prompt**: G3 of 3.3 (0003, cut at the context limit, work uncommitted) completed by 0045: lazy-split check and commit of the G3 work; Run enabled only on target `js` (R-GEN-35) with its test; mutation bench on generatorTabs.test.ts; probe of the generator tab; old probes ported or ticketed; the seven crops.
+**Files touched**: feat e4be12d09: frontend/src/codegen/ui/ CodePanel.tsx, CodePanel.scss, GeneratorPane.tsx (new), TemplateEditorTab.tsx, TemplateEditorTab.scss, openTemplateEditor.ts, canvasSelection.ts (new), codeOrigins.ts (new), generatorTabs.ts (new), __tests__/generatorTabs.test.ts (new); fix 1c74ff6fd: generatorTabs.ts, GeneratorPane.tsx, generatorTabs.test.ts; fix 5a4cbed0c: GeneratorPane.tsx; test 52f4a6e0c: frontend/scripts/probe/codegen-generator-tab.ts (new); test 8e598441f: frontend/scripts/probe/codegen-check.ts; docs: docs/log-inbox/codegen.md, the Status lines of the 0003 and 0045 prompts
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-24 00:03
+**Causa**: (g)
+**Regressions**: yes
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 7/7. Probes on 3131: generator-tab 22/22, codegen-check 43/43; crops in the 0045 lane folder, visual check by the chat (RC-23). Regression: G3's scrollIntoView scrolled .dock-top 1321px when the tab went behind; fixed in 5a4cbed0c, the probe guards it. Unattended: that fix (a G3 bug, no feature); the 0003 handoff's decisions 1-9. Cleanup candidate: TemplateEditor.tsx, no importer. Not fixed: «g1 (gone)» flashes on a new generator's first render. 15 files, all in DOVE.
+**Prompt document name**: 2026-10-24 00:45
+
+## 2026-10-24 — feat(codegen): GENERATORS section in the project left bar (P-2026-10-24-0004)
+**Prompt**: G4 of 3.3 (R-GEN-42): a GENERATORS section after TRANSFORMS in the project left bar, setting on only, none in consumer mode; rows open the generator tab, «+ New generator» creates one; both by dynamic import, so the lazy gate stays green. generatorEntries in setting.ts with tests, probe, crops.
+**Files touched**: feat 51620011c: frontend/src/codegen/setting.ts, __tests__/setting.test.ts, ui/TemplateEditorTab.tsx, ui/openTemplateEditor.ts; frontend/src/pages/components/LeftBar.tsx, pages/dashboard.scss; frontend/scripts/probe/codegen-leftbar.ts (new); docs: docs/log-inbox/codegen.md, the prompt's Status line
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 10/10 on generatorEntries. Probe on 3132: 21/21; crops in the lane folder, visual check by the chat (RC-23). Lazy gate --on green, only setting.ts eager. Out of DOVE, unattended (RC-21): the tab's «New generator» lifted into an exported createGenerator in TemplateEditorTab.tsx, re-exported by openTemplateEditor.ts; the creation had no entry outside the component. 7 files (>5). Not covered: the multi-metamodel group header and metamodel picker (no fixture with two metamodels).
+**Prompt document name**: 2026-10-24 00:04
+
+## 2026-10-24 — fix(codegen): empty state for a generator with no templates (P-2026-10-24-0318)
+**Prompt**: 3.3 fix: a generator with no templates shows a neutral empty state in Preview, Run and Check instead of the red "No template named 'main'"; a missing root over a non-empty list stays an error. Tests with named kills, probe extended with the empty generator and the go-to-template range reveal, crops.
+**Files touched**: fix eae105d89: frontend/src/codegen/ui/GeneratorPane.tsx, ui/generatorTabs.ts, ui/__tests__/generatorTabs.test.ts; frontend/scripts/probe/codegen-generator-tab.ts; docs: docs/log-inbox/codegen.md, the prompt's Status line
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-24 00:03 (P-2026-10-24-0003)
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 4/4. Probe on 3131: 26/26, crops in the lane folder for the chat (RC-23). Out of DOVE, unattended (RC-21): noTemplates and paneGeneration added to generatorTabs.ts, because GeneratorPane.tsx does not import in vitest. Reveal: the map gives no range for a model fragment (ModelOrigin has no template position), so TemplateEditorTab.tsx is unchanged. On a literal fragment the range is selected and revealed (goto_range.png).
+**Prompt document name**: 2026-10-24 03:18
+
+## 2026-10-24 — fix(codegen): generator tab beside the canvas, resizable columns (P-2026-10-24-1515, P-2026-10-24-1630)
+**Prompt**: 1630 completes 1515, stopped at the context ceiling with its work uncommitted. Alfonso's visual check of 15:08: a fragment click hid the code behind the canvas (one dock panel for both); he asked to resize the template and generated columns. The tab docks right of the canvas panel (45 %), joins the metamodel's other generator tabs, is moved beside on a fragment click; the Properties/Tree rail anchors to the canvas dock panel (scope extended by the chat, RC-25); splitter 200 px minimums, reset 0.55, ratio in localStorage.
+**Files touched**: fix 826a0f6bc (1515): frontend/src/codegen/ui/openTemplateEditor.ts, canvasSelection.ts, GeneratorPane.tsx, TemplateEditorTab.tsx, TemplateEditorTab.scss, splitter.tsx (new), __tests__/splitter.test.ts, __tests__/openTemplateEditor.test.ts (new); frontend/src/components/editors/PropertiesWithTreeView.tsx; frontend/scripts/probe/codegen-generator-tab.ts. fix 81ed10a75: ui/splitter.tsx, ui/TemplateEditorTab.tsx, ui/__tests__/splitter.test.ts. test f0c8c77f7: the probe. docs: docs/log-inbox/codegen.md, the Status lines of 1515 and 1630
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-24 15:15 (P-2026-10-24-1515)
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 8/8 (handoff's 7 + end minimum). Probe on 3133 ALL GREEN, 39 PASS; crops in ~/.jjodel-lanes/P-2026-10-24-1630/crops, rail_beside.png new. Rail, one dock panel, 1600x1000, model and metamodel: before = after, x 1200 w 400, insets 408/400 px. RC-21 rule in TemplateEditorTab.scss: shows the generator dock panel, no 710px cap, that panel only. Layer Impact: the rail holds the active editor's Tree pane and inspector; the canvas reads its insets. Also (c). Detail: 1515 handoff.md.
+**Prompt document name**: 2026-10-24 16:30
+
+**Ticket** (P-2026-10-24-1630): not done, optional item 5: collapsing the Properties rail, its translateX(100%) slides over the generator tab for 250 ms before unmount (cosmetic). Splitter fixed in this lane: the columns' paddings sat outside the flex share, a 50 px drag moved 45 px and the clamp stopped at 204 px; the probe's keyboard check focused the hidden second tab's splitter. Over five files (RC-11): the ten of 826a0f6bc above; PropertiesWithTreeView.tsx was outside 1515's DOVE, authorised by the chat. Unattended (RC-21): the prompt's fix subject is 85 characters, over the 72 of 6.2; 1515's own subject was used.
+
+## 2026-10-25 — feat(codegen): syntax colouring of the generated text (P-2026-10-24-1516)
+**Prompt**: Alfonso's visual check of 2026-10-24 asked for syntax highlighting of the generated code. Monaco's tokenizer on the shown file, language from the extension among registered ids; the linesOf pieces cut at token boundaries keeping their provenance (ui/codeTokens.ts colourLines); seven classes coloured from the Template Editor's theme; plain text and texts over the 1,000,000-character budget uncoloured.
+**Files touched**: feat 4cc4da0b6: frontend/src/codegen/ui/codeTokens.ts (new), ui/__tests__/codeTokens.test.ts (new), ui/GeneratorPane.tsx, ui/TemplateEditorTab.scss, frontend/scripts/probe/codegen-generator-tab.ts. docs: docs/log-inbox/codegen.md, the Status line of 1516
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 8/8. Probe on 3134 43 PASS 0 FAIL; crops preview_coloured.png, preview_hovered.png in ~/.jjodel-lanes/P-2026-10-24-1516/crops. Unattended (RC-21): colours inline from jjtlTheme, not SCSS rules (rule 28 forbids defining CSS variables, a fixed palette drifts); the pane's hover is one band, the per-piece outline boxed every token; probe on 3134, 3133 held by 1630's vite (left running). codeLines.ts unchanged.
+**Prompt document name**: 2026-10-24 15:16
+
+## 2026-10-25 — fix(codegen): Properties collapses beside a generator tab (P-2026-10-25-0925)
+**Prompt**: On a 1600 px viewport the 400 px Properties/Tree rail covered most of the canvas beside a generator tab. An opening of a generator tab collapses the rail (the topbar's own toggleRail) once a generator tab is beside the canvas panel; the last one closed or moved into the canvas panel restores the zones; a manual reopen is kept until the next opening; nothing persisted.
+**Files touched**: fix dd1b87b96: frontend/src/codegen/ui/generatorTabs.ts, ui/TemplateEditorTab.tsx, ui/openTemplateEditor.ts, ui/__tests__/generatorTabs.test.ts, ui/__tests__/openTemplateEditor.test.ts, frontend/scripts/probe/codegen-generator-tab.ts (6 files, all in DOVE). docs: docs/log-inbox/codegen.md, the Status line of 0925
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-24 15:15
+**Causa**: (d)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Bench 9/9. Probe on 3134 (3133 held by 1630's vite) 50 PASS 0 FAIL; crops beside_selection.png, layout_closed.png in ~/.jjodel-lanes/P-2026-10-25-0925/crops. Layer Impact: PropertiesWithTreeView.tsx and TreeViewPanelContext untouched, the rail driven through the context's toggleRail/show/showInspector. Unattended (RC-21): pagehide restore under flushSync keeps the collapse out of localStorage; subject shortened to 72.
+**Prompt document name**: 2026-10-25 09:25
+
+**Ticket** (P-2026-10-25-0925): a fragment click that moves a generator tab stacked on the canvas back beside it (canvasSelection.ts keepBeside) is not an opening: the rail, restored when the tab was stacked alone, stays open. Arming there touches GeneratorPane.tsx or canvasSelection.ts, outside this DOVE. The 250 ms slide of the 1630 ticket now plays on every auto-collapse.
+
+## 2026-10-25 · fix: generator tab with its header, scoped fragment highlight (P-2026-10-25-1045)
+**Prompt**: Alfonso's visual check of 10:41: «the generator has no tab, and selecting a fragment selects everything». Diagnosis (measured on 3133): the generator tab sat in dock group `models`, whose rc-dock bar `navbar.scss:2111` hides, and the app bar lists only ids of the first dock panel, so the tab had no header anywhere; with no canvas docked it stacked over `project_summary`; `body[data-editor-type=summary]` (abstract/style.scss:1118 and four sibling modes) zeroed every panel right of the first. The JS runtime `${target.runtime}` is one opaque fragment of 342 lines (23..364), another of 138 (428..565).
+**Files touched**: fix 21cbf99e6: frontend/src/codegen/ui/openTemplateEditor.ts, ui/generatorTabs.ts, ui/GeneratorPane.tsx, ui/TemplateEditorTab.scss, ui/__tests__/generatorTabs.test.ts, ui/__tests__/openTemplateEditor.test.ts, frontend/scripts/probe/codegen-generator-tab.ts (all in DOVE). docs: this entry and the Status line of 1045.
+**Outcome**: ✅ completed (the lane stopped at the context ceiling after its gates, probe and bench; the chat committed the tree as one fix commit instead of the two the prompt asked)
+**Corregge**: 2026-10-24 15:15, 2026-10-24 15:16
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: crops header_beside.png, header_leftbar.png, runtime_hover.png checked by the chat (RC-23); Alfonso's re-check pending
+**Notes**: Gates: typecheck 0, build 0, vitest src/codegen 2240 passed, check:codegen-lazy --on all green; probe 58 PASS 0 FAIL; bench 8/8. Unattended (RC-25, provisional): (1) generator tabs in their own dock group `codegen` with rc-dock's title and close; (2) with no canvas docked the tab opens in a right split of the project page (45 %), not as an app-bar tab beside the project and model tabs: the app bar needs Navbar.tsx, outside DOVE, a deviation from the prompt flagged for Alfonso; (3) beside-target order: model asked > metamodel > a docked conforming model > the first panel's tab; (4) CSS lift in TemplateEditorTab.scss for the five body modes; (5) FRAGMENT_WHOLE_LINES = 3, a longer fragment highlights the hovered line plus a gutter extent bar, a click selects no text.
+**Prompt document name**: 2026-10-25 10:45
+
+## 2026-10-25 — fix(codegen): generator tab in the app bar when no canvas is docked (P-2026-10-25-1200)
+**Prompt**: With no canvas docked the generator opened right of the narrow project page. It now joins the first dock panel, listed in the app bar beside the project and model tabs (bi-code-slash, «<generator> · <metamodel>», active state, close), full width when selected; with a canvas docked it stays beside it (1515/1045, rail 0925); moves between the two placements leave no ghost or duplicate
+**Files touched**: fix 93cbd14fd: frontend/src/codegen/ui/generatorTabs.ts, ui/openTemplateEditor.ts, ui/TemplateEditorTab.tsx, ui/__tests__/generatorTabs.test.ts, ui/__tests__/openTemplateEditor.test.ts, frontend/src/pages/components/Navbar.tsx, navbar.scss; test 115cdbddd: frontend/scripts/probe/codegen-generator-tab.ts; docs: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-25_1200_prompt_codegen_generator_in_app_bar.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-25 10:45
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: crops appbar_generator.png, appbar_project.png, beside_unchanged.png in ~/.jjodel-lanes/P-2026-10-25-1200/crops for the chat (RC-23)
+**Notes**: Gates: typecheck 0, build 0, vitest src/codegen 2245 passed, codegen-lazy --on green, check:scripts pass; probe 68/68 on 3133; bench 7/7 (6 unit, 1 probe). Layer Impact on Navbar.tsx: view only, syncTabs learns codegen_tpl_ ids from the tab's appBarTitle/requestClose, no import. Unattended (RC-25, provisional): hooks on the TabData; a canvas the first panel shows counts as docked; slate badge.
+**Prompt document name**: 2026-10-25 12:00
+
+**Ticket** (P-2026-10-25-1200): after a reload the dock restores the model tab but no generator tab (probe MEAS «the dock after the reload»: generators []), not fixed here (COSA 3). The app-bar title truncates to «Default · Demo…» under the strip's tab width, a perceptual item for Alfonso.
+
+## 2026-10-25 — fix(codegen): from a canvas the generator tab moves beside it (P-2026-10-25-1310)
+**Prompt**: Opened from GENERATORS with no canvas (app-bar tab), then the model canvas and its Code pill, the generator tab was only activated over the canvas. One placement rule: asked for while a canvas is shown, an open tab sharing the canvas's panel moves beside it (siblings' panel or right split, 45 %), the canvas active; one already beside is only activated; with no canvas shown it goes back to the first panel; a fragment click from the app bar ends side by side
+**Files touched**: fix 007c4e106: frontend/src/codegen/ui/canvasSelection.ts, ui/openTemplateEditor.ts, ui/__tests__/openTemplateEditor.test.ts; test ddff3f6fc: frontend/scripts/probe/codegen-generator-tab.ts; docs: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-25_1310_prompt_codegen_pill_moves_tab_beside.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-25 12:00
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: crops finding_pill_beside.png, finding_fragment_beside.png in ~/.jjodel-lanes/P-2026-10-25-1310/crops for the chat (RC-23)
+**Notes**: Gates: typecheck 0, build 0, vitest src/codegen 2249 passed, codegen-lazy --on green, check:scripts pass; probe 76/76 on 3133; bench 7/7 (unit). Unattended (RC-25, provisional): a canvas counts only while its panel shows a canvas, for new tabs too (GENERATORS with a canvas hidden behind the project page now joins the app bar); a new generator from a shown canvas never joins a sibling in the canvas's panel; the fragment move retries until the canvas is docked.
+**Prompt document name**: 2026-10-25 13:10
+
+## 2026-10-25 — fix(codegen): divider grab area, SELECT_NODE reveal beside a generator tab (P-2026-10-25-1355, P-2026-10-25-1441)
+**Prompt**: 1355: a resizable boundary between the canvas and the generator tab beside it, a fragment click that selects its node and brings it into view, a measured diagnosis. 1355 closed items 0-1 and stopped on item 2 (codegen cannot reach React Flow's instance); 1441, the chat's answer (RC-25), fixed item 2 in EditorV2.tsx's SELECT_NODE handler: React Flow's own pane, same zoom, no move when the node is fully inside.
+**Files touched**: 1355: f141bb614 frontend/src/codegen/ui/TemplateEditorTab.scss; d88d939bd frontend/scripts/probe/codegen-generator-tab.ts. 1441: 10abb57b3 frontend/src/components/editor-v2/EditorV2.tsx (SELECT_NODE handler and one import), editor-v2/utils/revealNode.ts (new), editor-v2/utils/__tests__/revealNode.test.ts (new); 6a34b2104 frontend/scripts/probe/codegen-generator-tab.ts; docs: docs/log-inbox/codegen.md, the Status lines of docs/prompts/claude_2026-10-25_1355_prompt_codegen_divider_and_reveal.md and claude_2026-10-25_1441_prompt_codegen_select_node_reveal.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-25 13:10
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: crops reveal_narrow.png, reveal_fullwidth.png in ~/.jjodel-lanes/P-2026-10-25-1441/crops, divider_before.png, divider_after.png in ~/.jjodel-lanes/P-2026-10-25-1355/crops, for the chat (RC-23)
+**Notes**: 1441 gates: typecheck 0, build 0, vitest codegen + editor-v2 6118 passed, codegen-lazy --on green, check:scripts pass, probe 86/86 on 3133. Bench 8/8, temporary detached worktree: unit 5/5 (window-based centre, move on every select, fitView used, inset ignored, no fit shift), probe 3/3 (the handler of 6ca598d5f, move on every select, zoom 1). Probe mutant P0 started with the 1-minute load at 24.75, above 20. 1355 gates on f141bb614: probe 79/79, bench 2/2. 7 files, all in DOVE (RC-11).
+**Prompt document name**: 2026-10-25 14:41
+
+**Ticket** (P-2026-10-25-1355, item 0 diagnosis): (a) the divider beside the tab was shown, 1px wide (abstract/style.scss:580), ew-resize, and a drag on its exact pixel worked (generator 720 -> 869 px): the defect was a 1px hit target, reproduced by a drag 2px off the line (width stays 720). With the project page closed rule 322 hides the divider, but PinnableDock hides the canvas panel too. (b) Every fragment click (EVENTS coin, TRANSITIONS tc, $v0 tp, model tab closed and reopened by the click) selected its node, never in view on a canvas narrowed to 528 px (React Flow 201..729, node 627..842): EditorV2.tsx:1140 centred at (window.innerWidth - rightInset)/3 from React Flow's left and moved the canvas on every click. Decisions (unattended, RC-25 provisional): 1355-1 rule 322 not overridden (it matches only when the canvas panel is hidden too); 1355-2 a 7px grab area for the divider of a box holding a generator panel, 1px line in the middle; 1355-3 bench in a temporary detached worktree; 1441-1 the one-third placement (F3) kept, on React Flow's pane less the right inset, shifted so a node that fits ends wholly inside; 1441-2 a pane with no size leaves the viewport alone; 1441-3 the commit subject shortened to 71 characters (§6.2), «stays if visible» for «no move when visible».
+
+**Ticket** (P-2026-10-25-1441, Layer Impact): view only (canvas v2-flow); no D-layer, L-layer, JjOM, sync or persistence write: the handler reads React Flow's store width/height and calls setViewport. Every SELECT_NODE emitter changes alike: codegen/ui/canvasSelection.ts:180, editor-v2/problems/ValidationResultsModal.tsx:87, editor-v2/hooks/neighborhoodAdapter.ts:79, TreeViewSidebar/TreeViewContent.tsx:1221; no emitter writes the string 'jjodel:selectNode' (grep). Full width, measured on the probe's layout (React Flow 201..1599 x 91..967, inset 408, window 1600x1000), a vertex panned off the left edge then a SELECT_NODE from elsewhere: centre (598.3, 424.3) with the handler of 6ca598d5f (bench P0), (531, 383) with the fix. Same rule, one third into the visible canvas, measured on the canvas instead of the window: the shift is (window - canvas)/3, here the 200 px left bar and 124 px of top chrome; 0 only when React Flow spans the window (unit test «on a full-width pane ...»). A pixel match with today would need the window size back, so it is not one: Alfonso's veto applies (RC-25).
+
+## 2026-10-25 — fix(codegen): beside the canvas the generator tab is in the app bar (P-2026-10-25-1510)
+**Prompt**: One tab bar, the app bar's. Beside a canvas the generator panel shows content only (no rc-dock tab bar, no maximize), the divider resizing content against the canvas; the app bar lists the generator tab next to the canvas tab, both active; its click keeps the layout and focuses the generator, its close removes the split (canvas full width, rail back); no ghost or duplicate entries between placements
+**Files touched**: fix 214e5484e: frontend/src/pages/components/Navbar.tsx, frontend/src/codegen/ui/TemplateEditorTab.tsx, ui/TemplateEditorTab.scss, ui/generatorTabs.ts (comment), ui/openTemplateEditor.ts (comment); fix 8e474b79a: ui/TemplateEditorTab.scss; test 8cf2bc758: frontend/scripts/probe/codegen-generator-tab.ts; docs: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-25_1510_prompt_codegen_beside_tab_in_app_bar.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-25 13:10
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: crops beside_two_tabs.png, appbar_close_full_width.png in ~/.jjodel-lanes/P-2026-10-25-1510/crops for the chat (RC-23)
+**Notes**: Gates: typecheck 0, build 0, vitest src/codegen 2249 passed, codegen-lazy --on green, check:scripts pass, probe 92/92 on 3133. Bench 5/5 in a temporary detached worktree, probe only: bar shown, ghost filter for beside, close removes only the entry, duplicate (first panel walked twice), no focus. 8 files, all in DOVE (RC-11). Beside style: the same appbar-tab--active as the canvas tab, plus a marker class appbar-tab--beside with no style of its own.
+**Prompt document name**: 2026-10-25 15:10
+
+**Ticket** (P-2026-10-25-1510): it also corrects 2026-10-25 10:45 (the panel tab bar beside the canvas). Decisions (unattended, RC-25 provisional): 1510-1 the beside entry takes the canvas tab's active style, two active tabs on screen at once; 1510-2 «focus» is DOM focus on the generator root (tabIndex -1, no outline), so its keyboard shortcuts apply; 1510-3 the bar is hidden by `.not-strip .dock-panel.dock-style-codegen .dock-bar` (rc-dock 3.3.2 nests it in `.dock`, the first direct-child selector matched nothing, fixed in 8e474b79a); 1510-4 the four named kills are probe checks, not units: Navbar.tsx is not importable in the bench (window) and the bar is CSS. Lost with the panel bar: the title's unsaved dot; the template list keeps its per-template dots, the app-bar entry shows none. The probe's first start after an SCSS HMR on 3133 twice failed to open the model's pane; a fresh server ran green.
+
+**Visual GO** (2026-10-25 16:05): Alfonso, «ok» on localhost:3131 after reloading cg-generators at 1b8135c1a, covering P-2026-10-24-1515/1516/1630, P-2026-10-25-0925/1045/1200/1310/1355/1441/1510.
+
+## 2026-10-30 — merge: cg-generators takes alfonso-frontend-jjtl (P-2026-10-30-1510)
+**Prompt**: RC-14: bring the trunk at 9606c352a into cg-generators with one --no-ff merge commit before the trunk takes the branch; union for decisions.md and the inboxes, step-4 probes, step-5 reading, gates, visual probes, GO.
+**Files touched**: merge 574429a0f (253 trunk files; by hand, authorized in C-2026-10-30-1430: frontend/src/components/editor-v2/EditorV2.tsx, frontend/src/pages/components/LeftBar.tsx, frontend/src/pages/components/Navbar.tsx, frontend/src/pages/dashboard.scss); fix b38dccdac: LeftBar.tsx; fix 213b368a8: frontend/src/codegen/ui/TemplateEditorTab.scss; docs: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-30_1510_prompt_cg-generators_take_trunk.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: 4 code conflicts stopped the lane (question); 5 hunks then resolved by union, trunk first. Alfonso put GENERATORS above SCRIPTS (b38dccdac). The merge broke the divider drag beside a generator tab: the trunk's :not(:has()) raised the split cap to (0,7,1) over the lift (0,6,0); 213b368a8 (0,8,0). Gates green; vitest 455 files, 12186 passed, same 9 red. Probes: leftbar 19/19, generator-tab 92/92 on 3151/3152; crops in ~/.jjodel-lanes/P-2026-10-30-1510/crops.
+**Prompt document name**: 2026-10-30 15:10

@@ -55,6 +55,7 @@ import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLay
 import { shouldAutoLayoutOnOpen } from './utils/autoLayoutOnOpen';
 import { clientCentre } from './utils/canvasCentre';
 import { orderSelection, sameIdList, resolveElementIds, type CanvasSelectionDetail } from './utils/canvasSelection';
+import { revealViewport } from './utils/revealNode';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
@@ -1140,20 +1141,24 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (!nodeId || modelId !== modelid) return;
             setNodes(nds => nds.map(n => ({ ...n, selected: n.id === nodeId })));
             setEdges(eds => eds.map(e => ({ ...e, selected: false })));
-            // Center the view on the selected node
+            // Bring the selected node into view on React Flow's own pane (P-2026-10-25-1441):
+            // same zoom, no move when it is already fully inside.
             const targetNode = getNodes().find(n => n.id === nodeId);
             if (targetNode) {
-                const x = (targetNode.position?.x ?? 0) + ((targetNode.measured?.width ?? 150) / 2);
-                const y = (targetNode.position?.y ?? 0) + ((targetNode.measured?.height ?? 50) / 2);
-                const vp = getViewport();
-                // F3: subtract the overlay's right inset so "one third from the left"
-                // is measured against the VISIBLE canvas width, not the full window.
-                setViewport({ x: -x * vp.zoom + (window.innerWidth - getCanvasRightInset()) / 3, y: -y * vp.zoom + window.innerHeight / 3, zoom: vp.zoom }, { duration: 300 });
+                const box = {
+                    x: targetNode.position?.x ?? 0,
+                    y: targetNode.position?.y ?? 0,
+                    width: targetNode.measured?.width ?? 150,
+                    height: targetNode.measured?.height ?? 50,
+                };
+                const { width, height } = storeApi.getState();
+                const next = revealViewport(box, getViewport(), { width, height }, getCanvasRightInset());
+                if (next) setViewport(next, { duration: 300 });
             }
         };
         window.addEventListener(JjodelEvents.SELECT_NODE, handleSelectNode);
         return () => window.removeEventListener(JjodelEvents.SELECT_NODE, handleSelectNode);
-    }, [modelid, setNodes, setEdges, getNodes, getViewport, setViewport]);
+    }, [modelid, setNodes, setEdges, getNodes, getViewport, setViewport, storeApi]);
 
     // Polymetric view modal (triggered via Tools menu CustomEvent)
     const [polymetricOpen, setPolymetricOpen] = useState(false);

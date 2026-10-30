@@ -1,5 +1,5 @@
 import {useState, useEffect, MouseEventHandler, JSX} from 'react';
-import {useSelector} from 'react-redux';
+import {shallowEqual, useSelector} from 'react-redux';
 import {DProject, LProject, LUser, R, U, findEnvironmentConfig, findProfile, visibleTopLevelTypes} from '../../joiner';
 
 import {DashProps} from "./Dashboard";
@@ -20,6 +20,7 @@ import { deleteProjectScript, readProjectScripts, renameProjectScript } from '..
 import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
 import { SCRIPT_EXTENSION } from '../../components/scripts/projectScripts';
 import type { DProjectScript } from '../../joiner/classes';
+import { generatorEntries, useCodegenEnabled } from '../../codegen/setting';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
@@ -363,6 +364,29 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     // LProject.transformations is synced by ProjectEditor via SetFieldAction (see ProjectEditor.tsx:169)
     const pTransformations = (((project as any)?.transformations) || []) as Array<{ id: string; name: string }>;
 
+    // R-GEN-42: the GENERATORS section, with the experimental setting on (and the build flag) only, never in
+    // consumer mode (R-GEN-23). The keys are read through codegen/setting.ts, the only codegen module this eager
+    // file may import; the tab is reached by a dynamic import, so the lazy gate (R-GEN-2) stays green.
+    const codegenOn = useCodegenEnabled();
+    const showGenerators = codegenOn && !consumer;
+    const generatorBags: unknown[] = useSelector((state: any) =>
+        (showGenerators ? pMetamodels.map(m => state?.idlookup?.[m.id]?._state) : []), shallowEqual);
+    const generatorGroups = showGenerators
+        ? pMetamodels.map((m, i) => ({ id: m.id, name: m.name, entries: generatorEntries({ [m.id]: { _state: generatorBags[i] } }, m.id) }))
+        : [];
+    const [pickingGeneratorMetamodel, setPickingGeneratorMetamodel] = useState(false);
+    const openGenerator = (metamodelId: string, metamodelName: string, generatorId: string) => {
+        void import('../../codegen/ui/openTemplateEditor').then(m => m.openTemplateEditor(metamodelId, metamodelName, null, generatorId));
+    };
+    const newGenerator = (metamodelId: string) => {
+        setPickingGeneratorMetamodel(false);
+        void import('../../codegen/ui/openTemplateEditor').then(m => m.createGenerator(metamodelId));
+    };
+    const onNewGeneratorClick = () => {
+        if (pMetamodels.length === 1) newGenerator(pMetamodels[0].id);
+        else if (pMetamodels.length > 1) setPickingGeneratorMetamodel(p => !p);
+    };
+
     /**
      * `itemAction` is the row's SECOND door: a hover-revealed button that opens a
      * different surface on the same subject, next to the arrow that opens the
@@ -592,6 +616,56 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     (t) => window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_TRANSFORMATION, { detail: { id: t.id } })),
                     () => requestFromProjectEditor(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG),
                     'New transform',
+                )}
+
+                {showGenerators && (
+                    <div className={`psb-section psb-section--generators${collapsedSections['generators'] ? ' collapsed' : ''}`}>
+                        <div className="psb-section-header" onClick={() => toggleSection('generators')}>
+                            <span className="psb-section-label">Generators</span>
+                            <i className="bi bi-chevron-down psb-chevron" />
+                        </div>
+                        <div className="psb-section-body">
+                            {generatorGroups.map(g => (
+                                <div key={g.id} className="psb-generator-group" data-metamodel={g.id}>
+                                    {generatorGroups.length > 1 && g.entries.length > 0 && (
+                                        <div className="psb-group" title={g.name}>{g.name}</div>
+                                    )}
+                                    {g.entries.map(e => (
+                                        <div
+                                            key={e.id}
+                                            className="psb-item"
+                                            data-generator={e.id}
+                                            onClick={() => openGenerator(g.id, g.name, e.id)}
+                                            title={e.name}
+                                        >
+                                            <span className="psb-badge psb-badge--G">G</span>
+                                            <span className="psb-item-name">{e.name}</span>
+                                            <i className="bi bi-arrow-right psb-item-arrow" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                            {pMetamodels.length > 0 && (
+                                <div className="psb-new" onClick={onNewGeneratorClick}>
+                                    <i className="bi bi-plus" />
+                                    <span>New generator</span>
+                                </div>
+                            )}
+                            {/* More than one metamodel: «New generator» asks which one first. */}
+                            {pickingGeneratorMetamodel && pMetamodels.length > 1 && pMetamodels.map(m => (
+                                <div
+                                    key={m.id}
+                                    className="psb-item psb-generator-pick"
+                                    onClick={() => newGenerator(m.id)}
+                                    title={`New generator on ${m.name}`}
+                                >
+                                    <span className="psb-badge psb-badge--M">M</span>
+                                    <span className="psb-item-name">{m.name}</span>
+                                    <i className="bi bi-arrow-right psb-item-arrow" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 )}
 
                 {!consumer && renderScriptsSection()}

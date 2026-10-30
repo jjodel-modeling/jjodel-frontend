@@ -129,9 +129,9 @@ describe('generate, end to end on the turnstile', () => {
         expect(line).toBe(5);
         const named = map.filter(e => e.line === line && e.origin.kind === 'model' && e.origin.featureName === 'name');
         expect(named.map(e => [code.split('\n')[line - 1].slice(e.start, e.end), e.origin])).toEqual([
-            ['tPushU', { kind: 'model', elementId: 'tPushU', feature: 'A_name', featureName: 'name', transformation: { name: 'identity' } }],
-            ['Unlocked', { kind: 'model', elementId: 'Unlocked', feature: null, featureName: 'name', transformation: { name: 'identity' } }],
-            ['Locked', { kind: 'model', elementId: 'Locked', feature: null, featureName: 'name', transformation: { name: 'identity' } }],
+            ['tPushU', { kind: 'model', elementId: 'tPushU', feature: 'A_name', featureName: 'name', transformation: { name: 'identity' }, template: 'transition' }],
+            ['Unlocked', { kind: 'model', elementId: 'Unlocked', feature: null, featureName: 'name', transformation: { name: 'identity' }, template: 'transition' }],
+            ['Locked', { kind: 'model', elementId: 'Locked', feature: null, featureName: 'name', transformation: { name: 'identity' }, template: 'transition' }],
         ]);
         const push = map.find(e => e.line === line && e.origin.kind === 'model' && e.origin.featureName === 'label')!;
         expect(push.origin).toMatchObject({ elementId: 'push', feature: 'A_label' });

@@ -1140,6 +1140,7 @@ project-card .tip {
       &--T { background: #dcfce7; color: #15803d; }
       &--V { background: #fce7f3; color: #9d174d; }
       &--S { background: #cffafe; color: #0e7490; }
+      &--G { background: #cffafe; color: #0e7490; }
     }
 
     /* Inline rename of a SCRIPTS row (S6b): takes the place of .psb-item-name. */
@@ -1154,6 +1155,16 @@ project-card .tip {
       color: inherit;
       background: #fff;
       outline: none;
+    }
+
+    /* GENERATORS (R-GEN-42): the metamodel's name over its generators, when the project has more than one. */
+    .psb-group {
+      padding: 4px 16px 2px;
+      font-size: 11px;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .psb-item-name {

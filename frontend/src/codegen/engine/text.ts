@@ -44,8 +44,9 @@ export interface FeatureRead {
 }
 
 export interface LiteralOrigin extends TemplatePosition { readonly kind: 'literal' }
-export interface ModelOrigin extends FeatureRead { readonly kind: 'model'; readonly transformation: Transformation }
-export interface OpaqueOrigin { readonly kind: 'opaque'; readonly reads: readonly FeatureRead[] }
+/** `template`, on a model and an opaque origin, is the template of the hole that wrote it (R-GEN-41); absent when unknown. */
+export interface ModelOrigin extends FeatureRead { readonly kind: 'model'; readonly transformation: Transformation; readonly template?: string }
+export interface OpaqueOrigin { readonly kind: 'opaque'; readonly reads: readonly FeatureRead[]; readonly template?: string }
 export interface ErrorOrigin extends TemplatePosition { readonly kind: 'error'; readonly message: string }
 export type Origin = LiteralOrigin | ModelOrigin | OpaqueOrigin | ErrorOrigin;
 

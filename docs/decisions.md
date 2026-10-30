@@ -6110,6 +6110,124 @@ Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
 
 - **R-GEN-18** (2026-10-23, decided by the chat on Alfonso's «andiamo avanti», unattended, evidence: measured, verified: none, reversible: trunk).
   **The 3.2 build ships the code generator: `VITE_CODEGEN = true` in `frontend/.env.production` and `frontend/.env.staging`; the Experimental setting «Code generation» stays off by default.** The oracle of slice S6 is already on the trunk (`src/codegen/oracle/`, Check in the Code panel, P-2026-10-11-1053), so by R-GEN-15 it enters 3.2 behind the setting. `check:codegen-lazy` with the flag on, 2026-10-23 17:05: ALL GREEN in both modes, `CodePanel` a dynamic entry outside the eager closure, 20 generator modules outside it, the runner worker named by the CodePanel chunk only. The codegen-pilot front closes with this row; its branch `codegen-pilot` carries nothing the trunk lacks (the discovery report is identical, the log entry is in the archive).
+
+- **R-GEN-19** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The Code panel opens on an M2 canvas under the same rule as on M1, read on that metamodel: setting on, and
+  Advanced mode or `genTemplates` stored.** On M2 it opens on Templates; Output, Run and Check act on a model chosen
+  among the project's models conforming to the metamodel, the first preselected, the choice local to the panel and not
+  persisted; with none, an explained empty state.
+
+- **R-GEN-20** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The Template Editor is a dock tab `codegen_tpl_<metamodelId>`, `cached: true`, opened from the lazy chunk through
+  `DockManager.dock`, one tab per metamodel; not a modal, and not a change to `DockManager`.**
+
+- **R-GEN-21** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **On M2, a click on a model value selects its metaclass on the canvas, and a selected class links the spans of its
+  instances.** Cut first if S1 runs long.
+
+- **R-GEN-22** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The editor writes on Save only (button, Ctrl/Cmd+S), through `templatesPatch` and the `state` setter, one undo
+  step; drafts live in the tab, marked dirty, and a clean draft follows outside writes.**
+
+- **R-GEN-23** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **No Code pill and no Template Editor in consumer mode (`isConsumerMode()`), decided in EditorV2 and in
+  `openTemplateEditor`, so `setting.ts` keeps its zero imports.**
+
+- **R-GEN-24** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The template language is a Monaco language of its own, `jjel-template`, defined under `src/codegen/ui/` (lazy),
+  with markers from `parseTemplate` and a completion provider over a context the open editor sets (the
+  `setCompletionContext` precedent); no JjEL language is added to `src/jjel/`.**
+
+- **R-GEN-25** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **A template record has `mode?: 'text' | 'expression'`, absent read as `expression`; the codec writes it after
+  `body` only when present.** Templates created in the panel and in the Template Editor are `text`. The gallery
+  examples keep their expression bodies.
+
+- **R-GEN-26** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Text bodies parse through `parseTemplateText`, a lexer option `textBody` off by default: `"` is text, the only
+  escape is `\${`, no trim, positions in body coordinates; one engine helper dispatches on `mode` for the engine and
+  the markers.** Monaco gets a `jjel-template-text` language sharing the hole states.
+
+- **R-GEN-27** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The mode toggle converts: expression to text only when one string literal spans the body, text to expression
+  always; a draft edit saved in one undo step.**
+
+- **R-GEN-28** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **Generation limits: depth 64 kept; a sticky budget of 2000 ms and 1,000,000 output characters, checked at template
+  calls and holes; when it trips, one error and no code.** Generate stays on the main thread in 3.2.
+
+- **R-GEN-29** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **JjEL member guard for every consumer of the evaluator: `__proto__` and inherited `Object.prototype` names read as
+  missing on dot, `?.`, index and method paths; a member read never yields a native function; builtin method tables
+  answer own keys only; object literal keys are own data properties.**
+
+- **R-GEN-30** (2026-10-23, provisional, unattended, evidence: read, verified: none, reversible: branch).
+  **The runner worker also removes `Worker`, `SharedWorker`, `caches` and `navigator.storage`; a CSP on the worker's
+  script response is a hosting matter, outside 3.2, filed as a ticket.**
+
+- **R-GEN-31** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **A generator is a concern of its own, several per metamodel, selectable and independent, stored as a record of the
+  metamodel's `_state`, not as a `DViewPoint` nor a new D-type.** Evidence §3.2, §3.4, §4.
+
+- **R-GEN-32** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **`genTemplates` is the template list of the default generator, unmoved; no migration, R-GEN-3 and R-GEN-12 hold as
+  written.** Other generators and the default's metadata live in one key `genGenerators` `{"v":1,"generators":[...]}`,
+  written through the `state` setter, one undo step per Save. Evidence §5.
+
+- **R-GEN-33** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **A generator declares `name`, `root` (an entry template), `files` (path → entry template) and `target` (`js` or
+  none); absent metadata reads as root `main` else the first template, one file.** Evidence §1.3, §1.5.
+
+- **R-GEN-34** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **The STC is the metamodel's and is not declared per generator; `target` is (amends working-model point 5).**
+  Evidence §1.4.
+
+- **R-GEN-35** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **Check runs only on a generator whose target is `js`; Run calls `main()` of its `js` file.** Evidence §6.
+
+- **R-GEN-36** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **The provenance triple is unchanged; the generator id is carried by the generation result and by the Template
+  Editor's tab and opener, not by each fragment.** Evidence §2.
+
+- **R-GEN-37** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **One Template Editor tab per (metamodel, generator); the default keeps `codegen_tpl_<metamodelId>`.** Amends
+  provisional R-GEN-20. Evidence §6. Superseded by R-GEN-40.
+
+- **R-GEN-38** (2026-10-23, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **Slice order G1..G4, G5 in a lane of its own; G1 alone ships nothing visible.** Evidence §8. Superseded by
+  R-GEN-43.
+
+- **R-GEN-39** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **3.2 ships code generation as it is on the trunk (`genTemplates`, one template list per metamodel); several
+  generators per metamodel ship in 3.3.** The 3.3 work lives on branch `cg-generators` and is not merged into
+  `alfonso-frontend-jjtl` before the 3.2 tag. The double authoring surface of 3.2 (Templates tab of the floating Code
+  panel and the Template Editor tab) is a known limit for its CHANGELOG.
+
+- **R-GEN-40** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **One dock tab per generator is the only authoring surface: the generator's template list on the left, the editor
+  (with the completion of S4) in the middle, and on the right a pane with the conforming-model chooser and three
+  modes, Preview (live generation), Run and Check.** The floating Code panel stops being an editor: the pill on the
+  canvas opens the tab of the generator last used on that metamodel (else the default), and on a model canvas (M1) the
+  tab opens with that model chosen. Supersedes R-GEN-37 and the G3/G4 split of R-GEN-38. The default generator's tab
+  keeps the id `codegen_tpl_<metamodelId>`.
+
+- **R-GEN-41** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **Provenance is navigable both ways in the generator tab, in every mode: a fragment that comes from a model element
+  selects that element on the canvas (as `selectOnCanvas` does in the 3.2 panel); every fragment also leads to the
+  template that produced it, opened and selected in the same tab.** The generator id travels on the generation result
+  (R-GEN-36), the template name on the fragment origin.
+
+- **R-GEN-42** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **The project's left bar gains a GENERATORS section, beside TRANSFORMS, listing each metamodel's generators (setting
+  on only; absent otherwise), with a «New generator» entry; a click opens the generator tab.** The left bar is eager
+  code: it reads the keys only through `codegen/setting.ts` and reaches the tab only through a dynamic import, so the
+  lazy gate (R-GEN-2) stays green.
+
+- **R-GEN-43** (2026-10-24, ratified by Alfonso 2026-10-23 «si su tutto», evidence: read, verified: none, reversible: branch).
+  **Slice order on `cg-generators`: G1 codec, G2 generation per file with the generator's target, G3 generator tab
+  with the panel reduced to a launcher and two-way provenance, G4 the left-bar section.** Each slice is its own lane
+  in one chain.
+
 ## R-GV — graphVertex containment: channel, layout, membership (ratifiche 2026-10-10)
 
 Source: `docs/discovery/discovery_2026-10-10_graphvertex_bpmn_lanes.md` (P-2026-10-10-0105 Phase 1, §H and §I), spec
