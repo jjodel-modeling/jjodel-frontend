@@ -646,11 +646,21 @@ Nested objects (STEP 6c), i.e. what `-> feature { ... }` created:
 
 7. `LValue.addObject(json, className)` on the parent's `$feature` slot. **It opens its own
    TRANSACTION around `DObject.new3`**, so it runs outside STEP 6's, for the same reason as
-   `DVertex.new`. It runs at the top of the STEP 8 timeout, where `lModel.objects` is
-   populated.
-8. The child is created with its **name only**. Its remaining attributes are queued against
-   the **real id `addObject` returned** and written on a further timer, past `addObject`'s
-   own deferred value seeding (`U.UpdatingTimer * 2`).
+   `DVertex.new`, and every call stays top-level. It runs at the top of the STEP 8 timeout,
+   where `lModel.objects` is populated. The walk goes **level by level, to any depth**
+   (`components/project/nestedMaterialization.ts`): roots are found by name as in STEP 8,
+   every object below them by the id `addObject` returned for it.
+8. The slots of an object `addObject` has just created do not answer synchronously (measured
+   at 90-316 ms). Each level polls the slot it writes into, by id, every **50 ms with a cap of
+   3 s per level**; a slot that does not answer leaves its subtree **unplaced**, with a warning.
+9. The child is created with **`{}`**. Its `name` and its remaining attributes are queued
+   against the **real id `addObject` returned** and written on a further timer, past
+   `addObject`'s own deferred value seeding (`U.UpdatingTimer * 2`), once the walk is done.
+   A name in the `addObject` json is refused for a second same-named sibling in one slot, and
+   outright on a class with no `name` attribute (decision R-S1-6): such a class never
+   receives a `name`.
+10. Objects left unplaced are counted and listed in the JjTL output panel
+    (`SystemEvents.JJTL_NESTED_MATERIALIZED`).
 
 **Design decision — children are resolved by id, not by name.** The STEP 8/8b name pool
 stays `lModel.objects` (the roots). Two tables may each own a column called `id`: a name
@@ -670,7 +680,9 @@ executor free of Jjodel pointers and confines the D-layer knowledge to the write
 attribute of the target class, nor a resolved reference, nor a nested creation is reported
 with the instance, the feature and the reason. It used to fall between the attribute
 whitelist (`allAttributes`, which excludes references) and the `__ref_result` channel
-without a word.
+without a word. This holds at every depth: a key of a nested object that is neither an
+attribute nor a nested creation is warned with its path, and an object that could not be
+placed is reported as above.
 
 ---
 
