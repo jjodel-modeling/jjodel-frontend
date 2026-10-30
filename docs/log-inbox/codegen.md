@@ -346,3 +346,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato
 **Notes**: 4 code conflicts stopped the lane (question); 5 hunks then resolved by union, trunk first. Alfonso put GENERATORS above SCRIPTS (b38dccdac). The merge broke the divider drag beside a generator tab: the trunk's :not(:has()) raised the split cap to (0,7,1) over the lift (0,6,0); 213b368a8 (0,8,0). Gates green; vitest 455 files, 12186 passed, same 9 red. Probes: leftbar 19/19, generator-tab 92/92 on 3151/3152; crops in ~/.jjodel-lanes/P-2026-10-30-1510/crops.
 **Prompt document name**: 2026-10-30 15:10
+
+## 2026-10-30 — merge: cg-generators into alfonso-frontend-jjtl (P-2026-10-30-2200)
+**Prompt**: `claude_2026-10-30_2200_prompt_merge_cg-generators.md`, a direct merge by `lane-run merge --direct`, no session: `cg-generators` at `5fdf3dc7a` into `alfonso-frontend-jjtl`, merge base `9606c352a`, 60 commits on the branch side.
+**Files touched**: merge `52ff81621`: 57 files from the branch side (`docs/decisions.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-10-24_0000_prompt_codegen_decisions_port.md`, `docs/prompts/claude_2026-10-24_0001_prompt_codegen_g1_generator_codec.md`, `docs/prompts/claude_2026-10-24_0002_prompt_codegen_g2_generate_files.md`, `docs/prompts/claude_2026-10-24_0003_prompt_codegen_g3_generator_tab.md`, `docs/prompts/claude_2026-10-24_0004_prompt_codegen_g4_leftbar_generators.md`, `docs/prompts/claude_2026-10-24_0045_prompt_codegen_g3_completion.md`, and 49 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `52ff81621` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12247 tests in 456 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: 3001 answers 200; branch probes on the same tree (cg-generators 5fdf3dc7a): codegen-leftbar ALL GREEN (GENERATORS above SCRIPTS), codegen-generator-tab ALL GREEN after 213b368a8; trunk merge clean, all gates green
+**Notes**: Rollback tag `pre-cg-generators` on `ab864b9b8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-30-2200/result.json`.
+**Prompt document name**: 2026-10-30 22:00
