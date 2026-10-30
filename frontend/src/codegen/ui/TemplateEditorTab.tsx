@@ -69,6 +69,8 @@ import {
 } from './generatorTabs';
 import { openTemplateEditor } from './openTemplateEditor';
 import GeneratorPane from './GeneratorPane';
+import { useGeneratorImport } from './GeneratorImportDialog';
+import { exportGenerator } from './generatorTransfer';
 import { ColumnSplitter, SPLIT_MIN_PX, readSplitRatio } from './splitter';
 import type { GeneratorResult } from '../engine/generateFiles';
 import type { GeneratorRecord } from '../engine/generatorCodec';
@@ -146,6 +148,11 @@ const subscribeDirty = (listener: () => void) => {
     dirtyListeners.add(listener);
     return () => { dirtyListeners.delete(listener); };
 };
+
+/** The unsaved drafts of the open tab of a metamodel's generator; 0 when no tab is open (generator import, P-2026-10-30-1515). */
+export function templateTabDrafts(metamodelId: string, generatorId: string): number {
+    return dirtyCounts.get(templateTabId(metamodelId, generatorId)) ?? 0;
+}
 
 /** Selects a template in the open tab of the metamodel's generator (the default when absent); false when no tab is open. */
 export function selectInTemplateTab(metamodelId: string, name: string | null, generatorId?: string): boolean {
@@ -411,6 +418,21 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
         setRenaming(null);
         if (name && generator && name !== generator.name) writePatch(generatorsPatch(rawT, rawG, renameGenerator(decoded.generators, generatorId, name)));
     };
+    // Import and export of generators as JSON (P-2026-10-30-1515): export reads the stored list, not the drafts.
+    const importer = useGeneratorImport({
+        metamodels: [{ id: metamodelId, name: metamodelName() }],
+        target: metamodelId,
+        draftsOf: templateTabDrafts,
+        onImported: imported => {
+            const first = imported[0];
+            if (first && first.generatorId !== generatorId) openTemplateEditor(metamodelId, metamodelName(), null, first.generatorId, paneModel ?? undefined);
+        },
+    });
+    const exportTitle = templates.length === 0
+        ? 'The generator has no template to export'
+        : dirtyCount > 0
+            ? `Export the generator as JSON: the saved templates, without the ${dirtyCount} unsaved draft${dirtyCount === 1 ? '' : 's'}`
+            : 'Export the generator as JSON';
     const deleteGenerator = () => {
         setConfirmDelete(false);
         if (generatorId === DEFAULT_GENERATOR_ID) return;
@@ -669,6 +691,26 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
                         >
                             <i className="bi bi-trash" />
                         </button>
+                        <button
+                            type="button"
+                            className="codegen-tpl__icon"
+                            title="Import a generator from a JSON file"
+                            aria-label="Import a generator"
+                            disabled={!exists}
+                            onClick={importer.start}
+                        >
+                            <i className="bi bi-box-arrow-in-down" />
+                        </button>
+                        <button
+                            type="button"
+                            className="codegen-tpl__icon"
+                            title={exportTitle}
+                            aria-label="Export the generator"
+                            disabled={!exists || !generator || templates.length === 0}
+                            onClick={() => exportGenerator({ id: metamodelId, name: metamodelName() }, generatorId)}
+                        >
+                            <i className="bi bi-box-arrow-up" />
+                        </button>
                     </div>
                 </div>
                 {generator && (
@@ -826,6 +868,7 @@ export default function TemplateEditorTab({ metamodelId, initial = null, generat
                 onConfirm={deleteGenerator}
                 onCancel={() => setConfirmDelete(false)}
             />
+            {importer.element}
         </div>
     );
 }

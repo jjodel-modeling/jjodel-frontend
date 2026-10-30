@@ -54,6 +54,8 @@ import {
     buildXmiImportSummary,
     buildErrorImportSummary,
 } from '../import/buildImportSummary';
+import { useCodegenEnabled } from '../../codegen/setting';
+import { isConsumerMode } from '../environment/consumerMode';
 import {
     materializeNested,
     countSubtree,
@@ -63,6 +65,9 @@ import {
     type NestedMaterializationReport,
 } from './nestedMaterialization';
 import './project-editor.scss';
+
+// The GENERATORS section, lazy: codegen code but setting.ts stays out of the dashboard's eager closure (R-GEN-2).
+const GeneratorsSection = React.lazy(() => import('../../codegen/ui/GeneratorsSection'));
 
 
 // Types for contextual menu
@@ -215,6 +220,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     if (!project) return null;
     // An absent target is left out: `.name` on it white-paged the project (P-2026-09-30-1540).
     const metamodels = (project.metamodels || []).filter(m => !!m);
+    const codegenOn = useCodegenEnabled();
     const models = (project.models || []).filter(m => !!m);
     // The Data Manager singleton is out of every list this page builds (R-DMV-1): the
     // VIEWPOINTS section, the megamodel, and the two export payloads below all read this
@@ -2894,6 +2900,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     />
                 )}
             </div>
+
+            {/* Generators Section (P-2026-10-30-1515): lazy, with the codegen setting on and outside consumer mode */}
+            {codegenOn && !isConsumerMode() && (
+                <React.Suspense fallback={null}>
+                    <GeneratorsSection
+                        SectionHeader={SectionHeader}
+                        metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name }))}
+                        projectName={project.name || 'project'}
+                    />
+                </React.Suspense>
+            )}
 
             {/* Viewpoints Section */}
             <div className="project-section" id="section-viewpoints">

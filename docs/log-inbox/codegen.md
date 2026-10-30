@@ -7,6 +7,19 @@ empties this file. The active log is not touched by this lane.
 ---
 
 
+## 2026-10-30 — feat(codegen): generator import and export as JSON, Templates tab and dashboard (P-2026-10-30-1430, P-2026-10-30-1515)
+**Prompt**: Import and export of a generator as a JSON file, from the Templates tab and from a new GENERATORS dashboard section, on the multi-generator storage of cg-generators. 1430 = discovery (Phase 1); 1515 = code (Phase 2) after the context ceiling; 1540 = this docs closure.
+**Files touched**: discovery 26d27c5e9: docs/discovery/discovery_2026-10-30_generator_import_export.md; 8a66dcde9: docs/prompts (acceptance fixtures); 7fbedcc78: frontend/src/codegen/engine/generatorFile.ts, engine/__tests__/generatorFile.test.ts; 03db53f3f: codegen/ui/generatorTransfer.ts, ui/GeneratorImportDialog.tsx + .scss, ui/TemplateEditorTab.tsx, ui/__tests__/generatorTransfer.test.ts; 9d844eca3: codegen/ui/GeneratorsSection.tsx, frontend/src/components/project/ProjectEditor.tsx; closure: this inbox, the discovery report, three prompt files
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (not run: the tab icons, the dialog and the dashboard section await Alfonso's visual check)
+**Notes**: Gates after 9d844eca3 all green: tsc 0, vitest src/codegen 2286 tests, build, check:codegen-lazy --on. 15 mutants killed. Open: visual check; byte comparison of generated SMV and Verilog with the hand-entered generators; ArbiterSpec_to_SyncRTL.json holds no Expr objects (ticket candidate). Entry in the inbox per P13.
+**Prompt document name**: 2026-10-30 15:40
+
 ## 2026-10-23 — discovery: codegen text mode, generation limits, JjEL prototype reads, worker CSP (P-2026-10-23-2010)
 **Prompt**: Read-only discovery for 3.2 after S2: template bodies in text mode with an additive `mode` field, recursion/time/output limits of generation, JjEL prototype reads, CSP for the runner's worker; slices alongside S3/S4 and provisional rows
 **Files touched**: docs/discovery/discovery_2026-10-23_codegen_textmode_safety.md (new), docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-23_2010_prompt_codegen_textmode_safety_discovery.md
@@ -359,3 +372,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: 3001 answers 200; branch probes on the same tree (cg-generators 5fdf3dc7a): codegen-leftbar ALL GREEN (GENERATORS above SCRIPTS), codegen-generator-tab ALL GREEN after 213b368a8; trunk merge clean, all gates green
 **Notes**: Rollback tag `pre-cg-generators` on `ab864b9b8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-30-2200/result.json`.
 **Prompt document name**: 2026-10-30 22:00
+
+## 2026-10-30 — merge: gen-io takes alfonso-frontend-jjtl (P-2026-10-30-2209)
+**Prompt**: RC-14: bring the trunk at 5e81e8933 into gen-io with one --no-ff merge commit before the trunk takes the branch; union for decisions.md and the inboxes, step-4 probes, step-5 reading, gates, visual probes, GO.
+**Files touched**: merge 358f48f5f (295 trunk files; by hand, authorized in C-2026-10-30-1430: frontend/src/components/project/ProjectEditor.tsx, the import hunk); docs: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-30_2209_prompt_gen-io_take_trunk.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: 1 code conflict stopped the lane (question); the import hunk resolved by union, branch first. Gates green: vitest 458 files, 12284 passed, same 9 red; hooks 967. generator-tab red twice on 3140, a vite started before the merge; fresh servers: this tree 92/92 on 3160, trunk tip 92/92 on 3161. Import/export by a gitignored probe: 14/14. Crops in ~/.jjodel-lanes/P-2026-10-30-2209/crops, crops-gentab, crops-io.
+**Prompt document name**: 2026-10-30 22:09
