@@ -385,3 +385,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato
 **Notes**: 1 code conflict stopped the lane (question); the import hunk resolved by union, branch first. Gates green: vitest 458 files, 12284 passed, same 9 red; hooks 967. generator-tab red twice on 3140, a vite started before the merge; fresh servers: this tree 92/92 on 3160, trunk tip 92/92 on 3161. Import/export by a gitignored probe: 14/14. Crops in ~/.jjodel-lanes/P-2026-10-30-2209/crops, crops-gentab, crops-io.
 **Prompt document name**: 2026-10-30 22:09
+
+## 2026-10-30 — merge: gen-io into alfonso-frontend-jjtl (P-2026-10-30-2300)
+**Prompt**: `claude_2026-10-30_2300_prompt_merge_gen-io.md`, a direct merge by `lane-run merge --direct`, no session: `gen-io` at `d0fc59c7a` into `alfonso-frontend-jjtl`, merge base `5e81e8933`, 11 commits on the branch side.
+**Files touched**: merge `1ed207097`: 17 files from the branch side (`docs/discovery/discovery_2026-10-30_generator_import_export.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-10-30_1430_prompt_generator_import_export.md`, `docs/prompts/claude_2026-10-30_1515_prompt_generator_import_export_phase2.md`, `docs/prompts/claude_2026-10-30_1540_prompt_generator_import_export_closure.md`, `docs/prompts/claude_2026-10-30_2209_prompt_gen-io_take_trunk.md`, `frontend/src/codegen/engine/__tests__/fixtures/generator-smv.json`, `frontend/src/codegen/engine/__tests__/fixtures/generator-verilog.json`, and 9 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1ed207097` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12284 tests in 458 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: generator-tab probe 92/92 and import/export probe 14/14 green on gen-io d0fc59c7a (P-2026-10-30-2209), same tree as the merge; gates green
+**Notes**: Rollback tag `pre-gen-io` on `5e81e8933` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-30-2300/result.json`.
+**Prompt document name**: 2026-10-30 23:00
