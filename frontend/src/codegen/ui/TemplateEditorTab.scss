@@ -8,9 +8,10 @@
 
 // The dock panel that holds a generator tab beside the canvas (P-2026-10-24-1515). PinnableDock hides every panel
 // without a pinnable tab header (DockManagerStyles.scss `.not-strip`), and the split layout caps a last panel at
-// 710px (abstract/style.scss, the retired Properties column): both are lifted for this panel only. The doubled class
-// in :has() outranks the body-scoped cap without !important.
-.not-strip > .dock-layout .dock-hbox > .dock-panel:has(.codegen-tpl.codegen-tpl) {
+// 710px (abstract/style.scss, the retired Properties column): both are lifted for this panel only. The class repeated
+// four times in :has() gives (0,8,0), over the body-scoped cap's (0,7,1) since its :not(:has()) of P-2026-10-25-0040,
+// without !important.
+.not-strip > .dock-layout .dock-hbox > .dock-panel:has(.codegen-tpl.codegen-tpl.codegen-tpl.codegen-tpl) {
     display: block;
     max-width: none;
 }
