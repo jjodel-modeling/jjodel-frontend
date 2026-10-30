@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-30-1540
 Chat: C-2026-10-30-1430
 Front: codegen
-Status: to execute
+Status: eseguito 2026-10-30 · lane gen-io · branch gen-io · the commit of this line
 Lane: fast (docs only, closure of P-2026-10-30-1430 and P-2026-10-30-1515)
 Depends: P-2026-10-30-1515 (feature commits 7fbedcc78, 03db53f3f, 9d844eca3)
 Worktree: ~/jjodel-w-genio, branch gen-io

@@ -7,6 +7,17 @@
 - Executor: Opus 5.5 (claude-opus-5-5)
 - This report is a set of hypotheses with evidence, not a reference. Whoever uses it downstream re-reads the real files.
 
+## 0. Answer in brief
+
+- The base (`gen-io`, from `cg-generators`) stores several generators per metamodel (`genTemplates` for the default one,
+  `genGenerators` for the others, `engine/generatorCodec.ts`), not one template list: H1 is falsified on the base.
+- The Code panel and the preview use the generator's declared files and root, not a template named `main` (H2 falsified);
+  the name check, the call walkers and the download/upload helpers exist but were private or unexported (H3, H4 partly; H5 holds).
+- The two acceptance generators (SMV, Verilog) were not reachable from this machine (H7 falsified); the type name `GeneratorFile` was taken.
+- Phase 2 (P-2026-10-30-1515, 7fbedcc78, 03db53f3f, 9d844eca3) built the file format, decode, validate and plan (`generatorFile.ts`),
+  Import/Export in the Templates tab, and a lazy GENERATORS dashboard section; it shipped on unit and fixture tests.
+- Open: visual check, byte comparison against the hand-entered generators, and the SyncRTL model export, which holds no Expr objects.
+
 ## Objective
 
 Establish, before any code, the storage shape the lane builds on, the entry convention, the reusable name check,

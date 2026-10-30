@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-30-1515
 Chat: C-2026-10-30-1430
 Front: codegen
-Status: to execute
+Status: eseguito 2026-10-30 · lane gen-io · branch gen-io · 9d844eca3 · verifica visiva da fare
 Lane: full (Phase 2 of P-2026-10-30-1430, continued in a fresh session)
 Depends: P-2026-10-30-1430 (discovery 26d27c5e9)
 Worktree: ~/jjodel-w-genio, branch gen-io (based on cg-generators 87cbac5b7)

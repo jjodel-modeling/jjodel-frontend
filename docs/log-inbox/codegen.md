@@ -7,6 +7,19 @@ empties this file. The active log is not touched by this lane.
 ---
 
 
+## 2026-10-30 — feat(codegen): generator import and export as JSON, Templates tab and dashboard (P-2026-10-30-1430, P-2026-10-30-1515)
+**Prompt**: Import and export of a generator as a JSON file, from the Templates tab and from a new GENERATORS dashboard section, on the multi-generator storage of cg-generators. 1430 = discovery (Phase 1); 1515 = code (Phase 2) after the context ceiling; 1540 = this docs closure.
+**Files touched**: discovery 26d27c5e9: docs/discovery/discovery_2026-10-30_generator_import_export.md; 8a66dcde9: docs/prompts (acceptance fixtures); 7fbedcc78: frontend/src/codegen/engine/generatorFile.ts, engine/__tests__/generatorFile.test.ts; 03db53f3f: codegen/ui/generatorTransfer.ts, ui/GeneratorImportDialog.tsx + .scss, ui/TemplateEditorTab.tsx, ui/__tests__/generatorTransfer.test.ts; 9d844eca3: codegen/ui/GeneratorsSection.tsx, frontend/src/components/project/ProjectEditor.tsx; closure: this inbox, the discovery report, three prompt files
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (not run: the tab icons, the dialog and the dashboard section await Alfonso's visual check)
+**Notes**: Gates after 9d844eca3 all green: tsc 0, vitest src/codegen 2286 tests, build, check:codegen-lazy --on. 15 mutants killed. Open: visual check; byte comparison of generated SMV and Verilog with the hand-entered generators; ArbiterSpec_to_SyncRTL.json holds no Expr objects (ticket candidate). Entry in the inbox per P13.
+**Prompt document name**: 2026-10-30 15:40
+
 ## 2026-10-23 — discovery: codegen text mode, generation limits, JjEL prototype reads, worker CSP (P-2026-10-23-2010)
 **Prompt**: Read-only discovery for 3.2 after S2: template bodies in text mode with an additive `mode` field, recursion/time/output limits of generation, JjEL prototype reads, CSP for the runner's worker; slices alongside S3/S4 and provisional rows
 **Files touched**: docs/discovery/discovery_2026-10-23_codegen_textmode_safety.md (new), docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-23_2010_prompt_codegen_textmode_safety_discovery.md
