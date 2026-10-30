@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-30-1315
 Chat: C-2026-10-30-1253
 Front: release-3-2
 Lane: fast (one product file plus one new test file, outside the critical zone, no exported interface changes)
-Status: da eseguire
+Status: eseguito 2026-10-30 · lane jjtl-executor-patch · afcecce4d · verifica visiva non applicabile (waiver Alfonso 2026-10-30)
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 non si applica (motivo: fast lane, the preliminary check goes inline in the log entry, max ten lines).
