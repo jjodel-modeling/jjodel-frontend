@@ -2,6 +2,7 @@
 
 Prompt-ID: P-2026-10-30-1215
 Chat: C-2026-10-30-1207
+Front: jjodie-ui
 Lane: fast (two files plus one test, outside the critical zone, no exported interface changes)
 Status: da eseguire
 
