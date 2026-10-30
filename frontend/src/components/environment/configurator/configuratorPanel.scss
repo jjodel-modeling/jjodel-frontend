@@ -100,17 +100,28 @@
         &--unsaved { color: var(--color-form-dirty-text); }
     }
 
+    // R-CFG-9: neutral (Delete's look) while the project is saved; the primary gradient while it has
+    // unsaved changes. The border stays in both states, transparent in the second, so the size does not move.
     &__save {
         display: inline-flex;
         align-items: center;
         gap: var(--space-1);
         padding: var(--space-1) var(--space-3);
-        border: none;
+        border: 1px solid var(--color-form-border);
         border-radius: var(--radius-sm);
-        background: var(--gradient-primary);
-        color: var(--color-text-inverse);
+        background: var(--color-form-surface);
+        color: var(--color-text-primary);
         font-size: var(--text-sm);
         cursor: pointer;
+
+        &:hover { border-color: var(--color-form-border-strong); }
+
+        &--unsaved,
+        &--unsaved:hover {
+            border-color: transparent;
+            background: var(--gradient-primary);
+            color: var(--color-text-inverse);
+        }
 
         &:disabled { opacity: 0.6; cursor: progress; }
     }
@@ -206,6 +217,27 @@
     }
 
     &__field { min-width: 0; }
+
+    // #186 «Customize element»: a role's «number input» is the stepper without its two buttons (a
+    // text field would write the number as a string).
+    &__field--number-input .ir-field__stepper-btn { display: none; }
+
+    // #186: the text properties a role's CSS declares on a field also reach its title and its
+    // control, one property per rule, so a field without them renders as before.
+    @each $prop in color, font-family, font-size, font-style, font-weight, letter-spacing, text-decoration, text-transform {
+        &__field[data-cfg-text~="#{$prop}"] :is(.cfg-panel__label, .cfg-panel__type, .cfg-panel__cardinality, input, select, textarea) {
+            #{$prop}: inherit;
+        }
+    }
+
+    // #186: the role's dropdown, and the free entry beside it when «Other…» is chosen.
+    &__dropdown {
+        display: flex;
+        gap: var(--space-2);
+        min-width: 0;
+
+        > * { flex: 1 1 0; min-width: 0; }
+    }
 
     &__diag {
         display: flex;
