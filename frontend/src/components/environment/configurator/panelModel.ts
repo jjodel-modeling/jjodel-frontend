@@ -12,6 +12,7 @@
 
 import { orderFields } from '../../editor-v2/viewpoint/ir/formHosts';
 import type { FormSpec } from '../../editor-v2/viewpoint/ir/irTypes';
+import { isRoleWidget, widgetChoicesFor } from '../../../joiner/environmentConfig';
 
 // ── Cardinality (#187 tasks 7 and 8) ────────────────────────────────────────
 
@@ -170,6 +171,57 @@ export function newTargetAt(
     if (rowIndex === undefined) return typeof controls.link === 'number' ? controls.link : null;
     const row = controls.rows.find((r) => r.index === rowIndex);
     return row && row.actions.includes('change') ? rowIndex : null;
+}
+
+/**
+ * «Remove from the list» on a reference row, and «(none)» in its picker (R-CFG-7, P-2026-10-20-1123):
+ * the unlink of the row, never a delete. A multi-valued row follows its own `remove`, as `jjform/refSlot`
+ * rules it. A single-valued row is unlinked whenever the viewer may change it, required ones included:
+ * `refSlot` gives `change` exactly when the slot is writable and the value is not locked, and withholds
+ * `remove` from a required single (R-REF-3, which the Data Manager keeps). An empty required slot is left
+ * to the validation to report.
+ */
+export function canUnlink(ref: { upper: number }, row: { actions: readonly string[] }): boolean {
+    if (row.actions.includes('remove')) return true;
+    return ref.upper === 1 && row.actions.includes('change');
+}
+
+// ── The role's widget (#186 «Customize element», P-2026-10-17-1053) ─────────
+
+/**
+ * How a role's widget renders through the form's own widgets, or null for «what the panel renders
+ * without a presentation». The field's descriptor takes `widget`; `cellWidget` replaces the width map's
+ * widget name on its cell, so an explicit «input» is not turned into an extended widget; `multiline`
+ * is the layout annotation that gives the growing textarea at span 12 (not the JjEL box of
+ * `WidgetKind.textarea`); `numberInput` hides the stepper's two buttons (a text field would write the
+ * number as a string, measured in the Phase 1 report §4.4); `dropdown` is the panel's own dropdown.
+ * A widget the field does not offer (`widgetChoicesFor`) or of the other family than its derived widget
+ * is ignored: a presentation written before the metamodel changed still renders.
+ */
+export interface RoleRendering {
+    widget: 'text' | 'number';
+    cellWidget?: 'text' | 'number';
+    multiline?: true;
+    numberInput?: true;
+    dropdown?: 'string' | 'number';
+}
+
+export function roleRendering(
+    widget: unknown,
+    f: { typeName: string; isEnum: boolean; isMultivalued: boolean; isReadOnly: boolean; derivedWidget: string },
+): RoleRendering | null {
+    if (!isRoleWidget(widget) || !widgetChoicesFor(f).includes(widget)) return null;
+    const family = widget === 'input' || widget === 'textarea' || widget === 'dropdown' ? 'text' : 'number';
+    if (f.derivedWidget !== family) return null;
+    switch (widget) {
+        case 'input': return { widget: 'text', cellWidget: 'text' };
+        case 'textarea': return { widget: 'text', multiline: true };
+        case 'dropdown': return { widget: 'text', dropdown: 'string' };
+        case 'stepper': return { widget: 'number', cellWidget: 'number' };
+        case 'number-input': return { widget: 'number', cellWidget: 'number', numberInput: true };
+        case 'number-dropdown': return { widget: 'number', dropdown: 'number' };
+        default: return null;
+    }
 }
 
 // ── Header band ────────────────────────────────────────────────────────────

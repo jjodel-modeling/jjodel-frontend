@@ -29,7 +29,7 @@ import {
     resolveTypePermission,
 } from '../../joiner';
 import { addChildReason, newDraft, paletteAttr } from '../../jjform';
-import { metamodelOfClass, modelsForType, restrictDeleteForProfile, topLevelReason } from '../../joiner/environmentConfig';
+import { metamodelOfClass, modelsForType, restrictDeleteForProfile, topLevelReason, typePresentationOf } from '../../joiner/environmentConfig';
 import { instancesOfClass, modelIdOfObject } from '../abstract/tabs/instanceManagerModel';
 import { makeShapeCtx } from '../editor-v2/hooks/shapeAdapter';
 import { applyCreate, childSlotCount } from '../editor-v2/hooks/createAdapter';
@@ -138,8 +138,25 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
     /** «New» returned no instance. Shown instead of a silent button; cleared on the next try. */
     const [createFailed, setCreateFailed] = useState(false);
 
-    // Clear the instance selection when the type changes.
-    useEffect(() => { setSelectedInstanceId(null); setCreateFailed(false); }, [selectedTypeId]);
+    /** R-CFG-9 — the instance selected last on each type, for the session (not persisted). Written
+     *  when the selection changes, never in the commit where only the type did, so an instance is
+     *  never filed under the wrong type. */
+    const lastByTypeRef = useRef<Record<string, string>>({});
+    useEffect(() => {
+        if (selectedTypeId && selectedInstanceId) lastByTypeRef.current[selectedTypeId] = selectedInstanceId;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedInstanceId]);
+
+    // When the type changes, select again the instance selected last on it, if it is still one of the
+    // type's instances and the role does not hide its type; otherwise clear the selection.
+    useEffect(() => {
+        const last = selectedTypeId ? lastByTypeRef.current[selectedTypeId] : undefined;
+        const keep = !!last && instances.some((row) => row.id === last)
+            && resolveTypePermission(profile, (idlookup as any)?.[last!]?.instanceof) !== 'hidden';
+        setSelectedInstanceId(keep ? last! : null);
+        setCreateFailed(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedTypeId]);
 
     /** The models the selected type lives in. «New» creates in the first one; the list shows
      *  the instances of all of them. Empty = the project has no model of that metamodel. */
@@ -239,6 +256,8 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
         (classId: string): DetailPermission => resolveTypePermission(profile, classId),
         [profile],
     );
+    /** #186 (R-CFG-3): the role's presentation of a metaclass, from `?profile=`. Stable per profile. */
+    const presentationOf = useCallback((classId: string) => typePresentationOf(profile, classId), [profile]);
 
     /** The Data Manager's form palette, so the detail is painted as it is there. */
     const palette = useSelector((s: any) => paletteAttr(s?.idlookup?.[DATA_MANAGER_VIEWPOINT_ID]?.formPalette));
@@ -548,6 +567,8 @@ export function ConfiguratorTab({ open, onClose, variant = 'overlay' }: Configur
                                                 // absent rule as «no profile», and keeps the developer's
                                                 // containment pickers as they were.
                                                 permissionOf={profile ? permissionOf : undefined}
+                                                // #186: the active role's presentation; the developer overlay has none.
+                                                presentationOf={profile ? presentationOf : undefined}
                                             />
                                         </div>
                                     </div>

@@ -1,14 +1,17 @@
 /**
  * Jodie Window Component
- * Draggable, resizable chat window
+ * Docked chat panel (R-JJD-1): a grid column of the project dashboard, resized from its left edge
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
+import { ScriptEditorView } from './ScriptEditorView';
+import { ScriptFileUpdateView } from './ScriptFileUpdateView';
+import { closeScriptEditor, getScriptEditorTarget, subscribeScriptEditor } from './scriptEditorModel';
 import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from '../../types/jodie';
-import { AIDisclaimer } from '../common/AIDisclaimer';
 import { AIEvents, JjScriptEvents } from '../../events/registry';
 
 interface JodieWindowProps {
@@ -58,11 +61,6 @@ interface JodieWindowProps {
     canClearCurrentMode?: boolean;
 }
 
-interface Position {
-    x: number;
-    y: number;
-}
-
 interface ExecutingCommand {
     command: string;
     lineNumber: number;
@@ -70,48 +68,42 @@ interface ExecutingCommand {
     total: number;
 }
 
-interface Size {
-    width: number;
-    height: number;
-}
-
-// Resize direction type for 8-way resizing
-type ResizeDirection = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw' | null;
-
-interface ResizeStart {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    posX: number;
-    posY: number;
-}
-
-const JODIE_DEFAULT_WIDTH = 760;
-const JODIE_DEFAULT_HEIGHT = 520;
-const JODIE_DEFAULT_MARGIN = 20;
-// Left gap when floating: one design-system grid step, so the window reads as edge-attached.
-// Fullscreen uses no gap at all — it is a docked panel, flush to the content area.
-const JODIE_LEFT_GAP = 8;
 // TODO: cleanup — no consumer left since the window stopped aligning to the FAB offsets.
 const JODIE_FAB_LEFT = 30;
 const JODIE_FAB_BOTTOM = 100;
 const JODIE_ANIMATION_MS = 220;
-const DEFAULT_SIZE: Size = { width: JODIE_DEFAULT_WIDTH, height: JODIE_DEFAULT_HEIGHT };
-const MIN_SIZE: Size = { width: 320, height: 400 };
-const MAX_SIZE: Size = { width: 1200, height: 900 };
+// Dock width bounds (R-JJD-1). Persisted as JodieConfig.dockWidth, written on pointer-up only:
+// save() cascades into every provider config, so it never runs per drag frame.
+const DOCK_MIN_WIDTH = 420;
+const DOCK_MAX_WIDTH = 760;
+const DOCK_DEFAULT_WIDTH = 460;
+const DOCK_KEY_STEP = 8;
+// Body variable the Properties rail offsets its `right` by (declared in styles/tokens/_layout.scss).
+const DOCK_WIDTH_VAR = '--jj-jodie-dock-width';
 
-// Left edge of the content area: 0 in editor tabs (rail unmounted), the rail width where it is mounted.
-// Under 769px the rail slides off-canvas while staying in the DOM, so clamp negatives away.
-const computeLeftInset = (): number =>
-    Math.max(0, document.querySelector('.leftbar')?.getBoundingClientRect().right ?? 0);
+const clampDockWidth = (w: number): number =>
+    Math.round(Math.max(DOCK_MIN_WIDTH, Math.min(DOCK_MAX_WIDTH, Number.isFinite(w) ? w : DOCK_DEFAULT_WIDTH)));
 
-// Left-aligned, one grid step off the content area; vertical margin unchanged.
-const computeDefaultPosition = (size: Size = DEFAULT_SIZE): Position => ({
-    // The min() clamp keeps the 760px-wide window fully visible on narrow viewports.
-    x: Math.max(0, Math.min(computeLeftInset() + JODIE_LEFT_GAP, window.innerWidth - size.width - JODIE_LEFT_GAP)),
-    y: Math.max(0, window.innerHeight - size.height - JODIE_DEFAULT_MARGIN),
-});
+// The dock slot is rendered by ProjectDashboard as its last grid column; Jodie is mounted once,
+// globally, in App.tsx, so the window reaches the slot through this tiny store and portals into it.
+// Where no slot exists (pages other than a project) the window docks to the viewport's right edge.
+let dockSlot: HTMLElement | null = null;
+const dockSlotListeners = new Set<() => void>();
+const setDockSlot = (el: HTMLDivElement | null): void => {
+    if (dockSlot === el) return;
+    dockSlot = el;
+    dockSlotListeners.forEach(l => l());
+};
+const subscribeDockSlot = (l: () => void): (() => void) => {
+    dockSlotListeners.add(l);
+    return () => { dockSlotListeners.delete(l); };
+};
+const getDockSlot = (): HTMLElement | null => dockSlot;
+
+/** Grid column the docked Jodie window portals into (R-JJD-1). Empty, and 0 px wide, while Jodie is closed. */
+export function JodieDockSlot(): JSX.Element {
+    return <div className="jodie-dock-slot" ref={setDockSlot} />;
+}
 
 export function JodieWindow({
     messages,
@@ -143,27 +135,38 @@ export function JodieWindow({
     onClearCurrentMode,
     canClearCurrentMode,
 }: JodieWindowProps): JSX.Element {
-    // Load initial position/size from config
-    const config = JodieConfig.current;
-    const initialSize: Size = config.size || DEFAULT_SIZE;
-    const initialPosition: Position = config.position || computeDefaultPosition(initialSize);
-
-    const [position, setPosition] = useState<Position>(initialPosition);
-    const [size, setSize] = useState<Size>(initialSize);
-    const [isDragging, setIsDragging] = useState(false);
-    const [resizeDirection, setResizeDirection] = useState<ResizeDirection>(null);
+    // Dock width from config; the old floating `position`/`size` stay readable and unused (R-JJD-1).
+    const [dockWidth, setDockWidth] = useState<number>(
+        () => clampDockWidth(JodieConfig.current.dockWidth ?? DOCK_DEFAULT_WIDTH)
+    );
+    const [isResizing, setIsResizing] = useState(false);
     const [executingCommand, setExecutingCommand] = useState<ExecutingCommand | null>(null);
-    const [isFullscreen, setIsFullscreen] = useState(false);
-    const [savedGeometry, setSavedGeometry] = useState<{ position: Position; size: Size } | null>(null);
     const [isAlive, setIsAlive] = useState<boolean>(() => JodieConfig.hasEnabledProviders());
     const [isAnimating, setIsAnimating] = useState(false);
+    const slot = useSyncExternalStore(subscribeDockSlot, getDockSlot);
+    const scriptEditor = useSyncExternalStore(subscribeScriptEditor, getScriptEditorTarget);
 
     const windowRef = useRef<HTMLDivElement>(null);
-    const dragOffset = useRef<Position>({ x: 0, y: 0 });
-    const resizeStart = useRef<ResizeStart>({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 });
+    // Scroll of the conversation when the script editor opened (S5), restored on `Chat`. Read by a
+    // store listener, which runs in the click handler, before the conversation is hidden.
+    const chatScrollRef = useRef<number | null>(null);
+    useEffect(() => subscribeScriptEditor(() => {
+        if (getScriptEditorTarget() && chatScrollRef.current === null) {
+            chatScrollRef.current = windowRef.current?.querySelector<HTMLElement>('.jodie-messages')?.scrollTop ?? null;
+        }
+    }), []);
+    useLayoutEffect(() => {
+        if (scriptEditor || chatScrollRef.current === null) return;
+        const list = windowRef.current?.querySelector<HTMLElement>('.jodie-messages');
+        if (list) list.scrollTop = chatScrollRef.current;
+        chatScrollRef.current = null;
+    }, [scriptEditor]);
+    const resizeStart = useRef<{ x: number; width: number }>({ x: 0, width: 0 });
+    const dockWidthRef = useRef<number>(dockWidth);
+    dockWidthRef.current = dockWidth;
     const animationTimeoutRef = useRef<number | null>(null);
 
-    // Programmatic geometry changes (fullscreen/exit/reset) animate; manual drag/resize do not.
+    // Programmatic geometry changes (reset) animate; manual resize does not.
     const triggerAnimation = useCallback(() => {
         setIsAnimating(true);
         if (animationTimeoutRef.current !== null) {
@@ -200,88 +203,60 @@ export function JodieWindow({
         };
     }, []);
 
-    // Persist position changes
-    const savePosition = useCallback((pos: Position) => {
-        JodieConfig.current.position = pos;
+    // Persist the dock width (pointer-up / key press only, never per drag frame).
+    const saveDockWidth = useCallback((w: number) => {
+        JodieConfig.current.dockWidth = w;
         JodieConfig.current.save();
     }, []);
 
-    // Persist size changes
-    const saveSize = useCallback((s: Size) => {
-        JodieConfig.current.size = s;
-        JodieConfig.current.save();
-    }, []);
-
-    // Handle dragging
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (isFullscreen) return;
-        const target = e.target as HTMLElement;
-        // Don't start drag if clicking on buttons
-        if (target.closest('button')) return;
-
-        if (target.closest('.jodie-header')) {
-            setIsDragging(true);
-            dragOffset.current = {
-                x: e.clientX - position.x,
-                y: e.clientY - position.y,
-            };
-        }
+    // Left-edge handle: dragging left widens the panel, since the dock sits on the right.
+    const handleResizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        resizeStart.current = { x: e.clientX, width: dockWidthRef.current };
+        setIsResizing(true);
     };
 
-    // Handle resize start for any direction
-    const handleResizeStart = (direction: ResizeDirection) => (e: React.MouseEvent) => {
-        if (isFullscreen) return;
-        e.stopPropagation();
-        setResizeDirection(direction);
-        resizeStart.current = {
-            x: e.clientX,
-            y: e.clientY,
-            width: size.width,
-            height: size.height,
-            posX: position.x,
-            posY: position.y,
-        };
+    const handleResizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isResizing) return;
+        setDockWidth(clampDockWidth(resizeStart.current.width - (e.clientX - resizeStart.current.x)));
     };
 
-    // Enter fullscreen: anchor left, full viewport height, default width
-    const enterFullscreen = useCallback(() => {
-        triggerAnimation();
-        setSavedGeometry({ position, size });
-        const fsSize: Size = { width: JODIE_DEFAULT_WIDTH, height: window.innerHeight };
-        const fsPosition: Position = {
-            // Flush to the viewport edge, over the rail: expanded it is a docked panel, not a floating one.
-            x: 0,
-            y: 0,
-        };
-        setSize(fsSize);
-        setPosition(fsPosition);
-        setIsFullscreen(true);
-    }, [position, size, triggerAnimation]);
+    const handleResizePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isResizing) return;
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+        setIsResizing(false);
+        saveDockWidth(dockWidthRef.current);
+    };
 
-    // Exit fullscreen: restore previously saved geometry
-    const exitFullscreen = useCallback(() => {
-        triggerAnimation();
-        if (savedGeometry) {
-            setSize(savedGeometry.size);
-            setPosition(savedGeometry.position);
-        }
-        setSavedGeometry(null);
-        setIsFullscreen(false);
-    }, [savedGeometry, triggerAnimation]);
+    const handleResizeKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        const delta = e.key === 'ArrowLeft' ? DOCK_KEY_STEP : e.key === 'ArrowRight' ? -DOCK_KEY_STEP : 0;
+        if (!delta) return;
+        e.preventDefault();
+        const next = clampDockWidth(dockWidthRef.current + delta);
+        setDockWidth(next);
+        saveDockWidth(next);
+    };
 
-    // Reset: bottom-left with default size; also exits fullscreen if active
+    // Reset: back to the default dock width.
     const resetPosition = useCallback(() => {
         triggerAnimation();
-        const defaultSize = DEFAULT_SIZE;
-        const defaultPos = computeDefaultPosition(defaultSize);
-        setSize(defaultSize);
-        setPosition(defaultPos);
-        setIsFullscreen(false);
-        setSavedGeometry(null);
-        JodieConfig.current.size = defaultSize;
-        JodieConfig.current.position = defaultPos;
-        JodieConfig.current.save();
-    }, [triggerAnimation]);
+        setDockWidth(DOCK_DEFAULT_WIDTH);
+        saveDockWidth(DOCK_DEFAULT_WIDTH);
+    }, [triggerAnimation, saveDockWidth]);
+
+    // Publish the dock width for the Properties rail while docked in the dashboard grid;
+    // back to 0px when the window closes or the slot goes away.
+    useEffect(() => {
+        if (!slot) return;
+        document.body.style.setProperty(DOCK_WIDTH_VAR, `${dockWidth}px`);
+    }, [slot, dockWidth]);
+
+    useEffect(() => {
+        if (!slot) return;
+        return () => { document.body.style.setProperty(DOCK_WIDTH_VAR, '0px'); };
+    }, [slot]);
 
     // Track AI provider configuration to drive the alive indicator
     useEffect(() => {
@@ -296,142 +271,34 @@ export function JodieWindow({
         };
     }, []);
 
-    // Handle dragging movement
-    useEffect(() => {
-        if (!isDragging) return;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            const newX = Math.max(0, Math.min(e.clientX - dragOffset.current.x, window.innerWidth - size.width));
-            const newY = Math.max(0, Math.min(e.clientY - dragOffset.current.y, window.innerHeight - size.height));
-            setPosition({ x: newX, y: newY });
-        };
-
-        const handleMouseUp = () => {
-            setIsDragging(false);
-            savePosition(position);
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDragging, position, size, savePosition]);
-
-    // Handle resize movement for all directions
-    useEffect(() => {
-        if (!resizeDirection) return;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            const deltaX = e.clientX - resizeStart.current.x;
-            const deltaY = e.clientY - resizeStart.current.y;
-
-            let newWidth = resizeStart.current.width;
-            let newHeight = resizeStart.current.height;
-            let newX = resizeStart.current.posX;
-            let newY = resizeStart.current.posY;
-
-            // Calculate new dimensions based on resize direction
-            if (resizeDirection.includes('e')) {
-                newWidth = Math.max(MIN_SIZE.width, Math.min(MAX_SIZE.width, resizeStart.current.width + deltaX));
-            }
-            if (resizeDirection.includes('w')) {
-                const potentialWidth = resizeStart.current.width - deltaX;
-                if (potentialWidth >= MIN_SIZE.width && potentialWidth <= MAX_SIZE.width) {
-                    newWidth = potentialWidth;
-                    newX = resizeStart.current.posX + deltaX;
-                }
-            }
-            if (resizeDirection.includes('s')) {
-                newHeight = Math.max(MIN_SIZE.height, Math.min(MAX_SIZE.height, resizeStart.current.height + deltaY));
-            }
-            if (resizeDirection === 'n' || resizeDirection === 'ne' || resizeDirection === 'nw') {
-                const potentialHeight = resizeStart.current.height - deltaY;
-                if (potentialHeight >= MIN_SIZE.height && potentialHeight <= MAX_SIZE.height) {
-                    newHeight = potentialHeight;
-                    newY = resizeStart.current.posY + deltaY;
-                }
-            }
-
-            // Ensure window stays within viewport
-            newX = Math.max(0, Math.min(newX, window.innerWidth - newWidth));
-            newY = Math.max(0, Math.min(newY, window.innerHeight - newHeight));
-
-            setSize({ width: newWidth, height: newHeight });
-            setPosition({ x: newX, y: newY });
-        };
-
-        const handleMouseUp = () => {
-            setResizeDirection(null);
-            saveSize(size);
-            savePosition(position);
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [resizeDirection, size, position, saveSize, savePosition]);
-
-    // Keep window in bounds on resize (or re-anchor when fullscreen)
-    useEffect(() => {
-        const handleWindowResize = () => {
-            if (isFullscreen) {
-                setSize(prev => ({ width: prev.width, height: window.innerHeight }));
-                setPosition(prev => ({
-                    // Stay flush to the viewport edge, mirroring enterFullscreen.
-                    x: 0,
-                    y: 0,
-                }));
-                return;
-            }
-            setPosition(prev => ({
-                x: Math.min(prev.x, window.innerWidth - size.width),
-                y: Math.min(prev.y, window.innerHeight - size.height),
-            }));
-        };
-
-        window.addEventListener('resize', handleWindowResize);
-        return () => window.removeEventListener('resize', handleWindowResize);
-    }, [size, isFullscreen]);
-
-    return (
+    const panel = (
         <div
             ref={windowRef}
             className={[
                 'jodie-window',
-                isDragging ? 'jodie-dragging' : '',
-                resizeDirection ? 'jodie-resizing' : '',
-                isFullscreen ? 'jodie-window--fullscreen' : '',
+                slot ? 'jodie-window--docked' : 'jodie-window--viewport',
+                isResizing ? 'jodie-resizing' : '',
                 isAnimating ? 'jodie-window--animating' : '',
                 isVisible ? 'jodie-window--visible' : 'jodie-window--hidden',
             ].filter(Boolean).join(' ')}
-            style={{
-                left: position.x,
-                top: position.y,
-                width: size.width,
-                height: size.height,
-            }}
-            onMouseDown={handleMouseDown}
+            style={{ width: dockWidth }}
         >
-            {/* Resize Handles (hidden in fullscreen) */}
-            {!isFullscreen && (
-                <>
-                    <div className="jodie-resize-handle nw" onMouseDown={handleResizeStart('nw')} />
-                    <div className="jodie-resize-handle ne" onMouseDown={handleResizeStart('ne')} />
-                    <div className="jodie-resize-handle sw" onMouseDown={handleResizeStart('sw')} />
-                    <div className="jodie-resize-handle se" onMouseDown={handleResizeStart('se')} />
-                    <div className="jodie-resize-handle n" onMouseDown={handleResizeStart('n')} />
-                    <div className="jodie-resize-handle e" onMouseDown={handleResizeStart('e')} />
-                    <div className="jodie-resize-handle s" onMouseDown={handleResizeStart('s')} />
-                    <div className="jodie-resize-handle w" onMouseDown={handleResizeStart('w')} />
-                </>
-            )}
+            {/* Vertical drag handle on the left edge (R-JJD-1) */}
+            <div
+                className="jodie-dock-handle"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize Jjodie panel"
+                aria-valuemin={DOCK_MIN_WIDTH}
+                aria-valuemax={DOCK_MAX_WIDTH}
+                aria-valuenow={dockWidth}
+                tabIndex={0}
+                onPointerDown={handleResizePointerDown}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+                onKeyDown={handleResizeKeyDown}
+            />
 
             <JodieHeader
                 activeProvider={activeProvider}
@@ -441,8 +308,6 @@ export function JodieWindow({
                 onOpenDocumentation={onOpenDocumentation}
                 isWaiting={isWaiting}
                 isAlive={isAlive}
-                isFullscreen={isFullscreen}
-                onToggleFullscreen={isFullscreen ? exitFullscreen : enterFullscreen}
                 onResetPosition={resetPosition}
                 consoleMode={consoleMode}
                 onConsoleModeChange={onConsoleModeChange}
@@ -467,6 +332,11 @@ export function JodieWindow({
                 </div>
             )}
 
+            {scriptEditor && (scriptEditor.update
+                ? <ScriptFileUpdateView key={scriptEditor.key} target={scriptEditor} onBack={closeScriptEditor} />
+                : <ScriptEditorView key={scriptEditor.key} target={scriptEditor} onBack={closeScriptEditor} />)}
+
+            <div className={`jodie-conversation${scriptEditor ? ' jodie-conversation--hidden' : ''}`}>
             <ChatMessages
                 messages={messages}
                 isWaiting={isWaiting}
@@ -497,10 +367,11 @@ export function JodieWindow({
                 entries={messages}
                 onClearRequested={onClearCurrentMode}
             />
-
-            <AIDisclaimer feature="chat" />
+            </div>
         </div>
     );
+
+    return slot ? createPortal(panel, slot) : panel;
 }
 
 export default JodieWindow;

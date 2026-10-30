@@ -66,6 +66,10 @@ import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { isConsumerMode } from '../../components/environment/consumerMode';
+import { NewRefactoringDialog } from '../../components/scripts/NewRefactoringDialog';
+import RunRefactoringMenu from '../../components/scripts/RunRefactoringMenu';
+import { projectRefactoringsFor, projectTargetCandidates, runScriptOnModel } from '../../components/scripts/scriptFiles';
+import { refactoringChoice, toolsRefactoringEntry } from '../../components/scripts/projectScripts';
 import { DOCUMENT_TYPES, DocumentTypeEntry } from '../../constants/documentTypes';
 
 
@@ -131,6 +135,7 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
     const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const [submenuOpen, setSubmenuOpen] = useState(false);
     const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const [refactoringDialogOpen, setRefactoringDialogOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -238,8 +243,8 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
                     ? { ...entry, onCreate: () => window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG)) }
                     : { ...entry, available: false, disabledReason: 'Create a metamodel first' };
             case 'refactoring':
-                // TODO: wire when refactoring document type lands
-                return entry;
+                // R-JJD-14: the dialog asks the target level, then creates the entry and opens its tab.
+                return { ...entry, onCreate: () => setRefactoringDialogOpen(true) };
             default:
                 return entry;
         }
@@ -348,6 +353,7 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
                     ))}
                 </div>
             )}
+            <NewRefactoringDialog isOpen={refactoringDialogOpen} onClose={() => setRefactoringDialogOpen(false)} />
         </div>
     );
 }
@@ -403,7 +409,7 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
         let hasSubItems = (!i.disabled && slength > 0) || isUndo;
 
         return (
-            <li className={hasSubItems ? "hoverable" : ""} key={i.id||i.name} tabIndex={0} onClick={()=>i.function?.()} id={i.id ? 'navbar_'+i.id : undefined}>
+            <li className={hasSubItems ? "hoverable" : ""} key={i.id||i.name} tabIndex={0} onClick={()=>i.function?.()} id={i.id ? 'navbar_'+i.id : undefined} title={i.title}>
                 <label className={`highlight ${i.disabled ? 'disabled' : ''}`}>
                     <span>{i.icon || <i className="bi bi-app hidden"/>} {i.jsx || <span>{i.name}</span>}</span>
                     {!i.disabled && slength > 0 ?
@@ -452,6 +458,7 @@ type MenuEntry = {
     subItems?: (MenuEntry|undefined|null)[],
     disabled?: boolean;
     section?: boolean;  // renders `name` as a non-interactive section label (uppercase via CSS)
+    title?: string;     // native tooltip, e.g. the reason a disabled entry is disabled
 } | null;
 
 /* File › New › Model lists at most this many metamodels; above it, the most recent ones plus More… (handoff §6). */
@@ -1405,6 +1412,21 @@ function NavbarComponent(props: AllProps) {
     }
 
     const isActiveTabModel = getActiveModelTab()?.isModel === true;
+
+    // Tools › «Run refactoring on <name>…» (R-JJD-17): the artifact of the active tab and the Refactorings
+    // the tab's right-click menu lists for it, run by the same request function.
+    const activeArtifactId = project ? getActiveModelTab()?.id : undefined;
+    const activeArtifact = activeArtifactId ? projectTargetCandidates().find(c => c.id === activeArtifactId) : undefined;
+    const activeRefactorings = activeArtifact ? projectRefactoringsFor(activeArtifact.id) : [];
+    const runRefactoring = toolsRefactoringEntry(activeArtifact, activeRefactorings);
+    const runRefactoringEntry: MenuEntry = {id: 'tools_run_refactoring', name: runRefactoring.label,
+        icon: <i className="bi bi-arrow-repeat" />, disabled: runRefactoring.disabled, title: runRefactoring.title,
+        subItems: runRefactoring.disabled || !activeArtifact ? undefined : activeRefactorings.map(r => {
+            const choice = refactoringChoice(r);
+            return {id: 'tools_run_refactoring_' + r.id, name: choice.label, disabled: choice.disabled, title: choice.title,
+                icon: <i className="bi bi-arrow-repeat" />,
+                function: choice.disabled ? undefined : () => { void runScriptOnModel(r.text, activeArtifact.id); }};
+        })};
     const isDashboard = !project;
     const isProject = !!project;
     const isFavorite = project?.isFavorite;
@@ -1593,6 +1615,8 @@ function NavbarComponent(props: AllProps) {
            in editor with no metamodels shows only empty-state hint */
         (isDashboard || !props.advanced || consumer) ? null : {name: 'Tools',
             subItems: [
+                runRefactoringEntry,
+                {name: 'divisor'},
                 ...(metamodels.length === 0 ? [
                     {name: 'No metamodel tools', disabled: true, icon: <i className="bi bi-tools" />}
                 ] : []),
@@ -1949,6 +1973,9 @@ function NavbarComponent(props: AllProps) {
     });
 
     const [showOverflow, setShowOverflow] = useState(false);
+    /** The right-click menu of a metamodel or model tab: «Run refactoring…» (R-JJD-14). */
+    const [artifactMenu, setArtifactMenu] = useState<{ modelId: string; x: number; y: number } | null>(null);
+    const closeArtifactMenu = useCallback(() => setArtifactMenu(null), []);
     /** #157 R1 — the topbar «Save» is busy for the duration of one save, nothing more. */
     const [savingProject, setSavingProject] = useState(false);
     const saveFromTopbar = async () => {
@@ -2033,6 +2060,11 @@ function NavbarComponent(props: AllProps) {
                                 key={tab.id}
                                 className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}${tab.beside ? ' appbar-tab--beside' : ''}`}
                                 onClick={() => handleTabClick(tab.id, tab.beside)}
+                                onContextMenu={tab.type === 'metamodel' || tab.type === 'model' ? (e) => {
+                                    e.preventDefault();
+                                    setArtifactMenu({ modelId: tab.id, x: e.clientX, y: e.clientY });
+                                } : undefined}
+                                data-tab-id={tab.id}
                                 title={(() => {
                                     const typeLabel = getTabTypeLabel(tab.type);
                                     return typeLabel ? `${tab.title} — ${typeLabel}` : tab.title;
@@ -2056,6 +2088,11 @@ function NavbarComponent(props: AllProps) {
                             </button>
                         );
                     })}
+                    {artifactMenu && (
+                        <RunRefactoringMenu key={artifactMenu.modelId + artifactMenu.x + artifactMenu.y}
+                                            modelId={artifactMenu.modelId} x={artifactMenu.x} y={artifactMenu.y}
+                                            onClose={closeArtifactMenu} />
+                    )}
                     {overflowTabs.length > 0 && (
                         <div className="appbar-tabs__overflow">
                             <button

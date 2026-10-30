@@ -483,7 +483,10 @@ export function Jodie(): JSX.Element {
             if (isConsumerMode()) return;
 
             const target = e.target as HTMLElement | null;
-            const focusInJjodie = !!jodieRootRef.current && !!target && jodieRootRef.current.contains(target);
+            // The docked window is portaled into the dashboard grid (R-JJD-1), outside the root.
+            const focusInJjodie = !!target && (
+                (!!jodieRootRef.current && jodieRootRef.current.contains(target)) || !!target.closest('.jodie-window')
+            );
             const isEditable = !!target && !!target.closest('input, textarea, [contenteditable], .monaco-editor');
             if (isEditable && !focusInJjodie) return;
 

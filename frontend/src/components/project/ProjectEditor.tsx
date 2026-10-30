@@ -23,6 +23,7 @@ import {
     Log,
 } from '../../joiner';
 import DockManager from '../abstract/DockManager';
+import { deleteProjectScript, readProjectScripts, renameProjectScript } from '../scripts/scriptFiles';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
@@ -55,6 +56,14 @@ import {
 } from '../import/buildImportSummary';
 import { useCodegenEnabled } from '../../codegen/setting';
 import { isConsumerMode } from '../environment/consumerMode';
+import {
+    materializeNested,
+    countSubtree,
+    type NestedDeps,
+    type NestedJob,
+    type NestedUnplaced,
+    type NestedMaterializationReport,
+} from './nestedMaterialization';
 import './project-editor.scss';
 
 // The GENERATORS section, lazy: codegen code but setting.ts stays out of the dashboard's eager closure (R-GEN-2).
@@ -1673,6 +1682,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     attributes: Record<string, any>;
                 }> = [];
 
+                // Nested objects that never reach the model, with where and why: reported in
+                // the transformation output panel once STEP 6c ends, not only in the console.
+                const nestedUnplaced: NestedUnplaced[] = [];
+
                 // Map __sourceId → objectName: the reliable bridge between executor
                 // target instances and the DObjects created from them.
                 // Each executor target has __sourceId (the Pointer ID of the source
@@ -1857,6 +1870,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             + `'${className}', so the ${children.length} object(s) created for it cannot be `
                                             + `stored and were dropped.`
                                         );
+                                        nestedUnplaced.push({
+                                            path: `${objectName}.${key}`, count: countSubtree(children),
+                                            reason: `'${key}' is not a reference of '${className}'`,
+                                        });
                                         continue;
                                     }
                                     pendingNestedCreations.push({
@@ -1952,7 +1969,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                 // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
                 if ((pendingAttributeSets.length > 0 || pendingReferenceSets.length > 0
-                    || pendingChildAttributeSets.length > 0) && createdModelId) {
+                    || pendingChildAttributeSets.length > 0 || pendingNestedCreations.length > 0) && createdModelId) {
                     const modelId = createdModelId;
                     // console.log(`[ProjectEditor] STEP 8: Will set attributes for ${pendingAttributeSets.length} objects via LModel proxy`);
 
@@ -1974,84 +1991,76 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     // SetFieldActions (CLAUDE.md §3.3). Same reason DVertex.new is deferred.
                     //
                     // Runs at the top of the STEP 8 timeout, where lModel.objects is known
-                    // to be populated. The child is created with its NAME only; the remaining
-                    // attributes are queued against the real id the primitive returns and
-                    // written on a further timer, past addObject's own deferred seeding.
+                    // to be populated. Level by level, to any depth (nestedMaterialization.ts):
+                    // the slots of a just-created object answer 90-316 ms later (measured,
+                    // docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md §4), so
+                    // each level polls the slots it writes into, by id, before creating. Each
+                    // `addObject` stays a top-level call, never wrapped in a TRANSACTION.
+                    // Roots are resolved by name (R-S1-5); everything below by the id
+                    // `addObject` returned. Every nested object is created with `{}` and gets
+                    // `name` by id with its other attributes on the deferred timer below, so
+                    // same-named siblings and classes without a `name` attribute are created
+                    // too (R-S1-6, docs/decisions.md).
+                    let nestedDone: Promise<void> | null = null;
+                    const reportNested = (created: number) => {
+                        const detail: NestedMaterializationReport = {
+                            modelName: uniqueOutputName, created, unplaced: nestedUnplaced,
+                        };
+                        window.dispatchEvent(new CustomEvent(SystemEvents.JJTL_NESTED_MATERIALIZED, { detail }));
+                    };
                     if (pendingNestedCreations.length > 0) {
-                        let nestedCreated = 0;
-                        console.time('[TIMING] nested DObject creation');
-                        try {
-                            const lModelN = lModel;
-                            const rootObjects: LObject[] = (lModelN?.objects || []) as LObject[];
-                            const targetClassesN: LClass[] = targetMetamodel.classes || [];
-
-                            for (const pending of pendingNestedCreations) {
-                                const matches = rootObjects.filter((o: LObject) => o.name === pending.parentName);
-                                if (matches.length !== 1) {
-                                    console.warn(
-                                        `[ProjectEditor] Nested: parent "${pending.parentName}" resolves to `
-                                        + `${matches.length} objects — '${pending.featureName}' left empty.`
-                                    );
-                                    continue;
-                                }
-                                const parent = matches[0];
-                                const slot = (parent as any)['$' + pending.featureName];
-                                if (!slot || typeof slot.addObject !== 'function') {
-                                    console.warn(
-                                        `[ProjectEditor] Nested: feature "$${pending.featureName}" not available on `
-                                        + `"${pending.parentName}" — ${pending.children.length} object(s) dropped.`
-                                    );
-                                    continue;
-                                }
-
-                                for (const child of pending.children) {
-                                    const childClassName = child.__type || child.className;
-                                    const childClass = targetClassesN.find(c => c.name === childClassName);
-                                    if (!childClass) {
-                                        console.warn(`[ProjectEditor] Nested: class "${childClassName}" not found in target metamodel.`);
-                                        continue;
-                                    }
-                                    const childAttrNames = new Set(
-                                        (childClass.allAttributes || []).map((a: any) => a.name).filter(Boolean)
-                                    );
-                                    const childName = typeof child.name === 'string' && child.name
-                                        ? child.name
-                                        : `${childClassName}_${nestedCreated}`;
-                                    try {
-                                        const created = slot.addObject({ name: childName }, childClassName);
-                                        if (!created || !created.id) {
-                                            console.warn(
-                                                `[ProjectEditor] Nested: addObject returned nothing for `
-                                                + `"${pending.parentName}".${pending.featureName} -> ${childClassName}.`
-                                            );
-                                            continue;
-                                        }
-                                        const attrs: Record<string, any> = {};
-                                        for (const [k, v] of Object.entries(child)) {
-                                            if (k === 'name') continue;          // already given to addObject
-                                            if (!childAttrNames.has(k)) continue;
-                                            if (v === undefined || v === null) continue;
-                                            attrs[k] = v;
-                                        }
-                                        if (Object.keys(attrs).length > 0) {
-                                            pendingChildAttributeSets.push({
-                                                objectId: created.id, className: childClassName, attributes: attrs,
-                                            });
-                                        }
-                                        nestedCreated++;
-                                    } catch (e) {
-                                        console.error(
-                                            `[ProjectEditor] Nested: addObject failed for `
-                                            + `"${pending.parentName}".${pending.featureName} -> ${childClassName}:`, e
-                                        );
-                                    }
-                                }
+                        const rootObjects: LObject[] = (lModel?.objects || []) as LObject[];
+                        const targetClassesN: LClass[] = targetMetamodel.classes || [];
+                        const jobs: NestedJob[] = [];
+                        for (const pending of pendingNestedCreations) {
+                            const matches = rootObjects.filter((o: LObject) => o.name === pending.parentName);
+                            if (matches.length !== 1) {
+                                console.warn(
+                                    `[ProjectEditor] Nested: parent "${pending.parentName}" resolves to `
+                                    + `${matches.length} objects — '${pending.featureName}' left empty.`
+                                );
+                                nestedUnplaced.push({
+                                    path: `${pending.parentName}.${pending.featureName}`,
+                                    count: countSubtree(pending.children),
+                                    reason: `parent "${pending.parentName}" resolves to ${matches.length} objects`,
+                                });
+                                continue;
                             }
-                        } catch (e) {
-                            console.error('[ProjectEditor] Error creating nested objects (non-fatal):', e);
+                            jobs.push({
+                                parentId: matches[0].id, path: pending.parentName,
+                                featureName: pending.featureName, children: pending.children,
+                            });
                         }
-                        console.timeEnd('[TIMING] nested DObject creation');
-                        console.log(`[ProjectEditor] Nested objects created: ${nestedCreated}`);
+                        const nestedDeps: NestedDeps = {
+                            slotOf: (objectId, featureName) => {
+                                const o = LPointerTargetable.fromPointer(objectId) as any;
+                                const slot = o && o['$' + featureName];
+                                return slot && typeof slot.addObject === 'function' ? slot : undefined;
+                            },
+                            classInfo: (className) => {
+                                const cls = targetClassesN.find(c => c.name === className);
+                                if (!cls) return undefined;
+                                return {
+                                    attributeNames: new Set((cls.allAttributes || []).map((a: any) => a.name).filter(Boolean)),
+                                    referenceNames: new Set((cls.allReferences || []).map((r: any) => r.name).filter(Boolean)),
+                                };
+                            },
+                            sleep: (ms) => new Promise<void>(resolve => setTimeout(resolve, ms)),
+                            now: () => performance.now(),
+                            warn: (message) => console.warn('[ProjectEditor] ' + message),
+                        };
+                        console.time('[TIMING] nested DObject creation');
+                        nestedDone = materializeNested(jobs, nestedDeps).then(r => {
+                            console.timeEnd('[TIMING] nested DObject creation');
+                            console.log(`[ProjectEditor] Nested objects created: ${r.created} on ${r.levels} level(s)`);
+                            pendingChildAttributeSets.push(...r.attributeSets);
+                            nestedUnplaced.push(...r.unplaced);
+                            reportNested(r.created);
+                        }).catch(e => {
+                            console.error('[ProjectEditor] Error creating nested objects (non-fatal):', e);
+                        });
+                    } else if (nestedUnplaced.length > 0) {
+                        reportNested(0);
                     }
 
                             // console.log(`[ProjectEditor] LModel has ${objects.length} objects:`, objects.map((o: LObject) => o.name));
@@ -2146,32 +2155,38 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // Deferred once more: addObject seeds its own json values on a
                             // timer of U.UpdatingTimer * 2 (600ms) and the child's DValues do
                             // not exist before that, so writing here would find no $feature.
-                            if (pendingChildAttributeSets.length > 0) {
-                                setTimeout(() => {
-                                    for (const pending of pendingChildAttributeSets) {
-                                        try {
-                                            const lChild = LPointerTargetable.fromPointer(pending.objectId) as LObject | undefined;
-                                            if (!lChild) {
-                                                console.warn(
-                                                    `[ProjectEditor] Nested: object ${pending.objectId} (${pending.className}) `
-                                                    + `no longer resolves; its attributes were not written.`
-                                                );
-                                                continue;
-                                            }
-                                            const who = `${lChild.name || pending.objectId} (${pending.className})`;
-                                            for (const [attrName, attrValue] of Object.entries(pending.attributes)) {
-                                                try {
-                                                    writeAttribute(lChild, attrName, attrValue, who);
-                                                } catch (e) {
-                                                    console.error(`[ProjectEditor] Error setting ${attrName} on ${who}:`, e);
-                                                }
-                                            }
-                                        } catch (e) {
-                                            console.error(`[ProjectEditor] Error seeding nested object ${pending.objectId}:`, e);
+                            // The queue fills when the last nested level is created (STEP 6c is
+                            // asynchronous now), so the timer starts from there. `name` travels
+                            // here with the other attributes (R-S1-6).
+                            const writeNestedAttributes = () => {
+                                for (const pending of pendingChildAttributeSets) {
+                                    try {
+                                        const lChild = LPointerTargetable.fromPointer(pending.objectId) as LObject | undefined;
+                                        if (!lChild) {
+                                            console.warn(
+                                                `[ProjectEditor] Nested: object ${pending.objectId} (${pending.className}) `
+                                                + `no longer resolves; its attributes were not written.`
+                                            );
+                                            continue;
                                         }
+                                        const who = `${lChild.name || pending.objectId} (${pending.className})`;
+                                        for (const [attrName, attrValue] of Object.entries(pending.attributes)) {
+                                            try {
+                                                writeAttribute(lChild, attrName, attrValue, who);
+                                            } catch (e) {
+                                                console.error(`[ProjectEditor] Error setting ${attrName} on ${who}:`, e);
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.error(`[ProjectEditor] Error seeding nested object ${pending.objectId}:`, e);
                                     }
-                                    console.log(`[ProjectEditor] ✅ Nested attribute setting complete`);
-                                }, 1000);
+                                }
+                                console.log(`[ProjectEditor] ✅ Nested attribute setting complete`);
+                            };
+                            if (nestedDone) {
+                                nestedDone.then(() => {
+                                    if (pendingChildAttributeSets.length > 0) setTimeout(writeNestedAttributes, 1000);
+                                });
                             }
 
                             console.log(`[ProjectEditor] ✅ Attribute setting complete`);
@@ -2989,6 +3004,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             {showMegamodelModal && (() => {
                 const megamodel = getRuntimeMegamodel(project.id);
                 if (!megamodel) return null;
+                // Script files (S6b): the store's own array, so the view's layout effect sees the
+                // same reference across renders; undefined when the project has none.
+                const projectScripts = readProjectScripts();
+                const isScript = (id: string) => projectScripts.some(s => s.id === id);
 
                 // Compute artifact stats for rich node cards
                 const artifactStats: ArtifactStats[] = [];
@@ -3049,10 +3068,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             name: vp.name || 'Unnamed',
                             isOverlay: vp.isOverlay,
                         }))}
+                        scripts={projectScripts.length ? projectScripts : undefined}
                         artifactStats={artifactStats}
                         onClose={() => setShowMegamodelModal(false)}
                         onOpenNode={(nodeId, nodeKind) => {
-                            if (nodeKind === 'metamodel' || nodeKind === 'model') {
+                            if (isScript(nodeId)) {
+                                DockManager.openScript(nodeId);
+                            } else if (nodeKind === 'metamodel' || nodeKind === 'model') {
                                 const lModel = metamodels.find(mm => mm.id === nodeId) || models.find(m => m.id === nodeId);
                                 if (lModel) DockManager.open2(lModel);
                             } else if (nodeKind === 'transformation') {
@@ -3061,7 +3083,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             }
                         }}
                         onDeleteNode={(nodeId, nodeKind) => {
-                            if (nodeKind === 'metamodel') {
+                            if (isScript(nodeId)) {
+                                deleteProjectScript(nodeId);
+                            } else if (nodeKind === 'metamodel') {
                                 const mm = metamodels.find(m => m.id === nodeId);
                                 if (mm) handleDeleteMetamodel(mm);
                             } else if (nodeKind === 'model') {
@@ -3085,6 +3109,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     m.name = newName;
                                     markDirty();
                                 }
+                            } else if (isScript(nodeId)) {
+                                renameProjectScript(nodeId, newName);
                             } else if (nodeKind === 'transformation') {
                                 handleRenameTransformation(nodeId, newName);
                             }

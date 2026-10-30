@@ -183,7 +183,9 @@ export function routePoints(p1: Point, exitSide: Side, p2: Point, entrySide: Sid
  * Build an SVG path string from waypoints with rounded corners (r = CORNER_R).
  * Uses quadratic bezier arcs at each bend.
  */
-export function buildRoundedPath(pts: Point[]): string {
+export function buildRoundedPath(rawPts: Point[]): string {
+    // Drop consecutive duplicates: a zero-length segment would divide 0/0 below.
+    const pts = rawPts.filter((p, i) => i === 0 || p.x !== rawPts[i - 1].x || p.y !== rawPts[i - 1].y);
     if (pts.length < 2) return '';
     if (pts.length === 2) return `M${pts[0].x},${pts[0].y} L${pts[1].x},${pts[1].y}`;
 
@@ -204,8 +206,11 @@ export function buildRoundedPath(pts: Point[]): string {
         const lenPrev = Math.sqrt(dxPrev * dxPrev + dyPrev * dyPrev);
         const lenNext = Math.sqrt(dxNext * dxNext + dyNext * dyNext);
 
+        // Guard: a zero-length segment cannot be normalised
+        if (lenPrev === 0 || lenNext === 0) continue;
+
         // Clamp radius so it doesn't exceed half the segment length
-        const rr = Math.min(r, lenPrev / 2, lenNext / 2);
+        const rr =Math.min(r, lenPrev / 2, lenNext / 2);
 
         // Points just before/after the corner
         const beforeX = curr.x + (dxPrev / lenPrev) * rr;

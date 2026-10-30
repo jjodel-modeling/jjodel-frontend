@@ -76,12 +76,11 @@ export const DOCUMENT_TYPES: readonly DocumentTypeEntry[] = [
     {
         type: 'refactoring',
         label: 'Refactoring',
-        description: 'Model refactoring rules',
+        description: 'In-place changes of a metamodel or model',
         badge: 'R',
         icon: 'arrow-repeat',
         badgeBg: 'var(--color-entity-refactoring-bg)',
         badgeColor: 'var(--color-entity-refactoring-fg)',
-        available: false,
-        comingSoon: true,
+        available: true,
     },
 ];

@@ -1,0 +1,284 @@
+// Editor tab of a project script file (S6a). Tokens only, from styles/tokens/.
+.script-tab {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--color-bg-primary);
+
+    &--missing {
+        align-items: center;
+        justify-content: center;
+        color: var(--color-form-muted);
+        font-size: var(--text-sm);
+    }
+
+    &__toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--color-form-border);
+        background: var(--color-form-surface);
+        font-size: var(--text-xs);
+    }
+
+    &__name {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--color-text-primary);
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__dirty {
+        color: var(--color-accent);
+    }
+
+    // R-JJD-14: the name with the Refactoring's target level under it.
+    &__heading {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        gap: 1px;
+    }
+
+    &__target {
+        color: var(--color-form-muted);
+        font-size: var(--text-xs);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__spacer {
+        flex: 1;
+    }
+
+    &__model {
+        height: 26px;
+        padding: 0 6px;
+        border: 1px solid var(--color-form-border);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-size: var(--text-xs);
+    }
+
+    &__button {
+        height: 26px;
+        padding: 0 10px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-size: var(--text-xs);
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        &--primary {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+    }
+
+    &__editor {
+        flex: 1;
+        min-height: 0;
+
+        // Monaco's focus outline ran the full height of the split handle (P-2026-10-25-0005);
+        // the caret and the current line show the focus.
+        .monaco-editor,
+        .monaco-editor.focused {
+            outline: none !important;
+        }
+    }
+
+    // Jjodie, from the header: this tab hides the floating launcher (P-2026-10-25-0005).
+    &__jodie {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-size: 15px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    // P-2026-10-24-2320: the split, the planner's diagnostics, Preview.
+    &__of {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--color-form-muted);
+        white-space: nowrap;
+    }
+
+    &__warnings {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--color-form-muted);
+        white-space: nowrap;
+
+        &--on {
+            color: var(--color-warning-text);
+        }
+
+        &--errors {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__button--solid {
+        background: var(--color-accent);
+        color: var(--color-text-inverse);
+
+        &:hover:not(:disabled) {
+            background: var(--color-accent-hover);
+        }
+    }
+
+    &__button--active {
+        box-shadow: inset 0 0 0 1px var(--color-text-inverse);
+    }
+
+    &__split {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+    }
+
+    &__left {
+        display: flex;
+        flex-direction: column;
+        flex: none;
+        min-width: 0;
+    }
+
+    // Beside the target's tab (P-2026-10-25-0020): the editor takes the whole tab.
+    &--beside &__left {
+        flex: 1;
+    }
+
+    &__handle {
+        flex: none;
+        width: 5px;
+        border-left: 1px solid var(--color-form-border);
+        cursor: col-resize;
+        touch-action: none;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+    }
+
+    &__right {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__problems {
+        flex: none;
+        max-height: 30%;
+        margin: 0;
+        padding: 4px 0;
+        overflow: auto;
+        list-style: none;
+        border-top: 1px solid var(--color-form-border);
+        background: var(--color-form-surface);
+        font-size: var(--text-xs);
+    }
+
+    &__problem {
+        display: flex;
+        gap: 8px;
+        padding: 2px 10px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &::before {
+            content: '';
+            flex: none;
+            width: 7px;
+            height: 7px;
+            margin-top: 5px;
+            border-radius: 50%;
+            background: var(--color-warning);
+        }
+
+        &--error::before {
+            background: var(--color-error);
+        }
+    }
+
+    &__problem-at {
+        flex: none;
+        min-width: 56px;
+        color: var(--color-form-muted);
+        font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    &__problem-msg {
+        color: var(--color-text-primary);
+    }
+}
+
+// Monaco's glyph margin: an amber dot on a line with warnings, red with an error.
+.script-tab__glyph {
+    &::after {
+        content: '';
+        display: block;
+        width: 7px;
+        height: 7px;
+        margin: 6px auto 0;
+        border-radius: 50%;
+        background: var(--color-warning);
+    }
+
+    &--error::after {
+        background: var(--color-error);
+    }
+}
+
+// The panel beside a Refactoring tab (P-2026-10-25-0040). The main dock shows a top-level panel only
+// when it holds a pinnable tab header (`.not-strip` in DockManagerStyles.scss); the target's canvas
+// tab has none, so its panel would stay `display: none`.
+.not-strip > .dock-layout .dock-hbox:has(> .dock-panel .script-tab--beside) > .dock-panel {
+    display: block;
+}

@@ -374,3 +374,21 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato — chat, unattended: Built-in browser (dev, zoom 60%), Jjodel harness after merge 460d77437: BPMN 48 nodes 42 edges; selection click 0.4 s of long tasks (145/129/121), ring in 745 ms by rAF polling under dev load; drag of about 80 px 0.69 s of long tasks including the drop, dragged back; node sizes unchanged on screen
 **Notes**: Rollback tag `pre-perf-round3-P-2026-10-21-1753` on `b0a5ec435` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-21-1753/result.json`.
 **Prompt document name**: 2026-10-21 17:53
+
+## 2026-10-30 — ticket: JjTL: a transformation run is many undo steps, not one
+**Ticket**: A JjTL transformation run in the app writes the output model through several deferred steps (STEP 6c addObject per level, then the attribute timer). Each write is its own undo entry, so undoing a run takes many steps and can stop half-way with a partial output model.
+
+Expected: one transformation run is one undo step.
+
+Found by P-2026-10-30-1440 (report docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md, section 8, Q7); left out of scope by decision of Alfonso 2026-10-30.
+**Priority**: low
+**Found in**: P-2026-10-30-1440
+
+## 2026-10-30 — ticket: Rename via the $name slot bypasses the R-S1-2 same-name guard
+**Ticket**: R-S1-2 refuses a second child with the same explicit name in one containment slot at creation (addObject). A rename written through the child $name slot afterwards is not checked: the P-2026-10-30-1335/1440 probe produced two same-named siblings in one slot with no toast and no refusal.
+
+R-S1-6 (2026-10-30) makes the JjTL output deliberately use this path for nested objects, so the fix must keep that exception: decide whether set_name through the $name slot should run the R-S1-2 verdict for user gestures and JjScript, and how the transformation path opts out.
+
+Measured in docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md.
+**Priority**: medium
+**Found in**: P-2026-10-30-1440

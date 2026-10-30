@@ -14,6 +14,17 @@ import {
     topLevelReason,
     restrictDeleteForProfile,
     CASCADE_LOCKED_REASON,
+    typePresentationOf,
+    fieldPresentationOf,
+    widgetChoicesFor,
+    isRoleWidget,
+    sanitizeDeclarations,
+    textPropsOf,
+    parseOptionList,
+    cleanTypePresentation,
+    nextTypePresentations,
+    MAX_STYLE_DECLARATIONS,
+    MAX_STYLE_LENGTH,
 } from '../environmentConfig';
 
 // A plain idlookup, the shape the store persists — no D-layer classes, so this suite
@@ -275,5 +286,257 @@ describe('restrictDeleteForProfile (#157, 2026-10-04)', () => {
         restrictDeleteForProfile(input, perm);
         expect(ids(input.descendants)).toEqual(['vault']);
         expect(ids(input.referencedBy)).toEqual(['ref_hidden']);
+    });
+});
+
+// ── #186 «Customize element»: the per-role presentation of a type (R-CFG-3, P-2026-10-17-1053) ──
+
+describe('typePresentationOf (#186)', () => {
+    const entry = { fields: { title: { label: 'Headline' } } };
+    it('returns the entry of the class', () => {
+        expect(typePresentationOf({ typePresentation: { C1: entry } }, 'C1')).toEqual(entry);
+    });
+    it('is null when the profile, the field or the class entry is absent', () => {
+        expect(typePresentationOf(null, 'C1')).toBeNull();
+        expect(typePresentationOf(undefined, 'C1')).toBeNull();
+        expect(typePresentationOf({ name: 'Edu' }, 'C1')).toBeNull();
+        expect(typePresentationOf({ typePresentation: { C1: entry } }, 'C2')).toBeNull();
+    });
+    it('is null on malformed data, never throws', () => {
+        expect(typePresentationOf({ typePresentation: 'x' }, 'C1')).toBeNull();
+        expect(typePresentationOf({ typePresentation: { C1: 'x' } }, 'C1')).toBeNull();
+        expect(typePresentationOf({ typePresentation: { C1: [entry] } }, 'C1')).toBeNull();
+    });
+});
+
+describe('fieldPresentationOf (#186)', () => {
+    it('returns the entry of a feature', () => {
+        expect(fieldPresentationOf({ fields: { title: { label: 'H' } } }, 'title')).toEqual({ label: 'H' });
+    });
+    it('is null for an absent feature, a missing or malformed fields map, a malformed entry, no presentation', () => {
+        expect(fieldPresentationOf({ fields: { title: { label: 'H' } } }, 'notes')).toBeNull();
+        expect(fieldPresentationOf({}, 'title')).toBeNull();
+        expect(fieldPresentationOf({ fields: 'x' } as any, 'title')).toBeNull();
+        expect(fieldPresentationOf({ fields: { title: 'x' } } as any, 'title')).toBeNull();
+        expect(fieldPresentationOf(null, 'title')).toBeNull();
+    });
+});
+
+describe('widgetChoicesFor (#186)', () => {
+    const f = (typeName: string, o: { isEnum?: boolean; isMultivalued?: boolean; isReadOnly?: boolean } = {}) =>
+        widgetChoicesFor({ typeName, isEnum: !!o.isEnum, isMultivalued: !!o.isMultivalued, isReadOnly: o.isReadOnly });
+    it('a string: input (the default rendering first), textarea, dropdown', () => {
+        expect(f('EString')).toEqual(['input', 'textarea', 'dropdown']);
+    });
+    it('every numeric type the form renders as a number: stepper (the default first), number input, number dropdown', () => {
+        for (const t of ['EInt', 'ELong', 'EShort', 'EFloat', 'EDouble']) {
+            expect(f(t)).toEqual(['stepper', 'number-input', 'number-dropdown']);
+        }
+    });
+    it('no choice for a type whose widget is fixed or not covered: boolean, char, date, byte, a custom datatype', () => {
+        for (const t of ['EBoolean', 'EChar', 'EDate', 'EByte', 'Color']) expect(f(t)).toEqual([]);
+    });
+    it('no choice for an enum (its select, as the metamodel defines it), whatever its type name', () => {
+        expect(f('Level', { isEnum: true })).toEqual([]);
+        expect(f('EString', { isEnum: true })).toEqual([]);
+    });
+    it('no choice for a multi-valued attribute or a read-only field', () => {
+        expect(f('EString', { isMultivalued: true })).toEqual([]);
+        expect(f('EInt', { isReadOnly: true })).toEqual([]);
+    });
+    it('returns a fresh array: a caller that edits it changes nothing for the next', () => {
+        const a = f('EString');
+        a.pop();
+        expect(f('EString')).toEqual(['input', 'textarea', 'dropdown']);
+    });
+    it('isRoleWidget accepts the six identifiers and nothing else', () => {
+        for (const w of ['input', 'textarea', 'dropdown', 'stepper', 'number-input', 'number-dropdown']) expect(isRoleWidget(w)).toBe(true);
+        for (const w of ['text', 'select', 'number', '', null, 3]) expect(isRoleWidget(w)).toBe(false);
+    });
+});
+
+describe('sanitizeDeclarations (#186)', () => {
+    const keys = (t: string) => Object.keys(sanitizeDeclarations(t).style);
+    it('keeps property declarations, as a camelCase style object and a normalized text', () => {
+        expect(sanitizeDeclarations('font-weight: 600; color: #0f172a')).toEqual({
+            style: { fontWeight: '600', color: '#0f172a' },
+            text: 'font-weight: 600;\ncolor: #0f172a;',
+            dropped: [],
+        });
+    });
+    it('accepts camelCase property names', () => {
+        const r = sanitizeDeclarations('fontWeight: bold');
+        expect(r.style).toEqual({ fontWeight: 'bold' });
+        expect(r.text).toBe('font-weight: bold;');
+    });
+    it('a newline separates declarations as a semicolon does', () => {
+        expect(sanitizeDeclarations('color: red\nfont-style: italic').style).toEqual({ color: 'red', fontStyle: 'italic' });
+    });
+    it('vendor prefixes take React\'s keys', () => {
+        expect(keys('-webkit-text-stroke: 1px red; -ms-flex: 1; -moz-tab-size: 2')).toEqual(['WebkitTextStroke', 'msFlex', 'MozTabSize']);
+    });
+    it('drops url(, in any case and inside another function', () => {
+        const r = sanitizeDeclarations('background: URL(x.png); background-image: linear-gradient(red, url(y)); color: red');
+        expect(r.style).toEqual({ color: 'red' });
+        expect(r.dropped.map((d) => d.reason)).toEqual(['contains url(', 'contains url(']);
+    });
+    it('drops the other functions that load a resource or run code', () => {
+        for (const v of ['background-image: image-set("a.png" 1x)', 'background: image(x.png)', 'background: cross-fade(a, b)',
+            'background: element(#x)', 'width: expression(alert(1))', 'background: javascript:alert(1)']) {
+            expect(sanitizeDeclarations(v).style).toEqual({});
+        }
+    });
+    it('drops an at-rule, and a value with @, a backslash, a brace or an angle bracket', () => {
+        expect(sanitizeDeclarations('@import "x.css"; color: red').style).toEqual({ color: 'red' });
+        for (const v of ['font-family: @foo', 'color: re\\64', 'color: red} body{color:blue', 'content: "<b>"', 'width: a>b']) {
+            expect(sanitizeDeclarations(v).style).toEqual({});
+        }
+    });
+    it('drops behavior and -moz-binding', () => {
+        expect(sanitizeDeclarations('behavior: x; -moz-binding: y; color: red').style).toEqual({ color: 'red' });
+    });
+    it('keeps position static and relative only: fixed, absolute and sticky lift a field out of its box', () => {
+        expect(keys('position: relative')).toEqual(['position']);
+        expect(keys('position: Static')).toEqual(['position']);
+        for (const v of ['fixed', 'absolute', 'sticky', 'FIXED']) expect(keys(`position: ${v}`)).toEqual([]);
+    });
+    it('drops a custom property: it would override the design tokens under the field', () => {
+        const r = sanitizeDeclarations('--color-text-primary: red; color: red');
+        expect(r.style).toEqual({ color: 'red' });
+        expect(r.dropped).toEqual([{ declaration: '--color-text-primary: red', reason: 'custom properties are not allowed' }]);
+    });
+    it('drops what is not a declaration: no colon, an invalid name, an empty value', () => {
+        const r = sanitizeDeclarations('red; 1color: red; col or: red; color: ; margin: 0');
+        expect(r.style).toEqual({ margin: '0' });
+        expect(r.dropped).toHaveLength(4);
+    });
+    it('a semicolon inside quotes or parentheses does not split', () => {
+        const r = sanitizeDeclarations('font-family: "A;B", serif; width: calc(1px ;2px); color: red');
+        expect(r.style).toEqual({ fontFamily: '"A;B", serif', width: 'calc(1px ;2px)', color: 'red' });
+    });
+    it('strips !important and keeps the declaration', () => {
+        expect(sanitizeDeclarations('color: red !IMPORTANT')).toEqual({ style: { color: 'red' }, text: 'color: red;', dropped: [] });
+    });
+    it('strips comments; an unclosed comment takes the rest', () => {
+        expect(sanitizeDeclarations('color: red; /* x: y; */ font-weight: 700').style).toEqual({ color: 'red', fontWeight: '700' });
+        expect(sanitizeDeclarations('color: red; /* font-weight: 700').style).toEqual({ color: 'red' });
+    });
+    it('a later declaration of the same property wins', () => {
+        const r = sanitizeDeclarations('color: red; color: blue');
+        expect(r.style).toEqual({ color: 'blue' });
+        expect(r.text).toBe('color: blue;');
+    });
+    it(`keeps at most ${MAX_STYLE_DECLARATIONS} declarations and ${MAX_STYLE_LENGTH} characters, and reports the rest`, () => {
+        const many = sanitizeDeclarations(Array.from({ length: MAX_STYLE_DECLARATIONS + 1 }, (_, i) => `x-p${i}: 1`).join(';'));
+        expect(Object.keys(many.style)).toHaveLength(MAX_STYLE_DECLARATIONS);
+        expect(many.dropped).toHaveLength(1);
+        const long = sanitizeDeclarations(`color: red; font-family: ${'a'.repeat(MAX_STYLE_LENGTH)}`);
+        expect(long.style).toEqual({ color: 'red' });
+        expect(long.dropped).toHaveLength(1);
+        expect(long.text.length).toBeLessThanOrEqual(MAX_STYLE_LENGTH);
+    });
+    it('every dropped entry names the declaration and a reason', () => {
+        const r = sanitizeDeclarations('background: url(x); position: fixed');
+        expect(r.dropped).toHaveLength(2);
+        for (const d of r.dropped) {
+            expect(d.declaration.length).toBeGreaterThan(0);
+            expect(d.reason.length).toBeGreaterThan(0);
+        }
+        expect(r.dropped[0].declaration).toBe('background: url(x)');
+    });
+    it('is total on a non-string', () => {
+        for (const v of [undefined, null, 42, {}]) expect(sanitizeDeclarations(v as any)).toEqual({ style: {}, text: '', dropped: [] });
+    });
+});
+
+describe('textPropsOf (#186)', () => {
+    it('lists the text properties declared, in a fixed order, and nothing else', () => {
+        expect(textPropsOf({ fontWeight: '600', backgroundColor: 'red', color: 'blue' })).toEqual(['color', 'font-weight']);
+    });
+    it('the font shorthand stands for its four parts, once each', () => {
+        expect(textPropsOf({ font: 'bold 14px Inter', fontWeight: '700' })).toEqual(['font-family', 'font-size', 'font-style', 'font-weight']);
+    });
+    it('an empty style declares none', () => {
+        expect(textPropsOf({})).toEqual([]);
+    });
+});
+
+describe('parseOptionList (#186)', () => {
+    it('one option per line, trimmed, without empty lines or duplicates', () => {
+        expect(parseOptionList('  a \n\nb\na\n c', false)).toEqual({ options: ['a', 'b', 'c'], dropped: [] });
+    });
+    it('numeric: numbers only, normalized, the rest reported', () => {
+        expect(parseOptionList('1\n2.5\nx\n-3\n1e2\n05\n1\n0x10', true)).toEqual({ options: ['1', '2.5', '-3', '100', '5'], dropped: ['x', '0x10'] });
+    });
+    it('keeps at most 200 options', () => {
+        const r = parseOptionList(Array.from({ length: 205 }, (_, i) => `o${i}`).join('\n'), false);
+        expect(r.options).toHaveLength(200);
+        expect(r.dropped).toHaveLength(5);
+    });
+    it('is total on a non-string', () => {
+        expect(parseOptionList(undefined as any, false)).toEqual({ options: [], dropped: [] });
+    });
+});
+
+describe('cleanTypePresentation (#186)', () => {
+    it('keeps what means something and drops the defaults', () => {
+        expect(cleanTypePresentation({
+            fields: {
+                title: { widget: 'dropdown', options: ['a', ' b ', 'a', ''], allowOther: true, label: ' Headline ', showType: false },
+                notes: { label: '   ', showType: true, allowOther: false },
+                level: { widget: 'select' as any, options: ['x'] },
+                budget: { widget: 'number-dropdown', options: ['1', 'x', '2.50'] },
+                duration: { widget: 'stepper', options: ['1'], allowOther: true },
+                bogus: 'x' as any,
+            },
+        })).toEqual({
+            fields: {
+                title: { widget: 'dropdown', options: ['a', 'b'], allowOther: true, label: 'Headline', showType: false },
+                budget: { widget: 'number-dropdown', options: ['1', '2.5'] },
+                duration: { widget: 'stepper' },
+            },
+        });
+    });
+    it('stores the kept declarations only, and drops a style left empty', () => {
+        expect(cleanTypePresentation({ fields: { goal: { cardStyle: 'background: url(x)', lineStyle: 'border-color: red; position: fixed', style: 'color: red' } } }))
+            .toEqual({ fields: { goal: { lineStyle: 'border-color: red;', style: 'color: red;' } } });
+    });
+    it('is null when nothing is left, and on malformed input', () => {
+        expect(cleanTypePresentation({ fields: { title: { showType: true } } })).toBeNull();
+        expect(cleanTypePresentation({})).toBeNull();
+        expect(cleanTypePresentation({ fields: 'x' } as any)).toBeNull();
+        expect(cleanTypePresentation(null)).toBeNull();
+    });
+    it('does not change its input', () => {
+        const input = { fields: { title: { label: ' H ', showType: true } } };
+        cleanTypePresentation(input);
+        expect(input).toEqual({ fields: { title: { label: ' H ', showType: true } } });
+    });
+});
+
+describe('nextTypePresentations (#186)', () => {
+    const c2 = { fields: { description: { label: 'What' } } };
+    it('sets the class entry and keeps the others', () => {
+        expect(nextTypePresentations({ C2: c2 }, 'C1', { fields: { title: { label: 'H' } } }))
+            .toEqual({ next: { C2: c2, C1: { fields: { title: { label: 'H' } } } }, changed: true });
+    });
+    it('an entry left empty removes the key: a change when it was there, none when it was not', () => {
+        expect(nextTypePresentations({ C1: { fields: { title: { label: 'H' } } }, C2: c2 }, 'C1', { fields: { title: { label: '' } } }))
+            .toEqual({ next: { C2: c2 }, changed: true });
+        expect(nextTypePresentations({ C2: c2 }, 'C1', null)).toEqual({ next: { C2: c2 }, changed: false });
+    });
+    it('an entry equal to the stored one, once cleaned, is no change', () => {
+        expect(nextTypePresentations({ C1: { fields: { title: { label: 'H' } } } }, 'C1', { fields: { title: { label: ' H ', showType: true } } }).changed).toBe(false);
+    });
+    it('the order of the features does not make a change', () => {
+        const a = { fields: { title: { label: 'H' }, notes: { label: 'N' } } };
+        const b = { fields: { notes: { label: 'N' }, title: { label: 'H' } } };
+        expect(nextTypePresentations({ C1: a }, 'C1', b).changed).toBe(false);
+    });
+    it('starts from nothing on malformed data, and does not change its input', () => {
+        expect(nextTypePresentations('x', 'C1', { fields: { title: { label: 'H' } } }).next).toEqual({ C1: { fields: { title: { label: 'H' } } } });
+        const all = { C2: c2 };
+        nextTypePresentations(all, 'C1', { fields: { title: { label: 'H' } } });
+        expect(all).toEqual({ C2: c2 });
     });
 });

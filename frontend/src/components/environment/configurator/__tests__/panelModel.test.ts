@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     FOLD_PREFIX,
+    canUnlink,
     cardinalityLabel,
     cardinalityText,
     componentKind,
@@ -11,6 +12,7 @@ import {
     orderComponents,
     parseFolds,
     partitionFields,
+    roleRendering,
     saveStatus,
     serializeFolds,
     summaryLine,
@@ -151,6 +153,31 @@ describe('newTargetAt', () => {
     });
 });
 
+// P-2026-10-20-1123, R-CFG-7: the Configurator unlinks every single reference the viewer may write,
+// required ones included; `jjform/refSlot` keeps R-REF-3 for the Data Manager.
+describe('canUnlink', () => {
+    const row = (actions: string[]) => ({ actions });
+    it('on a multi-valued slot follows the row\'s remove, as R-REF-3 rules it', () => {
+        expect(canUnlink({ upper: -1 }, row(['open', 'remove']))).toBe(true);
+        expect(canUnlink({ upper: 2 }, row(['open']))).toBe(false);
+    });
+    it('does not read change on a multi-valued slot', () => {
+        expect(canUnlink({ upper: -1 }, row(['open', 'change']))).toBe(false);
+        expect(canUnlink({ upper: 2 }, row(['open', 'change']))).toBe(false);
+    });
+    it('on a single-valued slot unlinks a required row the viewer may change, and an optional one', () => {
+        expect(canUnlink({ upper: 1 }, row(['open', 'change']))).toBe(true);
+        expect(canUnlink({ upper: 1 }, row(['open', 'change', 'remove']))).toBe(true);
+    });
+    it('keeps a row the viewer may not write: changeable=false, derived, the role, a locked value, a hidden reference', () => {
+        expect(canUnlink({ upper: 1 }, row(['open']))).toBe(false);
+        expect(canUnlink({ upper: 1 }, row([]))).toBe(false);
+    });
+    it('unlinks a dangling pointer of a required single slot, which has no Open', () => {
+        expect(canUnlink({ upper: 1 }, row(['change']))).toBe(true);
+    });
+});
+
 describe('issuesText', () => {
     it('says no issues, and counts errors and warnings with their plurals', () => {
         expect(issuesText(0, 0)).toBe('No issues');
@@ -172,5 +199,36 @@ describe('summaryLine', () => {
     it('joins the key fields of an element as label: text', () => {
         expect(summaryLine([{ label: 'description', text: 'Learn X' }, { label: 'minutes', text: '30' }])).toBe('description: Learn X · minutes: 30');
         expect(summaryLine([])).toBe('');
+    });
+});
+
+// #186 «Customize element» (P-2026-10-17-1053): how the role's widget renders through the form's own widgets.
+describe('roleRendering', () => {
+    const str = { typeName: 'EString', isEnum: false, isMultivalued: false, isReadOnly: false, derivedWidget: 'text' };
+    const num = { typeName: 'EInt', isEnum: false, isMultivalued: false, isReadOnly: false, derivedWidget: 'number' };
+    it('a string: input forces the plain text cell, textarea the growing box, dropdown the panel\'s dropdown', () => {
+        expect(roleRendering('input', str)).toEqual({ widget: 'text', cellWidget: 'text' });
+        expect(roleRendering('textarea', str)).toEqual({ widget: 'text', multiline: true });
+        expect(roleRendering('dropdown', str)).toEqual({ widget: 'text', dropdown: 'string' });
+    });
+    it('a number: the stepper, the number input (the stepper without its buttons: a text field would write a string), the number dropdown', () => {
+        expect(roleRendering('stepper', num)).toEqual({ widget: 'number', cellWidget: 'number' });
+        expect(roleRendering('number-input', num)).toEqual({ widget: 'number', cellWidget: 'number', numberInput: true });
+        expect(roleRendering('number-dropdown', num)).toEqual({ widget: 'number', dropdown: 'number' });
+    });
+    it('no widget, an unknown one, or one of the other family: what the panel renders without a presentation', () => {
+        expect(roleRendering(undefined, str)).toBeNull();
+        expect(roleRendering('select', str)).toBeNull();
+        expect(roleRendering('stepper', str)).toBeNull();
+        expect(roleRendering('input', num)).toBeNull();
+    });
+    it('a choice the field does not offer: an enum, a multi-valued or read-only field, a type without choices', () => {
+        expect(roleRendering('dropdown', { ...str, isEnum: true, derivedWidget: 'select' })).toBeNull();
+        expect(roleRendering('input', { ...str, isMultivalued: true })).toBeNull();
+        expect(roleRendering('number-input', { ...num, isReadOnly: true })).toBeNull();
+        expect(roleRendering('input', { ...str, typeName: 'EChar' })).toBeNull();
+    });
+    it('a stale presentation: a string choice on a field whose type became numeric renders the number widget of today', () => {
+        expect(roleRendering('textarea', { ...str, derivedWidget: 'number' })).toBeNull();
     });
 });

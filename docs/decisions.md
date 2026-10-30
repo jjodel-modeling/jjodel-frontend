@@ -4206,6 +4206,17 @@ la scrittura sarebbe avvenuta. Referto:
 `docs/discovery/discovery_2026-08-30_s1b_ambiguita_dichiarata.md`.
 
 
+**R-S1-6** (2026-10-30) — **L'output di una trasformazione JjTL non passa dalla guardia di R-S1-2.** La guardia
+sul nome esplicito resta per i gesti dell'utente e per JjScript. Gli oggetti annidati che STEP 6c di
+`handleExecuteTransformation` materializza nascono senza nome (`{}`) e ricevono `name` per id insieme agli altri
+attributi, sul timer differito: l'output nell'app coincide oggetto per oggetto con quello dell'executor in node,
+fratelli omonimi compresi (riferimenti per nome come i `Ref` di un albero di espressioni). I duplicati che ne
+risultano si aprono come quelli preesistenti (R-S1-4) e chi risolve per nome dichiara l'ambiguita' (R-S1-5); le
+radici mantengono la regola attuale. Decisione di Alfonso, 2026-10-30 15:12, su
+`docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md` §8 (P-2026-10-30-1440). Fuori da questa
+decisione: la rinomina via slot `$name`, che oggi non passa dalla guardia (misurato nello stesso report), resta un
+ticket.
+
 ## Serie R-GT / R-M2 — tre micro fix di core (ratifiche 2026-08-30)
 
 A valle di `discovery_2026-08-30_gettype_finestra_parser.md` e
@@ -5977,6 +5988,34 @@ unreached, «Role» in the UI all stand). Decided by Juri in chat `C-2026-10-14-
 `P-2026-10-14-1101`: «non voglio gli endpoint a livello di dashboard. deve stare in un menu dedicato», then the top
 bar among three options.
 
+R-CFG-6..9 below: @tmaog's test of the two merged lanes on beta (#187 issuecomment of 2026-10-18, #186 of
+2026-10-17), read by the chat on 2026-10-20; R-CFG-7..9 decided by Juri in chat `C-2026-10-14-1020` the same day.
+
+**R-CFG-6** (2026-10-20, provisional, unattended (RC-25), evidence: read, verified: none, reversible: trunk) —
+**The element on screen shows its direct components extended, at any depth.** Whatever element is the body of the
+Configurator's panel (the selected row or the one reached by «open»), each element its components hold, references
+and compositions alike, renders as a card with its Identity and Attributes editable and its own Components
+simplified (name and summary); a multi-valued component lists its elements as rows that expand into that card. The
+level below stays simplified. Supersedes, for the Configurator, the depth rule of 12c (`rendersInline` at depth 0
+only) and the compact card of a reference at the extended level. Source: @tmaog's «[ISSUE] Correct behavior» on
+#187 and his mockup (screen 3).
+
+**R-CFG-7** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**Every single-valued reference of the Configurator shows a remove (×), required ones included.** It unlinks and
+never deletes (R-REF-3 semantics); a required slot left empty is reported by the validation. Juri chose it over the
+recommendation (optional ones only). The Data Manager keeps R-REF-3.
+
+**R-CFG-8** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**The Endpoints window gets «Cancel» beside «Done», and arrows beside its tabs.** «Cancel» closes without saving,
+as Escape and the close button do today: the changes stay in the project, unsaved. Arrows ‹ › move to the previous
+and next tab, beside the click and the keyboard.
+
+**R-CFG-9** (2026-10-20, ratified by Juri 2026-10-20, evidence: read, verified: none, reversible: trunk) —
+**The stand-alone link keeps `&profile=<id>`.** @tmaog asked whether it should read `&role=`; Juri keeps the
+parameter (R-CFG-4 stands). Also adopted from the same test, no decision needed: the Save button changes colour
+while the project has unsaved changes, and the Configurator remembers the instance selected for each type when the
+user switches type and comes back.
+
 ## R-GEN: model-to-text code generation, the pilot (ratifications 2026-10-10)
 
 Evidence: the design discussion in chat `C-2026-10-10-0046`, written as
@@ -6717,6 +6756,141 @@ later; 20:50 «l'unico che manca è il bit-vector»; 20:54 «ti do il via» on t
   (`slice`, `trunc`, `toNumber`) is refused `P-STEP` over a step value, `toVerilog` stays refused `T-METHOD`. A
   stored register is declared on the metamodel: a model may declare globals only (`stateAttributesCodec.ts:303`).
   Five mutations, all killed (docs closure commit of P-2026-10-21-0700).
+
+## R-JJD: the Jjodie panel redesign (decisions 2026-10-24)
+
+Evidence: the project chat C-2026-10-24-0020 of 2026-10-24 (00:40 «eseguilo con /lane auto e dopo le discovery
+procedi con l'implementazione»; 01:14 «S6 ok», «Apply ok» on A1 and A2 of the report), the discovery report
+`docs/discovery/discovery_2026-10-24_jjodie_panel_jjel_live.md` (P-2026-10-24-0020, P-2026-10-24-0115),
+`docs/harness/fronts.json` (front `jjodie-ui`). Target release 3.3; nothing reaches the trunk before 3.2 is released.
+
+- **R-JJD-1** (2026-10-24, ratified by Alfonso 2026-10-24 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **Jjodie docks as a grid column of `.dashboard-container` in `ProjectDashboard`, not as a fixed overlay**: the editor
+  shrinks with it. Floating and maximized modes go away. The Properties rail's `right` becomes the dock width through a
+  body variable declared in `styles/tokens/` (default `0px`) and written by the dock; `--jj-canvas-right-inset` stays as
+  it is. The width (420..760, default 460) persists as an optional `dockWidth` on `JodieConfig`, per browser profile,
+  written on pointer-up; `position` and `size` stay readable and unused. Report D1, D7, D8; D-UI-1 is read as «flush
+  with the window side of the canvas» (A4).
+- **R-JJD-2** (2026-10-24, ratified by Alfonso 2026-10-24 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **A script's dry run is a pure, read-only effects planner**, not a live run with rollback and not a sandboxed
+  transaction. The effect chips and the ghost preview come only from it. The ghost preview appends synthetic,
+  non-draggable, non-selectable nodes and edges to `flowElements` in `EditorV2.tsx` and creates no D-object; no
+  critical-zone file is touched. Apply compares planned and real effects per metaclass and reports a mismatch.
+  The planner warns when a script writes one end of an opposite pair (A3: opposites are not mirrored, unchanged here).
+  Report D2, D3.
+- **R-JJD-3** (2026-10-24, ratified by Alfonso 2026-10-24 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **JjEL live evaluation stays synchronous on the main thread, bounded by an optional `deadline` on
+  `EvaluationContext`** checked in `JjelEvaluator.evaluate`. Multi-selection reaches Jjodie through a new event in
+  `events/registry.ts` that publishes React Flow's selected nodes. Report D4, D6.
+- **R-JJD-4** (2026-10-24, ratified by Alfonso 2026-10-24 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **No `add` command**: `set =` on a multi-valued M1 reference appends and `+=` exists. From the language note only
+  the formatter that breaks after `in` remains. Report D5.
+- **R-JJD-5** (2026-10-24, ratified by Alfonso 01:14, evidence: read, verified: none, reversible: branch).
+  **A script file is an optional `DProject.scripts` field, read with `|| []` like `transformations`**, with no
+  VersionFixer migration. It is listed under SCRIPTS and opened as an editor tab. Report A1.
+- **R-JJD-6** (2026-10-24, ratified by Alfonso 01:14, evidence: read, verified: none, reversible: branch).
+  **Apply is one undoable step through a minimal undo group in `reducer.ts`**: the length of
+  `statehistory[user].undoable` is marked at Apply start and the deltas pushed until Apply end are merged through the
+  existing `U.objectMergeInPlace(pastDelta, delta)` path. A core change, authorised for this front only, with tests.
+  Report A2.
+- **R-JJD-7** (2026-10-24, ratified by Alfonso 06:51 «ok alle raccomandazioni», evidence: read, verified: none, reversible: branch).
+  **D-UI-1 gets its own row: the Properties rail is flush with the window side of the canvas.** With Jjodie closed that
+  is the viewport edge, as before; with Jjodie docked it is the dock's left edge (R-JJD-1). The dock width stays per
+  browser profile in `JodieConfig.dockWidth`, like every other Jjodie preference; no account-level setting.
+- **R-JJD-8** (2026-10-24, ratified by Alfonso 06:51, evidence: measured, verified: none, reversible: branch).
+  **The unattended choices of the night lanes stand.** S1a: outside a project the panel docks to the viewport's right
+  edge; the header Reset restores 460; the handle steps 8 px per arrow key; an unsent draft is lost when the panel moves
+  between a project and another page. S1b: Clear becomes «New conversation», Reset moves to the overflow menu. S4b:
+  preview nodes are filtered out of `getNodes`/`getEdges`; the preview clears only when the model's content no longer
+  matches the plan. S3c: in JjEL mode the input keeps the expression after a submit (spec S3).
+- **R-JJD-9** (2026-10-24, ratified by Alfonso 06:51, evidence: measured, verified: none, reversible: branch).
+  **JjEL in the conversation is bounded too**: the S3a deadline applies to conversation evaluations at about 2 s, with
+  a muted «timed out» message, as in live mode (500 ms). A nested `forall` froze the page for more than 30 s before.
+- **R-JJD-10** (2026-10-24, ratified by Alfonso 06:51, evidence: read, verified: none, reversible: branch).
+  **No continuation rule for `in` in the JjScript grammar**: the formatter that breaks long `create` lines before `in`
+  is for display only (R-JJD-4 stands: one command per line). M2 commands in the planner and the script card come in a
+  later lane of this front; until then an M2 script keeps the code block with Run.
+- **R-JJD-11** (2026-10-24, ratified by Alfonso 06:51, evidence: measured, verified: none, reversible: branch).
+  **Two follow-ups open on this front**: the Quick tip clears the Properties panel too (a panel-width variable, small
+  lane), and a short discovery on the extra undo entry «Create element» (pointedBy on the new vertices) that a canvas
+  click adds after Apply, which may touch the sync layer.
+- **R-JJD-12** (2026-10-24, ratified by Alfonso 13:47 «si hai il mio si esplicito, fixa anche il ticket», evidence: measured,
+  verified: none, reversible: branch). **The pending `pointedBy` writes are resolved in the same batch**: at the end of
+  `CompositeActionReducer` (`reducer.ts`, before `updateRedundancies_OBSOLETE`) the queue `PendingPointedByPaths` is
+  drained again, so a pointer to an element created later in the batch lands in that batch's delta (option A of
+  `docs/discovery/discovery_2026-10-24_undo_after_apply.md`). A second core change in `reducer.ts` for this front, beside
+  R-JJD-6; it applies to every batch. The same lane fixes the duplicated `vertexs` entry in a new DVertex's `pointedBy`
+  (ticket F8) if its cause is in the reducer or the D-layer and outside the critical zone.
+- **R-JJD-13** (2026-10-24, decided by Alfonso 15:15 «chiudiamo tutto senza aspettare la 3.2», then «Dentro la 3.2»
+  when told that the trunk is also the 3.2 base, evidence: read, verified: none, reversible: trunk).
+  **The Jjodie panel redesign ships in 3.2, not 3.3**: `jjodie-panel` merges into `alfonso-frontend-jjtl` before the
+  3.2 tag, after the closing lanes P-2026-10-24-1520 (M2 scripts) and P-2026-10-24-1521 (megamodel NaN paths, Discard
+  under Playwright), a trunk-into-branch sync and Alfonso's visual GO. Supersedes the target line of this section's
+  evidence paragraph and of P-2026-10-24-0020.
+- **R-JJD-14** (2026-10-24, decided by Alfonso 20:33, evidence: read, verified: none, reversible: trunk).
+  **A saved script is a Refactoring artifact**: the «Refactoring» entry of the artifact menu creates one, Jjodie's
+  `Open as file` and the editor's `Save as file` create one, and a Refactoring is run from a menu on the artifact of
+  the active tab, always through the ghost preview and Apply as one undo (R-JJD-2, R-JJD-6). «Refactoring» is used in a
+  broad sense: an in-place change of a metamodel or of a model, with no guarantee that meaning is preserved. Not
+  «Script», which would cast JjScript as a low-level programming language. Direction, not yet planned: one Refactoring
+  may change a metamodel and, optionally, all its conforming models in the same artifact (coupled evolution), or be
+  applied to a single model.
+- **R-JJD-15** (2026-10-24, unattended decisions of P-2026-10-24-2320/2340 ratified by Alfonso 2026-10-24 ~23:58
+  «merge nel tronco», evidence: measured, verified: none, reversible: trunk). **The refactoring page (mockup A of the
+  design canvas) ships in 3.2** with these choices: the right pane is a compact read-only class-box renderer, not an
+  embedded EditorV2 canvas (the canvas would mount `useJjomSync`, critical zone), and for an M1 target it shows the
+  metamodel with the M1 effects as chips only; plan and preview state are local to the tab, not the global
+  `scriptPreviewStore`; the planner fills `slotValues` for an M2 world only; the wavy underline marks unresolved names
+  with a column range, gutter dots mark every warned line; the editor width lives in
+  `localStorage['jjodel.refactoring.editorWidth']` (480..800, default 600); Jjodie's launcher moves to the right edge on
+  the Refactoring tab only; `.script-tab__target` and `.script-tab__model` stay for the rf1 probe. Log:
+  `docs/log-inbox/jjodie-ui-rfa.md`. Follow-up P-2026-10-25-0005: one Preview label, no empty editor gutter, launcher
+  aligned with the docked panel.
+- **R-JJD-16** (2026-10-25, ratified by Alfonso 2026-10-25 09:54 «decidi tu», evidence: measured, verified: none, reversible: trunk).
+  P-2026-10-25-0020/0040; amends R-JJD-15 on Alfonso's request of 2026-10-25 ~00:12. The decision was delegated to the
+  project chat, which keeps the row as the lanes wrote it.
+  **The Refactoring tab sits beside its target's own tab** (the metamodel tab for M2, the model tab for M1) in a dock
+  split, editor 40 / canvas 60, ratio in `localStorage['jjodel.refactoring.splitRatio']`; never a second instance.
+  Its preview is published to the shared `scriptPreviewStore` with an `owner` and drawn on that real canvas; the
+  bar stays in the tab. The class-box pane remains only as the fallback (window under 1100 px, or the dock cannot
+  place the tab). The helper is `DockManager.openBeside`, not `MyRcDock.tsx`. The legacy last-panel rules of
+  `abstract/style.scss` and the `.not-strip` panel hiding skip the hbox holding a beside Refactoring tab, and only it.
+  Discovery: `docs/discovery/discovery_2026-10-25_refactoring_side_by_side.md`.
+
+## R-RFB: refactoring operations that migrate instance data (decisions 2026-10-24)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-10-24_refactoring_operations.md` (P-2026-10-24-2321,
+merged in `972a30c4e`), section «Decisions awaiting Alfonso»; the project chat C-2026-10-24-0020, Alfonso 2026-10-24
+«ok alle raccomandazioni». Design reference: board «Refactoring B» of the design canvas. All rows: ratified by
+Alfonso as recommended, evidence: read, verified: none, reversible: trunk (docs only, no code yet).
+
+- **R-RFB-1** (2026-10-24). **Syntax: bare verbs** as in the mockup (`extract`, `pull`, `push`, `inline` become
+  reserved words; `rename`, `move`, `set` reused). Slice S2a first counts identifiers named `extract|pull|push|inline`
+  in the bundled examples; if any is found, fall back to one prefix word (`refactor pull up …`).
+- **R-RFB-2** (2026-10-24). **M1 migration copies values into the new slots and then deletes the old feature**; no
+  re-pointing of `DValue.instanceof` through a raw SetFieldAction. No guard bypassed, no core change.
+- **R-RFB-3** (2026-10-24). **One refactoring is a sequence of ordered steps, one TRANSACTION each with a settle,
+  inside one R-JJD-6 undo group**; never a single TRANSACTION (CLAUDE.md rule 12).
+- **R-RFB-4** (2026-10-24). **Lossy operations**: the planner lists every value that will be lost, per model, and
+  Apply stays disabled until the user acknowledges the loss in the preview; no `force` keyword in the script. Lossless
+  operations apply with no extra step.
+- **R-RFB-5** (2026-10-24). **Scope**: every model of the project that conforms to the metamodel is migrated and
+  listed in the plan; no model can be skipped in the first release.
+- **R-RFB-6** (2026-10-24). **The generic `move` stays as it is** (packages, classes); `move attribute … from … to …
+  via …` gets its own parse path through `set_father`. The fix of the current `move` on features waits for slice
+  S0's measurement.
+- **R-RFB-7** (2026-10-24). **Rename warns with the textual occurrences and does not rewrite them**; a rewriting
+  rename is its own discovery.
+- **R-RFB-8** (2026-10-24). **First release**: rename warnings, pull up, extract superclass, set multiplicity (with the
+  loss report of R-RFB-4). Move via, push down, inline class and type change come after.
+
+Open, not decided by these rows (questions 3 and 4 of the report): whether Jjodie's Run and the script editor's Run
+open an undo group too, and whether a filled slot left behind when a superclass is removed is a bug or intended.
+- **R-JJD-17** (2026-10-25, decided by Alfonso 09:43, evidence: read, verified: none, reversible: trunk).
+  **«Run refactoring» lives in the main menu under Tools**, enabled only when it applies: the label names the active
+  artifact («Run refactoring on <name>…»), it lists the Refactorings compatible with that artifact (R-JJD-14), and with
+  none it stays visible but disabled with the reason. Tools stays Advanced-only, so in Basic mode a Refactoring is run
+  from its own tab (`Run on`) or the right-click on the artifact tab, which stays as a shortcut. No «⋯» icon on the tabs.
 
 ## Superate
 
