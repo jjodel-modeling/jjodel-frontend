@@ -23,6 +23,7 @@ import {
     Log,
 } from '../../joiner';
 import DockManager from '../abstract/DockManager';
+import { deleteProjectScript, readProjectScripts, renameProjectScript } from '../scripts/scriptFiles';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
@@ -2972,6 +2973,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             {showMegamodelModal && (() => {
                 const megamodel = getRuntimeMegamodel(project.id);
                 if (!megamodel) return null;
+                // Script files (S6b): the store's own array, so the view's layout effect sees the
+                // same reference across renders; undefined when the project has none.
+                const projectScripts = readProjectScripts();
+                const isScript = (id: string) => projectScripts.some(s => s.id === id);
 
                 // Compute artifact stats for rich node cards
                 const artifactStats: ArtifactStats[] = [];
@@ -3032,10 +3037,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             name: vp.name || 'Unnamed',
                             isOverlay: vp.isOverlay,
                         }))}
+                        scripts={projectScripts.length ? projectScripts : undefined}
                         artifactStats={artifactStats}
                         onClose={() => setShowMegamodelModal(false)}
                         onOpenNode={(nodeId, nodeKind) => {
-                            if (nodeKind === 'metamodel' || nodeKind === 'model') {
+                            if (isScript(nodeId)) {
+                                DockManager.openScript(nodeId);
+                            } else if (nodeKind === 'metamodel' || nodeKind === 'model') {
                                 const lModel = metamodels.find(mm => mm.id === nodeId) || models.find(m => m.id === nodeId);
                                 if (lModel) DockManager.open2(lModel);
                             } else if (nodeKind === 'transformation') {
@@ -3044,7 +3052,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             }
                         }}
                         onDeleteNode={(nodeId, nodeKind) => {
-                            if (nodeKind === 'metamodel') {
+                            if (isScript(nodeId)) {
+                                deleteProjectScript(nodeId);
+                            } else if (nodeKind === 'metamodel') {
                                 const mm = metamodels.find(m => m.id === nodeId);
                                 if (mm) handleDeleteMetamodel(mm);
                             } else if (nodeKind === 'model') {
@@ -3068,6 +3078,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     m.name = newName;
                                     markDirty();
                                 }
+                            } else if (isScript(nodeId)) {
+                                renameProjectScript(nodeId, newName);
                             } else if (nodeKind === 'transformation') {
                                 handleRenameTransformation(nodeId, newName);
                             }

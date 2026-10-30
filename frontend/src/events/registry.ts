@@ -97,6 +97,14 @@ export const JjodelEvents = {
   IMPORT_SUMMARY_SHOW: 'jjodel:import-summary-show',
   // Symbol editor modal (D15): launch only; closing is local state of the modal
   SYMBOL_EDITOR_OPEN: 'jjodel:symbol-editor-open',
+  // P-2026-10-24-0155 (R-JJD-3). React Flow's selected nodes changed in an EditorV2 canvas, at most
+  // once per animation frame and only when the list differs. detail: CanvasSelectionDetail
+  // { modelId, nodeIds, elementIds } (components/editor-v2/utils/canvasSelection.ts), in selection order.
+  CANVAS_SELECTION_CHANGED: 'jjodel:canvas-selection-changed',
+  // P-2026-10-24-0225 (R-JJD-2). Plan an M1 script and show its ghost preview on the canvas of the
+  // model. detail: ScriptPreviewRequest { script, modelId } (components/editor-v2/preview/scriptPreviewStore.ts);
+  // an empty script clears the preview.
+  SCRIPT_PREVIEW_REQUEST: 'jjodel:script-preview-request',
 } as const;
 
 // ─── JjScript ───────────────────────────────────────────────────

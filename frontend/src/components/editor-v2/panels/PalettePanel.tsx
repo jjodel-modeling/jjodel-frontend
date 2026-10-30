@@ -58,6 +58,8 @@ const ReferencesIcon = () => (
 // ---------------------------------------------------------------------------
 
 interface PalettePanelProps {
+    /** Collapsed to nothing while a preview another view drives is on this canvas (the Refactoring tab beside it, R-JJD-16). */
+    collapsed?: boolean;
     /** If 'model' → show M1 palette with rootable classes. Default 'metamodel'. */
     editorMode?: 'metamodel' | 'model';
     /** Rootable classes for M1 palette (concrete classes not targeted by compositions). */
@@ -81,7 +83,7 @@ interface PalettePanelProps {
     onItemActivate?: (type: string, metaclassId?: string) => void;
 }
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate }: PalettePanelProps) {
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [], onItemActivate, collapsed = false }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
@@ -138,7 +140,7 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
     // ── M1 Palette ───────────────────────────────────────────────────
     if (editorMode === 'model') {
         return (
-            <aside className="editor-v2-palette editor-v2-palette--m1">
+            <aside className={`editor-v2-palette editor-v2-palette--m1${collapsed ? ' editor-v2-palette--collapsed' : ''}`}>
                 {/* Instances — root instance creation (kept as drag-to-canvas) */}
                 <div className="palette-instances">
                     <div className="palette-instances__title">Instances</div>
@@ -269,7 +271,7 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
 
     // ── M2 Palette ───────────────────────────────────────────────────
     return (
-        <aside className="editor-v2-palette">
+        <aside className={`editor-v2-palette${collapsed ? ' editor-v2-palette--collapsed' : ''}`}>
             {m2Groups.map(group => (
                 <div key={group} className="palette-group">
                     <div className="palette-group__title">{group}</div>

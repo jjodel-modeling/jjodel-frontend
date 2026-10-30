@@ -381,17 +381,19 @@
      ============================================ */
   &.two-column {
     display: grid;
-    grid-template-columns: 240px 1fr;
+    // Last column: the docked Jjodie slot (R-JJD-1). `auto` sizes it to the panel the
+    // JodieWindow portals in, and to 0 when Jjodie is closed (the slot is then empty).
+    grid-template-columns: 240px 1fr auto;
     grid-template-rows: 1fr;
     flex-flow: unset;
 
     // Hide project sidebar when metamodel editor is active
     &.hide-leftbar {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr auto;
     }
 
     @media (max-width: 768px) {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr auto;
 
       .leftbar {
         position: fixed;
@@ -1137,7 +1139,22 @@ project-card .tip {
       &--m { background: #fef3c7; color: #92400e; }
       &--T { background: #dcfce7; color: #15803d; }
       &--V { background: #fce7f3; color: #9d174d; }
+      &--S { background: #cffafe; color: #0e7490; }
       &--G { background: #cffafe; color: #0e7490; }
+    }
+
+    /* Inline rename of a SCRIPTS row (S6b): takes the place of .psb-item-name. */
+    .psb-rename-input {
+      flex: 1;
+      min-width: 0;
+      height: 20px;
+      padding: 0 4px;
+      border: 1px solid #0ea5e9;
+      border-radius: 3px;
+      font: inherit;
+      color: inherit;
+      background: #fff;
+      outline: none;
     }
 
     /* GENERATORS (R-GEN-42): the metamodel's name over its generators, when the project has more than one. */

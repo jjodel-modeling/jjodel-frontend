@@ -198,7 +198,14 @@ export class AIProviderService {
         if (data.choices?.[0]?.finish_reason === 'length') {
             console.warn(`[AIProviderService] ${providerLabel} response hit the token limit (finish_reason=length) — output was truncated and may be incomplete. Raise CHAT_MAX_OUTPUT_TOKENS if this recurs.`);
         }
-        return data.choices[0].message.content;
+        // A refusal or a tool-call-only reply carries no string content (P-2026-10-30-1215).
+        const choice = data.choices?.[0];
+        const content = choice?.message?.content;
+        if (typeof content !== 'string') {
+            const refusal = choice?.message?.refusal ? `, refusal: ${choice.message.refusal}` : '';
+            throw new Error(`${providerLabel} returned no text (finish_reason=${choice?.finish_reason}${refusal})`);
+        }
+        return content;
     }
 
     /**
@@ -256,7 +263,14 @@ export class AIProviderService {
         if (data.stop_reason === 'max_tokens') {
             console.warn('[AIProviderService] Claude response hit max_tokens — output was truncated and may be incomplete (e.g. a cut-off JjScript). Raise CHAT_MAX_OUTPUT_TOKENS if this recurs.');
         }
-        return data.content[0].text;
+        // The reply may open with non-text blocks (adaptive thinking runs by default on the current
+        // models): join the text blocks, and fail loudly when there is none (P-2026-10-30-1215).
+        const blocks: Array<{ type?: string; text?: string }> = Array.isArray(data.content) ? data.content : [];
+        const textBlocks = blocks.filter(b => b?.type === 'text' && typeof b.text === 'string');
+        if (!textBlocks.length) {
+            throw new Error(`Claude returned no text (stop_reason=${data.stop_reason}, blocks: ${blocks.map(b => b?.type).join(', ') || 'none'})`);
+        }
+        return textBlocks.map(b => b.text).join('');
     }
 
     /**

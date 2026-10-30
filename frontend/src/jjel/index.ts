@@ -41,6 +41,7 @@ export { parseTemplateText } from './parser/parser';
 export {
     JjelEvaluator,
     JjelEvaluationError,
+    JjelTimeoutError,
     evaluate,
     EvaluationContext,
     TypeRegistry,

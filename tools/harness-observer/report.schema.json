@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:jjodel:harness-observer:1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "readerVersion", "dataset", "records", "coverage"],
+  "properties": {
+    "schemaVersion": {"const": "harness-observer/1"},
+    "readerVersion": {"type": "string"},
+    "dataset": {"type":"object", "required":["laneIds","sourceFingerprint"], "properties":{"laneIds":{"type":"array","items":{"type":"string","pattern":"^P-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}$"}},"sourceFingerprint":{"type":"string","pattern":"^[a-f0-9]{64}$"}},"additionalProperties":false},
+    "records": {"type":"array","items":{"$ref":"#/$defs/record"}},
+    "coverage": {"type":"object","required":["lanes","llmLanes","reconciledLanes","baselineTechnicalTotal","completeSystemConsumption"],"properties":{"lanes":{"type":"integer","minimum":0},"llmLanes":{"type":"integer","minimum":0},"reconciledLanes":{"type":"integer","minimum":0},"baselineTechnicalTotal":{"type":["integer","null"],"minimum":0},"completeSystemConsumption":{"const":false}},"additionalProperties":false}
+  },
+  "$defs": {
+    "counters":{"type":"object","required":["input","cacheRead","cacheCreation","output"],"additionalProperties":false,"properties":{"input":{"type":["integer","null"],"minimum":0},"cacheRead":{"type":["integer","null"],"minimum":0},"cacheCreation":{"type":["integer","null"],"minimum":0},"output":{"type":["integer","null"],"minimum":0}}},
+    "record":{"type":"object","additionalProperties":false,"required":["laneId","sources","entities","relations","originalCounters","reconstructedUsage","reconciliation","operationalOutcomes","architect","diagnostics"],"properties":{
+      "laneId":{"type":"string"},"sources":{"type":"array","items":{"type":"object","required":["path","sha256","bytes","stable"]}},
+      "entities":{"type":"array","items":{"type":"object","required":["id","type","status"]}},"relations":{"type":"array"},
+      "originalCounters":{"type":"object","required":["messages","results"]},
+      "reconstructedUsage":{"type":"object","required":["calls","mainCalls","subCalls","stream","outputStreamAvailability"],"properties":{"stream":{"type":"object","required":["all","main","subagents","byModel"],"properties":{"all":{"$ref":"#/$defs/counters"},"main":{"$ref":"#/$defs/counters"},"subagents":{"$ref":"#/$defs/counters"},"byModel":{"type":"object","additionalProperties":{"$ref":"#/$defs/counters"}}}}}},
+      "reconciliation":{"type":"object","required":["availability","accounted","difference","inputEqual","baselineTechnicalTotal","eligibleForBaseline","comparisonScope","segments"],"properties":{"availability":{"enum":["available","partial","missing","not_applicable","invalid"]},"baselineTechnicalTotal":{"type":["integer","null"],"minimum":0},"inputEqual":{"type":"boolean"},"eligibleForBaseline":{"type":"boolean"},"segments":{"type":"array"}}},
+      "operationalOutcomes":{"type":"object","required":["agent","exit","direct","acceptance","integration","invocationsObserved","invocationCoverage"]},
+      "architect":{"type":"object","required":["availability","reason","originalCounters"]},
+      "diagnostics":{"type":"array","items":{"type":"object","required":["code"],"properties":{"code":{"type":"string"}}}}
+    }}
+  }
+}
