@@ -333,3 +333,16 @@ empties this file. The active log is not touched by this lane.
 **Ticket** (P-2026-10-25-1510): it also corrects 2026-10-25 10:45 (the panel tab bar beside the canvas). Decisions (unattended, RC-25 provisional): 1510-1 the beside entry takes the canvas tab's active style, two active tabs on screen at once; 1510-2 «focus» is DOM focus on the generator root (tabIndex -1, no outline), so its keyboard shortcuts apply; 1510-3 the bar is hidden by `.not-strip .dock-panel.dock-style-codegen .dock-bar` (rc-dock 3.3.2 nests it in `.dock`, the first direct-child selector matched nothing, fixed in 8e474b79a); 1510-4 the four named kills are probe checks, not units: Navbar.tsx is not importable in the bench (window) and the bar is CSS. Lost with the panel bar: the title's unsaved dot; the template list keeps its per-template dots, the app-bar entry shows none. The probe's first start after an SCSS HMR on 3133 twice failed to open the model's pane; a fresh server ran green.
 
 **Visual GO** (2026-10-25 16:05): Alfonso, «ok» on localhost:3131 after reloading cg-generators at 1b8135c1a, covering P-2026-10-24-1515/1516/1630, P-2026-10-25-0925/1045/1200/1310/1355/1441/1510.
+
+## 2026-10-30 — merge: cg-generators takes alfonso-frontend-jjtl (P-2026-10-30-1510)
+**Prompt**: RC-14: bring the trunk at 9606c352a into cg-generators with one --no-ff merge commit before the trunk takes the branch; union for decisions.md and the inboxes, step-4 probes, step-5 reading, gates, visual probes, GO.
+**Files touched**: merge 574429a0f (253 trunk files; by hand, authorized in C-2026-10-30-1430: frontend/src/components/editor-v2/EditorV2.tsx, frontend/src/pages/components/LeftBar.tsx, frontend/src/pages/components/Navbar.tsx, frontend/src/pages/dashboard.scss); fix b38dccdac: LeftBar.tsx; fix 213b368a8: frontend/src/codegen/ui/TemplateEditorTab.scss; docs: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-30_1510_prompt_cg-generators_take_trunk.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: 4 code conflicts stopped the lane (question); 5 hunks then resolved by union, trunk first. Alfonso put GENERATORS above SCRIPTS (b38dccdac). The merge broke the divider drag beside a generator tab: the trunk's :not(:has()) raised the split cap to (0,7,1) over the lift (0,6,0); 213b368a8 (0,8,0). Gates green; vitest 455 files, 12186 passed, same 9 red. Probes: leftbar 19/19, generator-tab 92/92 on 3151/3152; crops in ~/.jjodel-lanes/P-2026-10-30-1510/crops.
+**Prompt document name**: 2026-10-30 15:10

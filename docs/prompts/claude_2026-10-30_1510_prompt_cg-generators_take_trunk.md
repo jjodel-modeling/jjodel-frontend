@@ -5,7 +5,7 @@ Chat: C-2026-10-30-1430
 Front: codegen
 Request: none (rendered by lane-run, no chat URL known for no --chat)
 Lane: full (merge of the trunk into the branch; 4 conflicts: `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/pages/components/Navbar.tsx`, `frontend/src/pages/dashboard.scss` measured)
-Status: da eseguire
+Status: eseguito 2026-10-30 · lane cg-generators · 574429a0f · verifica visiva passata 2026-10-30 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-cggen`, branch `cg-generators`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-cggen`, branch `cg-generators`, `git log -1` is the commit that adds this file (its parent `87cbac5b7`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-30-1510 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
