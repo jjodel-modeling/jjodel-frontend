@@ -20,3 +20,16 @@ and in this order** (RC-12) and empties this file. The active log is not touched
 **Prompt document name**: 2026-10-30 13:15
 
 **Ticket** (in-app visual check blocked, found in P-2026-10-30-1315): ProjectEditor materializes nested creations one level deep only, so the in-app check of this fix cannot run until that is fixed; waived by Alfonso 2026-10-30 13:28, handled by the next lane. Regressions is `unknown` because the executor suites that would cover the patch do not collect (`window is not defined`); only the new test exercises it.
+
+## 2026-10-30 — merge: jjtl-executor-patch into alfonso-frontend-jjtl (P-2026-10-30-1330)
+**Prompt**: `claude_2026-10-30_1330_prompt_merge_jjtl-executor-patch.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-executor-patch` at `1e370cf4b` into `alfonso-frontend-jjtl`, merge base `555bab6d0`, 2 commits on the branch side.
+**Files touched**: merge `6dbd2e3b0`: 4 files from the branch side (`docs/log-inbox/jjtl-executor-patch.md`, `docs/prompts/claude_2026-10-30_1315_prompt_jjtl_nested_feature_creation.md`, `frontend/src/jjtl/__tests__/nested-feature-creation.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6dbd2e3b0` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12079 tests in 447 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non applicabile (executor-only change covered by nested-feature-creation.test.ts; in-app check waived by Alfonso 2026-10-30 13:28, deferred to P-2026-10-30-1335)
+**Notes**: Rollback tag `pre-jjtl-executor-patch` on `555bab6d0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-30-1330/result.json`.
+**Prompt document name**: 2026-10-30 13:30
