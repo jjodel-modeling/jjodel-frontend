@@ -618,8 +618,6 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     'New transform',
                 )}
 
-                {!consumer && renderScriptsSection()}
-
                 {showGenerators && (
                     <div className={`psb-section psb-section--generators${collapsedSections['generators'] ? ' collapsed' : ''}`}>
                         <div className="psb-section-header" onClick={() => toggleSection('generators')}>
@@ -669,6 +667,8 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         </div>
                     </div>
                 )}
+
+                {!consumer && renderScriptsSection()}
 
                 {!consumer && renderSection(
                     'viewpoints', 'Viewpoints', 'V',
