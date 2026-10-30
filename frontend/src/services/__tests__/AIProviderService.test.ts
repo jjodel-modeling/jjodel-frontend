@@ -303,3 +303,72 @@ describe('#179 with a live catalog: a missing model is flagged and kept, never s
         expect(JSON.parse(storage.get(GEMINI_KEY)!).replacedModel).toBe('gemini-2.0-flash-exp');
     });
 });
+
+// P-2026-10-30-1215: a Claude reply whose first block is not text (adaptive thinking runs by default
+// on the current models) returned `content[0].text`, undefined, and the chat crashed on render.
+describe('reply text: non-text blocks and empty content', () => {
+    beforeEach(() => {
+        vi.resetModules();
+        const storage = new Map<string, string>();
+        vi.stubGlobal('localStorage', {
+            getItem: (key: string) => storage.get(key) ?? null,
+            setItem: (key: string, value: string) => storage.set(key, value),
+        });
+        vi.stubGlobal('fetch', vi.fn());
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    const answer = (body: unknown) => vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => body } as Response);
+
+    async function chatClaude() {
+        const { AI, AIProvider } = await import('../../types/jodie');
+        const { AIProviderService } = await import('../AIProviderService');
+        localStorage.setItem(AI.Claude.storageKey, JSON.stringify({
+            name: AIProvider.Claude, apiKey: 'sk-ant-test', model: 'claude-opus-5-5', enabled: true,
+        }));
+        return AIProviderService.chat('Hello', AIProvider.Claude, [], undefined, undefined, undefined, 'claude-opus-5-5');
+    }
+
+    async function chatDeepSeek() {
+        const { AI, AIProvider } = await import('../../types/jodie');
+        const { AIProviderService } = await import('../AIProviderService');
+        localStorage.setItem(AI.DeepSeek.storageKey, JSON.stringify({
+            name: AIProvider.DeepSeek, apiKey: 'sk-test', model: 'deepseek-chat', enabled: true,
+        }));
+        return AIProviderService.chat('Hello', AIProvider.DeepSeek, [], undefined, undefined, undefined, 'deepseek-chat');
+    }
+
+    it('Claude: joins the text blocks in order, skipping a leading thinking block', async () => {
+        answer({
+            stop_reason: 'end_turn',
+            content: [{ type: 'thinking', thinking: '', signature: 'sig' }, { type: 'text', text: 'one ' }, { type: 'text', text: 'two' }],
+        });
+        expect(await chatClaude()).toBe('one two');
+    });
+
+    it('Claude: no text block throws naming stop_reason and the block types', async () => {
+        answer({ stop_reason: 'refusal', content: [{ type: 'redacted_thinking', data: 'x' }] });
+        await expect(chatClaude()).rejects.toThrow(/stop_reason=refusal.*redacted_thinking/);
+    });
+
+    it('Claude: an empty content array throws instead of returning undefined', async () => {
+        answer({ stop_reason: 'refusal', content: [] });
+        await expect(chatClaude()).rejects.toThrow(/stop_reason=refusal/);
+    });
+
+    it('OpenAI-compatible: null content throws naming finish_reason and the refusal', async () => {
+        answer({ choices: [{ finish_reason: 'stop', message: { content: null, refusal: 'I cannot help with that.' } }] });
+        await expect(chatDeepSeek()).rejects.toThrow(/finish_reason=stop.*I cannot help with that\./);
+    });
+
+    it('OpenAI-compatible: a tool-call-only reply throws naming finish_reason', async () => {
+        answer({ choices: [{ finish_reason: 'tool_calls', message: { content: null, tool_calls: [] } }] });
+        await expect(chatDeepSeek()).rejects.toThrow(/finish_reason=tool_calls/);
+    });
+
+    it('control: a string content is returned unchanged', async () => {
+        answer({ choices: [{ finish_reason: 'stop', message: { content: 'Hi' } }] });
+        expect(await chatDeepSeek()).toBe('Hi');
+    });
+});

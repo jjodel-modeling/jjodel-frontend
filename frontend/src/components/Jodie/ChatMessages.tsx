@@ -46,7 +46,9 @@ type ExtractedCodeBlock = { language: string | null; content: string };
 // Extracts the first markdown fenced code block (```lang? ... ```) from text.
 // Powers the "Test in code mode" promotion shown under assistant messages.
 // Captures group 1 (language tag) is optional and may be undefined.
-function extractFirstCodeBlock(text: string): ExtractedCodeBlock | null {
+// A non-string content (a reply that came back without text) yields null instead of crashing the render.
+export function extractFirstCodeBlock(text: string | null | undefined): ExtractedCodeBlock | null {
+    if (typeof text !== 'string') return null;
     const match = text.match(/```(\w+)?\n([\s\S]*?)```/);
     if (!match) return null;
     return {
@@ -64,7 +66,8 @@ function scriptCardModelId(message: ChatMessage): string | null {
     return scope?.level === 'M1' && scope.modelId ? scope.modelId : null;
 }
 
-function hasScriptCardBlock(text: string): boolean {
+export function hasScriptCardBlock(text: string | null | undefined): boolean {
+    if (typeof text !== 'string') return false;
     for (const m of text.matchAll(/```(\w+)?\n([\s\S]*?)```/g)) {
         if (isScriptCardBlock((m[1] ?? 'text').toLowerCase(), m[2].replace(/\n$/, ''), isJjScriptCode)) return true;
     }

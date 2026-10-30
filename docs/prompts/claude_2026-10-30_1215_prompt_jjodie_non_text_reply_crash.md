@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-30-1215
 Chat: C-2026-10-30-1207
 Front: jjodie-ui
 Lane: fast (two files plus one test, outside the critical zone, no exported interface changes)
-Status: da eseguire
+Status: eseguito 2026-10-30 · lane jjodie-ui-ntr · 8d5b5a1fe · verifica visiva passata 2026-10-30
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P4 non si applica (motivo: fast lane, the preliminary check goes inline in the log entry, max ten lines).
