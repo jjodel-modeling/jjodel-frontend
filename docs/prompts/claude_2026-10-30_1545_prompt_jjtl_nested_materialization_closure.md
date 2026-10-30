@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-30-1545
 Chat: C-2026-10-30-1253
 Front: release-3-2
 Lane: full (closure of P-2026-10-30-1440 Phase 2 from its handoff; no new product change)
-Status: da eseguire
+Status: eseguito 2026-10-30 · lane jjtl-nested-materialization · e169b2bf3 · verifica visiva passata 2026-10-30
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
 
