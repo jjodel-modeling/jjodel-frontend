@@ -372,3 +372,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: 3001 answers 200; branch probes on the same tree (cg-generators 5fdf3dc7a): codegen-leftbar ALL GREEN (GENERATORS above SCRIPTS), codegen-generator-tab ALL GREEN after 213b368a8; trunk merge clean, all gates green
 **Notes**: Rollback tag `pre-cg-generators` on `ab864b9b8` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-30-2200/result.json`.
 **Prompt document name**: 2026-10-30 22:00
+
+## 2026-10-30 — merge: gen-io takes alfonso-frontend-jjtl (P-2026-10-30-2209)
+**Prompt**: RC-14: bring the trunk at 5e81e8933 into gen-io with one --no-ff merge commit before the trunk takes the branch; union for decisions.md and the inboxes, step-4 probes, step-5 reading, gates, visual probes, GO.
+**Files touched**: merge 358f48f5f (295 trunk files; by hand, authorized in C-2026-10-30-1430: frontend/src/components/project/ProjectEditor.tsx, the import hunk); docs: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-30_2209_prompt_gen-io_take_trunk.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: 1 code conflict stopped the lane (question); the import hunk resolved by union, branch first. Gates green: vitest 458 files, 12284 passed, same 9 red; hooks 967. generator-tab red twice on 3140, a vite started before the merge; fresh servers: this tree 92/92 on 3160, trunk tip 92/92 on 3161. Import/export by a gitignored probe: 14/14. Crops in ~/.jjodel-lanes/P-2026-10-30-2209/crops, crops-gentab, crops-io.
+**Prompt document name**: 2026-10-30 22:09
