@@ -57,8 +57,8 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
             // (t, i) => `${i}:[${t.type}:${JSON.stringify(t.value)}]`
         // ).join(' '));
 
-        // Parse
-        const parserResult = parse(lexerResult.tokens);
+        // Parse; the source string sends every expression through JjEL, as node does
+        const parserResult = parse(lexerResult.tokens, source);
         // console.log('[useJjtlParser] Parse result:', {
             // hasAst: !!parserResult.ast,
             // mappingsCount: parserResult.ast?.mappings?.length || 0,
