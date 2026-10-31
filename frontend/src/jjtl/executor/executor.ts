@@ -50,6 +50,7 @@ import type { JjelValue, JjelFunction } from '../../jjel';
 
 import { toJjelAst } from './astBridge';
 import { extractAttributeValues } from '../../jjel/evaluator/modelContext';
+import { registerRangeBuiltin } from '../../jjel/evaluator/evaluator';
 
 import {
     TraceModel,
@@ -999,6 +1000,9 @@ export class JjtlExecutor {
 
         // Register resolve() and resolveAll() as JjEL builtins
         this.registerTraceBuiltins();
+
+        // The executor evaluates in its own context, which the JjelEvaluator's global builtins never reach.
+        registerRangeBuiltin(this.context.evalContext);
     }
 
     /**

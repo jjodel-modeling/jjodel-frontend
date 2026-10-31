@@ -515,6 +515,8 @@ With `forall` replacing `filter` and `map`, the remaining collection methods are
 
 Note: `filter` and `map` are **removed** — replaced by `forall` construct.
 
+**Global function:** `range(n)` is the list `[0, 1, ..., n-1]` and `range(a, b)` is `[a, ..., b-1]`; both are empty when the end is not above the start (`range(0)`, `range(-2)`, `range(5, 2)`, `range(2, 2)`). It iterates numbers where `forall` iterates model elements: `forall i in range(nregs) -> Register { name := "x" + i }`. Integers only: a fraction, a string, `null`, a boolean, a list or a bit-vector is an error naming `range()`, as is a wrong number of arguments or a result above 1,000,000 elements; nothing is truncated or converted. Being a builtin, `range` shadows a context variable of the same bare name, like `bits`: read a model feature called `range` as `self.range`. Available wherever `JjelEvaluator` registers its globals (expressions, code generator templates) and in JjTL; not in the simulator's guard context, which takes the bit-vector constructors only (R-BV-8).
+
 ### 7.4 Date Methods (34 + 5 constructors)
 
 Dates are represented as ISO 8601 strings.
