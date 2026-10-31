@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1411
 Chat: C-2026-10-31-1328
 Front: release-3-2
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane xmi-abstract · ac7c92039 · verifica visiva non applicabile (importer, unit tests)
 Lane: full (XMI importer behaviour change, one file plus tests; from the discovery of P-2026-10-31-1342, point 5)
 Depends: none
 Worktree: ~/jjodel-w-xmiabs, branch xmi-abstract (from alfonso-frontend-jjtl 5b19ebfc8)
