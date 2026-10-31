@@ -499,7 +499,12 @@ export class JjtlParser {
         let filter: ExpressionAST | undefined;
         if (this.match(TokenType.SUCH)) {
             this.consume(TokenType.THAT, "Expected 'that' after 'such'");
-            filter = this.expression();
+            // Delegate to JjEL like `where` and `:=`, so `exists`, `implies` and
+            // the rest of JjEL parse here too. The filter ends at the `->` of the
+            // creation, which JjEL never uses.
+            filter = this.source !== undefined
+                ? this.parseJjELExpression([TokenType.ARROW, TokenType.NEWLINE])
+                : this.expression();
         }
 
         // Required: object creation -> Type { ... }

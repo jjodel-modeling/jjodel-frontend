@@ -391,6 +391,15 @@ export class JjtlExecutor {
     // lookup then returns undefined and the executor keeps its unvalidated
     // behaviour, which is what most unit tests exercise.
     private targetClasses: Map<string, TargetClassInfo> = new Map();
+    // Readable stand-ins for `{ __ref: id }` source values, one per id per run,
+    // and plain-data views of the source objects that hold such values. See
+    // liftSourceRefs.
+    private sourceRefHandles: Map<string, any> = new Map();
+    private sourceViews: WeakMap<object, any> = new WeakMap();
+    private sourceIndexById: Map<string, any> | null = null;
+    // Member reads on unresolved references made by the JjEL evaluation in
+    // progress; null outside one. Drained into a warning by evaluateExpression.
+    private unresolvedReads: Set<string> | null = null;
     private stats: ExecutionStats = {
         sourceInstancesProcessed: 0,
         targetInstancesCreated: 0,
@@ -831,6 +840,115 @@ export class JjtlExecutor {
     }
 
     /**
+     * Make `{ __ref: id }` source values readable from a JjEL expression.
+     *
+     * A forall dereferences each element of its collection (runForAll), but an
+     * expression read the same feature as raw wrappers: `requirements.first().kind`
+     * was null, in silence. A wrapper is replaced by a handle whose only enumerable
+     * key is still `__ref`, so Object.keys, fromJjelValue, JSON and resolveValue's
+     * `'__ref' in value` see exactly the wrapper they saw before (the id path of
+     * cross-type resolution, fail-open, is unchanged). The features of the source
+     * object sit on the handle as non-enumerable getters, which JjEL's `in` and
+     * `[]` reach. Arrays are mapped, anything else is returned as is.
+     */
+    private liftSourceRefs(value: any): any {
+        if (Array.isArray(value)) {
+            let changed = false;
+            const lifted = value.map(el => {
+                const out = this.liftSourceRefs(el);
+                if (out !== el) changed = true;
+                return out;
+            });
+            return changed ? lifted : value;
+        }
+        // Own-property check first: it never runs the get trap of an L-layer proxy.
+        if (!value || typeof value !== 'object'
+            || !Object.prototype.hasOwnProperty.call(value, '__ref')) return value;
+        const id = (value as any).__ref;
+        if (typeof id !== 'string') return value;
+        const cached = this.sourceRefHandles.get(id);
+        if (cached) return cached;
+
+        const target = this.derefSourceRef(value);
+        let handle: any;
+        if (target !== value) {
+            handle = { __ref: id };
+            for (const [key, raw] of proxyEntries(target)) {
+                if (key === '__ref') continue;
+                Object.defineProperty(handle, key, {
+                    get: () => this.liftSourceRefs(raw),
+                    enumerable: false,
+                    configurable: true,
+                });
+            }
+        } else {
+            // Not in the source model: every member read made by an expression is
+            // recorded and reads null, and evaluateExpression turns the record into
+            // a warning instead of a silent null.
+            handle = new Proxy({ __ref: id }, {
+                has: (t, key) => Reflect.has(t, key)
+                    || (this.unresolvedReads !== null && typeof key === 'string' && !key.startsWith('__')),
+                get: (t, key, receiver) => {
+                    if (Reflect.has(t, key)) return Reflect.get(t, key, receiver);
+                    // `className` is probed by JjEL itself on every member access.
+                    if (this.unresolvedReads !== null && typeof key === 'string'
+                        && !key.startsWith('__') && key !== 'then' && key !== 'className') {
+                        this.unresolvedReads.add(`'${key}' of '${id}'`);
+                    }
+                    return undefined;
+                },
+            });
+        }
+        this.sourceRefHandles.set(id, handle);
+        return handle;
+    }
+
+    /**
+     * The value an expression sees for a source value: an element of the source
+     * model becomes a plain-data view whose reference features are lifted (same
+     * keys, so cross-type resolution and the trace see the same object shape);
+     * anything else goes through liftSourceRefs. Objects outside the source array,
+     * L-layer proxies included, are never copied.
+     */
+    private bindSourceValue(value: any): JjelValue {
+        if (value && typeof value === 'object' && !Array.isArray(value) && this.isSourceElement(value)) {
+            return shallowToJjelValue(this.sourceView(value));
+        }
+        return shallowToJjelValue(this.liftSourceRefs(value));
+    }
+
+    private isSourceElement(obj: any): boolean {
+        const arr = Array.isArray(this.context?.sourceModel) ? this.context.sourceModel : null;
+        if (!arr) return false;
+        if (!this.sourceIndexById) {
+            // First match wins, as in derefSourceRef.
+            this.sourceIndexById = new Map();
+            for (const o of arr) {
+                if (o && typeof o.id === 'string' && !this.sourceIndexById.has(o.id)) {
+                    this.sourceIndexById.set(o.id, o);
+                }
+            }
+        }
+        const id = obj.id;
+        return typeof id === 'string' && this.sourceIndexById.get(id) === obj;
+    }
+
+    private sourceView(obj: any): any {
+        const cached = this.sourceViews.get(obj);
+        if (cached) return cached;
+        let changed = false;
+        const view: Record<string, any> = {};
+        for (const [key, value] of proxyEntries(obj)) {
+            const lifted = this.liftSourceRefs(value);
+            if (lifted !== value) changed = true;
+            view[key] = lifted;
+        }
+        const result = changed ? view : obj;
+        this.sourceViews.set(obj, result);
+        return result;
+    }
+
+    /**
      * Initialize execution context
      */
     private initializeContext(sourceModel: any, targetMetamodel?: any): void {
@@ -875,6 +993,9 @@ export class JjtlExecutor {
             targetsBySourceName: new Map(),
             pendingByMapping: new Map(),
         };
+        this.sourceRefHandles = new Map();
+        this.sourceViews = new WeakMap();
+        this.sourceIndexById = null;
 
         // Register resolve() and resolveAll() as JjEL builtins
         this.registerTraceBuiltins();
@@ -1386,7 +1507,7 @@ export class JjtlExecutor {
                 await this.executeAttributeMapping(item as AttributeMappingAST, sourceInstance, targetInstance, alias);
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
-                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias);
             } else if (item.type === 'AlertStatement') {
                 const alertItem = item as AlertStatementAST;
                 const ctx = this.createInstanceContext(sourceInstance, alias);
@@ -1405,7 +1526,7 @@ export class JjtlExecutor {
                     letCtx = letCtx.child({ [binding.name]: value });
                 }
                 // Execute let body with enriched context — delegate to a helper
-                await this.executeLetBody(letItem.body, sourceInstance, targetInstance, letCtx);
+                await this.executeLetBody(letItem.body, sourceInstance, targetInstance, letCtx, alias);
             }
         }
 
@@ -1434,7 +1555,7 @@ export class JjtlExecutor {
                 await this.executeAttributeMappingWithTrace(mapping, sourceInstance, targetInstance, traceLink, alias);
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
-                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias);
             } else if (item.type === 'AlertStatement') {
                 const alertItem = item as AlertStatementAST;
                 const ctx = this.createInstanceContext(sourceInstance, alias);
@@ -1452,7 +1573,7 @@ export class JjtlExecutor {
                     const value = await this.evaluateExpressionAsync(binding.value, letCtx);
                     letCtx = letCtx.child({ [binding.name]: value });
                 }
-                await this.executeLetBodyWithTrace(letItem.body, sourceInstance, targetInstance, letCtx, traceLink);
+                await this.executeLetBodyWithTrace(letItem.body, sourceInstance, targetInstance, letCtx, traceLink, alias);
             }
         }
 
@@ -1477,7 +1598,9 @@ export class JjtlExecutor {
             const expressionSource = hasExpression ? this.getExpressionSource(mapping.conversion!.expression!) : undefined;
 
             if (mapping.objectCreation) {
-                const created = await this.executeCreationMapping(mapping, sourceInstance, targetInstance);
+                const created = await this.executeCreationMapping(
+                    mapping, sourceInstance, targetInstance, this.aliasBindings(sourceInstance, alias)
+                );
                 traceLink.addBinding(
                     null, mapping.targetAttribute, undefined, null,
                     created === undefined ? null : created, false, undefined, undefined
@@ -1683,7 +1806,7 @@ export class JjtlExecutor {
             if (mapping.objectCreation) {
                 // Object creation is placed into a FEATURE of the enclosing target
                 // instance, which executeCreationMapping resolves and writes itself.
-                await this.executeCreationMapping(mapping, sourceInstance, targetInstance);
+                await this.executeCreationMapping(mapping, sourceInstance, targetInstance, this.aliasBindings(sourceInstance, alias));
                 return;
             } else if (mapping.expression !== undefined) {
                 // New := syntax: evaluate expression, optionally apply value mapping
@@ -1905,18 +2028,18 @@ export class JjtlExecutor {
 
             const itemBindings: Record<string, JjelValue> = {
                 ...(extraBindings || {}),
-                [forall.variable]: shallowToJjelValue(item),
+                [forall.variable]: this.bindSourceValue(item),
             };
             // Also add item properties directly for unqualified access.
             // Uses proxyEntries to capture L-layer proxy properties.
             if (item && typeof item === 'object') {
                 for (const [key, value] of proxyEntries(item)) {
                     if (!key.startsWith('__')) {
-                        itemBindings[key] = shallowToJjelValue(value);
+                        itemBindings[key] = this.bindSourceValue(value);
                     }
                 }
             }
-            const childCtx = baseCtx.child({ [forall.variable]: shallowToJjelValue(item) });
+            const childCtx = baseCtx.child({ [forall.variable]: this.bindSourceValue(item) });
 
             if (forall.filter) {
                 const passes = this.evaluateExpression(forall.filter, childCtx);
@@ -2090,9 +2213,10 @@ export class JjtlExecutor {
     private async executeForAllMapping(
         forall: ForAllMappingAST,
         sourceInstance: any,
-        targetInstance: any
+        targetInstance: any,
+        alias?: string
     ): Promise<void> {
-        const results = await this.runForAll(forall, sourceInstance);
+        const results = await this.runForAll(forall, sourceInstance, this.aliasBindings(sourceInstance, alias));
         if (results.length === 0) return;
 
         const ownerClassName = targetInstance?.__type || targetInstance?.className || '';
@@ -2100,6 +2224,15 @@ export class JjtlExecutor {
 
         const existing = targetInstance[propName];
         targetInstance[propName] = Array.isArray(existing) ? [...existing, ...results] : results;
+    }
+
+    /**
+     * The rule's source alias as an extra binding. Nested bodies (forall, created
+     * objects, `-> feature { ... }`) build their context from the source instance
+     * alone, so without it `a.name` read null below rule level.
+     */
+    private aliasBindings(sourceInstance: any, alias?: string): Record<string, JjelValue> | undefined {
+        return alias ? { [alias]: this.bindSourceValue(sourceInstance) } : undefined;
     }
 
     /**
@@ -2135,14 +2268,15 @@ export class JjtlExecutor {
         body: MappingBodyItemAST[],
         sourceInstance: any,
         targetInstance: any,
-        letCtx: EvaluationContext
+        letCtx: EvaluationContext,
+        alias?: string
     ): Promise<void> {
         for (const item of body) {
             if (item.type === 'AttributeMapping') {
                 const mapping = item as AttributeMappingAST;
                 let value: JjelValue;
                 if (mapping.objectCreation) {
-                    value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance);
+                    value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance, this.aliasBindings(sourceInstance, alias));
                 } else if (mapping.expression !== undefined) {
                     value = await this.evaluateExpressionAsync(mapping.expression, letCtx);
                     if (mapping.valueMapping && mapping.valueMapping.length > 0) {
@@ -2165,7 +2299,7 @@ export class JjtlExecutor {
                 targetInstance[mapping.targetAttribute] = fromJjelValue(this.applyCrossTypeResolution(value, mapping.targetAttribute));
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
-                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias);
             } else if (item.type === 'AlertStatement') {
                 const msg = this.evaluateExpression((item as AlertStatementAST).message, letCtx);
                 await getUIBridge().showAlert(String(msg ?? ''), (item as AlertStatementAST).alertType ?? 'info');
@@ -2180,7 +2314,7 @@ export class JjtlExecutor {
                     const value = await this.evaluateExpressionAsync(binding.value, nestedCtx);
                     nestedCtx = nestedCtx.child({ [binding.name]: value });
                 }
-                await this.executeLetBody(nested.body, sourceInstance, targetInstance, nestedCtx);
+                await this.executeLetBody(nested.body, sourceInstance, targetInstance, nestedCtx, alias);
             }
         }
     }
@@ -2193,7 +2327,8 @@ export class JjtlExecutor {
         sourceInstance: any,
         targetInstance: any,
         letCtx: EvaluationContext,
-        traceLink: TraceLinkBuilder
+        traceLink: TraceLinkBuilder,
+        alias?: string
     ): Promise<void> {
         for (const item of body) {
             if (item.type === 'AttributeMapping') {
@@ -2204,7 +2339,7 @@ export class JjtlExecutor {
                 const expressionSource = hasExpression ? this.getExpressionSource(mapping.conversion!.expression!) : undefined;
 
                 if (mapping.objectCreation) {
-                    value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance);
+                    value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance, this.aliasBindings(sourceInstance, alias));
                 } else if (mapping.expression !== undefined) {
                     value = await this.evaluateExpressionAsync(mapping.expression, letCtx);
                     sourceValue = fromJjelValue(value);
@@ -2249,7 +2384,7 @@ export class JjtlExecutor {
                 );
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
-                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias);
             } else if (item.type === 'AlertStatement') {
                 const msg = this.evaluateExpression((item as AlertStatementAST).message, letCtx);
                 await getUIBridge().showAlert(String(msg ?? ''), (item as AlertStatementAST).alertType ?? 'info');
@@ -2263,7 +2398,7 @@ export class JjtlExecutor {
                     const value = await this.evaluateExpressionAsync(binding.value, nestedCtx);
                     nestedCtx = nestedCtx.child({ [binding.name]: value });
                 }
-                await this.executeLetBodyWithTrace(nested.body, sourceInstance, targetInstance, nestedCtx, traceLink);
+                await this.executeLetBodyWithTrace(nested.body, sourceInstance, targetInstance, nestedCtx, traceLink, alias);
             }
         }
     }
@@ -2279,16 +2414,16 @@ export class JjtlExecutor {
      */
     private createInstanceContext(sourceInstance: any, alias?: string): EvaluationContext {
         const bindings: Record<string, JjelValue> = {
-            source: shallowToJjelValue(sourceInstance),
-            self: shallowToJjelValue(sourceInstance),
-            it: shallowToJjelValue(sourceInstance),
+            source: this.bindSourceValue(sourceInstance),
+            self: this.bindSourceValue(sourceInstance),
+            it: this.bindSourceValue(sourceInstance),
         };
 
         // Add instance properties directly — use proxyEntries to capture proxy getter keys
         if (sourceInstance && typeof sourceInstance === 'object') {
             for (const [key, value] of proxyEntries(sourceInstance)) {
                 if (!key.startsWith('__')) {
-                    bindings[key] = shallowToJjelValue(
+                    bindings[key] = this.bindSourceValue(
                         key === 'parent' ? this.derefSourceRef(value) : value
                     );
                 }
@@ -2302,7 +2437,7 @@ export class JjtlExecutor {
 
         // Bind alias as an additional name for the source instance
         if (alias) {
-            bindings[alias] = shallowToJjelValue(sourceInstance);
+            bindings[alias] = this.bindSourceValue(sourceInstance);
         }
 
         // `parent` keyword: evaluates to the eContainer (owning DObject) of
@@ -2319,7 +2454,7 @@ export class JjtlExecutor {
                 const sourceArr = Array.isArray(this.context.sourceModel) ? this.context.sourceModel : [];
                 const parentObj = sourceArr.find((o: any) => o.id === containerId);
                 if (parentObj) {
-                    bindings.parent = shallowToJjelValue(parentObj);
+                    bindings.parent = this.bindSourceValue(parentObj);
                     resolved = true;
                 }
             }
@@ -2332,7 +2467,7 @@ export class JjtlExecutor {
                 if (container !== null && container !== undefined) {
                     // Same dereference as inside a forall: a container arriving as
                     // { __ref: id } is resolved to the source object it names.
-                    bindings.parent = shallowToJjelValue(this.derefSourceRef(container));
+                    bindings.parent = this.bindSourceValue(this.derefSourceRef(container));
                 }
             }
         }
@@ -2435,6 +2570,8 @@ export class JjtlExecutor {
         }
 
         // Convert JjTL AST to JjEL AST and delegate to JjEL evaluator
+        const outerReads = this.unresolvedReads;
+        this.unresolvedReads = new Set();
         try {
             const jjelExpr = toJjelAst(expr);
             return this.jjelEvaluator.evaluate(jjelExpr, ctx);
@@ -2444,7 +2581,25 @@ export class JjtlExecutor {
             console.warn(`[JjTL Executor] JjEL evaluation failed for ${expr.type}: ${errorMessage}`);
             this.warnings.push(`Expression evaluation failed (${expr.type}): ${errorMessage}`);
             return null;
+        } finally {
+            const reads = this.unresolvedReads;
+            this.unresolvedReads = outerReads;
+            if (reads.size > 0) this.warnUnresolvedReads(expr, reads);
         }
+    }
+
+    /**
+     * One warning per expression that read a member of a reference absent from
+     * the source model (see liftSourceRefs). Neither JjEL AST keeps its source
+     * text, so the expression is named by its position.
+     */
+    private warnUnresolvedReads(expr: ExpressionAST, reads: Set<string>): void {
+        const rule = this.context.currentRuleName ?? 'transformation';
+        const start = expr.location?.start;
+        const where = start ? `expression at line ${start.line}, column ${start.column}` : `${expr.type} expression`;
+        const msg = `Rule '${rule}', ${where}: read ${[...reads].join(', ')}, ` +
+            `a reference to an object that is not in the source model; the value is null.`;
+        if (!this.warnings.includes(msg)) this.warnings.push(msg);
     }
 
     /**
