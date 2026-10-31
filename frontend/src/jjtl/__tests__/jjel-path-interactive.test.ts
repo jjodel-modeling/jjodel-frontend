@@ -123,6 +123,32 @@ describe('interactive builtins on the JjEL path', () => {
     });
 });
 
+describe('input(message, kind, default) passes the evaluated default (P-2026-10-31-2245)', () => {
+    // A host that records the default it receives and accepts it unchanged.
+    const ACCEPTING_BRIDGE: UIBridge = {
+        ...RECORDING_BRIDGE,
+        async showInput(message, inputType, defaultValue) {
+            calls.push(`input|${message}|${inputType}|${JSON.stringify(defaultValue)}`);
+            return { value: defaultValue as any, cancelled: false };
+        },
+    };
+    beforeEach(() => { setUIBridge(ACCEPTING_BRIDGE); });
+
+    for (const withSource of [true, false]) {
+        it(`reaches the host and accepting it binds the default (${withSource ? 'JjEL' : 'legacy'} path)`, async () => {
+            const out = await run(`Element -> Item {\n    size := input("Size?", "number", 4)\n}`, withSource);
+            expect(calls).toEqual(['input|Size?|number|4']);
+            expect(out.size).toBe(4);
+        });
+
+        it(`evaluates the default against the source (${withSource ? 'JjEL' : 'legacy'} path)`, async () => {
+            const out = await run(`Element -> Item {\n    label := input("Label?", "string", name + "!")\n}`, withSource);
+            expect(calls).toEqual(['input|Label?|string|"alpha!"']);
+            expect(out.label).toBe('alpha!');
+        });
+    }
+});
+
 describe('a := conditional continues with else on the next line, JjEL path', () => {
     it('binds both attributes', async () => {
         const out = await run(`Element -> Item {\n    a := if flag then 1\n         else 2\n    b := 3\n}`, true);

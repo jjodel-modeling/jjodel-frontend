@@ -2683,10 +2683,13 @@ export class JjtlExecutor {
             const opts = ie.options
                 ? ie.options.map(o => fromJjelValue(this.evaluateExpression(o, ctx)))
                 : undefined;
+            const defaultVal = ie.defaultValue
+                ? fromJjelValue(this.evaluateExpression(ie.defaultValue, ctx))
+                : undefined;
             const result = await getUIBridge().showInput(
                 String(msg ?? ''),
                 typeHint,
-                undefined,
+                defaultVal,
                 Array.isArray(opts) ? opts.map(String) : undefined
             );
             if (result.cancelled) return null;
