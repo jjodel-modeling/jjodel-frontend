@@ -18,3 +18,16 @@ and in this order** (RC-12) and empties this file. The active log is not touched
 **Smoke visivo**: non applicabile (parser only; the app was not run, the hook is covered by a node test)
 **Notes**: 144 fixtures: 111 identical, 16 differ only in the warning label `(JjelExpression)`, 13 JjEL-only, 4 fail on both; 0 parse regressions (discovery P2). JjEL untouched. Gates: tsc 0, build 0, src/jjtl+src/jjel 868 passed, same 7 files fail at import; stubbed joiner same 2 pre-existing failures. 10 files, above five, all in the declared dirs (RC-11). Regressions unknown: 7 suites do not collect; JjtlEditor has no node test.
 **Prompt document name**: 2026-10-31 19:10
+
+## 2026-10-31 — merge: jjtl-jjel-parity into alfonso-frontend-jjtl (P-2026-10-31-2011)
+**Prompt**: Bring `jjtl-jjel-parity` at `a2622ec4b` into the trunk `alfonso-frontend-jjtl` with one `--no-ff` merge commit of the explicit sha (RC-14), probes on the merge-tree, union resolution of decisions and log inboxes if they conflict, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 03e53f926 (11 files from the branch, among them `frontend/src/jjtl/parser/parser.ts`, `frontend/src/jjtl/hooks/useJjtlParser.ts` and `frontend/src/jjtl/editor/JjtlEditor.tsx`); `docs/prompts/claude_2026-10-31_2011_prompt_merge_jjtl-jjel-parity.md` Status line; `docs/log-inbox/jjtl-jjel-parity.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat on 3001: prompt, nested exists such that, requirements.exists lambda, multi-line if/else after := and a control parse clean; broken expression gives the JjEL error)
+**Notes**: Merge-tree: zero conflicts, tree a8759e79b; base 4714a2ca7; trunk side only this prompt (d39faf966). No file on both sides, no union, 1 probe once. Gates on 03e53f926: typecheck 0, typecheck:scripts 0; vitest 12583 (12420 + 163), 471 files, same 9 red at import; hooks 967; build 0; check:docs 5/5 (prompt said 4/4); agents, scripts, addonly PASS. Lane board untouched; 3001 up, not restarted.
+**Prompt document name**: 2026-10-31 20:11
