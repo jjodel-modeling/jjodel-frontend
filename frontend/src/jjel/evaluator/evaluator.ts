@@ -108,6 +108,42 @@ function withBitVectorDefects<T>(step: () => T): T {
     }
 }
 
+/** The longest list `range` builds: a typo such as `range(1e9)` is an error, not a hung tab. */
+const RANGE_MAX_LENGTH = 1_000_000;
+
+/**
+ * `range(n)` is `[0, ..., n-1]`, `range(a, b)` is `[a, ..., b-1]`; empty when the
+ * end is not above the start. Integers only: anything else, and a wrong arity,
+ * is an error naming the function, never a truncation or a conversion.
+ */
+function makeRange(args: JjelValue[]): number[] {
+    if (args.length < 1 || args.length > 2) {
+        throw new JjelEvaluationError(`range() takes 1 or 2 integer arguments, got ${args.length}`);
+    }
+    for (const arg of args) {
+        if (typeof arg !== 'number' || !Number.isInteger(arg)) {
+            const got = arg === null ? 'null' : isBitVector(arg) ? 'a bit-vector' : Array.isArray(arg) ? 'a list' : typeof arg === 'number' ? `the non-integer ${arg}` : `a ${typeof arg}`;
+            throw new JjelEvaluationError(`range() takes integers, got ${got}`);
+        }
+    }
+    const start = args.length === 1 ? 0 : args[0] as number;
+    const end = args.length === 1 ? args[0] as number : args[1] as number;
+    if (end - start > RANGE_MAX_LENGTH) {
+        throw new JjelEvaluationError(`range() would build ${end - start} elements, above the limit of ${RANGE_MAX_LENGTH}`);
+    }
+    const out: number[] = [];
+    for (let i = start; i < end; i++) out.push(i);
+    return out;
+}
+
+/**
+ * Register the global `range` on `ctx`. The evaluator calls it on its own
+ * context; the JjTL executor evaluates in a context of its own and calls it there.
+ */
+export function registerRangeBuiltin(ctx: EvaluationContext): void {
+    ctx.registerBuiltin('range', createFunction(['a', 'b'], makeRange));
+}
+
 /**
  * Member guard (R-GEN-29): `__proto__`, and a name inherited from
  * `Object.prototype` that the receiver does not own (`constructor`,
@@ -186,6 +222,9 @@ export class JjelEvaluator {
         this.context.registerBuiltin('Array', createFunction(['...values'], (args) => {
             return args;
         }));
+
+        // Like `bits`, a global: it shadows a context variable named `range`.
+        registerRangeBuiltin(this.context);
 
         // Bit-vector constructors (R-BV-5): the only bit-vector globals.
         registerBitVectorConstructors(this.context);
