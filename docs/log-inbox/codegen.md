@@ -411,3 +411,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Out of scope: templates.ts (body sink) and context.ts (4 optional JjelTextHost members); 6 code files. origin.test.ts rows 108-109 amended: a + in a hole is now one model fragment per operand, as the prompt's rule demands. Gates: tsc 0, vitest codegen 2304, jjel 491, build 0; examples code sha-identical. Bench 9/10 killed, M10 declared intent. jjel/SPEC.md:702 not updated.
 **Prompt document name**: 2026-10-31 13:41
+
+## 2026-10-31 — merge: cg-origin-concat into alfonso-frontend-jjtl (P-2026-10-31-1539)
+**Prompt**: Bring `cg-origin-concat` at `fe8bb988e` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit a9b0c8f62 (9 files from the branch: `frontend/src/codegen/engine/origin.ts`, `frontend/src/codegen/engine/templates.ts`, `frontend/src/jjel/evaluator/context.ts`, `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/codegen/engine/__tests__/origin.test.ts`, `frontend/src/codegen/engine/__tests__/originOperands.test.ts`, the 1341 discovery report, prompt and this inbox file); `docs/prompts/claude_2026-10-31_1539_prompt_merge_cg-origin-concat.md` Status line; `docs/log-inbox/codegen.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (codegen engine only, no visual surface; GO from chat on the gates)
+**Notes**: Merge-tree measured again: zero conflicts (tree df66f240e), no file on both sides, no governance file; no union resolution; 3 probes once each. Gates on a9b0c8f62: typecheck 0 and typecheck:scripts 0 (no error TS); vitest 12321 passed, 460 files, 9 known red at import, as expected (trunk 12303/459 + branch 18/1); hooks 967; build 0; check:docs 5/5 (prompt said 4/4, gate E added since); check:agents, check:scripts, check:addonly PASS.
+**Prompt document name**: 2026-10-31 15:39
