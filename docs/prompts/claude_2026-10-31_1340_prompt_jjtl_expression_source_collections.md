@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1340
 Chat: C-2026-10-31-1328
 Front: release-3-2
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane jjtl-expr-resolve · branch jjtl-expr-resolve · 636d465c0 · verifica visiva non applicabile (executor only)
 Lane: full (executor and JjEL evaluation context, cause unknown, two-phase)
 Depends: none (P-2026-10-30-1315, nested `-> feature { forall ... }`, is already on the trunk at 6dbd2e3b0)
 Worktree: ~/jjodel-w-jjtlexpr, branch jjtl-expr-resolve (from alfonso-frontend-jjtl 5b19ebfc8)
