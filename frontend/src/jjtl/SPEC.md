@@ -311,7 +311,7 @@ The second argument is required: `prompt(message)` alone is rejected by both pat
 `"number"`, `"boolean"`, `"date"`, `"select"`); the optional third is the default, or the options array for
 `"select"`.
 
-> **Implementation status:** Parser produces AST nodes. UIBridge interface and React dialog components exist. **Executor does NOT execute alert/notify statements** (silently dropped). **Prompt/Input in expressions return null** via the AST bridge. This is a gap that needs to be closed.
+> **Implementation status:** The executor runs all four. `alert` awaits the host dialog; `notify` shows a toast and does not wait. `prompt`, `input` and `confirm` open the host dialog when the call is the whole right-hand side of an attribute mapping, a `let` binding or a conversion: the executor awaits the answer and binds the value entered (for `input`, the default is pre-filled), or `null` when the dialog is cancelled. A call nested inside a larger expression opens no dialog: on the JjEL path the expression fails with the warning `Expression evaluation failed (JjelExpression): Function 'prompt' is not defined` and the attribute is `null`; on the legacy path the call evaluates to `null` with no warning, so `"x" + prompt("N", EString)` yields `"x"`.
 
 ### 3.6 Expressions
 
@@ -632,7 +632,7 @@ Three implementations:
 | `boolean` | Checkbox / toggle |
 | `select` | Dropdown from options array |
 
-> **Implementation gap:** The executor silently drops `AlertStatement` and `NotifyStatement` from mapping bodies. `PromptExpression` and `InputExpression` evaluate to `null`. The UIBridge exists but is not wired into the executor.
+> **Implementation status:** The executor runs `AlertStatement`, `NotifyStatement`, `PromptExpression`, `InputExpression` and `ConfirmExpression` through the UIBridge. An `input` call opens the host dialog with its kind, its default pre-filled and, for `select`, its evaluated options, and returns the value entered, or `null` when the dialog is cancelled. The interactive expressions open a dialog only as the whole right-hand side of a binding; see §3.5 for the nested case.
 
 ---
 
@@ -1029,7 +1029,7 @@ type ExpressionAST =
     | NullCoalesceExpressionAST // a ?? b
     | IsTypeExpressionAST     // x is Type
     | LambdaExpressionAST     // x : x.name
-    | PromptExpressionAST     // prompt("message", default)
+    | PromptExpressionAST     // prompt("message", default) | prompt("message", Type [, default])
     | InputExpressionAST      // input("message", "text", default)
     | ArrayLiteralAST         // [1, 2, 3]
     | JjelExpressionWrapperAST // wrapped JjEL expression
