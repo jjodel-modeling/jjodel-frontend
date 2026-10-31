@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1712
 Chat: C-2026-10-31-1328
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane cg-spec-note · 90123e307, a8499d9d0
 Lane: fast (one spec paragraph, one UI condition plus a test)
 Depends: P-2026-10-31-1341 and P-2026-10-31-1342 (both merged)
 Worktree: ~/jjodel-w-cgspec, branch cg-spec-note (from the trunk tip after P-2026-10-31-1702)
