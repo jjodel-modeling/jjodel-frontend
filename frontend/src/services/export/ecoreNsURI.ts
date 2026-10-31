@@ -61,5 +61,5 @@ export function ecoreCollision(json: any, loaded: LoadedMetamodelNs[]): EcoreNsC
 
 export function ecoreCollisionMessage(c: EcoreNsCollision): string {
     return `The metamodel "${c.metamodel}" already uses the nsURI "${c.nsURI}". `
-        + 'Delete or rename the loaded metamodel first, then import again.';
+        + 'Delete the loaded metamodel first, then import again.';
 }

@@ -73,7 +73,7 @@ describe('Ecore import: nsURI already loaded (P-2026-10-31-1711)', () => {
         expect(r.model).toBeUndefined();
         expect(r.errors).toEqual([
             'The metamodel "Families" already uses the nsURI "http://families/1.0". '
-            + 'Delete or rename the loaded metamodel first, then import again.',
+            + 'Delete the loaded metamodel first, then import again.',
         ]);
         expect(parse).not.toHaveBeenCalled();
     });
@@ -137,6 +137,6 @@ describe('ecoreNsURI helpers', () => {
         expect(ecoreCollision({ '-nsURI': 'http://x' }, loaded)).toEqual({ metamodel: 'A', nsURI: 'http://x' });
         expect(ecoreCollision({ '-nsURI': 'http://x/' }, loaded)).toBeNull();
         expect(ecoreCollisionMessage({ metamodel: 'A', nsURI: 'http://x' }))
-            .toBe('The metamodel "A" already uses the nsURI "http://x". Delete or rename the loaded metamodel first, then import again.');
+            .toBe('The metamodel "A" already uses the nsURI "http://x". Delete the loaded metamodel first, then import again.');
     });
 });
