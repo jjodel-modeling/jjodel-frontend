@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-31-1631
 Chat: C-2026-10-31-1328
 Request: none (rendered by lane-run, no chat URL known for C-2026-10-31-1328)
 Lane: full (merge of the trunk into the branch; 2 conflicts: `docs/log-inbox/codegen.md`, `frontend/src/codegen/ui/TemplateEditorTab.tsx` measured)
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane gen-anomalies · stopped with Outcome: question (semantic conflict in TemplateEditorTab.tsx), superseded by P-2026-10-31-1640 (c9f9828ad)
 
 Worktree: `/Users/alfonso/jjodel-w-genanom`, branch `gen-anomalies`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-genanom`, branch `gen-anomalies`, `git log -1` is the commit that adds this file (its parent `e5fbd104d`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-31-1631 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
