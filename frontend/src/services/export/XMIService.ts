@@ -95,6 +95,21 @@ type XMIImportContext = {
     conformitySlots: Map<Pointer<DObject>, Map<string, DValue>>;
     summary: { dobjects: number; attrs: number; warnings: number; refsResolved: number; refsFailed: number };
     warnings: string[];
+    skips: SkipTally;
+};
+
+// P-2026-10-31-1411: objects whose class is missing from the metamodel (unknown root tag,
+// unresolvable xsi:type) or not instantiable (abstract/interface) are not created, nor is their
+// subtree. They are tallied per class so the import reports one warning per class, and their
+// xmi:ids (subtree included) are kept so pass 2 can tell a reference to a skipped object from a
+// dangling one.
+// • byClass    — key → { label naming the class and the reason, objects skipped, nested objects in their subtrees }
+// • xmiIds     — every xmi:id found inside a skipped subtree
+// • refsDropped — reference tokens that pointed at a skipped object
+type SkipTally = {
+    byClass: Map<string, { label: string; objects: number; nested: number }>;
+    xmiIds: Set<string>;
+    refsDropped: number;
 };
 
 // A non-containment reference seen in pass 1 whose target xmi:id(s) we will look up in pass 2.
@@ -589,36 +604,10 @@ export class XMIService {
             }
             const metamodel: LModel = mmLookup.model;
 
-            const modelName = filename || 'imported_xmi_model';
-            const dModel: DModel = DModel.new(modelName, metamodel.id, false, true);
-
-            // Build the prefix → URI map ONCE from the root element's xmlns:* attrs.
-            // XMI files declare all namespace prefixes at the root (nested redeclaration is
-            // legal but extremely rare in EMF output and we don't support shadowing here).
-            const nsPrefixMap = XMIService.buildNamespaceMap(rootContent);
-            // Snapshot of every nsURI that resolves to a loaded metamodel — used by the
-            // xmi:Extension / UML profile detector (any prefix mapping to an unknown URI is
-            // treated as a foreign extension and skipped with a warning).
-            const knownMetamodelURIs = new Set<string>();
-            for (const uri of nsPrefixMap.values()) {
-                if (getMetamodelByNsURI(uri).model) knownMetamodelURIs.add(uri);
-            }
-            if (xmlnsDefault) knownMetamodelURIs.add(xmlnsDefault);
-
-            const ctx: XMIImportContext = {
-                dModel,
-                metamodel,
-                xmiIdMap: new Map<string, Pointer<DObject>>(),
-                nsPrefixMap,
-                pendingRefs: [],
-                knownMetamodelURIs,
-                conformitySlots: new Map<Pointer<DObject>, Map<string, DValue>>(),
-                summary: { dobjects: 0, attrs: 0, warnings: 0, refsResolved: 0, refsFailed: 0 },
-                warnings,
-            };
-
-            type Pending = { dObject: DObject; itemJson: any; metaClass: LClass };
-            const pending: Pending[] = [];
+            // Root classes are resolved BEFORE the DModel is created: when every root object is
+            // skipped the import fails and nothing is written (P-2026-10-31-1411).
+            const skips: SkipTally = { byClass: new Map(), xmiIds: new Set<string>(), refsDropped: 0 };
+            const roots: { itemJson: any; metaClass: LClass }[] = [];
 
             if (isWrapper) {
                 // Wrapper path: each non-dash key under <xmi:XMI> is a root instance (or array thereof).
@@ -645,23 +634,20 @@ export class XMIService {
                     }
                     const val = rootContent[key];
                     const tag = key.indexOf(':') > 0 ? key.substring(key.indexOf(':') + 1) : key;
+                    const items = Array.isArray(val) ? val : [val];
 
+                    // A root of a class the metamodel lacks is skipped with its subtree and counted,
+                    // like an unknown xsi:type below a containment (it used to fail the whole import).
                     const metaClass = XMIService.findMetaclassByName(metamodel, tag);
                     if (!metaClass) {
-                        errors.push(`Unknown class '${tag}' in metamodel '${metamodel.name}'`);
-                        return { success: false, errors, warnings };
+                        for (const item of items) XMIService.recordSkip(skips, `missing:${tag}`, `Class '${tag}' is not in metamodel '${metamodel.name}'`, item);
+                        continue;
                     }
-
-                    const items = Array.isArray(val) ? val : [val];
-                    for (const item of items) {
-                        const dObject: DObject = DObject.new(metaClass.id, dModel.id, DModel, undefined, true);
-                        // FIX 2026-07-21: no direct push into dModel.objects. Constructors.DObject
-                        // (father = DModel) already queues SetFieldAction "objects" '+=' at commit;
-                        // an explicit push here duplicates every root (mirrors the child-pointer fix
-                        // in the containment branch below). Verified: dModel.objects had each root twice.
-                        ctx.summary.dobjects++;
-                        pending.push({ dObject, itemJson: item, metaClass });
+                    if (XMIService.isNotInstantiable(metaClass)) {
+                        for (const item of items) XMIService.recordSkip(skips, `abstract:${metaClass.id}`, XMIService.notInstantiableLabel(metaClass), item);
+                        continue;
                     }
+                    for (const item of items) roots.push({ itemJson: item, metaClass });
                 }
             } else {
                 // Single-root path: the document root tag itself is the unique root instance.
@@ -677,12 +663,59 @@ export class XMIService {
                         warnings,
                     };
                 }
+                if (XMIService.isNotInstantiable(metaClass)) {
+                    XMIService.recordSkip(skips, `abstract:${metaClass.id}`, XMIService.notInstantiableLabel(metaClass), rootContent);
+                } else {
+                    roots.push({ itemJson: rootContent, metaClass });
+                }
+            }
 
+            if (roots.length === 0 && skips.byClass.size > 0) {
+                const skipErrors = XMIService.skipSummary(skips);
+                skipErrors.forEach(msg => console.warn('[XMI import]', msg));
+                return { success: false, errors: [...skipErrors, 'Every root object was skipped: nothing imported'], warnings };
+            }
+
+            const modelName = filename || 'imported_xmi_model';
+            const dModel: DModel = DModel.new(modelName, metamodel.id, false, true);
+
+            // Build the prefix → URI map ONCE from the root element's xmlns:* attrs.
+            // XMI files declare all namespace prefixes at the root (nested redeclaration is
+            // legal but extremely rare in EMF output and we don't support shadowing here).
+            const nsPrefixMap = XMIService.buildNamespaceMap(rootContent);
+            // Snapshot of every nsURI that resolves to a loaded metamodel — used by the
+            // xmi:Extension / UML profile detector (any prefix mapping to an unknown URI is
+            // treated as a foreign extension and skipped with a warning).
+            const knownMetamodelURIs = new Set<string>();
+            for (const uri of nsPrefixMap.values()) {
+                if (getMetamodelByNsURI(uri).model) knownMetamodelURIs.add(uri);
+            }
+            if (xmlnsDefault) knownMetamodelURIs.add(xmlnsDefault);
+
+            const ctx: XMIImportContext = {
+                dModel,
+                metamodel,
+                xmiIdMap: new Map<string, Pointer<DObject>>(),
+                nsPrefixMap,
+                pendingRefs: [],
+                knownMetamodelURIs,
+                conformitySlots: new Map<Pointer<DObject>, Map<string, DValue>>(),
+                summary: { dobjects: 0, attrs: 0, warnings: 0, refsResolved: 0, refsFailed: 0 },
+                warnings,
+                skips,
+            };
+
+            type Pending = { dObject: DObject; itemJson: any; metaClass: LClass };
+            const pending: Pending[] = [];
+
+            for (const { itemJson, metaClass } of roots) {
                 const dObject: DObject = DObject.new(metaClass.id, dModel.id, DModel, undefined, true);
-                // FIX 2026-07-21: no direct push into dModel.objects (see multi-root branch above) —
-                // Constructors.DObject already registers the root via SetFieldAction "objects" '+='.
+                // FIX 2026-07-21: no direct push into dModel.objects. Constructors.DObject
+                // (father = DModel) already queues SetFieldAction "objects" '+=' at commit;
+                // an explicit push here duplicates every root (mirrors the child-pointer fix
+                // in the containment branch below). Verified: dModel.objects had each root twice.
                 ctx.summary.dobjects++;
-                pending.push({ dObject, itemJson: rootContent, metaClass });
+                pending.push({ dObject, itemJson, metaClass });
             }
 
             // Pass 1 — recursive walker: each DObject.new / DValue.new opens its own TRANSACTION via
@@ -699,6 +732,13 @@ export class XMIService {
 
             // Side-table — persist DObject.id → original xmi:id mapping for round-trip export.
             XMIService.persistMetadata(dModel, ctx.xmiIdMap);
+
+            // Skip summary — one warning per missing or abstract class, plus the dropped references,
+            // placed ahead of the per-element warnings so the import dialog shows them first.
+            const skipWarnings = XMIService.skipSummary(ctx.skips);
+            skipWarnings.forEach(msg => console.warn('[XMI import]', msg));
+            warnings.unshift(...skipWarnings);
+            ctx.summary.warnings += skipWarnings.length;
 
             console.info('[XMI M1 Import] Completato:', {
                 dobjects: ctx.summary.dobjects,
@@ -1046,12 +1086,15 @@ export class XMIService {
             // xsi:type polymorphism: resolve the concrete subclass when present; otherwise use
             // the feature-declared type. resolveDClass logs its own warnings on prefix misses.
             const xsiTypeRaw: string | undefined = childItem['-xsi:type'];
-            let childClass: LClass | null = XMIService.resolveDClass(xsiTypeRaw, ctx.metamodel, fallbackClass, ctx);
-            if (!childClass) {
-                // Resolution failed (unknown prefix or unknown classname). Fall back to the
-                // declared feature type rather than dropping the child silently.
-                childClass = fallbackClass;
+            const resolution = XMIService.resolveDClass(xsiTypeRaw, ctx.metamodel, fallbackClass, ctx);
+            if (!resolution.cls) {
+                // Resolution failed (unknown prefix or unknown classname). The child is NOT created
+                // as the declared feature type (P-2026-10-31-1411): that type may be abstract, and
+                // the subtree's features belong to a class this metamodel lacks. Skip and count.
+                XMIService.recordSkip(ctx.skips, `missing:${xsiTypeRaw}`, resolution.missing, childItem);
+                continue;
             }
+            const childClass: LClass = resolution.cls;
 
             // Type-safety guard: a non-null xsi:type must resolve to a (transitive) subclass of
             // the feature.type. Otherwise the XMI is malformed and we drop the child rather than
@@ -1061,6 +1104,13 @@ export class XMIService {
                 console.warn('[XMI import]', msg);
                 ctx.warnings.push(msg);
                 ctx.summary.warnings++;
+                continue;
+            }
+
+            // An abstract class (named by xsi:type, or the declared type when xsi:type is absent)
+            // has no instances: skip the child with its subtree and count it.
+            if (XMIService.isNotInstantiable(childClass)) {
+                XMIService.recordSkip(ctx.skips, `abstract:${childClass.id}`, XMIService.notInstantiableLabel(childClass), childItem);
                 continue;
             }
 
@@ -1105,16 +1155,17 @@ export class XMIService {
     //   • no xsi:type           → return fallback (feature-declared type, the B.2 default)
     //   • `prefix:ClassName`    → look up prefix in nsPrefixMap → metamodel via nsURI → class by name
     //   • bare `ClassName`      → class lookup in the feature's parent metamodel
-    // Any miss (unknown prefix, prefix not pointing at a loaded metamodel, class not in the
-    // resolved metamodel) emits a warning and returns null so the caller can fall back to the
-    // declared feature type. The subclass-of guard is enforced by the caller after this returns.
+    // A miss that leaves no class (prefix not pointing at a loaded metamodel, class not in the
+    // resolved metamodel) returns `cls: null` with a `missing` label naming the class, and no
+    // per-object warning: the caller skips the object and tallies it under that label
+    // (P-2026-10-31-1411). The subclass-of guard is enforced by the caller after this returns.
     private static resolveDClass(
         xsiTypeRaw: string | undefined,
         parentMetamodel: LModel,
         fallback: LClass | null | undefined,
         ctx: XMIImportContext,
-    ): LClass | null {
-        if (!xsiTypeRaw) return fallback ?? null;
+    ): { cls: LClass; missing?: undefined } | { cls: null; missing: string } {
+        if (!xsiTypeRaw) return fallback ? { cls: fallback } : { cls: null, missing: `Containment without xsi:type has no declared type` };
 
         const colonIdx = xsiTypeRaw.indexOf(':');
         const prefix = colonIdx > 0 ? xsiTypeRaw.substring(0, colonIdx) : '';
@@ -1133,24 +1184,64 @@ export class XMIService {
                 if (lookup.model) {
                     targetMetamodel = lookup.model;
                 } else {
-                    const msg = `xsi:type prefix '${prefix}' (URI=${nsURI}) does not match any loaded metamodel`;
-                    console.warn('[XMI import]', msg);
-                    ctx.warnings.push(msg);
-                    ctx.summary.warnings++;
-                    return null;
+                    return { cls: null, missing: `xsi:type '${xsiTypeRaw}': prefix '${prefix}' (URI=${nsURI}) does not match any loaded metamodel` };
                 }
             }
         }
 
         const cls = XMIService.findMetaclassByName(targetMetamodel, className);
         if (!cls) {
-            const msg = `xsi:type '${xsiTypeRaw}' resolves no class in metamodel '${targetMetamodel.name}'`;
-            console.warn('[XMI import]', msg);
-            ctx.warnings.push(msg);
-            ctx.summary.warnings++;
-            return null;
+            return { cls: null, missing: `xsi:type '${xsiTypeRaw}' names no class in metamodel '${targetMetamodel.name}'` };
         }
-        return cls;
+        return { cls };
+    }
+
+    // Abstract classes and interfaces have no instances: the importer never creates one.
+    private static isNotInstantiable(cls: LClass): boolean {
+        return (cls as any).abstract === true || (cls as any).interface === true;
+    }
+
+    private static notInstantiableLabel(cls: LClass): string {
+        return `Class '${cls.name}' is ${(cls as any).interface === true ? 'an interface' : 'abstract'}`;
+    }
+
+    // Tally a skipped object under `key` and walk its JSON subtree: every nested element that
+    // stands for an object (not a Format B reference element, which carries xmi:idref or href) is
+    // counted, and every xmi:id is remembered so pass 2 can drop references to it.
+    private static recordSkip(skips: SkipTally, key: string, label: string, itemJson: any): void {
+        let entry = skips.byClass.get(key);
+        if (!entry) {
+            entry = { label, objects: 0, nested: 0 };
+            skips.byClass.set(key, entry);
+        }
+        entry.objects++;
+        const walk = (node: any, isRoot: boolean): void => {
+            if (!node || typeof node !== 'object') return;
+            if (Array.isArray(node)) { node.forEach(n => walk(n, false)); return; }
+            if (node['-xmi:idref'] !== undefined || node['-href'] !== undefined) return;
+            if (!isRoot) entry!.nested++;
+            const xmiId = node['-xmi:id'];
+            if (typeof xmiId === 'string' && xmiId.length > 0) skips.xmiIds.add(xmiId);
+            for (const k of Object.keys(node)) {
+                if (k.startsWith('-') || k === '#text') continue;
+                walk(node[k], false);
+            }
+        };
+        walk(itemJson, true);
+    }
+
+    // One line per skipped class, then one line for the references dropped because they pointed
+    // at a skipped object.
+    private static skipSummary(skips: SkipTally): string[] {
+        const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+        const lines: string[] = [];
+        skips.byClass.forEach(({ label, objects, nested }) => {
+            lines.push(`${label}: ${plural(objects, 'object')} not created, with ${plural(nested, 'nested object')} of their subtrees`);
+        });
+        if (skips.refsDropped > 0) {
+            lines.push(`${plural(skips.refsDropped, 'reference')} to skipped objects dropped`);
+        }
+        return lines;
     }
 
     // Transitive subclass test: `child` is a subclass of `parent` iff parent appears anywhere
@@ -1210,6 +1301,10 @@ export class XMIService {
                 if (target) {
                     resolved.push(target);
                     ctx.summary.refsResolved++;
+                } else if (ctx.skips.xmiIds.has(token)) {
+                    // The target was skipped (missing or abstract class): drop the reference and
+                    // count it in the skip summary instead of warning once per token.
+                    ctx.skips.refsDropped++;
                 } else {
                     const msg = `Reference target xmi:id='${token}' not found for ${sourceTagPath}; value left unresolved`;
                     console.warn('[XMI import]', msg);
