@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1800
 Chat: C-2026-10-31-1743
 Front: plugins
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane plugins (full, discovery) · plugin-discovery · 1ea149576 · verifica visiva non applicabile
 Lane: full (discovery only, read-only on product code; a new front, decisions not yet ratified)
 Depends: none
 Worktree: ~/jjodel-w-plugins, branch plugin-discovery (from alfonso-frontend-jjtl 9654de9b6)
