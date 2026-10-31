@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1710
 Chat: C-2026-10-31-1328
 Front: release-3-2
-Status: da eseguire
+Status: non completato 2026-10-31 · lane jjtl-app-source · branch jjtl-app-source · discovery 7f77bdc16 · point 2 done 370c12155 · point 1 not applied, it changes results (discovery P2-P3), awaiting Alfonso · verifica visiva non applicabile (executor only)
 Lane: full (app parser switch to the JjEL path, executor scoping; discovery report first, one session)
 Depends: P-2026-10-31-1340 (merged, 7227828c4)
 Worktree: ~/jjodel-w-jjtlapp, branch jjtl-app-source (from the trunk tip after P-2026-10-31-1702)

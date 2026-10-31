@@ -174,3 +174,13 @@ alias or with the forall's item properties.
 1. Point 1: keep the hook on the legacy path until (a) and (b) are fixed, or switch now accepting the two regressions?
 2. If the switch goes ahead, should `JjtlEditor.tsx:57` switch in the same lane (outside the declared files)?
 3. SPEC.md §13 example 5 (`prompt(msg, source.category)`) does not parse on the legacy path today: fix the example or the parser?
+
+## Addendum 2026-10-31, after Phase 2 (370c12155)
+
+- P4 row 4 and F7 overstate one case. The probe stripped `__type`; the mutation bench of Phase 2 shows that for
+  `-> columns { -> Column { ... } }` the old let-body path already built a `Column` (the parser gives the creation
+  `targetClass: 'Column'`, `parser.ts:262`). Only `$x` was missing there. The wrapper object appears for
+  `-> feature { forall ... }` in a let body (P4 row 3), which is what the routing through `executeCreationMapping` fixes.
+- `executeAttributeMappings` and therefore `executeLetBody` have no caller: `execute()` reaches only the
+  `...WithTrace` pair (`executor.ts:1374`, grep of `this.executeAttributeMappings(`, positive control the `WithTrace`
+  call found by the same search). Phase 2 changed both walkers alike; only the trace one is exercised by the tests.
