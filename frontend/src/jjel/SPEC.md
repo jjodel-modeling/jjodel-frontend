@@ -700,6 +700,7 @@ class.closure(c => c.subclasses)     -- replaces allSubclasses
 - `\$` writes a literal `$`, so `"\${x}"` is the text `${x}`. Single-quoted strings never interpolate.
 - Without a Text host the value is a string: `null` renders as `''`, a collection as its items joined by `", "`, numbers and booleans with `String`.
 - Two optional fields of the evaluation context serve the code generator (`frontend/src/codegen/`) and nothing else, both inherited by child scopes: `textHost`, a `JjelTextHost` that builds Text values from interpolations and takes over `+`, `join` and the rendering of a hole when a Text is involved; and `readObserver`, called with target, property and value on every member read that finds its property, `o.p` and `o.p()`.
+- Under a text host, a member read that is an operand of `+`, or an item of `map(...).join(...)`, carries its model origin as it does alone in a hole, also when no operand is a Text (P-2026-10-31-1341): the value stays a plain string, and the origins land where it is written, a hole or the body of an expression template. In `"${"logic " + r.name + ";"}"` the read `r.name` is attributed to `r`, and so is each `r.name` of `rs.map(r => r.name).join(", ")`; the literals and the separator stay opaque. Values are unchanged, and without a text host `+` and `join` are plain string operations. The host sees these through four optional members of `JjelTextHost`: `evaluateConcat`, `evaluatePart`, `mapItems` and `evaluateJoin`.
 
 ### 9.5 `forall` Nesting
 
