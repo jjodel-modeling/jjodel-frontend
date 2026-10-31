@@ -18,6 +18,9 @@
  * generator's declared profile, R-GEN-33, R-GEN-34; `js` by default, today's behaviour). The context's Text host and
  * read observer are an `OriginHost`.
  *
+ * The class graph of `globals.classes` goes to the templates' registration, for the problems of templates dispatched
+ * on the metaclass of their first parameter (dispatch.ts, P-2026-10-31-1410).
+ *
  * A generation has a budget (text.ts, R-GEN-28): 2000 ms and 1,000,000 output characters by default, `limits`
  * overrides them and the clock. When it trips, the result has no code and one error more than the template
  * problems, at the call or hole that tripped it.
@@ -33,6 +36,7 @@ import { stcAccess } from '../stcAccess';
 import { jsTarget } from '../target/js/access';
 import type { StcElement, StcView } from '../stcAccess';
 import type { GeneratorTarget } from './generatorCodec';
+import { graphOfShells } from './dispatch';
 import { OriginHost, TemplateSources } from './origin';
 import { registerTemplates } from './templates';
 import type { TemplateRecord } from './templates';
@@ -100,7 +104,7 @@ export function generate(
     ctx.textHost = host;
     ctx.readObserver = host.observe;
     const evaluator = new JjelEvaluator(ctx);
-    const set = registerTemplates(templates, ctx, evaluator, host, sources, budget);
+    const set = registerTemplates(templates, ctx, evaluator, host, sources, budget, graphOfShells(globals.classes));
 
     const errors: GenerateError[] = set.problems.map(p => ({ template: p.template, offset: p.offset, line: p.line, column: p.column, message: p.message }));
     let text = EMPTY_TEXT;
