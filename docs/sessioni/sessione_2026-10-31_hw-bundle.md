@@ -74,3 +74,17 @@ Awaiting Alfonso: merge of the three branches; the app parser switch (recommende
 a lane that makes `prompt`, `confirm`, `input` and multi-line `if/else` work on the JjEL path, then switch
 `useJjtlParser` and `JjtlEditor.tsx` together; SPEC §13 example 5 goes with it); the nsURI message (recommended: say
 only «delete», since renaming does not change the nsURI).
+
+## Update 2026-10-31 19:50
+
+Alfonso answered «ok alle raccomandazioni» at 17:49 on the three follow-ups. On the trunk, gates green on each merge:
+`cg-spec-note` (P-2026-10-31-1751, SPEC 9.4 and the stale-draft note), `ecore-nsuri` (P-2026-10-31-1839, refusal
+message says only to delete the loaded metamodel), `jjtl-app-source` (P-2026-10-31-1924, `let` variables in nested
+bodies; it took the trunk first in P-2026-10-31-1902 because `executor.ts` also changed with jjel-range). Another
+chat merged `jjel-range` (P-2026-10-31-1746) in between; this chat stopped its own merge lane 1751 before any step to
+avoid two merges on the trunk, and resumed it after 1746 closed. Before every merge, check that no other chat's
+merge lane is running on the trunk.
+
+The app parser switch stays as it is. P-2026-10-31-1910 (branch `jjtl-jjel-parity`) makes `prompt`, `confirm`,
+`input` and a multi-line `if/else` after `:=` work on the JjEL path, fixes SPEC §13 example 5, then switches
+`useJjtlParser` and `JjtlEditor.tsx` together; it stops with a question if any fixture differs between the paths.
