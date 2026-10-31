@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1341
 Chat: C-2026-10-31-1328
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-10-31, lane full, branch cg-origin-concat, eccd6ca1d
 Lane: full (codegen engine evaluator and origin rules, discovery report first, one session)
 Depends: none
 Worktree: ~/jjodel-w-cgorigin, branch cg-origin-concat (from alfonso-frontend-jjtl 5b19ebfc8)
