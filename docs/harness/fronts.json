@@ -138,6 +138,16 @@
       "ownerChat": "C-2026-10-24-0020",
       "ownerSince": "2026-10-24",
       "milestone": 15
+    },
+    {
+      "slug": "plugins",
+      "title": "Plugin mechanism: extension points, sandbox for untrusted plugins, role catalogs, certification",
+      "exit": "a decision row closes the front once the first plugin slice is merged into alfonso-frontend-jjtl, or a decision row defers the mechanism",
+      "state": "open",
+      "openedOn": "2026-10-31",
+      "ownerChat": "C-2026-10-31-1743",
+      "ownerSince": "2026-10-31",
+      "milestone": 16
     }
   ]
 }
