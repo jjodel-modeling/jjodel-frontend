@@ -150,8 +150,8 @@ notify("Done!", 3000)`,
     {
         id: 'promptExpression',
         name: 'Prompt Expression',
-        description: 'Asks user for text input, returns String',
-        ebnf: '"prompt" "(" expression ("," expression)? ")"',
+        description: 'Asks user for a value; a bare name in second position is the type, any other expression the default (type EString)',
+        ebnf: '"prompt" "(" expression "," (IDENTIFIER ("," expression)? | expression) ")"',
         example: `prefix := prompt("Table prefix:", "tbl_")`,
     },
     {
