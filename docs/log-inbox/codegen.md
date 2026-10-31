@@ -398,3 +398,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: generator-tab probe 92/92 and import/export probe 14/14 green on gen-io d0fc59c7a (P-2026-10-30-2209), same tree as the merge; gates green
 **Notes**: Rollback tag `pre-gen-io` on `5e81e8933` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-30-2300/result.json`.
 **Prompt document name**: 2026-10-30 23:00
+
+## 2026-10-31 — feat(codegen): model origins for member reads inside + and join (P-2026-10-31-1341)
+**Prompt**: Rule 1 of origin.ts per operand: in `"logic " + r.name + ";"` and in `list.map(r => r.name).join(", ")` each member read gets its model origin, as `${r.name}` does; values unchanged, no text host unchanged. Discovery report first, then code.
+**Files touched**: 4b6bc1f81: docs/discovery/discovery_2026-10-31_codegen_origins_through_concat.md; eccd6ca1d: frontend/src/codegen/engine/origin.ts, engine/templates.ts, frontend/src/jjel/evaluator/context.ts, jjel/evaluator/evaluator.ts, engine/__tests__/origin.test.ts, engine/__tests__/originOperands.test.ts (new); this commit: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-31_1341_prompt_codegen_origins_through_concat.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Out of scope: templates.ts (body sink) and context.ts (4 optional JjelTextHost members); 6 code files. origin.test.ts rows 108-109 amended: a + in a hole is now one model fragment per operand, as the prompt's rule demands. Gates: tsc 0, vitest codegen 2304, jjel 491, build 0; examples code sha-identical. Bench 9/10 killed, M10 declared intent. jjel/SPEC.md:702 not updated.
+**Prompt document name**: 2026-10-31 13:41

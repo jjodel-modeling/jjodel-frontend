@@ -157,7 +157,8 @@ export function registerTemplates(
         try {
             const bindings: Record<string, JjelValue> = {};
             entry.record.params.forEach((p, i) => { bindings[p] = args[i] ?? null; });
-            return budget.measure(host.toText(evaluator.evaluate(entry.expr, root.child(bindings))));
+            const expr = entry.expr;
+            return budget.measure(host.evaluateBody(expr, () => evaluator.evaluate(expr, root.child(bindings))));
         } finally {
             budget.leave();
             depth--;
