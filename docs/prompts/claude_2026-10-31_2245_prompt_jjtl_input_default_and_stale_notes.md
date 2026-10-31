@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-2245
 Chat: C-2026-10-31-1328
 Front: release-3-2
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane jjtl-input-default · branch jjtl-input-default · fix 8b0ab9d28, SPEC e7d38f515 · verifica visiva non applicabile (host mocked; dialog pre-fill on 3001 unverified)
 Lane: fast (one executor fix plus a test, then a separate docs commit on the SPEC)
 Depends: P-2026-10-31-2025 (merge P-2026-10-31-2230)
 Worktree: ~/jjodel-w-inputdefault, branch jjtl-input-default (from the trunk tip after P-2026-10-31-2230)
