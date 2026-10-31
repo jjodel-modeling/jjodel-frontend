@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1910
 Chat: C-2026-10-31-1328
 Front: release-3-2
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane jjtl-jjel-parity · branch jjtl-jjel-parity · discovery a31bcf9b5 · parser 73294243b · hook and editor switch d3d42310c · verifica visiva non applicabile (parser only, app not run)
 Lane: full (JjTL parser and executor, app parser hook and editor; discovery report first, one session)
 Depends: P-2026-10-31-1710 (jjtl-app-source, merged into the trunk)
 Worktree: ~/jjodel-w-jjtlparity, branch jjtl-jjel-parity (from the trunk tip after the jjtl-app-source merge)
