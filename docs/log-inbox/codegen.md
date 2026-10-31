@@ -398,3 +398,21 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato — chat, unattended: generator-tab probe 92/92 and import/export probe 14/14 green on gen-io d0fc59c7a (P-2026-10-30-2209), same tree as the merge; gates green
 **Notes**: Rollback tag `pre-gen-io` on `5e81e8933` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-30-2300/result.json`.
 **Prompt document name**: 2026-10-30 23:00
+
+## 2026-10-31 — fix(codegen): generator root follows templates, names without gaps (P-2026-10-31-1342)
+**Prompt**: `claude_2026-10-31_1342_prompt_generators_export_and_import_anomalies.md`, two-phase: Phase 1 discovery of six anomalies, Phase 2 lane A only (codegen points 1, 2, 4 and the Export confirmation); XMI (point 5) to its own lane, Ecore nsURI (point 6) held for Alfonso.
+**Files touched**: `038934225`: `docs/discovery/discovery_2026-10-31_generators_export_and_import_anomalies.md`; `092c33b68`: `frontend/src/codegen/ui/generatorTabs.ts`, `frontend/src/codegen/ui/TemplateEditorTab.tsx`, `frontend/src/codegen/ui/__tests__/generatorAnomalies.test.ts` (new); this commit: this entry, a ticket, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-24 00:03 — the generator tab of slice G3 (New template, Save, Delete, right pane), whose writes froze a fallback root and named templates with gaps
+**Causa**: (c)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Six files across the lane, all listed above. Gates on 092c33b68: typecheck exit 0; vitest src/codegen 2303 tests in 40 files; build exit 0. Mutation bench M1..M14 all killed (commit body). The tab's wiring does not import in the bench (monaco): untested; manual app check owed to the chat. Unattended: a file entry naming a deleted template moves to the root, also in multi-file generators (listed for Alfonso). check:codegen-lazy red in off mode: ticket below.
+**Prompt document name**: 2026-10-31 13:42
+
+## 2026-10-31 — ticket: check:codegen-lazy cannot pass its off mode while every .env sets VITE_CODEGEN on
+**Ticket**: `npm run check:codegen-lazy` exits 1 with mode `off` FAILED (`off 0. the build resolved VITE_CODEGEN as anything but "true" — resolved "true"`, then off 1 and off 3 follow from it), mode `on` green. The committed `frontend/.env.development`, `.env.production` and `.env.staging` all set `VITE_CODEGEN = true` since `2046c17a3` (2026-10-23), so the off build is never off. Measured on `092c33b68`; not caused by P-2026-10-31-1342. The gate needs a way to force the flag off for its off mode, or the off mode retired by decision.
+**Priority**: medium
+**Found in**: P-2026-10-31-1342

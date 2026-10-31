@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1342
 Chat: C-2026-10-31-1328
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane gen-anomalies · 092c33b68
 Lane: full (six observations across the Generators panel, the Code panel and two importers, two-phase)
 Depends: none
 Worktree: ~/jjodel-w-genanom, branch gen-anomalies (from alfonso-frontend-jjtl 5b19ebfc8)
