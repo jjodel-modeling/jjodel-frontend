@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1711
 Chat: C-2026-10-31-1328
 Front: release-3-2
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane ecore-nsuri · dad0678a7 · verifica visiva non applicabile (importer only, no manual import run)
 Lane: fast (one importer path plus tests, behaviour decided by Alfonso)
 Depends: none
 Worktree: ~/jjodel-w-ecorensuri, branch ecore-nsuri (from the trunk tip after P-2026-10-31-1702)
