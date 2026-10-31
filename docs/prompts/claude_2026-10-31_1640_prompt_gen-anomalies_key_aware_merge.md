@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1640
 Chat: C-2026-10-31-1328
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-10-31 · gen-anomalies · c9f9828ad
 Lane: fast (merge with code resolution on the branch, two files plus tests, no exported interface change)
 Depends: P-2026-10-31-1605 (cg-dispatch merged into the trunk, de897d1a4)
 Worktree: ~/jjodel-w-genanom, branch gen-anomalies
