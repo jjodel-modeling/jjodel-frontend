@@ -515,6 +515,8 @@ With `forall` replacing `filter` and `map`, the remaining collection methods are
 
 Note: `filter` and `map` are **removed** — replaced by `forall` construct.
 
+**Global function:** `range(n)` is the list `[0, 1, ..., n-1]` and `range(a, b)` is `[a, ..., b-1]`; both are empty when the end is not above the start (`range(0)`, `range(-2)`, `range(5, 2)`, `range(2, 2)`). It iterates numbers where `forall` iterates model elements: `forall i in range(nregs) -> Register { name := "x" + i }`. Integers only: a fraction, a string, `null`, a boolean, a list or a bit-vector is an error naming `range()`, as is a wrong number of arguments or a result above 1,000,000 elements; nothing is truncated or converted. Being a builtin, `range` shadows a context variable of the same bare name, like `bits`: read a model feature called `range` as `self.range`. Available wherever `JjelEvaluator` registers its globals (expressions, code generator templates) and in JjTL; not in the simulator's guard context, which takes the bit-vector constructors only (R-BV-8).
+
 ### 7.4 Date Methods (34 + 5 constructors)
 
 Dates are represented as ISO 8601 strings.
@@ -700,6 +702,7 @@ class.closure(c => c.subclasses)     -- replaces allSubclasses
 - `\$` writes a literal `$`, so `"\${x}"` is the text `${x}`. Single-quoted strings never interpolate.
 - Without a Text host the value is a string: `null` renders as `''`, a collection as its items joined by `", "`, numbers and booleans with `String`.
 - Two optional fields of the evaluation context serve the code generator (`frontend/src/codegen/`) and nothing else, both inherited by child scopes: `textHost`, a `JjelTextHost` that builds Text values from interpolations and takes over `+`, `join` and the rendering of a hole when a Text is involved; and `readObserver`, called with target, property and value on every member read that finds its property, `o.p` and `o.p()`.
+- Under a text host, a member read that is an operand of `+`, or an item of `map(...).join(...)`, carries its model origin as it does alone in a hole, also when no operand is a Text (P-2026-10-31-1341): the value stays a plain string, and the origins land where it is written, a hole or the body of an expression template. In `"${"logic " + r.name + ";"}"` the read `r.name` is attributed to `r`, and so is each `r.name` of `rs.map(r => r.name).join(", ")`; the literals and the separator stay opaque. Values are unchanged, and without a text host `+` and `join` are plain string operations. The host sees these through four optional members of `JjelTextHost`: `evaluateConcat`, `evaluatePart`, `mapItems` and `evaluateJoin`.
 
 ### 9.5 `forall` Nesting
 

@@ -25,3 +25,34 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: The parity test of the generated JS prelude against the S1 bit-vector module (`printer.bitvector.test.ts`, P-2026-10-21-0700) runs on the 48 golden rows of `bv-golden.json` only, because the Verilator table `bv-cases.json` (4733 rows, P-2026-10-21-0641) was not on its branch. Both are now on the trunk: extend the parity test to the full table so the prelude copy cannot drift (R-BV-6).
 **Priority**: low
 **Found in**: P-2026-10-21-0700
+
+## 2026-10-31 — feat: JjEL range(n) and range(a, b), usable in a JjTL forall
+**Prompt**: P-2026-10-31-1740: add `range(n)` / `range(a, b)` to JjEL for the hardware generator (registers, bits, stages): integers only, errors naming the function, usable in JjTL `forall` and in code generator templates; report the count of bare `range` reads before choosing global vs method.
+**Files touched**: `a64d90f7e`: `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjel/SPEC.md`, `frontend/src/jjel/__tests__/range.test.ts` (new), `frontend/src/jjtl/executor/__tests__/range-forall.test.ts` (new). Status flip of the prompt and this entry in the docs commit that follows.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck exit 0 before and after; `vitest src/jjel src/jjtl` 667 -> 695 tests, 7 files fail to load with "window is not defined" before and after (the known list); `src/codegen src/model` 89 files, 3535 tests green; build exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Global, like `bits`; bare `range` reads in tests, fixtures and samples: 0 (all hits are prose, `'range'` strings, Monaco ranges, `domain.kind`). The JjTL executor evaluates in its own EvaluationContext, which the evaluator's globals never reach, so it registers `range` itself (one line, away from runForAll). Added a 1,000,000-element cap, not in the prompt.
+**Prompt document name**: 2026-10-31 17:40
+
+## 2026-10-31 — ticket: JjEL global builtins other than range may be missing in JjTL and validation expressions
+**Ticket**: `JjelEvaluator.registerGlobalBuiltins` registers `String`, `Number`, `Boolean`, `Array`, `bits`, `sbits` and the date constructors on its own context only. `JjTLExecutor` (`executor.ts:989`) and `validationEvaluator.ts:268` evaluate in a context they build themselves, so a global called there resolves to "not defined" or null. Measured for `range` only (it failed in a JjTL forall until registered on `evalContext`); the other globals are inferred from the same lookup path (`ctx.getBuiltin`), not run.
+**Priority**: low
+**Found in**: P-2026-10-31-1740
+
+## 2026-10-31 — merge: jjel-range into alfonso-frontend-jjtl (P-2026-10-31-1746)
+**Prompt**: Bring `jjel-range` at `ad4ef1cc8` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), probes on the merge-tree, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 9654de9b6 (7 files from the branch: `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjel/SPEC.md`, `__tests__/range.test.ts` (new), `executor/__tests__/range-forall.test.ts` (new), prompt 1740 and this inbox file); `docs/prompts/claude_2026-10-31_1746_prompt_merge_jjel-range.md` Status line; `docs/log-inbox/hw-notation.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (evaluator and executor only; range covered by range.test.ts and range-forall.test.ts, green on 9654de9b6)
+**Notes**: Tip moved mid-session (40dd35d28, de519893f: docs only, other chats), accepted. Merge-tree: zero conflicts, tree f7c289a56 = merge commit's; 7 files branch side, none on both, no governance file; 2 probes once each; no union. Gates on 9654de9b6: typecheck 0, typecheck:scripts 0; vitest 12401 passed, 466 files, 9 known red at import (12373 + 28); hooks 967; build 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Lane board untouched.
+**Prompt document name**: 2026-10-31 17:46

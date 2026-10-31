@@ -494,3 +494,29 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato (Templates tab checked by the chat on the branch, vite :3021: gapless template3 after two expr, expr (e: Ref) and expr (e: Const), warning row for Conj, gone-metamodel preview disabled)
 **Notes**: Merge-tree: zero conflicts, tree ecc606d51 equal to the merge commit's; 8 files branch side, 6 trunk side, none on both, no governance file; 5 probes once each; no union. Gates on 2249bfef5: typecheck 0, typecheck:scripts 0; vitest 12373 passed, 455 files, 9 known red at import, as expected (trunk 12353 + branch 20); hooks 967 (967 + 0); build 0; check:docs 5/5 (prompt said 4/4); check:agents, check:scripts, check:addonly PASS. Lane board untouched.
 **Prompt document name**: 2026-10-31 17:02
+
+## 2026-10-31 — fix(codegen): stale-draft note only while the metamodel exists, SPEC on origins through + and join (P-2026-10-31-1712)
+**Prompt**: `claude_2026-10-31_1712_prompt_codegen_spec_and_draft_note.md`: update jjel/SPEC.md §9.4 for model origins of member reads inside `+` and `map(...).join(...)` (P-2026-10-31-1341); hide the «changed outside the editor» note once the metamodel is gone, with a test.
+**Files touched**: 90123e307: `frontend/src/codegen/ui/templateDrafts.ts`, `frontend/src/codegen/ui/TemplateEditorTab.tsx`, `frontend/src/codegen/ui/__tests__/generatorAnomalies.test.ts`; a8499d9d0: `frontend/src/jjel/SPEC.md`; this commit: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-31 13:42 — the gone-metamodel state of the Templates tab still showed the stale-draft note
+**Causa**: (c)
+**Regressions**: unknown
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Out of scope: templateDrafts.ts, new pure helper outsideNoteShown, since the tab does not import in the bench (monaco). Bench: M1 exists dropped, M2 always false, both killed. Gates: tsc 0; vitest src/codegen 2350 in 43 files; build 0; check:docs 0. The tab's wiring itself is untested and not checked in the app: Regressions unknown.
+**Prompt document name**: 2026-10-31 17:12
+
+## 2026-10-31 — merge: cg-spec-note into alfonso-frontend-jjtl (P-2026-10-31-1751)
+**Prompt**: Bring `cg-spec-note` at `16bcd3432` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), probes on the merge-tree, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 2a41d7507 (6 files from the branch: `frontend/src/codegen/ui/TemplateEditorTab.tsx`, `templateDrafts.ts`, `__tests__/generatorAnomalies.test.ts`, `frontend/src/jjel/SPEC.md`, prompt 1712 and this inbox file); `docs/prompts/claude_2026-10-31_1751_prompt_merge_cg-spec-note.md` Status line; `docs/log-inbox/codegen.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (GO from the chat on the gates and the unit test of the condition; browser pane hidden, no visual re-check)
+**Notes**: Stopped once while the jjel-range merge ran; restarted on e190e7158, base e94541c13 unchanged. Merge-tree: zero conflicts, tree 19dae0e30 equal to the merge's index; jjel/SPEC.md on both sides, markdown, disjoint hunks (7.3 vs 9.4), auto-merged; no code file on both sides, no governance file; probe once; no union. Gates on 2a41d7507: typecheck 0, typecheck:scripts 0; vitest 12402 (12401 + 1), 466 files, 9 known red at import; hooks 967; build 0; check:docs 5/5; agents, scripts, addonly PASS.
+**Prompt document name**: 2026-10-31 17:51
