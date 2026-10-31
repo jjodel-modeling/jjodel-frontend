@@ -51,3 +51,26 @@ SystemVerilog and SVA), kept locally.
 - Check the trunk against a bundle's base commit before splitting it into lanes: half of this one had landed.
 - Three lanes stopped at the context ceiling before their closure; a short resume for the closure only was enough.
 - The bridge dropped once (13:47-14:08); the lanes kept running.
+
+## Update 2026-10-31 17:50
+
+Alfonso answered «ok alle raccomandazioni» at 15:08. The chat checked the Templates tab of `cg-dispatch` and
+`gen-anomalies` in the built-in browser (15:15, and again at 16:48 after the key-aware merge P-2026-10-31-1640).
+All five branches are on the trunk, gates green on each merge (vitest 12373 at the last one):
+P-2026-10-31-1508 `jjtl-expr-resolve`, 1539 `cg-origin-concat`, 1605 `cg-dispatch`, 1635 `xmi-abstract`, 1702
+`gen-anomalies`. `gen-anomalies` first took the trunk by meaning (P-2026-10-31-1640: root and file entries follow
+the template key `name:Type`); P-2026-10-31-1631 stopped on that conflict and is superseded. Trunk tip `e94541c13`,
+180 commits ahead of origin at 17:26; push is Alfonso's.
+
+Follow-up lanes from `e94541c13`, on branches, not merged:
+
+| Lane | Branch | Result |
+|---|---|---|
+| P-2026-10-31-1710 | `jjtl-app-source` (`86d91287c`) | `let` variables reach nested bodies at any depth (done); the app parser switch stopped with a question: on the JjEL path `prompt`, `confirm`, `input` and a multi-line `if/else` after `:=` regress |
+| P-2026-10-31-1711 | `ecore-nsuri` (`2fd5d83d8`) | an Ecore whose nsURI is already loaded is refused, nothing written |
+| P-2026-10-31-1712 | `cg-spec-note` (`16bcd3432`) | SPEC 9.4 on origins through `+` and `join`; the stale-draft note shows only while the metamodel exists |
+
+Awaiting Alfonso: merge of the three branches; the app parser switch (recommended: keep the parser as it is and open
+a lane that makes `prompt`, `confirm`, `input` and multi-line `if/else` work on the JjEL path, then switch
+`useJjtlParser` and `JjtlEditor.tsx` together; SPEC §13 example 5 goes with it); the nsURI message (recommended: say
+only «delete», since renaming does not change the nsURI).
