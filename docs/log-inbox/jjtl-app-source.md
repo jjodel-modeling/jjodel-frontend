@@ -31,3 +31,16 @@ and in this order** (RC-12) and empties this file. The active log is not touched
 **Smoke visivo**: non applicabile (executor only, no visual surface; GO from the chat on the gates)
 **Notes**: Merge-tree: zero conflicts, tree 153fa108a; base e94541c13. executor.ts on both sides, disjoint hunks, read whole (3522 lines): branch file plus the trunk's range import and call; no marker, no duplicate. No union needed; 8 probes once each. Gates on bd1dbb29d: typecheck 0, typecheck:scripts 0; vitest 12420 (12410 + 10), 468 files, same 9 red at import; hooks 967; build 0; check:docs 5/5; scripts, addonly PASS.
 **Prompt document name**: 2026-10-31 19:02
+
+## 2026-10-31 — merge: jjtl-app-source into alfonso-frontend-jjtl (P-2026-10-31-1924)
+**Prompt**: Bring `jjtl-app-source` at `ef3114f64` into the trunk `alfonso-frontend-jjtl` with one `--no-ff` merge commit of the explicit sha (RC-14), probes on the merge-tree, union resolution of decisions and log inboxes if they conflict, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 26ba0e08b (6 files from the branch, among them `frontend/src/jjtl/executor/executor.ts` and `frontend/src/jjtl/executor/__tests__/let-in-nested-bodies.test.ts`); `docs/prompts/claude_2026-10-31_1924_prompt_merge_jjtl-app-source.md` Status line; `docs/log-inbox/jjtl-app-source.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (executor only, no visual surface; GO from the chat on the gates)
+**Notes**: Merge-tree: zero conflicts, tree 8613fc5a2; base 6ea23356a; trunk side only this prompt (c905f27a8). No file on both sides, no union, 2 probes once each. Gates on 26ba0e08b: typecheck 0, typecheck:scripts 0; vitest 12420 (12410 + 10), 468 files, same 9 red at import; hooks 967; build 0; check:docs 5/5 (prompt said 4/4); agents, scripts, addonly PASS. Lane board untouched; 3001 up, not restarted. Merge body omits the session id the precedent names.
+**Prompt document name**: 2026-10-31 19:24
