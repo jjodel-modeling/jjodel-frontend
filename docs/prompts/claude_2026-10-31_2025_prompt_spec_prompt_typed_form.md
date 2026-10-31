@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-2025
 Chat: C-2026-10-31-1328
 Front: release-3-2
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane spec-prompt-typed · branch spec-prompt-typed · SPEC and diagram 8e5ee511b · verifica visiva non applicabile (docs only)
 Lane: fast (docs only, one SPEC section and the grammar diagram if it has the rule)
 Depends: P-2026-10-31-1910 (merge P-2026-10-31-2011)
 Worktree: ~/jjodel-w-specprompt, branch spec-prompt-typed (from the trunk tip after P-2026-10-31-2011)
