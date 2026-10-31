@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
     exportDraftsQuestion, freshTemplateName, goneGeneratorLabel, previewOffReason, retargetGenerator, saveGeneratorTemplates,
 } from '../generatorTabs';
-import { applyDrafts, editDraft, savedNames } from '../templateDrafts';
+import { applyDrafts, editDraft, outsideNoteShown, savedNames } from '../templateDrafts';
 import type { Drafts } from '../templateDrafts';
 import { addGenerator, decodeGenerators, GEN_GENERATORS_KEY, generatorsPatch } from '../../engine/generatorCodec';
 import type { GeneratorRecord } from '../../engine/generatorCodec';
@@ -250,5 +250,15 @@ describe('point 4: a gone metamodel or generator', () => {
     it('the selector shows the last known name, the id only when none is known (kills: the id always shown)', () => {
         expect(goneGeneratorLabel('g1', 'SMV')).toBe('SMV (gone)');
         expect(goneGeneratorLabel('g1', null)).toBe('g1 (gone)');
+    });
+
+    it('the stale-draft note waits for a live metamodel, and still shows over a changed template (kills: exists ignored, always hidden)', () => {
+        const stored = [t('a', 'x')];
+        const draft = editDraft({}, stored[0], { body: 'y' })[templateKey(stored[0])];
+        expect(outsideNoteShown(false, draft, [])).toBe(false);
+        expect(outsideNoteShown(false, draft, [t('a', 'z')])).toBe(false);
+        expect(outsideNoteShown(true, draft, [t('a', 'z')])).toBe(true);
+        expect(outsideNoteShown(true, draft, stored)).toBe(false);
+        expect(outsideNoteShown(true, undefined, [t('a', 'z')])).toBe(false);
     });
 });

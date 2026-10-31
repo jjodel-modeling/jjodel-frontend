@@ -95,6 +95,14 @@ export function changedOutside(draft: TemplateDraft, stored: readonly TemplateRe
     return !current || !sameRecord(current, draft.base);
 }
 
+/**
+ * The tab shows «changed outside the editor» over a dirty draft whose template changed, only while the metamodel
+ * exists (P-2026-10-31-1712): a gone metamodel took the store away, nothing changed the template.
+ */
+export function outsideNoteShown(exists: boolean, draft: TemplateDraft | undefined, stored: readonly TemplateRecord[]): boolean {
+    return exists && !!draft && changedOutside(draft, stored);
+}
+
 /** Why a draft cannot be saved, or `null`; `taken` are the keys the other templates will hold. */
 export function draftProblem(draft: TemplateDraft, taken: readonly string[]): string | null {
     const name = draft.name.trim();
