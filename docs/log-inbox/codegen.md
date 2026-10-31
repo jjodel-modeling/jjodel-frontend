@@ -437,3 +437,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: 9 code files, over 5 (RC-11). Not named in DOVE: templateCodec.ts (stores paramType, key uniqueness), templateDrafts.ts (drafts keyed by templateKey), dispatch.ts (new). Gates: tsc 0, vitest codegen 2329 (2304+25), build 0, codegen-lazy on green. Bench 10/10 killed. Version 1.1 only for typed files; a 1.0 reader still accepts 1.x. Visual check of the tab pending (chat).
 **Prompt document name**: 2026-10-31 14:10
+
+## 2026-10-31 — merge: cg-dispatch into alfonso-frontend-jjtl (P-2026-10-31-1605)
+**Prompt**: Bring `cg-dispatch` at `7dc35c8ec` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), union on the codegen inbox, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 7d298c2dc (12 files from the branch: `frontend/src/codegen/engine/dispatch.ts`, `generate.ts`, `generatorFile.ts`, `templateCodec.ts`, `templates.ts`, `frontend/src/codegen/ui/TemplateEditorTab.tsx`, `templateDrafts.ts`, two new test files, the 1410 discovery report, prompt and this inbox file); `docs/prompts/claude_2026-10-31_1605_prompt_merge_cg-dispatch.md` Status line; `docs/log-inbox/codegen.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Templates tab checked by the chat on the branch, vite :3020: Type select, list labels, warning row for an uncovered class)
+**Notes**: Merge-tree: 1 conflict, docs/log-inbox/codegen.md, union trunk first then branch, both 13-line appends, 439 lines; no code file on both sides, no governance file; 4 probes once each. Gates on 7d298c2dc: typecheck 0, typecheck:scripts 0; vitest 12346 passed, 462 files, 9 known red at import, as expected (trunk 12321/460 + branch 25/2); hooks 967; build 0; check:docs 5/5 (prompt said 4/4, gate E added since); check:agents, check:scripts, check:addonly PASS.
+**Prompt document name**: 2026-10-31 16:05
