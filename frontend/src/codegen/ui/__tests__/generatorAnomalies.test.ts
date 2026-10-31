@@ -17,6 +17,7 @@ import type { GeneratorRecord } from '../../engine/generatorCodec';
 import { encodeTemplates, GEN_TEMPLATES_KEY } from '../../engine/templateCodec';
 import { decodeGeneratorFile, encodeGeneratorFile, generatorDocument } from '../../engine/generatorFile';
 import type { TemplateRecord } from '../../engine/templates';
+import { templateKey } from '../../engine/dispatch';
 
 const t = (name: string, body = ''): TemplateRecord => ({ name, params: [], body, mode: 'text' });
 
@@ -166,6 +167,63 @@ describe('point 1: the root and the files follow the templates', () => {
         const d = bag.get('default');
         expect(d.root).toBe('main');
         expect(d.files).toEqual([{ path: 'main.js', entry: 'main' }]);
+    });
+});
+
+describe('templates of one name under two types (P-2026-10-31-1640)', () => {
+    const typed = (name: string, type: string): TemplateRecord => ({ name, params: ['x'], paramType: type, body: '', mode: 'text' });
+
+    /** g1 with `expr:Ref`, `expr:Const` and `main`, its root and its file entry set to `expr`. */
+    function exprGenerator(): Bag {
+        const bag = newGenerator();
+        bag.save('g1', [typed('expr', 'Ref'), typed('expr', 'Const'), t('main')]);
+        bag.apply({ [GEN_GENERATORS_KEY]: bag.rawG!.replace('"root":"main"', '"root":"expr"').replace('"entry":"main"', '"entry":"expr"') });
+        expect(bag.get('g1').root).toBe('expr');
+        return bag;
+    }
+
+    /** A Save of one draft renaming the template of key `key`, as the tab saves it. */
+    function rename(bag: Bag, key: string, name: string): void {
+        const templates = bag.get('g1').templates;
+        const drafts = editDraft({}, templates.find(x => templateKey(x) === key)!, { name });
+        const applied = applyDrafts(templates, drafts);
+        expect(applied.problems).toEqual({});
+        bag.save('g1', applied.next, savedNames(drafts));
+    }
+
+    /** A Delete of the template of key `key`, as the tab writes it. */
+    const remove = (bag: Bag, key: string) => bag.save('g1', bag.get('g1').templates.filter(x => templateKey(x) !== key));
+
+    const entries = (bag: Bag) => [bag.get('g1').root, ...bag.get('g1').files.map(f => f.entry)];
+
+    it('a rename of either keeps the name while the other serves it, then follows the last one (kills: renames keyed by name; a name followed while still served)', () => {
+        const a = exprGenerator();
+        rename(a, 'expr:Ref', 'ref');
+        expect(entries(a)).toEqual(['expr', 'expr']);
+        rename(a, 'expr:Const', 'konst');
+        expect(entries(a)).toEqual(['konst', 'konst']);
+
+        const b = exprGenerator();
+        rename(b, 'expr:Const', 'konst');
+        expect(entries(b)).toEqual(['expr', 'expr']);
+        rename(b, 'expr:Ref', 'ref');
+        expect(entries(b)).toEqual(['ref', 'ref']);
+    });
+
+    it('a Delete of either keeps the name while the other serves it, then gives the fallback root (kills: a name dropped once one of its templates is deleted)', () => {
+        for (const [first, second] of [['expr:Ref', 'expr:Const'], ['expr:Const', 'expr:Ref']]) {
+            const bag = exprGenerator();
+            remove(bag, first);
+            expect(entries(bag)).toEqual(['expr', 'expr']);
+            remove(bag, second);
+            expect(entries(bag)).toEqual(['main', 'main']);
+        }
+    });
+
+    it('a new template after them is named fresh and with no gap (kills: keys collapsed to names; the name of a typed key not taken)', () => {
+        const templates = [typed('expr', 'Ref'), typed('expr', 'Const')];
+        expect(freshTemplateName(templates.map(x => templateKey(x)), {})).toBe('template3');
+        expect(freshTemplateName(['template3:Ref', 'a'], {})).toBe('template4');
     });
 });
 

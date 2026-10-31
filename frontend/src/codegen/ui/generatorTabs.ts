@@ -22,6 +22,7 @@
  * Pure but for the session memory: no React, no store.
  */
 
+import { templateKey } from '../engine/dispatch';
 import { DEFAULT_GENERATOR_ID, generatorsPatch } from '../engine/generatorCodec';
 import type { GeneratorRecord, GeneratorTarget } from '../engine/generatorCodec';
 import type { TemplateRecord } from '../engine/templates';
@@ -98,15 +99,31 @@ const fallbackRootOf = (templates: readonly TemplateRecord[]): string | undefine
 
 /**
  * The generator `g` over its next template list (P-2026-10-31-1342): its root and its files' entries follow the
- * renames (`renames`, old name to new); then a root that names no template of `next` becomes the codec's fallback
- * root, and a file entry that names none becomes the root. A list with no template keeps root and files as they are.
+ * renames (`renames`, a stored template's key to its new name); then a root that names no template of `next` becomes the
+ * codec's fallback root, and a file entry that names none becomes the root. A list with no template keeps root and files
+ * as they are.
+ *
+ * Root and entries are names, and a name may stand for several templates told apart by type (dispatch.ts,
+ * P-2026-10-31-1640): a name follows a rename only once no template of it keeps it, to the new name of the first one
+ * renamed in the stored order; a template of no draft keeps its name while its key is in `next`, else it is deleted.
  */
 export function retargetGenerator(
     g: GeneratorRecord, next: readonly TemplateRecord[], renames: Readonly<Record<string, string>> = {},
 ): GeneratorRecord {
     if (next.length === 0) return { ...g, templates: next };
     const names = new Set(next.map(t => t.name));
-    const follow = (name: string) => (Object.prototype.hasOwnProperty.call(renames, name) ? renames[name] : name);
+    const nextKeys = new Set(next.map(t => templateKey(t)));
+    // Where each stored template goes: its new name, or null once deleted.
+    const fates = g.templates.map(t => {
+        const key = templateKey(t);
+        const to = Object.prototype.hasOwnProperty.call(renames, key) ? renames[key] : nextKeys.has(key) ? t.name : null;
+        return { from: t.name, to };
+    });
+    const follow = (name: string): string => {
+        const own = fates.filter(f => f.from === name);
+        if (own.some(f => f.to === name)) return name;
+        return own.find(f => f.to !== null)?.to ?? name;
+    };
     const followed = g.root !== undefined ? follow(g.root) : undefined;
     const root = followed !== undefined && names.has(followed) ? followed : fallbackRootOf(next)!;
     const files = g.files.map(f => {
@@ -140,11 +157,14 @@ export function saveGeneratorTemplates(
 /**
  * The name of a new template (P-2026-10-31-1342): `template<n>`, `n` one past the number of templates the tab lists
  * (the stored ones and the drafts whose template is gone), skipping a name a template or a draft holds. A draft that
- * renames its template counts once, so the names run template1, template2, ... with no gap.
+ * renames its template counts once, so the names run template1, template2, ... with no gap. `stored` and the drafts'
+ * own keys are template keys (`templateKey`, P-2026-10-31-1640): two templates of one name under two types count two,
+ * and the name before the `:` is taken.
  */
 export function freshTemplateName(stored: readonly string[], drafts: Readonly<Record<string, { readonly name: string }>>): string {
     const listed = new Set([...stored, ...Object.keys(drafts)]);
-    const taken = new Set([...listed, ...Object.values(drafts).map(d => d.name.trim())]);
+    const nameOf = (key: string) => key.split(':')[0];
+    const taken = new Set([...listed, ...[...listed].map(nameOf), ...Object.values(drafts).map(d => d.name.trim())]);
     let n = listed.size + 1;
     while (taken.has(`template${n}`)) n++;
     return `template${n}`;

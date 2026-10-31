@@ -351,6 +351,16 @@ export class JjelEvaluator {
     // ============================================
 
     private evaluateBinary(expr: BinaryExpr, ctx: EvaluationContext): JjelValue {
+        // `+` under a host that attributes its operands: the same order, the same value (R-GEN-10).
+        if (expr.operator === '+' && ctx.textHost?.evaluateConcat) {
+            return ctx.textHost.evaluateConcat(
+                expr,
+                () => this.evaluate(expr.left, ctx),
+                () => this.evaluate(expr.right, ctx),
+                (left, right) => this.applyBinaryOperator('+', left, right),
+            );
+        }
+
         const left = this.evaluate(expr.left, ctx);
         const right = this.evaluate(expr.right, ctx);
 
@@ -792,7 +802,7 @@ export class JjelEvaluator {
         }
 
         const args = expr.args.map(arg => this.evaluate(arg, ctx));
-        return this.callMethod(obj, expr.method, args, ctx);
+        return this.callMethod(obj, expr.method, args, ctx, expr);
     }
 
     private evaluateNullSafeMethodCall(expr: NullSafeMethodCallExpr, ctx: EvaluationContext): JjelValue {
@@ -803,7 +813,7 @@ export class JjelEvaluator {
         }
 
         const args = expr.args.map(arg => this.evaluate(arg, ctx));
-        return this.callMethod(obj, expr.method, args, ctx);
+        return this.callMethod(obj, expr.method, args, ctx, expr);
     }
 
     /**
@@ -828,7 +838,7 @@ export class JjelEvaluator {
         );
     }
 
-    private callMethod(obj: JjelValue, method: string, args: JjelValue[], ctx: EvaluationContext): JjelValue {
+    private callMethod(obj: JjelValue, method: string, args: JjelValue[], ctx: EvaluationContext, expr?: JjelExpression): JjelValue {
         // Pedagogical error mirror of getProperty: catches the paren form
         // `obj.className()` on instances. Same redirection to `instanceOf.name`.
         if (
@@ -847,12 +857,19 @@ export class JjelEvaluator {
         if (Array.isArray(obj)) {
             // `join` from a context with a Text host (R-GEN-10); without one, the usual dispatch below.
             if (method === 'join' && ctx.textHost) {
+                const host = ctx.textHost;
+                if (host.evaluateJoin) return host.evaluateJoin(expr, obj, args[0], () => joinWithTextHost(obj, args[0], host));
                 return joinWithTextHost(obj, args[0], ctx.textHost);
             }
             const collectionMethod = getCollectionMethod(method);
             if (collectionMethod) {
                 // Check if first arg is a lambda (function)
                 const firstArg = args[0];
+                // `map` under a host that keeps each item's origin: the items `map` computes (R-GEN-10).
+                if (method === 'map' && isJjelFunction(firstArg) && ctx.textHost?.mapItems) {
+                    const host = ctx.textHost;
+                    return withBitVectorDefects(() => host.mapItems!(obj, item => firstArg.call([item], ctx)));
+                }
                 if (isJjelFunction(firstArg)) {
                     return withBitVectorDefects(() => collectionMethod(obj, firstArg, ctx, ...args.slice(1)));
                 }
@@ -1004,7 +1021,9 @@ export class JjelEvaluator {
                 lambdaCtx.set(expr.params[i], args[i] ?? null);
             }
 
-            // Evaluate body
+            // Evaluate body, through a host that records it as a part (R-GEN-10)
+            const host = lambdaCtx.textHost;
+            if (host?.evaluatePart) return host.evaluatePart(expr.body, () => this.evaluate(expr.body, lambdaCtx));
             return this.evaluate(expr.body, lambdaCtx);
         });
     }

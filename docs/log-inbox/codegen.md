@@ -399,6 +399,58 @@ empties this file. The active log is not touched by this lane.
 **Notes**: Rollback tag `pre-gen-io` on `5e81e8933` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-10-30-2300/result.json`.
 **Prompt document name**: 2026-10-30 23:00
 
+## 2026-10-31 — feat(codegen): model origins for member reads inside + and join (P-2026-10-31-1341)
+**Prompt**: Rule 1 of origin.ts per operand: in `"logic " + r.name + ";"` and in `list.map(r => r.name).join(", ")` each member read gets its model origin, as `${r.name}` does; values unchanged, no text host unchanged. Discovery report first, then code.
+**Files touched**: 4b6bc1f81: docs/discovery/discovery_2026-10-31_codegen_origins_through_concat.md; eccd6ca1d: frontend/src/codegen/engine/origin.ts, engine/templates.ts, frontend/src/jjel/evaluator/context.ts, jjel/evaluator/evaluator.ts, engine/__tests__/origin.test.ts, engine/__tests__/originOperands.test.ts (new); this commit: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-31_1341_prompt_codegen_origins_through_concat.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Out of scope: templates.ts (body sink) and context.ts (4 optional JjelTextHost members); 6 code files. origin.test.ts rows 108-109 amended: a + in a hole is now one model fragment per operand, as the prompt's rule demands. Gates: tsc 0, vitest codegen 2304, jjel 491, build 0; examples code sha-identical. Bench 9/10 killed, M10 declared intent. jjel/SPEC.md:702 not updated.
+**Prompt document name**: 2026-10-31 13:41
+
+## 2026-10-31 — merge: cg-origin-concat into alfonso-frontend-jjtl (P-2026-10-31-1539)
+**Prompt**: Bring `cg-origin-concat` at `fe8bb988e` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit a9b0c8f62 (9 files from the branch: `frontend/src/codegen/engine/origin.ts`, `frontend/src/codegen/engine/templates.ts`, `frontend/src/jjel/evaluator/context.ts`, `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/codegen/engine/__tests__/origin.test.ts`, `frontend/src/codegen/engine/__tests__/originOperands.test.ts`, the 1341 discovery report, prompt and this inbox file); `docs/prompts/claude_2026-10-31_1539_prompt_merge_cg-origin-concat.md` Status line; `docs/log-inbox/codegen.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (codegen engine only, no visual surface; GO from chat on the gates)
+**Notes**: Merge-tree measured again: zero conflicts (tree df66f240e), no file on both sides, no governance file; no union resolution; 3 probes once each. Gates on a9b0c8f62: typecheck 0 and typecheck:scripts 0 (no error TS); vitest 12321 passed, 460 files, 9 known red at import, as expected (trunk 12303/459 + branch 18/1); hooks 967; build 0; check:docs 5/5 (prompt said 4/4, gate E added since); check:agents, check:scripts, check:addonly PASS.
+**Prompt document name**: 2026-10-31 15:39
+
+## 2026-10-31 — feat(codegen): templates dispatched on the metaclass of their first argument (P-2026-10-31-1410)
+**Prompt**: Templates sharing a name and differing by `paramType`, the metaclass of their first parameter; a call runs the most specific match, else the untyped fallback, else an error naming the class. Ambiguity and arity are validation errors; the Templates tab gains a Type select and a warning row for uncovered concrete classes; the file format carries `paramType`. Discovery report first.
+**Files touched**: ed032103b: docs/discovery/discovery_2026-10-31_codegen_metaclass_dispatch.md; 49aa0cc56: frontend/src/codegen/engine/dispatch.ts (new), engine/templates.ts, engine/generate.ts, engine/templateCodec.ts, engine/generatorFile.ts, ui/templateDrafts.ts, ui/TemplateEditorTab.tsx, engine/__tests__/dispatch.test.ts (new), ui/__tests__/templateDispatch.test.ts (new); this commit: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-31_1410_prompt_codegen_metaclass_dispatch.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 9 code files, over 5 (RC-11). Not named in DOVE: templateCodec.ts (stores paramType, key uniqueness), templateDrafts.ts (drafts keyed by templateKey), dispatch.ts (new). Gates: tsc 0, vitest codegen 2329 (2304+25), build 0, codegen-lazy on green. Bench 10/10 killed. Version 1.1 only for typed files; a 1.0 reader still accepts 1.x. Visual check of the tab pending (chat).
+**Prompt document name**: 2026-10-31 14:10
+
+## 2026-10-31 — merge: cg-dispatch into alfonso-frontend-jjtl (P-2026-10-31-1605)
+**Prompt**: Bring `cg-dispatch` at `7dc35c8ec` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), union on the codegen inbox, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 7d298c2dc (12 files from the branch: `frontend/src/codegen/engine/dispatch.ts`, `generate.ts`, `generatorFile.ts`, `templateCodec.ts`, `templates.ts`, `frontend/src/codegen/ui/TemplateEditorTab.tsx`, `templateDrafts.ts`, two new test files, the 1410 discovery report, prompt and this inbox file); `docs/prompts/claude_2026-10-31_1605_prompt_merge_cg-dispatch.md` Status line; `docs/log-inbox/codegen.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Templates tab checked by the chat on the branch, vite :3020: Type select, list labels, warning row for an uncovered class)
+**Notes**: Merge-tree: 1 conflict, docs/log-inbox/codegen.md, union trunk first then branch, both 13-line appends, 439 lines; no code file on both sides, no governance file; 4 probes once each. Gates on 7d298c2dc: typecheck 0, typecheck:scripts 0; vitest 12346 passed, 462 files, 9 known red at import, as expected (trunk 12321/460 + branch 25/2); hooks 967; build 0; check:docs 5/5 (prompt said 4/4, gate E added since); check:agents, check:scripts, check:addonly PASS.
+**Prompt document name**: 2026-10-31 16:05
+
 ## 2026-10-31 — fix(codegen): generator root follows templates, names without gaps (P-2026-10-31-1342)
 **Prompt**: `claude_2026-10-31_1342_prompt_generators_export_and_import_anomalies.md`, two-phase: Phase 1 discovery of six anomalies, Phase 2 lane A only (codegen points 1, 2, 4 and the Export confirmation); XMI (point 5) to its own lane, Ecore nsURI (point 6) held for Alfonso.
 **Files touched**: `038934225`: `docs/discovery/discovery_2026-10-31_generators_export_and_import_anomalies.md`; `092c33b68`: `frontend/src/codegen/ui/generatorTabs.ts`, `frontend/src/codegen/ui/TemplateEditorTab.tsx`, `frontend/src/codegen/ui/__tests__/generatorAnomalies.test.ts` (new); this commit: this entry, a ticket, the Status of the prompt file.
