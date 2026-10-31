@@ -18,3 +18,4 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Guard in EcoreService.importFromXML before EcoreParser.parse, so every caller gets it: dashboard Import (ProjectEditor, the only mounted entry), ImportDropZone (mounted nowhere), XMIService embedded metamodel (reached only via ImportDropZone). Compares top-level imported nsURIs with every package (sub-packages too) of state.m2models, on D-layer uri. 8 tests; guard disabled kills 3. Export suite 86/86, tsc, build green. No manual import run.
 **Prompt document name**: 2026-10-31 17:11
+**Follow-up** (Alfonso, 17:49): the refusal says only to delete the loaded metamodel, not rename it, since a rename keeps the nsURI — 35fca6676.
