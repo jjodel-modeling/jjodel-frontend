@@ -43,3 +43,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: `JjelEvaluator.registerGlobalBuiltins` registers `String`, `Number`, `Boolean`, `Array`, `bits`, `sbits` and the date constructors on its own context only. `JjTLExecutor` (`executor.ts:989`) and `validationEvaluator.ts:268` evaluate in a context they build themselves, so a global called there resolves to "not defined" or null. Measured for `range` only (it failed in a JjTL forall until registered on `evalContext`); the other globals are inferred from the same lookup path (`ctx.getBuiltin`), not run.
 **Priority**: low
 **Found in**: P-2026-10-31-1740
+
+## 2026-10-31 — merge: jjel-range into alfonso-frontend-jjtl (P-2026-10-31-1746)
+**Prompt**: Bring `jjel-range` at `ad4ef1cc8` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), probes on the merge-tree, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 9654de9b6 (7 files from the branch: `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjel/SPEC.md`, `__tests__/range.test.ts` (new), `executor/__tests__/range-forall.test.ts` (new), prompt 1740 and this inbox file); `docs/prompts/claude_2026-10-31_1746_prompt_merge_jjel-range.md` Status line; `docs/log-inbox/hw-notation.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (evaluator and executor only; range covered by range.test.ts and range-forall.test.ts, green on 9654de9b6)
+**Notes**: Tip moved mid-session (40dd35d28, de519893f: docs only, other chats), accepted. Merge-tree: zero conflicts, tree f7c289a56 = merge commit's; 7 files branch side, none on both, no governance file; 2 probes once each; no union. Gates on 9654de9b6: typecheck 0, typecheck:scripts 0; vitest 12401 passed, 466 files, 9 known red at import (12373 + 28); hooks 967; build 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Lane board untouched.
+**Prompt document name**: 2026-10-31 17:46
