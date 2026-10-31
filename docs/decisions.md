@@ -6892,6 +6892,44 @@ open an undo group too, and whether a filled slot left behind when a superclass 
   none it stays visible but disabled with the reason. Tools stays Advanced-only, so in Basic mode a Refactoring is run
   from its own tab (`Run on`) or the right-click on the artifact tab, which stays as a shortcut. No «⋯» icon on the tabs.
 
+## R-PLG: the plugin mechanism (decisions 2026-10-31)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-10-31_plugin_mechanism.md` (P-2026-10-31-1800, branch
+`plugin-discovery`, report `1ea149576`), sections 0 and 11; the project chat C-2026-10-31-1743, Alfonso 2026-10-31 17:50
+(plugins can be written by any user; plugins of general interest may receive a certified status) and 22:29 «ok alle
+raccomandazioni». All rows: ratified by Alfonso as recommended, evidence: read, and measured for R-PLG-2 (probe on
+Chromium 151 only), verified: none, reversible: trunk (docs only, no code yet).
+
+- **R-PLG-1** (2026-10-31). **A plugin is untrusted code by default.** Any user may write one; nothing in the design
+  assumes the author is known or benign.
+- **R-PLG-2** (2026-10-31). **One sandbox for every plugin, certified or not.** Plugin code runs only in a Web Worker
+  started from a blob URL inside an `<iframe sandbox="allow-scripts">` without `allow-same-origin`, under a CSP that
+  forbids egress, with the bootstrap script pinned by hash, never by nonce (a nonce let dynamic `import()` out, run 1).
+  Plugin code never runs on the iframe's main thread: it leaks there through WebRTC, self-navigation and
+  `<meta refresh>`, and no shipped CSP directive closes them (measured). A separate origin for plugin frames is not
+  required for the first slice and is required before any third-party plugin can be installed.
+- **R-PLG-3** (2026-10-31). **Plugin UI is a declarative description rendered by the host.** No plugin-owned DOM:
+  it would reopen the three main-thread leaks of R-PLG-2.
+- **R-PLG-4** (2026-10-31). **A plugin writes through JjScript lines**, through the existing guard, planner, preview and
+  `applyAsOneStep`, not through a new typed command list. The host validates at the command, not at `Action.fire`.
+- **R-PLG-5** (2026-10-31). **Every Run is one undo step**: Script Run and chat Run open an undo group as the
+  refactoring Apply does, so the plugin channel and the user's scripts share one undo rule. This is the rule R-RFB-12
+  states on branch `rfo` (not yet on the trunk); when `rfo` merges, R-RFB-12 and this row say the same thing.
+- **R-PLG-6** (2026-10-31). **Opening a project never runs code stored in it without the user's consent.** This covers
+  the classic view fields the reducer executes with `new Function` on open (`reducer.ts:542` to `:862`, found by reading,
+  not yet confirmed with a crafted project). It is fixed before any plugin work, in its own lane, discovery first.
+- **R-PLG-7** (2026-10-31). **A missing or refused plugin degrades explicitly**, marked in authoring and never replaced
+  by a silent default (ViewpointIR v1.2 §10 and §11, R-IRN-3).
+- **R-PLG-8** (2026-10-31). **Certification is a quality attribute, not a privilege.** It is bound to the hash of one
+  plugin version, revocable, and grants no technical capability beyond the narrow ones a manifest declares (network
+  access, for example).
+- **R-PLG-9** (2026-10-31). **The plugin API is a public, versioned contract**, with the weight of an IR schema bump.
+- **R-PLG-10** (2026-10-31). **One role-catalog format** shared by `ontoBindings`, the codegen role reads and the STC
+  roles, adopted in that order, the STC last (its `runSignature` is the hazard).
+- **R-PLG-11** (2026-10-31). **The first slice re-hosts the instance-of semantics** (`bindingReader`, `bindingCheck`)
+  as a worker plugin bound through `ontoBindings v1` and writing `set` lines through `applyAsOneStep`; the JavaScript
+  generator of the codegen pilot is not the first slice.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
