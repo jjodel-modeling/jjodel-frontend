@@ -411,3 +411,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Out of scope: templates.ts (body sink) and context.ts (4 optional JjelTextHost members); 6 code files. origin.test.ts rows 108-109 amended: a + in a hole is now one model fragment per operand, as the prompt's rule demands. Gates: tsc 0, vitest codegen 2304, jjel 491, build 0; examples code sha-identical. Bench 9/10 killed, M10 declared intent. jjel/SPEC.md:702 not updated.
 **Prompt document name**: 2026-10-31 13:41
+
+## 2026-10-31 — feat(codegen): templates dispatched on the metaclass of their first argument (P-2026-10-31-1410)
+**Prompt**: Templates sharing a name and differing by `paramType`, the metaclass of their first parameter; a call runs the most specific match, else the untyped fallback, else an error naming the class. Ambiguity and arity are validation errors; the Templates tab gains a Type select and a warning row for uncovered concrete classes; the file format carries `paramType`. Discovery report first.
+**Files touched**: ed032103b: docs/discovery/discovery_2026-10-31_codegen_metaclass_dispatch.md; 49aa0cc56: frontend/src/codegen/engine/dispatch.ts (new), engine/templates.ts, engine/generate.ts, engine/templateCodec.ts, engine/generatorFile.ts, ui/templateDrafts.ts, ui/TemplateEditorTab.tsx, engine/__tests__/dispatch.test.ts (new), ui/__tests__/templateDispatch.test.ts (new); this commit: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-31_1410_prompt_codegen_metaclass_dispatch.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 9 code files, over 5 (RC-11). Not named in DOVE: templateCodec.ts (stores paramType, key uniqueness), templateDrafts.ts (drafts keyed by templateKey), dispatch.ts (new). Gates: tsc 0, vitest codegen 2329 (2304+25), build 0, codegen-lazy on green. Bench 10/10 killed. Version 1.1 only for typed files; a 1.0 reader still accepts 1.x. Visual check of the tab pending (chat).
+**Prompt document name**: 2026-10-31 14:10

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1410
 Chat: C-2026-10-31-1328
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-10-31, lane full, branch cg-dispatch, 49aa0cc56
 Lane: full (template record and generator file format, call resolution, editor warning; discovery report first, one session)
 Depends: P-2026-10-31-1341 (branch cg-origin-concat, fe8bb988e, not merged into the trunk)
 Worktree: ~/jjodel-w-cgdispatch, branch cg-dispatch (from cg-origin-concat fe8bb988e)
