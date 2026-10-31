@@ -1525,12 +1525,14 @@ export class JjtlExecutor {
             } else if (item.type === 'LetStatement') {
                 const letItem = item as LetStatementAST;
                 let letCtx = this.createInstanceContext(sourceInstance, alias);
+                const letVars: Record<string, JjelValue> = {};
                 for (const binding of letItem.bindings) {
                     const value = await this.evaluateExpressionAsync(binding.value, letCtx);
+                    letVars[binding.name] = value;
                     letCtx = letCtx.child({ [binding.name]: value });
                 }
                 // Execute let body with enriched context — delegate to a helper
-                await this.executeLetBody(letItem.body, sourceInstance, targetInstance, letCtx, alias);
+                await this.executeLetBody(letItem.body, sourceInstance, targetInstance, letCtx, alias, letVars);
             }
         }
 
@@ -1573,11 +1575,13 @@ export class JjtlExecutor {
             } else if (item.type === 'LetStatement') {
                 const letItem = item as LetStatementAST;
                 let letCtx = this.createInstanceContext(sourceInstance, alias);
+                const letVars: Record<string, JjelValue> = {};
                 for (const binding of letItem.bindings) {
                     const value = await this.evaluateExpressionAsync(binding.value, letCtx);
+                    letVars[binding.name] = value;
                     letCtx = letCtx.child({ [binding.name]: value });
                 }
-                await this.executeLetBodyWithTrace(letItem.body, sourceInstance, targetInstance, letCtx, traceLink, alias);
+                await this.executeLetBodyWithTrace(letItem.body, sourceInstance, targetInstance, letCtx, traceLink, alias, letVars);
             }
         }
 
@@ -2111,8 +2115,24 @@ export class JjtlExecutor {
         };
         this.stats.targetInstancesCreated++;
 
+        await this.executeCreationBody(creation.body, sourceInstance, newObject, extraBindings);
+
+        return newObject;
+    }
+
+    /**
+     * Execute the body items of a created object (attribute mappings, forall mappings,
+     * let and interactive statements). A let body runs through here again with its
+     * variables merged into the extra bindings, so they reach nested bodies at any depth.
+     */
+    private async executeCreationBody(
+        body: MappingBodyItemAST[],
+        sourceInstance: any,
+        newObject: Record<string, JjelValue>,
+        extraBindings?: Record<string, JjelValue>
+    ): Promise<void> {
         // Execute nested body items (attribute mappings, forall mappings, and interactive statements)
-        for (const item of creation.body) {
+        for (const item of body) {
             if (item.type === 'AttributeMapping') {
                 const attrMapping = item as AttributeMappingAST;
                 const ctx = extraBindings
@@ -2168,45 +2188,19 @@ export class JjtlExecutor {
                 let letCtx = extraBindings
                     ? this.createInstanceContext(sourceInstance).child(extraBindings)
                     : this.createInstanceContext(sourceInstance);
+                const letVars: Record<string, JjelValue> = {};
                 for (const binding of letItem.bindings) {
                     const value = await this.evaluateExpressionAsync(binding.value, letCtx);
+                    letVars[binding.name] = value;
                     letCtx = letCtx.child({ [binding.name]: value });
                 }
-                // Execute let body items inline on the same newObject
-                for (const bodyItem of letItem.body) {
-                    if (bodyItem.type === 'AttributeMapping') {
-                        const attrMapping = bodyItem as AttributeMappingAST;
-                        let value: JjelValue;
-                        if (attrMapping.objectCreation) {
-                            value = await this.executeObjectCreation(attrMapping.objectCreation, sourceInstance, extraBindings);
-                        } else if (attrMapping.expression !== undefined) {
-                            value = await this.evaluateExpressionAsync(attrMapping.expression, letCtx);
-                            if (attrMapping.valueMapping && attrMapping.valueMapping.length > 0) {
-                                const match = attrMapping.valueMapping.find(vm =>
-                                    this.valuesEqual(value, this.getLiteralValue(vm.sourceValue))
-                                );
-                                if (match) value = this.getLiteralValue(match.targetValue);
-                            }
-                        } else if (attrMapping.conversion?.expression) {
-                            value = this.applyValueMappings(
-                                await this.evaluateExpressionAsync(attrMapping.conversion.expression, letCtx),
-                                attrMapping.conversion.mappings
-                            );
-                        } else if (attrMapping.sourceAttribute) {
-                            value = this.evaluatePropertyPath(attrMapping.sourceAttribute, letCtx);
-                        } else {
-                            value = null;
-                        }
-                        newObject[attrMapping.targetAttribute] = this.applyCrossTypeResolution(value, attrMapping.targetAttribute) as JjelValue;
-                    } else if (bodyItem.type === 'ForAllMapping') {
-                        await this.executeForAllMappingOnObject(bodyItem as ForAllMappingAST, sourceInstance, newObject, extraBindings);
-                    }
-                    // Nested let, alert, notify inside object creation let body are handled recursively
-                }
+                // The let body runs on the same newObject, with the let variables
+                // bound in every nested body (forall, created objects, -> feature { }).
+                await this.executeCreationBody(
+                    letItem.body, sourceInstance, newObject, { ...(extraBindings || {}), ...letVars }
+                );
             }
         }
-
-        return newObject;
     }
 
     /**
@@ -2218,9 +2212,10 @@ export class JjtlExecutor {
         forall: ForAllMappingAST,
         sourceInstance: any,
         targetInstance: any,
-        alias?: string
+        alias?: string,
+        letBindings?: Record<string, JjelValue>
     ): Promise<void> {
-        const results = await this.runForAll(forall, sourceInstance, this.aliasBindings(sourceInstance, alias));
+        const results = await this.runForAll(forall, sourceInstance, this.aliasBindings(sourceInstance, alias, letBindings));
         if (results.length === 0) return;
 
         const ownerClassName = targetInstance?.__type || targetInstance?.className || '';
@@ -2234,9 +2229,21 @@ export class JjtlExecutor {
      * The rule's source alias as an extra binding. Nested bodies (forall, created
      * objects, `-> feature { ... }`) build their context from the source instance
      * alone, so without it `a.name` read null below rule level.
+     *
+     * The variables of the enclosing `let` statements travel the same way, for the
+     * same reason. Their names carry `$`, so they cannot shadow the alias.
      */
-    private aliasBindings(sourceInstance: any, alias?: string): Record<string, JjelValue> | undefined {
-        return alias ? { [alias]: this.bindSourceValue(sourceInstance) } : undefined;
+    private aliasBindings(
+        sourceInstance: any,
+        alias?: string,
+        letBindings?: Record<string, JjelValue>
+    ): Record<string, JjelValue> | undefined {
+        const hasLet = !!letBindings && Object.keys(letBindings).length > 0;
+        if (!alias && !hasLet) return undefined;
+        return {
+            ...(alias ? { [alias]: this.bindSourceValue(sourceInstance) } : {}),
+            ...(hasLet ? letBindings : {}),
+        };
     }
 
     /**
@@ -2273,14 +2280,20 @@ export class JjtlExecutor {
         sourceInstance: any,
         targetInstance: any,
         letCtx: EvaluationContext,
-        alias?: string
+        alias?: string,
+        letBindings: Record<string, JjelValue> = {}
     ): Promise<void> {
         for (const item of body) {
             if (item.type === 'AttributeMapping') {
                 const mapping = item as AttributeMappingAST;
                 let value: JjelValue;
                 if (mapping.objectCreation) {
-                    value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance, this.aliasBindings(sourceInstance, alias));
+                    // Placed into the feature like at rule level (executeAttributeMapping).
+                    await this.executeCreationMapping(
+                        mapping, sourceInstance, targetInstance, this.aliasBindings(sourceInstance, alias, letBindings)
+                    );
+                    this.stats.attributeMappingsExecuted++;
+                    continue;
                 } else if (mapping.expression !== undefined) {
                     value = await this.evaluateExpressionAsync(mapping.expression, letCtx);
                     if (mapping.valueMapping && mapping.valueMapping.length > 0) {
@@ -2303,7 +2316,7 @@ export class JjtlExecutor {
                 targetInstance[mapping.targetAttribute] = fromJjelValue(this.applyCrossTypeResolution(value, mapping.targetAttribute));
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
-                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias);
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias, letBindings);
             } else if (item.type === 'AlertStatement') {
                 const msg = this.evaluateExpression((item as AlertStatementAST).message, letCtx);
                 await getUIBridge().showAlert(String(msg ?? ''), (item as AlertStatementAST).alertType ?? 'info');
@@ -2314,11 +2327,13 @@ export class JjtlExecutor {
                 // Nested let
                 const nested = item as LetStatementAST;
                 let nestedCtx = letCtx;
+                const nestedVars: Record<string, JjelValue> = { ...letBindings };
                 for (const binding of nested.bindings) {
                     const value = await this.evaluateExpressionAsync(binding.value, nestedCtx);
+                    nestedVars[binding.name] = value;
                     nestedCtx = nestedCtx.child({ [binding.name]: value });
                 }
-                await this.executeLetBody(nested.body, sourceInstance, targetInstance, nestedCtx, alias);
+                await this.executeLetBody(nested.body, sourceInstance, targetInstance, nestedCtx, alias, nestedVars);
             }
         }
     }
@@ -2332,7 +2347,8 @@ export class JjtlExecutor {
         targetInstance: any,
         letCtx: EvaluationContext,
         traceLink: TraceLinkBuilder,
-        alias?: string
+        alias?: string,
+        letBindings: Record<string, JjelValue> = {}
     ): Promise<void> {
         for (const item of body) {
             if (item.type === 'AttributeMapping') {
@@ -2343,7 +2359,16 @@ export class JjtlExecutor {
                 const expressionSource = hasExpression ? this.getExpressionSource(mapping.conversion!.expression!) : undefined;
 
                 if (mapping.objectCreation) {
-                    value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance, this.aliasBindings(sourceInstance, alias));
+                    // Placed into the feature like at rule level (executeAttributeMappingWithTrace).
+                    const created = await this.executeCreationMapping(
+                        mapping, sourceInstance, targetInstance, this.aliasBindings(sourceInstance, alias, letBindings)
+                    );
+                    traceLink.addBinding(
+                        null, mapping.targetAttribute, undefined, null,
+                        created === undefined ? null : created, false, undefined, undefined
+                    );
+                    this.stats.attributeMappingsExecuted++;
+                    continue;
                 } else if (mapping.expression !== undefined) {
                     value = await this.evaluateExpressionAsync(mapping.expression, letCtx);
                     sourceValue = fromJjelValue(value);
@@ -2388,7 +2413,7 @@ export class JjtlExecutor {
                 );
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
-                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias);
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias, letBindings);
             } else if (item.type === 'AlertStatement') {
                 const msg = this.evaluateExpression((item as AlertStatementAST).message, letCtx);
                 await getUIBridge().showAlert(String(msg ?? ''), (item as AlertStatementAST).alertType ?? 'info');
@@ -2398,11 +2423,13 @@ export class JjtlExecutor {
             } else if (item.type === 'LetStatement') {
                 const nested = item as LetStatementAST;
                 let nestedCtx = letCtx;
+                const nestedVars: Record<string, JjelValue> = { ...letBindings };
                 for (const binding of nested.bindings) {
                     const value = await this.evaluateExpressionAsync(binding.value, nestedCtx);
+                    nestedVars[binding.name] = value;
                     nestedCtx = nestedCtx.child({ [binding.name]: value });
                 }
-                await this.executeLetBodyWithTrace(nested.body, sourceInstance, targetInstance, nestedCtx, traceLink, alias);
+                await this.executeLetBodyWithTrace(nested.body, sourceInstance, targetInstance, nestedCtx, traceLink, alias, nestedVars);
             }
         }
     }
