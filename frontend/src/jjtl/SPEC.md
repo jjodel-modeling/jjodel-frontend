@@ -283,9 +283,33 @@ notifyStatement = "notify" "(" expression ( "," NUMBER )? ")" ;
 **Interactive expressions** (usable inside conversion expressions):
 
 ```ebnf
-promptExpr = "prompt" "(" expression ( "," expression )? ")" ;
+promptExpr = "prompt" "(" expression "," ( IDENTIFIER ( "," expression )? | expression ) ")" ;
 inputExpr  = "input" "(" expression "," STRING ( "," ( arrayLiteral | expression ) )? ")" ;
 ```
+
+`prompt` has two forms:
+
+- `prompt(message, default)`: asks for a value of type `EString`, with `default` pre-filled.
+- `prompt(message, Type [, default])`: asks for a value of type `Type`, with an optional `default`.
+
+The second argument is read by its shape. A bare name (an identifier followed by `,` or `)`) is the type; any
+other expression (a string, a number, a dotted path, a call, a concatenation) is the default, and the type is
+`EString`. With three arguments the second must be a bare name. The parser does not check the name against the
+known types. Both parser paths, legacy and JjEL, apply the same rule.
+
+```jjtl
+prefix := prompt("Table prefix:", "tbl_")          -- default "tbl_", type EString
+size   := prompt("Column size:", EInt, 255)        -- type EInt, default 255
+label  := prompt("Label for " + name + "?", EString, name)
+```
+
+A bare name is never a default: `prompt("Label?", name)` asks for a value of type `name`, it does not pre-fill the
+`name` attribute. To pre-fill from a variable or attribute, write the type explicitly, as in the third line above.
+The second argument is required: `prompt(message)` alone is rejected by both paths.
+
+`input` does not share this rule. Its second argument is always a string literal naming the input kind (`"string"`,
+`"number"`, `"boolean"`, `"date"`, `"select"`); the optional third is the default, or the options array for
+`"select"`.
 
 > **Implementation status:** Parser produces AST nodes. UIBridge interface and React dialog components exist. **Executor does NOT execute alert/notify statements** (silently dropped). **Prompt/Input in expressions return null** via the AST bridge. This is a gap that needs to be closed.
 
