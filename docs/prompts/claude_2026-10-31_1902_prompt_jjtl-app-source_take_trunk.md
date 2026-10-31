@@ -4,7 +4,7 @@ Prompt-ID: P-2026-10-31-1902
 Chat: C-2026-10-31-1328
 Request: none (rendered by lane-run, no chat URL known for C-2026-10-31-1328)
 Lane: full (merge of the trunk into the branch; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane jjtl-app-source · bd1dbb29d · verifica visiva passata 2026-10-31 (chat, unattended; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-w-jjtlapp`, branch `jjtl-app-source`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-jjtlapp`, branch `jjtl-app-source`, `git log -1` is the commit that adds this file (its parent `cb2a8b160`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-10-31-1902 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
