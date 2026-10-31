@@ -105,10 +105,20 @@ describe('§B.3 row 4, lossy whole-value builtins: their name', () => {
 describe('§B.3 row 5, anything else: opaque, with the reads observed in the hole', () => {
     it.each([
         ['s.title.replace("u", "U")', [TITLE]], ['s.title.replaceAll("e", "E")', [TITLE]], ['s.title.repeat(2)', [TITLE]],
-        ['s.title * 2', [TITLE]], ['s.title + t.label', [TITLE, LABEL]], ['s.title.substring(s.n)', [TITLE, { elementId: 's2', feature: 'A_n', featureName: 'n' }]],
-        ['t.label + t.label', [LABEL]], ['"x"', []],
+        ['s.title * 2', [TITLE]], ['s.title.substring(s.n)', [TITLE, { elementId: 's2', feature: 'A_n', featureName: 'n' }]],
+        ['"x"', []],
     ])('%s (mutant: the reads not recorded)', (expr, reads) => {
         expect(holeFragment('"${' + expr + '}"').origin).toEqual({ kind: 'opaque', reads, template: 'main' });
+    });
+
+    // Amended by P-2026-10-31-1341: rule 1 applies per operand of a plain string `+`, so these two holes, once one
+    // opaque fragment with both reads, are one model fragment per operand (originOperands.test.ts).
+    it.each([
+        ['s.title + t.label', [TITLE, LABEL]], ['t.label + t.label', [LABEL, LABEL]],
+    ])('%s: one model fragment per operand', (expr, owners) => {
+        const out = gen('"${' + expr + '}"');
+        const frags = out.text.fragments.filter(f => f.kind !== 'literal');
+        expect(frags.map(f => f.origin)).toEqual(owners.map(o => ({ kind: 'model', ...o, transformation: { name: 'identity' }, template: 'main' })));
     });
 });
 
