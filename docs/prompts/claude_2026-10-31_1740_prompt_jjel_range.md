@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1740
 Chat: C-2026-10-31-1732
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-10-31 · lane fast · branch jjel-range · a64d90f7e · verifica visiva non applicabile
 Lane: fast (one additive JjEL builtin with tests; stop if the JjTL forall needs more than a local change)
 Depends: none
 Worktree: ~/jjodel-w-jjelrange, branch jjel-range (from alfonso-frontend-jjtl e94541c13)
