@@ -5,7 +5,8 @@
  * The templates of a metamodel live in one key of its `_state` bag, `genTemplates`, the bag that holds the STC
  * roles they read (R-GEN-7), whose value is a JSON string, as `runScenarios` and `runWatches` are
  * (model/simulation/scenarioCodec.ts): `{"v":1,"templates":[template...]}`, a template being `name`, `params`,
- * `body`, `mode` and `target` when it has them, written in that order, so the same templates give the same string.
+ * `paramType`, `body`, `mode` and `target` when it has them, written in that order, so the same templates give the same
+ * string. `paramType` types the first parameter (dispatch.ts, P-2026-10-31-1410): a record without it writes nothing.
  * A record with no `mode` is an expression (R-GEN-25): nothing writes `mode` for it, so a stored string keeps its bytes. The key
  * is not a `sim*` key on purpose: `runSignature` folds every `sim*` key of the bag (simBridge.ts), so an edit would
  * interrupt a run.
@@ -15,8 +16,8 @@
  * The writer is S5's, through the existing `state` setter, with the patch below; this module dispatches nothing.
  *
  * Decoding is tolerant, template by template: a string that is not JSON, or has no `v` 1 and `templates` list, is
- * one defect on the key and the list is not readable; a template that is not a record, has no name, a name an
- * earlier one holds, params that are not a list of strings, a body that is not a text, a mode that is neither `text`
+ * one defect on the key and the list is not readable; a template that is not a record, has no name, a parameter type
+ * that is not a non-empty text, a key (`templateKey`: the name, with its parameter type) an earlier one holds, params that are not a list of strings, a body that is not a text, a mode that is neither `text`
  * nor `expression`, or a target that is not a text, is a defect of its own and the others decode. Unknown fields are
  * ignored. No VersionFixer step and no
  * `irVersion`: a project saved before the key has none, and unknown keys survive save and load (discovery §C.3).
@@ -25,6 +26,7 @@
  * Pure: no import outside the engine.
  */
 
+import { templateKey } from './dispatch';
 import type { TemplateRecord } from './templates';
 
 type Lookup = Record<string, any>;
@@ -54,6 +56,7 @@ export function encodeTemplates(templates: readonly TemplateRecord[]): string {
         templates: templates.map(t => ({
             name: t.name,
             params: [...t.params],
+            ...(t.paramType !== undefined ? { paramType: t.paramType } : {}),
             body: t.body,
             ...(t.mode !== undefined ? { mode: t.mode } : {}),
             ...(t.target !== undefined ? { target: t.target } : {}),
@@ -77,22 +80,26 @@ export function decodeTemplates(raw: string | null | undefined): DecodedTemplate
     if (!root || root.v !== 1 || !Array.isArray(root.templates)) return unreadable('The templates have no version 1 and no list.');
     const templates: TemplateRecord[] = [];
     const defects: TemplateDefect[] = [];
-    const names = new Set<string>();
+    const keys = new Set<string>();
     root.templates.forEach((item, index) => {
         const r = isRecord(item) ? item : null;
         const name = typeof r?.name === 'string' && r.name !== '' ? r.name : null;
         const defect = (message: string) => defects.push({ index, name, message });
         if (!r) return defect('Not a template.');
         if (name === null) return defect('No name.');
-        if (names.has(name)) return defect(`${name}: the name is taken by an earlier one.`);
+        if (r.paramType !== undefined && (typeof r.paramType !== 'string' || r.paramType === '')) return defect(`${name}: the parameter type is not a class name.`);
+        const paramType = typeof r.paramType === 'string' ? r.paramType : undefined;
+        const key = templateKey({ name, paramType });
+        if (keys.has(key)) return defect(paramType !== undefined ? `${name}: the name and the parameter type ${paramType} are taken by an earlier one.` : `${name}: the name is taken by an earlier one.`);
         if (!Array.isArray(r.params) || r.params.some(p => typeof p !== 'string')) return defect(`${name}: the parameters are not a list of names.`);
         if (typeof r.body !== 'string') return defect(`${name}: the body is not a text.`);
         if (r.mode !== undefined && r.mode !== 'text' && r.mode !== 'expression') return defect(`${name}: the mode is neither text nor expression.`);
         if (r.target !== undefined && typeof r.target !== 'string') return defect(`${name}: the target is not a text.`);
-        names.add(name);
+        keys.add(key);
         templates.push({
             name,
             params: [...(r.params as string[])],
+            ...(paramType !== undefined ? { paramType } : {}),
             body: r.body,
             ...(r.mode === 'text' || r.mode === 'expression' ? { mode: r.mode } : {}),
             ...(typeof r.target === 'string' ? { target: r.target } : {}),

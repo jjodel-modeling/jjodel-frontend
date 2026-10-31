@@ -3,11 +3,15 @@
  * discovery_2026-10-30_generator_import_export).
  *
  * The file is `{format, formatVersion, metamodel, generator, entry, targetProfile, files, templates}`, in that order,
- * `entry` written when the generator has a root; a template is `{name, params, mode, body, target?}`. `mode` is always
+ * `entry` written when the generator has a root; a template is `{name, params, paramType?, mode, body, target?}`. `mode` is always
  * written; on import `text` is kept and `expression` is stored with no `mode` (R-GEN-25), so a round trip keeps the
  * stored bytes. `entry` is the generator's `root`, `targetProfile` its `target` (`js` or `none`, R-GEN-34), `files`
  * its declared output files. Export all is a JSON array of such objects; import reads one object or an array. Bodies
  * go through `JSON.stringify` verbatim; files are indented by two spaces and end with one newline.
+ *
+ * `paramType` types a template's first parameter (dispatch.ts, P-2026-10-31-1410). A 1.0 reader would drop it with a
+ * note and read the template untyped, so a document with a typed template is written `formatVersion` 1.1; one with none
+ * stays 1.0, byte for byte. Every 1.x is read, 1.0 unchanged.
  *
  * On import `metamodel`, `entry`, `targetProfile` and `files` may be absent: absent metadata is resolved by the
  * generator codec's own rules (R-GEN-33), through a synthetic `genGenerators` record decoded by `decodeGenerators`,
@@ -33,23 +37,27 @@ import type { JjelExpression } from '../../jjel';
 import { decodeGenerators, DEFAULT_GENERATOR_ID, generatorsPatch, newGeneratorId } from './generatorCodec';
 import type { GeneratorFile, GeneratorRecord, GeneratorTarget } from './generatorCodec';
 import { OriginHost, TemplateSources } from './origin';
+import { templateKey } from './dispatch';
 import { decodeTemplates, encodeTemplates } from './templateCodec';
 import { modeOf, parseTemplateBody, registerTemplates } from './templates';
 import type { TemplateMode, TemplateRecord } from './templates';
 
 export const GENERATOR_FILE_FORMAT = 'jjodel-generator';
 export const GENERATOR_FILE_VERSION = '1.0';
+/** The version of a document with a typed template (`paramType`). */
+export const GENERATOR_FILE_VERSION_TYPED = '1.1';
 
 /** A `formatVersion` this reader accepts: major version 1, any minor. */
 const ACCEPTED_VERSION = /^1(\.\d+)?$/;
 
 const TOP_FIELDS = ['format', 'formatVersion', 'metamodel', 'generator', 'entry', 'targetProfile', 'files', 'templates'];
-const TEMPLATE_FIELDS = ['name', 'params', 'mode', 'body', 'target'];
+const TEMPLATE_FIELDS = ['name', 'params', 'paramType', 'mode', 'body', 'target'];
 
 /** A template as the file writes it: the mode always explicit. */
 export interface GeneratorDocumentTemplate {
     readonly name: string;
     readonly params: readonly string[];
+    readonly paramType?: string;
     readonly mode: TemplateMode;
     readonly body: string;
     readonly target?: string;
@@ -106,7 +114,7 @@ const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 export function generatorDocument(metamodel: string, g: GeneratorRecord): GeneratorDocument {
     return {
         format: GENERATOR_FILE_FORMAT,
-        formatVersion: GENERATOR_FILE_VERSION,
+        formatVersion: g.templates.some(t => t.paramType !== undefined) ? GENERATOR_FILE_VERSION_TYPED : GENERATOR_FILE_VERSION,
         metamodel,
         generator: g.name,
         ...(g.root !== undefined ? { entry: g.root } : {}),
@@ -115,6 +123,7 @@ export function generatorDocument(metamodel: string, g: GeneratorRecord): Genera
         templates: g.templates.map(t => ({
             name: t.name,
             params: [...t.params],
+            ...(t.paramType !== undefined ? { paramType: t.paramType } : {}),
             mode: modeOf(t),
             body: t.body,
             ...(t.target !== undefined ? { target: t.target } : {}),
@@ -201,7 +210,7 @@ export function validateGenerator(g: ImportedGenerator, declared: readonly strin
     const evaluator = new JjelEvaluator(ctx);
     const builtins = new Set(ctx.allNames());
     const sources = new TemplateSources();
-    const parses = new Map(g.templates.map(t => [t.name, parseTemplateBody(t)] as const));
+    const parses = new Map(g.templates.map(t => [templateKey(t), parseTemplateBody(t)] as const));
     const set = registerTemplates(g.templates, ctx, evaluator, new OriginHost({}, sources), sources);
     for (const p of set.problems) {
         const isParseError = parses.get(p.template)?.errors.some(e => e.line === p.line && e.column === p.column && e.message === p.message);
@@ -210,13 +219,13 @@ export function validateGenerator(g: ImportedGenerator, declared: readonly strin
 
     const templates = new Set(g.templates.map(t => t.name));
     for (const t of g.templates) {
-        const expr: JjelExpression | null | undefined = parses.get(t.name)?.expression;
+        const expr: JjelExpression | null | undefined = parses.get(templateKey(t))?.expression;
         if (!expr) continue;
         const calls: string[] = [];
         freeCalls(expr, new Set(t.params), calls);
         for (const callee of new Set(calls)) {
             if (builtins.has(callee) || templates.has(callee)) continue;
-            warnings.push({ severity: 'warning', generator, template: t.name, message: `${t.name} calls ${callee}(), which is not a template of the generator.` });
+            warnings.push({ severity: 'warning', generator, template: templateKey(t), message: `${templateKey(t)} calls ${callee}(), which is not a template of the generator.` });
         }
     }
     return [...errors, ...warnings];
@@ -274,6 +283,7 @@ export function decodeGeneratorFile(text: string): DecodedGeneratorFile {
         const templates: TemplateRecord[] = decoded.templates.map(t => ({
             name: t.name,
             params: t.params,
+            ...(t.paramType !== undefined ? { paramType: t.paramType } : {}),
             body: t.body,
             ...(t.mode === 'text' ? { mode: 'text' as const } : {}),
             ...(t.target !== undefined ? { target: t.target } : {}),

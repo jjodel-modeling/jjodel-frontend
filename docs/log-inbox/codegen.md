@@ -424,3 +424,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile (codegen engine only, no visual surface; GO from chat on the gates)
 **Notes**: Merge-tree measured again: zero conflicts (tree df66f240e), no file on both sides, no governance file; no union resolution; 3 probes once each. Gates on a9b0c8f62: typecheck 0 and typecheck:scripts 0 (no error TS); vitest 12321 passed, 460 files, 9 known red at import, as expected (trunk 12303/459 + branch 18/1); hooks 967; build 0; check:docs 5/5 (prompt said 4/4, gate E added since); check:agents, check:scripts, check:addonly PASS.
 **Prompt document name**: 2026-10-31 15:39
+
+## 2026-10-31 — feat(codegen): templates dispatched on the metaclass of their first argument (P-2026-10-31-1410)
+**Prompt**: Templates sharing a name and differing by `paramType`, the metaclass of their first parameter; a call runs the most specific match, else the untyped fallback, else an error naming the class. Ambiguity and arity are validation errors; the Templates tab gains a Type select and a warning row for uncovered concrete classes; the file format carries `paramType`. Discovery report first.
+**Files touched**: ed032103b: docs/discovery/discovery_2026-10-31_codegen_metaclass_dispatch.md; 49aa0cc56: frontend/src/codegen/engine/dispatch.ts (new), engine/templates.ts, engine/generate.ts, engine/templateCodec.ts, engine/generatorFile.ts, ui/templateDrafts.ts, ui/TemplateEditorTab.tsx, engine/__tests__/dispatch.test.ts (new), ui/__tests__/templateDispatch.test.ts (new); this commit: docs/log-inbox/codegen.md, docs/prompts/claude_2026-10-31_1410_prompt_codegen_metaclass_dispatch.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 9 code files, over 5 (RC-11). Not named in DOVE: templateCodec.ts (stores paramType, key uniqueness), templateDrafts.ts (drafts keyed by templateKey), dispatch.ts (new). Gates: tsc 0, vitest codegen 2329 (2304+25), build 0, codegen-lazy on green. Bench 10/10 killed. Version 1.1 only for typed files; a 1.0 reader still accepts 1.x. Visual check of the tab pending (chat).
+**Prompt document name**: 2026-10-31 14:10
