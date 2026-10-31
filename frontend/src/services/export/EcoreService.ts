@@ -32,6 +32,7 @@ import {
     Selectors,
     Defaults
 } from '../../joiner';
+import { ecoreCollision, ecoreCollisionMessage, LoadedMetamodelNs } from './ecoreNsURI';
 
 // ============================================
 // TYPES
@@ -592,6 +593,18 @@ export class EcoreService {
 
             // console.log('Ecore XML to JSON:', json);
 
+            // P-2026-10-31-1711: an nsURI already declared by a loaded metamodel is refused here,
+            // before the parser writes anything (a second metamodel on it would make XMI on that
+            // namespace ambiguous).
+            const collision = ecoreCollision(json, this.loadedMetamodelNsURIs());
+            if (collision) {
+                return {
+                    success: false,
+                    errors: [ecoreCollisionMessage(collision)],
+                    warnings,
+                };
+            }
+
             // Use existing EcoreParser
             const parsedElements = EcoreParser.parse(json, true, filename || 'imported', true);
 
@@ -621,6 +634,30 @@ export class EcoreService {
                 warnings: [],
             };
         }
+    }
+
+    /**
+     * Package nsURIs (sub-packages included) of the metamodels loaded in the store. Reads the
+     * D-layer `uri`, the literal EPackage.nsURI (LPackage.uri appends the name).
+     */
+    private static loadedMetamodelNsURIs(): LoadedMetamodelNs[] {
+        const state: any = store.getState();
+        const lookup: any = state?.idlookup || {};
+        const out: LoadedMetamodelNs[] = [];
+        const visit = (pkgIds: any, metamodel: string, seen: Set<string>): void => {
+            for (const id of pkgIds || []) {
+                const pkg = lookup[id];
+                if (!pkg || seen.has(id)) continue;
+                seen.add(id);
+                if (typeof pkg.uri === 'string' && pkg.uri.trim() !== '') out.push({ metamodel, nsURI: pkg.uri });
+                visit(pkg.subpackages, metamodel, seen);
+            }
+        };
+        for (const id of state?.m2models || []) {
+            const model = lookup[id];
+            if (model) visit(model.packages, model.name, new Set());
+        }
+        return out;
     }
 
     /**
