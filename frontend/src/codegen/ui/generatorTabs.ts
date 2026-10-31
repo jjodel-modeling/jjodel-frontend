@@ -6,7 +6,8 @@
  *   an open tab and the opener keep working; `codegen_tpl_<metamodelId>_<generatorId>` for the others.
  * - The generator the pill opens: the one last used on that metamodel while it exists, else the default. The memory
  *   is this module's, per session, never persisted.
- * - A Save of one generator's templates: one patch through `generatorsPatch` (G1), the other generators as stored.
+ * - A Save of one generator's templates: one patch through `generatorsPatch` (G1), the other generators as stored; its
+ *   root and files follow the renames and deletes of its templates (P-2026-10-31-1342).
  * - Check is offered only on a generator whose target is `js` (R-GEN-35).
  * - Run likewise: it calls `main()` of the generator's `js` file; a `none` target produces text, not a program (R-GEN-35).
  * - «Go to template»: the template a fragment names, while the list holds it.
@@ -21,6 +22,7 @@
  * Pure but for the session memory: no React, no store.
  */
 
+import { templateKey } from '../engine/dispatch';
 import { DEFAULT_GENERATOR_ID, generatorsPatch } from '../engine/generatorCodec';
 import type { GeneratorRecord, GeneratorTarget } from '../engine/generatorCodec';
 import type { TemplateRecord } from '../engine/templates';
@@ -92,9 +94,50 @@ export function launchGenerator(metamodelId: string, generators: readonly { read
     return last !== undefined && generators.some(g => g.id === last) ? last : DEFAULT_GENERATOR_ID;
 }
 
+/** The root a generator reads when it declares none (R-GEN-33, as the codec's own): `main`, else the first template. */
+const fallbackRootOf = (templates: readonly TemplateRecord[]): string | undefined => (templates.find(t => t.name === 'main') ?? templates[0])?.name;
+
+/**
+ * The generator `g` over its next template list (P-2026-10-31-1342): its root and its files' entries follow the
+ * renames (`renames`, a stored template's key to its new name); then a root that names no template of `next` becomes the
+ * codec's fallback root, and a file entry that names none becomes the root. A list with no template keeps root and files
+ * as they are.
+ *
+ * Root and entries are names, and a name may stand for several templates told apart by type (dispatch.ts,
+ * P-2026-10-31-1640): a name follows a rename only once no template of it keeps it, to the new name of the first one
+ * renamed in the stored order; a template of no draft keeps its name while its key is in `next`, else it is deleted.
+ */
+export function retargetGenerator(
+    g: GeneratorRecord, next: readonly TemplateRecord[], renames: Readonly<Record<string, string>> = {},
+): GeneratorRecord {
+    if (next.length === 0) return { ...g, templates: next };
+    const names = new Set(next.map(t => t.name));
+    const nextKeys = new Set(next.map(t => templateKey(t)));
+    // Where each stored template goes: its new name, or null once deleted.
+    const fates = g.templates.map(t => {
+        const key = templateKey(t);
+        const to = Object.prototype.hasOwnProperty.call(renames, key) ? renames[key] : nextKeys.has(key) ? t.name : null;
+        return { from: t.name, to };
+    });
+    const follow = (name: string): string => {
+        const own = fates.filter(f => f.from === name);
+        if (own.some(f => f.to === name)) return name;
+        return own.find(f => f.to !== null)?.to ?? name;
+    };
+    const followed = g.root !== undefined ? follow(g.root) : undefined;
+    const root = followed !== undefined && names.has(followed) ? followed : fallbackRootOf(next)!;
+    const files = g.files.map(f => {
+        const entry = follow(f.entry);
+        return { path: f.path, entry: names.has(entry) ? entry : root };
+    });
+    return { ...g, root, files, templates: next };
+}
+
 /**
  * What a Save of the generator `generatorId` writes: the decoded `generators` with that one's templates replaced,
- * through `generatorsPatch`; `null` when nothing changes or the generator is gone.
+ * through `generatorsPatch`; `null` when nothing changes or the generator is gone. The root and the files follow the
+ * list (`retargetGenerator`, `renames` from the drafts), but for a default with no `genGenerators`: its metadata is
+ * not stored, and resolves anew from the list.
  */
 export function saveGeneratorTemplates(
     rawTemplates: string | null | undefined,
@@ -102,9 +145,50 @@ export function saveGeneratorTemplates(
     generators: readonly GeneratorRecord[],
     generatorId: string,
     next: readonly TemplateRecord[],
+    renames: Readonly<Record<string, string>> = {},
 ): Record<string, string> | null {
     if (!generators.some(g => g.id === generatorId)) return null;
-    return generatorsPatch(rawTemplates, rawGenerators, generators.map(g => (g.id === generatorId ? { ...g, templates: next } : g)));
+    const derived = generatorId === DEFAULT_GENERATOR_ID && (rawGenerators === undefined || rawGenerators === null);
+    return generatorsPatch(rawTemplates, rawGenerators, generators.map(g => (
+        g.id !== generatorId ? g : derived ? { ...g, templates: next } : retargetGenerator(g, next, renames)
+    )));
+}
+
+/**
+ * The name of a new template (P-2026-10-31-1342): `template<n>`, `n` one past the number of templates the tab lists
+ * (the stored ones and the drafts whose template is gone), skipping a name a template or a draft holds. A draft that
+ * renames its template counts once, so the names run template1, template2, ... with no gap. `stored` and the drafts'
+ * own keys are template keys (`templateKey`, P-2026-10-31-1640): two templates of one name under two types count two,
+ * and the name before the `:` is taken.
+ */
+export function freshTemplateName(stored: readonly string[], drafts: Readonly<Record<string, { readonly name: string }>>): string {
+    const listed = new Set([...stored, ...Object.keys(drafts)]);
+    const nameOf = (key: string) => key.split(':')[0];
+    const taken = new Set([...listed, ...[...listed].map(nameOf), ...Object.values(drafts).map(d => d.name.trim())]);
+    let n = listed.size + 1;
+    while (taken.has(`template${n}`)) n++;
+    return `template${n}`;
+}
+
+/** What Export asks first while the tab holds unsaved drafts (P-2026-10-31-1342); `null` with none: export at once. */
+export function exportDraftsQuestion(dirty: number): string | null {
+    if (dirty <= 0) return null;
+    return `${dirty} template${dirty === 1 ? ' has' : 's have'} unsaved changes. The export holds the saved templates only.`;
+}
+
+/**
+ * Why the tab's right pane generates nothing (P-2026-10-31-1342): the metamodel is gone, or the generator is; `null`
+ * while both exist. The default generator of a gone metamodel still decodes, so `exists` is checked first.
+ */
+export function previewOffReason(exists: boolean, generator: unknown): string | null {
+    if (!exists) return 'This metamodel is gone: nothing is generated.';
+    if (!generator) return 'This generator is gone: nothing is generated.';
+    return null;
+}
+
+/** The selector's entry of a gone generator: its last known name, else its id. */
+export function goneGeneratorLabel(generatorId: string, knownName: string | null | undefined): string {
+    return `${knownName || generatorId} (gone)`;
 }
 
 /** Check is offered only on a generator whose target is `js` (R-GEN-35). */

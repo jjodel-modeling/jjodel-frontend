@@ -450,3 +450,34 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: passato (Templates tab checked by the chat on the branch, vite :3020: Type select, list labels, warning row for an uncovered class)
 **Notes**: Merge-tree: 1 conflict, docs/log-inbox/codegen.md, union trunk first then branch, both 13-line appends, 439 lines; no code file on both sides, no governance file; 4 probes once each. Gates on 7d298c2dc: typecheck 0, typecheck:scripts 0; vitest 12346 passed, 462 files, 9 known red at import, as expected (trunk 12321/460 + branch 25/2); hooks 967; build 0; check:docs 5/5 (prompt said 4/4, gate E added since); check:agents, check:scripts, check:addonly PASS.
 **Prompt document name**: 2026-10-31 16:05
+
+## 2026-10-31 — fix(codegen): generator root follows templates, names without gaps (P-2026-10-31-1342)
+**Prompt**: `claude_2026-10-31_1342_prompt_generators_export_and_import_anomalies.md`, two-phase: Phase 1 discovery of six anomalies, Phase 2 lane A only (codegen points 1, 2, 4 and the Export confirmation); XMI (point 5) to its own lane, Ecore nsURI (point 6) held for Alfonso.
+**Files touched**: `038934225`: `docs/discovery/discovery_2026-10-31_generators_export_and_import_anomalies.md`; `092c33b68`: `frontend/src/codegen/ui/generatorTabs.ts`, `frontend/src/codegen/ui/TemplateEditorTab.tsx`, `frontend/src/codegen/ui/__tests__/generatorAnomalies.test.ts` (new); this commit: this entry, a ticket, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-24 00:03 — the generator tab of slice G3 (New template, Save, Delete, right pane), whose writes froze a fallback root and named templates with gaps
+**Causa**: (c)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Six files across the lane, all listed above. Gates on 092c33b68: typecheck exit 0; vitest src/codegen 2303 tests in 40 files; build exit 0. Mutation bench M1..M14 all killed (commit body). The tab's wiring does not import in the bench (monaco): untested; manual app check owed to the chat. Unattended: a file entry naming a deleted template moves to the root, also in multi-file generators (listed for Alfonso). check:codegen-lazy red in off mode: ticket below.
+**Prompt document name**: 2026-10-31 13:42
+
+## 2026-10-31 — ticket: check:codegen-lazy cannot pass its off mode while every .env sets VITE_CODEGEN on
+**Ticket**: `npm run check:codegen-lazy` exits 1 with mode `off` FAILED (`off 0. the build resolved VITE_CODEGEN as anything but "true" — resolved "true"`, then off 1 and off 3 follow from it), mode `on` green. The committed `frontend/.env.development`, `.env.production` and `.env.staging` all set `VITE_CODEGEN = true` since `2046c17a3` (2026-10-23), so the off build is never off. Measured on `092c33b68`; not caused by P-2026-10-31-1342. The gate needs a way to force the flag off for its off mode, or the off mode retired by decision.
+**Priority**: medium
+**Found in**: P-2026-10-31-1342
+
+## 2026-10-31 — merge: alfonso-frontend-jjtl into gen-anomalies, key-aware (P-2026-10-31-1640)
+**Prompt**: `claude_2026-10-31_1640_prompt_gen-anomalies_key_aware_merge.md`: merge `de897d1a4` (cg-dispatch in the trunk) into `gen-anomalies`, resolving TemplateEditorTab.tsx by meaning: retarget and savedNames on template keys, freshTemplateName over names and keys, preview with both guards, log inbox union.
+**Files touched**: merge commit c9f9828ad (resolved: `frontend/src/codegen/ui/TemplateEditorTab.tsx`, `frontend/src/codegen/ui/generatorTabs.ts`, `frontend/src/codegen/ui/__tests__/generatorAnomalies.test.ts`, `docs/log-inbox/codegen.md`); docs: `docs/prompts/claude_2026-10-31_1640_prompt_gen-anomalies_key_aware_merge.md`, `docs/log-inbox/codegen.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-10-31 16:31 — the trunk merge that stopped on the conflict of meaning in TemplateEditorTab.tsx
+**Causa**: (f)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Root and file entries stay names (stored form unchanged); a name follows a rename only once no template of it keeps it. Mutation bench M1-M5 in the merge commit body, each killed. Gates: tsc exit 0; vitest src/codegen 43 files 2349 tests; build exit 0; check:docs exit 0. No push.
+**Prompt document name**: 2026-10-31 16:40
