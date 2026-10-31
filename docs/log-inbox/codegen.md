@@ -481,3 +481,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Root and file entries stay names (stored form unchanged); a name follows a rename only once no template of it keeps it. Mutation bench M1-M5 in the merge commit body, each killed. Gates: tsc exit 0; vitest src/codegen 43 files 2349 tests; build exit 0; check:docs exit 0. No push.
 **Prompt document name**: 2026-10-31 16:40
+
+## 2026-10-31 — merge: gen-anomalies into alfonso-frontend-jjtl (P-2026-10-31-1702)
+**Prompt**: Bring `gen-anomalies` at `7c3da13e1` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), probes on the merge-tree, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 2249bfef5 (8 files from the branch: `frontend/src/codegen/ui/TemplateEditorTab.tsx`, `generatorTabs.ts`, `__tests__/generatorAnomalies.test.ts` (new), the 1342 discovery report, prompts 1342, 1631, 1640 and this inbox file); `docs/prompts/claude_2026-10-31_1702_prompt_merge_gen-anomalies.md` Status line; `docs/log-inbox/codegen.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Templates tab checked by the chat on the branch, vite :3021: gapless template3 after two expr, expr (e: Ref) and expr (e: Const), warning row for Conj, gone-metamodel preview disabled)
+**Notes**: Merge-tree: zero conflicts, tree ecc606d51 equal to the merge commit's; 8 files branch side, 6 trunk side, none on both, no governance file; 5 probes once each; no union. Gates on 2249bfef5: typecheck 0, typecheck:scripts 0; vitest 12373 passed, 455 files, 9 known red at import, as expected (trunk 12353 + branch 20); hooks 967 (967 + 0); build 0; check:docs 5/5 (prompt said 4/4); check:agents, check:scripts, check:addonly PASS. Lane board untouched.
+**Prompt document name**: 2026-10-31 17:02
