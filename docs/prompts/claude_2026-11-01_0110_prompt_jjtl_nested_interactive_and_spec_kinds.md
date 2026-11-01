@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-0110
 Chat: C-2026-10-31-1328
 Front: release-3-2
-Status: da eseguire
+Status: eseguito 2026-11-01 · lane jjtl-nested-interactive · branch jjtl-nested-interactive · fix 8ee42b697, SPEC eaa44fad0 · verifica visiva non applicabile (host mocked; nested calls open no dialog)
 Lane: fast (one executor change plus a test, then a separate SPEC commit)
 Depends: P-2026-10-31-2245 (merge P-2026-11-01-0049)
 Worktree: ~/jjodel-w-nestedinteractive, branch jjtl-nested-interactive (from the trunk tip after P-2026-11-01-0049)
