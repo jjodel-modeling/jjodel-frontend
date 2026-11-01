@@ -742,3 +742,15 @@ C {
 **Smoke visivo**: non applicabile
 **Notes**: All read, no app run. Proposal: a txtNotation record on the metamodel _state (as generators), no JjEL in v1; all four prototype overrides are data (RISC-V grouping is a finite literal table). Printer in TS, JjEL generator as oracle. Side finding: nearley and ohm-js are already dependencies, used by the legacy DState.languages t2m feature whose Languages tab is no longer mounted (Dock.tsx:309, 347-354). Ten questions in report §4.
 **Prompt document name**: 2026-11-01 20:17
+
+## 2026-11-01 — merge: textual-viewpoint-discovery into alfonso-frontend-jjtl (P-2026-11-01-2042)
+**Prompt**: Bring `textual-viewpoint-discovery` (report of P-2026-11-01-2017) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-viewpoint-discovery on 26977c7ff); union resolution of this inbox.
+**Files touched**: merge commit 29a790243 (`docs/discovery/discovery_2026-11-01_textual_viewpoint.md`, the branch prompt, this inbox); `docs/prompts/claude_2026-11-01_2042_prompt_merge_textual-viewpoint-discovery.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (docs-only)
+**Prompt document name**: 2026-11-01 20:42
