@@ -554,3 +554,16 @@ Importing an Ecore metamodel drops defaultValueLiteral on attributes and the val
 Expected: the import keeps defaultValueLiteral and literal values, and DClass.features is populated as for a metamodel built in the editor.
 **Priority**: medium
 **Found in**: P-2026-11-01-1709
+
+## 2026-11-01 — feat(jjel): trace index reads with a string key (P-2026-11-01-1945)
+**Prompt**: R-TXT-6: `o["f"]` with a string key notifies `ctx.readObserver` as the member read `o.f` does; numeric index, non-string key and missing key unchanged; tests first, red before the change
+**Files touched**: frontend/src/jjel/evaluator/evaluator.ts, frontend/src/jjel/__tests__/templateInterpolation.test.ts, frontend/src/codegen/engine/__tests__/origin.test.ts (edcbad03e); docs/log-inbox/codegen.md, docs/prompts/claude_2026-11-01_1945_prompt_jjel_index_read_origin.md (Status)
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Observer part done, guards on a mutation bench. Not met: test (1) "same origin span through a template". origin.ts rule 1 (readName, :199) names member reads only, so s["title"] is an opaque fragment with the read in `reads`, and GeneratorPane.tsx:594 sets data-origin-id on model origins only: no Alt+click yet. That step is origin.ts, outside the declared scope; awaiting Alfonso. Gates: tsc 0, vitest jjel+codegen 2868/2868, build 0.
+**Prompt document name**: 2026-11-01 19:45

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-1945
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · lane index-read-origin · edcbad03e · partial: observer done, model origin for o["f"] needs origin.ts (awaiting Alfonso) · verifica visiva non applicabile
 Lane: fast (one evaluator change plus tests)
 Depends: P-2026-11-01-1709 (merged 5b069a615); decisions R-TXT-1..10 (404452168)
 Worktree: ~/jjodel-w-indexorigin, branch index-read-origin (from the trunk commit that adds this prompt, on top of 71aee8fde)
