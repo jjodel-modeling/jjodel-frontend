@@ -901,3 +901,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile (no UI)
 **Notes**: Real buildEvalContext under a joiner Proxy stub and a mocked ../utils: 6 of 8 red before, 9/9 after (EInt 7, EBoolean false/true, EString, EDouble 2.5, enum Mid, "abc" -> 0/null, Ecore fixture, default text prints `level 7`, shell defaultValue). 3 mutants killed. Gates: tsc 0, vitest jjscript+jjel+codegen 3725 passed (context-binding.test.ts known window red), build 0, check:docs 0. Literal parsed strictly: "2.5" on EInt reads 2.5, as defaultValue does.
 **Prompt document name**: 2026-11-01 23:50
+
+## 2026-11-02 — merge: jjel-default-literal into alfonso-frontend-jjtl (P-2026-11-02-0007)
+**Prompt**: Bring `jjel-default-literal` at `1e5a8ff90` (fix 59fb7c389) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-jjel-default-literal on eef5351e7); union resolution of this inbox.
+**Files touched**: merge commit 4383c2572 (`frontend/src/jjscript/executor/commands/eval.ts`, `frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts`, the 2350 prompt, this inbox); `docs/prompts/claude_2026-11-02_0007_prompt_merge_jjel-default-literal.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 00:07
