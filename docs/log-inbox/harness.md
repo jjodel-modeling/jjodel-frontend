@@ -988,3 +988,10 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 **Smoke visivo**: non applicabile — the chat checks the board and the tray after the merge (P8 deroga)
 **Notes**: 4790, warm caches, 20 s busy loop, load 4-13: /api error "" on 5/5 (cold 8.0 s, then 0.5-0.8 s). Old timeout not reproduced at that load; loop stall in the cold round measured instead: max 0.49 s new, 6.6 s on the HEAD copy (4791). /api/attention primes trunk Status before attentionOf. Mutation bench (4 mutants, all red) in the commit message. 4700 agent untouched.
 **Prompt document name**: 2026-10-22 12:10
+
+## 2026-11-01 — ticket: criticalZone.test.ts fails inside lanes started with a critical-zone go-ahead
+**Ticket**: `frontend/scripts/hooks/__tests__/criticalZone.test.ts` (or wherever the critical-zone hook test lives) fails 4 cases whenever it runs inside a lane started with `--critical-zone-goahead`: the lane's environment carries `JJODEL_CRITICAL_ZONE_GOAHEAD`, and the hook spawned by the test inherits it, so the "ask"/"deny" expectations see a granted go-ahead. Measured by P-2026-11-01-1605 on 2026-11-01: 4 failures on the branch and on trunk `052746160` with the variable set; 70/70 with the variable unset.
+
+Expected: the test clears `JJODEL_CRITICAL_ZONE_GOAHEAD` (and any other go-ahead variable) from the child environment unless a case sets it on purpose, so vitest baselines inside critical-zone lanes match the ones outside.
+**Priority**: low
+**Found in**: P-2026-11-01-1605
