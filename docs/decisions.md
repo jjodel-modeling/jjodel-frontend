@@ -6930,6 +6930,40 @@ Chromium 151 only), verified: none, reversible: trunk (docs only, no code yet).
   as a worker plugin bound through `ontoBindings v1` and writing `set` lines through `applyAsOneStep`; the JavaScript
   generator of the codegen pilot is not the first slice.
 
+## R-TXT: a default textual notation for every model (decisions 2026-11-01)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-11-01_default_textual_notation.md` (P-2026-11-01-1709,
+branch `default-textual-notation`, report `f910decbc`, merged `5b069a615`), sections 3 to 5; the project chat
+C-2026-11-01-1713, Alfonso 2026-11-01 19:39 «ok alle raccomandazioni» on the ten questions of §5. All rows: ratified by
+Alfonso as recommended, evidence: read and measured (probes in the app, report §1), verified: none, reversible: trunk
+(docs only, no code yet). The rules D1 to D7 are those of the report's §0 as amended here.
+
+- **R-TXT-1** (2026-11-01). **D6, feature order:** the features of the supertypes first (most general first), then the
+  class's own; within each, attributes before references, in declaration order.
+- **R-TXT-2** (2026-11-01). **D3, strings are always quoted.** Integers in decimal, booleans as `true`/`false`, an
+  enumeration literal unquoted as declared (told apart from a string by the attribute's type being in `enumerations`).
+- **R-TXT-3** (2026-11-01). **D1/D3, names as declared:** class names and enumeration literals are printed exactly as
+  declared, never lower-cased. An object name that is not an identifier is quoted.
+- **R-TXT-4** (2026-11-01). **D5, references:** the target's name when it is unique among the instances of the
+  reference's type in the model; otherwise, or when the target has no `name`, its containment path from the root
+  (`parts[1]`, as `buildContainmentPath`, `eval.ts:879`). A multi-valued reference prints `r [a, b]`.
+- **R-TXT-5** (2026-11-01). **D2, unset:** an attribute is unset when it reads `null` (optional, no declared default) or
+  an empty list (multi-valued). Mandatory and defaulted attributes always print. No `isSet(o, f)` builtin for now.
+- **R-TXT-6** (2026-11-01). **An index read is traced:** `o["f"]` with a string key notifies `readObserver` exactly as
+  the member read `o.f` does (`evaluator.ts:673-677`), so text printed by reflection keeps its model origin. A JjEL
+  change, done in its own lane under R-GEN-10.
+- **R-TXT-7** (2026-11-01). **First deliverable: a shipped generator written in JjEL** (untyped templates `obj(o)`,
+  `feature(o, f)`, `value(a, v)`), not a built-in `defaultText`. A built-in is reconsidered only if the JjEL generator
+  hits a measured limit.
+- **R-TXT-8** (2026-11-01). **Overrides go through the existing metaclass dispatch** (`templates.ts:183-197`): per-class
+  typed hooks that take the object first (`kw(o, f)`, `feature(o, f)`), so the most specific class wins. No new
+  name-based lookup.
+- **R-TXT-9** (2026-11-01). **D7, contextual keywords:** a feature name is a keyword only where it starts a line; a name
+  position accepts an identifier equal to a keyword. Only non-identifiers are quoted.
+- **R-TXT-10** (2026-11-01). **The Ecore import's losses are a ticket:** `defaultValueLiteral` and the literal `value`s
+  are dropped on import, and `DClass.features` is empty afterwards (report §1.1, side finding). Tracked as a ticket on
+  the codegen front, not fixed inside the R-TXT lanes.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
