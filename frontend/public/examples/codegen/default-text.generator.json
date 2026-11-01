@@ -1,0 +1,150 @@
+{
+  "format": "jjodel-generator",
+  "formatVersion": "1.0",
+  "generator": "Default text",
+  "entry": "main",
+  "targetProfile": "none",
+  "files": [
+    {
+      "path": "model.txt",
+      "entry": "main"
+    }
+  ],
+  "templates": [
+    {
+      "name": "main",
+      "params": [],
+      "mode": "expression",
+      "body": "instances.filter(x => x.parent == null).map(o => obj(o)).join(\"\\n\")"
+    },
+    {
+      "name": "obj",
+      "params": [
+        "o"
+      ],
+      "mode": "expression",
+      "body": "objDefault(o)"
+    },
+    {
+      "name": "objDefault",
+      "params": [
+        "o"
+      ],
+      "mode": "expression",
+      "body": "[(o.instanceOf.allSuperclasses.sortBy(s => s.allSuperclasses.size) + [o.instanceOf]).flatMap(k => k.attributes.filter(a => a.name != \"name\" and (if o[a.name] == null then false else if o[a.name] is Array then o[a.name].size > 0 else true)) + k.references.filter(r => (if o[r.name] == null then false else if o[r.name] is Array then o[r.name].size > 0 else true)))].map(fs => if fs.isEmpty then head(o) + \" {}\" else block(o, fs)).first"
+    },
+    {
+      "name": "block",
+      "params": [
+        "o",
+        "fs"
+      ],
+      "mode": "text",
+      "body": "${head(o)} {\n  ${fs.map(f => feature(o, f)).join(\"\\n\")}\n}"
+    },
+    {
+      "name": "head",
+      "params": [
+        "o"
+      ],
+      "mode": "expression",
+      "body": "o.instanceOf.name + (if (o.instanceOf.allSuperclasses + [o.instanceOf]).flatMap(k => k.attributes).map(a => a.name).contains(\"name\") and o.name != null then \" \" + nm(o.name) else \"\")"
+    },
+    {
+      "name": "feature",
+      "params": [
+        "o",
+        "f"
+      ],
+      "mode": "expression",
+      "body": "if f.containment == null then attribute(o, f) else if f.containment then contained(o, f) else reference(o, f)"
+    },
+    {
+      "name": "kw",
+      "params": [
+        "o",
+        "f"
+      ],
+      "mode": "expression",
+      "body": "f.name"
+    },
+    {
+      "name": "attribute",
+      "params": [
+        "o",
+        "a"
+      ],
+      "mode": "expression",
+      "body": "kw(o, a) + \" \" + (if o[a.name] is Array then \"[\" + o[a.name].map(v => value(a, v)).join(\", \") + \"]\" else value(a, o[a.name]))"
+    },
+    {
+      "name": "contained",
+      "params": [
+        "o",
+        "r"
+      ],
+      "mode": "text",
+      "body": "${kw(o, r)} {\n  ${(if o[r.name] is Array then o[r.name] else [o[r.name]]).map(c => obj(c)).join(\"\\n\")}\n}"
+    },
+    {
+      "name": "reference",
+      "params": [
+        "o",
+        "r"
+      ],
+      "mode": "expression",
+      "body": "kw(o, r) + \" \" + (if o[r.name] is Array then \"[\" + o[r.name].map(t => ref(o, r, t)).join(\", \") + \"]\" else ref(o, r, o[r.name]))"
+    },
+    {
+      "name": "value",
+      "params": [
+        "a",
+        "v"
+      ],
+      "mode": "expression",
+      "body": "if enumerations.map(e => e.name).contains(a.type) then v else if v is Boolean then (if v then \"true\" else \"false\") else if v is Number then \"\" + v else str(v)"
+    },
+    {
+      "name": "ref",
+      "params": [
+        "o",
+        "r",
+        "t"
+      ],
+      "mode": "expression",
+      "body": "if (t.instanceOf.allSuperclasses + [t.instanceOf]).flatMap(k => k.attributes).map(a => a.name).contains(\"name\") and t.name != null and [classes.filter(c => c.name == r.type).first].map(c => if c == null then instances else c.allInstances).first.filter(x => x.name == t.name).size == 1 then nm(t.name) else path(t)"
+    },
+    {
+      "name": "path",
+      "params": [
+        "t"
+      ],
+      "mode": "expression",
+      "body": "if t.parent == null then \"[\" + instances.filter(x => x.parent == null).map(x => x.id).indexOf(t.id) + \"]\" else (if t.parent.parent == null and instances.filter(x => x.parent == null).size == 1 then \"\" else path(t.parent) + \".\") + segment(t)"
+    },
+    {
+      "name": "segment",
+      "params": [
+        "t"
+      ],
+      "mode": "expression",
+      "body": "[t.parent].map(p => (p.instanceOf.allSuperclasses + [p.instanceOf]).flatMap(k => k.references).filter(r => r.containment and (if p[r.name] is Array then p[r.name].map(x => x.id).contains(t.id) else p[r.name]?.id == t.id)).map(r => if p[r.name] is Array then r.name + \"[\" + p[r.name].map(x => x.id).indexOf(t.id) + \"]\" else r.name).first).first"
+    },
+    {
+      "name": "nm",
+      "params": [
+        "s"
+      ],
+      "mode": "expression",
+      "body": "if s.matches(\"^[A-Za-z_][A-Za-z0-9_]*$\") then s else str(s)"
+    },
+    {
+      "name": "str",
+      "params": [
+        "s"
+      ],
+      "mode": "expression",
+      "body": "\"\\\"\" + s.replaceAll(\"\\\\\", \"\\\\\\\\\").replaceAll(\"\\\"\", \"\\\\\\\"\").replaceAll(\"\\n\", \"\\\\n\") + \"\\\"\""
+    }
+  ]
+}
