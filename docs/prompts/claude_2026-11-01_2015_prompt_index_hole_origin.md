@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2015
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito (parziale: test 4 e smoke visivo non soddisfatti, vedi log)
 Lane: fast (one engine change plus tests)
 Depends: P-2026-11-01-1945 (merged 9e19ecbab); decisions R-TXT-13 (7b1ac5abf)
 Worktree: ~/jjodel-w-indexhole, branch index-hole-origin (from the trunk commit that adds this prompt)

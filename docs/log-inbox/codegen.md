@@ -660,3 +660,16 @@ Arbiter arb3 {
 **Layer Impact Report**: not-required
 **Smoke visivo**: passato (crops of the lane, unattended; a new example file, nothing in the demo changes)
 **Prompt document name**: 2026-11-01 20:02
+
+## 2026-11-01 — feat(codegen): index holes take the origin of their last read (P-2026-11-01-2015)
+**Prompt**: R-TXT-13: a hole whose expression is an index read gets the model origin of its last read when that read's value equals the hole's value; origin.ts only, tests first, red before the change
+**Files touched**: frontend/src/codegen/engine/origin.ts, frontend/src/codegen/engine/__tests__/origin.test.ts (56092ebf5); docs/log-inbox/codegen.md, docs/prompts/claude_2026-11-01_2015_prompt_index_hole_origin.md (Status)
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-01 19:45 (`claude_2026-11-01_1945_prompt_jjel_index_read_origin.md`: its test (1) was left open, the origin of o["f"])
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (see Notes)
+**Notes**: Engine part done, two mutants on a bench. Not met: test (4) and the visual check: the default generator passes values as template arguments (`value(a, o[a.name])`), so the index read runs outside the hole that prints `"" + v`; "0" stays opaque. Needs reads carried through call arguments, outside origin.ts; awaiting Alfonso. Gates: tsc 0, vitest 2883/2883, build 0.
+**Prompt document name**: 2026-11-01 20:15
