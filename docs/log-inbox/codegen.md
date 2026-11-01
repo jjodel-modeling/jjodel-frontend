@@ -685,3 +685,35 @@ Arbiter arb3 {
 **Layer Impact Report**: not-required
 **Smoke visivo**: passato (crop of the lane, unattended)
 **Prompt document name**: 2026-11-01 20:26
+
+## 2026-11-01 — probe(codegen): default text generator on real reads, R-TXT-5 and R-TXT-12 hold (P-2026-11-01-2016)
+**Prompt**: check R-TXT-5 (unset/mandatory/defaulted reads) and R-TXT-12 (non-diamond multiple inheritance order) on real JjEL handles in the app; fix the generator and its test mock only if either fails
+**Files touched**: none in code; docs/log-inbox/codegen.md, docs/prompts/claude_2026-11-01_2016_prompt_default_text_real_reads.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Both rules hold, no code. The prompt cites frontend/src/examples/codegen/, which does not exist: the generator is frontend/public/examples/codegen/default-text.generator.json (the 2002 merge entry carries the same wrong path). Declared default set after the import via LAttribute.defaultValue = 7 (import drops it). Probe _tmp_default_text_reads.ts, port 3048, exit 0, no generation or page error; fixture, log, crop in ~/.jjodel-lanes/P-2026-11-01-2016.
+**Prompt document name**: 2026-11-01 20:16
+
+Probe fixture `ReadsProbe.ecore`: A{a: EInt [1]}, B1 extends A {b1: EInt [1]}, B2 {b2: EInt [1]}, C extends B1, B2 {opt: EString, count: EInt [1], flag: EBoolean, must: EBoolean [1], level: EInt default 7, tags: EString [*]}; one C, nothing set in the XMI.
+
+JjEL hole, measured: `a=I:0 b1=I:0 b2=I:0 opt=null count=I:0 flag=null must=B:false level=I:7 tags=A[]`; `C supers=[B1,B2] all=[B1,A,B2]` (depth-first preorder), `sortBy(allSuperclasses.size) + [C]` = `A,B2,B1,C`, which is R-TXT-12 (depth 0: A before B2 by depth-first declaration order; then B1; then C).
+
+Default text output (crop `output-readsprobe.png`):
+```
+C {
+  a 0
+  b2 0
+  b1 0
+  count 0
+  must false
+  level 7
+}
+```
+`opt`, `flag` (optional, no default) and `tags` (empty) do not print; mandatory and defaulted attributes print (R-TXT-5).
+
+**Ticket** (side finding, low): the XMI import writes `["false"]` into the D-layer slot of the unset mandatory boolean `must` (the other unset slots, `count` included, hold `[]`), so for a mandatory EBoolean the D-layer cannot tell unset from set-to-false; class shells read `lowerBound` as `null` for every attribute, so a generator cannot see mandatoriness through `a.lowerBound`.

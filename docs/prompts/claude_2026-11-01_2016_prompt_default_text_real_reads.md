@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2016
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito
 Lane: fast (a probe in the app, then at most a change to the generator file and its test)
 Depends: P-2026-11-01-1946 (merged 0e5d9152d); decisions R-TXT-5, R-TXT-12 (7b1ac5abf)
 Worktree: ~/jjodel-w-textreads, branch default-text-real-reads (from the trunk commit that adds this prompt)
