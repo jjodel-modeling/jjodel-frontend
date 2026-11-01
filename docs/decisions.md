@@ -6952,8 +6952,8 @@ Alfonso as recommended, evidence: read and measured (probes in the app, report Â
 - **R-TXT-6** (2026-11-01). **An index read is traced:** `o["f"]` with a string key notifies `readObserver` exactly as
   the member read `o.f` does (`evaluator.ts:673-677`), so text printed by reflection keeps its model origin. A JjEL
   change, done in its own lane under R-GEN-10.
-- **R-TXT-7** (2026-11-01). **First deliverable: a shipped generator written in JjEL** (untyped templates `obj(o)`,
-  `feature(o, f)`, `value(a, v)`), not a built-in `defaultText`. A built-in is reconsidered only if the JjEL generator
+- **R-TXT-7** (2026-11-01). **First deliverable: a shipped generator written in JjGen** (untyped templates `obj(o)`,
+  `feature(o, f)`, `value(a, v)`), not a built-in `defaultText`. A built-in is reconsidered only if the JjGen generator
   hits a measured limit.
 - **R-TXT-8** (2026-11-01). **Overrides go through the existing metaclass dispatch** (`templates.ts:183-197`): per-class
   typed hooks that take the object first (`kw(o, f)`, `feature(o, f)`), so the most specific class wins. No new
@@ -6978,11 +6978,11 @@ verified: none, reversible: trunk.
 - **R-TXT-13** (2026-11-01). **An index hole has a model origin:** a template hole whose expression is an index read
   (`o[f.name]`) gets the origin of the last read recorded for it, when that read's value equals the hole's value;
   otherwise it stays unlinked, as today. Alt+click on reflective output reaches the model.
-- **R-TXT-14** (2026-11-01). **The JjEL generator is the reference implementation of R-TXT, not the final mechanism.**
+- **R-TXT-14** (2026-11-01). **The JjGen generator is the reference implementation of R-TXT, not the final mechanism.**
   The final mechanism is to be designed as a declarative model of the notation (a textual viewpoint), from which the
-  printer, the EBNF and later a parser are derived, and in which a DSL's overrides are data, not JjEL code. Until it is
-  ratified, no DSL override is written against the JjEL generator in the repo.
-
+  printer, the EBNF and later a parser are derived, and in which a DSL's overrides are data, not JjGen templates. Until it is
+  ratified, no DSL override is written against the JjGen generator in the repo.
+- **R-TXT-15** (2026-11-01, Alfonso 20:24). **Terminology:** JjGen is the template language of code generation (templates, holes, typed dispatch); JjEL is the expression language, used inside JjGen holes and elsewhere. A generator is written in JjGen, not in JjEL. Rows 7 and 14 were reworded accordingly the same day.
 
 ## Superate
 
