@@ -729,3 +729,16 @@ C {
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile (docs-only)
 **Prompt document name**: 2026-11-01 20:34
+
+## 2026-11-01 — docs(codegen): discovery of a textual viewpoint (P-2026-11-01-2017)
+**Prompt**: read-only discovery for R-TXT-14: what a declarative textual notation (a textual viewpoint) should be in Jjodel, where it lives, what is data and what needs JjEL, how printer, EBNF and parser derive from it; a proposal with CoreSpec and ArbiterSpec as overrides
+**Files touched**: docs/discovery/discovery_2026-11-01_textual_viewpoint.md (new), docs/log-inbox/codegen.md, docs/prompts/claude_2026-11-01_2017_prompt_textual_viewpoint_discovery.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: All read, no app run. Proposal: a txtNotation record on the metamodel _state (as generators), no JjEL in v1; all four prototype overrides are data (RISC-V grouping is a finite literal table). Printer in TS, JjEL generator as oracle. Side finding: nearley and ohm-js are already dependencies, used by the legacy DState.languages t2m feature whose Languages tab is no longer mounted (Dock.tsx:309, 347-354). Ten questions in report §4.
+**Prompt document name**: 2026-11-01 20:17
