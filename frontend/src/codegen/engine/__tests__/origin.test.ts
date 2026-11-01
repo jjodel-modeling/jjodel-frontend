@@ -167,16 +167,55 @@ describe('the absent value and the explicit null (U10)', () => {
     });
 });
 
-describe('an index read with a string key (R-TXT-6, P-2026-11-01-1945)', () => {
-    // The evaluator reports the read; rule 1 names member reads only (readName), so the hole stays opaque and carries
-    // the read in `reads`. A model origin for o["f"] is a step of origin.ts, not of this lane.
-    it('s["title"] is opaque and carries the read of s.title (mutant: the index path not observed)', () => {
-        const f = holeFragment('"${s["title"]}"');
+describe('an index read with a string key (R-TXT-6, R-TXT-13)', () => {
+    const IDENTITY_TITLE = { kind: 'model', ...TITLE, transformation: { name: 'identity' }, template: 'main' };
+
+    /** `gen` with extra globals: a key `k = "title"` and a handle `f` named `title`. */
+    function genWith(body: string) {
+        const { lookup, globals } = fixture();
+        return generate({ ...globals, k: 'title', f: { id: 'f1', __type: 'Attribute', name: 'title' } }, lookup, 'M', [T(body)], 'main');
+    }
+    const hole = (body: string): TextFragment => {
+        const out = genWith(body);
+        expect(out.errors).toEqual([]);
+        const frags = out.text.fragments.filter(x => x.kind !== 'literal');
+        expect(frags).toHaveLength(1);
+        return frags[0];
+    };
+
+    it.each([['s["title"]'], ['s[k]'], ['s[f.name]'], ['s["ti" + "tle"]']])('%s has the origin of s.title (mutant: an IndexAccess hole not linked)', expr => {
+        const f = hole('"${' + expr + '}"');
+        expect([f.text, f.origin]).toEqual(['unlocked State', IDENTITY_TITLE]);
+    });
+
+    it('a number feature read by index keeps its feature (mutant: the value type not allowed)', () => {
+        const f = hole('"${s["n"]}"');
+        expect([f.text, f.origin]).toEqual(['3', { kind: 'model', elementId: 's2', feature: 'A_n', featureName: 'n', transformation: { name: 'identity' }, template: 'main' }]);
+    });
+
+    it.each([['s["title"].repeat(2)'], ['s["title"].replace("u", "U")'], ['s["n"] * 2']])('%s is not an index hole: opaque (mutant: the check on the expression type dropped)', expr => {
+        expect(hole('"${' + expr + '}"').origin.kind).toBe('opaque');
+    });
+
+    it('a plain string + links its index operand, as a member operand (rule 1 per operand)', () => {
+        const out = genWith('"${s["title"] + "x"}"');
+        expect(out.text.fragments.filter(x => x.kind === 'model').map(x => x.origin)).toEqual([IDENTITY_TITLE]);
+    });
+
+    it('an index hole whose last read differs from its value stays opaque, with the reads (mutant: the value check dropped)', () => {
+        const f = hole('"${["z", s.title][s.n - 2]}"');
+        expect([f.text, f.origin.kind]).toEqual(['unlocked State', 'opaque']);
+        const g = hole('"${[s.title, "z"][s.n - 2]}"');
+        expect([g.text, g.origin.kind]).toEqual(['z', 'opaque']);
+    });
+
+    it('a numeric index on an array stays opaque, with the reads of the array (mutant: a numeric key linked)', () => {
+        const f = hole('"${[s.title][0]}"');
         expect([f.text, f.origin]).toEqual(['unlocked State', { kind: 'opaque', reads: [TITLE], template: 'main' }]);
     });
 
-    it('a computed string key is a read too', () => {
-        const f = holeFragment('"${s["ti" + "tle"]}"');
-        expect([f.text, f.origin]).toEqual(['unlocked State', { kind: 'opaque', reads: [TITLE], template: 'main' }]);
+    it('a key that names no member is no read and no link (mutant: the membership guard dropped)', () => {
+        const out = genWith('"${s["nope"]}"');
+        expect(out.text.fragments.filter(x => x.kind === 'model')).toEqual([]);
     });
 });

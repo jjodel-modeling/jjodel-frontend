@@ -5,7 +5,7 @@
  * `OriginHost` is the `JjelTextHost` a template's context carries, and its `observe` is the context's
  * `readObserver`. Each hole is evaluated through `evaluateHole`, which collects the member reads of that hole and
  * turns its value into a Text by four rules (discovery §B.4):
- * 1. model: the hole is a member read, or one named builtin with literal arguments applied to a member read. The
+ * 1. model: the hole is a member read or an index read (R-TXT-13), or one named builtin with literal arguments applied to a member read. The
  *    fragment gets the read's owner and feature, and the builtin's name: `identity` for a bare read; the name for
  *    a character-aligned or a lossy whole-value builtin; the name and the arguments for a sub-range one. The name
  *    is recorded without claiming invertibility (U9). The owner is the object the feature was read on, the last
@@ -200,6 +200,17 @@ function readName(expr: JjelExpression): string | null {
     if (expr.type === 'MemberAccess' || expr.type === 'NullSafeMemberAccess') return expr.property;
     if ((expr.type === 'MethodCall' || expr.type === 'NullSafeMethodCall') && expr.args.length === 0) return expr.method;
     return null;
+}
+
+/**
+ * An index read with a string key, `o[k]` (R-TXT-13): the evaluator reports it as the member read `o.k` (R-TXT-6). The
+ * key is not known here, so a literal key is checked against the read and a literal number (an array position) is
+ * refused; any other index is taken as read, and `modelOrigin` then compares the read's value with the hole's.
+ */
+function isIndexRead(expr: JjelExpression, read: Read): boolean {
+    if (expr.type !== 'IndexAccess') return false;
+    if (expr.index.type !== 'Literal') return true;
+    return typeof expr.index.value === 'string' && expr.index.value === read.property;
 }
 
 /** A literal argument's value: a literal, or `-` before a number literal; `undefined` for anything else. */
@@ -484,7 +495,7 @@ export class OriginHost implements JjelTextHost {
         const last = reads[reads.length - 1];
         if (!last) return null;
         let transformation: Transformation | null = null;
-        if (readName(expr) === last.property && last.value === value) {
+        if ((readName(expr) === last.property || isIndexRead(expr, last)) && last.value === value) {
             transformation = IDENTITY;
         } else {
             const applied = namedBuiltin(expr);
