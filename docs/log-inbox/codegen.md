@@ -717,3 +717,15 @@ C {
 `opt`, `flag` (optional, no default) and `tags` (empty) do not print; mandatory and defaulted attributes print (R-TXT-5).
 
 **Ticket** (side finding, low): the XMI import writes `["false"]` into the D-layer slot of the unset mandatory boolean `must` (the other unset slots, `count` included, hold `[]`), so for a mandatory EBoolean the D-layer cannot tell unset from set-to-false; class shells read `lowerBound` as `null` for every attribute, so a generator cannot see mandatoriness through `a.lowerBound`.
+
+## 2026-11-01 — merge: default-text-real-reads into alfonso-frontend-jjtl (P-2026-11-01-2034)
+**Prompt**: Bring `default-text-real-reads` at `228a531bf` into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-default-text-real-reads on a86478e21); union resolution of this inbox.
+**Files touched**: merge commit 2d6bf281d (the branch prompt, this inbox); `docs/prompts/claude_2026-11-01_2034_prompt_merge_default-text-real-reads.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (docs-only)
+**Prompt document name**: 2026-11-01 20:34
