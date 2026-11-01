@@ -1172,7 +1172,11 @@ export class JjelEvaluator {
             const key = String(index);
             if (isBlockedMember(obj, key)) return null;
             const value = (obj as any)[key];
-            return typeof value === 'function' ? null : value ?? null;
+            if (typeof value === 'function') return null;
+            // A string key is observed as the member read `o.f` is, same guard
+            // and arguments, so reflective text keeps its origin (R-TXT-6).
+            if (typeof index === 'string' && key in obj) ctx.readObserver?.(obj, key, value ?? null);
+            return value ?? null;
         }
         return null;
     }

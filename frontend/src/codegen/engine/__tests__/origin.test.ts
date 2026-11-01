@@ -166,3 +166,17 @@ describe('the absent value and the explicit null (U10)', () => {
         expect(out.code).toBe('unlocked State, CoinCoin');
     });
 });
+
+describe('an index read with a string key (R-TXT-6, P-2026-11-01-1945)', () => {
+    // The evaluator reports the read; rule 1 names member reads only (readName), so the hole stays opaque and carries
+    // the read in `reads`. A model origin for o["f"] is a step of origin.ts, not of this lane.
+    it('s["title"] is opaque and carries the read of s.title (mutant: the index path not observed)', () => {
+        const f = holeFragment('"${s["title"]}"');
+        expect([f.text, f.origin]).toEqual(['unlocked State', { kind: 'opaque', reads: [TITLE], template: 'main' }]);
+    });
+
+    it('a computed string key is a read too', () => {
+        const f = holeFragment('"${s["ti" + "tle"]}"');
+        expect([f.text, f.origin]).toEqual(['unlocked State', { kind: 'opaque', reads: [TITLE], template: 'main' }]);
+    });
+});
