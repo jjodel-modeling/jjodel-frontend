@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2351
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · lane ecore-export-defaults · ed6df7b6d · export reads defaultValueLiteral from __raw, import reads literal label and serializable
 Lane: fast (export line re-enabled, two import reads, round-trip tests)
 Depends: P-2026-11-01-2300/2325 (merged 44c6794f2); its open points 2 and 3
 Worktree: ~/jjodel-w-ecoreexport, branch ecore-export-defaults (from the trunk commit that adds this prompt)

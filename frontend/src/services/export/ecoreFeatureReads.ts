@@ -27,3 +27,15 @@ export function ecoreLiteralValue(json: Record<string, unknown> | null | undefin
     const raw = json?.[INLINE + 'value'];
     return raw === undefined || raw === null ? Number.NEGATIVE_INFINITY : +raw;
 }
+
+/** An EEnumLiteral's display `literal`; '' when the .ecore declares none (P-2026-11-01-2351). */
+export function ecoreLiteralLabel(json: Record<string, unknown> | null | undefined): string {
+    const raw = json?.[INLINE + 'literal'];
+    return raw === undefined || raw === null ? '' : String(raw);
+}
+
+/** An EEnum's `serializable` flag; true when the .ecore declares none, as EMF does (P-2026-11-01-2351). */
+export function ecoreEnumSerializable(json: Record<string, unknown> | null | undefined): boolean {
+    const raw = json?.[INLINE + 'serializable'];
+    return raw === undefined || raw === null ? true : String(raw) !== 'false';
+}

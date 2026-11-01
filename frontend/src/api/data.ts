@@ -45,7 +45,7 @@ import {
     DPointerTargetable, ShortAttribETypes, toLongEType, DState, Debug
 } from "../joiner";
 import {DefaultEClasses, ShortDefaultEClasses, toLongEClass} from "../common/U";
-import {ecoreDefaultValueLiteral, ecoreLiteralValue} from "../services/export/ecoreFeatureReads";
+import {ecoreDefaultValueLiteral, ecoreLiteralValue, ecoreLiteralLabel, ecoreEnumSerializable} from "../services/export/ecoreFeatureReads";
 type RET<T = boolean> = T | Promise<T>;
 /*
 
@@ -885,6 +885,7 @@ export class EcoreParser{
                 case ECoreEnum.xsitype: case ECoreNamed.namee: break;
                 case ECoreEnum.eLiterals: break;
                 case ECoreEnum.serializable: dObject.serializable = value === 'true'; break;
+                case EcoreParser.XMLinlineMarker + 'serializable': dObject.serializable = ecoreEnumSerializable(json); break;
                 case ECoreEnum.instanceTypeName: dObject.instanceClassName = value + ''; break;
             }
         }
@@ -936,7 +937,7 @@ export class EcoreParser{
         /// *** specific start *** ///
         // P-2026-11-01-2300: read under the '-' key xmlToJson writes (ECoreLiteral.value has none).
         dObject.value = ecoreLiteralValue(json);//vv4
-        dObject.literal = this.read(json, ECoreLiteral.literal, '');
+        dObject.literal = ecoreLiteralLabel(json) || this.read(json, ECoreLiteral.literal, '');
         dObject.name = this.read(json, ECoreNamed.namee,  dObject.literal || 'literal_1');
         (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
         /// *** specific end *** ///

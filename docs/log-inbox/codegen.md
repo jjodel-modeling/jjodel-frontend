@@ -863,3 +863,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile (no UI)
 **Prompt document name**: 2026-11-01 23:49
+
+## 2026-11-01 — fix(ecore): export defaults; import literal labels and serializable (P-2026-11-01-2351)
+**Prompt**: Open points 2 and 3 of P-2026-11-01-2300: re-enable the Ecore export of defaultValueLiteral, and read a literal's label and an enum's serializable flag through the '-' prefix on import.
+**Files touched**: ed6df7b6d: frontend/src/services/export/EcoreService.ts, frontend/src/services/export/ecoreFeatureReads.ts, frontend/src/api/data.ts, frontend/src/services/export/__tests__/ecore-export-defaults.test.ts (new); closure: this inbox, the Status line of the 2351 prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-01 23:00
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The line was dead for a second reason: the L proxy has no defaultValueLiteral getter (LModelElement.tsx:2326-2331 commented out), so the export now reads attr.__raw. No reason for the 2026-02-04 comment-out in the commit (260e1a0ce). Legacy unprefixed 'serializable' and 'literal' keys still read. 5 of 6 tests red before, green after; tsc 0, vitest export+codegen 50 files/2464, build ok. Browser round trip not run.
+**Prompt document name**: 2026-11-01 23:51
