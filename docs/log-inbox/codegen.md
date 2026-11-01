@@ -648,3 +648,15 @@ Arbiter arb3 {
   }
 }
 ```
+
+## 2026-11-01 — merge: default-text-generator into alfonso-frontend-jjtl (P-2026-11-01-2002)
+**Prompt**: Bring `default-text-generator` at `281cf10a3` into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-default-text-generator on a763bbb91).
+**Files touched**: merge commit 0e5d9152d (`frontend/src/examples/codegen/default-text.generator.json`, `frontend/src/codegen/engine/__tests__/defaultText.test.ts`, the branch prompt, this inbox); `docs/prompts/claude_2026-11-01_2002_prompt_merge_default-text-generator.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops of the lane, unattended; a new example file, nothing in the demo changes)
+**Prompt document name**: 2026-11-01 20:02
