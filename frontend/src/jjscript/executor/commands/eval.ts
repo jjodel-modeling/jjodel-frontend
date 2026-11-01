@@ -500,7 +500,8 @@ function shallowAttributeToJjelValue(attr: any, className: string): JjelValue {
         isDerived: attr.isDerived ?? attr.derived ?? false,
         isId: attr.isId ?? attr.id ?? false,
         multiValued: attr.upperBound === -1 || attr.upperBound === '*',
-        defaultValue: attr.defaultValue ?? null,
+        // The editor and the Ecore import fill `defaultValueLiteral`, not `defaultValue`.
+        defaultValue: attr.defaultValue ?? declaredLiteralDefault(attr) ?? null,
         __type: 'Attribute'
     } as JjelValue;
 }
@@ -720,6 +721,8 @@ function fillInstanceSlots(
  *   1. Declared default: if the attribute declares a `defaultValue`, use it,
  *      coerced to the attribute's primitive type (same `type`/`defaultValue`
  *      fields read by shallowAttributeToJjelValue — no parallel value pipeline).
+ *   1b. Else the declared `defaultValueLiteral` (the string the editor and the
+ *      Ecore import write), parsed strictly; unparsable -> as if none (2/3).
  *   2. Mandatory: else if `lowerBound >= 1`, the canonical type default —
  *      boolean -> false, numeric -> 0, EString -> "", enum -> first literal name.
  *   3. Optional: else (lowerBound 0, or not reliably readable) -> null.
@@ -734,21 +737,7 @@ function emptyAttributeDefault(meta: any): JjelValue {
 
     // Type categorisation, shared by declared-default coercion and the canonical
     // default. Reuses the attribute's classifier; introduces no parallel pipeline.
-    let typeName = '';
-    let isEnum = false;
-    let enumLiterals: any[] = [];
-    try {
-        const t = meta.type;
-        if (t) {
-            isEnum = t.isEnum === true || t.className === 'DEnumerator';
-            typeName = String(t.name || '').toLowerCase();
-            if (isEnum) { try { enumLiterals = t.literals || []; } catch { enumLiterals = []; } }
-        }
-    } catch { /* type unreadable -> 'other' below */ }
-
-    const isBool = !isEnum && typeName.includes('bool');
-    const isNum  = !isEnum && /(int|long|short|byte|float|double|decimal|integer|number)/.test(typeName);
-    const isStr  = !isEnum && typeName.includes('string');
+    const { isEnum, enumLiterals, isBool, isNum, isStr } = attributeTypeCategory(meta);
 
     const firstLiteralName = (): JjelValue => {
         try { const n = enumLiterals[0]?.name; return typeof n === 'string' ? n : null; }
@@ -780,6 +769,13 @@ function emptyAttributeDefault(meta: any): JjelValue {
         return declared;
     }
 
+    // 1b. Declared default as written by the editor (JjScript `set ... default`) and
+    // the Ecore import: the string `defaultValueLiteral` (P-2026-11-01-2350). Parsed
+    // strictly: a literal that does not parse as the attribute's type reads as if no
+    // default were declared (falls through to 2/3), so "false" never reads true.
+    const parsed = declaredLiteralDefault(meta);
+    if (parsed !== undefined) return parsed;
+
     // 2. Mandatory -> canonical type default.
     let lower: any;
     try { lower = meta.lowerBound; } catch { lower = undefined; }
@@ -793,6 +789,60 @@ function emptyAttributeDefault(meta: any): JjelValue {
 
     // 3. Optional / unknown lower bound -> null.
     return null;
+}
+
+/** The attribute's type, categorised as emptyAttributeDefault coerces it. */
+function attributeTypeCategory(meta: any): { isEnum: boolean; enumLiterals: any[]; isBool: boolean; isNum: boolean; isStr: boolean } {
+    let typeName = '';
+    let isEnum = false;
+    let enumLiterals: any[] = [];
+    try {
+        const t = meta.type;
+        if (t) {
+            isEnum = t.isEnum === true || t.className === 'DEnumerator';
+            typeName = String(t.name || '').toLowerCase();
+            if (isEnum) { try { enumLiterals = t.literals || []; } catch { enumLiterals = []; } }
+        }
+    } catch { /* type unreadable -> 'other' below */ }
+
+    const isBool = !isEnum && typeName.includes('bool');
+    const isNum  = !isEnum && /(int|long|short|byte|float|double|decimal|integer|number)/.test(typeName);
+    const isStr  = !isEnum && typeName.includes('string');
+    return { isEnum, enumLiterals, isBool, isNum, isStr };
+}
+
+/**
+ * The declared `defaultValueLiteral` of an attribute, parsed to its type with the
+ * same accepted forms as the `defaultValue` coercion in emptyAttributeDefault.
+ * `undefined` = no literal, or unparsable. Enum: the literal named by the string.
+ * EString and other types: the string.
+ */
+function declaredLiteralDefault(meta: any): JjelValue | undefined {
+    if (!meta) return undefined;
+    let literal: any;
+    try { literal = meta.defaultValueLiteral; } catch { literal = undefined; }
+    if (typeof literal !== 'string' || literal === '') return undefined;
+
+    const { isEnum, enumLiterals, isBool, isNum } = attributeTypeCategory(meta);
+    if (isEnum) {
+        try {
+            const named = enumLiterals.find((l: any) => l?.name === literal);
+            return typeof named?.name === 'string' ? named.name : undefined;
+        } catch { return undefined; }
+    }
+    const s = literal.trim();
+    if (isBool) {
+        const b = s.toLowerCase();
+        if (b === 'true' || b === '1') return true;
+        if (b === 'false' || b === '0') return false;
+        return undefined;
+    }
+    if (isNum) {
+        if (s === '') return undefined;
+        const n = Number(s);
+        return Number.isFinite(n) ? n : undefined;
+    }
+    return literal;
 }
 
 /**
