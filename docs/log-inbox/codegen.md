@@ -520,3 +520,16 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile (GO from the chat on the gates and the unit test of the condition; browser pane hidden, no visual re-check)
 **Notes**: Stopped once while the jjel-range merge ran; restarted on e190e7158, base e94541c13 unchanged. Merge-tree: zero conflicts, tree 19dae0e30 equal to the merge's index; jjel/SPEC.md on both sides, markdown, disjoint hunks (7.3 vs 9.4), auto-merged; no code file on both sides, no governance file; probe once; no union. Gates on 2a41d7507: typecheck 0, typecheck:scripts 0; vitest 12402 (12401 + 1), 466 files, 9 known red at import; hooks 967; build 0; check:docs 5/5; agents, scripts, addonly PASS.
 **Prompt document name**: 2026-10-31 17:51
+
+## 2026-11-01 — docs(codegen): discovery of a default textual notation (P-2026-11-01-1709)
+**Prompt**: read-only discovery: can a default textual notation (rules D1-D7) be derived by reflection from the metamodel; answer 1.1-1.6 by generator runs in the dock tab, propose built-in, overrides and EBNF, review the rules
+**Files touched**: docs/discovery/discovery_2026-11-01_default_textual_notation.md (new), docs/log-inbox/codegen.md, docs/prompts/claude_2026-11-01_1709_prompt_default_textual_notation_discovery.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Probe _tmp_default_text.ts (gitignored, not committed), port 3171, own fixture TextProbe.ecore/xmi in ~/.jjodel-lanes; 2 runs exit 0, run 2 no generation error. 1.2 holds (06-11 finding obsolete), index reads carry no origin; enum literal is a string; eIsSet only for optional no-default attrs; no Text emptiness test; names not unique. Side: Ecore import drops defaultValueLiteral and literal values. Session hit the context ceiling once; finished on GO.
+**Prompt document name**: 2026-11-01 17:09
