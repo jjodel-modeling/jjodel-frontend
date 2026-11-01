@@ -545,3 +545,12 @@ empties this file. The active log is not touched by this lane.
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile (docs-only)
 **Prompt document name**: 2026-11-01 17:43
+
+## 2026-11-01 — ticket: Ecore import drops defaultValueLiteral, literal values and DClass.features
+**Ticket**: Found by the discovery P-2026-11-01-1709 (report docs/discovery/discovery_2026-11-01_default_textual_notation.md, section 1.1 and side finding), decision R-TXT-10.
+
+Importing an Ecore metamodel drops defaultValueLiteral on attributes and the value of enumeration literals, and leaves DClass.features empty afterwards. A reflective generator (R-TXT-7) then prints mandatory defaults it cannot see and cannot rely on features for D6 ordering.
+
+Expected: the import keeps defaultValueLiteral and literal values, and DClass.features is populated as for a metamodel built in the editor.
+**Priority**: medium
+**Found in**: P-2026-11-01-1709
