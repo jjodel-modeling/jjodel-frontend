@@ -20,3 +20,16 @@ and in this order** (RC-12) and empties this file. The active log is not touched
 **Prompt document name**: 2026-10-31 22:45
 
 **Ticket** (P-2026-10-31-2245): SPEC §8.3 table and the Appendix A `input` comment name the kind `text`; the parsers accept `string`, not `text`. SPEC "Not Tested" still lists Prompt/Input execution. Left untouched, out of scope.
+
+## 2026-11-01 — merge: jjtl-input-default into alfonso-frontend-jjtl (P-2026-11-01-0049)
+**Prompt**: Bring `jjtl-input-default` at `45ad4cb3d` into the trunk `alfonso-frontend-jjtl` with one `--no-ff` merge commit of the explicit sha (RC-14), probes on the merge-tree, union resolution of decisions and log inboxes if they conflict, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 02333c0d0 (5 files from the branch: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/__tests__/jjel-path-interactive.test.ts`, `frontend/src/jjtl/SPEC.md`, the branch prompt, this inbox); `docs/prompts/claude_2026-11-01_0049_prompt_merge_jjtl-input-default.md` Status line; `docs/log-inbox/jjtl-input-default.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat on 3001, unattended: GO on gates; the real input dialog was not opened, the default reaching the host is covered only with the host mocked)
+**Notes**: Tip did not move. Re-measured at 8ebcf6502: zero conflicts, tree 4028e38bb = index. No file on both sides, no union, 3 probes as expected. Gates on 02333c0d0: typecheck 0, typecheck:scripts 0; vitest 12587 = 12583 + 4 new, 471 files, same 9 red at import; hooks 967; build 0; check:docs 5/5 (prompt said 4/4); agents, scripts, addonly PASS. Lane board untouched; 3001 up.
+**Prompt document name**: 2026-11-01 00:49
