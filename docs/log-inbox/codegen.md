@@ -888,3 +888,18 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
 **Prompt document name**: 2026-11-01 23:58
+
+## 2026-11-02 — feat(codegen): textual style checks (P-2026-11-01-2356)
+**Prompt**: Step T3 of R-TXT-16: a check that a style applied to a metamodel's base grammar gives an unambiguous concrete grammar: addendum §A.2 (i) and (ii), case injectivity with the R-TXT-21 (10) fallback as a notice, findings not a boolean; nearley as the test oracle (exactly one parse) on samples generated from the concrete grammar (R-TXT-21 (1)).
+**Files touched**: 7731968ab, new: `frontend/src/codegen/textual/styleCheck.ts`, `__tests__/oracle.ts`, `__tests__/styleCheck.test.ts`; the prompt's Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Notes**: Gates: tsc 0 errors; vitest src/codegen 46 files, 2420 tests; build exit 0. Mutation bench 19/19 killed (~/.jjodel-lanes/P-2026-11-01-2356/bench.py). Rules beyond (i), (ii) and case: reserved-words, block-delimiters, list-tokens, terminator. Separator = terminator is not a CFG ambiguity with bracketed lists; it is an error as the recovery's sync point. T1's corpus metamodels copied into the test (textual.test.ts exports nothing).
+**Prompt document name**: 2026-11-01 23:56
+
+**Ticket** (P-2026-11-01-2356): T1's case fallback covers merges inside the class keywords and inside one enumeration, not a class keyword folded onto a style word (`End` to `end` under `begin`/`end` blocks); the check reports it as an error. Whether the derivation should fall back for it too is open.
