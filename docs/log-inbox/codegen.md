@@ -567,3 +567,15 @@ Expected: the import keeps defaultValueLiteral and literal values, and DClass.fe
 **Smoke visivo**: non applicabile
 **Notes**: Observer part done, guards on a mutation bench. Not met: test (1) "same origin span through a template". origin.ts rule 1 (readName, :199) names member reads only, so s["title"] is an opaque fragment with the read in `reads`, and GeneratorPane.tsx:594 sets data-origin-id on model origins only: no Alt+click yet. That step is origin.ts, outside the declared scope; awaiting Alfonso. Gates: tsc 0, vitest jjel+codegen 2868/2868, build 0.
 **Prompt document name**: 2026-11-01 19:45
+
+## 2026-11-01 — merge: index-read-origin into alfonso-frontend-jjtl (P-2026-11-01-1952)
+**Prompt**: Bring `index-read-origin` at `8a17f3b84` into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-index-read-origin on cb072e61a).
+**Files touched**: merge commit 9e19ecbab (`frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjel/__tests__/templateInterpolation.test.ts`, `frontend/src/codegen/engine/__tests__/origin.test.ts`, the branch prompt, this inbox); `docs/prompts/claude_2026-11-01_1952_prompt_merge_index-read-origin.md` Status line; this entry
+**Outcome**: ✅ completed (the branch itself is partial: an index hole still has no model origin, see P-2026-11-01-1945)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-01 19:52
