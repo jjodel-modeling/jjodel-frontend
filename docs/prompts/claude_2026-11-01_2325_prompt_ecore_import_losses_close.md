@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2325
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01
 Lane: fast (closure only: gates and commits of work already done and tested)
 Depends: P-2026-11-01-2300 (hard-stop, nothing committed; handoff `~/.jjodel-lanes/P-2026-11-01-2300/handoff.md`)
 Worktree: ~/jjodel-w-ecoreimport, branch ecore-import-losses (the same tree, uncommitted changes of 2300 in place)

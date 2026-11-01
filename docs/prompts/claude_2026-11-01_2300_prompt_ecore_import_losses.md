@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2300
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · hard-stop, closed by P-2026-11-01-2325
 Lane: fast (discovery inline, then the fix in the import code and its tests)
 Depends: ticket #395 (71aee8fde); the base grammar of R-TXT-16 is derived from the metamodel, so what the import drops it cannot see
 Worktree: ~/jjodel-w-ecoreimport, branch ecore-import-losses (from the trunk commit that adds this prompt)

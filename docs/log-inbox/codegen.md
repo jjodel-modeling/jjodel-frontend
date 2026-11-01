@@ -765,3 +765,30 @@ Neither breaks the default text generator today, but the base grammar of R-TXT-1
 Expected: unset slots are [] whatever the type; lowerBound is exposed on attribute and reference shells.
 **Priority**: medium
 **Found in**: P-2026-11-01-2016
+
+## 2026-11-01 — fix(import): keep default values and literal values on Ecore import (P-2026-11-01-2300, P-2026-11-01-2325)
+**Prompt**: Ticket #395 / R-TXT-10: the Ecore import keeps (1) EAttribute defaultValueLiteral, (2) EEnumLiteral value, (3) DClass.features. 2300 = fix and tests, hard-stop at the context ceiling (handoff ~/.jjodel-lanes/P-2026-11-01-2300/handoff.md); 2325 = gates and commits (RC-51).
+**Files touched**: b320f849f: frontend/src/api/data.ts (EcoreParser.parseDAttribute, parseDEnumLiteral), frontend/src/services/export/ecoreFeatureReads.ts (new), frontend/src/services/export/__tests__/ecore-import-losses.test.ts (new); closure: this inbox, the Status lines of the 2300 and 2325 prompts
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (the properties panel shows no default or literal value, Info.tsx; the visual probe failed on page.goto, vite EPIPE, not diagnosed)
+**Notes**: 5 unit tests red on the pre-fix parser (2 failed), green after. Gates on b320f849f: tsc 0, vitest export+codegen 49 files/2458 passed, build ok. Browser probe on 3072 ALL PASS (defaults 7/true/hello world/Mid, literals 0/5/9, no pageErrors); on HEAD data.ts 6 FAILs. Export round trip keeps literal values, drops defaults (EcoreService.ts:316-318). Item 3 undone: the editor leaves DClass.features empty too. No LIR: parser, not a 3.2 path. Open points: ticket below.
+**Prompt document name**: 2026-11-01 23:25
+
+## 2026-11-01 — ticket: Ecore round trip still loses defaults, literal labels and serializable; DClass.features undecided
+**Ticket**: Four open points left by P-2026-11-01-2300 for Alfonso.
+
+(1) #395 item 3: the premise is false, no code writes DClass.features for M2 features (Constructors.DAttribute/DReference push to attributes/references only, classes.ts:767-778). Drop it (recommended: the base grammar reads attributes then references) or open a core lane that maintains features in the editor and the import alike (Rule 5).
+
+(2) The Ecore export of defaultValueLiteral is commented out (EcoreService.ts:316-318): an import then export drops every default. Re-enable it in its own lane.
+
+(3) Same key bug as the literal value: `ECoreLiteral.literal` and `ECoreEnum.serializable` carry no '-' prefix, so the literal label and serializable are never read on import.
+
+(4) JjEL shells read `defaultValue`, which nothing fills; R-TXT generators will not see defaults until eval.ts reads defaultValueLiteral (jjscript lane).
+**Priority**: medium
+**Found in**: P-2026-11-01-2300
+**Detail**: ~/.jjodel-lanes/P-2026-11-01-2300/handoff.md
