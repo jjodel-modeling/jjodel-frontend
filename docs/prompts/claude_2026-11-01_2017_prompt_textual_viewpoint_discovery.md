@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2017
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · lane textual-viewpoint-discovery · report docs/discovery/discovery_2026-11-01_textual_viewpoint.md · verifica visiva non applicabile
 Lane: discovery (read-only; one report, one docs-only commit)
 Depends: P-2026-11-01-1709, P-2026-11-01-1946 (merged); decisions R-TXT-1..14 (7b1ac5abf)
 Worktree: ~/jjodel-w-textviewpoint, branch textual-viewpoint-discovery (from the trunk commit that adds this prompt)
