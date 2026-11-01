@@ -754,3 +754,14 @@ C {
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile (docs-only)
 **Prompt document name**: 2026-11-01 20:42
+
+## 2026-11-01 — ticket: XMI import stores ["false"] in an unset mandatory boolean; lowerBound reads null on feature shells
+**Ticket**: Found by P-2026-11-01-2016 (log entry in docs/log-inbox/codegen.md, probe in ~/.jjodel-lanes/P-2026-11-01-2016/).
+
+Two defects seen while reading a model imported from XMI: (1) the import writes ["false"] into the empty slot of a mandatory boolean attribute, while every other unset slot is []; (2) the class shells read lowerBound as null for every attribute.
+
+Neither breaks the default text generator today, but the base grammar of R-TXT-16 needs the lower bound to tell optional from mandatory features, and a spurious stored value makes an unset attribute look set.
+
+Expected: unset slots are [] whatever the type; lowerBound is exposed on attribute and reference shells.
+**Priority**: medium
+**Found in**: P-2026-11-01-2016
