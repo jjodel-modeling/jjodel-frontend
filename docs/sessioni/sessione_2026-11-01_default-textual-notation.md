@@ -46,3 +46,11 @@ design; no way to test it for emptiness. 1.6: names are not unique. Side finding
 
 Alfonso answers the ten questions; then, if agreed, a lane for item 6 (JjEL, origin of index reads) and one for the
 JjEL default generator. The codegen front is owned by chat C-2026-10-23-2009: decide whether the follow-up stays here.
+
+## Update 20:12
+
+Alfonso ratified the ten questions (19:39): R-TXT-1..10 in docs/decisions.md (404452168); ticket #395 (71aee8fde).
+P-2026-11-01-1945 (index read traced): partial, reads now reach the reads list but an index hole still has no model origin (origin.ts:199); merged 9e19ecbab.
+P-2026-11-01-1946 (shipped JjEL generator, frontend/src/examples/codegen/default-text.generator.json): done, merged 0e5d9152d; runs on the fixture, CoreSpec and ArbiterSpec.
+
+Open for Alfonso: (a) a short origin.ts lane for index holes; (b) a declarative notation model (textual viewpoint) as the final mechanism, the JjEL generator being the reference implementation of R-TXT; (c) keep ref(o, r, t) and the [k] root prefix; (d) record the R-TXT-1 tie-break between sibling supertypes; (e) R-TXT-5 is tested on a mock handle only, one in-app check needed.
