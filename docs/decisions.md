@@ -6984,6 +6984,41 @@ verified: none, reversible: trunk.
   ratified, no DSL override is written against the JjGen generator in the repo.
 - **R-TXT-15** (2026-11-01, Alfonso 20:24). **Terminology:** JjGen is the template language of code generation (templates, holes, typed dispatch); JjEL is the expression language, used inside JjGen holes and elsewhere. A generator is written in JjGen, not in JjEL. Rows 7 and 14 were reworded accordingly the same day.
 
+Rows 16 to 20: the project chat C-2026-11-01-1713, Alfonso 2026-11-01 20:47 (base grammar generated from the metamodel and
+not editable except through the metamodel; syntax chosen on top of it, possibly from several styles), 20:54 (indentation
+style accepted), 22:06 «procediamo» on the chat's design for styles, annotations, identity and the source of truth.
+Ratified as recommended, evidence: read (P-2026-11-01-2017 report, Xtext's design as reference), verified: none,
+reversible: trunk (no code yet).
+
+- **R-TXT-16** (2026-11-01). **Three levels, no hand-written grammar in v1.** (1) The **base grammar** is derived
+  automatically from the metamodel by R-TXT-1..12 and cannot be edited; it changes only when the metamodel changes.
+  (2) A **style**, chosen from a catalog, maps the base grammar to a concrete one: block delimiters, assignment form,
+  separators, terminators, comments, quoting. First styles: C-like braces, Pascal/Ada `begin ... end`, then
+  indentation, Lisp, YAML-like, HUTN. Each style is shown unambiguous once, for every base grammar, not per DSL.
+  (3) Optional **syntax annotations on metamodel elements** adjust the result locally: a feature's keyword, a class
+  printed on one line or positionally, a list of enumeration values grouped by subsets of literals, a class as a binary
+  operator with symbol and precedence. The resulting concrete EBNF, annotated with the features, is shown read-only;
+  printer and parser are both derived from it. This replaces the JSON notation model of P-2026-11-01-2017 as the form an
+  author writes; the restricted-JjGen alternative is dropped; the JjGen generator stays the reference of R-TXT-14.
+- **R-TXT-17** (2026-11-01). **The model is the single source of truth**; text and diagrams are views of it. On save,
+  Jjodel can also write the model's text file next to it (with ids, R-TXT-18), for git, review and LLM edits; an edited
+  file comes back by re-import. A text-first model (the text file as the persisted artifact, Xtext's design) is not
+  done until a concrete need is stated.
+- **R-TXT-18** (2026-11-01). **Identity of objects on re-read.** Inside Jjodel's editor, by origins: every printed span
+  carries its object's id as an editor decoration, so a rename or a move keeps the object and a pasted copy is a new
+  object. Outside (re-import), by a cascade: id in the text if present; class and name in the same container; class
+  and name in the model (moves); attribute similarity among unmatched objects of one class (renames). Uncertain matches
+  are always confirmed by the user before applying. Ids in the text are an option of the style, on by default in the
+  exported file; a repeated id makes a new object, with a warning.
+- **R-TXT-19** (2026-11-01). **Applying a text** is a minimal diff (create, update, delete, move) applied as JjScript
+  lines in one undo step (R-PLG-4 path). What the notation does not show is preserved, never cleared; an attribute
+  omitted because unset (R-TXT-5) reads back as unset. Order matters only for features declared ordered in the
+  metamodel. A text that does not parse leaves the model at its last valid state, with the errors marked in the text;
+  deleting an object that other models reference asks for confirmation.
+- **R-TXT-20** (2026-11-01). **Comments and formatting survive.** The text keeps a concrete syntax tree alongside the
+  model (Xtext's node model as reference); model-to-text updates (an edit in a diagram, a style change) rewrite only the
+  spans of the objects that changed.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
