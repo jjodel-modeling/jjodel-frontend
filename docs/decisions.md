@@ -6964,6 +6964,26 @@ Alfonso as recommended, evidence: read and measured (probes in the app, report �
   are dropped on import, and `DClass.features` is empty afterwards (report §1.1, side finding). Tracked as a ticket on
   the codegen front, not fixed inside the R-TXT lanes.
 
+Rows 11 to 14: the project chat C-2026-11-01-1713, after P-2026-11-01-1945 and P-2026-11-01-1946 (merged 9e19ecbab and
+0e5d9152d); Alfonso 2026-11-01 20:12 «ok alle raccomandazioni». Ratified as recommended, evidence: read (lane results),
+verified: none, reversible: trunk.
+
+- **R-TXT-11** (2026-11-01). **The reference template is `ref(o, r, t)`**: the owner, the reference, the target, so that
+  R-TXT-4 checks uniqueness among the instances of the reference's type. A containment path is made of segments like
+  `parts[1]` joined by `.`; when the model has several roots it starts with `[k]`, the root's position among them, and
+  a model's only root, when referenced, prints as `[0]`.
+- **R-TXT-12** (2026-11-01). **Tie-break of R-TXT-1:** ancestors are ordered by their own number of ancestors (most
+  general first); ancestors at the same depth follow the declaration order of the supertypes, depth-first from the
+  class. The rule holds for every multiple-inheritance shape, not only the diamond.
+- **R-TXT-13** (2026-11-01). **An index hole has a model origin:** a template hole whose expression is an index read
+  (`o[f.name]`) gets the origin of the last read recorded for it, when that read's value equals the hole's value;
+  otherwise it stays unlinked, as today. Alt+click on reflective output reaches the model.
+- **R-TXT-14** (2026-11-01). **The JjEL generator is the reference implementation of R-TXT, not the final mechanism.**
+  The final mechanism is to be designed as a declarative model of the notation (a textual viewpoint), from which the
+  printer, the EBNF and later a parser are derived, and in which a DSL's overrides are data, not JjEL code. Until it is
+  ratified, no DSL override is written against the JjEL generator in the repo.
+
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
