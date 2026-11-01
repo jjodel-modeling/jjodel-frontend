@@ -754,3 +754,16 @@ C {
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile (docs-only)
 **Prompt document name**: 2026-11-01 20:42
+
+## 2026-11-01 — docs(codegen): textual syntax addendum (P-2026-11-01-2210, P-2026-11-01-2232)
+**Prompt**: Discovery of the textual syntax derived from the metamodel (R-TXT-16..20): base grammar, styles, annotations, printer/parser compared, identity and application, comments, plan. 2210 measured and hard-stopped at the context ceiling (RC-51); 2232 continued from its handoff and wrote the addendum.
+**Files touched**: docs/discovery/discovery_2026-11-01_textual_viewpoint.md (addendum; «JjEL generator» → «JjGen generator», 7 places); docs/prompts/claude_2026-11-01_2210_prompt_textual_syntax_design_discovery.md, docs/prompts/claude_2026-11-01_2232_prompt_textual_syntax_discovery_part2.md (Status); this inbox
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (docs-only; Monaco probe headless outside src/)
+**Notes**: Probes in ~/.jjodel-lanes/P-2026-11-01-2232/probe/ (not committed). Measured: C-like = JjGen generator byte for byte; 16/16 Briefs; nearley 1 parse on 19 samples; ohm fixed (#() skips no leading space; kw<k> rule) 19/19; 1,001 objects hand 15 ms, nearley 11 ms, ohm 107 ms (1.6 ms incremental); recovery loses a root on a missing }; Monaco decorations not restored by undo.
+**Prompt document name**: 2026-11-01 22:32

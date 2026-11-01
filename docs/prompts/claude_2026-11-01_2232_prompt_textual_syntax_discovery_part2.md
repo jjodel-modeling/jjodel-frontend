@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2232
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · lane textual-syntax-discovery · addendum in docs/discovery/discovery_2026-11-01_textual_viewpoint.md · verifica visiva non applicabile
 Lane: discovery (read-only; probes outside `src/`; one addendum, one docs-only commit)
 Depends: P-2026-11-01-2210 (hard-stop at the context ceiling, RC-51; nothing committed)
 Worktree: ~/jjodel-w-textsyntax, branch textual-syntax-discovery (the same tree as 2210, at the commit that adds this prompt)
