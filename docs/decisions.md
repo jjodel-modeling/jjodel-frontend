@@ -7052,6 +7052,15 @@ Row 23: Alfonso 2026-11-01 23:44, on the chat's questions of 23:37 (answers to 2
   (`DClass.features`) dropped; origins through template-call arguments go to a low-priority ticket; the codegen front
   is owned by the project chat C-2026-11-01-1713 from 2026-11-01, no longer by C-2026-10-23-2009.
 
+Row 24: after P-2026-11-01-2320 (T1, merged by P-2026-11-01-2349); Alfonso 2026-11-01 23:50 «ok» on the two questions
+of T1. Ratified as recommended, evidence: measured (T1's corpus and mutation bench), verified: none, reversible: trunk.
+
+- **R-TXT-24** (2026-11-01). **Amends R-TXT-21 (3) and addendum §A.1.** (a) The top level of a text admits every
+  concrete class, because the printer (like the JjGen generator) prints every uncontained object at the top and such
+  objects are common in Jjodel models; restricting the top level to never-contained classes becomes an optional
+  annotation, in step T4. (b) A single-valued containment prints as a block of one object, `f { T }`, as the JjGen
+  generator and T1 do; §A.1's bare `T` is superseded.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.

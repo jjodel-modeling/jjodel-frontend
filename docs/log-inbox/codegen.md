@@ -851,3 +851,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Prompt document name**: 2026-11-01 23:20
 
 **Ticket** (P-2026-11-01-2320): R-TXT-21 (3) derives the roots as classes never contained, but the printer (like JjGen) prints every uncontained object at the top; a Model rule restricted to those classes would not accept the printed text of a model with an orphan Part. T1 keeps the addendum's Model rule over all concrete classes; to settle before T2.
+
+## 2026-11-01 — merge: textual-t1 into alfonso-frontend-jjtl (P-2026-11-01-2349)
+**Prompt**: Bring `textual-t1` at `21a9fd84c` (feat 34c138640) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-t1 on 069d2a81c); union resolution of this inbox.
+**Files touched**: merge commit 3166319dd (seven new files in `frontend/src/codegen/textual/`, the T1 prompt, this inbox); `docs/prompts/claude_2026-11-01_2349_prompt_merge_textual-t1.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Prompt document name**: 2026-11-01 23:49
