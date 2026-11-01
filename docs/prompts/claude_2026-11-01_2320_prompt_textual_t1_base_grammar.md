@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2320
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · lane textual-t1 · 34c138640 · verifica visiva non applicabile (nessuna UI)
 Lane: full, Phase 2 only (the design is the addendum of P-2026-11-01-2210/2232); new module, no change to existing behaviour
 Depends: decisions R-TXT-1..22; addendum `docs/discovery/discovery_2026-11-01_textual_viewpoint.md` §A.1, §A.2, §A.7 (step T1)
 Worktree: ~/jjodel-w-textt1, branch textual-t1 (from the trunk commit that adds this prompt)

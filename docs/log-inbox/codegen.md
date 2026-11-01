@@ -836,3 +836,18 @@ Expected: unset slots are [] whatever the type; lowerBound is exposed on attribu
 An index hole now takes the origin of its last read, but a value passed through a template-call argument (value(a, o[a.name]) in the default text generator) loses it, so Alt+click does not reach the model on text printed through helper templates. Fix: carry reads through template-call arguments in the JjGen engine (origin.ts and the call path). Low priority since R-TXT-16: the textual notation is printed by a TypeScript printer; this serves JjGen generators in general.
 **Priority**: low
 **Found in**: P-2026-11-01-2015
+
+## 2026-11-01 — feat(codegen): textual base grammar, C-like style and printer (P-2026-11-01-2320)
+**Prompt**: Step T1 of R-TXT-16: base grammar derived from the metamodel, style record with C-like as first value, concrete grammar and EBNF text, printer with object spans; differential test against the shipped JjGen default-text generator (R-TXT-14) on the 1709 fixture and a corpus; mutation check.
+**Files touched**: 34c138640, new folder `frontend/src/codegen/textual/`: `metamodel.ts`, `baseGrammar.ts`, `style.ts`, `concreteGrammar.ts`, `printer.ts`, `__tests__/spec.ts`, `__tests__/textual.test.ts`; the prompt's Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes (7 new files in the declared folder, above the five of rule 19; no existing file changed)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Notes**: Gates: tsc 0 errors; vitest src/codegen 45 files, 2383 tests; build exit 0. Mutation bench 12/12 killed (script in ~/.jjodel-lanes/P-2026-11-01-2320/). Departures from the probe/addendum: ancestors by number of ancestors (R-TXT-12, as JjGen; the probe sorted by depth); single containment printed as a block of one (as JjGen); Model rule over all concrete classes, not R-TXT-21 (3) roots.
+**Prompt document name**: 2026-11-01 23:20
+
+**Ticket** (P-2026-11-01-2320): R-TXT-21 (3) derives the roots as classes never contained, but the printer (like JjGen) prints every uncontained object at the top; a Model rule restricted to those classes would not accept the printed text of a model with an orphan Part. T1 keeps the addendum's Model rule over all concrete classes; to settle before T2.
