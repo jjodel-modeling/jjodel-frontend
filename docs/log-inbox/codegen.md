@@ -928,3 +928,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Prompt document name**: 2026-11-01 23:56
 
 **Ticket** (P-2026-11-01-2356): T1's case fallback covers merges inside the class keywords and inside one enumeration, not a class keyword folded onto a style word (`End` to `end` under `begin`/`end` blocks); the check reports it as an error. Whether the derivation should fall back for it too is open.
+
+## 2026-11-02 — merge: textual-t3 into alfonso-frontend-jjtl (P-2026-11-02-0027)
+**Prompt**: Bring `textual-t3` at `3b87b4ecd` (feat 7731968ab) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-t3 on 6eed25e95); union resolution of this inbox.
+**Files touched**: merge commit 3008d69b5 (`frontend/src/codegen/textual/styleCheck.ts`, `frontend/src/codegen/textual/__tests__/styleCheck.test.ts`, `frontend/src/codegen/textual/__tests__/oracle.ts`, the T3 prompt, this inbox); `docs/prompts/claude_2026-11-02_0027_prompt_merge_textual-t3.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Prompt document name**: 2026-11-02 00:27
