@@ -817,3 +817,22 @@ Expected: unset slots are [] whatever the type; lowerBound is exposed on attribu
 **Priority**: medium
 **Found in**: P-2026-11-01-2300
 **Detail**: ~/.jjodel-lanes/P-2026-11-01-2300/handoff.md
+
+## 2026-11-01 — merge: ecore-import-losses into alfonso-frontend-jjtl (P-2026-11-01-2340)
+**Prompt**: Bring `ecore-import-losses` at `9d0d2450c` (fix b320f849f) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-ecore-import-losses on 44a713c1e); union resolution of this inbox.
+**Files touched**: merge commit 44c6794f2 (`frontend/src/api/data.ts`, `frontend/src/services/export/ecoreFeatureReads.ts`, `frontend/src/services/export/__tests__/ecore-import-losses.test.ts`, the 2300 and 2325 prompts, this inbox); `docs/prompts/claude_2026-11-01_2340_prompt_merge_ecore-import-losses.md` Status line; this entry
+**Outcome**: ✅ completed (#395 closed for items 1 and 2; item 3 dropped, R-TXT-23)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-01 23:40
+
+## 2026-11-01 — ticket: JjGen: origins through template-call arguments
+**Ticket**: Found by P-2026-11-01-2015 (decision R-TXT-13, R-TXT-23).
+
+An index hole now takes the origin of its last read, but a value passed through a template-call argument (value(a, o[a.name]) in the default text generator) loses it, so Alt+click does not reach the model on text printed through helper templates. Fix: carry reads through template-call arguments in the JjGen engine (origin.ts and the call path). Low priority since R-TXT-16: the textual notation is printed by a TypeScript printer; this serves JjGen generators in general.
+**Priority**: low
+**Found in**: P-2026-11-01-2015

@@ -7040,6 +7040,18 @@ Monaco 0.52.2 headless), verified: none, reversible: trunk.
   parse's spans and decorations are the strongest evidence of the match, before the cascade of R-TXT-18. A pasted
   copy still comes out as a new object.
 
+Row 23: Alfonso 2026-11-01 23:44, on the chat's questions of 23:37 (answers to 2-6: «Sono d'accordo», «Ok»).
+
+- **R-TXT-23** (2026-11-01). **The textual syntax is a viewpoint-like entry of the model, as the Data manager is.**
+  It appears in the toolbar's viewpoint picker next to the viewpoints and the «Data manager» entry (the synthetic-entry
+  pattern of `components/editor-v2/dataManagerOption.ts`), and opens the model's text in a tab of the dock. Among a
+  model's syntaxes the textual entry carries the language's name (by default the metamodel's name). A «New model from
+  text» action opens the same tab on an empty model. The other answers of 23:44: JjEL reads the declared default from
+  `defaultValueLiteral` (lane P-2026-11-01-2350); the Ecore export writes defaults again and the import keeps literal
+  labels and the serializable flag (lane P-2026-11-01-2351); ticket #395 is closed for its items 1 and 2, item 3
+  (`DClass.features`) dropped; origins through template-call arguments go to a low-priority ticket; the codegen front
+  is owned by the project chat C-2026-11-01-1713 from 2026-11-01, no longer by C-2026-10-23-2009.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
