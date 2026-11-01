@@ -2571,6 +2571,16 @@ export class JjtlExecutor {
      *   function call AST node.
      */
     private evaluateExpression(expr: ExpressionAST, ctx: EvaluationContext): JjelValue {
+        // An interactive call nested inside another expression opens no dialog:
+        // only a whole expression is awaited (evaluateExpressionAsync). The JjEL
+        // path fails the whole expression in its evaluator; the legacy path does
+        // the same here, with the same warning, instead of a silent null operand.
+        const nested = this.findNestedInteractive(expr);
+        if (nested) {
+            this.warnings.push(`Expression evaluation failed (JjelExpression): Function '${nested}' is not defined`);
+            return null;
+        }
+
         // Special case: resolve(expr) / resolve(expr, TargetType) — the second
         // argument is an identifier that names a target class; it must NOT be
         // evaluated (no binding exists for class names in the value context).
@@ -2631,6 +2641,36 @@ export class JjtlExecutor {
         const msg = `Rule '${rule}', ${where}: read ${[...reads].join(', ')}, ` +
             `a reference to an object that is not in the source model; the value is null.`;
         if (!this.warnings.includes(msg)) this.warnings.push(msg);
+    }
+
+    /**
+     * The name of the first interactive call (prompt, confirm, input) found
+     * strictly below `expr` in the legacy JjTL AST, depth-first. A JjEL
+     * wrapper is not entered: its evaluator reports the call itself.
+     */
+    private findNestedInteractive(expr: ExpressionAST): string | undefined {
+        const NAMES: Record<string, string> = {
+            PromptExpression: 'prompt', ConfirmExpression: 'confirm', InputExpression: 'input',
+        };
+        const visit = (node: any, isRoot: boolean): string | undefined => {
+            if (!node || typeof node !== 'object') return undefined;
+            if (Array.isArray(node)) {
+                for (const el of node) {
+                    const found = visit(el, false);
+                    if (found) return found;
+                }
+                return undefined;
+            }
+            if (typeof node.type !== 'string' || node.type === 'JjelExpression') return undefined;
+            if (!isRoot && NAMES[node.type]) return NAMES[node.type];
+            for (const key of Object.keys(node)) {
+                if (key === 'location') continue;
+                const found = visit(node[key], false);
+                if (found) return found;
+            }
+            return undefined;
+        };
+        return visit(expr, true);
     }
 
     /**

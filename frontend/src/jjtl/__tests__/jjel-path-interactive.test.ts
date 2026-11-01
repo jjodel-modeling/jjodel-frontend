@@ -198,3 +198,42 @@ Element -> TargetElement {
         expect(result.targetModel.roots[0].category).toBe('typed');
     });
 });
+
+describe('an interactive call nested in an expression warns on both paths (P-2026-11-01-0110)', () => {
+    const CASES: [string, string, string][] = [
+        ['prompt', 'name', `"x" + prompt("Name?", EString)`],
+        ['confirm', 'ok', `not confirm("Sure?")`],
+        ['input', 'n', `1 + input("N?", "number")`],
+    ];
+
+    async function runNested(body: string, withSource: boolean): Promise<{ out: any; warnings: string[] }> {
+        const { ast, errors } = parse(HEAD + body, withSource);
+        expect(errors).toEqual([]);
+        const result: any = await execute(ast!, SOURCE);
+        expect(result.errors).toEqual([]);
+        return { out: result.targetModel.roots[0], warnings: result.warnings };
+    }
+
+    for (const [fn, attr, expr] of CASES) {
+        it(`${fn}: null, no dialog, one identical warning`, async () => {
+            const body = `Element -> Item {\n    ${attr} := ${expr}\n}`;
+            const jjel = await runNested(body, true);
+            const legacy = await runNested(body, false);
+            expect(calls).toEqual([]);
+            expect(jjel.out[attr]).toBeNull();
+            expect(legacy.out[attr]).toBeNull();
+            expect(jjel.warnings).toEqual([`Expression evaluation failed (JjelExpression): Function '${fn}' is not defined`]);
+            expect(legacy.warnings).toEqual(jjel.warnings);
+        });
+    }
+
+    it('in a let binding, on both paths', async () => {
+        const body = `Element -> Item {\n    let $p = "a" + prompt("P", EString) in {\n        name := $p\n    }\n}`;
+        const jjel = await runNested(body, true);
+        const legacy = await runNested(body, false);
+        expect(calls).toEqual([]);
+        expect([jjel.out.name, legacy.out.name]).toEqual([null, null]);
+        expect(legacy.warnings).toEqual(jjel.warnings);
+        expect(jjel.warnings).toHaveLength(1);
+    });
+});
