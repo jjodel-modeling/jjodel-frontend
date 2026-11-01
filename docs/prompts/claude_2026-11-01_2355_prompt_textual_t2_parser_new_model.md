@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2355
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: in corso · split by RC-52: T2a P-2026-11-02-0024, T2b and T2c to follow
 Lane: full (inline discovery with a file list before any change, then Phase 2; UI change authorised by Alfonso 2026-11-01 23:44)
 Depends: T1 (P-2026-11-01-2320, merged by P-2026-11-01-2349); decisions R-TXT-16..24; addendum §A.4, §A.5, §A.7 (step T2)
 Worktree: ~/jjodel-w-textt2, branch textual-t2 (from the trunk commit that adds this prompt)

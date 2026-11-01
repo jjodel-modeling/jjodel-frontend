@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-0024
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane textual-t2 · 45c883e92 · verifica visiva non applicabile (nessuna UI)
 Lane: fast (new code inside `frontend/src/codegen/textual/` only, no UI)
 Depends: P-2026-11-01-2355 (hard-stop after discovery, RC-51; nothing written); T1 on the trunk
 Worktree: ~/jjodel-w-textt2, branch textual-t2 (the same tree, at the commit that adds this prompt)

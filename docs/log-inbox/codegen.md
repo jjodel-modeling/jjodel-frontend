@@ -888,3 +888,18 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
 **Prompt document name**: 2026-11-01 23:58
+
+## 2026-11-02 — feat(codegen): textual parser with recovery (P-2026-11-02-0024)
+**Prompt**: Slice T2a of T2 (RC-51, RC-52, after P-2026-11-01-2355 stopped at the ceiling): hand-written interpreter of T1's concrete grammar, C-like, with recovery; output in the printer's shape; errors with line and column; recovered objects never applicable; `parseText(text, grammar)`.
+**Files touched**: 45c883e92: `frontend/src/codegen/textual/parser.ts`, `frontend/src/codegen/textual/__tests__/parser.test.ts` (both new); closure: this inbox, the Status lines of the 0024 and 2355 prompts
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Notes**: Gates: tsc 0; vitest src/codegen 46 files, 2409 tests; build 0; check:codegen-lazy on green, off red as in the open ticket on .env.production (no textual module in any chunk). Mutation bench 9/10 killed, the survivor a progress guard (commit message). Features must follow grammar order: out of order is an error. Corpus of textual.test.ts copied into parser.test.ts (it exports nothing).
+**Prompt document name**: 2026-11-02 00:24
+
+**Ticket** (P-2026-11-02-0024): the printer can print one text for two targets. A bare single-containment path segment (`inner`) and an object name `inner` that is unique among the reference's targets both print as `inner`. The parser reads the name first (handoff of 2355), so such a model does not round trip. Not in T1's corpus; to settle in the printer or with R-TXT-4.
