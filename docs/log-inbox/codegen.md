@@ -533,3 +533,15 @@ empties this file. The active log is not touched by this lane.
 **Smoke visivo**: non applicabile
 **Notes**: Probe _tmp_default_text.ts (gitignored, not committed), port 3171, own fixture TextProbe.ecore/xmi in ~/.jjodel-lanes; 2 runs exit 0, run 2 no generation error. 1.2 holds (06-11 finding obsolete), index reads carry no origin; enum literal is a string; eIsSet only for optional no-default attrs; no Text emptiness test; names not unique. Side: Ecore import drops defaultValueLiteral and literal values. Session hit the context ceiling once; finished on GO.
 **Prompt document name**: 2026-11-01 17:09
+
+## 2026-11-01 — merge: default-textual-notation into alfonso-frontend-jjtl (P-2026-11-01-1743)
+**Prompt**: Bring `default-textual-notation` at `f910decbc` into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-default-textual-notation on 8b25b1a11).
+**Files touched**: merge commit 5b069a615 (3 files from the branch: `docs/discovery/discovery_2026-11-01_default_textual_notation.md`, `docs/log-inbox/codegen.md`, the branch prompt); `docs/prompts/claude_2026-11-01_1743_prompt_merge_default-textual-notation.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (docs-only)
+**Prompt document name**: 2026-11-01 17:43
