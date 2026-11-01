@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-1946
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · lane default-text-generator · c29dde42a
 Lane: full, Phase 2 only (the discovery is P-2026-11-01-1709); a short inline discovery first, reported in the log entry
 Depends: P-2026-11-01-1709 (merged 5b069a615); decisions R-TXT-1..10 (404452168). Independent of P-2026-11-01-1945
 Worktree: ~/jjodel-w-defaulttextgen, branch default-text-generator (from the trunk commit that adds this prompt, on top of 71aee8fde)

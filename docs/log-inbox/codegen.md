@@ -554,3 +554,72 @@ Importing an Ecore metamodel drops defaultValueLiteral on attributes and the val
 Expected: the import keeps defaultValueLiteral and literal values, and DClass.features is populated as for a metamodel built in the editor.
 **Priority**: medium
 **Found in**: P-2026-11-01-1709
+
+## 2026-11-01 — feat(codegen): default textual notation generator (P-2026-11-01-1946)
+**Prompt**: a shipped JjEL generator printing any model in the default textual notation of R-TXT-1..9, untyped obj/feature/value/ref and an entry, overridable per class through the metaclass dispatch (R-TXT-8); tests on a fixture built in code; acceptance on CoreSpec and ArbiterSpec
+**Files touched**: c29dde42a frontend/public/examples/codegen/default-text.generator.json (new), frontend/src/codegen/engine/__tests__/defaultText.test.ts (new); docs/log-inbox/codegen.md, docs/prompts/claude_2026-11-01_1946_prompt_default_text_generator.md (Status)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: 16 templates, no engine change. Measured: JjEL `and`/`or` evaluate both sides, so guards are `if`; a template returns a Text, so lists are rebuilt inline ([x].map(...).first as a let). Ref signature is ref(o, r, t), not ref(o, t): R-TXT-4 needs the reference's type. No codegen user docs exist (none created). Probe _tmp_default_text_gen.ts port 3046, exit 0, 3/3 no generation or page error; crops and outputs in ~/.jjodel-lanes/P-2026-11-01-1946.
+**Prompt document name**: 2026-11-01 19:46
+
+Inline discovery. (1) No shipped generator existed: the SyncRTL acceptance files are test fixtures (`frontend/src/codegen/engine/__tests__/fixtures/generator-{smv,verilog}.json`), the shipped examples are `.jjodel` projects in `frontend/public/examples/codegen/`; the generator goes beside them. (2) `GeneratorImportDialog` reads a picked JSON through `decodeGeneratorFile`; with `metamodel` absent the Templates tab's Import lands it on the tab's metamodel and opens it (measured). (3) Tests run a generator with `generate(globals, lookup, modelId, templates, entry)` over globals shaped like `buildEvalContext` (`dispatch.test.ts`); the new test does the same, reading the shipped file through `decodeGeneratorFile` (no problem). (4) Containment path: `parts[1]` segments joined by `.` from the root; with several roots it opens with `[k]`, the root's index; a lone root referenced is `[0]`. (5) Order: ancestors sorted by their own `allSuperclasses.size` (an ancestor has fewer), stable, then the class.
+
+Acceptance (read-only, nothing copied into the repo). CoreSpec + `core_mc4.xmi`:
+```
+Core core_mc4 {
+  xlen 4
+  nregs 4
+  microarch MULTICYCLE
+  instructions {
+    Instruction {
+      mnemonic ADD
+    }
+    ... (SUB, AND, OR, XOR, ADDI, LW, SW, BEQ, BNE, same shape)
+  }
+  requirements {
+    Requirement isa_conformance {
+      kind ISA_CONFORMANCE
+    }
+    Requirement no_hazard {
+      kind NO_HAZARD
+    }
+    Requirement in_order_retire {
+      kind IN_ORDER_RETIRE
+    }
+  }
+}
+```
+ArbiterSpec + `arbiter3.xmi` (`Requirement priority`: a feature name unquoted in a name position, R-TXT-9):
+```
+Arbiter arb3 {
+  policy FIXED
+  requesters {
+    Requester cpu {
+      priority 0
+    }
+    Requester dma {
+      priority 1
+    }
+    Requester io {
+      priority 2
+    }
+  }
+  requirements {
+    Requirement mutex {
+      kind MUTEX
+    }
+    Requirement no_spurious_grant {
+      kind NO_SPURIOUS_GRANT
+    }
+    Requirement priority {
+      kind PRIORITY
+    }
+  }
+}
+```
