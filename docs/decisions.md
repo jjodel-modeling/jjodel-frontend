@@ -7019,6 +7019,27 @@ reversible: trunk (no code yet).
   model (Xtext's node model as reference); model-to-text updates (an edit in a diagram, a style change) rewrite only the
   spans of the objects that changed.
 
+Rows 21 and 22: the project chat C-2026-11-01-1713, after the addendum of P-2026-11-01-2210/2232 to
+`docs/discovery/discovery_2026-11-01_textual_viewpoint.md` (§A.4, §A.5, §A.9); Alfonso 2026-11-01 23:14 «ok alle
+raccomandazioni». Ratified as recommended, evidence: measured (probes of 2210/2232: round trips, parse counts, times,
+Monaco 0.52.2 headless), verified: none, reversible: trunk.
+
+- **R-TXT-21** (2026-11-01). **The ten answers of §A.9.** (1) The parser is a hand-written interpreter of the concrete
+  grammar, with recovery; nearley stays only as the test oracle for unambiguity (exactly one parse). (2) Syntax
+  annotations live in the metamodel's `_state`, keyed by element id, one record next to the generators. (3) Root
+  classes are derived (classes never contained), with an annotation as override. (4) A grouping by an attribute is
+  allowed only when that attribute is mandatory. (5) A text that differs only in the order of an unordered feature
+  yields no diff. (6) The diff addresses objects by id through handles registered before the run, not by a new
+  JjScript syntax. (7) The cascade's thresholds start at 0.6 with a margin of 0.2, calibrated in step T8. (8) Objects
+  recovered from a broken text are never applied: they show only as outline and markers. (9) A remark the prototype
+  wrote as a comment (`// listed twice: add`) becomes a validation marker, not printed text. (10) A style whose case
+  folding would merge two literals (`FAST`, `Fast`) falls back to the declared case for that metamodel, with a notice.
+- **R-TXT-22** (2026-11-01). **Amends R-TXT-18 on identity inside the editor.** Monaco decorations cannot carry
+  identity alone (measured: a cut collapses them, undo restores the text but not them, text typed at a span's edge
+  falls outside). Inside the editor, too, spans are re-derived from every parse and matched to objects; the previous
+  parse's spans and decorations are the strongest evidence of the match, before the cascade of R-TXT-18. A pasted
+  copy still comes out as a new object.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.

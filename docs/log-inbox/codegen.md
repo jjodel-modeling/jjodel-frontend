@@ -778,3 +778,15 @@ Expected: unset slots are [] whatever the type; lowerBound is exposed on attribu
 **Smoke visivo**: non applicabile (docs-only; Monaco probe headless outside src/)
 **Notes**: Probes in ~/.jjodel-lanes/P-2026-11-01-2232/probe/ (not committed). Measured: C-like = JjGen generator byte for byte; 16/16 Briefs; nearley 1 parse on 19 samples; ohm fixed (#() skips no leading space; kw<k> rule) 19/19; 1,001 objects hand 15 ms, nearley 11 ms, ohm 107 ms (1.6 ms incremental); recovery loses a root on a missing }; Monaco decorations not restored by undo.
 **Prompt document name**: 2026-11-01 22:32
+
+## 2026-11-01 — merge: textual-syntax-discovery into alfonso-frontend-jjtl (P-2026-11-01-2311)
+**Prompt**: Bring `textual-syntax-discovery` at `4a90cc085` (addendum of P-2026-11-01-2210/2232) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-syntax-discovery on eaaeb624a); union resolution of this inbox.
+**Files touched**: merge commit ddf1088d9 (`docs/discovery/discovery_2026-11-01_textual_viewpoint.md`, the 2210 and 2232 prompts, this inbox); `docs/prompts/claude_2026-11-01_2311_prompt_merge_textual-syntax-discovery.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (docs-only)
+**Prompt document name**: 2026-11-01 23:11
