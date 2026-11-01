@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-1709
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · lane default-textual-notation · discovery, no code change
 Lane: discovery (read-only; probes in the running app; one report, one docs-only commit)
 Depends: none (trunk tip 06bbed9a0)
 Worktree: ~/jjodel-w-defaulttext, branch default-textual-notation (from 06bbed9a0)
