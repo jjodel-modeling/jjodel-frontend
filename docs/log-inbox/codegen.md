@@ -876,3 +876,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: The line was dead for a second reason: the L proxy has no defaultValueLiteral getter (LModelElement.tsx:2326-2331 commented out), so the export now reads attr.__raw. No reason for the 2026-02-04 comment-out in the commit (260e1a0ce). Legacy unprefixed 'serializable' and 'literal' keys still read. 5 of 6 tests red before, green after; tsc 0, vitest export+codegen 50 files/2464, build ok. Browser round trip not run.
 **Prompt document name**: 2026-11-01 23:51
+
+## 2026-11-02 — merge: ecore-export-defaults into alfonso-frontend-jjtl (P-2026-11-01-2358)
+**Prompt**: Bring `ecore-export-defaults` at `f1a4a25d7` (fix ed6df7b6d) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-ecore-export-defaults on bda991ccf); union resolution of this inbox.
+**Files touched**: merge commit 6b2bfeb36 (`frontend/src/services/export/EcoreService.ts`, `frontend/src/services/export/ecoreFeatureReads.ts`, `frontend/src/api/data.ts`, `frontend/src/services/export/__tests__/ecore-export-defaults.test.ts`, the 2351 prompt, this inbox); `docs/prompts/claude_2026-11-01_2358_prompt_merge_ecore-export-defaults.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-01 23:58
