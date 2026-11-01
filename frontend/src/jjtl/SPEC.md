@@ -311,7 +311,7 @@ The second argument is required: `prompt(message)` alone is rejected by both pat
 `"number"`, `"boolean"`, `"date"`, `"select"`); the optional third is the default, or the options array for
 `"select"`.
 
-> **Implementation status:** The executor runs all four. `alert` awaits the host dialog; `notify` shows a toast and does not wait. `prompt`, `input` and `confirm` open the host dialog when the call is the whole right-hand side of an attribute mapping, a `let` binding or a conversion: the executor awaits the answer and binds the value entered (for `input`, the default is pre-filled), or `null` when the dialog is cancelled. A call nested inside a larger expression opens no dialog: on the JjEL path the expression fails with the warning `Expression evaluation failed (JjelExpression): Function 'prompt' is not defined` and the attribute is `null`; on the legacy path the call evaluates to `null` with no warning, so `"x" + prompt("N", EString)` yields `"x"`.
+> **Implementation status:** The executor runs all four. `alert` awaits the host dialog; `notify` shows a toast and does not wait. `prompt`, `input` and `confirm` open the host dialog when the call is the whole right-hand side of an attribute mapping, a `let` binding or a conversion: the executor awaits the answer and binds the value entered (for `input`, the default is pre-filled), or `null` when the dialog is cancelled. A call nested inside a larger expression opens no dialog: on both parse paths the whole expression fails with the warning `Expression evaluation failed (JjelExpression): Function 'prompt' is not defined` (`confirm` or `input` named likewise) and the value is `null`, so `"x" + prompt("N", EString)` yields `null`.
 
 ### 3.6 Expressions
 
@@ -625,11 +625,16 @@ Three implementations:
 
 ### 8.3 Input Types
 
+The kind is the second argument of `input`, a string literal: `input("Name?", "string")`. Both
+parsers accept exactly the kinds below, compared after lowercasing; any other kind is a parse
+error.
+
 | Type | Widget |
 |---|---|
-| `text` | Text input field |
+| `string` | Text input field |
 | `number` | Numeric input |
 | `boolean` | Checkbox / toggle |
+| `date` | Date picker |
 | `select` | Dropdown from options array |
 
 > **Implementation status:** The executor runs `AlertStatement`, `NotifyStatement`, `PromptExpression`, `InputExpression` and `ConfirmExpression` through the UIBridge. An `input` call opens the host dialog with its kind, its default pre-filled and, for `select`, its evaluated options, and returns the value entered, or `null` when the dialog is cancelled. The interactive expressions open a dialog only as the whole right-hand side of a binding; see §3.5 for the nested case.
@@ -1030,7 +1035,7 @@ type ExpressionAST =
     | IsTypeExpressionAST     // x is Type
     | LambdaExpressionAST     // x : x.name
     | PromptExpressionAST     // prompt("message", default) | prompt("message", Type [, default])
-    | InputExpressionAST      // input("message", "text", default)
+    | InputExpressionAST      // input("message", "string", default)
     | ArrayLiteralAST         // [1, 2, 3]
     | JjelExpressionWrapperAST // wrapped JjEL expression
 ```
@@ -1082,13 +1087,14 @@ NotifyStatementAST {
 
 - AST bridge: all node type conversions (22 tests)
 - Executor integration: direct mapping, JjEL builtins, value mapping, guards, nested objects, if/then/else, null-safe navigation, multiple instances, trace recording (15 tests)
+- Prompt/Confirm/Input execution, host mocked: `__tests__/jjel-path-interactive.test.ts` — the dialog opens and binds the answer on the JjEL path; the `input` default reaches the host on both paths (P-2026-10-31-2245); a call nested in an expression yields `null` with the same warning on both paths (P-2026-11-01-0110)
 
 ### Not Tested
 
 - Helpers
 - Multiple class mappings in one transformation
 - Multiplicity `[*]`
-- Alert/Notify/Prompt/Input execution
+- Alert/Notify execution
 - Cross-reference resolution
 - Multi-attribute with complex conversions
 - Edge cases for `evaluatePropertyPath`
