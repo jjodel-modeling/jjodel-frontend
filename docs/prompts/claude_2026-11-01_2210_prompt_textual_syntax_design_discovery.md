@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2210
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · hard-stop at the context ceiling, continued by P-2026-11-01-2232
 Lane: discovery (read-only; measured probes allowed outside `src/`; one addendum, one docs-only commit)
 Depends: P-2026-11-01-2017 (report on the trunk); decisions R-TXT-1..20
 Worktree: ~/jjodel-w-textsyntax, branch textual-syntax-discovery (from the trunk commit that adds this prompt)
