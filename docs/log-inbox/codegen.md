@@ -836,3 +836,16 @@ Expected: unset slots are [] whatever the type; lowerBound is exposed on attribu
 An index hole now takes the origin of its last read, but a value passed through a template-call argument (value(a, o[a.name]) in the default text generator) loses it, so Alt+click does not reach the model on text printed through helper templates. Fix: carry reads through template-call arguments in the JjGen engine (origin.ts and the call path). Low priority since R-TXT-16: the textual notation is printed by a TypeScript printer; this serves JjGen generators in general.
 **Priority**: low
 **Found in**: P-2026-11-01-2015
+
+## 2026-11-01 — fix(jjel): unset attributes read their declared default literal (P-2026-11-01-2350)
+**Prompt**: R-TXT-5: JjEL's unset read takes the declared default from `defaultValueLiteral` (the field the editor and, since 44c6794f2, the Ecore import fill) when `defaultValue` is absent, coerced to the attribute's type; unparsable reads as no default.
+**Files touched**: 59fb7c389: frontend/src/jjscript/executor/commands/eval.ts, frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts (new); closure: this inbox, the Status line of the 2350 prompt
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Notes**: Real buildEvalContext under a joiner Proxy stub and a mocked ../utils: 6 of 8 red before, 9/9 after (EInt 7, EBoolean false/true, EString, EDouble 2.5, enum Mid, "abc" -> 0/null, Ecore fixture, default text prints `level 7`, shell defaultValue). 3 mutants killed. Gates: tsc 0, vitest jjscript+jjel+codegen 3725 passed (context-binding.test.ts known window red), build 0, check:docs 0. Literal parsed strictly: "2.5" on EInt reads 2.5, as defaultValue does.
+**Prompt document name**: 2026-11-01 23:50

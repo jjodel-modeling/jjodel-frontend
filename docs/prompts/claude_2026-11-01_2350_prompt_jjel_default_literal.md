@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-01-2350
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-01 · 59fb7c389
 Lane: fast (one reader change plus tests)
 Depends: P-2026-11-01-2300/2325 (merged 44c6794f2: the Ecore import now fills `defaultValueLiteral`)
 Worktree: ~/jjodel-w-jjeldefault, branch jjel-default-literal (from the trunk commit that adds this prompt)
