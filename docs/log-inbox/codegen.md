@@ -651,7 +651,7 @@ Arbiter arb3 {
 
 ## 2026-11-01 — merge: default-text-generator into alfonso-frontend-jjtl (P-2026-11-01-2002)
 **Prompt**: Bring `default-text-generator` at `281cf10a3` into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-default-text-generator on a763bbb91).
-**Files touched**: merge commit 0e5d9152d (`frontend/src/examples/codegen/default-text.generator.json`, `frontend/src/codegen/engine/__tests__/defaultText.test.ts`, the branch prompt, this inbox); `docs/prompts/claude_2026-11-01_2002_prompt_merge_default-text-generator.md` Status line; this entry
+**Files touched**: merge commit 0e5d9152d (`frontend/public/examples/codegen/default-text.generator.json`, `frontend/src/codegen/engine/__tests__/defaultText.test.ts`, the branch prompt, this inbox); `docs/prompts/claude_2026-11-01_2002_prompt_merge_default-text-generator.md` Status line; this entry
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
@@ -673,3 +673,15 @@ Arbiter arb3 {
 **Smoke visivo**: non applicabile (see Notes)
 **Notes**: Engine part done, two mutants on a bench. Not met: test (4) and the visual check: the default generator passes values as template arguments (`value(a, o[a.name])`), so the index read runs outside the hole that prints `"" + v`; "0" stays opaque. Needs reads carried through call arguments, outside origin.ts; awaiting Alfonso. Gates: tsc 0, vitest 2883/2883, build 0.
 **Prompt document name**: 2026-11-01 20:15
+
+## 2026-11-01 — merge: index-hole-origin into alfonso-frontend-jjtl (P-2026-11-01-2026)
+**Prompt**: Bring `index-hole-origin` at `5a66efa50` into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-index-hole-origin on 7e009a33a).
+**Files touched**: merge commit 0bf0f91cc (`frontend/src/codegen/engine/origin.ts`, `frontend/src/codegen/engine/__tests__/origin.test.ts`, the branch prompt, this inbox); `docs/prompts/claude_2026-11-01_2026_prompt_merge_index-hole-origin.md` Status line; this entry; the generator path in the entry of P-2026-11-01-2002 corrected to `frontend/public/examples/codegen/default-text.generator.json` (the chat had written the wrong one)
+**Outcome**: ✅ completed (R-TXT-13 holds for index holes; origins through template-call arguments still missing, open question)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crop of the lane, unattended)
+**Prompt document name**: 2026-11-01 20:26
