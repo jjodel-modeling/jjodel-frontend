@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-2345
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane fast · jjtl-forall-collection-jjel · 9c0ac6c3d · verifica visiva non applicabile
 Lane: fast (one parser rule; the discovery is inline)
 Depends: none
 Worktree: ~/jjodel-w-jjtlcoll, branch jjtl-forall-collection-jjel (from the trunk tip)
