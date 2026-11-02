@@ -68,11 +68,14 @@ function globalsOf(spec: Spec): Record<string, any> {
     return globals;
 }
 
+/** The tests run under load (vitest workers, other lanes): a generation gets far more than the production 2000 ms (R-GEN-28), which is asserted in engine/__tests__/budget.test.ts. */
+export const TEST_LIMITS = { timeMs: 60_000 };
+
 const LOOKUP = { MM: { className: 'DModel', id: 'MM', name: 'mm' }, M: { className: 'DModel', id: 'M', name: 'm', instanceof: 'MM' } };
 
 /** The text the shipped JjGen generator prints for the spec. */
 export function referenceText(spec: Spec, templates: readonly TemplateRecord[] = shippedTemplates()): string {
-    const out = generate(globalsOf(spec), LOOKUP, 'M', templates, 'main', [], {}, 'none');
+    const out = generate(globalsOf(spec), LOOKUP, 'M', templates, 'main', [], TEST_LIMITS, 'none');
     expect(out.errors).toEqual([]);
     return out.code;
 }

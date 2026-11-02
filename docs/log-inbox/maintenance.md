@@ -649,3 +649,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: not run. The `a != b` behaviour in the app (`NAME_CONFLICT` or both `Foo_dup`) stays unmeasured.
 **Notes**: Rollback tag `pre-jjscript-forall-by-id`.
 **Prompt document name**: 2026-11-02 22:22
+
+## 2026-11-02 — test: codegen and trace-monitor tests get a load-proof time budget (P-2026-11-02-2250)
+**Prompt**: `claude_2026-11-02_2250_prompt_load_sensitive_tests.md`: tests that fail under load, `defaultText.test.ts`, `textual.test.ts` (via `spec.ts`) and the CLI tests of `traceMonitor.test.ts`.
+**Files touched**: `frontend/src/codegen/engine/__tests__/defaultText.test.ts`, `frontend/src/codegen/textual/__tests__/spec.ts`, `frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts`, `frontend/scripts/gates/__tests__/traceMonitor.test.ts`. Tests only; `text.ts` and the 2000 ms of R-GEN-28 untouched.
+**Outcome**: ⚠️ partial: fix committed and gates green; the third verification was cut by the chat
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no. tsc 0, typecheck:scripts 0, `vitest run src/codegen scripts/gates` 60 files, 2906 tests green, no load.
+**Out-of-scope changes**: no. `unsetDefaultLiteral.test.ts` is the one other test of the same shape (default-text generator, default budget); it never failed.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Codegen: at 40 CPU hogs, 8 tests stopped with `Generation stopped after 2000 ms: template 'block' was still running` (R-GEN-28), so time; fix `{ timeMs: 60_000 }` via `limits`. CLI: at 500 hogs `spawnSync` gave ETIMEDOUT, SIGTERM, status null; timeout now 90 s. Codegen green 3 runs at 40 hogs; CLI green in 1 run at 500 hogs, the other 2 cut by the chat (shared Mac). Detail in the report.
+**Prompt document name**: 2026-11-02 22:50
