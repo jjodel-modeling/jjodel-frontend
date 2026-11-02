@@ -203,3 +203,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (chat GO: 3001 HTTP 200 on the merged tree; behaviour measured by the P-2026-11-02-2108 probe on aa503e261; no hand run on the trunk, not a visual verification)
 **Notes**: Merge-tree 230d1041f equal to the staged tree; 22 probes as declared. Gates on c58e00349: typecheck, typecheck:scripts exit 0; vitest 13028 = trunk 12988 + 40 (190 vs 150 in the four touched test files), the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Trunk tip red once on one laneRun 15 s timeout under a concurrent run, green on rerun.
 **Prompt document name**: 2026-11-02 21:49
+
+## 2026-11-02 — feat(jjtl): B1 steps 2 and 3, called rules tested, the environment (P-2026-11-02-2247)
+**Prompt**: P-2026-11-02-2247, continuation of P-2026-11-02-2224 after its context ceiling: test the wip step 2 (called rules, depth limit 256) and commit; implement step 3, the environment, with the acceptance case (2), capture, and implicit resolution inheriting the environment to the leaves.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts` (8ddcc744f), `executor/__tests__/called-lazy-rules.test.ts` (4e2891bc3, 8ddcc744f), `frontend/src/jjtl/SPEC.md` (0c2e9d071), this inbox, the `Status:` lines of P-2026-11-02-2224 and P-2026-11-02-2247.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Six files, all in DOVE. Step 2 green unchanged. Step 3: closures (value, binding-site env), structural env keys, lowering per (rule, source, env) under a non-empty env, delegating rules on first demand. Mutation (closures under use-site env) kills 8/14. Gates: jjtl 462 + 7 known; full 13048 passed, 9 known + 2 Chromium hook timeouts, 18/18 alone; tsc exit 0. Steps 4 (lazy) and 5 (fresh subtree under B) are the next lane.
+**Prompt document name**: 2026-11-02 22:47
