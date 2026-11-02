@@ -337,7 +337,10 @@ export async function executeCreate(
             };
         }
 
-        if (!parentElement && needsParent(elementType)) {
+        // A parent that was named and resolved nowhere is refused for every type: a class, enum or
+        // package handed `father: undefined` was made with no father, listed by nothing, and reported
+        // as created (P-2026-11-03-0000, defect 2).
+        if (!parentElement && (parent || needsParent(elementType))) {
             const expected = kindLabel(parentKinds);
             const rule = PARENT_RULE_BY_ELEMENT_TYPE[elementType];
             const notFound = `${expected} '${parent ? qualifiedNameToString(parent) : ''}' not found.${rule ? ' ' + rule : ''}`;
