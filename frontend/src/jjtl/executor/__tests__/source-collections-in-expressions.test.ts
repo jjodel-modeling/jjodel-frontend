@@ -133,8 +133,9 @@ Requirement -> Reg {
 }`, withSource);
 
         expect(m.reqs.__ref_result).toBe(true);
-        // Targets are copied when bound, before pass 2 of the other rule names them.
+        // Targets are bound by identity (P-2026-11-02-1742): pass 2 of the other rule names them.
         expect(m.reqs.targets.map((t: any) => t.__sourceId)).toEqual(['R1', 'R2', 'R3']);
+        expect(m.reqs.targets.map((t: any) => t.name)).toEqual(['r1', 'r2', 'r3']);
         expect(warnings).toEqual([]);
     });
 

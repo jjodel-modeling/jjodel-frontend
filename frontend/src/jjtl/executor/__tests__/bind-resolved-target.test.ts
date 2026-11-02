@@ -26,6 +26,7 @@ vi.mock('../../../joiner', () => ({
 import { JjtlLexer } from '../../lexer/lexer';
 import { JjtlParser } from '../../parser/parser';
 import { execute } from '../executor';
+import { serializeTraceModel } from '../traceModel';
 import type { TransformationAST } from '../../types/ast';
 
 function cls(name: string, attributes: string[], references: any[] = []) {
@@ -77,25 +78,59 @@ async function run(body: string, withSource: boolean) {
     return { m, regs, warnings: result.warnings };
 }
 
+// Until P-2026-11-02-1742 the parent held a copy taken at bind time (fromJjelValue at
+// executor.ts:1671, committed green in d2e2c8574): with the Arbiter rule first the copies
+// had no name, with the Requirement rule first they had it. Binding is now by identity.
 describe.each([
     ['legacy parser (no source)', false],
     ['JjEL delegation (source)', true],
 ])('a parent bound to a resolved target: %s', (_label, withSource) => {
-    it('holds a copy taken at bind time, so a rule bound later is missing from it', async () => {
-        const { m, regs } = await run(ARBITER_RULE + '\n' + REQUIREMENT_RULE, withSource);
+    it('holds the live target, so what a later rule binds on it is there', async () => {
+        const { m, regs, warnings } = await run(ARBITER_RULE + '\n' + REQUIREMENT_RULE, withSource);
 
         expect(m.reqs.__ref_result).toBe(true);
-        expect(m.reqs.targets.map((t: any) => t.__sourceId)).toEqual(['R1', 'R2']);
-        // The live targets got their name in pass 2, after the parent was bound.
-        expect(regs.map((r: any) => r.name)).toEqual(['r1', 'r2']);
-        expect(m.reqs.targets[0]).not.toBe(regs[0]);
-        expect(m.reqs.targets.map((t: any) => t.name)).toEqual([undefined, undefined]);
+        expect(m.reqs.targets[0]).toBe(regs[0]);
+        expect(m.reqs.targets[1]).toBe(regs[1]);
+        expect(m.reqs.targets.map((t: any) => t.name)).toEqual(['r1', 'r2']);
+        expect(warnings).toEqual([]);
     });
 
-    it('holds a copy whose content depends on pass-2 rule order', async () => {
+    it('holds the same thing whatever the rule order', async () => {
         const { m, regs } = await run(REQUIREMENT_RULE + '\n' + ARBITER_RULE, withSource);
 
-        expect(m.reqs.targets[0]).not.toBe(regs[0]);
+        expect(m.reqs.targets[0]).toBe(regs[0]);
         expect(m.reqs.targets.map((t: any) => t.name)).toEqual(['r1', 'r2']);
+    });
+
+    it('lets two rule targets point at each other, and every reader of the output survives the cycle', async () => {
+        const target = {
+            classes: [
+                cls('M', ['name'], [{ name: 'reqs', composition: false, type: { name: 'Reg' } }]),
+                cls('Reg', ['name'], [{ name: 'owner', composition: false, type: { name: 'M' } }]),
+            ],
+        };
+        const source = SOURCE.map(e => e.className === 'Requirement' ? { ...e, arbiter: { __ref: 'A1' } } : e);
+        const ast = parseJjtl(ARBITER_RULE + `
+Requirement -> Reg {
+    name := name
+    owner := arbiter
+}`, withSource);
+        const result = await execute(ast, source, target);
+
+        expect(result.success).toBe(true);
+        expect(result.errors).toEqual([]);
+        const m = result.targetModel!.instances.get('M')![0];
+        const regs = result.targetModel!.instances.get('Reg')!;
+        expect(m.reqs.targets[0]).toBe(regs[0]);
+        expect(regs[0].owner.targets[0]).toBe(m);
+        expect(m.reqs.targets[0].owner.targets[0].reqs.targets[1]).toBe(regs[1]);
+
+        // The trace holds the same live values; its serialization writes a rule target short.
+        const trace = JSON.parse(serializeTraceModel(result.traceModel!));
+        const owner = trace.links.flatMap((l: any) => l.bindings).find((b: any) => b.targetAttribute === 'owner');
+        expect(owner.targetValue).toEqual({
+            __ref_result: true,
+            targets: [{ __type: 'M', className: 'M', __sourceId: 'A1' }],
+        });
     });
 });
