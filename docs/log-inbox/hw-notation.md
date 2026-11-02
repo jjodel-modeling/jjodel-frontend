@@ -6,6 +6,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-02 — feat(jjtl): A2, placed targets written inside their container by the nested path (P-2026-11-02-2024)
+**Prompt**: P-2026-11-02-2024, close P-2026-11-02-1956, LIR, then the app's write-back of rule targets placed in a containment, the nine handoff items, measured through the real Execute dialog.
+**Files touched**: `frontend/src/components/project/ProjectEditor.tsx` (STEP 6, 6c, 8b), `nestedMaterialization.ts`, `__tests__/nestedMaterialization.test.ts`, `frontend/src/jjtl/SPEC.md`, `docs/discovery/lir_2026-11-02_jjtl_containment_writeback.md` (new), this inbox, the `Status:` lines of both prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato
+**Notes**: Probe port 3193, two runs, one tab per scenario: depth 3 both orders, 8 objects, roots s1 and e1 only, order and pointers out of the tree right; mixed feature [a,b,c,made]; second claim fails visibly, no model; save/reopen same tree; P-1838 S1-S5 unchanged. Undo after a run: output tab Undo button disabled, Cmd+Z changes nothing. Gates: 453 jjtl+project, full 12945 (9 known), tsc 0, build 0. Probe: `~/.jjodel-lanes/P-2026-11-02-2024/probe/`.
+**Prompt document name**: 2026-11-02 20:24
+
 ## 2026-11-02 — feat(jjtl): A1, containment placement through the trace in the executor (P-2026-11-02-1956)
 **Prompt**: P-2026-11-02-1956, containment placement of rule targets through the trace in the executor only: ownership errors, per-model trace, ticket #445 finding, parity serializer, SPEC, write-back list for the next lane.
 **Files touched**: `frontend/src/jjtl/executor/executor.ts`, `traceModel.ts`, `__tests__/containment-placement.test.ts` (new), `__tests__/nested-name-undeclared.test.ts` (new), `frontend/src/jjtl/__tests__/jjel-path-parity.test.ts`, `frontend/src/jjtl/SPEC.md`, this inbox, the prompt's `Status:`.

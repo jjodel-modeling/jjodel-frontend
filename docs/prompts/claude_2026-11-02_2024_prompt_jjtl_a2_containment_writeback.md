@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-2024
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane hw-notation · 897e4fdca, 2481545b5, 784c0acc0 and the closure commit · verifica visiva passata 2026-11-02 (probe, port 3193)
 Lane: full (JjTL write-back in the app; second lane of slice A)
 Depends: P-2026-11-02-1956
 Worktree: ~/jjodel-w-jjtlcontain, branch jjtl-containment (the same tree, at the commit that adds this prompt)
