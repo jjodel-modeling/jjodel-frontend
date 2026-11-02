@@ -1182,3 +1182,18 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Prompt document name**: 2026-11-02 19:30
 
 **Ticket** (P-2026-11-02-1930): the app-bar tab ellipsises the title to `demoESM · Stat…` at default width.
+
+## 2026-11-02 — feat(codegen): text paths follow the class keyword (P-2026-11-02-2003)
+**Prompt**: R-TXT-28: a path's first segment is the class's printed keyword (class name when dropped), in printer and parser, keyword read from the concrete grammar; tests first on the library fixture; measure feature segments; gates, commit, bench.
+**Files touched**: e141ed7b1: `frontend/src/codegen/textual/printer.ts`, `parser.ts`, `__tests__/syntaxRecord.test.ts`; Status line of the 2003 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Tests written first, 4 red before the fix. Bench 4/4 mutants killed (commit body). printer.ts exports pathKeyword (head kw of the object rule); parser resolves among the top-level classes only; shared keyword gives an error naming both. styleCheck.ts untouched: distinct-classes and LL(1) already refuse both clashes. No record: byte-identical, 2535 codegen tests green.
+**Prompt document name**: 2026-11-02 20:03
+
+**Ticket** (P-2026-11-02-2003): feature segments keep the feature name: with `members` printed as `patrons`, the path reads `shelf[0].members[1]`, and `shelf[0].patrons[1]` is refused with `Library has no containment "patrons"`. Same mismatch as R-TXT-28 fixed for classes; outside that row.
