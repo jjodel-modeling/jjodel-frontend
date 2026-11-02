@@ -38,8 +38,8 @@ JjTL is a declarative model-to-model (M2M) transformation language. Its declarat
 | `from`, `to` | Model references |
 | `where` | Guard |
 | `helper` | Helper definition |
-| `rule` | Called rule definition (Phase 2) |
-| `lazy`, `unique` | Rule modifiers (Phase 2) |
+| `rule` | Called rule definition (contextual, §3.4b) |
+| `lazy`, `unique` | Rule modifiers (contextual, §3.4b) |
 | `abstract`, `extends` | Rule inheritance (Phase 2) |
 | `do` | Imperative block (Phase 4) |
 | `import`, `uses`, `library` | Module system (Phase 5) |
@@ -51,6 +51,13 @@ JjTL is a declarative model-to-model (M2M) transformation language. Its declarat
 | `true`, `false`, `null` | Literals (JjEL) |
 
 Keywords are **case-insensitive** at the lexer level.
+
+`rule`, `lazy` and `unique` are **contextual** (P-2026-11-02-2224): the lexer gives them no
+token, since lowercasing would take a class `Rule` or Ecore's feature `unique` away from every
+saved transformation. The parser reads them, lowercase and by value, only at the start of a
+top-level declaration: `rule NAME (`, `lazy NAME`, `unique lazy NAME`. Everywhere else they are
+identifiers. One form changes reading: a source class called `lazy` with an alias
+(`lazy l -> T`) is now a lazy rule on `l`; `lazy -> T` still maps the class.
 
 ### 2.2 Operators and Punctuation
 
@@ -301,6 +308,40 @@ returnType = IDENTIFIER ;
 helper formatLabel(name: String, prefix: String) -> String {
     prefix + '_' + name.snakeCase()
 }
+```
+
+### 3.4b Called and Lazy Rules
+
+> **STATUS: implemented in the executor (P-2026-11-02-2224, slice B).** The app's write-back
+> of several targets per source element is slice B2. Semantics: §5.3.3.
+
+```ebnf
+calledRule = "rule" IDENTIFIER "(" [ ruleParam ( "," ruleParam )* ] ")" ruleTail ;
+ruleParam  = IDENTIFIER [ ":" IDENTIFIER ] ;
+lazyRule   = [ "unique" ] "lazy" IDENTIFIER [ IDENTIFIER ] ruleTail ;
+ruleTail   = "->" IDENTIFIER multiplicity? condition? [ "{" mappingBody "}" ]
+           | "=" expression ;                     (* a delegating rule, to the end of the line *)
+classMapping = sourcePattern ( "," sourcePattern )* ruleTail ;
+```
+
+The form follows `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md:268-322` (R-JTG-5). Called and lazy
+rules are kept in `TransformationAST.rules`, not in `mappings`: neither takes part in pass-1
+matching. A parameter typed `Env` receives the environment (§5.3.3); other parameter types are
+optional and not checked.
+
+**Delegating rules** (`= expression`) are this lane's addition to the sketch: a rule that
+creates no target of its own and lowers to what the expression lowers to. A source node with
+no target counterpart needs one: `Bind(expr, bindings)` lowers to its `expr`, and a variable
+lowers either to a `Ref` or to the expression bound to it. Any of the three kinds may delegate;
+a delegating rule has no guard, its expression decides.
+
+```jjtl
+rule mkRef(v) -> Ref { name := v.name }
+rule under(e, env: Env) = e
+lazy Add -> Add { left := left  right := right }
+unique lazy Const -> Const { value := value }
+lazy Var v = if envHas(v.name) then envLookup(v.name) else mkRef(v)
+Main m = m.expr
 ```
 
 ### 3.5 Interactive Statements
