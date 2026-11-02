@@ -2839,6 +2839,19 @@ export class JjtlExecutor {
      * @param value            The evaluated RHS value
      * @param targetAttribute  The target attribute being bound (used only for error messages)
      */
+    /**
+     * Report a resolution fallback as a warning, naming the rule and the source element
+     * whose binding hit it (P-2026-11-02-1742). What the executor binds does not change.
+     * The same message is reported once, so a forall does not repeat it per element.
+     */
+    private reportFallback(message: string): void {
+        const where = this.context.currentRuleName
+            ? ` (rule '${this.context.currentRuleName}', source element '${this.context.currentInstanceName ?? '?'}')`
+            : '';
+        const msg = `Unresolved reference: ${message}${where}.`;
+        if (!this.warnings.includes(msg)) this.warnings.push(msg);
+    }
+
     private applyCrossTypeResolution(value: any, targetAttribute: string): any {
         const resolved = this.resolveValue(value, targetAttribute, undefined, 0);
         return this.wrapIfTargetReference(resolved);
@@ -2952,7 +2965,16 @@ export class JjtlExecutor {
         if (!className) return value;
 
         const rules = this.context.rulesBySourceType.get(className);
-        if (!rules || rules.length === 0) return value;
+        if (!rules || rules.length === 0) {
+            // Fallback kept, now reported: the source object itself is bound.
+            if (value.__createdBy !== 'JjTL') {
+                this.reportFallback(
+                    `${className} '${value.name ?? value.id ?? '?'}' bound to '${targetAttribute}' has no rule ` +
+                    `mapping '${className}': the source object itself was bound`
+                );
+            }
+            return value;
+        }
 
         let chosenRule: ClassMappingAST | undefined;
         if (expectedTarget) {
@@ -3016,6 +3038,10 @@ export class JjtlExecutor {
                 );
             }
             // Implicit path — fail open: reference points to a type without a rule.
+            // Fallback kept, now reported.
+            this.reportFallback(
+                `the reference to '${sourceId}' bound to '${targetAttribute}' points to an element no rule maps: it resolved to null`
+            );
             return null;
         }
 
@@ -3035,7 +3061,15 @@ export class JjtlExecutor {
 
         // Multiple entries — check if they all come from the same rule
         const distinctRules = new Set(entries.map(e => e.rule));
-        if (distinctRules.size === 1) return entries[0].target;
+        if (distinctRules.size === 1) {
+            // Fallback kept, now reported: the first target is bound.
+            const rule = entries[0].rule;
+            this.reportFallback(
+                `the reference to '${sourceId}' bound to '${targetAttribute}' has ${entries.length} targets from rule ` +
+                `'${rule.sources.map(s => s.className).join(', ')} -> ${rule.targetClass}': the first was bound`
+            );
+            return entries[0].target;
+        }
 
         // Ambiguous — multiple rules produced targets for the same source ID
         const targetClasses = [...new Set(entries.map(e => e.targetClass))].join(', ');
