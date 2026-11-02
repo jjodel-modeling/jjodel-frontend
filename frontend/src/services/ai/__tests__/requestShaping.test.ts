@@ -251,6 +251,22 @@ describe('OpenAI-compatible request', () => {
         expect(calls[0].body.max_tokens).toBe(8192);
     });
 
+    const streamReply = () => sse([`data: ${JSON.stringify({ id: 'c', object: 'chat.completion.chunk', created: 0, model: 'm', choices: [{ index: 0, delta: { content: 'Hello' }, finish_reason: null }] })}\n\n`, 'data: [DONE]\n\n']);
+    it.each([
+        ['chat', GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, openAIReply, (p: OpenAICompatibleProvider) => p.chat(CONVERSATION)],
+        ['chatStream', GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, streamReply, (p: OpenAICompatibleProvider) => collect(p.chatStream(CONVERSATION))],
+        ['test()', GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, openAIReply, (p: OpenAICompatibleProvider) => p.test()],
+        ['keyless chat', OLLAMA, { baseUrl: 'http://localhost:11434', model: 'llama3' }, openAIReply, (p: OpenAICompatibleProvider) => p.chat(CONVERSATION)],
+    ] as const)('%s sends no X-Stainless header, which the Mistral and Kimi CORS preflight rejects (R-AI-19)', async (_name, spec, config, reply, run) => {
+        const { fn, calls } = mockFetch(reply);
+        const provider = new OpenAICompatibleProvider(spec, config, { fetch: fn });
+        await run(provider);
+        expect(calls).toHaveLength(1);
+        const names = [...calls[0].headers.keys()];
+        expect(names).toContain('content-type');
+        expect(names.filter(n => n.startsWith('x-stainless'))).toEqual([]);
+    });
+
     it('sends an earlier turn\'s image and PDF again, on that turn (R-AI-17)', async () => {
         const { fn, calls } = mockFetch(openAIReply);
         const provider = new OpenAICompatibleProvider(GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, { fetch: fn });

@@ -38,6 +38,26 @@ const OPENAI_SNAPSHOT = /-\d{4}-\d{2}-\d{2}$/;
 /** Models the chat-completions path cannot use (audio, image, search, Responses-only...). */
 const OPENAI_DENY = /audio|realtime|transcribe|tts|image|search|embedding|moderation|instruct|whisper|dall-e|codex|deep-research|-pro(-|$)/;
 
+/**
+ * Every `X-Stainless-*` header the installed `openai` SDK (7.47.0: `internal/detect-platform.mjs`,
+ * `client.mjs`, the polling helpers) can add, set to null so none reaches the wire (R-AI-19): the CORS
+ * preflight of api.mistral.ai and api.moonshot.cn rejects them, and the request then reads as a
+ * connection error instead of its status. A null in `defaultHeaders` is the SDK's way to unset one.
+ */
+const NO_STAINLESS_HEADERS: Record<string, null> = {
+    'X-Stainless-Lang': null,
+    'X-Stainless-Package-Version': null,
+    'X-Stainless-OS': null,
+    'X-Stainless-Arch': null,
+    'X-Stainless-Runtime': null,
+    'X-Stainless-Runtime-Version': null,
+    'X-Stainless-Retry-Count': null,
+    'X-Stainless-Timeout': null,
+    'X-Stainless-Helper-Method': null,
+    'X-Stainless-Poll-Helper': null,
+    'X-Stainless-Custom-Poll-Interval': null,
+};
+
 type ContentPart =
     | { type: 'text'; text: string }
     | { type: 'image_url'; image_url: { url: string } }
@@ -61,7 +81,7 @@ export class OpenAICompatibleProvider extends BaseProvider {
             dangerouslyAllowBrowser: true,
             maxRetries: 0,
             fetch: this.options.fetch,
-            defaultHeaders: keyless ? { Authorization: null } : undefined,
+            defaultHeaders: keyless ? { ...NO_STAINLESS_HEADERS, Authorization: null } : NO_STAINLESS_HEADERS,
         });
     }
 
