@@ -1008,3 +1008,16 @@ Expected: the test clears `JJODEL_CRITICAL_ZONE_GOAHEAD` (and any other go-ahead
 **Smoke visivo**: non applicabile
 **Notes**: Closes ticket #393 (2026-11-01, found in P-2026-11-01-1605). runScript lives in hookRunner.ts, shared by seven test files and left untouched: a local runZone deletes the variable from process.env around the synchronous spawn and restores it. Mutation (delete commented out): set 66/70, the 4 RC-19 bypass cases red; unset 70/70.
 **Prompt document name**: 2026-11-02 06:45
+
+## 2026-11-02 — merge: criticalzone-test-env into alfonso-frontend-jjtl (P-2026-11-02-0723)
+**Prompt**: Bring `criticalzone-test-env` at ad09563f7 (criticalZone hook tests drop an inherited go-ahead, 3c54c9d3f, ticket #393) into the trunk `alfonso-frontend-jjtl` with one --no-ff merge commit of the explicit sha (RC-14).
+**Files touched**: merge commit 34bb2c30c (`frontend/scripts/hooks/__tests__/criticalZone.test.ts`, `docs/prompts/claude_2026-11-02_0645_prompt_criticalzone_test_env.md`, this inbox); `docs/prompts/claude_2026-11-02_0723_prompt_merge_criticalzone-test-env.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (test-only change; chat GO 2026-11-02)
+**Notes**: Gates on 34bb2c30c: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk; hook tests 21 files, 967 = trunk = branch (no new test); build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Zero conflicts, no union. Lane board untouched. Step 6 names 81e0aafdf as reset target; the real pre-merge tip was bce1f3ef5 (template fix owed).
+**Prompt document name**: 2026-11-02 07:23
