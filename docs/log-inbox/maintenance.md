@@ -484,3 +484,16 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 **Smoke visivo**: non applicabile
 **Notes**: 13 files, above five: the consumer fix in subsetChecker.ts (E-FORALL on a top flatten over ForAll, record projection not E-VALUE) and the provider were outside the parser. Gates: tsc exit 0; vitest jjel/jjscript/jjtl/codegen/validation/simulation 5096 tests passed, 8 suites the known window import failures; build exit 0. Context branch killed by a mutation (1 fail). Regressions unknown: the 3001 autocomplete check is the chat's, after the merge. Temporary node_modules symlink removed.
 **Prompt document name**: 2026-11-02 14:10
+
+## 2026-11-02 — merge: jjel-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1511)
+**Prompt**: `claude_2026-11-02_1511_prompt_merge_jjel-forall-multivar.md`, a direct merge by `lane-run merge --direct`, closed by hand by the chat because the worker ended blocked and `lane-run go` did not apply.
+**Files touched**: merge `bf4b33e74`, the files of the branch side.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. vitest 12886 tests, 4 failed, all in `codegen/engine/__tests__/defaultText.test.ts` and `codegen/textual/__tests__/textual.test.ts` (generation errors). Same run: 3 of the 4 red before the merge, 0 on the branch. The two files alone on the trunk, twice, load average 13: 23 of 23 green. Intermittent; the 2000 ms generation budget (R-GEN-28) under a full run is a hypothesis, the error text was not captured. Other gates green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: on 3001, from the served modules: eight expressions as R-FA, both parse errors, three autocomplete contexts `after-forall-in`. The suggestion list in the console UI was not exercised.
+**Notes**: Rollback tag `pre-jjel-forall-multivar` on `a122f5463`. Worker: `~/.jjodel-lanes/P-2026-11-02-1511/result.json`.
+**Prompt document name**: 2026-11-02 15:11
