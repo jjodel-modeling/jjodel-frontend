@@ -523,3 +523,10 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 **Smoke visivo**: passato — chat, unattended: on 3001 from the served JjScript parser: both multi-variable spellings parse to nested forall, a repeated name is a parse error. No command was run on a model in the UI; merge gates green
 **Notes**: Rollback tag `pre-jjscript-forall-multivar` on `767d350a3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1701/result.json`.
 **Prompt document name**: 2026-11-02 17:01
+
+## 2026-11-02 — ticket: Abstract-syntax viewport is not restored after a reload
+**Ticket**: With no viewpoint (abstract syntax), reloading the page and reopening a model does not restore its stored viewport, while under a viewpoint (BPMN on the harness model) it does. Found by P-2026-11-02-0646 (discovery `docs/discovery/discovery_2026-11-02_open_viewport_empty.md`, §5.3 and open question 4), on HEAD `246edb1bc`: under BPMN the initial transform equals the stored `jjodel.viewport.<model>.<viewpoint>` value and no fit runs; without a viewpoint the key `jjodel.viewport.<model>.__abstract__` is present but the initial transform is the identity and a fresh fit runs.
+
+Expected: the abstract-syntax viewport is restored on reopen like the viewpoint ones (the restore site is around `EditorV2.tsx:609`). Kept out of the #419 fix on purpose.
+**Priority**: low
+**Found in**: P-2026-11-02-0646
