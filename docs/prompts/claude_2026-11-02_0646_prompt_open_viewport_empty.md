@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-02-0646
 Chat: C-2026-11-01-1434
 Front: maintenance
 Lane: full (cause unknown: Phase 1 read-only with report, Phase 2 on the chat's GO)
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane open-viewport-empty · 55e4d2703 · verifica visiva passata 2026-11-02
 Request: https://claude.ai/code/session_01DQt9R32KVprpjZZCfe6Sbp
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
