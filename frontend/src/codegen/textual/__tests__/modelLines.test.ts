@@ -61,7 +61,10 @@ function emptyWorld(mm: TextMetamodel): PlanWorld {
         const features = classFeatures(mm, c);
         classes[c.name] = {
             name: c.name, abstract: !!c.isAbstract, kinds: [c.name, ...classAncestors(mm, c).map(a => a.name)],
-            attributes: features.filter(f => f.kind === 'attribute').map(f => ({ name: f.name, upper: f.many ? -1 : 1 })),
+            attributes: features.filter(f => f.kind === 'attribute').map(f => {
+                const e = mm.enumerations.find(x => x.name === f.type);
+                return { name: f.name, upper: f.many ? -1 : 1, ...(e ? { enumeration: { name: e.name, literals: [...e.literals] } } : {}) };
+            }),
             references: features.filter(f => f.kind !== 'attribute').map(f => ({ name: f.name, containment: f.kind === 'containment', upper: f.many ? -1 : 1, type: f.type })),
         };
     }
@@ -93,7 +96,10 @@ function plannedModel(mm: TextMetamodel, plan: EffectsPlan): TextObject[] {
             put(byHandle.get(owner)!, feature, c.id);
         }
     }
-    for (const f of plan.features) put(f.ownerId, f.feature, f.value);
+    for (const f of plan.features) {
+        if (f.values) out.get(f.ownerId)!.slots[f.feature] = [...f.values];
+        else put(f.ownerId, f.feature, f.value);
+    }
     for (const r of plan.references) {
         expect(r.operator === '=' || r.operator === '+=').toBe(true);
         put(r.sourceId, r.feature, r.targetId);
@@ -117,12 +123,13 @@ function withOriginalIds(g: ConcreteGrammar, mm: TextMetamodel, original: readon
 
 describe('lines of a parsed text, run by the JjScript planner on an empty model, give the model back up to ids', () => {
     const corpus: [string, Spec, NotationStyle][] = [
-        ['the 1709 fixture', oneValued(FIXTURE), CLIKE_STYLE],
+        ['the 1709 fixture', FIXTURE, CLIKE_STYLE],
+        ['the 1709 fixture, many-valued attributes cut to one value', oneValued(FIXTURE), CLIKE_STYLE],
         ['a diamond', DIAMOND, CLIKE_STYLE],
         ['a multiple inheritance without a diamond', NON_DIAMOND, CLIKE_STYLE],
-        ['names, homonyms, paths, several roots', oneValued(GARAGE), CLIKE_STYLE],
+        ['names, homonyms, paths, several roots; a two-valued enumeration and a two-valued number', GARAGE, CLIKE_STYLE],
         ['a single nameless root and a nameless named object', BOX, CLIKE_STYLE],
-        ['class keywords and literals in lower case', oneValued(GARAGE), LOWER],
+        ['class keywords and literals in lower case', GARAGE, LOWER],
         ['two class keywords after the fallback', CASES, LOWER],
         ['awkward names and every kind of value', AWKWARD, CLIKE_STYLE],
     ];
@@ -183,10 +190,28 @@ describe('handles, order and values', () => {
         ]);
     });
 
-    it('an enumeration value is written as the literal name, in the declared case', () => {
+    it('an enumeration value is written as the bare literal, in the declared case, even where a handle has its name', () => {
         const lines = modelLines(metamodelOf(FIXTURE), objectsOf(FIXTURE)).lines;
-        expect(lines).toContain('set s1.mode = "Fast"');
-        expect(lines).toContain('set Part_1.kind = "FAST"');
+        expect(lines).toContain('set s1.mode = Fast');
+        expect(lines).toContain('set Part_1.kind = FAST');
+        expect(lines).toContain('set FAST.kind = Fast');
+    });
+
+    it('a many-valued attribute is written as one list, enumeration literals bare; an empty one is not written', () => {
+        expect(modelLines(metamodelOf(FIXTURE), objectsOf(FIXTURE)).lines.filter(l => /\.(tags|empty) /.test(l))).toEqual(['set s1.tags = ["a", "b-c"]']);
+        const garage = modelLines(metamodelOf(GARAGE), objectsOf(GARAGE)).lines;
+        expect(garage).toContain('set alpha.colors = [Red, blue]');
+        expect(garage).toContain('set alpha.marks = [3, 1]');
+        expect(modelLines(metamodelOf(oneValued(GARAGE)), objectsOf(oneValued(GARAGE))).lines).toContain('set alpha.colors = [Red]');
+    });
+
+    it('a literal JjScript would not read back as a name is written as a string', () => {
+        const spec: Spec = {
+            classes: [{ name: 'Lamp', attributes: [{ name: 'state', type: 'Sw' }, { name: 'log', type: 'Sw', many: true }] }],
+            enums: { Sw: ['true', 'create', 'on'] },
+            objects: [{ id: 'l', cls: 'Lamp', slots: { state: 'true', log: ['create', 'on'] } }],
+        };
+        expect(modelLines(metamodelOf(spec), objectsOf(spec)).lines.slice(1)).toEqual(['set Lamp_1.state = "true"', 'set Lamp_1.log = ["create", on]']);
     });
 
     it('strings are escaped for the JjScript lexer; numbers never use an exponent', () => {
@@ -198,13 +223,9 @@ describe('handles, order and values', () => {
 });
 
 describe('what JjScript cannot write yet blocks the creation', () => {
-    it('a many-valued attribute with two values or more is a problem on its object and feature; one value is still written', () => {
-        const built = modelLines(metamodelOf(FIXTURE), objectsOf(FIXTURE));
-        expect(built.problems.map(p => `${p.id}.${p.feature}`)).toEqual(['s1.tags']);
-        expect(built.problems[0].message).toMatch(/not writable by JjScript yet/);
-        expect(built.lines).toContain('set s1.tags = "a"');
-        const garage = modelLines(metamodelOf(GARAGE), objectsOf(GARAGE));
-        expect(garage.problems.map(p => `${p.id}.${p.feature}`)).toEqual(['c1.colors', 'c1.marks']);
+    it('a many-valued attribute with two values or more is no longer a problem (R-TXT-25 (2))', () => {
+        expect(modelLines(metamodelOf(FIXTURE), objectsOf(FIXTURE)).problems).toEqual([]);
+        expect(modelLines(metamodelOf(GARAGE), objectsOf(GARAGE)).problems).toEqual([]);
     });
 
     it('a class whose name JjScript reads as a word of its own is a problem', () => {
@@ -223,14 +244,12 @@ describe('the reading of the «new» mode: markers, and lines only when nothing 
         expect(text.slice(r.markers[0].start, r.markers[0].end)).toBe('four');
     });
 
-    it('a many-valued attribute with two values is a marker on the feature, and blocks the lines', () => {
+    it('a many-valued attribute with two values is no marker, and the lines are given', () => {
         const g = grammarOf(FIXTURE);
         const text = printTextModel(g, objectsOf(FIXTURE)).text;
         const r = readNewModel(text, g, metamodelOf(FIXTURE));
-        expect(r.lines).toBeNull();
-        expect(r.markers).toHaveLength(1);
-        expect(text.slice(r.markers[0].start, r.markers[0].end)).toBe('tags');
-        expect(r.markers[0].message).toMatch(/not writable by JjScript yet/);
+        expect(r.markers).toEqual([]);
+        expect(r.lines).toContain('set s1.tags = ["a", "b-c"]');
     });
 
     it('a clean text gives its lines and no marker; an empty text is an empty model', () => {

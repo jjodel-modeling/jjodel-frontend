@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-0651
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · commits 36a5387f6, 084eb0902 · verifica visiva: non applicabile (preview UI unchanged)
 Lane: full, Phase 2 (inline discovery with file list first)
 Depends: T2c (`frontend/src/codegen/textual/modelLines.ts` blocks texts with many-valued attributes today); R-TXT-25
 Worktree: ~/jjodel-w-jjsset, branch jjscript-set-lists (from the trunk commit that adds this prompt)

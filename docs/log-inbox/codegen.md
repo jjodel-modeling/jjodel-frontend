@@ -1079,3 +1079,29 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
 **Prompt document name**: 2026-11-02 08:41
+
+## 2026-11-02 — feat(jjscript): set lists and enum literals (P-2026-11-02-0651)
+**Prompt**: R-TXT-25 (2): M1 `set` takes a list on a many-valued attribute (error on a single one) and an enumeration literal on an enum-typed one (unknown literal names the enumeration); planner mirrors; `modelLines.ts` writes lists and bare literals, its many-valued block removed.
+**Files touched**: 36a5387f6: `jjscript/parser/parser.ts`, `executor/commands/instance.ts`, `executor/commands/set.ts`, `executor/effectsPlanner.ts`, `executor/planWorld.ts`, tests `m1SetLists.test.ts` (new), `effectsPlanner.test.ts`, `planWorld.test.ts`; 084eb0902: `codegen/textual/modelLines.ts`, `__tests__/modelLines.test.ts`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 10 files, approved at 8-9 by the GO; `set.ts` is the expansion: a list at M2 is refused (LIST_NOT_SUPPORTED), as it was a parse error before the parser read lists. Enum values stored by name; a string on an enum attribute is still written as given. Undo is measured in the bench as one write inside one TRANSACTION, not on the real store (joiner does not import). Gates: tsc 0, vitest jjscript+codegen 3333 passed (context-binding: known window import), build 0.
+**Prompt document name**: 2026-11-02 06:51
+
+## 2026-11-02 — merge: jjscript-set-lists takes alfonso-frontend-jjtl (P-2026-11-02-0855)
+**Prompt**: RC-14: bring the trunk `alfonso-frontend-jjtl` at `47c975ec2` into `jjscript-set-lists` with one `--no-ff` merge commit, before the trunk takes the branch; union resolution of this inbox.
+**Files touched**: merge commit fb57b19f1 (the trunk's 31 commits since `c03585ae8`; resolution only in this inbox, +13 lines over the trunk's file); `docs/prompts/claude_2026-11-02_0855_prompt_jjscript-set-lists_take_trunk.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, unattended)
+**Notes**: Both sides only appended to this inbox: trunk file whole, then the branch's 0651 entry. modelLines.test.ts auto-merged, read whole, its corpus imports resolve. Gates: tsc 0, typecheck:scripts 0; vitest 12787 = trunk 12765 + branch 22, 0 failed, 9 known window-red (trunk run had one autoIntake 15s timeout, green on the merge); hooks 967 = 967; build 0; check:docs 5/5 (check E is new, prompt said 4/4); check:scripts PASS; check:addonly PASS.
+**Prompt document name**: 2026-11-02 08:55

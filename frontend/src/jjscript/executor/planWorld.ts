@@ -46,7 +46,12 @@ function readClass(idlookup: Idlookup, classId: string): PlanClass {
         for (const id of ids(k?.attributes)) {
             const f = idlookup[id];
             if (!f?.name || attributes.some((x) => x.name === f.name)) continue;
-            attributes.push({ name: f.name, upper: upperOf(f) });
+            const attribute: PlanAttribute = { name: f.name, upper: upperOf(f) };
+            const t = typeof f.type === 'string' ? idlookup[f.type] : undefined;
+            if (t?.className === 'DEnumerator') {
+                attribute.enumeration = { name: String(t.name), literals: ids(t.literals).map((l) => String(idlookup[l]?.name)) };
+            }
+            attributes.push(attribute);
         }
         for (const id of ids(k?.references)) {
             const f = idlookup[id];
