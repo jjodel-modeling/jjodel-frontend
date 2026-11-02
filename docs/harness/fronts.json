@@ -138,6 +138,15 @@
       "ownerChat": "C-2026-10-24-0020",
       "ownerSince": "2026-10-24",
       "milestone": 15
+    },
+    {
+      "slug": "ai-provider",
+      "title": "AI provider layer refactor (#196): src/services/ai/ on three SDKs, AIProviderService and Worker proxy removed, types/jodie.ts deleted",
+      "exit": "lanes L0..L4 and L6 of #196 are merged into staging and #196 is closed, or a decision row defers them",
+      "state": "open",
+      "openedOn": "2026-11-02",
+      "ownerChat": "C-2026-11-02-1016",
+      "ownerSince": "2026-11-02"
     }
   ]
 }
