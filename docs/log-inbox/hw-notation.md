@@ -6,6 +6,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-02 — discovery: can an M1 model depend on another M1 model (P-2026-11-02-2021)
+**Prompt**: P-2026-11-02-2021: measure in a running app whether an M1 can depend on another M1 (gesture, reference and getters, save and reopen, delete and cycle, what the JjTL Execute path receives), say what C0 needs, and register R-JTG-8 as provisional.
+**Files touched**: `docs/discovery/discovery_2026-11-02_m1_depends_on_m1.md` (new), `docs/decisions.md` (R-JTG-8), this inbox, the `Status:` line of the prompt. Probes outside the repo in `~/.jjodel-lanes/P-2026-11-02-2021/probe/`. No product code.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Yes in the UI (Info panel, "Depends from models"), survives save and reopen; Library delete clears dependency and reference silently; cycle accepted, no hang. Execute reads allSubObjects, so the Library reference is serialised and lost (warned, empty slot). C0 needs one change at ProjectEditor.tsx:1463-1464. Not measured: Library of another metamodel, export.
+**Prompt document name**: 2026-11-02 20:21
+
 ## 2026-11-02 — ticket: the textual printer writes a bare reference keyword when the target is not in the text, and the text does not parse
 **Ticket**: `printTextModel` skips a reference whose target id is not among the printed objects (`printer.ts:91,161,188`). For a Brief whose `library` and `operations` point at objects of another model it prints `library` (keyword with no value) and `operations []`, and `parseText` rejects that text (`4:15 expected an integer; found "]"`). The printer is not total over a model with a cross-model reference, so the print-parse-print property of R-TXT-21 (1) does not hold there. Measured with `probe5` in `~/.jjodel-lanes/P-2026-11-02-1942/`. Fix belongs with the cross-model reference work, or earlier as a guard that prints nothing for the feature.
 **Priority**: medium

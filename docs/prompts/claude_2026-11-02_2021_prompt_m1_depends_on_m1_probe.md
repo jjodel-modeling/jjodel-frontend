@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-2021
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-02, lane P-2026-11-02-2021 (hw-notation)
 Lane: discovery (read-only on product code; one probe outside the repo, one short report, one docs-only commit)
 Depends: P-2026-11-02-1942
 Worktree: ~/jjodel-w-jjtlnotation, branch jjtl-notation-measure (the same tree, at the commit that adds this prompt)
