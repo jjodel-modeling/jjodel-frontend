@@ -14,6 +14,36 @@ Paths are relative to `frontend/` unless they start with `cloudflare-worker/`, `
 
 ---
 
+## 0. Answer in brief
+
+**Answer.** The #196 plan holds, with fifteen corrections to its file lists. The `AI` / `AIConfig` / `JodieConfig` runtime
+contract has zero uses in shipped repo content (§A3); server projects are unmeasured. The three SDKs work from a browser
+origin (§B3): Gemini end to end, including a PDF; OpenAI up to a 429 for an empty balance; Anthropic `messages` with a
+readable 401. An invalid Claude key on `models.list` is CORS-blocked without the Worker. That is the Worker's one remaining
+job (§A8), and it gates L4.
+
+**Recommendation.** Adopt the plan with the corrections, pin `openai` 7.47.0, `@anthropic-ai/sdk` 1.3.0, `@google/genai`
+2.32.0, and gate L4 on a real-key Anthropic run and a Claude `test()` on `/v1/messages`.
+
+**Outcome after phase 1.** Juri ratified questions 1-4 as recommended and the chat adopted question 5 (RC-21). Those answers
+are R-AI-1..5 (`docs/decisions.md`, `cc252b1ca`). The frozen spec is
+`docs/spec/claude_spec_2026-11-02_ai_provider_refactor.md` (P-2026-11-02-1055). Question 6 is recorded there as a
+precondition of L4.
+
+**Decisions awaiting Alfonso (RC-26).**
+1. Removal of the `jjodel-ai-proxy` Cloudflare deployment and the `cloudflare-worker/` folder at L4. The notifications Worker
+   stays (R-AI-4).
+2. Deletion of the two orphans `components/common/ProviderSelector.tsx` and `components/settings/ProviderSettings.tsx` (R-AI-5).
+
+**Questions** (answered; full text in «Questions for Juri»).
+1. Is ④ dead? Recommended: yes, with a CHANGELOG note at L6. Answer: yes (R-AI-1).
+2. Are the three pins approved? Recommended: yes. Answer: yes (R-AI-2).
+3. Are `BaseProvider` and `src/services/ai/` confirmed? Recommended: yes. Answer: yes (R-AI-3).
+4. Is ⑥ kept? Recommended: keep it, with L4 gated. Answer: yes (R-AI-4).
+5. Are all fifteen corrections adopted? Recommended: yes. Answer: yes (R-AI-5).
+6. Will Juri add an Anthropic key and OpenAI credit for a re-run? Recommended: yes, before L4. Answer: open, a precondition of
+   L4 that does not block L1.
+
 ## 0. First finding (hard-stop check A3)
 
 No shipped content uses `AI`, `AIConfig` or `JodieConfig` as an identifier. There are no hits in default views, `jsxString` templates,

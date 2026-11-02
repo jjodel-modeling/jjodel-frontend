@@ -5,7 +5,7 @@ Chat: C-2026-11-02-1016
 Front: ai-provider
 Lane: full (two-phase, docs only in the repo; spike outside the repo)
 Depends: none
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane 196-ai-refactor · 712aae6dd · phase 2 in P-2026-11-02-1055
 Corregge: —
 Request: Juri, 2026-11-02, in chat («riparti con il compito 196»; spike with real keys, line `staging`)
 Model: claude-opus-5-5

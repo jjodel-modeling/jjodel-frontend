@@ -5,7 +5,7 @@ Chat: C-2026-11-02-1016
 Front: ai-provider
 Lane: full (docs only)
 Depends: P-2026-11-02-1020
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane 196-ai-refactor · ad209a6ad
 Corregge: —
 Request: Juri, 2026-11-02, in chat (GO on phase 2 of P-2026-11-02-1020 with decisions R-AI-1..5)
 Model: claude-opus-5-5
