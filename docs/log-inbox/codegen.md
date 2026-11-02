@@ -1037,3 +1037,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato
 **Notes**: Discovery: «closed tab» is ModelTab.tsx:27 / MetamodelTab.tsx:148 for a missing model; undo never touches the dock, and the app bar hides the tab as a ghost, so it stays active. General: one undo of Navbar createM1 or createM2 does the same. Fix: both tabs call closeTabsForEntity, as a delete. Probe 3065, before/after in the commit body. Gates: tsc 0; vitest 20 files, 533 tests; build 0. Crops in ~/.jjodel-lanes/P-2026-11-02-0650/.
 **Prompt document name**: 2026-11-02 06:50
+
+## 2026-11-02 — merge: undo-tab-badge into alfonso-frontend-jjtl (P-2026-11-02-0833)
+**Prompt**: Bring `undo-tab-badge` at `d114178d6` (fix fdb70a1e8) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-undo-tab-badge on 015d2a27e); union resolution of this inbox.
+**Files touched**: merge commit 41c7c0d8a (`frontend/src/components/abstract/tabs/ModelTab.tsx`, `MetamodelTab.tsx`, `frontend/src/pages/components/Navbar.tsx`, the 0650 prompt, this inbox); `docs/prompts/claude_2026-11-02_0833_prompt_merge_undo-tab-badge.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops of the lane)
+**Prompt document name**: 2026-11-02 08:33
