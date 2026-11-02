@@ -70,3 +70,16 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: passato — chat, unattended: no visual smoke: L1 is additive, no app file imports src/services/ai; merge gates 8/8 green (typecheck 0, vitest 12264 tests, 9 known import reds, build, check:docs/agents/scripts/addonly); lane 2 measured the app build identical to a8f58436b once the embedded git hash is neutralised; merge approved by Juri in chat C-2026-11-02-1311
 **Notes**: Rollback tag `pre-feat/196-l1-ai-module` on `a8f58436b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1646/result.json`.
 **Prompt document name**: 2026-11-02 16:46
+
+## 2026-11-02 — feat: #196 L2, settings, Jodie and feature consumers on src/services/ai (P-2026-11-02-1916, P-2026-11-02-1930)
+**Prompt**: #196 L2, one lane of 13 files (R-AI-10): settings surfaces, Jodie and status bar, feature consumers read registry, stores and catalog of src/services/ai; the old chat paths stay until L3. P-2026-11-02-1916 measured and committed group 1, then stopped at the context ceiling (RC-51); P-2026-11-02-1930 continued from its handoff, with the #179 correction, groups 2 and 3, gates, Playwright probe and the visual hard stop.
+**Files touched**: `6a58c8bef` AIDisclaimer.tsx, ProviderModelSelector.tsx, AISettingsContent.tsx, AIAssistantSettings.tsx, ProviderConfigModal.tsx, services/ai/index.ts, services/ai/registry.ts, services/ai/__tests__/providerStatus.test.ts; `83fa06083` services/ai/BaseProvider.ts, services/ai/__tests__/connectionTest.test.ts, AISettingsContent.tsx, ProviderConfigModal.tsx; `1d100d6d7` Jodie.tsx, ChatInput.tsx, JodieWindow.tsx, StatusBarRightZone.tsx; `2d9f347d9` MappingSuggestionService.ts, DocumentationTab.tsx, SuggestedMappingsPanel.tsx; this inbox; the `Status:` lines of both prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on each commit: typecheck exit 0, build exit 0, full vitest with the nine known import reds (on 83fa06083 and 1d100d6d7 two more each, load timeouts: laneRun/laneRunDirect and irCollapsedRender/irSelectionRing, all green alone); on 2d9f347d9 exactly the nine, 12273 tests passed. Probe `_tmp_196_l2_probe.ts` on 3197: 14/14, 0 page errors.
+**Out-of-scope changes**: no. 17 files, above five: rule 19 confirmed by Juri for L2 as one lane (R-AI-10); BaseProvider.ts and connectionTest.test.ts named by P-2026-11-02-1930.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Juri's visual GO on port 3197 (chat C-2026-11-02-1311), overall on the 10-item checklist
+**Notes**: Juri's yes covers the 9-row provider list (Llama, Copilot gone) and three unattended decisions: attachments follow the chat's model; ChatMessages.tsx unchanged (presentation, L6); mapping export label from the registry. Bridge, L3 deletes it: refreshLiveCatalog copies the live list into AI[p].versions. #179: test(modelId?) is on the chat's model again (1916 had it on the configured one). Dock width key jjodie_dock_width. R-AI-11 label was inverted, fixed.
+**Prompt document name**: 2026-11-02 19:30

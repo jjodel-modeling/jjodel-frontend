@@ -5,7 +5,7 @@ Chat: C-2026-11-02-1311
 Front: ai-provider
 Lane: full
 Depends: P-2026-11-02-1321
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane feat/196-l2-settings-cutover · 6a58c8bef · continued in P-2026-11-02-1930
 Corregge: —
 Request: none (no URL: Juri asked in a local Claude Code session on 2026-11-02, «riprendi»; his words are `request.md` in the lane folder, RC-43)
 Model: claude-opus-5-5
