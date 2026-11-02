@@ -592,10 +592,64 @@ export class Parser {
             throw new Error("Expected 'to' or 'as' after target in rename command");
         }
 
-        // #175: quoted as `create instance` takes it, or bare.
-        const newName = this.check('STRING') ? this.advance().value : this.expectIdentifier('new name');
+        // R-FA-9: a single name followed by the end of the command is the literal name, even when a
+        // variable has it; anything else is a JjEL expression, evaluated by the executor.
+        const first = this.peek();
+        const single = first.type === 'STRING' || first.type === 'IDENTIFIER' || first.type === 'KEYWORD';
+        if (this.endsCommandAt(this.current) || (single && this.endsRenameNameAt(this.current + 1))) {
+            // #175: quoted as `create instance` takes it, or bare.
+            const newName = this.check('STRING') ? this.advance().value : this.expectIdentifier('new name');
+            return { command: 'rename', target, newName, elementType };
+        }
 
-        return { command: 'rename', target, newName, elementType };
+        const newNameExpr = this.collectCommandExprRaw();
+        return { command: 'rename', target, newName: newNameExpr, elementType, newNameExpr };
+    }
+
+    /**
+     * After a single new name: the end of the command, or a trailing `in` (`rename attribute a to b
+     * in C`, as `defaultPrompts.ts` writes it), which the literal form has always left unread.
+     */
+    private endsRenameNameAt(index: number): boolean {
+        const token = this.tokens[index];
+        if (token && (token.type === 'KEYWORD' || token.type === 'IDENTIFIER') && token.value.toLowerCase() === 'in') return true;
+        return this.endsCommandAt(index);
+    }
+
+    /**
+     * The end of a command at parenthesis depth 0: end of input, a newline, ';', the 'end' of an
+     * enclosing block, or a command word starting the next command of a one-line block.
+     */
+    private endsCommandAt(index: number): boolean {
+        const token = this.tokens[index];
+        if (!token || token.type === 'EOF' || token.type === 'NEWLINE' || token.type === 'COMMAND') return true;
+        if (token.type === 'PUNCTUATION' && token.value === ';') return true;
+        return this.blockDepth > 0 && (token.type === 'KEYWORD' || token.type === 'IDENTIFIER')
+            && token.value.toLowerCase() === 'end';
+    }
+
+    /**
+     * Raw expression text from the original input up to the end of the command (`endsCommandAt`).
+     * Both bounds are token ends (`position + value.length`, which `createToken` in `lexer.ts` makes
+     * the lexer's offset when the token was made): a STRING token's `position` is off by its quotes
+     * and a NEWLINE's by one, so neither start can bound the text.
+     */
+    private collectCommandExprRaw(): string {
+        const end = (token: Token) => token.position + token.value.length;
+        const startPos = end(this.tokens[this.current - 1]);
+        let depth = 0;
+
+        while (!this.isAtEnd() && !(depth === 0 && this.endsCommandAt(this.current))) {
+            const token = this.peek();
+            if (token.type === 'EOF' || token.type === 'NEWLINE') break;
+            if (token.type === 'PUNCTUATION') {
+                if (token.value === '(') depth++;
+                else if (token.value === ')') { if (depth > 0) depth--; }
+            }
+            this.advance();
+        }
+
+        return this.originalInput.substring(startPos, end(this.tokens[this.current - 1])).trim();
     }
 
     // ============================================

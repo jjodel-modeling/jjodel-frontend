@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-2030
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane maintenance · branch jjscript-rename-expression · commit 62522c9bf · verifica visiva non applicabile
 Lane: full (JjScript grammar and executor, two-phase in one session)
 Depends: none
 Worktree: ~/jjodel-w-jjsrenameexpr, branch jjscript-rename-expression (from the trunk commit that adds this prompt)
