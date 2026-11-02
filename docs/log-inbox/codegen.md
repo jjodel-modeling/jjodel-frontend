@@ -999,3 +999,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: passato (crops, unattended; after undo of Create model the canvas tab shows a bare «closed tab» text, open question)
 **Prompt document name**: 2026-11-02 06:37
+
+## 2026-11-02 — feat(codegen): unambiguous paths, fold fallback, shared corpus (P-2026-11-02-0652)
+**Prompt**: R-TXT-25 (5, 6, 7, 11): paths `Class[k].f[i]` that never equal a name, in printer, parser and the JjGen generator; a case folding onto a style word falls back to the declared case with a notice; one shared textual test corpus.
+**Files touched**: `frontend/src/codegen/textual/printer.ts`, `parser.ts`, `concreteGrammar.ts`, `style.ts`; `__tests__/corpus.ts` (new), `textual.test.ts`, `parser.test.ts`, `styleCheck.test.ts`, `modelLines.test.ts`, `oracle.ts`; `frontend/public/examples/codegen/default-text.generator.json`; `frontend/src/codegen/engine/__tests__/defaultText.test.ts`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Out of `textual/`: `engine/__tests__/defaultText.test.ts` pins the generator's paths, updated with it; `modelLines.test.ts`, a fourth corpus copy, also moved to `corpus.ts`. Paths always open with the root (`Class[k]`), single root included. Closes T2a's `inner` ticket (INNER corpus case). Gates: tsc 0; vitest src/codegen 49 files, 2479 tests; build 0; codegen-lazy on green, off red (open ticket, R-TXT-25 (10)). Bench 5/5 killed.
+**Prompt document name**: 2026-11-02 06:52

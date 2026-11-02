@@ -98,6 +98,17 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle): 
         notices.push({ code: 'case-fallback', message: `class keywords kept as declared: case ${classCase} would merge ${classClash.join('; ')}` });
         classCase = 'declared';
     }
+    // R-TXT-25 (7): a folding that lands a class keyword on a style word (`End` on `end`) falls back as well.
+    const styleWords = new Set([
+        ...style.blockOpen, ...style.blockClose, ...style.emptyBlock, ...style.assign, ...style.terminator,
+        style.list.open, style.list.separator, style.list.close,
+    ].filter(w => /^\w/.test(w)));
+    const ontoWords = objectRules.map(r => r.cls).filter(c => !styleWords.has(c) && styleWords.has(applyCase(c, classCase)));
+    if (ontoWords.length) {
+        const folds = ontoWords.map(c => `${c} onto "${applyCase(c, classCase)}"`).join(', ');
+        notices.push({ code: 'case-fallback', message: `class keywords kept as declared: case ${classCase} would fold ${folds}, a style word` });
+        classCase = 'declared';
+    }
 
     // Base rule names to concrete ones: `Obj_C` is `C`; a choice with a single class is that class.
     const clsOfObjectRule = new Map(objectRules.map(r => [r.name, r.cls]));

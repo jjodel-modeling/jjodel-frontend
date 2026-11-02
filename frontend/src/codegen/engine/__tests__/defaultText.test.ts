@@ -129,7 +129,7 @@ const EXPECTED = `Sys s1 {
     Part dup {
       size 1
       kind FAST
-      peers [size, parts[1]]
+      peers [size, Sys[0].parts[1]]
     }
     Part dup {
       size 2
@@ -148,13 +148,13 @@ const EXPECTED = `Sys s1 {
     Link {
       weight 5
       from size
-      to links[1]
+      to Sys[0].links[1]
     }
     Link {
-      from parts[0]
+      from Sys[0].parts[0]
     }
   }
-  main parts[1]
+  main Sys[0].parts[1]
 }`;
 
 describe('the default textual notation (R-TXT-1..9)', () => {
@@ -172,7 +172,7 @@ describe('the default textual notation (R-TXT-1..9)', () => {
         ];
         const out = run(model(classes, {}, [{ id: 'x', cls: 'C', slots: { a: 1, b: 2, c: 3, ra: 'x', rc: 'x' } }]), shippedTemplates());
         expect(out.errors).toEqual([]);
-        expect(out.code).toBe('C {\n  a 1\n  ra [0]\n  b 2\n  c 3\n  rc [0]\n}');
+        expect(out.code).toBe('C {\n  a 1\n  ra C[0]\n  b 2\n  c 3\n  rc C[0]\n}');
     });
 
     it('feature order on a diamond: A before both its heirs, which keep their declaration order (R-TXT-1; kills: the ancestors in reverse of their walk)', () => {
@@ -187,7 +187,7 @@ describe('the default textual notation (R-TXT-1..9)', () => {
         expect(out.code).toBe('C {\n  a 1\n  b1 2\n  b2 3\n  c 4\n}');
     });
 
-    it('several roots: a containment path opens with the root\'s index among the roots (kills: path ambiguous across roots)', () => {
+    it('several roots: a containment path opens with the root\'s class and its index among the roots of that class (R-TXT-25 (5, 6); kills: path ambiguous across roots)', () => {
         const objs: ObjSpec[] = [
             { id: 's1', cls: 'Sys', slots: { name: 'a', parts: ['p1'] } },
             { id: 's2', cls: 'Sys', slots: { name: 'b', parts: ['p2'], main: 'p1' } },
@@ -196,7 +196,7 @@ describe('the default textual notation (R-TXT-1..9)', () => {
         ];
         const out = run(model(CLASSES, ENUMS, objs), shippedTemplates());
         expect(out.errors).toEqual([]);
-        expect(out.code).toBe('Sys a {\n  parts {\n    Part x {}\n  }\n}\nSys b {\n  parts {\n    Part x {}\n  }\n  main [0].parts[0]\n}');
+        expect(out.code).toBe('Sys a {\n  parts {\n    Part x {}\n  }\n}\nSys b {\n  parts {\n    Part x {}\n  }\n  main Sys[0].parts[0]\n}');
     });
 });
 
