@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1838
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane hw-notation · docs-only, the closure commit is the one carrying this line · probe in ~/.jjodel-lanes/P-2026-11-02-1838/probe/
 Lane: fast (docs and one probe outside the repo; no product code)
 Depends: P-2026-11-02-1742
 Worktree: ~/jjodel-w-jjtlgeneric, branch jjtl-generic-transformation (the same tree, at the commit that adds this prompt)

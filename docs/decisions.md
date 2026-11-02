@@ -7141,6 +7141,15 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-JTG-5 (2026-11-02)**: called and lazy rules adopt the sketch of `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md:268-322`, with
   the environment dynamically scoped, reified as a named parameter of called rules, values as closures; trace key
   (source, rule, environment). A's specification is written in those terms now, vacuous until B.
+- **R-JTG-6 (2026-11-02)**: a containment resolves (source, rule, caller's environment) and creates the entry on demand
+  when absent: under A a lookup, under B a new environment gives a fresh subtree. A call of a rule not declared `unique`
+  always creates a fresh subtree, even under an environment seen before, so one expression may be placed twice with the
+  same bindings. The double-claim error of R-JTG-4 applies to implicit resolutions and to `unique` rules. Ratified by
+  Alfonso 2026-11-02 18:35, registered by P-2026-11-02-1838; evidence: read, verified: none, reversible: trunk.
+- **R-JTG-7 (2026-11-02)**: rules meant for lowering are declared `lazy`: they never match in pass 1 and create a target
+  only when a resolution or a call reaches the node. Matched rules stay for the elements the transformation maps as such.
+  Containment under A alone therefore does not serve library expressions; that value arrives with B. Ratified by
+  Alfonso 2026-11-02 18:35, registered by P-2026-11-02-1838; evidence: read, verified: none, reversible: trunk.
 
 ## Superate
 
