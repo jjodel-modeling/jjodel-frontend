@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-2113
 Chat: C-2026-11-02-1814
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane fast · 09cfca60d · hard-stop at the ceiling, docs closed by the chat · verifica visiva passata con riserva 2026-11-02 (chat, unattended; probe with the enum fill removed)
 Lane: fast (printer result, one tab surface, tests)
 Depends: none
 Worktree: ~/jjodel-w-textunprinted, branch textual-unprinted (from the trunk commit that adds this prompt)
