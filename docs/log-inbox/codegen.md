@@ -1079,3 +1079,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
 **Prompt document name**: 2026-11-02 08:41
+
+## 2026-11-02 — fix(codegen): guard codegen imports for the lazy gate (P-2026-11-02-0845)
+**Prompt**: R-TXT-25 (10), the ticket of P-2026-11-02-0653: put the two unguarded codegen dynamic imports under CODEGEN_BUILD so check:codegen-lazy --off is green, behaviour with the flag on unchanged.
+**Files touched**: 3f84dfbd1: frontend/src/components/project/ProjectEditor.tsx, frontend/src/pages/components/LeftBar.tsx; closure: this inbox, the Status line of the 0845 prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-02 06:53
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: The prompt cited src/pages/ProjectEditor.tsx, absent; the only ProjectEditor.tsx is src/components/project/, whose :70 is the ticket's React.lazy: edited there (marked yes, honesty rule). GeneratorsSection is null without the flag; LeftBar guards both openTemplateEditor imports (:385, :389). Gates: tsc 0; vitest 50 files, 2482 tests; build 0; lazy gate ALL GREEN, off: only setting.ts. Probe 3133 flag on all PASS; crops in ~/.jjodel-lanes/P-2026-11-02-0845/crops/.
+**Prompt document name**: 2026-11-02 08:45
