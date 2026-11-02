@@ -141,3 +141,13 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: The probe of P-2026-11-02-1838 recorded one page error, `init_dash`, on port 3187. It was not traced and nothing visibly failed. Find its origin and whether it is new.
 **Priority**: low
 **Found in**: P-2026-11-02-1838
+
+## 2026-11-02 — ticket: Model dependencies: silent loss on delete, cycles and self-dependency accepted
+**Ticket**: Measured in P-2026-11-02-2021 (`docs/discovery/discovery_2026-11-02_m1_depends_on_m1.md`, branch `jjtl-notation-measure`): deleting a model that another model depends on removes the dependency and the pointers into it with no message; a dependency cycle between two models is accepted, and `crossObjects` then repeats objects; a model can depend on itself through the assignment. Decide what to report and what to refuse.
+**Priority**: medium
+**Found in**: P-2026-11-02-2021
+
+## 2026-11-02 — ticket: Undo after a JjTL run does nothing
+**Ticket**: Measured in P-2026-11-02-2024: after a JjTL run, the output model's Undo button is disabled and Cmd+Z on the canvas leaves all objects. Undo after a transformation does nothing. Not new with that lane. Decide whether a run should be one undo step.
+**Priority**: low
+**Found in**: P-2026-11-02-2024
