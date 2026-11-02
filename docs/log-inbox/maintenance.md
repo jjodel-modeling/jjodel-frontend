@@ -584,3 +584,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato (chat, GO 2026-11-02 on the merge tree; the chat runs the combined-tree visual check before the trunk merge)
 **Notes**: Trunk tip moved to 4d1d32b8b (docs only, R-TXT-29); e5e60dca4 merged. Gates on 91033dfc9: typecheck and typecheck:scripts exit 0; vitest 492 files, 483 passed + the known 9, 12957 = trunk 12943 + 14; hooks 967 = trunk (a first run red on a laneBoard 10 s timeout, run beside the build, green alone); build exit 0; check:docs 5/5; check:scripts, check:addonly PASS. Full read of EditorV2.tsx by an explorer subagent.
 **Prompt document name**: 2026-11-02 20:28
+
+## 2026-11-02 — merge: open-viewport-empty into alfonso-frontend-jjtl (P-2026-11-02-2112)
+**Prompt**: `claude_2026-11-02_2112_prompt_merge_open-viewport-empty.md`, full lane: bring open-viewport-empty at the explicit sha b319e15a2 into the trunk with one --no-ff merge commit (RC-14), union for the inbox conflict; stopped at step 7 for the chat's smoke, resumed on the GO (Alfonso GO 20:20).
+**Files touched**: merge commit ebe3bd548 (the branch's 9 files; resolved by hand: `docs/log-inbox/maintenance.md` by union, base then trunk tail then branch tail); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, RC-23 on the combined tree, same code as ebe3bd548; GO 2026-11-02)
+**Notes**: Trunk tip moved to 02586b29b (docs only, R-TXT-30); R-TXT-30 control counted 1 from the trunk, 0 on the branch. Gates on ebe3bd548: typecheck, typecheck:scripts exit 0; vitest 12988 = trunk 12974 + 14, the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Trunk runs red on load timeouts (textual.test.ts 2000 ms, one laneRun 15 s), green alone.
+**Prompt document name**: 2026-11-02 21:12
