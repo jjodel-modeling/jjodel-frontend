@@ -6,7 +6,7 @@ import type OpenAI from 'openai';
 import { BaseProvider, capabilitiesFor, orderCatalog } from './BaseProvider';
 import type { CatalogEntry } from './BaseProvider';
 import type { ChatRequest } from './types';
-import { AIModel, EAuthScheme } from './types';
+import { AIModel, EAuthScheme, ECapabilities } from './types';
 
 /**
  * The SDK `baseURL` for a user-supplied endpoint; the SDK appends `/chat/completions` itself.
@@ -65,25 +65,32 @@ export class OpenAICompatibleProvider extends BaseProvider {
         });
     }
 
-    protected messages(req: ChatRequest): OpenAI.Chat.ChatCompletionMessageParam[] {
+    /**
+     * System, then the history; a turn with attachments is text, images, PDFs. An earlier turn keeps
+     * its own attachments the model declares (R-AI-17); the current turn adds the request's.
+     */
+    protected messages(req: ChatRequest, modelId: string): OpenAI.Chat.ChatCompletionMessageParam[] {
+        const model = this.model(modelId);
         const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
         if (req.system) messages.push({ role: 'system', content: req.system });
         const last = req.history.length - 1;
         req.history.forEach((msg, i) => {
-            const attachments = i === last && msg.role === 'user' && (req.images?.length || req.documents?.length);
-            if (!attachments) {
+            const current = i === last && msg.role === 'user';
+            const images = [...(model?.has(ECapabilities.IMAGES) ? msg.images ?? [] : []), ...(current ? req.images ?? [] : [])];
+            const documents = [...(model?.has(ECapabilities.DOCUMENTS) ? msg.documents ?? [] : []), ...(current ? req.documents ?? [] : [])];
+            if (!images.length && !documents.length) {
                 messages.push({ role: msg.role, content: msg.content } as OpenAI.Chat.ChatCompletionMessageParam);
                 return;
             }
             const parts: ContentPart[] = [];
             if (msg.content) parts.push({ type: 'text', text: msg.content });
-            for (const img of req.images ?? []) {
+            for (const img of images) {
                 parts.push({ type: 'image_url', image_url: { url: `data:${img.mimeType};base64,${img.data}` } });
             }
-            for (const doc of req.documents ?? []) {
+            for (const doc of documents) {
                 parts.push({ type: 'file', file: { filename: doc.name ?? 'document.pdf', file_data: `data:${doc.mimeType};base64,${doc.data}` } });
             }
-            messages.push({ role: 'user', content: parts });
+            messages.push({ role: msg.role, content: parts } as OpenAI.Chat.ChatCompletionMessageParam);
         });
         return messages;
     }
@@ -92,9 +99,9 @@ export class OpenAICompatibleProvider extends BaseProvider {
         const client = await this.client();
         const completion = await client.chat.completions.create({
             model: modelId,
-            messages: this.messages(req),
+            messages: this.messages(req, modelId),
             max_tokens: this.maxOutputTokens(req),
-        });
+        }, { signal: req.signal });
         return completion.choices[0]?.message?.content ?? '';
     }
 
@@ -102,14 +109,16 @@ export class OpenAICompatibleProvider extends BaseProvider {
         const client = await this.client();
         const chunks = await client.chat.completions.create({
             model: modelId,
-            messages: this.messages(req),
+            messages: this.messages(req, modelId),
             max_tokens: this.maxOutputTokens(req),
             stream: true,
-        });
+        }, { signal: req.signal });
         for await (const chunk of chunks) {
             const text = chunk.choices[0]?.delta?.content;
             if (text) yield text;
         }
+        // The SDK ends an aborted stream quietly; it ends with the abort error, as the Google family's does.
+        req.signal?.throwIfAborted();
     }
 
     protected async probe(modelId: string): Promise<void> {

@@ -46,6 +46,13 @@ export interface Attachment {
 export interface HistoryMessage {
     role: 'user' | 'assistant';
     content: string;
+    /**
+     * Base64 images of an earlier turn, sent again on that turn (R-AI-17). Dropped, not refused,
+     * when the model does not declare IMAGES, as the text-only families of the old path dropped them.
+     */
+    images?: Attachment[];
+    /** Base64 PDFs of an earlier turn, as `images` (R-AI-17). */
+    documents?: Attachment[];
 }
 
 export interface ChatRequest {
@@ -60,6 +67,8 @@ export interface ChatRequest {
     documents?: Attachment[];
     /** Default DEFAULT_MAX_OUTPUT_TOKENS. */
     maxOutputTokens?: number;
+    /** Aborts the HTTP request, streaming included (R-AI-15). */
+    signal?: AbortSignal;
 }
 
 export interface ConnectionTestResult {

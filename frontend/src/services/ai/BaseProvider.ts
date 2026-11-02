@@ -226,6 +226,10 @@ export abstract class BaseProvider {
     /** Every check before a chat call; throws the message the caller shows. Returns the model. */
     protected prepare(req: ChatRequest): string {
         if (!this.enabled()) throw new Error(`Provider ${this.name} is not configured. Please add your API key in Settings.`);
+        // Custom is configured by a key alone, but has no endpoint without a Base URL (R-AI-18).
+        if (this.name === 'Custom' && !(this.config.baseUrl ?? '').trim()) {
+            throw new Error('Custom provider requires a Base URL. Set it in Settings.');
+        }
         const keyError = this.validateKey();
         if (keyError) throw new Error(keyError);
         const modelId = this.resolveModel(req.model);
