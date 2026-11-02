@@ -675,3 +675,22 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: tests only, no UI change: visual check not applicable; merge gates green (13060 tests, 0 failed, 9 red at import, build exit 0)
 **Notes**: Lesson: a prompt that asks for load states a cap below load 20. P-2026-11-02-2250 gave none, its lane ran 500 hogs, load 600 for about 20 minutes on the shared Mac; gates of other lanes between 22:50 and 23:10 may be falsely red. Rollback tag `pre-codegen-tests-budget` on `52e49d05c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2330/result.json`.
 **Prompt document name**: 2026-11-02 23:30
+
+## 2026-11-03 — fix(jjscript): four JjScript console defects (P-2026-11-03-0000)
+**Prompt**: `claude_2026-11-03_0000_prompt_jjscript_console_defects.md`, lane full, auto: four defects seen on 3001 in the JjScript console (`create package` crash on `cname`, `create class X in P` with no P reporting success, `eval` refusing lambdas and strings, a `let` value cut at a `forall`'s `in`). Two phases in one session, one commit per defect, order 2, 1, 3, 4.
+**Files touched**: discovery `9ff3f733b` (`docs/discovery/discovery_2026-11-03_jjscript_console_defects.md`); defect 2 `2decd2160` and defect 1 `b9c45587a` (`frontend/src/jjscript/executor/commands/create.ts`); defect 3 `c3fcb4e0a` and defect 4 `217b931da` (`frontend/src/jjscript/parser/parser.ts`); tests in all four (`frontend/src/jjscript/executor/__tests__/consoleDefects.test.ts`, new), `frontend/src/jjscript/__tests__/parserTermination.test.ts` in `c3fcb4e0a`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `217b931da`: `npx tsc --noEmit` exit 0; `npx vitest run src/jjscript src/jjel` 1487+ tests green, 1 file red at import (`context-binding.test.ts`, the known `window is not defined`); `npm run build` exit 0; `npm run check:docs` run at the close.
+**Out-of-scope changes**: no. Seven files across the lane (RC-11), all in the declared scope: `create.ts`, `parser.ts`, the two test files, the discovery report, this inbox, the prompt file.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Causes: `createPackage` omitted the `fatherType` that `Constructors.DPackage` reads; a named parent resolved nowhere fell through to `DClass.new` with no father; `eval` joined token values with spaces; `forall` lexes as COMMAND, unseen by the `let` value collector. `parserTermination.test.ts` pinned the dropped quotes of `eval "a end b"` and now expects them kept. `node_modules` via a temporary symlink, removed at the close (P14).
+**Prompt document name**: 2026-11-03 00:00
+
+## 2026-11-03 — ticket: Info.tsx creates a package without fatherType
+**Ticket**: `frontend/src/components/editors/Info.tsx:384` calls `DPackage.new('NewPackage', '', '', parentId, true)` with no `fatherType`; `Constructors.DPackage` (`joiner/classes.ts:996-997`) reads `fatherType.cname` whenever there is a father, the crash fixed in JjScript `create package` by `b9c45587a`. Not reproduced in the UI.
+**Priority**: medium
+**Found in**: P-2026-11-03-0000
+**Detail**: docs/discovery/discovery_2026-11-03_jjscript_console_defects.md

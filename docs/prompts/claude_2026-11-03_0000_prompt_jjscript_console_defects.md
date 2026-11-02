@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-0000
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · 217b931da · verifica visiva non applicabile
 Lane: full (auto; four independent fixes in JjScript, two-phase in one session)
 Depends: none
 Worktree: ~/jjodel-w-jjsconsole, branch jjscript-console-defects (from 34b82af49 plus this prompt)
