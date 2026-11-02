@@ -7089,6 +7089,14 @@ Row 26: Alfonso 2026-11-02 08:34 «pause», on the chat's question of 08:27 abou
   or the uncertain matches are confirmed in a small panel. Each application is one undo step (R-TXT-19), and undo
   restores text and model together. No explicit «Apply» button in v1.
 
+Row 27: P-2026-11-02-0846 (T4a-1 design, hard-stop at the ceiling); Alfonso 2026-11-02 09:52 «Ok alle raccomandazioni».
+
+- **R-TXT-27** (2026-11-02). (1) The prototype's CoreSpec declares `Instruction.mnemonic [1..1]`: an instruction
+  without a mnemonic makes no sense, and R-TXT-21 (4) keeps grouping only on mandatory attributes; the change belongs to
+  the prototype's metamodel, not to Jjodel. (2) A class annotated as one-line or positional requires a mandatory name
+  attribute: otherwise the annotation is refused by the style check (an error, not a notice), so that every printed
+  text reads back (R-TXT-19, R-TXT-21 (8)).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
