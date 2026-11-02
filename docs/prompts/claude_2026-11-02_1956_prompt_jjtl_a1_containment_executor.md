@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1956
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane hw-notation · 01c2a9ccb, 787a2fcf3 · stopped at the context ceiling, closed by P-2026-11-02-2024 · verifica visiva non applicabile (executor only)
 Lane: full (JjTL executor semantics; first of two lanes of slice A, the write-back follows as a separate lane)
 Depends: P-2026-11-02-1742
 Worktree: ~/jjodel-w-jjtlcontain, branch jjtl-containment (from the trunk commit that adds this prompt)
