@@ -126,9 +126,8 @@ Main m = loop(m.expr)
 });
 
 // ---------------------------------------------------------------------------
-// The environment (step 3, R-JTG-5, R-JTG-6). Every class has a matched rule, so the
-// eager pass 1 still lowers each node once under the empty environment; the trees below
-// are the ones lowered under an environment, read from the roots.
+// The environment (step 3, R-JTG-5, R-JTG-6), on the toy whose expression rules are lazy
+// (step 4, R-JTG-7): pass 1 lowers nothing, so the roots hold only what Main reached.
 
 const ENV_RULES = `
 rule mkRef(v) -> Ref {
@@ -137,18 +136,18 @@ rule mkRef(v) -> Ref {
 
 rule under(e, env: Env) = e
 
-Add -> Add {
+lazy Add -> Add {
     left := left
     right := right
 }
 
-Const -> Const {
+lazy Const -> Const {
     value := value
 }
 
-Var v = if envHas(v.name) then envLookup(v.name) else mkRef(v)
+lazy Var v = if envHas(v.name) then envLookup(v.name) else mkRef(v)
 
-Bind b = under(b.expr, extendEnv(b.bindings.map(x => x.var), b.bindings.map(x => x.expr)))
+lazy Bind b = under(b.expr, extendEnv(b.bindings.map(x => x.var), b.bindings.map(x => x.expr)))
 
 Main m = m.expr
 `;
@@ -180,8 +179,7 @@ describe.each([
             v('va', 'a', 'bd1'),
         ]);
         expect(result.errors).toEqual([]);
-        // The second tree is the eager lowering of a1 under the empty environment.
-        expect(rootTerms(result)).toEqual(['Add(Ref(a), Const(1))', 'Add(Ref(x), Const(1))']);
+        expect(rootTerms(result)).toEqual(['Add(Ref(a), Const(1))']);
     });
 
     it('carries the environment to the leaves through nested implicit resolutions', async () => {
@@ -197,10 +195,7 @@ describe.each([
             v('va', 'a', 'bd1'),
         ]);
         expect(result.errors).toEqual([]);
-        expect(rootTerms(result)).toEqual([
-            'Add(Add(Ref(a), Const(1)), Const(2))',
-            'Add(Add(Ref(x), Const(1)), Const(2))',
-        ]);
+        expect(rootTerms(result)).toEqual(['Add(Add(Ref(a), Const(1)), Const(2))']);
     });
 
     it('lowers a bound expression where it was written: no capture', async () => {
@@ -218,7 +213,7 @@ describe.each([
             v('vy2', 'y', 'bdx'),
         ]);
         expect(result.errors).toEqual([]);
-        expect(rootTerms(result)).toEqual(['Add(Ref(x), Ref(y))', 'Add(Ref(y), Const(5))']);
+        expect(rootTerms(result)).toEqual(['Add(Ref(y), Const(5))']);
     });
 
     it('resolves a bound expression in the outer scope of its binding site', async () => {
@@ -239,7 +234,7 @@ describe.each([
             v('vy2', 'y', 'bdx'),
         ]);
         expect(result.errors).toEqual([]);
-        expect(rootTerms(result)).toContain('Add(Const(2), Const(5))');
+        expect(rootTerms(result)).toEqual(['Add(Const(2), Const(5))']);
     });
 
     it('names the environment of each frame in an error stack', async () => {
@@ -256,5 +251,122 @@ Bind b = spin(b.expr, extendEnv(b.bindings.map(x => x.var), b.bindings.map(x => 
         const depth = result.errors.filter(e => /depth limit/.test(e));
         expect(depth).toHaveLength(1);
         expect(depth[0]).toMatch(/\n  at rule spin\(e, env\) = \.\.\. on Var 'x' with \{ x := Var 'a' \}/);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Lazy rules (step 4, R-JTG-7): indexed by source class, selected by their guards, applied
+// only when something reaches the node; `unique` once per (rule, source, environment).
+
+describe.each([
+    ['legacy parser (no source)', false],
+    ['JjEL parser (source)', true],
+] as const)('lazy rules — %s', (_label, withSource) => {
+    const run = (rules: string, source: any[]) => execute(parseJjtl(rules, withSource), source, TARGET);
+    const rootTerms = (result: any) => result.targetModel!.roots.map(term).sort();
+
+    it('creates no target, and no root, for a lazy node nothing reaches', async () => {
+        const result = await run(ENV_RULES, [
+            el('m1', 'Main', { expr: ref('a1') }),
+            add('a1', 'c1', 'c2', 'm1'),
+            k('c1', 1, 'a1'),
+            k('c2', 2, 'a1'),
+            add('a9', 'c8', 'c9', 'm1'),
+            k('c8', 8, 'a9'),
+            k('c9', 9, 'a9'),
+        ]);
+        expect(result.errors).toEqual([]);
+        expect(rootTerms(result)).toEqual(['Add(Const(1), Const(2))']);
+        expect(result.targetModel!.instances.get('Add')).toHaveLength(1);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(2);
+    });
+
+    it('creates a unique lazy target once per environment: a second placement is a second claim', async () => {
+        const result = await run(ENV_RULES.replace('lazy Const -> Const', 'unique lazy Const -> Const'), [
+            el('m1', 'Main', { expr: ref('b1') }),
+            bind('b1', 'a1', ['bd1'], 'm1'),
+            add('a1', 'vx', 'vx2', 'b1'),
+            v('vx', 'x', 'a1'),
+            v('vx2', 'x', 'a1'),
+            binding('bd1', 'x', 'c5', 'b1'),
+            k('c5', 5, 'bd1'),
+        ]);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
+        const conflicts = result.errors.filter(e => /Containment conflict/.test(e));
+        expect(conflicts).toHaveLength(1);
+        expect(conflicts[0]).toMatch(/Const '?.*'? is claimed by Add .*\.left .* and by Add .*\.right/);
+    });
+
+    it('selects the one lazy rule whose guard holds', async () => {
+        const result = await run(`
+lazy Add -> Add {
+    left := left
+    right := right
+}
+
+lazy Const c -> Const where c.value >= 0 {
+    value := value
+}
+
+lazy Const c -> Ref where c.value < 0 {
+    name := 'neg'
+}
+
+Main m = m.expr
+`, [
+            el('m1', 'Main', { expr: ref('a1') }),
+            add('a1', 'c1', 'c2', 'm1'),
+            k('c1', 1, 'a1'),
+            k('c2', -1, 'a1'),
+        ]);
+        expect(result.errors).toEqual([]);
+        expect(rootTerms(result)).toEqual(['Add(Const(1), Ref(neg))']);
+    });
+
+    it('reports no applicable lazy rule, and several, as errors naming the rules', async () => {
+        const rules = (lo: string, hi: string) => `
+lazy Add -> Add {
+    left := left
+    right := right
+}
+
+lazy Const c -> Const where ${lo} {
+    value := value
+}
+
+lazy Const c -> Ref where ${hi} {
+    name := 'neg'
+}
+
+Main m = m.expr
+`;
+        const source = [
+            el('m1', 'Main', { expr: ref('a1') }),
+            add('a1', 'c1', 'c1', 'm1'),
+            k('c1', 1, 'a1'),
+        ];
+        const none = await run(rules('c.value > 5', 'c.value < -5'), source);
+        expect(none.errors.some(e =>
+            /No lazy rule applies to Const 'c1': the guard of 'lazy Const -> Const', 'lazy Const -> Ref' is false/.test(e)
+        )).toBe(true);
+        const both = await run(rules('c.value > 0', 'c.value > -5'), source);
+        expect(both.errors.some(e =>
+            /Ambiguous lazy rules for Const 'c1': 'lazy Const -> Const', 'lazy Const -> Ref' all apply/.test(e)
+        )).toBe(true);
+    });
+
+    it('rejects a class with both a matched and a lazy rule', async () => {
+        const result = await run(`
+Const -> Const {
+    value := value
+}
+
+lazy Const -> Const {
+    value := value
+}
+`, [k('c1', 1, 'm1')]);
+        expect(result.success).toBe(false);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/Ambiguous rules for 'Const': matched 'Const -> Const' and lazy 'lazy Const -> Const'/);
     });
 });

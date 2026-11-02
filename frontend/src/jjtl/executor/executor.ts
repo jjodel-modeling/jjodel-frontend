@@ -551,6 +551,10 @@ export class JjtlExecutor {
     private objectKeys: WeakMap<object, number> = new WeakMap();
     private objectKeyCount = 0;
     private realized: Map<string, any> = new Map();
+    // Lazy rules by source class (step 4, R-JTG-7), and every rule's position, the rule
+    // part of the (rule, source, environment) key.
+    private lazyBySourceType: Map<string, ClassMappingAST[]> = new Map();
+    private ruleIds: Map<ClassMappingAST, number> = new Map();
     private stats: ExecutionStats = {
         sourceInstancesProcessed: 0,
         targetInstancesCreated: 0,
@@ -642,6 +646,7 @@ export class JjtlExecutor {
             // target classes (e.g. reject abstract targets)
             this.buildTargetClassIndex();
             this.validateTargetClasses();
+            this.validateLazyRules();
 
             // If validation errors, return early
             if (this.errors.length > 0) {
@@ -1190,6 +1195,17 @@ export class JjtlExecutor {
         this.objectKeys = new WeakMap();
         this.objectKeyCount = 0;
         this.realized = new Map();
+        this.lazyBySourceType = new Map();
+        this.ruleIds = new Map();
+        [...this.ast.mappings, ...(this.ast.rules ?? [])].forEach((r, i) => this.ruleIds.set(r, i));
+        for (const rule of this.ast.rules ?? []) {
+            if (rule.ruleKind !== 'lazy') continue;
+            for (const src of rule.sources) {
+                const list = this.lazyBySourceType.get(src.className) || [];
+                list.push(rule);
+                this.lazyBySourceType.set(src.className, list);
+            }
+        }
 
         // Register resolve() and resolveAll() as JjEL builtins
         this.registerTraceBuiltins();
@@ -3157,20 +3173,70 @@ export class JjtlExecutor {
      * the current environment: a delegating rule always (its result exists only once
      * applied), any rule under a non-empty environment (implicit resolution inherits the
      * environment down to the leaves, R-JTG-6). Otherwise undefined: the pass 1 target
-     * answers, through the resolution that follows.
+     * answers, through the resolution that follows. For a class of lazy rules, the
+     * candidates instead: realizeLazy selects one.
      */
-    private sourceRuleOf(value: any): { element: any; rule: ClassMappingAST } | undefined {
+    private sourceRuleOf(value: any): { element: any; rule?: ClassMappingAST; lazy?: ClassMappingAST[] } | undefined {
         if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
         if (value.__createdBy === 'JjTL' || this.demandOf(value) || this.environmentOf(value)) return undefined;
         const element = this.asSourceElement(value);
         if (!element) return undefined;
         const className = this.detectSourceClassName(element);
+        // A class lowered by lazy rules: reaching the node is what applies one (R-JTG-7).
+        const lazy = className ? this.lazyBySourceType.get(className) : undefined;
+        if (lazy && lazy.length > 0) return { element, lazy };
         const rules = className ? this.context.rulesBySourceType.get(className) : undefined;
         // Ambiguity and absence stay with resolveValue, which reports them.
         if (!rules || rules.length !== 1) return undefined;
         const rule = rules[0];
         if (!rule.result && this.currentEnvironment() === EMPTY_ENVIRONMENT) return undefined;
         return { element, rule };
+    }
+
+    /**
+     * A class is lowered either by matched rules or by lazy rules, never by both: which
+     * one a resolution reaching the node would mean is ambiguous (R-JTG-7).
+     */
+    private validateLazyRules(): void {
+        for (const [className, lazy] of this.lazyBySourceType) {
+            const matched = this.context.rulesBySourceType.get(className);
+            if (!matched || matched.length === 0) continue;
+            this.errors.push(
+                `Ambiguous rules for '${className}': matched ${matched.map(r => `'${this.ruleLabel(r)}'`).join(', ')} ` +
+                `and lazy ${lazy.map(r => `'${this.ruleLabel(r)}'`).join(', ')}. A class is lowered by matched ` +
+                `rules or by lazy rules, not both.`
+            );
+        }
+    }
+
+    /**
+     * The lazy rule that lowers `element`: the one whose guard holds, a rule without a
+     * guard always holding. None or several is an error naming the candidates.
+     */
+    private selectLazyRule(element: any, candidates: ClassMappingAST[]): ClassMappingAST {
+        const holding = candidates.filter(r =>
+            !r.condition || this.evaluateCondition(r.condition, element, r.sources[0]?.alias)
+        );
+        if (holding.length === 1) return holding[0];
+        const subject = this.describeSubject(element);
+        const labels = (rules: ClassMappingAST[]) => rules.map(r => `'${this.ruleLabel(r)}'`).join(', ');
+        if (holding.length === 0) {
+            throw new Error(`No lazy rule applies to ${subject}: the guard of ${labels(candidates)} is false.`);
+        }
+        throw new Error(`Ambiguous lazy rules for ${subject}: ${labels(holding)} all apply. A guard must select one.`);
+    }
+
+    /**
+     * A node of a lazy class, reached now: the selected rule is applied afresh under the
+     * current environment, or, when `unique`, once per (rule, source, environment).
+     */
+    private async realizeLazy(element: any, candidates: ClassMappingAST[]): Promise<any> {
+        const rule = this.selectLazyRule(element, candidates);
+        const env = this.currentEnvironment();
+        if (rule.unique) return this.realizeSource(element, rule, env);
+        const lowered = await this.applyRule(rule, { source: element, env });
+        if (rule.result) this.stats.classMappingsExecuted++;
+        return lowered;
     }
 
     /**
@@ -3193,8 +3259,9 @@ export class JjtlExecutor {
         const demand = this.demandOf(value);
         if (demand?.kind === 'call') return this.applyRule(demand.rule, { args: demand.args, env: demand.callerEnv });
         if (demand?.kind === 'closure') return this.realizeClosure(demand);
-        const { element, rule } = this.sourceRuleOf(value)!;
-        return this.realizeSource(element, rule, this.currentEnvironment());
+        const { element, rule, lazy } = this.sourceRuleOf(value)!;
+        if (lazy) return this.realizeLazy(element, lazy);
+        return this.realizeSource(element, rule!, this.currentEnvironment());
     }
 
     /**
@@ -3204,7 +3271,7 @@ export class JjtlExecutor {
      */
     private async realizeSource(element: any, rule: ClassMappingAST, env: TraceEnvironment): Promise<any> {
         const sourceKey = String(element?.id ?? element?.name ?? this.valueKey(element));
-        const key = `${this.ast.mappings.indexOf(rule)}|${sourceKey}|${this.envKey(env)}`;
+        const key = `${this.ruleIds.get(rule)}|${sourceKey}|${this.envKey(env)}`;
         if (this.realized.has(key)) return this.realized.get(key);
         const lowered = await this.applyRule(rule, { source: element, env });
         this.realized.set(key, lowered);
