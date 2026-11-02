@@ -313,8 +313,7 @@ export class EcoreService {
         if (attr.unique === false) parts.push(`unique="false"`);
 
         // Default value
-        // D-layer __raw: the L proxy declares no defaultValueLiteral getter (LModelElement.tsx:2326-2331, commented out).
-        const defaultLiteral = attr.__raw?.defaultValueLiteral;
+        const defaultLiteral = attr.defaultValueLiteral;
         if (defaultLiteral) {
             parts.push(`defaultValueLiteral="${this.escapeXml(defaultLiteral)}"`);
         }

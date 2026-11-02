@@ -76,7 +76,7 @@ const many = (v: any): any[] => (v === undefined ? [] : Array.isArray(v) ? v : [
 
 const ptr = (id: string, name: string) => ({ id, name });
 const attribute = (name: string, type: any, extra: Record<string, unknown> = {}) =>
-    ({ name, type, lowerBound: 0, upperBound: 1, changeable: true, __raw: { ...extra } });
+    ({ name, type, lowerBound: 0, upperBound: 1, changeable: true, ...extra, __raw: {} }); // L accessor, not __raw (R-TXT-25 (8))
 
 const ATTRS = [
     attribute('level', ptr('Pointer_EINT', 'EInt'), { defaultValueLiteral: '7' }),

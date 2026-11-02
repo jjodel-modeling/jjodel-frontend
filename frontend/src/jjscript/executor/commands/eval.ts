@@ -792,7 +792,7 @@ function emptyAttributeDefault(meta: any): JjelValue {
 }
 
 /** The attribute's type, categorised as emptyAttributeDefault coerces it. */
-function attributeTypeCategory(meta: any): { isEnum: boolean; enumLiterals: any[]; isBool: boolean; isNum: boolean; isStr: boolean } {
+function attributeTypeCategory(meta: any): { isEnum: boolean; enumLiterals: any[]; isBool: boolean; isNum: boolean; isStr: boolean; isInt: boolean } {
     let typeName = '';
     let isEnum = false;
     let enumLiterals: any[] = [];
@@ -808,7 +808,9 @@ function attributeTypeCategory(meta: any): { isEnum: boolean; enumLiterals: any[
     const isBool = !isEnum && typeName.includes('bool');
     const isNum  = !isEnum && /(int|long|short|byte|float|double|decimal|integer|number)/.test(typeName);
     const isStr  = !isEnum && typeName.includes('string');
-    return { isEnum, enumLiterals, isBool, isNum, isStr };
+    // EInt, ELong, EShort, EByte, EBigInteger and their object forms.
+    const isInt  = !isEnum && /^e?(int|integer|long|short|byte|biginteger)(object)?$/.test(typeName);
+    return { isEnum, enumLiterals, isBool, isNum, isStr, isInt };
 }
 
 /**
@@ -823,7 +825,7 @@ function declaredLiteralDefault(meta: any): JjelValue | undefined {
     try { literal = meta.defaultValueLiteral; } catch { literal = undefined; }
     if (typeof literal !== 'string' || literal === '') return undefined;
 
-    const { isEnum, enumLiterals, isBool, isNum } = attributeTypeCategory(meta);
+    const { isEnum, enumLiterals, isBool, isNum, isInt } = attributeTypeCategory(meta);
     if (isEnum) {
         try {
             const named = enumLiterals.find((l: any) => l?.name === literal);
@@ -840,9 +842,25 @@ function declaredLiteralDefault(meta: any): JjelValue | undefined {
     if (isNum) {
         if (s === '') return undefined;
         const n = Number(s);
-        return Number.isFinite(n) ? n : undefined;
+        if (!Number.isFinite(n)) return undefined;
+        // An integer type takes integer literals only, as Ecore does: "2.5" on EInt
+        // reads as no declared default (R-TXT-25 (9)).
+        if (isInt && !/^[+-]?\d+$/.test(s)) { warnRejectedLiteral(meta, literal); return undefined; }
+        return n;
     }
     return literal;
+}
+
+const rejectedLiteralWarnings = new Set<string>();
+
+/** The notice for a rejected default literal, once per attribute and literal. */
+function warnRejectedLiteral(meta: any, literal: string): void {
+    let attr = '', type = '';
+    try { attr = String(meta.name ?? ''); type = String(meta.type?.name ?? ''); } catch { /* unreadable */ }
+    const key = attr + ':' + type + ':' + literal;
+    if (rejectedLiteralWarnings.has(key)) return;
+    rejectedLiteralWarnings.add(key);
+    console.warn(`[JjEL] default literal "${literal}" of attribute ${attr} is not a valid ${type}: read as no declared default`);
 }
 
 /**
