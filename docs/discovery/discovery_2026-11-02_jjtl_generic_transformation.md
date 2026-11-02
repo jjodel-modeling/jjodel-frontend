@@ -7,6 +7,23 @@
 - Executor model (session banner): Sonnet 5.5. The reading session (P-2026-11-02-1425) ran on Opus 5.5 and left a handoff.
 - Nature of this document: a set of hypotheses with evidence, not a definitive reference. Whoever uses it downstream rereads the real files.
 
+## 0. Answer in brief
+
+*Added by P-2026-11-02-1742 (P16); the rest of the report is unchanged.*
+
+- **Answer.** One domain-free JjTL transformation is credible (250-400 lines, Q7), provided JjTL gains: containment
+  placement through the trace (A), called and lazy rules with an environment (B), sources spanning a model and its
+  dependencies (C0), inheritance matching (D). Implicit resolution of references already existed; SPEC §5.3 was stale.
+- **Recommendation.** Order A0, A, B, C0, D, C1 only if needed (§6). A0 first because it changes behaviour that exists:
+  resolved targets were copied on bind (§3.3).
+- **Ratified.** Alfonso ratified the order and the frame on 2026-11-02: `docs/decisions.md`, section R-JTG (R-JTG-1..5).
+- **Since then.** A0 shipped in P-2026-11-02-1742: the copy was confirmed by a test, binding is by identity, the three
+  silent fallbacks are reported, SPEC §5.3 rewritten.
+- **Decisions awaiting Alfonso.** How containment under A (traced target) relates to containment under B (fresh
+  subtree), and whether lowering rules are `lazy` so matched rules do not fire on library nodes: SPEC §5.3.2, "Open".
+  Whether an M1 model can depend on another M1 (§9, question 4), and who owns a textual notation for template and
+  library models (Q7): open, not answered here.
+
 **Provenance of the claims.** No claim here was measured by a run: no probe was written (the prompt forbids a test file in Phase 1). Every claim is *read*: from source at `445cdc94f`, from docs, or from the prototype files outside the repo. The reading session (P-2026-11-02-1425) reached its context ceiling before writing; its handoff is the source of the line references. In this session I re-opened and confirmed the ones the argument leans on most (marked "reconfirmed" below); the others are reported as the handoff holds them. The prototype is outside the repo and unnamed on purpose; only the file names and sizes needed for the argument are quoted.
 
 ## 1. Objective and hypotheses under test

@@ -7125,6 +7125,23 @@ project chat C-2026-11-02-1319. All rows: provisional, unattended, evidence: rea
   `forall` is E-FORALL, and an object literal with more than one entry, each `k: k`, is not E-VALUE. A JjTL `forall` with several
   variables does not expose the elements' properties unqualified: two elements would collide; one variable keeps doing so.
 
+## R-JTG: one generic JjTL transformation, the order and frame of parts A to D (decisions 2026-11-02)
+
+Evidence: Alfonso 2026-11-02 17:38, GO for slice A0 on `docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md`
+(P-2026-11-02-1425, P-2026-11-02-1612); registered by P-2026-11-02-1742. All rows: ratified by Alfonso, evidence: read,
+verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
+
+- **R-JTG-1 (2026-11-02)**: order A0, A, B, C0, D, C1 if needed; each slice its own lane, prompt and GO.
+- **R-JTG-2 (2026-11-02)**: A0 alone and first: a confirming test of copy on bind, then binding by identity, then the
+  silent fallbacks reported with source element and rule.
+- **R-JTG-3 (2026-11-02)**: two rules on one source keep the throw naming both; with D the most specific rule wins and the
+  throw remains for equal specificity. No declaration-order flag.
+- **R-JTG-4 (2026-11-02)**: a second containment claim is an error naming both containers; a containment cycle is an
+  error; leaving roots is recorded, not warned.
+- **R-JTG-5 (2026-11-02)**: called and lazy rules adopt the sketch of `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md:268-322`, with
+  the environment dynamically scoped, reified as a named parameter of called rules, values as closures; trace key
+  (source, rule, environment). A's specification is written in those terms now, vacuous until B.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
