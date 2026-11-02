@@ -675,3 +675,18 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: tests only, no UI change: visual check not applicable; merge gates green (13060 tests, 0 failed, 9 red at import, build exit 0)
 **Notes**: Lesson: a prompt that asks for load states a cap below load 20. P-2026-11-02-2250 gave none, its lane ran 500 hogs, load 600 for about 20 minutes on the shared Mac; gates of other lanes between 22:50 and 23:10 may be falsely red. Rollback tag `pre-codegen-tests-budget` on `52e49d05c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2330/result.json`.
 **Prompt document name**: 2026-11-02 23:30
+
+## 2026-11-02 — feat(jjtl): JjEL parses a forall collection the legacy parser cannot (P-2026-11-02-2345)
+**Prompt**: `claude_2026-11-02_2345_prompt_jjtl_forall_collection_jjel.md`: with the source text, a forall collection such as `requesters.flatMap(... { hi: q, lo: r })` is parsed by JjEL up to `such`, `->` and the binding comma (R-FA-5), so it no longer fails with `Expected expression`; no test expectation changes.
+**Files touched**: `9c0ac6c3d`: `frontend/src/jjtl/parser/parser.ts` (new `forAllCollection`), `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts` (+4), `frontend/src/jjtl/executor/__tests__/forall-multivar.test.ts` (+3), `frontend/src/jjtl/SPEC.md` (one line); this commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc exit 0; vitest src/jjtl src/jjel 998 passed, 7 files red at import (window is not defined, the known list); build exit 0; check:docs exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Legacy first, JjEL on fallback: the legacy result stays when it stops at a forall stop token, otherwise backtrack (errors truncated) to JjEL. Bench: JjEL always fails 2 AST assertions of parser forall-multivar and parity fixture tests#107; reverting the call site kills the 6 new tests. useJjtlParser already passes source. node_modules symlinked to ~/jjodel/frontend/node_modules (untracked, as every lane worktree).
+**Prompt document name**: 2026-11-02 23:45
+
+**Ticket** (P-2026-11-02-2345): under JjEL the collection of parity fixture `tests#107` evaluates differently at run time (`range() takes integers, got null`), so JjEL-always for forall collections is not run-time equivalent today. Still legacy-only with source: the messages of `alert`/`notify` and the statement-level `prompt`/`confirm`/`input` arguments (parser.ts alertStatement, notifyStatement, promptExpression, confirmExpression, inputExpression).
