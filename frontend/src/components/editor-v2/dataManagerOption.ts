@@ -79,3 +79,35 @@ export function textualOptionLabel(metamodelName: string | null | undefined, lan
     const metamodel = (metamodelName ?? '').trim();
     return metamodel || TEXTUAL_OPTION_FALLBACK_LABEL;
 }
+
+/** The key of the metamodel's `_state` that holds its syntax annotations (codegen/textual/syntaxRecord.ts, R-TXT-21 (2)). */
+export const TEXTUAL_SYNTAX_KEY = 'textSyntax';
+
+let lastStored: unknown;
+let lastLanguage: string | null = null;
+
+/**
+ * The language's name a stored annotations record sets (R-TXT-25 (12)), `null` when there is none or the record is not
+ * a readable version-1 record. Read here, with no import, so the picker can show it without loading `src/codegen/`;
+ * the rule is `resolveAnnotations`'s (a non-blank string). The last value read is kept, as the picker reads it per
+ * store change.
+ */
+export function textualLanguageOf(stored: unknown): string | null {
+    if (stored === lastStored) return lastLanguage;
+    let language: string | null = null;
+    if (typeof stored === 'string') {
+        try {
+            const r = JSON.parse(stored);
+            if (r && typeof r === 'object' && !Array.isArray(r) && r.v === 1 && typeof r.language === 'string' && r.language.trim()) language = r.language;
+        } catch { /* not JSON: no language */ }
+    }
+    lastStored = stored;
+    lastLanguage = language;
+    return language;
+}
+
+/** The language's name stored on the metamodel the model `modelId` is an instance of, or `null`. */
+export function textualLanguageNameOf(lookup: Readonly<Record<string, any>> | undefined, modelId: string | undefined): string | null {
+    const mm = modelId ? lookup?.[lookup?.[modelId]?.instanceof] : undefined;
+    return textualLanguageOf(mm?._state?.[TEXTUAL_SYNTAX_KEY]);
+}
