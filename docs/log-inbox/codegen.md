@@ -1012,3 +1012,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: Out of `textual/`: `engine/__tests__/defaultText.test.ts` pins the generator's paths, updated with it; `modelLines.test.ts`, a fourth corpus copy, also moved to `corpus.ts`. Paths always open with the root (`Class[k]`), single root included. Closes T2a's `inner` ticket (INNER corpus case). Gates: tsc 0; vitest src/codegen 49 files, 2479 tests; build 0; codegen-lazy on green, off red (open ticket, R-TXT-25 (10)). Bench 5/5 killed.
 **Prompt document name**: 2026-11-02 06:52
+
+## 2026-11-02 — merge: textual-paths into alfonso-frontend-jjtl (P-2026-11-02-0821)
+**Prompt**: Bring `textual-paths` at `f91c95e22` (feat 40b70401d) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-paths on a54aad3cc).
+**Files touched**: merge commit b7c0adfc2 (printer, parser, style, concreteGrammar, shared test corpus, the JjGen default generator and its test, the 0652 prompt, this inbox); `docs/prompts/claude_2026-11-02_0821_prompt_merge_textual-paths.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 08:21
