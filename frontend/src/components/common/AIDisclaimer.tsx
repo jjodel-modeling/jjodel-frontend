@@ -10,7 +10,9 @@
  */
 
 import React from 'react';
-import {AI, AIConfig, AIFeature} from '../../types/jodie';
+import type {AIFeature} from '../../types/jodie';
+import { registry } from '../../services/ai';
+import { preferredProviderId } from './ProviderModelSelector';
 import './AIDisclaimer.scss';
 
 interface AIDisclaimerProps {
@@ -25,7 +27,7 @@ interface AIDisclaimerProps {
  * Reads the per-feature provider name from settings.
  */
 export const AIDisclaimer: React.FC<AIDisclaimerProps> = ({ feature, compact = false }) => {
-    const llm = AI[AIConfig.getPreferred(feature)];
+    const llm = registry.get(preferredProviderId(feature));
 
     if (compact) {
         return (
