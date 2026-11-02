@@ -167,9 +167,12 @@ function syntheticSource(ast: TransformationAST): any[] {
     return out;
 }
 
-/** A target created by a rule (pass 1), as opposed to an object created inside a body. */
+/**
+ * A target created by a rule (pass 1), as opposed to an object created inside a body.
+ * A placed one is marked `__nested` and `__placed` (P-2026-11-02-2108).
+ */
 const isRuleTarget = (x: any): boolean =>
-    !!x && typeof x === 'object' && !Array.isArray(x) && x.__createdBy === 'JjTL' && !x.__nested;
+    !!x && typeof x === 'object' && !Array.isArray(x) && x.__createdBy === 'JjTL' && (!x.__nested || !!x.__placed);
 
 /**
  * Rule targets are bound by identity (P-2026-11-02-1742), so two of them may point at

@@ -63,7 +63,6 @@ import {
     type NestedJob,
     type NestedReferenceSet,
     type NestedUnplaced,
-    type IsPlacedIn,
     type NestedMaterializationReport,
 } from './nestedMaterialization';
 import './project-editor.scss';
@@ -1703,13 +1702,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                 // Rule targets a containment binding placed inside a container (slice A,
                 // SPEC §5.3.1): not created as roots here, but by STEP 6c inside their
-                // container, in the feature's order, like an object created in a body.
-                // Pointers to them resolve through the ids the walk returns.
+                // container, in the feature's order, like an object created in a body. The
+                // executor marks them __nested (P-2026-11-02-2108); `placements` is kept for
+                // ownership. Pointers to them resolve through the ids the walk returns.
                 const placements = result.targetModel?.containment;
-                const isPlacedIn: IsPlacedIn = (child, parent, featureName) => {
-                    const claim = placements?.get(child);
-                    return !!claim && claim.container === parent && claim.feature === featureName;
-                };
                 let nestedCreatedIds = new Map<any, string>();
                 const nestedReferenceSets: NestedReferenceSet[] = [];
 
@@ -1881,7 +1877,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     if (key.startsWith('__')) continue;
                                     const candidates = Array.isArray(val) ? val : [val];
                                     const children = candidates.filter(
-                                        (v: any) => v && typeof v === 'object' && (v.__nested || isPlacedIn(v, instanceData, key))
+                                        (v: any) => v && typeof v === 'object' && v.__nested
                                     );
                                     if (children.length === 0) continue;
                                     nestedKeys.add(key);
@@ -1892,7 +1888,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             + `stored and were dropped.`
                                         );
                                         nestedUnplaced.push({
-                                            path: `${objectName}.${key}`, count: countSubtree(children, isPlacedIn),
+                                            path: `${objectName}.${key}`, count: countSubtree(children),
                                             reason: `'${key}' is not a reference of '${className}'`,
                                         });
                                         continue;
@@ -2042,7 +2038,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 );
                                 nestedUnplaced.push({
                                     path: `${pending.parentName}.${pending.featureName}`,
-                                    count: countSubtree(pending.children, isPlacedIn),
+                                    count: countSubtree(pending.children),
                                     reason: `parent "${pending.parentName}" resolves to ${matches.length} objects`,
                                 });
                                 continue;
@@ -2069,7 +2065,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             sleep: (ms) => new Promise<void>(resolve => setTimeout(resolve, ms)),
                             now: () => performance.now(),
                             warn: (message) => console.warn('[ProjectEditor] ' + message),
-                            isPlacedIn,
                         };
                         console.time('[TIMING] nested DObject creation');
                         nestedDone = materializeNested(jobs, nestedDeps).then(r => {

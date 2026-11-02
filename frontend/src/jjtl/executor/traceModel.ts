@@ -345,11 +345,12 @@ export class TraceLinkBuilder {
  *
  * A binding value holds a rule target by identity (P-2026-11-02-1742), and two targets
  * may point at each other, so a rule target is written as `{__type, className, __sourceId}`:
- * its content belongs to the target model, not to the trace.
+ * its content belongs to the target model, not to the trace. A placed target is marked
+ * `__nested` and `__placed` (P-2026-11-02-2108) and is written the same way.
  */
 export function serializeTraceModel(trace: TraceModel): string {
     return JSON.stringify(trace, (_k, x) => {
-        if (x && typeof x === 'object' && !Array.isArray(x) && x.__createdBy === 'JjTL' && !x.__nested) {
+        if (x && typeof x === 'object' && !Array.isArray(x) && x.__createdBy === 'JjTL' && (!x.__nested || x.__placed)) {
             return { __type: x.__type, className: x.className, __sourceId: x.__sourceId };
         }
         return x;

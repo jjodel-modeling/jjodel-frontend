@@ -251,3 +251,48 @@ describe('materializeNested, rule targets placed in a containment (slice A)', ()
         expect(store.warnings).toEqual([`Nested: r1.nodes[0] (Leaf): 'owner' is not a reference of 'Leaf'. Pointer dropped.`]);
     });
 });
+
+// The executor marks a placed target `__nested` and `__placed` (P-2026-11-02-2108), so the walk
+// finds it with the one test it applies to created objects, and no `isPlacedIn`.
+describe('materializeNested, placed targets marked __nested (P-2026-11-02-2108)', () => {
+    const P = (type: string, fields: Record<string, any>) => ({ ...T(type, fields), __nested: true, __placed: true });
+
+    it('creates a marked placed tree of depth 3 without isPlacedIn, in the feature order', async () => {
+        const store = fakeStore(120);
+        const leaf = P('Leaf', { value: 7 });
+        const n2 = P('Node', { name: 'n2', label: 'B', leaves: [leaf] });
+        const created = N('Node', { name: 'c1', label: 'C' });
+        const n1 = P('Node', { name: 'n1', label: 'A', kids: [created, n2] });
+        const { result, tree } = await run(store, [n1]);
+        expect(tree).toEqual({
+            cls: 'Root',
+            nodes: [{
+                cls: 'Node', name: 'n1', label: 'A',
+                kids: [
+                    { cls: 'Node', name: 'c1', label: 'C' },
+                    { cls: 'Node', name: 'n2', label: 'B', leaves: [{ cls: 'Leaf', value: 7 }] },
+                ],
+            }],
+        });
+        expect(result.created).toBe(4);
+        expect(result.unplaced).toEqual([]);
+        expect(store.warnings).toEqual([]);
+        expect(new Set(result.createdIds!.values()).size).toBe(4);
+    });
+
+    it('queues a pointer to a marked target as a pointer, and creates that target once, where placed', async () => {
+        const store = fakeStore(120);
+        const target = P('Node', { name: 'n2', label: 'B' });
+        const pointer = { __ref_result: true, targets: [target] };
+        const holder = N('Leaf', { value: 1, subs: pointer });
+        const n1 = P('Node', { name: 'n1', label: 'A', kids: [target], leaves: [holder] });
+        const { result } = await run(store, [n1]);
+        expect(result.created).toBe(3);
+        expect(result.createdIds!.has(target)).toBe(true);
+        expect(result.referenceSets).toEqual([{
+            objectId: result.createdIds!.get(holder), className: 'Leaf', path: 'r1.nodes[0].leaves[0]',
+            references: { subs: pointer },
+        }]);
+        expect(store.warnings).toEqual([]);
+    });
+});

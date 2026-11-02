@@ -27,6 +27,7 @@ vi.mock('../../../joiner', () => ({
 import { JjtlLexer } from '../../lexer/lexer';
 import { JjtlParser } from '../../parser/parser';
 import { execute } from '../executor';
+import { serializeTraceModel } from '../traceModel';
 import type { TransformationAST } from '../../types/ast';
 
 function cls(name: string, attributes: string[], references: any[] = []) {
@@ -338,5 +339,67 @@ describe.each([
         const [a1, a2] = result.targetModel!.instances.get('Add')!;
         expect(a1.peer).toEqual({ __ref_result: true, targets: [a2] });
         expect(a2.peer.targets[0]).toBe(a1);
+    });
+});
+
+// A placed target carries the nested format (P-2026-11-02-2108): `__nested` for the write-back,
+// `__placed` so that it is still read as a rule target.
+describe.each([
+    ['legacy parser (no source)', false],
+    ['JjEL parser (source)', true],
+] as const)('placed targets marked __nested — %s', (_label, withSource) => {
+    it('marks every placed target __nested and __placed, and no root or body creation __placed', async () => {
+        const result = await execute(parseJjtl(TREE_RULES.join('\n\n'), withSource), TREE_SOURCE, TREE_TARGET);
+        expect(result.errors).toEqual([]);
+        const tm = result.targetModel!;
+        const placed = [...tm.containment!.keys()];
+        expect(placed).toHaveLength(5);
+        for (const t of placed) {
+            expect(t.__nested).toBe(true);
+            expect(t.__placed).toBe(true);
+            expect(t.__createdBy).toBe('JjTL');
+        }
+        for (const r of tm.roots) {
+            expect(r.__nested).toBeUndefined();
+            expect(r.__placed).toBeUndefined();
+        }
+        // Each placed target keeps its trace link, by the source element of the rule that created it.
+        const linked = result.traceModel!.links.map(l => l.sourceElement.elementName);
+        for (const t of placed) expect(linked).toContain(t.__sourceId);
+    });
+
+    it('does not mark a body creation __placed, even next to a placed target', async () => {
+        const result = await execute(parseJjtl(TREE_RULES.join('\n\n'), withSource), TREE_SOURCE, TREE_TARGET);
+        const all = [...result.targetModel!.instances.values()].flat();
+        for (const t of all) {
+            if (!result.targetModel!.containment!.has(t)) expect(t.__placed).toBeUndefined();
+        }
+    });
+
+    it('keeps pointers to a marked target, both ways, in either rule order, and serializes the trace short', async () => {
+        const rules = [
+            'Add -> Add {\n    name := name + "_t"\n    args := args\n    peer := peer\n}',
+            'Lit -> Lit {\n    name := name + "_t"\n}',
+        ];
+        for (const order of [rules, [...rules].reverse()]) {
+            const result = await execute(parseJjtl(order.join('\n\n'), withSource), ADD_SOURCE, ADD_TARGET);
+            expect(result.errors).toEqual([]);
+            const [a1, a2] = result.targetModel!.instances.get('Add')!;
+            expect(a2.__nested).toBe(true);
+            expect(a2.__placed).toBe(true);
+            // The root points at the marked target and the marked target at the root: both
+            // stay __ref_result pointers by identity, never a nested object to create.
+            expect(a1.peer).toEqual({ __ref_result: true, targets: [a2] });
+            expect(a1.peer.targets[0]).toBe(a2);
+            expect(a2.peer.targets[0]).toBe(a1);
+            expect(a1.args[0]).toBe(a2);
+
+            const trace = JSON.parse(serializeTraceModel(result.traceModel!));
+            const peers = trace.links.flatMap((l: any) => l.bindings).filter((b: any) => b.targetAttribute === 'peer');
+            expect(peers.map((b: any) => b.targetValue)).toEqual(expect.arrayContaining([
+                { __ref_result: true, targets: [{ __type: 'Add', className: 'Add', __sourceId: 'a2' }] },
+                { __ref_result: true, targets: [{ __type: 'Add', className: 'Add', __sourceId: 'a1' }] },
+            ]));
+        }
     });
 });

@@ -81,10 +81,14 @@ export type { SourceElement, TargetElement } from './jjodelConverter';
 // BINDING BY IDENTITY
 // ============================================
 
-/** A target created by a rule of this run (pass 1), as opposed to a nested creation. */
+/**
+ * A target created by a rule of this run (pass 1), as opposed to a nested creation.
+ * A rule target placed in a containment is marked `__nested` after pass 2, and `__placed`
+ * with it (P-2026-11-02-2108): it is still a rule target.
+ */
 function isRuleTarget(value: unknown): boolean {
     return !!value && typeof value === 'object' && !Array.isArray(value)
-        && (value as any).__createdBy === 'JjTL' && !(value as any).__nested;
+        && (value as any).__createdBy === 'JjTL' && (!(value as any).__nested || !!(value as any).__placed);
 }
 
 /**
@@ -3050,6 +3054,13 @@ export class JjtlExecutor {
         targetModel.containment = new Map(
             [...this.containerOf].map(([t, c]) => [t, { container: c.container, feature: c.feature }])
         );
+        // The write-back's nested format (P-2026-11-02-2108). Marked here, after pass 2, never at
+        // claim time: a binding made while the target is marked would not wrap a pointer to it.
+        // `__placed` keeps it a rule target for the readers that tell the two apart.
+        for (const target of this.containerOf.keys()) {
+            target.__nested = true;
+            target.__placed = true;
+        }
 
         const targetModelName = this.ast.targetMetamodel || 'target';
         const ref = (obj: any): TraceElementRef => ({

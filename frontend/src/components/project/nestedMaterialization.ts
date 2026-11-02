@@ -16,8 +16,9 @@
  *   (R-S1-6, docs/decisions.md).
  *
  * Rule targets placed in a containment (slice A, SPEC §5.3.1) take the same path: the executor
- * leaves them unmarked in the container's feature and lists them in `targetModel.containment`,
- * and the caller's `isPlacedIn` tells the walk which values of a feature they are. A placed
+ * marks them `__nested` in the container's feature (P-2026-11-02-2108) and lists them in
+ * `targetModel.containment`, so the walk finds them with one test. An unmarked rule target is
+ * walked only when the caller's optional `isPlacedIn` says it was placed there. A placed
  * target is created where it is placed and nowhere else, in the feature's order, and the walk
  * returns its created id so that pointers to it can be written once everything exists.
  *
@@ -45,7 +46,8 @@ export interface NestedDeps {
     warn(message: string): void;
     /**
      * `child` is a rule target placed in `featureName` of `parent` (slice A). Absent: only
-     * `__nested` objects are created, as before.
+     * `__nested` objects are created, which since P-2026-11-02-2108 include placed targets;
+     * the app no longer passes it.
      */
     isPlacedIn?(child: any, parent: any, featureName: string): boolean;
 }
