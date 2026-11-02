@@ -6786,6 +6786,26 @@ reversible: trunk (docs only, no code yet).
   frozen spec (adopted by the chat under RC-21, within the lane's files). The deletion of the two files with no
   importers (`ProviderSelector.tsx`, `ProviderSettings.tsx`) waits for Alfonso (RC-26).
 
+Open items of the frozen spec `docs/spec/claude_spec_2026-11-02_ai_provider_refactor.md` §10, answered by Juri in chat
+C-2026-11-02-1016 on 2026-11-02 (R-AI-6..12: ratified by Juri, R-AI-6..9 and 11..12 as recommended, R-AI-10 against
+the recommendation; evidence: read, verified: none, reversible: trunk).
+
+- **R-AI-6** (2026-11-02, O-1). **Key precedence stays as it is today.** L1 measures which of the two stored copies
+  (`jjodie_provider_<name>`, `jjodie-credentials.providers`) wins at load, pins it in a test, and the new store honours
+  that precedence and writes both copies. No data migration.
+- **R-AI-7** (2026-11-02, O-6). **The Claude `test()` is built on `/v1/messages` in L1** (one call, `max_tokens` 1), so
+  from L2 on a bad Claude key reads as AUTH, not NETWORK. This fulfils the second gate of R-AI-4 at L1.
+- **R-AI-8** (2026-11-02, O-3). **An OpenAI 429 with code `insufficient_quota` keeps the RATE category but its own
+  message** («no credit left on the account»), not «retry later». Every other 429 reads as today.
+- **R-AI-9** (2026-11-02, O-2). **`dockWidth` leaves the credentials blob at L2**, into a localStorage key of its own,
+  reading the old value once so the user's width is kept. L1's store preserves the field on round-trip until then.
+- **R-AI-10** (2026-11-02, O-8). **L2 stays one lane of 13 files**; Juri confirms rule 19 for it now, against the
+  recommendation to split it.
+- **R-AI-11** (2026-11-02, O-5). **L2 measures `AIConfig.getStatus` with a test before moving it**; if the label is
+  inverted it fixes it and says so in its log entry, otherwise it moves it as it is.
+- **R-AI-12** (2026-11-02, O-4). **The documentation types leave `types/jodie.ts` for a new `src/types/documentation.ts`
+  at L6.**
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
