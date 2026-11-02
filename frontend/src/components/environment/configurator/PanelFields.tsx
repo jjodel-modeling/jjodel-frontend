@@ -42,7 +42,9 @@ import type { LayoutAnnotations, RefShape, RefSlotControls, ShapeCtx } from '../
 import type { FormSpec } from '../../editor-v2/viewpoint/ir/irTypes';
 import type { SummaryItem } from '../../abstract/tabs/instanceTable';
 import type { DetailPermission } from '../../abstract/tabs/InstanceDetail';
-import { cardinalityText, foldKey, parseFolds, partitionFields, serializeFolds, typeLabel, type SectionKey } from './panelModel';
+import { fieldPresentationOf, sanitizeDeclarations, textPropsOf, type TypePresentation } from '../../../joiner/environmentConfig';
+import { cardinalityText, foldKey, parseFolds, partitionFields, roleRendering, serializeFolds, typeLabel, type SectionKey } from './panelModel';
+import { PanelDropdown } from './PanelDropdown';
 
 /** What the panel's parts share: the store, the role, the host's gestures, the panel's bookkeeping. */
 export interface PanelEnv {
@@ -76,6 +78,11 @@ export interface PanelEnv {
     openDelete?: (instanceId: string) => void;
     onCreate?: (cls: string, ownerId: string | null, childKey: string | null) => void;
     onCreateAndLink?: (targetCls: string, sourceId: string, refKey: string, at?: number) => void;
+    /** #186: the active role's presentation of a metaclass, by DClass id. Absent: no role (the
+     *  developer overlay), nothing presented. */
+    presentationOf?: (classId: string) => TypePresentation | null;
+    /** #186: the RENDER of «Customize element»: the sections ignore their remembered folds. */
+    preview?: boolean;
 }
 
 export const PanelEnvContext = createContext<PanelEnv | null>(null);
@@ -127,7 +134,7 @@ export function SectionHead({ title, folded, onToggle }: { title: string; folded
 }
 
 /** A field or component title: `label (cardinality) [Type]` (#187 task 7). */
-export function FieldTitle({ label, htmlFor, id, lower, upper, derived, count, typeName, readOnly, dirty, hint, bare }: {
+export function FieldTitle({ label, htmlFor, id, lower, upper, derived, count, typeName, readOnly, dirty, hint, bare, showType = true }: {
     label: string;
     /** The control the title labels; absent for a component, which is not one control. */
     htmlFor?: string;
@@ -142,6 +149,8 @@ export function FieldTitle({ label, htmlFor, id, lower, upper, derived, count, t
     hint?: string | null;
     /** Identity's title: the name and its type, no cardinality (mockup). */
     bare?: boolean;
+    /** #186: the role's «isTypeShown»; false drops `[Type]`. */
+    showType?: boolean;
 }) {
     return (
         <div className="cfg-panel__title" id={id}>
@@ -151,7 +160,7 @@ export function FieldTitle({ label, htmlFor, id, lower, upper, derived, count, t
                 : <span className="cfg-panel__label">{label}</span>}
             {/* Spaces in the text, not only the gap: the title reads as one phrase, copied or spoken. */}
             {!bare && <>{' '}<span className="cfg-panel__cardinality">({cardinalityText({ lower, upper, derived, count })})</span></>}
-            {' '}<span className="cfg-panel__type">[{typeLabel(typeName)}]</span>
+            {showType && <>{' '}<span className="cfg-panel__type">[{typeLabel(typeName)}]</span></>}
             {readOnly && <i className="bi bi-lock-fill cfg-panel__lock" title="Read-only" aria-hidden="true" />}
             {hint && <>{' '}<span className="cfg-panel__hint">{hint}</span></>}
         </div>
@@ -221,35 +230,61 @@ function jjelHint(f: FormFieldDescriptor): string | null {
  * The name is the `name` attribute when the class declares one (its slot propagates onto
  * `DObject.name`, root CLAUDE.md §3.12), otherwise `DObject.name` through `setObjectName`.
  */
-export function ObjectFields({ objectId, model, readOnly, diagnostics, folds, onToggle }: {
+export function ObjectFields({ objectId, model, readOnly, diagnostics, folds, onToggle, presentation }: {
     objectId: string;
     model: ObjectModel;
     readOnly: boolean;
     diagnostics: FormDiagnostics;
     folds: Set<SectionKey>;
     onToggle: (k: SectionKey) => void;
+    /** #186: the role's presentation of this element's class, null without one. */
+    presentation?: TypePresentation | null;
 }) {
     const env = usePanelEnv();
     const { identity, attributes } = partitionFields(model.fields);
     const [nameRefusal, setNameRefusal] = useState<string | null>(null);
     useEffect(() => { setNameRefusal(null); }, [objectId]);
 
+    /** #186: a feature's presentation, and how its widget renders (none on a read-only element). */
+    const presented = (f: FormFieldDescriptor) => {
+        const fp = fieldPresentationOf(presentation, f.name);
+        return { fp, rr: fp && !readOnly ? roleRendering(fp.widget, f) : null };
+    };
+
     const layoutAnnotations = useMemo<LayoutAnnotations>(() => {
         const out: LayoutAnnotations = {};
-        for (const f of attributes) out[f.name] = { renderer: f.annotations?.renderer, multiline: f.annotations?.multiline };
+        for (const f of attributes) {
+            // #186: the role's textarea is the width map's growing box, asked for as the metamodel would.
+            const multiline = presented(f).rr?.multiline ? true : f.annotations?.multiline;
+            out[f.name] = { renderer: f.annotations?.renderer, multiline };
+        }
         return out;
-    }, [attributes]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [attributes, presentation, readOnly]);
     const rows = autoLayoutRows(attributes.map(inputFromDescriptor), layoutAnnotations);
     const byName = new Map(attributes.map(f => [f.name, f]));
 
     const field = (f: FormFieldDescriptor, layout: LayoutField | undefined, bare: boolean) => {
         const ds = diagnostics.byField.get(f.name);
         const dirty = env.isDirty(objectId, f.name);
-        const shown = readOnly ? { ...f, isReadOnly: true } : f;
+        const { fp, rr } = presented(f);
+        const base = readOnly ? { ...f, isReadOnly: true } : f;
+        const shown = rr ? { ...base, widget: rr.widget } : base;
+        const cellLayout = layout && rr?.cellWidget ? { ...layout, widget: rr.cellWidget } : layout;
+        // #186: the field's CSS on its box; the text properties it declares also reach the title and
+        // the control, through one scoped rule each (`data-cfg-text`, configuratorPanel.scss).
+        const css = sanitizeDeclarations(fp?.style);
+        const textProps = textPropsOf(css.style).join(' ');
         return (
-            <div className="cfg-panel__field" data-field={f.name} data-problems={problemsAttr(ds)}>
+            <div
+                className={`cfg-panel__field${rr?.numberInput ? ' cfg-panel__field--number-input' : ''}`}
+                data-field={f.name}
+                data-problems={problemsAttr(ds)}
+                data-cfg-text={textProps || undefined}
+                style={css.text ? (css.style as React.CSSProperties) : undefined}
+            >
                 <FieldTitle
-                    label={f.label ?? f.name}
+                    label={fp?.label ?? f.label ?? f.name}
                     htmlFor={`ir-field-${f.slotId}`}
                     lower={f.lowerBound}
                     upper={f.upperBound}
@@ -258,21 +293,35 @@ export function ObjectFields({ objectId, model, readOnly, diagnostics, folds, on
                     typeName={f.typeName}
                     readOnly={shown.isReadOnly}
                     dirty={dirty}
-                    hint={jjelHint(f)}
+                    hint={jjelHint(shown)}
                     bare={bare}
+                    showType={fp?.showType !== false}
                 />
-                <IRFormField
-                    objectId={objectId}
-                    field={shown}
-                    offer={model.offer}
-                    diagnostics={ds}
-                    dirty={dirty}
-                    onCommitted={() => env.markDirty(objectId, f.name)}
-                    layout={layout}
-                    isLocked={env.profileReads
-                        ? (id: string) => isLockedValue(id, model.accessOf(f.name), env.profileReads)
-                        : undefined}
-                />
+                {rr?.dropdown ? (
+                    <PanelDropdown
+                        objectId={objectId}
+                        field={shown}
+                        options={fp?.options ?? []}
+                        allowOther={rr.dropdown === 'string' && fp?.allowOther === true}
+                        numeric={rr.dropdown === 'number'}
+                        diagnostics={ds}
+                        dirty={dirty}
+                        onCommitted={() => env.markDirty(objectId, f.name)}
+                    />
+                ) : (
+                    <IRFormField
+                        objectId={objectId}
+                        field={shown}
+                        offer={model.offer}
+                        diagnostics={ds}
+                        dirty={dirty}
+                        onCommitted={() => env.markDirty(objectId, f.name)}
+                        layout={cellLayout}
+                        isLocked={env.profileReads
+                            ? (id: string) => isLockedValue(id, model.accessOf(f.name), env.profileReads)
+                            : undefined}
+                    />
+                )}
             </div>
         );
     };

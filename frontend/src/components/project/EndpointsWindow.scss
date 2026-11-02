@@ -12,10 +12,45 @@
 }
 
 .endpoints-window {
+  // R-CFG-8: ‹ the tabs ›. The bar takes the tabs' bottom margin.
+  &__tabbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-bottom: var(--space-3);
+  }
+
   &__tabs {
     display: inline-flex;
     gap: var(--space-1);
-    margin-bottom: var(--space-3);
+  }
+
+  &__arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--color-bg-hover);
+      color: var(--color-text-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-selection-bar);
+      outline-offset: 1px;
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
   }
 
   &__tab {

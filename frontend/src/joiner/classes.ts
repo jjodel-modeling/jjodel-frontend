@@ -1,5 +1,6 @@
 import {Mixin} from "ts-mixer";
 import {findEnvironmentConfig} from "./environmentConfig";
+import type {TypePresentation} from "./environmentConfig";
 import type {
     DEdge,
     DEdgePoint,
@@ -3789,6 +3790,9 @@ export class DProfile extends DPointerTargetable {
     /** Per-metaclass permission overrides (metaclass pointer → 'hidden'|'read'|'edit').
      *  An absent key means the default: 'edit'. */
     typePermissions: Dictionary<Pointer<DClass>, 'hidden' | 'read' | 'edit'> = {};
+    /** #186 (R-CFG-3): per-metaclass presentation for this profile (metaclass pointer → TypePresentation).
+     *  Created at the first «Done» of «Customize element»; absent reads as empty, so no initialiser. */
+    typePresentation?: Dictionary<Pointer<DClass>, TypePresentation>;
 
     public static new(configId: Pointer<DEnvironmentConfig>, name?: string,
                       callback?: ((d: DProfile, c: Constructors) => void)): DProfile {
@@ -3805,6 +3809,7 @@ export class LProfile<Context extends LogicContext<DProfile> = any, D extends DP
     father!: LEnvironmentConfig;
     name!: string;
     typePermissions!: Dictionary<Pointer<DClass>, 'hidden' | 'read' | 'edit'>;
+    typePresentation?: Dictionary<Pointer<DClass>, TypePresentation>;
 }
 
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DEnvironmentConfig);

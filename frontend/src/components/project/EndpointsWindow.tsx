@@ -8,8 +8,11 @@
  * the first write, so opening the window writes nothing; they are mounted only while it is open.
  *
  * «Done» saves the project when it has unsaved changes and closes, as the wizard's «Done» does
- * (#157 R1, `EnvGenWizardModal.tsx`); Escape, the close button and the backdrop close without a
- * save. A portal on `document.body`, as the wizard: ProjectEditor's pane may be inactive.
+ * (#157 R1, `EnvGenWizardModal.tsx`); «Cancel» beside it, Escape, the close button and the backdrop
+ * close without a save (R-CFG-8, P-2026-10-20-1123): the changes stay in the project, unsaved. The
+ * arrows ‹ › beside the tabs move to the previous and the next tab, disabled at the ends, beside the
+ * click and the keyboard. A portal on `document.body`, as the wizard: ProjectEditor's pane may be
+ * inactive.
  *
  * Developer only: the doors are hidden in consumer mode, and the window closes when a
  * `?profile=` enters the hash (re-read on hashchange, as LeftBar and Dashboard do).
@@ -85,6 +88,7 @@ export const EndpointsWindow: React.FC<EndpointsWindowProps> = ({ tab, onTabChan
         onClose();
     };
 
+    const tabIndex = TABS.findIndex((t) => t.id === tab);
     // Roving tabindex: the arrows, Home and End move the selection and the focus together.
     const selectAt = (index: number) => {
         const next = TABS[(index + TABS.length) % TABS.length];
@@ -119,6 +123,18 @@ export const EndpointsWindow: React.FC<EndpointsWindowProps> = ({ tab, onTabChan
                 </div>
 
                 <div className="envgen-content endpoints-window__body">
+                    {/* R-CFG-8: the arrows sit outside the tablist, which holds tabs only. */}
+                    <div className="endpoints-window__tabbar">
+                    <button
+                        type="button"
+                        className="endpoints-window__arrow"
+                        aria-label="Previous tab"
+                        title="Previous tab"
+                        disabled={tabIndex <= 0}
+                        onClick={() => selectAt(tabIndex - 1)}
+                    >
+                        <i className="bi bi-chevron-left" aria-hidden="true" />
+                    </button>
                     <div className="endpoints-window__tabs" role="tablist" aria-label="Endpoints">
                         {TABS.map((t, i) => {
                             const selected = tab === t.id;
@@ -142,6 +158,17 @@ export const EndpointsWindow: React.FC<EndpointsWindowProps> = ({ tab, onTabChan
                             );
                         })}
                     </div>
+                    <button
+                        type="button"
+                        className="endpoints-window__arrow"
+                        aria-label="Next tab"
+                        title="Next tab"
+                        disabled={tabIndex >= TABS.length - 1}
+                        onClick={() => selectAt(tabIndex + 1)}
+                    >
+                        <i className="bi bi-chevron-right" aria-hidden="true" />
+                    </button>
+                    </div>
 
                     <div className="endpoints-window__panel" role="tabpanel" id={PANEL_ID} aria-labelledby={tabId(tab)}>
                         {tab === 'metaclasses' ? <MetaclassesStep /> : <ProfilesStep />}
@@ -151,6 +178,9 @@ export const EndpointsWindow: React.FC<EndpointsWindowProps> = ({ tab, onTabChan
                 <div className="envgen-footer">
                     <div className="envgen-footer__left" />
                     <div className="envgen-footer__right">
+                        <button type="button" className="envgen-btn envgen-btn--secondary" onClick={onClose} title="Close without saving">
+                            Cancel
+                        </button>
                         <button type="button" className="envgen-btn envgen-btn--primary" onClick={done}>
                             <i className="bi bi-check-lg" /> Done
                         </button>
