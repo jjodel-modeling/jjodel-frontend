@@ -1,0 +1,495 @@
+/**
+ * Step T6a of the textual notation (P-2026-11-02-2327; R-TXT-18, R-TXT-19, R-TXT-21 (5, 6), R-TXT-22, R-TXT-26,
+ * R-TXT-30): an edited text against the model it was printed from: the match, the minimal diff, the refusals, the
+ * lines. The acceptance is the library metamodel of syntaxRecord.test.ts, with and without its annotations (a renamed
+ * keyword, a dropped one, a group), and the saved turnstile example of codegen/examples (another domain), with and
+ * without annotations (a renamed keyword, a dropped one, an inline containment); the round trip runs over the shared
+ * corpus as well. Mutations each test kills are in its name; the bench is in the commit body.
+ */
+
+import { readFileSync } from 'node:fs';
+import { describe, it, expect, vi } from 'vitest';
+import type { ElementIds, SyntaxAnnotations } from '../annotations';
+import type { ConcreteGrammar } from '../concreteGrammar';
+import { classFeatures } from '../metamodel';
+import type { TextMetamodel, TextObject } from '../metamodel';
+import { parseText } from '../parser';
+import { printTextModel } from '../printer';
+import type { ObjectSpan } from '../printer';
+import { textualNotation } from '../syntaxRecord';
+import { diffText, planTextEdit } from '../textDiff';
+import type { PlanInput } from '../textDiff';
+import { defaultedSlots, referencedElsewhere } from '../textApply';
+import { BOX, CASES, DIAMOND, GARAGE, INNER, LOWER, NON_DIAMOND, grammarOf } from './corpus';
+import { FIXTURE, metamodelOf, objectsOf } from './spec';
+import type { Spec } from './spec';
+
+// ---- The library metamodel (syntaxRecord.test.ts), as the notation's plain data ----------------------------------
+
+const LIBRARY_MM: TextMetamodel = {
+    classes: [
+        {
+            name: 'Library', attributes: [{ name: 'name', type: 'EString' }],
+            references: [{ name: 'books', type: 'Book', containment: true, many: true }, { name: 'members', type: 'Member', containment: true, many: true }],
+        },
+        { name: 'Book', attributes: [{ name: 'name', type: 'EString' }, { name: 'genre', type: 'Genre' }, { name: 'year', type: 'EInt' }], references: [{ name: 'borrowedBy', type: 'Member' }] },
+        { name: 'Member', attributes: [{ name: 'name', type: 'EString' }] },
+    ],
+    enumerations: [{ name: 'Genre', literals: ['FICTION', 'POETRY', 'SCIENCE', 'HISTORY'] }],
+};
+
+const LIBRARY_IDS: ElementIds = {
+    classes: { C_Lib: 'Library', C_Book: 'Book', C_Mem: 'Member' },
+    features: {
+        A_Lib_name: { owner: 'Library', name: 'name', lower: 1 }, A_Book_name: { owner: 'Book', name: 'name', lower: 1 },
+        A_Book_genre: { owner: 'Book', name: 'genre', lower: 1 }, A_Book_year: { owner: 'Book', name: 'year', lower: 0 },
+        A_Mem_name: { owner: 'Member', name: 'name', lower: 1 }, R_Lib_books: { owner: 'Library', name: 'books', lower: 0 },
+        R_Lib_members: { owner: 'Library', name: 'members', lower: 0 }, R_Book_borrowedBy: { owner: 'Book', name: 'borrowedBy', lower: 0 },
+    },
+    enums: { E_Genre: 'Genre' },
+};
+
+const LIBRARY_RECORD: SyntaxAnnotations = {
+    v: 1,
+    language: 'Shelf',
+    features: { R_Lib_members: { keyword: 'patrons' }, A_Book_genre: { keyword: '' }, R_Lib_books: { groupBy: 'A_Book_genre' } },
+    enums: {
+        E_Genre: { subsets: [{ name: 'prose', literals: ['FICTION', 'HISTORY'] }, { name: 'verse', literals: ['POETRY'] }, { name: 'nonfiction', literals: ['SCIENCE'] }] },
+    },
+};
+
+function libraryObjects(over: Record<string, Record<string, unknown>> = {}): TextObject[] {
+    const base: Record<string, { cls: string; slots: Record<string, unknown> }> = {
+        lib: { cls: 'Library', slots: { name: 'city', books: ['b1', 'b2', 'b3', 'b4'], members: ['m1', 'm2'] } },
+        m1: { cls: 'Member', slots: { name: 'ann' } },
+        m2: { cls: 'Member', slots: { name: 'bob' } },
+        b1: { cls: 'Book', slots: { name: 'dune', genre: 'FICTION', year: null, borrowedBy: null } },
+        b2: { cls: 'Book', slots: { name: 'cosmos', genre: 'SCIENCE', year: 1980, borrowedBy: 'm1' } },
+        b3: { cls: 'Book', slots: { name: 'odes', genre: 'POETRY', year: null, borrowedBy: null } },
+        b4: { cls: 'Book', slots: { name: 'spqr', genre: 'HISTORY', year: 2015, borrowedBy: 'm2' } },
+    };
+    return Object.entries(base).map(([id, o]) => ({ id, cls: o.cls, slots: { ...o.slots, ...(over[id] ?? {}) } }));
+}
+
+const notation = (mm: TextMetamodel, record: SyntaxAnnotations | null, ids: ElementIds): ConcreteGrammar => {
+    const n = textualNotation(mm, { record, issues: [] }, ids);
+    expect(n.issues.filter(i => i.level === 'error')).toEqual([]);
+    return n.grammar;
+};
+const LIBRARY = notation(LIBRARY_MM, LIBRARY_RECORD, LIBRARY_IDS);
+const LIBRARY_PLAIN = notation(LIBRARY_MM, null, LIBRARY_IDS);
+
+// ---- The turnstile example (codegen/examples/turnstile), read from its saved lookup ----------------------------
+
+const TURNSTILE = JSON.parse(readFileSync(new URL('../../examples/turnstile/turnstile.json', import.meta.url), 'utf8'));
+
+/** The saved lookup as the notation's input: a primitive as its E-type (an expression or an action as a string); a
+ *  reference is a containment when its values' objects have its value as father. */
+function fromLookup(L: Record<string, any>): { mm: TextMetamodel; objects: TextObject[]; ids: ElementIds } {
+    const all = Object.values(L);
+    const features = all.filter(o => o.className === 'DAttribute' || o.className === 'DReference');
+    const values = all.filter(o => o.className === 'DValue');
+    const contains = (fid: string): boolean => values.some(v => v.instanceof === fid && v.values.some((t: string) => L[t]?.father === v.id));
+    const typeOf = (t: string): string => (t === 'Pointer_EINT' ? 'EInt' : 'EString');
+    const classes = all.filter(o => o.className === 'DClass');
+    const mm: TextMetamodel = {
+        classes: classes.map(c => ({
+            name: c.name, isAbstract: !!c.abstract, supers: (c.extends ?? []).map((s: string) => L[s].name),
+            attributes: features.filter(f => f.father === c.id && f.className === 'DAttribute').map(f => ({ name: f.name, type: typeOf(f.type), many: f.upperBound === -1 })),
+            references: features.filter(f => f.father === c.id && f.className === 'DReference')
+                .map(f => ({ name: f.name, type: L[f.type].name, containment: contains(f.id), many: f.upperBound === -1 })),
+        })),
+        enumerations: [],
+    };
+    const objects: TextObject[] = all.filter(o => o.className === 'DObject').map(o => {
+        const slots: Record<string, unknown> = {};
+        for (const vid of o.features) {
+            const v = L[vid];
+            const f = L[v.instanceof];
+            slots[f.name] = f.upperBound === -1 ? [...v.values] : v.values[0] ?? null;
+        }
+        return { id: o.id, cls: L[o.instanceof].name, slots };
+    });
+    const ids: ElementIds = {
+        classes: Object.fromEntries(classes.map(c => [c.id, c.name])),
+        features: Object.fromEntries(features.map(f => [f.id, { owner: L[f.father].name, name: f.name, lower: f.lowerBound ?? 0 }])),
+        enums: {},
+    };
+    return { mm, objects, ids };
+}
+
+const TS = fromLookup(TURNSTILE.lookup);
+const TURNSTILE_RECORD: SyntaxAnnotations = {
+    v: 1,
+    features: { F_State_transitions: { inline: true }, F_Transition_nextState: { keyword: 'to' }, F_Transition_event: { keyword: '' } },
+};
+const TS_PLAIN = notation(TS.mm, null, TS.ids);
+const TS_ANNOTATED = notation(TS.mm, TURNSTILE_RECORD, TS.ids);
+
+// ---- Helpers ---------------------------------------------------------------------------------------------------
+
+interface Case { readonly mm: TextMetamodel; readonly g: ConcreteGrammar; readonly objects: readonly TextObject[] }
+
+const specCase = (spec: Spec, g: ConcreteGrammar = grammarOf(spec)): Case => ({ mm: metamodelOf(spec), g, objects: objectsOf(spec) });
+
+/** Monaco's decorations over one edit (`NeverGrowsWhenTypingAtEdges`): a span after it shifts, one around it stretches. */
+function carry(spans: readonly ObjectSpan[], at: number, removed: number, inserted: number): ObjectSpan[] {
+    const delta = inserted - removed;
+    return spans.map(s => {
+        if (s.end <= at) return s;
+        if (s.start >= at + removed) return { ...s, start: s.start + delta, end: s.end + delta };
+        const start = s.start <= at ? s.start : at;
+        return { ...s, start, end: Math.max(start, s.end + delta) };
+    });
+}
+
+interface EditOptions {
+    /** Carry the previous print's spans over the edit (the editor), or give none (a re-import). */
+    readonly spans?: boolean;
+    readonly defaults?: ReadonlyMap<string, ReadonlySet<string>>;
+    readonly referencedElsewhere?: ReadonlySet<string>;
+    readonly ordered?: PlanInput['ordered'];
+}
+
+/** Prints the case, applies the replacements to the text in order, and plans the edit. */
+function edit(c: Case, replacements: readonly (readonly [string, string])[], o: EditOptions = {}) {
+    const printed = printTextModel(c.g, c.objects);
+    let text = printed.text;
+    let spans: ObjectSpan[] = [...printed.spans];
+    for (const [from, to] of replacements) {
+        const at = text.indexOf(from);
+        expect(at, `"${from}" in the text`).toBeGreaterThanOrEqual(0);
+        text = text.slice(0, at) + to + text.slice(at + from.length);
+        spans = carry(spans, at, from.length, to.length);
+    }
+    const parsed = parseText(text, c.g);
+    const plan = planTextEdit({
+        mm: c.mm, grammar: c.g, model: c.objects, parsed, unprinted: printed.unprinted,
+        ...(o.spans ? { previous: spans } : {}),
+        ...(o.defaults ? { defaults: o.defaults } : {}),
+        ...(o.referencedElsewhere ? { referencedElsewhere: o.referencedElsewhere } : {}),
+        ...(o.ordered ? { ordered: o.ordered } : {}),
+    });
+    return { printed, text, parsed, plan };
+}
+
+const codes = (p: ReturnType<typeof edit>['plan']): string[] => p.refusals.map(r => r.code);
+
+const LIBRARY_CASE: Case = { mm: LIBRARY_MM, g: LIBRARY, objects: libraryObjects() };
+const LIBRARY_PLAIN_CASE: Case = { mm: LIBRARY_MM, g: LIBRARY_PLAIN, objects: libraryObjects() };
+
+// ---- The round trip ----------------------------------------------------------------------------------------------
+
+const CORPUS: readonly (readonly [string, Case])[] = [
+    ['library, annotated', LIBRARY_CASE],
+    ['library, plain', LIBRARY_PLAIN_CASE],
+    ['turnstile, plain', { mm: TS.mm, g: TS_PLAIN, objects: TS.objects }],
+    ['turnstile, annotated', { mm: TS.mm, g: TS_ANNOTATED, objects: TS.objects }],
+    ...([['FIXTURE', FIXTURE], ['GARAGE', GARAGE], ['BOX', BOX], ['INNER', INNER], ['DIAMOND', DIAMOND], ['NON_DIAMOND', NON_DIAMOND], ['CASES', CASES]] as const)
+        .flatMap(([name, spec]) => [[name, specCase(spec)] as const, [`${name}, lower`, specCase(spec, grammarOf(spec, LOWER))] as const]),
+];
+
+describe('print, parse, diff is empty', () => {
+    it.each(CORPUS)('%s: no operation, with and without the spans; applicable with the spans (mutant: span evidence dropped)', (_, c) => {
+        for (const spans of [false, true]) {
+            const { parsed, plan } = edit(c, [], { spans });
+            expect(parsed.errors).toEqual([]);
+            expect(plan.diff!.ops).toEqual([]);
+            expect(plan.diff!.match.created).toEqual([]);
+            expect(plan.diff!.match.deleted).toEqual([]);
+            if (spans) {
+                expect(plan.refusals).toEqual([]);
+                expect(plan.lines).toEqual([]);
+            }
+        }
+    });
+
+    it('the annotated texts carry their annotations: the library groups and renames, the turnstile inlines and drops', () => {
+        const lib = printTextModel(LIBRARY, LIBRARY_CASE.objects).text;
+        expect(lib).toContain('patrons {');
+        expect(lib).toContain('prose {');
+        const ts = printTextModel(TS_ANNOTATED, TS.objects).text;
+        expect(ts).toContain(' to ');
+        expect(ts).not.toContain('transitions');
+        expect(ts).not.toContain('event ');
+    });
+
+    it.each(CORPUS)('%s: every unordered many-valued slot read in reverse order is no change (R-TXT-21 (5); mutant: order-insensitive compare removed)', (_, c) => {
+        const classOf = (cls: string) => c.mm.classes.find(k => k.name === cls)!;
+        let reversed = 0;
+        for (const o of c.objects) {
+            for (const [f, v] of Object.entries(o.slots)) {
+                if (!Array.isArray(v) || v.length < 2) continue;
+                const containment = classFeatures(c.mm, classOf(o.cls)).some(x => x.name === f && x.kind === 'containment');
+                if (containment) continue;
+                const objects = c.objects.map(x => (x.id === o.id ? { ...x, slots: { ...x.slots, [f]: [...v].reverse() } } : x));
+                const text = printTextModel(c.g, objects).text;
+                const parsed = parseText(text, c.g);
+                const diff = diffText({ mm: c.mm, grammar: c.g, model: c.objects, parsed, previous: printTextModel(c.g, c.objects).spans });
+                expect(diff.ops, `${o.id}.${f}`).toEqual([]);
+                reversed++;
+            }
+        }
+        if (c === LIBRARY_CASE) expect(reversed).toBe(0);
+    });
+
+    it('a slot declared ordered and reversed is a change: a list attribute is rewritten, a reference is a reorder for T7', () => {
+        const c = specCase(FIXTURE);
+        const reversed = c.objects.map(x => (x.id === 's1' ? { ...x, slots: { ...x.slots, tags: ['b-c', 'a'] } } : x.id === 'p1' ? { ...x, slots: { ...x.slots, peers: ['p2', 'p3'] } } : x));
+        const parsed = parseText(printTextModel(c.g, reversed).text, c.g);
+        const ordered = (_: string, f: string) => f === 'tags' || f === 'peers';
+        const diff = diffText({ mm: c.mm, grammar: c.g, model: c.objects, parsed, previous: printTextModel(c.g, c.objects).spans, ordered });
+        expect(diff.ops).toEqual([{ op: 'attribute', target: { model: 's1' }, feature: 'tags', value: ['b-c', 'a'] }]);
+        expect(diff.unsupported).toEqual([{ kind: 'reorder', model: 'p1', feature: 'peers' }]);
+    });
+});
+
+// ---- Edits -------------------------------------------------------------------------------------------------------
+
+describe('an edit is the minimal diff, and its lines address the objects by registered handles', () => {
+    it('an attribute: one update, one line', () => {
+        for (const spans of [false, true]) {
+            const { plan } = edit(LIBRARY_CASE, [['year 2015', 'year 2016']], { spans });
+            expect(plan.diff!.ops).toEqual([{ op: 'attribute', target: { model: 'b4' }, feature: 'year', value: 2016 }]);
+            expect(plan.refusals).toEqual([]);
+            expect(plan.lines).toEqual(['set spqr.year = 2016']);
+            expect([...plan.handles]).toEqual([['spqr', 'b4']]);
+        }
+    });
+
+    it('an attribute removed from the text is cleared (R-TXT-19: an omitted attribute reads back as unset)', () => {
+        const { plan } = edit(LIBRARY_CASE, [['\n        year 2015', '']], { spans: true });
+        expect(plan.lines).toEqual(['set spqr.year = null']);
+    });
+
+    it('a reference: one update, one line', () => {
+        const { plan } = edit(LIBRARY_CASE, [['borrowedBy bob', 'borrowedBy ann']], { spans: true });
+        expect(plan.diff!.ops).toEqual([{ op: 'reference', target: { model: 'b4' }, feature: 'borrowedBy', to: { model: 'm1' } }]);
+        expect(plan.lines).toEqual(['set spqr.borrowedBy = ann']);
+        expect(new Map(plan.handles)).toEqual(new Map([['spqr', 'b4'], ['ann', 'm1']]));
+    });
+
+    it('an object added, and one deleted with the reference to it', () => {
+        const added = edit(LIBRARY_CASE, [['    Member bob {}', '    Member bob {}\n    Member cid {}']]);
+        expect(added.plan.diff!.ops).toEqual([{ op: 'create', text: added.parsed.objects.find(o => o.slots.name === 'cid')!.id, cls: 'Member', into: { owner: { model: 'lib' }, feature: 'members' } },
+            { op: 'attribute', target: { text: added.parsed.objects.find(o => o.slots.name === 'cid')!.id }, feature: 'name', value: 'cid' }]);
+        expect(added.plan.lines).toEqual(['create instance of Member "cid" in city.members']);
+
+        const gone = edit(LIBRARY_CASE, [['\n        borrowedBy bob', ''], ['\n    Member bob {}', '']]);
+        expect(gone.plan.diff!.ops).toEqual([{ op: 'delete', model: 'm2' }]);
+        expect(gone.plan.lines).toEqual(['delete bob']);
+    });
+
+    it('nested: a container added with its contents, and one deleted with its contents in one line', () => {
+        const c = specCase(GARAGE);
+        const added = edit(c, [['    }\n  }\n  best Car[0].wheels[1]', '    }\n    Wheel z {\n      bolts {\n        Bolt q {}\n      }\n    }\n  }\n  best Car[0].wheels[1]']], { spans: true });
+        expect(added.parsed.errors).toEqual([]);
+        expect(added.plan.refusals).toEqual([]);
+        expect(added.plan.lines).toEqual(['create instance of Wheel "z" in beta.wheels', 'create instance of Bolt "q" in z.bolts']);
+
+        const tree = specCase({
+            classes: [{ name: 'Folder', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'folders', type: 'Folder', containment: true, many: true }, { name: 'files', type: 'File', containment: true, many: true }] },
+                { name: 'File', attributes: [{ name: 'name', type: 'EString' }, { name: 'size', type: 'EInt' }] }],
+            enums: {},
+            objects: [
+                { id: 'root', cls: 'Folder', slots: { name: 'root', folders: ['docs'], files: ['f0'] } },
+                { id: 'docs', cls: 'Folder', slots: { name: 'docs', files: ['f1', 'f2'] } },
+                { id: 'f0', cls: 'File', slots: { name: 'readme', size: 1 } },
+                { id: 'f1', cls: 'File', slots: { name: 'a', size: 2 } },
+                { id: 'f2', cls: 'File', slots: { name: 'b', size: 3 } },
+            ],
+        });
+        const printed = printTextModel(tree.g, tree.objects).text;
+        const from = printed.indexOf('  folders {');
+        const docs = printed.slice(from, printed.indexOf('\n  }', from) + 4);
+        const deleted = edit(tree, [[docs, '']], { spans: true });
+        expect(deleted.parsed.errors).toEqual([]);
+        expect(deleted.plan.diff!.ops).toEqual([{ op: 'delete', model: 'docs' }]);
+        expect(deleted.plan.lines).toEqual(['delete docs']);
+    });
+
+    it('a rename with an unchanged body: matched by its span in the editor; uncertain by similarity outside it (mutant: refusal on uncertain removed)', () => {
+        const inEditor = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']], { spans: true });
+        expect(inEditor.plan.diff!.match.matches.find(m => m.model === 'b4')).toMatchObject({ by: 'span', uncertain: false });
+        expect(inEditor.plan.lines).toEqual(['set spqr.name = "rome"']);
+
+        const reimport = edit(LIBRARY_CASE, [['Book spqr', 'Book rome']]);
+        expect(reimport.plan.diff!.match.matches.find(m => m.model === 'b4')).toMatchObject({ by: 'rename', uncertain: true, score: 1 });
+        expect(reimport.plan.diff!.ops).toEqual([{ op: 'attribute', target: { model: 'b4' }, feature: 'name', value: 'rome' }]);
+        expect(codes(reimport.plan)).toEqual(['uncertain']);
+        expect(reimport.plan.lines).toBeNull();
+    });
+
+    it('a rename that changes the body too is a creation and a deletion outside the editor', () => {
+        const { plan } = edit(LIBRARY_CASE, [['Book spqr {\n        HISTORY\n        year 2015\n        borrowedBy bob', 'Book rome {\n        FICTION\n        year 1']]);
+        expect(plan.diff!.match.deleted).toEqual(['b4']);
+        expect(plan.diff!.match.created).toHaveLength(1);
+        expect(plan.refusals).toEqual([]);
+    });
+
+    it('homonyms pair by order and are uncertain; in the editor, the spans decide (R-TXT-18, R-TXT-22)', () => {
+        const c = specCase(FIXTURE);
+        const reimport = edit(c, [['size 2', 'size 5']]);
+        expect(reimport.plan.diff!.match.matches.filter(m => m.by === 'homonym').map(m => m.model)).toEqual(['p1', 'p2', 'l1', 'l2']);
+        expect(reimport.plan.diff!.ops).toEqual([{ op: 'attribute', target: { model: 'p2' }, feature: 'size', value: 5 }]);
+        expect(codes(reimport.plan)).toEqual(['uncertain']);
+
+        const inEditor = edit(c, [['size 2', 'size 5']], { spans: true });
+        expect(inEditor.plan.refusals).toEqual([]);
+        expect(inEditor.plan.lines).toEqual(['set Part_1.size = 5']);
+        expect(inEditor.plan.handles.get('Part_1')).toBe('p2');
+    });
+
+    it('the turnstile, annotated: an inline transition retargeted, nameless homonyms decided by their spans', () => {
+        const c = { mm: TS.mm, g: TS_ANNOTATED, objects: TS.objects };
+        // The transition of State: `to Initial[0]` then its event `push`, on the next line (keyword dropped).
+        const from = '  Transition {\n    to Initial[0]\n    push';
+        const to = '  Transition {\n    to Initial[0]\n    coin';
+        const { plan } = edit(c, [[from, to]], { spans: true });
+        expect(plan.refusals).toEqual([]);
+        expect(plan.diff!.ops).toHaveLength(1);
+        expect(plan.diff!.ops[0]).toMatchObject({ op: 'reference', feature: 'event', to: { model: 'coin' } });
+        expect(edit(c, [[from, to]]).plan.refusals.map(r => r.code)).toEqual(['uncertain']);
+    });
+});
+
+// ---- Preservation, point 4 ----------------------------------------------------------------------------------------
+
+describe('what the text does not show is preserved; a default read is no change', () => {
+    it('a many-valued target the text cannot name is kept (mutant: preserved-hidden-feature cleared)', () => {
+        const f = specCase(FIXTURE);
+        const peers: Case = { ...f, objects: f.objects.map(o => (o.id === 'p1' ? { ...o, slots: { ...o.slots, peers: ['p3', 'zz', 'p2'] } } : o)) };
+        expect(edit(peers, [], { spans: true }).plan.diff!.ops).toEqual([]);
+    });
+
+    it('a single-valued target the text cannot name is an expected refusal: the printer writes the keyword with no value, the text does not parse, the model is not touched (printer defect, ticket of P-2026-11-02-1942)', () => {
+        const c: Case = { ...LIBRARY_CASE, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
+        for (const replacements of [[], [['year 2015', 'year 2016']]] as const) {
+            const { parsed, plan } = edit(c, replacements, { spans: true });
+            expect(parsed.errors).not.toEqual([]);
+            expect(codes(plan)).toEqual(['parse']);
+            expect(plan.diff).toBeNull();
+            expect(plan.lines).toBeNull();
+        }
+    });
+
+    it('a mandatory enumeration left empty reads as its first literal: the text printing it asks no change, and never writes it (mutant: default counted as a change)', () => {
+        const defaults = new Map([['b1', new Set(['genre'])]]);
+        for (const c of [LIBRARY_CASE, LIBRARY_PLAIN_CASE]) {
+            const same = edit(c, [], { spans: true, defaults });
+            expect(same.plan.diff!.ops).toEqual([]);
+            expect(same.plan.lines).toEqual([]);
+        }
+        const changed = edit(LIBRARY_PLAIN_CASE, [['genre FICTION', 'genre POETRY']], { spans: true, defaults });
+        expect(changed.plan.lines).toEqual(['set dune.genre = POETRY']);
+    });
+
+    it('a declared default printed and then left out of the text asks no change; a stored value left out is cleared', () => {
+        const objects = libraryObjects({ b3: { year: 1900 } });
+        const c: Case = { ...LIBRARY_PLAIN_CASE, objects };
+        const drop: [string, string] = ['\n      year 1900', ''];
+        expect(edit(c, [drop], { spans: true, defaults: new Map([['b3', new Set(['year'])]]) }).plan.lines).toEqual([]);
+        expect(edit(c, [drop], { spans: true }).plan.lines).toEqual(['set odes.year = null']);
+    });
+});
+
+// ---- Refusals (R-TXT-26, R-TXT-30) --------------------------------------------------------------------------------
+
+describe('the refusals', () => {
+    it('a parse error refuses, and no diff is computed (R-TXT-21 (8))', () => {
+        const { plan } = edit(LIBRARY_CASE, [['year 2015', 'year twenty']], { spans: true });
+        expect(codes(plan)).toEqual(['parse']);
+        expect(plan.diff).toBeNull();
+        expect(plan.lines).toBeNull();
+    });
+
+    it('a deletion of an object another model references refuses, also when it goes with its container', () => {
+        const gone = edit(LIBRARY_CASE, [['\n        borrowedBy bob', ''], ['\n    Member bob {}', '']], { spans: true, referencedElsewhere: new Set(['m2']) });
+        expect(codes(gone.plan)).toEqual(['referenced']);
+        expect(gone.plan.lines).toBeNull();
+        const kept = edit(LIBRARY_CASE, [['year 2015', 'year 2016']], { spans: true, referencedElsewhere: new Set(['m2']) });
+        expect(kept.plan.refusals).toEqual([]);
+
+        const c = specCase(GARAGE);
+        const text = printTextModel(c.g, c.objects).text;
+        const at = text.indexOf('  engine {');
+        const engine = text.slice(at, text.indexOf('\n  }', at) + 4);
+        const inside = edit(c, [[engine, ''], ['eng Car[0].engine[0]', '']], { spans: true, referencedElsewhere: new Set(['e1']) });
+        expect(inside.parsed.errors).toEqual([]);
+        expect(codes(inside.plan)).toContain('referenced');
+    });
+
+    it('objects the text does not print refuse (R-TXT-30), whatever the edit', () => {
+        const c: Case = { ...LIBRARY_CASE, objects: libraryObjects({ b3: { genre: null } }) };
+        const { printed, plan } = edit(c, [], { spans: true });
+        expect(printed.unprinted).toHaveLength(1);
+        expect(codes(plan)).toEqual(['unprinted']);
+        expect(plan.lines).toBeNull();
+    });
+
+    it('an uncertain match refuses, in each of its three kinds', () => {
+        expect(codes(edit(specCase(FIXTURE), []).plan)).toEqual(['uncertain']);
+        expect(edit(LIBRARY_CASE, [['Book spqr', 'Book rome']]).plan.refusals[0].message).toContain('rename');
+        // A move: Member ann taken out of patrons and put at the top.
+        const moved = edit(LIBRARY_PLAIN_CASE, [['\n    Member ann {}', ''], ['Library city {', 'Member ann {}\nLibrary city {']]);
+        expect(moved.parsed.errors).toEqual([]);
+        expect(moved.plan.diff!.match.matches.find(m => m.model === 'm1')).toMatchObject({ by: 'move', uncertain: true });
+        expect(codes(moved.plan)).toEqual(['uncertain', 'unsupported']);
+    });
+});
+
+// ---- The readers of the lookup ----------------------------------------------------------------------------------
+
+describe('what the lookup gives the diff', () => {
+    it('defaultedSlots: an empty D-layer value read as a value; referencedElsewhere: a pointer from another model', () => {
+        const L: Record<string, any> = {
+            M: { id: 'M', className: 'DModel' }, N: { id: 'N', className: 'DModel' },
+            F_genre: { id: 'F_genre', className: 'DAttribute', name: 'genre' }, F_year: { id: 'F_year', className: 'DAttribute', name: 'year' },
+            F_ref: { id: 'F_ref', className: 'DReference', name: 'borrowedBy' },
+            b1: { id: 'b1', className: 'DObject', father: 'M', features: ['V1', 'V2', 'V3'] },
+            V1: { id: 'V1', className: 'DValue', father: 'b1', instanceof: 'F_genre', values: [] },
+            V2: { id: 'V2', className: 'DValue', father: 'b1', instanceof: 'F_year', values: [1990] },
+            V3: { id: 'V3', className: 'DValue', father: 'b1', instanceof: 'F_ref', values: [] },
+            m1: { id: 'm1', className: 'DObject', father: 'M', features: [] },
+            x: { id: 'x', className: 'DObject', father: 'N', features: ['VX'] },
+            VX: { id: 'VX', className: 'DValue', father: 'x', instanceof: 'F_ref', values: ['m1'] },
+            VY: { id: 'VY', className: 'DValue', father: 'b1', instanceof: 'F_ref', values: ['m1'] },
+        };
+        const objects: TextObject[] = [{ id: 'b1', cls: 'Book', slots: { genre: 'FICTION', year: 1990, borrowedBy: null } }];
+        expect(defaultedSlots(L, objects)).toEqual(new Map([['b1', new Set(['genre'])]]));
+        expect(referencedElsewhere(L, 'M')).toEqual(new Set(['m1']));
+        expect(referencedElsewhere(L, 'N')).toEqual(new Set());
+    });
+});
+
+// ---- The run (no app: the runner is mocked) ---------------------------------------------------------------------
+
+const run = vi.hoisted(() => ({ calls: [] as any[], registered: [] as [string, string][], events: [] as string[] }));
+vi.mock('../../../components/editor-v2/preview/PreviewBar', () => ({
+    applyAsOneStep: async (p: any) => { run.calls.push({ ...p, registered: [...run.registered] }); return { applied: p.script.split('\n').length, failed: 0 }; },
+}));
+vi.mock('../../../jjscript/executor/planWorld', () => ({ buildPlanWorld: () => ({ level: 'M1' }) }));
+vi.mock('../../../joiner', () => ({ U: {}, store: { getState: () => ({ idlookup: {} }) } }));
+vi.mock('../../../jjscript/executor/handleRegistry', () => ({ registerHandle: (h: string, id: string) => { run.registered.push([h, id]); } }));
+
+describe('applyTextEdit', () => {
+    it('runs the lines as one undo step, after registering the handles, and nothing when refused (mutant: no undo group)', async () => {
+        const events: string[] = [];
+        (globalThis as any).window = { dispatchEvent: (e: any) => { events.push(e.type); return true; } };
+        (globalThis as any).CustomEvent ??= class { constructor(public type: string, public init?: any) {} };
+        const { applyTextEdit } = await import('../textApply');
+        const { plan } = edit(LIBRARY_CASE, [['year 2015', 'year 2016'], ['borrowedBy bob', 'borrowedBy ann']], { spans: true });
+        expect(await applyTextEdit('M', plan)).toEqual({ applied: 2, failed: 0 });
+        expect(run.calls).toHaveLength(1);
+        expect(run.calls[0]).toMatchObject({ script: 'set spqr.year = 2016\nset spqr.borrowedBy = ann', modelId: 'M' });
+        expect(new Map(run.calls[0].registered)).toEqual(new Map([['spqr', 'b4'], ['ann', 'm1']]));
+        expect(events).toHaveLength(2);
+
+        const refused = edit(LIBRARY_CASE, [['year 2015', 'year twenty']], { spans: true });
+        expect((await applyTextEdit('M', refused.plan)).refused?.map(r => r.code)).toEqual(['parse']);
+        expect(await applyTextEdit('M', edit(LIBRARY_CASE, [], { spans: true }).plan)).toEqual({ applied: 0, failed: 0 });
+        const hidden: Case = { ...LIBRARY_CASE, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
+        expect((await applyTextEdit('M', edit(hidden, [], { spans: true }).plan)).refused?.map(r => r.code)).toEqual(['parse']);
+        expect(run.calls).toHaveLength(1);
+    });
+});
