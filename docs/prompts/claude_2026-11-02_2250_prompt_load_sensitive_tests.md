@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-2250
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane fast · ac2ee82f8 · verifica visiva non applicabile
 Lane: fast (tests only unless the cause says otherwise)
 Depends: none
 Worktree: ~/jjodel-w-cgbudget, branch codegen-tests-budget (from the trunk tip)
