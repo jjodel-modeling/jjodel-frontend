@@ -510,3 +510,16 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 **Smoke visivo**: non applicabile
 **Notes**: Executor, planner, guard, validator unchanged (planner: `unsupported: forall`, pinned by a test). Undo is the Run's group, not run end to end (executor does not import in the bench). `x, y in S` reading x is a regex parse error (a lambda rebinding x is a false positive). `rename b to b.name + _dup` does not parse (rename takes a name token, pre-existing). Gates: tsc 0, vitest 1425 passed (context-binding the known failure), build 0. Mutation: bindingContinues=false kills 5.
 **Prompt document name**: 2026-11-02 13:32
+
+## 2026-11-02 — merge: jjscript-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1701)
+**Prompt**: `claude_2026-11-02_1701_prompt_merge_jjscript-forall-multivar.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-forall-multivar` at `1d415bd5d` into `alfonso-frontend-jjtl`, merge base `767d350a3`, 2 commits on the branch side.
+**Files touched**: merge `838ea1449`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_1332_prompt_jjscript_forall_multivar.md`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/__tests__/parser.test.ts`, `frontend/src/jjscript/executor/__tests__/forallMultivar.test.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `838ea1449` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12899 tests in 488 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: on 3001 from the served JjScript parser: both multi-variable spellings parse to nested forall, a repeated name is a parse error. No command was run on a model in the UI; merge gates green
+**Notes**: Rollback tag `pre-jjscript-forall-multivar` on `767d350a3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1701/result.json`.
+**Prompt document name**: 2026-11-02 17:01
