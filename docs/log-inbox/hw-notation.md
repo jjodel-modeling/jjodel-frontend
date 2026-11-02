@@ -6,6 +6,45 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-02 — feat(jjtl): A3, placed targets marked __nested, write-back reads one test (P-2026-11-02-2108)
+**Prompt**: P-2026-11-02-2108, Alfonso's ruling: a placed target carries the `__nested` format; the write-back replaces `v.__nested || isPlacedIn(...)` with one test; `targetModel.containment` stays.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `executor/traceModel.ts`, `executor/__tests__/containment-placement.test.ts`, `jjtl/__tests__/jjel-path-parity.test.ts`, `components/project/ProjectEditor.tsx`, `nestedMaterialization.ts`, `__tests__/nestedMaterialization.test.ts`, `frontend/src/jjtl/SPEC.md`, this inbox, the `Status:` line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Marked in settleContainment after pass 2, plus `__placed` so isRuleTarget and both serializers still read a rule target. Claim-time marking kills 4 tests, the old serializer 2. Probe port 3194: A1-A5, save/reopen and A0 S1-S5 same figures as P-2024. Gates: 461 jjtl+project, full 12951 (9 known + 2 laneRun timeouts, 145/145 alone), tsc 0, build 0. Probe: `~/.jjodel-lanes/P-2026-11-02-2108/probe/`.
+**Prompt document name**: 2026-11-02 21:08
+
+## 2026-11-02 — feat(jjtl): A2, placed targets written inside their container by the nested path (P-2026-11-02-2024)
+**Prompt**: P-2026-11-02-2024, close P-2026-11-02-1956, LIR, then the app's write-back of rule targets placed in a containment, the nine handoff items, measured through the real Execute dialog.
+**Files touched**: `frontend/src/components/project/ProjectEditor.tsx` (STEP 6, 6c, 8b), `nestedMaterialization.ts`, `__tests__/nestedMaterialization.test.ts`, `frontend/src/jjtl/SPEC.md`, `docs/discovery/lir_2026-11-02_jjtl_containment_writeback.md` (new), this inbox, the `Status:` lines of both prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato
+**Notes**: Probe port 3193, two runs, one tab per scenario: depth 3 both orders, 8 objects, roots s1 and e1 only, order and pointers out of the tree right; mixed feature [a,b,c,made]; second claim fails visibly, no model; save/reopen same tree; P-1838 S1-S5 unchanged. Undo after a run: output tab Undo button disabled, Cmd+Z changes nothing. Gates: 453 jjtl+project, full 12945 (9 known), tsc 0, build 0. Probe: `~/.jjodel-lanes/P-2026-11-02-2024/probe/`.
+**Prompt document name**: 2026-11-02 20:24
+
+## 2026-11-02 — feat(jjtl): A1, containment placement through the trace in the executor (P-2026-11-02-1956)
+**Prompt**: P-2026-11-02-1956, containment placement of rule targets through the trace in the executor only: ownership errors, per-model trace, ticket #445 finding, parity serializer, SPEC, write-back list for the next lane.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `traceModel.ts`, `__tests__/containment-placement.test.ts` (new), `__tests__/nested-name-undeclared.test.ts` (new), `frontend/src/jjtl/__tests__/jjel-path-parity.test.ts`, `frontend/src/jjtl/SPEC.md`, this inbox, the prompt's `Status:`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Placed targets stay unmarked, ownership in `targetModel.containment` and `traceModel.placements`; second claim and cycle fail the run. App write-back unchanged by design: until P-2026-11-02-2024 placed targets become roots, hence Regressions unknown and no merge. Session stopped at the context ceiling; this entry and the Status line written by P-2026-11-02-2024 from the handoff. Gates: src/jjtl 436 passed, full suite 12941 passed (9 known import failures), typecheck 0.
+**Prompt document name**: 2026-11-02 19:56
+
 ## 2026-11-02 — docs(jjtl): R-JTG-6 and R-JTG-7 registered, A0 write-back exercised in the running app (P-2026-11-02-1838)
 **Prompt**: P-2026-11-02-1838, register the two rulings Alfonso gave on 2026-11-02 18:35, replace the Open block of SPEC 5.3.2, and probe the A0 write-back in the app: a reference between two rules in both orders, one nested creation, one two-rule cycle.
 **Files touched**: `docs/decisions.md`, `frontend/src/jjtl/SPEC.md`, this inbox, the `Status:` line of the prompt. Probe outside the repo: `~/.jjodel-lanes/P-2026-11-02-1838/probe/a0-writeback.ts` and its json.

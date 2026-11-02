@@ -61,6 +61,7 @@ import {
     countSubtree,
     type NestedDeps,
     type NestedJob,
+    type NestedReferenceSet,
     type NestedUnplaced,
     type NestedMaterializationReport,
 } from './nestedMaterialization';
@@ -1699,6 +1700,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // set if the transformation has no `name := name` binding).
                 const sourceIdToObjectName = new Map<string, string>();
 
+                // Rule targets a containment binding placed inside a container (slice A,
+                // SPEC §5.3.1): not created as roots here, but by STEP 6c inside their
+                // container, in the feature's order, like an object created in a body. The
+                // executor marks them __nested (P-2026-11-02-2108); `placements` is kept for
+                // ownership. Pointers to them resolve through the ids the walk returns.
+                const placements = result.targetModel?.containment;
+                let nestedCreatedIds = new Map<any, string>();
+                const nestedReferenceSets: NestedReferenceSet[] = [];
+
                 // Collect object IDs + positions for DVertex creation AFTER the TRANSACTION
                 // (DVertex.new has its own internal TRANSACTION — nesting causes coordinates to be lost)
                 const pendingVertices: Array<{
@@ -1790,6 +1800,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                             for (const instanceData of instances) {
                                 // console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
+                                // Written once, inside its container (STEP 6c), never also as a root.
+                                if (placements?.has(instanceData)) continue;
 
                                 let objectName = instanceData.name || `${className}_${instancesCreated}`;
                                 if (usedObjectNames.has(objectName)) {
@@ -1856,6 +1868,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 }
 
                                 // Collect nested creations (marked __nested by the executor)
+                                // and the rule targets placed in the same feature, in its order
                                 const domainRefNames = new Set(
                                     (targetClass.allReferences || []).map((r: any) => r.name).filter(Boolean)
                                 );
@@ -2059,6 +2072,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             console.log(`[ProjectEditor] Nested objects created: ${r.created} on ${r.levels} level(s)`);
                             pendingChildAttributeSets.push(...r.attributeSets);
                             nestedUnplaced.push(...r.unplaced);
+                            if (r.createdIds) nestedCreatedIds = r.createdIds;
+                            nestedReferenceSets.push(...(r.referenceSets || []));
                             reportNested(r.created);
                         }).catch(e => {
                             console.error('[ProjectEditor] Error creating nested objects (non-fatal):', e);
@@ -2187,11 +2202,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 }
                                 console.log(`[ProjectEditor] ✅ Nested attribute setting complete`);
                             };
-                            if (nestedDone) {
-                                nestedDone.then(() => {
-                                    if (pendingChildAttributeSets.length > 0) setTimeout(writeNestedAttributes, 1000);
-                                });
-                            }
 
                             console.log(`[ProjectEditor] ✅ Attribute setting complete`);
 
@@ -2203,64 +2213,105 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // ID of the source element that produced it). sourceIdToObjectName
                             // maps __sourceId → the DObject name assigned during creation.
                             // We then find the real DObject via LModel proxy by name to get
-                            // the real Pointer ID.
-                            if (pendingReferenceSets.length > 0) {
-                                console.log(`[ProjectEditor] STEP 8b: Setting references for ${pendingReferenceSets.length} objects`);
-                                for (const pending of pendingReferenceSets) {
-                                    const ro = resolveSeeded(pending.objectName, 'reference seeding');
-                                    if (ro.ambiguous) continue;
-                                    const lObject = ro.found;
-                                    if (!lObject) {
-                                        console.warn(`[ProjectEditor] Ref: Object "${pending.objectName}" not found`);
-                                        continue;
+                            // the real Pointer ID. A target placed in a containment is not a
+                            // root: it resolves by the id STEP 6c's walk returned for it.
+                            const resolveTargetId = (target: any, where: string): string | null => {
+                                const createdId = target && typeof target === 'object' ? nestedCreatedIds.get(target) : undefined;
+                                if (createdId) return createdId;
+                                if (target && placements?.has(target)) {
+                                    console.warn(`[ProjectEditor] Ref: target placed in a containment was not created, for ${where}`);
+                                    return null;
+                                }
+                                const sourceId = target?.__sourceId;
+                                const targetName = sourceId
+                                    ? sourceIdToObjectName.get(String(sourceId))
+                                    : target?.name;
+                                if (!targetName) {
+                                    if (sourceId) {
+                                        console.warn(`[ProjectEditor] Ref: sourceId not found in map: ${sourceId} (for ${where})`);
+                                    } else {
+                                        console.warn(`[ProjectEditor] Ref: target has no __sourceId or name for ${where}`);
                                     }
-                                    for (const [refName, refData] of Object.entries(pending.references)) {
-                                        try {
-                                            const feature = (lObject as any)['$' + refName];
-                                            if (!feature) {
-                                                console.warn(`[ProjectEditor] Ref: Feature "$${refName}" not found on "${pending.objectName}"`);
-                                                continue;
-                                            }
-                                            const targets = refData.targets || [];
-                                            for (let ri = 0; ri < targets.length; ri++) {
-                                                const target = targets[ri];
-                                                const sourceId = target?.__sourceId;
-                                                const targetName = sourceId
-                                                    ? sourceIdToObjectName.get(String(sourceId))
-                                                    : target?.name;
-                                                if (!targetName) {
-                                                    if (sourceId) {
-                                                        console.warn(`[ProjectEditor] Ref: sourceId not found in map: ${sourceId} (for ${pending.objectName}.${refName}[${ri}])`);
-                                                    } else {
-                                                        console.warn(`[ProjectEditor] Ref: target has no __sourceId or name for ${pending.objectName}.${refName}[${ri}]`);
-                                                    }
-                                                    continue;
-                                                }
-                                                // The pointer WRITE below is the one the census
-                                                // singles out: an ambiguous target here does not
-                                                // fail, it points somewhere. Skipping leaves the
-                                                // slot empty and declared, which is the honest
-                                                // outcome — a written pointer cannot be told
-                                                // apart from a chosen one afterwards.
-                                                const rt = resolveSeeded(
-                                                    targetName, `reference target for ${pending.objectName}.${refName}[${ri}]`
-                                                );
-                                                if (rt.ambiguous) continue;
-                                                const targetLObj = rt.found;
-                                                if (!targetLObj) {
-                                                    console.warn(`[ProjectEditor] Ref: Target "${targetName}" not found in model for ${pending.objectName}.${refName}[${ri}]`);
-                                                    continue;
-                                                }
-                                                const targetRealId = targetLObj.id;
-                                                feature.setValueAtPosition(ri, targetRealId, { isPtr: true });
-                                                console.log(`[ProjectEditor] ✅ Ref: ${pending.objectName}.${refName}[${ri}] → ${targetName} (${targetRealId})`);
-                                            }
-                                        } catch (e) {
-                                            console.error(`[ProjectEditor] Error setting ref ${refName} on "${pending.objectName}":`, e);
+                                    return null;
+                                }
+                                // The pointer WRITE below is the one the census
+                                // singles out: an ambiguous target here does not
+                                // fail, it points somewhere. Skipping leaves the
+                                // slot empty and declared, which is the honest
+                                // outcome — a written pointer cannot be told
+                                // apart from a chosen one afterwards.
+                                const rt = resolveSeeded(targetName, `reference target for ${where}`);
+                                if (rt.ambiguous) return null;
+                                if (!rt.found) {
+                                    console.warn(`[ProjectEditor] Ref: Target "${targetName}" not found in model for ${where}`);
+                                    return null;
+                                }
+                                return rt.found.id;
+                            };
+                            const writePointers = (lObject: LObject, who: string, references: Record<string, { targets: any[] }>): void => {
+                                for (const [refName, refData] of Object.entries(references)) {
+                                    try {
+                                        const feature = (lObject as any)['$' + refName];
+                                        if (!feature) {
+                                            console.warn(`[ProjectEditor] Ref: Feature "$${refName}" not found on "${who}"`);
+                                            continue;
                                         }
+                                        const targets = refData.targets || [];
+                                        for (let ri = 0; ri < targets.length; ri++) {
+                                            const targetRealId = resolveTargetId(targets[ri], `${who}.${refName}[${ri}]`);
+                                            if (!targetRealId) continue;
+                                            feature.setValueAtPosition(ri, targetRealId, { isPtr: true });
+                                            console.log(`[ProjectEditor] ✅ Ref: ${who}.${refName}[${ri}] → ${targetRealId}`);
+                                        }
+                                    } catch (e) {
+                                        console.error(`[ProjectEditor] Error setting ref ${refName} on "${who}":`, e);
                                     }
                                 }
+                            };
+                            const writeReferences = () => {
+                                if (pendingReferenceSets.length > 0) {
+                                    console.log(`[ProjectEditor] STEP 8b: Setting references for ${pendingReferenceSets.length} objects`);
+                                    for (const pending of pendingReferenceSets) {
+                                        const ro = resolveSeeded(pending.objectName, 'reference seeding');
+                                        if (ro.ambiguous) continue;
+                                        if (!ro.found) {
+                                            console.warn(`[ProjectEditor] Ref: Object "${pending.objectName}" not found`);
+                                            continue;
+                                        }
+                                        writePointers(ro.found, pending.objectName, pending.references);
+                                    }
+                                }
+                                // Pointers held by objects STEP 6c created, by their real id.
+                                for (const pending of nestedReferenceSets) {
+                                    const lChild = LPointerTargetable.fromPointer(pending.objectId) as LObject | undefined;
+                                    if (!lChild) {
+                                        console.warn(
+                                            `[ProjectEditor] Nested: object ${pending.objectId} (${pending.className}) `
+                                            + `no longer resolves; its references were not written.`
+                                        );
+                                        continue;
+                                    }
+                                    writePointers(lChild, pending.path, pending.references);
+                                }
                                 console.log(`[ProjectEditor] ✅ Reference setting complete`);
+                            };
+
+                            // Two phases: when STEP 6c runs, every pointer is written after the
+                            // whole tree exists and its attributes are seeded, so a pointer to a
+                            // placed target, or held by a created object, finds both ends.
+                            if (nestedDone) {
+                                nestedDone.then(() => {
+                                    setTimeout(() => {
+                                        try {
+                                            if (pendingChildAttributeSets.length > 0) writeNestedAttributes();
+                                            writeReferences();
+                                        } catch (e) {
+                                            console.error(`[ProjectEditor] Error writing nested attributes or references:`, e);
+                                        }
+                                    }, 1000);
+                                });
+                            } else if (pendingReferenceSets.length > 0) {
+                                writeReferences();
                             }
 
                         } catch (e) {

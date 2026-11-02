@@ -167,23 +167,32 @@ function syntheticSource(ast: TransformationAST): any[] {
     return out;
 }
 
-/** A target created by a rule (pass 1), as opposed to an object created inside a body. */
+/**
+ * A target created by a rule (pass 1), as opposed to an object created inside a body.
+ * A placed one is marked `__nested` and `__placed` (P-2026-11-02-2108).
+ */
 const isRuleTarget = (x: any): boolean =>
-    !!x && typeof x === 'object' && !Array.isArray(x) && x.__createdBy === 'JjTL' && !x.__nested;
+    !!x && typeof x === 'object' && !Array.isArray(x) && x.__createdBy === 'JjTL' && (!x.__nested || !!x.__placed);
 
 /**
  * Rule targets are bound by identity (P-2026-11-02-1742), so two of them may point at
- * each other. A rule target is written in full as an element of `roots`, where every
- * rule target sits, and as `{__type, className, __sourceId}` anywhere else.
+ * each other. A rule target is written in full as an element of `roots`, or, when a
+ * containment binding placed it (P-2026-11-02-1956, slice A), in the containment feature
+ * of its container, which is itself reached from a root; `{__type, className, __sourceId}`
+ * anywhere else.
  */
-function serialize(v: any): any {
+function serialize(v: any, containment?: Map<any, { container: any; feature: string }>): any {
     const roots = v?.roots;
     const rootSet = new Set(roots ?? []);
-    return JSON.parse(JSON.stringify(v, function (this: any, _k, x) {
+    return JSON.parse(JSON.stringify(v, function (this: any, k, x) {
         if (x instanceof Map) return Object.fromEntries(x);
         if (isRuleTarget(x) && this !== roots) {
-            // The short form is safe only while the full one is compared as a root.
-            if (!rootSet.has(x)) throw new Error(`rule target ${x.className} from ${x.__sourceId} is not a root: its content would go uncompared`);
+            const claim = containment?.get(x);
+            if (claim && (this === claim.container[claim.feature] || (this === claim.container && k === claim.feature))) {
+                return x;
+            }
+            // The short form is safe only while the full one is compared, as a root or in its container.
+            if (!rootSet.has(x) && !claim) throw new Error(`rule target ${x.className} from ${x.__sourceId} is neither a root nor contained: its content would go uncompared`);
             return { __type: x.__type, className: x.className, __sourceId: x.__sourceId };
         }
         return x;
@@ -207,7 +216,7 @@ async function run(ast: TransformationAST): Promise<any> {
         warnings: result.warnings.map((w: string) => w.replace(/^Expression evaluation failed \(\w+\)/, 'Expression evaluation failed (...)')),
         roots: result.targetModel?.roots,
         calls,
-    });
+    }, result.targetModel?.containment);
 }
 
 // ---------------------------------------------------------------------------

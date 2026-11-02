@@ -87,6 +87,25 @@ export interface TraceModel {
     executedAt: number;
     /** All trace links */
     links: TraceLink[];
+    /**
+     * Rule targets placed inside a container by a containment binding, which took them
+     * out of the target model's roots (slice A, R-JTG-4: recorded, not warned).
+     */
+    placements?: TracePlacement[];
+}
+
+/**
+ * A rule target placed inside a container by a containment binding.
+ */
+export interface TracePlacement {
+    /** The rule whose binding placed the target */
+    rule: string;
+    /** The placed target */
+    target: TraceElementRef;
+    /** The object that holds it */
+    container: TraceElementRef;
+    /** The containment feature of the container */
+    feature: string;
 }
 
 // ============================================
@@ -117,6 +136,7 @@ export class TraceModelBuilder {
     private sourceModelName: string;
     private targetModelName: string;
     private links: TraceLink[] = [];
+    private placements: TracePlacement[] = [];
 
     constructor(transformationName: string, sourceModelName: string, targetModelName: string) {
         this.transformationName = transformationName;
@@ -143,6 +163,13 @@ export class TraceModelBuilder {
         };
         this.links.push(link);
         return new TraceLinkBuilder(link);
+    }
+
+    /**
+     * Record that a binding of `rule` placed `target` inside `container.feature`.
+     */
+    addPlacement(rule: string, target: TraceElementRef, container: TraceElementRef, feature: string): void {
+        this.placements.push({ rule, target, container, feature });
     }
 
     /**
@@ -234,6 +261,7 @@ export class TraceModelBuilder {
             targetModelName: this.targetModelName,
             executedAt: Date.now(),
             links: this.links,
+            ...(this.placements.length > 0 ? { placements: this.placements } : {}),
         };
     }
 
@@ -317,11 +345,12 @@ export class TraceLinkBuilder {
  *
  * A binding value holds a rule target by identity (P-2026-11-02-1742), and two targets
  * may point at each other, so a rule target is written as `{__type, className, __sourceId}`:
- * its content belongs to the target model, not to the trace.
+ * its content belongs to the target model, not to the trace. A placed target is marked
+ * `__nested` and `__placed` (P-2026-11-02-2108) and is written the same way.
  */
 export function serializeTraceModel(trace: TraceModel): string {
     return JSON.stringify(trace, (_k, x) => {
-        if (x && typeof x === 'object' && !Array.isArray(x) && x.__createdBy === 'JjTL' && !x.__nested) {
+        if (x && typeof x === 'object' && !Array.isArray(x) && x.__createdBy === 'JjTL' && (!x.__nested || x.__placed)) {
             return { __type: x.__type, className: x.className, __sourceId: x.__sourceId };
         }
         return x;

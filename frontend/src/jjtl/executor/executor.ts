@@ -81,10 +81,14 @@ export type { SourceElement, TargetElement } from './jjodelConverter';
 // BINDING BY IDENTITY
 // ============================================
 
-/** A target created by a rule of this run (pass 1), as opposed to a nested creation. */
+/**
+ * A target created by a rule of this run (pass 1), as opposed to a nested creation.
+ * A rule target placed in a containment is marked `__nested` after pass 2, and `__placed`
+ * with it (P-2026-11-02-2108): it is still a rule target.
+ */
 function isRuleTarget(value: unknown): boolean {
     return !!value && typeof value === 'object' && !Array.isArray(value)
-        && (value as any).__createdBy === 'JjTL' && !(value as any).__nested;
+        && (value as any).__createdBy === 'JjTL' && (!(value as any).__nested || !!(value as any).__placed);
 }
 
 /**
@@ -93,10 +97,20 @@ function isRuleTarget(value: unknown): boolean {
  * time missed whatever pass 2 bound on that target later, so rule order decided what
  * the parent held. Identity also lets two targets point at each other: the walk stops
  * at a rule target, so it never follows such a cycle.
+ *
+ * An object created in a body (`__nested`) is converted in place and kept too
+ * (P-2026-11-02-1956): it may be the container of a placed rule target, and the
+ * ownership map names it by identity. The executor made it, so no one else holds it.
  */
 function fromJjelValueKeepingTargets(value: JjelValue): unknown {
     if (isRuleTarget(value)) return value;
     if (Array.isArray(value)) return value.map(fromJjelValueKeepingTargets);
+    if (isJjelObject(value) && (value as any).__createdBy === 'JjTL' && (value as any).__nested) {
+        for (const [k, v] of Object.entries(value)) {
+            (value as any)[k] = fromJjelValueKeepingTargets(v);
+        }
+        return value;
+    }
     if (isJjelObject(value)) {
         const result: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(value)) {
@@ -277,6 +291,23 @@ interface TargetEntry {
     target: any;
     rule: ClassMappingAST;
     targetClass: string;
+    /** Third part of the trace key (source, rule, environment), R-JTG-6. */
+    environment: TraceEnvironment;
+}
+
+/**
+ * The environment part of a trace key (R-JTG-5, R-JTG-6). Slice B introduces
+ * non-empty environments; until then every entry is registered and every lookup
+ * made under EMPTY_ENVIRONMENT, so the key is (source, rule) in effect.
+ */
+type TraceEnvironment = Readonly<Record<string, never>>;
+const EMPTY_ENVIRONMENT: TraceEnvironment = Object.freeze({});
+
+/** Who holds a rule target placed by a containment binding (slice A, R-JTG-4). */
+interface ContainmentClaim {
+    container: any;
+    feature: string;
+    rule?: string;
 }
 
 /**
@@ -360,6 +391,11 @@ export interface TargetModel {
     instances: Map<string, any[]>;
     /** Root instances (top-level elements) */
     roots: any[];
+    /**
+     * Rule targets placed by a containment binding, with the object and feature that
+     * hold them (slice A, R-JTG-4). None of them is in `roots`.
+     */
+    containment?: Map<any, { container: any; feature: string }>;
 }
 
 /**
@@ -445,6 +481,14 @@ export class JjtlExecutor {
     // Member reads on unresolved references made by the JjEL evaluation in
     // progress; null outside one. Drained into a warning by evaluateExpression.
     private unresolvedReads: Set<string> | null = null;
+    // Containment placement (slice A, R-JTG-4): rule target -> the object whose
+    // containment feature holds it. Decided here, before any write-back.
+    private containerOf: Map<any, ContainmentClaim> = new Map();
+    // Second claims, formatted after pass 2 so the names of both containers are bound.
+    private containmentConflicts: { target: any; first: ContainmentClaim; second: ContainmentClaim }[] = [];
+    // Objects created in a body -> the object whose feature holds them; walked with
+    // containerOf to find containment cycles.
+    private nestedParentOf: WeakMap<object, any> = new WeakMap();
     private stats: ExecutionStats = {
         sourceInstancesProcessed: 0,
         targetInstancesCreated: 0,
@@ -568,6 +612,10 @@ export class JjtlExecutor {
                 console.log(`[JjTL] Pass2 ${mi + 1}/${totalMappings}: ${mappingLabel}`);
                 await this.pass2BindAttributes(mapping);
             }
+
+            // Containment placement: report second claims and cycles, take the
+            // placed targets out of roots, record the placements in the trace.
+            this.settleContainment(targetModel);
 
             this.stats.executionTimeMs = performance.now() - startTime;
 
@@ -1063,6 +1111,9 @@ export class JjtlExecutor {
         this.sourceRefHandles = new Map();
         this.sourceViews = new WeakMap();
         this.sourceIndexById = null;
+        this.containerOf = new Map();
+        this.containmentConflicts = [];
+        this.nestedParentOf = new WeakMap();
 
         // Register resolve() and resolveAll() as JjEL builtins
         this.registerTraceBuiltins();
@@ -1417,7 +1468,7 @@ export class JjtlExecutor {
         for (const key of keys) {
             const entries = this.context.targetsBySourceName.get(key) || [];
             for (const target of targetInstances) {
-                entries.push({ source: sourceInstance, target, rule: mapping, targetClass });
+                entries.push({ source: sourceInstance, target, rule: mapping, targetClass, environment: EMPTY_ENVIRONMENT });
             }
             this.context.targetsBySourceName.set(key, entries);
         }
@@ -1709,7 +1760,7 @@ export class JjtlExecutor {
             // Cross-type resolution: if the binding value is (or contains) a
             // source element whose type has a rule, swap it for the
             // corresponding target element via the trace.
-            const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute);
+            const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute, targetInstance);
 
             // Set target attribute
             const finalValue = fromJjelValueKeepingTargets(resolved);
@@ -1912,7 +1963,7 @@ export class JjtlExecutor {
             }
 
             // Cross-type resolution: swap source elements for target elements via trace.
-            const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute);
+            const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute, targetInstance);
 
             // Set target attribute
             const finalValue = fromJjelValueKeepingTargets(resolved);
@@ -2051,7 +2102,8 @@ export class JjtlExecutor {
                         );
                     }
                 }
-                targetInstance[shape.featureName] = results;
+                this.noteNestedParent(targetInstance, results);
+                targetInstance[shape.featureName] = this.afterPlacedTargets(targetInstance, shape.featureName, results);
                 return results;
             }
 
@@ -2059,7 +2111,8 @@ export class JjtlExecutor {
                 const created = fromJjelValueKeepingTargets(
                     await this.executeObjectCreation(mapping.objectCreation!, sourceInstance, extraBindings)
                 );
-                targetInstance[shape.featureName] = created;
+                this.noteNestedParent(targetInstance, [created]);
+                targetInstance[shape.featureName] = this.afterPlacedTargets(targetInstance, shape.featureName, created);
                 return created;
             }
         }
@@ -2248,7 +2301,7 @@ export class JjtlExecutor {
                     value = null;
                 }
 
-                newObject[attrMapping.targetAttribute] = this.applyCrossTypeResolution(value, attrMapping.targetAttribute) as JjelValue;
+                newObject[attrMapping.targetAttribute] = this.applyCrossTypeResolution(value, attrMapping.targetAttribute, newObject) as JjelValue;
             } else if (item.type === 'ForAllMapping') {
                 await this.executeForAllMappingOnObject(item as ForAllMappingAST, sourceInstance, newObject, extraBindings);
             } else if (item.type === 'AlertStatement') {
@@ -2303,6 +2356,7 @@ export class JjtlExecutor {
         const ownerClassName = targetInstance?.__type || targetInstance?.className || '';
         const propName = this.resolveForAllFeature(ownerClassName, forall.objectCreation.targetClass);
 
+        this.noteNestedParent(targetInstance, results);
         const existing = targetInstance[propName];
         targetInstance[propName] = Array.isArray(existing) ? [...existing, ...results] : results;
     }
@@ -2347,6 +2401,7 @@ export class JjtlExecutor {
         );
         const propName = this.resolveForAllFeature(ownerClassName, forall.objectCreation.targetClass);
 
+        this.noteNestedParent(parentObject, results);
         const existing = parentObject[propName];
         parentObject[propName] = (Array.isArray(existing)
             ? [...(existing as any[]), ...results]
@@ -2395,7 +2450,7 @@ export class JjtlExecutor {
                 } else {
                     value = null;
                 }
-                targetInstance[mapping.targetAttribute] = fromJjelValueKeepingTargets(this.applyCrossTypeResolution(value, mapping.targetAttribute));
+                targetInstance[mapping.targetAttribute] = fromJjelValueKeepingTargets(this.applyCrossTypeResolution(value, mapping.targetAttribute, targetInstance));
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
                 await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias, letBindings);
@@ -2476,7 +2531,7 @@ export class JjtlExecutor {
                     value = null;
                 }
 
-                const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute);
+                const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute, targetInstance);
                 const finalValue = fromJjelValueKeepingTargets(resolved);
                 targetInstance[mapping.targetAttribute] = finalValue;
                 const invertible = this.isBindingInvertible(mapping);
@@ -2852,9 +2907,170 @@ export class JjtlExecutor {
         if (!this.warnings.includes(msg)) this.warnings.push(msg);
     }
 
-    private applyCrossTypeResolution(value: any, targetAttribute: string): any {
+    /**
+     * @param owner  The object whose feature `targetAttribute` receives the value. When that
+     *               feature is a containment, resolved rule targets are placed inside `owner`
+     *               (slice A) instead of travelling as `__ref_result`.
+     */
+    private applyCrossTypeResolution(value: any, targetAttribute: string, owner?: any): any {
         const resolved = this.resolveValue(value, targetAttribute, undefined, 0);
+        if (owner && this.isContainmentFeature(owner, targetAttribute)) {
+            return this.placeInContainer(resolved, owner, targetAttribute);
+        }
         return this.wrapIfTargetReference(resolved);
+    }
+
+    /** `featureName` of the class of `owner` is a containment reference (`composition`). */
+    private isContainmentFeature(owner: any, featureName: string): boolean {
+        const ownerClassName = owner?.__type || owner?.className;
+        if (typeof ownerClassName !== 'string') return false;
+        const info = this.resolveTargetFeature(ownerClassName, featureName);
+        return !!info?.isReference && !!info.composition;
+    }
+
+    /**
+     * Place the rule targets of a resolved value inside `owner`, by identity, in order
+     * (slice A, SPEC §5.3.2, R-JTG-4). A value holding no rule target is bound as before.
+     *
+     * The binding replaces what an earlier binding of the same feature had placed, so those
+     * claims are released first. Objects created in a body that the feature already holds
+     * stay ahead of the placed targets, which keeps source order when a rule names both.
+     * A target claimed by another container is not placed; the conflict is reported after
+     * pass 2 (settleContainment). Leaving `roots` happens there too.
+     */
+    private placeInContainer(resolved: any, owner: any, feature: string): any {
+        const items: any[] = Array.isArray(resolved) ? resolved : [resolved];
+        if (!items.some(isRuleTarget)) return this.wrapIfTargetReference(resolved);
+
+        const prior = owner[feature];
+        const priorItems: any[] = Array.isArray(prior) ? prior : prior != null ? [prior] : [];
+        for (const el of priorItems) {
+            const claim = this.containerOf.get(el);
+            if (claim && claim.container === owner && claim.feature === feature) this.containerOf.delete(el);
+        }
+        const created = priorItems.filter(el => el && typeof el === 'object' && el.__nested);
+
+        const placed: any[] = [];
+        let dropped = 0;
+        for (const el of items) {
+            if (el == null) { dropped++; continue; }
+            if (!isRuleTarget(el)) { placed.push(el); continue; }
+            if (placed.includes(el)) continue;
+            if (this.claimContainment(el, owner, feature)) placed.push(el);
+        }
+        if (dropped > 0) {
+            this.warnings.push(
+                `Partially resolved reference array: kept ${items.length - dropped} resolved ` +
+                `target(s), dropped ${dropped} unresolved element(s) (target type without a matching rule).`
+            );
+        }
+        if (!Array.isArray(resolved) && created.length === 0) return placed[0] ?? null;
+        return [...created, ...placed];
+    }
+
+    /** Record `owner.feature` as the container of `target`; false on a second claim. */
+    private claimContainment(target: any, owner: any, feature: string): boolean {
+        const second: ContainmentClaim = { container: owner, feature, rule: this.context.currentRuleName };
+        const first = this.containerOf.get(target);
+        if (first && (first.container !== owner || first.feature !== feature)) {
+            this.containmentConflicts.push({ target, first, second });
+            return false;
+        }
+        this.containerOf.set(target, second);
+        return true;
+    }
+
+    /** Remember which object holds the objects created in one of its features. */
+    private noteNestedParent(owner: any, created: any[]): void {
+        for (const obj of created) {
+            if (obj && typeof obj === 'object') this.nestedParentOf.set(obj, owner);
+        }
+    }
+
+    /**
+     * Objects created into `owner.feature` by `-> feature { ... }`, after the rule targets
+     * that an earlier binding placed there. Without placed targets the value is `created`,
+     * as before: the feature is overwritten.
+     */
+    private afterPlacedTargets(owner: any, feature: string, created: any): any {
+        const prior = owner[feature];
+        const priorItems: any[] = Array.isArray(prior) ? prior : prior != null ? [prior] : [];
+        const placed = priorItems.filter(el => {
+            const claim = this.containerOf.get(el);
+            return !!claim && claim.container === owner && claim.feature === feature;
+        });
+        if (placed.length === 0) return created;
+        return [...placed, ...(Array.isArray(created) ? created : [created])];
+    }
+
+    /** `Class 'name'` for a target-side object, by its bound name or its source id. */
+    private describeTargetObject(obj: any): string {
+        const className = obj?.__type || obj?.className || '?';
+        const name = typeof obj?.name === 'string' && obj.name ? obj.name : obj?.__sourceId;
+        return `${className} '${name ?? '?'}'`;
+    }
+
+    /**
+     * After pass 2: report second claims and containment cycles as errors, take every
+     * placed target out of `roots`, and record each placement in the trace (R-JTG-4).
+     */
+    private settleContainment(targetModel: TargetModel): void {
+        for (const { target, first, second } of this.containmentConflicts) {
+            this.errors.push(
+                `Containment conflict: ${this.describeTargetObject(target)} is claimed by ` +
+                `${this.describeTargetObject(first.container)}.${first.feature} (rule '${first.rule ?? '?'}') and by ` +
+                `${this.describeTargetObject(second.container)}.${second.feature} (rule '${second.rule ?? '?'}'). ` +
+                `A target has one container; the second claim was not placed.`
+            );
+        }
+
+        const containerOfAny = (obj: any): any =>
+            this.containerOf.get(obj)?.container ?? this.nestedParentOf.get(obj);
+        const settled = new Set<any>();
+        for (const start of this.containerOf.keys()) {
+            if (settled.has(start)) continue;
+            const path: any[] = [];
+            const index = new Map<any, number>();
+            let cur: any = start;
+            while (cur && !settled.has(cur)) {
+                if (index.has(cur)) {
+                    const cycle = path.slice(index.get(cur));
+                    this.errors.push(
+                        `Containment cycle: ${[...cycle, cur].map(o => this.describeTargetObject(o)).join(' is contained in ')}.`
+                    );
+                    break;
+                }
+                index.set(cur, path.length);
+                path.push(cur);
+                cur = containerOfAny(cur);
+            }
+            for (const p of path) settled.add(p);
+        }
+
+        if (this.containerOf.size === 0) return;
+        const kept = targetModel.roots.filter(r => !this.containerOf.has(r));
+        targetModel.roots.length = 0;
+        targetModel.roots.push(...kept);
+        targetModel.containment = new Map(
+            [...this.containerOf].map(([t, c]) => [t, { container: c.container, feature: c.feature }])
+        );
+        // The write-back's nested format (P-2026-11-02-2108). Marked here, after pass 2, never at
+        // claim time: a binding made while the target is marked would not wrap a pointer to it.
+        // `__placed` keeps it a rule target for the readers that tell the two apart.
+        for (const target of this.containerOf.keys()) {
+            target.__nested = true;
+            target.__placed = true;
+        }
+
+        const targetModelName = this.ast.targetMetamodel || 'target';
+        const ref = (obj: any): TraceElementRef => ({
+            modelName: targetModelName,
+            elementName: (typeof obj?.name === 'string' && obj.name) || obj?.__sourceId || '?',
+            className: obj?.__type || obj?.className || '?',
+        });
+        for (const [target, claim] of this.containerOf) {
+            this.context.traceBuilder.addPlacement(claim.rule ?? '?', ref(target), ref(claim.container), claim.feature);
+        }
     }
 
     /**
@@ -2960,6 +3176,12 @@ export class JjtlExecutor {
             return this.resolveRefById(value.__ref, targetAttribute, expectedTarget);
         }
 
+        // ── An object of the target model is never a source element ───────
+        // The trace is per (source model, target model): with one class name on
+        // both sides (`Add -> Add`), a target that `resolve()` returned would
+        // otherwise be looked up again as a source `Add` (P-2026-11-02-1956).
+        if (value.__createdBy === 'JjTL') return value;
+
         // ── Object with className (test / flattened proxy path) ───────────
         const className = this.detectSourceClassName(value);
         if (!className) return value;
@@ -3003,7 +3225,7 @@ export class JjtlExecutor {
             );
         }
 
-        const entries = this.context.targetsBySourceName.get(String(elementName));
+        const entries = this.traceEntries(String(elementName), EMPTY_ENVIRONMENT);
         const match = entries?.find(e => e.rule === chosenRule);
         if (!match) {
             throw new Error(
@@ -3014,6 +3236,16 @@ export class JjtlExecutor {
             );
         }
         return match.target;
+    }
+
+    /**
+     * The trace entries for a source element (by name or id) under `environment`: the
+     * lookup half of the key (source, rule, environment), R-JTG-6. The caller filters by
+     * rule. Implicit resolution passes the caller's environment, always empty before B.
+     */
+    private traceEntries(sourceKey: string, environment: TraceEnvironment): TargetEntry[] | undefined {
+        const entries = this.context.targetsBySourceName.get(sourceKey);
+        return entries?.filter(e => e.environment === environment);
     }
 
     /**
@@ -3029,7 +3261,7 @@ export class JjtlExecutor {
         targetAttribute: string,
         expectedTarget: string | undefined,
     ): any {
-        const entries = this.context.targetsBySourceName.get(sourceId);
+        const entries = this.traceEntries(sourceId, EMPTY_ENVIRONMENT);
 
         if (!entries || entries.length === 0) {
             if (expectedTarget) {
