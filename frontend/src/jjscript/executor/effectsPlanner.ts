@@ -966,6 +966,8 @@ function planCommand(sim: Simulation, m2: M2Simulation, open: 'M1' | 'M2', ast: 
         case 'set':
             return lineLevel(sim, m2, open, (args as SetArgs).target) === 'M2' ? planM2Set(m2, args as SetArgs, line) : planSet(sim, args as SetArgs, line);
         case 'rename':
+            // R-FA-9: the executor computes the name over the JjEL context, which a plan does not read.
+            if ((args as RenameArgs).newNameExpr !== undefined) return fail('UNSUPPORTED', `unsupported: rename to a computed name (${(args as RenameArgs).newNameExpr})`);
             return lineLevel(sim, m2, open, (args as RenameArgs).target, args.elementType) === 'M2' ? planM2Rename(m2, args as RenameArgs, line) : planRename(sim, args as RenameArgs, line);
         case 'delete':
             return lineLevel(sim, m2, open, (args as DeleteArgs).target, args.elementType) === 'M2' ? planM2Delete(m2, args as DeleteArgs, line) : planDelete(sim, args as DeleteArgs, line);

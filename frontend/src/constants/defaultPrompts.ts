@@ -145,6 +145,7 @@ delete reference refName in ClassName
 # Rename elements
 rename class OldName to NewName
 rename attribute oldAttr to newAttr in ClassName
+forall c in classes such that c.isAbstract do rename c to "Abstract_" + c.name
 
 # Repeat a command for every combination of several variables (a, b in S: both range over S)
 forall c in classes, x in c.attributes such that x.name == "id" do delete x

@@ -189,6 +189,12 @@ export interface RenameArgs {
     newName: string;
     /** Optional element type for explicit syntax: "rename class OldName to NewName" */
     elementType?: ElementType;
+    /**
+     * R-FA-9: the JjEL expression after `to`/`as` when it is not a single name, evaluated per
+     * execution (`commands/rename.ts`). When present, `newName` holds the same source text and is
+     * not the name the element receives.
+     */
+    newNameExpr?: string;
 }
 
 // SET command
