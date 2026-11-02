@@ -1236,3 +1236,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: 6 tests red first. Grouped index measured broken (books[3] reparsed as cosmos): printer now indexes in printed order. Path-keyword clash passed the style check silently: now refused (distinct-features) and a parse error naming both. Bench 6 mutants, all killed (commit body); inline mutant in its non-equivalent form. Closes the 2003 ticket. No record: byte-identical, 2543 codegen tests green.
 **Prompt document name**: 2026-11-02 20:29
+
+## 2026-11-02 — merge: textual-path-feature into alfonso-frontend-jjtl (P-2026-11-02-2057)
+**Prompt**: `claude_2026-11-02_2057_prompt_merge_textual-path-feature.md`, a direct merge by `lane-run merge --direct`, no session: `textual-path-feature` at `5edc759e0` into `alfonso-frontend-jjtl`, merge base `4d1d32b8b`, 2 commits on the branch side.
+**Files touched**: merge `1a5e905b0`: 6 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-02_2029_prompt_textual_path_feature_keyword.md`, `frontend/src/codegen/textual/__tests__/syntaxRecord.test.ts`, `frontend/src/codegen/textual/parser.ts`, `frontend/src/codegen/textual/printer.ts`, `frontend/src/codegen/textual/styleCheck.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1a5e905b0` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12974 tests in 492 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change, visual check not applicable
+**Notes**: Rollback tag `pre-textual-path-feature` on `43350d3cd` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2057/result.json`.
+**Prompt document name**: 2026-11-02 20:57
