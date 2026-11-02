@@ -7,7 +7,8 @@
  * References are read as a name or a path (R-TXT-4, R-TXT-25 (5, 6)) and resolved after the parse, against the whole
  * text: a name must be unique among the instances of the reference's type; a path is `keyword[k].f[i]...`, every segment
  * with its index, so a path never reads as a name; its first word is a class keyword as printed, the class name for a
- * positional class (R-TXT-28). The top level
+ * positional class (R-TXT-28), each later f a feature keyword as printed, the feature name when it prints none (R-TXT-29).
+ * The top level
  * admits every concrete class (R-TXT-24 (a)); a single containment is a block of one object (R-TXT-24 (b)).
  *
  * Recovery: an error inside a body costs the rest of its line, the parse resumes at the next line that starts an item
@@ -20,7 +21,7 @@ import type { ConcreteGrammar, ConcreteRule, GrammarNode, ObjectRule } from './c
 import { applyCase, derivedName } from './concreteGrammar';
 import type { TextFeature, TextObject } from './metamodel';
 import type { ObjectSpan } from './printer';
-import { pathKeyword } from './printer';
+import { featureKeyword, pathKeyword } from './printer';
 
 /** An error at `[start, end)` of the text; `line` and `col` are 1-based, of `start`. */
 export interface TextParseError {
@@ -625,9 +626,19 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
         if (!tops[head.index]) return `there is no top-level ${head.f}[${head.index}]: the text has ${tops.length}`;
         let cur: MutableObject = tops[head.index];
         for (const seg of rest) {
-            const f: TextFeature | undefined = g.objects[cur.cls]?.features.find(x => x.name === seg.f);
-            if (!f || f.kind !== 'containment') return `${cur.cls} has no containment "${seg.f}"`;
-            const v: unknown = cur.slots[seg.f];
+            // R-TXT-29: a later segment is a containment's printed keyword (printer.ts `featureKeyword`); two containments
+            // with one keyword are refused by the style check (distinct-features), and never resolved to one of them.
+            const cls = cur.cls;
+            const containments = (g.objects[cls]?.features ?? []).filter(x => x.kind === 'containment');
+            const keyed = containments.filter(x => featureKeyword(g, cls, x.name) === seg.f);
+            if (keyed.length > 1) return `the path keyword "${seg.f}" names ${keyed.length} containments of ${cls}: ${keyed.map(x => x.name).join(', ')}`;
+            const f: TextFeature | undefined = keyed[0];
+            if (!f) {
+                const renamed = containments.find(x => x.name === seg.f);
+                if (renamed) return `a path segment is a feature keyword: ${renamed.owner}.${renamed.name} is written "${featureKeyword(g, cls, renamed.name)}"`;
+                return `${cls} has no containment "${seg.f}"`;
+            }
+            const v: unknown = cur.slots[f.name];
             const id: unknown = f.many ? (Array.isArray(v) ? v[seg.index] : undefined) : seg.index === 0 ? v : undefined;
             if (!f.many && seg.index !== 0) return `"${seg.f}" holds one object: write ${seg.f}[0]`;
             const next: MutableObject | undefined = typeof id === 'string' ? byId.get(id) : undefined;

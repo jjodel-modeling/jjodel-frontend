@@ -38,6 +38,34 @@ export function pathKeyword(g: ConcreteGrammar, cls: string): string {
     return head?.t === 'kw' ? head.text : applyCase(cls, g.classCase);
 }
 
+/** The node of a containment `feat` in an object rule's body: its `opt` without a group filter. */
+function containmentNode(n: GrammarNode | undefined, feat: string): Extract<GrammarNode, { t: 'opt' }> | undefined {
+    if (!n) return undefined;
+    if (n.t === 'opt') return n.feat === feat && !n.where ? n : undefined;
+    const items = n.t === 'seq' || n.t === 'block' ? n.items : [];
+    for (const x of items) { const found = containmentNode(x, feat); if (found) return found; }
+    return undefined;
+}
+
+/**
+ * R-TXT-29: the word a later path segment starts with, read off the concrete grammar: the keyword the text prints before
+ * the containment's block, or the feature name when none is printed (the keyword dropped, or the containment inline).
+ */
+export function featureKeyword(g: ConcreteGrammar, cls: string, feat: string): string {
+    const node = containmentNode(g.objects[cls]?.body, feat);
+    const items = node?.item.t === 'seq' ? node.item.items.filter(x => x.t !== 'nl') : [];
+    // Inline, the first item is the content (a star, or a group's opt), never a keyword followed by the block.
+    return items[0]?.t === 'kw' && items[1]?.t === 'block' ? items[0].text : feat;
+}
+
+/** The group stars of a grouped containment, in the order the text prints them; none for an ungrouped one. */
+function groupStars(n: GrammarNode | undefined): Extract<GrammarNode, { t: 'star' }>[] {
+    if (!n) return [];
+    if (n.t === 'star') return n.where ? [n] : [];
+    if (n.t === 'opt') return groupStars(n.item);
+    return n.t === 'seq' || n.t === 'block' ? n.items.flatMap(groupStars) : [];
+}
+
 const isSet = (v: unknown): boolean => v != null && !(Array.isArray(v) && v.length === 0);
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
 
@@ -56,13 +84,34 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     // The object rules by name: a grouping's derived rules print the objects of their class (concreteGrammar.ts).
     const ruleNamed = new Map(g.rules.flatMap(r => (r.t === 'object' ? [[r.name, r] as const] : [])));
 
-    // The containment tree: each object's container and its path segment, `f[i]` even for a single containment.
+    const resolve = (id: unknown): TextObject | undefined => (typeof id === 'string' ? byId.get(id) : undefined);
+
+    /** The values a star iterates: with `where`, those whose object's attribute is one of the group's literals, in the
+     *  literals' order (ties in model order). */
+    const values = (n: Extract<GrammarNode, { t: 'opt' | 'star' }>, o: TextObject): unknown[] => {
+        const vs = n.feat === undefined ? [] : asArray(o.slots[n.feat]);
+        const w = n.where;
+        if (!w) return vs;
+        const rank = (v: unknown): number => { const c = resolve(v); return c ? w.literals.indexOf(String(c.slots[w.attr])) : -1; };
+        return vs.filter(v => rank(v) >= 0).sort((a, b) => rank(a) - rank(b));
+    };
+
+    // The containment tree: each object's container and its path segment, `f[i]` even for a single containment. R-TXT-29:
+    // f is the feature's printed keyword, the feature name when none is printed; i is the object's position in the feature
+    // as the text gives it, the one the parser reads back: the model order, but a grouped containment prints its values
+    // group by group (those no group prints come after them, and a path to them names no object).
     const parent = new Map<string, { readonly owner: TextObject; readonly segment: string }>();
     for (const o of objects) {
-        for (const f of ruleOf(o).features) {
+        const rule = ruleOf(o);
+        for (const f of rule.features) {
             if (f.kind !== 'containment') continue;
-            asArray(o.slots[f.name]).forEach((id, i) => {
-                if (typeof id === 'string' && byId.has(id)) parent.set(id, { owner: o, segment: `${f.name}[${i}]` });
+            const all = asArray(o.slots[f.name]);
+            const stars = groupStars(containmentNode(rule.body, f.name));
+            const grouped = stars.flatMap(n => values(n, o));
+            const order = stars.length ? [...grouped, ...all.filter(v => !grouped.includes(v))] : all;
+            const kw = featureKeyword(g, o.cls, f.name);
+            order.forEach((id, i) => {
+                if (typeof id === 'string' && byId.has(id)) parent.set(id, { owner: o, segment: `${kw}[${i}]` });
             });
         }
     }
@@ -74,9 +123,10 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         rootsOf.set(r.cls, (rootIndex.get(r.id) ?? 0) + 1);
     }
 
-    // R-TXT-25 (5, 6), R-TXT-28: a root is `keyword[k]`, the class keyword as printed (the class name when dropped), k
-    // its position among the top-level objects of its class; a contained object adds `.f[i]`. Every segment carries an
-    // index, so a path is never a bare identifier, never a name.
+    // R-TXT-25 (5, 6), R-TXT-28, R-TXT-29: a root is `keyword[k]`, the class keyword as printed (the class name when
+    // dropped), k its position among the top-level objects of its class; a contained object adds `.f[i]`, f the feature
+    // keyword as printed (the feature name when dropped or inline). Every segment carries an index, so a path is never a
+    // bare identifier, never a name.
     const path = (t: TextObject): string => {
         const up = parent.get(t.id);
         return up ? `${path(up.owner)}.${up.segment}` : `${pathKeyword(g, t.cls)}[${rootIndex.get(t.id)}]`;
@@ -98,7 +148,6 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         if (typeof nm === 'string' && objects.filter(x => n.targets.includes(x.cls) && nameOf(x) === nm).length === 1) return name(nm);
         return path(t);
     };
-    const resolve = (id: unknown): TextObject | undefined => (typeof id === 'string' ? byId.get(id) : undefined);
 
     // Output: a token goes on the current line, after the indentation or a space; a line break is written lazily, so
     // the text never ends with one. Punctuation that closes or separates sticks to the token before it.
@@ -139,15 +188,6 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         spans.push({ id: o.id, start: starts.get(o.id) ?? out.length, end: out.length });
     };
 
-    /** The values a star iterates: with `where`, those whose object's attribute is one of the group's literals, in the
-     *  literals' order (ties in model order). */
-    const values = (n: Extract<GrammarNode, { t: 'opt' | 'star' }>, o: TextObject): unknown[] => {
-        const vs = n.feat === undefined ? [] : asArray(o.slots[n.feat]);
-        const w = n.where;
-        if (!w) return vs;
-        const rank = (v: unknown): number => { const c = resolve(v); return c ? w.literals.indexOf(String(c.slots[w.attr])) : -1; };
-        return vs.filter(v => rank(v) >= 0).sort((a, b) => rank(a) - rank(b));
-    };
     /** Whether an opt prints: its feature is set, a value passes its filter, and a name differs from its derived one. */
     const shown = (n: Extract<GrammarNode, { t: 'opt' }>, o: TextObject): boolean => {
         if (!isSet(o.slots[n.feat])) return false;
