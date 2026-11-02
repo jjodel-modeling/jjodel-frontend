@@ -556,3 +556,29 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Priority**: medium
 **Found in**: P-2026-11-02-2030
 **Detail**: docs/discovery/discovery_2026-11-02_jjscript_rename_expression.md
+
+## 2026-11-02 — discovery: forall body by element id, stopped before Phase 2 (P-2026-11-02-2105)
+**Prompt**: a `forall` body acts on the iterated element, not on its name (ticket «forall rename of same-named elements fails as ambiguous»); two-phase in one session.
+**Files touched**: 4d28b4868 (`docs/discovery/discovery_2026-11-02_jjscript_forall_element_by_id.md`); Status line of the 2105 prompt; this entry
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Phase 1 only: report 4d28b4868 (probe, F1-F7, four questions; Phase 2 needed commands/eval.ts and commands/instance.ts, outside the DOVE list). The session hit the context ceiling (RC-51) before this entry; entry and Status were written by P-2026-11-02-2140 from its handoff.md. Phase 2 is P-2026-11-02-2140.
+**Prompt document name**: 2026-11-02 21:05
+
+## 2026-11-02 — feat(jjscript): forall body acts on the element by id (P-2026-11-02-2140)
+**Prompt**: Phase 2 of P-2026-11-02-2105 with the chat's answers (R-FA-10): an `id` on the M2 shells, `instance.ts` and `eval.ts` in scope (7 files), `c.attr` fixed, identity on targets only as `QualifiedName.elementId`; both duplicates examples tested; the id neither persisted nor written back.
+**Files touched**: 733ae10c0 (`frontend/src/jjscript/types.ts`, `executor/resolvers.ts`, `executor/executor.ts`, `executor/commands/forall.ts`, `executor/commands/instance.ts`, `executor/commands/eval.ts`, `executor/__tests__/forallById.test.ts` new); Status lines of 2105 and 2140; this entry and the 2105 one
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: `elementId` only on a `target`, denotes segments[0]; an id miss is a miss. Also substituted: `c.x` and `set c.p` (F4); an outer-bound target is not re-read by an inner variable. No existing test changed (vitest 4066 passed, context-binding the known failure); codegen untouched. Not executed here: the guard wiring in executor.ts and the M1 delete/set sites (no node import); undo. Gates: tsc 0, build 0. Temp node_modules symlink, removed.
+**Prompt document name**: 2026-11-02 21:40

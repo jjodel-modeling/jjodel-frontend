@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-2140
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane jjscript-forall-by-id · branch jjscript-forall-by-id · 733ae10c0
 Lane: full (implementation; Phase 1 is the report of 2105)
 Depends: P-2026-11-02-2105 (hard-stop at the ceiling, RC-51; report 4d28b4868)
 Worktree: ~/jjodel-w-jjsforallid, branch jjscript-forall-by-id (the same tree)
