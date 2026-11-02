@@ -552,3 +552,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Prompt document name**: 2026-11-02 18:56
 
 **Ticket** (P-2026-11-02-1856): the toolbar's full auto layout on the harness model with no viewpoint (407 nodes) holds the main thread about 391 s before its fit (probe `open-viewport.ts`, toolbar scenario, load under 6); measured on this branch only, not on the base, and the layout code is untouched here.
+
+## 2026-11-02 — merge: open-viewport-empty takes alfonso-frontend-jjtl (P-2026-11-02-2028)
+**Prompt**: `claude_2026-11-02_2028_prompt_open-viewport-empty_take_trunk.md`, full lane: bring the trunk at the explicit sha e5e60dca4 into open-viewport-empty with one --no-ff merge commit (RC-14), union for the inboxes; stopped at step 2 on the EditorV2.tsx conflict, resumed on the chat's authorization (RC-21, Alfonso GO 20:20) to keep both import lines.
+**Files touched**: merge commit 91033dfc9 (the trunk's 127 files; resolved by hand: `docs/log-inbox/maintenance.md` by union, `frontend/src/components/editor-v2/EditorV2.tsx` the import hunk only); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, GO 2026-11-02 on the merge tree; the chat runs the combined-tree visual check before the trunk merge)
+**Notes**: Trunk tip moved to 4d1d32b8b (docs only, R-TXT-29); e5e60dca4 merged. Gates on 91033dfc9: typecheck and typecheck:scripts exit 0; vitest 492 files, 483 passed + the known 9, 12957 = trunk 12943 + 14; hooks 967 = trunk (a first run red on a laneBoard 10 s timeout, run beside the build, green alone); build exit 0; check:docs 5/5; check:scripts, check:addonly PASS. Full read of EditorV2.tsx by an explorer subagent.
+**Prompt document name**: 2026-11-02 20:28
