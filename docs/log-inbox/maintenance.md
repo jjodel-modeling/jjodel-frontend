@@ -458,3 +458,16 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 **Smoke visivo**: non applicabile
 **Notes**: Seven files, all named by the prompt or its acceptance. `bindings?` is an optional field of ForAllMappingAST, read only in jjtl. JjEL route: the collection parser has no object literal (F5); records bound by let lost their ref getters in fromJjelValue, fixed in the executor (bindForAllElement). Gates: tsc 0 errors; vitest src/jjtl src/jjel 910 passed, the same 7 window failures before and after; build exit 0. node_modules: temporary symlink, removed.
 **Prompt document name**: 2026-11-02 13:31
+
+## 2026-11-02 — merge: jjtl-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1404)
+**Prompt**: `claude_2026-11-02_1404_prompt_merge_jjtl-forall-multivar.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-forall-multivar` at `fc3bfee2a` into `alfonso-frontend-jjtl`, merge base `17beac16c`, 4 commits on the branch side.
+**Files touched**: merge `100889e0c`: 9 files from the branch side (`docs/discovery/discovery_2026-11-02_jjtl_forall_multivar.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_1331_prompt_jjtl_forall_multivar.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/parser/parser.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `100889e0c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12843 tests in 486 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: parser and executor only, no UI change: visual check not applicable; merge gates green (12843 tests, 9 red at import, build exit 0)
+**Notes**: Rollback tag `pre-jjtl-forall-multivar` on `8913bf878` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1404/result.json`.
+**Prompt document name**: 2026-11-02 14:04
