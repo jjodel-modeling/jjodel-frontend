@@ -209,3 +209,50 @@ describe('defect 3: `eval` hands JjEL the source text', () => {
         expect((r.ast!.args as EvalArgs).expression).toBe('1 + 2');
     });
 });
+
+// ── defect 4 ────────────────────────────────────────────────────────────────────────────────────────────────
+describe('defect 4: a `let` value parses whole, and `$x` reads in `eval`', () => {
+    const values = (src: string) => ast<LetArgs>(src, 'let').bindings.map(b => b.valueExpr);
+
+    it('an unparenthesized forall keeps the `in` of its binding', () => {
+        expect(values('let $x = forall a in classes : a.name in eval $x')).toEqual(['forall a in classes : a.name']);
+    });
+
+    it('two variables, `a, b in S`, stay in the value', () => {
+        expect(values('let $x = forall a, b in classes : a.name in eval $x')).toEqual(['forall a, b in classes : a.name']);
+    });
+
+    it('two bindings, `a in S, b in T` (R-FA-5), stay in the value', () => {
+        expect(values('let $x = forall a in classes, b in classes : a.name in eval $x'))
+            .toEqual(['forall a in classes, b in classes : a.name']);
+    });
+
+    it('exists, and a second let binding after a quantifier', () => {
+        expect(values('let $x = exists a in classes such that a.name == "A", $y = 1 in eval $y'))
+            .toEqual(['exists a in classes such that a.name == "A"', '1']);
+    });
+
+    it('a call argument after a quantifier is not a binding (R-FA-5)', () => {
+        expect(values('let $x = f(forall a in classes, y) in eval $x')).toEqual(['f(forall a in classes, y)']);
+    });
+
+    it('`$x` reads in eval: the unparenthesized form', async () => {
+        m2({ classes: ['A', 'B'] });
+        const res = await letOf('let $x = forall a in classes : a.name in eval $x');
+        expect(res.success, res.message).toBe(true);
+        expect(resultOf(res)).toEqual(['A', 'B']);
+    });
+
+    it('`$x.size` reads in eval: the parenthesized two-variable form', async () => {
+        m2({ classes: ['A', 'B'] });
+        const res = await letOf('let $x = (forall a, b in classes : a.name) in eval $x.size');
+        expect(res.success, res.message).toBe(true);
+        expect(resultOf(res)).toBe(4);
+    });
+
+    it('a value that does not parse is an error, not a truncation', async () => {
+        m2({ classes: ['A'] });
+        const res = await letOf('let $x = forall a in in eval $x');
+        expect(res.success, res.message).toBe(false);
+    });
+});
