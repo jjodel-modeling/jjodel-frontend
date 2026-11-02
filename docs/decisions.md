@@ -7121,6 +7121,8 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   or outside every subset is not in the text. The Text tab reports it as a visible issue naming count, class and attribute
   (`2 Book not shown: genre unset`). Step T6 never applies a text while such objects exist, because their absence would read
   as a deletion. Printing them in a block of their own stays a later option: it changes the grammar.
+  Measured by P-2026-11-02-2113: a mandatory enum left empty reads as its first literal, so the warning rarely fires in
+  the app; it stays as a guard.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
