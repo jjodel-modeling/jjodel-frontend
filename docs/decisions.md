@@ -7105,6 +7105,13 @@ evidence: read (crop of the annotated text), verified: none, reversible: trunk.
   dropped (positional class) it uses the class name. The index k stays the position among the top-level objects of that
   class. Without annotations nothing changes. Feature segments are not covered by this row.
 
+Row 29: lane P-2026-11-02-2003 measured the mismatch on feature segments; Alfonso 2026-11-02 20:28 «si». Ratified as
+recommended, evidence: measured, verified: none, reversible: trunk.
+
+- **R-TXT-29** (2026-11-02). **Extends R-TXT-28 to feature segments.** A later segment of a path uses the feature's printed
+  keyword (`shelf[0].patrons[1]`), and the feature's name when no keyword is printed for it (dropped or inline). The index
+  stays the position in that feature. Without annotations nothing changes.
+
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
 Evidence: Alfonso 2026-11-02 13:19, forall x,y in JjEL and then in every language that uses JjEL; the parsers read by the
