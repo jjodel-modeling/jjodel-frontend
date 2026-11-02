@@ -9,9 +9,11 @@
 
 import type { Dictionary } from '../joiner';
 import { LProject } from '../joiner';
-import AIProviderService from './AIProviderService';
 import { JjodieContextService } from './JjodieContext';
-import {AI, AIConfig, JodieConfig} from "../types/jodie";
+import {AI} from "../types/jodie";
+import { PromptService } from './PromptService';
+import { registry } from './ai';
+import { preferredModelId, preferredProviderId } from '../components/common/ProviderModelSelector';
 
 // ============================================
 // TYPES
@@ -148,7 +150,7 @@ export class DocumentationService {
      * Generate documentation (auto-selects Local or Jjodie based on parameter)
      */
     static async generate(project: LProject, useJjodie: boolean): Promise<GenerationResult> {
-        if (useJjodie && JodieConfig.getEnabledProviders().length > 0) {
+        if (useJjodie && registry.enabled().length > 0) {
             return await this.generateWithJjodie(project);
         } else {
             return this.generateLocal(project);
@@ -611,23 +613,19 @@ export class DocumentationService {
         // console.log('[DocumentationService] Jjodie prompt built, length:', prompt.length);
 
         // Get per-feature provider + model for documentation
-        const activeProvider = AIConfig.getPreferred('documentation');
-        const activeModel = AIConfig.getPreferredModel('documentation');
+        const activeProvider = preferredProviderId('documentation');
+        const activeModel = preferredModelId('documentation');
         if (!activeProvider) {
             throw new Error('No AI provider configured');
         }
 
-        // Call AI
+        // Call AI, with the chat system prompt the old chat path rendered for every caller
         // console.log('[DocumentationService] Calling AI provider:', activeProvider, 'model:', activeModel);
-        const responseText = await AIProviderService.chat(
-            prompt,
-            activeProvider,
-            [],
-            undefined,
-            undefined,
-            undefined,
-            activeModel
-        );
+        const responseText = await registry.get(activeProvider).chat({
+            system: PromptService.getRendered('chat'),
+            history: [{ role: 'user', content: prompt }],
+            model: activeModel,
+        });
         // console.log('[DocumentationService] AI response received, length:', responseText.length);
 
         // Parse JSON response with robust extraction

@@ -1,7 +1,7 @@
 /**
  * Jjodie (LLM) console provider.
  *
- * Wraps the LLM call (AIProviderService.chat) with the same RAG augmentation
+ * Wraps the LLM call (the provider's chat, src/services/ai) with the same RAG augmentation
  * and per-feature model selection the Jodie chat handler used inline. Provider
  * selection / auto-switch and the surrounding state updates (user message,
  * isWaiting, hasUnread) stay in the handler; this provider only computes the
@@ -13,10 +13,17 @@
  * try/catch mirrors the handler and never propagates.
  */
 import type { LanguageProvider, ConsoleContext, ConsoleResult } from '../types';
-import type { ChatMessage } from '../../../../types/jodie';
-import { AIConfig } from '../../../../types/jodie';
-import { AIProviderService } from '../../../../services/AIProviderService';
+import type { ChatDocument, ChatImage, ChatMessage } from '../../../../types/jodie';
 import { JjodieRagService } from '../../../../services/JjodieRagService';
+import { PromptService } from '../../../../services/PromptService';
+import { registry } from '../../../../services/ai';
+import type { Attachment, HistoryMessage } from '../../../../services/ai';
+import { isProviderId, preferredModelId } from '../../../common/ProviderModelSelector';
+
+/** A chat attachment as the AI module takes it (base64 data, MIME type, name). */
+function toAttachments(files: (ChatImage | ChatDocument)[] | undefined): Attachment[] | undefined {
+    return files?.length ? files.map(f => ({ mimeType: f.mimeType, data: f.data, name: f.name })) : undefined;
+}
 
 export const jjodieProvider: LanguageProvider = {
     id: 'jjodie',
@@ -47,12 +54,25 @@ export const jjodieProvider: LanguageProvider = {
             }
         }
 
-        // Call AI provider with augmented context, images and documents.
-        // Pass per-feature model (falls back to provider's AIConfig.model inside chat()).
-        const chatModel = AIConfig.getPreferredModel('chat');
-        const response = await AIProviderService.chat(
-            input, providerToUse, history, augmentedContext, ctx.images, ctx.documents, chatModel,
-        );
+        if (!isProviderId(providerToUse)) throw new Error(`Unsupported provider: ${providerToUse}`);
+
+        // Call AI provider with augmented context, images and documents: the system prompt is the
+        // chat prompt with the project context, the history keeps each turn's attachments (R-AI-17),
+        // and the current turn goes last. Per-feature model (falls back to the provider's model).
+        const system = PromptService.getRendered('chat', augmentedContext ? { customVariables: { projectContext: augmentedContext } } : undefined);
+        const turns: HistoryMessage[] = history.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+            images: toAttachments(msg.images),
+            documents: toAttachments(msg.documents),
+        }));
+        const response = await registry.get(providerToUse).chat({
+            system,
+            history: [...turns, { role: 'user', content: input }],
+            model: preferredModelId('chat'),
+            images: toAttachments(ctx.images),
+            documents: toAttachments(ctx.documents),
+        });
 
         const assistantMessage: ChatMessage = {
             id: ctx.makeId(),
