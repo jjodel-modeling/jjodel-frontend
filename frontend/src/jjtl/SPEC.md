@@ -682,6 +682,32 @@ in an environment are closures (the expression with the environment of the bindi
    Matched rules stay for the elements the transformation maps as such. Containment under A
    alone therefore does not serve library expressions; that value arrives with B.
 
+#### 5.3.3 Called rules and the environment (B, steps 2 and 3)
+
+Implemented by P-2026-11-02-2224 and P-2026-11-02-2247; lazy rules (step 4) and the
+fresh-subtree rule of containment under B (step 5) are not yet.
+
+- **Calls.** A called rule is a JjEL function. Calling it during an expression yields a
+  demand, which the receiving binding carries out before it resolves its value: the rule is
+  applied, its target created and returned, then placed as any rule target (§5.3.1). Each call
+  applies the rule afresh. A delegating rule (`= expression`, §3.4b) returns what its
+  expression lowers to; what is left a source element resolves through the trace.
+- **Environment.** Each application runs under an environment, a chain of frames binding names
+  to closures. It is the caller's, unless a called rule receives one through a parameter typed
+  `Env`. `extendEnv(names, values)` returns a frame over the current environment, every value a
+  closure over the current environment, which is its binding site. `envHas(name)` tests a name;
+  `envLookup(name)` yields the bound value, lowered under the closure's environment and not the
+  caller's, so names are not captured.
+- **Implicit resolution under an environment.** Under a non-empty environment, a source element
+  reached by a binding is lowered by its matched rule under that environment, once per
+  (rule, source, environment), and its targets are traced with that key; environments compare
+  structurally, by the closures they make visible. Under the empty environment the pass-1
+  target answers, as before. A delegating matched rule is applied when a binding first reaches
+  its element, or in pass 2, whichever comes first.
+- **Non-termination.** More than 256 nested applications (calls, delegations, closures) stop the
+  run with one error naming the application stack, innermost first: rule, source element, and
+  the bindings visible in each frame.
+
 ### 5.4 Per-Binding Invertibility
 
 Each binding is classified at runtime:
