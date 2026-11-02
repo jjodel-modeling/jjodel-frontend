@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1612
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane hw-notation · report docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md
 Lane: fast (docs only, no code; continues P-2026-11-02-1425 after its context ceiling)
 Depends: P-2026-11-02-1425
 Worktree: ~/jjodel-w-jjtlgeneric, branch jjtl-generic-transformation (the same tree, at the commit that adds this prompt)

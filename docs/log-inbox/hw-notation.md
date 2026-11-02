@@ -56,3 +56,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (evaluator and executor only; range covered by range.test.ts and range-forall.test.ts, green on 9654de9b6)
 **Notes**: Tip moved mid-session (40dd35d28, de519893f: docs only, other chats), accepted. Merge-tree: zero conflicts, tree f7c289a56 = merge commit's; 7 files branch side, none on both, no governance file; 2 probes once each; no union. Gates on 9654de9b6: typecheck 0, typecheck:scripts 0; vitest 12401 passed, 466 files, 9 known red at import (12373 + 28); hooks 967; build 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Lane board untouched.
 **Prompt document name**: 2026-10-31 17:46
+
+## 2026-11-02 — discovery: JjTL generic transformation, Phase 1 report (P-2026-11-02-1425, P-2026-11-02-1612)
+**Prompt**: P-2026-11-02-1425: Phase 1 only of the request for one domain-free JjTL transformation (A implicit trace resolution with containment, B called/lazy rules with an environment, C multi-model sources, D inheritance matching, E slots holding fragments): verify the premises, design proposal, answers to questions 1-7, Layer Impact Report. The 1425 session stopped at the context-ceiling hook before writing; P-2026-11-02-1612 wrote the report from its handoff.
+**Files touched**: `docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md` (new), this inbox, the `Status:` lines of the two prompt files. No code.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (in the report, section 7)
+**Smoke visivo**: non applicabile
+**Notes**: Log in the lane inbox (P9), not `docs/claude-code-log.md` as the 1425 prompt says. SPEC §5.3 "NOT IMPLEMENTED" is stale (references resolve through the trace; containment does not). Recommended order A0 -> A -> B -> C0 -> D. All claims are read, none run; the snapshot copy (executor.ts:1671) must be confirmed by a test in the first Phase-2 lane.
+**Prompt document name**: 2026-11-02 14:25
