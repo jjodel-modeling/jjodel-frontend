@@ -7165,6 +7165,11 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   only when a resolution or a call reaches the node. Matched rules stay for the elements the transformation maps as such.
   Containment under A alone therefore does not serve library expressions; that value arrives with B. Ratified by
   Alfonso 2026-11-02 18:35, registered by P-2026-11-02-1838; evidence: read, verified: none, reversible: trunk.
+- **R-FA-9 (2026-11-02), provisional, unattended, evidence: measured (P-2026-11-02-2030), verified: none, reversible: trunk**: JjScript `rename` takes
+  an expression. A single name or string after `to`/`as`, followed by the end of the command or by `in <parent>`, stays
+  literal, even when a variable has that name; anything else is a JjEL expression with the `forall` variables and `let`
+  bindings visible. The exception for a trailing `in` keeps `rename attribute a to b in C`, the form taught in
+  `defaultPrompts.ts`. A result that is not a non-empty string is a command error.
 
 ## Superate
 
