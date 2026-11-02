@@ -597,3 +597,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato (chat, RC-23 on the combined tree, same code as ebe3bd548; GO 2026-11-02)
 **Notes**: Trunk tip moved to 02586b29b (docs only, R-TXT-30); R-TXT-30 control counted 1 from the trunk, 0 on the branch. Gates on ebe3bd548: typecheck, typecheck:scripts exit 0; vitest 12988 = trunk 12974 + 14, the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Trunk runs red on load timeouts (textual.test.ts 2000 ms, one laneRun 15 s), green alone.
 **Prompt document name**: 2026-11-02 21:12
+
+## 2026-11-02 — merge: jjscript-rename-expression into alfonso-frontend-jjtl (P-2026-11-02-2045)
+**Prompt**: `claude_2026-11-02_2045_prompt_merge_jjscript-rename-expression.md`, a direct merge, closed by hand by the chat because the worker ended blocked.
+**Files touched**: merge `43350d3cd`, the files of the branch side.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown, none attributed. vitest 12966 tests, 6 failed: 4 in `codegen/engine/__tests__/defaultText.test.ts` and `codegen/textual/__tests__/textual.test.ts`, 2 in `scripts/gates/__tests__/traceMonitor.test.ts`; 0 before the merge. The next merge, P-2026-11-02-2057, on a tree containing this one: 12974 tests, 0 failed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: on 3001 from the served parser: expression and literal forms parse as R-FA-9. The command was not run on a model.
+**Notes**: Ticket, load-sensitive tests: the two codegen files alone gave 23 of 23 green at load 13, and 4 and 6 failures in two runs at load 140, generation errors. Hypotheses, not measured: the 2000 ms generation budget (R-GEN-28) and the `spawnSync` of `traceMonitor.test.ts` returning a null status under load. With parallel lanes they can block a direct merge at random. Rollback tag `pre-jjscript-rename-expression`.
+**Prompt document name**: 2026-11-02 20:45
