@@ -124,3 +124,137 @@ Main m = loop(m.expr)
         expect(depth[0]).toMatch(/more/);
     });
 });
+
+// ---------------------------------------------------------------------------
+// The environment (step 3, R-JTG-5, R-JTG-6). Every class has a matched rule, so the
+// eager pass 1 still lowers each node once under the empty environment; the trees below
+// are the ones lowered under an environment, read from the roots.
+
+const ENV_RULES = `
+rule mkRef(v) -> Ref {
+    name := v.name
+}
+
+rule under(e, env: Env) = e
+
+Add -> Add {
+    left := left
+    right := right
+}
+
+Const -> Const {
+    value := value
+}
+
+Var v = if envHas(v.name) then envLookup(v.name) else mkRef(v)
+
+Bind b = under(b.expr, extendEnv(b.bindings.map(x => x.var), b.bindings.map(x => x.expr)))
+
+Main m = m.expr
+`;
+
+const v = (id: string, name: string, container: string) => el(id, 'Var', { name, _containerId: container });
+const k = (id: string, value: number, container: string) => el(id, 'Const', { value, _containerId: container });
+const add = (id: string, l: string, r: string, container: string) =>
+    el(id, 'Add', { left: ref(l), right: ref(r), _containerId: container });
+const bind = (id: string, expr: string, bindings: string[], container: string) =>
+    el(id, 'Bind', { expr: ref(expr), bindings: bindings.map(ref), _containerId: container });
+const binding = (id: string, variable: string, expr: string, container: string) =>
+    el(id, 'Binding', { var: variable, expr: ref(expr), _containerId: container });
+
+describe.each([
+    ['legacy parser (no source)', false],
+    ['JjEL parser (source)', true],
+] as const)('the environment — %s', (_label, withSource) => {
+    const run = (rules: string, source: any[]) => execute(parseJjtl(rules, withSource), source, TARGET);
+    const rootTerms = (result: any) => result.targetModel!.roots.map(term).sort();
+
+    it('lowers Bind(Add(Var x, Const 1), [x := Var a]) to Add(Ref a, Const 1)', async () => {
+        const result = await run(ENV_RULES, [
+            el('m1', 'Main', { expr: ref('b1') }),
+            bind('b1', 'a1', ['bd1'], 'm1'),
+            add('a1', 'vx', 'c1', 'b1'),
+            v('vx', 'x', 'a1'),
+            k('c1', 1, 'a1'),
+            binding('bd1', 'x', 'va', 'b1'),
+            v('va', 'a', 'bd1'),
+        ]);
+        expect(result.errors).toEqual([]);
+        // The second tree is the eager lowering of a1 under the empty environment.
+        expect(rootTerms(result)).toEqual(['Add(Ref(a), Const(1))', 'Add(Ref(x), Const(1))']);
+    });
+
+    it('carries the environment to the leaves through nested implicit resolutions', async () => {
+        const result = await run(ENV_RULES, [
+            el('m1', 'Main', { expr: ref('b1') }),
+            bind('b1', 'a1', ['bd1'], 'm1'),
+            add('a1', 'a2', 'c2', 'b1'),
+            add('a2', 'vx', 'c1', 'a1'),
+            v('vx', 'x', 'a2'),
+            k('c1', 1, 'a2'),
+            k('c2', 2, 'a1'),
+            binding('bd1', 'x', 'va', 'b1'),
+            v('va', 'a', 'bd1'),
+        ]);
+        expect(result.errors).toEqual([]);
+        expect(rootTerms(result)).toEqual([
+            'Add(Add(Ref(a), Const(1)), Const(2))',
+            'Add(Add(Ref(x), Const(1)), Const(2))',
+        ]);
+    });
+
+    it('lowers a bound expression where it was written: no capture', async () => {
+        // Bind(Add(Var x, Var y), [y := Const 5, x := Var y]): x is the y of the binding
+        // site, unbound there, not the y := Const 5 of the use site.
+        const result = await run(ENV_RULES, [
+            el('m1', 'Main', { expr: ref('b1') }),
+            bind('b1', 'a1', ['bdy', 'bdx'], 'm1'),
+            add('a1', 'vx', 'vy', 'b1'),
+            v('vx', 'x', 'a1'),
+            v('vy', 'y', 'a1'),
+            binding('bdy', 'y', 'c5', 'b1'),
+            k('c5', 5, 'bdy'),
+            binding('bdx', 'x', 'vy2', 'b1'),
+            v('vy2', 'y', 'bdx'),
+        ]);
+        expect(result.errors).toEqual([]);
+        expect(rootTerms(result)).toEqual(['Add(Ref(x), Ref(y))', 'Add(Ref(y), Const(5))']);
+    });
+
+    it('resolves a bound expression in the outer scope of its binding site', async () => {
+        // Bind(Bind(Add(Var x, Var y), [y := Const 5, x := Var y]), [y := Const 2]):
+        // x lowers to the outer y, Const 2.
+        const result = await run(ENV_RULES, [
+            el('m1', 'Main', { expr: ref('b0') }),
+            bind('b0', 'b1', ['bdo'], 'm1'),
+            binding('bdo', 'y', 'c2', 'b0'),
+            k('c2', 2, 'bdo'),
+            bind('b1', 'a1', ['bdy', 'bdx'], 'b0'),
+            add('a1', 'vx', 'vy', 'b1'),
+            v('vx', 'x', 'a1'),
+            v('vy', 'y', 'a1'),
+            binding('bdy', 'y', 'c5', 'b1'),
+            k('c5', 5, 'bdy'),
+            binding('bdx', 'x', 'vy2', 'b1'),
+            v('vy2', 'y', 'bdx'),
+        ]);
+        expect(result.errors).toEqual([]);
+        expect(rootTerms(result)).toContain('Add(Const(2), Const(5))');
+    });
+
+    it('names the environment of each frame in an error stack', async () => {
+        const result = await run(`
+rule spin(e, env: Env) = spin(e, env)
+
+Bind b = spin(b.expr, extendEnv(b.bindings.map(x => x.var), b.bindings.map(x => x.expr)))
+`, [
+            bind('b1', 'vx', ['bd1'], 'm1'),
+            v('vx', 'x', 'b1'),
+            binding('bd1', 'x', 'va', 'b1'),
+            v('va', 'a', 'bd1'),
+        ]);
+        const depth = result.errors.filter(e => /depth limit/.test(e));
+        expect(depth).toHaveLength(1);
+        expect(depth[0]).toMatch(/\n  at rule spin\(e, env\) = \.\.\. on Var 'x' with \{ x := Var 'a' \}/);
+    });
+});
