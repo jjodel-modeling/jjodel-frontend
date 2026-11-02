@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
 import {connect} from "react-redux";
 import {
     DModel,
@@ -18,12 +18,16 @@ import {
 } from "../../../joiner";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { EditorSwitch } from "./EditorSwitch";
+import DockManager from "../DockManager";
 
 
 function ModelTabComponent(props: AllProps) {
     const model = props.model;
     const graph = props.graph;
 
+    // A tab is only opened on an existing model, so a missing one is gone: deleted, or its creation
+    // undone (R-TXT-25 (1)). Its tabs close as a delete closes them, instead of printing «closed tab».
+    useEffect(() => { if (!model) DockManager.closeTabsForEntity(props.modelid, 'model'); }, [!model]);
     if (!model) return(<>closed tab</>);
     if (!graph) {
         const graphid = Constructors.DGraph_makeID(model.id);

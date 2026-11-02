@@ -1024,3 +1024,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
 **Prompt document name**: 2026-11-02 08:21
+
+## 2026-11-02 — fix(ui): close the tab of an undone model; badge for Text tabs (P-2026-11-02-0650)
+**Prompt**: R-TXT-25 (1) and (4): after an undone «Create model» the canvas tab shows a bare «closed tab»; probe whether any undone model creation does it, then close a tab whose model is gone. Text tabs get an app-bar badge.
+**Files touched**: fdb70a1e8: `frontend/src/components/abstract/tabs/ModelTab.tsx`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `frontend/src/pages/components/Navbar.tsx`; closure: this inbox, the Status line of the 0650 prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-02 02:35
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Discovery: «closed tab» is ModelTab.tsx:27 / MetamodelTab.tsx:148 for a missing model; undo never touches the dock, and the app bar hides the tab as a ghost, so it stays active. General: one undo of Navbar createM1 or createM2 does the same. Fix: both tabs call closeTabsForEntity, as a delete. Probe 3065, before/after in the commit body. Gates: tsc 0; vitest 20 files, 533 tests; build 0. Crops in ~/.jjodel-lanes/P-2026-11-02-0650/.
+**Prompt document name**: 2026-11-02 06:50
