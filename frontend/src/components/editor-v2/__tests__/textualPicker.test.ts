@@ -5,6 +5,9 @@
  * its predicate, and the label (the language's name, the metamodel's by default). `Toolbar.tsx` does not import under
  * the `node` environment (it reaches `../../joiner`, see dataManagerPicker.test.ts), so the two routing claims below
  * are asserted on its source; the mutation each one dies on is in its name, the bench in the commit body.
+ *
+ * T4a-2 (P-2026-11-02-1830, R-TXT-25 (12)): the language's name is read from the metamodel's stored syntax annotations
+ * (codegen/textual/syntaxRecord.ts), here, with no import, so the picker shows it without loading `src/codegen/`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -14,8 +17,11 @@ import {
     DATA_MANAGER_OPTION_VALUE,
     TEXTUAL_OPTION_FALLBACK_LABEL,
     TEXTUAL_OPTION_VALUE,
+    TEXTUAL_SYNTAX_KEY,
     isDataManagerOption,
     isTextualOption,
+    textualLanguageNameOf,
+    textualLanguageOf,
     textualOptionLabel,
 } from '../dataManagerOption';
 
@@ -92,5 +98,50 @@ describe('T2b — the routing in Toolbar.tsx', () => {
         expect(entry).toBeGreaterThan(guard);
         expect(entry).toBeLessThan(entries.indexOf('value: DATA_MANAGER_OPTION_VALUE'));
         expect(TSX).toContain('const codegenEnabled = useCodegenEnabled() && CODEGEN_BUILD;');
+    });
+});
+
+describe('T4a-2 — the language name stored with the syntax annotations', () => {
+    const lookup = (stored?: unknown): Record<string, any> => ({
+        M: { id: 'M', name: 'city', instanceof: 'MM' },
+        MM: { id: 'MM', name: 'Library', _state: stored === undefined ? {} : { [TEXTUAL_SYNTAX_KEY]: stored } },
+    });
+    const label = (l: Record<string, any>) => textualOptionLabel(l.MM.name, textualLanguageNameOf(l, 'M'));
+
+    it('labels the entry with the language name when the record sets one (dies when the label ignores the language)', () => {
+        expect(label(lookup('{"v":1,"language":"Shelf"}'))).toBe('Shelf');
+    });
+
+    it('falls back to the metamodel name when the record sets none, or there is no record', () => {
+        expect(label(lookup())).toBe('Library');
+        expect(label(lookup('{"v":1}'))).toBe('Library');
+        expect(label(lookup('{"v":1,"language":"  "}'))).toBe('Library');
+    });
+
+    it('reads no language from a record it cannot read, as the codec does (dies when the version is not checked)', () => {
+        for (const raw of ['{not json', '{"v":2,"language":"Shelf"}', '{"language":"Shelf"}', '[1]', 7, null]) {
+            expect(textualLanguageOf(raw)).toBeNull();
+        }
+        expect(label(lookup('{"v":2,"language":"Shelf"}'))).toBe('Library');
+    });
+
+    it('reads the language from the model\'s metamodel, and nothing for an unknown model', () => {
+        const l = lookup('{"v":1,"language":"Shelf"}');
+        expect(textualLanguageNameOf(l, 'M')).toBe('Shelf');
+        expect(textualLanguageNameOf(l, 'nope')).toBeNull();
+        expect(textualLanguageNameOf(l, undefined)).toBeNull();
+        expect(textualLanguageNameOf(undefined, 'M')).toBeNull();
+    });
+
+    it('is the key the codec writes', () => {
+        expect(TEXTUAL_SYNTAX_KEY).toBe('textSyntax');
+    });
+
+    it('passes the language name to the label in the entry and in the handler (dies when either drops it)', () => {
+        const entries = slice('const syntaxEntries: SyntaxEntry[] = [ABSTRACT_SYNTAX_ENTRY];', 'const currentSyntax');
+        expect(entries).toContain('label: textualOptionLabel(metamodelName, languageName),');
+        expect(TSX).toContain('const languageName = useSelector((state: any) => textualLanguageNameOf(state.idlookup, modelId))');
+        const handler = slice('const handleViewpointChange = useCallback(', '}, [modelId]);');
+        expect(handler).toMatch(/textualOptionLabel\(metamodelNameOf\(lookup, modelId\), textualLanguageNameOf\(lookup, modelId\)\)/);
     });
 });

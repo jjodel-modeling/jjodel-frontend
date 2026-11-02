@@ -13,6 +13,10 @@
  * The tab sits in the first dock panel, whose tab bar the app bar replaces; the app bar lists only the tab ids it
  * resolves (Navbar.tsx `syncTabs`), so this tab carries its own title and close in its header.
  *
+ * Both modes derive the grammar through one path (syntaxRecord.ts `textualNotation`, step T4a-2, P-2026-11-02-1830):
+ * the metamodel's stored syntax annotations, resolved against its element ids. Their issues, and the style's case
+ * notices, are listed under the bar; the label is the language's name when the record sets one.
+ *
  * In `src/codegen/`: loaded through the dynamic import of the opener only (R-GEN-2, scripts/gates/check-codegen-lazy.ts).
  */
 
@@ -23,13 +27,15 @@ import type { OnMount } from '@monaco-editor/react';
 import { buildEvalContext } from '../../../jjscript';
 import { evalContextFor } from '../../../components/editor-v2/sim/simBridge';
 import DockManager from '../../../components/abstract/DockManager';
-import { deriveBaseGrammar } from '../baseGrammar';
-import { concreteGrammarEbnf, deriveConcreteGrammar } from '../concreteGrammar';
+import { TEXTUAL_SYNTAX_KEY, textualLanguageNameOf, textualLanguageOf, textualOptionLabel } from '../../../components/editor-v2/dataManagerOption';
+import { concreteGrammarEbnf } from '../concreteGrammar';
 import { classFeatures } from '../metamodel';
 import { readNewModel } from '../modelLines';
 import { printTextModel } from '../printer';
-import { CLIKE_STYLE } from '../style';
+import { elementIdsOf, readSyntax, textualNotation } from '../syntaxRecord';
+import type { AnnotationIssue, ElementIds } from '../annotations';
 import type { ConcreteGrammar } from '../concreteGrammar';
+import type { DecodedSyntax } from '../syntaxRecord';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import type { NewModelReading } from '../modelLines';
 import './TextualTab.scss';
@@ -45,6 +51,22 @@ export interface TextualView {
     readonly text: string;
     readonly ebnf: string;
     readonly error: string | null;
+    /** The annotations' issues and the style's notices (syntaxRecord.ts `textualNotation`); absent when none could be derived. */
+    readonly issues?: readonly AnnotationIssue[];
+}
+
+/** The metamodel's stored syntax annotations and the ids they are keyed by. */
+export interface StoredNotation {
+    readonly decoded: DecodedSyntax;
+    readonly ids: ElementIds;
+}
+
+const NO_ANNOTATIONS: StoredNotation = { decoded: { record: null, issues: [] }, ids: { classes: {}, features: {}, enums: {} } };
+
+/** The annotations stored on the metamodel `metamodelId`, read from the lookup. */
+export function storedNotation(lookup: Readonly<Record<string, any>>, metamodelId: string | undefined): StoredNotation {
+    if (typeof metamodelId !== 'string' || !lookup[metamodelId]) return NO_ANNOTATIONS;
+    return { decoded: readSyntax(lookup, metamodelId), ids: elementIdsOf(lookup, metamodelId) };
 }
 
 const list = (v: unknown): any[] => (Array.isArray(v) ? v : []);
@@ -91,31 +113,48 @@ export function textInputOf(globals: Readonly<Record<string, any>>): TextInput {
     return { metamodel, objects };
 }
 
-/** The text and the EBNF of the C-like notation for the globals; a failure is reported, never thrown. */
-export function textualView(globals: Readonly<Record<string, any>>): TextualView {
+/** The text and the EBNF of the C-like notation for the globals, with the stored annotations; a failure is reported, never thrown. */
+export function textualView(globals: Readonly<Record<string, any>>, stored: StoredNotation = NO_ANNOTATIONS): TextualView {
     let input: TextInput;
     let grammar: ConcreteGrammar;
+    let issues: readonly AnnotationIssue[];
     try {
         input = textInputOf(globals);
-        grammar = deriveConcreteGrammar(deriveBaseGrammar(input.metamodel), CLIKE_STYLE);
+        ({ grammar, issues } = textualNotation(input.metamodel, stored.decoded, stored.ids));
     } catch (e) {
         return { text: '', ebnf: '', error: messageOf(e) };
     }
     const ebnf = concreteGrammarEbnf(grammar);
     try {
-        return { text: printTextModel(grammar, input.objects).text, ebnf, error: null };
+        return { text: printTextModel(grammar, input.objects).text, ebnf, error: null, issues };
     } catch (e) {
-        return { text: '', ebnf, error: messageOf(e) };
+        return { text: '', ebnf, error: messageOf(e), issues };
     }
 }
 
 /** The model as the eval context reads it; the project is the user's (jjscript/executor/utils.ts `getProject`). */
 function modelView(lookup: Readonly<Record<string, any>>, modelId: string): TextualView {
     try {
-        return textualView(buildEvalContext(evalContextFor(lookup, modelId, ''), { extentModelId: modelId }));
+        const globals = buildEvalContext(evalContextFor(lookup, modelId, ''), { extentModelId: modelId });
+        return textualView(globals, storedNotation(lookup, lookup[modelId]?.instanceof));
     } catch (e) {
         return { text: '', ebnf: '', error: messageOf(e) };
     }
+}
+
+/** The issues of the notation, one line each, under the tab's bar; nothing when there is none. */
+function NotationIssues({ issues }: { readonly issues: readonly AnnotationIssue[] | undefined }) {
+    if (!issues?.length) return null;
+    return (
+        <ul className="textual-tab__issues" aria-label="Notation issues">
+            {issues.map((i, k) => (
+                <li key={k} className={`textual-tab__issue textual-tab__issue--${i.level}`}>
+                    <i className={`bi ${i.level === 'error' ? 'bi-exclamation-triangle' : 'bi-info-circle'}`} aria-hidden="true" />
+                    {`${i.where}: ${i.message}`}
+                </li>
+            ))}
+        </ul>
+    );
 }
 
 type TextualMode = 'text' | 'ebnf';
@@ -142,16 +181,19 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     const view = useMemo(() => modelView(lookup ?? {}, modelId), [lookup, modelId]);
     const model = lookup?.[modelId];
     const modelName = typeof model?.name === 'string' && model.name ? model.name : 'Unnamed';
+    // The picker's rule (Toolbar.tsx), read live: a language name set after the tab opened shows here too.
+    const metamodel = lookup?.[model?.instanceof];
+    const shownLabel = metamodel ? textualOptionLabel(metamodel.name, textualLanguageNameOf(lookup, modelId)) : label;
     const shown = mode === 'text' ? view.text : view.ebnf;
     const failed = view.error !== null && (mode === 'text' || !view.ebnf);
 
     return (
         <div className="textual-tab">
             <div className="textual-tab__bar">
-                <span className="textual-tab__title" title={`${modelName} · ${label}`}>
+                <span className="textual-tab__title" title={`${modelName} · ${shownLabel}`}>
                     <i className="bi bi-file-earmark-text" aria-hidden="true" />
                     <span className="textual-tab__name">{modelName}</span>
-                    <span className="textual-tab__language">{label}</span>
+                    <span className="textual-tab__language">{shownLabel}</span>
                 </span>
                 <span className="textual-tab__readonly" title="Editing the text comes in a later slice">
                     <i className="bi bi-lock" aria-hidden="true" />
@@ -178,6 +220,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                     <i className="bi bi-x-lg" aria-hidden="true" />
                 </button>
             </div>
+            {model && <NotationIssues issues={view.issues} />}
             <div className="textual-tab__body">
                 {!model ? (
                     <div className="textual-tab__message">
@@ -221,17 +264,20 @@ interface NewModelGrammar {
     readonly metamodel: TextMetamodel | null;
     readonly grammar: ConcreteGrammar | null;
     readonly error: string | null;
+    readonly issues?: readonly AnnotationIssue[];
 }
 
 /** An extent that matches no model: the metamodel alone is read (an empty extent selects every model, evalExtent.ts). */
 const NO_MODEL_EXTENT = '\u0000no-model';
 
 /** The grammar of the metamodel `metamodelId`, read as the Text tab reads a model's, with no object. */
-function metamodelGrammar(lookup: Readonly<Record<string, any>>, metamodelId: string): NewModelGrammar {
+export function metamodelGrammar(lookup: Readonly<Record<string, any>>, metamodelId: string): NewModelGrammar {
     try {
         const globals = buildEvalContext({ ...evalContextFor(lookup, metamodelId, ''), targetMetamodelId: metamodelId }, { extentModelId: NO_MODEL_EXTENT });
         const metamodel = textInputOf(globals).metamodel;
-        return { metamodel, grammar: deriveConcreteGrammar(deriveBaseGrammar(metamodel), CLIKE_STYLE), error: null };
+        const stored = storedNotation(lookup, metamodelId);
+        const { grammar, issues } = textualNotation(metamodel, stored.decoded, stored.ids);
+        return { metamodel, grammar, error: null, issues };
     } catch (e) {
         return { metamodel: null, grammar: null, error: messageOf(e) };
     }
@@ -259,6 +305,7 @@ export function NewTextualTab({ metamodelId, label, tabId, initialName, onCreate
     const lookup = useSelector((state: any) => state.idlookup) as Record<string, any>;
     const metamodel = lookup?.[metamodelId];
     const metamodelName = typeof metamodel?.name === 'string' && metamodel.name ? metamodel.name : 'Unnamed';
+    const shownLabel = metamodel ? textualOptionLabel(metamodel.name, textualLanguageOf(metamodel._state?.[TEXTUAL_SYNTAX_KEY])) : label;
     const input = useMemo(() => metamodelGrammar(lookup ?? {}, metamodelId), [lookup, metamodelId]);
     const [text, setText] = useState('');
     const [name, setName] = useState(initialName);
@@ -326,10 +373,10 @@ export function NewTextualTab({ metamodelId, label, tabId, initialName, onCreate
     return (
         <div className="textual-tab">
             <div className="textual-tab__bar">
-                <span className="textual-tab__title" title={`New model of ${metamodelName} · ${label}`}>
+                <span className="textual-tab__title" title={`New model of ${metamodelName} · ${shownLabel}`}>
                     <i className="bi bi-file-earmark-plus" aria-hidden="true" />
                     <span className="textual-tab__name">New model</span>
-                    <span className="textual-tab__language">{label}</span>
+                    <span className="textual-tab__language">{shownLabel}</span>
                 </span>
                 <label className="textual-tab__model-name">
                     <span>Name</span>
@@ -352,6 +399,7 @@ export function NewTextualTab({ metamodelId, label, tabId, initialName, onCreate
                     <i className="bi bi-x-lg" aria-hidden="true" />
                 </button>
             </div>
+            {metamodel && <NotationIssues issues={input.issues} />}
             <div className="textual-tab__body">
                 {!metamodel ? (
                     <div className="textual-tab__message">

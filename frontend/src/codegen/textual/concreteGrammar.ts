@@ -287,11 +287,17 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
             derivedEnums.push({ t: 'enum', name: enumName, literals, body: { t: 'alt', alts: literals.map(l => ({ t: 'kw', text: applyCase(l, literalCase) })) } });
             derivedObjects.push({ t: 'object', name: objName, cls: T.cls, named: T.named, features: T.features.map(x => x.feature), body: objectBody(T, { attr, rule: enumName }) });
             const where: GroupFilter = { attr: attr.name, literals };
+            const el: GrammarNode = { t: 'assign', feat: f.name, op: '+=', item: { t: 'rule', name: objName } };
+            // One-line objects follow the subset's keyword on its line; objects with a block of their own go one per
+            // line in a block, as an ungrouped containment's do (T4a-2: chained on one line they read `} Book b {`).
+            const members: GrammarNode = shapes.get(T.cls)?.line
+                ? { t: 'star', feat: f.name, where, item: el }
+                : block([{ t: 'star', feat: f.name, where, item: { t: 'seq', items: [el, { t: 'nl' }] } }]);
             out.push({
                 t: 'opt', feat: f.name, where, item: {
                     t: 'seq', items: [
                         { t: 'kw', text: s.name },
-                        { t: 'star', feat: f.name, where, item: { t: 'assign', feat: f.name, op: '+=', item: { t: 'rule', name: objName } } },
+                        members,
                         { t: 'nl' },
                     ],
                 },
