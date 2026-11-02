@@ -7097,6 +7097,30 @@ Row 27: P-2026-11-02-0846 (T4a-1 design, hard-stop at the ceiling); Alfonso 2026
   attribute: otherwise the annotation is refused by the style check (an error, not a notice), so that every printed
   text reads back (R-TXT-19, R-TXT-21 (8)).
 
+## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
+
+Evidence: Alfonso 2026-11-02 13:19, forall x,y in JjEL and then in every language that uses JjEL; the parsers read by the
+project chat C-2026-11-02-1319. All rows: provisional, unattended, evidence: read, verified: none, reversible: trunk.
+
+- **R-FA-1 (2026-11-02)**: two spellings, mixable: `forall x, y in S` (same collection) and `forall x in A, y in B`.
+  Iteration is the full cartesian product, first variable outermost: without a filter the pair (a, a) and both orders
+  are present, as in OCL `forAll(x, y | ...)`; excluding them is the filter's job.
+- **R-FA-2 (2026-11-02)**: bindings read left to right: a later collection may read an earlier variable
+  (`forall c in classes, a in c.attributes`). Every variable is bound in the filter and in the projection.
+- **R-FA-3 (2026-11-02)**: the result is one flat list. Without a projection each element is a record named by the
+  variables (`{ x, y }`, read as `p.x`). One variable keeps returning the element itself.
+- **R-FA-4 (2026-11-02)**: `exists` takes the same bindings, so `exists ... P` stays equivalent to
+  `(forall ... such that P).isNotEmpty`.
+- **R-FA-5 (2026-11-02)**: a repeated name in one binding list is a parse error. After a collection, a comma continues
+  the bindings only when followed by an identifier and `in` or by an identifier list ending in `in`; so `f(forall x in S, y)` stays two arguments.
+- **R-FA-6 (2026-11-02)**: JjEL implements this in the parser, by desugaring: `forall` to nested `flatMap` over a
+  one-variable `forall`, `exists` to nested `exists`. No new AST node and no change to an exported type, so every reader of
+  the AST (evaluator, JS printer, subset checker, completion) is correct by construction. A new AST node only if the
+  discovery measures that the desugaring differs from the semantics above (a non-array collection must give `[]`).
+- **R-FA-7 (2026-11-02)**: every language gets the same spellings. JjScript desugars `do` to nested foralls; JjTL iterates
+  the product in the executor, flat in the feature, because a nested `forall` there builds a tree. Validation rules,
+  guards, templates, JjLet and JjModal inherit from the JjEL parser. Supersedes P-2026-10-31-1741, which never ran.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
