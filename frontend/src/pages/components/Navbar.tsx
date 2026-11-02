@@ -1939,6 +1939,9 @@ function NavbarComponent(props: AllProps) {
             case 'manager': return { letter: '', icon: 'bi-table', className: 'appbar-tab__badge--model' };
             case 'viewpoint': return { letter: 'V', className: 'appbar-tab__badge--viewpoint' };
             case 'generator': return { letter: '', icon: 'bi-code-slash', className: 'appbar-tab__badge--generator' };
+            // A Text tab (R-TXT-25 (4)): a model's text, so the model colour, as the manager's, with the glyph its
+            // own header shows.
+            case 'textual': return { letter: '', icon: 'bi-file-earmark-text', className: 'appbar-tab__badge--model' };
             default: return { letter: '', className: '' };
         }
     };
@@ -1952,6 +1955,7 @@ function NavbarComponent(props: AllProps) {
             case 'viewpoint': return 'Viewpoint';
             case 'manager': return 'Instance manager';
             case 'generator': return 'Generator';
+            case 'textual': return 'Text';
             default: return '';
         }
     };
