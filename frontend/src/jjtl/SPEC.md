@@ -682,10 +682,10 @@ in an environment are closures (the expression with the environment of the bindi
    Matched rules stay for the elements the transformation maps as such. Containment under A
    alone therefore does not serve library expressions; that value arrives with B.
 
-#### 5.3.3 Called rules and the environment (B, steps 2 and 3)
+#### 5.3.3 Called rules, the environment, lazy rules (B1)
 
-Implemented by P-2026-11-02-2224 and P-2026-11-02-2247; lazy rules (step 4) and the
-fresh-subtree rule of containment under B (step 5) are not yet.
+Implemented by P-2026-11-02-2224, P-2026-11-02-2247 and P-2026-11-02-2321, in the executor.
+The app's write-back of several targets per source element is B2 (list below).
 
 - **Calls.** A called rule is a JjEL function. Calling it during an expression yields a
   demand, which the receiving binding carries out before it resolves its value: the rule is
@@ -704,9 +704,36 @@ fresh-subtree rule of containment under B (step 5) are not yet.
   structurally, by the closures they make visible. Under the empty environment the pass-1
   target answers, as before. A delegating matched rule is applied when a binding first reaches
   its element, or in pass 2, whichever comes first.
+- **Lazy rules (R-JTG-7).** A lazy rule never matches in pass 1: it applies when a binding
+  reaches a node of its source class, under the environment of that moment. The lazy rules of
+  a class are candidates; the one whose guard holds applies (no guard always holds), and none
+  or several is an error naming the candidates. A class with both a matched and a lazy rule is
+  rejected before pass 1. A lazy node nothing reaches creates no target and no root.
+- **`unique`.** A `unique lazy` rule applies once per (rule, source, environment); a later
+  reach under an equal environment returns the same target.
+- **Containment under B (R-JTG-6).** A call of a rule not `unique`, a reach of a lazy rule not
+  `unique`, and the lookup of a bound value each lower to a fresh subtree, even under an
+  environment seen before: one expression may be placed twice, with the same bindings or with
+  different ones. A bound value whose class has a matched rule is lowered anew by that rule
+  under its binding site's environment, even an empty one, never resolved to the shared pass-1
+  target; that new target is not traced, so a reference to the element still means its pass-1
+  target. Its descendants follow their own rules: matched classes resolve through the trace, so
+  a value to be placed twice is lowered by lazy rules. The double-claim error (R-JTG-4)
+  remains for implicit resolutions and `unique` rules.
 - **Non-termination.** More than 256 nested applications (calls, delegations, closures) stop the
   run with one error naming the application stack, innermost first: rule, source element, and
   the bindings visible in each frame.
+
+**Left for B2.**
+1. The app's write-back keeps one target per source id (the map at
+   `components/project/ProjectEditor.tsx:1809`, as cited by P-2026-11-02-2247): lazy, called and
+   fresh targets can be several per source element.
+2. The optional `isPlacedIn` of `nestedMaterialization.ts`, to be removed.
+3. The legacy `trace` Map of the result, which called, lazy and fresh targets do not fill.
+4. `resolve()`, `resolveAll()` and `{ __ref }` lookups answer matched rules only: a lazy node
+   is reached by a binding's value, not by an explicit `resolve()`.
+5. A lazy-rule selection error raised under a delegating matched rule in pass 2 ends the run as
+   `Execution failed`, not as a per-binding error.
 
 ### 5.4 Per-Binding Invertibility
 
@@ -1010,6 +1037,7 @@ interface ExecutionResult {
 | UIBridge interface + React components | ✅ | `executor/UIBridge.ts`, `executor/ReactUIBridge.ts`, `components/dialogs/*` |
 | Monaco syntax highlighting | ✅ | `editor/` |
 | JjOM source model conversion | ✅ | `executor/jjodelConverter.ts` |
+| Called, lazy, `unique lazy` and delegating rules; the environment (B1, §5.3.3) | ✅ executor; app write-back B2 | `parser/parser.ts`, `executor/executor.ts` |
 
 ### 12.2 Known Bugs
 
@@ -1035,15 +1063,15 @@ message, not silence.
 
 | # | Gap | Description | Priority |
 |---|---|---|---|
-| 1 | **Implicit trace resolution** | Done for references, by identity, fallbacks reported (A0, §5.3.1), and for containments (A). The (source, rule, environment) key is in place with the environment always empty; non-empty environments come with B (§5.3.2) | High |
+| 1 | **Implicit trace resolution** | Done for references, by identity, fallbacks reported (A0, §5.3.1), and for containments (A). The (source, rule, environment) key is in place; non-empty environments, lazy rules and fresh subtrees under B are done in the executor (B1, §5.3.3); the app write-back of several targets per source is B2 | High |
 | 2 | **Alert/Notify execution** | Wire executor body items to UIBridge | High |
 | 3 | **Prompt/Input execution** | Wire AST bridge to UIBridge for interactive expressions | High |
 | 4 | **Multiplicity `[*]`** | Define and implement unbounded creation semantics | Medium |
 | 5 | **Reference mapping** | References: done (§5.3.1). Containments: done in the executor, placed targets leave `roots`, second claims and cycles are errors (A, §5.3.1, R-JTG-4). App write-back: done, placed targets created inside their container by the nested path (§9.2, P-2026-11-02-2024) | High |
 | 6 | **Source alias** | Parse and bind `Person p -> Human` alias in executor | Medium |
 | 7 | **Multi-model** | `from A, B to C, D` with qualified types | Phase 1 |
-| 8 | **Called rules** | `rule name(params) -> Type { ... }` | Phase 2 |
-| 9 | **Lazy rules** | `lazy` / `unique lazy` keyword | Phase 2 |
+| 8 | **Called rules** | `rule name(params) -> Type { ... }`: done in the executor (B1, §5.3.3); write-back B2 | Phase 2 |
+| 9 | **Lazy rules** | `lazy` / `unique lazy`: done in the executor (B1, §5.3.3); write-back B2 | Phase 2 |
 | 10 | **Rule inheritance** | `abstract` / `extends` | Phase 2 |
 | 11 | **`do {}` blocks** | Imperative post-binding section | Phase 4 |
 | 12 | **Variables** | `var` declarations in imperative blocks | Phase 4 |
