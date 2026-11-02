@@ -46,7 +46,7 @@ const LITERAL_WORDS = new Set(['null', 'true', 'false']);
 const ESCAPES: Readonly<Record<string, string>> = { '\\': '\\\\', '"': '\\"', '\n': '\\n', '\r': '\\r', '\t': '\\t' };
 
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
-const isWord = (s: string): boolean => IDENTIFIER.test(s) && !isReservedIdentifier(s) && !LITERAL_WORDS.has(s.toLowerCase());
+export const isWord = (s: string): boolean => IDENTIFIER.test(s) && !isReservedIdentifier(s) && !LITERAL_WORDS.has(s.toLowerCase());
 
 /** A string literal the JjScript lexer reads back as `s` (`readString`: `\n \t \r \\ \"`). */
 export const jjscriptString = (s: string): string => `"${s.replace(/[\\"\n\r\t]/g, c => ESCAPES[c])}"`;
@@ -63,7 +63,8 @@ export function jjscriptNumber(n: number): string {
     return `${m[1]}${digits.slice(0, point)}.${digits.slice(point)}`;
 }
 
-const valueText = (v: unknown, literals?: readonly string[]): string =>
+/** A value as `set` reads it back: an enumeration literal bare when JjScript reads it as a name, else a string. */
+export const valueText = (v: unknown, literals?: readonly string[]): string =>
     typeof v === 'number' ? jjscriptNumber(v) : typeof v === 'boolean' ? String(v)
         : typeof v === 'string' && literals?.includes(v) && isWord(v) ? v : jjscriptString(String(v));
 
