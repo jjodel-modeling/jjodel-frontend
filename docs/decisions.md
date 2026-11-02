@@ -6815,6 +6815,19 @@ the recommendation; evidence: read, verified: none, reversible: trunk).
   (O-7), and only a bad key on `models.list` reads as NETWORK, which R-AI-7 already avoids. The remaining L4 gate is
   R-AI-7's Claude `test()` on `/v1/messages`, built in L1. The optional OpenAI credit is not needed for any gate.
 
+L3 shape, answered by Juri in chat C-2026-11-03-0001 on 2026-11-03 (R-AI-14..16: ratified by Juri, R-AI-14 and 15 as
+recommended, R-AI-16 his own answer; evidence: read, verified: none, reversible: trunk).
+
+- **R-AI-14** (2026-11-03). **L3 is one lane in two phases**, rule 19 confirmed for up to 13 files: phase 1 moves the
+  four chat consumers and stops for Juri's real-key smoke; phase 2, after his GO, deletes `AIProviderService.ts` and its
+  test and rewrites the catalog test. The smoke falls before the deletion, as spec §7 L3 asks.
+- **R-AI-15** (2026-11-03). **`ChatRequest` gains an optional `signal?: AbortSignal`** (rule 11: optional property
+  only), forwarded by the three providers to their SDK, so `ExplainModal` keeps aborting the HTTP request on close as
+  it does today and `AIMatcher` forwards its own signal.
+- **R-AI-16** (2026-11-03). **The L3 real-key smoke uses the keys Juri has**: Claude, Gemini, Ollama (local), Custom
+  pointed at OpenRouter (an OpenAI-compatible remote server, Juri's key), OpenAI only up to its «no credit» 429, Mistral
+  if Juri finds a key. DeepSeek, Groq and Kimi are covered by mocks of the same `OpenAICompatibleProvider` class.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
