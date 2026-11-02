@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-0653
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane defaults-layer-gate · ffcb21052 · parziale: lazy off red (unguarded imports, ticket)
 Lane: fast (inline discovery reported in the log entry)
 Depends: P-2026-11-01-2350 and 2351 merged; R-TXT-25
 Worktree: ~/jjodel-w-defaultslayer, branch defaults-layer-gate (from the trunk commit that adds this prompt)
