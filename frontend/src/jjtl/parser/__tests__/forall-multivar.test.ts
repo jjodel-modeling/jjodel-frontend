@@ -80,3 +80,36 @@ describe.each([
         expect(parse(`A a -> B {\n    forall q in xs, r -> C { }\n}`, withSource).errors.length).toBeGreaterThan(0);
     });
 });
+
+describe('a forall collection the legacy parser cannot read goes to JjEL (P-2026-11-02-2345)', () => {
+    const PAIRS = 'xs.flatMap(q => xs.filter(r => r.p > q.p).map(r => { hi: q, lo: r }))';
+
+    it('an object literal in the collection parses with source, as one JjEL expression', () => {
+        const f = forallOf(`A a -> B {\n    forall pr in ${PAIRS} -> C { }\n}`, true);
+        expect(f.variable).toBe('pr');
+        expect(f.collection.type).toBe('JjelExpression');
+    });
+
+    it('without source the legacy path stays, and still rejects it', () => {
+        expect(parse(`A a -> B {\n    forall pr in ${PAIRS} -> C { }\n}`, false).errors.length).toBeGreaterThan(0);
+    });
+
+    it('the collection stops at `such`, at the comma of the next binding and at `->`', () => {
+        const f = forallOf(`A a -> B {\n    forall pr in ${PAIRS}, s in ys such that s.p == pr.hi.p -> C { }\n}`, true);
+        expect(names(f)).toEqual(['pr', 's']);
+        expect(f.bindings![0].collection.type).toBe('JjelExpression');
+        expect((f.bindings![1].collection as any).name).toBe('ys');
+        expect(f.filter).toBeDefined();
+    });
+
+    it('a JjEL parse error in the collection points into the collection', () => {
+        const src = HEAD + 'A a -> B {\n    forall pr in xs.map(r => { hi: }) -> C { }\n}';
+        const { tokens } = new JjtlLexer(src).tokenize();
+        const { errors } = new JjtlParser(tokens, src).parse();
+        const jjel = errors.filter(e => e.message.startsWith('JjEL:'));
+        expect(jjel.length).toBeGreaterThan(0);
+        // line 6 of the source, the column of the `}` that ends the empty `hi:`
+        expect(jjel[0].line).toBe(6);
+        expect(jjel[0].column).toBe('    forall pr in xs.map(r => { hi: '.length + 1);
+    });
+});
