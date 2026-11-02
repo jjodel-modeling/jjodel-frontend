@@ -1130,3 +1130,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato
 **Notes**: The prompt cited src/pages/ProjectEditor.tsx, absent; the only ProjectEditor.tsx is src/components/project/, whose :70 is the ticket's React.lazy: edited there (marked yes, honesty rule). GeneratorsSection is null without the flag; LeftBar guards both openTemplateEditor imports (:385, :389). Gates: tsc 0; vitest 50 files, 2482 tests; build 0; lazy gate ALL GREEN, off: only setting.ts. Probe 3133 flag on all PASS; crops in ~/.jjodel-lanes/P-2026-11-02-0845/crops/.
 **Prompt document name**: 2026-11-02 08:45
+
+## 2026-11-02 — merge: lazy-gate-guards into alfonso-frontend-jjtl (P-2026-11-02-0943)
+**Prompt**: Bring `lazy-gate-guards` at `70e93a9cc` (fix 3f84dfbd1) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-lazy-gate-guards on 39e5014bc); union resolution of this inbox.
+**Files touched**: merge commit e684fef6c (`frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/pages/components/LeftBar.tsx`, the 0845 prompt, this inbox); `docs/prompts/claude_2026-11-02_0943_prompt_merge_lazy-gate-guards.md` Status line; this entry
+**Outcome**: ✅ completed (check:codegen-lazy green in both modes)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 09:43

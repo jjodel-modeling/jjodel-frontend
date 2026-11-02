@@ -72,3 +72,26 @@ Adopted unattended (RC-21): the textual entry shows only with the code-generatio
 model created from text opens inside the undo group, so that one undo removes it.
 
 Open for Alfonso: see the morning digest in the chat (twelve questions with recommendations).
+
+## Morning 2026-11-02
+
+Ratified: R-TXT-25 (the twelve answers of the night digest, 06:43) and R-TXT-26 (an edited text is applied on a pause,
+only when clean, 08:34).
+
+Landed on `alfonso-frontend-jjtl`: unambiguous paths `Class[k]`/`feature[k]`, fold fallback on style words, shared
+test corpus (b7c0adfc2); undo of «Create model» closes the canvas tab and Text tabs have an app-bar badge (41c7c0d8a);
+`defaultValueLiteral` accessors restored, decimals refused on integer defaults, lazy gate off mode independent of
+`.env.production` (247007a7b); JjScript M1 `set` with lists and enumeration literals, `modelLines` no longer blocks
+many-valued attributes (a53423995, after P-2026-11-02-0855 took the trunk); codegen imports guarded so the lazy gate is
+green in both modes (e684fef6c).
+
+T4 is split (RC-52): T4a-1 (annotations as data and their application in derivation, printer, parser; acceptance on
+the 16 Briefs), T4a-2 (storage in `_state`, wiring, language-name label), T4b (the form). P-2026-11-02-0846 wrote the
+T4a-1 design in `~/.jjodel-lanes/P-2026-11-02-0846/handoff.md` and stopped at the context ceiling; its continuation
+waits for two answers from Alfonso: (1) `CoreSpec.ecore` declares `Instruction.mnemonic [0..1]`, so R-TXT-21 (4) refuses
+the RISC-V grouping (recommended: `[1..1]` in the prototype's metamodel); (2) a one-line class without block reads the
+next word as its name (recommended: the annotation requires a mandatory name, not a notice).
+
+Next: T4a-1 continuation, T4a-2, T4b, then T6 (apply edits on pause, R-TXT-26). Other open points: a quoted string on
+an enum attribute is not checked against the literals; redo after the undo of a model creation does not reopen its tab;
+a model's Text tab stays hidden when its model disappears.
