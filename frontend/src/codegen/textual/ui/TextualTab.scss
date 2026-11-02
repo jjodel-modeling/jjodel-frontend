@@ -152,7 +152,10 @@
     }
 
     &__status {
+        min-width: 0;
+        overflow: hidden;
         color: var(--color-text-tertiary);
+        text-overflow: ellipsis;
         white-space: nowrap;
 
         &--error {
@@ -193,6 +196,10 @@
     &__body {
         flex: 1;
         min-height: 0;
+
+        &--layered {
+            position: relative;
+        }
 
         .monaco-editor,
         .monaco-editor.focused {
@@ -239,5 +246,104 @@
         &--warning {
             color: var(--color-warning-text);
         }
+    }
+
+    // Step T6b (P-2026-11-03-0021): the editable text and the EBNF share the body, one over the other, so the toggle
+    // keeps a pending edit; the text under the EBNF is hidden, not unmounted.
+    &__layer {
+        position: absolute;
+        inset: 0;
+
+        &--hidden {
+            visibility: hidden;
+        }
+    }
+
+    // The model changed under a pending edit: one line in the bar, the text kept.
+    &__stale {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        overflow: hidden;
+        color: var(--color-warning-text);
+        white-space: nowrap;
+    }
+
+    &__stale-reload {
+        height: 22px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+    }
+
+    // The matches and deletions to confirm: over the bottom of the editor, so the text does not move when it shows.
+    &__confirm {
+        position: absolute;
+        right: 16px;
+        bottom: 8px;
+        left: 16px;
+        z-index: 5;
+        max-height: 40%;
+        overflow-y: auto;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        font-size: 11px;
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
+    &__confirm-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+    }
+
+    &__confirm-rows {
+        width: 100%;
+        border-collapse: collapse;
+
+        th,
+        td {
+            padding: 2px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--color-text-tertiary);
+            font-weight: 400;
+        }
+
+        td .bi {
+            margin-right: 4px;
+        }
+    }
+
+    &__confirm-row--flagged td {
+        color: var(--color-warning-text);
     }
 }
