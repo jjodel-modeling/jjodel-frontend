@@ -1281,3 +1281,22 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: visual check passed with reservation on the branch, crop checked by the chat
 **Notes**: Rollback tag `pre-textual-unprinted` on `7d66c7420` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2317/result.json`.
 **Prompt document name**: 2026-11-02 23:17
+
+## 2026-11-03 — feat(codegen): diff an edited text against its model (P-2026-11-02-2327, P-2026-11-02-2355)
+**Prompt**: T6a of the textual notation, no UI: match parsed objects to model objects (spans, then the R-TXT-18 cascade), minimal diff, refusals (R-TXT-26, R-TXT-30), a default read is no change, lines by registered handles, run as one undo step. 2327 stopped at the context ceiling (RC-51); 2355 closed it from its handoff: test fixes, gates, commit, bench, apply and undo on a real project state.
+**Files touched**: be4a90587: `frontend/src/codegen/textual/textMatch.ts`, `textDiff.ts`, `textApply.ts` (new), `__tests__/textDiff.test.ts` (new), `modelLines.ts`; Status lines of the 2327 and 2355 prompts; this entry and the ticket below
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; apply and one undo checked in the app by a probe)
+**Notes**: 7 red tests of the handoff fixed, one expectation changed with its reason in the commit body (nameless Links are homonyms). Gates: tsc 0, vitest src/codegen 52 files 2606 passed, build, check:docs, check:codegen-lazy off and on. Bench: 6 mutants, all killed (docs commit body). Probe on demoESM: 4 lines applied, reprint equals the edit, one undo restores text and the 36-element subtree; `~/.jjodel-lanes/P-2026-11-02-2355/probe.out`.
+**Prompt document name**: 2026-11-02 23:27, 2026-11-02 23:55
+
+## 2026-11-03 — ticket: a text edit of a model with a single-valued reference outside the text is always refused
+**Ticket**: the printer writes a single-valued reference keyword with no value when the target is not among the printed objects (the defect of the P-2026-11-02-1942 ticket in `docs/log-inbox/hw-notation.md`), so the text does not parse and `planTextEdit` refuses every edit of that model with `parse`; the model is not touched. Pinned as an expected refusal by `textDiff.test.ts` ('a single-valued target the text cannot name is an expected refusal'). A many-valued target outside the text is preserved. The fix is the printer's (`printer.ts`), outside T6a.
+**Priority**: medium
+**Found in**: P-2026-11-02-2327
+**Detail**: docs/log-inbox/hw-notation.md (ticket of P-2026-11-02-1942)
