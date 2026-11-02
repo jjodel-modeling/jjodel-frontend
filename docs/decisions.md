@@ -6828,6 +6828,17 @@ recommended, R-AI-16 his own answer; evidence: read, verified: none, reversible:
   pointed at OpenRouter (an OpenAI-compatible remote server, Juri's key), OpenAI only up to its «no credit» 429, Mistral
   if Juri finds a key. DeepSeek, Groq and Kimi are covered by mocks of the same `OpenAICompatibleProvider` class.
 
+Two gaps found by lane P-2026-11-03-0005 at its item 1 hard stop, answered by Juri in chat C-2026-11-03-0001 on
+2026-11-03 (R-AI-17..18: ratified by Juri as recommended; evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-17** (2026-11-03). **Earlier-turn attachments are still sent, as today.** `HistoryMessage` gains optional
+  `images?`/`documents?` (rule 11), the three providers place them on their own turn with the capability check, with
+  tests. The spec's text-only history (§4) is corrected: today `AIProviderService.ts:220-222` (and the other families)
+  re-sends every earlier image and PDF, and Jodie keeps them on its history (`Jodie.tsx:715-724`, `:735`).
+- **R-AI-18** (2026-11-03). **The Custom «requires a Base URL» check moves into `BaseProvider.prepare`**, with today's
+  text («Custom provider requires a Base URL. Set it in Settings.», `AIProviderService.ts:683-685`) and a test, so every
+  chat consumer gets it. `BaseProvider.ts` joins L3's DOVE (14 entries, rule 19 confirmed by this answer).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
