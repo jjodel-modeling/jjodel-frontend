@@ -471,7 +471,8 @@ TraceModel
 ├── sourceModelName: string
 ├── targetModelName: string
 ├── executedAt: Date
-└── links: TraceLink[]
+├── links: TraceLink[]
+└── placements?: TracePlacement[]   # containment placements (§5.3.1), absent when none
 
 TraceLink
 ├── rule: string                    # e.g., "State -> Place"
@@ -489,6 +490,12 @@ TraceLink
 │   ├── invertible: boolean
 │   └── inverseExpression?: string
 └── invertible: boolean             # weakest-link of all bindings
+
+TracePlacement
+├── rule: string                    # the rule whose binding placed the target
+├── target: TraceElementRef
+├── container: TraceElementRef
+└── feature: string                 # the containment feature of the container
 ```
 
 ### 5.2 Trace Resolution
@@ -503,8 +510,9 @@ For reverse lookups:
 
 ### 5.3 Implicit Trace Resolution
 
-> **STATUS: implemented for references (P-2026-11-02-1742, slice A0). Containment placement,
-> environments and called rules are PLANNED: parts A and B of
+> **STATUS: implemented for references (P-2026-11-02-1742, slice A0) and for containment
+> placement in the executor (P-2026-11-02-1956, slice A; the app's write-back of a placed target
+> is the next lane). Environments and called rules are PLANNED: part B of
 > `docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md`, ratified as R-JTG-1..5
 > in `docs/decisions.md`.** Each paragraph below says which of the two it describes.
 
@@ -556,9 +564,36 @@ and the source element whose binding hit them (R-JTG-2):
 | a `{ __ref }` to an element no rule maps | `null` (dropped from a collection that also holds resolved targets, with the partial-array warning) | `... points to an element no rule maps: it resolved to null` |
 | several targets of one rule for one source (multiplicity `[n]`) | the first | `... has <n> targets from rule '<rule>': the first was bound` |
 
-**Containment, today.** A resolved target bound to a containment feature is still a root of
-the target model and travels as `__ref_result`; the D-layer write reparents it. Objects created
-in a body (`-> feature { -> T { ... } }`) are the containment channel that works today.
+**Containment (slice A, P-2026-11-02-1956).** A binding on a containment feature (`composition`
+in the target metamodel) places each rule target it resolves to inside the object that owns the
+feature: the feature holds the **live** target, not a `__ref_result`, a collection element by
+element in order. A value holding no rule target is bound as before, and a fallback of the table
+above keeps its warning: an unmapped `{ __ref }` is dropped, an unmapped embedded object is bound
+as itself. Without a target metamodel no feature is known as a containment and nothing is placed.
+
+- *Roots.* After pass 2 every placed target leaves `roots`. This is recorded, not warned
+  (R-JTG-4): `targetModel.containment` maps each placed target to `{ container, feature }`, and
+  `traceModel.placements` lists `{ rule, target, container, feature }`.
+- *Ownership, decided in the executor.* A second claim on a target by another container, or by
+  another feature of the same one, is an error naming the target and both containers; the
+  second claim is not placed. A containment cycle, self-containment included, is an error naming
+  the elements on it; the walk runs through objects created in a body as well. Both make the
+  run fail (`success: false`) before anything reaches the D-layer.
+- *Assignment.* A second binding of the same feature on the same owner replaces the first and
+  releases its claims. Objects created into that feature by `-> feature { ... }` are kept in
+  source order with the placed targets: created first, then placed, or the reverse.
+- *Identity.* Objects created in a body keep their identity through the bind-time conversion,
+  so one of them can be the container of a placed target.
+- *Order.* Placement happens in pass 2 against targets created in pass 1, so the tree is the
+  same, by identity, whatever the rule order.
+- *References.* A non-containment binding to a placed target is still a `__ref_result` pointer.
+
+**Per model.** The trace maps source elements to target elements of one run. An object of the
+target model (`__createdBy: 'JjTL'`) is never resolved as a source element, so `Add -> Add` from
+one model to another is not endogenous: a target returned by `resolve()` is bound as itself.
+
+**Trace key.** Each trace entry carries an environment, and implicit resolution looks entries up
+under (source, rule, environment). Until B the environment is always the empty one.
 
 #### 5.3.2 The frame of A and B (planned)
 
@@ -573,11 +608,11 @@ in an environment are closures (the expression with the environment of the bindi
 - **Inherited environment.** Implicit resolution looks up the entry under the **caller's**
   environment. Until B ships the environment is always empty, so this is vacuous and A0's
   behaviour is the whole of it.
-- **Containment (A).** A containment binding places the target found through the trace inside
-  the new container and takes it out of `roots`; a collection element by element, in order.
-  Taking a root is recorded, not warned. A second containment claim on one target is an error
-  naming both containers; a containment cycle is an error (R-JTG-4). The placement travels as
-  `__nested` so the nested write-back (§9.2) materializes it.
+- **Containment (A).** Implemented in the executor, §5.3.1 (P-2026-11-02-1956). The placed
+  target is not marked `__nested`: other bindings may point at it, and marking it at claim
+  time would make the pointer depend on rule order. The write-back recognises it as a rule
+  target inside a containment feature, through `targetModel.containment`, and materializes it
+  with the nested path (§9.2): the next lane.
 - **Called and lazy rules (B).** A called rule is invoked from a binding or a `forall` body,
   binds its arguments, and returns the target it creates; it takes no part in pass-1 matching.
   `lazy` creates on first demand, `unique lazy` memoizes on (rule, arguments, environment).
@@ -905,11 +940,11 @@ message, not silence.
 
 | # | Gap | Description | Priority |
 |---|---|---|---|
-| 1 | **Implicit trace resolution** | Done for references, by identity, fallbacks reported (A0, §5.3.1). Left: the (source, rule, environment) key made explicit, with B (§5.3.2) | High |
+| 1 | **Implicit trace resolution** | Done for references, by identity, fallbacks reported (A0, §5.3.1), and for containments (A). The (source, rule, environment) key is in place with the environment always empty; non-empty environments come with B (§5.3.2) | High |
 | 2 | **Alert/Notify execution** | Wire executor body items to UIBridge | High |
 | 3 | **Prompt/Input execution** | Wire AST bridge to UIBridge for interactive expressions | High |
 | 4 | **Multiplicity `[*]`** | Define and implement unbounded creation semantics | Medium |
-| 5 | **Reference mapping** | References: done (§5.3.1). Containments: every rule target is a root; placing a traced target in its container is part A, planned (§5.3.2, R-JTG-4) | High |
+| 5 | **Reference mapping** | References: done (§5.3.1). Containments: done in the executor, placed targets leave `roots`, second claims and cycles are errors (A, §5.3.1, R-JTG-4). Left: the app's write-back of a placed target | High |
 | 6 | **Source alias** | Parse and bind `Person p -> Human` alias in executor | Medium |
 | 7 | **Multi-model** | `from A, B to C, D` with qualified types | Phase 1 |
 | 8 | **Called rules** | `rule name(params) -> Type { ... }` | Phase 2 |
