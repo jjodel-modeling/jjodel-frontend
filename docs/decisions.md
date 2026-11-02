@@ -7110,7 +7110,17 @@ recommended, evidence: measured, verified: none, reversible: trunk.
 
 - **R-TXT-29** (2026-11-02). **Extends R-TXT-28 to feature segments.** A later segment of a path uses the feature's printed
   keyword (`shelf[0].patrons[1]`), and the feature's name when no keyword is printed for it (dropped or inline). The index
-  stays the position in that feature. Without annotations nothing changes.
+  is the position in the order the text prints (for a grouped containment, not the model order: amended 2026-11-02
+  20:47, measured by P-2026-11-02-2029), so a path keeps resolving to the same object after a reprint. Without annotations
+  the two orders coincide and nothing changes.
+
+Row 30: P-2026-11-02-2029 measured that an object no group prints disappears from the text; Alfonso 2026-11-02 20:47 «Si».
+Ratified as recommended, evidence: read (code of the grouped print), verified: none, reversible: trunk.
+
+- **R-TXT-30** (2026-11-02). **Objects a grouped containment does not print.** An object whose grouping attribute is unset
+  or outside every subset is not in the text. The Text tab reports it as a visible issue naming count, class and attribute
+  (`2 Book not shown: genre unset`). Step T6 never applies a text while such objects exist, because their absence would read
+  as a deletion. Printing them in a block of their own stays a later option: it changes the grammar.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
