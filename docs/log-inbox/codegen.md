@@ -987,3 +987,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato
 **Notes**: Deviation: canvas opened inside the undo group (after it: 2 entries, undo left the model). Probe on 3235 also found 14/21 lines failing when the script started before the model was in `project.models`; the opener now waits for it. Gates: tsc 0; vitest 225 files, 6377 tests; build 0; codegen-lazy on green, off red (open ticket). Bench 4/4 killed. Closes the app-bar ticket. Crops in ~/.jjodel-lanes/P-2026-11-02-0235/.
 **Prompt document name**: 2026-11-02 02:35
+
+## 2026-11-02 — merge: textual-t2 into alfonso-frontend-jjtl (P-2026-11-02-0637)
+**Prompt**: Bring `textual-t2` (T2a parser 45c883e92, T2b entry and tab 7bd41e3cf, T2c New model from text edf047bf3) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-t2 on a29347b82); union resolution of this inbox.
+**Files touched**: merge commit aa68ad049 (`frontend/src/codegen/textual/parser.ts`, `modelLines.ts`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `ui/openTextualTab.tsx` and their tests, `frontend/src/components/editor-v2/Toolbar.tsx`, `dataManagerOption.ts`, `frontend/src/pages/components/LeftBar.tsx`, `Navbar.tsx`, the slice prompts, this inbox); `docs/prompts/claude_2026-11-02_0637_prompt_merge_textual-t2.md` Status line; this entry
+**Outcome**: ✅ completed (styleCheck.ts, the JjEL default fix and its test kept from the trunk)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops, unattended; after undo of Create model the canvas tab shows a bare «closed tab» text, open question)
+**Prompt document name**: 2026-11-02 06:37
