@@ -126,3 +126,18 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato (chat, unattended: 3001 HTTP 200 on the merged tree; write-back by the P-2026-11-02-1838 probe on 88dd98234, the second parent; app not driven by hand)
 **Notes**: Tip moved after the merge (a296fefcb, docs only), accepted. Merge-tree: zero conflicts, tree 9bbb91623 = merge commit's; 14 files branch side, none on both, no governance file; 7 probes once each; no union. Gates on 8f14055bf: typecheck 0, typecheck:scripts 0; vitest 12913 passed, 490 files, 9 known red at import (12899 + 14, counted from the diff: branch tree has no node_modules); hooks 967; build 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Lane board untouched.
 **Prompt document name**: 2026-11-02 19:05
+
+## 2026-11-02 — ticket: JjTL nested creation drops name on a class without a declared name attribute
+**Ticket**: In the probe of P-2026-11-02-1838 (`~/.jjodel-lanes/P-2026-11-02-1838/probe/`, scenario S3), the nested creation `-> toys { -> TToy { name := "toy" } }` produced objects named `TToy_0`. The probe declares no `name` attribute on TToy, and `nestedMaterialization.ts:112` copies only attributes the class declares, so the cause is probably that. Inferred, not confirmed. A0 did not touch that file. Confirm the cause and decide whether a binding to an undeclared feature must be reported instead of dropped. To clear before slice A, which places containments through this path.
+**Priority**: medium
+**Found in**: P-2026-11-02-1838
+
+## 2026-11-02 — ticket: JjTL re-run in the same tab executes a stale AST
+**Ticket**: In the probe of P-2026-11-02-1838, re-running a transformation in the same tab of `JjtlDevelopmentEnv` after changing its source executed the AST of the earlier run: the trace showed the old rules, and the run looked normal. A wrong result with no signal. Seen once and worked around with a fresh tab per scenario; not investigated. Reproduce, then fix. Probe: `~/.jjodel-lanes/P-2026-11-02-1838/probe/a0-writeback.ts`.
+**Priority**: high
+**Found in**: P-2026-11-02-1838
+
+## 2026-11-02 — ticket: init_dash page error in the JjTL probe, untraced
+**Ticket**: The probe of P-2026-11-02-1838 recorded one page error, `init_dash`, on port 3187. It was not traced and nothing visibly failed. Find its origin and whether it is new.
+**Priority**: low
+**Found in**: P-2026-11-02-1838
