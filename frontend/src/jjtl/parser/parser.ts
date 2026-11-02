@@ -87,6 +87,7 @@ export class JjtlParser {
 
         const mappings: ClassMappingAST[] = [];
         const helpers: HelperAST[] = [];
+        const rules: ClassMappingAST[] = [];
 
         while (!this.isAtEnd()) {
             this.skipNewlines();
@@ -94,6 +95,10 @@ export class JjtlParser {
 
             if (this.check(TokenType.HELPER)) {
                 helpers.push(this.helper());
+            } else if (this.isCalledRuleStart()) {
+                rules.push(this.calledRule());
+            } else if (this.isLazyRuleStart()) {
+                rules.push(this.lazyRule());
             } else if (this.check(TokenType.IDENTIFIER)) {
                 mappings.push(this.classMapping());
             } else {
@@ -108,11 +113,79 @@ export class JjtlParser {
             targetMetamodel,
             mappings,
             helpers,
+            ...(rules.length > 0 ? { rules } : {}),
             location: this.makeLocation(startToken, this.previous()),
         };
     }
 
-    // classMapping = sourcePattern ("," sourcePattern)* "->" IDENTIFIER multiplicity? condition? mappingBody?
+    // `rule`, `lazy` and `unique` are contextual: the lexer lowercases before its keyword
+    // lookup, so as keywords they would take a class `Rule` or a feature `unique` away
+    // from every saved transformation. They are read by value, at the top level only.
+    private isContextual(offset: number, word: string): boolean {
+        const token = this.tokens[this.current + offset];
+        return !!token && token.type === TokenType.IDENTIFIER && token.value === word;
+    }
+
+    private tokenTypeAt(offset: number): TokenType | undefined {
+        return this.tokens[this.current + offset]?.type;
+    }
+
+    // `rule NAME (`: a source class called `rule` is followed by an alias or `->`, never `(`.
+    private isCalledRuleStart(): boolean {
+        return this.isContextual(0, 'rule')
+            && this.tokenTypeAt(1) === TokenType.IDENTIFIER
+            && this.tokenTypeAt(2) === TokenType.LPAREN;
+    }
+
+    // `lazy S ...` or `unique lazy S ...`. A source class called `lazy` keeps the form
+    // `lazy -> T`; with an alias (`lazy l -> T`) it now reads as a lazy rule on `l`.
+    private isLazyRuleStart(): boolean {
+        if (this.isContextual(0, 'unique')) {
+            return this.isContextual(1, 'lazy') && this.tokenTypeAt(2) === TokenType.IDENTIFIER;
+        }
+        return this.isContextual(0, 'lazy') && this.tokenTypeAt(1) === TokenType.IDENTIFIER;
+    }
+
+    // calledRule = "rule" IDENTIFIER "(" [param ("," param)*] ")" ruleTail
+    // param      = IDENTIFIER [":" IDENTIFIER]
+    private calledRule(): ClassMappingAST {
+        const startToken = this.advance(); // 'rule'
+        const ruleName = this.consume(TokenType.IDENTIFIER, "Expected rule name").value;
+        this.consume(TokenType.LPAREN, "Expected '('");
+        const parameters: ParameterAST[] = [];
+        if (!this.check(TokenType.RPAREN)) {
+            do {
+                const paramToken = this.consume(TokenType.IDENTIFIER, "Expected parameter name");
+                let paramType = '';
+                if (this.match(TokenType.COLON)) {
+                    paramType = this.consume(TokenType.IDENTIFIER, "Expected parameter type").value;
+                }
+                parameters.push({
+                    type: 'Parameter',
+                    name: paramToken.value,
+                    paramType,
+                    location: this.makeLocation(paramToken, this.previous()),
+                });
+            } while (this.match(TokenType.COMMA));
+        }
+        this.consume(TokenType.RPAREN, "Expected ')'");
+        return this.ruleTail(startToken, [], { ruleKind: 'called', ruleName, parameters });
+    }
+
+    // lazyRule = ["unique"] "lazy" IDENTIFIER [IDENTIFIER] ruleTail
+    private lazyRule(): ClassMappingAST {
+        const startToken = this.advance(); // 'unique' or 'lazy'
+        const unique = startToken.value === 'unique';
+        if (unique) this.advance(); // 'lazy'
+        const className = this.consume(TokenType.IDENTIFIER, "Expected source class name").value;
+        let alias: string | undefined;
+        if (this.check(TokenType.IDENTIFIER)) {
+            alias = this.advance().value;
+        }
+        return this.ruleTail(startToken, [{ className, alias }], { ruleKind: 'lazy', ...(unique ? { unique } : {}) });
+    }
+
+    // classMapping = sourcePattern ("," sourcePattern)* ruleTail
     // sourcePattern = IDENTIFIER [IDENTIFIER]
     private classMapping(): ClassMappingAST {
         const startToken = this.peek();
@@ -128,6 +201,31 @@ export class JjtlParser {
             }
             sources.push({ className, alias });
         } while (this.match(TokenType.COMMA));
+
+        return this.ruleTail(startToken, sources, {});
+    }
+
+    // ruleTail = "->" IDENTIFIER multiplicity? condition? mappingBody?
+    //          | "=" expression                     (a delegating rule, slice B)
+    private ruleTail(
+        startToken: Token,
+        sources: SourcePatternAST[],
+        kind: Partial<ClassMappingAST>,
+    ): ClassMappingAST {
+        if (this.match(TokenType.EQUALS)) {
+            const result = this.source !== undefined
+                ? this.parseJjELExpression([TokenType.NEWLINE])
+                : this.expression();
+            return {
+                type: 'ClassMapping',
+                sources,
+                targetClass: '',
+                body: [],
+                ...kind,
+                result,
+                location: this.makeLocation(startToken, this.previous()),
+            };
+        }
 
         this.consume(TokenType.ARROW, "Expected '->'");
 
@@ -161,6 +259,7 @@ export class JjtlParser {
             targetMultiplicity,
             condition,
             body,
+            ...kind,
             location: this.makeLocation(startToken, this.previous()),
         };
     }

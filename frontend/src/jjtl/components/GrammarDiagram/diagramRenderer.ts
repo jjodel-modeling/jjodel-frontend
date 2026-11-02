@@ -291,6 +291,8 @@ function getDiagramForRule(rule: GrammarRule): DiagramNode {
                 ZeroOrMore(
                     Choice(
                         NonTerminal('classMapping'),
+                        NonTerminal('calledRule'),
+                        NonTerminal('lazyRule'),
                         NonTerminal('helper')
                     )
                 )
@@ -299,13 +301,58 @@ function getDiagramForRule(rule: GrammarRule): DiagramNode {
         case 'classMapping':
             return Sequence(
                 NonTerminal('SourceClass'),
-                Terminal('->'),
-                NonTerminal('TargetClass'),
-                Optional(NonTerminal('multiplicity')),
-                Optional(NonTerminal('condition')),
-                Terminal('{'),
-                NonTerminal('mappingBody'),
-                Terminal('}')
+                Optional(NonTerminal('alias')),
+                Choice(
+                    Sequence(
+                        Terminal('->'),
+                        NonTerminal('TargetClass'),
+                        Optional(NonTerminal('multiplicity')),
+                        Optional(NonTerminal('condition')),
+                        Terminal('{'),
+                        NonTerminal('mappingBody'),
+                        Terminal('}')
+                    ),
+                    Sequence(Terminal('='), NonTerminal('expression'))
+                )
+            );
+
+        case 'calledRule':
+            return Sequence(
+                Terminal('rule'),
+                NonTerminal('ID'),
+                Terminal('('),
+                Optional(NonTerminal('params')),
+                Terminal(')'),
+                Choice(
+                    Sequence(
+                        Terminal('->'),
+                        NonTerminal('TargetClass'),
+                        Optional(NonTerminal('condition')),
+                        Terminal('{'),
+                        NonTerminal('mappingBody'),
+                        Terminal('}')
+                    ),
+                    Sequence(Terminal('='), NonTerminal('expression'))
+                )
+            );
+
+        case 'lazyRule':
+            return Sequence(
+                Optional(Terminal('unique')),
+                Terminal('lazy'),
+                NonTerminal('SourceClass'),
+                Optional(NonTerminal('alias')),
+                Choice(
+                    Sequence(
+                        Terminal('->'),
+                        NonTerminal('TargetClass'),
+                        Optional(NonTerminal('condition')),
+                        Terminal('{'),
+                        NonTerminal('mappingBody'),
+                        Terminal('}')
+                    ),
+                    Sequence(Terminal('='), NonTerminal('expression'))
+                )
             );
 
         case 'multiplicity':

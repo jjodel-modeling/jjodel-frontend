@@ -6,6 +6,8 @@
 export type GrammarRule =
     | 'transformation'
     | 'classMapping'
+    | 'calledRule'
+    | 'lazyRule'
     | 'multiplicity'
     | 'condition'
     | 'mappingBody'
@@ -37,7 +39,7 @@ export const GRAMMAR_RULES: GrammarRuleInfo[] = [
         id: 'transformation',
         name: 'Transformation',
         description: 'Root element that defines a model-to-model transformation',
-        ebnf: 'transformation = "transformation" name "from" sourceMM "to" targetMM rule+',
+        ebnf: 'transformation = "transformation" name "from" sourceMM "to" targetMM (classMapping | calledRule | lazyRule | helper)*',
         example: `transformation sm_to_pn
 from statemachines
 to   petrinets
@@ -48,10 +50,31 @@ State -> Place { ... }`,
         id: 'classMapping',
         name: 'Class Mapping',
         description: 'Maps a source class to a target class',
-        ebnf: 'classMapping = SourceClass "->" TargetClass multiplicity? condition? "{" mappingBody "}"',
+        ebnf: 'classMapping = SourceClass alias? ("->" TargetClass multiplicity? condition? "{" mappingBody "}" | "=" expression)',
         example: `State -> Place {
     tokens := if isInitial then 1 else 0
 }`,
+    },
+    {
+        id: 'calledRule',
+        name: 'Called Rule',
+        description: 'A rule invoked by name from a binding; never matched. A parameter of type Env receives the environment',
+        ebnf: 'calledRule = "rule" ID "(" (ID (":" TYPE)?)* ")" ("->" TargetClass condition? "{" mappingBody "}" | "=" expression)',
+        example: `rule mkRef(v) -> Ref {
+    name := v.name
+}
+rule under(e, env: Env) = e`,
+    },
+    {
+        id: 'lazyRule',
+        name: 'Lazy Rule',
+        description: 'Creates a target only when a resolution or a call reaches the source element; unique creates it once per environment',
+        ebnf: 'lazyRule = "unique"? "lazy" SourceClass alias? ("->" TargetClass condition? "{" mappingBody "}" | "=" expression)',
+        example: `lazy Add -> Add {
+    left := left
+    right := right
+}
+unique lazy Const -> Const { value := value }`,
     },
     {
         id: 'multiplicity',
