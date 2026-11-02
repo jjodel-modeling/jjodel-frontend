@@ -12,8 +12,6 @@
 import { describe, it, expect } from 'vitest';
 import { planEffects } from '../../../jjscript/executor/effectsPlanner';
 import type { EffectsPlan, PlanWorld } from '../../../jjscript/executor/effectsPlanner';
-import { deriveBaseGrammar } from '../baseGrammar';
-import { deriveConcreteGrammar } from '../concreteGrammar';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { classAncestors, classFeatures } from '../metamodel';
 import type { TextMetamodel, TextObject } from '../metamodel';
@@ -22,92 +20,9 @@ import { isApplicableParse, parseText } from '../parser';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE } from '../style';
 import type { NotationStyle } from '../style';
+import { BOX, CASES, DIAMOND, GARAGE, grammarOf, LOWER, NON_DIAMOND } from './corpus';
 import { FIXTURE, metamodelOf, objectsOf } from './spec';
 import type { Spec } from './spec';
-
-// The corpus of textual.test.ts, copied as parser.test.ts copies it: neither file exports it.
-const DIAMOND: Spec = {
-    classes: [
-        { name: 'A', isAbstract: true, attributes: [{ name: 'a', type: 'EInt' }], references: [{ name: 'ra', type: 'C' }] },
-        { name: 'B1', isAbstract: true, supers: ['A'], attributes: [{ name: 'b1', type: 'EInt' }] },
-        { name: 'B2', isAbstract: true, supers: ['A'], attributes: [{ name: 'b2', type: 'EInt' }] },
-        { name: 'C', supers: ['B1', 'B2'], attributes: [{ name: 'c', type: 'EInt' }], references: [{ name: 'rc', type: 'C' }] },
-    ],
-    enums: {},
-    objects: [{ id: 'x', cls: 'C', slots: { a: 1, b1: 2, b2: 3, c: 4, ra: 'x', rc: 'x' } }],
-};
-
-const NON_DIAMOND: Spec = {
-    classes: [
-        { name: 'Q1', isAbstract: true, attributes: [{ name: 'q1', type: 'EInt' }] },
-        { name: 'Q2', isAbstract: true, attributes: [{ name: 'q2', type: 'EInt' }] },
-        { name: 'T', isAbstract: true, attributes: [{ name: 't', type: 'EInt' }] },
-        { name: 'S', isAbstract: true, supers: ['T'], attributes: [{ name: 's', type: 'EInt' }] },
-        { name: 'P', isAbstract: true, supers: ['Q1', 'Q2'], attributes: [{ name: 'p', type: 'EInt' }] },
-        { name: 'R', isAbstract: true, supers: ['S'], attributes: [{ name: 'r', type: 'EInt' }] },
-        { name: 'C', supers: ['P', 'R'], attributes: [{ name: 'c', type: 'EInt' }] },
-    ],
-    enums: {},
-    objects: [{ id: 'x', cls: 'C', slots: { q1: 1, q2: 2, t: 3, s: 4, p: 5, r: 6, c: 7 } }],
-};
-
-const GARAGE: Spec = {
-    classes: [
-        { name: 'Item', isAbstract: true, attributes: [{ name: 'name', type: 'EString' }] },
-        {
-            name: 'Car', supers: ['Item'],
-            attributes: [{ name: 'speed', type: 'EDouble' }, { name: 'colors', type: 'Color', many: true }, { name: 'marks', type: 'EInt', many: true }],
-            references: [
-                { name: 'engine', type: 'Engine', containment: true }, { name: 'wheels', type: 'Wheel', containment: true, many: true },
-                { name: 'spare', type: 'Item', containment: true, many: true },
-                { name: 'best', type: 'Item' }, { name: 'tow', type: 'Car' }, { name: 'eng', type: 'Engine' },
-            ],
-        },
-        { name: 'Wheel', supers: ['Item'], attributes: [{ name: 'size', type: 'EInt' }], references: [{ name: 'bolts', type: 'Bolt', containment: true, many: true }, { name: 'pair', type: 'Bolt' }] },
-        { name: 'Engine', attributes: [{ name: 'power', type: 'EInt' }, { name: 'note', type: 'EString' }] },
-        { name: 'Bolt', attributes: [{ name: 'name', type: 'EString' }] },
-        { name: 'Gear', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'wheel', type: 'Wheel' }] },
-    ],
-    enums: { Color: ['Red', 'GREEN', 'blue'] },
-    objects: [
-        { id: 'c1', cls: 'Car', slots: { name: 'alpha', speed: 1.5, colors: ['Red', 'blue'], marks: [3, 1], engine: 'e1', wheels: ['w1', 'w2'], spare: ['w3', 'c3'], best: 'w1', tow: 'c2', eng: 'e1' } },
-        { id: 'c2', cls: 'Car', slots: { name: 'beta', wheels: ['w4'], best: 'w2', eng: 'e0', tow: 'c3' } },
-        { id: 'g1', cls: 'Gear', slots: { name: 'w', wheel: 'w4' } },
-        { id: 'e0', cls: 'Engine', slots: { power: 0 } },
-        { id: 'e1', cls: 'Engine', slots: { power: 90, note: 'line1\nline2 "q"' } },
-        { id: 'w1', cls: 'Wheel', slots: { name: 'w', size: 16, bolts: ['b1', 'b2'] } },
-        { id: 'w2', cls: 'Wheel', slots: { name: 'w', size: 17 } },
-        { id: 'w3', cls: 'Wheel', slots: { name: 'it\'s "odd"', size: 1 } },
-        { id: 'c3', cls: 'Car', slots: { name: 'inner', tow: 'c1' } },
-        { id: 'b1', cls: 'Bolt', slots: { name: 'b' } },
-        { id: 'b2', cls: 'Bolt', slots: { name: 'b' } },
-        { id: 'w4', cls: 'Wheel', slots: { name: 'v', bolts: ['b3'], pair: 'b1' } },
-        { id: 'b3', cls: 'Bolt', slots: { name: 'v' } },
-    ],
-};
-
-const BOX: Spec = {
-    classes: [
-        {
-            name: 'Box',
-            references: [{ name: 'inner', type: 'Box', containment: true }, { name: 'label', type: 'Tag', containment: true }, { name: 'self', type: 'Box' }, { name: 'tag', type: 'Tag' }],
-        },
-        { name: 'Tag', attributes: [{ name: 'name', type: 'EString' }] },
-    ],
-    enums: {},
-    objects: [
-        { id: 'r', cls: 'Box', slots: { inner: 'i', self: 'r', tag: 't' } },
-        { id: 'i', cls: 'Box', slots: { self: 'i', inner: 't2', label: 't' } },
-        { id: 't', cls: 'Tag', slots: {} },
-        { id: 't2', cls: 'Box', slots: {} },
-    ],
-};
-
-const CASES: Spec = {
-    classes: [{ name: 'Node', attributes: [{ name: 'name', type: 'EString' }] }, { name: 'NODE', attributes: [{ name: 'name', type: 'EString' }] }],
-    enums: {},
-    objects: [{ id: 'a', cls: 'Node', slots: { name: 'a' } }, { id: 'b', cls: 'NODE', slots: { name: 'b' } }],
-};
 
 // Names JjScript cannot take as a handle: a command word, a literal word in another case, a class name, a name that
 // is not an identifier; and a value of every kind a line writes.
@@ -125,9 +40,6 @@ const AWKWARD: Spec = {
     ],
 };
 
-const LOWER: NotationStyle = { ...CLIKE_STYLE, id: 'c-like-lower', classCase: 'lower', literalCase: 'lower' };
-
-const grammarOf = (spec: Spec, style: NotationStyle = CLIKE_STYLE): ConcreteGrammar => deriveConcreteGrammar(deriveBaseGrammar(metamodelOf(spec)), style);
 
 /** The spec with every many-valued attribute cut to its first value: what JjScript can write today. */
 function oneValued(spec: Spec): Spec {

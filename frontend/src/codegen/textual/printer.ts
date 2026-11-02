@@ -44,26 +44,30 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         return r;
     };
 
-    // The containment tree: each object's container and its path segment (`parts[1]`, or `f` when single-valued).
+    // The containment tree: each object's container and its path segment, `f[i]` even for a single containment.
     const parent = new Map<string, { readonly owner: TextObject; readonly segment: string }>();
     for (const o of objects) {
         for (const f of ruleOf(o).features) {
             if (f.kind !== 'containment') continue;
-            const v = o.slots[f.name];
-            asArray(v).forEach((id, i) => {
-                if (typeof id === 'string' && byId.has(id)) parent.set(id, { owner: o, segment: Array.isArray(v) ? `${f.name}[${i}]` : f.name });
+            asArray(o.slots[f.name]).forEach((id, i) => {
+                if (typeof id === 'string' && byId.has(id)) parent.set(id, { owner: o, segment: `${f.name}[${i}]` });
             });
         }
     }
     const roots = objects.filter(o => !parent.has(o.id));
-    const rootIndex = new Map(roots.map((r, i) => [r.id, i]));
+    const keyword = (o: TextObject): string => applyCase(o.cls, g.classCase);
+    const rootIndex = new Map<string, number>();
+    const rootsOf = new Map<string, number>();
+    for (const r of roots) {
+        rootIndex.set(r.id, rootsOf.get(r.cls) ?? 0);
+        rootsOf.set(r.cls, (rootIndex.get(r.id) ?? 0) + 1);
+    }
 
-    // R-TXT-11: a path from the root, `[k]` first when there are several roots; the only root itself is `[0]`.
+    // R-TXT-25 (5, 6): a root is `Class[k]`, k its position among the top-level objects of its class; a contained
+    // object adds `.f[i]`. Every segment carries an index, so a path is never a bare identifier, never a name.
     const path = (t: TextObject): string => {
         const up = parent.get(t.id);
-        if (!up) return `[${rootIndex.get(t.id)}]`;
-        const prefix = !parent.has(up.owner.id) && roots.length === 1 ? '' : `${path(up.owner)}.`;
-        return prefix + up.segment;
+        return up ? `${path(up.owner)}.${up.segment}` : `${keyword(t)}[${rootIndex.get(t.id)}]`;
     };
 
     const quote = (s: string): string => {

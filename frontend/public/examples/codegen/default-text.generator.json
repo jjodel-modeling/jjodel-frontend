@@ -120,7 +120,7 @@
         "t"
       ],
       "mode": "expression",
-      "body": "if t.parent == null then \"[\" + instances.filter(x => x.parent == null).map(x => x.id).indexOf(t.id) + \"]\" else (if t.parent.parent == null and instances.filter(x => x.parent == null).size == 1 then \"\" else path(t.parent) + \".\") + segment(t)"
+      "body": "if t.parent == null then t.instanceOf.name + \"[\" + instances.filter(x => x.parent == null and x.instanceOf.name == t.instanceOf.name).map(x => x.id).indexOf(t.id) + \"]\" else path(t.parent) + \".\" + segment(t)"
     },
     {
       "name": "segment",
@@ -128,7 +128,7 @@
         "t"
       ],
       "mode": "expression",
-      "body": "[t.parent].map(p => (p.instanceOf.allSuperclasses + [p.instanceOf]).flatMap(k => k.references).filter(r => r.containment and (if p[r.name] is Array then p[r.name].map(x => x.id).contains(t.id) else p[r.name]?.id == t.id)).map(r => if p[r.name] is Array then r.name + \"[\" + p[r.name].map(x => x.id).indexOf(t.id) + \"]\" else r.name).first).first"
+      "body": "[t.parent].map(p => (p.instanceOf.allSuperclasses + [p.instanceOf]).flatMap(k => k.references).filter(r => r.containment and (if p[r.name] is Array then p[r.name].map(x => x.id).contains(t.id) else p[r.name]?.id == t.id)).map(r => r.name + \"[\" + (if p[r.name] is Array then p[r.name].map(x => x.id).indexOf(t.id) else 0) + \"]\").first).first"
     },
     {
       "name": "nm",
