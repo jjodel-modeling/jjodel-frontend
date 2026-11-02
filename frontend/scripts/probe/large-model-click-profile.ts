@@ -69,6 +69,12 @@
  *                   forces a layout when it is the first of its burst, or when the element read
  *                   before it is no longer at `max-content` (restored in between). Also notes the size of every
  *                   canvas node after the open, for a before/after comparison.
+ *     CLICK_FIT "1": after the open settles and before a node is picked, sets the viewport over the
+ *                   bounding box of the node positions (P-2026-11-02-0233). Positions only, sizes are not
+ *                   read: they differ between builds that measure only visible nodes, the positions do not.
+ *                   When minZoom clamps the fit, the viewport centres on the node nearest the box centre.
+ *                   The React Flow store is reached through the fiber of the pane's `.react-flow`; the
+ *                   viewport asked and the one obtained are noted ("fit") and kept in the json.
  */
 import { chromium, type Page, type CDPSession } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -611,6 +617,58 @@ const CLICKABLE = `(() => {
   }
   return out;
 })()`;
+// CLICK_FIT: viewport over the bounding box of the node positions, the same on every build.
+if (process.env.CLICK_FIT === '1') {
+    const fit: any = await page.evaluate(`(async () => {
+      const pane = document.querySelector(${JSON.stringify(paneSel)}) || document;
+      const rf = pane.querySelector('.react-flow');
+      if (!rf) return { error: 'no .react-flow in the pane' };
+      const fk = Object.keys(rf).find(k => k.startsWith('__reactFiber$'));
+      let store = null;
+      for (let f = fk ? rf[fk] : null; f && !store; f = f.return) {
+        const v = f.memoizedProps && f.memoizedProps.value;
+        if (v && typeof v.getState === 'function' && v.getState().nodeLookup && v.getState().panZoom) store = v;
+      }
+      if (!store) return { error: 'no React Flow store above .react-flow' };
+      const s = store.getState();
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, n = 0;
+      for (const node of s.nodeLookup.values()) {
+        if (node.hidden) continue;
+        const p = node.internals.positionAbsolute;
+        x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); n++;
+      }
+      if (!n) return { error: 'no node in the store' };
+      // A fixed allowance for the last node's extent stands in for the sizes.
+      x1 += 200; y1 += 100;
+      const W = s.width, H = s.height;
+      const want = 0.9 * Math.min(W / (x1 - x0), H / (y1 - y0));
+      const zoom = Math.max(s.minZoom, Math.min(1, want));
+      // Clamped by minZoom the box overflows the pane and its centre can be empty (the open
+      // viewport of ticket #419 is that centre): centre on the node nearest to it instead.
+      let cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, near = null;
+      if (want < s.minZoom) {
+        let best = Infinity;
+        for (const node of s.nodeLookup.values()) {
+          if (node.hidden) continue;
+          const p = node.internals.positionAbsolute, d = (p.x - cx) ** 2 + (p.y - cy) ** 2;
+          if (d < best || (d === best && node.id < near)) { best = d; near = node.id; }
+        }
+        const p = s.nodeLookup.get(near).internals.positionAbsolute;
+        cx = p.x + 100; cy = p.y + 50;
+      }
+      const asked = { x: Math.round(W / 2 - cx * zoom), y: Math.round(H / 2 - cy * zoom), zoom: +zoom.toFixed(4) };
+      await s.panZoom.setViewport(asked, { duration: 0 });
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const [tx, ty, tz] = store.getState().transform;
+      return { nodes: n, bbox: [x0, y0, x1, y1].map(Math.round), pane: [W, H], minZoom: s.minZoom, near, asked,
+               got: { x: Math.round(tx), y: Math.round(ty), zoom: +tz.toFixed(4) } };
+    })()`);
+    note('fit', fit);
+    result.fit = fit;
+    check('fit viewport applied', !fit.error, JSON.stringify(fit));
+    await page.waitForTimeout(1500);
+    await page.evaluate(settle(SETTLE_MS, 240000));
+}
 let nodeHits: Array<[string, number, number]> = await page.evaluate(CLICKABLE) as any;
 for (let z = 0; nodeHits.length < NODES && z < 6; z++) {
     // Zoom out with the wheel on the pane centre (React Flow zoomOnScroll).
