@@ -1342,15 +1342,18 @@ export class Parser {
     // ============================================
 
     private parseEvalCommand(): EvalArgs {
-        // Everything after "eval" is the JjEL expression
-        // Reconstruct from remaining tokens
+        // Everything after "eval" is the JjEL expression, as the source has it: joining token values
+        // turned `=>` into `= >`, dropped the quotes of a string and split `$x` (P-2026-11-03-0000).
+        // Bounded by token ends, as in `collectCommandExprRaw`.
         // Inside a block, stop before the bare 'end' token that closes it.
-        const parts: string[] = [];
+        const end = (token: Token) => token.position + token.value.length;
+        const startPos = end(this.tokens[this.current - 1]);
+        let endPos = startPos;
         while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF') &&
                !(this.blockDepth > 0 && this.checkKeyword('end'))) {
-            parts.push(this.advance().value);
+            endPos = end(this.advance());
         }
-        const expression = parts.join(' ').trim();
+        const expression = this.originalInput.substring(startPos, endPos).trim();
         if (!expression) {
             throw new Error('Expected JjEL expression after eval');
         }

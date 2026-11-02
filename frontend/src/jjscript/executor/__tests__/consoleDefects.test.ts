@@ -174,3 +174,38 @@ describe('defect 1: `create package` hands DPackage.new the kind of its father',
         expect(h.created).toEqual([{ kind: 'package', name: 'P2', father: 'p', fatherType: 'DPackage' }]);
     });
 });
+
+// ── defect 3 ────────────────────────────────────────────────────────────────────────────────────────────────
+describe('defect 3: `eval` hands JjEL the source text', () => {
+    it('the expression is the raw text after `eval`', () => {
+        expect(ast<EvalArgs>('eval classes.map(c => c.name)', 'eval').expression).toBe('classes.map(c => c.name)');
+        expect(ast<EvalArgs>('eval forall c in classes : c.name + " " + c.id', 'eval').expression)
+            .toBe('forall c in classes : c.name + " " + c.id');
+        expect(ast<EvalArgs>('eval "a  b".size', 'eval').expression).toBe('"a  b".size');
+    });
+
+    it('a lambda evaluates', async () => {
+        m2({ classes: ['A', 'B'] });
+        const res = await evalOf('eval classes.map(c => c.name)');
+        expect(res.success, res.message).toBe(true);
+        expect(resultOf(res)).toEqual(['A', 'B']);
+    });
+
+    it('a projection with a string literal evaluates', async () => {
+        m2({ classes: ['A'] });
+        const res = await evalOf('eval forall c in classes : c.name + " " + c.id');
+        expect(res.success, res.message).toBe(true);
+        expect(resultOf(res)).toEqual(['A c0']);
+    });
+
+    it('inside a block the expression still stops before `end`', () => {
+        const r = parse('forall c in classes do\n  eval c.name\nend');
+        expect(r.success, r.errors?.map(e => e.message).join(', ')).toBe(true);
+    });
+
+    it('stops at the end of the line', () => {
+        const r = parse('eval 1 + 2\n');
+        expect(r.success).toBe(true);
+        expect((r.ast!.args as EvalArgs).expression).toBe('1 + 2');
+    });
+});
