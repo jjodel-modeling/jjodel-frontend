@@ -95,3 +95,5 @@ next word as its name (recommended: the annotation requires a mandatory name, no
 Next: T4a-1 continuation, T4a-2, T4b, then T6 (apply edits on pause, R-TXT-26). Other open points: a quoted string on
 an enum attribute is not checked against the literals; redo after the undo of a model creation does not reopen its tab;
 a model's Text tab stays hidden when its model disappears.
+
+Later on 2026-11-02: R-TXT-27 ratified (09:52); T4a-1 landed, syntax annotations as data applied in grammar, printer and parser, LL(1) check of annotated grammars, the 16 Briefs reproduced (merge c41033a9a). The prototype metamodels need `Instruction.mnemonic [1..1]` (CoreSpec) and `Requester.name [1..1]` (ArbiterSpec), outside Jjodel. Next: T4a-2 (storage in `_state`, language-name label), T4b (form), T6 (apply on pause, R-TXT-26).

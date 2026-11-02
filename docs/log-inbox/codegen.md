@@ -1155,3 +1155,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: Corregge 0846 for one point only: its handoff put instructions in model order within a group; the prototype's brief-text.md:66 and 8 briefs want the subset's literal order, ties in model order. Acceptance on the 16 micron briefs, scratch deleted: 16/16 print equal, parse clean, reprint equal, one nearley parse. Bench: 8/8 mutations killed (commit message). Gates: tsc 0, vitest src/codegen 2504/2504, build 0, check:docs 0, lazy on PASS. Fixtures: Requester.name, Instruction.mnemonic [1..1].
 **Prompt document name**: 2026-11-02 10:16
+
+## 2026-11-02 — merge: textual-t4 into alfonso-frontend-jjtl (P-2026-11-02-1027)
+**Prompt**: Bring `textual-t4` at `3cf861948` (feat 5467088b7, T4a-1 designed by 0846, implemented by 0955 and 1016) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-t4 on 7dc62b88f); union resolution of this inbox.
+**Files touched**: merge commit c41033a9a (`frontend/src/codegen/textual/annotations.ts`, `concreteGrammar.ts`, `parser.ts`, `printer.ts`, `style.ts`, `styleCheck.ts`, `__tests__/annotations.test.ts`, the 0846/0955/1016 prompts, this inbox); `docs/prompts/claude_2026-11-02_1027_prompt_merge_textual-t4.md` Status line; this entry
+**Outcome**: ✅ completed (R-TXT-27 and the 0845 guards kept from the trunk)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 10:27
