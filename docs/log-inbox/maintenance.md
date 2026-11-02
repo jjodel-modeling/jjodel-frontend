@@ -662,3 +662,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Codegen: at 40 CPU hogs, 8 tests stopped with `Generation stopped after 2000 ms: template 'block' was still running` (R-GEN-28), so time; fix `{ timeMs: 60_000 }` via `limits`. CLI: at 500 hogs `spawnSync` gave ETIMEDOUT, SIGTERM, status null; timeout now 90 s. Codegen green 3 runs at 40 hogs; CLI green in 1 run at 500 hogs, the other 2 cut by the chat (shared Mac). Detail in the report.
 **Prompt document name**: 2026-11-02 22:50
+
+## 2026-11-02 — merge: codegen-tests-budget into alfonso-frontend-jjtl (P-2026-11-02-2330)
+**Prompt**: `claude_2026-11-02_2330_prompt_merge_codegen-tests-budget.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-tests-budget` at `e13326d89` into `alfonso-frontend-jjtl`, merge base `8a2490c20`, 3 commits on the branch side.
+**Files touched**: merge `7536db524`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_2250_prompt_load_sensitive_tests.md`, `frontend/scripts/gates/__tests__/traceMonitor.test.ts`, `frontend/src/codegen/engine/__tests__/defaultText.test.ts`, `frontend/src/codegen/textual/__tests__/spec.ts`, `frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7536db524` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13060 tests in 496 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: tests only, no UI change: visual check not applicable; merge gates green (13060 tests, 0 failed, 9 red at import, build exit 0)
+**Notes**: Rollback tag `pre-codegen-tests-budget` on `52e49d05c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2330/result.json`.
+**Prompt document name**: 2026-11-02 23:30
