@@ -44,3 +44,16 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: non applicabile
 **Notes**: Item 1 hard-stopped: npm install replaced the node_modules symlink with a real dir (now /tmp/nm196-l1-real-install, left to the chat). On Juri's GO: --package-lock-only here, shared node_modules filled --no-save from the main tree. Lock: 42 new, 2 changed (root, ws 8.22.1). Gap: vitest runs in node, so @google/genai loads its node export; browser wire is the L3 smoke. Ten files, rule 19 confirmed. Decisions (404 SERVER) and bench: d011234cf.
 **Prompt document name**: 2026-11-02 13:20
+
+## 2026-11-02 — feat: #196 L1 lane 2/2, persistent half of src/services/ai; L1 complete (P-2026-11-02-1321)
+**Prompt**: #196 L1, lane 2 of chain-P-2026-11-02-1320: measure the R-AI-6 key precedence on today's code, then `ProviderConfigStore`, `FeaturePreferenceStore` (four migrations, same sentinels), `catalogCache` (24 h, key hash, direct fetch), `registry`, `index`, their tests, the app-unchanged and SDK-laziness gates and a four-mutation bench.
+**Files touched**: `frontend/src/services/ai/` `config/ProviderConfigStore.ts`, `config/FeaturePreferenceStore.ts`, `catalog/catalogCache.ts`, `registry.ts`, `index.ts`, `__tests__/stores.test.ts`, `__tests__/migrations.test.ts`, `__tests__/catalogCache.test.ts`, `__tests__/registry.test.ts`, `__tests__/legacyKeyPrecedence.test.ts` (`6609dffa1`); this inbox; the prompt's `Status:` line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: L1 complete (lanes 1/2 and 2/2). R-AI-6: jjodie_provider_<name> is the only copy read; the blob is never adopted at load (object providers fail Array.isArray), so today dockWidth is lost on the next save: input for R-AI-9 at L2. Build tip vs a8f58436b: 19 of 3515 files differ, from the git defines only (control build identical). SDKs lazy, entry 8.25 kB gzip. Ten files, rule 19 confirmed. Lane 1 files untouched. Decisions, numbers, bench: 6609dffa1.
+**Prompt document name**: 2026-11-02 13:21
