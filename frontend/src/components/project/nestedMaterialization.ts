@@ -15,6 +15,12 @@
  *   So every nested object is created with `{}` and gets `name` by id with its other attributes
  *   (R-S1-6, docs/decisions.md).
  *
+ * Rule targets placed in a containment (slice A, SPEC §5.3.1) take the same path: the executor
+ * leaves them unmarked in the container's feature and lists them in `targetModel.containment`,
+ * and the caller's `isPlacedIn` tells the walk which values of a feature they are. A placed
+ * target is created where it is placed and nowhere else, in the feature's order, and the walk
+ * returns its created id so that pointers to it can be written once everything exists.
+ *
  * Pure: no store, no joiner import (the joiner barrel does not load under vitest). The caller passes
  * the slot reader, the class table and the clock.
  */
@@ -37,6 +43,11 @@ export interface NestedDeps {
     sleep(ms: number): Promise<void>;
     now(): number;
     warn(message: string): void;
+    /**
+     * `child` is a rule target placed in `featureName` of `parent` (slice A). Absent: only
+     * `__nested` objects are created, as before.
+     */
+    isPlacedIn?(child: any, parent: any, featureName: string): boolean;
 }
 
 /** A feature of an object already in the store, and the executor objects to create inside it. */
@@ -63,11 +74,23 @@ export interface NestedAttributeSet {
     attributes: Record<string, any>;
 }
 
+/** Pointer values of an object the walk created, written once every level exists. */
+export interface NestedReferenceSet {
+    objectId: string;
+    className: string;
+    path: string;
+    references: Record<string, { targets: any[] }>;
+}
+
 export interface NestedResult {
     created: number;
     levels: number;
     attributeSets: NestedAttributeSet[];
     unplaced: NestedUnplaced[];
+    /** Executor object -> id `addObject` returned for it. */
+    createdIds?: Map<any, string>;
+    /** `__ref_result` values of created objects, by created id (no longer dropped). */
+    referenceSets?: NestedReferenceSet[];
 }
 
 /** Detail of `SystemEvents.JJTL_NESTED_MATERIALIZED`, read by the JjTL output panel. */
@@ -82,24 +105,32 @@ export const SLOT_WAIT_CAP_MS = 3000;
 
 const isNested = (v: any): boolean => !!(v && typeof v === 'object' && v.__nested);
 
-/** The features of an executor object that hold nested creations, with those creations. */
-export function nestedFeaturesOf(obj: any): Array<[string, any[]]> {
+/** Tells whether a value of `parent.featureName` is a rule target placed there (slice A). */
+export type IsPlacedIn = (child: any, parent: any, featureName: string) => boolean;
+
+/**
+ * The features of an executor object that hold nested creations or placed rule targets,
+ * with those objects in the feature's order.
+ */
+export function nestedFeaturesOf(obj: any, isPlacedIn?: IsPlacedIn): Array<[string, any[]]> {
     const out: Array<[string, any[]]> = [];
     if (!obj || typeof obj !== 'object') return out;
     for (const [key, val] of Object.entries(obj)) {
         if (key.startsWith('__')) continue;
-        const children = (Array.isArray(val) ? val : [val]).filter(isNested);
+        const children = (Array.isArray(val) ? val : [val]).filter(
+            v => isNested(v) || (!!isPlacedIn && !!v && typeof v === 'object' && isPlacedIn(v, obj, key))
+        );
         if (children.length > 0) out.push([key, children]);
     }
     return out;
 }
 
 /** The objects, nested ones included, that a list of executor objects stands for. */
-export function countSubtree(children: any[]): number {
+export function countSubtree(children: any[], isPlacedIn?: IsPlacedIn): number {
     let n = 0;
     for (const child of children) {
         n++;
-        for (const [, kids] of nestedFeaturesOf(child)) n += countSubtree(kids);
+        for (const [, kids] of nestedFeaturesOf(child, isPlacedIn)) n += countSubtree(kids, isPlacedIn);
     }
     return n;
 }
@@ -132,7 +163,11 @@ export async function materializeNested(
     pollMs: number = SLOT_POLL_MS,
     capMs: number = SLOT_WAIT_CAP_MS,
 ): Promise<NestedResult> {
-    const result: NestedResult = { created: 0, levels: 0, attributeSets: [], unplaced: [] };
+    const createdIds = new Map<any, string>();
+    const referenceSets: NestedReferenceSet[] = [];
+    const result: NestedResult = { created: 0, levels: 0, attributeSets: [], unplaced: [], createdIds, referenceSets };
+    const placedIn = deps.isPlacedIn;
+    const subtree = (children: any[]) => countSubtree(children, placedIn);
     const lose = (u: NestedUnplaced) => {
         result.unplaced.push(u);
         deps.warn(`Nested: ${u.path}${u.className ? ' (' + u.className + ')' : ''} not placed, `
@@ -158,7 +193,7 @@ export async function materializeNested(
         }
         for (const job of waiting) {
             lose({
-                path: `${job.path}.${job.featureName}`, count: countSubtree(job.children),
+                path: `${job.path}.${job.featureName}`, count: subtree(job.children),
                 reason: `feature "${job.featureName}" not available after ${capMs} ms`,
             });
         }
@@ -173,7 +208,7 @@ export async function materializeNested(
                 const className: string | undefined = child.__type || child.className;
                 const info = className ? deps.classInfo(className) : undefined;
                 if (!className || !info) {
-                    lose({ path, className, count: countSubtree([child]), reason: `class "${className}" not found in the target metamodel` });
+                    lose({ path, className, count: subtree([child]), reason: `class "${className}" not found in the target metamodel` });
                     return;
                 }
                 let created: any;
@@ -184,10 +219,11 @@ export async function materializeNested(
                     failure = 'addObject failed: ' + (e && e.message || e);
                 }
                 if (!created || !created.id) {
-                    lose({ path, className, count: countSubtree([child]), reason: failure });
+                    lose({ path, className, count: subtree([child]), reason: failure });
                     return;
                 }
                 result.created++;
+                createdIds.set(child, created.id);
 
                 const attributes = nestedAttributesOf(child, info);
                 if (Object.keys(attributes).length > 0) {
@@ -195,13 +231,31 @@ export async function materializeNested(
                 }
 
                 const nestedKeys = new Set<string>();
-                for (const [key, kids] of nestedFeaturesOf(child)) {
+                for (const [key, kids] of nestedFeaturesOf(child, placedIn)) {
                     nestedKeys.add(key);
                     if (!info.referenceNames.has(key)) {
-                        lose({ path: `${path}.${key}`, count: countSubtree(kids), reason: `'${key}' is not a reference of '${className}'` });
+                        lose({ path: `${path}.${key}`, count: subtree(kids), reason: `'${key}' is not a reference of '${className}'` });
                         continue;
                     }
                     next.push({ parentId: created.id, path, featureName: key, children: kids });
+                }
+
+                // Pointers to rule targets: queued by the created id and written by the caller
+                // once every level exists, so a target placed further on is there to point at.
+                const references: Record<string, { targets: any[] }> = {};
+                for (const [key, val] of Object.entries(child)) {
+                    if (key.startsWith('__') || nestedKeys.has(key)) continue;
+                    if (!val || typeof val !== 'object' || !(val as any).__ref_result) continue;
+                    nestedKeys.add(key);
+                    if (!info.referenceNames.has(key)) {
+                        deps.warn(`Nested: ${path} (${className}): '${key}' is not a reference of '${className}'. `
+                            + `Pointer dropped.`);
+                        continue;
+                    }
+                    references[key] = val as { targets: any[] };
+                }
+                if (Object.keys(references).length > 0) {
+                    referenceSets.push({ objectId: created.id, className, path, references });
                 }
 
                 // Anything left over is a value the model will not receive (SPEC.md §9.2).
@@ -211,7 +265,7 @@ export async function materializeNested(
                     if (val === undefined || val === null) continue;
                     if (info.attributeNames.has(key) || nestedKeys.has(key)) continue;
                     deps.warn(`Nested: ${path} (${className}): '${key}' is neither an attribute nor a nested `
-                        + `creation of '${className}'. Value dropped.`);
+                        + `creation nor a resolved reference of '${className}'. Value dropped.`);
                 }
             });
         }
