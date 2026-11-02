@@ -178,9 +178,10 @@ valueKey         = literal | IDENTIFIER ;
 
 objectCreation   = "{" ( "->" targetType mappingBody | forAllMapping+ ) "}" ;
 
-forAllMapping    = "forall" IDENTIFIER "in" expression
+forAllMapping    = "forall" forAllBinding ( "," forAllBinding )*
                    ( "such" "that" expression )? NEWLINE*
                    "->" targetType mappingBody ;
+forAllBinding    = IDENTIFIER ( "," IDENTIFIER )* "in" expression ;
 ```
 
 **Binding forms:**
@@ -247,6 +248,35 @@ of the source model are iterated unresolved, with one warning per collection.
 
 This is the opposite direction from trace resolution (§5.3), which maps the same wrapper
 source → **target**. Both coexist and neither changed the other.
+
+#### `forall` over several variables
+
+A `forall` may bind several variables, in two spellings that mix
+(R-FA-1, R-FA-7): `forall q, r in xs` ranges both over `xs`, `forall q in xs, r in ys`
+gives each its collection. The iteration is the **cartesian product**, first variable
+outermost; without a filter the pair `(a, a)` and both orders are present, and excluding
+them is the filter's job. A later collection may read an earlier variable
+(`forall c in classes, a in c.attributes`). Every variable is bound in the `such that`
+and in the body, with the variables of an enclosing `forall` and the `let` bindings in
+scope. The created objects form **one flat list** in the feature; an empty product creates
+nothing, without a warning. A name bound twice in the same `forall` is a parse error.
+Unlike a one-variable `forall`, the properties of the elements are not bound unqualified.
+
+```jjtl
+-- same collection: every unordered pair of requesters, once
+-> ops {
+    forall q, r in requesters such that r.priority > q.priority -> Neg { ... }
+}
+
+-- one collection each, the second reading the first
+-> columns {
+    forall e in entities, a in e.ownedAttributes -> Column { name := e.name + "_" + a.name }
+}
+```
+
+An element of a collection that is a record built by an expression
+(`{ hi: q, lo: r }`) has its fields lifted like a source reference, so `pr.hi.name`
+reads the source object.
 
 **Property resolution** (4-strategy fallback for reading source values):
 1. Direct property access: `source[path]`
@@ -777,6 +807,7 @@ interface ExecutionResult {
 | `forall` in a mapping body | ✅ | `parser/parser.ts`, `executor/executor.ts` |
 | Contained source instances | ✅ | `components/project/ProjectEditor.tsx` |
 | Reference collections dereferenced in `forall` | ✅ | `executor/executor.ts` |
+| `forall` over several variables (cartesian product, flat) | ✅ | `parser/parser.ts`, `executor/executor.ts` |
 | Trace model (build + query) | ✅ | `executor/traceModel.ts` |
 | Per-binding invertibility | ✅ | `executor/executor.ts` lines 678-776 |
 | Bidirectionality analyzer | ✅ | `analyzer/bidirectionality.ts` |
