@@ -216,3 +216,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Six files, all in DOVE. Step 2 green unchanged. Step 3: closures (value, binding-site env), structural env keys, lowering per (rule, source, env) under a non-empty env, delegating rules on first demand. Mutation (closures under use-site env) kills 8/14. Gates: jjtl 462 + 7 known; full 13048 passed, 9 known + 2 Chromium hook timeouts, 18/18 alone; tsc exit 0. Steps 4 (lazy) and 5 (fresh subtree under B) are the next lane.
 **Prompt document name**: 2026-11-02 22:47
+
+## 2026-11-02 — feat(jjtl): B1 steps 4 and 5, lazy rules and containment under B (P-2026-11-02-2321)
+**Prompt**: P-2026-11-02-2321, closes B1: lazy rules (by class, guard selection, matched+lazy ambiguity, `unique` memo) and containment under B (fresh subtrees, double claim only implicit and `unique`); toy rules lazy; ruling R-JTG-6/7 on bound values; remaining acceptance tests; SPEC 5.3.3, 12, B2 list.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts` (105140d39, 6bf6e6578), `executor/__tests__/called-lazy-rules.test.ts` (105140d39, 6bf6e6578), `frontend/src/jjtl/SPEC.md` (b0ad73715), this inbox, the `Status:` line of P-2026-11-02-2321.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Five files, all in DOVE. Bound values lower afresh, a matched class untraced. Mutations: unique memo dropped 2/24; closures not fresh 2/34; lazy memoised 4/34. Gates: jjtl 482 + 7 known; full 13068 passed, 9 known import failures, 0 failed tests; tsc exit 0. B2 list in SPEC 5.3.3.
+**Prompt document name**: 2026-11-02 23:21
