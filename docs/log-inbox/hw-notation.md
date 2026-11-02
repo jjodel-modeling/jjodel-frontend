@@ -113,3 +113,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Log in the lane inbox (P9), not `docs/claude-code-log.md` as the 1425 prompt says. SPEC §5.3 "NOT IMPLEMENTED" is stale (references resolve through the trace; containment does not). Recommended order A0 -> A -> B -> C0 -> D. All claims are read, none run; the snapshot copy (executor.ts:1671) must be confirmed by a test in the first Phase-2 lane.
 **Prompt document name**: 2026-11-02 14:25
+
+## 2026-11-02 — merge: jjtl-generic-transformation into alfonso-frontend-jjtl (P-2026-11-02-1905)
+**Prompt**: Bring `jjtl-generic-transformation` at `88dd98234` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), probes on the merge-tree, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 8f14055bf (14 files from the branch: `frontend/src/jjtl/executor/executor.ts`, `traceModel.ts`, `frontend/src/jjtl/SPEC.md`, `bind-resolved-target.test.ts` (new), `resolution-fallbacks.test.ts` (new), two modified tests, `docs/decisions.md`, the discovery report, four prompt files, this inbox file); `docs/prompts/claude_2026-11-02_1905_prompt_merge_jjtl-generic-transformation.md` Status line; `docs/log-inbox/hw-notation.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, unattended: 3001 HTTP 200 on the merged tree; write-back by the P-2026-11-02-1838 probe on 88dd98234, the second parent; app not driven by hand)
+**Notes**: Tip moved after the merge (a296fefcb, docs only), accepted. Merge-tree: zero conflicts, tree 9bbb91623 = merge commit's; 14 files branch side, none on both, no governance file; 7 probes once each; no union. Gates on 8f14055bf: typecheck 0, typecheck:scripts 0; vitest 12913 passed, 490 files, 9 known red at import (12899 + 14, counted from the diff: branch tree has no node_modules); hooks 967; build 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Lane board untouched.
+**Prompt document name**: 2026-11-02 19:05
