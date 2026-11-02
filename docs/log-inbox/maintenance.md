@@ -636,3 +636,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: `elementId` only on a `target`, denotes segments[0]; an id miss is a miss. Also substituted: `c.x` and `set c.p` (F4); an outer-bound target is not re-read by an inner variable. No existing test changed (vitest 4066 passed, context-binding the known failure); codegen untouched. Not executed here: the guard wiring in executor.ts and the M1 delete/set sites (no node import); undo. Gates: tsc 0, build 0. Temp node_modules symlink, removed.
 **Prompt document name**: 2026-11-02 21:40
+
+## 2026-11-02 — merge: jjscript-forall-by-id into alfonso-frontend-jjtl (P-2026-11-02-2222)
+**Prompt**: `claude_2026-11-02_2222_prompt_merge_jjscript-forall-by-id.md`, a direct merge, closed by hand by the chat because the worker ended blocked.
+**Files touched**: merge `371a3dfe2`, the files of the branch side.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. vitest 13054 tests, 3 failed, in `defaultText.test.ts` and `textual.test.ts`, the load-sensitive tests of the ticket in P-2026-11-02-2045. The same two files alone on the merge, three runs at load 4: 23 of 23. These tests build no element through `commands/eval.ts`; read, not measured.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: not run. The `a != b` behaviour in the app (`NAME_CONFLICT` or both `Foo_dup`) stays unmeasured.
+**Notes**: Rollback tag `pre-jjscript-forall-by-id`.
+**Prompt document name**: 2026-11-02 22:22
