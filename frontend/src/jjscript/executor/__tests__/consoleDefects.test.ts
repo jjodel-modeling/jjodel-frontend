@@ -150,3 +150,27 @@ describe('defect 2: `create class X in P` with no P fails naming P', () => {
         expect(h.created).toEqual([{ kind: 'class', name: 'Foo', father: 'p' }]);
     });
 });
+
+// ── defect 1 ────────────────────────────────────────────────────────────────────────────────────────────────
+describe('defect 1: `create package` hands DPackage.new the kind of its father', () => {
+    it('default parent is the first package: a subpackage, fatherType DPackage', async () => {
+        m2();
+        const res = await create('create package P2');
+        expect(res.success, res.message).toBe(true);
+        expect(h.created).toEqual([{ kind: 'package', name: 'P2', father: 'p', fatherType: 'DPackage' }]);
+    });
+
+    it('a metamodel with no package: a root package, fatherType DModel', async () => {
+        m2({ pkg: false });
+        const res = await create('create package P1');
+        expect(res.success, res.message).toBe(true);
+        expect(h.created).toEqual([{ kind: 'package', name: 'P1', father: 'mm', fatherType: 'DModel' }]);
+    });
+
+    it('`in P1` names a package father', async () => {
+        m2();
+        const res = await create('create package P2 in P1');
+        expect(res.success, res.message).toBe(true);
+        expect(h.created).toEqual([{ kind: 'package', name: 'P2', father: 'p', fatherType: 'DPackage' }]);
+    });
+});

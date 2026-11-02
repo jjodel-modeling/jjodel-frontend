@@ -25,6 +25,7 @@ import { resolveSuperclasses, superclassNames } from '../superclassResolution';
 // Import Jjodel model types and actions
 import {
     DClass,
+    DModel,
     DAttribute,
     DReference,
     DOperation,
@@ -1064,6 +1065,9 @@ async function createPackage(
     return new Promise((resolve) => {
         try {
             const parentId = parent?.id || parent;
+            // `Constructors.DPackage` reads `fatherType.cname` whenever there is a father, to pick
+            // `packages` (model) or `subpackages` (package): without it every create threw on `cname`.
+            const fatherType = parent?.className === 'DModel' ? DModel : DPackage;
 
             // DPackage.new(name, uri, prefix, father, persist, fatherClass)
             const newPkg = DPackage.new(
@@ -1071,7 +1075,8 @@ async function createPackage(
                 options?.nsUri,
                 options?.nsPrefix,
                 parentId,
-                true
+                true,
+                fatherType
             );
 
             resolve({
