@@ -32,6 +32,8 @@ export interface NotationStyle {
     readonly literalCase: LetterCase;
     /** Spaces per nesting level. */
     readonly indent: number;
+    /** A blank line before each containment, except at the start of a body (step T4, a syntax annotation's style option). */
+    readonly blankBeforeContainment?: boolean;
 }
 
 export const CLIKE_STYLE: NotationStyle = {
