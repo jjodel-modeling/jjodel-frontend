@@ -5,112 +5,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { deriveBaseGrammar } from '../baseGrammar';
-import { deriveConcreteGrammar } from '../concreteGrammar';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import type { TextObject } from '../metamodel';
 import { isApplicableParse, parseText } from '../parser';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE } from '../style';
 import type { NotationStyle } from '../style';
-import { FIXTURE, metamodelOf, objectsOf } from './spec';
+import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
+import { FIXTURE, objectsOf } from './spec';
 import type { Spec } from './spec';
-
-const grammarOf = (spec: Spec, style: NotationStyle = CLIKE_STYLE): ConcreteGrammar => deriveConcreteGrammar(deriveBaseGrammar(metamodelOf(spec)), style);
-
-// The corpus of textual.test.ts, copied: that file exports nothing.
-// R-TXT-1 on a diamond: A once, before both heirs, which keep their declaration order.
-const DIAMOND: Spec = {
-    classes: [
-        { name: 'A', isAbstract: true, attributes: [{ name: 'a', type: 'EInt' }], references: [{ name: 'ra', type: 'C' }] },
-        { name: 'B1', isAbstract: true, supers: ['A'], attributes: [{ name: 'b1', type: 'EInt' }] },
-        { name: 'B2', isAbstract: true, supers: ['A'], attributes: [{ name: 'b2', type: 'EInt' }] },
-        { name: 'C', supers: ['B1', 'B2'], attributes: [{ name: 'c', type: 'EInt' }], references: [{ name: 'rc', type: 'C' }] },
-    ],
-    enums: {},
-    objects: [{ id: 'x', cls: 'C', slots: { a: 1, b1: 2, b2: 3, c: 4, ra: 'x', rc: 'x' } }],
-};
-
-// R-TXT-12 without a shared ancestor, where the number of ancestors and the depth disagree: P has two (depth 1), S one
-// (depth 1), R two (depth 2). By number: Q1 Q2 T S P R. By depth, as the probe sorted: Q1 Q2 T P S R.
-const NON_DIAMOND: Spec = {
-    classes: [
-        { name: 'Q1', isAbstract: true, attributes: [{ name: 'q1', type: 'EInt' }] },
-        { name: 'Q2', isAbstract: true, attributes: [{ name: 'q2', type: 'EInt' }] },
-        { name: 'T', isAbstract: true, attributes: [{ name: 't', type: 'EInt' }] },
-        { name: 'S', isAbstract: true, supers: ['T'], attributes: [{ name: 's', type: 'EInt' }] },
-        { name: 'P', isAbstract: true, supers: ['Q1', 'Q2'], attributes: [{ name: 'p', type: 'EInt' }] },
-        { name: 'R', isAbstract: true, supers: ['S'], attributes: [{ name: 'r', type: 'EInt' }] },
-        { name: 'C', supers: ['P', 'R'], attributes: [{ name: 'c', type: 'EInt' }] },
-    ],
-    enums: {},
-    objects: [{ id: 'x', cls: 'C', slots: { q1: 1, q2: 2, t: 3, s: 4, p: 5, r: 6, c: 7 } }],
-};
-
-// Names, paths and roots: homonyms in one container and across containers, a homonym of another class, an abstract
-// containment (a choice), a name unique only within the reference's type (`wheel v`, a Bolt is also `v`), a single
-// containment, a nameless root, escapes, floats and many-valued attributes.
-const GARAGE: Spec = {
-    classes: [
-        { name: 'Item', isAbstract: true, attributes: [{ name: 'name', type: 'EString' }] },
-        {
-            name: 'Car', supers: ['Item'],
-            attributes: [{ name: 'speed', type: 'EDouble' }, { name: 'colors', type: 'Color', many: true }, { name: 'marks', type: 'EInt', many: true }],
-            references: [
-                { name: 'engine', type: 'Engine', containment: true }, { name: 'wheels', type: 'Wheel', containment: true, many: true },
-                { name: 'spare', type: 'Item', containment: true, many: true },
-                { name: 'best', type: 'Item' }, { name: 'tow', type: 'Car' }, { name: 'eng', type: 'Engine' },
-            ],
-        },
-        { name: 'Wheel', supers: ['Item'], attributes: [{ name: 'size', type: 'EInt' }], references: [{ name: 'bolts', type: 'Bolt', containment: true, many: true }, { name: 'pair', type: 'Bolt' }] },
-        { name: 'Engine', attributes: [{ name: 'power', type: 'EInt' }, { name: 'note', type: 'EString' }] },
-        { name: 'Bolt', attributes: [{ name: 'name', type: 'EString' }] },
-        { name: 'Gear', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'wheel', type: 'Wheel' }] },
-    ],
-    enums: { Color: ['Red', 'GREEN', 'blue'] },
-    objects: [
-        { id: 'c1', cls: 'Car', slots: { name: 'alpha', speed: 1.5, colors: ['Red', 'blue'], marks: [3, 1], engine: 'e1', wheels: ['w1', 'w2'], spare: ['w3', 'c3'], best: 'w1', tow: 'c2', eng: 'e1' } },
-        { id: 'c2', cls: 'Car', slots: { name: 'beta', wheels: ['w4'], best: 'w2', eng: 'e0', tow: 'c3' } },
-        { id: 'g1', cls: 'Gear', slots: { name: 'w', wheel: 'w4' } },
-        { id: 'e0', cls: 'Engine', slots: { power: 0 } },
-        { id: 'e1', cls: 'Engine', slots: { power: 90, note: 'line1\nline2 "q"' } },
-        { id: 'w1', cls: 'Wheel', slots: { name: 'w', size: 16, bolts: ['b1', 'b2'] } },
-        { id: 'w2', cls: 'Wheel', slots: { name: 'w', size: 17 } },
-        { id: 'w3', cls: 'Wheel', slots: { name: 'it\'s "odd"', size: 1 } },
-        { id: 'c3', cls: 'Car', slots: { name: 'inner', tow: 'c1' } },
-        { id: 'b1', cls: 'Bolt', slots: { name: 'b' } },
-        { id: 'b2', cls: 'Bolt', slots: { name: 'b' } },
-        { id: 'w4', cls: 'Wheel', slots: { name: 'v', bolts: ['b3'], pair: 'b1' } },
-        { id: 'b3', cls: 'Bolt', slots: { name: 'v' } },
-    ],
-};
-
-// A single nameless root: referenced it prints `[0]`; a named class with its name unset prints no name.
-const BOX: Spec = {
-    classes: [
-        {
-            name: 'Box',
-            references: [{ name: 'inner', type: 'Box', containment: true }, { name: 'label', type: 'Tag', containment: true }, { name: 'self', type: 'Box' }, { name: 'tag', type: 'Tag' }],
-        },
-        { name: 'Tag', attributes: [{ name: 'name', type: 'EString' }] },
-    ],
-    enums: {},
-    objects: [
-        { id: 'r', cls: 'Box', slots: { inner: 'i', self: 'r', tag: 't' } },
-        { id: 'i', cls: 'Box', slots: { self: 'i', inner: 't2', label: 't' } },
-        { id: 't', cls: 'Tag', slots: {} },
-        { id: 't2', cls: 'Box', slots: {} },
-    ],
-};
-
-// Class keywords that one case folding merges.
-const CASES: Spec = {
-    classes: [{ name: 'Node', attributes: [{ name: 'name', type: 'EString' }] }, { name: 'NODE', attributes: [{ name: 'name', type: 'EString' }] }],
-    enums: {},
-    objects: [{ id: 'a', cls: 'Node', slots: { name: 'a' } }, { id: 'b', cls: 'NODE', slots: { name: 'b' } }],
-};
-
-const LOWER: NotationStyle = { ...CLIKE_STYLE, id: 'c-like-lower', classCase: 'lower', literalCase: 'lower' };
 
 const print = (g: ConcreteGrammar, objects: readonly TextObject[]): string => printTextModel(g, objects).text;
 
@@ -135,7 +38,8 @@ describe('round trip: print, parse, print (R-TXT-21 (1))', () => {
         ['a diamond', DIAMOND, CLIKE_STYLE],
         ['a multiple inheritance without a diamond', NON_DIAMOND, CLIKE_STYLE],
         ['names, homonyms, paths, several roots', GARAGE, CLIKE_STYLE],
-        ['a single nameless root referenced as [0]', BOX, CLIKE_STYLE],
+        ['a single nameless root referenced as Box[0]', BOX, CLIKE_STYLE],
+        ['a single containment and a name that printed alike before R-TXT-25 (5, 6)', INNER, CLIKE_STYLE],
         ['class keywords and literals in lower case', GARAGE, LOWER],
         ['mixed-case literals after the fallback', FIXTURE, LOWER],
         ['two class keywords after the fallback', CASES, LOWER],
@@ -150,7 +54,7 @@ describe('round trip: print, parse, print (R-TXT-21 (1))', () => {
         expect(print(g, r.objects)).toBe(text);
     });
 
-    it.each([['FIXTURE', FIXTURE], ['GARAGE', GARAGE], ['BOX', BOX]] as const)('%s: the parsed objects are the model, up to ids', (_, spec) => {
+    it.each([['FIXTURE', FIXTURE], ['GARAGE', GARAGE], ['BOX', BOX], ['INNER', INNER]] as const)('%s: the parsed objects are the model, up to ids', (_, spec) => {
         const g = grammarOf(spec);
         const original = objectsOf(spec);
         const r = parseText(print(g, original), g);
@@ -203,8 +107,8 @@ describe('errors carry line, column and a readable message', () => {
     });
 
     it('a reference to an object of another type, a path into nothing, a feature given twice or out of order', () => {
-        expect(brief('Sys s {\n  links {\n    Link {}\n  }\n  main links[0]\n}')).toEqual(['5:8 "main" expects Part; the reference names a Link']);
-        expect(brief('Sys s {\n  main parts[3]\n}')).toEqual(['2:8 parts[3] names no object']);
+        expect(brief('Sys s {\n  links {\n    Link {}\n  }\n  main Sys[0].links[0]\n}')).toEqual(['5:8 "main" expects Part; the reference names a Link']);
+        expect(brief('Sys s {\n  main Sys[0].parts[3]\n}')).toEqual(['2:8 parts[3] names no object']);
         expect(brief('Part a {\n  size 1\n  size 2\n}')).toEqual(['3:3 "size" is given twice']);
         expect(brief('Part a {\n  kind FAST\n  size 2\n}')).toEqual(['3:3 "size" must come before "kind"']);
         expect(brief('Lorry x {}\nPart a {}')).toEqual(['1:1 expected "Sys", "Part" or "Link"; found name "Lorry"']);
@@ -213,6 +117,31 @@ describe('errors carry line, column and a readable message', () => {
     it('lexical errors: an unterminated string, a stray character', () => {
         expect(brief('Part "a {\n}')).toEqual(['1:6 unterminated string', '2:1 expected "{"; found "}"']);
         expect(brief('Part a { size 1 § }')).toEqual(['1:17 unexpected character "§"']);
+    });
+});
+
+describe('paths (R-TXT-25 (5, 6))', () => {
+    const g = grammarOf(INNER);
+    const see = (ref: string) => parseText(`Room hall {\n  inner {\n    Room {}\n  }\n  rooms {\n    Room inner {}\n  }\n  see [${ref}]\n}`, g);
+    const brief2 = (ref: string) => see(ref).errors.map(e => e.message);
+
+    it('a path and a name never read alike: Room[0].inner[0] is the containment, inner the named room', () => {
+        expect(see('Room[0].inner[0], inner, Room[0]').objects[0].slots.see).toEqual(['t2', 't3', 't1']);
+    });
+
+    it('a root is counted among the top-level objects of its class', () => {
+        const r = parseText('Part a {}\nSys s {\n  main Part[1]\n}\nPart b {}', grammarOf(FIXTURE));
+        expect(r.errors).toEqual([]);
+        expect(r.objects[1].slots.main).toBe('t3');
+    });
+
+    it('the forms R-TXT-25 retires, and paths that name nothing, are errors', () => {
+        expect(brief2('Room[0].inner')).toEqual(['expected "["; found "]"']);
+        expect(brief2('[0]')).toEqual(['expected a reference (a name or a path); found "["']);
+        expect(brief2('Room[0].inner[1]')).toEqual(['"inner" holds one object: write inner[0]']);
+        expect(brief2('Room[1]')).toEqual(['there is no top-level Room[1]: the text has 1']);
+        expect(brief2('Hall[0]')).toEqual(['a path starts with a class: there is no class "Hall"']);
+        expect(brief2('Room[0].see[0]')).toEqual(['Room has no containment "see"']);
     });
 });
 

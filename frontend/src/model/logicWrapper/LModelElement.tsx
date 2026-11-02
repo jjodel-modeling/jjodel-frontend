@@ -2228,7 +2228,7 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
     volatile!: boolean;
     transient!: boolean;
     unsettable!: boolean;
-    // defaultValueLiteral!: string;
+    defaultValueLiteral!: string;
     defaultValue!: (LObject[] | PrimitiveType[]);
     // getFeatureID(): number;
     // getContainerClass(): EJavaClass
@@ -2323,12 +2323,16 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
         }, c.data.derived, val)
         return true;
     }
-    /*
-        protected get_defaultValueLiteral(context: Context): this["defaultValueLiteral"] { return context.data.defaultValueLiteral; }
-        protected set_defaultValueLiteral(val: this["defaultValueLiteral"], context: Context): boolean {
-            SetFieldAction.new(context.data, 'defaultValueLiteral', val, "", false);
-            return true;
-        }*/
+
+    protected get_defaultValueLiteral(context: Context): this["defaultValueLiteral"] { return (context.data as GObject).defaultValueLiteral; }
+    protected set_defaultValueLiteral(val: this["defaultValueLiteral"], c: Context): boolean {
+        const old = (c.data as GObject).defaultValueLiteral;
+        if (old === val) return true;
+        TRANSACTION(this.get_name(c)+'.defaultValueLiteral', ()=>{
+            SetFieldAction.new(c.data as any, 'defaultValueLiteral' as any, val, "", false);
+        }, old, val)
+        return true;
+    }
 
 }
 RuntimeAccessibleClass.set_extend(DTypedElement, DStructuralFeature);

@@ -111,6 +111,29 @@ describe('an unset attribute reads its declared default literal (P-2026-11-01-23
         expect(read('s1.kind')).toBeNull();
     });
 
+    it('"2.5" on EInt, ELong, EShort, EByte reads as no declared default, with one warning each; "-3" on ELong reads -3 (R-TXT-25 (9); kills: the integer check dropped, or applied to EDouble)', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            editorModel([
+                { name: 'i', type: prim('EInt'), literal: '2.5', lower: 1 },
+                { name: 'l', type: prim('ELong'), literal: '2.5' },
+                { name: 's', type: prim('EShort'), literal: '2.5' },
+                { name: 'b', type: prim('EByte'), literal: '2.5' },
+                { name: 'n', type: prim('ELong'), literal: '-3' },
+                { name: 'd', type: prim('EDouble'), literal: '2.5' },
+            ]);
+            expect(read('s1.i')).toBe(0);
+            expect(read('s1.l')).toBeNull();
+            expect(read('s1.s')).toBeNull();
+            expect(read('s1.b')).toBeNull();
+            expect(read('s1.n')).toBe(-3);
+            expect(read('s1.d')).toBe(2.5);
+            const msgs = warn.mock.calls.map(c => String(c[0]));
+            for (const a of ['i', 'l', 's', 'b']) expect(msgs.filter(m => m.includes(`attribute ${a} `)).length).toBe(1);
+            expect(msgs.some(m => m.includes('attribute n ') || m.includes('attribute d '))).toBe(false);
+        } finally { warn.mockRestore(); }
+    });
+
     it('neither a default nor a literal keeps today\'s reads; a set value wins over the literal (per contrasto)', () => {
         editorModel([
             { name: 'width', type: prim('EInt') },

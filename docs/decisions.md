@@ -7081,6 +7081,14 @@ Ratified as recommended, evidence: read and measured (lane results of the night)
   the metamodel's name. The canvas of a model created from text opens inside the undo group (confirms the night's
   adoption).
 
+Row 26: Alfonso 2026-11-02 08:34 «pause», on the chat's question of 08:27 about step T6.
+
+- **R-TXT-26** (2026-11-02). **When an edited text is applied to an existing model (T6):** on a pause in typing, and only
+  when the text parses without errors, no match of R-TXT-18/22 is uncertain, and no deletion touches an object that
+  other models reference. Otherwise the markers stay in the text and the model is not touched until the text is fixed
+  or the uncertain matches are confirmed in a small panel. Each application is one undo step (R-TXT-19), and undo
+  restores text and model together. No explicit «Apply» button in v1.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.

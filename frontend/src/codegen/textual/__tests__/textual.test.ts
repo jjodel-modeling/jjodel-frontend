@@ -6,15 +6,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { baseGrammarText, deriveBaseGrammar } from '../baseGrammar';
-import { concreteGrammarEbnf, deriveConcreteGrammar } from '../concreteGrammar';
-import type { ConcreteGrammar } from '../concreteGrammar';
+import { concreteGrammarEbnf } from '../concreteGrammar';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE } from '../style';
 import type { NotationStyle } from '../style';
+import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
 import { FIXTURE, metamodelOf, objectsOf, referenceText, shippedTemplates } from './spec';
 import type { Spec } from './spec';
 
-const grammarOf = (spec: Spec, style: NotationStyle = CLIKE_STYLE): ConcreteGrammar => deriveConcreteGrammar(deriveBaseGrammar(metamodelOf(spec)), style);
 const printed = (spec: Spec, style: NotationStyle = CLIKE_STYLE): string => printTextModel(grammarOf(spec, style), objectsOf(spec)).text;
 
 // The addendum §A.1 (`out-base.txt` of the probe P-2026-11-01-2232), verbatim.
@@ -33,99 +32,6 @@ Part          ::= "Part" [name=NAME] "{" ["doc" doc=STRING] ["size" size=INT] ["
 Link          ::= "Link" "{" ["weight" weight=INT] ["from" from=REF] ["to" to=REF] "}" ;
 Mode          ::= "FAST" | "Fast" | "slow" ;`;
 const spaces = (s: string): string => s.replace(/ +/g, ' ');
-
-// R-TXT-1 on a diamond: A once, before both heirs, which keep their declaration order.
-const DIAMOND: Spec = {
-    classes: [
-        { name: 'A', isAbstract: true, attributes: [{ name: 'a', type: 'EInt' }], references: [{ name: 'ra', type: 'C' }] },
-        { name: 'B1', isAbstract: true, supers: ['A'], attributes: [{ name: 'b1', type: 'EInt' }] },
-        { name: 'B2', isAbstract: true, supers: ['A'], attributes: [{ name: 'b2', type: 'EInt' }] },
-        { name: 'C', supers: ['B1', 'B2'], attributes: [{ name: 'c', type: 'EInt' }], references: [{ name: 'rc', type: 'C' }] },
-    ],
-    enums: {},
-    objects: [{ id: 'x', cls: 'C', slots: { a: 1, b1: 2, b2: 3, c: 4, ra: 'x', rc: 'x' } }],
-};
-
-// R-TXT-12 without a shared ancestor, where the number of ancestors and the depth disagree: P has two (depth 1), S one
-// (depth 1), R two (depth 2). By number: Q1 Q2 T S P R. By depth, as the probe sorted: Q1 Q2 T P S R.
-const NON_DIAMOND: Spec = {
-    classes: [
-        { name: 'Q1', isAbstract: true, attributes: [{ name: 'q1', type: 'EInt' }] },
-        { name: 'Q2', isAbstract: true, attributes: [{ name: 'q2', type: 'EInt' }] },
-        { name: 'T', isAbstract: true, attributes: [{ name: 't', type: 'EInt' }] },
-        { name: 'S', isAbstract: true, supers: ['T'], attributes: [{ name: 's', type: 'EInt' }] },
-        { name: 'P', isAbstract: true, supers: ['Q1', 'Q2'], attributes: [{ name: 'p', type: 'EInt' }] },
-        { name: 'R', isAbstract: true, supers: ['S'], attributes: [{ name: 'r', type: 'EInt' }] },
-        { name: 'C', supers: ['P', 'R'], attributes: [{ name: 'c', type: 'EInt' }] },
-    ],
-    enums: {},
-    objects: [{ id: 'x', cls: 'C', slots: { q1: 1, q2: 2, t: 3, s: 4, p: 5, r: 6, c: 7 } }],
-};
-
-// Names, paths and roots: homonyms in one container and across containers, a homonym of another class, an abstract
-// containment (a choice), a name unique only within the reference's type (`wheel v`, a Bolt is also `v`), a single
-// containment, a nameless root, escapes, floats and many-valued attributes.
-const GARAGE: Spec = {
-    classes: [
-        { name: 'Item', isAbstract: true, attributes: [{ name: 'name', type: 'EString' }] },
-        {
-            name: 'Car', supers: ['Item'],
-            attributes: [{ name: 'speed', type: 'EDouble' }, { name: 'colors', type: 'Color', many: true }, { name: 'marks', type: 'EInt', many: true }],
-            references: [
-                { name: 'engine', type: 'Engine', containment: true }, { name: 'wheels', type: 'Wheel', containment: true, many: true },
-                { name: 'spare', type: 'Item', containment: true, many: true },
-                { name: 'best', type: 'Item' }, { name: 'tow', type: 'Car' }, { name: 'eng', type: 'Engine' },
-            ],
-        },
-        { name: 'Wheel', supers: ['Item'], attributes: [{ name: 'size', type: 'EInt' }], references: [{ name: 'bolts', type: 'Bolt', containment: true, many: true }, { name: 'pair', type: 'Bolt' }] },
-        { name: 'Engine', attributes: [{ name: 'power', type: 'EInt' }, { name: 'note', type: 'EString' }] },
-        { name: 'Bolt', attributes: [{ name: 'name', type: 'EString' }] },
-        { name: 'Gear', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'wheel', type: 'Wheel' }] },
-    ],
-    enums: { Color: ['Red', 'GREEN', 'blue'] },
-    objects: [
-        { id: 'c1', cls: 'Car', slots: { name: 'alpha', speed: 1.5, colors: ['Red', 'blue'], marks: [3, 1], engine: 'e1', wheels: ['w1', 'w2'], spare: ['w3', 'c3'], best: 'w1', tow: 'c2', eng: 'e1' } },
-        { id: 'c2', cls: 'Car', slots: { name: 'beta', wheels: ['w4'], best: 'w2', eng: 'e0', tow: 'c3' } },
-        { id: 'g1', cls: 'Gear', slots: { name: 'w', wheel: 'w4' } },
-        { id: 'e0', cls: 'Engine', slots: { power: 0 } },
-        { id: 'e1', cls: 'Engine', slots: { power: 90, note: 'line1\nline2 "q"' } },
-        { id: 'w1', cls: 'Wheel', slots: { name: 'w', size: 16, bolts: ['b1', 'b2'] } },
-        { id: 'w2', cls: 'Wheel', slots: { name: 'w', size: 17 } },
-        { id: 'w3', cls: 'Wheel', slots: { name: 'it\'s "odd"', size: 1 } },
-        { id: 'c3', cls: 'Car', slots: { name: 'inner', tow: 'c1' } },
-        { id: 'b1', cls: 'Bolt', slots: { name: 'b' } },
-        { id: 'b2', cls: 'Bolt', slots: { name: 'b' } },
-        { id: 'w4', cls: 'Wheel', slots: { name: 'v', bolts: ['b3'], pair: 'b1' } },
-        { id: 'b3', cls: 'Bolt', slots: { name: 'v' } },
-    ],
-};
-
-// A single nameless root: referenced it prints `[0]`; a named class with its name unset prints no name.
-const BOX: Spec = {
-    classes: [
-        {
-            name: 'Box',
-            references: [{ name: 'inner', type: 'Box', containment: true }, { name: 'label', type: 'Tag', containment: true }, { name: 'self', type: 'Box' }, { name: 'tag', type: 'Tag' }],
-        },
-        { name: 'Tag', attributes: [{ name: 'name', type: 'EString' }] },
-    ],
-    enums: {},
-    objects: [
-        { id: 'r', cls: 'Box', slots: { inner: 'i', self: 'r', tag: 't' } },
-        { id: 'i', cls: 'Box', slots: { self: 'i', inner: 't2', label: 't' } },
-        { id: 't', cls: 'Tag', slots: {} },
-        { id: 't2', cls: 'Box', slots: {} },
-    ],
-};
-
-// Class keywords that one case folding merges.
-const CASES: Spec = {
-    classes: [{ name: 'Node', attributes: [{ name: 'name', type: 'EString' }] }, { name: 'NODE', attributes: [{ name: 'name', type: 'EString' }] }],
-    enums: {},
-    objects: [{ id: 'a', cls: 'Node', slots: { name: 'a' } }, { id: 'b', cls: 'NODE', slots: { name: 'b' } }],
-};
-
-const LOWER: NotationStyle = { ...CLIKE_STYLE, id: 'c-like-lower', classCase: 'lower', literalCase: 'lower' };
 
 describe('base grammar (R-TXT-16 level 1)', () => {
     it('of the 1709 fixture is the addendum\'s (kills: feature order, name not in the head, wrong value shape)', () => {
@@ -177,6 +83,15 @@ describe('C-like style and EBNF (R-TXT-16 level 2)', () => {
         expect(g.classCase).toBe('declared');
         expect(g.notices.map(n => n.message)).toEqual(['class keywords kept as declared: case lower would merge Node, NODE']);
     });
+
+    it('R-TXT-25 (7): a folding that lands a class keyword on a style word falls back too, with a notice', () => {
+        const SCRIPT: Spec = { classes: [{ name: 'Script', references: [{ name: 'steps', type: 'End', containment: true, many: true }] }, { name: 'End' }], enums: {}, objects: [] };
+        const words: NotationStyle = { ...CLIKE_STYLE, id: 'begin-end-lower', blockOpen: ['begin'], blockClose: ['end'], emptyBlock: ['begin', 'end'], reservedNames: ['begin', 'end'], classCase: 'lower' };
+        const g = grammarOf(SCRIPT, words);
+        expect(g.classCase).toBe('declared');
+        expect(g.notices.map(n => n.message)).toEqual(['class keywords kept as declared: case lower would fold End onto "end", a style word']);
+        expect(grammarOf(SCRIPT, { ...words, blockClose: ['fin'], emptyBlock: ['begin', 'fin'] }).classCase).toBe('lower');
+    });
 });
 
 describe('printer against the JjGen generator, byte for byte (R-TXT-14)', () => {
@@ -191,8 +106,9 @@ describe('printer against the JjGen generator, byte for byte (R-TXT-14)', () => 
     const corpus: [string, Spec, NotationStyle][] = [
         ['a diamond (R-TXT-1)', DIAMOND, CLIKE_STYLE],
         ['a multiple inheritance without a diamond, by number of ancestors (R-TXT-12)', NON_DIAMOND, CLIKE_STYLE],
-        ['names, homonyms, paths, several roots with [k] (R-TXT-4, R-TXT-11)', GARAGE, CLIKE_STYLE],
-        ['a single nameless root referenced as [0], a class without name', BOX, CLIKE_STYLE],
+        ['names, homonyms, paths, several roots as Class[k] (R-TXT-4, R-TXT-25 (5, 6))', GARAGE, CLIKE_STYLE],
+        ['a single nameless root referenced as Box[0], a class without name', BOX, CLIKE_STYLE],
+        ['a single containment and a name that printed alike before R-TXT-25 (5, 6)', INNER, CLIKE_STYLE],
         ['mixed-case literals under a lower-case style, after the fallback (R-TXT-21 (10))', FIXTURE, { ...CLIKE_STYLE, literalCase: 'lower' }],
         ['two class keywords under a lower-case style, after the fallback (R-TXT-21 (10))', CASES, { ...CLIKE_STYLE, classCase: 'lower' }],
     ];
@@ -201,14 +117,15 @@ describe('printer against the JjGen generator, byte for byte (R-TXT-14)', () => 
     });
 
     it('the corpus prints what the rules say (kills: a reference that agrees with a broken printer)', () => {
-        expect(printed(DIAMOND)).toBe('C {\n  a 1\n  ra [0]\n  b1 2\n  b2 3\n  c 4\n  rc [0]\n}');
+        expect(printed(DIAMOND)).toBe('C {\n  a 1\n  ra C[0]\n  b1 2\n  b2 3\n  c 4\n  rc C[0]\n}');
         expect(printed(NON_DIAMOND)).toBe('C {\n  q1 1\n  q2 2\n  t 3\n  s 4\n  p 5\n  r 6\n  c 7\n}');
-        expect(printed(BOX)).toBe('Box {\n  inner {\n    Box {\n      inner {\n        Box {}\n      }\n      label {\n        Tag {}\n      }\n      self inner\n    }\n  }\n  self [0]\n  tag inner.label\n}');
+        expect(printed(BOX)).toBe('Box {\n  inner {\n    Box {\n      inner {\n        Box {}\n      }\n      label {\n        Tag {}\n      }\n      self Box[0].inner[0]\n    }\n  }\n  self Box[0]\n  tag Box[0].inner[0].label[0]\n}');
         const garage = printed(GARAGE);
         expect(garage).toContain('  speed 1.5\n  colors [Red, blue]\n  marks [3, 1]\n  engine {\n    Engine {\n      power 90\n      note "line1\\nline2 \\"q\\""\n    }\n  }');
         expect(garage).toContain('    Wheel "it\'s \\"odd\\"" {\n      size 1\n    }');
-        expect(garage).toContain('  best [0].wheels[0]\n  tow beta\n  eng [0].engine\n}');
-        expect(garage).toContain('Car beta {\n  wheels {\n    Wheel v {\n      bolts {\n        Bolt v {}\n      }\n      pair [0].wheels[0].bolts[0]\n    }\n  }\n  best [0].wheels[1]\n  tow inner\n  eng [3]\n}');
+        expect(garage).toContain('  best Car[0].wheels[0]\n  tow beta\n  eng Car[0].engine[0]\n}');
+        expect(garage).toContain('Car beta {\n  wheels {\n    Wheel v {\n      bolts {\n        Bolt v {}\n      }\n      pair Car[0].wheels[0].bolts[0]\n    }\n  }\n  best Car[0].wheels[1]\n  tow inner\n  eng Engine[0]\n}');
+        expect(printed(INNER)).toBe('Room hall {\n  inner {\n    Room {}\n  }\n  rooms {\n    Room inner {}\n  }\n  see [Room[0].inner[0], inner, hall]\n}');
         expect(garage).toContain('Gear w {\n  wheel v\n}');
     });
 });

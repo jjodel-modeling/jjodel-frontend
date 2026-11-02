@@ -399,3 +399,49 @@ Measured in docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md.
 Expected: opening a model fits the view to its nodes (or restores a saved viewport that contains nodes). The viewport at open should be deterministic for the same file.
 **Priority**: medium
 **Found in**: P-2026-11-02-0020
+
+## 2026-11-02 — perf(editor-v2): conditional onlyRenderVisibleElements (P-2026-11-02-0225)
+**Prompt**: Close P-2026-11-02-0020 from its handoff: rerun typecheck and the colocated test, commit the code with explicit pathspec, write this entry and the two Status lines uncommitted (RC-17), delete the temp DOM probe and the trunk worktree. Alfonso accepted on 2026-11-02 02:20 the open time and his hand measurement of 2026-10-31 for the no-viewpoint case.
+**Files touched**: 36694dbfb: frontend/src/components/editor-v2/EditorV2.tsx (import, useMemo `onlyRenderVisible`, prop on `<ReactFlow>`), NEW frontend/src/components/editor-v2/onlyRenderVisible.ts, NEW frontend/src/components/editor-v2/__tests__/onlyRenderVisible.test.ts. Uncommitted: this entry, Status lines of docs/prompts/claude_2026-11-02_0020_prompt_only_visible_conditional.md and claude_2026-11-02_0225_prompt_only_visible_conditional_closure.md.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (RC-23, built-in browser, 2026-11-02 02:55, dev server of only-visible-conditional; Alfonso GO 06:46)
+**Notes**: Partial: no-viewpoint drag unmeasured, the probe viewport opens on an empty area on both builds, so no node is clicked; a probe change, its own lane. Causa (g): smoke run 1 timed out on page.goto on a cold server, run 2 green. New module is the pure-predicate seam of 0020 item 2 (EditorV2 does not import in the bench). Handoff said 13 tests; the tree holds 12, byte-identical to handoff.diff. Supersedes branch only-visible-wip, prompts P-2026-11-01-0040..2335.
+**Prompt document name**: 2026-11-02 02:25
+
+**Ticket** (evidence, from the 0020 handoff). Timing, CLICK_PROD=1 CLICK_STEPS=open,drag CLICK_NODES=1, trunk and branch interleaved, load gate 1-min < 16, wallMs, three runs each:
+
+| case | step | trunk | branch | median trunk / branch |
+|------|------|-------|--------|-----------------------|
+| no viewpoint | open | 17735 17849 17602 | 6009 6060 5974 | 17735 / 6009 |
+| BPMN | open | 5209 5297 5459 | 5149 5133 5558 | 5297 / 5149 |
+| BPMN | drag | 4709 4827 5261 | 4701 4690 5282 | 4827 / 4701 |
+
+Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed (the known window-is-not-defined nine), 12659 tests passed; smoke 12 passed, 3 skipped (run 2); bpmn-lanes probe pass=12 fail=0. Rerun here: typecheck exit 0, colocated test 12/12. Mutation bench 11, 10 killed; m10 (dropping the `checked` dedupe) survives, cost only. DOM checks (prod previews 3092 branch, 3093 trunk): open viewport nondeterministic on both builds; no viewpoint at translate(~-1224,-9802) scale(0.5): branch 0 nodes, 104 edges (99 crossing, none zero-length), trunk 407 nodes, 0 in view, 97 edges crossing; minimap 407 = 407; BPMN 48 nodes 42 edges on both; console errors only `init_dash` on both. Not done: the zoom-in edge pick, covered by the 0-node case.
+
+**Timing, no viewpoint, drag** (P-2026-11-02-0233, probe 604f578ed). CLICK_PROD=1 CLICK_VP=- CLICK_FIT=1 CLICK_STEPS=open,drag CLICK_NODES=1, prod previews (trunk = merge base 4383c2572, branch = 9217e9185), interleaved, 1-min load 2.06-3.61, three runs each. Viewport on all six runs x 124, y -9862, zoom 0.5 (minZoom clamp, centred on the node nearest the bbox centre); drag from the same point (437,569) on the same object `dRC_13`. wallMs includes the settle; act = the mouse sequence; LT = long-task sum and longest task in the drag step (the probe has no hitch measure of its own, the longest task stands in).
+
+| step | trunk | branch | median trunk / branch |
+|------|-------|--------|-----------------------|
+| open wallMs | 18463 18046 18393 | 6020 6016 6939 | 18393 / 6020 |
+| drag wallMs | 5991 6114 6099 | 3713 3709 3726 | 6099 / 3713 |
+| drag act ms | 2967 3107 3081 | 704 703 719 | 3081 / 704 |
+| drag LT sum | 1033 1821 2640 | 58 234 119 | 1821 / 119 |
+| drag longest LT | 270 270 275 | 58 60 60 | 270 / 60 |
+
+## 2026-11-02 — merge: only-visible-conditional into alfonso-frontend-jjtl (P-2026-11-02-0656)
+**Prompt**: Bring `only-visible-conditional` at bfb6ee654 (conditional onlyRenderVisibleElements 36694dbfb, CLICK_FIT probe 604f578ed) into the trunk `alfonso-frontend-jjtl` with one --no-ff merge commit of the explicit sha (RC-14); union resolution of this inbox.
+**Files touched**: merge commit 7a4094009 (`frontend/src/components/editor-v2/EditorV2.tsx`, `onlyRenderVisible.ts`, `__tests__/onlyRenderVisible.test.ts`, `frontend/scripts/probe/large-model-click-profile.ts`, the branch's three prompts, this inbox); `docs/prompts/claude_2026-11-02_0656_prompt_merge_only-visible-conditional.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, RC-23, 2026-11-02 02:55 on the branch; Alfonso GO 06:46)
+**Notes**: Gates on 7a4094009: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk 12742 + 12; hook tests 21 files, 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Union in this inbox: the trunk's empty-viewport ticket first, then the branch's 0225 entry. No rollback tag (not in the prompt); lane board untouched.
+**Prompt document name**: 2026-11-02 06:56

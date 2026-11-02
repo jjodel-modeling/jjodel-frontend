@@ -1000,6 +1000,86 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato (crops, unattended; after undo of Create model the canvas tab shows a bare «closed tab» text, open question)
 **Prompt document name**: 2026-11-02 06:37
 
+## 2026-11-02 — feat(codegen): unambiguous paths, fold fallback, shared corpus (P-2026-11-02-0652)
+**Prompt**: R-TXT-25 (5, 6, 7, 11): paths `Class[k].f[i]` that never equal a name, in printer, parser and the JjGen generator; a case folding onto a style word falls back to the declared case with a notice; one shared textual test corpus.
+**Files touched**: `frontend/src/codegen/textual/printer.ts`, `parser.ts`, `concreteGrammar.ts`, `style.ts`; `__tests__/corpus.ts` (new), `textual.test.ts`, `parser.test.ts`, `styleCheck.test.ts`, `modelLines.test.ts`, `oracle.ts`; `frontend/public/examples/codegen/default-text.generator.json`; `frontend/src/codegen/engine/__tests__/defaultText.test.ts`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Out of `textual/`: `engine/__tests__/defaultText.test.ts` pins the generator's paths, updated with it; `modelLines.test.ts`, a fourth corpus copy, also moved to `corpus.ts`. Paths always open with the root (`Class[k]`), single root included. Closes T2a's `inner` ticket (INNER corpus case). Gates: tsc 0; vitest src/codegen 49 files, 2479 tests; build 0; codegen-lazy on green, off red (open ticket, R-TXT-25 (10)). Bench 5/5 killed.
+**Prompt document name**: 2026-11-02 06:52
+
+## 2026-11-02 — merge: textual-paths into alfonso-frontend-jjtl (P-2026-11-02-0821)
+**Prompt**: Bring `textual-paths` at `f91c95e22` (feat 40b70401d) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-paths on a54aad3cc).
+**Files touched**: merge commit b7c0adfc2 (printer, parser, style, concreteGrammar, shared test corpus, the JjGen default generator and its test, the 0652 prompt, this inbox); `docs/prompts/claude_2026-11-02_0821_prompt_merge_textual-paths.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 08:21
+
+## 2026-11-02 — fix(ui): close the tab of an undone model; badge for Text tabs (P-2026-11-02-0650)
+**Prompt**: R-TXT-25 (1) and (4): after an undone «Create model» the canvas tab shows a bare «closed tab»; probe whether any undone model creation does it, then close a tab whose model is gone. Text tabs get an app-bar badge.
+**Files touched**: fdb70a1e8: `frontend/src/components/abstract/tabs/ModelTab.tsx`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `frontend/src/pages/components/Navbar.tsx`; closure: this inbox, the Status line of the 0650 prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-02 02:35
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Discovery: «closed tab» is ModelTab.tsx:27 / MetamodelTab.tsx:148 for a missing model; undo never touches the dock, and the app bar hides the tab as a ghost, so it stays active. General: one undo of Navbar createM1 or createM2 does the same. Fix: both tabs call closeTabsForEntity, as a delete. Probe 3065, before/after in the commit body. Gates: tsc 0; vitest 20 files, 533 tests; build 0. Crops in ~/.jjodel-lanes/P-2026-11-02-0650/.
+**Prompt document name**: 2026-11-02 06:50
+
+## 2026-11-02 — merge: undo-tab-badge into alfonso-frontend-jjtl (P-2026-11-02-0833)
+**Prompt**: Bring `undo-tab-badge` at `d114178d6` (fix fdb70a1e8) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-undo-tab-badge on 015d2a27e); union resolution of this inbox.
+**Files touched**: merge commit 41c7c0d8a (`frontend/src/components/abstract/tabs/ModelTab.tsx`, `MetamodelTab.tsx`, `frontend/src/pages/components/Navbar.tsx`, the 0650 prompt, this inbox); `docs/prompts/claude_2026-11-02_0833_prompt_merge_undo-tab-badge.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops of the lane)
+**Prompt document name**: 2026-11-02 08:33
+
+## 2026-11-02 — fix(model): defaultValueLiteral accessors, integer defaults, lazy gate off mode (P-2026-11-02-0653)
+**Prompt**: R-TXT-25 (8), (9), (10): restore the L-layer get_/set_defaultValueLiteral and make the Ecore export read them; reject a decimal default literal on an integer attribute with a notice; make the off mode of check:codegen-lazy independent of `.env.production`.
+**Files touched**: ffcb21052: frontend/src/model/logicWrapper/LModelElement.tsx, frontend/src/services/export/EcoreService.ts, frontend/src/services/export/__tests__/ecore-export-defaults.test.ts, frontend/src/jjscript/executor/commands/eval.ts, frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts, frontend/scripts/gates/check-codegen-lazy.ts; closure: this inbox, the Status line of the 0653 prompt
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-01 23:50
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Notes**: Lazy off: clause 0 now resolves "false", clauses 1 and 3 stay red (43 generator modules via two unguarded imports, ticket below): the 10-23 ticket is re-scoped, not closed. No notice sink reaches the default read: console.warn, once per attribute and literal. L accessor not executed by a test (joiner does not import in the bench). Bench 3/3 killed. Gates: tsc 0, vitest 3409 (known window red), build 0, check:scripts 0, lazy on green.
+**Prompt document name**: 2026-11-02 06:53
+
+## 2026-11-02 — ticket: the lazy gate's off build ships generator modules through unguarded dynamic imports
+**Ticket**: With VITE_CODEGEN=false resolved (P-2026-11-02-0653), check:codegen-lazy --off still fails clauses 1 and 3: 43 modules under src/codegen/ land in lazy chunks and a chunk names runner.worker. Two dynamic imports lack the CODEGEN_BUILD guard their neighbours have: `ProjectEditor.tsx:70` (React.lazy GeneratorsSection) and `LeftBar.tsx:385` (import of openTemplateEditor). The env-file cause of the 2026-10-23 ticket is gone; this is what remains.
+**Priority**: medium
+**Found in**: P-2026-11-02-0653
+
+## 2026-11-02 — merge: defaults-layer-gate into alfonso-frontend-jjtl (P-2026-11-02-0841)
+**Prompt**: Bring `defaults-layer-gate` at `85da82fc8` (fix ffcb21052) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-defaults-layer-gate on 5b62357a5); union resolution of this inbox.
+**Files touched**: merge commit 247007a7b (`LModelElement.tsx` accessors, `EcoreService.ts`, `eval.ts`, the lazy gate script, tests, the 0653 prompt, this inbox); `docs/prompts/claude_2026-11-02_0841_prompt_merge_defaults-layer-gate.md` Status line; this entry
+**Outcome**: ✅ completed (gate off mode still red on two imports: P-2026-11-02-0845)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 08:41
+
 ## 2026-11-02 — feat(jjscript): set lists and enum literals (P-2026-11-02-0651)
 **Prompt**: R-TXT-25 (2): M1 `set` takes a list on a many-valued attribute (error on a single one) and an enumeration literal on an enum-typed one (unknown literal names the enumeration); planner mirrors; `modelLines.ts` writes lists and bare literals, its many-valued block removed.
 **Files touched**: 36a5387f6: `jjscript/parser/parser.ts`, `executor/commands/instance.ts`, `executor/commands/set.ts`, `executor/effectsPlanner.ts`, `executor/planWorld.ts`, tests `m1SetLists.test.ts` (new), `effectsPlanner.test.ts`, `planWorld.test.ts`; 084eb0902: `codegen/textual/modelLines.ts`, `__tests__/modelLines.test.ts`

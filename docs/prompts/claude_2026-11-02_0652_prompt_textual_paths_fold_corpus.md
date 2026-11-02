@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-0652
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane textual-paths · 40b70401d · verifica visiva non applicabile (nessuna UI)
 Lane: fast (changes inside `frontend/src/codegen/textual/` and its tests only)
 Depends: T1, T2a, T3 merged; R-TXT-25 (amends R-TXT-4 and R-TXT-11 on paths)
 Worktree: ~/jjodel-w-textpaths, branch textual-paths (from the trunk commit that adds this prompt)

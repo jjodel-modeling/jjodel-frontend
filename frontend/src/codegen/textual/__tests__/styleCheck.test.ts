@@ -5,8 +5,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { deriveBaseGrammar } from '../baseGrammar';
-import { deriveConcreteGrammar } from '../concreteGrammar';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE } from '../style';
@@ -14,51 +12,13 @@ import type { NotationStyle } from '../style';
 import { checkStyle, STYLE_RULES } from '../styleCheck';
 import type { StyleFinding } from '../styleCheck';
 import { generateSamples, nearleyGrammarOf, parseCount } from './oracle';
-import { FIXTURE, metamodelOf, objectsOf } from './spec';
+import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
+import { FIXTURE, objectsOf } from './spec';
 import type { Spec } from './spec';
 
-const grammarOf = (spec: Spec, style: NotationStyle = CLIKE_STYLE): ConcreteGrammar => deriveConcreteGrammar(deriveBaseGrammar(metamodelOf(spec)), style);
 const errors = (fs: readonly StyleFinding[]): [string, string][] => fs.filter(f => f.level === 'error').map(f => [f.rule, f.where]);
-const LOWER: NotationStyle = { ...CLIKE_STYLE, id: 'c-like-lower', classCase: 'lower', literalCase: 'lower' };
 
-// T1's corpus (textual.test.ts), the metamodels only: that file exports nothing.
 const mm = (classes: Spec['classes'], enums: Spec['enums'] = {}): Spec => ({ classes, enums, objects: [] });
-const DIAMOND = mm([
-    { name: 'A', isAbstract: true, attributes: [{ name: 'a', type: 'EInt' }], references: [{ name: 'ra', type: 'C' }] },
-    { name: 'B1', isAbstract: true, supers: ['A'], attributes: [{ name: 'b1', type: 'EInt' }] },
-    { name: 'B2', isAbstract: true, supers: ['A'], attributes: [{ name: 'b2', type: 'EInt' }] },
-    { name: 'C', supers: ['B1', 'B2'], attributes: [{ name: 'c', type: 'EInt' }], references: [{ name: 'rc', type: 'C' }] },
-]);
-const NON_DIAMOND = mm([
-    { name: 'Q1', isAbstract: true, attributes: [{ name: 'q1', type: 'EInt' }] },
-    { name: 'Q2', isAbstract: true, attributes: [{ name: 'q2', type: 'EInt' }] },
-    { name: 'T', isAbstract: true, attributes: [{ name: 't', type: 'EInt' }] },
-    { name: 'S', isAbstract: true, supers: ['T'], attributes: [{ name: 's', type: 'EInt' }] },
-    { name: 'P', isAbstract: true, supers: ['Q1', 'Q2'], attributes: [{ name: 'p', type: 'EInt' }] },
-    { name: 'R', isAbstract: true, supers: ['S'], attributes: [{ name: 'r', type: 'EInt' }] },
-    { name: 'C', supers: ['P', 'R'], attributes: [{ name: 'c', type: 'EInt' }] },
-]);
-const GARAGE = mm([
-    { name: 'Item', isAbstract: true, attributes: [{ name: 'name', type: 'EString' }] },
-    {
-        name: 'Car', supers: ['Item'],
-        attributes: [{ name: 'speed', type: 'EDouble' }, { name: 'colors', type: 'Color', many: true }, { name: 'marks', type: 'EInt', many: true }],
-        references: [
-            { name: 'engine', type: 'Engine', containment: true }, { name: 'wheels', type: 'Wheel', containment: true, many: true },
-            { name: 'spare', type: 'Item', containment: true, many: true },
-            { name: 'best', type: 'Item' }, { name: 'tow', type: 'Car' }, { name: 'eng', type: 'Engine' },
-        ],
-    },
-    { name: 'Wheel', supers: ['Item'], attributes: [{ name: 'size', type: 'EInt' }], references: [{ name: 'bolts', type: 'Bolt', containment: true, many: true }, { name: 'pair', type: 'Bolt' }] },
-    { name: 'Engine', attributes: [{ name: 'power', type: 'EInt' }, { name: 'note', type: 'EString' }] },
-    { name: 'Bolt', attributes: [{ name: 'name', type: 'EString' }] },
-    { name: 'Gear', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'wheel', type: 'Wheel' }] },
-], { Color: ['Red', 'GREEN', 'blue'] });
-const BOX = mm([
-    { name: 'Box', references: [{ name: 'inner', type: 'Box', containment: true }, { name: 'label', type: 'Tag', containment: true }, { name: 'self', type: 'Box' }, { name: 'tag', type: 'Tag' }] },
-    { name: 'Tag', attributes: [{ name: 'name', type: 'EString' }] },
-]);
-const CASES = mm([{ name: 'Node', attributes: [{ name: 'name', type: 'EString' }] }, { name: 'NODE', attributes: [{ name: 'name', type: 'EString' }] }]);
 
 const CORPUS: [string, Spec, NotationStyle][] = [
     ['the 1709 fixture', FIXTURE, CLIKE_STYLE],
@@ -66,6 +26,7 @@ const CORPUS: [string, Spec, NotationStyle][] = [
     ['a multiple inheritance without a diamond', NON_DIAMOND, CLIKE_STYLE],
     ['names, homonyms, choices, a single containment', GARAGE, CLIKE_STYLE],
     ['a nameless recursive class', BOX, CLIKE_STYLE],
+    ['a single containment and a homonymous name', INNER, CLIKE_STYLE],
     ['two class keywords one case apart', CASES, CLIKE_STYLE],
     ['the garage, lower case', GARAGE, LOWER],
     ['the fixture, lower case after the fallback', FIXTURE, LOWER],
@@ -116,11 +77,13 @@ describe('style check (R-TXT-16, §A.2)', () => {
         ]);
     });
 
-    it('a class keyword that the case folds onto a style word; the declared case is fine', () => {
+    it('R-TXT-25 (7): a class keyword the case would fold onto a style word keeps its declared case, a notice', () => {
         expect(errors(checkStyle(grammarOf(SCRIPT, WORD_BLOCKS)))).toEqual([]);
         const fs = checkStyle(grammarOf(SCRIPT, WORD_BLOCKS_LOWER));
-        expect(errors(fs)).toEqual([['case-injective', 'class End']]);
-        expect(fs.find(f => f.level === 'error')!.message).toBe('case lower folds the keyword of End onto the style word "end"');
+        expect(errors(fs)).toEqual([]);
+        expect(fs.filter(f => f.level === 'notice')).toEqual([
+            { level: 'notice', rule: 'case-injective', where: 'style begin-end-lower', message: 'class keywords kept as declared: case lower would fold End onto "end", a style word' },
+        ]);
     });
 
     it('a class keyword equal to a block token, without folding, is a block-delimiters error', () => {
