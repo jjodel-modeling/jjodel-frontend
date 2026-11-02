@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1016
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · commit 5467088b7 · verifica visiva non applicabile
 Lane: fast (closure of work already written and mostly tested)
 Depends: P-2026-11-02-0955 (hard-stop at the ceiling, RC-51; uncommitted work in the tree, handoff in its lane folder)
 Worktree: ~/jjodel-w-textt4, branch textual-t4 (the same tree)

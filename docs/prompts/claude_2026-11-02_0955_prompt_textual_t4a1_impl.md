@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-0955
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · hard-stop at the context ceiling (RC-51), closed by P-2026-11-02-1016 · commit 5467088b7
 Lane: full, Phase 2 (the design is in `~/.jjodel-lanes/P-2026-11-02-0846/handoff.md`)
 Depends: P-2026-11-02-0846 (hard-stop at the ceiling after the design, RC-51; nothing written); decisions R-TXT-16..27
 Worktree: ~/jjodel-w-textt4, branch textual-t4 (the same tree, at the commit that adds this prompt)

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-0846
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · design 0846, implemented by 0955 and 1016
 Lane: full, Phase 2 (design in addendum §A.3 of `docs/discovery/discovery_2026-11-01_textual_viewpoint.md`); no UI in this slice
 Depends: T1, T2, T3 and the path change of P-2026-11-02-0652 on the trunk; decisions R-TXT-16..26
 Worktree: ~/jjodel-w-textt4, branch textual-t4 (from the trunk commit that adds this prompt)
