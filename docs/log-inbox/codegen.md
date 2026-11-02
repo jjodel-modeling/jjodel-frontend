@@ -1105,3 +1105,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato (chat, unattended)
 **Notes**: Both sides only appended to this inbox: trunk file whole, then the branch's 0651 entry. modelLines.test.ts auto-merged, read whole, its corpus imports resolve. Gates: tsc 0, typecheck:scripts 0; vitest 12787 = trunk 12765 + branch 22, 0 failed, 9 known window-red (trunk run had one autoIntake 15s timeout, green on the merge); hooks 967 = 967; build 0; check:docs 5/5 (check E is new, prompt said 4/4); check:scripts PASS; check:addonly PASS.
 **Prompt document name**: 2026-11-02 08:55
+
+## 2026-11-02 — merge: jjscript-set-lists into alfonso-frontend-jjtl (P-2026-11-02-0931)
+**Prompt**: Bring `jjscript-set-lists` at `c4f1048a2` (feats 36a5387f6, 084eb0902; trunk taken by P-2026-11-02-0855) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-jjscript-set-lists on 47c975ec2).
+**Files touched**: merge commit a53423995 (JjScript parser, set/instance commands, effects planner, planWorld, modelLines and tests, the 0651 and 0855 prompts, this inbox); `docs/prompts/claude_2026-11-02_0931_prompt_merge_jjscript-set-lists.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 09:31
