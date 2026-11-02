@@ -922,3 +922,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Priority**: medium
 **Found in**: P-2026-11-02-0040
 **Detail**: ~/.jjodel-lanes/P-2026-11-02-0040/handoff.md
+
+## 2026-11-02 — feat(ui): New model from text (P-2026-11-02-0235)
+**Prompt**: Close slice T2c (P-2026-11-02-0045 stopped at the ceiling, RC-51): from 0045's handoff, the opener (`openNewModelTab`, `createModelFromText`, `appBarTitle`), `NewTextualTab`, the LeftBar action on metamodel rows; gates, probe, commits. One undo after «Create model» must remove the whole model.
+**Files touched**: edf047bf3: `frontend/src/codegen/textual/modelLines.ts`, `frontend/src/codegen/textual/__tests__/modelLines.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/ui/TextualTab.scss`, `frontend/src/codegen/textual/ui/openTextualTab.tsx`, `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/pages/components/Navbar.tsx`; closure: this inbox, the Status lines of the 2355, 0045 and 0235 prompts
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Deviation: canvas opened inside the undo group (after it: 2 entries, undo left the model). Probe on 3235 also found 14/21 lines failing when the script started before the model was in `project.models`; the opener now waits for it. Gates: tsc 0; vitest 225 files, 6377 tests; build 0; codegen-lazy on green, off red (open ticket). Bench 4/4 killed. Closes the app-bar ticket. Crops in ~/.jjodel-lanes/P-2026-11-02-0235/.
+**Prompt document name**: 2026-11-02 02:35

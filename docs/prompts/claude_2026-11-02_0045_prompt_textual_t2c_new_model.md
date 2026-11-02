@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-0045
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · hard-stop, closed by P-2026-11-02-0235
 Lane: full, Phase 2 (the discovery is in `~/.jjodel-lanes/P-2026-11-01-2355/handoff.md`); UI change authorised by Alfonso 2026-11-01 23:44 (R-TXT-23)
 Depends: T2a (P-2026-11-02-0024, parser) and T2b (P-2026-11-02-0040, entry and tab), both committed on this branch
 Worktree: ~/jjodel-w-textt2, branch textual-t2 (the same tree, at the commit that adds this prompt)
