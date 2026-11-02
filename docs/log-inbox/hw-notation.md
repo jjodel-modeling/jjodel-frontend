@@ -6,6 +6,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-02 — test(jjtl): A0 step 1, copy on bind confirmed; stopped at the step 2 inventory (P-2026-11-02-1742)
+**Prompt**: P-2026-11-02-1742, JjTL slice A0: confirming test of copy on bind, inventory of what relies on it, then binding by identity, reported fallbacks, SPEC §5.3/§12.3, R-JTG rows. Stop with a question if anything beyond `source-collections-in-expressions.test.ts:136` relies on the copy.
+**Files touched**: `frontend/src/jjtl/executor/__tests__/bind-resolved-target.test.ts` (new, d2e2c8574), this inbox, the `Status:` line of the prompt.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Copy on bind confirmed on both parse paths (4/4). Identity probe, reverted, patch in `.agent-logs/P-2026-11-02-1742-identity.patch`: `jjel-path-parity.test.ts` fails 4 fixtures (tests#126, #129, #130, SPEC.md#3, the SM2PN arcs), its serializer JSON-stringifies output that identity makes cyclic. Steps 3-6 not done; awaiting Alfonso. Gates ran through a temporary `frontend/node_modules` symlink, removed.
+**Prompt document name**: 2026-11-02 17:42
+
 ## 2026-10-21 — ticket: JjEL: 0xFF evaluates silently to 0 (lenient parse drops trailing tokens)
 **Ticket**: JjEL reads `0xFF` as the number `0` followed by the identifier `xFF`, and the lenient `parse()` keeps the first expression and drops the rest without an error (discovery `docs/discovery/discovery_2026-10-20_jjel_bitvector.md` §3.3; known defect in `docs/spec/concern_languages.md:102`, parse() does not check EOF). A hardware user writing a hex constant gets 0 silently. Expected: a parse error on trailing tokens, or hex/binary number literals; at minimum the error. Found by P-2026-10-20-2055.
 **Priority**: medium
