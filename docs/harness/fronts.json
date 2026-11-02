@@ -146,7 +146,8 @@
       "state": "open",
       "openedOn": "2026-11-02",
       "ownerChat": "C-2026-11-02-1016",
-      "ownerSince": "2026-11-02"
+      "ownerSince": "2026-11-02",
+      "milestone": 17
     }
   ]
 }
