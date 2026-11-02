@@ -1223,3 +1223,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: no UI change, visual check not applicable
 **Notes**: Rollback tag `pre-textual-path-keyword` on `5467e2328` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2019/result.json`.
 **Prompt document name**: 2026-11-02 20:19
+
+## 2026-11-02 — feat(codegen): text paths follow feature keywords (P-2026-11-02-2029)
+**Prompt**: R-TXT-29: a later path segment is the containment's printed keyword (feature name when dropped or inline), in printer and parser, read from the concrete grammar; tests first on the library fixture; clash refused; grouped index measured; gates, commit, bench.
+**Files touched**: fb25f816a: `frontend/src/codegen/textual/printer.ts`, `parser.ts`, `styleCheck.ts`, `__tests__/syntaxRecord.test.ts`; Status line of the 2029 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 6 tests red first. Grouped index measured broken (books[3] reparsed as cosmos): printer now indexes in printed order. Path-keyword clash passed the style check silently: now refused (distinct-features) and a parse error naming both. Bench 6 mutants, all killed (commit body); inline mutant in its non-equivalent form. Closes the 2003 ticket. No record: byte-identical, 2543 codegen tests green.
+**Prompt document name**: 2026-11-02 20:29

@@ -99,11 +99,12 @@ const shell = (name: string, attributes: any[], references: any[] = []) => ({
     name, className: 'DClass', isAbstract: false, isInterface: false, attributes, references, superTypes: [], subTypes: [], instances: [], allInstances: [], __type: 'Class',
 });
 
-/** The globals `buildEvalContext` gives for the model `M` (with objects) or for the metamodel alone. */
-function libraryGlobals(book = 'Book', withObjects = true): Record<string, any> {
+/** The globals `buildEvalContext` gives for the model `M` (with objects) or for the metamodel alone; with `favourite`, a
+ *  member has a `favourite` book (R-TXT-29: a reference into the grouped `books`). */
+function libraryGlobals(book = 'Book', withObjects = true, favourite = false): Record<string, any> {
     const library = shell('Library', [attr('Library', 'name', 'EString')], [ref('Library', 'books', book, -1, true), ref('Library', 'members', 'Member', -1, true)]);
     const bookShell = shell(book, [attr(book, 'name', 'EString'), attr(book, 'genre', 'Genre'), attr(book, 'year', 'EInt')], [ref(book, 'borrowedBy', 'Member', 1)]);
-    const member = shell('Member', [attr('Member', 'name', 'EString')]);
+    const member = shell('Member', [attr('Member', 'name', 'EString')], favourite ? [ref('Member', 'favourite', book, 1)] : []);
     const obj = (id: string, cls: any, slots: Record<string, unknown>): any => ({ id, __type: 'Object', instanceOf: cls, instanceof: cls, parent: null, ...slots });
     const ann = obj('m1', member, { name: 'ann' });
     const bob = obj('m2', member, { name: 'bob' });
@@ -368,10 +369,10 @@ describe('stale ids and renames', () => {
 
 const { checkStyle } = await import('../styleCheck');
 
-/** The library grammar under a record. */
-function libraryGrammar(record: SyntaxAnnotations) {
+/** The library grammar under a record; with `favourite`, of the metamodel where a member has a favourite book. */
+function libraryGrammar(record: SyntaxAnnotations, favourite = false) {
     const stored = storedNotation(libraryLookup('Book', encodeSyntax(record)), 'MM');
-    return textualNotation(textInputOf(libraryGlobals()).metamodel, stored.decoded, stored.ids).grammar;
+    return textualNotation(textInputOf(libraryGlobals('Book', true, favourite)).metamodel, stored.decoded, stored.ids).grammar;
 }
 
 /** The library model with both members named `ann`, so that `borrowedBy` prints paths: cosmos borrows the first, spqr the
@@ -453,5 +454,98 @@ describe('R-TXT-28: a path starts with the printed class keyword', () => {
         const r = parseText(text, g);
         expect(r.errors.map(e => e.message)).toEqual(['a path starts with a class keyword: Library is written "shelf"']);
         expect(isApplicableParse(r)).toBe(false);
+    });
+});
+
+// ---- R-TXT-29: feature segments follow the printed feature keyword (P-2026-11-02-2029) ---------------------------
+
+/** The library model of `pathObjects` in the metamodel where a member has a favourite book; spqr is renamed `dune`, so
+ *  that a favourite prints a path: ann's is spqr (model position 3 in `books`), bob's is dune (position 0). */
+function favouriteObjects() {
+    return textInputOf(libraryGlobals('Book', true, true)).objects.map(o => {
+        if (o.id === 'm2') return { ...o, slots: { ...o.slots, name: 'ann' } };
+        if (o.id === 'b4') return { ...o, slots: { ...o.slots, name: 'dune' } };
+        return o;
+    }).map(o => (o.id === 'm1' ? { ...o, slots: { ...o.slots, favourite: 'b4' } } : o.id === 'm2' ? { ...o, slots: { ...o.slots, favourite: 'b1' } } : o));
+}
+
+const GENRES = LIBRARY_RECORD.enums;
+
+describe('R-TXT-29: a feature segment is the printed feature keyword', () => {
+    it('a renamed feature: the path reads shelf[0].patrons[1] and resolves to the same member (mutants: printer keeps the feature name; parser keeps the feature name)', () => {
+        const g = libraryGrammar({ v: 1, classes: { C_Lib: { keyword: 'shelf' } }, features: { R_Lib_members: { keyword: 'patrons' } } });
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        const { text, r, named } = roundTrip(g, pathObjects());
+        expect(text).toContain('borrowedBy shelf[0].patrons[0]');
+        expect(text).toContain('borrowedBy shelf[0].patrons[1]');
+        expect(text).not.toContain('.members[');
+        const members = r.objects.find(o => o.cls === 'Library')!.slots.members as string[];
+        expect(named('cosmos').slots.borrowedBy).toBe(members[0]);
+        expect(named('spqr').slots.borrowedBy).toBe(members[1]);
+    });
+
+    it('the old name of a renamed feature is an error naming the keyword (mutants: printer keeps the feature name; parser keeps the feature name)', () => {
+        const g = libraryGrammar({ v: 1, classes: { C_Lib: { keyword: 'shelf' } }, features: { R_Lib_members: { keyword: 'patrons' } } });
+        const text = printTextModel(g, pathObjects()).text.replace('shelf[0].patrons[1]', 'shelf[0].members[1]');
+        const r = parseText(text, g);
+        expect(r.errors.map(e => e.message)).toEqual(['a path segment is a feature keyword: Library.members is written "patrons"']);
+        expect(isApplicableParse(r)).toBe(false);
+    });
+
+    it('a dropped keyword falls back to the feature name (mutant: the segment is the empty keyword)', () => {
+        const g = libraryGrammar({ v: 1, features: { R_Lib_members: { keyword: '' } } });
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        const { text, r, named } = roundTrip(g, pathObjects());
+        expect(text).not.toContain('  members {');
+        expect(text).toContain('borrowedBy Library[0].members[1]');
+        expect(named('spqr').slots.borrowedBy).toBe((r.objects.find(o => o.cls === 'Library')!.slots.members as string[])[1]);
+    });
+
+    it('an inline feature falls back to the feature name, its keyword unprinted (no mutant of the bench: an ungrouped inline containment starts with its star, so no keyword reads off it)', () => {
+        const g = libraryGrammar({ v: 1, features: { R_Lib_members: { keyword: 'patrons', inline: true } } });
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        const { text, r, named } = roundTrip(g, pathObjects());
+        expect(text).not.toContain('patrons');
+        expect(text).toContain('borrowedBy Library[0].members[1]');
+        expect(named('spqr').slots.borrowedBy).toBe((r.objects.find(o => o.cls === 'Library')!.slots.members as string[])[1]);
+    });
+
+    it('a grouped feature: its keyword, and an index that is the position the text gives, so a reprint resolves to the same book (mutants: printer keeps the feature name; parser keeps the feature name; printer indexes by model order)', () => {
+        const g = libraryGrammar({ v: 1, features: { R_Lib_books: { groupBy: 'A_Book_genre', keyword: 'stock' } }, enums: GENRES }, true);
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        const { text, r } = roundTrip(g, favouriteObjects());
+        // spqr is books[3] in the model, and prints second, in the prose group after dune: the parse makes it books[1].
+        expect(text).toContain('favourite Library[0].stock[1]');
+        expect(text).toContain('favourite Library[0].stock[0]');
+        const member = (k: number) => r.objects.filter(o => o.cls === 'Member')[k];
+        const book = (id: unknown) => r.objects.find(o => o.id === id)!;
+        expect(book(member(0).slots.favourite).slots.genre).toBe('HISTORY');
+        expect(book(member(1).slots.favourite).slots.genre).toBe('FICTION');
+    });
+
+    it('an inline grouped feature falls back to the feature name, never a group keyword (mutants: inline fallback removed; printer indexes by model order)', () => {
+        const g = libraryGrammar({ v: 1, features: { R_Lib_books: { groupBy: 'A_Book_genre', inline: true } }, enums: GENRES }, true);
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        const { text, r } = roundTrip(g, favouriteObjects());
+        expect(text).toContain('favourite Library[0].books[1]');
+        expect(text).not.toContain('.prose[');
+        const book = (id: unknown) => r.objects.find(o => o.id === id)!;
+        expect(book(r.objects.filter(o => o.cls === 'Member')[0].slots.favourite).slots.genre).toBe('HISTORY');
+    });
+
+    it('two containments of one class with one path keyword are refused by the style check, and a path through it is an error, never one of them (mutants: parser keeps the feature name; parser takes the first containment)', () => {
+        const g = libraryGrammar({ v: 1, features: { R_Lib_books: { keyword: 'members' }, R_Lib_members: { inline: true } } });
+        expect(checkStyle(g).filter(f => f.level === 'error').map(f => `${f.rule}: ${f.where}: ${f.message}`))
+            .toEqual(['distinct-features: class Library: the path keyword "members" names 2 containments: Library.books, Library.members']);
+        const text = printTextModel(g, pathObjects()).text;
+        expect(text).toContain('borrowedBy Library[0].members[1]');
+        const r = parseText(text, g);
+        expect([...new Set(r.errors.map(e => e.message))]).toEqual(['the path keyword "members" names 2 containments of Library: books, members']);
+    });
+
+    it('a dropped keyword whose feature name is another feature\'s keyword is refused the same way (mutant: the segment is the empty keyword)', () => {
+        const g = libraryGrammar({ v: 1, features: { R_Lib_books: { keyword: '' }, R_Lib_members: { keyword: 'books' } } });
+        expect(checkStyle(g).filter(f => f.level === 'error').map(f => f.message))
+            .toContain('the path keyword "books" names 2 containments: Library.books, Library.members');
     });
 });

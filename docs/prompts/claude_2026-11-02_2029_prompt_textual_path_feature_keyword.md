@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-2029
 Chat: C-2026-11-02-1814
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane fast · fb25f816a · verifica visiva non applicabile
 Lane: fast (two source files and their tests, no UI)
 Depends: none
 Worktree: ~/jjodel-w-textpathfeat, branch textual-path-feature (from the trunk commit that adds this prompt)

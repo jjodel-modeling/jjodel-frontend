@@ -11,6 +11,7 @@
 import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
 import type { Matcher } from './parser';
 import { firstSetsOf, word } from './parser';
+import { featureKeyword } from './printer';
 
 export type StyleRule =
     /** §A.2 (i): the feature keywords of a class are distinct, inherited ones included. */
@@ -79,6 +80,19 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
             if (n < 2) continue;
             const owners = r.features.filter(f => f.name === kw).map(f => `${f.owner}.${f.name}`);
             error('distinct-features', `class ${r.cls}`, `the keyword "${kw}" starts ${n} features: ${owners.join(', ')}`);
+        }
+    }
+    // R-TXT-29: a path segment names a containment by its printed keyword, the feature name when it prints none; so a
+    // dropped or inline containment can share its segment with another one's keyword, which no item keyword shows.
+    for (const r of Object.values(g.objects)) {
+        const byKw = new Map<string, string[]>();
+        for (const f of r.features) {
+            if (f.kind !== 'containment') continue;
+            const kw = featureKeyword(g, r.cls, f.name);
+            byKw.set(kw, [...(byKw.get(kw) ?? []), `${f.owner}.${f.name}`]);
+        }
+        for (const [kw, fs] of byKw) {
+            if (fs.length > 1) error('distinct-features', `class ${r.cls}`, `the path keyword "${kw}" names ${fs.length} containments: ${fs.join(', ')}`);
         }
     }
 
