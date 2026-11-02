@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1830
 Chat: C-2026-11-02-1814
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · hard-stop at the ceiling, closed by P-2026-11-02-1930 · verifica visiva passata 2026-11-02 (chat, unattended)
 Lane: full (more than three files; persisted data in `_state`)
 Depends: none
 Worktree: ~/jjodel-w-textt4a2, branch textual-t4a2 (from the trunk commit that adds this prompt)

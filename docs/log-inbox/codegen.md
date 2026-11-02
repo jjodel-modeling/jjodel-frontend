@@ -1167,3 +1167,18 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
 **Prompt document name**: 2026-11-02 10:27
+
+## 2026-11-02 — feat(codegen): textual syntax annotations stored, language name shown (P-2026-11-02-1830, P-2026-11-02-1930)
+**Prompt**: T4a-2 (1830, hard-stop at the context ceiling, RC-51) closed by 1930: syntax annotations in the metamodel's `_state` under `textSyntax`, `ElementIds` with lower bounds, one grammar path for Text tab, EBNF and «New model from text», issues strip, picker/tab/app-bar labelled with `language`; gates, commit, in-app check.
+**Files touched**: bb620d93c: `frontend/src/codegen/textual/syntaxRecord.ts` (new), `__tests__/syntaxRecord.test.ts` (new), `concreteGrammar.ts`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `ui/openTextualTab.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `dataManagerOption.ts`, `__tests__/textualPicker.test.ts`; Status lines of the 1830 and 1930 prompts; this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-02 10:16 (T4a-1 grouping: block-layout objects of a subset chained on one line, 8-line fix in concreteGrammar.ts)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no (9 code files, above five, all in 1830's DOVE and listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe agente 24/24; verifica visiva passata 2026-11-02, chat RC-23, unattended)
+**Notes**: Tests followed the code, contrary to 1830 COME; bench 11/11 mutants killed (commit body). Discovery: key textSyntax free; Toolbar cannot import src/codegen (lazy gate), so the key lives in dataManagerOption.ts; ElementIds from the D-layer lookup, legacy classifiers too; no issues UI existed, strip added. Commit subject cut to 72 (hook). Probe DemoESM 24/24: one undo clears the record (2 history entries), reload equal, malformed record shows its error. Detail: lane handoff.md, probe-run1.log.
+**Prompt document name**: 2026-11-02 19:30
+
+**Ticket** (P-2026-11-02-1930): the app-bar tab ellipsises the title to `demoESM · Stat…` at default width.

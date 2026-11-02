@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1930
 Chat: C-2026-11-02-1814
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane fast · bb620d93c · verifica visiva passata 2026-11-02 (chat, unattended)
 Lane: fast (closure of work already written and tested)
 Depends: P-2026-11-02-1830 (hard-stop at the ceiling, RC-51; uncommitted work in the tree, handoff in its lane folder)
 Worktree: ~/jjodel-w-textt4a2, branch textual-t4a2 (the same tree)
