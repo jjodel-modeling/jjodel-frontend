@@ -6,6 +6,19 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-02 — feat(jjtl): A3, placed targets marked __nested, write-back reads one test (P-2026-11-02-2108)
+**Prompt**: P-2026-11-02-2108, Alfonso's ruling: a placed target carries the `__nested` format; the write-back replaces `v.__nested || isPlacedIn(...)` with one test; `targetModel.containment` stays.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `executor/traceModel.ts`, `executor/__tests__/containment-placement.test.ts`, `jjtl/__tests__/jjel-path-parity.test.ts`, `components/project/ProjectEditor.tsx`, `nestedMaterialization.ts`, `__tests__/nestedMaterialization.test.ts`, `frontend/src/jjtl/SPEC.md`, this inbox, the `Status:` line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Marked in settleContainment after pass 2, plus `__placed` so isRuleTarget and both serializers still read a rule target. Claim-time marking kills 4 tests, the old serializer 2. Probe port 3194: A1-A5, save/reopen and A0 S1-S5 same figures as P-2024. Gates: 461 jjtl+project, full 12951 (9 known + 2 laneRun timeouts, 145/145 alone), tsc 0, build 0. Probe: `~/.jjodel-lanes/P-2026-11-02-2108/probe/`.
+**Prompt document name**: 2026-11-02 21:08
+
 ## 2026-11-02 — feat(jjtl): A2, placed targets written inside their container by the nested path (P-2026-11-02-2024)
 **Prompt**: P-2026-11-02-2024, close P-2026-11-02-1956, LIR, then the app's write-back of rule targets placed in a containment, the nine handoff items, measured through the real Execute dialog.
 **Files touched**: `frontend/src/components/project/ProjectEditor.tsx` (STEP 6, 6c, 8b), `nestedMaterialization.ts`, `__tests__/nestedMaterialization.test.ts`, `frontend/src/jjtl/SPEC.md`, `docs/discovery/lir_2026-11-02_jjtl_containment_writeback.md` (new), this inbox, the `Status:` lines of both prompts.
