@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1742
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: fermo 2026-11-02 · lane hw-notation · step 1 committed (d2e2c8574) · stopped on a question at the step 2 inventory (jjel-path-parity relies on the copy); steps 3-6 not done
+Status: eseguito 2026-11-02 · lane hw-notation · stopped once at the step 2 inventory, resumed on Alfonso's GO · d2e2c8574, a43408ca2, 39202fe67, 73f4655fe and the docs commits
 Lane: full (JjTL executor behaviour that is committed changes; first Phase 2 slice of P-2026-11-02-1425)
 Depends: P-2026-11-02-1425, P-2026-11-02-1612
 Worktree: ~/jjodel-w-jjtlgeneric, branch jjtl-generic-transformation (the same tree, at the commit that adds this prompt)

@@ -6,6 +6,24 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-02 — feat(jjtl): A0, resolved targets bound by identity, fallbacks reported, SPEC 5.3, R-JTG (P-2026-11-02-1742)
+**Prompt**: P-2026-11-02-1742 resumed on Alfonso's GO: parity serializer change approved on condition every rule target's content is still compared as a root; Steps 3 to 6.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `traceModel.ts`, `__tests__/bind-resolved-target.test.ts`, `__tests__/source-collections-in-expressions.test.ts`, `__tests__/resolution-fallbacks.test.ts` (new), `frontend/src/jjtl/__tests__/jjel-path-parity.test.ts`, `frontend/src/jjtl/SPEC.md`, `docs/decisions.md`, the discovery report, this inbox, the prompt's `Status:`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Out of scope: `jjel-path-parity.test.ts`, approved by Alfonso. Its serializer writes a rule target short outside `roots` and throws if one is not a root (every rule target is pushed to roots, `executor.ts` single creation site), so A will trip it on purpose. Gates: src/jjtl 408 passed, full suite 12905 passed (9 known import failures), typecheck 0. No app smoke: write-back read, not run.
+**Prompt document name**: 2026-11-02 17:42
+
+## 2026-11-02 — ticket: two JjTL executor tests fail once the joiner import is mocked
+**Ticket**: `executor-bridge.test.ts` "Test 5: Nested object creation" and `executor-llayer.test.ts` "forall with such that filter using item property" fail on the tip when `joiner` is mocked; both files normally fail at import (`window is not defined`), so the failures are invisible. Read, not diagnosed: Test 5 expects a nested object without the `__sourceId`/`__createdBy`/`__nested` markers added by P-2026-10-30-1330 (stale expectation); the llayer case leaves `tables[0].columns` undefined for a forall in a rule body with no target metamodel (placement of a body forall). Neither involves trace resolution: neither bears on part A.
+**Priority**: low
+**Found in**: P-2026-11-02-1742
+
 ## 2026-11-02 — test(jjtl): A0 step 1, copy on bind confirmed; stopped at the step 2 inventory (P-2026-11-02-1742)
 **Prompt**: P-2026-11-02-1742, JjTL slice A0: confirming test of copy on bind, inventory of what relies on it, then binding by identity, reported fallbacks, SPEC §5.3/§12.3, R-JTG rows. Stop with a question if anything beyond `source-collections-in-expressions.test.ts:136` relies on the copy.
 **Files touched**: `frontend/src/jjtl/executor/__tests__/bind-resolved-target.test.ts` (new, d2e2c8574), this inbox, the `Status:` line of the prompt.
