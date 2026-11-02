@@ -999,3 +999,21 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: passato (crops, unattended; after undo of Create model the canvas tab shows a bare «closed tab» text, open question)
 **Prompt document name**: 2026-11-02 06:37
+
+## 2026-11-02 — fix(model): defaultValueLiteral accessors, integer defaults, lazy gate off mode (P-2026-11-02-0653)
+**Prompt**: R-TXT-25 (8), (9), (10): restore the L-layer get_/set_defaultValueLiteral and make the Ecore export read them; reject a decimal default literal on an integer attribute with a notice; make the off mode of check:codegen-lazy independent of `.env.production`.
+**Files touched**: ffcb21052: frontend/src/model/logicWrapper/LModelElement.tsx, frontend/src/services/export/EcoreService.ts, frontend/src/services/export/__tests__/ecore-export-defaults.test.ts, frontend/src/jjscript/executor/commands/eval.ts, frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts, frontend/scripts/gates/check-codegen-lazy.ts; closure: this inbox, the Status line of the 0653 prompt
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-01 23:50
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Notes**: Lazy off: clause 0 now resolves "false", clauses 1 and 3 stay red (43 generator modules via two unguarded imports, ticket below): the 10-23 ticket is re-scoped, not closed. No notice sink reaches the default read: console.warn, once per attribute and literal. L accessor not executed by a test (joiner does not import in the bench). Bench 3/3 killed. Gates: tsc 0, vitest 3409 (known window red), build 0, check:scripts 0, lazy on green.
+**Prompt document name**: 2026-11-02 06:53
+
+## 2026-11-02 — ticket: the lazy gate's off build ships generator modules through unguarded dynamic imports
+**Ticket**: With VITE_CODEGEN=false resolved (P-2026-11-02-0653), check:codegen-lazy --off still fails clauses 1 and 3: 43 modules under src/codegen/ land in lazy chunks and a chunk names runner.worker. Two dynamic imports lack the CODEGEN_BUILD guard their neighbours have: `ProjectEditor.tsx:70` (React.lazy GeneratorsSection) and `LeftBar.tsx:385` (import of openTemplateEditor). The env-file cause of the 2026-10-23 ticket is gone; this is what remains.
+**Priority**: medium
+**Found in**: P-2026-11-02-0653
