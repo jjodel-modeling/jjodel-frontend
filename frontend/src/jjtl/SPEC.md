@@ -261,6 +261,7 @@ and in the body, with the variables of an enclosing `forall` and the `let` bindi
 scope. The created objects form **one flat list** in the feature; an empty product creates
 nothing, without a warning. A name bound twice in the same `forall` is a parse error.
 Unlike a one-variable `forall`, the properties of the elements are not bound unqualified.
+With the source text, a collection the legacy expression parser cannot read (an object literal, `{ hi: q, lo: r }`) is parsed by JjEL up to `such`, `->`, the comma of the next binding or the end of the line; one it can read keeps its legacy AST (P-2026-11-02-2345).
 
 ```jjtl
 -- same collection: every unordered pair of requesters, once
