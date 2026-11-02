@@ -484,3 +484,42 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 **Smoke visivo**: non applicabile
 **Notes**: 13 files, above five: the consumer fix in subsetChecker.ts (E-FORALL on a top flatten over ForAll, record projection not E-VALUE) and the provider were outside the parser. Gates: tsc exit 0; vitest jjel/jjscript/jjtl/codegen/validation/simulation 5096 tests passed, 8 suites the known window import failures; build exit 0. Context branch killed by a mutation (1 fail). Regressions unknown: the 3001 autocomplete check is the chat's, after the merge. Temporary node_modules symlink removed.
 **Prompt document name**: 2026-11-02 14:10
+
+## 2026-11-02 — merge: jjel-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1511)
+**Prompt**: `claude_2026-11-02_1511_prompt_merge_jjel-forall-multivar.md`, a direct merge by `lane-run merge --direct`, closed by hand by the chat because the worker ended blocked and `lane-run go` did not apply.
+**Files touched**: merge `bf4b33e74`, the files of the branch side.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. vitest 12886 tests, 4 failed, all in `codegen/engine/__tests__/defaultText.test.ts` and `codegen/textual/__tests__/textual.test.ts` (generation errors). Same run: 3 of the 4 red before the merge, 0 on the branch. The two files alone on the trunk, twice, load average 13: 23 of 23 green. Intermittent; the 2000 ms generation budget (R-GEN-28) under a full run is a hypothesis, the error text was not captured. Other gates green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: on 3001, from the served modules: eight expressions as R-FA, both parse errors, three autocomplete contexts `after-forall-in`. The suggestion list in the console UI was not exercised.
+**Notes**: Rollback tag `pre-jjel-forall-multivar` on `a122f5463`. Worker: `~/.jjodel-lanes/P-2026-11-02-1511/result.json`.
+**Prompt document name**: 2026-11-02 15:11
+
+## 2026-11-02 — feat(jjscript): forall...do over several variables (P-2026-11-02-1332)
+**Prompt**: R-FA-7 in JjScript: `forall a, b in S ... do` and `forall x in A, y in x.f ... do` desugared by the parser to nested ForAllArgs, filter on the innermost; tests, one Jjodie prompt line.
+**Files touched**: df3455a9d (4 files: `frontend/src/jjscript/parser/parser.ts`, `__tests__/parser.test.ts`, `executor/__tests__/forallMultivar.test.ts` new, `frontend/src/constants/defaultPrompts.ts`); Status of the 1332 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Executor, planner, guard, validator unchanged (planner: `unsupported: forall`, pinned by a test). Undo is the Run's group, not run end to end (executor does not import in the bench). `x, y in S` reading x is a regex parse error (a lambda rebinding x is a false positive). `rename b to b.name + _dup` does not parse (rename takes a name token, pre-existing). Gates: tsc 0, vitest 1425 passed (context-binding the known failure), build 0. Mutation: bindingContinues=false kills 5.
+**Prompt document name**: 2026-11-02 13:32
+
+## 2026-11-02 — merge: jjscript-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1701)
+**Prompt**: `claude_2026-11-02_1701_prompt_merge_jjscript-forall-multivar.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-forall-multivar` at `1d415bd5d` into `alfonso-frontend-jjtl`, merge base `767d350a3`, 2 commits on the branch side.
+**Files touched**: merge `838ea1449`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_1332_prompt_jjscript_forall_multivar.md`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/__tests__/parser.test.ts`, `frontend/src/jjscript/executor/__tests__/forallMultivar.test.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `838ea1449` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12899 tests in 488 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: on 3001 from the served JjScript parser: both multi-variable spellings parse to nested forall, a repeated name is a parse error. No command was run on a model in the UI; merge gates green
+**Notes**: Rollback tag `pre-jjscript-forall-multivar` on `767d350a3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1701/result.json`.
+**Prompt document name**: 2026-11-02 17:01
