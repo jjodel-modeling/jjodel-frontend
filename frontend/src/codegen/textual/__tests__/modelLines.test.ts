@@ -1,0 +1,333 @@
+/**
+ * The JjScript lines of «New model from text» (slice T2c, P-2026-11-02-0045). On T1's corpus: print a model, parse
+ * it, build the lines, run them through the JjScript planner on an empty model of the metamodel (the world PreviewBar
+ * plans against, here derived from T1's input), and read the planned effects back as a model: it is the original up
+ * to ids. The planner parses every line with the real JjScript parser and applies the executor's rules (handles,
+ * containers, multiplicities, operators), so a line it refuses is a line the app would refuse.
+ *
+ * A many-valued attribute with two values or more is not writable by JjScript today: the round trip runs on the
+ * corpus with such attributes cut to their first value, and the problem is pinned on the originals.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { planEffects } from '../../../jjscript/executor/effectsPlanner';
+import type { EffectsPlan, PlanWorld } from '../../../jjscript/executor/effectsPlanner';
+import { deriveBaseGrammar } from '../baseGrammar';
+import { deriveConcreteGrammar } from '../concreteGrammar';
+import type { ConcreteGrammar } from '../concreteGrammar';
+import { classAncestors, classFeatures } from '../metamodel';
+import type { TextMetamodel, TextObject } from '../metamodel';
+import { jjscriptNumber, jjscriptString, modelLines, readNewModel } from '../modelLines';
+import { isApplicableParse, parseText } from '../parser';
+import { printTextModel } from '../printer';
+import { CLIKE_STYLE } from '../style';
+import type { NotationStyle } from '../style';
+import { FIXTURE, metamodelOf, objectsOf } from './spec';
+import type { Spec } from './spec';
+
+// The corpus of textual.test.ts, copied as parser.test.ts copies it: neither file exports it.
+const DIAMOND: Spec = {
+    classes: [
+        { name: 'A', isAbstract: true, attributes: [{ name: 'a', type: 'EInt' }], references: [{ name: 'ra', type: 'C' }] },
+        { name: 'B1', isAbstract: true, supers: ['A'], attributes: [{ name: 'b1', type: 'EInt' }] },
+        { name: 'B2', isAbstract: true, supers: ['A'], attributes: [{ name: 'b2', type: 'EInt' }] },
+        { name: 'C', supers: ['B1', 'B2'], attributes: [{ name: 'c', type: 'EInt' }], references: [{ name: 'rc', type: 'C' }] },
+    ],
+    enums: {},
+    objects: [{ id: 'x', cls: 'C', slots: { a: 1, b1: 2, b2: 3, c: 4, ra: 'x', rc: 'x' } }],
+};
+
+const NON_DIAMOND: Spec = {
+    classes: [
+        { name: 'Q1', isAbstract: true, attributes: [{ name: 'q1', type: 'EInt' }] },
+        { name: 'Q2', isAbstract: true, attributes: [{ name: 'q2', type: 'EInt' }] },
+        { name: 'T', isAbstract: true, attributes: [{ name: 't', type: 'EInt' }] },
+        { name: 'S', isAbstract: true, supers: ['T'], attributes: [{ name: 's', type: 'EInt' }] },
+        { name: 'P', isAbstract: true, supers: ['Q1', 'Q2'], attributes: [{ name: 'p', type: 'EInt' }] },
+        { name: 'R', isAbstract: true, supers: ['S'], attributes: [{ name: 'r', type: 'EInt' }] },
+        { name: 'C', supers: ['P', 'R'], attributes: [{ name: 'c', type: 'EInt' }] },
+    ],
+    enums: {},
+    objects: [{ id: 'x', cls: 'C', slots: { q1: 1, q2: 2, t: 3, s: 4, p: 5, r: 6, c: 7 } }],
+};
+
+const GARAGE: Spec = {
+    classes: [
+        { name: 'Item', isAbstract: true, attributes: [{ name: 'name', type: 'EString' }] },
+        {
+            name: 'Car', supers: ['Item'],
+            attributes: [{ name: 'speed', type: 'EDouble' }, { name: 'colors', type: 'Color', many: true }, { name: 'marks', type: 'EInt', many: true }],
+            references: [
+                { name: 'engine', type: 'Engine', containment: true }, { name: 'wheels', type: 'Wheel', containment: true, many: true },
+                { name: 'spare', type: 'Item', containment: true, many: true },
+                { name: 'best', type: 'Item' }, { name: 'tow', type: 'Car' }, { name: 'eng', type: 'Engine' },
+            ],
+        },
+        { name: 'Wheel', supers: ['Item'], attributes: [{ name: 'size', type: 'EInt' }], references: [{ name: 'bolts', type: 'Bolt', containment: true, many: true }, { name: 'pair', type: 'Bolt' }] },
+        { name: 'Engine', attributes: [{ name: 'power', type: 'EInt' }, { name: 'note', type: 'EString' }] },
+        { name: 'Bolt', attributes: [{ name: 'name', type: 'EString' }] },
+        { name: 'Gear', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'wheel', type: 'Wheel' }] },
+    ],
+    enums: { Color: ['Red', 'GREEN', 'blue'] },
+    objects: [
+        { id: 'c1', cls: 'Car', slots: { name: 'alpha', speed: 1.5, colors: ['Red', 'blue'], marks: [3, 1], engine: 'e1', wheels: ['w1', 'w2'], spare: ['w3', 'c3'], best: 'w1', tow: 'c2', eng: 'e1' } },
+        { id: 'c2', cls: 'Car', slots: { name: 'beta', wheels: ['w4'], best: 'w2', eng: 'e0', tow: 'c3' } },
+        { id: 'g1', cls: 'Gear', slots: { name: 'w', wheel: 'w4' } },
+        { id: 'e0', cls: 'Engine', slots: { power: 0 } },
+        { id: 'e1', cls: 'Engine', slots: { power: 90, note: 'line1\nline2 "q"' } },
+        { id: 'w1', cls: 'Wheel', slots: { name: 'w', size: 16, bolts: ['b1', 'b2'] } },
+        { id: 'w2', cls: 'Wheel', slots: { name: 'w', size: 17 } },
+        { id: 'w3', cls: 'Wheel', slots: { name: 'it\'s "odd"', size: 1 } },
+        { id: 'c3', cls: 'Car', slots: { name: 'inner', tow: 'c1' } },
+        { id: 'b1', cls: 'Bolt', slots: { name: 'b' } },
+        { id: 'b2', cls: 'Bolt', slots: { name: 'b' } },
+        { id: 'w4', cls: 'Wheel', slots: { name: 'v', bolts: ['b3'], pair: 'b1' } },
+        { id: 'b3', cls: 'Bolt', slots: { name: 'v' } },
+    ],
+};
+
+const BOX: Spec = {
+    classes: [
+        {
+            name: 'Box',
+            references: [{ name: 'inner', type: 'Box', containment: true }, { name: 'label', type: 'Tag', containment: true }, { name: 'self', type: 'Box' }, { name: 'tag', type: 'Tag' }],
+        },
+        { name: 'Tag', attributes: [{ name: 'name', type: 'EString' }] },
+    ],
+    enums: {},
+    objects: [
+        { id: 'r', cls: 'Box', slots: { inner: 'i', self: 'r', tag: 't' } },
+        { id: 'i', cls: 'Box', slots: { self: 'i', inner: 't2', label: 't' } },
+        { id: 't', cls: 'Tag', slots: {} },
+        { id: 't2', cls: 'Box', slots: {} },
+    ],
+};
+
+const CASES: Spec = {
+    classes: [{ name: 'Node', attributes: [{ name: 'name', type: 'EString' }] }, { name: 'NODE', attributes: [{ name: 'name', type: 'EString' }] }],
+    enums: {},
+    objects: [{ id: 'a', cls: 'Node', slots: { name: 'a' } }, { id: 'b', cls: 'NODE', slots: { name: 'b' } }],
+};
+
+// Names JjScript cannot take as a handle: a command word, a literal word in another case, a class name, a name that
+// is not an identifier; and a value of every kind a line writes.
+const AWKWARD: Spec = {
+    classes: [
+        { name: 'Thing', attributes: [{ name: 'name', type: 'EString' }, { name: 'n', type: 'EDouble' }, { name: 'on', type: 'EBoolean' }, { name: 'text', type: 'EString' }], references: [{ name: 'from', type: 'Thing' }, { name: 'to', type: 'Thing', many: true }] },
+    ],
+    enums: {},
+    objects: [
+        { id: 'k1', cls: 'Thing', slots: { name: 'create', n: -2.5, on: true, text: 'tab\there\\ "q" \r', from: 'k2', to: ['k3', 'k4', 'k3'] } },
+        { id: 'k2', cls: 'Thing', slots: { name: 'True', n: 0.0000015, on: false, text: '' } },
+        { id: 'k3', cls: 'Thing', slots: { name: 'Thing', n: 1e21 } },
+        { id: 'k4', cls: 'Thing', slots: { name: 'two words', to: ['k1'] } },
+        { id: 'k5', cls: 'Thing', slots: { name: 'Thing_1' } },
+    ],
+};
+
+const LOWER: NotationStyle = { ...CLIKE_STYLE, id: 'c-like-lower', classCase: 'lower', literalCase: 'lower' };
+
+const grammarOf = (spec: Spec, style: NotationStyle = CLIKE_STYLE): ConcreteGrammar => deriveConcreteGrammar(deriveBaseGrammar(metamodelOf(spec)), style);
+
+/** The spec with every many-valued attribute cut to its first value: what JjScript can write today. */
+function oneValued(spec: Spec): Spec {
+    const mm = metamodelOf(spec);
+    return {
+        ...spec,
+        objects: spec.objects.map(o => {
+            const c = mm.classes.find(k => k.name === o.cls)!;
+            const many = new Set(classFeatures(mm, c).filter(f => f.kind === 'attribute' && f.many).map(f => f.name));
+            return { ...o, slots: Object.fromEntries(Object.entries(o.slots).map(([k, v]) => [k, many.has(k) && Array.isArray(v) ? v.slice(0, 1) : v])) };
+        }),
+    };
+}
+
+/** An empty model of the metamodel, as `buildPlanWorld` reads one: classes with inherited features, no element. */
+function emptyWorld(mm: TextMetamodel): PlanWorld {
+    const classes: PlanWorld['classes'] = {};
+    for (const c of mm.classes) {
+        const features = classFeatures(mm, c);
+        classes[c.name] = {
+            name: c.name, abstract: !!c.isAbstract, kinds: [c.name, ...classAncestors(mm, c).map(a => a.name)],
+            attributes: features.filter(f => f.kind === 'attribute').map(f => ({ name: f.name, upper: f.many ? -1 : 1 })),
+            references: features.filter(f => f.kind !== 'attribute').map(f => ({ name: f.name, containment: f.kind === 'containment', upper: f.many ? -1 : 1, type: f.type })),
+        };
+    }
+    return { classes, elements: [], level: 'M1' };
+}
+
+/**
+ * The model the plan builds, in creation order, with the planner's ids: an object is named by its `create` (the
+ * handle) unless a `set … name` follows; a contained object enters its container's slot at its `create`.
+ */
+function plannedModel(mm: TextMetamodel, plan: EffectsPlan): TextObject[] {
+    const byHandle = new Map(plan.created.map(c => [c.name, c.id]));
+    const out = new Map<string, { id: string; cls: string; slots: Record<string, unknown> }>();
+    const featureOf = (id: string, name: string) => {
+        const c = mm.classes.find(k => k.name === out.get(id)!.cls)!;
+        return classFeatures(mm, c).find(f => f.name === name)!;
+    };
+    const put = (id: string, name: string, value: unknown) => {
+        const slots = out.get(id)!.slots;
+        if (featureOf(id, name).many) slots[name] = [...((slots[name] as unknown[] | undefined) ?? []), value];
+        else slots[name] = value;
+    };
+    for (const c of plan.created) {
+        out.set(c.id, { id: c.id, cls: c.metaclass, slots: {} });
+        const k = mm.classes.find(x => x.name === c.metaclass)!;
+        if (classFeatures(mm, k).some(f => f.kind === 'attribute' && f.name === 'name')) out.get(c.id)!.slots.name = c.name;
+        if (c.container) {
+            const [owner, feature] = c.container.split('.');
+            put(byHandle.get(owner)!, feature, c.id);
+        }
+    }
+    for (const f of plan.features) put(f.ownerId, f.feature, f.value);
+    for (const r of plan.references) {
+        expect(r.operator === '=' || r.operator === '+=').toBe(true);
+        put(r.sourceId, r.feature, r.targetId);
+    }
+    return [...out.values()];
+}
+
+/** The planned objects with the original ids, matched by text order (creation order is text order). */
+function withOriginalIds(g: ConcreteGrammar, mm: TextMetamodel, original: readonly TextObject[], planned: readonly TextObject[]): TextObject[] {
+    const order = printTextModel(g, original).spans.map(s => s.id);
+    const to = new Map(planned.map((o, i) => [o.id, order[i]]));
+    return planned.map(o => ({
+        id: to.get(o.id)!, cls: o.cls,
+        slots: Object.fromEntries(Object.entries(o.slots).map(([k, v]) => {
+            const f = classFeatures(mm, mm.classes.find(c => c.name === o.cls)!).find(x => x.name === k)!;
+            const id = (x: unknown) => (typeof x === 'string' && to.has(x) ? to.get(x) : x);
+            return [k, f.kind === 'attribute' ? v : Array.isArray(v) ? v.map(id) : id(v)];
+        })),
+    }));
+}
+
+describe('lines of a parsed text, run by the JjScript planner on an empty model, give the model back up to ids', () => {
+    const corpus: [string, Spec, NotationStyle][] = [
+        ['the 1709 fixture', oneValued(FIXTURE), CLIKE_STYLE],
+        ['a diamond', DIAMOND, CLIKE_STYLE],
+        ['a multiple inheritance without a diamond', NON_DIAMOND, CLIKE_STYLE],
+        ['names, homonyms, paths, several roots', oneValued(GARAGE), CLIKE_STYLE],
+        ['a single nameless root and a nameless named object', BOX, CLIKE_STYLE],
+        ['class keywords and literals in lower case', oneValued(GARAGE), LOWER],
+        ['two class keywords after the fallback', CASES, LOWER],
+        ['awkward names and every kind of value', AWKWARD, CLIKE_STYLE],
+    ];
+    it.each(corpus)('%s', async (_, spec, style) => {
+        const g = grammarOf(spec, style);
+        const mm = metamodelOf(spec);
+        const original = objectsOf(spec);
+        const parsed = parseText(printTextModel(g, original).text, g);
+        expect(isApplicableParse(parsed)).toBe(true);
+        const built = modelLines(mm, parsed.objects);
+        expect(built.problems).toEqual([]);
+        const plan = await planEffects(built.lines.join('\n'), emptyWorld(mm));
+        expect(plan.errors).toEqual([]);
+        expect(plan.warnings).toEqual([]);
+        expect(plan.created).toHaveLength(original.length);
+        // A nameless object of a class with a name takes its handle as name, as any instance created without one.
+        const handleOf = new Map(parsed.objects.map((o, i) => [printTextModel(g, original).spans[i].id, built.handles.get(o.id)!]));
+        const expected = original.map(o => {
+            const named = classFeatures(mm, mm.classes.find(c => c.name === o.cls)!).some(f => f.kind === 'attribute' && f.name === 'name');
+            return named && typeof o.slots.name !== 'string' ? { ...o, slots: { ...o.slots, name: handleOf.get(o.id) } } : o;
+        });
+        const byId = new Map(expected.map(o => [o.id, o]));
+        for (const o of withOriginalIds(g, mm, original, plannedModel(mm, plan))) expect(o).toEqual(byId.get(o.id));
+    });
+});
+
+describe('handles, order and values', () => {
+    it('an object named by a unique identifier is created under its name; parents before children, then attributes, then references', () => {
+        const spec: Spec = {
+            classes: [{ name: 'Sys', attributes: [{ name: 'name', type: 'EString' }, { name: 'w', type: 'EInt' }], references: [{ name: 'parts', type: 'Sys', containment: true, many: true }, { name: 'main', type: 'Sys' }] }],
+            enums: {},
+            objects: [{ id: 's', cls: 'Sys', slots: { name: 'top', w: 1, parts: ['p'], main: 'p' } }, { id: 'p', cls: 'Sys', slots: { name: 'leaf', w: 2 } }],
+        };
+        expect(modelLines(metamodelOf(spec), objectsOf(spec)).lines).toEqual([
+            'create instance of Sys "top"',
+            'create instance of Sys "leaf" in top.parts',
+            'set top.w = 1',
+            'set leaf.w = 2',
+            'set top.main = leaf',
+        ]);
+    });
+
+    it('homonyms, names that are not identifiers, reserved or literal words and class names get generated handles, then their name', () => {
+        const built = modelLines(metamodelOf(AWKWARD), objectsOf(AWKWARD));
+        // Thing_1 is a name in the text: the generated handles skip it.
+        expect([...built.handles.values()]).toEqual(['Thing_2', 'Thing_3', 'Thing_4', 'Thing_5', 'Thing_1']);
+        expect(built.lines.filter(l => l.includes('.name ='))).toEqual([
+            'set Thing_2.name = "create"', 'set Thing_3.name = "True"', 'set Thing_4.name = "Thing"', 'set Thing_5.name = "two words"',
+        ]);
+        const dup = modelLines(metamodelOf(FIXTURE), objectsOf(FIXTURE)).handles;
+        expect([dup.get('p1'), dup.get('p2'), dup.get('p4'), dup.get('p5')]).toEqual(['Part_1', 'Part_2', 'FAST', 'Part_3']);
+    });
+
+    it('a many-valued reference is written with += per value, in order, duplicates kept; a single one with =', () => {
+        const lines = modelLines(metamodelOf(AWKWARD), objectsOf(AWKWARD)).lines;
+        expect(lines.filter(l => /\.(to|from) /.test(l))).toEqual([
+            'set Thing_2.from = Thing_3', 'set Thing_2.to += Thing_4', 'set Thing_2.to += Thing_5', 'set Thing_2.to += Thing_4', 'set Thing_5.to += Thing_2',
+        ]);
+    });
+
+    it('an enumeration value is written as the literal name, in the declared case', () => {
+        const lines = modelLines(metamodelOf(FIXTURE), objectsOf(FIXTURE)).lines;
+        expect(lines).toContain('set s1.mode = "Fast"');
+        expect(lines).toContain('set Part_1.kind = "FAST"');
+    });
+
+    it('strings are escaped for the JjScript lexer; numbers never use an exponent', () => {
+        expect(jjscriptString('a\\b"c\nd\re\tf')).toBe('"a\\\\b\\"c\\nd\\re\\tf"');
+        expect([1e21, 1.25e21, 1.5e-7, -2.5e-7, 0, -3, 0.5].map(jjscriptNumber)).toEqual([
+            '1000000000000000000000', '1250000000000000000000', '0.00000015', '-0.00000025', '0', '-3', '0.5',
+        ]);
+    });
+});
+
+describe('what JjScript cannot write yet blocks the creation', () => {
+    it('a many-valued attribute with two values or more is a problem on its object and feature; one value is still written', () => {
+        const built = modelLines(metamodelOf(FIXTURE), objectsOf(FIXTURE));
+        expect(built.problems.map(p => `${p.id}.${p.feature}`)).toEqual(['s1.tags']);
+        expect(built.problems[0].message).toMatch(/not writable by JjScript yet/);
+        expect(built.lines).toContain('set s1.tags = "a"');
+        const garage = modelLines(metamodelOf(GARAGE), objectsOf(GARAGE));
+        expect(garage.problems.map(p => `${p.id}.${p.feature}`)).toEqual(['c1.colors', 'c1.marks']);
+    });
+
+    it('a class whose name JjScript reads as a word of its own is a problem', () => {
+        const spec: Spec = { classes: [{ name: 'model' }], enums: {}, objects: [{ id: 'm', cls: 'model', slots: {} }] };
+        expect(modelLines(metamodelOf(spec), objectsOf(spec)).problems.map(p => p.id)).toEqual(['m']);
+    });
+});
+
+describe('the reading of the «new» mode: markers, and lines only when nothing blocks', () => {
+    it('a text with errors has a marker per error and no lines, even where objects were recovered (R-TXT-21 (8))', () => {
+        const g = grammarOf(FIXTURE);
+        const text = 'Part a { size four }\nPart b {}';
+        const r = readNewModel(text, g, metamodelOf(FIXTURE));
+        expect(r.lines).toBeNull();
+        expect(r.markers.length).toBeGreaterThan(0);
+        expect(text.slice(r.markers[0].start, r.markers[0].end)).toBe('four');
+    });
+
+    it('a many-valued attribute with two values is a marker on the feature, and blocks the lines', () => {
+        const g = grammarOf(FIXTURE);
+        const text = printTextModel(g, objectsOf(FIXTURE)).text;
+        const r = readNewModel(text, g, metamodelOf(FIXTURE));
+        expect(r.lines).toBeNull();
+        expect(r.markers).toHaveLength(1);
+        expect(text.slice(r.markers[0].start, r.markers[0].end)).toBe('tags');
+        expect(r.markers[0].message).toMatch(/not writable by JjScript yet/);
+    });
+
+    it('a clean text gives its lines and no marker; an empty text is an empty model', () => {
+        const spec = oneValued(GARAGE);
+        const g = grammarOf(spec);
+        const r = readNewModel(printTextModel(g, objectsOf(spec)).text, g, metamodelOf(spec));
+        expect(r.markers).toEqual([]);
+        expect(r.objects).toBe(spec.objects.length);
+        expect(r.lines).toEqual(modelLines(metamodelOf(spec), parseText(r.text, g).objects).lines);
+        expect(readNewModel('  // nothing yet\n', g, metamodelOf(spec))).toMatchObject({ markers: [], lines: [], objects: 0 });
+    });
+});

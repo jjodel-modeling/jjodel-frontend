@@ -24,6 +24,12 @@ import { generatorEntries, useCodegenEnabled } from '../../codegen/setting';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
+// «New model from text» (R-TXT-23, P-2026-11-02-0045) opens a tab whose module lives in src/codegen/, reached by dynamic
+// import only (R-GEN-2, scripts/gates/check-codegen-lazy.ts), under the build flag as Toolbar.tsx's `CODEGEN_BUILD`:
+// without `VITE_CODEGEN=true` Vite turns the literal into `undefined === 'true'` and Rollup drops the import.
+// @ts-ignore
+const CODEGEN_BUILD: boolean = import.meta.env.VITE_CODEGEN === 'true';
+
 function relativeTime(date: number | string | Date): string {
     const d = typeof date === 'number' ? date : (typeof date === 'string' ? new Date(date).getTime() : date.getTime());
     const diff = Date.now() - d;
@@ -562,6 +568,13 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     (m) => { const lm = pMetamodels.find(x => x.id === m.id); if (lm) DockManager.open2(lm); },
                     () => { if (project) createM2(project); },
                     'New metamodel',
+                    codegenOn ? {
+                        icon: 'bi-file-earmark-plus',
+                        title: 'New model from text',
+                        onClick: (m) => {
+                            if (CODEGEN_BUILD) void import('../../codegen/textual/ui/openTextualTab').then(t => t.openNewModelTab(m.id));
+                        },
+                    } : undefined,
                 )}
 
                 {/* #157 R5 — consumer: the types of the profile, in place of the models. */}
