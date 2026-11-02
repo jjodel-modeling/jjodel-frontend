@@ -1210,3 +1210,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Prompt document name**: 2026-11-02 20:03
 
 **Ticket** (P-2026-11-02-2003): feature segments keep the feature name: with `members` printed as `patrons`, the path reads `shelf[0].members[1]`, and `shelf[0].patrons[1]` is refused with `Library has no containment "patrons"`. Same mismatch as R-TXT-28 fixed for classes; outside that row.
+
+## 2026-11-02 — merge: textual-path-keyword into alfonso-frontend-jjtl (P-2026-11-02-2019)
+**Prompt**: `claude_2026-11-02_2019_prompt_merge_textual-path-keyword.md`, a direct merge by `lane-run merge --direct`, no session: `textual-path-keyword` at `3ebbb3f92` into `alfonso-frontend-jjtl`, merge base `42e4065c6`, 2 commits on the branch side.
+**Files touched**: merge `45b02a390`: 5 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-02_2003_prompt_textual_path_keyword.md`, `frontend/src/codegen/textual/__tests__/syntaxRecord.test.ts`, `frontend/src/codegen/textual/parser.ts`, `frontend/src/codegen/textual/printer.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `45b02a390` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12943 tests in 491 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change, visual check not applicable
+**Notes**: Rollback tag `pre-textual-path-keyword` on `5467e2328` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2019/result.json`.
+**Prompt document name**: 2026-11-02 20:19
