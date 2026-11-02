@@ -101,23 +101,28 @@ const shell = (name: string, attributes: any[], references: any[] = []) => ({
 
 /** The globals `buildEvalContext` gives for the model `M` (with objects) or for the metamodel alone; with `favourite`, a
  *  member has a `favourite` book (R-TXT-29: a reference into the grouped `books`). */
-function libraryGlobals(book = 'Book', withObjects = true, favourite = false): Record<string, any> {
+function libraryGlobals(book = 'Book', withObjects = true, favourite = false, notes = false): Record<string, any> {
     const library = shell('Library', [attr('Library', 'name', 'EString')], [ref('Library', 'books', book, -1, true), ref('Library', 'members', 'Member', -1, true)]);
-    const bookShell = shell(book, [attr(book, 'name', 'EString'), attr(book, 'genre', 'Genre'), attr(book, 'year', 'EInt')], [ref(book, 'borrowedBy', 'Member', 1)]);
+    // With `notes`, a book contains notes (R-TXT-30: objects inside an object the text does not print).
+    const note = shell('Note', [attr('Note', 'name', 'EString')]);
+    const bookShell = shell(book, [attr(book, 'name', 'EString'), attr(book, 'genre', 'Genre'), attr(book, 'year', 'EInt')],
+        [ref(book, 'borrowedBy', 'Member', 1), ...(notes ? [ref(book, 'notes', 'Note', -1, true)] : [])]);
     const member = shell('Member', [attr('Member', 'name', 'EString')], favourite ? [ref('Member', 'favourite', book, 1)] : []);
     const obj = (id: string, cls: any, slots: Record<string, unknown>): any => ({ id, __type: 'Object', instanceOf: cls, instanceof: cls, parent: null, ...slots });
     const ann = obj('m1', member, { name: 'ann' });
     const bob = obj('m2', member, { name: 'bob' });
-    const b1 = obj('b1', bookShell, { name: 'dune', genre: 'FICTION', year: null, borrowedBy: null });
+    const n1 = obj('n1', note, { name: 'todo' });
+    const b1 = obj('b1', bookShell, { name: 'dune', genre: 'FICTION', year: null, borrowedBy: null, ...(notes ? { notes: [n1] } : {}) });
     const b2 = obj('b2', bookShell, { name: 'cosmos', genre: 'SCIENCE', year: 1980, borrowedBy: ann });
     const b3 = obj('b3', bookShell, { name: 'odes', genre: 'POETRY', year: null, borrowedBy: null });
     const b4 = obj('b4', bookShell, { name: 'spqr', genre: 'HISTORY', year: 2015, borrowedBy: bob });
     const city = obj('lib', library, { name: 'city', books: [b1, b2, b3, b4], members: [ann, bob] });
     for (const o of [ann, bob, b1, b2, b3, b4]) o.parent = city;
+    n1.parent = b1;
     return {
-        classes: [library, bookShell, member],
+        classes: notes ? [library, bookShell, member, note] : [library, bookShell, member],
         enumerations: [{ name: 'Genre', literals: ['FICTION', 'POETRY', 'SCIENCE', 'HISTORY'].map((n, value) => ({ name: n, value })), literalCount: 4, __type: 'Enumeration' }],
-        instances: withObjects ? [city, ann, bob, b1, b2, b3, b4] : [],
+        instances: withObjects ? [city, ann, bob, b1, b2, b3, b4, ...(notes ? [n1] : [])] : [],
     };
 }
 
@@ -547,5 +552,83 @@ describe('R-TXT-29: a feature segment is the printed feature keyword', () => {
         const g = libraryGrammar({ v: 1, features: { R_Lib_books: { keyword: '' }, R_Lib_members: { keyword: 'books' } } });
         expect(checkStyle(g).filter(f => f.level === 'error').map(f => f.message))
             .toContain('the path keyword "books" names 2 containments: Library.books, Library.members');
+    });
+});
+
+// ---- R-TXT-30: objects a grouped containment does not print (P-2026-11-02-2113) -----------------------------------
+
+const { hasUnprinted } = await import('../printer');
+const { unprintedIssues } = await import('../ui/TextualTab');
+
+/** The books grouped by genre, as in the library acceptance; with `notes`, a book contains notes. */
+function groupedLibrary(notes = false) {
+    const stored = storedNotation(libraryLookup('Book', encodeSyntax(LIBRARY_RECORD)), 'MM');
+    const globals = libraryGlobals('Book', true, false, notes);
+    const input = textInputOf(globals);
+    return { g: textualNotation(input.metamodel, stored.decoded, stored.ids).grammar, objects: input.objects, globals, stored };
+}
+
+/** `edit` applied to the slots of the object `id`. */
+const withSlots = (objects: ReturnType<typeof groupedLibrary>['objects'], id: string, edit: Record<string, unknown>) =>
+    objects.map(o => (o.id === id ? { ...o, slots: { ...o.slots, ...edit } } : o));
+
+describe('R-TXT-30: the objects the text does not print', () => {
+    it('nothing unprinted: the list is empty, the text is the acceptance one, and the view carries no warning (mutant: a printed object reported)', () => {
+        const { g, objects, globals, stored } = groupedLibrary();
+        const r = printTextModel(g, objects);
+        expect(r.text).toBe(LIBRARY_TEXT);
+        expect(r.unprinted).toEqual([]);
+        expect(hasUnprinted(r)).toBe(false);
+        expect(textualView(globals, stored).warnings ?? []).toEqual([]);
+    });
+
+    it('an unset grouping attribute: the book is reported with its owner, feature, class and attribute, and the text is the one without it (mutants: unprinted list always empty; unset read as outside)', () => {
+        const { g, objects } = groupedLibrary();
+        const edited = withSlots(objects, 'b1', { genre: undefined });
+        const r = printTextModel(g, edited);
+        expect(r.unprinted).toEqual([{ id: 'b1', owner: 'lib', feature: 'books', cls: 'Book', attr: 'genre', reason: 'unset', inside: 0 }]);
+        expect(hasUnprinted(r)).toBe(true);
+        const without = withSlots(objects.filter(o => o.id !== 'b1'), 'lib', { books: ['b2', 'b3', 'b4'] });
+        expect(r.text).toBe(printTextModel(g, without).text);
+        expect(r.spans.map(s => s.id)).not.toContain('b1');
+    });
+
+    it('a value outside every subset: reported as outside, the unset one stays unset (mutant: outside read as unset)', () => {
+        const { g, objects } = groupedLibrary();
+        const edited = withSlots(withSlots(objects, 'b3', { genre: 'MYSTERY' }), 'b4', { genre: null });
+        expect(printTextModel(g, edited).unprinted.map(u => `${u.id} ${u.reason}`)).toEqual(['b3 outside', 'b4 unset']);
+    });
+
+    it('the objects inside an unprinted one are counted with it, once, and not listed (mutant: children not counted)', () => {
+        const { g, objects } = groupedLibrary(true);
+        const edited = withSlots(objects, 'b1', { genre: undefined });
+        const r = printTextModel(g, edited);
+        expect(r.unprinted).toEqual([{ id: 'b1', owner: 'lib', feature: 'books', cls: 'Book', attr: 'genre', reason: 'unset', inside: 1 }]);
+        expect(r.spans.map(s => s.id)).not.toContain('n1');
+        // Printed, the same book keeps its note in the text and nothing is reported.
+        const printed = printTextModel(g, objects);
+        expect(printed.unprinted).toEqual([]);
+        expect(printed.spans.map(s => s.id)).toContain('n1');
+    });
+
+    it('the Text tab lists one warning per class and reason, counting the objects inside (mutants: issue dropped by the tab; children not counted; one line per object)', () => {
+        const { g, objects } = groupedLibrary(true);
+        const r = printTextModel(g, withSlots(withSlots(withSlots(objects, 'b1', { genre: undefined }), 'b3', { genre: undefined }), 'b4', { genre: 'MYSTERY' }));
+        expect(unprintedIssues(r.unprinted)).toEqual([
+            { level: 'warning', message: '2 Book not shown: genre unset, with 1 object inside' },
+            { level: 'warning', message: '1 Book not shown: genre outside every subset' },
+        ]);
+        expect(unprintedIssues([])).toEqual([]);
+    });
+
+    it('textualView carries the warnings of the model it prints (mutant: issue dropped by the tab)', () => {
+        const { globals, stored } = groupedLibrary();
+        const lib = globals.instances.find((o: any) => o.id === 'lib');
+        const b1 = lib.books[0];
+        b1.genre = undefined;
+        const view = textualView(globals, stored);
+        expect(view.error).toBeNull();
+        expect(view.warnings).toEqual([{ level: 'warning', message: '1 Book not shown: genre unset' }]);
+        expect(view.text).not.toContain('dune');
     });
 });

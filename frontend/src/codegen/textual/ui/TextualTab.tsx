@@ -32,6 +32,7 @@ import { concreteGrammarEbnf } from '../concreteGrammar';
 import { classFeatures } from '../metamodel';
 import { readNewModel } from '../modelLines';
 import { printTextModel } from '../printer';
+import type { UnprintedObject } from '../printer';
 import { elementIdsOf, readSyntax, textualNotation } from '../syntaxRecord';
 import type { AnnotationIssue, ElementIds } from '../annotations';
 import type { ConcreteGrammar } from '../concreteGrammar';
@@ -53,6 +54,35 @@ export interface TextualView {
     readonly error: string | null;
     /** The annotations' issues and the style's notices (syntaxRecord.ts `textualNotation`); absent when none could be derived. */
     readonly issues?: readonly AnnotationIssue[];
+    /** R-TXT-30: the objects the text leaves out, one line per class and reason (`unprintedIssues`); absent when none is. */
+    readonly warnings?: readonly UnprintedIssue[];
+}
+
+/** A warning under the tab's bar: a line of its own, with no place in front of it. */
+export interface UnprintedIssue {
+    readonly level: 'warning';
+    readonly message: string;
+}
+
+/**
+ * R-TXT-30: one warning per class, grouping attribute and reason, in the order the objects were met:
+ * `2 Book not shown: genre unset`. The objects inside the unprinted ones are counted in their line (`, with 3 objects
+ * inside`), not as lines of their own: those are the objects that are missing too.
+ */
+export function unprintedIssues(unprinted: readonly UnprintedObject[]): UnprintedIssue[] {
+    const lines = new Map<string, { cls: string; attr: string; reason: UnprintedObject['reason']; n: number; inside: number }>();
+    for (const u of unprinted) {
+        const key = `${u.cls}\u0000${u.attr}\u0000${u.reason}`;
+        const line = lines.get(key) ?? { cls: u.cls, attr: u.attr, reason: u.reason, n: 0, inside: 0 };
+        line.n += 1;
+        line.inside += u.inside;
+        lines.set(key, line);
+    }
+    return [...lines.values()].map(l => ({
+        level: 'warning',
+        message: `${l.n} ${l.cls} not shown: ${l.attr} ${l.reason === 'unset' ? 'unset' : 'outside every subset'}`
+            + (l.inside ? `, with ${l.inside} object${l.inside === 1 ? '' : 's'} inside` : ''),
+    }));
 }
 
 /** The metamodel's stored syntax annotations and the ids they are keyed by. */
@@ -126,7 +156,9 @@ export function textualView(globals: Readonly<Record<string, any>>, stored: Stor
     }
     const ebnf = concreteGrammarEbnf(grammar);
     try {
-        return { text: printTextModel(grammar, input.objects).text, ebnf, error: null, issues };
+        const printed = printTextModel(grammar, input.objects);
+        const warnings = unprintedIssues(printed.unprinted);
+        return { text: printed.text, ebnf, error: null, issues, ...(warnings.length ? { warnings } : {}) };
     } catch (e) {
         return { text: '', ebnf, error: messageOf(e), issues };
     }
@@ -142,15 +174,21 @@ function modelView(lookup: Readonly<Record<string, any>>, modelId: string): Text
     }
 }
 
-/** The issues of the notation, one line each, under the tab's bar; nothing when there is none. */
-function NotationIssues({ issues }: { readonly issues: readonly AnnotationIssue[] | undefined }) {
-    if (!issues?.length) return null;
+/** The issues of the notation, and the warnings of the objects left out, one line each, under the tab's bar; nothing when there is none. */
+function NotationIssues({ issues, warnings }: { readonly issues: readonly AnnotationIssue[] | undefined; readonly warnings?: readonly UnprintedIssue[] }) {
+    if (!issues?.length && !warnings?.length) return null;
     return (
         <ul className="textual-tab__issues" aria-label="Notation issues">
-            {issues.map((i, k) => (
+            {(issues ?? []).map((i, k) => (
                 <li key={k} className={`textual-tab__issue textual-tab__issue--${i.level}`}>
                     <i className={`bi ${i.level === 'error' ? 'bi-exclamation-triangle' : 'bi-info-circle'}`} aria-hidden="true" />
                     {`${i.where}: ${i.message}`}
+                </li>
+            ))}
+            {(warnings ?? []).map((w, k) => (
+                <li key={`w${k}`} className="textual-tab__issue textual-tab__issue--warning">
+                    <i className="bi bi-exclamation-triangle" aria-hidden="true" />
+                    {w.message}
                 </li>
             ))}
         </ul>
@@ -220,7 +258,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                     <i className="bi bi-x-lg" aria-hidden="true" />
                 </button>
             </div>
-            {model && <NotationIssues issues={view.issues} />}
+            {model && <NotationIssues issues={view.issues} warnings={view.warnings} />}
             <div className="textual-tab__body">
                 {!model ? (
                     <div className="textual-tab__message">
