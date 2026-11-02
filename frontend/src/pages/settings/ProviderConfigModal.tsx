@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {AI} from '../../types/jodie';
-import { PROVIDER_SPECS, ProviderConfigStore, registry } from '../../services/ai';
+import { FeaturePreferenceStore, PROVIDER_SPECS, ProviderConfigStore, registry } from '../../services/ai';
 import type { ProviderId, StoredProviderConfig } from '../../services/ai';
 import { isDeprecatedModel } from '../../components/common/ProviderModelSelector';
 import './ProviderConfigModal.scss';
@@ -80,8 +80,10 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
         setTestMessage('Testing connection...');
 
         try {
-            // The test reads the stored settings: the fields below save on every edit.
-            const result = await registry.get(provider).test();
+            // The test reads the stored settings: the fields below save on every edit. It tests the
+            // model the chat calls this provider with, as the settings row labels it (#179).
+            const pref = FeaturePreferenceStore.get('chat');
+            const result = await registry.get(provider).test(pref?.providerId === provider ? pref.modelId : undefined);
 
             if (result.success) {
                 setTestStatus('success');

@@ -175,6 +175,13 @@ export function AISettingsContent({
         }, REVERT_DELAY_MS);
     };
 
+    // The model the chat requests from this provider: its own pick when the chat points here, else
+    // none (the provider's configured model). Test Connection and the row label both use it (#179).
+    const chatRequestedModel = (name: ProviderId): string | undefined => {
+        const pref = FeaturePreferenceStore.get('chat');
+        return pref?.providerId === name ? pref.modelId : undefined;
+    };
+
     // Test provider connection against the real provider endpoint (provider.test(), src/services/ai).
     // Persist the outcome on config (lastTested + lastTestOk + lastTestFailure, plus enabled) so the
     // row dot and its tooltip survive a reload; on failure keep the error message.
@@ -186,7 +193,7 @@ export function AISettingsContent({
         setTestWarning(prev => ({ ...prev, [provider]: '' }));
 
         try {
-            const result = await registry.get(provider).test();
+            const result = await registry.get(provider).test(chatRequestedModel(provider));
 
             if (result.success) {
                 ProviderConfigStore.save(provider, {
@@ -241,9 +248,8 @@ export function AISettingsContent({
     // model the chat calls it with, which is the one Test Connection tests (#179).
     // Falls back to the raw id for models outside the registry (custom / user-pulled tags).
     const activeModelLabel = (name: ProviderId): string => {
-        const pref = FeaturePreferenceStore.get('chat');
         const provider = registry.get(name);
-        const model = provider.resolveModel(pref?.providerId === name ? pref.modelId : undefined);
+        const model = provider.resolveModel(chatRequestedModel(name));
         return provider.model(model)?.displayName || model || '';
     };
 
