@@ -70,6 +70,8 @@ export interface PlanReference {
 export interface PlanAttribute {
     name: string;
     upper: number | '*';
+    /** The attribute's type when it is an enumeration (R-TXT-25 (2)): its name and literals, in order. */
+    enumeration?: { name: string; literals: string[] };
 }
 
 /** A metaclass, found by name as `findMetaclassByName` finds it (`instance.ts:93-115`). */
@@ -181,6 +183,8 @@ export interface PlannedFeature {
     value: string | number | boolean | null;
     /** A multi-valued attribute: `=` replaces its first value. */
     many: boolean;
+    /** A list written on a multi-valued attribute: it replaces every value (`value` is then null). */
+    values?: Array<string | number | boolean | null>;
     /** `M2`: a `set` (or `abstract`) on an element of the metamodel. */
     level?: 'M2';
 }
@@ -331,6 +335,57 @@ function literalToPrimitive(value: LiteralValue): string | number | boolean | nu
     }
 }
 
+/** `set.ts`: a list is the value of a model attribute, not of a metamodel property. */
+const LIST_AT_M2 = 'A list is the value of a many-valued attribute of a model, not of a metamodel property';
+
+type Primitive = string | number | boolean | null;
+type AttributeWrite = { ok: true; value: Primitive } | { ok: true; values: Primitive[] } | { ok: false; code: string; message: string };
+
+/**
+ * `attributeWrite` and `attributeScalar` (`instance.ts`, R-TXT-25 (2)): a list replaces the values
+ * of a multi-valued attribute and is refused on a single one; a name is a literal of the
+ * attribute's enumeration (`L`, `E.L`, `E::L`), stored by its name; anything else as given.
+ */
+function attributeWrite(attribute: PlanAttribute, value: LiteralValue | QualifiedName): AttributeWrite {
+    if (isLiteral(value) && value.kind === 'array') {
+        if (!isManyValued(attribute.upper)) return { ok: false, code: 'LIST_ON_SINGLE_VALUED', message: `'${attribute.name}' holds one value: write it without brackets` };
+        const values: Primitive[] = [];
+        for (const v of value.values) {
+            const one = attributeScalar(attribute, v);
+            if (!one.ok) return one;
+            values.push((one as { value: Primitive }).value);
+        }
+        return { ok: true, values };
+    }
+    return attributeScalar(attribute, value);
+}
+
+function attributeScalar(attribute: PlanAttribute, value: LiteralValue | QualifiedName): AttributeWrite {
+    let spelled: { enumName: string; literal: string };
+    if (!isLiteral(value)) {
+        const qn = value as QualifiedName;
+        spelled = qn.member
+            ? { enumName: qn.segments.join('::'), literal: qn.member }
+            : { enumName: qn.segments.slice(0, -1).join('::'), literal: qn.segments[qn.segments.length - 1] ?? qn.raw };
+    } else if (value.kind === 'enumLiteral') {
+        spelled = { enumName: value.enum.segments.join('::'), literal: value.literal };
+    } else if (value.kind === 'array') {
+        return { ok: false, code: 'TYPE_MISMATCH', message: 'A list cannot hold a list' };
+    } else {
+        return { ok: true, value: literalToPrimitive(value) };
+    }
+    const e = attribute.enumeration;
+    const shown = spelled.enumName ? `${spelled.enumName}.${spelled.literal}` : spelled.literal;
+    if (!e) return { ok: false, code: 'TYPE_MISMATCH', message: `Cannot assign a name '${shown}' to an attribute` };
+    if (spelled.enumName && spelled.enumName !== e.name) {
+        return { ok: false, code: 'UNKNOWN_LITERAL', message: `'${spelled.enumName}' is not the enumeration of '${attribute.name}', which is ${e.name}` };
+    }
+    if (!e.literals.includes(spelled.literal)) {
+        return { ok: false, code: 'UNKNOWN_LITERAL', message: `'${spelled.literal}' is not a literal of the enumeration ${e.name} (${e.literals.join(', ')})` };
+    }
+    return { ok: true, value: spelled.literal };
+}
+
 function conforms(world: PlanWorld, className: string, type: string): boolean {
     const cls = world.classes[className];
     return !cls || cls.kinds.includes(type);
@@ -414,11 +469,14 @@ function planSet(sim: Simulation, args: SetArgs, line: number): LineResult {
 
     if (attribute) {
         if (operator !== '=') return fail('OPERATOR_NOT_SUPPORTED', `'${operator}' is not available on the attribute '${args.property}'`); // :977-987
-        if (!isLiteral(args.value)) return fail('TYPE_MISMATCH', `Attribute '${args.property}' expects a literal value`); // :988-998
-        return ok({ kind: 'feature', value: {
+        const written = attributeWrite(attribute, args.value);                                                       // `attributeWrite`
+        if (!written.ok) return fail(written.code, written.code === 'TYPE_MISMATCH' ? `Attribute '${args.property}' expects a literal value` : written.message);
+        const feature: PlannedFeature = {
             line, owner: ownerName, ownerId: source.id, feature: args.property,
-            value: literalToPrimitive(args.value), many: isManyValued(attribute.upper),
-        } });
+            value: 'values' in written ? null : written.value, many: isManyValued(attribute.upper),
+        };
+        if ('values' in written) feature.values = written.values;
+        return ok({ kind: 'feature', value: feature });
     }
 
     const ref = reference!;
@@ -788,6 +846,7 @@ function planM2Set(m2: M2Simulation, args: SetArgs, line: number): LineResult {
     const allowed = [...COMMON_PROPERTIES, ...SET_PROPERTIES[e.kind]];
     const property = allowed.find((p) => p.toLowerCase() === args.property.toLowerCase());
     if (!property) return fail('UNKNOWN_PROPERTY', `${e.kind} '${e.name}' has no property '${args.property}'`);            // :67-82
+    if (isLiteral(args.value) && args.value.kind === 'array') return fail('LIST_NOT_SUPPORTED', LIST_AT_M2);             // set.ts list guard
 
     let value: string | number | boolean | null;
     if (property === 'type' && TYPE_RULES[e.kind]) {                                                                // :84-92

@@ -24,6 +24,7 @@ import {
     DeleteArgs,
     RenameArgs,
     SetArgs,
+    LiteralValue,
     AddArgs,
     RemoveArgs,
     MoveArgs,
@@ -1313,6 +1314,11 @@ export class Parser {
             }
         }
 
+        // A list `[v1, v2, ...]` (R-TXT-25 (2)): the values of a many-valued attribute.
+        if ((token.type === 'PUNCTUATION' && token.value === '[') || token.type === 'MULTIPLICITY') {
+            return this.parseListValue();
+        }
+
         // Check for $variable reference (PUNCTUATION '$' + IDENTIFIER)
         if (token.type === 'PUNCTUATION' && token.value === '$') {
             this.advance(); // consume '$'
@@ -1323,6 +1329,38 @@ export class Parser {
 
         // Otherwise, treat as qualified name
         return this.parseQualifiedNameToken();
+    }
+
+    /**
+     * `[v1, v2, ...]`, `[]` included: each value a literal or a name (an enumeration literal).
+     * The lexer reads `[1]` as a MULTIPLICITY token (`readMultiplicityOrPunctuation`), so a
+     * one-number list arrives that way; any other multiplicity is not a list.
+     */
+    private parseListValue(): LiteralValue {
+        const open = this.advance();
+        if (open.type === 'MULTIPLICITY') {
+            if (/^\[-?\d+(\.\d+)?\]$/.test(open.value)) return { kind: 'array', values: [parseLiteralValue(open.value.slice(1, -1))] };
+            throw new Error(`Expected a list of values, found '${open.value}'`);
+        }
+        const values: LiteralValue[] = [];
+        const isClose = () => this.peek().type === 'PUNCTUATION' && this.peek().value === ']';
+        if (!isClose()) {
+            do {
+                const v = this.parseValueOrQualified();
+                if ('kind' in v && v.kind === 'array') throw new Error('A list cannot hold a list');
+                // A name is an enumeration literal: `L`, `E.L` or `E::L` (the executor checks it).
+                values.push('kind' in v ? v : this.nameAsEnumLiteral(v));
+            } while (this.matchComma());
+        }
+        if (!isClose()) throw new Error(`Expected ',' or ']' in a list, found '${this.peek().value}'`);
+        this.advance();
+        return { kind: 'array', values };
+    }
+
+    private nameAsEnumLiteral(qn: QualifiedName): LiteralValue {
+        if (qn.member) return { kind: 'enumLiteral', enum: { segments: qn.segments, raw: qn.segments.join('::') }, literal: qn.member };
+        const segs = qn.segments;
+        return { kind: 'enumLiteral', enum: { segments: segs.slice(0, -1), raw: segs.slice(0, -1).join('::') }, literal: segs[segs.length - 1] ?? qn.raw };
     }
 
     private expectIdentifier(what: string): string {

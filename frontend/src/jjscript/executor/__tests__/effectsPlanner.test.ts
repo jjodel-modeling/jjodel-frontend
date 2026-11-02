@@ -246,3 +246,47 @@ describe('read only', () => {
         expect(JSON.stringify(w)).toBe(before);
     });
 });
+
+describe('lists and enumeration literals on attributes (R-TXT-25 (2), P-2026-11-02-0651)', () => {
+    /** The world above, with an enum-typed single and many attribute on State. */
+    function moodWorld(): PlanWorld {
+        const w = world();
+        const mood = { name: 'Mood', literals: ['happy', 'sad'] };
+        w.classes.State.attributes.push({ name: 'mood', upper: 1, enumeration: mood }, { name: 'moods', upper: UNBOUNDED, enumeration: mood });
+        return w;
+    }
+
+    it('previews a list on a many-valued attribute as one feature carrying every value (dies on `values` dropped)', async () => {
+        const plan = await planEffects('set B.tags = ["a", "b"]\nset B.moods = [happy, Mood.sad]\nset B.tags = []', moodWorld());
+        expect(plan.errors).toEqual([]);
+        expect(plan.features).toEqual([
+            { line: 1, owner: 'B', ownerId: 'b', feature: 'tags', value: null, many: true, values: ['a', 'b'] },
+            { line: 2, owner: 'B', ownerId: 'b', feature: 'moods', value: null, many: true, values: ['happy', 'sad'] },
+            { line: 3, owner: 'B', ownerId: 'b', feature: 'tags', value: null, many: true, values: [] },
+        ]);
+    });
+
+    it('previews an enumeration literal by name as its name, and a single value with no `values`', async () => {
+        const plan = await planEffects('set B.mood = sad\nset B.mood = Mood::happy', moodWorld());
+        expect(plan.features.map((f) => [f.value, 'values' in f])).toEqual([['sad', false], ['happy', false]]);
+    });
+
+    it('refuses a list on a single-valued attribute and an unknown literal, as the executor does', async () => {
+        const list = await planEffects('set B.name = ["x"]', moodWorld());
+        expect(list.features).toEqual([]);
+        expect(list.error).toMatchObject({ line: 1, code: 'LIST_ON_SINGLE_VALUED' });
+        const unknown = await planEffects('set B.mood = angry', moodWorld());
+        expect(unknown.error).toMatchObject({ line: 1, code: 'UNKNOWN_LITERAL', message: "'angry' is not a literal of the enumeration Mood (happy, sad)" });
+        expect((await planEffects('set B.name = happy', moodWorld())).error).toMatchObject({ code: 'TYPE_MISMATCH' });
+    });
+
+    it('a list at M2 stays an error (it was a parse error before lists)', async () => {
+        const m2: PlanWorld['m2'] = {
+            id: 'mm', name: 'MM', defaultParent: 'pkg',
+            elements: [{ id: 'pkg', name: 'mmpkg', kind: 'Package', father: 'mm' }, { id: 'cState', name: 'State', kind: 'Class', father: 'pkg', abstract: false, extends: [] }],
+        };
+        const plan = await planEffects('set State.name = ["x"]', { ...moodWorld(), elements: [], level: 'M2', m2 });
+        expect(plan.features).toEqual([]);
+        expect(plan.error).toMatchObject({ line: 1, code: 'LIST_NOT_SUPPORTED' });
+    });
+});
