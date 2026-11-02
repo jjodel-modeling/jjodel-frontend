@@ -603,6 +603,18 @@ describe('Parser: forall', () => {
         const r = parseOk('forall x in items : x.name');
         expect(r.ast!.command).toBe('eval');
     });
+
+    it('delegates a JjEL forall / exists over several variables to eval whole (R-FA, P-2026-11-02-1330)', () => {
+        for (const src of [
+            'forall x, y in items such that x.p < y.p : x.name + y.name',
+            'forall x in a, y in b : x.name + y.name',
+            'exists x, y in items such that x != y and x.name == y.name',
+        ]) {
+            const r = parseOk(src);
+            expect(r.ast!.command).toBe('eval');
+            expect((r.ast!.args as EvalArgs).expression).toBe(src);
+        }
+    });
 });
 
 // ─── BLOCK ───────────────────────────────────────────────────

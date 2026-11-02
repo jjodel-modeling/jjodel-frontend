@@ -104,6 +104,18 @@ describe('paramClassesOf', () => {
         expect(paramClassesOf(list.slice(0, 2), classes).get('state')?.get('s')).toBe('State');
         expect(paramClassesOf(list, classes).get('state')?.get('s')).toBeUndefined();
     });
+
+    it('takes the class of each variable of a forall over several variables (R-FA, P-2026-11-02-1330)', () => {
+        const list = [
+            tpl('main', [], '${forall s in State.instances, f in Final.instances : fin(f, s)}'),
+            tpl('fin', ['f', 'from'], '${f.name}'),
+        ];
+        const known = paramClassesOf(list, classes).get('fin');
+        expect(known?.get('f')).toBe('Final');
+        expect(known?.get('from')).toBe('State');
+        const same = [tpl('main', [], '${forall a, b in State.instances : fin(a, b)}'), list[1]];
+        expect(paramClassesOf(same, classes).get('fin')?.get('from')).toBe('State');
+    });
 });
 
 describe('inCodeAt', () => {

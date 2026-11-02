@@ -131,13 +131,16 @@ The `is` operator checks type membership including supertypes:
 ```
 expression     = forallExpr | existsExpr | withExpr | ifThenElse
 
-forallExpr     = 'forall' IDENT 'in' expression
+forallExpr     = 'forall' bindings
                    ('such' 'that' expression)?
                    (':' expression)?
                    ('do' expression)?
 
-existsExpr     = 'exists' IDENT 'in' expression
+existsExpr     = 'exists' bindings
                    (':' | 'such' 'that') expression
+
+bindings       = names 'in' expression (',' names 'in' expression)*   -- §5.1.1
+names          = IDENT (',' IDENT)*
 
 withExpr       = 'with' expression 'do' expression
 
@@ -250,6 +253,45 @@ forall a in attributes: a.name + " " + a.type.toUpper()
 forall a in attributes do createColumn(a)
 ```
 
+#### 5.1.1 Several variables
+
+A binding list binds several variables at once; the result ranges over their combinations, the first variable outermost.
+
+| Form | Means |
+|------|-------|
+| `forall x, y in S ...` | `x` and `y` both range over `S` (every ordered pair, `(a, a)` included) |
+| `forall x in A, y in B ...` | `x` ranges over `A`, `y` over `B` |
+| `forall x in A, y, z in B ...` | the two spellings mix |
+| `forall p in S, k in p.children ...` | a later collection may read an earlier variable |
+
+Rules of the list:
+- A name bound twice in one list is a parse error (`forall x, x in S`, `forall x in S, x in T`).
+- The collection of `x, y in S` is shared by the names of its list, so it may not read any of them but the last (`forall x, y in x.children` is a parse error: rename the variable). A lambda or a nested `forall` / `exists` that rebinds the name hides it.
+- After a collection, `,` continues the list only if `IDENT (',' IDENT)* 'in'` follows; otherwise it stays the separator of the enclosing call or array (`f(forall x in S : x, y)` has two arguments).
+- The filter and the projection see every variable. Without a projection the result is the list of records `{x: x, y: y, ...}`, read as `p.x`, `p.y`.
+- An empty collection anywhere gives `[]`; a collection that is not an array (null, an object, a string) gives `[]`, as with one variable.
+
+The parser desugars the list; there is no AST node of its own:
+
+| Source | Desugared |
+|--------|-----------|
+| `forall x in A, <rest>` | `(forall x in A : forall <rest>).flatten()` |
+| `forall x, y in S such that P : E` | `(forall x in S : forall y in S such that P : E).flatten()` |
+| `forall x, y in S such that P` | `(forall x in S : forall y in S such that P : {x: x, y: y}).flatten()` |
+
+`flatten()` and not `A.flatMap(x => ...)`: `flatMap` throws on a collection that is not an array, where `forall` gives `[]`. `flatten()` removes one level only, so a projection that is itself an array stays one element (`forall x in [1, 2], y in [3] : [x, y]` is `[[1, 3], [2, 3]]`).
+
+```
+-- ordered pairs of distinct classes with the same name
+forall x, y in classes such that x != y and x.name == y.name : x.name
+
+-- every class with each of its attributes
+forall c in classes, a in c.attributes : c.name + "." + a.name
+
+-- records, without a projection
+forall p in (forall x, y in S such that x.p < y.p) : p.x.name + p.y.name
+```
+
 ### 5.2 `exists` — Existential Check
 
 `exists` checks whether at least one element in a collection satisfies a condition. It always returns a **boolean**.
@@ -266,10 +308,18 @@ Note: `|` is an alias for `such that`. The `:` separator is **NOT** accepted for
 **Semantics:**
 `exists x in S such that P` is equivalent to `(forall x in S such that P).isNotEmpty`
 
+With several variables (§5.1.1) the list nests, and the equivalence holds unchanged: `exists x in A, <rest> such that P` is `exists x in A such that (exists <rest> such that P)`, and `exists x, y in S such that P` is `(forall x, y in S such that P).isNotEmpty`.
+
 **Examples:**
 ```
 exists a in attributes such that a.type == "String"
 exists a in attributes | a.isPublic and not a.isDerived
+
+-- two distinct classes with the same name
+exists x, y in classes such that x != y and x.name == y.name
+
+-- some class has an attribute named "id"
+exists c in classes, a in c.attributes | a.name == "id"
 ```
 
 ### 5.3 `implies` — Logical Implication
