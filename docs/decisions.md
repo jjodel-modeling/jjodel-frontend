@@ -6763,6 +6763,29 @@ open an undo group too, and whether a filled slot left behind when a superclass 
   none it stays visible but disabled with the reason. Tools stays Advanced-only, so in Basic mode a Refactoring is run
   from its own tab (`Run on`) or the right-click on the artifact tab, which stays as a shortcut. No «⋯» icon on the tabs.
 
+## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-11-02_196_l0_ai_layer.md` (P-2026-11-02-1020, phase 1,
+`712aae6dd`), section «Questions for Juri»; chat C-2026-11-02-1016. Front `ai-provider`. R-AI-1..4: ratified by Juri
+2026-11-02 as recommended; R-AI-5: adopted by the chat (RC-21). All rows: evidence: measured, verified: agent,
+reversible: trunk (docs only, no code yet).
+
+- **R-AI-1** (2026-11-02, decision ④). **The runtime contract on `AI`, `AIConfig` and `JodieConfig` is dead.** No
+  compatibility facade is kept; the `@RuntimeAccessible` registrations go away with `types/jodie.ts` at L6, and the new
+  provider classes are not registered. L6 announces the break in the CHANGELOG. Measured: zero uses as identifiers in
+  shipped repo content; projects stored on the server are not measured.
+- **R-AI-2** (2026-11-02, rule 4). **Three new dependencies approved for L1, exact-pinned**: `openai` 7.47.0,
+  `@anthropic-ai/sdk` 1.3.0, `@google/genai` 2.32.0 (Apache-2.0). Each is imported dynamically inside provider methods,
+  and L1's gate shows by a build chunk diff that the initial bundle does not grow. A different version is a new decision.
+- **R-AI-3** (2026-11-02, decision ⑤). **Abstract class `BaseProvider`, module `src/services/ai/`**, as in the plan.
+- **R-AI-4** (2026-11-02, decision ⑥). **`cloudflare-worker/` is deleted, but L4 is gated** on two things: a real-key
+  Anthropic run of the spike (`models.list`, `messages`, stream), and the Claude connection `test()` moved to
+  `/v1/messages`, because a bad key on `models.list` is CORS-blocked without the Worker (spike, phase 1). The deployment
+  is removed by Alfonso on his Cloudflare account; the notifications Worker on the same account stays untouched.
+- **R-AI-5** (2026-11-02). **The fifteen corrections to the L1..L6 file lists of the report are adopted** in the
+  frozen spec (adopted by the chat under RC-21, within the lane's files). The deletion of the two files with no
+  importers (`ProviderSelector.tsx`, `ProviderSettings.tsx`) waits for Alfonso (RC-26).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
