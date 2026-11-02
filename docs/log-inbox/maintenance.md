@@ -432,3 +432,16 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 | drag act ms | 2967 3107 3081 | 704 703 719 | 3081 / 704 |
 | drag LT sum | 1033 1821 2640 | 58 234 119 | 1821 / 119 |
 | drag longest LT | 270 270 275 | 58 60 60 | 270 / 60 |
+
+## 2026-11-02 — merge: only-visible-conditional into alfonso-frontend-jjtl (P-2026-11-02-0656)
+**Prompt**: Bring `only-visible-conditional` at bfb6ee654 (conditional onlyRenderVisibleElements 36694dbfb, CLICK_FIT probe 604f578ed) into the trunk `alfonso-frontend-jjtl` with one --no-ff merge commit of the explicit sha (RC-14); union resolution of this inbox.
+**Files touched**: merge commit 7a4094009 (`frontend/src/components/editor-v2/EditorV2.tsx`, `onlyRenderVisible.ts`, `__tests__/onlyRenderVisible.test.ts`, `frontend/scripts/probe/large-model-click-profile.ts`, the branch's three prompts, this inbox); `docs/prompts/claude_2026-11-02_0656_prompt_merge_only-visible-conditional.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, RC-23, 2026-11-02 02:55 on the branch; Alfonso GO 06:46)
+**Notes**: Gates on 7a4094009: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk 12742 + 12; hook tests 21 files, 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Union in this inbox: the trunk's empty-viewport ticket first, then the branch's 0225 entry. No rollback tag (not in the prompt); lane board untouched.
+**Prompt document name**: 2026-11-02 06:56
