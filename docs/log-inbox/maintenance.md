@@ -530,3 +530,10 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 Expected: the abstract-syntax viewport is restored on reopen like the viewpoint ones (the restore site is around `EditorV2.tsx:609`). Kept out of the #419 fix on purpose.
 **Priority**: low
 **Found in**: P-2026-11-02-0646
+
+## 2026-11-02 — ticket: Toolbar auto layout blocks the page for minutes on a 407-node model
+**Ticket**: On the harness model (`~/jjodel-papers/2026-sosym-harness-models/jjodel/jjodel.harness.project.jjodel`, 407 nodes, no viewpoint), the toolbar's full auto layout (button `title="Auto layout"`, `Toolbar.tsx:1042-1050`, handler `handleToolbarAutoLayout` in `EditorV2.tsx`) blocks the main thread for about 391 s before its fit runs. Observed by P-2026-11-02-1856 while probing the fit fallback of ticket #419 (the probe needed a 600 s wait); not measured on the trunk, so it is not known whether the cost is the same there.
+
+Expected: measure it on the trunk first (open, auto layout, time to the fit, longest task, where the time goes: ELK layout, port distribution, React commit). A layout that takes minutes should at least run off the main thread or show progress and be cancellable.
+**Priority**: medium
+**Found in**: P-2026-11-02-1856
