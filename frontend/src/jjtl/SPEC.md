@@ -587,6 +587,13 @@ as itself. Without a target metamodel no feature is known as a containment and n
 - *Order.* Placement happens in pass 2 against targets created in pass 1, so the tree is the
   same, by identity, whatever the rule order.
 - *References.* A non-containment binding to a placed target is still a `__ref_result` pointer.
+- *Format (P-2026-11-02-2108).* After pass 2 every placed target is marked `__nested: true`, the
+  format of an object created in a body, and `__placed: true`. `__nested` is what the write-back
+  reads; `__placed` keeps it a rule target for the readers that tell the two apart (binding by
+  identity, the trace serializer, which writes it short). It is marked once every binding is
+  made, never at claim time, so no pointer to it depends on rule order. Its trace link, its
+  bindings and the pointers to it are unchanged. `targetModel.containment` stays, for ownership
+  and errors.
 - *Write-back.* The app writes a placed target once, inside its container, never as a root
   (§9.2). A run that fails on a second claim or a cycle writes nothing.
 
@@ -611,10 +618,10 @@ in an environment are closures (the expression with the environment of the bindi
   environment. Until B ships the environment is always empty, so this is vacuous and A0's
   behaviour is the whole of it.
 - **Containment (A).** Implemented in the executor, §5.3.1 (P-2026-11-02-1956). The placed
-  target is not marked `__nested`: other bindings may point at it, and marking it at claim
-  time would make the pointer depend on rule order. The write-back recognises it as a rule
-  target inside a containment feature, through `targetModel.containment`, and materializes it
-  with the nested path (§9.2, P-2026-11-02-2024).
+  target is not marked `__nested` at claim time: other bindings may point at it, and marking
+  it then would make the pointer depend on rule order. It is marked `__nested` and `__placed`
+  after pass 2 (P-2026-11-02-2108), and the write-back materializes it with the nested path
+  by that marker alone (§9.2, P-2026-11-02-2024).
 - **Called and lazy rules (B).** A called rule is invoked from a binding or a `forall` body,
   binds its arguments, and returns the target it creates; it takes no part in pass-1 matching.
   `lazy` creates on first demand, `unique lazy` memoizes on (rule, arguments, environment).
@@ -827,7 +834,7 @@ writer:
 
 11. STEP 6 does not create a target listed in `targetModel.containment`: no root DObject, no
     DVertex, no entry in the source-id map. A feature's children for STEP 6c are its `__nested`
-    objects and the targets placed in it (`containment` names this object and this feature),
+    objects, one test: the executor marks a placed target `__nested` too (P-2026-11-02-2108),
     in the feature's order, so a created object and a placed target share one containment.
     A placed target's own features are walked the same way, to any depth.
 12. A placed target is created with `{}` by `addObject`, polled and capped as above, and its
