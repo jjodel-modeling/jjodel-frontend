@@ -28,6 +28,16 @@ export interface TextPrintResult {
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
+/**
+ * R-TXT-28: the word a path's first segment starts with, read off the concrete grammar: the class keyword the text
+ * prints (the head of the class's object rule), or, for a positional class, which prints none, the class name.
+ */
+export function pathKeyword(g: ConcreteGrammar, cls: string): string {
+    const body = g.objects[cls]?.body;
+    const head = body?.t === 'seq' ? body.items[0] : body;
+    return head?.t === 'kw' ? head.text : applyCase(cls, g.classCase);
+}
+
 const isSet = (v: unknown): boolean => v != null && !(Array.isArray(v) && v.length === 0);
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
 
@@ -57,7 +67,6 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         }
     }
     const roots = objects.filter(o => !parent.has(o.id));
-    const keyword = (o: TextObject): string => applyCase(o.cls, g.classCase);
     const rootIndex = new Map<string, number>();
     const rootsOf = new Map<string, number>();
     for (const r of roots) {
@@ -65,11 +74,12 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         rootsOf.set(r.cls, (rootIndex.get(r.id) ?? 0) + 1);
     }
 
-    // R-TXT-25 (5, 6): a root is `Class[k]`, k its position among the top-level objects of its class; a contained
-    // object adds `.f[i]`. Every segment carries an index, so a path is never a bare identifier, never a name.
+    // R-TXT-25 (5, 6), R-TXT-28: a root is `keyword[k]`, the class keyword as printed (the class name when dropped), k
+    // its position among the top-level objects of its class; a contained object adds `.f[i]`. Every segment carries an
+    // index, so a path is never a bare identifier, never a name.
     const path = (t: TextObject): string => {
         const up = parent.get(t.id);
-        return up ? `${path(up.owner)}.${up.segment}` : `${keyword(t)}[${rootIndex.get(t.id)}]`;
+        return up ? `${path(up.owner)}.${up.segment}` : `${pathKeyword(g, t.cls)}[${rootIndex.get(t.id)}]`;
     };
 
     const quote = (s: string): string => {

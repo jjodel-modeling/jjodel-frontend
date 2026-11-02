@@ -5,8 +5,9 @@
  * the printer takes (`{id, cls, slots}`), so that print, parse, print gives the same text.
  *
  * References are read as a name or a path (R-TXT-4, R-TXT-25 (5, 6)) and resolved after the parse, against the whole
- * text: a name must be unique among the instances of the reference's type; a path is `Class[k].f[i]...`, every segment
- * with its index, so a path never reads as a name. The top level
+ * text: a name must be unique among the instances of the reference's type; a path is `keyword[k].f[i]...`, every segment
+ * with its index, so a path never reads as a name; its first word is a class keyword as printed, the class name for a
+ * positional class (R-TXT-28). The top level
  * admits every concrete class (R-TXT-24 (a)); a single containment is a block of one object (R-TXT-24 (b)).
  *
  * Recovery: an error inside a body costs the rest of its line, the parse resumes at the next line that starts an item
@@ -19,6 +20,7 @@ import type { ConcreteGrammar, ConcreteRule, GrammarNode, ObjectRule } from './c
 import { applyCase, derivedName } from './concreteGrammar';
 import type { TextFeature, TextObject } from './metamodel';
 import type { ObjectSpan } from './printer';
+import { pathKeyword } from './printer';
 
 /** An error at `[start, end)` of the text; `line` and `col` are 1-based, of `start`. */
 export interface TextParseError {
@@ -590,10 +592,35 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
         }
         return follow(s.segments ?? []);
     };
+    // R-TXT-28: a path's first word is the printed keyword of a class the top level admits (printer.ts `pathKeyword`).
+    const rulesByName = new Map(g.rules.map(r => [r.name, r]));
+    const classesOf = (n: GrammarNode, seen: Set<string>): string[] => {
+        switch (n.t) {
+            case 'seq': return n.items.flatMap(x => classesOf(x, seen));
+            case 'star': return classesOf(n.item, seen);
+            case 'alt': return n.alts.flatMap(x => classesOf(x, seen));
+            case 'rule': {
+                if (seen.has(n.name)) return [];
+                seen.add(n.name);
+                const r = rulesByName.get(n.name);
+                return r?.t === 'object' ? [r.cls] : r?.t === 'choice' ? classesOf(r.body, seen) : [];
+            }
+            default: return [];
+        }
+    };
+    const model = g.rules.find(r => r.t === 'model');
+    const topClasses = model ? [...new Set(classesOf(model.body, new Set()))] : [];
     const follow = (segments: readonly { readonly f: string; readonly index: number }[]): MutableObject | string => {
         const [head, ...rest] = segments;
-        const cls = Object.values(g.objects).find(k => applyCase(k.cls, g.classCase) === head.f)?.cls;
-        if (cls === undefined) return `a path starts with a class: there is no class "${head.f}"`;
+        const named = topClasses.filter(c => pathKeyword(g, c) === head.f);
+        // Two classes with one keyword at the top level are refused by the style check (distinct-classes); never pick one.
+        if (named.length > 1) return `the path keyword "${head.f}" names ${named.length} classes: ${named.join(', ')}`;
+        const cls = named[0];
+        if (cls === undefined) {
+            const renamed = topClasses.find(c => applyCase(c, g.classCase) === head.f || c === head.f);
+            if (renamed !== undefined) return `a path starts with a class keyword: ${renamed} is written "${pathKeyword(g, renamed)}"`;
+            return `a path starts with a class: there is no class "${head.f}"`;
+        }
         const tops = roots.filter(o => o.cls === cls);
         if (!tops[head.index]) return `there is no top-level ${head.f}[${head.index}]: the text has ${tops.length}`;
         let cur: MutableObject = tops[head.index];

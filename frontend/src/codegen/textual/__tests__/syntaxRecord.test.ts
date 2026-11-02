@@ -363,3 +363,95 @@ describe('stale ids and renames', () => {
         expect(textualOptionLabel(lookup.MM.name, textualLanguageNameOf(lookup, 'M'))).toBe('Shelf');
     });
 });
+
+// ---- R-TXT-28: paths follow the class keyword (P-2026-11-02-2003) ---------------------------------------------
+
+const { checkStyle } = await import('../styleCheck');
+
+/** The library grammar under a record. */
+function libraryGrammar(record: SyntaxAnnotations) {
+    const stored = storedNotation(libraryLookup('Book', encodeSyntax(record)), 'MM');
+    return textualNotation(textInputOf(libraryGlobals()).metamodel, stored.decoded, stored.ids).grammar;
+}
+
+/** The library model with both members named `ann`, so that `borrowedBy` prints paths: cosmos borrows the first, spqr the
+ *  second; with `orphans`, two more members named `ann` at the top level, and dune borrows the second of them. */
+function pathObjects(orphans = false) {
+    const objs = textInputOf(libraryGlobals()).objects.map(o => {
+        if (o.id === 'm2') return { ...o, slots: { ...o.slots, name: 'ann' } };
+        if (orphans && o.id === 'b1') return { ...o, slots: { ...o.slots, borrowedBy: 'm4' } };
+        return o;
+    });
+    if (!orphans) return objs;
+    return [...objs, { id: 'm3', cls: 'Member', slots: { name: 'ann' } }, { id: 'm4', cls: 'Member', slots: { name: 'ann' } }];
+}
+
+/** Prints, parses and reprints; the parse must be clean and the reprint equal. */
+function roundTrip(g: ReturnType<typeof libraryGrammar>, objects: ReturnType<typeof pathObjects>) {
+    const text = printTextModel(g, objects).text;
+    const r = parseText(text, g);
+    expect(r.errors).toEqual([]);
+    expect(isApplicableParse(r)).toBe(true);
+    expect(printTextModel(g, r.objects).text).toBe(text);
+    const named = (n: string) => r.objects.find(o => o.slots.name === n)!;
+    return { text, r, named };
+}
+
+describe('R-TXT-28: a path starts with the printed class keyword', () => {
+    it('an annotated keyword starts the path, and the path resolves to the same member (mutants: printer keeps the class name; parser keeps the class name)', () => {
+        const g = libraryGrammar({ v: 1, classes: { C_Lib: { keyword: 'shelf' } } });
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        const { text, r, named } = roundTrip(g, pathObjects());
+        expect(text).toContain('shelf city {');
+        expect(text).toContain('borrowedBy shelf[0].members[0]');
+        expect(text).toContain('borrowedBy shelf[0].members[1]');
+        expect(text).not.toContain('Library[');
+        const lib = r.objects.find(o => o.cls === 'Library')!;
+        const members = lib.slots.members as string[];
+        expect(named('cosmos').slots.borrowedBy).toBe(members[0]);
+        expect(named('spqr').slots.borrowedBy).toBe(members[1]);
+    });
+
+    it('a keyword equal to another class name names the class printed with it (mutants: printer keeps the class name; parser keeps the class name)', () => {
+        const g = libraryGrammar({ v: 1, classes: { C_Lib: { keyword: 'Member' }, C_Mem: { keyword: 'patron' } } });
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        const { text, r, named } = roundTrip(g, pathObjects(true));
+        expect(text).toContain('borrowedBy Member[0].members[1]');
+        expect(text).toContain('borrowedBy patron[1]');
+        const lib = r.objects.find(o => o.cls === 'Library')!;
+        const tops = r.objects.filter(o => o.cls === 'Member' && !(lib.slots.members as string[]).includes(o.id));
+        expect(named('spqr').slots.borrowedBy).toBe((lib.slots.members as string[])[1]);
+        expect(named('dune').slots.borrowedBy).toBe(tops[1].id);
+    });
+
+    it('two top-level classes sharing the keyword are refused by the style check, and a path through it is an error, never one of them (mutants: parser keeps the class name; parser takes the first class)', () => {
+        const g = libraryGrammar({ v: 1, classes: { C_Lib: { keyword: 'Member' } } });
+        expect(checkStyle(g).filter(f => f.level === 'error').map(f => `${f.rule}: ${f.message}`))
+            .toContain('distinct-classes: the keyword "Member" starts 2 classes: Library, Member');
+        const r = parseText('Member city {\n  books {\n    Book dune {\n      genre FICTION\n      borrowedBy Member[0]\n    }\n  }\n}', g);
+        expect(r.errors.map(e => e.message)).toEqual(['the path keyword "Member" names 2 classes: Library, Member']);
+    });
+
+    it('a positional class whose class name is another class\'s keyword is refused by the style check', () => {
+        const g = libraryGrammar({ v: 1, classes: { C_Lib: { keyword: '' }, C_Mem: { keyword: 'Library' } } });
+        expect(checkStyle(g).some(f => f.level === 'error')).toBe(true);
+    });
+
+    it('a dropped keyword falls back to the class name (mutant: the path starts with the empty keyword)', () => {
+        const g = libraryGrammar({ v: 1, roots: ['C_Lib'], classes: { C_Lib: { keyword: '' } } });
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        const { text, r, named } = roundTrip(g, pathObjects());
+        expect(text.startsWith('city {')).toBe(true);
+        expect(text).toContain('borrowedBy Library[0].members[1]');
+        const lib = r.objects.find(o => o.cls === 'Library')!;
+        expect(named('spqr').slots.borrowedBy).toBe((lib.slots.members as string[])[1]);
+    });
+
+    it('the class name on a class with another keyword is an error naming the keyword (mutants: printer keeps the class name; parser keeps the class name)', () => {
+        const g = libraryGrammar({ v: 1, classes: { C_Lib: { keyword: 'shelf' } } });
+        const text = printTextModel(g, pathObjects()).text.replace('shelf[0].members[1]', 'Library[0].members[1]');
+        const r = parseText(text, g);
+        expect(r.errors.map(e => e.message)).toEqual(['a path starts with a class keyword: Library is written "shelf"']);
+        expect(isApplicableParse(r)).toBe(false);
+    });
+});
