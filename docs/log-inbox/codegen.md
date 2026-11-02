@@ -1268,3 +1268,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Priority**: low
 **Found in**: P-2026-11-02-2113
 **Detail**: ~/.jjodel-lanes/P-2026-11-02-2113/probe-probe.log
+
+## 2026-11-02 — merge: textual-unprinted into alfonso-frontend-jjtl (P-2026-11-02-2317)
+**Prompt**: `claude_2026-11-02_2317_prompt_merge_textual-unprinted.md`, a direct merge by `lane-run merge --direct`, no session: `textual-unprinted` at `ea1aad134` into `alfonso-frontend-jjtl`, merge base `02586b29b`, 2 commits on the branch side.
+**Files touched**: merge `2951a72a6`: 6 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-02_2113_prompt_textual_unprinted_objects.md`, `frontend/src/codegen/textual/__tests__/syntaxRecord.test.ts`, `frontend/src/codegen/textual/printer.ts`, `frontend/src/codegen/textual/ui/TextualTab.scss`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2951a72a6` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13060 tests in 496 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: visual check passed with reservation on the branch, crop checked by the chat
+**Notes**: Rollback tag `pre-textual-unprinted` on `7d66c7420` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2317/result.json`.
+**Prompt document name**: 2026-11-02 23:17
