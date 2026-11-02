@@ -7184,6 +7184,11 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   `forall` used as a command's target denotes the element, by a string `elementId` on `QualifiedName`, never written back; values are unchanged.
   M2 elements get an `id` in `commands/eval.ts`, as M1 instances have: `c.id` reads in JjEL and `==` is false between two
   distinct elements of one shape. A pair is taken once with `a.id < b.id`; `a != b` matches both orders.
+- **R-JTG-8 (2026-11-02)**: recommendation to the owner of the kernel metamodel: the `for each`, `where`, guard and
+  substitution source of a template are modelled expressions, not strings, so that the generic transformation interprets
+  no text. Not decided here: it belongs to the hardware prototype, and it sizes the expression sub-language. Provisional,
+  ratified as asked, unattended (P-2026-11-02-2021, from the owner's instruction in the prompt, not a new decision of
+  Alfonso's); evidence: read, verified: none, reversible: trunk.
 
 ## Superate
 

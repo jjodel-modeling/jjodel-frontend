@@ -45,6 +45,38 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Notes**: Placed targets stay unmarked, ownership in `targetModel.containment` and `traceModel.placements`; second claim and cycle fail the run. App write-back unchanged by design: until P-2026-11-02-2024 placed targets become roots, hence Regressions unknown and no merge. Session stopped at the context ceiling; this entry and the Status line written by P-2026-11-02-2024 from the handoff. Gates: src/jjtl 436 passed, full suite 12941 passed (9 known import failures), typecheck 0.
 **Prompt document name**: 2026-11-02 19:56
 
+## 2026-11-02 — discovery: can an M1 model depend on another M1 model (P-2026-11-02-2021)
+**Prompt**: P-2026-11-02-2021: measure in a running app whether an M1 can depend on another M1 (gesture, reference and getters, save and reopen, delete and cycle, what the JjTL Execute path receives), say what C0 needs, and register R-JTG-8 as provisional.
+**Files touched**: `docs/discovery/discovery_2026-11-02_m1_depends_on_m1.md` (new), `docs/decisions.md` (R-JTG-8), this inbox, the `Status:` line of the prompt. Probes outside the repo in `~/.jjodel-lanes/P-2026-11-02-2021/probe/`. No product code.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Yes in the UI (Info panel, "Depends from models"), survives save and reopen; Library delete clears dependency and reference silently; cycle accepted, no hang. Execute reads allSubObjects, so the Library reference is serialised and lost (warned, empty slot). C0 needs one change at ProjectEditor.tsx:1463-1464. Not measured: Library of another metamodel, export.
+**Prompt document name**: 2026-11-02 20:21
+
+## 2026-11-02 — ticket: the textual printer writes a bare reference keyword when the target is not in the text, and the text does not parse
+**Ticket**: `printTextModel` skips a reference whose target id is not among the printed objects (`printer.ts:91,161,188`). For a Brief whose `library` and `operations` point at objects of another model it prints `library` (keyword with no value) and `operations []`, and `parseText` rejects that text (`4:15 expected an integer; found "]"`). The printer is not total over a model with a cross-model reference, so the print-parse-print property of R-TXT-21 (1) does not hold there. Measured with `probe5` in `~/.jjodel-lanes/P-2026-11-02-1942/`. Fix belongs with the cross-model reference work, or earlier as a guard that prints nothing for the feature.
+**Priority**: medium
+**Found in**: P-2026-11-02-1942
+**Detail**: docs/discovery/discovery_2026-11-02_textual_notation_for_templates.md
+
+## 2026-11-02 — discovery: how far the default textual notation goes for template and library models (P-2026-11-02-1942)
+**Prompt**: P-2026-11-02-1942: measure by running what R-TXT (T1 to T4a-1) already covers for template and library models: round trip of a library, a template fragment and a Brief; depth and size at about 2,500 objects; hand-writing cost against infix; custom concrete syntax for a class; references to another model; one recommendation with an owner.
+**Files touched**: `docs/discovery/discovery_2026-11-02_textual_notation_for_templates.md` (new), this inbox, the `Status:` line of the prompt. Probes outside the repo in `~/.jjodel-lanes/P-2026-11-02-1942/`. No code.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Default notation round-trips (41 objects) and prints 2,150-2,450 balanced objects in 9-16 ms, parses in 15-22 ms; stack overflow beyond 500 levels (print) and 375 (parse). An expression is 10-12x its infix length; `operator` annotation is stored, not applied. No cross-model reference. Recommended: extend, owner `codegen`. Not measured: Monaco, browser stack, T6.
+**Prompt document name**: 2026-11-02 19:42
+
 ## 2026-11-02 — docs(jjtl): R-JTG-6 and R-JTG-7 registered, A0 write-back exercised in the running app (P-2026-11-02-1838)
 **Prompt**: P-2026-11-02-1838, register the two rulings Alfonso gave on 2026-11-02 18:35, replace the Open block of SPEC 5.3.2, and probe the A0 write-back in the app: a reference between two rules in both orders, one nested creation, one two-rule cycle.
 **Files touched**: `docs/decisions.md`, `frontend/src/jjtl/SPEC.md`, this inbox, the `Status:` line of the prompt. Probe outside the repo: `~/.jjodel-lanes/P-2026-11-02-1838/probe/a0-writeback.ts` and its json.

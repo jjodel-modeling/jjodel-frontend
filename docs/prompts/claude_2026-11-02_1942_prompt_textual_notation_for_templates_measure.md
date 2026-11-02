@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1942
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane hw-notation · docs-only, the closure commit is the one carrying this line · report docs/discovery/discovery_2026-11-02_textual_notation_for_templates.md · probes in ~/.jjodel-lanes/P-2026-11-02-1942/
 Lane: discovery (read-only; one short report, one docs-only commit)
 Depends: P-2026-11-02-1425
 Worktree: ~/jjodel-w-jjtlnotation, branch jjtl-notation-measure (from the trunk commit that adds this prompt)
