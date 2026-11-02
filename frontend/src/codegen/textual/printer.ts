@@ -26,6 +26,31 @@ export interface TextPrintResult {
     readonly spans: readonly ObjectSpan[];
 }
 
+/**
+ * R-TXT-30: an object a grouped containment holds and no group prints, because its grouping attribute is unset or is
+ * none of the literals of any subset. It is not in the text; neither are the objects it contains.
+ */
+export interface UnprintedObject {
+    readonly id: string;
+    /** The object holding it, which the text does print. */
+    readonly owner: string;
+    readonly feature: string;
+    readonly cls: string;
+    /** The grouping attribute. */
+    readonly attr: string;
+    readonly reason: 'unset' | 'outside';
+    /** The objects contained in it, at any depth: absent from the text with it, and not listed on their own. */
+    readonly inside: number;
+}
+
+/** What `printTextModel` returns: the text, its spans, and the objects it leaves out. */
+export interface TextPrintReport extends TextPrintResult {
+    readonly unprinted: readonly UnprintedObject[];
+}
+
+/** R-TXT-30: whether the text leaves objects out. Step T6 never applies a text while it does: their absence would read as a deletion. */
+export const hasUnprinted = (r: Pick<TextPrintReport, 'unprinted'>): boolean => r.unprinted.length > 0;
+
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /**
@@ -73,7 +98,7 @@ const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [
  * Prints the objects of a model. The roots are the objects no other object contains, in the order given; a
  * reference or containment slot names its targets by id, and an id that names no object is skipped.
  */
-export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[]): TextPrintResult {
+export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[]): TextPrintReport {
     const style = g.style;
     const byId = new Map(objects.map(o => [o.id, o]));
     const ruleOf = (o: TextObject): ObjectRule => {
@@ -101,6 +126,9 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     // as the text gives it, the one the parser reads back: the model order, but a grouped containment prints its values
     // group by group (those no group prints come after them, and a path to them names no object).
     const parent = new Map<string, { readonly owner: TextObject; readonly segment: string }>();
+    const contained = new Map<string, string[]>();
+    // R-TXT-30: the values of a grouped containment that no group prints, kept until the walk says which owners print.
+    const left: Omit<UnprintedObject, 'inside'>[] = [];
     for (const o of objects) {
         const rule = ruleOf(o);
         for (const f of rule.features) {
@@ -111,8 +139,17 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
             const order = stars.length ? [...grouped, ...all.filter(v => !grouped.includes(v))] : all;
             const kw = featureKeyword(g, o.cls, f.name);
             order.forEach((id, i) => {
-                if (typeof id === 'string' && byId.has(id)) parent.set(id, { owner: o, segment: `${kw}[${i}]` });
+                if (typeof id === 'string' && byId.has(id)) {
+                    parent.set(id, { owner: o, segment: `${kw}[${i}]` });
+                    contained.set(o.id, [...(contained.get(o.id) ?? []), id]);
+                }
             });
+            const attr = stars[0]?.where?.attr;
+            if (attr === undefined) continue;
+            for (const id of all) {
+                const c = grouped.includes(id) ? undefined : resolve(id);
+                if (c) left.push({ id: c.id, owner: o.id, feature: f.name, cls: c.cls, attr, reason: isSet(c.slots[attr]) ? 'outside' : 'unset' });
+            }
         }
     }
     const roots = objects.filter(o => !parent.has(o.id));
@@ -257,5 +294,14 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     };
 
     for (const r of roots) { object(r); newline(); }
-    return { text: out, spans: [...spans].sort((a, b) => a.start - b.start) };
+
+    // R-TXT-30: a value left out by a printed owner; one inside an owner left out is counted in it, not listed.
+    const printed = new Set(spans.map(s => s.id));
+    const insideOf = (id: string, seen = new Set<string>([id])): number => {
+        let n = 0;
+        for (const c of contained.get(id) ?? []) if (!seen.has(c)) { seen.add(c); n += 1 + insideOf(c, seen); }
+        return n;
+    };
+    const unprinted = left.filter(u => printed.has(u.owner)).map(u => ({ ...u, inside: insideOf(u.id) }));
+    return { text: out, spans: [...spans].sort((a, b) => a.start - b.start), unprinted };
 }

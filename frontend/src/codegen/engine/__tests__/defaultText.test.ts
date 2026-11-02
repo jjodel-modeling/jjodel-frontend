@@ -76,8 +76,11 @@ function model(classSpecs: readonly ClassSpec[], enums: Record<string, readonly 
 
 const LOOKUP = { MM: { className: 'DModel', id: 'MM', name: 'mm' }, M: { className: 'DModel', id: 'M', name: 'm', instanceof: 'MM' } };
 
+// A generous time budget: under load the production 2000 ms (R-GEN-28) trips on a run that passes alone; budget.test.ts asserts the budget itself.
+const TEST_LIMITS = { timeMs: 60_000 };
+
 function run(globals: Record<string, any>, templates: readonly TemplateRecord[]): GenerateResult {
-    return generate(globals, LOOKUP, 'M', templates, 'main', [], {}, 'none');
+    return generate(globals, LOOKUP, 'M', templates, 'main', [], TEST_LIMITS, 'none');
 }
 
 // The discovery's fixture (report, Method), in code: `doc` on Named shows the supertype's features first.

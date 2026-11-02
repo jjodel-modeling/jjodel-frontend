@@ -218,7 +218,7 @@ describe('the default text generator prints an unset defaulted attribute (R-TXT-
         const decoded = decodeGeneratorFile(readFileSync(FILE, 'utf8'));
         expect(decoded.problems).toEqual([]);
         const lookup = { MM: { className: 'DModel', id: 'MM', name: 'mm' }, M: { className: 'DModel', id: 'M', name: 'm', instanceof: 'MM' } };
-        const out = generate(buildEvalContext({} as any), lookup, 'M', [...decoded.generators[0].templates], 'main', [], {}, 'none');
+        const out = generate(buildEvalContext({} as any), lookup, 'M', [...decoded.generators[0].templates], 'main', [], { timeMs: 60_000 }, 'none');
         expect(out.errors).toEqual([]);
         expect(out.code).toBe('Sys s1 {\n  level 7\n}');
     });

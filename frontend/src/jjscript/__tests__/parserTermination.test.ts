@@ -137,9 +137,9 @@ describe.each(MODES)('Parser termination (%s)', (_mode, strict) => {
     // `parseEvalCommand` read to the end of the line and swallowed the block's `end`.
     it.each([
         ['do eval x.name end', 'x.name'],
-        // A string literal is one token: its `end` stays inside it. The quotes are not kept,
-        // as for a top-level `eval "a end b"`.
-        ['do eval "a end b" end', 'a end b'],
+        // A string literal is one token: its `end` stays inside it. The quotes are kept, as the
+        // source has them (P-2026-11-03-0000).
+        ['do eval "a end b" end', '"a end b"'],
         // An identifier that starts with `end` is not the terminator.
         ['do eval endDate end', 'endDate'],
     ])('%j parses to a block of one eval that stops before end', (input, expression) => {

@@ -197,3 +197,34 @@ describe('the JjEL route gives the same pairs (with source only)', () => {
             .toEqual(await pairs('forall q, r in requesters such that r.priority > q.priority', true));
     });
 });
+
+describe('a JjEL collection written directly in the forall (with source only, P-2026-11-02-2345)', () => {
+    const PAIRS = 'requesters.flatMap(q => requesters.filter(r => r.priority > q.priority).map(r => { hi: q, lo: r }))';
+
+    async function direct(forall: string, body: string): Promise<string[][]> {
+        const prop = await run(`Arbiter a -> Property {
+    -> expr { -> Conj { -> ops {
+        ${forall} -> Pair {
+            ${body}
+        }
+    } } }
+}`, true);
+        return prop.expr.ops.map((p: any) => [p.hi, p.lo]);
+    }
+
+    it('gives the same pairs as the `let` form', async () => {
+        expect(await direct(`forall pr in ${PAIRS}`, 'hi := pr.hi.name\n            lo := pr.lo.name'))
+            .toEqual([['cpu', 'dma'], ['cpu', 'io'], ['dma', 'io']]);
+    });
+
+    it('a filter after the collection', async () => {
+        expect(await direct(`forall pr in ${PAIRS} such that pr.hi.name == "cpu"`, 'hi := pr.hi.name\n            lo := pr.lo.name'))
+            .toEqual([['cpu', 'dma'], ['cpu', 'io']]);
+    });
+
+    it('a second variable and a filter after the collection', async () => {
+        expect(await direct(`forall pr in ${PAIRS}, s in requesters such that s.name == pr.lo.name`,
+            'hi := pr.hi.name + s.name\n            lo := s.name'))
+            .toEqual([['cpudma', 'dma'], ['cpuio', 'io'], ['dmaio', 'io']]);
+    });
+});

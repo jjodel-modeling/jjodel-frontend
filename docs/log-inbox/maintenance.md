@@ -610,3 +610,128 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: on 3001 from the served parser: expression and literal forms parse as R-FA-9. The command was not run on a model.
 **Notes**: Ticket, load-sensitive tests: the two codegen files alone gave 23 of 23 green at load 13, and 4 and 6 failures in two runs at load 140, generation errors. Hypotheses, not measured: the 2000 ms generation budget (R-GEN-28) and the `spawnSync` of `traceMonitor.test.ts` returning a null status under load. With parallel lanes they can block a direct merge at random. Rollback tag `pre-jjscript-rename-expression`.
 **Prompt document name**: 2026-11-02 20:45
+
+## 2026-11-02 — discovery: forall body by element id, stopped before Phase 2 (P-2026-11-02-2105)
+**Prompt**: a `forall` body acts on the iterated element, not on its name (ticket «forall rename of same-named elements fails as ambiguous»); two-phase in one session.
+**Files touched**: 4d28b4868 (`docs/discovery/discovery_2026-11-02_jjscript_forall_element_by_id.md`); Status line of the 2105 prompt; this entry
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Phase 1 only: report 4d28b4868 (probe, F1-F7, four questions; Phase 2 needed commands/eval.ts and commands/instance.ts, outside the DOVE list). The session hit the context ceiling (RC-51) before this entry; entry and Status were written by P-2026-11-02-2140 from its handoff.md. Phase 2 is P-2026-11-02-2140.
+**Prompt document name**: 2026-11-02 21:05
+
+## 2026-11-02 — feat(jjscript): forall body acts on the element by id (P-2026-11-02-2140)
+**Prompt**: Phase 2 of P-2026-11-02-2105 with the chat's answers (R-FA-10): an `id` on the M2 shells, `instance.ts` and `eval.ts` in scope (7 files), `c.attr` fixed, identity on targets only as `QualifiedName.elementId`; both duplicates examples tested; the id neither persisted nor written back.
+**Files touched**: 733ae10c0 (`frontend/src/jjscript/types.ts`, `executor/resolvers.ts`, `executor/executor.ts`, `executor/commands/forall.ts`, `executor/commands/instance.ts`, `executor/commands/eval.ts`, `executor/__tests__/forallById.test.ts` new); Status lines of 2105 and 2140; this entry and the 2105 one
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: `elementId` only on a `target`, denotes segments[0]; an id miss is a miss. Also substituted: `c.x` and `set c.p` (F4); an outer-bound target is not re-read by an inner variable. No existing test changed (vitest 4066 passed, context-binding the known failure); codegen untouched. Not executed here: the guard wiring in executor.ts and the M1 delete/set sites (no node import); undo. Gates: tsc 0, build 0. Temp node_modules symlink, removed.
+**Prompt document name**: 2026-11-02 21:40
+
+## 2026-11-02 — merge: jjscript-forall-by-id into alfonso-frontend-jjtl (P-2026-11-02-2222)
+**Prompt**: `claude_2026-11-02_2222_prompt_merge_jjscript-forall-by-id.md`, a direct merge, closed by hand by the chat because the worker ended blocked.
+**Files touched**: merge `371a3dfe2`, the files of the branch side.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. vitest 13054 tests, 3 failed, in `defaultText.test.ts` and `textual.test.ts`, the load-sensitive tests of the ticket in P-2026-11-02-2045. The same two files alone on the merge, three runs at load 4: 23 of 23. These tests build no element through `commands/eval.ts`; read, not measured.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: not run. The `a != b` behaviour in the app (`NAME_CONFLICT` or both `Foo_dup`) stays unmeasured.
+**Notes**: Rollback tag `pre-jjscript-forall-by-id`.
+**Prompt document name**: 2026-11-02 22:22
+
+## 2026-11-02 — test: codegen and trace-monitor tests get a load-proof time budget (P-2026-11-02-2250)
+**Prompt**: `claude_2026-11-02_2250_prompt_load_sensitive_tests.md`: tests that fail under load, `defaultText.test.ts`, `textual.test.ts` (via `spec.ts`) and the CLI tests of `traceMonitor.test.ts`.
+**Files touched**: `frontend/src/codegen/engine/__tests__/defaultText.test.ts`, `frontend/src/codegen/textual/__tests__/spec.ts`, `frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts`, `frontend/scripts/gates/__tests__/traceMonitor.test.ts`. Tests only; `text.ts` and the 2000 ms of R-GEN-28 untouched.
+**Outcome**: ⚠️ partial: fix committed and gates green; the third verification was cut by the chat
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no. tsc 0, typecheck:scripts 0, `vitest run src/codegen scripts/gates` 60 files, 2906 tests green, no load.
+**Out-of-scope changes**: no. `unsetDefaultLiteral.test.ts` is the one other test of the same shape (default-text generator, default budget); it never failed.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Codegen: at 40 CPU hogs, 8 tests stopped with `Generation stopped after 2000 ms: template 'block' was still running` (R-GEN-28), so time; fix `{ timeMs: 60_000 }` via `limits`. CLI: at 500 hogs `spawnSync` gave ETIMEDOUT, SIGTERM, status null; timeout now 90 s. Codegen green 3 runs at 40 hogs; CLI green in 1 run at 500 hogs, the other 2 cut by the chat (shared Mac). Detail in the report.
+**Prompt document name**: 2026-11-02 22:50
+
+## 2026-11-02 — merge: codegen-tests-budget into alfonso-frontend-jjtl (P-2026-11-02-2330)
+**Prompt**: `claude_2026-11-02_2330_prompt_merge_codegen-tests-budget.md`, a direct merge by `lane-run merge --direct`, no session: `codegen-tests-budget` at `e13326d89` into `alfonso-frontend-jjtl`, merge base `8a2490c20`, 3 commits on the branch side.
+**Files touched**: merge `7536db524`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_2250_prompt_load_sensitive_tests.md`, `frontend/scripts/gates/__tests__/traceMonitor.test.ts`, `frontend/src/codegen/engine/__tests__/defaultText.test.ts`, `frontend/src/codegen/textual/__tests__/spec.ts`, `frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7536db524` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13060 tests in 496 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: tests only, no UI change: visual check not applicable; merge gates green (13060 tests, 0 failed, 9 red at import, build exit 0)
+**Notes**: Lesson: a prompt that asks for load states a cap below load 20. P-2026-11-02-2250 gave none, its lane ran 500 hogs, load 600 for about 20 minutes on the shared Mac; gates of other lanes between 22:50 and 23:10 may be falsely red. Rollback tag `pre-codegen-tests-budget` on `52e49d05c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2330/result.json`.
+**Prompt document name**: 2026-11-02 23:30
+
+## 2026-11-02 — feat(jjtl): JjEL parses a forall collection the legacy parser cannot (P-2026-11-02-2345)
+**Prompt**: `claude_2026-11-02_2345_prompt_jjtl_forall_collection_jjel.md`: with the source text, a forall collection such as `requesters.flatMap(... { hi: q, lo: r })` is parsed by JjEL up to `such`, `->` and the binding comma (R-FA-5), so it no longer fails with `Expected expression`; no test expectation changes.
+**Files touched**: `9c0ac6c3d`: `frontend/src/jjtl/parser/parser.ts` (new `forAllCollection`), `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts` (+4), `frontend/src/jjtl/executor/__tests__/forall-multivar.test.ts` (+3), `frontend/src/jjtl/SPEC.md` (one line); this commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc exit 0; vitest src/jjtl src/jjel 998 passed, 7 files red at import (window is not defined, the known list); build exit 0; check:docs exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Legacy first, JjEL on fallback: the legacy result stays when it stops at a forall stop token, otherwise backtrack (errors truncated) to JjEL. Bench: JjEL always fails 2 AST assertions of parser forall-multivar and parity fixture tests#107; reverting the call site kills the 6 new tests. useJjtlParser already passes source. node_modules symlinked to ~/jjodel/frontend/node_modules (untracked, as every lane worktree).
+**Prompt document name**: 2026-11-02 23:45
+
+**Ticket** (P-2026-11-02-2345): under JjEL the collection of parity fixture `tests#107` evaluates differently at run time (`range() takes integers, got null`), so JjEL-always for forall collections is not run-time equivalent today. Still legacy-only with source: the messages of `alert`/`notify` and the statement-level `prompt`/`confirm`/`input` arguments (parser.ts alertStatement, notifyStatement, promptExpression, confirmExpression, inputExpression).
+
+## 2026-11-03 — merge: jjtl-forall-collection-jjel into alfonso-frontend-jjtl (P-2026-11-02-2357)
+**Prompt**: `claude_2026-11-02_2357_prompt_merge_jjtl-forall-collection-jjel.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-forall-collection-jjel` at `b4378e231` into `alfonso-frontend-jjtl`, merge base `54fbfa71e`, 4 commits on the branch side.
+**Files touched**: merge `98d34c9c4`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_2345_prompt_jjtl_forall_collection_jjel.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `98d34c9c4` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13067 tests in 496 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: parser only, no UI change: visual check not applicable; merge gates green (13067 tests, 0 failed, 9 red at import)
+**Notes**: Rollback tag `pre-jjtl-forall-collection-jjel` on `54fbfa71e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2357/result.json`.
+**Prompt document name**: 2026-11-02 23:57
+
+## 2026-11-03 — fix(jjscript): four JjScript console defects (P-2026-11-03-0000)
+**Prompt**: `claude_2026-11-03_0000_prompt_jjscript_console_defects.md`, lane full, auto: four defects seen on 3001 in the JjScript console (`create package` crash on `cname`, `create class X in P` with no P reporting success, `eval` refusing lambdas and strings, a `let` value cut at a `forall`'s `in`). Two phases in one session, one commit per defect, order 2, 1, 3, 4.
+**Files touched**: discovery `9ff3f733b` (`docs/discovery/discovery_2026-11-03_jjscript_console_defects.md`); defect 2 `2decd2160` and defect 1 `b9c45587a` (`frontend/src/jjscript/executor/commands/create.ts`); defect 3 `c3fcb4e0a` and defect 4 `217b931da` (`frontend/src/jjscript/parser/parser.ts`); tests in all four (`frontend/src/jjscript/executor/__tests__/consoleDefects.test.ts`, new), `frontend/src/jjscript/__tests__/parserTermination.test.ts` in `c3fcb4e0a`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `217b931da`: `npx tsc --noEmit` exit 0; `npx vitest run src/jjscript src/jjel` 1487+ tests green, 1 file red at import (`context-binding.test.ts`, the known `window is not defined`); `npm run build` exit 0; `npm run check:docs` run at the close.
+**Out-of-scope changes**: no. Seven files across the lane (RC-11), all in the declared scope: `create.ts`, `parser.ts`, the two test files, the discovery report, this inbox, the prompt file.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Causes: `createPackage` omitted the `fatherType` that `Constructors.DPackage` reads; a named parent resolved nowhere fell through to `DClass.new` with no father; `eval` joined token values with spaces; `forall` lexes as COMMAND, unseen by the `let` value collector. `parserTermination.test.ts` pinned the dropped quotes of `eval "a end b"` and now expects them kept. `node_modules` via a temporary symlink, removed at the close (P14).
+**Prompt document name**: 2026-11-03 00:00
+
+## 2026-11-03 — ticket: Info.tsx creates a package without fatherType
+**Ticket**: `frontend/src/components/editors/Info.tsx:384` calls `DPackage.new('NewPackage', '', '', parentId, true)` with no `fatherType`; `Constructors.DPackage` (`joiner/classes.ts:996-997`) reads `fatherType.cname` whenever there is a father, the crash fixed in JjScript `create package` by `b9c45587a`. Not reproduced in the UI.
+**Priority**: medium
+**Found in**: P-2026-11-03-0000
+**Detail**: docs/discovery/discovery_2026-11-03_jjscript_console_defects.md
+
+## 2026-11-03 — merge: jjscript-console-defects into alfonso-frontend-jjtl (P-2026-11-03-0020)
+**Prompt**: `claude_2026-11-03_0020_prompt_merge_jjscript-console-defects.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-console-defects` at `fe85c80cb` into `alfonso-frontend-jjtl`, merge base `34b82af49`, 7 commits on the branch side.
+**Files touched**: merge `5b186217f`: 7 files from the branch side (`docs/discovery/discovery_2026-11-03_jjscript_console_defects.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-03_0000_prompt_jjscript_console_defects.md`, `frontend/src/jjscript/__tests__/parserTermination.test.ts`, `frontend/src/jjscript/executor/__tests__/consoleDefects.test.ts`, `frontend/src/jjscript/executor/commands/create.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5b186217f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13145 tests in 498 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: on 3001 in a throwaway project, JjScript console: create package P1, create class Foo in P1 (appears in classes), create class X in Missing refused, eval with a lambda and with a string, let with an unparenthesized forall a, b reading x.size = 4: all as expected. Merge gates green (13145 tests, 0 failed, 9 red at import)
+**Notes**: Rollback tag `pre-jjscript-console-defects` on `e1b35c188` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-0020/result.json`.
+**Prompt document name**: 2026-11-03 00:20

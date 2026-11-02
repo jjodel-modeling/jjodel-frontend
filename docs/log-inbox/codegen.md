@@ -1249,3 +1249,67 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: no UI change, visual check not applicable
 **Notes**: Rollback tag `pre-textual-path-feature` on `43350d3cd` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2057/result.json`.
 **Prompt document name**: 2026-11-02 20:57
+
+## 2026-11-02 — feat(codegen): report objects the text does not print (P-2026-11-02-2113)
+**Prompt**: R-TXT-30, first half: printTextModel returns the objects a grouped containment does not print (owner, feature, class, attribute, unset or outside, objects inside); the Text tab lists one warning per class and reason; hasUnprinted() for step T6; tests first, mutation bench, in-app check.
+**Files touched**: 09cfca60d: `frontend/src/codegen/textual/printer.ts`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `__tests__/syntaxRecord.test.ts`; Status line of the 2113 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato con riserva: probe in the lane folder, Shelf metamodel, light theme, warning for 1 then 2 books, gone once set; browser served eval.ts without the mandatory-enum fill, repo untouched; crop checked by the chat
+**Notes**: 6 tests red first; bench 3 mutants killed. vitest src/codegen at load 7: 51 files, 2549 passed; the 4 red generator tests at load 134 were the 2000 ms limit. Measured: a mandatory enum left empty reads as its first literal, so the warning does not fire on an unset attribute in the app. Closed by the chat after the context ceiling.
+**Prompt document name**: 2026-11-02 21:13
+
+## 2026-11-02 — ticket: R-TXT-30 warning rarely reachable for an enum grouping (P-2026-11-02-2113)
+**Ticket**: a mandatory enum left empty reads as its first literal (`emptyAttributeDefault`, `jjscript/executor/commands/eval.ts`), so the text prints that object under the first literal's group and the warning stays silent. From reading the code, one path remains: a declared default that is no literal is returned as is, and falls outside every subset (not measured). Step T6 must state how it compares a read default with a stored empty value, so that applying a text does not write the default unasked.
+**Priority**: low
+**Found in**: P-2026-11-02-2113
+**Detail**: ~/.jjodel-lanes/P-2026-11-02-2113/probe-probe.log
+
+## 2026-11-02 — merge: textual-unprinted into alfonso-frontend-jjtl (P-2026-11-02-2317)
+**Prompt**: `claude_2026-11-02_2317_prompt_merge_textual-unprinted.md`, a direct merge by `lane-run merge --direct`, no session: `textual-unprinted` at `ea1aad134` into `alfonso-frontend-jjtl`, merge base `02586b29b`, 2 commits on the branch side.
+**Files touched**: merge `2951a72a6`: 6 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-02_2113_prompt_textual_unprinted_objects.md`, `frontend/src/codegen/textual/__tests__/syntaxRecord.test.ts`, `frontend/src/codegen/textual/printer.ts`, `frontend/src/codegen/textual/ui/TextualTab.scss`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2951a72a6` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13060 tests in 496 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: visual check passed with reservation on the branch, crop checked by the chat
+**Notes**: Rollback tag `pre-textual-unprinted` on `7d66c7420` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2317/result.json`.
+**Prompt document name**: 2026-11-02 23:17
+
+## 2026-11-03 — feat(codegen): diff an edited text against its model (P-2026-11-02-2327, P-2026-11-02-2355)
+**Prompt**: T6a of the textual notation, no UI: match parsed objects to model objects (spans, then the R-TXT-18 cascade), minimal diff, refusals (R-TXT-26, R-TXT-30), a default read is no change, lines by registered handles, run as one undo step. 2327 stopped at the context ceiling (RC-51); 2355 closed it from its handoff: test fixes, gates, commit, bench, apply and undo on a real project state.
+**Files touched**: be4a90587: `frontend/src/codegen/textual/textMatch.ts`, `textDiff.ts`, `textApply.ts` (new), `__tests__/textDiff.test.ts` (new), `modelLines.ts`; Status lines of the 2327 and 2355 prompts; this entry and the ticket below
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI; apply and one undo checked in the app by a probe)
+**Notes**: 7 red tests of the handoff fixed, one expectation changed with its reason in the commit body (nameless Links are homonyms). Gates: tsc 0, vitest src/codegen 52 files 2606 passed, build, check:docs, check:codegen-lazy off and on. Bench: 6 mutants, all killed (docs commit body). Probe on demoESM: 4 lines applied, reprint equals the edit, one undo restores text and the 36-element subtree; `~/.jjodel-lanes/P-2026-11-02-2355/probe.out`.
+**Prompt document name**: 2026-11-02 23:27, 2026-11-02 23:55
+
+## 2026-11-03 — ticket: a text edit of a model with a single-valued reference outside the text is always refused
+**Ticket**: the printer writes a single-valued reference keyword with no value when the target is not among the printed objects (the defect of the P-2026-11-02-1942 ticket in `docs/log-inbox/hw-notation.md`), so the text does not parse and `planTextEdit` refuses every edit of that model with `parse`; the model is not touched. Pinned as an expected refusal by `textDiff.test.ts` ('a single-valued target the text cannot name is an expected refusal'). A many-valued target outside the text is preserved. The fix is the printer's (`printer.ts`), outside T6a.
+**Priority**: medium
+**Found in**: P-2026-11-02-2327
+**Detail**: docs/log-inbox/hw-notation.md (ticket of P-2026-11-02-1942)
+
+## 2026-11-03 — merge: textual-t6a into alfonso-frontend-jjtl (P-2026-11-03-0011)
+**Prompt**: `claude_2026-11-03_0011_prompt_merge_textual-t6a.md`, a direct merge by `lane-run merge --direct`, no session: `textual-t6a` at `dfc34e2b1` into `alfonso-frontend-jjtl`, merge base `52e49d05c`, 3 commits on the branch side.
+**Files touched**: merge `b0bfeb221`: 8 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-02_2327_prompt_textual_t6a_diff.md`, `docs/prompts/claude_2026-11-02_2355_prompt_textual_t6a_close.md`, `frontend/src/codegen/textual/__tests__/textDiff.test.ts`, `frontend/src/codegen/textual/modelLines.ts`, `frontend/src/codegen/textual/textApply.ts`, `frontend/src/codegen/textual/textDiff.ts`, `frontend/src/codegen/textual/textMatch.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b0bfeb221` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13124 tests in 497 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change, visual check not applicable
+**Notes**: Rollback tag `pre-textual-t6a` on `d52bb1c58` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-0011/result.json`.
+**Prompt document name**: 2026-11-03 00:11

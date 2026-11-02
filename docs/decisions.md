@@ -7121,6 +7121,8 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   or outside every subset is not in the text. The Text tab reports it as a visible issue naming count, class and attribute
   (`2 Book not shown: genre unset`). Step T6 never applies a text while such objects exist, because their absence would read
   as a deletion. Printing them in a block of their own stays a later option: it changes the grammar.
+  Measured by P-2026-11-02-2113: a mandatory enum left empty reads as its first literal, so the warning rarely fires in
+  the app; it stays as a guard.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
@@ -7175,15 +7177,24 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   only when a resolution or a call reaches the node. Matched rules stay for the elements the transformation maps as such.
   Containment under A alone therefore does not serve library expressions; that value arrives with B. Ratified by
   Alfonso 2026-11-02 18:35, registered by P-2026-11-02-1838; evidence: read, verified: none, reversible: trunk.
-- **R-FA-9 (2026-11-02), provisional, unattended, evidence: measured (P-2026-11-02-2030), verified: none, reversible: trunk**: JjScript `rename` takes
+- **R-FA-9 (2026-11-02), ratified by Alfonso 2026-11-02 23:42 («Vai con tutti»), evidence: measured (P-2026-11-02-2030), verified: none, reversible: trunk**: JjScript `rename` takes
   an expression. A single name or string after `to`/`as`, followed by the end of the command or by `in <parent>`, stays
   literal, even when a variable has that name; anything else is a JjEL expression with the `forall` variables and `let`
   bindings visible. The exception for a trailing `in` keeps `rename attribute a to b in C`, the form taught in
   `defaultPrompts.ts`. A result that is not a non-empty string is a command error.
-- **R-FA-10 (2026-11-02), provisional, unattended, evidence: measured (P-2026-11-02-2105, 2140), verified: none, reversible: trunk**: a variable of a JjScript
+- **R-FA-10 (2026-11-02), ratified by Alfonso 2026-11-02 23:42 («Vai con tutti»), evidence: measured (P-2026-11-02-2105, 2140), verified: none, reversible: trunk**: a variable of a JjScript
   `forall` used as a command's target denotes the element, by a string `elementId` on `QualifiedName`, never written back; values are unchanged.
   M2 elements get an `id` in `commands/eval.ts`, as M1 instances have: `c.id` reads in JjEL and `==` is false between two
   distinct elements of one shape. A pair is taken once with `a.id < b.id`; `a != b` matches both orders.
+- **R-JTG-8 (2026-11-02)**: recommendation to the owner of the kernel metamodel: the `for each`, `where`, guard and
+  substitution source of a template are modelled expressions, not strings, so that the generic transformation interprets
+  no text. Not decided here: it belongs to the hardware prototype, and it sizes the expression sub-language. Provisional,
+  ratified as asked, unattended (P-2026-11-02-2021, from the owner's instruction in the prompt, not a new decision of
+  Alfonso's); evidence: read, verified: none, reversible: trunk.
+- **R-JTG-9 (2026-11-02)**: `__placed` is accepted beside `__nested` on a target placed in a containment; when the nested
+  walk runs, all pointers, root ones included, are written after the tree; the optional `isPlacedIn` is removed with B.
+  Ratified by Alfonso (2026-11-02, ok to the recommendations on P-2026-11-02-2108); evidence: measured, verified: the
+  lane probes, reversible: trunk.
 
 ## Superate
 

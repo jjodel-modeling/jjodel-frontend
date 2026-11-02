@@ -334,6 +334,12 @@ export interface QualifiedName {
     segments: string[];           // ['Package', 'SubPackage', 'Class']
     member?: string;              // Optional member access: 'attributeName'
     raw: string;                  // Original string: 'Package::SubPackage::Class.attributeName'
+    /**
+     * Id of the element `segments[0]` denotes, set by `forall` on a command's `target` when the
+     * iteration variable is a model element (R-FA-10). The resolvers look it up by id, never by
+     * name, so homonyms do not make it ambiguous; a miss is a miss.
+     */
+    elementId?: string;
 }
 
 // ============================================
