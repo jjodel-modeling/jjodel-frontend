@@ -724,16 +724,25 @@ The app's write-back of several targets per source element is B2 (list below).
   run with one error naming the application stack, innermost first: rule, source element, and
   the bindings visible in each frame.
 
-**Left for B2.**
-1. The app's write-back keeps one target per source id (the map at
+**Left for B2.** Done by P-2026-11-02-2338, except item 4.
+1. Done. The app's write-back kept one target per source id (the map at
    `components/project/ProjectEditor.tsx:1809`, as cited by P-2026-11-02-2247): lazy, called and
-   fresh targets can be several per source element.
-2. The optional `isPlacedIn` of `nestedMaterialization.ts`, to be removed.
-3. The legacy `trace` Map of the result, which called, lazy and fresh targets do not fill.
-4. `resolve()`, `resolveAll()` and `{ __ref }` lookups answer matched rules only: a lazy node
-   is reached by a binding's value, not by an explicit `resolve()`.
-5. A lazy-rule selection error raised under a delegating matched rule in pass 2 ends the run as
-   `Execution failed`, not as a per-binding error.
+   fresh targets can be several per source element. Root targets are now found by the identity
+   of the executor object (`makeRootTargetIndex`, `nestedMaterialization.ts`); `__sourceId` is a
+   fallback only when it names exactly one root, otherwise the pointer is skipped with a warning.
+   A pointer array is deduplicated by target identity, not by source id, so two fresh targets of
+   one source stay two pointers.
+2. Done. The optional `isPlacedIn` of `nestedMaterialization.ts` is removed.
+3. Done, nothing to change. The legacy `trace` Map, which called, lazy and fresh targets do not
+   fill, is read only by `hooks/useJjtlExecutor.ts`, as a fallback when `traceModel.links` is
+   empty; every called, lazy and fresh target has a trace link, so no consumer loses one.
+4. Open, awaiting a decision. `resolve()`, `resolveAll()` and `{ __ref }` lookups answer
+   matched rules only: a lazy node is reached by a binding's value, not by an explicit
+   `resolve()`.
+5. Done. A non-abort error raised under a delegating matched rule in pass 2, a lazy-rule
+   selection error among them, is an error of that element, `Failed to lower <Class 'x'> by rule
+   '<label>': <message>` with the application stack, and the other elements are still lowered;
+   the depth limit still ends the run.
 
 ### 5.4 Per-Binding Invertibility
 
