@@ -1021,3 +1021,10 @@ Expected: the test clears `JJODEL_CRITICAL_ZONE_GOAHEAD` (and any other go-ahead
 **Smoke visivo**: non applicabile (test-only change; chat GO 2026-11-02)
 **Notes**: Gates on 34bb2c30c: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk; hook tests 21 files, 967 = trunk = branch (no new test); build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Zero conflicts, no union. Lane board untouched. Step 6 names 81e0aafdf as reset target; the real pre-merge tip was bce1f3ef5 (template fix owed).
 **Prompt document name**: 2026-11-02 07:23
+
+## 2026-11-02 — ticket: Merge prompt template names the wrong reset target when check:addonly fails
+**Ticket**: The merge prompt that `lane-run merge ... --launch` generated for P-2026-11-02-0723 (criticalzone-test-env into alfonso-frontend-jjtl) named `81e0aafdf` in its step 6 as the reset point if `check:addonly` fails. `81e0aafdf` is the closure commit of the previous merge (P-2026-11-02-0656). The real pre-merge tip was `bce1f3ef5`, the commit that adds the merge prompt itself, so a reset to `81e0aafdf` would also drop the merge prompt's own commit. It had no effect because the gate passed; the merge session noticed and reported it.
+
+Expected: the template names the trunk tip at the moment the merge prompt is committed (the prompt commit itself), or tells the session to read it with `git rev-parse HEAD` before merging.
+**Priority**: low
+**Found in**: P-2026-11-02-0723
