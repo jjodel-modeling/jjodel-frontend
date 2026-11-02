@@ -6838,6 +6838,16 @@ Two gaps found by lane P-2026-11-03-0005 at its item 1 hard stop, answered by Ju
 - **R-AI-18** (2026-11-03). **The Custom «requires a Base URL» check moves into `BaseProvider.prepare`**, with today's
   text («Custom provider requires a Base URL. Set it in Settings.», `AIProviderService.ts:683-685`) and a test, so every
   chat consumer gets it. `BaseProvider.ts` joins L3's DOVE (14 entries, rule 19 confirmed by this answer).
+- **R-AI-19** (2026-11-03, measured by chat C-2026-11-03-0001 with Juri's keys, Chromium at `http://localhost:3198`
+  on `cc78e8e3f`; evidence: measured, verified: agent, reversible: trunk; ratified by Juri as recommended). **The
+  OpenAI-compatible client sends no `X-Stainless-*` header.** The `openai` SDK adds seven of them (`-OS`, `-Arch`,
+  `-Lang`, `-Package-Version`, `-Runtime`, `-Runtime-Version`, `-Retry-Count`; `-Timeout` on some requests), and the
+  CORS preflight of `api.mistral.ai` («Request header field x-stainless-os is not allowed») and of `api.moonshot.cn`
+  rejects them: chat and `test()` read «Connection error» / «Cannot reach», where a plain `fetch` from the same page gets
+  a readable status (Mistral 429, Kimi 401). The same SDK client with each header set to `null` in `defaultHeaders`
+  sends none and gets the readable status (Mistral 429 `RateLimitError`, Kimi 401 `AuthenticationError`). Ollama and
+  OpenRouter accept the headers; the Anthropic and Google SDKs are unaffected on their own hosts. Fixed in L3, in
+  `OpenAICompatibleProvider.ts`, with a test.
 
 ## Superate
 
