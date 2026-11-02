@@ -471,3 +471,16 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 **Smoke visivo**: passato — chat, unattended: parser and executor only, no UI change: visual check not applicable; merge gates green (12843 tests, 9 red at import, build exit 0)
 **Notes**: Rollback tag `pre-jjtl-forall-multivar` on `8913bf878` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1404/result.json`.
 **Prompt document name**: 2026-11-02 14:04
+
+## 2026-11-02 — feat(jjel): forall and exists over several variables (P-2026-11-02-1410)
+**Prompt**: Close P-2026-11-02-1330 (hard-stop at the context ceiling, RC-51) from its handoff: decisions F1 `flatten`, F2 parse error, E-VALUE record rule adopted by the chat; add `forall x, y in |` and `forall x in A, y in |` to the `after-forall-in` autocomplete context with a test; SPEC.md grammar and §5.1.1; gates, code commit, log, Status flips, symlink removal.
+**Files touched**: fd13ba517 (13 files: `frontend/src/jjel/parser/parser.ts`, `SPEC.md`, `autocomplete/context.ts`, `autocomplete/providers/identifier.ts`, `autocomplete/util/boundVariables.ts` new, `__tests__/forallMultivar.test.ts` new; `frontend/src/model/simulation/subsetChecker.ts`; tests of codegen printer, templateCompletion, jjscript parser, guardEvaluator, subsetChecker, validationEvaluator); Status lines of the 1330 and 1410 prompts; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 13 files, above five: the consumer fix in subsetChecker.ts (E-FORALL on a top flatten over ForAll, record projection not E-VALUE) and the provider were outside the parser. Gates: tsc exit 0; vitest jjel/jjscript/jjtl/codegen/validation/simulation 5096 tests passed, 8 suites the known window import failures; build exit 0. Context branch killed by a mutation (1 fail). Regressions unknown: the 3001 autocomplete check is the chat's, after the merge. Temporary node_modules symlink removed.
+**Prompt document name**: 2026-11-02 14:10

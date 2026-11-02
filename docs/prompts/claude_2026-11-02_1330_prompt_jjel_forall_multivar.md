@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1330
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-02 · hard-stop at the context ceiling (RC-51), closed by P-2026-11-02-1410 · commit fd13ba517
 Lane: full (JjEL grammar, every language inherits it; two-phase in one session)
 Depends: none
 Worktree: ~/jjodel-w-jjelmultivar, branch jjel-forall-multivar (from the trunk commit that adds this prompt)

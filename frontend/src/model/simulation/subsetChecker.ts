@@ -36,7 +36,7 @@
  * Pure: types from JjEL only.
  */
 
-import type { ASTLocation, BinaryExpr, JjelExpression } from '../../jjel/types/ast';
+import type { ASTLocation, BinaryExpr, JjelExpression, ObjectLiteralExpr } from '../../jjel/types/ast';
 import { STATE_RESERVED } from '../../jjel/stateReserved';
 import { literalArgument } from './stateAttributesCodec';
 
@@ -254,6 +254,12 @@ function eagerMessage(w: Walk, b: BinaryExpr & { operator: 'and' | 'or' }, idiom
         : `${head} Write: not (${left}) implies ${r}`;
 }
 
+/** `{ x: x, y: y, … }`: the record a forall over several variables yields without a projection. */
+function isVariableRecord(e: JjelExpression): e is ObjectLiteralExpr {
+    return e.type === 'ObjectLiteral' && e.entries.length > 1
+        && e.entries.every(x => x.value.type === 'Identifier' && x.value.name === x.key);
+}
+
 function checkBinder(w: Walk, name: string, at: JjelExpression): void {
     if (GUARD_ROOTS.includes(name)) {
         report(w, 'E-SHADOW', `'${name}' is a reserved root (${GUARD_ROOTS.join(', ')}): name the local variable otherwise.`, at);
@@ -358,7 +364,9 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
             checkBinder(w, e.variable, e);
             plain(e.collection);
             if (e.filter) within(e.filter, [e.variable]);
-            if (e.projection) within(e.projection, [e.variable]);
+            // The record `{ x: x, y: y }` of a forall over several variables is an element, not a verdict (R-FA-3).
+            if (e.projection && isVariableRecord(e.projection)) e.projection.entries.forEach(x => within(x.value, [e.variable]));
+            else if (e.projection) within(e.projection, [e.variable]);
             return;
         case 'Exists':
             checkBinder(w, e.variable, e);
@@ -396,7 +404,8 @@ function walk(w: Walk, e: JjelExpression, bound: ReadonlySet<string>, lambdaAllo
  */
 export function checkGuardSubset(expr: JjelExpression, source?: string): SubsetDiagnostic[] {
     const w: Walk = { out: [], source };
-    if (expr.type === 'ForAll') {
+    // A forall over several variables is `(forall x in A : …).flatten()` (R-FA-6): a collection as well.
+    if (expr.type === 'ForAll' || (expr.type === 'MethodCall' && expr.method === 'flatten' && expr.args.length === 0 && expr.object.type === 'ForAll')) {
         report(w, 'E-FORALL', '`forall` returns a collection, never a verdict: write `coll.all(x => …)` or `exists x in coll | …`.', expr);
     }
     walk(w, expr, new Set(), false);
