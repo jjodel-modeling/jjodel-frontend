@@ -7113,13 +7113,17 @@ project chat C-2026-11-02-1319. All rows: provisional, unattended, evidence: rea
   `(forall ... such that P).isNotEmpty`.
 - **R-FA-5 (2026-11-02)**: a repeated name in one binding list is a parse error. After a collection, a comma continues
   the bindings only when followed by an identifier and `in` or by an identifier list ending in `in`; so `f(forall x in S, y)` stays two arguments.
-- **R-FA-6 (2026-11-02)**: JjEL implements this in the parser, by desugaring: `forall` to nested `flatMap` over a
-  one-variable `forall`, `exists` to nested `exists`. No new AST node and no change to an exported type, so every reader of
-  the AST (evaluator, JS printer, subset checker, completion) is correct by construction. A new AST node only if the
-  discovery measures that the desugaring differs from the semantics above (a non-array collection must give `[]`).
+- **R-FA-6 (2026-11-02, amended the same day)**: JjEL implements this in the parser, by desugaring: `forall x in A, <rest>`
+  to `(forall x in A : <rest>).flatten()`, `exists` to nested `exists`. Not `flatMap`, as first written: measured by the
+  discovery of P-2026-11-02-1330, `flatMap` throws on a null, object or string collection where `forall` gives `[]`. No new
+  AST node and no change to an exported type.
 - **R-FA-7 (2026-11-02)**: every language gets the same spellings. JjScript desugars `do` to nested foralls; JjTL iterates
   the product in the executor, flat in the feature, because a nested `forall` there builds a tree. Validation rules,
   guards, templates, JjLet and JjModal inherit from the JjEL parser. Supersedes P-2026-10-31-1741, which never ran.
+- **R-FA-8 (2026-11-02)**: from the lanes 1330 and 1331. In `x, y in S`, `S` may not read a name of its own list: parse
+  error, since the copy that `y` ranges over would see the new `x`. In the subset checker, a whole-guard multi-variable
+  `forall` is E-FORALL, and an object literal with more than one entry, each `k: k`, is not E-VALUE. A JjTL `forall` with several
+  variables does not expose the elements' properties unqualified: two elements would collide; one variable keeps doing so.
 
 ## Superate
 
