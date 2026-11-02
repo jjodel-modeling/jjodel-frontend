@@ -57,3 +57,16 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: non applicabile
 **Notes**: L1 complete (lanes 1/2 and 2/2). R-AI-6: jjodie_provider_<name> is the only copy read; the blob is never adopted at load (object providers fail Array.isArray), so today dockWidth is lost on the next save: input for R-AI-9 at L2. Build tip vs a8f58436b: 19 of 3515 files differ, from the git defines only (control build identical). SDKs lazy, entry 8.25 kB gzip. Ten files, rule 19 confirmed. Lane 1 files untouched. Decisions, numbers, bench: 6609dffa1.
 **Prompt document name**: 2026-11-02 13:21
+
+## 2026-11-02 — merge: feat/196-l1-ai-module into staging (P-2026-11-02-1646)
+**Prompt**: `claude_2026-11-02_1646_prompt_merge_feat-196-l1-ai-module.md`, a direct merge by `lane-run merge --direct`, no session: `feat/196-l1-ai-module` at `625d1214f` into `staging`, merge base `a8f58436b`, 7 commits on the branch side.
+**Files touched**: merge `d2cd747a0`: 23 files from the branch side (`docs/log-inbox/196-ai-refactor.md`, `docs/prompts/claude_2026-11-02_1320_prompt_196_l1a_ai_providers.md`, `docs/prompts/claude_2026-11-02_1321_prompt_196_l1b_ai_stores_registry.md`, `frontend/package-lock.json`, `frontend/package.json`, `frontend/src/services/ai/AnthropicCompatibleProvider.ts`, `frontend/src/services/ai/BaseProvider.ts`, `frontend/src/services/ai/GoogleCompatibleProvider.ts`, and 15 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d2cd747a0` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12264 tests in 455 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no visual smoke: L1 is additive, no app file imports src/services/ai; merge gates 8/8 green (typecheck 0, vitest 12264 tests, 9 known import reds, build, check:docs/agents/scripts/addonly); lane 2 measured the app build identical to a8f58436b once the embedded git hash is neutralised; merge approved by Juri in chat C-2026-11-02-1311
+**Notes**: Rollback tag `pre-feat/196-l1-ai-module` on `a8f58436b` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1646/result.json`.
+**Prompt document name**: 2026-11-02 16:46
