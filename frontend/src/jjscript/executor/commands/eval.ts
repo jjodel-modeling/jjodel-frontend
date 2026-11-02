@@ -432,6 +432,7 @@ function shallowClassToJjelValue(cls: any): JjelValue {
         shallowReferenceToJjelValue(ref, className)
     );
     const operations = (cls.operations || []).map((op: any) => ({
+        id: op.id ?? '',
         name: op.name ?? '',
         returnType: op.type?.name ?? op.typeName ?? 'void',
         className
@@ -453,6 +454,9 @@ function shallowClassToJjelValue(cls: any): JjelValue {
     } catch { /* proxy access can fail */ }
 
     return {
+        // The element's pointer (R-FA-10), as on M1 instances: a forall body acts on THIS
+        // element, and two distinct classes of one shape are not `==`.
+        id: cls.id ?? '',
         name: className,
         // M3 type name (meta-metaclass), e.g. "DClass". Source: D-layer runtime
         // class name auto-set by the joiner at construction (classes.ts:458).
@@ -494,6 +498,7 @@ function shallowClassToJjelValue(cls: any): JjelValue {
  */
 function shallowAttributeToJjelValue(attr: any, className: string): JjelValue {
     return {
+        id: attr.id ?? '',
         name: attr.name ?? '',
         type: attr.type?.name ?? attr.typeName ?? 'String',
         className,
@@ -512,6 +517,7 @@ function shallowAttributeToJjelValue(attr: any, className: string): JjelValue {
 function shallowReferenceToJjelValue(ref: any, className: string): JjelValue {
     const upper = ref.upperBound ?? ref.upper ?? 1;
     return {
+        id: ref.id ?? '',
         name: ref.name ?? '',
         type: ref.type?.name ?? ref.typeName ?? '',
         containment: ref.containment ?? false,
@@ -529,11 +535,13 @@ function shallowReferenceToJjelValue(ref: any, className: string): JjelValue {
  */
 function shallowPackageToJjelValue(pkg: any): JjelValue {
     const classes = (pkg.classes || []).map((c: any) => ({
+        id: c.id ?? '',
         name: c.name ?? '',
         isAbstract: c.isAbstract ?? c.abstract ?? false,
         isInterface: c.isInterface ?? c.interface ?? false
     }));
     return {
+        id: pkg.id ?? '',
         name: pkg.name ?? '',
         uri: pkg.uri ?? '',
         prefix: pkg.prefix ?? '',
@@ -548,10 +556,12 @@ function shallowPackageToJjelValue(pkg: any): JjelValue {
  */
 function shallowEnumToJjelValue(e: any): JjelValue {
     const literals = (e.literals || []).map((l: any) => ({
+        id: l.id ?? '',
         name: l.name ?? '',
         value: l.value ?? null
     }));
     return {
+        id: e.id ?? '',
         name: e.name ?? '',
         literals,
         literalCount: literals.length,

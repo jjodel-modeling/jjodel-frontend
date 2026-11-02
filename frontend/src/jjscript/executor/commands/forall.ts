@@ -79,7 +79,10 @@ export async function executeForAll(
             const elementName = typeof element === 'string'
                 ? element
                 : ((element as any)?.name ?? String(element));
-            const resolvedBody = resolveVariableInBody(args.body, args.variable, elementName);
+            // R-FA-10: a model element also carries its id, so the command acts on THIS element.
+            const rawId = element && typeof element === 'object' ? (element as any).id : undefined;
+            const elementId = typeof rawId === 'string' && rawId !== '' ? rawId : undefined;
+            const resolvedBody = resolveVariableInBody(args.body, args.variable, elementName, elementId);
 
             // Create child context with the iteration variable available
             const childContext: ExecutionContext = {
@@ -131,21 +134,27 @@ export async function executeForAll(
  * Example: forall c in classes do rename c to NewName
  *   → body has target.raw == 'c'
  *   → replaced with target.raw == 'Person' (the element's name)
+ *
+ * When the element has an id, a `target` QualifiedName naming the variable also gets
+ * `elementId` (R-FA-10): the resolvers then act on that element even if others share its name.
+ * Values (`set p.ref = c`) get the name only. The id is a string so it survives the JSON clone
+ * a nested forall applies to its body again.
  */
 function resolveVariableInBody(
     body: CommandNode,
     variable: string,
-    elementName: string
+    elementName: string,
+    elementId?: string
 ): CommandNode {
     const clone = JSON.parse(JSON.stringify(body)) as CommandNode;
     if (clone.command === 'block') {
         // Recursively resolve in each sub-command
         const blockArgs = clone.args as BlockArgs;
         for (const cmd of blockArgs.commands) {
-            replaceVariableRefs(cmd.args, variable, elementName);
+            replaceVariableRefs(cmd.args, variable, elementName, elementId);
         }
     } else {
-        replaceVariableRefs(clone.args, variable, elementName);
+        replaceVariableRefs(clone.args, variable, elementName, elementId);
     }
     return clone;
 }
@@ -154,28 +163,36 @@ function resolveVariableInBody(
  * Recursively walk an object and replace QualifiedName nodes whose
  * raw or first segment matches the variable name.
  */
-function replaceVariableRefs(obj: any, variable: string, replacement: string): void {
+function replaceVariableRefs(obj: any, variable: string, replacement: string, elementId?: string): void {
     if (!obj || typeof obj !== 'object') return;
     if (Array.isArray(obj)) {
-        for (const item of obj) replaceVariableRefs(item, variable, replacement);
+        for (const item of obj) replaceVariableRefs(item, variable, replacement, elementId);
         return;
     }
     for (const key of Object.keys(obj)) {
         const val = obj[key];
         if (val && typeof val === 'object') {
             // Check for QualifiedName shape: { segments: string[], raw: string }
-            if ('raw' in val && 'segments' in val && Array.isArray(val.segments)) {
+            // A target an outer forall already bound to an element is not re-read as a variable.
+            if ('raw' in val && 'segments' in val && Array.isArray(val.segments) && !val.elementId) {
+                let matched = false;
                 if (val.raw === variable) {
                     // Exact match: c → Person
                     val.raw = replacement;
                     val.segments = [replacement];
-                } else if (val.segments[0] === variable && val.segments.length > 1) {
-                    // Prefix match: c.abstract → Person.abstract (qualified name)
+                    matched = true;
+                } else if (val.segments[0] === variable) {
+                    // Prefix match: c::abstract → Person::abstract (qualified name), member
+                    // access c.x → Person.x, and a set target c.abstract → Person.abstract
                     val.segments[0] = replacement;
-                    val.raw = val.segments.join('::') + (val.member ? '.' + val.member : '');
+                    val.raw = val.raw.startsWith(variable)
+                        ? replacement + val.raw.slice(variable.length)
+                        : val.segments.join('::') + (val.member ? '.' + val.member : '');
+                    matched = true;
                 }
+                if (matched && key === 'target' && elementId) val.elementId = elementId;
             }
-            replaceVariableRefs(val, variable, replacement);
+            replaceVariableRefs(val, variable, replacement, elementId);
         }
     }
 }

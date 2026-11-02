@@ -322,6 +322,44 @@ function missingMember(parent: any, member: string): TargetResolution {
     };
 }
 
+function hasElementId(target: QualifiedName): boolean {
+    return typeof target.elementId === 'string' && target.elementId !== '';
+}
+
+/** The element with this id among `root` and everything its `collections` reach, or null. */
+function findById(root: any, id: string, collections: string[]): any {
+    const seen = new Set<any>();
+    const stack: any[] = [root];
+    while (stack.length > 0) {
+        const item = stack.pop();
+        if (!item || typeof item !== 'object') continue;
+        const key = item.id ?? item;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (item.id === id) return item;
+        for (const collName of collections) {
+            const collection = item[collName];
+            if (Array.isArray(collection)) for (const child of collection) stack.push(child);
+        }
+    }
+    return null;
+}
+
+/**
+ * A target that carries `elementId` (a `forall` variable, R-FA-10): `segments[0]` is the element
+ * with that id, the rest of the path and the member are resolved from it. A miss is NOT_FOUND,
+ * never a fallback to the name: that is how a homonym would get acted on.
+ */
+function resolveByElementId(
+    target: QualifiedName, root: any, collections: string[], kinds?: ResolutionKind[]
+): TargetResolution {
+    const found = findById(root, target.elementId as string, collections);
+    if (!found) return NOT_FOUND;
+    const rest = target.segments.slice(1);
+    if (rest.length === 0) return selectTarget([found], found.name ?? '', target.member, kinds);
+    return resolveByPathInMetamodel(rest, found, target.member, kinds);
+}
+
 /** True when a resolution is settled: either it found something, or it found too much. */
 function isConclusive(r: TargetResolution): boolean {
     return !!r.element || !!r.ambiguousWith || !!r.memberMissingOn;
@@ -359,6 +397,8 @@ export function resolveTargetInMetamodel(
 
     const segments = target.segments;
     if (segments.length === 0) return NOT_FOUND;
+
+    if (hasElementId(target)) return resolveByElementId(target, metamodel, METAMODEL_COLLECTIONS, kinds);
 
     // Strategy 1: Direct path resolution within metamodel
     let result = resolveByPathInMetamodel(segments, metamodel, target.member, kinds);
@@ -544,6 +584,8 @@ export function resolveTargetInProject(
 
     const segments = target.segments;
     if (segments.length === 0) return NOT_FOUND;
+
+    if (hasElementId(target)) return resolveByElementId(target, project, PROJECT_COLLECTIONS, kinds);
 
     // Try multiple resolution strategies
 
