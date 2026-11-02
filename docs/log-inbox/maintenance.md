@@ -445,3 +445,16 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 **Smoke visivo**: passato (chat, RC-23, 2026-11-02 02:55 on the branch; Alfonso GO 06:46)
 **Notes**: Gates on 7a4094009: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk 12742 + 12; hook tests 21 files, 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Union in this inbox: the trunk's empty-viewport ticket first, then the branch's 0225 entry. No rollback tag (not in the prompt); lane board untouched.
 **Prompt document name**: 2026-11-02 06:56
+
+## 2026-11-02 — feat(jjel): forall and exists over several variables (P-2026-11-02-1410)
+**Prompt**: Close P-2026-11-02-1330 (hard-stop at the context ceiling, RC-51) from its handoff: decisions F1 `flatten`, F2 parse error, E-VALUE record rule adopted by the chat; add `forall x, y in |` and `forall x in A, y in |` to the `after-forall-in` autocomplete context with a test; SPEC.md grammar and §5.1.1; gates, code commit, log, Status flips, symlink removal.
+**Files touched**: fd13ba517 (13 files: `frontend/src/jjel/parser/parser.ts`, `SPEC.md`, `autocomplete/context.ts`, `autocomplete/providers/identifier.ts`, `autocomplete/util/boundVariables.ts` new, `__tests__/forallMultivar.test.ts` new; `frontend/src/model/simulation/subsetChecker.ts`; tests of codegen printer, templateCompletion, jjscript parser, guardEvaluator, subsetChecker, validationEvaluator); Status lines of the 1330 and 1410 prompts; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 13 files, above five: the consumer fix in subsetChecker.ts (E-FORALL on a top flatten over ForAll, record projection not E-VALUE) and the provider were outside the parser. Gates: tsc exit 0; vitest jjel/jjscript/jjtl/codegen/validation/simulation 5096 tests passed, 8 suites the known window import failures; build exit 0. Context branch killed by a mutation (1 fail). Regressions unknown: the 3001 autocomplete check is the chat's, after the merge. Temporary node_modules symlink removed.
+**Prompt document name**: 2026-11-02 14:10
