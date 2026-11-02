@@ -511,8 +511,8 @@ For reverse lookups:
 ### 5.3 Implicit Trace Resolution
 
 > **STATUS: implemented for references (P-2026-11-02-1742, slice A0) and for containment
-> placement in the executor (P-2026-11-02-1956, slice A; the app's write-back of a placed target
-> is the next lane). Environments and called rules are PLANNED: part B of
+> placement, in the executor (P-2026-11-02-1956, slice A) and in the app's write-back
+> (P-2026-11-02-2024, §9.2). Environments and called rules are PLANNED: part B of
 > `docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md`, ratified as R-JTG-1..5
 > in `docs/decisions.md`.** Each paragraph below says which of the two it describes.
 
@@ -587,6 +587,8 @@ as itself. Without a target metamodel no feature is known as a containment and n
 - *Order.* Placement happens in pass 2 against targets created in pass 1, so the tree is the
   same, by identity, whatever the rule order.
 - *References.* A non-containment binding to a placed target is still a `__ref_result` pointer.
+- *Write-back.* The app writes a placed target once, inside its container, never as a root
+  (§9.2). A run that fails on a second claim or a cycle writes nothing.
 
 **Per model.** The trace maps source elements to target elements of one run. An object of the
 target model (`__createdBy: 'JjTL'`) is never resolved as a source element, so `Add -> Add` from
@@ -612,7 +614,7 @@ in an environment are closures (the expression with the environment of the bindi
   target is not marked `__nested`: other bindings may point at it, and marking it at claim
   time would make the pointer depend on rule order. The write-back recognises it as a rule
   target inside a containment feature, through `targetModel.containment`, and materializes it
-  with the nested path (§9.2): the next lane.
+  with the nested path (§9.2, P-2026-11-02-2024).
 - **Called and lazy rules (B).** A called rule is invoked from a binding or a `forall` body,
   binds its arguments, and returns the target it creates; it takes no part in pass-1 matching.
   `lazy` creates on first demand, `unique lazy` memoizes on (rule, arguments, environment).
@@ -820,11 +822,30 @@ Nested objects (STEP 6c), i.e. what `-> feature { ... }` created:
 10. Objects left unplaced are counted and listed in the JjTL output panel
     (`SystemEvents.JJTL_NESTED_MATERIALIZED`).
 
+Rule targets placed in a containment (slice A, §5.3.1) take the same path; there is no second
+writer:
+
+11. STEP 6 does not create a target listed in `targetModel.containment`: no root DObject, no
+    DVertex, no entry in the source-id map. A feature's children for STEP 6c are its `__nested`
+    objects and the targets placed in it (`containment` names this object and this feature),
+    in the feature's order, so a created object and a placed target share one containment.
+    A placed target's own features are walked the same way, to any depth.
+12. A placed target is created with `{}` by `addObject`, polled and capped as above, and its
+    declared attributes are queued by the created id (ticket #445 applies unchanged).
+13. The walk returns the id it created for every executor object. A `__ref_result` held by a
+    created or placed object is queued against that id instead of being dropped; on a key that
+    is not a reference of its class it is warned and dropped.
+14. Pointers are written in a second phase: when STEP 6c runs, every pointer, the roots'
+    included, is written after the last level is created and its attributes seeded. A pointer
+    to a placed target resolves by the id the walk returned; a pointer to a root keeps the
+    `__sourceId` → name path.
+
 **Design decision — children are resolved by id, not by name.** The STEP 8/8b name pool
 stays `lModel.objects` (the roots). Two tables may each own a column called `id`: a name
 lookup could not tell them apart, and widening the pool would only make the rule-level
-lookups ambiguous without serving any case — nothing puts a contained object in the
-reference-target map. This is design, not a limitation.
+lookups ambiguous without serving any case. A pointer to a contained object, a placed target,
+resolves by the id the walk returned for it (item 14), never by name. This is design, not a
+limitation.
 
 **Design decision — enum values travel as strings.** The executor carries an enum value as
 the literal's **name**, which is also how the source side serializes it. `writeAttribute`
@@ -839,8 +860,8 @@ attribute of the target class, nor a resolved reference, nor a nested creation i
 with the instance, the feature and the reason. It used to fall between the attribute
 whitelist (`allAttributes`, which excludes references) and the `__ref_result` channel
 without a word. This holds at every depth: a key of a nested object that is neither an
-attribute nor a nested creation is warned with its path, and an object that could not be
-placed is reported as above.
+attribute nor a nested creation nor a resolved reference is warned with its path, and an object
+that could not be placed is reported as above.
 
 ---
 
@@ -944,7 +965,7 @@ message, not silence.
 | 2 | **Alert/Notify execution** | Wire executor body items to UIBridge | High |
 | 3 | **Prompt/Input execution** | Wire AST bridge to UIBridge for interactive expressions | High |
 | 4 | **Multiplicity `[*]`** | Define and implement unbounded creation semantics | Medium |
-| 5 | **Reference mapping** | References: done (§5.3.1). Containments: done in the executor, placed targets leave `roots`, second claims and cycles are errors (A, §5.3.1, R-JTG-4). Left: the app's write-back of a placed target | High |
+| 5 | **Reference mapping** | References: done (§5.3.1). Containments: done in the executor, placed targets leave `roots`, second claims and cycles are errors (A, §5.3.1, R-JTG-4). App write-back: done, placed targets created inside their container by the nested path (§9.2, P-2026-11-02-2024) | High |
 | 6 | **Source alias** | Parse and bind `Person p -> Human` alias in executor | Medium |
 | 7 | **Multi-model** | `from A, B to C, D` with qualified types | Phase 1 |
 | 8 | **Called rules** | `rule name(params) -> Type { ... }` | Phase 2 |
