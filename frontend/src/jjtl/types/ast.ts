@@ -112,6 +112,12 @@ export interface ForAllMappingAST extends ASTNode {
     type: 'ForAllMapping';
     variable: string;
     collection: ExpressionAST;
+    // Every variable in order, set only when there is more than one
+    // (`forall q, r in xs` or `forall q in xs, r in ys`); variable/collection hold the first.
+    bindings?: Array<{
+        variable: string;
+        collection: ExpressionAST;
+    }>;
     filter?: ExpressionAST;
     objectCreation: ObjectCreationAST;
 }

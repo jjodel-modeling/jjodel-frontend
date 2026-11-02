@@ -445,3 +445,16 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 **Smoke visivo**: passato (chat, RC-23, 2026-11-02 02:55 on the branch; Alfonso GO 06:46)
 **Notes**: Gates on 7a4094009: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk 12742 + 12; hook tests 21 files, 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Union in this inbox: the trunk's empty-viewport ticket first, then the branch's 0225 entry. No rollback tag (not in the prompt); lane board untouched.
 **Prompt document name**: 2026-11-02 06:56
+
+## 2026-11-02 — feat(jjtl): forall over several variables (P-2026-11-02-1331)
+**Prompt**: Execute P-2026-10-31-1741 (superseded) with R-FA-1 and R-FA-7: JjTL `forall q, r in xs` and `forall q in xs, r in ys`, mixable, cartesian product first variable outermost, flat in the feature; a later collection reads an earlier variable; check the JjEL route. Two-phase in one session.
+**Files touched**: bd135bd57 `docs/discovery/discovery_2026-11-02_jjtl_forall_multivar.md`; 482936ee5 `frontend/src/jjtl/parser/parser.ts`, `types/ast.ts`, `executor/executor.ts`, `executor/__tests__/forall-multivar.test.ts`, `parser/__tests__/forall-multivar.test.ts`; 0845044e3 `frontend/src/jjtl/SPEC.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Seven files, all named by the prompt or its acceptance. `bindings?` is an optional field of ForAllMappingAST, read only in jjtl. JjEL route: the collection parser has no object literal (F5); records bound by let lost their ref getters in fromJjelValue, fixed in the executor (bindForAllElement). Gates: tsc 0 errors; vitest src/jjtl src/jjel 910 passed, the same 7 window failures before and after; build exit 0. node_modules: temporary symlink, removed.
+**Prompt document name**: 2026-11-02 13:31
