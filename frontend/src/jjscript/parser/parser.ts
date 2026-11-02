@@ -1046,6 +1046,7 @@ export class Parser {
         const startPos = startToken.position;
         let parenDepth = 0;
         let forallExistsDepth = 0;
+        let quantified = false;
 
         while (!this.isAtEnd() && !this.check('EOF')) {
             const token = this.peek();
@@ -1053,13 +1054,19 @@ export class Parser {
             if (token.type === 'PUNCTUATION') {
                 if (token.value === '(') parenDepth++;
                 else if (token.value === ')') { if (parenDepth > 0) parenDepth--; }
-                else if (token.value === ',' && parenDepth === 0 && forallExistsDepth === 0) break;
+                else if (token.value === ',' && parenDepth === 0 && forallExistsDepth === 0) {
+                    // `forall a in S, b in T` (R-FA-5): a comma followed by names and 'in' continues
+                    // the quantifier's bindings, and that 'in' is its own. A let binding starts with '$'.
+                    if (!(quantified && this.bindingContinues())) break;
+                    forallExistsDepth++;
+                }
             }
 
-            // Track forall/exists nesting — each expects a following 'in'
-            // Note: forall/exists are not in KEYWORDS, so they tokenize as IDENTIFIER
-            if ((token.type === 'KEYWORD' || token.type === 'IDENTIFIER') && (token.value === 'forall' || token.value === 'exists')) {
+            // Track forall/exists nesting — each expects a following 'in'.
+            // 'forall' is a command word and lexes as COMMAND; 'exists' lexes as IDENTIFIER.
+            if ((token.type === 'COMMAND' || token.type === 'KEYWORD' || token.type === 'IDENTIFIER') && (token.value === 'forall' || token.value === 'exists')) {
                 forallExistsDepth++;
+                quantified = true;
             }
 
             // 'in' keyword: if inside a forall/exists, it belongs to that construct
@@ -1342,15 +1349,18 @@ export class Parser {
     // ============================================
 
     private parseEvalCommand(): EvalArgs {
-        // Everything after "eval" is the JjEL expression
-        // Reconstruct from remaining tokens
+        // Everything after "eval" is the JjEL expression, as the source has it: joining token values
+        // turned `=>` into `= >`, dropped the quotes of a string and split `$x` (P-2026-11-03-0000).
+        // Bounded by token ends, as in `collectCommandExprRaw`.
         // Inside a block, stop before the bare 'end' token that closes it.
-        const parts: string[] = [];
+        const end = (token: Token) => token.position + token.value.length;
+        const startPos = end(this.tokens[this.current - 1]);
+        let endPos = startPos;
         while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF') &&
                !(this.blockDepth > 0 && this.checkKeyword('end'))) {
-            parts.push(this.advance().value);
+            endPos = end(this.advance());
         }
-        const expression = parts.join(' ').trim();
+        const expression = this.originalInput.substring(startPos, endPos).trim();
         if (!expression) {
             throw new Error('Expected JjEL expression after eval');
         }
