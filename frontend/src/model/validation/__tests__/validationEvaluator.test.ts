@@ -370,3 +370,23 @@ describe('§G il quarto modo di non aver girato: la regola che non trova istanze
         expect(r.unmatchedRuleCount).toBe(0);
     });
 });
+
+// ── forall / exists over several variables (R-FA, P-2026-11-02-1330) ──────────
+
+describe('§R-FA una regola con piu\' variabili passa dal parser di JjEL e da nient\'altro', () => {
+    it('exists su due variabili e\' un verdetto, e viola dove deve', () => {
+        const unici = 'not (exists a, b in State.instances such that a != b and a.name == b.name)';
+        const ok = run([rule({ id: 'unici', body: unici })]);
+        expect([ok.violations.length, ok.notEvaluable.length, ok.defects.length]).toEqual([0, 0, 0]);
+        const appesa = 'not (exists s in State.instances, t in s.ownedTransitions such that t.nextState == null)';
+        expect(run([rule({ id: 'appesa', body: appesa })]).violations).toHaveLength(0);
+        expect(run([rule({ id: 'appesa', body: appesa })], semaforo({ initial: 'Green', danglingFrom: 'Red' })).violations).toHaveLength(3);
+    });
+
+    it('forall su due variabili restituisce un array: non-boolean, come con una', () => {
+        const r = run([rule({ id: 'coppie', body: 'forall a, b in State.instances : a != b' })]);
+        expect(r.notEvaluable.length).toBe(3);
+        expect(r.notEvaluable.every(n => n.reason === 'non-boolean')).toBe(true);
+        expect(r.notEvaluable[0].detail).toContain('array(9)');
+    });
+});

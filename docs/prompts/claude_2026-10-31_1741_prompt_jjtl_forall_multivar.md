@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-10-31-1741
 Chat: C-2026-10-31-1732
 Front: hw-notation
-Status: da eseguire
+Status: superseded by P-2026-11-02-1331, never ran
 Lane: full (JjTL grammar and executor bindings, two-phase in one session)
 Depends: P-2026-10-31-1710 (another chat; `let` bindings in nested bodies, same executor scoping) merged into the trunk
 Worktree: ~/jjodel-w-jjtlmultivar, branch jjtl-forall-multivar (from the trunk tip after the merge of P-2026-10-31-1710; the sha is in the launch message)

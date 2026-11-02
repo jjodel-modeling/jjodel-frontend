@@ -27,11 +27,13 @@ export interface NotationStyle {
     readonly comments: { readonly line: string | null; readonly block: readonly [string, string] | null };
     /** Words that cannot be a bare name: an object name equal to one of them is printed quoted. */
     readonly reservedNames: readonly string[];
-    /** Case of the class keywords and of the enumeration literals; `lower` falls back to `declared` when it would merge two (R-TXT-21 (10)). */
+    /** Case of the class keywords and of the enumeration literals; `lower` falls back to `declared` when it would merge two (R-TXT-21 (10)), or fold a class keyword onto a style word (R-TXT-25 (7)). */
     readonly classCase: LetterCase;
     readonly literalCase: LetterCase;
     /** Spaces per nesting level. */
     readonly indent: number;
+    /** A blank line before each containment, except at the start of a body (step T4, a syntax annotation's style option). */
+    readonly blankBeforeContainment?: boolean;
 }
 
 export const CLIKE_STYLE: NotationStyle = {

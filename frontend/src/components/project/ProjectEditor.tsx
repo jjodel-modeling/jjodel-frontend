@@ -67,7 +67,11 @@ import {
 import './project-editor.scss';
 
 // The GENERATORS section, lazy: codegen code but setting.ts stays out of the dashboard's eager closure (R-GEN-2).
-const GeneratorsSection = React.lazy(() => import('../../codegen/ui/GeneratorsSection'));
+// Under the build flag as EditorV2's `CODEGEN_BUILD`: without `VITE_CODEGEN=true` Rollup drops the import (the
+// gate's off mode). tsconfig has no vite/client types, hence the ts-ignore.
+// @ts-ignore
+const CODEGEN_BUILD: boolean = import.meta.env.VITE_CODEGEN === 'true';
+const GeneratorsSection = CODEGEN_BUILD ? React.lazy(() => import('../../codegen/ui/GeneratorsSection')) : null;
 
 
 // Types for contextual menu
@@ -2902,7 +2906,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             </div>
 
             {/* Generators Section (P-2026-10-30-1515): lazy, with the codegen setting on and outside consumer mode */}
-            {codegenOn && !isConsumerMode() && (
+            {GeneratorsSection && codegenOn && !isConsumerMode() && (
                 <React.Suspense fallback={null}>
                     <GeneratorsSection
                         SectionHeader={SectionHeader}

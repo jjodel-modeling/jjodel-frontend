@@ -234,6 +234,14 @@ describe('accepted node kinds: printed, run, equal to the evaluator', () => {
         expect(agreed('(forall c in self.children : c.weight).size() == model.[a]')).toBe(true);
     });
 
+    it('several variables (R-FA, P-2026-11-02-1330): exists expands nested, forall folds, both equal to the evaluator', () => {
+        expect(agreed('exists c, d in self.children | c != d and c.[k] + d.[k] == 3')).toBe(true);
+        expect(agreed('exists c, d in self.children | c.[k] + d.[k] == 5')).toBe(false);
+        expect(agreed('exists c in self.children, d in T2.children | c.[k] > 0')).toBe(false);
+        expect(agreed('(forall c, d in self.children such that c != d : c.weight).size() == model.[a]')).toBe(true);
+        expect(agreed('(forall c, d in self.children : c.weight + d.weight).size() == 4')).toBe(true);
+    });
+
     it('StateAccess reads the attribute, then the derived value (mutant: derived fallback dropped)', () => {
         expect(agreed('self.[n] + T2.[d]')).toBe(8);
     });
@@ -283,6 +291,8 @@ describe('refusals, with their code', () => {
         ['model.[s].toUpper() == "X"', 'P-STEP'],
         ['self.children.filter(c => c.[k] > 0).size() > 0', 'P-STEP'],
         ['(forall c in self.children such that c.[k] > 0 : c).size() > 0', 'P-STEP'],
+        ['forall c, d in self.children such that c.[k] > d.[k]', 'E-FORALL'],
+        ['(forall c, d in self.children such that c.[k] > d.[k]).size() > 0', 'P-STEP'],
         ['(model.[a] is Integer)', 'P-STEP'],
         ['[1, 2][model.[a]] == 1', 'P-STEP'],
         ['nope == model.[a]', 'P-ABSENT'],

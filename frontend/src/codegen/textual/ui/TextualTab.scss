@@ -212,4 +212,28 @@
             color: var(--color-error-text);
         }
     }
+
+    // The notation's issues (syntax annotations, case notices), one line each, under the bar (T4a-2).
+    &__issues {
+        flex: 0 0 auto;
+        max-height: 96px;
+        overflow-y: auto;
+        margin: 0;
+        padding: 4px 12px;
+        list-style: none;
+        border-bottom: 1px solid var(--color-border-secondary);
+        font-size: 11px;
+    }
+
+    &__issue {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 1px 0;
+        color: var(--color-text-tertiary);
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
 }

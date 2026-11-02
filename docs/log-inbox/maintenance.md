@@ -400,6 +400,144 @@ Expected: opening a model fits the view to its nodes (or restores a saved viewpo
 **Priority**: medium
 **Found in**: P-2026-11-02-0020
 
+## 2026-11-02 — perf(editor-v2): conditional onlyRenderVisibleElements (P-2026-11-02-0225)
+**Prompt**: Close P-2026-11-02-0020 from its handoff: rerun typecheck and the colocated test, commit the code with explicit pathspec, write this entry and the two Status lines uncommitted (RC-17), delete the temp DOM probe and the trunk worktree. Alfonso accepted on 2026-11-02 02:20 the open time and his hand measurement of 2026-10-31 for the no-viewpoint case.
+**Files touched**: 36694dbfb: frontend/src/components/editor-v2/EditorV2.tsx (import, useMemo `onlyRenderVisible`, prop on `<ReactFlow>`), NEW frontend/src/components/editor-v2/onlyRenderVisible.ts, NEW frontend/src/components/editor-v2/__tests__/onlyRenderVisible.test.ts. Uncommitted: this entry, Status lines of docs/prompts/claude_2026-11-02_0020_prompt_only_visible_conditional.md and claude_2026-11-02_0225_prompt_only_visible_conditional_closure.md.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (RC-23, built-in browser, 2026-11-02 02:55, dev server of only-visible-conditional; Alfonso GO 06:46)
+**Notes**: Partial: no-viewpoint drag unmeasured, the probe viewport opens on an empty area on both builds, so no node is clicked; a probe change, its own lane. Causa (g): smoke run 1 timed out on page.goto on a cold server, run 2 green. New module is the pure-predicate seam of 0020 item 2 (EditorV2 does not import in the bench). Handoff said 13 tests; the tree holds 12, byte-identical to handoff.diff. Supersedes branch only-visible-wip, prompts P-2026-11-01-0040..2335.
+**Prompt document name**: 2026-11-02 02:25
+
+**Ticket** (evidence, from the 0020 handoff). Timing, CLICK_PROD=1 CLICK_STEPS=open,drag CLICK_NODES=1, trunk and branch interleaved, load gate 1-min < 16, wallMs, three runs each:
+
+| case | step | trunk | branch | median trunk / branch |
+|------|------|-------|--------|-----------------------|
+| no viewpoint | open | 17735 17849 17602 | 6009 6060 5974 | 17735 / 6009 |
+| BPMN | open | 5209 5297 5459 | 5149 5133 5558 | 5297 / 5149 |
+| BPMN | drag | 4709 4827 5261 | 4701 4690 5282 | 4827 / 4701 |
+
+Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed (the known window-is-not-defined nine), 12659 tests passed; smoke 12 passed, 3 skipped (run 2); bpmn-lanes probe pass=12 fail=0. Rerun here: typecheck exit 0, colocated test 12/12. Mutation bench 11, 10 killed; m10 (dropping the `checked` dedupe) survives, cost only. DOM checks (prod previews 3092 branch, 3093 trunk): open viewport nondeterministic on both builds; no viewpoint at translate(~-1224,-9802) scale(0.5): branch 0 nodes, 104 edges (99 crossing, none zero-length), trunk 407 nodes, 0 in view, 97 edges crossing; minimap 407 = 407; BPMN 48 nodes 42 edges on both; console errors only `init_dash` on both. Not done: the zoom-in edge pick, covered by the 0-node case.
+
+**Timing, no viewpoint, drag** (P-2026-11-02-0233, probe 604f578ed). CLICK_PROD=1 CLICK_VP=- CLICK_FIT=1 CLICK_STEPS=open,drag CLICK_NODES=1, prod previews (trunk = merge base 4383c2572, branch = 9217e9185), interleaved, 1-min load 2.06-3.61, three runs each. Viewport on all six runs x 124, y -9862, zoom 0.5 (minZoom clamp, centred on the node nearest the bbox centre); drag from the same point (437,569) on the same object `dRC_13`. wallMs includes the settle; act = the mouse sequence; LT = long-task sum and longest task in the drag step (the probe has no hitch measure of its own, the longest task stands in).
+
+| step | trunk | branch | median trunk / branch |
+|------|-------|--------|-----------------------|
+| open wallMs | 18463 18046 18393 | 6020 6016 6939 | 18393 / 6020 |
+| drag wallMs | 5991 6114 6099 | 3713 3709 3726 | 6099 / 3713 |
+| drag act ms | 2967 3107 3081 | 704 703 719 | 3081 / 704 |
+| drag LT sum | 1033 1821 2640 | 58 234 119 | 1821 / 119 |
+| drag longest LT | 270 270 275 | 58 60 60 | 270 / 60 |
+
+## 2026-11-02 — merge: only-visible-conditional into alfonso-frontend-jjtl (P-2026-11-02-0656)
+**Prompt**: Bring `only-visible-conditional` at bfb6ee654 (conditional onlyRenderVisibleElements 36694dbfb, CLICK_FIT probe 604f578ed) into the trunk `alfonso-frontend-jjtl` with one --no-ff merge commit of the explicit sha (RC-14); union resolution of this inbox.
+**Files touched**: merge commit 7a4094009 (`frontend/src/components/editor-v2/EditorV2.tsx`, `onlyRenderVisible.ts`, `__tests__/onlyRenderVisible.test.ts`, `frontend/scripts/probe/large-model-click-profile.ts`, the branch's three prompts, this inbox); `docs/prompts/claude_2026-11-02_0656_prompt_merge_only-visible-conditional.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, RC-23, 2026-11-02 02:55 on the branch; Alfonso GO 06:46)
+**Notes**: Gates on 7a4094009: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk 12742 + 12; hook tests 21 files, 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Union in this inbox: the trunk's empty-viewport ticket first, then the branch's 0225 entry. No rollback tag (not in the prompt); lane board untouched.
+**Prompt document name**: 2026-11-02 06:56
+
+## 2026-11-02 — feat(jjtl): forall over several variables (P-2026-11-02-1331)
+**Prompt**: Execute P-2026-10-31-1741 (superseded) with R-FA-1 and R-FA-7: JjTL `forall q, r in xs` and `forall q in xs, r in ys`, mixable, cartesian product first variable outermost, flat in the feature; a later collection reads an earlier variable; check the JjEL route. Two-phase in one session.
+**Files touched**: bd135bd57 `docs/discovery/discovery_2026-11-02_jjtl_forall_multivar.md`; 482936ee5 `frontend/src/jjtl/parser/parser.ts`, `types/ast.ts`, `executor/executor.ts`, `executor/__tests__/forall-multivar.test.ts`, `parser/__tests__/forall-multivar.test.ts`; 0845044e3 `frontend/src/jjtl/SPEC.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Seven files, all named by the prompt or its acceptance. `bindings?` is an optional field of ForAllMappingAST, read only in jjtl. JjEL route: the collection parser has no object literal (F5); records bound by let lost their ref getters in fromJjelValue, fixed in the executor (bindForAllElement). Gates: tsc 0 errors; vitest src/jjtl src/jjel 910 passed, the same 7 window failures before and after; build exit 0. node_modules: temporary symlink, removed.
+**Prompt document name**: 2026-11-02 13:31
+
+## 2026-11-02 — merge: jjtl-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1404)
+**Prompt**: `claude_2026-11-02_1404_prompt_merge_jjtl-forall-multivar.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-forall-multivar` at `fc3bfee2a` into `alfonso-frontend-jjtl`, merge base `17beac16c`, 4 commits on the branch side.
+**Files touched**: merge `100889e0c`: 9 files from the branch side (`docs/discovery/discovery_2026-11-02_jjtl_forall_multivar.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_1331_prompt_jjtl_forall_multivar.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/parser/parser.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `100889e0c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12843 tests in 486 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: parser and executor only, no UI change: visual check not applicable; merge gates green (12843 tests, 9 red at import, build exit 0)
+**Notes**: Rollback tag `pre-jjtl-forall-multivar` on `8913bf878` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1404/result.json`.
+**Prompt document name**: 2026-11-02 14:04
+
+## 2026-11-02 — feat(jjel): forall and exists over several variables (P-2026-11-02-1410)
+**Prompt**: Close P-2026-11-02-1330 (hard-stop at the context ceiling, RC-51) from its handoff: decisions F1 `flatten`, F2 parse error, E-VALUE record rule adopted by the chat; add `forall x, y in |` and `forall x in A, y in |` to the `after-forall-in` autocomplete context with a test; SPEC.md grammar and §5.1.1; gates, code commit, log, Status flips, symlink removal.
+**Files touched**: fd13ba517 (13 files: `frontend/src/jjel/parser/parser.ts`, `SPEC.md`, `autocomplete/context.ts`, `autocomplete/providers/identifier.ts`, `autocomplete/util/boundVariables.ts` new, `__tests__/forallMultivar.test.ts` new; `frontend/src/model/simulation/subsetChecker.ts`; tests of codegen printer, templateCompletion, jjscript parser, guardEvaluator, subsetChecker, validationEvaluator); Status lines of the 1330 and 1410 prompts; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 13 files, above five: the consumer fix in subsetChecker.ts (E-FORALL on a top flatten over ForAll, record projection not E-VALUE) and the provider were outside the parser. Gates: tsc exit 0; vitest jjel/jjscript/jjtl/codegen/validation/simulation 5096 tests passed, 8 suites the known window import failures; build exit 0. Context branch killed by a mutation (1 fail). Regressions unknown: the 3001 autocomplete check is the chat's, after the merge. Temporary node_modules symlink removed.
+**Prompt document name**: 2026-11-02 14:10
+
+## 2026-11-02 — merge: jjel-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1511)
+**Prompt**: `claude_2026-11-02_1511_prompt_merge_jjel-forall-multivar.md`, a direct merge by `lane-run merge --direct`, closed by hand by the chat because the worker ended blocked and `lane-run go` did not apply.
+**Files touched**: merge `bf4b33e74`, the files of the branch side.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. vitest 12886 tests, 4 failed, all in `codegen/engine/__tests__/defaultText.test.ts` and `codegen/textual/__tests__/textual.test.ts` (generation errors). Same run: 3 of the 4 red before the merge, 0 on the branch. The two files alone on the trunk, twice, load average 13: 23 of 23 green. Intermittent; the 2000 ms generation budget (R-GEN-28) under a full run is a hypothesis, the error text was not captured. Other gates green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: on 3001, from the served modules: eight expressions as R-FA, both parse errors, three autocomplete contexts `after-forall-in`. The suggestion list in the console UI was not exercised.
+**Notes**: Rollback tag `pre-jjel-forall-multivar` on `a122f5463`. Worker: `~/.jjodel-lanes/P-2026-11-02-1511/result.json`.
+**Prompt document name**: 2026-11-02 15:11
+
+## 2026-11-02 — feat(jjscript): forall...do over several variables (P-2026-11-02-1332)
+**Prompt**: R-FA-7 in JjScript: `forall a, b in S ... do` and `forall x in A, y in x.f ... do` desugared by the parser to nested ForAllArgs, filter on the innermost; tests, one Jjodie prompt line.
+**Files touched**: df3455a9d (4 files: `frontend/src/jjscript/parser/parser.ts`, `__tests__/parser.test.ts`, `executor/__tests__/forallMultivar.test.ts` new, `frontend/src/constants/defaultPrompts.ts`); Status of the 1332 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Executor, planner, guard, validator unchanged (planner: `unsupported: forall`, pinned by a test). Undo is the Run's group, not run end to end (executor does not import in the bench). `x, y in S` reading x is a regex parse error (a lambda rebinding x is a false positive). `rename b to b.name + _dup` does not parse (rename takes a name token, pre-existing). Gates: tsc 0, vitest 1425 passed (context-binding the known failure), build 0. Mutation: bindingContinues=false kills 5.
+**Prompt document name**: 2026-11-02 13:32
+
+## 2026-11-02 — merge: jjscript-forall-multivar into alfonso-frontend-jjtl (P-2026-11-02-1701)
+**Prompt**: `claude_2026-11-02_1701_prompt_merge_jjscript-forall-multivar.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-forall-multivar` at `1d415bd5d` into `alfonso-frontend-jjtl`, merge base `767d350a3`, 2 commits on the branch side.
+**Files touched**: merge `838ea1449`: 6 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-02_1332_prompt_jjscript_forall_multivar.md`, `frontend/src/constants/defaultPrompts.ts`, `frontend/src/jjscript/__tests__/parser.test.ts`, `frontend/src/jjscript/executor/__tests__/forallMultivar.test.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `838ea1449` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12899 tests in 488 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: on 3001 from the served JjScript parser: both multi-variable spellings parse to nested forall, a repeated name is a parse error. No command was run on a model in the UI; merge gates green
+**Notes**: Rollback tag `pre-jjscript-forall-multivar` on `767d350a3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1701/result.json`.
+**Prompt document name**: 2026-11-02 17:01
+
+## 2026-11-02 — ticket: Abstract-syntax viewport is not restored after a reload
+**Ticket**: With no viewpoint (abstract syntax), reloading the page and reopening a model does not restore its stored viewport, while under a viewpoint (BPMN on the harness model) it does. Found by P-2026-11-02-0646 (discovery `docs/discovery/discovery_2026-11-02_open_viewport_empty.md`, §5.3 and open question 4), on HEAD `246edb1bc`: under BPMN the initial transform equals the stored `jjodel.viewport.<model>.<viewpoint>` value and no fit runs; without a viewpoint the key `jjodel.viewport.<model>.__abstract__` is present but the initial transform is the identity and a fresh fit runs.
+
+Expected: the abstract-syntax viewport is restored on reopen like the viewpoint ones (the restore site is around `EditorV2.tsx:609`). Kept out of the #419 fix on purpose.
+**Priority**: low
+**Found in**: P-2026-11-02-0646
+
+## 2026-11-02 — ticket: Toolbar auto layout blocks the page for minutes on a 407-node model
+**Ticket**: On the harness model (`~/jjodel-papers/2026-sosym-harness-models/jjodel/jjodel.harness.project.jjodel`, 407 nodes, no viewpoint), the toolbar's full auto layout (button `title="Auto layout"`, `Toolbar.tsx:1042-1050`, handler `handleToolbarAutoLayout` in `EditorV2.tsx`) blocks the main thread for about 391 s before its fit runs. Observed by P-2026-11-02-1856 while probing the fit fallback of ticket #419 (the probe needed a 600 s wait); not measured on the trunk, so it is not known whether the cost is the same there.
+
+Expected: measure it on the trunk first (open, auto layout, time to the fit, longest task, where the time goes: ELK layout, port distribution, React commit). A layout that takes minutes should at least run off the main thread or show progress and be cancellable.
+**Priority**: medium
+**Found in**: P-2026-11-02-1856
+
 ## 2026-11-02 — fix(editor-v2): an open fit that frames no node pans onto one (P-2026-11-02-1856)
 **Prompt**: `claude_2026-11-02_1856_prompt_open_viewport_fix.md`, full lane, Phase 2 of P-2026-11-02-0646 on the GO of 2026-11-02 18:26 (Q1 the two auto-layout fits, Q2 a restored viewport with no node in view, Q3 anchor nearest the box centre, Q5 commit the probe). Closes ticket #419; the abstract-syntax restore stays ticket #440.
 **Files touched**: `55e4d2703`: `frontend/src/components/editor-v2/openViewport.ts` (new), `frontend/src/components/editor-v2/__tests__/openViewport.test.ts` (new), `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/scripts/probe/open-viewport.ts` (new). Closure commit (RC-17): this inbox, the Status lines of the prompts P-2026-11-02-0646 and P-2026-11-02-1856.

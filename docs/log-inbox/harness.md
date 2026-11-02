@@ -995,3 +995,36 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 Expected: the test clears `JJODEL_CRITICAL_ZONE_GOAHEAD` (and any other go-ahead variable) from the child environment unless a case sets it on purpose, so vitest baselines inside critical-zone lanes match the ones outside.
 **Priority**: low
 **Found in**: P-2026-11-01-1605
+
+## 2026-11-02 — test(hooks): criticalZone spawns drop an inherited go-ahead (P-2026-11-02-0645)
+**Prompt**: Ticket #393: inside a lane started with --critical-zone-goahead the hook spawned by criticalZone.test.ts inherits JJODEL_CRITICAL_ZONE_GOAHEAD and 4 ask/deny cases fail. Strip the variable from the child environment in the test file only, keep the cases that set it on purpose, prove with the variable unset and set plus a mutation, gates, close the ticket.
+**Files touched**: frontend/scripts/hooks/__tests__/criticalZone.test.ts (3c54c9d3f); docs/log-inbox/harness.md, docs/prompts/claude_2026-11-02_0645_prompt_criticalzone_test_env.md (this commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. criticalZone.test.ts 70/70 with the variable unset and with JJODEL_CRITICAL_ZONE_GOAHEAD=P-2026-11-02-0645; check:scripts PASS, typecheck and typecheck:scripts exit 0 (neither covers scripts/hooks/__tests__)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Closes ticket #393 (2026-11-01, found in P-2026-11-01-1605). runScript lives in hookRunner.ts, shared by seven test files and left untouched: a local runZone deletes the variable from process.env around the synchronous spawn and restores it. Mutation (delete commented out): set 66/70, the 4 RC-19 bypass cases red; unset 70/70.
+**Prompt document name**: 2026-11-02 06:45
+
+## 2026-11-02 — merge: criticalzone-test-env into alfonso-frontend-jjtl (P-2026-11-02-0723)
+**Prompt**: Bring `criticalzone-test-env` at ad09563f7 (criticalZone hook tests drop an inherited go-ahead, 3c54c9d3f, ticket #393) into the trunk `alfonso-frontend-jjtl` with one --no-ff merge commit of the explicit sha (RC-14).
+**Files touched**: merge commit 34bb2c30c (`frontend/scripts/hooks/__tests__/criticalZone.test.ts`, `docs/prompts/claude_2026-11-02_0645_prompt_criticalzone_test_env.md`, this inbox); `docs/prompts/claude_2026-11-02_0723_prompt_merge_criticalzone-test-env.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (test-only change; chat GO 2026-11-02)
+**Notes**: Gates on 34bb2c30c: typecheck and typecheck:scripts exit 0; vitest 482 files (473 passed, the 9 known import failures), 12754 tests = trunk; hook tests 21 files, 967 = trunk = branch (no new test); build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Zero conflicts, no union. Lane board untouched. Step 6 names 81e0aafdf as reset target; the real pre-merge tip was bce1f3ef5 (template fix owed).
+**Prompt document name**: 2026-11-02 07:23
+
+## 2026-11-02 — ticket: Merge prompt template names the wrong reset target when check:addonly fails
+**Ticket**: The merge prompt that `lane-run merge ... --launch` generated for P-2026-11-02-0723 (criticalzone-test-env into alfonso-frontend-jjtl) named `81e0aafdf` in its step 6 as the reset point if `check:addonly` fails. `81e0aafdf` is the closure commit of the previous merge (P-2026-11-02-0656). The real pre-merge tip was `bce1f3ef5`, the commit that adds the merge prompt itself, so a reset to `81e0aafdf` would also drop the merge prompt's own commit. It had no effect because the gate passed; the merge session noticed and reported it.
+
+Expected: the template names the trunk tip at the moment the merge prompt is committed (the prompt commit itself), or tells the session to read it with `git rev-parse HEAD` before merging.
+**Priority**: low
+**Found in**: P-2026-11-02-0723

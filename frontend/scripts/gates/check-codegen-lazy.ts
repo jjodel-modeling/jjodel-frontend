@@ -22,8 +22,9 @@
  *
  * Two modes, one build each (P-2026-10-12-0012, release 3.1): the generator ships only in a build with
  * `VITE_CODEGEN=true` (EditorV2 and Settings read it as a literal, so Rollup drops the panel without it).
- *   off  the build 3.1 makes, the variable unset: 1. no module under `src/codegen/` but `setting.ts` in any chunk;
- *        2. `setting.ts` in a chunk, the control that the recorder sees the directory; 3. no chunk names a
+ *   off  the build 3.1 makes, the variable set to `false` in this process: it wins over `.env.production`, which
+ *        sets it `true` (R-TXT-25 (10)), and every reader compares against `'true'`. 1. no module under
+ *        `src/codegen/` but `setting.ts` in any chunk; 2. `setting.ts` in a chunk, the control that the recorder sees the directory; 3. no chunk names a
  *        `runner.worker` file, so none is ever fetched. The worker is a bundle of its own, outside the recorder, and Vite
  *        emits it even without the flag: Rollup loads the module a dead `import()` names, and Vite's worker plugin emits
  *        every worker it bundled while transforming (measured in this lane; the orphan file is listed, not failed).
@@ -126,11 +127,11 @@ function closure<K>(start: readonly K[], next: (k: K) => readonly K[]): Set<K> {
     return seen;
 }
 
-/** One production build in `mode`, the flag set or unset in this process for its duration, then the mode's clauses. */
+/** One production build in `mode`, the flag set in this process for its duration, then the mode's clauses. */
 async function checkBuild(mode: Mode, keep: boolean): Promise<number> {
     const before = process.env[FLAG];
-    if (mode === 'on') process.env[FLAG] = 'true';
-    else delete process.env[FLAG];
+    // Off is explicit, not unset: an unset variable reads `.env.production` (R-TXT-25 (10)).
+    process.env[FLAG] = mode === 'on' ? 'true' : 'false';
     const outDir = mkdtempSync(join(tmpdir(), 'codegen-lazy-'));
     const chunks: ChunkRecord[] = [];
     const flag: FlagRecord = { resolved: false, value: undefined };
@@ -151,7 +152,7 @@ async function checkBuild(mode: Mode, keep: boolean): Promise<number> {
         if (before === undefined) delete process.env[FLAG];
         else process.env[FLAG] = before;
     }
-    console.log(`build  ${mode} (${FLAG} ${mode === 'on' ? 'true' : 'unset'}): ${Math.round((Date.now() - t0) / 1000)} s, ${chunks.length} chunks, out ${outDir}`);
+    console.log(`build  ${mode} (${FLAG} ${mode === 'on' ? 'true' : 'false'}): ${Math.round((Date.now() - t0) / 1000)} s, ${chunks.length} chunks, out ${outDir}`);
 
     const manifestPath = join(outDir, '.vite', 'manifest.json');
     if (!existsSync(manifestPath) || chunks.length === 0) {

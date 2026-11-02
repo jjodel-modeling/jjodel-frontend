@@ -987,3 +987,239 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato
 **Notes**: Deviation: canvas opened inside the undo group (after it: 2 entries, undo left the model). Probe on 3235 also found 14/21 lines failing when the script started before the model was in `project.models`; the opener now waits for it. Gates: tsc 0; vitest 225 files, 6377 tests; build 0; codegen-lazy on green, off red (open ticket). Bench 4/4 killed. Closes the app-bar ticket. Crops in ~/.jjodel-lanes/P-2026-11-02-0235/.
 **Prompt document name**: 2026-11-02 02:35
+
+## 2026-11-02 — merge: textual-t2 into alfonso-frontend-jjtl (P-2026-11-02-0637)
+**Prompt**: Bring `textual-t2` (T2a parser 45c883e92, T2b entry and tab 7bd41e3cf, T2c New model from text edf047bf3) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-t2 on a29347b82); union resolution of this inbox.
+**Files touched**: merge commit aa68ad049 (`frontend/src/codegen/textual/parser.ts`, `modelLines.ts`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `ui/openTextualTab.tsx` and their tests, `frontend/src/components/editor-v2/Toolbar.tsx`, `dataManagerOption.ts`, `frontend/src/pages/components/LeftBar.tsx`, `Navbar.tsx`, the slice prompts, this inbox); `docs/prompts/claude_2026-11-02_0637_prompt_merge_textual-t2.md` Status line; this entry
+**Outcome**: ✅ completed (styleCheck.ts, the JjEL default fix and its test kept from the trunk)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops, unattended; after undo of Create model the canvas tab shows a bare «closed tab» text, open question)
+**Prompt document name**: 2026-11-02 06:37
+
+## 2026-11-02 — feat(codegen): unambiguous paths, fold fallback, shared corpus (P-2026-11-02-0652)
+**Prompt**: R-TXT-25 (5, 6, 7, 11): paths `Class[k].f[i]` that never equal a name, in printer, parser and the JjGen generator; a case folding onto a style word falls back to the declared case with a notice; one shared textual test corpus.
+**Files touched**: `frontend/src/codegen/textual/printer.ts`, `parser.ts`, `concreteGrammar.ts`, `style.ts`; `__tests__/corpus.ts` (new), `textual.test.ts`, `parser.test.ts`, `styleCheck.test.ts`, `modelLines.test.ts`, `oracle.ts`; `frontend/public/examples/codegen/default-text.generator.json`; `frontend/src/codegen/engine/__tests__/defaultText.test.ts`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Out of `textual/`: `engine/__tests__/defaultText.test.ts` pins the generator's paths, updated with it; `modelLines.test.ts`, a fourth corpus copy, also moved to `corpus.ts`. Paths always open with the root (`Class[k]`), single root included. Closes T2a's `inner` ticket (INNER corpus case). Gates: tsc 0; vitest src/codegen 49 files, 2479 tests; build 0; codegen-lazy on green, off red (open ticket, R-TXT-25 (10)). Bench 5/5 killed.
+**Prompt document name**: 2026-11-02 06:52
+
+## 2026-11-02 — merge: textual-paths into alfonso-frontend-jjtl (P-2026-11-02-0821)
+**Prompt**: Bring `textual-paths` at `f91c95e22` (feat 40b70401d) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-paths on a54aad3cc).
+**Files touched**: merge commit b7c0adfc2 (printer, parser, style, concreteGrammar, shared test corpus, the JjGen default generator and its test, the 0652 prompt, this inbox); `docs/prompts/claude_2026-11-02_0821_prompt_merge_textual-paths.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 08:21
+
+## 2026-11-02 — fix(ui): close the tab of an undone model; badge for Text tabs (P-2026-11-02-0650)
+**Prompt**: R-TXT-25 (1) and (4): after an undone «Create model» the canvas tab shows a bare «closed tab»; probe whether any undone model creation does it, then close a tab whose model is gone. Text tabs get an app-bar badge.
+**Files touched**: fdb70a1e8: `frontend/src/components/abstract/tabs/ModelTab.tsx`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `frontend/src/pages/components/Navbar.tsx`; closure: this inbox, the Status line of the 0650 prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-02 02:35
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Discovery: «closed tab» is ModelTab.tsx:27 / MetamodelTab.tsx:148 for a missing model; undo never touches the dock, and the app bar hides the tab as a ghost, so it stays active. General: one undo of Navbar createM1 or createM2 does the same. Fix: both tabs call closeTabsForEntity, as a delete. Probe 3065, before/after in the commit body. Gates: tsc 0; vitest 20 files, 533 tests; build 0. Crops in ~/.jjodel-lanes/P-2026-11-02-0650/.
+**Prompt document name**: 2026-11-02 06:50
+
+## 2026-11-02 — merge: undo-tab-badge into alfonso-frontend-jjtl (P-2026-11-02-0833)
+**Prompt**: Bring `undo-tab-badge` at `d114178d6` (fix fdb70a1e8) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-undo-tab-badge on 015d2a27e); union resolution of this inbox.
+**Files touched**: merge commit 41c7c0d8a (`frontend/src/components/abstract/tabs/ModelTab.tsx`, `MetamodelTab.tsx`, `frontend/src/pages/components/Navbar.tsx`, the 0650 prompt, this inbox); `docs/prompts/claude_2026-11-02_0833_prompt_merge_undo-tab-badge.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (crops of the lane)
+**Prompt document name**: 2026-11-02 08:33
+
+## 2026-11-02 — fix(model): defaultValueLiteral accessors, integer defaults, lazy gate off mode (P-2026-11-02-0653)
+**Prompt**: R-TXT-25 (8), (9), (10): restore the L-layer get_/set_defaultValueLiteral and make the Ecore export read them; reject a decimal default literal on an integer attribute with a notice; make the off mode of check:codegen-lazy independent of `.env.production`.
+**Files touched**: ffcb21052: frontend/src/model/logicWrapper/LModelElement.tsx, frontend/src/services/export/EcoreService.ts, frontend/src/services/export/__tests__/ecore-export-defaults.test.ts, frontend/src/jjscript/executor/commands/eval.ts, frontend/src/jjscript/executor/__tests__/unsetDefaultLiteral.test.ts, frontend/scripts/gates/check-codegen-lazy.ts; closure: this inbox, the Status line of the 0653 prompt
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-01 23:50
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Notes**: Lazy off: clause 0 now resolves "false", clauses 1 and 3 stay red (43 generator modules via two unguarded imports, ticket below): the 10-23 ticket is re-scoped, not closed. No notice sink reaches the default read: console.warn, once per attribute and literal. L accessor not executed by a test (joiner does not import in the bench). Bench 3/3 killed. Gates: tsc 0, vitest 3409 (known window red), build 0, check:scripts 0, lazy on green.
+**Prompt document name**: 2026-11-02 06:53
+
+## 2026-11-02 — ticket: the lazy gate's off build ships generator modules through unguarded dynamic imports
+**Ticket**: With VITE_CODEGEN=false resolved (P-2026-11-02-0653), check:codegen-lazy --off still fails clauses 1 and 3: 43 modules under src/codegen/ land in lazy chunks and a chunk names runner.worker. Two dynamic imports lack the CODEGEN_BUILD guard their neighbours have: `ProjectEditor.tsx:70` (React.lazy GeneratorsSection) and `LeftBar.tsx:385` (import of openTemplateEditor). The env-file cause of the 2026-10-23 ticket is gone; this is what remains.
+**Priority**: medium
+**Found in**: P-2026-11-02-0653
+
+## 2026-11-02 — merge: defaults-layer-gate into alfonso-frontend-jjtl (P-2026-11-02-0841)
+**Prompt**: Bring `defaults-layer-gate` at `85da82fc8` (fix ffcb21052) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-defaults-layer-gate on 5b62357a5); union resolution of this inbox.
+**Files touched**: merge commit 247007a7b (`LModelElement.tsx` accessors, `EcoreService.ts`, `eval.ts`, the lazy gate script, tests, the 0653 prompt, this inbox); `docs/prompts/claude_2026-11-02_0841_prompt_merge_defaults-layer-gate.md` Status line; this entry
+**Outcome**: ✅ completed (gate off mode still red on two imports: P-2026-11-02-0845)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 08:41
+
+## 2026-11-02 — feat(jjscript): set lists and enum literals (P-2026-11-02-0651)
+**Prompt**: R-TXT-25 (2): M1 `set` takes a list on a many-valued attribute (error on a single one) and an enumeration literal on an enum-typed one (unknown literal names the enumeration); planner mirrors; `modelLines.ts` writes lists and bare literals, its many-valued block removed.
+**Files touched**: 36a5387f6: `jjscript/parser/parser.ts`, `executor/commands/instance.ts`, `executor/commands/set.ts`, `executor/effectsPlanner.ts`, `executor/planWorld.ts`, tests `m1SetLists.test.ts` (new), `effectsPlanner.test.ts`, `planWorld.test.ts`; 084eb0902: `codegen/textual/modelLines.ts`, `__tests__/modelLines.test.ts`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 10 files, approved at 8-9 by the GO; `set.ts` is the expansion: a list at M2 is refused (LIST_NOT_SUPPORTED), as it was a parse error before the parser read lists. Enum values stored by name; a string on an enum attribute is still written as given. Undo is measured in the bench as one write inside one TRANSACTION, not on the real store (joiner does not import). Gates: tsc 0, vitest jjscript+codegen 3333 passed (context-binding: known window import), build 0.
+**Prompt document name**: 2026-11-02 06:51
+
+## 2026-11-02 — merge: jjscript-set-lists takes alfonso-frontend-jjtl (P-2026-11-02-0855)
+**Prompt**: RC-14: bring the trunk `alfonso-frontend-jjtl` at `47c975ec2` into `jjscript-set-lists` with one `--no-ff` merge commit, before the trunk takes the branch; union resolution of this inbox.
+**Files touched**: merge commit fb57b19f1 (the trunk's 31 commits since `c03585ae8`; resolution only in this inbox, +13 lines over the trunk's file); `docs/prompts/claude_2026-11-02_0855_prompt_jjscript-set-lists_take_trunk.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, unattended)
+**Notes**: Both sides only appended to this inbox: trunk file whole, then the branch's 0651 entry. modelLines.test.ts auto-merged, read whole, its corpus imports resolve. Gates: tsc 0, typecheck:scripts 0; vitest 12787 = trunk 12765 + branch 22, 0 failed, 9 known window-red (trunk run had one autoIntake 15s timeout, green on the merge); hooks 967 = 967; build 0; check:docs 5/5 (check E is new, prompt said 4/4); check:scripts PASS; check:addonly PASS.
+**Prompt document name**: 2026-11-02 08:55
+
+## 2026-11-02 — merge: jjscript-set-lists into alfonso-frontend-jjtl (P-2026-11-02-0931)
+**Prompt**: Bring `jjscript-set-lists` at `c4f1048a2` (feats 36a5387f6, 084eb0902; trunk taken by P-2026-11-02-0855) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-jjscript-set-lists on 47c975ec2).
+**Files touched**: merge commit a53423995 (JjScript parser, set/instance commands, effects planner, planWorld, modelLines and tests, the 0651 and 0855 prompts, this inbox); `docs/prompts/claude_2026-11-02_0931_prompt_merge_jjscript-set-lists.md` Status line; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 09:31
+
+## 2026-11-02 — fix(codegen): guard codegen imports for the lazy gate (P-2026-11-02-0845)
+**Prompt**: R-TXT-25 (10), the ticket of P-2026-11-02-0653: put the two unguarded codegen dynamic imports under CODEGEN_BUILD so check:codegen-lazy --off is green, behaviour with the flag on unchanged.
+**Files touched**: 3f84dfbd1: frontend/src/components/project/ProjectEditor.tsx, frontend/src/pages/components/LeftBar.tsx; closure: this inbox, the Status line of the 0845 prompt
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-02 06:53
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: The prompt cited src/pages/ProjectEditor.tsx, absent; the only ProjectEditor.tsx is src/components/project/, whose :70 is the ticket's React.lazy: edited there (marked yes, honesty rule). GeneratorsSection is null without the flag; LeftBar guards both openTemplateEditor imports (:385, :389). Gates: tsc 0; vitest 50 files, 2482 tests; build 0; lazy gate ALL GREEN, off: only setting.ts. Probe 3133 flag on all PASS; crops in ~/.jjodel-lanes/P-2026-11-02-0845/crops/.
+**Prompt document name**: 2026-11-02 08:45
+
+## 2026-11-02 — merge: lazy-gate-guards into alfonso-frontend-jjtl (P-2026-11-02-0943)
+**Prompt**: Bring `lazy-gate-guards` at `70e93a9cc` (fix 3f84dfbd1) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-lazy-gate-guards on 39e5014bc); union resolution of this inbox.
+**Files touched**: merge commit e684fef6c (`frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/pages/components/LeftBar.tsx`, the 0845 prompt, this inbox); `docs/prompts/claude_2026-11-02_0943_prompt_merge_lazy-gate-guards.md` Status line; this entry
+**Outcome**: ✅ completed (check:codegen-lazy green in both modes)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 09:43
+
+## 2026-11-02 — feat(codegen): textual syntax annotations, grammar part (P-2026-11-02-0955, P-2026-11-02-1016)
+**Prompt**: T4a-1 of the 0846 design: syntax annotations as data, applied in derivation, printer and parser, LL(1) check in the style check, R-TXT-27 refusal. 0955 wrote it and hard-stopped at the context ceiling (RC-51); 1016 applied the pending subset-order fix, ran acceptance, mutation bench and gates, and committed.
+**Files touched**: 5467088b7: frontend/src/codegen/textual/annotations.ts, __tests__/annotations.test.ts, concreteGrammar.ts, parser.ts, printer.ts, style.ts, styleCheck.ts; closure: this inbox, the Status lines of the 0846, 0955 and 1016 prompts
+**Outcome**: ✅ completed (check:codegen-lazy off mode red, pre-existing: same 43 modules on the tip, ticket of P-2026-11-02-0653)
+**Corregge**: 2026-11-02 08:46
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Corregge 0846 for one point only: its handoff put instructions in model order within a group; the prototype's brief-text.md:66 and 8 briefs want the subset's literal order, ties in model order. Acceptance on the 16 micron briefs, scratch deleted: 16/16 print equal, parse clean, reprint equal, one nearley parse. Bench: 8/8 mutations killed (commit message). Gates: tsc 0, vitest src/codegen 2504/2504, build 0, check:docs 0, lazy on PASS. Fixtures: Requester.name, Instruction.mnemonic [1..1].
+**Prompt document name**: 2026-11-02 10:16
+
+## 2026-11-02 — merge: textual-t4 into alfonso-frontend-jjtl (P-2026-11-02-1027)
+**Prompt**: Bring `textual-t4` at `3cf861948` (feat 5467088b7, T4a-1 designed by 0846, implemented by 0955 and 1016) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-textual-t4 on 7dc62b88f); union resolution of this inbox.
+**Files touched**: merge commit c41033a9a (`frontend/src/codegen/textual/annotations.ts`, `concreteGrammar.ts`, `parser.ts`, `printer.ts`, `style.ts`, `styleCheck.ts`, `__tests__/annotations.test.ts`, the 0846/0955/1016 prompts, this inbox); `docs/prompts/claude_2026-11-02_1027_prompt_merge_textual-t4.md` Status line; this entry
+**Outcome**: ✅ completed (R-TXT-27 and the 0845 guards kept from the trunk)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 10:27
+
+## 2026-11-02 — feat(codegen): textual syntax annotations stored, language name shown (P-2026-11-02-1830, P-2026-11-02-1930)
+**Prompt**: T4a-2 (1830, hard-stop at the context ceiling, RC-51) closed by 1930: syntax annotations in the metamodel's `_state` under `textSyntax`, `ElementIds` with lower bounds, one grammar path for Text tab, EBNF and «New model from text», issues strip, picker/tab/app-bar labelled with `language`; gates, commit, in-app check.
+**Files touched**: bb620d93c: `frontend/src/codegen/textual/syntaxRecord.ts` (new), `__tests__/syntaxRecord.test.ts` (new), `concreteGrammar.ts`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `ui/openTextualTab.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `dataManagerOption.ts`, `__tests__/textualPicker.test.ts`; Status lines of the 1830 and 1930 prompts; this entry
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-02 10:16 (T4a-1 grouping: block-layout objects of a subset chained on one line, 8-line fix in concreteGrammar.ts)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no (9 code files, above five, all in 1830's DOVE and listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (probe agente 24/24; verifica visiva passata 2026-11-02, chat RC-23, unattended)
+**Notes**: Tests followed the code, contrary to 1830 COME; bench 11/11 mutants killed (commit body). Discovery: key textSyntax free; Toolbar cannot import src/codegen (lazy gate), so the key lives in dataManagerOption.ts; ElementIds from the D-layer lookup, legacy classifiers too; no issues UI existed, strip added. Commit subject cut to 72 (hook). Probe DemoESM 24/24: one undo clears the record (2 history entries), reload equal, malformed record shows its error. Detail: lane handoff.md, probe-run1.log.
+**Prompt document name**: 2026-11-02 19:30
+
+**Ticket** (P-2026-11-02-1930): the app-bar tab ellipsises the title to `demoESM · Stat…` at default width.
+
+## 2026-11-02 — merge: textual-t4a2 into alfonso-frontend-jjtl (P-2026-11-02-1954)
+**Prompt**: `claude_2026-11-02_1954_prompt_merge_textual-t4a2.md`, a direct merge by `lane-run merge --direct`, no session: `textual-t4a2` at `718c11374` into `alfonso-frontend-jjtl`, merge base `e5ad232c4`, 3 commits on the branch side.
+**Files touched**: merge `4233db8e5`: 12 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-02_1830_prompt_textual_t4a2_storage_label.md`, `docs/prompts/claude_2026-11-02_1930_prompt_textual_t4a2_close.md`, `frontend/src/codegen/textual/__tests__/syntaxRecord.test.ts`, `frontend/src/codegen/textual/concreteGrammar.ts`, `frontend/src/codegen/textual/syntaxRecord.ts`, `frontend/src/codegen/textual/ui/TextualTab.scss`, `frontend/src/codegen/textual/ui/TextualTab.tsx`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4233db8e5` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12937 tests in 491 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: visual check passed on the branch, crops of P-2026-11-02-1930 checked by the chat, unattended
+**Notes**: Rollback tag `pre-textual-t4a2` on `e415cb932` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-1954/result.json`.
+**Prompt document name**: 2026-11-02 19:54
+
+## 2026-11-02 — feat(codegen): text paths follow the class keyword (P-2026-11-02-2003)
+**Prompt**: R-TXT-28: a path's first segment is the class's printed keyword (class name when dropped), in printer and parser, keyword read from the concrete grammar; tests first on the library fixture; measure feature segments; gates, commit, bench.
+**Files touched**: e141ed7b1: `frontend/src/codegen/textual/printer.ts`, `parser.ts`, `__tests__/syntaxRecord.test.ts`; Status line of the 2003 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Tests written first, 4 red before the fix. Bench 4/4 mutants killed (commit body). printer.ts exports pathKeyword (head kw of the object rule); parser resolves among the top-level classes only; shared keyword gives an error naming both. styleCheck.ts untouched: distinct-classes and LL(1) already refuse both clashes. No record: byte-identical, 2535 codegen tests green.
+**Prompt document name**: 2026-11-02 20:03
+
+**Ticket** (P-2026-11-02-2003): feature segments keep the feature name: with `members` printed as `patrons`, the path reads `shelf[0].members[1]`, and `shelf[0].patrons[1]` is refused with `Library has no containment "patrons"`. Same mismatch as R-TXT-28 fixed for classes; outside that row.
+
+## 2026-11-02 — merge: textual-path-keyword into alfonso-frontend-jjtl (P-2026-11-02-2019)
+**Prompt**: `claude_2026-11-02_2019_prompt_merge_textual-path-keyword.md`, a direct merge by `lane-run merge --direct`, no session: `textual-path-keyword` at `3ebbb3f92` into `alfonso-frontend-jjtl`, merge base `42e4065c6`, 2 commits on the branch side.
+**Files touched**: merge `45b02a390`: 5 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-02_2003_prompt_textual_path_keyword.md`, `frontend/src/codegen/textual/__tests__/syntaxRecord.test.ts`, `frontend/src/codegen/textual/parser.ts`, `frontend/src/codegen/textual/printer.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `45b02a390` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12943 tests in 491 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: no UI change, visual check not applicable
+**Notes**: Rollback tag `pre-textual-path-keyword` on `5467e2328` (RC-31). Union: `docs/log-inbox/codegen.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2019/result.json`.
+**Prompt document name**: 2026-11-02 20:19

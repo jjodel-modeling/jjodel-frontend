@@ -7061,6 +7061,104 @@ of T1. Ratified as recommended, evidence: measured (T1's corpus and mutation ben
   annotation, in step T4. (b) A single-valued containment prints as a block of one object, `f { T }`, as the JjGen
   generator and T1 do; §A.1's bare `T` is superseded.
 
+Row 25: the morning digest of 2026-11-02 (twelve questions after the night run); Alfonso 06:43 «Ok alle raccomandazioni».
+Ratified as recommended, evidence: read and measured (lane results of the night), verified: none, reversible: trunk.
+
+- **R-TXT-25** (2026-11-02). (1) Undoing «Create model» closes the model's canvas tab (no bare «closed tab» text);
+  first check whether the defect exists for any undone model creation. (2) JjScript M1 `set` accepts lists for
+  many-valued attributes and enumeration literals, so every text the parser accepts can become a model. (3) The textual
+  entry stays behind the code-generation setting while the feature is experimental (confirms the night's RC-21
+  adoption). (4) Text tabs get an app-bar badge like the other tab types. (5, 6) **Amends R-TXT-4 and R-TXT-11 on
+  paths:** every path segment carries a class or feature and an index, so a path is never a bare identifier: a root is
+  `Class[k]` (k = position among the top-level objects of that class), a contained object `feature[k]` even for a
+  single containment, segments joined by `.`; a name is an identifier or a quoted string, so paths and names never
+  coincide. (7) When a style's case folding lands a class keyword on a style word (`End` to `end`), the derivation falls
+  back to the declared case, as for literals (R-TXT-21 (10)). (8) The L-layer getter and setter of
+  `defaultValueLiteral` are restored in `LModelElement.tsx`, and the export reads them instead of `__raw`. (9) A
+  decimal default on an integer attribute is rejected with a notice, as Ecore does. (10) The «off» mode of
+  `check:codegen-lazy` is made independent of `.env.production`, before 3.2. (11) The textual test corpus moves to one
+  shared test module. (12) The language's name is stored as a syntax annotation in step T4; until then the entry shows
+  the metamodel's name. The canvas of a model created from text opens inside the undo group (confirms the night's
+  adoption).
+
+Row 26: Alfonso 2026-11-02 08:34 «pause», on the chat's question of 08:27 about step T6.
+
+- **R-TXT-26** (2026-11-02). **When an edited text is applied to an existing model (T6):** on a pause in typing, and only
+  when the text parses without errors, no match of R-TXT-18/22 is uncertain, and no deletion touches an object that
+  other models reference. Otherwise the markers stay in the text and the model is not touched until the text is fixed
+  or the uncertain matches are confirmed in a small panel. Each application is one undo step (R-TXT-19), and undo
+  restores text and model together. No explicit «Apply» button in v1.
+
+Row 27: P-2026-11-02-0846 (T4a-1 design, hard-stop at the ceiling); Alfonso 2026-11-02 09:52 «Ok alle raccomandazioni».
+
+- **R-TXT-27** (2026-11-02). (1) The prototype's CoreSpec declares `Instruction.mnemonic [1..1]`: an instruction
+  without a mnemonic makes no sense, and R-TXT-21 (4) keeps grouping only on mandatory attributes; the change belongs to
+  the prototype's metamodel, not to Jjodel. (2) A class annotated as one-line or positional requires a mandatory name
+  attribute: otherwise the annotation is refused by the style check (an error, not a notice), so that every printed
+  text reads back (R-TXT-19, R-TXT-21 (8)).
+
+Row 28: T4a-2's in-app check (P-2026-11-02-1930); Alfonso 2026-11-02 19:54 «Ok alle raccomandazioni». Ratified as recommended,
+evidence: read (crop of the annotated text), verified: none, reversible: trunk.
+
+- **R-TXT-28** (2026-11-02). **Amends R-TXT-25 (5, 6) and the T4a-1 design on paths.** The first segment of a path uses the
+  class's printed keyword (`nextState machine[0]`), so that a reference names what the text shows; when the keyword is
+  dropped (positional class) it uses the class name. The index k stays the position among the top-level objects of that
+  class. Without annotations nothing changes. Feature segments are not covered by this row.
+
+## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
+
+Evidence: Alfonso 2026-11-02 13:19, forall x,y in JjEL and then in every language that uses JjEL; the parsers read by the
+project chat C-2026-11-02-1319. All rows: ratified by Alfonso 2026-11-02 19:18 («ok»), evidence: read and measured (discoveries of P-2026-11-02-1330 and 1331), verified: none, reversible: trunk.
+
+- **R-FA-1 (2026-11-02)**: two spellings, mixable: `forall x, y in S` (same collection) and `forall x in A, y in B`.
+  Iteration is the full cartesian product, first variable outermost: without a filter the pair (a, a) and both orders
+  are present, as in OCL `forAll(x, y | ...)`; excluding them is the filter's job.
+- **R-FA-2 (2026-11-02)**: bindings read left to right: a later collection may read an earlier variable
+  (`forall c in classes, a in c.attributes`). Every variable is bound in the filter and in the projection.
+- **R-FA-3 (2026-11-02)**: the result is one flat list. Without a projection each element is a record named by the
+  variables (`{ x, y }`, read as `p.x`). One variable keeps returning the element itself.
+- **R-FA-4 (2026-11-02)**: `exists` takes the same bindings, so `exists ... P` stays equivalent to
+  `(forall ... such that P).isNotEmpty`.
+- **R-FA-5 (2026-11-02)**: a repeated name in one binding list is a parse error. After a collection, a comma continues
+  the bindings only when followed by an identifier and `in` or by an identifier list ending in `in`; so `f(forall x in S, y)` stays two arguments.
+- **R-FA-6 (2026-11-02, amended the same day)**: JjEL implements this in the parser, by desugaring: `forall x in A, <rest>`
+  to `(forall x in A : <rest>).flatten()`, `exists` to nested `exists`. Not `flatMap`, as first written: measured by the
+  discovery of P-2026-11-02-1330, `flatMap` throws on a null, object or string collection where `forall` gives `[]`. No new
+  AST node and no change to an exported type.
+- **R-FA-7 (2026-11-02)**: every language gets the same spellings. JjScript desugars `do` to nested foralls; JjTL iterates
+  the product in the executor, flat in the feature, because a nested `forall` there builds a tree. Validation rules,
+  guards, templates, JjLet and JjModal inherit from the JjEL parser. Supersedes P-2026-10-31-1741, which never ran.
+- **R-FA-8 (2026-11-02)**: from the lanes 1330 and 1331. In `x, y in S`, `S` may not read a name of its own list: parse
+  error, since the copy that `y` ranges over would see the new `x`. In the subset checker, a whole-guard multi-variable
+  `forall` is E-FORALL, and an object literal with more than one entry, each `k: k`, is not E-VALUE. A JjTL `forall` with several
+  variables does not expose the elements' properties unqualified: two elements would collide; one variable keeps doing so.
+
+## R-JTG: one generic JjTL transformation, the order and frame of parts A to D (decisions 2026-11-02)
+
+Evidence: Alfonso 2026-11-02 17:38, GO for slice A0 on `docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md`
+(P-2026-11-02-1425, P-2026-11-02-1612); registered by P-2026-11-02-1742. All rows: ratified by Alfonso, evidence: read,
+verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
+
+- **R-JTG-1 (2026-11-02)**: order A0, A, B, C0, D, C1 if needed; each slice its own lane, prompt and GO.
+- **R-JTG-2 (2026-11-02)**: A0 alone and first: a confirming test of copy on bind, then binding by identity, then the
+  silent fallbacks reported with source element and rule.
+- **R-JTG-3 (2026-11-02)**: two rules on one source keep the throw naming both; with D the most specific rule wins and the
+  throw remains for equal specificity. No declaration-order flag.
+- **R-JTG-4 (2026-11-02)**: a second containment claim is an error naming both containers; a containment cycle is an
+  error; leaving roots is recorded, not warned.
+- **R-JTG-5 (2026-11-02)**: called and lazy rules adopt the sketch of `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md:268-322`, with
+  the environment dynamically scoped, reified as a named parameter of called rules, values as closures; trace key
+  (source, rule, environment). A's specification is written in those terms now, vacuous until B.
+- **R-JTG-6 (2026-11-02)**: a containment resolves (source, rule, caller's environment) and creates the entry on demand
+  when absent: under A a lookup, under B a new environment gives a fresh subtree. A call of a rule not declared `unique`
+  always creates a fresh subtree, even under an environment seen before, so one expression may be placed twice with the
+  same bindings. The double-claim error of R-JTG-4 applies to implicit resolutions and to `unique` rules. Ratified by
+  Alfonso 2026-11-02 18:35, registered by P-2026-11-02-1838; evidence: read, verified: none, reversible: trunk.
+- **R-JTG-7 (2026-11-02)**: rules meant for lowering are declared `lazy`: they never match in pass 1 and create a target
+  only when a resolution or a call reaches the node. Matched rules stay for the elements the transformation maps as such.
+  Containment under A alone therefore does not serve library expressions; that value arrives with B. Ratified by
+  Alfonso 2026-11-02 18:35, registered by P-2026-11-02-1838; evidence: read, verified: none, reversible: trunk.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.

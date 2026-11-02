@@ -4,8 +4,10 @@
  * (concreteGrammar.ts), predicting each choice from the FIRST sets of the nodes, and gives back the objects in the shape
  * the printer takes (`{id, cls, slots}`), so that print, parse, print gives the same text.
  *
- * References are read as a name or a path (R-TXT-4, R-TXT-11) and resolved after the parse, against the whole text: a
- * name must be unique among the instances of the reference's type, a path starts at a top-level object. The top level
+ * References are read as a name or a path (R-TXT-4, R-TXT-25 (5, 6)) and resolved after the parse, against the whole
+ * text: a name must be unique among the instances of the reference's type; a path is `keyword[k].f[i]...`, every segment
+ * with its index, so a path never reads as a name; its first word is a class keyword as printed, the class name for a
+ * positional class (R-TXT-28). The top level
  * admits every concrete class (R-TXT-24 (a)); a single containment is a block of one object (R-TXT-24 (b)).
  *
  * Recovery: an error inside a body costs the rest of its line, the parse resumes at the next line that starts an item
@@ -13,10 +15,12 @@
  * whose text was not read in full are listed in `recovered` and are never applied (R-TXT-21 (8)).
  */
 
+import type { NamePattern } from './annotations';
 import type { ConcreteGrammar, ConcreteRule, GrammarNode, ObjectRule } from './concreteGrammar';
-import { applyCase } from './concreteGrammar';
+import { applyCase, derivedName } from './concreteGrammar';
 import type { TextFeature, TextObject } from './metamodel';
 import type { ObjectSpan } from './printer';
+import { pathKeyword } from './printer';
 
 /** An error at `[start, end)` of the text; `line` and `col` are 1-based, of `start`. */
 export interface TextParseError {
@@ -143,9 +147,9 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
 }
 
 /** A token class: `ID`, `ID:x` (the identifier x), `P:x`, `STR`, `INT`, `FLOAT`. */
-type Matcher = string;
+export type Matcher = string;
 
-interface First {
+export interface First {
     readonly set: ReadonlySet<Matcher>;
     readonly nullable: boolean;
 }
@@ -155,7 +159,7 @@ const hit = (t: Token, m: Matcher): boolean => {
     if (c < 0) return t.k === m;
     return t.k === m.slice(0, c) && t.v === m.slice(c + 1);
 };
-const word = (s: string): Matcher => (/^\w/.test(s) ? `ID:${s}` : `P:${s}`);
+export const word = (s: string): Matcher => (/^\w/.test(s) ? `ID:${s}` : `P:${s}`);
 
 const describeToken = (t: Token): string => {
     switch (t.k) {
@@ -182,45 +186,9 @@ const either = (xs: readonly string[]): string => {
     return shown.length <= 1 ? shown.join('') : `${shown.slice(0, -1).join(', ')} or ${shown[shown.length - 1]}`;
 };
 
-class ParseFailure extends Error {
-    constructor(readonly error: TextParseError) { super(error.message); }
-}
-
-/** A reference as written, resolved after the parse. */
-interface RefSyntax {
-    readonly name?: string;
-    /** The name was an identifier, so it may also be a one-segment path (`inner`, a single containment). */
-    readonly bare?: boolean;
-    readonly root?: number;
-    readonly segments?: readonly { readonly f: string; readonly index?: number }[];
-}
-
-class PendingRef {
-    constructor(readonly node: Extract<GrammarNode, { t: 'xref' }>, readonly owner: MutableObject, readonly feat: string, readonly syntax: RefSyntax, readonly at: Token, readonly endAt: number) {}
-}
-
-interface MutableObject {
-    readonly id: string;
-    readonly cls: string;
-    readonly slots: Record<string, unknown>;
-}
-
-/** A body being read: what may start one of its items, and how it closes (none at the top level). */
-interface Frame {
-    readonly can: (t: Token) => boolean;
-    readonly close?: readonly string[];
-    readonly open?: readonly string[];
-}
-
-/** Parses a text of the concrete grammar `g`. Never throws on a broken text: every problem is an error of the result. */
-export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
-    const errors: TextParseError[] = [];
-    const toks = tokenize(g, text, errors);
+/** The FIRST set and nullability of each node of `g`, memoised per node; a rule reached again while computing is taken as empty. */
+export function firstSetsOf(g: ConcreteGrammar): (n: GrammarNode) => First {
     const rules = new Map<string, ConcreteRule>(g.rules.map(r => [r.name, r]));
-    const model = g.rules.find(r => r.t === 'model');
-    if (!model) throw new Error('the grammar has no Model rule');
-
-    // FIRST sets and nullability, memoised per node; a rule reached again while computing is taken as empty.
     const memo = new Map<GrammarNode, First>();
     const EMPTY: First = { set: new Set(), nullable: true };
     const first = (n: GrammarNode): First => {
@@ -251,7 +219,7 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
                 set: new Set({ NAME: ['ID', 'STR'], INT: ['INT'], FLOAT: ['INT', 'FLOAT'], BOOL: ['ID:true', 'ID:false'], STRING: ['STR'] }[n.terminal]),
                 nullable: false,
             }; break;
-            case 'xref': r = { set: new Set(['ID', 'STR', 'P:[']), nullable: false }; break;
+            case 'xref': r = { set: new Set(['ID', 'STR']), nullable: false }; break;
             case 'lit': r = { set: new Set(literalsOf(n.rule).map(l => `ID:${applyCase(l, g.literalCase)}`)), nullable: false }; break;
             case 'rule': { const k = rules.get(n.name); r = k ? first(k.body) : EMPTY; break; }
             case 'assign': r = first(n.item); break;
@@ -266,6 +234,49 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
         const r = rules.get(rule);
         return r && r.t === 'enum' ? r.literals : [];
     }
+    return first;
+}
+
+class ParseFailure extends Error {
+    constructor(readonly error: TextParseError) { super(error.message); }
+}
+
+/** A reference as written, resolved after the parse: a name, or a path whose first segment is a class keyword. */
+interface RefSyntax {
+    readonly name?: string;
+    readonly segments?: readonly { readonly f: string; readonly index: number }[];
+}
+
+class PendingRef {
+    constructor(readonly node: Extract<GrammarNode, { t: 'xref' }>, readonly owner: MutableObject, readonly feat: string, readonly syntax: RefSyntax, readonly at: Token, readonly endAt: number) {}
+}
+
+interface MutableObject {
+    readonly id: string;
+    readonly cls: string;
+    readonly slots: Record<string, unknown>;
+}
+
+/** A body being read: what may start one of its items, and how it closes (none at the top level). */
+interface Frame {
+    readonly can: (t: Token) => boolean;
+    readonly close?: readonly string[];
+    readonly open?: readonly string[];
+}
+
+/** Parses a text of the concrete grammar `g`. Never throws on a broken text: every problem is an error of the result. */
+export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
+    const errors: TextParseError[] = [];
+    const toks = tokenize(g, text, errors);
+    const rules = new Map<string, ConcreteRule>(g.rules.map(r => [r.name, r]));
+    const model = g.rules.find(r => r.t === 'model');
+    if (!model) throw new Error('the grammar has no Model rule');
+
+    const first = firstSetsOf(g);
+    const literalsOf = (rule: string): readonly string[] => {
+        const r = rules.get(rule);
+        return r && r.t === 'enum' ? r.literals : [];
+    };
     const canAt = (n: GrammarNode, t: Token): boolean => [...first(n).set].some(m => hit(t, m));
 
     let p = 0;
@@ -289,6 +300,7 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
     const frames: Frame[] = [];
     const contained = new Set<string>();
     let counter = 0;
+    const derives = new Map<MutableObject, NamePattern>();
 
     const record = (e: TextParseError): void => { errors.push(e); };
     const owner = (): MutableObject | undefined => open[open.length - 1];
@@ -323,6 +335,12 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
         open.push(o);
         try {
             run(rule.body, o);
+            // A name left out where it equals its pattern's expansion is that expansion.
+            const pattern = derives.get(o);
+            if (pattern && o.slots.name === undefined) {
+                const nm = derivedName(g, rule, o.slots, pattern);
+                if (nm !== undefined) o.slots.name = nm;
+            }
         } catch (e) {
             recovered.add(o.id);
             throw e;
@@ -336,29 +354,19 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
     const reference = (): RefSyntax => {
         const t = peek();
         if (t.k === 'STR') { p++; return { name: t.v }; }
-        let root: number | undefined;
-        const segments: { f: string; index?: number }[] = [];
-        if (hit(t, 'P:[')) {
-            p++;
-            root = Number(expect('INT').v);
-            expect('P:]');
-            if (!hit(peek(), 'P:.')) return { root, segments };
-            p++;
-        } else if (t.k === 'ID' && !hit(peek(1), 'P:[') && !hit(peek(1), 'P:.')) {
-            p++;
-            return { name: t.v, bare: true };
-        } else if (t.k !== 'ID') {
-            fail(['a reference (a name or a path)']);
-        }
+        if (t.k !== 'ID') fail(['a reference (a name or a path)']);
+        if (!hit(peek(1), 'P:[')) { p++; return { name: t.v }; }
+        const segments: { f: string; index: number }[] = [];
         for (;;) {
             const f = expect('ID').v;
-            let index: number | undefined;
-            if (hit(peek(), 'P:[')) { p++; index = Number(expect('INT').v); expect('P:]'); }
+            expect('P:[');
+            const index = Number(expect('INT').v);
+            expect('P:]');
             segments.push({ f, index });
             if (!hit(peek(), 'P:.')) break;
             p++;
         }
-        return { root, segments };
+        return { segments };
     };
 
     const value = (n: GrammarNode, o: MutableObject, feat: string): unknown => {
@@ -389,6 +397,13 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
         throw new Error(`a ${n.t} node is not a value`);
     };
 
+    /** A star, or an inline containment (an opt over a star): the item may start again. */
+    const repeats = (n: GrammarNode): boolean => {
+        if (n.t === 'star') return true;
+        if (n.t !== 'opt' || n.item.t !== 'seq') return false;
+        const inner = n.item.items.filter(x => x.t !== 'nl');
+        return inner.length === 1 && inner[0].t === 'star';
+    };
     const featureOf = (n: GrammarNode): string | undefined => (n.t === 'opt' || n.t === 'star' || n.t === 'assign' || n.t === 'list' ? n.feat : undefined);
 
     /** Skips to the first token that can go on after an error at line `errLine`: it closes the frame, or it starts an item of this frame or of an enclosing one on a later line. */
@@ -448,7 +463,7 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
                 while (j < items.length && !can(items[j]) && first(items[j]).nullable) j++;
                 if (j < items.length && can(items[j])) {
                     guarded(frame, items[j], o);
-                    i = items[j].t === 'star' ? j : j + 1;
+                    i = repeats(items[j]) ? j : j + 1;
                     continue;
                 }
                 const k = items.findIndex(x => can(x));
@@ -489,7 +504,10 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
     const run = (n: GrammarNode, o: MutableObject | undefined): void => {
         switch (n.t) {
             case 'seq': for (const x of n.items) run(x, o); return;
-            case 'opt': if (can(n.item)) run(n.item, o); return;
+            case 'opt':
+                if (can(n.item)) run(n.item, o);
+                else if (n.derive && o) derives.set(o, n.derive);
+                return;
             case 'star':
                 while (can(n.item)) {
                     const before = p;
@@ -570,25 +588,50 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
                 const at = found.map(x => where(x.id)).join(', ');
                 return `"${s.name}" is ambiguous: ${found.length} objects of type ${r.node.type} carry that name (${at}); write a path`;
             }
-            if (!s.bare) return `no object of type ${r.node.type} is named "${s.name}"`;
-            const asPath = follow({ segments: [{ f: s.name }] });
-            return typeof asPath === 'string' ? `no object of type ${r.node.type} is named "${s.name}"` : asPath;
+            return `no object of type ${r.node.type} is named "${s.name}"`;
         }
-        return follow(s);
+        return follow(s.segments ?? []);
     };
-    const follow = (s: RefSyntax): MutableObject | string => {
-        if (s.root !== undefined && !roots[s.root]) return `there is no top-level object [${s.root}]: the text has ${roots.length}`;
-        if (s.root === undefined && roots.length !== 1) return `a path without [k] needs a single top-level object; the text has ${roots.length}`;
-        let cur: MutableObject = roots[s.root ?? 0];
-        for (const seg of s.segments ?? []) {
+    // R-TXT-28: a path's first word is the printed keyword of a class the top level admits (printer.ts `pathKeyword`).
+    const rulesByName = new Map(g.rules.map(r => [r.name, r]));
+    const classesOf = (n: GrammarNode, seen: Set<string>): string[] => {
+        switch (n.t) {
+            case 'seq': return n.items.flatMap(x => classesOf(x, seen));
+            case 'star': return classesOf(n.item, seen);
+            case 'alt': return n.alts.flatMap(x => classesOf(x, seen));
+            case 'rule': {
+                if (seen.has(n.name)) return [];
+                seen.add(n.name);
+                const r = rulesByName.get(n.name);
+                return r?.t === 'object' ? [r.cls] : r?.t === 'choice' ? classesOf(r.body, seen) : [];
+            }
+            default: return [];
+        }
+    };
+    const model = g.rules.find(r => r.t === 'model');
+    const topClasses = model ? [...new Set(classesOf(model.body, new Set()))] : [];
+    const follow = (segments: readonly { readonly f: string; readonly index: number }[]): MutableObject | string => {
+        const [head, ...rest] = segments;
+        const named = topClasses.filter(c => pathKeyword(g, c) === head.f);
+        // Two classes with one keyword at the top level are refused by the style check (distinct-classes); never pick one.
+        if (named.length > 1) return `the path keyword "${head.f}" names ${named.length} classes: ${named.join(', ')}`;
+        const cls = named[0];
+        if (cls === undefined) {
+            const renamed = topClasses.find(c => applyCase(c, g.classCase) === head.f || c === head.f);
+            if (renamed !== undefined) return `a path starts with a class keyword: ${renamed} is written "${pathKeyword(g, renamed)}"`;
+            return `a path starts with a class: there is no class "${head.f}"`;
+        }
+        const tops = roots.filter(o => o.cls === cls);
+        if (!tops[head.index]) return `there is no top-level ${head.f}[${head.index}]: the text has ${tops.length}`;
+        let cur: MutableObject = tops[head.index];
+        for (const seg of rest) {
             const f: TextFeature | undefined = g.objects[cur.cls]?.features.find(x => x.name === seg.f);
             if (!f || f.kind !== 'containment') return `${cur.cls} has no containment "${seg.f}"`;
             const v: unknown = cur.slots[seg.f];
-            const id: unknown = f.many ? (seg.index === undefined ? undefined : Array.isArray(v) ? v[seg.index] : undefined) : seg.index === undefined ? v : undefined;
-            if (f.many && seg.index === undefined) return `"${seg.f}" holds many objects: write ${seg.f}[i]`;
-            if (!f.many && seg.index !== undefined) return `"${seg.f}" holds one object: write ${seg.f} without an index`;
+            const id: unknown = f.many ? (Array.isArray(v) ? v[seg.index] : undefined) : seg.index === 0 ? v : undefined;
+            if (!f.many && seg.index !== 0) return `"${seg.f}" holds one object: write ${seg.f}[0]`;
             const next: MutableObject | undefined = typeof id === 'string' ? byId.get(id) : undefined;
-            if (!next) return `${seg.f}${seg.index === undefined ? '' : `[${seg.index}]`} names no object`;
+            if (!next) return `${seg.f}[${seg.index}] names no object`;
             cur = next;
         }
         return cur;

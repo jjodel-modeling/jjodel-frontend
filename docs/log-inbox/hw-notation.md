@@ -6,6 +6,50 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-11-02 — docs(jjtl): R-JTG-6 and R-JTG-7 registered, A0 write-back exercised in the running app (P-2026-11-02-1838)
+**Prompt**: P-2026-11-02-1838, register the two rulings Alfonso gave on 2026-11-02 18:35, replace the Open block of SPEC 5.3.2, and probe the A0 write-back in the app: a reference between two rules in both orders, one nested creation, one two-rule cycle.
+**Files touched**: `docs/decisions.md`, `frontend/src/jjtl/SPEC.md`, this inbox, the `Status:` line of the prompt. Probe outside the repo: `~/.jjodel-lanes/P-2026-11-02-1838/probe/a0-writeback.ts` and its json.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Probe on the real Execute dialog, port 3187: rules in either order, nested creation and cycle all bind to the real target, 0 fallback warnings, ~0.6 s per run; control S5 (no Pet rule) raises the warning. Reusing one transformation tab for several runs executed a stale AST (JjtlDevelopmentEnv, not A0): one tab per scenario. Nested `name := "toy"` is not applied (both TToy are named TToy_0).
+**Prompt document name**: 2026-11-02 18:38
+
+## 2026-11-02 — feat(jjtl): A0, resolved targets bound by identity, fallbacks reported, SPEC 5.3, R-JTG (P-2026-11-02-1742)
+**Prompt**: P-2026-11-02-1742 resumed on Alfonso's GO: parity serializer change approved on condition every rule target's content is still compared as a root; Steps 3 to 6.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts`, `traceModel.ts`, `__tests__/bind-resolved-target.test.ts`, `__tests__/source-collections-in-expressions.test.ts`, `__tests__/resolution-fallbacks.test.ts` (new), `frontend/src/jjtl/__tests__/jjel-path-parity.test.ts`, `frontend/src/jjtl/SPEC.md`, `docs/decisions.md`, the discovery report, this inbox, the prompt's `Status:`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Out of scope: `jjel-path-parity.test.ts`, approved by Alfonso. Its serializer writes a rule target short outside `roots` and throws if one is not a root (every rule target is pushed to roots, `executor.ts` single creation site), so A will trip it on purpose. Gates: src/jjtl 408 passed, full suite 12905 passed (9 known import failures), typecheck 0. No app smoke: write-back read, not run.
+**Prompt document name**: 2026-11-02 17:42
+
+## 2026-11-02 — ticket: two JjTL executor tests fail once the joiner import is mocked
+**Ticket**: `executor-bridge.test.ts` "Test 5: Nested object creation" and `executor-llayer.test.ts` "forall with such that filter using item property" fail on the tip when `joiner` is mocked; both files normally fail at import (`window is not defined`), so the failures are invisible. Read, not diagnosed: Test 5 expects a nested object without the `__sourceId`/`__createdBy`/`__nested` markers added by P-2026-10-30-1330 (stale expectation); the llayer case leaves `tables[0].columns` undefined for a forall in a rule body with no target metamodel (placement of a body forall). Neither involves trace resolution: neither bears on part A.
+**Priority**: low
+**Found in**: P-2026-11-02-1742
+
+## 2026-11-02 — test(jjtl): A0 step 1, copy on bind confirmed; stopped at the step 2 inventory (P-2026-11-02-1742)
+**Prompt**: P-2026-11-02-1742, JjTL slice A0: confirming test of copy on bind, inventory of what relies on it, then binding by identity, reported fallbacks, SPEC §5.3/§12.3, R-JTG rows. Stop with a question if anything beyond `source-collections-in-expressions.test.ts:136` relies on the copy.
+**Files touched**: `frontend/src/jjtl/executor/__tests__/bind-resolved-target.test.ts` (new, d2e2c8574), this inbox, the `Status:` line of the prompt.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Copy on bind confirmed on both parse paths (4/4). Identity probe, reverted, patch in `.agent-logs/P-2026-11-02-1742-identity.patch`: `jjel-path-parity.test.ts` fails 4 fixtures (tests#126, #129, #130, SPEC.md#3, the SM2PN arcs), its serializer JSON-stringifies output that identity makes cyclic. Steps 3-6 not done; awaiting Alfonso. Gates ran through a temporary `frontend/node_modules` symlink, removed.
+**Prompt document name**: 2026-11-02 17:42
+
 ## 2026-10-21 — ticket: JjEL: 0xFF evaluates silently to 0 (lenient parse drops trailing tokens)
 **Ticket**: JjEL reads `0xFF` as the number `0` followed by the identifier `xFF`, and the lenient `parse()` keeps the first expression and drops the rest without an error (discovery `docs/discovery/discovery_2026-10-20_jjel_bitvector.md` §3.3; known defect in `docs/spec/concern_languages.md:102`, parse() does not check EOF). A hardware user writing a hex constant gets 0 silently. Expected: a parse error on trailing tokens, or hex/binary number literals; at minimum the error. Found by P-2026-10-20-2055.
 **Priority**: medium
@@ -56,3 +100,44 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (evaluator and executor only; range covered by range.test.ts and range-forall.test.ts, green on 9654de9b6)
 **Notes**: Tip moved mid-session (40dd35d28, de519893f: docs only, other chats), accepted. Merge-tree: zero conflicts, tree f7c289a56 = merge commit's; 7 files branch side, none on both, no governance file; 2 probes once each; no union. Gates on 9654de9b6: typecheck 0, typecheck:scripts 0; vitest 12401 passed, 466 files, 9 known red at import (12373 + 28); hooks 967; build 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Lane board untouched.
 **Prompt document name**: 2026-10-31 17:46
+
+## 2026-11-02 — discovery: JjTL generic transformation, Phase 1 report (P-2026-11-02-1425, P-2026-11-02-1612)
+**Prompt**: P-2026-11-02-1425: Phase 1 only of the request for one domain-free JjTL transformation (A implicit trace resolution with containment, B called/lazy rules with an environment, C multi-model sources, D inheritance matching, E slots holding fragments): verify the premises, design proposal, answers to questions 1-7, Layer Impact Report. The 1425 session stopped at the context-ceiling hook before writing; P-2026-11-02-1612 wrote the report from its handoff.
+**Files touched**: `docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md` (new), this inbox, the `Status:` lines of the two prompt files. No code.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (in the report, section 7)
+**Smoke visivo**: non applicabile
+**Notes**: Log in the lane inbox (P9), not `docs/claude-code-log.md` as the 1425 prompt says. SPEC §5.3 "NOT IMPLEMENTED" is stale (references resolve through the trace; containment does not). Recommended order A0 -> A -> B -> C0 -> D. All claims are read, none run; the snapshot copy (executor.ts:1671) must be confirmed by a test in the first Phase-2 lane.
+**Prompt document name**: 2026-11-02 14:25
+
+## 2026-11-02 — merge: jjtl-generic-transformation into alfonso-frontend-jjtl (P-2026-11-02-1905)
+**Prompt**: Bring `jjtl-generic-transformation` at `88dd98234` into the trunk with one `--no-ff` merge commit of the explicit sha (RC-14), probes on the merge-tree, gates on the merge commit, then the Status flip and this entry after the GO.
+**Files touched**: merge commit 8f14055bf (14 files from the branch: `frontend/src/jjtl/executor/executor.ts`, `traceModel.ts`, `frontend/src/jjtl/SPEC.md`, `bind-resolved-target.test.ts` (new), `resolution-fallbacks.test.ts` (new), two modified tests, `docs/decisions.md`, the discovery report, four prompt files, this inbox file); `docs/prompts/claude_2026-11-02_1905_prompt_merge_jjtl-generic-transformation.md` Status line; `docs/log-inbox/hw-notation.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, unattended: 3001 HTTP 200 on the merged tree; write-back by the P-2026-11-02-1838 probe on 88dd98234, the second parent; app not driven by hand)
+**Notes**: Tip moved after the merge (a296fefcb, docs only), accepted. Merge-tree: zero conflicts, tree 9bbb91623 = merge commit's; 14 files branch side, none on both, no governance file; 7 probes once each; no union. Gates on 8f14055bf: typecheck 0, typecheck:scripts 0; vitest 12913 passed, 490 files, 9 known red at import (12899 + 14, counted from the diff: branch tree has no node_modules); hooks 967; build 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Lane board untouched.
+**Prompt document name**: 2026-11-02 19:05
+
+## 2026-11-02 — ticket: JjTL nested creation drops name on a class without a declared name attribute
+**Ticket**: In the probe of P-2026-11-02-1838 (`~/.jjodel-lanes/P-2026-11-02-1838/probe/`, scenario S3), the nested creation `-> toys { -> TToy { name := "toy" } }` produced objects named `TToy_0`. The probe declares no `name` attribute on TToy, and `nestedMaterialization.ts:112` copies only attributes the class declares, so the cause is probably that. Inferred, not confirmed. A0 did not touch that file. Confirm the cause and decide whether a binding to an undeclared feature must be reported instead of dropped. To clear before slice A, which places containments through this path.
+**Priority**: medium
+**Found in**: P-2026-11-02-1838
+
+## 2026-11-02 — ticket: JjTL re-run in the same tab executes a stale AST
+**Ticket**: In the probe of P-2026-11-02-1838, re-running a transformation in the same tab of `JjtlDevelopmentEnv` after changing its source executed the AST of the earlier run: the trace showed the old rules, and the run looked normal. A wrong result with no signal. Seen once and worked around with a fresh tab per scenario; not investigated. Reproduce, then fix. Probe: `~/.jjodel-lanes/P-2026-11-02-1838/probe/a0-writeback.ts`.
+**Priority**: high
+**Found in**: P-2026-11-02-1838
+
+## 2026-11-02 — ticket: init_dash page error in the JjTL probe, untraced
+**Ticket**: The probe of P-2026-11-02-1838 recorded one page error, `init_dash`, on port 3187. It was not traced and nothing visibly failed. Find its origin and whether it is new.
+**Priority**: low
+**Found in**: P-2026-11-02-1838

@@ -21,6 +21,7 @@ import {
     isTextualOption,
     TEXTUAL_OPTION_ICON,
     TEXTUAL_OPTION_VALUE,
+    textualLanguageNameOf,
     textualOptionLabel,
 } from './dataManagerOption';
 import { useCodegenEnabled } from '../../codegen/setting';
@@ -335,6 +336,8 @@ function Toolbar({
     // The textual entry shows only when both the setting and the build flag are on (R-GEN-2).
     const codegenEnabled = useCodegenEnabled() && CODEGEN_BUILD;
     const metamodelName = useSelector((state: any) => metamodelNameOf(state.idlookup, modelId)) as string;
+    // The language's name, when the metamodel's syntax annotations set one (R-TXT-25 (12)): the entry's label then.
+    const languageName = useSelector((state: any) => textualLanguageNameOf(state.idlookup, modelId)) as string | null;
 
     // ── VIEW group enablement ──
     // Notation and Theme govern the abstract-syntax rendering. As soon as a concrete-syntax
@@ -374,7 +377,8 @@ function Toolbar({
         // the manager is. The label is read from the store here, so the handler keeps its `[modelId]` deps.
         if (isTextualOption(vpId)) {
             if (!modelId) return;
-            const label = textualOptionLabel(metamodelNameOf((store.getState() as any).idlookup, modelId));
+            const lookup = (store.getState() as any).idlookup;
+            const label = textualOptionLabel(metamodelNameOf(lookup, modelId), textualLanguageNameOf(lookup, modelId));
             if (CODEGEN_BUILD) void import('../../codegen/textual/ui/openTextualTab').then(m => m.openTextualTab(modelId, label));
             return;
         }
@@ -429,7 +433,7 @@ function Toolbar({
             if (codegenEnabled) {
                 syntaxEntries.push({
                     value: TEXTUAL_OPTION_VALUE,
-                    label: textualOptionLabel(metamodelName),
+                    label: textualOptionLabel(metamodelName, languageName),
                     icon: TEXTUAL_OPTION_ICON,
                     sep: true,
                 });

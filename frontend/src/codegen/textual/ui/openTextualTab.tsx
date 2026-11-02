@@ -9,22 +9,28 @@
  * pick activates the open tab instead of mounting another; no change to DockManager or TabDataMaker. The title carries
  * `data-type="textual"`, not `model`: Dock.tsx `handleLayoutChange` reads that attribute, and `model` would announce
  * the tab's id as a model's. The app bar lists the tab by its `appBarTitle` (Navbar.tsx `syncTabs`), null once the
- * model or the metamodel is gone.
+ * model or the metamodel is gone. The label is the picker's (dataManagerOption.ts `textualOptionLabel`), read live
+ * from the store, so the language's name a record sets after the tab opened shows in the app bar too.
+ *
+ * `writeTextualSyntax` stores a metamodel's syntax annotations (syntaxRecord.ts), the one write of the record until
+ * its editing UI (step T4b).
  */
 
 import type { TabData } from 'rc-dock';
 import DockManager from '../../../components/abstract/DockManager';
-import { DUser, L, U, store } from '../../../joiner';
+import { DUser, L, LPointerTargetable, U, store } from '../../../joiner';
 import type { LModel, LProject } from '../../../joiner';
 import { COMMIT } from '../../../redux/action/action';
 import { beginUndoGroup, endUndoGroup } from '../../../redux/reducer/reducer';
 import { buildPlanWorld } from '../../../jjscript/executor/planWorld';
 import { applyAsOneStep } from '../../../components/editor-v2/preview/PreviewBar';
-import { textualOptionLabel } from '../../../components/editor-v2/dataManagerOption';
+import { TEXTUAL_SYNTAX_KEY, textualLanguageNameOf, textualLanguageOf, textualOptionLabel } from '../../../components/editor-v2/dataManagerOption';
 import { createM1 } from '../../../pages/components/Navbar';
 import { JjScriptEvents } from '../../../events/registry';
 import { toast } from '../../../components/Toast/toastDispatch';
 import type { AppBarTabHooks } from '../../ui/generatorTabs';
+import type { SyntaxAnnotations } from '../annotations';
+import { storedSyntax, syntaxPatch } from '../syntaxRecord';
 import TextualTab, { NewTextualTab } from './TextualTab';
 
 /** The prefix of a Text tab's id. */
@@ -38,6 +44,22 @@ export const newTextualTabId = (metamodelId: string): string => `${TEXTUAL_TAB_P
 const lookupOf = (): Record<string, any> => (store.getState() as any)?.idlookup ?? {};
 const nameOf = (o: any): string | null => (typeof o?.name === 'string' && o.name ? o.name : null);
 
+/** The label of the metamodel `mm`'s textual entry: the language's name when its record sets one, else its name. */
+const metamodelLabel = (mm: any): string => textualOptionLabel(nameOf(mm), textualLanguageOf(mm?._state?.[TEXTUAL_SYNTAX_KEY]));
+
+/**
+ * Stores `record` as the syntax annotations of the metamodel `metamodelId`: one `state` assignment, one undo step, as
+ * a generator's Save (TemplateEditorTab.tsx). Nothing is written when the record is the stored one. False when the
+ * metamodel is not in the store.
+ */
+export function writeTextualSyntax(metamodelId: string, record: SyntaxAnnotations): boolean {
+    const lookup = lookupOf();
+    if (!lookup[metamodelId]) return false;
+    const patch = syntaxPatch(storedSyntax(lookup, metamodelId), record);
+    if (patch) (LPointerTargetable.fromPointer(metamodelId as any) as any).state = patch;
+    return true;
+}
+
 /** Opens, or brings forward, the Text tab of `modelId`, titled with `label`; false when the dock or the model is missing. */
 export function openTextualTab(modelId: string, label: string): boolean {
     if (!DockManager.dock || !modelId) return false;
@@ -47,8 +69,11 @@ export function openTextualTab(modelId: string, label: string): boolean {
     const name = nameOf(model) ?? 'Unnamed';
     const appBar: AppBarTabHooks = {
         appBarTitle: () => {
-            const m = lookupOf()[modelId];
-            return m ? `${nameOf(m) ?? 'Unnamed'} · ${label}` : null;
+            const lookup = lookupOf();
+            const m = lookup[modelId];
+            if (!m) return null;
+            const live = lookup[m.instanceof] ? textualOptionLabel(nameOf(lookup[m.instanceof]), textualLanguageNameOf(lookup, modelId)) : label;
+            return `${nameOf(m) ?? 'Unnamed'} · ${live}`;
         },
         requestClose: () => { DockManager.closeTab(id); },
     };
@@ -86,9 +111,9 @@ export function openNewModelTab(metamodelId: string): boolean {
     const mm = lookupOf()[metamodelId];
     if (!mm) return false;
     const id = newTextualTabId(metamodelId);
-    const label = textualOptionLabel(nameOf(mm));
+    const label = metamodelLabel(mm);
     const appBar: AppBarTabHooks = {
-        appBarTitle: () => (lookupOf()[metamodelId] ? `New model · ${textualOptionLabel(nameOf(lookupOf()[metamodelId]))}` : null),
+        appBarTitle: () => (lookupOf()[metamodelId] ? `New model · ${metamodelLabel(lookupOf()[metamodelId])}` : null),
         requestClose: () => { DockManager.closeTab(id); },
     };
     const tab: TabData & AppBarTabHooks = {

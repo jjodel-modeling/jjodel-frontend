@@ -54,3 +54,46 @@ P-2026-11-01-1945 (index read traced): partial, reads now reach the reads list b
 P-2026-11-01-1946 (shipped JjEL generator, frontend/src/examples/codegen/default-text.generator.json): done, merged 0e5d9152d; runs on the fixture, CoreSpec and ArbiterSpec.
 
 Open for Alfonso: (a) a short origin.ts lane for index holes; (b) a declarative notation model (textual viewpoint) as the final mechanism, the JjEL generator being the reference implementation of R-TXT; (c) keep ref(o, r, t) and the [k] root prefix; (d) record the R-TXT-1 tie-break between sibling supertypes; (e) R-TXT-5 is tested on a mock handle only, one in-app check needed.
+
+## Night 2026-11-01/02 (/lane auto, Alfonso asleep from 23:50)
+
+Decisions ratified before the night: R-TXT-16..24 (three-level syntax, model as source of truth, identity, application,
+comments, the ten answers of the addendum, identity inside the editor, the textual entry as a viewpoint-like entry,
+top level and single containment). The codegen front is owned by this chat (C-2026-11-01-1713).
+
+Landed on `alfonso-frontend-jjtl`, in order: textual syntax addendum (merge ddf1088d9); Ecore import keeps defaults and
+literal values (44c6794f2); T1 base grammar, C-like style and printer (3166319dd); Ecore export of defaults, literal
+labels and serializable on import (6b2bfeb36); JjEL reads the declared default literal (4383c2572); T3 style checks
+(3008d69b5); T2 in three slices, parser (45c883e92), textual entry and read-only Text tab (7bd41e3cf), New model from
+text (edf047bf3), merged as aa68ad049. T2b and T2c each hit the context ceiling once and were closed by continuation
+lanes (RC-51). Tickets opened: #403 (XMI import), #408 (JjGen call-argument origins).
+
+Adopted unattended (RC-21): the textual entry shows only with the code-generation setting on (R-GEN-2); the canvas of a
+model created from text opens inside the undo group, so that one undo removes it.
+
+Open for Alfonso: see the morning digest in the chat (twelve questions with recommendations).
+
+## Morning 2026-11-02
+
+Ratified: R-TXT-25 (the twelve answers of the night digest, 06:43) and R-TXT-26 (an edited text is applied on a pause,
+only when clean, 08:34).
+
+Landed on `alfonso-frontend-jjtl`: unambiguous paths `Class[k]`/`feature[k]`, fold fallback on style words, shared
+test corpus (b7c0adfc2); undo of «Create model» closes the canvas tab and Text tabs have an app-bar badge (41c7c0d8a);
+`defaultValueLiteral` accessors restored, decimals refused on integer defaults, lazy gate off mode independent of
+`.env.production` (247007a7b); JjScript M1 `set` with lists and enumeration literals, `modelLines` no longer blocks
+many-valued attributes (a53423995, after P-2026-11-02-0855 took the trunk); codegen imports guarded so the lazy gate is
+green in both modes (e684fef6c).
+
+T4 is split (RC-52): T4a-1 (annotations as data and their application in derivation, printer, parser; acceptance on
+the 16 Briefs), T4a-2 (storage in `_state`, wiring, language-name label), T4b (the form). P-2026-11-02-0846 wrote the
+T4a-1 design in `~/.jjodel-lanes/P-2026-11-02-0846/handoff.md` and stopped at the context ceiling; its continuation
+waits for two answers from Alfonso: (1) `CoreSpec.ecore` declares `Instruction.mnemonic [0..1]`, so R-TXT-21 (4) refuses
+the RISC-V grouping (recommended: `[1..1]` in the prototype's metamodel); (2) a one-line class without block reads the
+next word as its name (recommended: the annotation requires a mandatory name, not a notice).
+
+Next: T4a-1 continuation, T4a-2, T4b, then T6 (apply edits on pause, R-TXT-26). Other open points: a quoted string on
+an enum attribute is not checked against the literals; redo after the undo of a model creation does not reopen its tab;
+a model's Text tab stays hidden when its model disappears.
+
+Later on 2026-11-02: R-TXT-27 ratified (09:52); T4a-1 landed, syntax annotations as data applied in grammar, printer and parser, LL(1) check of annotated grammars, the 16 Briefs reproduced (merge c41033a9a). The prototype metamodels need `Instruction.mnemonic [1..1]` (CoreSpec) and `Requester.name [1..1]` (ArbiterSpec), outside Jjodel. Next: T4a-2 (storage in `_state`, language-name label), T4b (form), T6 (apply on pause, R-TXT-26).

@@ -24,6 +24,7 @@ import {
     DeleteArgs,
     RenameArgs,
     SetArgs,
+    LiteralValue,
     AddArgs,
     RemoveArgs,
     MoveArgs,
@@ -1167,22 +1168,45 @@ export class Parser {
     }
 
     /**
-     * Parse: forall <var> in <collection> [such that <filter>] do <command>
+     * Parse: forall <bindings> [such that <filter>] do <command>
+     * bindings = names 'in' <collection> (',' names 'in' <collection>)*   (R-FA-7, as JjEL 5.1.1)
+     * Several variables desugar to nested ForAllArgs, first variable outermost, the filter and
+     * the body on the innermost; `x, y in S` shares the collection text of S.
      */
     private parseForAllCommand(): ForAllArgs {
-        this.advance(); // consume 'forall'
+        const forallToken = this.advance(); // consume 'forall'
+        const position = { line: forallToken.line, column: forallToken.column };
 
-        const variable = this.expectIdentifier('variable name');
+        const bindings: Array<{ variable: string; collectionExpr: string }> = [];
+        const seen = new Set<string>();
+        do {
+            const names = [this.expectIdentifier('variable name')];
+            while (this.peek().type === 'PUNCTUATION' && this.peek().value === ',') {
+                this.advance();
+                names.push(this.expectIdentifier('variable name'));
+            }
+            if (!this.matchKeyword('in')) {
+                throw new Error(names.length === 1
+                    ? "Expected 'in' after variable name in forall"
+                    : "Expected 'in' after variable names in forall");
+            }
+            for (const n of names) {
+                if (seen.has(n)) throw new Error(`Variable '${n}' is bound twice in one forall`);
+                seen.add(n);
+            }
 
-        if (!this.matchKeyword('in')) {
-            throw new Error("Expected 'in' after variable name in forall");
-        }
-
-        // Collect collection expression until 'such' or 'do' at depth 0
-        const collectionExpr = this.collectExprRawUntil(['do', 'such']);
-        if (!collectionExpr) {
-            throw new Error("Expected collection expression after 'in' in forall");
-        }
+            // Collection text until 'such' or 'do', or a ',' that continues the binding list
+            const collectionExpr = this.collectExprRawUntil(['do', 'such'], true);
+            if (!collectionExpr) {
+                throw new Error("Expected collection expression after 'in' in forall");
+            }
+            for (const n of names.slice(0, -1)) {
+                if (new RegExp(`(?<![\\w.$])${n.replace(/[$]/g, '\\$')}(?![\\w$])`).test(collectionExpr)) {
+                    throw new Error(`The collection of '${names.join(', ')} in ...' reads '${n}', which the list itself binds: rename the variable`);
+                }
+            }
+            for (const n of names) bindings.push({ variable: n, collectionExpr });
+        } while (this.peek().type === 'PUNCTUATION' && this.peek().value === ',' && this.advance());
 
         // Check for optional 'such that' filter
         let filterExpr: string | undefined;
@@ -1204,14 +1228,36 @@ export class Parser {
         // Parse body — single command or multiple commands until 'end'
         const body = this.parseBlockOrCommand('forall');
 
-        return { command: 'forall', variable, collectionExpr, filterExpr, body };
+        const last = bindings[bindings.length - 1];
+        let result: ForAllArgs = { command: 'forall', variable: last.variable, collectionExpr: last.collectionExpr, filterExpr, body };
+        for (let i = bindings.length - 2; i >= 0; i--) {
+            result = {
+                command: 'forall',
+                variable: bindings[i].variable,
+                collectionExpr: bindings[i].collectionExpr,
+                body: { type: 'Command', command: 'forall', args: result, position },
+            };
+        }
+        return result;
+    }
+
+    /** At ',' : the binding list goes on only if `IDENT (',' IDENT)* 'in'` follows (as JjEL). */
+    private bindingContinues(): boolean {
+        const at = (k: number) => this.tokens[this.current + k];
+        const isComma = (t?: Token) => t?.type === 'PUNCTUATION' && t.value === ',';
+        const isName = (t?: Token) => t?.type === 'IDENTIFIER' || t?.type === 'KEYWORD';
+        const isIn = (t?: Token) => isName(t) && t!.value.toLowerCase() === 'in';
+        if (!isComma(at(0)) || !isName(at(1)) || isIn(at(1))) return false;
+        let k = 1;
+        while (isComma(at(k + 1)) && isName(at(k + 2))) k += 2;
+        return isIn(at(k + 1));
     }
 
     /**
      * Collect raw expression text from the original input until one of the
      * stop keywords at parenthesis depth 0 (or end of input).
      */
-    private collectExprRawUntil(stopKeywords: string[]): string {
+    private collectExprRawUntil(stopKeywords: string[], stopAtBinding = false): string {
         const startToken = this.peek();
         const startPos = startToken.position;
         let depth = 0;
@@ -1222,6 +1268,7 @@ export class Parser {
             if (token.type === 'PUNCTUATION') {
                 if (token.value === '(') depth++;
                 else if (token.value === ')') { if (depth > 0) depth--; }
+                else if (stopAtBinding && depth === 0 && token.value === ',' && this.bindingContinues()) break;
             }
 
             if (depth === 0 && (token.type === 'KEYWORD' || token.type === 'IDENTIFIER')) {
@@ -1313,6 +1360,11 @@ export class Parser {
             }
         }
 
+        // A list `[v1, v2, ...]` (R-TXT-25 (2)): the values of a many-valued attribute.
+        if ((token.type === 'PUNCTUATION' && token.value === '[') || token.type === 'MULTIPLICITY') {
+            return this.parseListValue();
+        }
+
         // Check for $variable reference (PUNCTUATION '$' + IDENTIFIER)
         if (token.type === 'PUNCTUATION' && token.value === '$') {
             this.advance(); // consume '$'
@@ -1323,6 +1375,38 @@ export class Parser {
 
         // Otherwise, treat as qualified name
         return this.parseQualifiedNameToken();
+    }
+
+    /**
+     * `[v1, v2, ...]`, `[]` included: each value a literal or a name (an enumeration literal).
+     * The lexer reads `[1]` as a MULTIPLICITY token (`readMultiplicityOrPunctuation`), so a
+     * one-number list arrives that way; any other multiplicity is not a list.
+     */
+    private parseListValue(): LiteralValue {
+        const open = this.advance();
+        if (open.type === 'MULTIPLICITY') {
+            if (/^\[-?\d+(\.\d+)?\]$/.test(open.value)) return { kind: 'array', values: [parseLiteralValue(open.value.slice(1, -1))] };
+            throw new Error(`Expected a list of values, found '${open.value}'`);
+        }
+        const values: LiteralValue[] = [];
+        const isClose = () => this.peek().type === 'PUNCTUATION' && this.peek().value === ']';
+        if (!isClose()) {
+            do {
+                const v = this.parseValueOrQualified();
+                if ('kind' in v && v.kind === 'array') throw new Error('A list cannot hold a list');
+                // A name is an enumeration literal: `L`, `E.L` or `E::L` (the executor checks it).
+                values.push('kind' in v ? v : this.nameAsEnumLiteral(v));
+            } while (this.matchComma());
+        }
+        if (!isClose()) throw new Error(`Expected ',' or ']' in a list, found '${this.peek().value}'`);
+        this.advance();
+        return { kind: 'array', values };
+    }
+
+    private nameAsEnumLiteral(qn: QualifiedName): LiteralValue {
+        if (qn.member) return { kind: 'enumLiteral', enum: { segments: qn.segments, raw: qn.segments.join('::') }, literal: qn.member };
+        const segs = qn.segments;
+        return { kind: 'enumLiteral', enum: { segments: segs.slice(0, -1), raw: segs.slice(0, -1).join('::') }, literal: segs[segs.length - 1] ?? qn.raw };
     }
 
     private expectIdentifier(what: string): string {

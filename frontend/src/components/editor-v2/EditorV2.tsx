@@ -59,6 +59,7 @@ import { revealViewport } from './utils/revealNode';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
 import { openViewportFallback, type NodeRect } from './openViewport';
+import { canRenderOnlyVisible } from './onlyRenderVisible';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
 import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
@@ -1706,6 +1707,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // resize, drop and connect paths below.
     const irContainmentRef = useRef(irContainment);
     irContainmentRef.current = irContainment;
+
+    // React Flow renders only the elements in view (P-2026-11-02-0020) unless a view that can draw an object on
+    // canvas needs its node mounted: a graphVertex container, or a box derived from content (onlyRenderVisible.ts).
+    // Keyed on the containment model, which follows the viewpoint and the node set; with no IR viewpoint it is the
+    // same empty model on every render, so this runs once.
+    const onlyRenderVisible = useMemo(() => {
+        const model = irContainment.model;
+        if (model.objByVertex.size === 0) return true;
+        const state: any = store.getState();
+        const index = getIRIndex(state, computeIRSignature(state));
+        return canRenderOnlyVisible(index, state.idlookup ?? {}, model.objByVertex.values(), model.containers.size);
+    }, [irContainment.model]);
 
     /**
      * Membership slot edits of a graphVertex gesture (S3, R-GV-8): an append through the L-proxy `.values` setter, as
@@ -4936,6 +4949,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 zoomOnPinch={true}
                 deleteKeyCode={null}
                 connectionRadius={40}
+                onlyRenderVisibleElements={onlyRenderVisible}
             >
                 <svg className="editor-v2__dot-grid" style={{ opacity: gridVisible ? 1 : 0 }}>
                     <defs>

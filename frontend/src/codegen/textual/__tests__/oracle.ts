@@ -87,13 +87,12 @@ export function nearleyGrammarOf(g: ConcreteGrammar): nearley.Grammar {
     add('$BOOL', [word('true')]);
     add('$BOOL', [word('false')]);
     add('$STRING', [kind('string')]);
-    // R-TXT-4, R-TXT-11: a name, or a path `[k]`, `f`, `f[i]` joined by dots.
-    add('$REF', ['$refHead']);
-    add('$REF', ['$REF', '$refTail']);
-    add('$refHead', ['$NAME']);
-    add('$refHead', [punct('['), kind('int'), punct(']')]);
-    add('$refTail', [punct('.'), kind('word')]);
-    add('$refTail', [punct('['), kind('int'), punct(']')]);
+    // R-TXT-4, R-TXT-25 (5, 6): a name, or a path of segments `C[k]`, `f[i]` joined by dots.
+    add('$REF', ['$NAME']);
+    add('$REF', ['$refPath']);
+    add('$refPath', ['$refSeg']);
+    add('$refPath', ['$refPath', punct('.'), '$refSeg']);
+    add('$refSeg', [kind('word'), punct('['), kind('int'), punct(']')]);
 
     const symbols = (n: GrammarNode): Sym[] => {
         switch (n.t) {
@@ -181,7 +180,7 @@ export function generateSamples(g: ConcreteGrammar): Sample[] {
         FLOAT: ['1.5', '2', '-0.25'],
         BOOL: ['true', 'false'],
         STRING: ['top', 'say "hi" \\ bye', 'line1\nline2', ''].map(quote),
-        REF: ['x', 'size', 'parts[1]', '[0].wheels[0].bolts[0]', 'inner.label', 'has space', '[2]'].map(v => (/[.[]/.test(v) ? v : asName(v))),
+        REF: ['x', 'size', 'Sys[0].parts[1]', 'Car[0].wheels[0].bolts[0]', 'Box[0].inner[0].label[0]', 'has space', 'Part[2]'].map(v => (/[.[]/.test(v) ? v : asName(v))),
     };
     const counters = new Map<object, number>();
     const next = (key: object, mod: number): number => {

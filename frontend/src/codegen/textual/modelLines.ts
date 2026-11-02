@@ -8,12 +8,14 @@
  * identifier, unique in the text, not a word the JjScript lexer reserves or reads as a literal, and not the name of a
  * class or enumeration; otherwise a generated `<Class>_<n>` free of every name in the text, followed by
  * `set h.name = "…"` when the object has a name. A nameless object of a class with a name takes its handle as name,
- * as any instance created without one. An enumeration value is written as the literal's name, which the `set`
- * attribute branch stores as given (handoff of P-2026-11-01-2355).
+ * as any instance created without one. A many-valued attribute is written as a list, `set h.f = [v1, v2]`, which
+ * replaces its values; an enumeration value as the bare literal, which `set` checks against the attribute's
+ * enumeration and stores by name (R-TXT-25 (2), P-2026-11-02-0651). A literal JjScript would not read back as a name
+ * (reserved, a literal word, not an identifier, or not a literal of the enumeration) is written as a string, which
+ * `set` stores as given: the same name.
  *
- * What JjScript cannot write today is a problem, and any problem blocks the creation: a many-valued attribute with two
- * values or more (`set` writes one value, `+=` is refused on attributes), a class name the lexer reads as a word of its
- * own, a feature name that is not an identifier. The first value of such an attribute is still written.
+ * What JjScript cannot write today is a problem, and any problem blocks the creation: a class name the lexer reads as
+ * a word of its own, a feature name that is not an identifier.
  */
 
 import { isReservedIdentifier } from '../../jjscript/reservedIdentifiers';
@@ -61,8 +63,9 @@ export function jjscriptNumber(n: number): string {
     return `${m[1]}${digits.slice(0, point)}.${digits.slice(point)}`;
 }
 
-const valueText = (v: unknown): string =>
-    typeof v === 'number' ? jjscriptNumber(v) : typeof v === 'boolean' ? String(v) : jjscriptString(String(v));
+const valueText = (v: unknown, literals?: readonly string[]): string =>
+    typeof v === 'number' ? jjscriptNumber(v) : typeof v === 'boolean' ? String(v)
+        : typeof v === 'string' && literals?.includes(v) && isWord(v) ? v : jjscriptString(String(v));
 
 /** The lines that build `objects` (a parse that `isApplicableParse` accepts) in an empty model of `mm`. */
 export function modelLines(mm: TextMetamodel, objects: readonly TextObject[]): ModelLines {
@@ -139,10 +142,9 @@ export function modelLines(mm: TextMetamodel, objects: readonly TextObject[]): M
             }
             const values = asArray(o.slots[f.name]);
             if (values.length === 0 || !writable(o, f)) continue;
-            if (values.length > 1) {
-                problems.push({ id: o.id, feature: f.name, message: `${f.name} holds ${values.length} values: a many-valued attribute with more than one value is not writable by JjScript yet` });
-            }
-            lines.push(`set ${h}.${f.name} = ${valueText(values[0])}`);
+            const literals = mm.enumerations.find(e => e.name === f.type)?.literals;
+            const text = f.many ? `[${values.map(v => valueText(v, literals)).join(', ')}]` : valueText(values[0], literals);
+            lines.push(`set ${h}.${f.name} = ${text}`);
         }
     }
     for (const o of objects) {
