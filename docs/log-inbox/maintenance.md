@@ -537,3 +537,22 @@ Expected: the abstract-syntax viewport is restored on reopen like the viewpoint 
 Expected: measure it on the trunk first (open, auto layout, time to the fit, longest task, where the time goes: ELK layout, port distribution, React commit). A layout that takes minutes should at least run off the main thread or show progress and be cancellable.
 **Priority**: medium
 **Found in**: P-2026-11-02-1856
+
+## 2026-11-02 — feat(jjscript): rename to a JjEL expression (P-2026-11-02-2030)
+**Prompt**: R-FA-9: `rename ... to/as <expression>`; a single name followed by the end of the command stays literal, anything else is JjEL evaluated per execution with the forall variables and let bindings; errors carry expression and value; tests, help, one prompt line.
+**Files touched**: bd161d1a9 (discovery `docs/discovery/discovery_2026-11-02_jjscript_rename_expression.md`); 62522c9bf (7 files: `frontend/src/jjscript/parser/parser.ts`, `types.ts`, `executor/commands/rename.ts`, `executor/effectsPlanner.ts`, `executor/commands/help.ts`, `executor/__tests__/renameExpression.test.ts` new, `frontend/src/constants/defaultPrompts.ts`); Status of the 2030 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 7 files, all named by the prompt (effectsPlanner because it would plan a rename to the source text). R-FA-9 deviation: a single name before a trailing `in` stays literal (defaultPrompts.ts:147 form). Old `to "A_" + c.name` silently renamed to `A_` (F1). Gates: tsc 0, vitest jjscript+jjel 1448 passed (context-binding the known failure), build 0. Temp node_modules symlink, removed. Details: the discovery report.
+**Prompt document name**: 2026-11-02 20:30
+
+## 2026-11-02 — ticket: forall rename of same-named elements fails as ambiguous
+**Ticket**: `executeForAll` substitutes the iteration variable in the body by the element's name (`forall.ts:79-82`), and the command resolves that name again. With two classes of one name in a metamodel, `resolveTargetInProject` returns `ambiguousWith` (measured on `e5e60dca4`), so `forall a, b in classes such that a != b and a.name == b.name do rename b to b.name + "_dup"` refuses every pair with `AMBIGUOUS_TARGET`, whatever the new name. Expected: the body acts on the iterated element (substitute by id, or pass the element through the context).
+**Priority**: medium
+**Found in**: P-2026-11-02-2030
+**Detail**: docs/discovery/discovery_2026-11-02_jjscript_rename_expression.md
