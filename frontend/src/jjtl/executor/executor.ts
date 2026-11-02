@@ -3163,9 +3163,9 @@ export class JjtlExecutor {
     }
 
     /** True when `value` holds something realizeDemands would replace. */
-    private needsRealization(value: any): boolean {
-        if (Array.isArray(value)) return value.some(el => this.needsRealization(el));
-        return this.demandOf(value) !== undefined || this.sourceRuleOf(value) !== undefined;
+    private needsRealization(value: any, fresh = false): boolean {
+        if (Array.isArray(value)) return value.some(el => this.needsRealization(el, fresh));
+        return this.demandOf(value) !== undefined || this.sourceRuleOf(value, fresh) !== undefined;
     }
 
     /**
@@ -3173,10 +3173,11 @@ export class JjtlExecutor {
      * the current environment: a delegating rule always (its result exists only once
      * applied), any rule under a non-empty environment (implicit resolution inherits the
      * environment down to the leaves, R-JTG-6). Otherwise undefined: the pass 1 target
-     * answers, through the resolution that follows. For a class of lazy rules, the
-     * candidates instead: realizeLazy selects one.
+     * answers, through the resolution that follows, unless `fresh` asks for a new
+     * lowering (a bound value, step 5). For a class of lazy rules, the candidates
+     * instead: realizeLazy selects one.
      */
-    private sourceRuleOf(value: any): { element: any; rule?: ClassMappingAST; lazy?: ClassMappingAST[] } | undefined {
+    private sourceRuleOf(value: any, fresh = false): { element: any; rule?: ClassMappingAST; lazy?: ClassMappingAST[] } | undefined {
         if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
         if (value.__createdBy === 'JjTL' || this.demandOf(value) || this.environmentOf(value)) return undefined;
         const element = this.asSourceElement(value);
@@ -3189,7 +3190,7 @@ export class JjtlExecutor {
         // Ambiguity and absence stay with resolveValue, which reports them.
         if (!rules || rules.length !== 1) return undefined;
         const rule = rules[0];
-        if (!rule.result && this.currentEnvironment() === EMPTY_ENVIRONMENT) return undefined;
+        if (!rule.result && !fresh && this.currentEnvironment() === EMPTY_ENVIRONMENT) return undefined;
         return { element, rule };
     }
 
@@ -3244,13 +3245,15 @@ export class JjtlExecutor {
      * closure lowers its value under its own environment, a source element is lowered as
      * sourceRuleOf says; each is replaced by the result, flattened into an enclosing
      * collection. Any other value is returned unchanged, for the resolution that follows.
+     * With `fresh`, a source element of a matched class is lowered anew by its rule, not
+     * looked up: a bound value lowers like a lazy node (step 5, R-JTG-6, R-JTG-7).
      */
-    private async realizeDemands(value: any): Promise<any> {
-        if (!this.needsRealization(value)) return value;
+    private async realizeDemands(value: any, fresh = false): Promise<any> {
+        if (!this.needsRealization(value, fresh)) return value;
         if (Array.isArray(value)) {
             const out: any[] = [];
             for (const el of value) {
-                const realized = await this.realizeDemands(el);
+                const realized = await this.realizeDemands(el, fresh);
                 if (Array.isArray(realized) && !Array.isArray(el)) out.push(...realized);
                 else out.push(realized);
             }
@@ -3259,8 +3262,14 @@ export class JjtlExecutor {
         const demand = this.demandOf(value);
         if (demand?.kind === 'call') return this.applyRule(demand.rule, { args: demand.args, env: demand.callerEnv });
         if (demand?.kind === 'closure') return this.realizeClosure(demand);
-        const { element, rule, lazy } = this.sourceRuleOf(value)!;
+        const { element, rule, lazy } = this.sourceRuleOf(value, fresh)!;
         if (lazy) return this.realizeLazy(element, lazy);
+        if (fresh) {
+            // Untraced: a reference to the element still means its pass 1 target.
+            const lowered = await this.applyRule(rule!, { source: element, env: this.currentEnvironment(), untraced: true });
+            if (rule!.result) this.stats.classMappingsExecuted++;
+            return lowered;
+        }
         return this.realizeSource(element, rule!, this.currentEnvironment());
     }
 
@@ -3286,7 +3295,9 @@ export class JjtlExecutor {
     /**
      * The value bound to a name, lowered where it was written: under the environment of
      * its binding site, so the names of the use site are not captured (R-JTG-5). The
-     * closure is a frame of its own on the application stack.
+     * closure is a frame of its own on the application stack. Each lookup lowers it
+     * afresh, even when the binding site's environment is empty: never a shared pass 1
+     * target, so one bound value may be placed twice (R-JTG-6).
      */
     private async realizeClosure(demand: ClosureDemand): Promise<any> {
         const { closure } = demand;
@@ -3296,7 +3307,7 @@ export class JjtlExecutor {
         this.checkDepth(`binding ${demand.name}`, frame);
         this.applicationStack.push(frame);
         try {
-            return await this.realizeDemands(closure.value);
+            return await this.realizeDemands(closure.value, true);
         } finally {
             this.applicationStack.pop();
         }
@@ -3319,7 +3330,7 @@ export class JjtlExecutor {
      */
     private async applyRule(
         rule: ClassMappingAST,
-        app: { source?: any; args?: any[]; env: TraceEnvironment },
+        app: { source?: any; args?: any[]; env: TraceEnvironment; untraced?: boolean },
     ): Promise<any> {
         const label = this.ruleLabel(rule);
         const source = rule.ruleKind === 'called' ? this.calledRuleSource(rule, app.args ?? []) : app.source;
@@ -3370,7 +3381,7 @@ export class JjtlExecutor {
                 className: rule.targetClass,
             };
             const traceLink = this.context.traceBuilder.addLink(label, sourceRef, [targetRef], !!rule.condition);
-            if (sourceElement) {
+            if (sourceElement && !app.untraced) {
                 this.registerTargetsBySourceName(sourceElement, [target], rule, rule.targetClass, env);
             }
 

@@ -370,3 +370,113 @@ lazy Const -> Const {
         expect(result.errors[0]).toMatch(/Ambiguous rules for 'Const': matched 'Const -> Const' and lazy 'lazy Const -> Const'/);
     });
 });
+
+// ---------------------------------------------------------------------------
+// Containment under B (step 5, R-JTG-6): a call of a rule not `unique`, a lazy node and a
+// bound value each lower to a fresh subtree, so one expression may be placed twice; the
+// double-claim error stays for implicit resolutions and `unique` rules.
+
+describe.each([
+    ['legacy parser (no source)', false],
+    ['JjEL parser (source)', true],
+] as const)('containment under B — %s', (_label, withSource) => {
+    const run = (rules: string, source: any[]) => execute(parseJjtl(rules, withSource), source, TARGET);
+    const rootTerms = (result: any) => result.targetModel!.roots.map(term).sort();
+    // Add(Bind(e, [x := c1]), Bind(e, [x := ?])), e = Add(Var x, Const 0): e placed twice.
+    const twice = (secondBinding: string) => [
+        el('m1', 'Main', { expr: ref('a0') }),
+        add('a0', 'b1', 'b2', 'm1'),
+        bind('b1', 'e1', ['bd1'], 'a0'),
+        bind('b2', 'e1', [secondBinding], 'a0'),
+        add('e1', 'vx', 'c0', 'b1'),
+        v('vx', 'x', 'e1'),
+        k('c0', 0, 'e1'),
+        binding('bd1', 'x', 'c1', 'b1'),
+        k('c1', 1, 'bd1'),
+        binding('bd2', 'x', 'c2', 'b2'),
+        k('c2', 2, 'bd2'),
+    ];
+
+    it('places one expression twice with the same bindings as two separate subtrees', async () => {
+        const result = await run(ENV_RULES, twice('bd1'));
+        expect(result.errors).toEqual([]);
+        expect(rootTerms(result)).toEqual(['Add(Add(Const(1), Const(0)), Add(Const(1), Const(0)))']);
+        const root = result.targetModel!.roots[0];
+        const [l, r] = [root.left, root.right].map(x => (Array.isArray(x) ? x[0] : x));
+        expect(l).not.toBe(r);
+        expect(result.targetModel!.instances.get('Add')).toHaveLength(3);
+    });
+
+    it('places one expression twice with different bindings as two different subtrees', async () => {
+        const result = await run(ENV_RULES, twice('bd2'));
+        expect(result.errors).toEqual([]);
+        expect(rootTerms(result)).toEqual(['Add(Add(Const(1), Const(0)), Add(Const(2), Const(0)))']);
+    });
+
+    it('lowers a bound value of a matched class afresh, never to its shared pass 1 target', async () => {
+        // Bind(Add(Var x, Var x), [x := Const 5]) with Const matched: the binding site's
+        // environment is empty, and x is placed twice without a second claim.
+        const rules = ENV_RULES.replace('lazy Const -> Const', 'Const -> Const');
+        const result = await run(rules, [
+            el('m1', 'Main', { expr: ref('b1') }),
+            bind('b1', 'a1', ['bd1'], 'm1'),
+            add('a1', 'vx', 'vx2', 'b1'),
+            v('vx', 'x', 'a1'),
+            v('vx2', 'x', 'a1'),
+            binding('bd1', 'x', 'c5', 'b1'),
+            k('c5', 5, 'bd1'),
+        ]);
+        expect(result.errors).toEqual([]);
+        // The pass 1 Const stays a root of its own: nothing claims it.
+        expect(rootTerms(result)).toEqual(['Add(Const(5), Const(5))', 'Const(5)']);
+    });
+
+    it('still reports a second claim through an implicit resolution', async () => {
+        const result = await run(`
+lazy Var v = mkRef(v)
+
+rule mkRef(v) -> Ref {
+    name := v.name
+}
+
+Add -> Add {
+    left := left
+    right := right
+}
+
+Const -> Const {
+    value := value
+}
+`, [
+            add('a1', 'c1', 'c1', 'm1'),
+            k('c1', 1, 'a1'),
+        ]);
+        const conflicts = result.errors.filter(e => /Containment conflict/.test(e));
+        expect(conflicts).toHaveLength(1);
+        expect(conflicts[0]).toMatch(/Const '?.*'? is claimed by Add .*\.left .* and by Add .*\.right/);
+    });
+
+    it('expands a template into one target per referenced Op, semantics lowered, operands bound', async () => {
+        // Template(each = [inc, dbl], body = Var a): inc = Add(Var x, Const 1),
+        // dbl = Add(Var x, Var x); each Op's semantics lowered with x := the body.
+        const rules = ENV_RULES.replace(
+            'Main m = m.expr',
+            'lazy Template t = t.each.map(op => under(op.semantics, extendEnv(\'x\', t.body)))\n\nMain m = m.expr',
+        );
+        const result = await run(rules, [
+            el('m1', 'Main', { expr: ref('t1') }),
+            el('t1', 'Template', { each: [ref('op1'), ref('op2')], body: ref('va'), _containerId: 'm1' }),
+            v('va', 'a', 't1'),
+            el('op1', 'Op', { name: 'inc', semantics: ref('s1') }),
+            add('s1', 'vx1', 'c1', 'op1'),
+            v('vx1', 'x', 's1'),
+            k('c1', 1, 's1'),
+            el('op2', 'Op', { name: 'dbl', semantics: ref('s2') }),
+            add('s2', 'vx2', 'vx3', 'op2'),
+            v('vx2', 'x', 's2'),
+            v('vx3', 'x', 's2'),
+        ]);
+        expect(result.errors).toEqual([]);
+        expect(rootTerms(result)).toEqual(['Add(Ref(a), Const(1))', 'Add(Ref(a), Ref(a))']);
+    });
+});
