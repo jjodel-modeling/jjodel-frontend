@@ -1142,3 +1142,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile
 **Prompt document name**: 2026-11-02 09:43
+
+## 2026-11-02 — feat(codegen): textual syntax annotations, grammar part (P-2026-11-02-0955, P-2026-11-02-1016)
+**Prompt**: T4a-1 of the 0846 design: syntax annotations as data, applied in derivation, printer and parser, LL(1) check in the style check, R-TXT-27 refusal. 0955 wrote it and hard-stopped at the context ceiling (RC-51); 1016 applied the pending subset-order fix, ran acceptance, mutation bench and gates, and committed.
+**Files touched**: 5467088b7: frontend/src/codegen/textual/annotations.ts, __tests__/annotations.test.ts, concreteGrammar.ts, parser.ts, printer.ts, style.ts, styleCheck.ts; closure: this inbox, the Status lines of the 0846, 0955 and 1016 prompts
+**Outcome**: ✅ completed (check:codegen-lazy off mode red, pre-existing: same 43 modules on the tip, ticket of P-2026-11-02-0653)
+**Corregge**: 2026-11-02 08:46
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Corregge 0846 for one point only: its handoff put instructions in model order within a group; the prototype's brief-text.md:66 and 8 briefs want the subset's literal order, ties in model order. Acceptance on the 16 micron briefs, scratch deleted: 16/16 print equal, parse clean, reprint equal, one nearley parse. Bench: 8/8 mutations killed (commit message). Gates: tsc 0, vitest src/codegen 2504/2504, build 0, check:docs 0, lazy on PASS. Fixtures: Requester.name, Instruction.mnemonic [1..1].
+**Prompt document name**: 2026-11-02 10:16

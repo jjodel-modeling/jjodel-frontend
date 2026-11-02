@@ -10,7 +10,7 @@
  */
 
 import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
-import { applyCase } from './concreteGrammar';
+import { applyCase, derivedName } from './concreteGrammar';
 import type { TextObject } from './metamodel';
 
 /** `[start, end)` offsets into the printed text. */
@@ -43,6 +43,8 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         if (!r) throw new Error(`no rule for class ${o.cls} (abstract, or not in the metamodel)`);
         return r;
     };
+    // The object rules by name: a grouping's derived rules print the objects of their class (concreteGrammar.ts).
+    const ruleNamed = new Map(g.rules.flatMap(r => (r.t === 'object' ? [[r.name, r] as const] : [])));
 
     // The containment tree: each object's container and its path segment, `f[i]` even for a single containment.
     const parent = new Map<string, { readonly owner: TextObject; readonly segment: string }>();
@@ -99,11 +101,16 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     let last = '';
     let lastPunct = false;
     let opening: string[] = [];
+    // A blank line asked by a `blank` node, written with the next line break; never at the start of a body.
+    let blankPending = false;
+    let bodyStart = true;
     const spans: ObjectSpan[] = [];
     const starts = new Map<string, number>();
 
     const token = (s: string, punct = false): void => {
-        if (breakPending) { out += '\n'; breakPending = false; atLineStart = true; }
+        if (breakPending) { out += blankPending ? '\n\n' : '\n'; breakPending = false; atLineStart = true; }
+        blankPending = false;
+        bodyStart = false;
         if (atLineStart) out += ' '.repeat(depth * style.indent);
         else if (!(punct && glueBefore.has(s)) && !(lastPunct && glueAfter.has(last))) out += ' ';
         for (const id of opening) starts.set(id, out.length);
@@ -115,15 +122,34 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     };
     const newline = (): void => { if (!atLineStart) breakPending = true; };
 
-    const object = (o: TextObject): void => {
+    const object = (o: TextObject, ruleName?: string): void => {
+        const named = ruleName !== undefined ? ruleNamed.get(ruleName) : undefined;
         opening.push(o.id);
-        emit(ruleOf(o).body, o, undefined);
+        emit((named?.cls === o.cls ? named : ruleOf(o)).body, o, undefined);
         spans.push({ id: o.id, start: starts.get(o.id) ?? out.length, end: out.length });
+    };
+
+    /** The values a star iterates: with `where`, those whose object's attribute is one of the group's literals, in the
+     *  literals' order (ties in model order). */
+    const values = (n: Extract<GrammarNode, { t: 'opt' | 'star' }>, o: TextObject): unknown[] => {
+        const vs = n.feat === undefined ? [] : asArray(o.slots[n.feat]);
+        const w = n.where;
+        if (!w) return vs;
+        const rank = (v: unknown): number => { const c = resolve(v); return c ? w.literals.indexOf(String(c.slots[w.attr])) : -1; };
+        return vs.filter(v => rank(v) >= 0).sort((a, b) => rank(a) - rank(b));
+    };
+    /** Whether an opt prints: its feature is set, a value passes its filter, and a name differs from its derived one. */
+    const shown = (n: Extract<GrammarNode, { t: 'opt' }>, o: TextObject): boolean => {
+        if (!isSet(o.slots[n.feat])) return false;
+        if (n.where && !values(n, o).length) return false;
+        return !(n.derive && o.slots[n.feat] === derivedName(g, ruleOf(o), o.slots, n.derive));
     };
 
     const present = (n: GrammarNode, o: TextObject): boolean => {
         switch (n.t) {
-            case 'opt': case 'star': case 'list': case 'assign': return n.feat === undefined || isSet(o.slots[n.feat]);
+            case 'opt': return shown(n, o);
+            case 'star': return n.feat === undefined || values(n, o).length > 0;
+            case 'list': case 'assign': return n.feat === undefined || isSet(o.slots[n.feat]);
             case 'seq': return n.items.some(x => present(x, o));
             default: return false;
         }
@@ -131,7 +157,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
 
     const value = (n: GrammarNode, v: unknown): void => {
         switch (n.t) {
-            case 'rule': { const c = resolve(v); if (c) object(c); return; }
+            case 'rule': { const c = resolve(v); if (c) object(c, n.name); return; }
             case 'xref': { const t = resolve(v); if (t) token(ref(n, t)); return; }
             case 'lit': token(applyCase(String(v), g.literalCase)); return;
             case 'tok':
@@ -147,12 +173,17 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     const emit = (n: GrammarNode, o: TextObject, elem: unknown): void => {
         switch (n.t) {
             case 'seq': for (const x of n.items) emit(x, o, elem); return;
-            case 'opt': if (isSet(o.slots[n.feat])) emit(n.item, o, elem); return;
-            case 'star': if (n.feat !== undefined) for (const v of asArray(o.slots[n.feat])) emit(n.item, o, v); return;
+            case 'opt': if (shown(n, o)) emit(n.item, o, elem); return;
+            case 'star': for (const v of values(n, o)) emit(n.item, o, v); return;
             case 'kw': token(n.text); return;
             case 'p': token(n.text, true); return;
-            case 'nl': newline(); return;
-            case 'assign': value(n.item, elem !== undefined ? elem : o.slots[n.feat]); return;
+            case 'nl': if (!n.blank) newline(); else if (!bodyStart) blankPending = true; return;
+            case 'assign': {
+                // A required name left unset prints nothing: the text then reads back with the error at its place.
+                if (elem === undefined && o.slots[n.feat] == null) return;
+                value(n.item, elem !== undefined ? elem : o.slots[n.feat]);
+                return;
+            }
             case 'list': {
                 const vs = asArray(o.slots[n.feat]).filter(v => !(n.item.t === 'assign' && n.item.item.t === 'xref') || resolve(v));
                 token(n.open, true);
@@ -164,6 +195,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
                 if (!n.items.some(x => present(x, o))) { for (const s of n.empty) token(s, !/^\w/.test(s)); return; }
                 for (const s of n.open) token(s, !/^\w/.test(s));
                 newline();
+                bodyStart = true;
                 depth++;
                 for (const x of n.items) emit(x, o, elem);
                 newline();

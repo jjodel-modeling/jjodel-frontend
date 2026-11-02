@@ -14,8 +14,9 @@
  * whose text was not read in full are listed in `recovered` and are never applied (R-TXT-21 (8)).
  */
 
+import type { NamePattern } from './annotations';
 import type { ConcreteGrammar, ConcreteRule, GrammarNode, ObjectRule } from './concreteGrammar';
-import { applyCase } from './concreteGrammar';
+import { applyCase, derivedName } from './concreteGrammar';
 import type { TextFeature, TextObject } from './metamodel';
 import type { ObjectSpan } from './printer';
 
@@ -144,9 +145,9 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
 }
 
 /** A token class: `ID`, `ID:x` (the identifier x), `P:x`, `STR`, `INT`, `FLOAT`. */
-type Matcher = string;
+export type Matcher = string;
 
-interface First {
+export interface First {
     readonly set: ReadonlySet<Matcher>;
     readonly nullable: boolean;
 }
@@ -156,7 +157,7 @@ const hit = (t: Token, m: Matcher): boolean => {
     if (c < 0) return t.k === m;
     return t.k === m.slice(0, c) && t.v === m.slice(c + 1);
 };
-const word = (s: string): Matcher => (/^\w/.test(s) ? `ID:${s}` : `P:${s}`);
+export const word = (s: string): Matcher => (/^\w/.test(s) ? `ID:${s}` : `P:${s}`);
 
 const describeToken = (t: Token): string => {
     switch (t.k) {
@@ -183,42 +184,9 @@ const either = (xs: readonly string[]): string => {
     return shown.length <= 1 ? shown.join('') : `${shown.slice(0, -1).join(', ')} or ${shown[shown.length - 1]}`;
 };
 
-class ParseFailure extends Error {
-    constructor(readonly error: TextParseError) { super(error.message); }
-}
-
-/** A reference as written, resolved after the parse: a name, or a path whose first segment is a class keyword. */
-interface RefSyntax {
-    readonly name?: string;
-    readonly segments?: readonly { readonly f: string; readonly index: number }[];
-}
-
-class PendingRef {
-    constructor(readonly node: Extract<GrammarNode, { t: 'xref' }>, readonly owner: MutableObject, readonly feat: string, readonly syntax: RefSyntax, readonly at: Token, readonly endAt: number) {}
-}
-
-interface MutableObject {
-    readonly id: string;
-    readonly cls: string;
-    readonly slots: Record<string, unknown>;
-}
-
-/** A body being read: what may start one of its items, and how it closes (none at the top level). */
-interface Frame {
-    readonly can: (t: Token) => boolean;
-    readonly close?: readonly string[];
-    readonly open?: readonly string[];
-}
-
-/** Parses a text of the concrete grammar `g`. Never throws on a broken text: every problem is an error of the result. */
-export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
-    const errors: TextParseError[] = [];
-    const toks = tokenize(g, text, errors);
+/** The FIRST set and nullability of each node of `g`, memoised per node; a rule reached again while computing is taken as empty. */
+export function firstSetsOf(g: ConcreteGrammar): (n: GrammarNode) => First {
     const rules = new Map<string, ConcreteRule>(g.rules.map(r => [r.name, r]));
-    const model = g.rules.find(r => r.t === 'model');
-    if (!model) throw new Error('the grammar has no Model rule');
-
-    // FIRST sets and nullability, memoised per node; a rule reached again while computing is taken as empty.
     const memo = new Map<GrammarNode, First>();
     const EMPTY: First = { set: new Set(), nullable: true };
     const first = (n: GrammarNode): First => {
@@ -264,6 +232,49 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
         const r = rules.get(rule);
         return r && r.t === 'enum' ? r.literals : [];
     }
+    return first;
+}
+
+class ParseFailure extends Error {
+    constructor(readonly error: TextParseError) { super(error.message); }
+}
+
+/** A reference as written, resolved after the parse: a name, or a path whose first segment is a class keyword. */
+interface RefSyntax {
+    readonly name?: string;
+    readonly segments?: readonly { readonly f: string; readonly index: number }[];
+}
+
+class PendingRef {
+    constructor(readonly node: Extract<GrammarNode, { t: 'xref' }>, readonly owner: MutableObject, readonly feat: string, readonly syntax: RefSyntax, readonly at: Token, readonly endAt: number) {}
+}
+
+interface MutableObject {
+    readonly id: string;
+    readonly cls: string;
+    readonly slots: Record<string, unknown>;
+}
+
+/** A body being read: what may start one of its items, and how it closes (none at the top level). */
+interface Frame {
+    readonly can: (t: Token) => boolean;
+    readonly close?: readonly string[];
+    readonly open?: readonly string[];
+}
+
+/** Parses a text of the concrete grammar `g`. Never throws on a broken text: every problem is an error of the result. */
+export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
+    const errors: TextParseError[] = [];
+    const toks = tokenize(g, text, errors);
+    const rules = new Map<string, ConcreteRule>(g.rules.map(r => [r.name, r]));
+    const model = g.rules.find(r => r.t === 'model');
+    if (!model) throw new Error('the grammar has no Model rule');
+
+    const first = firstSetsOf(g);
+    const literalsOf = (rule: string): readonly string[] => {
+        const r = rules.get(rule);
+        return r && r.t === 'enum' ? r.literals : [];
+    };
     const canAt = (n: GrammarNode, t: Token): boolean => [...first(n).set].some(m => hit(t, m));
 
     let p = 0;
@@ -287,6 +298,7 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
     const frames: Frame[] = [];
     const contained = new Set<string>();
     let counter = 0;
+    const derives = new Map<MutableObject, NamePattern>();
 
     const record = (e: TextParseError): void => { errors.push(e); };
     const owner = (): MutableObject | undefined => open[open.length - 1];
@@ -321,6 +333,12 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
         open.push(o);
         try {
             run(rule.body, o);
+            // A name left out where it equals its pattern's expansion is that expansion.
+            const pattern = derives.get(o);
+            if (pattern && o.slots.name === undefined) {
+                const nm = derivedName(g, rule, o.slots, pattern);
+                if (nm !== undefined) o.slots.name = nm;
+            }
         } catch (e) {
             recovered.add(o.id);
             throw e;
@@ -377,6 +395,13 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
         throw new Error(`a ${n.t} node is not a value`);
     };
 
+    /** A star, or an inline containment (an opt over a star): the item may start again. */
+    const repeats = (n: GrammarNode): boolean => {
+        if (n.t === 'star') return true;
+        if (n.t !== 'opt' || n.item.t !== 'seq') return false;
+        const inner = n.item.items.filter(x => x.t !== 'nl');
+        return inner.length === 1 && inner[0].t === 'star';
+    };
     const featureOf = (n: GrammarNode): string | undefined => (n.t === 'opt' || n.t === 'star' || n.t === 'assign' || n.t === 'list' ? n.feat : undefined);
 
     /** Skips to the first token that can go on after an error at line `errLine`: it closes the frame, or it starts an item of this frame or of an enclosing one on a later line. */
@@ -436,7 +461,7 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
                 while (j < items.length && !can(items[j]) && first(items[j]).nullable) j++;
                 if (j < items.length && can(items[j])) {
                     guarded(frame, items[j], o);
-                    i = items[j].t === 'star' ? j : j + 1;
+                    i = repeats(items[j]) ? j : j + 1;
                     continue;
                 }
                 const k = items.findIndex(x => can(x));
@@ -477,7 +502,10 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
     const run = (n: GrammarNode, o: MutableObject | undefined): void => {
         switch (n.t) {
             case 'seq': for (const x of n.items) run(x, o); return;
-            case 'opt': if (can(n.item)) run(n.item, o); return;
+            case 'opt':
+                if (can(n.item)) run(n.item, o);
+                else if (n.derive && o) derives.set(o, n.derive);
+                return;
             case 'star':
                 while (can(n.item)) {
                     const before = p;
