@@ -392,3 +392,10 @@ R-S1-6 (2026-10-30) makes the JjTL output deliberately use this path for nested 
 Measured in docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md.
 **Priority**: medium
 **Found in**: P-2026-10-30-1440
+
+## 2026-11-02 — ticket: Opening a large model with no viewpoint lands the canvas on an empty area
+**Ticket**: Opening the harness model (`~/jjodel-papers/2026-sosym-harness-models/jjodel/jjodel.harness.project.jjodel`, 407 nodes) with no viewpoint lands the canvas on an empty area: `translate(~-1224, -9802) scale(0.5)` in most runs, `(-1197, -1107)` in others, on trunk `4383c2572` and on the branch of P-2026-11-02-0020 alike. No node is in view at open; the user sees an empty canvas and must zoom out or fit by hand. Found by P-2026-11-02-0020 (DOM check and the click-profile probe, which reports `visible nodes in the target pane 0` and cannot click or drag).
+
+Expected: opening a model fits the view to its nodes (or restores a saved viewport that contains nodes). The viewport at open should be deterministic for the same file.
+**Priority**: medium
+**Found in**: P-2026-11-02-0020
