@@ -1,0 +1,215 @@
+// Text tab (R-TXT-23, slice T2b, P-2026-11-02-0040) — loaded with the opener's lazy chunk only.
+//
+// A header over Monaco: the model and the language, a read-only mark, the Text / EBNF toggle and the close; in «new»
+// mode the model's name, the reading's status and «Create model» instead of the mark and the toggle. The header
+// keeps one height and the toggle one width in both views, so switching moves nothing but the editor's text.
+//
+// Design-system tokens only, none defined here (rule 28). Cyan marks focus only.
+
+.textual-tab {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-family: inherit;
+
+    &__bar {
+        display: flex;
+        flex: 0 0 32px;
+        align-items: center;
+        gap: 8px;
+        padding: 0 8px 0 12px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+        font-size: 11px;
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+            color: inherit;
+        }
+    }
+
+    &__title {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    &__name {
+        overflow: hidden;
+        font-weight: 600;
+        text-overflow: ellipsis;
+    }
+
+    &__language {
+        color: var(--color-text-tertiary);
+
+        &::before {
+            content: '·';
+            margin-right: 6px;
+        }
+    }
+
+    &__readonly {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 6px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        color: var(--color-text-tertiary);
+        line-height: 18px;
+        white-space: nowrap;
+    }
+
+    &__spacer {
+        flex: 1;
+    }
+
+    &__modes {
+        display: inline-flex;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    &__mode,
+    &__close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        height: 22px;
+        padding: 0 8px;
+        border: 0;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+    }
+
+    // One width for both entries: the active one changes colour, never weight.
+    &__mode {
+        min-width: 56px;
+
+        & + & {
+            border-left: 1px solid var(--color-border-secondary);
+        }
+
+        &--active,
+        &--active:hover {
+            background: var(--color-bg-active);
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__close {
+        width: 22px;
+        padding: 0;
+        border-radius: 4px;
+    }
+
+    // «new» mode (slice T2c, P-2026-11-02-0045): the model's name, the reading's status and «Create model».
+    &__model-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--color-text-tertiary);
+
+        input {
+            width: 160px;
+            height: 22px;
+            padding: 0 6px;
+            border: 1px solid var(--color-border-secondary);
+            border-radius: 4px;
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            font-family: inherit;
+            font-size: 11px;
+
+            &:focus-visible {
+                outline: 2px solid var(--color-canvas-accent);
+                outline-offset: -2px;
+            }
+        }
+    }
+
+    &__status {
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
+
+    &__create {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 22px;
+        padding: 0 10px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-button);
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: inherit;
+        font-size: 11px;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+        }
+
+        &:disabled {
+            cursor: default;
+            opacity: 0.6;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+    }
+
+    &__body {
+        flex: 1;
+        min-height: 0;
+
+        .monaco-editor,
+        .monaco-editor.focused {
+            outline: none !important;
+        }
+    }
+
+    &__message {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 12px 16px;
+        color: var(--color-text-tertiary);
+        font-size: 11px;
+
+        &--error {
+            color: var(--color-error-text);
+        }
+    }
+}

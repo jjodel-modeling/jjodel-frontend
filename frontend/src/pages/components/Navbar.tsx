@@ -106,7 +106,7 @@ export function createM2(project: LProject, name0?: string) {
  *  `name0` (P-2026-10-19-1618): the name typed in the New model dialog. Kept when unique among
  *  `metamodel.models`, otherwise the same ending-number rule as the auto name applies to it;
  *  `DModel.new` then makes it unique among every model and metamodel (` (n)`, nameLookup.ts). */
-export function createM1(project: LProject, metamodel: LModel, open: boolean = true, name0?: string) {
+export function createM1(project: LProject, metamodel: LModel, open: boolean = true, name0?: string): LModel {
     let name = (name0 && name0.trim()) || 'model_' + 1;
     let modelNames: (string)[] = metamodel.models.map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
@@ -125,6 +125,8 @@ export function createM1(project: LProject, metamodel: LModel, open: boolean = t
         entityId: dModel.id,
         entityName: name,
     });
+    // The created model (P-2026-11-02-0045): «New model from text» writes its objects into it.
+    return lModel;
 }
 interface NewDocumentButtonProps {
     project: LProject;
@@ -1793,6 +1795,14 @@ function NavbarComponent(props: AllProps) {
                         if (typeof named !== 'string' || !named) return null;
                         title = named;
                         closable = true;
+                    } else if (id.startsWith('txt_')) {
+                        // A Text tab (R-TXT-23, P-2026-11-02-0040 and 0045): a model's text, or the text of a new
+                        // model. Its module is lazy, so the tab carries its title (openTextualTab.tsx); a tab with
+                        // no title (model or metamodel gone) is a ghost, as the generator's.
+                        type = 'textual';
+                        const named = typeof tab.appBarTitle === 'function' ? tab.appBarTitle() : null;
+                        if (typeof named !== 'string' || !named) return null;
+                        title = named;
                     } else if (id.startsWith('vp_')) {
                         type = 'viewpoint';
                         // Extract title from React element or look up viewpoint

@@ -940,3 +940,50 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile (no UI)
 **Prompt document name**: 2026-11-02 00:27
+
+## 2026-11-02 — feat(codegen): textual parser with recovery (P-2026-11-02-0024)
+**Prompt**: Slice T2a of T2 (RC-51, RC-52, after P-2026-11-01-2355 stopped at the ceiling): hand-written interpreter of T1's concrete grammar, C-like, with recovery; output in the printer's shape; errors with line and column; recovered objects never applicable; `parseText(text, grammar)`.
+**Files touched**: 45c883e92: `frontend/src/codegen/textual/parser.ts`, `frontend/src/codegen/textual/__tests__/parser.test.ts` (both new); closure: this inbox, the Status lines of the 0024 and 2355 prompts
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI)
+**Notes**: Gates: tsc 0; vitest src/codegen 46 files, 2409 tests; build 0; check:codegen-lazy on green, off red as in the open ticket on .env.production (no textual module in any chunk). Mutation bench 9/10 killed, the survivor a progress guard (commit message). Features must follow grammar order: out of order is an error. Corpus of textual.test.ts copied into parser.test.ts (it exports nothing).
+**Prompt document name**: 2026-11-02 00:24
+
+**Ticket** (P-2026-11-02-0024): the printer can print one text for two targets. A bare single-containment path segment (`inner`) and an object name `inner` that is unique among the reference's targets both print as `inner`. The parser reads the name first (handoff of 2355), so such a model does not round trip. Not in T1's corpus; to settle in the printer or with R-TXT-4.
+
+## 2026-11-02 — feat(ui): textual entry and read-only Text tab (P-2026-11-02-0057)
+**Prompt**: Close slice T2b (P-2026-11-02-0040 stopped at the ceiling, RC-51): finish the Toolbar part from 0040's handoff, gates, visual check, commits. Picker entry `@textual` (metamodel name as label, behind the codegen setting and build flag) opening a read-only Text tab: T1 printer in Monaco, toggle to the concrete EBNF, opener by dynamic import only.
+**Files touched**: 7bd41e3cf: `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/dataManagerOption.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/ui/TextualTab.scss`, `frontend/src/codegen/textual/ui/openTextualTab.tsx`, `frontend/src/codegen/textual/__tests__/textualTab.test.ts`, `frontend/src/components/editor-v2/__tests__/textualPicker.test.ts`; closure: this inbox, the Status lines of the 0040 and 0057 prompts
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Seven code files, above five, listed in 0040's first message; `textualTab.test.ts` was added beyond that list. Gates: tsc 0; vitest src/codegen + editor-v2 223 files, 6356 tests; build 0; codegen-lazy on green, off red (open ticket). Mutation bench 7/7 killed (commit body). Probe on 3057, DemoESM: entries Abstract syntax, DemoESM, Data manager; text 31 lines; EBNF 6 rules; typing changes nothing. Crops in ~/.jjodel-lanes/P-2026-11-02-0057/.
+**Prompt document name**: 2026-11-02 00:57
+
+## 2026-11-02 — ticket: the Text tab is missing from the app bar
+**Ticket**: Navbar.tsx `syncTabs` lists a first-panel tab only when its id resolves to a model or matches a known prefix, so the `txt_<modelId>` Text tab of T2b is dropped as a ghost and the `models` panel's own tab bar is hidden; the tab carries its own header (title, Read-only, Text/EBNF, close) meanwhile. Fix: one `txt_` branch in `syncTabs`, as for the manager, in T2c, which already touches Navbar.tsx; also decide whether to hide the floating rail on it (Dock.tsx).
+**Priority**: medium
+**Found in**: P-2026-11-02-0040
+**Detail**: ~/.jjodel-lanes/P-2026-11-02-0040/handoff.md
+
+## 2026-11-02 — feat(ui): New model from text (P-2026-11-02-0235)
+**Prompt**: Close slice T2c (P-2026-11-02-0045 stopped at the ceiling, RC-51): from 0045's handoff, the opener (`openNewModelTab`, `createModelFromText`, `appBarTitle`), `NewTextualTab`, the LeftBar action on metamodel rows; gates, probe, commits. One undo after «Create model» must remove the whole model.
+**Files touched**: edf047bf3: `frontend/src/codegen/textual/modelLines.ts`, `frontend/src/codegen/textual/__tests__/modelLines.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/ui/TextualTab.scss`, `frontend/src/codegen/textual/ui/openTextualTab.tsx`, `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/pages/components/Navbar.tsx`; closure: this inbox, the Status lines of the 2355, 0045 and 0235 prompts
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Deviation: canvas opened inside the undo group (after it: 2 entries, undo left the model). Probe on 3235 also found 14/21 lines failing when the script started before the model was in `project.models`; the opener now waits for it. Gates: tsc 0; vitest 225 files, 6377 tests; build 0; codegen-lazy on green, off red (open ticket). Bench 4/4 killed. Closes the app-bar ticket. Crops in ~/.jjodel-lanes/P-2026-11-02-0235/.
+**Prompt document name**: 2026-11-02 02:35
