@@ -382,11 +382,11 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         : [];
     const [pickingGeneratorMetamodel, setPickingGeneratorMetamodel] = useState(false);
     const openGenerator = (metamodelId: string, metamodelName: string, generatorId: string) => {
-        void import('../../codegen/ui/openTemplateEditor').then(m => m.openTemplateEditor(metamodelId, metamodelName, null, generatorId));
+        if (CODEGEN_BUILD) void import('../../codegen/ui/openTemplateEditor').then(m => m.openTemplateEditor(metamodelId, metamodelName, null, generatorId));
     };
     const newGenerator = (metamodelId: string) => {
         setPickingGeneratorMetamodel(false);
-        void import('../../codegen/ui/openTemplateEditor').then(m => m.createGenerator(metamodelId));
+        if (CODEGEN_BUILD) void import('../../codegen/ui/openTemplateEditor').then(m => m.createGenerator(metamodelId));
     };
     const onNewGeneratorClick = () => {
         if (pMetamodels.length === 1) newGenerator(pMetamodels[0].id);
