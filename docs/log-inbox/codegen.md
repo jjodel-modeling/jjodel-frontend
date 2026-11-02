@@ -999,3 +999,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Layer Impact Report**: not-required
 **Smoke visivo**: passato (crops, unattended; after undo of Create model the canvas tab shows a bare «closed tab» text, open question)
 **Prompt document name**: 2026-11-02 06:37
+
+## 2026-11-02 — feat(jjscript): set lists and enum literals (P-2026-11-02-0651)
+**Prompt**: R-TXT-25 (2): M1 `set` takes a list on a many-valued attribute (error on a single one) and an enumeration literal on an enum-typed one (unknown literal names the enumeration); planner mirrors; `modelLines.ts` writes lists and bare literals, its many-valued block removed.
+**Files touched**: 36a5387f6: `jjscript/parser/parser.ts`, `executor/commands/instance.ts`, `executor/commands/set.ts`, `executor/effectsPlanner.ts`, `executor/planWorld.ts`, tests `m1SetLists.test.ts` (new), `effectsPlanner.test.ts`, `planWorld.test.ts`; 084eb0902: `codegen/textual/modelLines.ts`, `__tests__/modelLines.test.ts`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 10 files, approved at 8-9 by the GO; `set.ts` is the expansion: a list at M2 is refused (LIST_NOT_SUPPORTED), as it was a parse error before the parser read lists. Enum values stored by name; a string on an enum attribute is still written as given. Undo is measured in the bench as one write inside one TRANSACTION, not on the real store (joiner does not import). Gates: tsc 0, vitest jjscript+codegen 3333 passed (context-binding: known window import), build 0.
+**Prompt document name**: 2026-11-02 06:51
