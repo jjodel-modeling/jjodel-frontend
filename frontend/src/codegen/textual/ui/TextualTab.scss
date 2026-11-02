@@ -235,5 +235,9 @@
         &--error {
             color: var(--color-error-text);
         }
+
+        &--warning {
+            color: var(--color-warning-text);
+        }
     }
 }

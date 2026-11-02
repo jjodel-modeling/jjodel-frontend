@@ -1249,3 +1249,22 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: no UI change, visual check not applicable
 **Notes**: Rollback tag `pre-textual-path-feature` on `43350d3cd` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2057/result.json`.
 **Prompt document name**: 2026-11-02 20:57
+
+## 2026-11-02 — feat(codegen): report objects the text does not print (P-2026-11-02-2113)
+**Prompt**: R-TXT-30, first half: printTextModel returns the objects a grouped containment does not print (owner, feature, class, attribute, unset or outside, objects inside); the Text tab lists one warning per class and reason; hasUnprinted() for step T6; tests first, mutation bench, in-app check.
+**Files touched**: 09cfca60d: `frontend/src/codegen/textual/printer.ts`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `__tests__/syntaxRecord.test.ts`; Status line of the 2113 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato con riserva: probe in the lane folder, Shelf metamodel, light theme, warning for 1 then 2 books, gone once set; browser served eval.ts without the mandatory-enum fill, repo untouched; crop checked by the chat
+**Notes**: 6 tests red first; bench 3 mutants killed. vitest src/codegen at load 7: 51 files, 2549 passed; the 4 red generator tests at load 134 were the 2000 ms limit. Measured: a mandatory enum left empty reads as its first literal, so the warning does not fire on an unset attribute in the app. Closed by the chat after the context ceiling.
+**Prompt document name**: 2026-11-02 21:13
+
+## 2026-11-02 — ticket: R-TXT-30 warning rarely reachable for an enum grouping (P-2026-11-02-2113)
+**Ticket**: a mandatory enum left empty reads as its first literal (`emptyAttributeDefault`, `jjscript/executor/commands/eval.ts`), so the text prints that object under the first literal's group and the warning stays silent. From reading the code, one path remains: a declared default that is no literal is returned as is, and falls outside every subset (not measured). Step T6 must state how it compares a read default with a stored empty value, so that applying a text does not write the default unasked.
+**Priority**: low
+**Found in**: P-2026-11-02-2113
+**Detail**: ~/.jjodel-lanes/P-2026-11-02-2113/probe-probe.log
