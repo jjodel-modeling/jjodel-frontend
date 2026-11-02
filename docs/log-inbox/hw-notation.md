@@ -229,3 +229,31 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile
 **Notes**: Five files, all in DOVE. Bound values lower afresh, a matched class untraced. Mutations: unique memo dropped 2/24; closures not fresh 2/34; lazy memoised 4/34. Gates: jjtl 482 + 7 known; full 13068 passed, 9 known import failures, 0 failed tests; tsc exit 0. B2 list in SPEC 5.3.3.
 **Prompt document name**: 2026-11-02 23:21
+
+## 2026-11-03 — ticket: JjTL source serializer unwraps a one-element many-valued reference
+**Ticket**: A many-valued reference of the source model that holds one value reaches the JjTL rules as a single value, not as a one-element list: the source serializer of the Execute path (`components/project/ProjectEditor.tsx:1556-1574`) unwraps it. Measured in the app, probe `b2-writeback.ts` of P-2026-11-02-2338 (port 3197): `Bind.bindings` holding one `Binding`, the rule `b.bindings.map(x => x.bvar)` warns `Expression evaluation failed (JjelExpression): Unknown method 'map' for type Binding`; S1 wrote 0 objects instead of 3, S3 wrote 1 (`Add(null, null)`) instead of 7. The same sources with two bindings each pass (S1 3 objects, S3 7, two separate subtrees). A transformation that works on two values breaks on one.
+**Priority**: high
+**Found in**: P-2026-11-02-2338
+
+## 2026-11-03 — ticket: JjTL source serializer drops a repeated pointer of a many-valued reference
+**Ticket**: The same pointer listed twice in a many-valued source reference reaches the JjTL rules once: the source serializer of the Execute path (`components/project/ProjectEditor.tsx:1556-1574`) collapses the repeat. Measured in the app, probe `b2-writeback.ts` of P-2026-11-02-2338 (port 3197): `Main.exprs = [c1, c1]` under `items := exprs` with a non-unique lazy rule wrote 1 `Const` and `Holder.items` of 1, against 2 and 2 expected; the executor saw `inst {Holder: 1, Const: 1}`. Reaching the one source twice through two distinct elements (`m.exprs.map(e => m.expr)`) gives 2 Const and 2 distinct pointers, so the loss is on the source side, not in the write-back.
+**Priority**: medium
+**Found in**: P-2026-11-02-2338
+
+## 2026-11-03 — ticket: JjTL write-back of a 2,559-object tree takes 17 s against 603 ms in the executor
+**Ticket**: Writing a tree of 2,559 lowered objects to the store is slow in the app. Measured with probe `b2-writeback.ts` of P-2026-11-02-2338 (port 3197), scenario T: the executor ran in 603 ms and all 2,559 objects were in the store 17,061 ms after Execute (first run, 2026-11-02); reruns gave 955 ms / 22,203 ms and 878 ms / 24,413 ms. The time is the write-back, not the transformation. To find where it goes for trees of this size (actions per object, renders, sync); no fix asked.
+**Priority**: medium
+**Found in**: P-2026-11-02-2338
+
+## 2026-11-03 — feat(jjtl): B2 closed, probes rerun, SPEC 5.3.3 (P-2026-11-03-0009)
+**Prompt**: Continue P-2026-11-02-2338 after its context ceiling: rerun the B2 probe and the probes of P-2026-11-02-2108 and P-2026-11-02-1838, update the B2 list of SPEC 5.3.3, file three tickets, log entry, `Status:` lines. B2 code is 7e96a4e1c (P-2026-11-02-2338).
+**Files touched**: `frontend/src/jjtl/SPEC.md` (b1d1c45fd); `docs/log-inbox/hw-notation.md` (three tickets, this entry); `docs/prompts/` `Status:` lines of P-2026-11-03-0009 and P-2026-11-02-2338
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Port 3197. B2 probe 10/10 (S1 3 obj, S3 7, S4 2 Const + 2 pointers, S5 1 + 1, S5b 2 + 2, S6/S7 fail visibly, T 2559 in 878 ms exec / 24.4 s written, reopen equal). S1/S3/S4/S5 rewritten to avoid the two serializer defects (tickets). 2108 a2: A1-A5 all checks true, reopen 8/8/9; a0-rerun and 1838 a0-writeback S1-S5 identical (4/4/6/4/2). Only page error `init_dash`. SPEC item 4 open, awaiting Alfonso.
+**Prompt document name**: 2026-11-03 00:09
