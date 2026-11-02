@@ -7061,6 +7061,26 @@ of T1. Ratified as recommended, evidence: measured (T1's corpus and mutation ben
   annotation, in step T4. (b) A single-valued containment prints as a block of one object, `f { T }`, as the JjGen
   generator and T1 do; §A.1's bare `T` is superseded.
 
+Row 25: the morning digest of 2026-11-02 (twelve questions after the night run); Alfonso 06:43 «Ok alle raccomandazioni».
+Ratified as recommended, evidence: read and measured (lane results of the night), verified: none, reversible: trunk.
+
+- **R-TXT-25** (2026-11-02). (1) Undoing «Create model» closes the model's canvas tab (no bare «closed tab» text);
+  first check whether the defect exists for any undone model creation. (2) JjScript M1 `set` accepts lists for
+  many-valued attributes and enumeration literals, so every text the parser accepts can become a model. (3) The textual
+  entry stays behind the code-generation setting while the feature is experimental (confirms the night's RC-21
+  adoption). (4) Text tabs get an app-bar badge like the other tab types. (5, 6) **Amends R-TXT-4 and R-TXT-11 on
+  paths:** every path segment carries a class or feature and an index, so a path is never a bare identifier: a root is
+  `Class[k]` (k = position among the top-level objects of that class), a contained object `feature[k]` even for a
+  single containment, segments joined by `.`; a name is an identifier or a quoted string, so paths and names never
+  coincide. (7) When a style's case folding lands a class keyword on a style word (`End` to `end`), the derivation falls
+  back to the declared case, as for literals (R-TXT-21 (10)). (8) The L-layer getter and setter of
+  `defaultValueLiteral` are restored in `LModelElement.tsx`, and the export reads them instead of `__raw`. (9) A
+  decimal default on an integer attribute is rejected with a notice, as Ecore does. (10) The «off» mode of
+  `check:codegen-lazy` is made independent of `.env.production`, before 3.2. (11) The textual test corpus moves to one
+  shared test module. (12) The language's name is stored as a syntax annotation in step T4; until then the entry shows
+  the metamodel's name. The canvas of a model created from text opens inside the undo group (confirms the night's
+  adoption).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
