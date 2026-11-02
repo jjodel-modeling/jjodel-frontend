@@ -261,6 +261,21 @@ export function resolveInstanceHandle(model: LModel, handle: string): InstanceRe
 }
 
 /**
+ * Resolve a command target to an instance. A target carrying `elementId` (a `forall` variable,
+ * R-FA-10) is that instance of the model, by id, however many share its name; not found there
+ * is a miss, never the name. Any other target is `resolveInstanceHandle` of its name.
+ */
+export function resolveInstanceTarget(model: LModel, target: QualifiedName): InstanceResolution {
+    const name = target.segments.join('::') || target.raw;
+    if (typeof target.elementId === 'string' && target.elementId && target.segments.length === 1) {
+        const obj = allModelInstances(model).find((o: any) => o?.id === target.elementId);
+        if (obj) return { ok: true, value: obj };
+        return { ok: false, reason: `No instance named '${name}' in '${(model as any)?.name ?? 'the model'}'` };
+    }
+    return resolveInstanceHandle(model, name);
+}
+
+/**
  * Generate a unique default name for a new instance.
  * Strategy: <ClassName>, <ClassName>2, <ClassName>3, ... — same as the visual editor.
  *
@@ -753,7 +768,7 @@ export async function executeDeleteInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const resolved = resolveInstanceHandle(targetModel, instanceName);
+    const resolved = resolveInstanceTarget(targetModel, args.target);
     // Ambiguous → REFUSE. Deleting is destructive and irreversible in one gesture: hitting
     // the first of several homonyms is the defect the census names, not a behaviour to keep.
     if (!resolved.ok && resolved.candidates) {
@@ -889,7 +904,7 @@ export async function executeRenameInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const resolved = resolveInstanceHandle(targetModel, instanceName);
+    const resolved = resolveInstanceTarget(targetModel, args.target);
     // Ambiguous → REFUSE: renaming the wrong homonym is as silent as deleting it.
     if (!resolved.ok && resolved.candidates) {
         return {
@@ -988,7 +1003,7 @@ export async function executeSetInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const resolved = resolveInstanceHandle(targetModel, instanceName);
+    const resolved = resolveInstanceTarget(targetModel, args.target);
     // Ambiguous → REFUSE before any write: `set` mutates, and writing into the first of
     // several homonyms is a write to an instance the script never named.
     if (!resolved.ok && resolved.candidates) {
