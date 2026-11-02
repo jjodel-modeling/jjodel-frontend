@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-02-2149
 Chat: C-2026-11-02-1541
 Request: https://claude.ai/code/session_01DQt9R6PwbdyvU1szY334kM (merge of jjtl-containment launched by chat C-2026-11-02-1541)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane merge · c58e00349 · verifica visiva non eseguita sul tronco 2026-11-02 (chat, unattended: 3001 answers HTTP 200 on the merged tree; behaviour measured by the P-2026-11-02-2108 probe on aa503e261, the second parent; Alfonso in the morning digest)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-02-2149 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

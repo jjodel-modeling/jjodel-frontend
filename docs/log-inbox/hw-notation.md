@@ -190,3 +190,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Ticket**: Measured in P-2026-11-02-2024: after a JjTL run, the output model's Undo button is disabled and Cmd+Z on the canvas leaves all objects. Undo after a transformation does nothing. Not new with that lane. Decide whether a run should be one undo step.
 **Priority**: low
 **Found in**: P-2026-11-02-2024
+
+## 2026-11-02 — merge: jjtl-containment into alfonso-frontend-jjtl (P-2026-11-02-2149)
+**Prompt**: `claude_2026-11-02_2149_prompt_merge_jjtl-containment.md`, full lane: bring jjtl-containment at the explicit sha aa503e261 into the trunk with one --no-ff merge commit (RC-14); zero conflicts; stopped at step 7 for the chat's smoke, resumed on the GO.
+**Files touched**: merge commit c58e00349 (the branch's 14 files, no union resolution: `docs/log-inbox/hw-notation.md` merged clean); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (chat GO: 3001 HTTP 200 on the merged tree; behaviour measured by the P-2026-11-02-2108 probe on aa503e261; no hand run on the trunk, not a visual verification)
+**Notes**: Merge-tree 230d1041f equal to the staged tree; 22 probes as declared. Gates on c58e00349: typecheck, typecheck:scripts exit 0; vitest 13028 = trunk 12988 + 40 (190 vs 150 in the four touched test files), the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Trunk tip red once on one laneRun 15 s timeout under a concurrent run, green on rerun.
+**Prompt document name**: 2026-11-02 21:49
