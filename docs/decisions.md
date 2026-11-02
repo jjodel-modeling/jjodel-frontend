@@ -7097,6 +7097,14 @@ Row 27: P-2026-11-02-0846 (T4a-1 design, hard-stop at the ceiling); Alfonso 2026
   attribute: otherwise the annotation is refused by the style check (an error, not a notice), so that every printed
   text reads back (R-TXT-19, R-TXT-21 (8)).
 
+Row 28: T4a-2's in-app check (P-2026-11-02-1930); Alfonso 2026-11-02 19:54 «Ok alle raccomandazioni». Ratified as recommended,
+evidence: read (crop of the annotated text), verified: none, reversible: trunk.
+
+- **R-TXT-28** (2026-11-02). **Amends R-TXT-25 (5, 6) and the T4a-1 design on paths.** The first segment of a path uses the
+  class's printed keyword (`nextState machine[0]`), so that a reference names what the text shows; when the keyword is
+  dropped (positional class) it uses the class name. The index k stays the position among the top-level objects of that
+  class. Without annotations nothing changes. Feature segments are not covered by this row.
+
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
 Evidence: Alfonso 2026-11-02 13:19, forall x,y in JjEL and then in every language that uses JjEL; the parsers read by the
