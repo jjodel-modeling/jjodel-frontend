@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1331
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane full · branch jjtl-forall-multivar · commit 482936ee5 · verifica visiva non applicabile
 Lane: full (JjTL grammar and executor bindings, two-phase in one session)
 Depends: none
 Worktree: ~/jjodel-w-jjtlforallmv, branch jjtl-forall-multivar (from the trunk commit that adds this prompt)
