@@ -45,6 +45,7 @@ import {
     createFunction,
     toJjelValue,
     fromJjelValue,
+    isJjelObject,
 } from '../../jjel';
 import type { JjelValue, JjelFunction } from '../../jjel';
 
@@ -75,6 +76,49 @@ export {
 
 // Re-export types separately to satisfy isolatedModules
 export type { SourceElement, TargetElement } from './jjodelConverter';
+
+// ============================================
+// BINDING BY IDENTITY
+// ============================================
+
+/** A target created by a rule of this run (pass 1), as opposed to a nested creation. */
+function isRuleTarget(value: unknown): boolean {
+    return !!value && typeof value === 'object' && !Array.isArray(value)
+        && (value as any).__createdBy === 'JjTL' && !(value as any).__nested;
+}
+
+/**
+ * `fromJjelValue` for a value about to be bound, except that a rule target is kept
+ * as the live instance (P-2026-11-02-1742, slice A0, R-JTG-2). A copy taken at bind
+ * time missed whatever pass 2 bound on that target later, so rule order decided what
+ * the parent held. Identity also lets two targets point at each other: the walk stops
+ * at a rule target, so it never follows such a cycle.
+ */
+function fromJjelValueKeepingTargets(value: JjelValue): unknown {
+    if (isRuleTarget(value)) return value;
+    if (Array.isArray(value)) return value.map(fromJjelValueKeepingTargets);
+    if (isJjelObject(value)) {
+        const result: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(value)) {
+            result[k] = fromJjelValueKeepingTargets(v);
+        }
+        return result;
+    }
+    return fromJjelValue(value);
+}
+
+/** A short form of a bound value for the console: the full one may be cyclic. */
+function describeBoundValue(value: unknown): string {
+    if (isRuleTarget(value)) return `<${(value as any).className} from ${(value as any).__sourceId}>`;
+    if (value && typeof value === 'object' && (value as any).__ref_result) {
+        return `<ref ${((value as any).targets as unknown[]).map(describeBoundValue).join(', ')}>`;
+    }
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return String(value);
+    }
+}
 
 // ============================================
 // PROXY-SAFE UTILITIES
@@ -1668,9 +1712,9 @@ export class JjtlExecutor {
             const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute);
 
             // Set target attribute
-            const finalValue = fromJjelValue(resolved);
+            const finalValue = fromJjelValueKeepingTargets(resolved);
             targetInstance[mapping.targetAttribute] = finalValue;
-            console.log(`[JjTL] Result: ${mapping.targetAttribute} = ${JSON.stringify(finalValue)}`);
+            console.log(`[JjTL] Result: ${mapping.targetAttribute} = ${describeBoundValue(finalValue)}`);
 
             // Determine invertibility
             const invertible = this.isBindingInvertible(mapping);
@@ -1871,7 +1915,7 @@ export class JjtlExecutor {
             const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute);
 
             // Set target attribute
-            const finalValue = fromJjelValue(resolved);
+            const finalValue = fromJjelValueKeepingTargets(resolved);
             targetInstance[mapping.targetAttribute] = finalValue;
             // console.log(`[JjTL Executor] Set ${mapping.targetAttribute} = ${JSON.stringify(finalValue)}`);
         } catch (error) {
@@ -2012,7 +2056,7 @@ export class JjtlExecutor {
             }
 
             case 'featureCreation': {
-                const created = fromJjelValue(
+                const created = fromJjelValueKeepingTargets(
                     await this.executeObjectCreation(mapping.objectCreation!, sourceInstance, extraBindings)
                 );
                 targetInstance[shape.featureName] = created;
@@ -2072,7 +2116,7 @@ export class JjtlExecutor {
                 const created = await this.executeObjectCreation(
                     forall.objectCreation, sourceInstance, itemBindings
                 );
-                results.push(fromJjelValue(created));
+                results.push(fromJjelValueKeepingTargets(created));
                 return;
             }
 
@@ -2351,7 +2395,7 @@ export class JjtlExecutor {
                 } else {
                     value = null;
                 }
-                targetInstance[mapping.targetAttribute] = fromJjelValue(this.applyCrossTypeResolution(value, mapping.targetAttribute));
+                targetInstance[mapping.targetAttribute] = fromJjelValueKeepingTargets(this.applyCrossTypeResolution(value, mapping.targetAttribute));
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
                 await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias, letBindings);
@@ -2433,7 +2477,7 @@ export class JjtlExecutor {
                 }
 
                 const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute);
-                const finalValue = fromJjelValue(resolved);
+                const finalValue = fromJjelValueKeepingTargets(resolved);
                 targetInstance[mapping.targetAttribute] = finalValue;
                 const invertible = this.isBindingInvertible(mapping);
                 const userProvided = mapping.expression !== undefined
@@ -2795,6 +2839,19 @@ export class JjtlExecutor {
      * @param value            The evaluated RHS value
      * @param targetAttribute  The target attribute being bound (used only for error messages)
      */
+    /**
+     * Report a resolution fallback as a warning, naming the rule and the source element
+     * whose binding hit it (P-2026-11-02-1742). What the executor binds does not change.
+     * The same message is reported once, so a forall does not repeat it per element.
+     */
+    private reportFallback(message: string): void {
+        const where = this.context.currentRuleName
+            ? ` (rule '${this.context.currentRuleName}', source element '${this.context.currentInstanceName ?? '?'}')`
+            : '';
+        const msg = `Unresolved reference: ${message}${where}.`;
+        if (!this.warnings.includes(msg)) this.warnings.push(msg);
+    }
+
     private applyCrossTypeResolution(value: any, targetAttribute: string): any {
         const resolved = this.resolveValue(value, targetAttribute, undefined, 0);
         return this.wrapIfTargetReference(resolved);
@@ -2908,7 +2965,16 @@ export class JjtlExecutor {
         if (!className) return value;
 
         const rules = this.context.rulesBySourceType.get(className);
-        if (!rules || rules.length === 0) return value;
+        if (!rules || rules.length === 0) {
+            // Fallback kept, now reported: the source object itself is bound.
+            if (value.__createdBy !== 'JjTL') {
+                this.reportFallback(
+                    `${className} '${value.name ?? value.id ?? '?'}' bound to '${targetAttribute}' has no rule ` +
+                    `mapping '${className}': the source object itself was bound`
+                );
+            }
+            return value;
+        }
 
         let chosenRule: ClassMappingAST | undefined;
         if (expectedTarget) {
@@ -2972,6 +3038,10 @@ export class JjtlExecutor {
                 );
             }
             // Implicit path — fail open: reference points to a type without a rule.
+            // Fallback kept, now reported.
+            this.reportFallback(
+                `the reference to '${sourceId}' bound to '${targetAttribute}' points to an element no rule maps: it resolved to null`
+            );
             return null;
         }
 
@@ -2991,7 +3061,15 @@ export class JjtlExecutor {
 
         // Multiple entries — check if they all come from the same rule
         const distinctRules = new Set(entries.map(e => e.rule));
-        if (distinctRules.size === 1) return entries[0].target;
+        if (distinctRules.size === 1) {
+            // Fallback kept, now reported: the first target is bound.
+            const rule = entries[0].rule;
+            this.reportFallback(
+                `the reference to '${sourceId}' bound to '${targetAttribute}' has ${entries.length} targets from rule ` +
+                `'${rule.sources.map(s => s.className).join(', ')} -> ${rule.targetClass}': the first was bound`
+            );
+            return entries[0].target;
+        }
 
         // Ambiguous — multiple rules produced targets for the same source ID
         const targetClasses = [...new Set(entries.map(e => e.targetClass))].join(', ');

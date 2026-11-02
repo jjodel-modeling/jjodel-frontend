@@ -503,35 +503,99 @@ For reverse lookups:
 
 ### 5.3 Implicit Trace Resolution
 
-> **STATUS: NOT IMPLEMENTED**
+> **STATUS: implemented for references (P-2026-11-02-1742, slice A0). Containment placement,
+> environments and called rules are PLANNED: parts A and B of
+> `docs/discovery/discovery_2026-11-02_jjtl_generic_transformation.md`, ratified as R-JTG-1..5
+> in `docs/decisions.md`.** Each paragraph below says which of the two it describes.
 
-**Intended behavior (ATL-style):** When an attribute binding assigns a source element (or a reference to one) to a target property, and the target property's type corresponds to a target class in the transformation, the engine should **automatically resolve** via the trace.
+When a binding assigns a source element, or a reference to one, the engine replaces it with
+the target that a rule created for it, found through the trace. No `resolve()` is needed.
 
-**Example:**
 ```jjtl
 Transition -> Transition {
-    source -> source    # source.source is a State; target.source expects a Place
-                        # Engine should auto-resolve State → Place via trace
-}
+    source := source    -- source.source is a State; the target holds the Place
+}                       -- that the rule State -> Place created for it
 ```
 
-**Algorithm (to implement):**
+#### 5.3.1 What is implemented
 
-1. Evaluate the source expression → get a value `v`
-2. If `v` is an object with a `className` or `__type`:
-   a. Check if any class mapping maps that type to a target type
-   b. If yes, look up the trace for `v` → get the corresponding target element
-   c. Assign the target element (not the source element)
-3. If `v` is a collection, apply step 2 to each element
-4. If no trace link found, assign `v` as-is (fallback to direct copy)
+**When.** Every binding value goes through resolution before it is stored: rule-level
+bindings, bindings inside a `let`, and bindings of objects created in a body
+(`-> feature { -> T { ... } }`). A collection is resolved element by element.
 
-**Disambiguation for multiple rules matching the same source type:**
-- Use the first matching trace link (declaration order)
-- If the target property has a declared type, prefer the rule whose target class matches
+**The trace.** Pass 1 creates every target of every matched rule and records it under the
+source element's id and name, with the rule and the target class (§4). Pass 2 evaluates the
+bindings, so resolution finds a target whatever the rule order.
 
-**Endogenous transformations (same metamodel):**
-- When source and target types are the same, implicit resolution is ambiguous
-- Require explicit `resolve()` in this case, or use type context from the target property
+**Value shapes.**
+
+| Value | Resolution |
+|---|---|
+| `{ __ref: id }` (a reference read from the model) | the trace entries for `id` |
+| an object with `className` / `__type` | the rules for that class, then the trace entry for that rule |
+| primitive, `null` | unchanged |
+| array | element by element |
+
+**Binding by identity.** The parent holds the **live** target instance, not a copy. What
+pass 2 binds on that target, before or after the parent, is visible through the parent, and
+two targets may point at each other (`a.b = b`, `b.a = a`). A reference value is stored as
+`{ __ref_result: true, targets: [...] }`, which the write-back turns into pointers (§9.2).
+Every reader of the output tolerates cycles: the write-back reads one level, the trace view
+is depth-bounded, `serializeTraceModel` writes a rule target as `{__type, className, __sourceId}`.
+
+**Ambiguity.** Two rules matching one source element throw, naming both target classes;
+`resolve(e, TargetType)` disambiguates (R-JTG-3). An element of a class with a rule but no
+trace entry (filtered by `where`) throws `Unresolved reference`.
+
+**Fallbacks, reported.** Three cases keep their result and add one warning naming the rule
+and the source element whose binding hit them (R-JTG-2):
+
+| Case | Bound | Warning |
+|---|---|---|
+| an object of a class no rule maps | the source object itself | `... has no rule mapping '<Class>': the source object itself was bound` |
+| a `{ __ref }` to an element no rule maps | `null` (dropped from a collection that also holds resolved targets, with the partial-array warning) | `... points to an element no rule maps: it resolved to null` |
+| several targets of one rule for one source (multiplicity `[n]`) | the first | `... has <n> targets from rule '<rule>': the first was bound` |
+
+**Containment, today.** A resolved target bound to a containment feature is still a root of
+the target model and travels as `__ref_result`; the D-layer write reparents it. Objects created
+in a body (`-> feature { -> T { ... } }`) are the containment channel that works today.
+
+#### 5.3.2 The frame of A and B (planned)
+
+The terms are those of R-JTG-5 and of `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md:268-322`: called
+rules `rule name(args) -> T`, `lazy` and `unique lazy` rules; an **environment** that is dynamically
+scoped over a rule application and reified as a named parameter of called rules; values held
+in an environment are closures (the expression with the environment of the binding site).
+
+- **Trace key.** A trace entry is keyed by **(source element, rule, environment)**. Never
+  "one target per source": B creates several targets for one source element, one per
+  environment, and A must not be specified in a way B would have to break.
+- **Inherited environment.** Implicit resolution looks up the entry under the **caller's**
+  environment. Until B ships the environment is always empty, so this is vacuous and A0's
+  behaviour is the whole of it.
+- **Containment (A).** A containment binding places the target found through the trace inside
+  the new container and takes it out of `roots`; a collection element by element, in order.
+  Taking a root is recorded, not warned. A second containment claim on one target is an error
+  naming both containers; a containment cycle is an error (R-JTG-4). The placement travels as
+  `__nested` so the nested write-back (§9.2) materializes it.
+- **Called and lazy rules (B).** A called rule is invoked from a binding or a `forall` body,
+  binds its arguments, and returns the target it creates; it takes no part in pass-1 matching.
+  `lazy` creates on first demand, `unique lazy` memoizes on (rule, arguments, environment).
+  The write-back stops assuming one target per source id before B ships.
+
+**Two rulings on how the planned points relate (R-JTG-6, R-JTG-7; planned, not implemented).**
+
+1. *Containment under A and B (R-JTG-6).* A containment resolves (source, rule, caller's
+   environment) and creates the entry on demand when absent. Under A the environment is empty
+   and pass 1 has created the entry, so it is a lookup; under B a new environment has no entry
+   yet, so it is a fresh subtree. A call of a rule not declared `unique` always creates a fresh
+   subtree, even under an environment seen before, so one expression may be placed twice with
+   the same bindings. The double-claim error (R-JTG-4) applies to implicit resolutions and to
+   `unique` rules.
+2. *Rules for lowering (R-JTG-7).* Rules meant for lowering are declared `lazy`: they never
+   match in pass 1 and create a target only when a resolution or a call reaches the node.
+   Matched rules stay for the elements the transformation maps as such. Containment under A
+   alone therefore does not serve library expressions; that value arrives with B.
 
 ### 5.4 Per-Binding Invertibility
 
@@ -841,11 +905,11 @@ message, not silence.
 
 | # | Gap | Description | Priority |
 |---|---|---|---|
-| 1 | **Implicit trace resolution** | Auto-resolve source elements to target via trace | Critical |
+| 1 | **Implicit trace resolution** | Done for references, by identity, fallbacks reported (A0, §5.3.1). Left: the (source, rule, environment) key made explicit, with B (§5.3.2) | High |
 | 2 | **Alert/Notify execution** | Wire executor body items to UIBridge | High |
 | 3 | **Prompt/Input execution** | Wire AST bridge to UIBridge for interactive expressions | High |
 | 4 | **Multiplicity `[*]`** | Define and implement unbounded creation semantics | Medium |
-| 5 | **Reference mapping** | Map reference-typed properties (not just primitives) | High |
+| 5 | **Reference mapping** | References: done (§5.3.1). Containments: every rule target is a root; placing a traced target in its container is part A, planned (§5.3.2, R-JTG-4) | High |
 | 6 | **Source alias** | Parse and bind `Person p -> Human` alias in executor | Medium |
 | 7 | **Multi-model** | `from A, B to C, D` with qualified types | Phase 1 |
 | 8 | **Called rules** | `rule name(params) -> Type { ... }` | Phase 2 |

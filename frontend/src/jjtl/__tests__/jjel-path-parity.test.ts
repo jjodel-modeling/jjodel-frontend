@@ -167,8 +167,27 @@ function syntheticSource(ast: TransformationAST): any[] {
     return out;
 }
 
+/** A target created by a rule (pass 1), as opposed to an object created inside a body. */
+const isRuleTarget = (x: any): boolean =>
+    !!x && typeof x === 'object' && !Array.isArray(x) && x.__createdBy === 'JjTL' && !x.__nested;
+
+/**
+ * Rule targets are bound by identity (P-2026-11-02-1742), so two of them may point at
+ * each other. A rule target is written in full as an element of `roots`, where every
+ * rule target sits, and as `{__type, className, __sourceId}` anywhere else.
+ */
 function serialize(v: any): any {
-    return JSON.parse(JSON.stringify(v, (_k, x) => (x instanceof Map ? Object.fromEntries(x) : x)));
+    const roots = v?.roots;
+    const rootSet = new Set(roots ?? []);
+    return JSON.parse(JSON.stringify(v, function (this: any, _k, x) {
+        if (x instanceof Map) return Object.fromEntries(x);
+        if (isRuleTarget(x) && this !== roots) {
+            // The short form is safe only while the full one is compared as a root.
+            if (!rootSet.has(x)) throw new Error(`rule target ${x.className} from ${x.__sourceId} is not a root: its content would go uncompared`);
+            return { __type: x.__type, className: x.className, __sourceId: x.__sourceId };
+        }
+        return x;
+    }));
 }
 
 async function run(ast: TransformationAST): Promise<any> {
