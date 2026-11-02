@@ -995,3 +995,16 @@ Decisions awaiting Alfonso: none from the RC-26 list. For the owning chats (RC-3
 Expected: the test clears `JJODEL_CRITICAL_ZONE_GOAHEAD` (and any other go-ahead variable) from the child environment unless a case sets it on purpose, so vitest baselines inside critical-zone lanes match the ones outside.
 **Priority**: low
 **Found in**: P-2026-11-01-1605
+
+## 2026-11-02 — test(hooks): criticalZone spawns drop an inherited go-ahead (P-2026-11-02-0645)
+**Prompt**: Ticket #393: inside a lane started with --critical-zone-goahead the hook spawned by criticalZone.test.ts inherits JJODEL_CRITICAL_ZONE_GOAHEAD and 4 ask/deny cases fail. Strip the variable from the child environment in the test file only, keep the cases that set it on purpose, prove with the variable unset and set plus a mutation, gates, close the ticket.
+**Files touched**: frontend/scripts/hooks/__tests__/criticalZone.test.ts (3c54c9d3f); docs/log-inbox/harness.md, docs/prompts/claude_2026-11-02_0645_prompt_criticalzone_test_env.md (this commit)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. criticalZone.test.ts 70/70 with the variable unset and with JJODEL_CRITICAL_ZONE_GOAHEAD=P-2026-11-02-0645; check:scripts PASS, typecheck and typecheck:scripts exit 0 (neither covers scripts/hooks/__tests__)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Closes ticket #393 (2026-11-01, found in P-2026-11-01-1605). runScript lives in hookRunner.ts, shared by seven test files and left untouched: a local runZone deletes the variable from process.env around the synchronous spawn and restores it. Mutation (delete commented out): set 66/70, the 4 RC-19 bypass cases red; unset 70/70.
+**Prompt document name**: 2026-11-02 06:45

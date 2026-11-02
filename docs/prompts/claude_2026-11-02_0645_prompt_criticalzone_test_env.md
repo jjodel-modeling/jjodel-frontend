@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-02-0645
 Chat: C-2026-11-01-1434
 Front: harness
 Lane: fast (one test file)
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane criticalzone-test-env · 3c54c9d3f
 Request: https://claude.ai/code/session_01DQt9R32KVprpjZZCfe6Sbp
 
 Protocollo: docs/PROTOCOL.md — clausole P1..P16 applicabili (tutte salvo deroga esplicita nel prompt).
