@@ -6805,6 +6805,15 @@ the recommendation; evidence: read, verified: none, reversible: trunk).
   inverted it fixes it and says so in its log entry, otherwise it moves it as it is.
 - **R-AI-12** (2026-11-02, O-4). **The documentation types leave `types/jodie.ts` for a new `src/types/documentation.ts`
   at L6.**
+- **R-AI-13** (2026-11-02, measured by chat C-2026-11-02-1016 with Juri's Anthropic key, evidence: measured, verified:
+  agent, reversible: trunk). **The real-key Anthropic gate of R-AI-4 is met, and O-7 is answered.** The L0 spike driver,
+  Anthropic arms only (`~/.jjodel-lanes/spike196/drive3.mjs`, `results3.json`, 6 calls, key scan 0 hits with a 3/3
+  positive control), from Chromium at `http://localhost:3010`, `@anthropic-ai/sdk` 1.3.0 with the direct-browser header
+  on every request: with a valid key `GET /v1/models` 200 (14 models, `access-control-allow-origin: *`),
+  `messages.create` 200 and `messages.stream` 200 on `claude-haiku-5-5`; with an invalid key `messages` 401 readable,
+  `GET /v1/models` blocked by CORS (no status). So the live Claude catalog works without the Worker for a valid key
+  (O-7), and only a bad key on `models.list` reads as NETWORK, which R-AI-7 already avoids. The remaining L4 gate is
+  R-AI-7's Claude `test()` on `/v1/messages`, built in L1. The optional OpenAI credit is not needed for any gate.
 
 ## Superate
 
