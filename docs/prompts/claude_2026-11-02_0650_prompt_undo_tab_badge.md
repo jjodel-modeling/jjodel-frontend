@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-0650
 Chat: C-2026-11-01-1713
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-02
 Lane: fast (inline discovery reported in the log entry, then a small fix)
 Depends: T2 merged (aa68ad049); R-TXT-25
 Worktree: ~/jjodel-w-undotab, branch undo-tab-badge (from the trunk commit that adds this prompt)
