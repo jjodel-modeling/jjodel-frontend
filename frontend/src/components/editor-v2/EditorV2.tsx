@@ -58,6 +58,7 @@ import { orderSelection, sameIdList, resolveElementIds, type CanvasSelectionDeta
 import { revealViewport } from './utils/revealNode';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
+import { openViewportFallback, type NodeRect } from './openViewport';
 import { canRenderOnlyVisible } from './onlyRenderVisible';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
 import { readVertexLayout } from './viewpoint/layout/vertexLayout';
@@ -572,6 +573,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // onInit callback fires after init, but fitView and applyDistribution
     // are defined later.
     const fitViewRef = useRef<(() => void) | null>(null);
+    // True when the current viewport frames no node (ticket #419); set beside fitViewRef below.
+    const viewportShowsNoNodeRef = useRef<(() => boolean) | null>(null);
     // Viewport restored from a previous session, read ONCE at mount: it feeds
     // `defaultViewport` (so the canvas opens where it was left, with no flash at the
     // origin) and suppresses the opening fit. Null = first ever opening under this
@@ -607,7 +610,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // Restore-if-present, fit otherwise. A stored viewport already came in
             // through `defaultViewport`, so there is nothing to re-apply here — the
             // only thing to do is NOT fit over it (R-LAY-18: no new fitView sites).
-            if (!restoredViewportRef.current) fitViewRef.current?.();
+            // Unless it frames no node: then it goes through the open fit and its fallback (ticket #419).
+            if (!restoredViewportRef.current || viewportShowsNoNodeRef.current?.()) fitViewRef.current?.();
             // Apply port distribution to edges loaded from JjOM.
             // Initial sync assigns all edges handle index 0; distribution
             // assigns correct indices based on spatial ordering.
@@ -764,7 +768,24 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const getEdges = useCallback(() => getFlowEdges().filter((e) => !isPreviewId(e.id)), [getFlowEdges]);
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
-    fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
+    // Ticket #419: a fit that frames no node (the box centre between the nodes at minZoom) pans, same zoom, onto
+    // the node nearest the box centre (openViewport.ts). R-LAY-18: a setViewport after the existing fits, no new fit.
+    const openFallbackViewport = useCallback(() => {
+        const { nodeLookup, width, height } = storeApi.getState();
+        const rects: NodeRect[] = [];
+        for (const n of nodeLookup.values()) {
+            if (n.hidden || isPreviewId(n.id)) continue;
+            const p = n.internals.positionAbsolute;
+            rects.push({ id: n.id, x: p.x, y: p.y, w: n.measured?.width ?? 0, h: n.measured?.height ?? 0 });
+        }
+        return openViewportFallback(rects, getViewport(), { width, height, rightInset: getCanvasRightInset() }, fitPadding());
+    }, [storeApi, getViewport]);
+    const ensureNodeInView = useCallback((duration?: number) => {
+        const next = openFallbackViewport();
+        if (next) setViewport(next, { duration });
+    }, [openFallbackViewport, setViewport]);
+    viewportShowsNoNodeRef.current = () => openFallbackViewport() !== null;
+    fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 }).then(() => ensureNodeInView());
     // The ReactFlow prop, without the body style read per render (P-2026-10-21-1010).
     const fitViewOptions = useFitViewOptions();
 
@@ -4096,7 +4117,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     },
                 };
             })));
-            requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
+            requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
             return;
         }
 
@@ -4148,8 +4169,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             });
             return applyDistribution(recomputed);
         });
-        requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
-    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid]);
+        requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }).then(() => ensureNodeInView(300)));
+    }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid, ensureNodeInView]);
     autoLayoutRef.current = handleAutoLayout;
     // The toolbar's button runs the full layout; the first open and the re-layout keep autoLayoutRef's (P-2026-10-01-2215).
     const handleToolbarAutoLayout = useCallback(() => handleAutoLayout({ full: true }), [handleAutoLayout]);

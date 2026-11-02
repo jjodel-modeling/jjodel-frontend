@@ -556,3 +556,31 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Priority**: medium
 **Found in**: P-2026-11-02-2030
 **Detail**: docs/discovery/discovery_2026-11-02_jjscript_rename_expression.md
+
+## 2026-11-02 — fix(editor-v2): an open fit that frames no node pans onto one (P-2026-11-02-1856)
+**Prompt**: `claude_2026-11-02_1856_prompt_open_viewport_fix.md`, full lane, Phase 2 of P-2026-11-02-0646 on the GO of 2026-11-02 18:26 (Q1 the two auto-layout fits, Q2 a restored viewport with no node in view, Q3 anchor nearest the box centre, Q5 commit the probe). Closes ticket #419; the abstract-syntax restore stays ticket #440.
+**Files touched**: `55e4d2703`: `frontend/src/components/editor-v2/openViewport.ts` (new), `frontend/src/components/editor-v2/__tests__/openViewport.test.ts` (new), `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/scripts/probe/open-viewport.ts` (new). Closure commit (RC-17): this inbox, the Status lines of the prompts P-2026-11-02-0646 and P-2026-11-02-1856.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato: chat, RC-23, 2026-11-02 ~19:55, built-in browser, dev server from open-viewport-empty, harness fixture, fresh profile, pane 822x644: no viewpoint first open shows nodes in view (2 at that pane) and stores the corrected viewport; BPMN after reload opens at (-1440.5, -1173, 0.5) with 9 nodes in view, as on the trunk with the same pane; no console errors. GO Alfonso 2026-11-02 20:20.
+**Notes**: No viewpoint now opens at (-160.75, -10106.75, 0.5), 21 nodes in view, same over 3 fresh opens; BPMN unchanged (-1197.5, -1107, 0.5); reload, stored-empty, toolbar layout in view; 0 empty frames between fit and fallback, counter control 54/54. Bench 14 tests, 3 mutations killed. bpmn-lanes 12/12, smoke GREEN, typecheck 0, build ok. First full vitest had a 10th red (textual.test.ts R-TXT-21 (10)) under load: green alone and on the rerun.
+**Prompt document name**: 2026-11-02 18:56
+
+**Ticket** (P-2026-11-02-1856): the toolbar's full auto layout on the harness model with no viewpoint (407 nodes) holds the main thread about 391 s before its fit (probe `open-viewport.ts`, toolbar scenario, load under 6); measured on this branch only, not on the base, and the layout code is untouched here.
+
+## 2026-11-02 — merge: open-viewport-empty takes alfonso-frontend-jjtl (P-2026-11-02-2028)
+**Prompt**: `claude_2026-11-02_2028_prompt_open-viewport-empty_take_trunk.md`, full lane: bring the trunk at the explicit sha e5e60dca4 into open-viewport-empty with one --no-ff merge commit (RC-14), union for the inboxes; stopped at step 2 on the EditorV2.tsx conflict, resumed on the chat's authorization (RC-21, Alfonso GO 20:20) to keep both import lines.
+**Files touched**: merge commit 91033dfc9 (the trunk's 127 files; resolved by hand: `docs/log-inbox/maintenance.md` by union, `frontend/src/components/editor-v2/EditorV2.tsx` the import hunk only); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (chat, GO 2026-11-02 on the merge tree; the chat runs the combined-tree visual check before the trunk merge)
+**Notes**: Trunk tip moved to 4d1d32b8b (docs only, R-TXT-29); e5e60dca4 merged. Gates on 91033dfc9: typecheck and typecheck:scripts exit 0; vitest 492 files, 483 passed + the known 9, 12957 = trunk 12943 + 14; hooks 967 = trunk (a first run red on a laneBoard 10 s timeout, run beside the build, green alone); build exit 0; check:docs 5/5; check:scripts, check:addonly PASS. Full read of EditorV2.tsx by an explorer subagent.
+**Prompt document name**: 2026-11-02 20:28
