@@ -722,3 +722,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Priority**: medium
 **Found in**: P-2026-11-03-0000
 **Detail**: docs/discovery/discovery_2026-11-03_jjscript_console_defects.md
+
+## 2026-11-03 — merge: jjscript-console-defects into alfonso-frontend-jjtl (P-2026-11-03-0020)
+**Prompt**: `claude_2026-11-03_0020_prompt_merge_jjscript-console-defects.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-console-defects` at `fe85c80cb` into `alfonso-frontend-jjtl`, merge base `34b82af49`, 7 commits on the branch side.
+**Files touched**: merge `5b186217f`: 7 files from the branch side (`docs/discovery/discovery_2026-11-03_jjscript_console_defects.md`, `docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-03_0000_prompt_jjscript_console_defects.md`, `frontend/src/jjscript/__tests__/parserTermination.test.ts`, `frontend/src/jjscript/executor/__tests__/consoleDefects.test.ts`, `frontend/src/jjscript/executor/commands/create.ts`, `frontend/src/jjscript/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5b186217f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13145 tests in 498 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: on 3001 in a throwaway project, JjScript console: create package P1, create class Foo in P1 (appears in classes), create class X in Missing refused, eval with a lambda and with a string, let with an unparenthesized forall a, b reading x.size = 4: all as expected. Merge gates green (13145 tests, 0 failed, 9 red at import)
+**Notes**: Rollback tag `pre-jjscript-console-defects` on `e1b35c188` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-0020/result.json`.
+**Prompt document name**: 2026-11-03 00:20
