@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-2338
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane hw-notation · 7e96a4e1c, closed by P-2026-11-03-0009
 Lane: full (JjTL write-back in the app; second lane of slice B)
 Depends: P-2026-11-02-2321
 Worktree: ~/jjodel-w-jjtlcalled, branch jjtl-called-rules (the same tree, at the commit that adds this prompt)
