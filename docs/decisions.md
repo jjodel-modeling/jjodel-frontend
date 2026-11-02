@@ -7100,7 +7100,7 @@ Row 27: P-2026-11-02-0846 (T4a-1 design, hard-stop at the ceiling); Alfonso 2026
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
 Evidence: Alfonso 2026-11-02 13:19, forall x,y in JjEL and then in every language that uses JjEL; the parsers read by the
-project chat C-2026-11-02-1319. All rows: provisional, unattended, evidence: read, verified: none, reversible: trunk.
+project chat C-2026-11-02-1319. All rows: ratified by Alfonso 2026-11-02 19:18 («ok»), evidence: read and measured (discoveries of P-2026-11-02-1330 and 1331), verified: none, reversible: trunk.
 
 - **R-FA-1 (2026-11-02)**: two spellings, mixable: `forall x, y in S` (same collection) and `forall x in A, y in B`.
   Iteration is the full cartesian product, first variable outermost: without a filter the pair (a, a) and both orders
