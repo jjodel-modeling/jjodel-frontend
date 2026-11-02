@@ -11,8 +11,9 @@ import { ChatInput } from './ChatInput';
 import { ScriptEditorView } from './ScriptEditorView';
 import { ScriptFileUpdateView } from './ScriptFileUpdateView';
 import { closeScriptEditor, getScriptEditorTarget, subscribeScriptEditor } from './scriptEditorModel';
-import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from '../../types/jodie';
+import {TAIProvider, ChatImage, ChatDocument, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from '../../types/jodie';
 import { AIEvents, JjScriptEvents } from '../../events/registry';
+import { registry } from '../../services/ai';
 
 interface JodieWindowProps {
     messages: ConsoleEntry[];
@@ -72,8 +73,8 @@ interface ExecutingCommand {
 const JODIE_FAB_LEFT = 30;
 const JODIE_FAB_BOTTOM = 100;
 const JODIE_ANIMATION_MS = 220;
-// Dock width bounds (R-JJD-1). Persisted as JodieConfig.dockWidth, written on pointer-up only:
-// save() cascades into every provider config, so it never runs per drag frame.
+// Dock width bounds (R-JJD-1). Persisted under DOCK_WIDTH_KEY (R-AI-9), written on pointer-up only,
+// never per drag frame.
 const DOCK_MIN_WIDTH = 420;
 const DOCK_MAX_WIDTH = 760;
 const DOCK_DEFAULT_WIDTH = 460;
@@ -83,6 +84,26 @@ const DOCK_WIDTH_VAR = '--jj-jodie-dock-width';
 
 const clampDockWidth = (w: number): number =>
     Math.round(Math.max(DOCK_MIN_WIDTH, Math.min(DOCK_MAX_WIDTH, Number.isFinite(w) ? w : DOCK_DEFAULT_WIDTH)));
+
+// The dock width's own localStorage key (#196 L2, R-AI-9): a plain number string.
+const DOCK_WIDTH_KEY = 'jjodie_dock_width';
+// The blob that held the width until #196 L2 (JodieConfig of types/jodie.ts). Read once, when the
+// key above is absent, so a width the user already has is kept.
+const LEGACY_DOCK_BLOB_KEY = 'jjodie-credentials';
+
+const loadDockWidth = (): number => {
+    try {
+        const stored = localStorage.getItem(DOCK_WIDTH_KEY);
+        if (stored !== null) return clampDockWidth(Number(stored));
+        const legacy = JSON.parse(localStorage.getItem(LEGACY_DOCK_BLOB_KEY) || 'null')?.dockWidth;
+        if (typeof legacy === 'number') {
+            const w = clampDockWidth(legacy);
+            localStorage.setItem(DOCK_WIDTH_KEY, String(w));
+            return w;
+        }
+    } catch { /* unreadable storage or blob: the default width */ }
+    return DOCK_DEFAULT_WIDTH;
+};
 
 // The dock slot is rendered by ProjectDashboard as its last grid column; Jodie is mounted once,
 // globally, in App.tsx, so the window reaches the slot through this tiny store and portals into it.
@@ -135,13 +156,11 @@ export function JodieWindow({
     onClearCurrentMode,
     canClearCurrentMode,
 }: JodieWindowProps): JSX.Element {
-    // Dock width from config; the old floating `position`/`size` stay readable and unused (R-JJD-1).
-    const [dockWidth, setDockWidth] = useState<number>(
-        () => clampDockWidth(JodieConfig.current.dockWidth ?? DOCK_DEFAULT_WIDTH)
-    );
+    // Dock width from its own key; the old floating `position`/`size` stay readable and unused (R-JJD-1).
+    const [dockWidth, setDockWidth] = useState<number>(loadDockWidth);
     const [isResizing, setIsResizing] = useState(false);
     const [executingCommand, setExecutingCommand] = useState<ExecutingCommand | null>(null);
-    const [isAlive, setIsAlive] = useState<boolean>(() => JodieConfig.hasEnabledProviders());
+    const [isAlive, setIsAlive] = useState<boolean>(() => registry.enabled().length > 0);
     const [isAnimating, setIsAnimating] = useState(false);
     const slot = useSyncExternalStore(subscribeDockSlot, getDockSlot);
     const scriptEditor = useSyncExternalStore(subscribeScriptEditor, getScriptEditorTarget);
@@ -205,8 +224,7 @@ export function JodieWindow({
 
     // Persist the dock width (pointer-up / key press only, never per drag frame).
     const saveDockWidth = useCallback((w: number) => {
-        JodieConfig.current.dockWidth = w;
-        JodieConfig.current.save();
+        try { localStorage.setItem(DOCK_WIDTH_KEY, String(w)); } catch { /* storage full or blocked */ }
     }, []);
 
     // Left-edge handle: dragging left widens the panel, since the dock sits on the right.
@@ -260,7 +278,7 @@ export function JodieWindow({
 
     // Track AI provider configuration to drive the alive indicator
     useEffect(() => {
-        const refreshAlive = () => setIsAlive(JodieConfig.hasEnabledProviders());
+        const refreshAlive = () => setIsAlive(registry.enabled().length > 0);
         refreshAlive();
         window.addEventListener(AIEvents.SETTINGS_CHANGED, refreshAlive);
         // #168: a key saved in Settings fires PROVIDER_CHANGED only (AIConfig.save).
