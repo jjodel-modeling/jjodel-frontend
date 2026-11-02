@@ -480,3 +480,77 @@ Const -> Const {
         expect(rootTerms(result)).toEqual(['Add(Ref(a), Const(1))', 'Add(Ref(a), Ref(a))']);
     });
 });
+
+// ---------------------------------------------------------------------------
+// What the app's write-back receives (slice B2, P-2026-11-02-2338).
+
+const POINTER_TARGET = {
+    classes: [
+        cls('Holder', [], [{ name: 'items', composition: false, type: { name: 'Const' } }]),
+        cls('Const', ['value']),
+    ],
+};
+
+describe.each([
+    ['legacy parser (no source)', false],
+    ['JjEL parser (source)', true],
+] as const)('write-back shape (B2) — %s', (_label, withSource) => {
+    const runOn = (target: any, rules: string, source: any[]) => execute(parseJjtl(rules, withSource), source, target);
+
+    it('keeps a pointer to each of two fresh targets of one source element, by identity', async () => {
+        const result = await runOn(POINTER_TARGET, `
+lazy Const -> Const {
+    value := value
+}
+
+Main m -> Holder {
+    items := exprs
+}
+`, [el('m1', 'Main', { exprs: [ref('c1'), ref('c1')] }), k('c1', 4, 'm1')]);
+        expect(result.errors).toEqual([]);
+        const consts = result.targetModel!.instances.get('Const')!;
+        expect(consts).toHaveLength(2);
+        expect(consts[0].__sourceId).toBe(consts[1].__sourceId);
+        const holder = result.targetModel!.instances.get('Holder')![0];
+        expect(holder.items.__ref_result).toBe(true);
+        expect(holder.items.targets).toHaveLength(2);
+        expect(holder.items.targets[0]).toBe(consts[0]);
+        expect(holder.items.targets[1]).toBe(consts[1]);
+    });
+
+    it('still collapses the same matched target held twice to one pointer', async () => {
+        const result = await runOn(POINTER_TARGET, `
+Const -> Const {
+    value := value
+}
+
+Main m -> Holder {
+    items := exprs
+}
+`, [el('m1', 'Main', { exprs: [ref('c1'), ref('c1')] }), k('c1', 4, 'm1')]);
+        expect(result.errors).toEqual([]);
+        const holder = result.targetModel!.instances.get('Holder')![0];
+        expect(holder.items.targets).toEqual([result.targetModel!.instances.get('Const')![0]]);
+    });
+
+    it('reports a lazy selection error under a delegating matched rule per element, with the stack', async () => {
+        const result = await execute(parseJjtl(`
+lazy Const c -> Const where c.value > 5 {
+    value := value
+}
+
+Main m = m.expr
+`, withSource), [
+            el('m1', 'Main', { expr: ref('c1') }),
+            el('m2', 'Main', { expr: ref('c2') }),
+            k('c1', 1, 'm1'),
+            k('c2', 9, 'm2'),
+        ], TARGET);
+        expect(result.success).toBe(false);
+        expect(result.errors.some(e => /Execution failed/.test(e))).toBe(false);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/^Failed to lower Main 'm1' by rule '.*': No lazy rule applies to Const 'c1'/);
+        expect(result.errors[0]).toMatch(/\n  at .* on Main 'm1'/);
+        expect(result.targetModel!.roots.map(term)).toEqual(['Const(9)']);
+    });
+});

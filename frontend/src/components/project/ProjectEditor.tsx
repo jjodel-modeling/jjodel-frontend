@@ -59,6 +59,7 @@ import { isConsumerMode } from '../environment/consumerMode';
 import {
     materializeNested,
     countSubtree,
+    makeRootTargetIndex,
     type NestedDeps,
     type NestedJob,
     type NestedReferenceSet,
@@ -1691,14 +1692,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // the transformation output panel once STEP 6c ends, not only in the console.
                 const nestedUnplaced: NestedUnplaced[] = [];
 
-                // Map __sourceId → objectName: the reliable bridge between executor
-                // target instances and the DObjects created from them.
-                // Each executor target has __sourceId (the Pointer ID of the source
-                // element that produced it). We key by __sourceId so STEP 8b can
-                // resolve reference targets without depending on JS object identity
-                // (which breaks across deep copies) or on .name (which may not be
-                // set if the transformation has no `name := name` binding).
-                const sourceIdToObjectName = new Map<string, string>();
+                // Root target → objectName: the bridge between executor target instances
+                // and the DObjects created from them. Keyed by the executor object itself
+                // (slice B2): called, lazy and fresh rules may give one source element
+                // several targets, so __sourceId alone no longer names one. The result is
+                // not deep-copied (only the source model is), so a pointer holds the very
+                // object STEP 6 indexed. __sourceId stays a fallback when it names one root.
+                const rootTargets = makeRootTargetIndex();
 
                 // Rule targets a containment binding placed inside a container (slice A,
                 // SPEC §5.3.1): not created as roots here, but by STEP 6c inside their
@@ -1816,10 +1816,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 console.time(objTimingLabel);
                                 const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
 
-                                // Map __sourceId → objectName for reference wiring in STEP 8b
-                                if (instanceData.__sourceId) {
-                                    sourceIdToObjectName.set(String(instanceData.__sourceId), objectName);
-                                }
+                                // Index the target → objectName for reference wiring in STEP 8b
+                                rootTargets.add(instanceData, objectName);
 
                                 // Collect for DVertex creation AFTER the TRANSACTION.
                                 // DVertex.new has its own internal TRANSACTION — nesting
@@ -1923,7 +1921,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         });
                     }
                     console.timeEnd('[TIMING] DObject creation loop');
-                    console.log('[ProjectEditor] sourceId→name map:', Object.fromEntries(sourceIdToObjectName));
 
                     // console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
                 });
@@ -2209,12 +2206,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // Uses setValueAtPosition with isPtr:true (same API the Properties
                             // panel dropdown uses in Info.tsx changeDValue).
                             //
-                            // Lookup strategy: each executor target has __sourceId (the Pointer
-                            // ID of the source element that produced it). sourceIdToObjectName
-                            // maps __sourceId → the DObject name assigned during creation.
-                            // We then find the real DObject via LModel proxy by name to get
-                            // the real Pointer ID. A target placed in a containment is not a
-                            // root: it resolves by the id STEP 6c's walk returned for it.
+                            // Lookup strategy: rootTargets maps each root target, by identity,
+                            // to the DObject name assigned during creation (__sourceId only as
+                            // a fallback naming one root). We then find the real DObject via
+                            // LModel proxy by name to get the real Pointer ID. A target placed
+                            // in a containment is not a root: it resolves by the id STEP 6c's
+                            // walk returned for it.
                             const resolveTargetId = (target: any, where: string): string | null => {
                                 const createdId = target && typeof target === 'object' ? nestedCreatedIds.get(target) : undefined;
                                 if (createdId) return createdId;
@@ -2222,16 +2219,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     console.warn(`[ProjectEditor] Ref: target placed in a containment was not created, for ${where}`);
                                     return null;
                                 }
-                                const sourceId = target?.__sourceId;
-                                const targetName = sourceId
-                                    ? sourceIdToObjectName.get(String(sourceId))
-                                    : target?.name;
+                                const { name: targetName, reason } = rootTargets.nameOf(target);
                                 if (!targetName) {
-                                    if (sourceId) {
-                                        console.warn(`[ProjectEditor] Ref: sourceId not found in map: ${sourceId} (for ${where})`);
-                                    } else {
-                                        console.warn(`[ProjectEditor] Ref: target has no __sourceId or name for ${where}`);
-                                    }
+                                    console.warn(`[ProjectEditor] Ref: ${reason} (for ${where})`);
                                     return null;
                                 }
                                 // The pointer WRITE below is the one the census

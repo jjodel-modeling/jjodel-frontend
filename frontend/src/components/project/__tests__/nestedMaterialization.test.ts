@@ -11,6 +11,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     materializeNested,
+    makeRootTargetIndex,
     SLOT_WAIT_CAP_MS,
     type NestedDeps,
     type NestedJob,
@@ -171,63 +172,16 @@ describe('materializeNested', () => {
     });
 });
 
-/** A rule target as the executor returns it: unmarked, held live by the feature that places it. */
+/** A rule target as the executor returns it before pass 2 marks a placement: unmarked. */
 const T = (type: string, fields: Record<string, any>) => ({ __createdBy: 'JjTL', __type: type, ...fields });
 
-/** `isPlacedIn` over a containment map built from (target, container, feature) triples. */
-const placedBy = (claims: Array<[any, any, string]>) => {
-    const map = new Map(claims.map(([t, c, f]) => [t, { container: c, feature: f }]));
-    return (child: any, parent: any, feature: string) => {
-        const c = map.get(child);
-        return !!c && c.container === parent && c.feature === feature;
-    };
-};
-
 describe('materializeNested, rule targets placed in a containment (slice A)', () => {
-    /** Root r1 places n1; n1 places n2 in kids next to a created node; n2 places a leaf. */
-    const placedTree = () => {
-        const rootObj: any = { __createdBy: 'JjTL', __type: 'Root' };
-        const leaf = T('Leaf', { value: 7 });
-        const n2 = T('Node', { name: 'n2', label: 'B', leaves: [leaf] });
-        const created = N('Node', { name: 'c1', label: 'C' });
-        const n1 = T('Node', { name: 'n1', label: 'A', kids: [created, n2] });
-        rootObj.nodes = [n1];
-        const isPlacedIn = placedBy([[n1, rootObj, 'nodes'], [n2, n1, 'kids'], [leaf, n2, 'leaves']]);
-        return { rootObj, n1, n2, leaf, created, isPlacedIn };
-    };
-
-    it('creates a placed tree of depth 3 inside its containers, created and placed in the feature order', async () => {
+    it('an unmarked rule target in a feature is not created: only __nested objects are walked', async () => {
         const store = fakeStore(120);
-        const t = placedTree();
-        store.deps.isPlacedIn = t.isPlacedIn;
-        const { result, tree } = await run(store, t.rootObj.nodes);
-        expect(tree).toEqual({
-            cls: 'Root',
-            nodes: [{
-                cls: 'Node', name: 'n1', label: 'A',
-                kids: [
-                    { cls: 'Node', name: 'c1', label: 'C' },
-                    { cls: 'Node', name: 'n2', label: 'B', leaves: [{ cls: 'Leaf', value: 7 }] },
-                ],
-            }],
-        });
-        expect(result.created).toBe(4);
-        expect(result.unplaced).toEqual([]);
-        expect(store.warnings).toEqual([]);
-        // Every placed target and created object has its id, each written once.
-        expect([t.n1, t.n2, t.leaf, t.created].map(o => result.createdIds!.has(o))).toEqual([true, true, true, true]);
-        expect(new Set(result.createdIds!.values()).size).toBe(4);
-    });
-
-    it('without isPlacedIn, or in a feature that did not place it, a rule target is not created', async () => {
-        const store = fakeStore(120);
-        const t = placedTree();
-        const { result } = await run(store, [N('Node', { name: 'x', label: 'X', kids: [t.n2] })]);
+        const n2 = T('Node', { name: 'n2', label: 'B', leaves: [T('Leaf', { value: 7 })] });
+        const { result } = await run(store, [N('Node', { name: 'x', label: 'X', kids: [n2] })]);
         expect(result.created).toBe(1);
-        const store2 = fakeStore(120);
-        store2.deps.isPlacedIn = t.isPlacedIn;
-        const { result: r2 } = await run(store2, [N('Node', { name: 'x', label: 'X', kids: [t.n2] })]);
-        expect(r2.created).toBe(1);
+        expect(result.createdIds!.has(n2)).toBe(false);
     });
 
     it('a pointer held by a created or placed object is queued by its created id, not dropped', async () => {
@@ -253,11 +207,11 @@ describe('materializeNested, rule targets placed in a containment (slice A)', ()
 });
 
 // The executor marks a placed target `__nested` and `__placed` (P-2026-11-02-2108), so the walk
-// finds it with the one test it applies to created objects, and no `isPlacedIn`.
+// finds it with the one test it applies to created objects.
 describe('materializeNested, placed targets marked __nested (P-2026-11-02-2108)', () => {
     const P = (type: string, fields: Record<string, any>) => ({ ...T(type, fields), __nested: true, __placed: true });
 
-    it('creates a marked placed tree of depth 3 without isPlacedIn, in the feature order', async () => {
+    it('creates a marked placed tree of depth 3, in the feature order', async () => {
         const store = fakeStore(120);
         const leaf = P('Leaf', { value: 7 });
         const n2 = P('Node', { name: 'n2', label: 'B', leaves: [leaf] });
@@ -294,5 +248,39 @@ describe('materializeNested, placed targets marked __nested (P-2026-11-02-2108)'
             references: { subs: pointer },
         }]);
         expect(store.warnings).toEqual([]);
+    });
+});
+
+// Slice B2: called, lazy and fresh rules may give one source element several root targets.
+describe('makeRootTargetIndex', () => {
+    it('resolves each root target by identity, two targets of one source to two objects', () => {
+        const index = makeRootTargetIndex();
+        const a = T('Add', { __sourceId: 's1' });
+        const b = T('Add', { __sourceId: 's1' });
+        index.add(a, 'Add_0');
+        index.add(b, 'Add_1');
+        expect(index.nameOf(a)).toEqual({ name: 'Add_0' });
+        expect(index.nameOf(b)).toEqual({ name: 'Add_1' });
+    });
+
+    it('falls back on the source id only when it names one root, and reports two', () => {
+        const index = makeRootTargetIndex();
+        index.add(T('Node', { __sourceId: 's1' }), 'n1');
+        expect(index.nameOf({ __sourceId: 's1' })).toEqual({ name: 'n1' });
+        index.add(T('Node', { __sourceId: 's2' }), 'n2');
+        index.add(T('Node', { __sourceId: 's2' }), 'n2_2');
+        const twice = index.nameOf({ __sourceId: 's2' });
+        expect(twice.name).toBeUndefined();
+        expect(twice.reason).toMatch(/s2 names 2 root targets \(n2, n2_2\); none chosen/);
+        expect(index.nameOf({ __sourceId: 's9' })).toEqual({ reason: 'sourceId not found in map: s9' });
+    });
+
+    it('resolves a root with no source id, a called rule over a plain value, by identity or by name', () => {
+        const index = makeRootTargetIndex();
+        const t = T('Const', {});
+        index.add(t, 'Const_3');
+        expect(index.nameOf(t)).toEqual({ name: 'Const_3' });
+        expect(index.nameOf({ name: 'k' })).toEqual({ name: 'k' });
+        expect(index.nameOf({})).toEqual({ reason: 'target has no __sourceId or name' });
     });
 });

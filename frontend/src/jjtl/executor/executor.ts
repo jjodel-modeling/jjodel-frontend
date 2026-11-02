@@ -352,6 +352,9 @@ interface ApplicationFrame {
 /** Stops the run: rethrown by every binding, reported once at the top. */
 class JjtlApplicationAbort extends Error {}
 
+/** Key under which a delegating rule's error carries the application stack of its throw. */
+const APPLICATION_STACK = Symbol('jjtlApplicationStack');
+
 /** Who holds a rule target placed by a containment binding (slice A, R-JTG-4). */
 interface ContainmentClaim {
     container: any;
@@ -1583,8 +1586,20 @@ export class JjtlExecutor {
 
         if (mapping.result) {
             // A binding that reached the element first has already lowered it (realizeSource).
+            // An error of one element is that element's, as a binding's is (slice B2): the
+            // others are still lowered. The depth-limit abort still ends the run.
             for (const entry of pending) {
-                await this.realizeSource(entry.sourceInstance, mapping, EMPTY_ENVIRONMENT);
+                try {
+                    await this.realizeSource(entry.sourceInstance, mapping, EMPTY_ENVIRONMENT);
+                } catch (error) {
+                    if (error instanceof JjtlApplicationAbort) throw error;
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    const stack = (error as any)?.[APPLICATION_STACK] ?? this.applicationStackSuffix();
+                    this.errors.push(
+                        `Failed to lower ${this.describeSubject(entry.sourceInstance)} by rule ` +
+                        `'${this.ruleLabel(mapping)}': ${errorMessage}${stack}`
+                    );
+                }
             }
             return;
         }
@@ -3350,10 +3365,19 @@ export class JjtlExecutor {
         try {
             const alias = rule.ruleKind === 'called' ? undefined : rule.sources[0]?.alias;
             if (rule.result) {
-                const ctx = this.createInstanceContext(source, alias);
-                const value = await this.evaluateExpressionAsync(rule.result, ctx);
-                // What is left a source element resolves through the trace, as a binding would.
-                return this.resolveValue(await this.realizeDemands(value), `<${label}>`, undefined);
+                try {
+                    const ctx = this.createInstanceContext(source, alias);
+                    const value = await this.evaluateExpressionAsync(rule.result, ctx);
+                    // What is left a source element resolves through the trace, as a binding would.
+                    return this.resolveValue(await this.realizeDemands(value), `<${label}>`, undefined);
+                } catch (error) {
+                    // The stack where the expression failed, innermost delegation first, for the
+                    // caller that reports it once this frame is popped (pass 2).
+                    if (error && typeof error === 'object' && !(APPLICATION_STACK in error)) {
+                        (error as any)[APPLICATION_STACK] = this.applicationStackSuffix();
+                    }
+                    throw error;
+                }
             }
             if (rule.condition && !this.evaluateCondition(rule.condition, source, alias)) {
                 const msg = `Rule '${label}' was applied to ${frame.source} and its guard is false: it returned null.`;
@@ -3654,16 +3678,11 @@ export class JjtlExecutor {
                         `target(s), dropped ${nullCount} unresolved element(s) (target type without a matching rule).`
                     );
                 }
-                // Deduplicate by __sourceId — duplicate entries can arise when
-                // the raw DValue.values array has the same Pointer twice.
-                const seen = new Set<string>();
-                const unique = jjtlTargets.filter(el => {
-                    const key = el.__sourceId || el.id || el.name;
-                    if (!key) return true;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
+                // Deduplicate by identity — duplicate entries can arise when the raw
+                // DValue.values array has the same Pointer twice, which resolves to the
+                // same target object. Not by __sourceId: called, lazy and fresh rules give
+                // one source element several targets, each its own pointer (slice B2).
+                const unique = [...new Set(jjtlTargets)];
                 return { __ref_result: true, targets: unique };
             }
             return value;
