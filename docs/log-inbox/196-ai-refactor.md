@@ -31,3 +31,16 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: non applicabile
 **Notes**: Docs only, nothing in `frontend/`. Key-material scan of the spec: 0 hits over 2 values (positive control on the env file: 2). Q6 (Anthropic key, OpenAI credit) is a precondition of L4, not of L1. The spec records eight open items (O-1..O-8) for L1, L2 and L6. The phase 2 lane could not invoke `status-flip` (user-only skill).
 **Prompt document name**: 2026-11-02 10:55
+
+## 2026-11-02 — feat: #196 L1 lane 1/2, provider half of src/services/ai (P-2026-11-02-1320)
+**Prompt**: #196 L1, lane 1 of chain-P-2026-11-02-1320: pin the three SDKs (R-AI-2), then `types.ts`, abstract `BaseProvider`, the OpenAI/Anthropic/Google providers (lazy SDK imports, Claude `test()` on `/v1/messages` max_tokens 1, `insufficient_quota` message), their tests and a four-mutation bench.
+**Files touched**: `frontend/package.json`, `frontend/package-lock.json` (`d6c8a43d4`); `frontend/src/services/ai/` `types.ts`, `BaseProvider.ts`, `OpenAICompatibleProvider.ts`, `AnthropicCompatibleProvider.ts`, `GoogleCompatibleProvider.ts`, `__tests__/requestShaping.test.ts`, `__tests__/connectionTest.test.ts`, `__tests__/baseProvider.test.ts` (`d011234cf`); this inbox; the prompt's `Status:` line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Item 1 hard-stopped: npm install replaced the node_modules symlink with a real dir (now /tmp/nm196-l1-real-install, left to the chat). On Juri's GO: --package-lock-only here, shared node_modules filled --no-save from the main tree. Lock: 42 new, 2 changed (root, ws 8.22.1). Gap: vitest runs in node, so @google/genai loads its node export; browser wire is the L3 smoke. Ten files, rule 19 confirmed. Decisions (404 SERVER) and bench: d011234cf.
+**Prompt document name**: 2026-11-02 13:20
