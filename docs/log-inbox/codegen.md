@@ -1067,3 +1067,15 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Ticket**: With VITE_CODEGEN=false resolved (P-2026-11-02-0653), check:codegen-lazy --off still fails clauses 1 and 3: 43 modules under src/codegen/ land in lazy chunks and a chunk names runner.worker. Two dynamic imports lack the CODEGEN_BUILD guard their neighbours have: `ProjectEditor.tsx:70` (React.lazy GeneratorsSection) and `LeftBar.tsx:385` (import of openTemplateEditor). The env-file cause of the 2026-10-23 ticket is gone; this is what remains.
 **Priority**: medium
 **Found in**: P-2026-11-02-0653
+
+## 2026-11-02 — merge: defaults-layer-gate into alfonso-frontend-jjtl (P-2026-11-02-0841)
+**Prompt**: Bring `defaults-layer-gate` at `85da82fc8` (fix ffcb21052) into the trunk `alfonso-frontend-jjtl` with lane-run merge --direct (tag pre-defaults-layer-gate on 5b62357a5); union resolution of this inbox.
+**Files touched**: merge commit 247007a7b (`LModelElement.tsx` accessors, `EcoreService.ts`, `eval.ts`, the lazy gate script, tests, the 0653 prompt, this inbox); `docs/prompts/claude_2026-11-02_0841_prompt_merge_defaults-layer-gate.md` Status line; this entry
+**Outcome**: ✅ completed (gate off mode still red on two imports: P-2026-11-02-0845)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Prompt document name**: 2026-11-02 08:41
