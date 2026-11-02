@@ -7191,6 +7191,10 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   no text. Not decided here: it belongs to the hardware prototype, and it sizes the expression sub-language. Provisional,
   ratified as asked, unattended (P-2026-11-02-2021, from the owner's instruction in the prompt, not a new decision of
   Alfonso's); evidence: read, verified: none, reversible: trunk.
+- **R-JTG-9 (2026-11-02)**: `__placed` is accepted beside `__nested` on a target placed in a containment; when the nested
+  walk runs, all pointers, root ones included, are written after the tree; the optional `isPlacedIn` is removed with B.
+  Ratified by Alfonso (2026-11-02, ok to the recommendations on P-2026-11-02-2108); evidence: measured, verified: the
+  lane probes, reversible: trunk.
 
 ## Superate
 
