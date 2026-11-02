@@ -152,6 +152,32 @@ describe('Anthropic test() classification', () => {
     });
 });
 
+describe('test(modelId) calls the model the chat calls (#179)', () => {
+    /** A Claude provider whose fetch records the `model` of every request body. */
+    const recording = () => {
+        const models: string[] = [];
+        const fn = (async (_input: any, init?: RequestInit) => {
+            models.push(JSON.parse(String(init?.body)).model);
+            return json(200, { id: 'm', type: 'message', role: 'assistant', model: 'x', content: [{ type: 'text', text: 'Hi' }], stop_reason: 'end_turn', stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } });
+        }) as typeof fetch;
+        const spec: ProviderSpec = { ...CLAUDE, seedModels: [new AIModel('claude-haiku-5-5'), new AIModel('claude-sonnet-5')] };
+        return { models, provider: new AnthropicCompatibleProvider(spec, { apiKey: 'sk-ant-test', model: 'claude-haiku-5-5' }, { fetch: fn }) };
+    };
+
+    it('sends the chat-preference model, not the configured one', async () => {
+        const { models, provider } = recording();
+        expect(await provider.test('claude-sonnet-5')).toEqual({ success: true });
+        await provider.chat({ model: 'claude-sonnet-5', history: [{ role: 'user', content: 'Hi' }] });
+        expect(models).toEqual(['claude-sonnet-5', 'claude-sonnet-5']);
+    });
+
+    it('without a model it tests the configured one', async () => {
+        const { models, provider } = recording();
+        expect(await provider.test()).toEqual({ success: true });
+        expect(models).toEqual(['claude-haiku-5-5']);
+    });
+});
+
 describe('Gemini test() classification', () => {
     it('ApiError 400 API_KEY_INVALID is AUTH, not the API JSON', async () => {
         const { provider } = gemini(() => json(400, { error: {

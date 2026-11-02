@@ -4,14 +4,35 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import type {Dictionary} from "../../joiner";
-import {TAIProvider, AI, ALL_AI_PROVIDERS, AIConfig} from '../../types/jodie';
+import {AI} from '../../types/jodie';
+import { PROVIDER_IDS, ProviderConfigStore, registry } from '../../services/ai';
+import type { ProviderId, StoredProviderConfig } from '../../services/ai';
 import { ProviderConfigModal } from './ProviderConfigModal';
 import { AIEvents } from '../../events/registry';
+
+/**
+ * The status of a provider card (was AIConfig.getStatus, types/jodie.ts). A tested provider reads
+ * by its last outcome; an untested one is «Ready» when configured and «Not configured» otherwise.
+ * The old method had the last two the other way round (R-AI-11, measured by
+ * services/ai/__tests__/providerStatus.test.ts): fixed here.
+ */
+export function providerStatus(stored: StoredProviderConfig | null, configured: boolean): { text: string; class: string } {
+    // NB: when config is changed, lastTested is erased too in ProviderConfigModal
+    if (stored?.lastTested) {
+        if (stored.enabled) return { text: 'Connected', class: 'connected' };
+        else return { text: 'Error', class: 'error' };
+    }
+
+    if (!configured) return { text: 'Not configured', class: 'not-configured' };
+
+    // Has API key but not tested = Ready to test
+    return { text: 'Ready', class: 'ready' };
+}
 
 export function AIAssistantSettings() {
     const [refresh, setRefresh] = useState(0);
     // Modal state
-    const [selectedProvider, setSelectedProvider] = useState<TAIProvider | null>(null);
+    const [selectedProvider, setSelectedProvider] = useState<ProviderId | null>(null);
 
     // State for all providers
     /*const [providers, setProviders] = useState<ProvidersState>(() => {
@@ -38,9 +59,10 @@ export function AIAssistantSettings() {
     }, []);
 
     // Get model label for display
-    const getModelLabel = (provider: TAIProvider) => {
-        const config = AIConfig.get(provider);
-        return AI[provider].versions[config.model]?.label || config.model;
+    const getModelLabel = (provider: ProviderId) => {
+        const llmProvider = registry.get(provider);
+        const model = llmProvider.resolveModel();
+        return llmProvider.model(model)?.displayName || model;
     };
 
     return (
@@ -51,10 +73,9 @@ export function AIAssistantSettings() {
             </p>
 
             <div className="providers-list">
-                {ALL_AI_PROVIDERS.map(provider => {
-                    const config = AIConfig.get(provider);
+                {PROVIDER_IDS.map(provider => {
                     const llm = AI[provider];
-                    const status = config.getStatus();
+                    const status = providerStatus(ProviderConfigStore.load(provider), registry.get(provider).enabled());
                     const modelLabel = getModelLabel(provider);
 
                     return (

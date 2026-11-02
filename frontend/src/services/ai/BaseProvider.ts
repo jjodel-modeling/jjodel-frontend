@@ -254,8 +254,11 @@ export abstract class BaseProvider {
         return this.listModels();
     }
 
-    /** One minimal call with the model the chat uses; a failure is classified. */
-    async test(): Promise<ConnectionTestResult> {
+    /**
+     * One minimal call with the model the chat uses; a failure is classified. `modelId` is the
+     * chat's requested model, resolved as a chat call resolves it (#179); none tests the configured one.
+     */
+    async test(modelId?: string): Promise<ConnectionTestResult> {
         if (!this.enabled()) {
             return { success: false, error: this.requiresKey ? 'API key not configured' : `${this.name} requires a Base URL.` };
         }
@@ -264,13 +267,13 @@ export abstract class BaseProvider {
         }
         const keyError = this.validateKey();
         if (keyError) return { success: false, failure: FailureCatalog.AUTH, error: keyError };
-        const modelId = this.resolveModel();
-        if (!modelId.trim()) return { success: false, error: `No model selected for ${this.name}. Please choose a model in Settings.` };
+        const resolved = this.resolveModel(modelId);
+        if (!resolved.trim()) return { success: false, error: `No model selected for ${this.name}. Please choose a model in Settings.` };
         try {
-            await this.probe(modelId);
+            await this.probe(resolved);
             return { success: true };
         } catch (error) {
-            return this.classify(error, modelId);
+            return this.classify(error, resolved);
         }
     }
 

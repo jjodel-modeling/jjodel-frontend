@@ -32,11 +32,11 @@ export const claudeLegacyIdMap: Record<string, string> = {
 };
 
 /** One `.add(...)` of types/jodie.ts: id, label, pdf, vision, deprecated, context window. */
-type SeedRow = [id: string, label: string, pdf: boolean, vision: boolean, deprecated?: boolean, contextWindow?: number];
+export type SeedRow = [id: string, label: string, pdf: boolean, vision: boolean, deprecated?: boolean, contextWindow?: number];
 
 const unkn = false;
 
-const SEEDS: Record<ProviderId, SeedRow[]> = {
+export const SEEDS: Record<ProviderId, SeedRow[]> = {
     GPT: [
         ['gpt-4o',                    'GPT-4o',           true,  false],
         ['gpt-4o-mini',               'GPT-4o Mini',      true,  false],

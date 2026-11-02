@@ -4,16 +4,18 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {TAIProvider, AI, AIConfig, AIProvider, JodieConfig} from '../../types/jodie';
-import { AIProviderService } from '../../services/AIProviderService';
+import {AI} from '../../types/jodie';
+import { FeaturePreferenceStore, PROVIDER_SPECS, ProviderConfigStore, registry } from '../../services/ai';
+import type { ProviderId, StoredProviderConfig } from '../../services/ai';
+import { isDeprecatedModel } from '../../components/common/ProviderModelSelector';
 import './ProviderConfigModal.scss';
 
 
 interface ProviderConfigModalProps {
-    provider: TAIProvider;
+    provider: ProviderId;
     isOpen: boolean;
     onClose: () => void;
-    onSave?: (provider: TAIProvider, config: AIConfig) => void;
+    onSave?: (provider: ProviderId, config: StoredProviderConfig) => void;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
@@ -24,7 +26,15 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
     onClose,
     onSave,
 }) => {
-    let config = AIConfig.get(provider);
+    // The stored record, re-read at every render as AIConfig.get did; the model falls back to the
+    // provider's own (the first static entry when none was saved).
+    const stored = ProviderConfigStore.load(provider) ?? {};
+    const llmProvider = registry.get(provider);
+    const config = {
+        apiKey: stored.apiKey ?? '',
+        model: stored.model ?? llmProvider.spec.seedModels[0]?.apiName ?? '',
+        baseUrl: stored.baseUrl ?? '',
+    };
     const [apiKey, setApiKey] = useState(config.apiKey);
     const [model, setModel] = useState(config.model);
     const [baseUrl, setBaseUrl] = useState(config.baseUrl);
@@ -33,7 +43,7 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
     const [testMessage, setTestMessage] = useState('');
 
     // Check if this provider requires an API key
-    const requiresApiKey = provider !== AIProvider.Ollama;
+    const requiresApiKey = PROVIDER_SPECS[provider].requiresKey;
     let llm = AI[provider];
 
     // Reset state when modal opens with new provider
@@ -43,7 +53,7 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
             setModel(config.model);
             setBaseUrl(config.baseUrl);
             setShowKey(false);
-            setTestStatus(config.wasSuccessfullyTested() ? 'success' : 'idle');
+            setTestStatus(llmProvider.enabled() && stored.enabled && stored.lastTested ? 'success' : 'idle');
             setTestMessage('');
         }
     }, [isOpen, provider, config]);
@@ -53,8 +63,7 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
         const changed = apiKey !== config.apiKey || model !== config.model || baseUrl !== (config.baseUrl || '');
         if (changed) {
             setTestStatus('idle');
-            config.lastTested = undefined;
-            config.save();
+            ProviderConfigStore.save(provider, { lastTested: undefined });
         }
     }, [apiKey, model, baseUrl, config]);
 
@@ -71,28 +80,23 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
         setTestMessage('Testing connection...');
 
         try {
-            // Temporarily save config for testing
-            config.enabled = true;
-            if (!requiresApiKey) config.baseUrl = baseUrl;
-
-            const result = await AIProviderService.testConnection(provider);
+            // The test reads the stored settings: the fields below save on every edit. It tests the
+            // model the chat calls this provider with, as the settings row labels it (#179).
+            const pref = FeaturePreferenceStore.get('chat');
+            const result = await registry.get(provider).test(pref?.providerId === provider ? pref.modelId : undefined);
 
             if (result.success) {
                 setTestStatus('success');
                 setTestMessage('Connected successfully!');
-                config.lastTested = Date.now();
-                config.enabled = true;
-                config.save();
+                ProviderConfigStore.save(provider, { lastTested: Date.now(), enabled: true });
             } else {
                 setTestStatus('error');
                 setTestMessage(result.error || 'Connection failed');
                 // Revert enabled state on failure
-                config.enabled = false;
-                config.save();
+                ProviderConfigStore.save(provider, { enabled: false });
             }
         } catch (error: any) {
-            config.enabled = false;
-            config.save();
+            ProviderConfigStore.save(provider, { enabled: false });
             setTestStatus('error');
             setTestMessage(error.message || 'Connection failed');
         }
@@ -170,8 +174,8 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                                 type="text"
                                 value={baseUrl}
                                 onChange={(e) => {
-                                    setBaseUrl(config.baseUrl = e.target.value);
-                                    config.save();
+                                    setBaseUrl(e.target.value);
+                                    ProviderConfigStore.save(provider, { baseUrl: e.target.value });
                                 }}
                                 placeholder="http://localhost:11434"
                                 className="modal-input"
@@ -187,8 +191,8 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                                 type={showKey ? 'text' : 'password'}
                                 value={apiKey}
                                 onChange={(e) => {
-                                    setApiKey(config.apiKey = e.target.value);
-                                    config.save();
+                                    setApiKey(e.target.value);
+                                    ProviderConfigStore.save(provider, { apiKey: e.target.value });
                                 }}
                                 placeholder={requiresApiKey ? `Enter your ${llm.name} API key` : 'Optional - leave empty for local'}
                                 className="modal-input"
@@ -211,13 +215,13 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                         <select
                             value={model}
                             onChange={(e) => {
-                                setModel(config.model = e.target.value);
-                                config.save();
+                                setModel(e.target.value);
+                                ProviderConfigStore.save(provider, { model: e.target.value });
                             }}
                             className="modal-select"
                         >
-                            {Object.entries(llm.versions).map(([k, v]) => (
-                                <option key={k} value={k} disabled={v.deprecated}>{v.label}</option>
+                            {llmProvider.models().map(m => (
+                                <option key={m.apiName} value={m.apiName} disabled={isDeprecatedModel(provider, m.apiName)}>{m.displayName}</option>
                             ))}
                         </select>
                     </div>
