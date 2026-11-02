@@ -83,3 +83,16 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: passato — Juri's visual GO on port 3197 (chat C-2026-11-02-1311), overall on the 10-item checklist
 **Notes**: Juri's yes covers the 9-row provider list (Llama, Copilot gone) and three unattended decisions: attachments follow the chat's model; ChatMessages.tsx unchanged (presentation, L6); mapping export label from the registry. Bridge, L3 deletes it: refreshLiveCatalog copies the live list into AI[p].versions. #179: test(modelId?) is on the chat's model again (1916 had it on the configured one). Dock width key jjodie_dock_width. R-AI-11 label was inverted, fixed.
 **Prompt document name**: 2026-11-02 19:30
+
+## 2026-11-02 — merge: feat/196-l2-settings-cutover into staging (P-2026-11-02-2338)
+**Prompt**: `claude_2026-11-02_2338_prompt_merge_feat-196-l2-settings-cutover.md`, a direct merge by `lane-run merge --direct`, no session: `feat/196-l2-settings-cutover` at `4fb91f1db` into `staging`, merge base `4ecb408bb`, 7 commits on the branch side.
+**Files touched**: merge `fe3d6552d`: 20 files from the branch side (`docs/log-inbox/196-ai-refactor.md`, `docs/prompts/claude_2026-11-02_1916_prompt_196_l2_settings_cutover.md`, `docs/prompts/claude_2026-11-02_1930_prompt_196_l2_continuation.md`, `frontend/src/components/Jodie/ChatInput.tsx`, `frontend/src/components/Jodie/Jodie.tsx`, `frontend/src/components/Jodie/JodieWindow.tsx`, `frontend/src/components/StatusBarRightZone.tsx`, `frontend/src/components/abstract/tabs/DocumentationTab.tsx`, and 12 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fe3d6552d` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12273 tests in 456 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: visual GO by Juri on port 3197 (lane tree of feat/196-l2-settings-cutover, 10-item checklist, chat C-2026-11-02-1311); lane probe 14/14 with mocked providers; merge gates 8/8 green
+**Notes**: Rollback tag `pre-feat/196-l2-settings-cutover` on `4ecb408bb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2338/result.json`.
+**Prompt document name**: 2026-11-02 23:38
