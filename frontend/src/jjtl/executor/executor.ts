@@ -918,6 +918,28 @@ export class JjtlExecutor {
         return shallowToJjelValue(this.liftSourceRefs(value));
     }
 
+    /**
+     * The value a forall variable sees for one element of its collection. A record
+     * built by an expression (`{ hi: q, lo: r }`) reaches the forall through
+     * fromJjelValue, which copies it by Object.entries and so drops the getters of
+     * the source handles inside it: `pr.hi` was a bare `{ __ref }` and `pr.hi.name`
+     * read null. The fields of a plain record are lifted again; every other element
+     * goes through bindSourceValue as before.
+     */
+    private bindForAllElement(item: any): JjelValue {
+        if (item && typeof item === 'object' && !Array.isArray(item)
+            && Object.getPrototypeOf(item) === Object.prototype
+            && !Object.prototype.hasOwnProperty.call(item, '__ref')
+            && !this.isSourceElement(item)) {
+            const lifted: Record<string, any> = {};
+            for (const [key, value] of Object.entries(item)) {
+                lifted[key] = this.liftSourceRefs(value);
+            }
+            return shallowToJjelValue(lifted);
+        }
+        return this.bindSourceValue(item);
+    }
+
     private isSourceElement(obj: any): boolean {
         const arr = Array.isArray(this.context?.sourceModel) ? this.context.sourceModel : null;
         if (!arr) return false;
@@ -2014,55 +2036,71 @@ export class JjtlExecutor {
         const baseCtx = extraBindings
             ? this.createInstanceContext(sourceInstance).child(extraBindings)
             : this.createInstanceContext(sourceInstance);
-        const collectionValue = this.evaluateExpression(forall.collection, baseCtx);
-        const collection = fromJjelValue(collectionValue);
-
-        if (!Array.isArray(collection)) {
-            if (collection != null) {
-                this.warnings.push(`ForAll collection is not an array: ${typeof collection}`);
-            }
-            return [];
-        }
+        // `forall q, r in xs` and `forall q in xs, r in ys` carry every variable in
+        // `bindings`; a one-variable forall carries none.
+        const vars = forall.bindings ?? [{ variable: forall.variable, collection: forall.collection }];
 
         const results: any[] = [];
         let unresolvedRefs = 0;
 
-        for (const rawItem of collection) {
-            const item = this.derefSourceRef(rawItem);
-            if (item === rawItem && rawItem && typeof rawItem === 'object'
-                && typeof (rawItem as any).__ref === 'string') {
-                unresolvedRefs++;
-            }
-
-            const itemBindings: Record<string, JjelValue> = {
-                ...(extraBindings || {}),
-                [forall.variable]: this.bindSourceValue(item),
-            };
-            // Also add item properties directly for unqualified access.
-            // Uses proxyEntries to capture L-layer proxy properties.
-            if (item && typeof item === 'object') {
-                for (const [key, value] of proxyEntries(item)) {
-                    if (!key.startsWith('__')) {
-                        itemBindings[key] = this.bindSourceValue(value);
+        // The cartesian product, first variable outermost (R-FA-1). Each collection is
+        // evaluated with the variables before it bound, so `forall q in xs, r in q.children`
+        // reads q (R-FA-2). The created objects form one flat list.
+        const iterate = async (level: number, bound: Record<string, JjelValue>, lastItem: any): Promise<void> => {
+            if (level === vars.length) {
+                const itemBindings: Record<string, JjelValue> = {
+                    ...(extraBindings || {}),
+                    ...bound,
+                };
+                // Also add item properties directly for unqualified access.
+                // Uses proxyEntries to capture L-layer proxy properties.
+                // One variable only: the properties of two elements would collide.
+                if (vars.length === 1 && lastItem && typeof lastItem === 'object') {
+                    for (const [key, value] of proxyEntries(lastItem)) {
+                        if (!key.startsWith('__')) {
+                            itemBindings[key] = this.bindSourceValue(value);
+                        }
                     }
                 }
-            }
-            const childCtx = baseCtx.child({ [forall.variable]: this.bindSourceValue(item) });
+                const childCtx = baseCtx.child(bound);
 
-            if (forall.filter) {
-                const passes = this.evaluateExpression(forall.filter, childCtx);
-                if (!fromJjelValue(passes)) continue;
+                if (forall.filter) {
+                    const passes = this.evaluateExpression(forall.filter, childCtx);
+                    if (!fromJjelValue(passes)) return;
+                }
+
+                const created = await this.executeObjectCreation(
+                    forall.objectCreation, sourceInstance, itemBindings
+                );
+                results.push(fromJjelValue(created));
+                return;
             }
 
-            const created = await this.executeObjectCreation(
-                forall.objectCreation, sourceInstance, itemBindings
-            );
-            results.push(fromJjelValue(created));
-        }
+            const ctx = level === 0 ? baseCtx : baseCtx.child(bound);
+            const collectionValue = this.evaluateExpression(vars[level].collection, ctx);
+            const collection = fromJjelValue(collectionValue);
+
+            if (!Array.isArray(collection)) {
+                if (collection != null) {
+                    this.warnings.push(`ForAll collection is not an array: ${typeof collection}`);
+                }
+                return;
+            }
+
+            for (const rawItem of collection) {
+                const item = this.derefSourceRef(rawItem);
+                if (item === rawItem && rawItem && typeof rawItem === 'object'
+                    && typeof (rawItem as any).__ref === 'string') {
+                    unresolvedRefs++;
+                }
+                await iterate(level + 1, { ...bound, [vars[level].variable]: this.bindForAllElement(item) }, item);
+            }
+        };
+        await iterate(0, {}, undefined);
 
         if (unresolvedRefs > 0) {
             this.warnings.push(
-                `forall ${forall.variable}: ${unresolvedRefs} element(s) of the collection are references ` +
+                `forall ${vars.map(v => v.variable).join(', ')}: ${unresolvedRefs} element(s) of the collection are references ` +
                 `to objects outside the source model and were iterated unresolved ` +
                 `(target of '-> ${forall.objectCreation.targetClass}').`
             );

@@ -485,16 +485,31 @@ export class JjtlParser {
         };
     }
 
-    // forAllMapping = "forall" IDENT "in" expression ("such" "that" expression)? objectCreationDirect
+    // forAllMapping = "forall" forAllBinding ("," forAllBinding)* ("such" "that" expression)? objectCreationDirect
+    // forAllBinding = IDENT ("," IDENT)* "in" expression
     private forAllMapping(): ForAllMappingAST {
         const startToken = this.consume(TokenType.FORALL, "Expected 'forall'");
 
-        const variable = this.consume(TokenType.IDENTIFIER, "Expected iteration variable name").value;
+        const bindings: Array<{ variable: string; collection: ExpressionAST }> = [];
+        do {
+            const names: Token[] = [this.consume(TokenType.IDENTIFIER, "Expected iteration variable name")];
+            while (this.match(TokenType.COMMA)) {
+                names.push(this.consume(TokenType.IDENTIFIER, "Expected iteration variable name"));
+            }
+            this.consume(TokenType.IN, "Expected 'in' after forall variable");
 
-        this.consume(TokenType.IN, "Expected 'in' after forall variable");
+            // Parse collection expression — stops naturally at SUCH, ARROW or COMMA (not expression operators)
+            const collection = this.expression();
+            for (const name of names) {
+                if (bindings.some(b => b.variable === name.value)) {
+                    throw this.error(name, `'${name.value}' is bound twice in the same forall`);
+                }
+                bindings.push({ variable: name.value, collection });
+            }
+            // After a collection a comma continues the bindings: `forall q in xs, r in ys`.
+        } while (this.match(TokenType.COMMA));
 
-        // Parse collection expression — stops naturally at SUCH or ARROW (not expression operators)
-        const collection = this.expression();
+        const { variable, collection } = bindings[0];
 
         // Optional filter: 'such that' condition
         let filter: ExpressionAST | undefined;
@@ -533,6 +548,7 @@ export class JjtlParser {
             type: 'ForAllMapping',
             variable,
             collection,
+            ...(bindings.length > 1 ? { bindings } : {}),
             filter,
             objectCreation,
             location: this.makeLocation(startToken, this.previous()),
