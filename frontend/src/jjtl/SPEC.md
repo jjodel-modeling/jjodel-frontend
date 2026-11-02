@@ -583,20 +583,19 @@ in an environment are closures (the expression with the environment of the bindi
   `lazy` creates on first demand, `unique lazy` memoizes on (rule, arguments, environment).
   The write-back stops assuming one target per source id before B ships.
 
-**Open: how two planned points relate (Alfonso has not ruled; see the A0 closing report).**
+**Two rulings on how the planned points relate (R-JTG-6, R-JTG-7; planned, not implemented).**
 
-1. *Containment under A versus B.* Under A a containment places the target **found through
-   the trace**; under B (Q3 of the discovery report) it creates a **fresh subtree** and never
-   consults the trace. Recommendation: one rule for both, through the key. A containment
-   resolves (source, rule, caller's environment) and creates the entry on demand when absent.
-   Under A the environment is empty and pass 1 has created the entry, so it is a lookup; under
-   B a new environment has no entry yet, so it is a fresh subtree. A second placement under the
-   same environment stays a double claim.
-2. *Matched rules on library nodes.* A matched rule per class fires on every contained node of
-   a library expression, creating root targets that are only ever lowered through called
-   rules. Recommendation: rules meant for lowering are declared `lazy`, so they never match in
-   pass 1 and create a target only when a resolution or a call reaches the node; matched rules
-   stay for the elements the transformation maps as such.
+1. *Containment under A and B (R-JTG-6).* A containment resolves (source, rule, caller's
+   environment) and creates the entry on demand when absent. Under A the environment is empty
+   and pass 1 has created the entry, so it is a lookup; under B a new environment has no entry
+   yet, so it is a fresh subtree. A call of a rule not declared `unique` always creates a fresh
+   subtree, even under an environment seen before, so one expression may be placed twice with
+   the same bindings. The double-claim error (R-JTG-4) applies to implicit resolutions and to
+   `unique` rules.
+2. *Rules for lowering (R-JTG-7).* Rules meant for lowering are declared `lazy`: they never
+   match in pass 1 and create a target only when a resolution or a call reaches the node.
+   Matched rules stay for the elements the transformation maps as such. Containment under A
+   alone therefore does not serve library expressions; that value arrives with B.
 
 ### 5.4 Per-Binding Invertibility
 
