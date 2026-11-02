@@ -12,7 +12,8 @@ import {
 } from '../types/suggestions';
 import { SimpleMatcher } from './SimpleMatcher';
 import { AIMatcher } from './AIMatcher';
-import {JodieConfig, TAIProvider} from "../../types/jodie";
+import {TAIProvider} from "../../types/jodie";
+import { registry } from '../../services/ai';
 
 export interface AnalyzeOptions {
     mode: SuggestionMode;
@@ -55,7 +56,7 @@ export class MappingSuggestionService {
                 suggestions = this.simpleMatcher.analyze(sourceElements, targetElements);
             } else {
                 // AI mode
-                if (!JodieConfig.hasEnabledProviders()) {
+                if (registry.enabled().length === 0) {
                     return {
                         mode,
                         suggestions: [],
