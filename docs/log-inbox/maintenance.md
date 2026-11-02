@@ -497,3 +497,16 @@ Gates on 0020: typecheck exit 0; build exit 0; vitest 468 files passed, 9 failed
 **Smoke visivo**: on 3001, from the served modules: eight expressions as R-FA, both parse errors, three autocomplete contexts `after-forall-in`. The suggestion list in the console UI was not exercised.
 **Notes**: Rollback tag `pre-jjel-forall-multivar` on `a122f5463`. Worker: `~/.jjodel-lanes/P-2026-11-02-1511/result.json`.
 **Prompt document name**: 2026-11-02 15:11
+
+## 2026-11-02 — feat(jjscript): forall...do over several variables (P-2026-11-02-1332)
+**Prompt**: R-FA-7 in JjScript: `forall a, b in S ... do` and `forall x in A, y in x.f ... do` desugared by the parser to nested ForAllArgs, filter on the innermost; tests, one Jjodie prompt line.
+**Files touched**: df3455a9d (4 files: `frontend/src/jjscript/parser/parser.ts`, `__tests__/parser.test.ts`, `executor/__tests__/forallMultivar.test.ts` new, `frontend/src/constants/defaultPrompts.ts`); Status of the 1332 prompt; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Executor, planner, guard, validator unchanged (planner: `unsupported: forall`, pinned by a test). Undo is the Run's group, not run end to end (executor does not import in the bench). `x, y in S` reading x is a regex parse error (a lambda rebinding x is a false positive). `rename b to b.name + _dup` does not parse (rename takes a name token, pre-existing). Gates: tsc 0, vitest 1425 passed (context-binding the known failure), build 0. Mutation: bindingContinues=false kills 5.
+**Prompt document name**: 2026-11-02 13:32

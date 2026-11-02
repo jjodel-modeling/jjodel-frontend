@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-02-1332
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-02 · lane maintenance · branch jjscript-forall-multivar · commit df3455a9d · verifica visiva non applicabile
 Lane: fast (one parser rule, desugared to nested foralls; the executor unchanged if the probe confirms)
 Depends: P-2026-11-02-1330 merged into the trunk
 Worktree: ~/jjodel-w-jjsforallmv, branch jjscript-forall-multivar (from the trunk tip after that merge)
