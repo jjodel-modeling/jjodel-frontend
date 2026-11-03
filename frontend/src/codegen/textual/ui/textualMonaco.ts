@@ -34,7 +34,7 @@ const SLATE_700 = '334155';
 const SLATE_600 = '475569';
 const SLATE_500 = '64748b';
 const SLATE_400 = '94a3b8';
-const CYAN = '06b6d4';
+const CYAN = '0891b2'; // cyan-600: about 4.5:1 on white, where cyan-500 gave about 2.4:1
 const RED_600 = 'dc2626';
 
 const TEXTUAL_RULES: Monaco.editor.ITokenThemeRule[] = [
