@@ -593,3 +593,38 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: passato — chat, unattended: gates green on 1cbb75d13; acceptance by an app probe on the branch, no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-class2relational` on `968e7a44e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1532/result.json`.
 **Prompt document name**: 2026-11-03 15:32
+
+## 2026-11-03 — ticket: a JjTL rule whose target class does not exist runs without error and writes a partial model
+**Ticket**: a rule whose target class is not declared in the target metamodel (`-> Nope`) is not rejected: the run reports no error and writes a partial target model, 4 nested objects of the 10 the same transformation writes with the class declared. Measured in the app by the probe of P-2026-11-03-1435 (`fix-fail2`), not by hand. It is the case R-FA-11 names: a transformation that goes on writes a target model that is wrong and looks done. Expected: the run stops with an error naming the rule and the class, as an abstract target already does (`fix-fail4`), and writes nothing. Seen beside it, not separated: `envLookup("nope")` in a lazy Const did not fail either (`fix-fail`).
+**Priority**: high
+**Found in**: P-2026-11-03-1435
+
+## 2026-11-03 — ticket: an edit made while a JjTL run is writing is undone with the run
+**Ticket**: the undo step of a JjTL run (R-JTG-14) stays open until the store has been quiet 800 ms after the write-back, so a user edit made inside that window is folded into the run's step: Undo reverts the edit together with the run, Redo reapplies both. Measured by the probe of P-2026-11-03-1435 (`fix-edit2`): an edit at +1.35 s (`c0.num` 0 to 7) is reverted to 0 by Undo and back to 7 by Redo. Reported, not fixed; no fix was designed.
+**Priority**: low
+**Found in**: P-2026-11-03-1435
+
+## 2026-11-03 — feat(jjtl): a JjTL run is one undo step (#458) (P-2026-11-03-1435, P-2026-11-03-1522)
+**Prompt**: P-2026-11-03-1435, Undo after a JjTL run did nothing (#458): one run one undo step, Redo brings it back, no TRANSACTION around creators (NN-12); closed by P-2026-11-03-1522 after the context ceiling of the first session.
+**Files touched**: `8348487c6`: the Layer Impact Report; `5300d78b6`: `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/components/project/nestedMaterialization.ts`, `frontend/src/components/project/__tests__/nestedMaterialization.test.ts`; `a2bfae74e`: `docs/decisions.md` (R-JTG-14); this inbox (two tickets and this entry); the `Status:` lines of both prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — unattended: acceptance by an app probe on the branch (`~/.jjodel-lanes/P-2026-11-03-1435/probe/`), no hand run and no visual check
+**Probe**: this is the app probe of P-2026-11-03-1435, driven by script, not a hand run.
+
+| Case | Before / after | Result |
+|------|----------------|--------|
+| baseline-plain-b2_1 | before the fix | undo 0 after the run; Cmd+Z and Shift+Cmd+Z change nothing |
+| fix-plain-b2_1 | fix | undo 1; Undo: idlookup keys identical to before (model, tab, 11 vertices gone); Redo: keys and tree identical to after the run; the tab is not reopened |
+| fix-second-b2_1 | fix | Undo, second run, Undo: clean; a new run does not clear the redo stack (pre-existing) |
+| fix-fail4-b2_1 | fix | abstract target rejected with the error in the panel, no writes, no undo entry |
+| fix-fail2 | fix | `-> Nope` runs without error, partial model, 4 nested of 10 (ticket, high) |
+| fix-edit2-b2_1 | fix | edit at +1.35 s (`c0.num` 0 to 7) folded into the run's step: Undo 0, Redo 7 (ticket, low) |
+| fix-plain2-b10_8 | fix | group closed after 15339 ms, not capped; Undo blocks about 933 ms (longest task 875 ms), Redo about 309 ms; 11517 keys added, all removed by Undo, all back with an identical tree on Redo |
+
+**Notes**: Root cause measured: after a programmatic run `U.userHasInteracted` stays false, so every delta was dropped. The run raises it (R-UNDO-2) and opens an undo group after the executor succeeds, closed by R-JTG-14 (provisional, unattended). STEP 7 untouched. Unit: 6 new tests, 32/32, mutation bench kills all 6. Gates at `eb432d962`: vitest 13352 passed, 3 red at import (`window is not defined`, the expected three); build 0; tsc 0. Not merged.
+**Prompt document name**: 2026-11-03 14:35

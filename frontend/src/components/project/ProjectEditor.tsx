@@ -69,8 +69,11 @@ import {
     awaitNestedSlots,
     type NestedUnwritten,
     type NestedWaitDeps,
+    openRunUndoStep,
+    type RunUndoStep,
 } from './nestedMaterialization';
 import { COMMIT } from '../../redux/action/action';
+import { beginUndoGroup, endUndoGroup } from '../../redux/reducer/reducer';
 import { serializeFeatureValues } from './jjtlSourceValues';
 import './project-editor.scss';
 
@@ -1425,6 +1428,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 return;
             }
             isExecutingTransformation = true;
+            // The run's undo group (#458), opened once the executor has succeeded; closed after the last write.
+            let undoStep: RunUndoStep | null = null;
 
             // console.log('[ProjectEditor] handleExecuteTransformation called', {
             //     sourceModelId,
@@ -1710,6 +1715,23 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     posY: number;
                 }> = [];
 
+                // One undo step for the whole run (#458, R-JTG-14), as a script Apply (R-PLG-5):
+                // the click opens the D-layer history (R-UNDO-2, as createModelFromText does), and
+                // the R-JJD-6 group folds every write of the run, the tab and its canvas included.
+                // Not a TRANSACTION: it wraps no creator (CLAUDE.md rule 12).
+                U.userHasInteracted = true;
+                undoStep = await openRunUndoStep({
+                    begin: () => beginUndoGroup(),
+                    end: endUndoGroup,
+                    flush: async () => {
+                        COMMIT(undefined, false);
+                        await new Promise<void>(resolve => setTimeout(resolve, 0));
+                    },
+                    subscribe: (listener) => store.subscribe(listener),
+                    sleep: (ms) => new Promise<void>(resolve => setTimeout(resolve, ms)),
+                    now: () => performance.now(),
+                });
+
                 console.time('[TIMING] TRANSACTION total');
                 TRANSACTION('Execute Transformation: Create Target Model', () => {
                     // STEP 1: Crea DModel con il nome UNICO
@@ -1974,14 +1996,23 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     console.timeEnd('[TIMING] DVertex creation');
                 }
 
+                // The end of the write-back, for the run's undo step: STEP 8's timer has run and the
+                // chain it started has settled. The timer marks itself at its first line; the `.then`
+                // below reads `writeBackChain` after the timer's synchronous body, where it is assigned.
+                let writeBackChain: Promise<unknown> | undefined;
+                let markWriteBackRan: () => void = () => {};
+                let writeBackEnd: Promise<unknown> = Promise.resolve();
+
                 // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
                 if ((pendingAttributeSets.length > 0 || pendingReferenceSets.length > 0
                     || pendingChildAttributeSets.length > 0 || pendingNestedCreations.length > 0) && createdModelId) {
                     const modelId = createdModelId;
+                    writeBackEnd = new Promise<void>(resolve => { markWriteBackRan = resolve; }).then(() => writeBackChain);
                     // console.log(`[ProjectEditor] STEP 8: Will set attributes for ${pendingAttributeSets.length} objects via LModel proxy`);
 
                     // Use setTimeout to wait for Redux propagation and rendering
                     setTimeout(() => {
+                        markWriteBackRan();
                         try {
                             const lModel = LPointerTargetable.fromD(modelId) as LModel;
                             if (!lModel) {
@@ -2320,7 +2351,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // One report to the output panel, once the attributes are written,
                             // with what was not written (#482).
                             if (nestedDone) {
-                                nestedDone.then(async () => {
+                                writeBackChain = nestedDone.then(async () => {
                                     let unwritten: NestedUnwritten | undefined;
                                     let attributesDone = pendingChildAttributeSets.length === 0;
                                     try {
@@ -2362,6 +2393,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
                 window.dispatchEvent(new CustomEvent(SystemEvents.JJTL_EXECUTION_RESULT, { detail: result }));
 
+                // Close the run's undo step after STEP 8 and after STEP 7's tab, which opens 2000 ms after
+                // it is scheduled (above this line) and then writes its canvas.
+                undoStep.close(writeBackEnd, performance.now() + 2000).then(r => console.log(
+                    `[ProjectEditor] Run undo step closed after ${Math.round(r.waitedMs)} ms${r.capped ? ' (cap)' : ''}`));
+
                 // Reset execution guard
                 isExecutingTransformation = false;
                 return result;
@@ -2369,6 +2405,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             } catch (error) {
                 console.error('[ProjectEditor] Error:', error);
                 U.alert('e', 'Error', `Failed to execute transformation: ${error}`);
+                undoStep?.close();
                 // Reset execution guard
                 isExecutingTransformation = false;
                 // Return failed result so JjtlDevelopmentEnv can show errors
