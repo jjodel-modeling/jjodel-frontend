@@ -988,12 +988,25 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
     const byId = new Map(objects.map(o => [o.id, o]));
     const roots = objects.filter(o => !contained.has(o.id));
     const nameOf = (o: MutableObject): unknown => (g.objects[o.cls]?.named ? o.slots.name : undefined);
+    // Linear resolution (step A): the objects by name and the roots by class, each list in text order, built once.
+    const byName = new Map<unknown, MutableObject[]>();
+    for (const o of objects) {
+        const nm = nameOf(o);
+        if (nm === undefined) continue;
+        const list = byName.get(nm);
+        if (list) list.push(o); else byName.set(nm, [o]);
+    }
+    const rootsOf = new Map<string, MutableObject[]>();
+    for (const o of roots) {
+        const list = rootsOf.get(o.cls);
+        if (list) list.push(o); else rootsOf.set(o.cls, [o]);
+    }
 
     const walk = (r: PendingRef): MutableObject | string => {
         const s = r.syntax;
         const targets = r.node.targets;
         if (s.name !== undefined) {
-            const found = objects.filter(x => targets.includes(x.cls) && nameOf(x) === s.name);
+            const found = (byName.get(s.name) ?? []).filter(x => targets.includes(x.cls));
             if (found.length === 1) return found[0];
             if (found.length > 1) {
                 const at = found.map(x => where(x.id)).join(', ');
@@ -1032,7 +1045,7 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
             if (renamed !== undefined) return `a path starts with a class keyword: ${renamed} is written "${pathKeyword(g, renamed)}"`;
             return `a path starts with a class: there is no class "${head.f}"`;
         }
-        const tops = roots.filter(o => o.cls === cls);
+        const tops = rootsOf.get(cls) ?? [];
         if (!tops[head.index]) return `there is no top-level ${head.f}[${head.index}]: the text has ${tops.length}`;
         let cur: MutableObject = tops[head.index];
         for (const seg of rest) {

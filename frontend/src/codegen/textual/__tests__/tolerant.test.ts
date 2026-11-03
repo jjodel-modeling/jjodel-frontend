@@ -230,3 +230,27 @@ describe('(iv) two-tier diagnostics; a text with a syntax error is never applied
         expect(outside).toBeGreaterThan(mutants.length / 2);
     });
 });
+
+describe('(v) linear name resolution', () => {
+    const LIB = CASES[0];
+    const median = (text: string): number => {
+        const times: number[] = [];
+        for (let i = 0; i < 7; i++) { const s = performance.now(); parseText(text, LIB.g); times.push(performance.now() - s); }
+        return times.sort((a, b) => a - b)[3];
+    };
+    const small = printTextModel(LIB.g, libraryObjects(800, 200)).text;
+    const large = printTextModel(LIB.g, libraryObjects(4800, 1200)).text;
+
+    it('1,001 objects, a third of the books borrowed by name, parse within the 50 ms budget per keystroke (measured)', () => {
+        expect(parseText(small, LIB.g).errors).toEqual([]);
+        expect(median(small)).toBeLessThan(50);
+    });
+
+    it('six times the objects cost less than eight times the time: the resolution is not quadratic (measured)', () => {
+        median(small);
+        const a = median(small);
+        const b = median(large);
+        console.log(`[tolerant] parse median: 1,001 objects ${a.toFixed(1)} ms, 6,001 objects ${b.toFixed(1)} ms, ratio ${(b / a).toFixed(1)}`);
+        expect(b / a).toBeLessThan(8);
+    }, 60_000);
+});
