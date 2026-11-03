@@ -7137,6 +7137,17 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   is declared ordered unless `ordered === false`, the Ecore default: reversing a list in the text reorders the model. For
   R-TXT-22, a cut followed by a paste of the identical text is certain identity, with no confirmation; any other move is
   uncertain and confirmed; a paste with the original still in the text is a new object.
+- **R-TXT-34** (2026-11-03, Alfonso 13:53). **The goal of the textual syntax front becomes an IDE-level editor.** (1) Writing
+  expressions with binary operators enters the plan: `driver` reads as `st & (is_sw)` instead of Conj/Disj/ops pyramids,
+  with a round trip to the model. (2) The outline lives inside the Text tab, left of the text, and can be collapsed. (3)
+  This work goes ahead of the rest of the plan; T8 comes after it. One language service derived from grammar and
+  metamodel, wired to the Monaco providers, with no code specific to a metamodel. Acceptance on a non-hardware metamodel
+  first; the Briefs stay a read-only regression check. Order after T7: A tolerant parser with positions together with T9;
+  B semantic highlighting, outline, breadcrumb, folding, go to definition, find references, hover; C expression notation,
+  T4b, T5; D contextual completion, line errors with quick fixes, safe rename, formatting; E T10 with selection synced
+  between text and canvas; F embedded JjEL strings, generated line to model line, then T8. Out for now: debugger, terminal,
+  multi-file editing; the minimap only if Monaco offers it at no cost. R-TXT-21 (8) stands: objects recovered from a broken
+  text are never applied.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
