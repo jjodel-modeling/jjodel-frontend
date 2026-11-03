@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1402
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · e784e325d · rows reproduced by tests on both parser paths, double-execution row read only, no app probe (unattended)
 Lane: full (executor and parser behaviour, SPEC)
 Depends: none
 Worktree: ~/jjodel-w-jjtlspec12, branch jjtl-spec-12-review (at the commit that adds this prompt)
