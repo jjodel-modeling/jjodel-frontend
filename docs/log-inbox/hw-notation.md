@@ -628,3 +628,16 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 
 **Notes**: Root cause measured: after a programmatic run `U.userHasInteracted` stays false, so every delta was dropped. The run raises it (R-UNDO-2) and opens an undo group after the executor succeeds, closed by R-JTG-14 (provisional, unattended). STEP 7 untouched. Unit: 6 new tests, 32/32, mutation bench kills all 6. Gates at `eb432d962`: vitest 13352 passed, 3 red at import (`window is not defined`, the expected three); build 0; tsc 0. Not merged.
 **Prompt document name**: 2026-11-03 14:35
+
+## 2026-11-03 — merge: jjtl-run-undo into alfonso-frontend-jjtl (P-2026-11-03-1542)
+**Prompt**: `claude_2026-11-03_1542_prompt_merge_jjtl-run-undo.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-run-undo` at `a6e9a4b24` into `alfonso-frontend-jjtl`, merge base `ed6367578`, 6 commits on the branch side.
+**Files touched**: merge `a5e66854b`: 8 files from the branch side (`docs/decisions.md`, `docs/discovery/lir_2026-11-03_jjtl_run_undo.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1435_prompt_jjtl_run_undo.md`, `docs/prompts/claude_2026-11-03_1522_prompt_jjtl_run_undo_close.md`, `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/components/project/__tests__/nestedMaterialization.test.ts`, `frontend/src/components/project/nestedMaterialization.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a5e66854b` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13407 tests in 506 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on a5e66854b; acceptance by an app probe on the branch, no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-run-undo` on `a1d892c10` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1542/result.json`.
+**Prompt document name**: 2026-11-03 15:42
