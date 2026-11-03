@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1415
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · ecb912167, bda84222f · design carried out by P-2026-11-03-2120 and P-2026-11-03-2152 · verifica visiva passata 2026-11-03 (chat, RC-23, crops of P-2026-11-03-2152)
 Lane: full (parser core of the textual layer, design before the code)
 Depends: the merge of branch textual-t7; Alfonso's hand test
 Worktree: ~/jjodel-w-texta, branch textual-a-tolerant-parser

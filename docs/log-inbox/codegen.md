@@ -1456,3 +1456,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: 1,214 mutants, 0 throws. Deleting a root's `{` or keyword loses the whole root (sync skips balanced blocks). Reference errors precede the syntax error in the list. Parse quadratic in references (1.1 s at 24k objects, 48 ms without). No trivia, spans per object only. Recommended: lossless CST with trivia on tokens, built by parser and printer. Seven decisions await Alfonso, in the report.
 **Prompt document name**: 2026-11-03 14:15
+
+## 2026-11-03 — feat(codegen): tolerant parser, lossless tree and recovery, textual step A parser half (P-2026-11-03-2120, P-2026-11-03-2152)
+**Prompt**: `claude_2026-11-03_2120_prompt_textual_a_parser.md` and its continuation `claude_2026-11-03_2152_prompt_textual_a_parser_cont.md` (RC-51): tokens keep their trivia, a lossless tree, recovery by insertion, deletion and descent, reference errors after a syntax error as warnings, linear name resolution, a display-only match of a broken parse; bench, Briefs, gates, in-app check.
+**Files touched**: `parser.ts` (722eb3cee, 93ec1bd92, ce29856c2, 231113e79, beb512f58); `__tests__/tolerant.test.ts`, `__tests__/tolerantCorpus.ts` (93ec1bd92 onward, b35e18146); `textMatch.ts`, `ui/TextualTab.tsx` (bfa1a18ee); harness probe `docs/discovery/harness/probe_2026-11-03_2120_tolerant_recovery.test.ts`; this inbox; the Status of 1415, 2120, 2152 (P-2026-11-03-2220 item 1).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no (9 files over the two lanes, above five: listed above, RC-11; all inside the declared scope)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended, 4/4: brace deleted, keyword deleted, truncation, comment kept on apply; crops of P-2026-11-03-2152 checked by the chat (RC-23)
+**Notes**: Gates on b35e18146: tsc 0; vitest 13465 passed, 3 red at import (baseline); build 0; check:codegen-lazy ALL GREEN (off, on). Deletion probe: kept-after 83.4 -> 100% (library), stopped 20/542 -> 1/542; 6,001 objects 102.5 -> 27.2 ms. Bench: every mutant killed but isApplicableParse on errors only (equivalent). Findings (a) collapsed spans after paste-back, (b) live delete of a commented-out object: ~/.jjodel-lanes/P-2026-11-03-2152/handoff.md.
+**Prompt document name**: 2026-11-03 21:20
