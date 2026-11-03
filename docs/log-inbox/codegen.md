@@ -1443,3 +1443,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: merge of textual-applied-paths, gates green on the merge; crops of P-2026-11-03-1535 checked by the chat before the merge (RC-23)
 **Notes**: Rollback tag `pre-textual-applied-paths` on `8f3482ab3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1558/result.json`.
 **Prompt document name**: 2026-11-03 15:58
+
+## 2026-11-03 — discovery(codegen): tolerant parser, textual step A phase 1 (P-2026-11-03-1415)
+**Prompt**: `claude_2026-11-03_1415_prompt_textual_a_discovery.md`: measure `parser.ts` on incomplete text (truncation at every token, deletion of every token) on non-hardware metamodels in their annotated forms; read spans, identity and comments against a CST; recommend one design; stop with a question. No production code.
+**Files touched**: `ecb912167`: `docs/discovery/discovery_2026-11-03_textual_tolerant_parser.md`, `docs/discovery/harness/probe_2026-11-03_textual_tolerant_parser.test.ts`; this commit: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Docs and a harness probe only; no gate run (no code changed).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 1,214 mutants, 0 throws. Deleting a root's `{` or keyword loses the whole root (sync skips balanced blocks). Reference errors precede the syntax error in the list. Parse quadratic in references (1.1 s at 24k objects, 48 ms without). No trivia, spans per object only. Recommended: lossless CST with trivia on tokens, built by parser and printer. Seven decisions await Alfonso, in the report.
+**Prompt document name**: 2026-11-03 14:15
