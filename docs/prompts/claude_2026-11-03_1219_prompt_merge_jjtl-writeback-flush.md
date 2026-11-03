@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-03-1219
 Chat: C-2026-11-03-1020
 Request: https://claude.ai/code/session_01DQt9R3BFXF4UseWLm7Xnzy (merge of jjtl-writeback-flush launched by chat C-2026-11-03-1020)
 Lane: full (merge; 1 conflict: `docs/log-inbox/hw-notation.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane merge · f4232f784 · verifica visiva passata 2026-11-03 (gates green on f4232f784; acceptance by app probes on the branch at a3317694b, no hand run and no visual check)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-03-1219 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

@@ -455,3 +455,16 @@ b11_9 has no low-load before figure; its longest task after (7,206 and 7,885) is
 | c60 after, loaded | 40.2, 16.0 at the end | 6,607 | 191 (worse) | 9,867 | 62 | 62 of 62 |
 
 c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the probe's median, over bursts of `addObject` closer than 30 ms, 302 over 61 bursts before and 143 over 23 after, because flushed levels now fall into one burst. The walk ends sooner in every shape (b7_7 3,876 to 1,592; b10_8 10,440 to 4,921; c60 19,027 to 6,479); the longest task now sits just after the walk's end (b7_7 at 3,972, b10_8 at 5,095), where the open tab renders what earlier arrived level by level. The slow levels the old cap would have dropped are in the after runs: a level gap of 10,739 ms in the loaded run and 18,656 ms in the heavy one, with every `Const` created. The forced stop is a scratch probe mode, `WB_FORCESTALL=300`: after 300 `addObject` calls `Tgt.Add.left` is renamed, and the panel reads "feature "left" not available after 3000 ms without a slot answering": 2 lines shown, "... and 492 more" in the console. The 60 s total bound is covered by its unit test only.
+
+## 2026-11-03 — merge: jjtl-writeback-flush into alfonso-frontend-jjtl (P-2026-11-03-1219)
+**Prompt**: `claude_2026-11-03_1219_prompt_merge_jjtl-writeback-flush.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-writeback-flush` at `a3317694b` into `alfonso-frontend-jjtl`, merge base `c5b3e30ff`, 9 commits on the branch side.
+**Files touched**: merge `f4232f784`: 9 files from the branch side (`docs/discovery/lir_2026-11-03_jjtl_writeback_flush.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1033_prompt_jjtl_writeback_flush.md`, `docs/prompts/claude_2026-11-03_1057_prompt_jjtl_writeback_flush_close.md`, `docs/prompts/claude_2026-11-03_1137_prompt_jjtl_walk_cap.md`, `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/components/project/__tests__/nestedMaterialization.test.ts`, `frontend/src/components/project/nestedMaterialization.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f4232f784` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13262 tests in 503 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on f4232f784; acceptance by app probes on the branch at a3317694b, no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-writeback-flush` on `336f39188` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1219/result.json`.
+**Prompt document name**: 2026-11-03 12:19
