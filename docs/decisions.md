@@ -7290,6 +7290,20 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   `unique` is allowed on called rules: `unique rule f(x)` returns the same target for a second call with the same
   arguments and environment, as `unique lazy` does; the double-claim error of R-JTG-4 applies. A rule not declared
   `unique` keeps R-JTG-6's fresh target per call. Evidence: the tests of P-2026-11-03-2111.
+- **R-JTG-17** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a
+  rule whose target class is not in the target metamodel is an error before the run writes anything, naming the rule
+  and the class, as an abstract target is: nothing is written. A nested creation of an unknown class stays a warning.
+  Evidence: `language-open-points.test.ts` and the app probe of P-2026-11-04-0015 (no output model, 16 objects before
+  and after; the control run writes 27).
+- **R-JTG-18** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk): a
+  `lazy` rule is exempt from R-JTG-3 when its class also has a matched rule: it never matches in pass 1, so it does
+  not compete there. Narrows R-JTG-7's rejection of a class with both, which no longer holds. A binding that reaches
+  a node of such a class is settled by the type of its feature: the lazy rule when only its target fits, the matched
+  rule's pass 1 target when no lazy target fits, an error naming both otherwise (unattended reading, P-2026-11-04-0015).
+  Evidence: `language-open-points.test.ts`, `class2relational.test.ts`, `called-lazy-rules.test.ts`.
+- **R-JTG-19** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk): the
+  `such that` of a JjTL `forall` sees the bindings its body sees, the element's bare names included. Evidence:
+  `language-open-points.test.ts` (P-2026-11-04-0015).
 
 ## Superate
 
