@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-0703
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane jjtl-writeback-time · report f88a79bd8 · produzione non misurata
 Lane: discovery (no product code; one probe outside the repo, one report, one docs-only commit)
 Depends: P-2026-11-03-0539
 Worktree: ~/jjodel-w-jjtlwbtime, branch jjtl-writeback-time (at the commit that adds this prompt)
