@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1553
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane hw-notation · 984ccd9b0 · app probes, no hand run
 Lane: full (small; last step of the plan for the open JjTL points)
 Depends: none
 Worktree: ~/jjodel-w-jjtlstep6, branch jjtl-panel-warnings-low (at the commit that adds this prompt)
