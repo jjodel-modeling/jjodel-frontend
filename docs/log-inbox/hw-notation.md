@@ -341,3 +341,26 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (chat GO on HTTP 200 on 3001 and the probes of P-2026-11-03-0539 on the branch tip; no hand run on the trunk)
 **Notes**: Merge-tree 9a472978d equal to the merge commit's tree; 3 probes once each, no union. Gates on b7dfcc51e: typecheck, typecheck:scripts exit 0; vitest 502 files, 13231 = trunk 13215 + 16 (56 vs 40 in the two branch test files), the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5 (the prompt said 4/4); check:agents, check:scripts, check:addonly PASS. Lane board untouched. Regressions unknown: no app run on the trunk.
 **Prompt document name**: 2026-11-03 06:42
+
+## 2026-11-03 — ticket: JjTL nested-attribute write can run before the last commit and silently drop num at 5,119 objects
+**Ticket**: At 5,119 lowered objects the nested-attribute writer (STEP 8, `components/project/ProjectEditor.tsx:2165-2189`, a fixed 1,000 ms after the walk end) can run before the commit that creates the last level's slots, and nothing reports the loss. Measured in the app, probe `wbtime.ts` of P-2026-11-03-0703 (dev server, port 3211), shape `b11_9` (5,119 objects, 12 levels, output tab open): in two of three runs (`grow`, `grow3`) 2,048 of 2,560 `Const` objects lost `num`; the console printed 2,048 times `[ProjectEditor] Feature "$num" not found` and 512 `Const` kept `num`, still 512 after 10 s. The third run (`grow2`) wrote all 2,560. In `grow3` the writer ran at 23,285 ms and the 26,624-action dispatch at 23,296 ms, an 11 ms margin. A silent loss of model data: the toast and the status bar say the transformation completed.
+
+Reproduction: `WB_SIZES=b11_9 node frontend/scripts/lane-run.mjs probe ~/jjodel-w-jjtlwbtime ~/.jjodel-lanes/P-2026-11-03-0703/probe/wbtime.ts --port 3211 --id P-2026-11-03-0703`, three runs; fixture `fixture-b11_9.json` in the same directory. Not seen at 2,559 objects (5 of 5 runs complete) and not seen at 5,119 with the output tab not opened (`WB_ABLATE=open2`: 2,560 of 2,560, attributes at 11.6 s).
+
+Whether a smaller tree can hit it under load: the existing runs do not say. They were all made at machine load 1.4-3.0, and the margin at smaller sizes was not recorded. The window is a fixed timer against a commit stretched by long tasks, so a loaded machine is a plausible way to reach it with fewer objects; this is a hypothesis, not measured. Related: candidate B of `docs/discovery/discovery_2026-11-03_jjtl_writeback_time.md` (flush before writing the attributes) closes it by construction.
+**Priority**: high
+**Found in**: P-2026-11-03-0703
+**Detail**: docs/discovery/discovery_2026-11-03_jjtl_writeback_time.md
+
+## 2026-11-03 — discovery: where the JjTL write-back time goes (P-2026-11-03-1014)
+**Prompt**: P-2026-11-03-1014, continuation of P-2026-11-03-0703 after its context ceiling: write the report from the handoff, file the ticket for the 5,119-object attribute race, run production only if load allowed.
+**Files touched**: `docs/discovery/discovery_2026-11-03_jjtl_writeback_time.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_0703_prompt_jjtl_writeback_time.md` and `docs/prompts/claude_2026-11-03_1014_prompt_jjtl_writeback_time_report.md` (Status lines)
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-03 07:03 (`claude_2026-11-03_0703_prompt_jjtl_writeback_time.md`: continued after its context ceiling)
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Report written from the handoff, figures from the 0703 probe on the dev server. Production NOT measured: load 15.7 at the check (limit 8). The opening-after canvas cost (WB_OPENAFTER) is also unmeasured. Ticket for the 5,119 attribute race filed (#482, high).
+**Prompt document name**: 2026-11-03 10:14
