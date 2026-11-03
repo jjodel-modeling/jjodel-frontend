@@ -137,3 +137,16 @@ file. The active log is not touched by these lanes.
 **Ticket**: In Juri's visual check of #196 L3, Test connection on Gemini with the default `gemini-3.7-flash` showed «Unreachable» (NETWORK). The chat's Node run got a readable 503 «high demand» from the same model at the same time. `BaseProvider.classify` (`frontend/src/services/ai/BaseProvider.ts:290`) maps 5xx to SERVER («Provider error») and only a missing status to NETWORK. So in the browser, either `statusOf` (`:98`) does not find the status on the `@google/genai` error, or the 503 answer carries no CORS header and the fetch fails with no status. Not measured: run the Gemini test() in a browser against a 503 (real or routed) and read the thrown error's shape before choosing a fix.
 **Priority**: low
 **Found in**: P-2026-11-03-0020
+
+## 2026-11-03 — refactor: #196 L4, AI proxy Worker surface deleted from the code (P-2026-11-03-1330)
+**Prompt**: #196 L4, code part only (R-AI-20, R-AI-21): delete `getProxyBase`, `AI.proxy` and the proxy branch of `getEndpoint` in `types/jodie.ts`, the dead fetch path of `services/aiModelCatalog.ts` and their tests; prove the bundle no longer names the Worker host; probe with the Worker host routed and aborted.
+**Files touched**: `d0d305e0d` types/jodie.ts, services/aiModelCatalog.ts, services/__tests__/aiModelCatalog.test.ts, deleted types/__tests__/aiProxyEndpoint.test.ts; this inbox; the `Status:` line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d0d305e0d`: typecheck exit 0; build exit 0; vitest 445 files passed, 9 red at import (the nine known), 12241 tests passed (12263 - 22 deleted cases); dist files naming `jjodel-ai-proxy` 1 -> 0, `jjodel-notifications` 1 -> 1 (control).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe `_tmp_196_l4_probe.ts` under `lane-run probe` on 3196 (SMOKE_URL set): 30/30, 0 page errors, Worker route control 1 hit, 0 app requests to the Worker
+**Notes**: Item 1 table (name -> live importers -> fate, search with a positive control, no live importer of a deleted name) in `~/.jjodel-lanes/P-2026-11-03-1330/handoff.md`. Kept: CATALOG_PROVIDERS, cachedModelsFor, capabilitiesFor, the three types and what cachedModelsFor reads. Registry cases now seed the cache via hashKey and catalogStorageKey. Still owed (R-AI-20): `cloudflare-worker/`, the `.gitignore` line and the CODEBASE-MAP paragraph, after Alfonso removes the deployment; branch unmerged.
+**Prompt document name**: 2026-11-03 13:30
