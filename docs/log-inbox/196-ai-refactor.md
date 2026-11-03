@@ -150,3 +150,16 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: passato — probe `_tmp_196_l4_probe.ts` under `lane-run probe` on 3196 (SMOKE_URL set): 30/30, 0 page errors, Worker route control 1 hit, 0 app requests to the Worker
 **Notes**: Item 1 table (name -> live importers -> fate, search with a positive control, no live importer of a deleted name) in `~/.jjodel-lanes/P-2026-11-03-1330/handoff.md`. Kept: CATALOG_PROVIDERS, cachedModelsFor, capabilitiesFor, the three types and what cachedModelsFor reads. Registry cases now seed the cache via hashKey and catalogStorageKey. Still owed (R-AI-20): `cloudflare-worker/`, the `.gitignore` line and the CODEBASE-MAP paragraph, after Alfonso removes the deployment; branch unmerged.
 **Prompt document name**: 2026-11-03 13:30
+
+## 2026-11-03 — merge: feat/196-l4-proxy-removal into staging (P-2026-11-03-1430)
+**Prompt**: `claude_2026-11-03_1430_prompt_merge_feat-196-l4-proxy-removal.md`, a direct merge by `lane-run merge --direct`, no session: `feat/196-l4-proxy-removal` at `74653f9a7` into `staging`, merge base `99b380f6f`, 4 commits on the branch side.
+**Files touched**: merge `7816c57ec`: 7 files from the branch side (`docs/decisions.md`, `docs/log-inbox/196-ai-refactor.md`, `docs/prompts/claude_2026-11-03_1330_prompt_196_l4_proxy_removal.md`, `frontend/src/services/__tests__/aiModelCatalog.test.ts`, `frontend/src/services/aiModelCatalog.ts`, `frontend/src/types/__tests__/aiProxyEndpoint.test.ts`, `frontend/src/types/jodie.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7816c57ec` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 12241 tests in 454 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: merged staging 7816c57ec: L4 probe 30/30 on port 3190 (SMOKE_URL set), 0 page errors, 0 requests to the AI proxy Worker; Juri chose to merge the code part now, Worker and folder removal later
+**Notes**: Rollback tag `pre-feat/196-l4-proxy-removal` on `99b380f6f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1430/result.json`.
+**Prompt document name**: 2026-11-03 14:30
