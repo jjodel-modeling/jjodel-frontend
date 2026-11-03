@@ -659,6 +659,80 @@ describe('a move keeps the object, and a reorder of an ordered feature is minima
     });
 });
 
+// ---- Positional paths after a move or reorder (P-2026-11-03-1356, measurement) ------------------------------------
+
+/**
+ * Items have no name, so a reference to one prints as a path (R-TXT-4): `pin Folder[0].items[1]` names i1. The parser
+ * resolves a path against the edited text, so an edit that shifts the list retargets a reference whose text the user
+ * did not retype. The tests below assert the absence of that silent retarget and are expected to fail until a rule
+ * lands (docs/discovery/discovery_2026-11-03_textual_positional_paths.md); keeping or refusing both turn them green.
+ */
+const ANON: Spec = {
+    classes: [{ name: 'Folder', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'items', type: 'Item', containment: true, many: true }, { name: 'pin', type: 'Item' }] },
+        { name: 'Item', attributes: [{ name: 'size', type: 'EInt' }] }],
+    enums: {},
+    objects: [
+        { id: 'docs', cls: 'Folder', slots: { name: 'docs', items: ['i0', 'i1', 'i2'], pin: null } },
+        { id: 'pics', cls: 'Folder', slots: { name: 'pics', items: [], pin: null } },
+        { id: 'watch', cls: 'Folder', slots: { name: 'watch', items: [], pin: 'i1' } },
+        { id: 'i0', cls: 'Item', slots: { size: 10 } },
+        { id: 'i1', cls: 'Item', slots: { size: 11 } },
+        { id: 'i2', cls: 'Item', slots: { size: 12 } },
+    ],
+};
+const ITEM = (size: number, indent = '    '): string => `\n${indent}Item {\n${indent}  size ${size}\n${indent}}`;
+const PICS_WITH = (size: number): string => `Folder pics {\n  items {${ITEM(size)}\n  }\n}`;
+
+/** `edit` for nameless objects, in the editor: the spans are carried, and a pasted cut takes its model object's span by its size. */
+function editAnon(replacements: readonly (readonly [string, string])[], pasted: readonly (readonly [id: string, size: number])[] = []) {
+    const c = specCase(ANON);
+    const printed = printTextModel(c.g, c.objects);
+    expect(printed.text).toContain('pin Folder[0].items[1]');
+    let text = printed.text;
+    let spans: ObjectSpan[] = [...printed.spans];
+    for (const [from, to] of replacements) {
+        const at = text.indexOf(from);
+        expect(at, `"${from}" in the text`).toBeGreaterThanOrEqual(0);
+        text = text.slice(0, at) + to + text.slice(at + from.length);
+        spans = carry(spans, at, from.length, to.length);
+    }
+    const parsed = parseText(text, c.g);
+    for (const [id, size] of pasted) {
+        const s = parsed.spans.find(x => x.id === parsed.objects.find(o => o.slots.size === size)!.id)!;
+        spans = [...spans.filter(x => x.id !== id), { id, start: s.start, end: s.end }];
+    }
+    const plan = planTextEdit({ mm: c.mm, grammar: c.g, model: c.objects, parsed, unprinted: printed.unprinted, previous: spans });
+    return { text, parsed, plan };
+}
+/** The path text untouched and parsed without error: whether the plan applies a write of `watch.pin` (a refusal applies none). */
+const retargeted = (r: ReturnType<typeof editAnon>): boolean => {
+    expect(r.text).toContain('pin Folder[0].items[1]');
+    expect(r.parsed.errors).toEqual([]);
+    return r.plan.refusals.length === 0 && !!r.plan.diff?.ops.some(op => op.op === 'reference' && 'model' in op.target && op.target.model === 'watch');
+};
+
+describe('a path reference the user did not retype keeps its target (measured: retargeted; expected to fail)', () => {
+    it.fails('(a) pin Folder[0].items[1] after a reorder of docs.items (i0 pasted after i1): retargeted to i0', () => {
+        expect(retargeted(editAnon([[ITEM(10), ''], [ITEM(11), ITEM(11) + ITEM(10)]], [['i0', 10]]))).toBe(false);
+    });
+
+    it.fails('(b) pin Folder[0].items[1] after i0 is cut and pasted into pics: retargeted to i2', () => {
+        expect(retargeted(editAnon([[ITEM(10), ''], ['Folder pics {}', PICS_WITH(10)]], [['i0', 10]]))).toBe(false);
+    });
+
+    it.fails('(c) pin Folder[0].items[1] after i0 is deleted: retargeted to i2', () => {
+        expect(retargeted(editAnon([[ITEM(10), '']]))).toBe(false);
+    });
+
+    it.fails('(d) pin Folder[0].items[1] after a new item is inserted before i0: retargeted to i0', () => {
+        expect(retargeted(editAnon([['  items {', `  items {${ITEM(9)}`]]))).toBe(false);
+    });
+
+    it.fails('(e) pin Folder[0].items[1] after its target i1 is moved into pics and i2 shifts into [1]: retargeted to i2', () => {
+        expect(retargeted(editAnon([[ITEM(11), ''], ['Folder pics {}', PICS_WITH(11)]], [['i1', 11]]))).toBe(false);
+    });
+});
+
 // ---- The readers of the lookup ----------------------------------------------------------------------------------
 
 describe('what the lookup gives the diff', () => {
