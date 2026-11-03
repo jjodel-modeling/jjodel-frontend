@@ -1,0 +1,17 @@
+# Textual syntax, step B1, continuation: service tests, adapter, providers (continues P-2026-11-03-2350 after the context ceiling)
+
+Prompt-ID: P-2026-11-04-0020
+Chat: C-2026-11-03-1037
+Front: codegen
+Status: da eseguire
+Lane: full (new language service, Monaco adapter, Text tab; continuation under RC-51)
+Depends: P-2026-11-03-2350 (hard-stop at the ceiling, nothing committed; handoff and a copy of languageService.ts in its lane folder)
+Worktree: ~/jjodel-w-textb, branch textual-b-navigation (the same tree)
+Request: none (RC-51 continuation, no new words from Alfonso)
+
+Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit on top of b039ce08d, and the only changes are metamodel.ts modified and languageService.ts untracked, otherwise stop with Outcome: blocked. Do not touch any CLAUDE.md 3.2 file, docs/decisions.md or the core; no new dependency. Every reply opens with [P-2026-11-04-0020 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. No subagents, no background tasks except the foreground probe server. Never cat a gate or probe log: summary lines only, through node scripts/run-quiet.mjs LABEL -- CMD. One probe run per tool call; a probe result is valid only if its mtime follows the run. Commit after each item is green, tests red first; commit early and often, this work hits the ceiling. Near the ceiling, commit and write a handoff.
+
+## COSA
+Read ~/.jjodel-lanes/P-2026-11-03-2350/handoff.md and docs/prompts/claude_2026-11-03_2350_prompt_textual_b1_service.md. The chat adopts the five unattended decisions of 2350 (prefixed token types `textual-<role>` and the `.jjodel-ebnf` suffix; the adapter loaded by dynamic import, editors mounting one tick later; the theme as the JjScript theme plus the Text tab and EBNF rules; one cached parse per text version handed to planEdit; hover data from the store only when textInputOf gets it). R-TXT-38 and R-TXT-39 are on the trunk, not on this branch: read them with git show alfonso-frontend-jjtl:docs/decisions.md if needed; they count as accepted.
+
+Order: (1) the service tests of the handoff, red against an empty stub, then green with the file in the tree; commit metamodel.ts and languageService.ts with the tests. (2) Measured tests: analysis at 1,000 objects within the 50 ms budget together with a parse, figures at 6,000; an operation count rather than a time ratio where a bound is needed (#205). (3) The adapter textualMonaco.ts and the wiring in TextualTab.tsx per the handoff, every existing TextualTab test green. (4) planEdit optional parsed. (5) Item (ii) of 2350: import an .ecore with documentation and bounds in the app and report what the import keeps. (6) Mutation bench on the service queries. (7) Gates and the in-app check with crops as 2350 says (3 files red at import are the baseline; #205 if the timing test alone fails). Log entry (Notes under 500 characters) and the Status flips of 2350 and this prompt, left uncommitted (RC-17). Stop the probe server. No outline, breadcrumb or pinned hover card: B2. No push, no merge. Public repo: name no partner company. Final message: what was verified and how, Decisions taken (unattended), Decisions awaiting Alfonso, then the Outcome.
