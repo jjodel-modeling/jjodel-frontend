@@ -157,61 +157,9 @@ describe('the registry with a live catalog (types/jodie.ts)', () => {
         seedConfig('sk-ant-a', 'claude-3-opus-latest');
         writeCatalogCache('Claude', 'sk-ant-a', parseAnthropicModels(ANTHROPIC_PAGE));
         await import('../../types/jodie');
-        const { AIProviderService } = await import('../AIProviderService');
-        expect(AIProviderService.effectiveModel('Claude')).toBe('claude-3-opus-latest');
+        const { registry } = await import('../ai');
+        expect(registry.get('Claude').resolveModel()).toBe('claude-3-opus-latest');
         expect(JSON.parse(storage.get(CLAUDE_KEY)!).model).toBe('claude-3-opus-latest');
-    });
-});
-
-describe('testConnection for Claude lists the models, with no fixed model id', () => {
-    async function load(model: string) {
-        storage.set('jjodie_provider_claude', JSON.stringify({ name: 'Claude', apiKey: 'sk-ant-a', model, enabled: true }));
-        const jodie = await import('../../types/jodie');
-        const { AIProviderService } = await import('../AIProviderService');
-        return { ...jodie, AIProviderService };
-    }
-
-    it('passes on a model list, caches it and merges it', async () => {
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ok(ANTHROPIC_PAGE)));
-        const { AI, AIProviderService, hasLiveCatalog } = await load('claude-opus-4-7');
-        expect(hasLiveCatalog('Claude')).toBe(false);
-        expect(await AIProviderService.testConnection('Claude')).toEqual({ success: true });
-        const [url, init] = vi.mocked(fetch).mock.calls[0];
-        expect(url).toBe('https://api.anthropic.com/v1/models?limit=1000');
-        expect((init as RequestInit).method).toBe('GET');
-        expect(hasLiveCatalog('Claude')).toBe(true);
-        expect(Object.keys(AI.Claude.versions)[0]).toBe('claude-opus-4-7');
-        expect(storage.has('jjodel_models_claude')).toBe(true);
-    });
-
-    it('passes with a warning when the selected model is not offered to the key', async () => {
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ok(ANTHROPIC_PAGE)));
-        const { AIProviderService } = await load('claude-3-opus-latest');
-        const r = await AIProviderService.testConnection('Claude');
-        expect(r.success).toBe(true);
-        expect(r.warning).toContain('"claude-3-opus-latest"');
-    });
-
-    it('fails as auth on 401, as rate on 429, as network when nothing answers', async () => {
-        const { AIProviderService, hasLiveCatalog } = await load('claude-opus-4-7');
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fail(401)));
-        expect(await AIProviderService.testConnection('Claude')).toMatchObject({ success: false, failure: 'auth', error: expect.stringContaining('Invalid API key') });
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fail(429)));
-        expect(await AIProviderService.testConnection('Claude')).toMatchObject({ success: false, failure: 'rate' });
-        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-        expect(await AIProviderService.testConnection('Claude')).toMatchObject({ success: false, failure: 'network', error: expect.stringContaining('api.anthropic.com') });
-        expect(hasLiveCatalog('Claude')).toBe(false);
-    });
-
-    it('refreshModels skips a fresh cache for the same key and refetches for a new one', async () => {
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ok(ANTHROPIC_PAGE)));
-        const { AIProviderService } = await load('claude-opus-4-7');
-        expect(await AIProviderService.refreshModels('Claude')).toMatchObject({ ok: true });
-        expect(await AIProviderService.refreshModels('Claude')).toBeNull();
-        storage.set('jjodie_provider_claude', JSON.stringify({ name: 'Claude', apiKey: 'sk-ant-new', model: 'claude-opus-4-7' }));
-        expect(await AIProviderService.refreshModels('Claude')).toMatchObject({ ok: true });
-        expect(fetch).toHaveBeenCalledTimes(2);
-        expect(await AIProviderService.refreshModels('GPT')).toBeNull();
     });
 });
 
@@ -246,19 +194,6 @@ describe('splitModelList: what the model picker shows (ProviderModelSelector)', 
         expect(main.every(e => !e.version.deprecated)).toBe(true);
         expect(older.map(e => e.id)).toEqual(Object.keys(AI.Claude.versions).filter(id => AI.Claude.versions[id].deprecated));
         expect(older.length).toBeGreaterThan(0);
-    });
-});
-
-describe('Settings: which failed test disables the provider', () => {
-    it('disables on a rejected key or an unclassified failure, never on rate, network or server', async () => {
-        const { AIProviderService } = await import('../AIProviderService');
-        const d = (r: Parameters<typeof AIProviderService.failureDisablesProvider>[0]) => AIProviderService.failureDisablesProvider(r);
-        expect(d({ success: false, failure: 'auth' })).toBe(true);
-        expect(d({ success: false })).toBe(true);
-        expect(d({ success: false, failure: 'rate' })).toBe(false);
-        expect(d({ success: false, failure: 'network' })).toBe(false);
-        expect(d({ success: false, failure: 'server' })).toBe(false);
-        expect(d({ success: true, warning: 'x' })).toBe(false);
     });
 });
 
@@ -365,22 +300,5 @@ describe('(d) fetchCatalog for OpenAI and Gemini', () => {
         expect(await fetchCatalog('Gemini', 'AIza-k', 'https://proxy.example', f)).toMatchObject({ ok: false, failure: 'auth' });
         const g = vi.fn().mockResolvedValueOnce(fail(400, 'Invalid pageSize'));
         expect(await fetchCatalog('Gemini', 'AIza-k', 'https://proxy.example', g)).toMatchObject({ ok: false, failure: 'other' });
-    });
-});
-
-describe('(d) testConnection for GPT lists the models', () => {
-    it('passes on a list and makes the GPT registry live; refuses a key without sk- before any call', async () => {
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ok(OPENAI_LIST)));
-        storage.set('jjodie_provider_gpt', JSON.stringify({ name: 'GPT', apiKey: 'sk-a', model: 'gpt-5', enabled: true }));
-        const { AI, hasLiveCatalog } = await import('../../types/jodie');
-        const { AIProviderService } = await import('../AIProviderService');
-        expect(await AIProviderService.testConnection('GPT')).toEqual({ success: true });
-        expect(vi.mocked(fetch).mock.calls[0][0]).toBe('https://api.openai.com/v1/models');
-        expect(hasLiveCatalog('GPT')).toBe(true);
-        expect(Object.keys(AI.GPT.versions)[0]).toBe('gpt-5');
-        storage.set('jjodie_provider_gpt', JSON.stringify({ name: 'GPT', apiKey: 'xx-a', model: 'gpt-5', enabled: true }));
-        vi.mocked(fetch).mockClear();
-        expect(await AIProviderService.testConnection('GPT')).toMatchObject({ success: false, failure: 'auth' });
-        expect(fetch).not.toHaveBeenCalled();
     });
 });

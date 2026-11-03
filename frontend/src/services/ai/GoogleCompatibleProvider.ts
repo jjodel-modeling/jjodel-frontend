@@ -7,7 +7,7 @@ import type { Content, GoogleGenAI, Part } from '@google/genai';
 import { BaseProvider, capabilitiesFor, orderCatalog } from './BaseProvider';
 import type { CatalogEntry } from './BaseProvider';
 import type { ChatRequest } from './types';
-import { AIModel } from './types';
+import { AIModel, ECapabilities } from './types';
 
 /** The SDK `baseUrl`: the host, without the `/v1beta/models` or `/v1beta` the endpoint may carry. */
 export function googleBaseUrl(endpoint: string): string {
@@ -45,15 +45,20 @@ export class GoogleCompatibleProvider extends BaseProvider {
         });
     }
 
-    /** History as `user`/`model` turns; the attachments of the current turn before its text. */
-    protected contents(req: ChatRequest): Content[] {
+    /**
+     * History as `user`/`model` turns, each turn's attachments before its text: an earlier turn keeps
+     * its own the model declares (R-AI-17), the current turn adds the request's.
+     */
+    protected contents(req: ChatRequest, modelId: string): Content[] {
+        const model = this.model(modelId);
         const last = req.history.length - 1;
         return req.history.map((msg, i) => {
+            const current = i === last && msg.role === 'user';
+            const documents = [...(model?.has(ECapabilities.DOCUMENTS) ? msg.documents ?? [] : []), ...(current ? req.documents ?? [] : [])];
+            const images = [...(model?.has(ECapabilities.IMAGES) ? msg.images ?? [] : []), ...(current ? req.images ?? [] : [])];
             const parts: Part[] = [];
-            if (i === last && msg.role === 'user') {
-                for (const doc of req.documents ?? []) parts.push({ inlineData: { mimeType: doc.mimeType, data: doc.data } });
-                for (const img of req.images ?? []) parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
-            }
+            for (const doc of documents) parts.push({ inlineData: { mimeType: doc.mimeType, data: doc.data } });
+            for (const img of images) parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
             if (msg.content || !parts.length) parts.push({ text: msg.content });
             return { role: msg.role === 'user' ? 'user' : 'model', parts };
         });
@@ -63,10 +68,11 @@ export class GoogleCompatibleProvider extends BaseProvider {
         const client = await this.client();
         const response = await client.models.generateContent({
             model: modelId,
-            contents: this.contents(req),
+            contents: this.contents(req, modelId),
             config: {
                 ...(req.system ? { systemInstruction: req.system } : {}),
                 maxOutputTokens: this.maxOutputTokens(req),
+                ...(req.signal ? { abortSignal: req.signal } : {}),
             },
         });
         return response.text ?? '';
@@ -76,10 +82,11 @@ export class GoogleCompatibleProvider extends BaseProvider {
         const client = await this.client();
         const chunks = await client.models.generateContentStream({
             model: modelId,
-            contents: this.contents(req),
+            contents: this.contents(req, modelId),
             config: {
                 ...(req.system ? { systemInstruction: req.system } : {}),
                 maxOutputTokens: this.maxOutputTokens(req),
+                ...(req.signal ? { abortSignal: req.signal } : {}),
             },
         });
         for await (const chunk of chunks) {

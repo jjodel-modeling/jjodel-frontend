@@ -7,7 +7,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { BaseProvider, capabilitiesFor, orderCatalog } from './BaseProvider';
 import type { CatalogEntry } from './BaseProvider';
 import type { ChatRequest } from './types';
-import { AIModel } from './types';
+import { AIModel, ECapabilities } from './types';
 
 /** The SDK `baseURL`: the host, without a `/v1/messages` or `/v1` the endpoint may carry. */
 export function anthropicBaseUrl(endpoint: string): string {
@@ -46,21 +46,27 @@ export class AnthropicCompatibleProvider extends BaseProvider {
         });
     }
 
-    /** Documents first, then images, then the text, as the live code builds a Claude turn. */
-    protected messages(req: ChatRequest): Anthropic.MessageParam[] {
+    /**
+     * Documents first, then images, then the text, as the live code builds a Claude turn. An earlier
+     * turn keeps its own attachments the model declares (R-AI-17); the current turn adds the request's.
+     */
+    protected messages(req: ChatRequest, modelId: string): Anthropic.MessageParam[] {
+        const model = this.model(modelId);
         const last = req.history.length - 1;
         return req.history.map((msg, i) => {
-            const attachments = i === last && msg.role === 'user' && (req.images?.length || req.documents?.length);
-            if (!attachments) return { role: msg.role, content: msg.content };
+            const current = i === last && msg.role === 'user';
+            const documents = [...(model?.has(ECapabilities.DOCUMENTS) ? msg.documents ?? [] : []), ...(current ? req.documents ?? [] : [])];
+            const images = [...(model?.has(ECapabilities.IMAGES) ? msg.images ?? [] : []), ...(current ? req.images ?? [] : [])];
+            if (!documents.length && !images.length) return { role: msg.role, content: msg.content };
             const content: ContentBlock[] = [];
-            for (const doc of req.documents ?? []) {
+            for (const doc of documents) {
                 content.push({ type: 'document', source: { type: 'base64', media_type: doc.mimeType, data: doc.data } });
             }
-            for (const img of req.images ?? []) {
+            for (const img of images) {
                 content.push({ type: 'image', source: { type: 'base64', media_type: img.mimeType, data: img.data } });
             }
             if (msg.content) content.push({ type: 'text', text: msg.content });
-            return { role: 'user', content } as Anthropic.MessageParam;
+            return { role: msg.role, content } as Anthropic.MessageParam;
         });
     }
 
@@ -70,8 +76,8 @@ export class AnthropicCompatibleProvider extends BaseProvider {
             model: modelId,
             max_tokens: this.maxOutputTokens(req),
             ...(req.system ? { system: req.system } : {}),
-            messages: this.messages(req),
-        });
+            messages: this.messages(req, modelId),
+        }, { signal: req.signal });
         return message.content.map(block => (block.type === 'text' ? block.text : '')).join('');
     }
 
@@ -81,12 +87,14 @@ export class AnthropicCompatibleProvider extends BaseProvider {
             model: modelId,
             max_tokens: this.maxOutputTokens(req),
             ...(req.system ? { system: req.system } : {}),
-            messages: this.messages(req),
+            messages: this.messages(req, modelId),
             stream: true,
-        });
+        }, { signal: req.signal });
         for await (const event of events) {
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') yield event.delta.text;
         }
+        // The SDK ends an aborted stream quietly; it ends with the abort error, as the Google family's does.
+        req.signal?.throwIfAborted();
     }
 
     /** One `messages.create` with `max_tokens` 1 on the configured model, never `models.list` (R-AI-7). */

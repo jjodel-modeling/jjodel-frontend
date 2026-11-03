@@ -6815,6 +6815,40 @@ the recommendation; evidence: read, verified: none, reversible: trunk).
   (O-7), and only a bad key on `models.list` reads as NETWORK, which R-AI-7 already avoids. The remaining L4 gate is
   R-AI-7's Claude `test()` on `/v1/messages`, built in L1. The optional OpenAI credit is not needed for any gate.
 
+L3 shape, answered by Juri in chat C-2026-11-03-0001 on 2026-11-03 (R-AI-14..16: ratified by Juri, R-AI-14 and 15 as
+recommended, R-AI-16 his own answer; evidence: read, verified: none, reversible: trunk).
+
+- **R-AI-14** (2026-11-03). **L3 is one lane in two phases**, rule 19 confirmed for up to 13 files: phase 1 moves the
+  four chat consumers and stops for Juri's real-key smoke; phase 2, after his GO, deletes `AIProviderService.ts` and its
+  test and rewrites the catalog test. The smoke falls before the deletion, as spec §7 L3 asks.
+- **R-AI-15** (2026-11-03). **`ChatRequest` gains an optional `signal?: AbortSignal`** (rule 11: optional property
+  only), forwarded by the three providers to their SDK, so `ExplainModal` keeps aborting the HTTP request on close as
+  it does today and `AIMatcher` forwards its own signal.
+- **R-AI-16** (2026-11-03). **The L3 real-key smoke uses the keys Juri has**: Claude, Gemini, Ollama (local), Custom
+  pointed at OpenRouter (an OpenAI-compatible remote server, Juri's key), OpenAI only up to its «no credit» 429, Mistral
+  if Juri finds a key. DeepSeek, Groq and Kimi are covered by mocks of the same `OpenAICompatibleProvider` class.
+
+Two gaps found by lane P-2026-11-03-0005 at its item 1 hard stop, answered by Juri in chat C-2026-11-03-0001 on
+2026-11-03 (R-AI-17..18: ratified by Juri as recommended; evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-17** (2026-11-03). **Earlier-turn attachments are still sent, as today.** `HistoryMessage` gains optional
+  `images?`/`documents?` (rule 11), the three providers place them on their own turn with the capability check, with
+  tests. The spec's text-only history (§4) is corrected: today `AIProviderService.ts:220-222` (and the other families)
+  re-sends every earlier image and PDF, and Jodie keeps them on its history (`Jodie.tsx:715-724`, `:735`).
+- **R-AI-18** (2026-11-03). **The Custom «requires a Base URL» check moves into `BaseProvider.prepare`**, with today's
+  text («Custom provider requires a Base URL. Set it in Settings.», `AIProviderService.ts:683-685`) and a test, so every
+  chat consumer gets it. `BaseProvider.ts` joins L3's DOVE (14 entries, rule 19 confirmed by this answer).
+- **R-AI-19** (2026-11-03, ratified by Juri as recommended, measured by chat C-2026-11-03-0001 with Juri's keys,
+  Chromium at `http://localhost:3198` on `cc78e8e3f`, evidence: measured, verified: agent, reversible: trunk). **The
+  OpenAI-compatible client sends no `X-Stainless-*` header.** The `openai` SDK adds seven of them (`-OS`, `-Arch`,
+  `-Lang`, `-Package-Version`, `-Runtime`, `-Runtime-Version`, `-Retry-Count`; `-Timeout` on some requests), and the
+  CORS preflight of `api.mistral.ai` («Request header field x-stainless-os is not allowed») and of `api.moonshot.cn`
+  rejects them: chat and `test()` read «Connection error» / «Cannot reach», where a plain `fetch` from the same page gets
+  a readable status (Mistral 429, Kimi 401). The same SDK client with each header set to `null` in `defaultHeaders`
+  sends none and gets the readable status (Mistral 429 `RateLimitError`, Kimi 401 `AuthenticationError`). Ollama and
+  OpenRouter accept the headers; the Anthropic and Google SDKs are unaffected on their own hosts. Fixed in L3, in
+  `OpenAICompatibleProvider.ts`, with a test.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.

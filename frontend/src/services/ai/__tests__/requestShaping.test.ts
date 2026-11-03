@@ -7,10 +7,10 @@ import { describe, expect, it } from 'vitest';
 import { OpenAICompatibleProvider, openAIBaseUrl } from '../OpenAICompatibleProvider';
 import { AnthropicCompatibleProvider } from '../AnthropicCompatibleProvider';
 import { GoogleCompatibleProvider } from '../GoogleCompatibleProvider';
-import { AIModel, DEFAULT_MAX_OUTPUT_TOKENS, EAuthScheme, ECapabilities } from '../types';
+import { AIModel, DEFAULT_MAX_OUTPUT_TOKENS, EAuthScheme, ECapabilities, FailureCatalog } from '../types';
 import type { ChatRequest, ProviderSpec } from '../types';
 
-interface Call { url: string; method: string; headers: Headers; body: any }
+interface Call { url: string; method: string; headers: Headers; body: any; signal?: AbortSignal }
 
 function mockFetch(respond: (call: Call) => Response | Promise<Response>) {
     const calls: Call[] = [];
@@ -22,6 +22,7 @@ function mockFetch(respond: (call: Call) => Response | Promise<Response>) {
             method: String(init.method ?? 'GET').toUpperCase(),
             headers: new Headers(init.headers),
             body: typeof raw === 'string' && raw ? JSON.parse(raw) : raw,
+            signal: init.signal ?? undefined,
         };
         calls.push(call);
         return respond(call);
@@ -90,6 +91,77 @@ async function collect(stream: AsyncIterable<string>): Promise<string> {
     for await (const piece of stream) out += piece;
     return out;
 }
+
+// ── Abort (R-AI-15) ──────────────────────────────────────────────────────────
+// The SDKs hand fetch a signal of their own, linked to the request's; these mocks answer late and
+// fail as fetch does when that signal aborts, so a test dies when the request's signal is not forwarded.
+
+const abortError = () => new DOMException('This operation was aborted', 'AbortError');
+
+/** Answers `reply` after 300 ms, or rejects as soon as the fetch's signal aborts. */
+function slowFetch(reply: () => Response) {
+    return mockFetch(call => new Promise<Response>((resolve, reject) => {
+        const timer = setTimeout(() => resolve(reply()), 300);
+        call.signal?.addEventListener('abort', () => { clearTimeout(timer); reject(abortError()); });
+    }));
+}
+
+/** Streams `first` at once and `rest` after 300 ms; an abort of the fetch's signal errors the body. */
+function hangingStream(first: string, rest: string[]) {
+    return mockFetch(call => {
+        const encoder = new TextEncoder();
+        const body = new ReadableStream<Uint8Array>({
+            start(controller) {
+                controller.enqueue(encoder.encode(first));
+                const timer = setTimeout(() => {
+                    for (const piece of rest) controller.enqueue(encoder.encode(piece));
+                    controller.close();
+                }, 300);
+                call.signal?.addEventListener('abort', () => { clearTimeout(timer); controller.error(abortError()); });
+            },
+        });
+        return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    });
+}
+
+async function untilCalled(calls: Call[]): Promise<void> {
+    while (!calls.length) await new Promise(resolve => setTimeout(resolve, 5));
+}
+
+/** Aborts `chat` once its request is on the wire; resolves to what the call settled with. */
+async function abortedChat(chat: (signal: AbortSignal) => Promise<string>, calls: Call[]) {
+    const controller = new AbortController();
+    const settled = chat(controller.signal).then(text => ({ text }), (error: unknown) => ({ error }));
+    await untilCalled(calls);
+    controller.abort();
+    return settled;
+}
+
+/** Iterates `stream`, aborting after the first piece; returns the pieces and the error it ended with. */
+async function abortedStream(stream: (signal: AbortSignal) => AsyncIterable<string>) {
+    const controller = new AbortController();
+    const pieces: string[] = [];
+    let error: unknown;
+    try {
+        for await (const piece of stream(controller.signal)) {
+            pieces.push(piece);
+            controller.abort();
+        }
+    } catch (e) {
+        error = e;
+    }
+    return { pieces, error };
+}
+
+/** An earlier turn with an image and a PDF, then the current turn. */
+const WITH_EARLIER_ATTACHMENTS: ChatRequest = {
+    system: 'You are Jjodie.',
+    history: [
+        { role: 'user', content: 'first', images: [IMAGE], documents: [PDF] },
+        { role: 'assistant', content: 'answer' },
+        { role: 'user', content: 'second' },
+    ],
+};
 
 describe('OpenAI-compatible request', () => {
     it('posts to /v1/chat/completions with Bearer, system, history and max_tokens 8192 by default', async () => {
@@ -179,6 +251,69 @@ describe('OpenAI-compatible request', () => {
         expect(calls[0].body.max_tokens).toBe(8192);
     });
 
+    const streamReply = () => sse([`data: ${JSON.stringify({ id: 'c', object: 'chat.completion.chunk', created: 0, model: 'm', choices: [{ index: 0, delta: { content: 'Hello' }, finish_reason: null }] })}\n\n`, 'data: [DONE]\n\n']);
+    it.each([
+        ['chat', GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, openAIReply, (p: OpenAICompatibleProvider) => p.chat(CONVERSATION)],
+        ['chatStream', GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, streamReply, (p: OpenAICompatibleProvider) => collect(p.chatStream(CONVERSATION))],
+        ['test()', GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, openAIReply, (p: OpenAICompatibleProvider) => p.test()],
+        ['keyless chat', OLLAMA, { baseUrl: 'http://localhost:11434', model: 'llama3' }, openAIReply, (p: OpenAICompatibleProvider) => p.chat(CONVERSATION)],
+    ] as const)('%s sends no X-Stainless header, which the Mistral and Kimi CORS preflight rejects (R-AI-19)', async (_name, spec, config, reply, run) => {
+        const { fn, calls } = mockFetch(reply);
+        const provider = new OpenAICompatibleProvider(spec, config, { fetch: fn });
+        await run(provider);
+        expect(calls).toHaveLength(1);
+        const names = [...calls[0].headers.keys()];
+        expect(names).toContain('content-type');
+        expect(names.filter(n => n.startsWith('x-stainless'))).toEqual([]);
+    });
+
+    it('sends an earlier turn\'s image and PDF again, on that turn (R-AI-17)', async () => {
+        const { fn, calls } = mockFetch(openAIReply);
+        const provider = new OpenAICompatibleProvider(GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, { fetch: fn });
+        await provider.chat(WITH_EARLIER_ATTACHMENTS);
+        const messages = calls[0].body.messages;
+        expect(messages[1]).toEqual({
+            role: 'user',
+            content: [
+                { type: 'text', text: 'first' },
+                { type: 'image_url', image_url: { url: 'data:image/png;base64,iVBORw0KGgo=' } },
+                { type: 'file', file: { filename: 'spec.pdf', file_data: 'data:application/pdf;base64,JVBERi0xLjQ=' } },
+            ],
+        });
+        expect(messages[3]).toEqual({ role: 'user', content: 'second' });
+    });
+
+    it('drops an earlier turn\'s attachments the model does not declare, and still answers (Groq)', async () => {
+        const { fn, calls } = mockFetch(openAIReply);
+        const provider = new OpenAICompatibleProvider(GROQ, { apiKey: 'gsk_test', model: 'llama-3.3-70b-versatile' }, { fetch: fn });
+        expect(await provider.chat(WITH_EARLIER_ATTACHMENTS)).toBe('Hello');
+        expect(calls[0].body.messages[1]).toEqual({ role: 'user', content: 'first' });
+    });
+
+    it('refuses a Custom provider without a Base URL before any request (R-AI-18)', async () => {
+        const { fn, calls } = mockFetch(openAIReply);
+        const provider = new OpenAICompatibleProvider(CUSTOM, { apiKey: 'test-key', model: 'some-model' }, { fetch: fn });
+        await expect(provider.chat(CONVERSATION)).rejects.toThrow('Custom provider requires a Base URL. Set it in Settings.');
+        await expect(collect(provider.chatStream(CONVERSATION))).rejects.toThrow('Custom provider requires a Base URL. Set it in Settings.');
+        expect(calls).toHaveLength(0);
+    });
+
+    it('chat forwards the request signal: an abort rejects the call (R-AI-15)', async () => {
+        const { fn, calls } = slowFetch(openAIReply);
+        const provider = new OpenAICompatibleProvider(GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, { fetch: fn });
+        const result = await abortedChat(signal => provider.chat({ ...CONVERSATION, signal }), calls);
+        expect(result).toEqual({ error: expect.objectContaining({ message: expect.stringMatching(/abort/i) }) });
+    });
+
+    it('chatStream forwards the request signal: an abort mid-stream ends the iteration with an abort error (R-AI-15)', async () => {
+        const chunk = (content: string) => `data: ${JSON.stringify({ id: 'c', object: 'chat.completion.chunk', created: 0, model: 'm', choices: [{ index: 0, delta: { content }, finish_reason: null }] })}\n\n`;
+        const { fn } = hangingStream(chunk('Hel'), [chunk('lo'), 'data: [DONE]\n\n']);
+        const provider = new OpenAICompatibleProvider(GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, { fetch: fn });
+        const { pieces, error } = await abortedStream(signal => provider.chatStream({ ...CONVERSATION, signal }));
+        expect(pieces).toEqual(['Hel']);
+        expect(error).toEqual(expect.objectContaining({ message: expect.stringMatching(/abort/i) }));
+    });
+
     it('lists GPT chat models newest of each family first, without the denied ones', async () => {
         const { fn, calls } = mockFetch(() => json(200, { object: 'list', data: [
             { id: 'gpt-4o', object: 'model', created: 100, owned_by: 'openai' },
@@ -264,6 +399,54 @@ describe('Anthropic request', () => {
         expect(calls[0].body.stream).toBe(true);
     });
 
+    it('sends an earlier turn\'s PDF and image again, on that turn (R-AI-17)', async () => {
+        const { fn, calls } = mockFetch(anthropicReply);
+        const provider = new AnthropicCompatibleProvider(CLAUDE, { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' }, { fetch: fn });
+        await provider.chat(WITH_EARLIER_ATTACHMENTS);
+        expect(calls[0].body.messages[0]).toEqual({
+            role: 'user',
+            content: [
+                { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: 'JVBERi0xLjQ=' } },
+                { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0KGgo=' } },
+                { type: 'text', text: 'first' },
+            ],
+        });
+        expect(calls[0].body.messages[2]).toEqual({ role: 'user', content: 'second' });
+    });
+
+    it('drops an earlier turn\'s attachments the model does not declare, and still answers', async () => {
+        const { fn, calls } = mockFetch(anthropicReply);
+        const bare: ProviderSpec = { ...CLAUDE, seedModels: [new AIModel('claude-sonnet-4-6')] };
+        const provider = new AnthropicCompatibleProvider(bare, { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' }, { fetch: fn });
+        expect(await provider.chat(WITH_EARLIER_ATTACHMENTS)).toBe('Hello');
+        expect(calls[0].body.messages[0]).toEqual({ role: 'user', content: 'first' });
+    });
+
+    it('chat forwards the request signal: an abort rejects the call (R-AI-15)', async () => {
+        const { fn, calls } = slowFetch(anthropicReply);
+        const provider = new AnthropicCompatibleProvider(CLAUDE, { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' }, { fetch: fn });
+        const result = await abortedChat(signal => provider.chat({ ...CONVERSATION, signal }), calls);
+        expect(result).toEqual({ error: expect.objectContaining({ message: expect.stringMatching(/abort/i) }) });
+    });
+
+    it('chatStream forwards the request signal: an abort mid-stream ends the iteration with an abort error (R-AI-15)', async () => {
+        const event = (type: string, data: object) => `event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`;
+        const { fn } = hangingStream(
+            event('message_start', { message: { id: 'm', type: 'message', role: 'assistant', model: 'm', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 0 } } })
+            + event('content_block_start', { index: 0, content_block: { type: 'text', text: '' } })
+            + event('content_block_delta', { index: 0, delta: { type: 'text_delta', text: 'Hel' } }),
+            [
+                event('content_block_delta', { index: 0, delta: { type: 'text_delta', text: 'lo' } }),
+                event('content_block_stop', { index: 0 }),
+                event('message_stop', {}),
+            ],
+        );
+        const provider = new AnthropicCompatibleProvider(CLAUDE, { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' }, { fetch: fn });
+        const { pieces, error } = await abortedStream(signal => provider.chatStream({ ...CONVERSATION, signal }));
+        expect(pieces).toEqual(['Hel']);
+        expect(error).toEqual(expect.objectContaining({ message: expect.stringMatching(/abort/i) }));
+    });
+
     it('lists the Claude models newest of each family first', async () => {
         const { fn, calls } = mockFetch(() => json(200, { data: [
             { type: 'model', id: 'claude-sonnet-4-5', display_name: 'Claude Sonnet 4.5', created_at: '2025-09-01T00:00:00Z' },
@@ -329,6 +512,45 @@ describe('Google request', () => {
         expect(new URL(calls[0].url).pathname).toBe('/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent');
     });
 
+    it('sends an earlier turn\'s PDF and image again, on that turn (R-AI-17)', async () => {
+        const { fn, calls } = mockFetch(geminiReply);
+        const provider = new GoogleCompatibleProvider(GEMINI, { apiKey: 'AIzaTest', model: 'gemini-3.5-flash-lite' }, { fetch: fn });
+        await provider.chat(WITH_EARLIER_ATTACHMENTS);
+        expect(calls[0].body.contents[0]).toEqual({
+            role: 'user',
+            parts: [
+                { inlineData: { mimeType: 'application/pdf', data: 'JVBERi0xLjQ=' } },
+                { inlineData: { mimeType: 'image/png', data: 'iVBORw0KGgo=' } },
+                { text: 'first' },
+            ],
+        });
+        expect(calls[0].body.contents[2]).toEqual({ role: 'user', parts: [{ text: 'second' }] });
+    });
+
+    it('drops an earlier turn\'s attachments the model does not declare, and still answers', async () => {
+        const { fn, calls } = mockFetch(geminiReply);
+        const bare: ProviderSpec = { ...GEMINI, seedModels: [new AIModel('gemini-3.5-flash-lite')] };
+        const provider = new GoogleCompatibleProvider(bare, { apiKey: 'AIzaTest', model: 'gemini-3.5-flash-lite' }, { fetch: fn });
+        expect(await provider.chat(WITH_EARLIER_ATTACHMENTS)).toBe('Hello');
+        expect(calls[0].body.contents[0]).toEqual({ role: 'user', parts: [{ text: 'first' }] });
+    });
+
+    it('chat forwards the request signal: an abort rejects the call (R-AI-15)', async () => {
+        const { fn, calls } = slowFetch(geminiReply);
+        const provider = new GoogleCompatibleProvider(GEMINI, { apiKey: 'AIzaTest', model: 'gemini-3.5-flash-lite' }, { fetch: fn });
+        const result = await abortedChat(signal => provider.chat({ ...CONVERSATION, signal }), calls);
+        expect(result).toEqual({ error: expect.objectContaining({ message: expect.stringMatching(/abort/i) }) });
+    });
+
+    it('chatStream forwards the request signal: an abort mid-stream ends the iteration with an abort error (R-AI-15)', async () => {
+        const chunk = (text: string) => `data: ${JSON.stringify({ candidates: [{ content: { role: 'model', parts: [{ text }] }, index: 0 }] })}\n\n`;
+        const { fn } = hangingStream(chunk('Hel'), [chunk('lo')]);
+        const provider = new GoogleCompatibleProvider(GEMINI, { apiKey: 'AIzaTest', model: 'gemini-3.5-flash-lite' }, { fetch: fn });
+        const { pieces, error } = await abortedStream(signal => provider.chatStream({ ...CONVERSATION, signal }));
+        expect(pieces).toEqual(['Hel']);
+        expect(error).toEqual(expect.objectContaining({ message: expect.stringMatching(/abort/i) }));
+    });
+
     it('lists the Gemini models that generate content, newest of each family first', async () => {
         const { fn, calls } = mockFetch(() => json(200, { models: [
             { name: 'models/gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', inputTokenLimit: 1048576, supportedGenerationMethods: ['generateContent'] },
@@ -343,5 +565,36 @@ describe('Google request', () => {
         expect(calls[0].headers.get('x-goog-api-key')).toBe('AIzaTest');
         expect(models.map(m => m.apiName)).toEqual(['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash']);
         expect(models[0].contextWindow).toBe(1048576);
+    });
+});
+
+// Rows of the deleted AIProviderService.test.ts and aiModelCatalog.test.ts that no L1 test pinned
+// (#196 L3 item 8, P-2026-11-03-0020).
+describe('carried from AIProviderService', () => {
+    it.each(['custom', undefined])('refuses an empty configured Custom model (selection %s) before any call, in chat and in test()', async selection => {
+        const { fn, calls } = mockFetch(openAIReply);
+        const provider = new OpenAICompatibleProvider(CUSTOM, { apiKey: 'test-key', baseUrl: 'https://openrouter.ai/api/v1', model: '' }, { fetch: fn });
+        await expect(provider.chat({ ...CONVERSATION, model: selection })).rejects.toThrow('No model selected for Custom. Please choose a model in Settings.');
+        expect(await provider.test(selection)).toEqual({ success: false, error: 'No model selected for Custom. Please choose a model in Settings.' });
+        expect(calls).toEqual([]);
+    });
+
+    it('test() reads a 403 as AUTH, with the permission message', async () => {
+        const { fn } = mockFetch(() => json(403, { error: { message: 'nope', type: 'permission_error' } }));
+        const provider = new OpenAICompatibleProvider(GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, { fetch: fn });
+        expect(await provider.test()).toEqual({
+            success: false, failure: FailureCatalog.AUTH,
+            error: 'This key is not allowed to use this model (403). Check its permissions in the OpenAI Console.',
+        });
+    });
+
+    it('Claude test() reads a 429 as RATE and a rejected fetch as NETWORK naming api.anthropic.com', async () => {
+        const rate = mockFetch(() => json(429, { type: 'error', error: { type: 'rate_limit_error', message: 'slow down' } }));
+        const limited = new AnthropicCompatibleProvider(CLAUDE, { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' }, { fetch: rate.fn });
+        expect(await limited.test()).toEqual({ success: false, failure: FailureCatalog.RATE, error: 'Rate limit exceeded. Please try again in a moment.' });
+        const down = mockFetch(() => { throw new TypeError('Failed to fetch'); });
+        const unreachable = new AnthropicCompatibleProvider(CLAUDE, { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' }, { fetch: down.fn });
+        expect(await unreachable.test()).toEqual({ success: false, failure: FailureCatalog.NETWORK, error: 'Cannot reach api.anthropic.com (network or CORS).' });
+        expect(down.calls).toHaveLength(1);
     });
 });
