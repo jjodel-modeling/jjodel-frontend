@@ -93,12 +93,26 @@ export async function executeForAll(
 
             const result = await executor.executeAST(resolvedBody, childContext);
             results.push(result);
-            if (result.success) successCount++;
+            // A nested forall (`forall a, b in ...` desugars to one) counts by its leaf commands, so
+            // the outermost summary counts the commands that ran, not its own iterations.
+            const inner = leafCounts(result);
+            if (inner) {
+                successCount += inner.successCount;
+                errorCount += inner.errorCount;
+            } else if (result.success) successCount++;
             else errorCount++;
         }
 
         // 5. Build summary
-        const total = items.length;
+        const total = successCount + errorCount;
+        if (total === 0) {
+            return {
+                success: true,
+                command: 'forall',
+                message: 'forall: 0 elements matched — nothing to do',
+                data: { total: 0, successCount: 0, errorCount: 0, results }
+            };
+        }
         const message = errorCount === 0
             ? `forall: ${successCount}/${total} executed successfully`
             : `forall: ${successCount} succeeded, ${errorCount} failed (${total} total)`;
@@ -121,6 +135,17 @@ export async function executeForAll(
             errors: [{ code: 'FORALL_ERROR', message: err.message }]
         };
     }
+}
+
+/**
+ * The leaf counts of a body result that is itself a forall summary; undefined for any other
+ * result (a forall that failed before iterating carries no counts and is one failed leaf).
+ */
+function leafCounts(result: ExecutionResult): { successCount: number; errorCount: number } | undefined {
+    if (result.command !== 'forall') return undefined;
+    const data = result.data;
+    if (!data || typeof data.successCount !== 'number' || typeof data.errorCount !== 'number') return undefined;
+    return { successCount: data.successCount, errorCount: data.errorCount };
 }
 
 // ============================================

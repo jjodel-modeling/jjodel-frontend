@@ -735,3 +735,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: on 3001 in a throwaway project, JjScript console: create package P1, create class Foo in P1 (appears in classes), create class X in Missing refused, eval with a lambda and with a string, let with an unparenthesized forall a, b reading x.size = 4: all as expected. Merge gates green (13145 tests, 0 failed, 9 red at import)
 **Notes**: Rollback tag `pre-jjscript-console-defects` on `e1b35c188` (RC-31). Union: `docs/log-inbox/maintenance.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-0020/result.json`.
 **Prompt document name**: 2026-11-03 00:20
+
+## 2026-11-03 — fix(jjscript): forall summary counts leaf commands; Info.tsx package fatherType (P-2026-11-03-1015)
+**Prompt**: `claude_2026-11-03_1015_prompt_forall_summary_and_info_package.md`, lane fast, unattended: (1) a multi-variable `forall` summary counted outer iterations (`2/2` for one rename): count the leaf commands; (2) `Info.tsx` called `DPackage.new` without the father's type, the defect `b9c45587a` fixed in `create.ts`. One commit per fix.
+**Files touched**: fix 1 `9373d1fa7`: `frontend/src/jjscript/executor/commands/forall.ts`, `frontend/src/jjscript/executor/__tests__/forallMultivar.test.ts`; fix 2 `72d1b3cf2`: `frontend/src/components/editors/Info.tsx`; this commit: this entry. Status of the prompt file not flipped: the `status-flip` skill is user-invocable only.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-02 13:32
+**Causa**: (a)
+**Regressions**: no. Gates on `72d1b3cf2`: `npx tsc --noEmit` exit 0; `npx vitest run src/jjscript` 949 tests green, 1 file red at import (`context-binding.test.ts`, `window is not defined`); `npm run build` exit 0; `npm run check:docs` run at the close.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Fix 1: a body result that is a forall summary adds its leaf counts; any other result is one leaf, so one-variable messages are unchanged. `data.total/successCount/errorCount` are now leaf counts; `data.results` stays one entry per outer iteration, read only by `forallById.test.ts:179`. Mutation bench (aggregation removed) kills 4 tests. Fix 2: father is always the metamodel, so `DModel`; no node-importable home for a test, checked by reading `classes.ts:577-591,996-997` and typecheck.
+**Prompt document name**: 2026-11-03 10:15
