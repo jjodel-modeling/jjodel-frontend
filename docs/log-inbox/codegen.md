@@ -1482,3 +1482,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — nothing changes on screen; in-app check by the lane on demoESM (port 3453, 4/4): text byte-identical, tree leaves equal the text, an edit applies, one Undo restores model and text.
 **Notes**: Gates on 5dd458ddb green (tsc, vitest 13476 with the 3 baseline files, build, check:docs, codegen-lazy both modes). Equality 7/7 corpus cases, red before. Printer 1,001 objects 3.8 ms, 6,001 21.7 ms, linear. Bench 20/21 killed, survivor equivalent. Briefs: 0 errors, trees equal. Open: a quadratic step for grouped containments (printer.ts:159); a Canceled console error after Meta+z, older than this lane. Entry and Status by the chat; details in the 2220 handoff.
 **Prompt document name**: 2026-11-03 22:20
+
+## 2026-11-03 — merge: textual-a-tolerant-parser into alfonso-frontend-jjtl (P-2026-11-03-2245)
+**Prompt**: `claude_2026-11-03_2245_prompt_merge_textual-a-tolerant-parser.md`, a direct merge by `lane-run merge --direct`, no session: `textual-a-tolerant-parser` at `deb4416f9` into `alfonso-frontend-jjtl`, merge base `6fb7d2841`, 18 commits on the branch (step A of the textual IDE plan: tolerant parser, lossless tree, printer tree, R-TXT-36).
+**Files touched**: merge `2daef6982`, the branch side (`frontend/src/codegen/textual/parser.ts`, `printer.ts`, `textMatch.ts`, `ui/TextualTab.tsx`, their tests, `docs/discovery/discovery_2026-11-03_textual_tolerant_parser.md`, `docs/discovery/harness/`, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2daef6982` in the worker: typecheck 0 errors; typecheck:scripts exit 0; vitest green with the 3 baseline files red at import; build exit 0; check:agents, check:scripts, check:addonly exit 0; check:docs red (see Notes), green on `607ec2ead`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: crops of P-2026-11-03-2152 checked before the merge (RC-23); the printer half changes nothing on screen.
+**Notes**: Blocked on check:docs by a 711-char Notes field the chat wrote for P-2026-11-03-2220; shortened in `607ec2ead`, check:docs 5/5, lane resolved (`resolved.txt`). Rollback tag `pre-textual-a-tolerant-parser` on `00e4bcea4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-2245/result.json`.
+**Prompt document name**: 2026-11-03 22:45
