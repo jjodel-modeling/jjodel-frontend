@@ -165,18 +165,6 @@ export function isForeignModel(provider: TAIProvider, modelId: string | undefine
     return ALL_AI_PROVIDERS.some(p => p !== provider && !!AI[p]?.versions?.[modelId]);
 }
 
-/**
- * Base URL of the Jjodel AI proxy Worker (source: cloudflare-worker/). The production Worker in
- * every mode; VITE_AI_PROXY_URL overrides it, e.g. http://localhost:8787 in
- * frontend/.env.development.local for a local `wrangler dev`.
- */
-export function getProxyBase(): string {
-    const PROXY_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
-    // @ts-ignore -- `env` is not on ImportMeta for tsc here (vite-env.d.ts), as in codegen/setting.ts.
-    const override: string | undefined = import.meta.env?.VITE_AI_PROXY_URL;
-    return override ? override.trim().replace(/\/+$/, '') : PROXY_URL;
-}
-
 @RuntimeAccessible('AI')
 export class AI{
     static cname = 'AI';
@@ -208,7 +196,6 @@ export class AI{
     staticVersions?: Dictionary<string, AIVersion>;
     // version?: string;
     endpoint!: string;
-    proxy?: string;
     requiresKey: boolean = true;
     /** Auth scheme for OpenAI-compatible request construction (consumed by
      *  AIProviderService.chatOpenAICompatible / testOpenAICompatible). Default 'bearer'
@@ -244,13 +231,7 @@ export class AI{
         return this;
     }
     getEndpoint(): string {
-        if (!this.proxy) return this.endpoint;
-        /*switch (this.name) {
-            case AIProvider.Claude:
-            case AIProvider.Gemini:
-            default: return '';
-        }*/
-        return getProxyBase() + this.proxy;
+        return this.endpoint;
     }
     hasVision(version?: string): boolean{
         let model = version && this.versions[version];
@@ -416,7 +397,6 @@ AI.Custom.add('custom', 'Custom', false, false);
     .add('gemma2-9b-it',                     'Gemma 2 9B',          false, false)
     .add('llava-v1.5-7b-4096-preview',       'LLaVA 1.5 7B',        true,  false)
 */
-AI.Claude.proxy = '/v1/anthropic/messages';
 //AI.Gemini.proxy = '/v1/gemini';
 
 AI.GPT.endpoint = 'https://api.openai.com/v1/chat/completions';
