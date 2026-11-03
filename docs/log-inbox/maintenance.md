@@ -761,3 +761,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: forall summary and Info.tsx: covered by unit tests and by the merge gates (13234 tests, 0 failed, 9 red at import); not repeated in the app
 **Notes**: Rollback tag `pre-jjscript-forall-summary` on `fa9e886cb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1041/result.json`.
 **Prompt document name**: 2026-11-03 10:41
+
+## 2026-11-03 — discovery: JjTL forall collection under JjEL only, stopped before Phase 2 (P-2026-11-03-1016)
+**Prompt**: `claude_2026-11-03_1016_prompt_jjtl_collection_jjel_only.md`: find out why JjEL-always for a forall collection breaks AST assertions and parity fixture `tests#107`; make JjEL the only parser only if the cause is a small local fix that changes no run-time result.
+**Files touched**: `1300be2cc` (`docs/discovery/discovery_2026-11-03_jjtl_collection_jjel_only.md`); this commit: this entry and the Status line of the 1016 prompt.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. No code changed; tsc exit 0; vitest src/jjtl src/jjel 1048 passed, 7 files red at import (the known list); build exit 0; check:docs exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Phase 1 only. The two paths agree on the AST and on `range(null)`. The executor differs: a legacy builtin `FunctionCall` throws (executor.ts:2859-2863, outside the try), so the mapping fails, while a JjelExpression warns and yields null (2881-2886). Probe P2, with that path aligned: parity 145/145, and only 3 AST-shape assertions red. Each fix changes `tests#107`, which is a stop. Causa (c): the 2345 ticket put the cause in parsing. Detail in the report.
+**Prompt document name**: 2026-11-03 10:16
