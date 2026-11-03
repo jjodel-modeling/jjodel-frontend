@@ -679,3 +679,18 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: passato — chat, unattended: gates green on 6fb7d2841; app probes on the branch, no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-panel-warnings-low` on `51ea2aad2` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1619/result.json`.
 **Prompt document name**: 2026-11-03 16:19
+
+## 2026-11-03 — feat(jjtl): let holds its value (#515), unique on called rules (P-2026-11-03-2111, P-2026-11-03-2325)
+**Prompt**: `claude_2026-11-03_2111_prompt_jjtl_let_unique_called.md`: a JjTL `let` holds its value (#515), `unique` on called rules, the natural Class2Relational moved forward; stopped at the context ceiling (AM-8), docs closed by `claude_2026-11-03_2325_prompt_jjtl_let_unique_close.md`.
+**Files touched**: code `d8c281211`: `frontend/src/jjtl/parser/parser.ts`, `types/ast.ts`, `executor/executor.ts`, `components/GrammarDiagram/types.ts`, `components/GrammarDiagram/diagramRenderer.ts`, `__tests__/fixtures/class2relational.ts`, `executor/__tests__/class2relational.test.ts`, `executor/__tests__/called-lazy-rules.test.ts`, `parser/__tests__/called-lazy-rules.test.ts`; docs `860f3d5f3`: `docs/decisions.md` (R-JTG-15, R-JTG-16); `5f05b418c`: `frontend/src/jjtl/SPEC.md`; this entry; the Status lines of both prompts in the commit after it.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d8c281211`: typecheck 0; vitest 13439 passed, 0 failed, 3 red at import (baseline); build exit 0. check:docs 5/5 after `5f05b418c`.
+**Out-of-scope changes**: no (12 files, all in the declared scope of `frontend/src/jjtl/` and `docs/`, listed above)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe on port 3271, not by hand: natural C2R text completes, 27 objects, schemaEqualsExpected true; save/reopen same tree
+**Notes**: Red first: 10 tests failed for the intended reasons. Mutation bench 6/6 killed (`~/.jjodel-lanes/P-2026-11-03-2111/mutate.py`); two mutations ran in one tool call, against one-probe-per-call. 11 of the 21 fixture edits go away (W5 10, W6 1), 10 remain (W1 1, W2 4, W3 4, W4 1). Two expectations moved with #515: W2 join-table key, #445 line 27 to 29. Evidence: `~/.jjodel-lanes/P-2026-11-03-2111/handoff.md`.
+**Prompt document name**: 2026-11-03 21:11
+
+**Ticket** (#515, update, closed by R-JTG-15): a `let` bound to a called-rule call or an `envLookup` now realizes it once, at the binding (`letValue`/`realizeCalls` in `executor.ts`, all five LetStatement sites), so two uses of the name are one object; a source element bound by a `let` stays the element. On Class2Relational the 8 extra root Columns are gone and no `resolve()` is left in the natural text. #517 stays open, pinned by its test on `MATCHED_KEYS`.
