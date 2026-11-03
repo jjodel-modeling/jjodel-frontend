@@ -1326,3 +1326,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato 2026-11-03 (chat, unattended, RC-23) on the crops `2-attribute-applied`, `7-broken`, `9-stale`, `10-panel` of 0021: status in the bar, markers, nothing shifted, panel with Confirm, Reprint line. In-app probe of 0021: 34 PASS, crops in `~/.jjodel-lanes/P-2026-11-03-0021/`. The probe's diagram edit was a direct write to the model (`SetFieldAction` on a DValue), not a canvas click. Deleting a cross-model target, unprinted objects and a move refusal are covered by unit tests only.
 **Notes**: Gates: tsc 0; vitest src/codegen + textualPicker 54 files 2643 passed; build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Bench 12/12 killed + probe mutant "two undo steps" killed (commit body). Process: 0021 started a dev server (port 3076) for its probe, against the no-background-tasks rule of its prompt; it is stopped. Open decision: a stale text is never applied (handoff decision 1).
 **Prompt document name**: 2026-11-03 00:21, 2026-11-03 00:49
+
+## 2026-11-03 — merge: textual-t6b into alfonso-frontend-jjtl (P-2026-11-03-0543)
+**Prompt**: `claude_2026-11-03_0543_prompt_merge_textual-t6b.md`, a direct merge by `lane-run merge --direct`, no session: `textual-t6b` at `d4b7775bf` into `alfonso-frontend-jjtl`, merge base `e1b35c188`, 3 commits on the branch side.
+**Files touched**: merge `8814e3c4a`: 8 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-03_0021_prompt_textual_t6b_edit.md`, `docs/prompts/claude_2026-11-03_0049_prompt_textual_t6b_close.md`, `frontend/src/codegen/textual/__tests__/textualEdit.test.ts`, `frontend/src/codegen/textual/textDiff.ts`, `frontend/src/codegen/textual/ui/TextConfirmPanel.tsx`, `frontend/src/codegen/textual/ui/TextualTab.scss`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `8814e3c4a` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13215 tests in 501 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: visual check passed on the branch, crops of P-2026-11-03-0021 checked by the chat, unattended
+**Notes**: Rollback tag `pre-textual-t6b` on `b3c82f86d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-0543/result.json`.
+**Prompt document name**: 2026-11-03 05:43
