@@ -302,3 +302,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (chat GO on the gates of a4aa879ec; no app run on the merged branch; the app probes of P-2026-11-03-0009 predate this trunk-into)
 **Notes**: Merge-tree 7e0dff533 equal to the staged tree; 25 probes once each, control 0, no union. Gates on a4aa879ec: typecheck, typecheck:scripts exit 0; vitest 13193 = trunk 13145 + 48 (59 vs 11 in the three branch test files), the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5 (the prompt said 4/4); check:scripts, check:addonly PASS. Regressions unknown: gates only, no app run on the merged tree.
 **Prompt document name**: 2026-11-03 00:45
+
+## 2026-11-03 — merge: jjtl-called-rules into alfonso-frontend-jjtl (P-2026-11-03-0121)
+**Prompt**: `claude_2026-11-03_0121_prompt_merge_jjtl-called-rules.md`, full lane: bring jjtl-called-rules at the explicit sha 4acda9332 into the trunk with one --no-ff merge commit (RC-14); zero conflicts; stopped at step 7 for the chat's GO, resumed on it.
+**Files touched**: merge commit f716c5f31 (the branch's 20 files, no union resolution, no file changed on both sides); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (chat GO on HTTP 200 on 3001 and the B2 probe rerun on the branch at 4acda9332; no hand run on the trunk)
+**Notes**: Merge-tree dc7859d21 equal to the staged tree; 7 probes once each, no union. Gates on f716c5f31: typecheck, typecheck:scripts exit 0; vitest 500 files, 13193 = trunk 13145 + 48, the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5 (the prompt said 4/4); check:agents, check:scripts, check:addonly PASS. Lane board untouched. vitest ran twice on the merge by mistake. Regressions unknown: no app run on the trunk.
+**Prompt document name**: 2026-11-03 01:21
