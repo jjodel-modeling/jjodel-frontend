@@ -241,18 +241,20 @@ describe('(v) linear name resolution', () => {
         return least;
     };
     const small = printTextModel(LIB.g, libraryObjects(800, 200)).text;
-    const large = printTextModel(LIB.g, libraryObjects(4800, 1200)).text;
+    const mid = printTextModel(LIB.g, libraryObjects(1600, 400)).text;
+    const large = printTextModel(LIB.g, libraryObjects(9600, 2400)).text;
 
     it('1,001 objects, a third of the books borrowed by name, parse within the 50 ms budget per keystroke (measured)', () => {
         expect(parseText(small, LIB.g).errors).toEqual([]);
         expect(best(small)).toBeLessThan(50);
     });
 
-    it('six times the objects cost less than ten times the time: the resolution is not quadratic (measured)', () => {
-        best(small);
-        const a = best(small);
+    it('six times the objects cost less than twelve times the time: the resolution is not quadratic (measured)', () => {
+        // 2,001 against 12,001 objects: quadratic, the ratio was 20 and more; linear, about 6.
+        best(mid);
+        const a = best(mid);
         const b = best(large);
-        expect(b / a, `1,001 objects ${a.toFixed(1)} ms, 6,001 objects ${b.toFixed(1)} ms`).toBeLessThan(10);
+        expect(b / a, `2,001 objects ${a.toFixed(1)} ms, 12,001 objects ${b.toFixed(1)} ms`).toBeLessThan(12);
     }, 60_000);
 });
 
@@ -277,6 +279,14 @@ describe('(vi) the match of a broken parse, for display only', () => {
         const r = displayMatch({ mm: LIB.mm, grammar: LIB.g, model: withTop, parsed });
         expect(r.orphans).toEqual([{ text: 't4' }, { text: 't5', model: 'm1' }]);
         expect(r.match.matches.find(m => m.text === 't5')).toMatchObject({ by: 'move', uncertain: true });
+    });
+
+    it('an orphan is no homonym of a top-level object: the top-level one keeps its certain match by name', () => {
+        const withTop = [...model, { id: 'mx', cls: 'Member', slots: { name: 'reader0' } }];
+        const parsed = parseText(`Member reader0 {}\n${broken}`, LIB.g);
+        const r = displayMatch({ mm: LIB.mm, grammar: LIB.g, model: withTop, parsed });
+        expect(r.orphans.map(o => o.text)).toEqual(['t5', 't6']);
+        expect(r.match.matches[0]).toEqual({ text: 't1', model: 'mx', by: 'name', uncertain: false });
     });
 
     it('a text without a tree or orphans: the plain match, no orphans', () => {
