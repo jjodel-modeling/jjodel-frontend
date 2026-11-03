@@ -22,7 +22,7 @@ T7 finishes and merges, with the rule on positional paths settled (`docs/discove
 
 **C. Compact notation.** Expression notation (`driver` as `st & (is_sw)`, round trip to the model), T4b (annotations form), T5 (other styles). Test case: a port on one line, `input instr : Word(32)`. To settle at its start: R-TXT-16 (3) speaks of a class as a binary operator, while Conj/Disj hold an `ops` list, so the annotation has to cover n-ary containment; redundant parentheses have no model element and survive only through the tree of A; precedence has to fit the LL(1) check of T3.
 
-**D. Writing aids.** Contextual completion (allowed keywords, valid targets, enum literals), errors on the line with quick fixes, including conformance violations and validation rules; safe rename; formatting.
+**D. Writing aids.** Contextual completion (allowed keywords, valid targets, enum literals), errors on the line with quick fixes, including conformance violations and validation rules; safe rename; formatting. Commenting whole objects out asks for confirmation instead of applying on the pause (R-TXT-37).
 
 **E. T10 and synced selection.** Scenario 2 and selection synced between text and canvas, both ways, checked with a real canvas gesture. If it enters the critical zone: Layer Impact Report and Alfonso's go-ahead.
 

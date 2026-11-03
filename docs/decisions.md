@@ -7164,6 +7164,10 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   parser's; a test of equality between the two trees closes A. Sizes: models in use reach the order of 1,000 objects in a
   text; no incremental parsing; the budget is 50 ms per keystroke at 1,000 objects; highlighting and outline are measured
   at B and D. With a broken root, the outline puts recovered objects under an `unknown container` node.
+- **R-TXT-37** (2026-11-03, Alfonso 22:18, «1 ok»). **Commenting an object out asks first.** When the only change of an
+  application is the disappearance of whole objects covered by a comment just typed, the Text tab asks for confirmation
+  instead of applying on the pause (an exception to R-TXT-26). Measured by P-2026-11-03-2152: typing `//` at the start of
+  `Terminal {}` applied the deletion while the user was still typing. Implemented in step D of the IDE plan.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
