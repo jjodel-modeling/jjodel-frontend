@@ -8,8 +8,12 @@
  * printed objects prints as `@"id"` (R-TXT-32): kept as printed it asks no change, deleted it is cleared or unlinked,
  * anywhere else (an edited id, another owner or feature, a new object) it is refused. An attribute omitted because unset
  * reads back as unset. A
- * many-valued feature compares as a multiset unless declared ordered (R-TXT-21 (5)); a reorder of an ordered one, and a
- * move, are step T7 and block the application.
+ * many-valued feature compares as a multiset unless declared ordered (R-TXT-21 (5)).
+ *
+ * Step T7 (P-2026-11-03-1225, P-2026-11-03-1251; R-TXT-19): a matched object in another container, or at the top level,
+ * is a move, written as the containment write the core moves an object by (`+=` into a many-valued slot, `=` into a
+ * single one, `-=` out of the old slot to the top level). A reorder of an ordered feature re-appends, `-=` then `+=`,
+ * what follows the longest prefix of the text order the slot already holds in that order: JjScript appends only.
  *
  * A value the model reads through a default (eval.ts `emptyAttributeDefault`: a declared default, or a mandatory
  * enumeration left empty read as its first literal) is stored empty: the text that prints that default, or omits the
@@ -18,7 +22,9 @@
  * The lines (R-TXT-21 (6)) address every model object by a handle that the run registers, before its first line,
  * against the object's id (`executor/handleRegistry.ts`): no name lookup, no new JjScript syntax. In order: the
  * links taken away and the references cleared, the deletions (a container takes its contents, `delete` cleans the
- * pointers to it), the creations in text order, the attributes, the links added and the references set.
+ * pointers to it), the creations in text order, the attributes, the links added and the references set. T7 adds the
+ * moves into existing containers or to the top level before the deletions, the moves into created containers in text
+ * order with the creations, and the reorders last.
  */
 
 import type { ConcreteGrammar } from './concreteGrammar';
@@ -47,9 +53,17 @@ export type DiffOp =
     | { readonly op: 'reference'; readonly target: ObjectRef; readonly feature: string; readonly to: ObjectRef | null }
     | { readonly op: 'link' | 'unlink'; readonly target: ObjectRef; readonly feature: string; readonly to: ObjectRef }
     /** Takes the objects it contains with it. */
-    | { readonly op: 'delete'; readonly model: string };
+    | { readonly op: 'delete'; readonly model: string }
+    /**
+     * T7: the model object into another containment slot (`into`), or to the top level (`into` null) out of `from`, its
+     * slot when the op runs (null when it is at the top level).
+     */
+    | { readonly op: 'move'; readonly model: string; readonly into: { readonly owner: ObjectRef; readonly feature: string } | null;
+        readonly from: { readonly owner: string; readonly feature: string } | null }
+    /** T7: `to` taken out of the ordered many-valued slot and appended again at its end. */
+    | { readonly op: 'reorder'; readonly target: ObjectRef; readonly feature: string; readonly to: ObjectRef };
 
-/** What the diff cannot express before step T7: a move, or a reorder of an ordered feature. */
+/** What the diff could not express before step T7: a move, or a reorder of an ordered feature. None is reported since T7. */
 export interface UnsupportedChange {
     readonly kind: 'move' | 'reorder';
     readonly model: string;
@@ -81,7 +95,7 @@ export interface DiffInput {
     readonly parsed: TextParseResult;
     /** The previous print's spans, carried over the edit (R-TXT-22). */
     readonly previous?: readonly ObjectSpan[];
-    /** Whether a feature is declared ordered (R-TXT-19); none is by default. */
+    /** Whether a feature is declared ordered (R-TXT-19); by default its `ordered` in the metamodel, absent read as unordered. */
     readonly ordered?: (cls: string, feature: string) => boolean;
 }
 
@@ -93,7 +107,7 @@ const keyOf = (r: ObjectRef): string => ('model' in r ? `m:${r.model}` : 'text' 
 export function diffText(input: DiffInput): TextDiff {
     const { grammar: g, model, parsed } = input;
     const featuresOf = featureTable(input.mm);
-    const ordered = input.ordered ?? (() => false);
+    const ordered = input.ordered ?? ((cls: string, feature: string) => featuresOf(cls).some(f => f.name === feature && f.ordered === true));
     const match = matchObjects(input);
     const modelOf = new Map<string, ObjectMatch>(match.matches.map(m => [m.text, m]));
     const modelById = new Map(model.map(o => [o.id, o]));
@@ -106,6 +120,7 @@ export function diffText(input: DiffInput): TextDiff {
     const creates: DiffOp[] = [];
     const attributes: DiffOp[] = [];
     const additions: DiffOp[] = [];
+    const moves: { readonly model: string; readonly into: { readonly owner: ObjectRef; readonly feature: string } | null; readonly from: { readonly owner: string; readonly feature: string } | null }[] = [];
     const unsupported: UnsupportedChange[] = [];
     const outer: MisplacedOuter[] = [];
 
@@ -165,11 +180,6 @@ export function diffText(input: DiffInput): TextDiff {
         }
         for (const r of rest) if (!('model' in r && deleted.has(r.model))) removals.push({ op: 'unlink', target, feature: f.name, to: r });
         for (const r of added) if (!misplaced(target, f.name, r)) additions.push({ op: 'link', target, feature: f.name, to: r });
-        if (m && ordered(t.cls, f.name)) {
-            const kept = was.filter(x => !rest.includes(x)).map(keyOf);
-            const after = [...kept, ...added.map(keyOf)];
-            if (after.join('\u0000') !== now.map(keyOf).join('\u0000')) unsupported.push({ kind: 'reorder', model: m.id, feature: f.name });
-        }
     };
 
     for (const t of parsed.objects) {
@@ -182,35 +192,117 @@ export function diffText(input: DiffInput): TextDiff {
         }
         const m = modelById.get(mt.model)!;
         compare({ model: m.id }, t, m);
-        // The container: a matched object elsewhere is a move (T7).
+        // The container: a matched object elsewhere is a move (T7), in text order, a container before what it holds.
         const tp = textPlace.get(t.id);
         const mp = modelPlace.get(m.id);
         const tOwner = tp ? keyOf(ref(tp.owner)) : '';
         const mOwner = mp ? keyOf({ model: mp.owner }) : '';
-        if (tOwner !== mOwner || (tp?.feature ?? '') !== (mp?.feature ?? '')) unsupported.push({ kind: 'move', model: m.id, feature: tp?.feature ?? '' });
-    }
-
-    // A reorder of an ordered containment among the objects that stay.
-    for (const t of parsed.objects) {
-        const mt = modelOf.get(t.id);
-        if (!mt) continue;
-        const m = modelById.get(mt.model)!;
-        for (const f of featuresOf(t.cls)) {
-            if (f.kind !== 'containment' || !f.many || !ordered(t.cls, f.name)) continue;
-            const kept = (ids: unknown, side: (id: string) => string | undefined): string[] =>
-                asArray(ids).flatMap(id => { const k = typeof id === 'string' ? side(id) : undefined; return k ? [k] : []; });
-            const textOrder = kept(t.slots[f.name], id => modelOf.get(id)?.model);
-            const modelOrder = kept(m.slots[f.name], id => (deleted.has(id) ? undefined : id)).filter(id => textOrder.includes(id));
-            if (textOrder.join('\u0000') !== modelOrder.join('\u0000')) unsupported.push({ kind: 'reorder', model: m.id, feature: f.name });
+        if (tOwner !== mOwner || (tp?.feature ?? '') !== (mp?.feature ?? '')) {
+            moves.push({ model: m.id, into: tp ? { owner: ref(tp.owner), feature: tp.feature } : null, from: mp ? { owner: mp.owner, feature: mp.feature } : null });
         }
     }
+
+    // A move into a created container waits for its creation, in text order with the creations; one out of a container
+    // the deletions take goes before them: to the top level first when its new container is yet to be created.
+    const movedIds = new Set(moves.map(x => x.model));
+    const doomed = (id: string): boolean => {
+        for (let p = modelPlace.get(id); p; p = modelPlace.get(p.owner)) {
+            if (movedIds.has(p.owner)) return false;
+            if (deleted.has(p.owner)) return true;
+        }
+        return false;
+    };
+    const early: DiffOp[] = [];
+    for (const x of moves) {
+        if (!x.into || !('text' in x.into.owner)) early.push(moveOp(x));
+        else if (doomed(x.model)) early.push(moveOp({ ...x, into: null }));
+    }
+    const late = new Map(moves.filter(x => x.into && 'text' in x.into.owner).map(x => [x.model, moveOp({ ...x, from: doomed(x.model) ? null : x.from })]));
 
     // Deletions: the topmost only, a container takes what it contains.
     const deletions: DiffOp[] = match.deleted
         .filter(id => { const p = modelPlace.get(id); return !(p && deleted.has(p.owner)); })
         .map(id => ({ op: 'delete', model: id }));
 
-    return { match, ops: [...removals, ...deletions, ...creates, ...attributes, ...additions], unsupported, ...(outer.length ? { outer } : {}) };
+    const createOf = new Map(creates.flatMap(c => (c.op === 'create' ? [[c.text, c] as const] : [])));
+    const placedOps: DiffOp[] = parsed.objects.flatMap((t): DiffOp[] => {
+        const op = createOf.get(t.id) ?? late.get(modelOf.get(t.id)?.model ?? '');
+        return op ? [op] : [];
+    });
+    const ops = [...removals, ...early, ...deletions, ...placedOps, ...attributes, ...additions];
+    ops.push(...reorders(ops));
+    return { match, ops, unsupported, ...(outer.length ? { outer } : {}) };
+
+    /**
+     * The reorders: the ops run on a copy of every ordered many-valued slot the text prints, then each slot is compared
+     * with the text's order. What follows the longest prefix of the text order the slot holds in that order is
+     * re-appended, in text order (append only: that prefix is what can stay).
+     */
+    function reorders(run: readonly DiffOp[]): DiffOp[] {
+        const slots = new Map<string, string[]>();
+        const at = new Map<string, string>();
+        const refOf = new Map<string, ObjectRef>();
+        const slotKey = (owner: ObjectRef, feature: string): string => `${keyOf(owner)}\u0000${feature}`;
+        const keyed = (r: ObjectRef): string => { const k = keyOf(r); refOf.set(k, r); return k; };
+        const slot = (k: string): string[] => { let s = slots.get(k); if (!s) slots.set(k, s = []); return s; };
+        const take = (k: string): void => { const s = at.get(k); if (s === undefined) return; const xs = slot(s); const i = xs.indexOf(k); if (i >= 0) xs.splice(i, 1); at.delete(k); };
+        for (const o of model) {
+            for (const f of featuresOf(o.cls)) {
+                if (!f.many || f.kind === 'attribute') continue;
+                const k = slotKey({ model: o.id }, f.name);
+                const xs = f.kind === 'containment'
+                    ? asArray(o.slots[f.name]).filter((id): id is string => typeof id === 'string' && modelById.has(id)).map(id => keyed({ model: id }))
+                    : modelTargets(o.slots[f.name]).map(keyed);
+                slots.set(k, xs);
+                if (f.kind === 'containment') xs.forEach(x => at.set(x, k));
+            }
+        }
+        const many = (owner: ObjectRef, feature: string): boolean => {
+            const o = 'model' in owner ? modelById.get(owner.model) : 'text' in owner ? parsed.objects.find(x => x.id === owner.text) : undefined;
+            return !!o && featuresOf(o.cls).some(f => f.name === feature && f.many);
+        };
+        const gone = deletedObjects(input.mm, model, run);
+        for (const op of run) {
+            if (op.op === 'create' && op.into && many(op.into.owner, op.into.feature)) {
+                const k = slotKey(op.into.owner, op.into.feature);
+                const x = keyed({ text: op.text });
+                slot(k).push(x);
+                at.set(x, k);
+            } else if (op.op === 'move') {
+                const x = keyed({ model: op.model });
+                take(x);
+                if (op.into && many(op.into.owner, op.into.feature)) { const k = slotKey(op.into.owner, op.into.feature); slot(k).push(x); at.set(x, k); }
+            } else if (op.op === 'link') slot(slotKey(op.target, op.feature)).push(keyed(op.to));
+            else if (op.op === 'unlink') { const xs = slot(slotKey(op.target, op.feature)); const i = xs.indexOf(keyOf(op.to)); if (i >= 0) xs.splice(i, 1); }
+        }
+        // `delete` takes the object out of its slot and cleans every pointer to it.
+        const dead = new Set([...gone].map(id => keyOf({ model: id })));
+        for (const [k, xs] of slots) slots.set(k, xs.filter(x => !dead.has(x)));
+        const out: DiffOp[] = [];
+        for (const t of parsed.objects) {
+            const rule = g.objects[t.cls];
+            if (!rule) continue;
+            const shown = shownFeatures(rule);
+            const owner = ref(t.id);
+            for (const f of featuresOf(t.cls)) {
+                if (!f.many || f.kind === 'attribute' || !shown.has(f.name) || !ordered(t.cls, f.name)) continue;
+                const want = (f.kind === 'containment'
+                    ? asArray(t.slots[f.name]).filter((id): id is string => typeof id === 'string').map(ref)
+                    : parsedTargets(t.slots[f.name])).map(keyed);
+                const have = slots.get(slotKey(owner, f.name)) ?? [];
+                if (want.join('\u0000') === have.join('\u0000')) continue;
+                let from = 0;
+                let kept = 0;
+                for (const x of want) { const i = have.indexOf(x, from); if (i < 0) break; from = i + 1; kept++; }
+                for (const x of want.slice(kept)) if (have.includes(x)) out.push({ op: 'reorder', target: owner, feature: f.name, to: refOf.get(x)! });
+            }
+        }
+        return out;
+    }
+}
+
+function moveOp(x: { readonly model: string; readonly into: { readonly owner: ObjectRef; readonly feature: string } | null; readonly from: { readonly owner: string; readonly feature: string } | null }): DiffOp {
+    return { op: 'move', model: x.model, into: x.into, from: x.from };
 }
 
 /** Why a diff is not applied (R-TXT-26, R-TXT-30, R-TXT-21 (8)); none means it may be. */
@@ -236,8 +328,10 @@ export function deletedObjects(mm: TextMetamodel, model: readonly TextObject[], 
     const places = placesOf(model, featureTable(mm));
     const contents = new Map<string, string[]>();
     for (const [id, p] of places) contents.set(p.owner, [...(contents.get(p.owner) ?? []), id]);
+    // A moved object leaves its container before the deletions (T7), and takes its own contents with it.
+    const moved = new Set(ops.flatMap(op => (op.op === 'move' ? [op.model] : [])));
     const gone = new Set<string>();
-    const take = (id: string): void => { if (gone.has(id)) return; gone.add(id); (contents.get(id) ?? []).forEach(take); };
+    const take = (id: string): void => { if (gone.has(id) || moved.has(id)) return; gone.add(id); (contents.get(id) ?? []).forEach(take); };
     for (const op of ops) if (op.op === 'delete') take(op.model);
     return gone;
 }
@@ -356,6 +450,20 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
                 break;
             case 'link': case 'unlink':
                 if (writable(idOf(op.target), op.feature)) lines.push(`set ${handle(op.target)}.${op.feature} ${op.op === 'link' ? '+=' : '-='} ${handle(op.to)}`);
+                break;
+            case 'move': {
+                const h = handle({ model: op.model });
+                if (op.into) {
+                    if (!writable(op.model, op.into.feature)) break;
+                    const owner = objectOf(op.into.owner);
+                    const many = !!owner && featuresOf(owner.cls).some(f => f.name === op.into!.feature && f.many);
+                    lines.push(`set ${handle(op.into.owner)}.${op.into.feature} ${many ? '+=' : '='} ${h}`);
+                } else if (op.from && writable(op.model, op.from.feature)) lines.push(`set ${handle({ model: op.from.owner })}.${op.from.feature} -= ${h}`);
+                break;
+            }
+            case 'reorder':
+                if (!writable(idOf(op.target), op.feature)) break;
+                lines.push(`set ${handle(op.target)}.${op.feature} -= ${handle(op.to)}`, `set ${handle(op.target)}.${op.feature} += ${handle(op.to)}`);
                 break;
         }
     }

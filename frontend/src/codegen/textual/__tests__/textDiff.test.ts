@@ -149,6 +149,9 @@ interface EditOptions {
     readonly defaults?: ReadonlyMap<string, ReadonlySet<string>>;
     readonly referencedElsewhere?: ReadonlySet<string>;
     readonly ordered?: PlanInput['ordered'];
+    readonly confirmed?: PlanInput['confirmed'];
+    /** A cut pasted whole (D-5 of T7): the model object's span is carried to the parsed object of that name, as the Text tab does. */
+    readonly pasted?: readonly (readonly [id: string, name: string])[];
 }
 
 /** Prints the case, applies the replacements to the text in order, and plans the edit. */
@@ -163,12 +166,18 @@ function edit(c: Case, replacements: readonly (readonly [string, string])[], o: 
         spans = carry(spans, at, from.length, to.length);
     }
     const parsed = parseText(text, c.g);
+    for (const [id, name] of o.pasted ?? []) {
+        const t = parsed.objects.find(x => x.slots.name === name)!;
+        const s = parsed.spans.find(x => x.id === t.id)!;
+        spans = [...spans.filter(x => x.id !== id), { id, start: s.start, end: s.end }];
+    }
     const plan = planTextEdit({
         mm: c.mm, grammar: c.g, model: c.objects, parsed, unprinted: printed.unprinted,
-        ...(o.spans ? { previous: spans } : {}),
+        ...(o.spans || o.pasted ? { previous: spans } : {}),
         ...(o.defaults ? { defaults: o.defaults } : {}),
         ...(o.referencedElsewhere ? { referencedElsewhere: o.referencedElsewhere } : {}),
         ...(o.ordered ? { ordered: o.ordered } : {}),
+        ...(o.confirmed ? { confirmed: o.confirmed } : {}),
     });
     return { printed, text, parsed, plan };
 }
@@ -233,14 +242,15 @@ describe('print, parse, diff is empty', () => {
         if (c === LIBRARY_CASE) expect(reversed).toBe(0);
     });
 
-    it('a slot declared ordered and reversed is a change: a list attribute is rewritten, a reference is a reorder for T7', () => {
+    it('a slot declared ordered and reversed is a change: a list attribute is rewritten, a reference reordered (T7)', () => {
         const c = specCase(FIXTURE);
         const reversed = c.objects.map(x => (x.id === 's1' ? { ...x, slots: { ...x.slots, tags: ['b-c', 'a'] } } : x.id === 'p1' ? { ...x, slots: { ...x.slots, peers: ['p2', 'p3'] } } : x));
         const parsed = parseText(printTextModel(c.g, reversed).text, c.g);
         const ordered = (_: string, f: string) => f === 'tags' || f === 'peers';
         const diff = diffText({ mm: c.mm, grammar: c.g, model: c.objects, parsed, previous: printTextModel(c.g, c.objects).spans, ordered });
-        expect(diff.ops).toEqual([{ op: 'attribute', target: { model: 's1' }, feature: 'tags', value: ['b-c', 'a'] }]);
-        expect(diff.unsupported).toEqual([{ kind: 'reorder', model: 'p1', feature: 'peers' }]);
+        expect(diff.ops).toEqual([{ op: 'attribute', target: { model: 's1' }, feature: 'tags', value: ['b-c', 'a'] },
+            { op: 'reorder', target: { model: 'p1' }, feature: 'peers', to: { model: 'p3' } }]);
+        expect(diff.unsupported).toEqual([]);
     });
 });
 
@@ -503,7 +513,120 @@ describe('the refusals', () => {
         const moved = edit(LIBRARY_PLAIN_CASE, [['\n    Member ann {}', ''], ['Library city {', 'Member ann {}\nLibrary city {']]);
         expect(moved.parsed.errors).toEqual([]);
         expect(moved.plan.diff!.match.matches.find(m => m.model === 'm1')).toMatchObject({ by: 'move', uncertain: true });
-        expect(codes(moved.plan)).toEqual(['uncertain', 'unsupported']);
+        expect(codes(moved.plan)).toEqual(['uncertain']);
+    });
+});
+
+// ---- Moves and reorders (step T7) --------------------------------------------------------------------------------
+
+const TREE: Spec = {
+    classes: [{ name: 'Folder', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'folders', type: 'Folder', containment: true, many: true },
+        { name: 'files', type: 'File', containment: true, many: true }, { name: 'pinned', type: 'File', many: true }] },
+    { name: 'File', attributes: [{ name: 'name', type: 'EString' }, { name: 'size', type: 'EInt' }], references: [{ name: 'link', type: 'File' }] }],
+    enums: {},
+    objects: [
+        { id: 'root', cls: 'Folder', slots: { name: 'root', folders: ['docs', 'pics'], files: ['f0'], pinned: [] } },
+        { id: 'docs', cls: 'Folder', slots: { name: 'docs', folders: [], files: ['f1', 'f2', 'f3'], pinned: ['f1', 'f2'] } },
+        { id: 'pics', cls: 'Folder', slots: { name: 'pics', folders: [], files: [], pinned: [] } },
+        { id: 'f0', cls: 'File', slots: { name: 'readme', size: 1, link: 'f2' } },
+        { id: 'f1', cls: 'File', slots: { name: 'a', size: 2, link: null } },
+        { id: 'f2', cls: 'File', slots: { name: 'b', size: 3, link: null } },
+        { id: 'f3', cls: 'File', slots: { name: 'c', size: 4, link: null } },
+    ],
+};
+/** The tree with every many-valued reference declared `ordered` as given (TextReference.ordered, read by the default predicate). */
+const treeCase = (ordered?: boolean): Case => {
+    const c = specCase(TREE);
+    if (ordered === undefined) return c;
+    return { ...c, mm: { ...c.mm, classes: c.mm.classes.map(k => ({ ...k, references: k.references?.map(r => (r.many ? { ...r, ordered } : r)) })) } };
+};
+const FILE_B = '\n        File b {\n          size 3\n        }';
+const PICS_WITH_B = 'Folder pics {\n      files {\n        File b {\n          size 3\n        }\n      }\n    }';
+
+describe('a move keeps the object, and a reorder of an ordered feature is minimal (T7)', () => {
+    it('cut and pasted whole into another container: certain by the carried span, one containment line, id and incoming references kept (mutant: move left unsupported)', () => {
+        const { plan } = edit(treeCase(), [[FILE_B, ''], ['Folder pics {}', PICS_WITH_B]], { pasted: [['f2', 'b']] });
+        expect(plan.diff!.match.matches.find(m => m.model === 'f2')).toMatchObject({ by: 'span', uncertain: false });
+        expect(plan.diff!.ops).toEqual([{ op: 'move', model: 'f2', into: { owner: { model: 'pics' }, feature: 'files' }, from: { owner: 'docs', feature: 'files' } }]);
+        expect(plan.refusals).toEqual([]);
+        expect(plan.lines).toEqual(['set pics.files += b']);
+        expect(new Map(plan.handles)).toEqual(new Map([['pics', 'pics'], ['b', 'f2']]));
+    });
+
+    it('without the carried span the same move is uncertain and asks; confirmed, it is the same line (R-TXT-18: never a silent guess)', () => {
+        const asked = edit(treeCase(), [[FILE_B, ''], ['Folder pics {}', PICS_WITH_B]]);
+        expect(asked.plan.diff!.match.matches.find(m => m.model === 'f2')).toMatchObject({ by: 'move', uncertain: true });
+        expect(codes(asked.plan)).toEqual(['uncertain']);
+        const confirmed = edit(treeCase(), [[FILE_B, ''], ['Folder pics {}', PICS_WITH_B]], { confirmed: ['uncertain'] });
+        expect(confirmed.plan.lines).toEqual(['set pics.files += b']);
+    });
+
+    it('a pasted copy with the original still in the text is a new object (R-TXT-22)', () => {
+        const { plan } = edit(treeCase(), [['Folder pics {}', PICS_WITH_B.replace('File b', 'File c').replace('size 3', 'size 4')]], { spans: true });
+        expect(plan.refusals).toEqual([]);
+        expect(plan.diff!.match.matches.find(m => m.model === 'f3')).toMatchObject({ by: 'span' });
+        expect(plan.lines).toEqual(['create instance of File "File_1" in pics.files', 'set File_1.name = "c"', 'set File_1.size = 4']);
+    });
+
+    it('to the top level: taken out of its slot (mutant: the line of a move to the top dropped)', () => {
+        const { plan } = edit(treeCase(), [[FILE_B, ''], ['Folder root {', 'File b {\n  size 3\n}\nFolder root {']], { pasted: [['f2', 'b']] });
+        expect(plan.diff!.ops).toEqual([{ op: 'move', model: 'f2', into: null, from: { owner: 'docs', feature: 'files' } }]);
+        expect(plan.lines).toEqual(['set docs.files -= b']);
+    });
+
+    it('out of a deleted container: moved before the deletion, and not counted as deleted (mutant: moves after the deletions)', () => {
+        const printed = printTextModel(treeCase().g, treeCase().objects).text;
+        const from = printed.indexOf('\n    Folder docs {');
+        const docs = printed.slice(from, printed.indexOf('\n    Folder pics', from));
+        const c = treeCase();
+        const { plan } = edit(c, [[docs, ''], ['Folder pics {}', 'Folder pics {\n      files {\n        File a {\n          size 2\n        }\n      }\n    }'], ['\n      link b', '']],
+            { pasted: [['f1', 'a']], referencedElsewhere: new Set(['f1']) });
+        expect(plan.refusals).toEqual([]);
+        expect(plan.lines).toEqual(['set pics.files += a', 'delete docs']);
+        const withB = edit(c, [[docs, ''], ['Folder pics {}', 'Folder pics {\n      files {\n        File a {\n          size 2\n        }\n      }\n    }'], ['\n      link b', '']],
+            { pasted: [['f1', 'a']], referencedElsewhere: new Set(['f2']) });
+        expect(codes(withB.plan)).toEqual(['referenced']);
+    });
+
+    it('into a created container while the old one is deleted: taken out first, put in after the creation (mutant: no detach)', () => {
+        const printed = printTextModel(treeCase().g, treeCase().objects).text;
+        const from = printed.indexOf('\n    Folder docs {');
+        const docs = printed.slice(from, printed.indexOf('\n    Folder pics', from));
+        const { plan } = edit(treeCase(), [[docs, ''], ['  folders {', '  folders {\n    Folder fresh {\n      files {\n        File a {\n          size 2\n        }\n      }\n    }'], ['\n      link b', '']],
+            { pasted: [['f1', 'a']] });
+        expect(plan.refusals).toEqual([]);
+        expect(plan.lines).toEqual(['set docs.files -= a', 'delete docs', 'create instance of Folder "fresh" in root.folders', 'set fresh.files += a']);
+    });
+
+    it('a swap of nesting moves in text order, the container first: no containment loop on the way (discovery R4)', () => {
+        const c: Case = { ...treeCase(), objects: treeCase().objects.map(o => (o.id === 'docs' ? { ...o, slots: { ...o.slots, folders: ['pics'] } } : o.id === 'root' ? { ...o, slots: { ...o.slots, folders: ['docs'] } } : o)) };
+        const docsAt = (t: string): string => t.slice(t.indexOf('    Folder docs {'), t.indexOf('\n  }\n  files {'));
+        const printed = printTextModel(c.g, c.objects).text;
+        const swapped = c.objects.map(o => (o.id === 'root' ? { ...o, slots: { ...o.slots, folders: ['pics'] } } : o.id === 'pics' ? { ...o, slots: { ...o.slots, folders: ['docs'] } } : o.id === 'docs' ? { ...o, slots: { ...o.slots, folders: [] } } : o));
+        const target = printTextModel(c.g, swapped).text;
+        const { plan } = edit(c, [[docsAt(printed), target.slice(target.indexOf('    Folder pics {'), target.indexOf('\n  }\n  files {'))]], { confirmed: ['uncertain'] });
+        expect(plan.refusals).toEqual([]);
+        expect(plan.lines).toEqual(['set root.folders += pics', 'set pics.folders += docs']);
+    });
+
+    it('an ordered containment reversed: the longest kept prefix stays, the rest is re-appended in text order (mutant: reorder dropped)', () => {
+        const reversed = '        File c {\n          size 4\n        }\n        File b {\n          size 3\n        }\n        File a {\n          size 2\n        }';
+        const original = '        File a {\n          size 2\n        }\n        File b {\n          size 3\n        }\n        File c {\n          size 4\n        }';
+        const { plan } = edit(treeCase(true), [[original, reversed]]);
+        expect(plan.refusals).toEqual([]);
+        expect(plan.lines).toEqual(['set docs.files -= b', 'set docs.files += b', 'set docs.files -= a', 'set docs.files += a']);
+        // Not declared ordered, or declared `ordered: false`: the model order stays (R-TXT-21 (5)).
+        for (const c of [treeCase(), treeCase(false)]) expect(edit(c, [[original, reversed]]).plan.lines).toEqual([]);
+    });
+
+    it('an ordered reference reordered, and a move into an ordered slot lands where the text puts it (mutant: prefix kept by set, not by order)', () => {
+        expect(edit(treeCase(true), [['pinned [a, b]', 'pinned [b, a]']], { spans: true }).plan.lines).toEqual(['set docs.pinned -= a', 'set docs.pinned += a']);
+        expect(edit(treeCase(false), [['pinned [a, b]', 'pinned [b, a]']], { spans: true }).plan.lines).toEqual([]);
+        const readme = '\n  files {\n    File readme {\n      size 1\n      link b\n    }\n  }';
+        const { plan } = edit(treeCase(true), [[readme, ''], ['          size 2\n        }', '          size 2\n        }\n        File readme {\n          size 1\n          link b\n        }']],
+            { spans: true, pasted: [['f0', 'readme']] });
+        expect(plan.refusals).toEqual([]);
+        expect(plan.lines).toEqual(['set docs.files += readme', 'set docs.files -= b', 'set docs.files += b', 'set docs.files -= c', 'set docs.files += c']);
     });
 });
 
@@ -561,5 +684,17 @@ describe('applyTextEdit', () => {
         const outer: Case = { ...LIBRARY_CASE, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
         expect(await applyTextEdit('M', edit(outer, [], { spans: true }).plan)).toEqual({ applied: 0, failed: 0 });
         expect(run.calls).toHaveLength(1);
+    });
+
+    it('a move with a reorder is one run, one undo step (T7 (4); dies when the move or the reorder is refused or run apart)', async () => {
+        (globalThis as any).window = { dispatchEvent: () => true };
+        const { applyTextEdit } = await import('../textApply');
+        const before = run.calls.length;
+        const readme = '\n  files {\n    File readme {\n      size 1\n      link b\n    }\n  }';
+        const { plan } = edit(treeCase(true), [[readme, ''], ['          size 2\n        }', '          size 2\n        }\n        File readme {\n          size 1\n          link b\n        }']],
+            { spans: true, pasted: [['f0', 'readme']] });
+        expect(await applyTextEdit('M', plan)).toEqual({ applied: 5, failed: 0 });
+        expect(run.calls).toHaveLength(before + 1);
+        expect(run.calls[before].script.split('\n')).toEqual(['set docs.files += readme', 'set docs.files -= b', 'set docs.files += b', 'set docs.files -= c', 'set docs.files += c']);
     });
 });
