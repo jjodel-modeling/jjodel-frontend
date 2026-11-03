@@ -1,6 +1,6 @@
 # Discovery 2026-11-03 — textual T7: moves between containers and reorder of ordered features
 
-- Prompt-ID: P-2026-11-03-1225 (`docs/prompts/claude_2026-11-03_1225_prompt_textual_t7_moves.md`)
+- Prompt-ID: P-2026-11-03-1225 (`docs/prompts/claude_2026-11-03_1225_prompt_textual_t7.md`)
 - Session: bd5a9d00-ceb6-4e29-b7d9-0cd41a15d20f
 - Tree: `~/jjodel-w-textt7`, branch `textual-t7`, HEAD `0f2126a8b`
 - Executor model: Opus 5.5 (`claude-opus-5-5`)
