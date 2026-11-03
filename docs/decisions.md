@@ -7127,6 +7127,12 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   (1) A stale edit stays blocked after an external model change; Reprint discards it. (2) The printer defect on a reference
   to an object outside the text gets a small fix before T7, independent of the model-to-model reference work. (3) The
   `ordered` flag comes with T7. (4) The test files red at import get a ticket.
+- **R-TXT-32** (2026-11-03). **Provisional, unattended (RC-25); amends R-TXT-4, awaits Alfonso (RC-26).** Evidence: read and measured,
+  report docs/discovery/discovery_2026-11-03_textual_refs_outside_text.md. A reference target the text does not print
+  prints as `@` and its id as a string, `borrowedBy @"<id>"`, in the style's quote; in a many-valued reference too, beside
+  the inner targets. Kept verbatim it writes nothing; deleted it clears or unlinks; retyped to a name or path it is an
+  ordinary retarget; an edited id, or the token at another owner or feature, is refused. It is never re-resolved by name
+  or position. R-TXT-4 is unchanged for targets inside the text.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
