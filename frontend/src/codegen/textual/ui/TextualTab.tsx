@@ -681,7 +681,8 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             const from = m.getPositionAt(Math.min(e.start, length));
             const to = m.getPositionAt(Math.min(Math.max(e.end, e.start + 1), length));
             return {
-                severity: monaco.MarkerSeverity.Error,
+                // Step A: a reference error after a syntax error may follow from it, and is a warning.
+                severity: 'secondary' in e && e.secondary ? monaco.MarkerSeverity.Warning : monaco.MarkerSeverity.Error,
                 message: e.message,
                 startLineNumber: from.lineNumber, startColumn: from.column,
                 endLineNumber: to.lineNumber, endColumn: to.column,

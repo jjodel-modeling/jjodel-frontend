@@ -11,6 +11,8 @@ import { grammarOf } from './corpus';
 import { FIXTURE } from './spec';
 import { printTextModel } from '../printer';
 import { libraryObjects, mutantsOf, tolerantCases } from './tolerantCorpus';
+import { nearleyGrammarOf, parseCount } from './oracle';
+import { planTextEdit } from '../textDiff';
 
 const CASES = tolerantCases();
 
@@ -184,7 +186,47 @@ describe('(iii) recovery: insertion, deletion, descent into skipped blocks; uncl
         expect(text).toContain('borrowedBy reader1');
         const broken = text.replace('  members {', '  {').replace('borrowedBy reader1', 'borrowedBy Member[0]');
         const r = parse(broken);
-        expect(r.errors.map(e => e.message)).toContain('there is no top-level Member[0]: the text has 0');
+        expect(r.errors.map(e => e.message)).toContainEqual(expect.stringMatching(/^there is no top-level Member\[0\]: the text has 0 \(may follow from/));
         expect(r.refs!.filter(x => x.feature === 'borrowedBy').map(x => x.to)).toEqual([undefined]);
+    });
+});
+
+describe('(iv) two-tier diagnostics; a text with a syntax error is never applied', () => {
+    const LIB = CASES[0];
+    const text = printTextModel(LIB.g, libraryObjects(2, 2)).text;
+
+    it('after a syntax error, a reference error is a secondary warning, listed after the syntax errors', () => {
+        const r = parseText(`${text.replace('borrowedBy reader1', 'borrowedBy nobody')}junk\n`, LIB.g);
+        const syntax = r.errors[0];
+        expect(syntax.message).toBe('expected "Library", "Book" or "Member"; found name "junk"');
+        expect('secondary' in syntax || 'severity' in syntax).toBe(false);
+        expect(r.errors.slice(1)).toEqual([expect.objectContaining({
+            message: `no object of type Member is named "nobody" (may follow from the error at ${syntax.line}:${syntax.col})`,
+            secondary: true, severity: 'warning',
+        })]);
+        expect(r.errors[1].start).toBeLessThan(syntax.start);
+    });
+
+    it('without a syntax error, a reference error keeps its shape: an error, not secondary', () => {
+        const r = parseText(text.replace('borrowedBy reader1', 'borrowedBy nobody'), LIB.g);
+        expect(r.errors.map(e => Object.keys(e).sort().join(','))).toEqual(['col,end,line,message,start']);
+    });
+
+    it.each(CASES.map(c => [c.name, c] as const))('%s: every mutant outside the language has a syntax error, and its diff is null (oracle)', (_, c) => {
+        const { mutants } = mutantsOf(c);
+        const ng = nearleyGrammarOf(c.g);
+        const print = printTextModel(c.g, c.objects);
+        let outside = 0;
+        for (const mu of mutants) {
+            let n = 0;
+            try { n = parseCount(c.g, mu.text, ng); } catch { n = 0; }
+            if (n > 0) continue;
+            outside++;
+            const parsed = parseText(mu.text, c.g);
+            expect(parsed.errors.some(e => !(e as { secondary?: boolean }).secondary), mu.text).toBe(true);
+            const plan = planTextEdit({ mm: c.mm, grammar: c.g, model: c.objects, parsed, unprinted: [], previous: print.spans });
+            expect(plan.diff).toBeNull();
+        }
+        expect(outside).toBeGreaterThan(mutants.length / 2);
     });
 });

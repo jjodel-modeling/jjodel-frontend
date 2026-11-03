@@ -34,12 +34,15 @@ export interface TextParseError {
     readonly start: number;
     readonly end: number;
     readonly message: string;
+    /** A reference error in a text with a syntax error: it may follow from that error (step A); listed after the syntax errors. */
+    readonly secondary?: true;
+    readonly severity?: 'warning';
 }
 
 export interface TextParseResult {
     /** In text order (an object before the objects it contains); ids `t1`, `t2`, ... */
     readonly objects: readonly TextObject[];
-    /** In text order. */
+    /** The syntax errors in text order, then the reference errors in text order, secondary when there is a syntax error. */
     readonly errors: readonly TextParseError[];
     /** The ids of the objects whose text was not read in full, or whose references did not resolve (R-TXT-21 (8)). */
     readonly recovered: readonly string[];
@@ -943,6 +946,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     };
     const refs: ParsedRef[] = [];
     const keep = new Set((options.keep ?? []).map(k => `${k.start}:${k.end}:${k.text}`));
+    const syntaxCount = errors.length;
     // An orphan's container is unknown: it is no top-level object, and a path never starts at it.
     resolve(g, objects, new Set([...contained, ...orphans]), errors, recovered, where, r => {
         const tokenText = text.slice(r.at.start, r.endAt);
@@ -965,9 +969,14 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     root.tokens = toks;
     const spans = objectNodes.map(n => ({ id: n.id!, start: n.start, end: n.end }));
     const isRecovered = (n: Building): boolean => n.state !== 'complete' || !!n.orphan;
-    errors.sort((a, b) => a.start - b.start);
+    // Two tiers (step A): the syntax errors first; after one, a reference error may follow from it, and is a warning.
+    const byStart = (a: TextParseError, b: TextParseError): number => a.start - b.start;
+    const syntax = errors.slice(0, syntaxCount).sort(byStart);
+    const linked = errors.slice(syntaxCount).sort(byStart);
+    const cause = syntax[0];
+    const tiers = [...syntax, ...(cause ? linked.map(e => ({ ...e, message: `${e.message} (may follow from the error at ${cause.line}:${cause.col})`, secondary: true as const, severity: 'warning' as const })) : linked)];
     return {
-        objects: objectNodes.map(n => byId.get(n.id!)!), errors, recovered: objectNodes.filter(isRecovered).map(n => n.id!), spans, refs,
+        objects: objectNodes.map(n => byId.get(n.id!)!), errors: tiers, recovered: objectNodes.filter(isRecovered).map(n => n.id!), spans, refs,
         unclosed: objectNodes.filter(n => n.state === 'unclosed').map(n => n.id!),
         tree: root as unknown as TextNode,
     };
