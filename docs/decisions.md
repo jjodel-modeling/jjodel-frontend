@@ -6849,6 +6849,23 @@ Two gaps found by lane P-2026-11-03-0005 at its item 1 hard stop, answered by Ju
   OpenRouter accept the headers; the Anthropic and Google SDKs are unaffected on their own hosts. Fixed in L3, in
   `OpenAICompatibleProvider.ts`, with a test.
 
+L4 shape, answered by Juri in chat C-2026-11-03-1227 on 2026-11-03 (R-AI-20..21: ratified by Juri as recommended;
+evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-20** (2026-11-03). **L4 removes the code first and the folder later, on one branch.** Measured on `staging`
+  `99b380f6f`: `AI.getEndpoint()` has no caller outside tests, and `fetchCatalog`/`fetchAnthropicCatalog`, the only
+  users of `proxyPath`, are imported only by their own test. The `jjodel-ai-proxy` Worker still answers (404 on `/`, 204
+  on the `/v1/anthropic/messages` preflight, 13:2x). One lane deletes the code proxy surface and proves that the bundle
+  no longer names the Worker host. The branch then stays unmerged. After Alfonso confirms that the deployment is
+  removed, a dedicated commit on the same branch deletes `cloudflare-worker/`, the `/cloudflare-worker/node_modules`
+  line of `.gitignore` and the Worker paragraph of `docs/CODEBASE-MAP.md`, and only then is the branch merged. Rule 19
+  is confirmed for that lane. Spec §7 L4 (a) also asks for a smoke from a production origin, which a lane cannot reach.
+  The dist check stands in for it, and the production run goes on Alfonso's test checklist.
+- **R-AI-21** (2026-11-03). **`services/aiModelCatalog.ts` loses its whole dead fetch path**, not only the proxy
+  fallback the spec names (§7 L4 «Modify»). Every export without a live importer outside its own test goes, along with
+  the private helpers that only those exports use and their test cases. The exports that live files still use
+  (`types/jodie.ts`, `ProviderModelSelector.tsx`, `AISettingsContent.tsx`) stay until L6.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
