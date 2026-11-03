@@ -7179,6 +7179,16 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   linear `matchObjects` gets a ticket. The paste-back loss of spans (a deleted and pasted-back text keeps no agreed spans,
   `TextualTab.tsx:803-807`) is fixed in its own fast lane before step B: the agreed text keeps its spans and reference
   tokens and they return whenever the text equals it again.
+- **R-TXT-39** (2026-11-04, Alfonso 00:00). **Layout of step B, from the mockup Alfonso approved** (a drawing with sample
+  data, not a specification: multiplicities, card texts and grammar in it are not references). (1) The outline shows the
+  grouping of a containment feature (`transitions`) as a node, not only the objects, so outline and breadcrumb follow the
+  structure of the text. (2) An unnamed object is told apart in the outline by a value that distinguishes it (`Transition
+  coin` in the test case); the rule holds for every metamodel with no metamodel-specific code and is proposed in the
+  discovery of B2. (3) The hover card stays open until closed or until a click on the text, and carries «Go to definition»
+  and the list of the lines that use the reference; the discovery measures how far Monaco allows this without forcing it,
+  and if it does not, the chat reports it with a proposal instead of working around it. Go to definition and find
+  references also work through Monaco's shortcuts and context menu. (4) With a broken root, recovered objects sit under
+  the `Unknown container` node (R-TXT-36). The order of the plan and the running lanes are unchanged.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
