@@ -5,7 +5,7 @@ Chat: C-2026-11-03-1227
 Front: ai-provider
 Lane: full
 Depends: P-2026-11-03-1226
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane feat/196-l4-proxy-removal · d0d305e0d
 Corregge: —
 Request: none (no URL: Juri asked in a local Claude Code session on 2026-11-03, «riparti con il compito 196-ai-provider-refactor.md»; his words are `request.md` in the lane folder, RC-43)
 Model: claude-opus-5-5
