@@ -208,13 +208,16 @@ describe('Class2Relational', () => {
         expect(render(result).filter(l => l.startsWith('root Column'))).toEqual(Array(6).fill('root Column id'));
     });
 
-    it('a lazy rule on Class beside the matched one is rejected before pass 1', async () => {
-        const text = MATCHED_KEYS.replace('-- The key column of a class\'s table.\nClass c -> Column {', 'unique lazy Class c -> Column {');
-        const { ast, errors } = parse(text);
-        expect(errors).toEqual([]);
-        const result = await execute(ast!, SHOP, RELATIONAL);
-        expect(result.success).toBe(false);
-        expect(result.errors.join('\n')).toMatch(/Class/);
+    it('a unique lazy rule on Class beside the matched one builds the same schema, reached through features typed Column', async () => {
+        // The lazy rule does not compete in pass 1 (P-2026-11-04-0015). resolve() finds matched
+        // targets only (R-JTG-13), so the key column is reached as `c` where a Column is expected.
+        const text = MATCHED_KEYS
+            .replace('-- The key column of a class\'s table.\nClass c -> Column {', 'unique lazy Class c -> Column {')
+            .replace(/resolve\(c, "?Column"?\)/g, 'c');
+        const result = await run(text);
+        expect(result.errors).toEqual([]);
+        expect(render(result)).toEqual(EXPECTED_SCHEMA);
+        expect(result.targetModel!.roots).toHaveLength(1);
     });
 
     it('#445: a binding to a feature the target class does not declare is warned with rule, line and column', async () => {
