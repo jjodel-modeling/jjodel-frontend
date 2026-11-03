@@ -76,14 +76,16 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
 
     // Parse with debouncing
     const debouncedParse = useCallback((source: string) => {
+        // Skip if same source, before touching the timer: Monaco delivers one edit as
+        // several change events that all read the final value, and clearing the timer
+        // here dropped the parse of that value, so Execute ran the previous AST (#446)
+        if (source === lastSourceRef.current) {
+            return;
+        }
+
         // Clear existing timer
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
-        }
-
-        // Skip if same source
-        if (source === lastSourceRef.current) {
-            return;
         }
 
         lastSourceRef.current = source;
@@ -139,10 +141,17 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
     // Parse immediately and return result (useful for getting fresh AST at execution time)
     const parseNow = useCallback((source: string): { ast: TransformationAST | null; errors: ParserError[] } => {
         // console.log('[useJjtlParser] parseNow called - immediate parse with result');
+        // The published AST is now this source's: a pending debounced parse of another
+        // source must not overwrite it, and the same-source skip must compare against it (#446)
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+        lastSourceRef.current = source;
         const result = parseSource(source);
         // Also update state
         setAst(result.ast);
         setErrors(result.errors);
+        setIsParsing(false);
         return result;
     }, [parseSource]);
 
