@@ -104,6 +104,74 @@ Main m = mkAdd(m.expr)
         expect(left.__placed).toBe(true);
     });
 
+    // `unique rule` (P-2026-11-03-2111): one target per (rule, arguments, environment).
+    const UNIQUE_CALLS = `
+unique rule mkConst(c) -> Const {
+    value := c.value
+}
+
+rule mkAdd(a) -> Add {
+    left := mkConst(a.left)
+    right := mkConst(a.right)
+}
+
+Main m = mkAdd(m.expr)
+`;
+
+    it('returns the target of a unique called rule for a second call with the same argument: placed twice, a second claim', async () => {
+        const result = await run(UNIQUE_CALLS, [
+            el('m1', 'Main', { expr: ref('a1') }),
+            el('a1', 'Add', { left: ref('c1'), right: ref('c1'), _containerId: 'm1' }),
+            el('c1', 'Const', { value: 1, _containerId: 'a1' }),
+        ]);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
+        const conflicts = result.errors.filter(e => /Containment conflict/.test(e));
+        expect(conflicts).toHaveLength(1);
+        expect(conflicts[0]).toMatch(/is claimed by Add .*\.left .* and by Add .*\.right/);
+    });
+
+    it('creates a fresh target of a unique called rule for different arguments', async () => {
+        const result = await run(UNIQUE_CALLS, [
+            el('m1', 'Main', { expr: ref('a1') }),
+            el('a1', 'Add', { left: ref('c1'), right: ref('c2'), _containerId: 'm1' }),
+            el('c1', 'Const', { value: 1, _containerId: 'a1' }),
+            el('c2', 'Const', { value: 2, _containerId: 'a1' }),
+        ]);
+        expect(result.errors).toEqual([]);
+        expect(result.targetModel!.roots.map(term)).toEqual(['Add(Const(1), Const(2))']);
+    });
+
+    it('calls a called rule not declared unique afresh for the same argument (R-JTG-6)', async () => {
+        const result = await run(UNIQUE_CALLS.replace('unique rule', 'rule'), [
+            el('m1', 'Main', { expr: ref('a1') }),
+            el('a1', 'Add', { left: ref('c1'), right: ref('c1'), _containerId: 'm1' }),
+            el('c1', 'Const', { value: 1, _containerId: 'a1' }),
+        ]);
+        expect(result.errors).toEqual([]);
+        expect(result.targetModel!.roots.map(term)).toEqual(['Add(Const(1), Const(1))']);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(2);
+    });
+
+    it('holds the value of a let bound to a called rule: two uses, one target (#515)', async () => {
+        const result = await run(`
+rule mkConst(c) -> Const {
+    value := c.value
+}
+
+Add a -> Add {
+    let $c = mkConst(a.left) in {
+        left := $c
+        right := $c
+    }
+}
+`, [
+            el('a1', 'Add', { left: ref('c1'), right: ref('c1') }),
+            el('c1', 'Const', { value: 1, _containerId: 'a1' }),
+        ]);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
+        expect(result.errors.filter(e => /Containment conflict/.test(e))).toHaveLength(1);
+    });
+
     it('stops a recursion with no progress at the depth limit, naming the stack', async () => {
         const source = [
             el('m1', 'Main', { expr: ref('a1') }),
@@ -295,6 +363,50 @@ describe.each([
         const conflicts = result.errors.filter(e => /Containment conflict/.test(e));
         expect(conflicts).toHaveLength(1);
         expect(conflicts[0]).toMatch(/Const '?.*'? is claimed by Add .*\.left .* and by Add .*\.right/);
+    });
+
+    it('holds the value of a let bound to envLookup: one lowering for two uses, placed twice, a second claim (#515)', async () => {
+        const result = await run(`
+rule twice(e, env: Env) -> Add {
+    let $x = envLookup("x") in {
+        left := $x
+        right := $x
+    }
+}
+
+lazy Const -> Const {
+    value := value
+}
+
+Main m = twice(m.expr, extendEnv(["x"], [m.expr]))
+`, [
+            el('m1', 'Main', { expr: ref('c5') }),
+            k('c5', 5, 'm1'),
+        ]);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(1);
+        expect(result.errors.filter(e => /Containment conflict/.test(e))).toHaveLength(1);
+    });
+
+    it('creates a unique called rule\'s target once per environment, not once per argument', async () => {
+        // One Var y under two Binds: mkRef(y) is called under {x := c5} twice and under {x := c6} once.
+        const text = ENV_RULES.replace('rule mkRef(v)', 'unique rule mkRef(v)');
+        const source = (second: string) => [
+            el('m1', 'Main', { expr: ref('a0') }),
+            add('a0', 'b1', 'b2', 'm1'),
+            bind('b1', 'vy', ['bd1'], 'a0'),
+            bind('b2', 'vy', ['bd2'], 'a0'),
+            v('vy', 'y', 'b1'),
+            binding('bd1', 'x', 'c5', 'b1'),
+            binding('bd2', 'x', second, 'b2'),
+            k('c5', 5, 'bd1'),
+            k('c6', 6, 'bd2'),
+        ];
+        const different = await run(text, source('c6'));
+        expect(different.errors).toEqual([]);
+        expect(different.targetModel!.instances.get('Ref')).toHaveLength(2);
+        const equal = await run(text, source('c5'));
+        expect(equal.targetModel!.instances.get('Ref')).toHaveLength(1);
+        expect(equal.errors.filter(e => /Containment conflict/.test(e))).toHaveLength(1);
     });
 
     it('selects the one lazy rule whose guard holds', async () => {

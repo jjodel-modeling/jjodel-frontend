@@ -55,7 +55,8 @@ Keywords are **case-insensitive** at the lexer level.
 `rule`, `lazy` and `unique` are **contextual** (P-2026-11-02-2224): the lexer gives them no
 token, since lowercasing would take a class `Rule` or Ecore's feature `unique` away from every
 saved transformation. The parser reads them, lowercase and by value, only at the start of a
-top-level declaration: `rule NAME (`, `lazy NAME`, `unique lazy NAME`. Everywhere else they are
+top-level declaration: `rule NAME (`, `unique rule NAME (`, `lazy NAME`, `unique lazy NAME`
+(`unique rule`: P-2026-11-03-2111, R-JTG-16). Everywhere else they are
 identifiers. One form changes reading: a source class called `lazy` with an alias
 (`lazy l -> T`) is now a lazy rule on `l`; `lazy -> T` still maps the class.
 
@@ -317,7 +318,7 @@ helper formatLabel(name: String, prefix: String) -> String {
 > of several targets per source element is slice B2. Semantics: §5.3.3.
 
 ```ebnf
-calledRule = "rule" IDENTIFIER "(" [ ruleParam ( "," ruleParam )* ] ")" ruleTail ;
+calledRule = [ "unique" ] "rule" IDENTIFIER "(" [ ruleParam ( "," ruleParam )* ] ")" ruleTail ;
 ruleParam  = IDENTIFIER [ ":" IDENTIFIER ] ;
 lazyRule   = [ "unique" ] "lazy" IDENTIFIER [ IDENTIFIER ] ruleTail ;
 ruleTail   = "->" IDENTIFIER multiplicity? condition? [ "{" mappingBody "}" ]
@@ -691,7 +692,7 @@ The app's write-back of several targets per source element is B2 (list below).
 - **Calls.** A called rule is a JjEL function. Calling it during an expression yields a
   demand, which the receiving binding carries out before it resolves its value: the rule is
   applied, its target created and returned, then placed as any rule target (§5.3.1). Each call
-  applies the rule afresh. A delegating rule (`= expression`, §3.4b) returns what its
+  applies the rule afresh, unless the rule is `unique`. A delegating rule (`= expression`, §3.4b) returns what its
   expression lowers to; what is left a source element resolves through the trace.
 - **Environment.** Each application runs under an environment, a chain of frames binding names
   to closures. It is the caller's, unless a called rule receives one through a parameter typed
@@ -711,9 +712,20 @@ The app's write-back of several targets per source element is B2 (list below).
   or several is an error naming the candidates. A class with both a matched and a lazy rule is
   rejected before pass 1. A lazy node nothing reaches creates no target and no root.
 - **`unique`.** A `unique lazy` rule applies once per (rule, source, environment); a later
-  reach under an equal environment returns the same target.
+  reach under an equal environment returns the same target. A `unique rule` (R-JTG-16,
+  P-2026-11-03-2111) applies once per (rule, arguments, environment): a second call with the
+  same arguments under an equal environment returns the same target. Arguments compare by
+  value key, a source element by its id, any other object by identity; an `Env` argument is
+  left out of the arguments and counts as the environment of the application. Placing that one
+  target twice is the double-claim error of R-JTG-4.
+- **`let` (R-JTG-15).** A `let` holds the value of its expression, computed once, at the
+  binding (P-2026-11-03-2111, #515): the calls and the `envLookup` closures it holds are
+  carried out there, so two uses of the name are the same object, and a `unique` or a fresh
+  rule is applied once per `let`, not once per use. A source element bound by a `let` stays
+  the element: it is not lowered at the `let`, and `$x.name` navigates the source as before.
 - **Containment under B (R-JTG-6).** A call of a rule not `unique`, a reach of a lazy rule not
-  `unique`, and the lookup of a bound value each lower to a fresh subtree, even under an
+  `unique`, and the lookup of a bound value each lower to a fresh subtree, once per `let` that
+  holds them (R-JTG-15), even under an
   environment seen before: one expression may be placed twice, with the same bindings or with
   different ones. A bound value whose class has a matched rule is lowered anew by that rule
   under its binding site's environment, even an empty one, never resolved to the shared pass-1
@@ -1077,7 +1089,7 @@ interface ExecutionResult {
 | UIBridge interface + React components | ✅ | `executor/UIBridge.ts`, `executor/ReactUIBridge.ts`, `components/dialogs/*` |
 | Monaco syntax highlighting | ✅ | `editor/` |
 | JjOM source model conversion | ✅ | `executor/jjodelConverter.ts` |
-| Called, lazy, `unique lazy` and delegating rules; the environment (B1, §5.3.3) | ✅ executor; app write-back B2 | `parser/parser.ts`, `executor/executor.ts` |
+| Called, `unique` called, lazy, `unique lazy` and delegating rules; the environment (B1, §5.3.3); a `let` holds its value (R-JTG-15) | ✅ executor; app write-back B2 | `parser/parser.ts`, `executor/executor.ts` |
 
 ### 12.2 Known Bugs
 

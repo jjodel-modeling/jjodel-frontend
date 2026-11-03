@@ -130,11 +130,13 @@ export class JjtlParser {
         return this.tokens[this.current + offset]?.type;
     }
 
-    // `rule NAME (`: a source class called `rule` is followed by an alias or `->`, never `(`.
+    // `[unique] rule NAME (`: a source class called `rule` is followed by an alias or `->`,
+    // never `(`; one called `unique` with alias `rule` is followed by `->`, never a name.
     private isCalledRuleStart(): boolean {
-        return this.isContextual(0, 'rule')
-            && this.tokenTypeAt(1) === TokenType.IDENTIFIER
-            && this.tokenTypeAt(2) === TokenType.LPAREN;
+        const at = this.isContextual(0, 'unique') ? 1 : 0;
+        return this.isContextual(at, 'rule')
+            && this.tokenTypeAt(at + 1) === TokenType.IDENTIFIER
+            && this.tokenTypeAt(at + 2) === TokenType.LPAREN;
     }
 
     // `lazy S ...` or `unique lazy S ...`. A source class called `lazy` keeps the form
@@ -146,10 +148,12 @@ export class JjtlParser {
         return this.isContextual(0, 'lazy') && this.tokenTypeAt(1) === TokenType.IDENTIFIER;
     }
 
-    // calledRule = "rule" IDENTIFIER "(" [param ("," param)*] ")" ruleTail
+    // calledRule = ["unique"] "rule" IDENTIFIER "(" [param ("," param)*] ")" ruleTail
     // param      = IDENTIFIER [":" IDENTIFIER]
     private calledRule(): ClassMappingAST {
-        const startToken = this.advance(); // 'rule'
+        const startToken = this.advance(); // 'unique' or 'rule'
+        const unique = startToken.value === 'unique';
+        if (unique) this.advance(); // 'rule'
         const ruleName = this.consume(TokenType.IDENTIFIER, "Expected rule name").value;
         this.consume(TokenType.LPAREN, "Expected '('");
         const parameters: ParameterAST[] = [];
@@ -169,7 +173,7 @@ export class JjtlParser {
             } while (this.match(TokenType.COMMA));
         }
         this.consume(TokenType.RPAREN, "Expected ')'");
-        return this.ruleTail(startToken, [], { ruleKind: 'called', ruleName, parameters });
+        return this.ruleTail(startToken, [], { ruleKind: 'called', ruleName, parameters, ...(unique ? { unique } : {}) });
     }
 
     // lazyRule = ["unique"] "lazy" IDENTIFIER [IDENTIFIER] ruleTail

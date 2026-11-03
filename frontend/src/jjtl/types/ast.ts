@@ -57,7 +57,7 @@ export interface ClassMappingAST extends ASTNode {
     ruleName?: string;
     /** Parameters of a called rule; `paramType` is '' when omitted, 'Env' for the environment parameter. */
     parameters?: ParameterAST[];
-    /** `unique lazy`: one target per (rule, arguments, environment). */
+    /** `unique lazy` and `unique rule`: one target per (rule, arguments, environment). */
     unique?: boolean;
     /**
      * A delegating rule (`... = expression`): it creates no target of its own and lowers to

@@ -105,6 +105,9 @@ helper integerType(e: Element) -> DataType {
 /**
  * Each workaround replaces one passage of NATURAL, with the reason it was needed. WORKAROUND
  * is NATURAL with all of them applied, in order; a passage that does not occur is an error.
+ * W5 and W6 left this list with P-2026-11-03-2111: a `let` holds its value (#515), so the
+ * natural `let $id = idColumn(c)` runs, and with it no `resolve()` is left for W6 to quote.
+ * Their form survives as MATCHED_KEY_EDITS below.
  */
 export const WORKAROUNDS: { why: string; from: string; to: string }[] = [
     {
@@ -145,8 +148,29 @@ export const WORKAROUNDS: { why: string; from: string; to: string }[] = [
         from: 'o.name.toLowerCase()',
         to: 'o.name.toLower()',
     },
+];
+
+/** `text` with `edits` applied in order; `__ALL__` quotes the type name of every `resolve(x, T)`. */
+export function applyEdits(text: string, edits: { why: string; from: string; to: string }[]): string {
+    return edits.reduce((t, w) => {
+        if (w.from === '__ALL__') return t.replace(/resolve\(([^,()]+(?:\([^()]*\))?), (\w+)\)/g, 'resolve($1, "$2")');
+        if (!t.includes(w.from)) throw new Error(`workaround passage not found: ${w.why}`);
+        return t.replace(w.from, w.to);
+    }, text);
+}
+
+export const WORKAROUND = applyEdits(NATURAL, WORKAROUNDS);
+
+/**
+ * The matched-rule form of the keys, the text that ran before P-2026-11-03-2111 (W5, W6 of the
+ * report): the key column of a table and the owner column of a join table are second matched
+ * rules, so every resolution of a Class or a multi-valued Attribute names its target with
+ * `resolve(x, "T")`. Kept as a second correct way to write the mapping and as the case for
+ * `resolve()` among several rules (#517, the fix of P-2026-11-03-1434).
+ */
+export const MATCHED_KEY_EDITS: { why: string; from: string; to: string }[] = [
     {
-        why: 'W5: a `let` bound to a call holds the call, not its target: each use applies the rule afresh (R-JTG-6), so `key` and the foreign key got columns of their own, left at the root, with no warning. One target referenced twice needs a matched rule, so the key column is a second matched rule on Class, and every resolution of a Class names its rule with `resolve()` (R-JTG-3)',
+        why: 'W5: until P-2026-11-03-2111 a `let` bound to a call held the call, not its target: each use applied the rule afresh (R-JTG-6), so `key` and the foreign key got columns of their own, left at the root, with no warning (#515). One target referenced twice then needed a matched rule, so the key column is a second matched rule on Class, and every resolution of a Class names its rule with `resolve()` (R-JTG-3)',
         from: '    let $id = idColumn(c) in {\n        columns := [$id] + c.attributes.filter(a => not a.multiValued)\n        key := [$id]\n',
         to: '    columns := [resolve(c, Column)] + c.attributes.filter(a => not a.multiValued)\n    key := [resolve(c, Column)]\n',
     },
@@ -182,19 +206,15 @@ export const WORKAROUNDS: { why: string; from: string; to: string }[] = [
         from: 'rule ownerColumn(o) -> Column {\n    name := o.name.toLower() + "Id"',
         to: '-- The owner column of a join table.\nAttribute a -> Column where a.multiValued {\n    name := parent.name.toLower() + "Id"',
     },
-    { why: 'W5', from: 'c.attributes.filter(a => a.multiValued))', to: 'c.attributes.filter(a => a.multiValued).map(a => resolve(a, Table)))' },    {
+    { why: 'W5', from: 'c.attributes.filter(a => a.multiValued))', to: 'c.attributes.filter(a => a.multiValued).map(a => resolve(a, Table)))' },
+    {
         why: 'W6: the bare type name of `resolve(x, T)` is read as a name only when the call is the whole right-hand side; inside a list or a lambda it is evaluated as a variable, null, and the call reports the ambiguity it was written to settle. Quoted, it is a string and works everywhere',
         from: '__ALL__',
         to: '',
     },
 ];
 
-export const WORKAROUND = WORKAROUNDS.reduce((text, w) => {
-    // W6 rewrites every `resolve(x, T)` to `resolve(x, "T")`.
-    if (w.from === '__ALL__') return text.replace(/resolve\(([^,()]+(?:\([^()]*\))?), (\w+)\)/g, 'resolve($1, "$2")');
-    if (!text.includes(w.from)) throw new Error(`workaround passage not found: ${w.why}`);
-    return text.replace(w.from, w.to);
-}, NATURAL);
+export const MATCHED_KEYS = applyEdits(WORKAROUND, MATCHED_KEY_EDITS);
 
 // ---------------------------------------------------------------------------
 // Metamodels, in the shape the executor reads (`classes` with attributes and
