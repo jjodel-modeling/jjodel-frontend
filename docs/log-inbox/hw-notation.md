@@ -468,3 +468,45 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: passato — chat, unattended: gates green on f4232f784; acceptance by app probes on the branch at a3317694b, no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-writeback-flush` on `336f39188` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1219/result.json`.
 **Prompt document name**: 2026-11-03 12:19
+
+## 2026-11-03 — fix(jjtl): open the output tab after the write-back (P-2026-11-03-1232)
+**Prompt**: #475, candidate A: STEP 7 opens the output tab after the write-back, also on failure; measure what moves; say whether the flush-per-level regression goes; honest toast and status bar; what the user sees between click and tab.
+**Files touched**: `docs/discovery/lir_2026-11-03_jjtl_output_tab_late.md` (ce6c7334a); `frontend/src/components/project/ProjectEditor.tsx` (3b8c3b51b); `docs/log-inbox/hw-notation.md`, `Status:` of `docs/prompts/claude_2026-11-03_1232_prompt_jjtl_output_tab_late.md`
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-03 11:37
+**Causa**: (c)
+**Regressions**: yes
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile
+**Notes**: Attributes written 2.7-2.8x sooner, no loss, save/reopen same tree, toast counts all objects, status bar silent until the tab. Regression kept: the canvas freeze moved after the tab and is not smaller (b10_8 longest task 2,554 to 3,046-3,097). Item 3 open: spreading it needs useJjomSync.ts (critical zone), question to the chat. No unit seam: STEP 7 is inline. Gates: typecheck 0, vitest 13,262 (9 import-red), build 0, check:docs.
+**Prompt document name**: 2026-11-03 12:32
+
+**Before and after** (dev server, output tab open; probe `~/.jjodel-lanes/P-2026-11-03-1033/probe/`, labels `pre`/`post*`; before is `6571f548a`, the trunk commit of this branch; times in ms from the click; load is the 1-minute average from `uptime` before the run, and at the end in brackets):
+
+| run | load | attributes written | tab | longest task | lag max | page quiet | `Const` | `num` kept |
+|---|---|---|---|---|---|---|---|---|
+| b7_7 before | 3.8 (3.5) | 1,672 | 2,086 | 497 | 955 | 7,142 | 256 | 256 of 256 |
+| b7_7 after | 4.1 (2.6) | 1,717 | 2,113 | 506 (worse) | 1,164 (worse) | 7,270 (worse) | 256 | 256 of 256 |
+| b10_8 before | 3.3 (2.8) | 11,549 | 2,624 | 2,554 | 6,628 | 18,113 | 1,280 | 1,280 of 1,280 |
+| b10_8 after | 2.3 (4.5) | 4,392 | 4,416 (later) | 3,097 (worse) | 5,627 | 17,554 | 1,280 | 1,280 of 1,280, reopen same tree |
+| b10_8 after, again | 11.7 (5.8) | 4,341 | 4,361 (later) | 3,046 (worse) | 5,374 | 17,128 | 1,280 | 1,280 of 1,280 |
+| b11_9 before | 3.0 (9.5) | 30,182 | 3,082 | 8,471 | 12,297 | 42,368 | 2,560 | 2,560 of 2,560 |
+| b11_9 after, run 1, loaded | 4.2 (21.0) | 44,079 (worse) | 44,117 | 7,815 | 11,342 | 50,400 (worse) | 2,560 | 2,560 of 2,560 |
+| b11_9 after, run 2 | 9.4 (6.8) | 10,854 | 10,878 (later) | 10,150 (worse) | 18,933 (worse) | 35,274 | 2,560 | 2,560 of 2,560 |
+| b11_9 after, run 3 | 6.1 (8.2) | 10,642 | 10,667 (later) | 3,664 | 3,792 | 15,234 | 2,560 | 2,560 of 2,560 |
+| c60 before | 3.0 (6.1) | 3,653 | 2,090 | 100 | 143 | 6,732 | 62 | 62 of 62 |
+| c60 after | 4.2 (9.7) | 2,378 | 2,394 (later) | 111 (worse) | 144 (worse) | 6,501 | 62 | 62 of 62 |
+
+Run 1 of b11_9 went from load 4 to 21 during the run, so it is marked loaded. The flush-per-level figures of P-2026-11-03-1137 (b7_7 longest 1,829) did not come back on the trunk today: 497 before, 506 after. A profiled b10_8 after run (`postprof`, slower by the profiler) puts the window after the tab at 22.8 s busy of 23.7: react-dom 13.6 s inclusive, `action.ts` 4.6 s, `useJjomSync.ts` 2.6 s, `GraphDataElements` 2.1 s, `DynamicHandles.tsx` 0.8 s self. The tab mounts on 2,559 objects and Step 2bis of `useJjomSync` makes 2,558 vertices in one loop, then React renders them: yielding before `open2` cannot split that. Frames for b10_8 in `~/.jjodel-lanes/P-2026-11-03-1232/post2-b10_8-{1-click,2-writing,3-tab,4-tab+2s}.png` (full viewport, not cropped); the `4-tab+2s` frame was meant for 6.4 s and was taken at 13.9 s because the page was frozen.
+
+## 2026-11-03 — ticket: JjTL output canvas freezes the page once the tab opens on a large tree
+**Ticket**: With the output tab opened after the write-back (P-2026-11-03-1232), the canvas mounts on the whole tree: `useJjomSync` Step 2bis (`useJjomSync.ts:741-772`) makes one `DVertex.new` per object in one synchronous loop and React renders them all. Measured in the app, dev server: longest task after the tab b10_8 3,046-3,097 ms (2,554 before), b11_9 3,664-10,150 ms (8,471 before), lag max up to 18,933 ms. Spreading it needs a critical-zone file (chunking Step 2bis over frames, or rendering only visible nodes); `ProjectEditor.tsx` cannot split it.
+**Priority**: high
+**Found in**: P-2026-11-03-1232
+**Detail**: docs/discovery/lir_2026-11-03_jjtl_output_tab_late.md
+
+## 2026-11-03 — ticket: nothing tells the user a JjTL run is still writing its output
+**Ticket**: Between the click and the output tab the JjTL panel already says "Transformation completed successfully", the status bar says "Success · 122ms · 2559 mapped", and nothing says the write-back is running. Measured with the tab opened after the write-back (P-2026-11-03-1232, dev server): click to tab 4,361-4,416 ms for b10_8 (2,559 objects), 10,667-10,878 ms for b11_9 (5,119 objects), 44,117 ms for b11_9 under load. Above 2 s from about 2,500 objects. No progress UI added: it needs its own lane.
+**Priority**: medium
+**Found in**: P-2026-11-03-1232

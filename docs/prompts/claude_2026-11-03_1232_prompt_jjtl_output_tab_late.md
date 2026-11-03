@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1232
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · jjtl-output-tab-late · 3b8c3b51b · question to the chat (item 3: the canvas freeze needs a critical-zone file) · verifica visiva non applicabile (probe, frames in ~/.jjodel-lanes/P-2026-11-03-1232/)
 Lane: full (visible behaviour of a JjTL run)
 Depends: P-2026-11-03-1219
 Worktree: ~/jjodel-w-jjtltab, branch jjtl-output-tab-late (at the commit that adds this prompt)
