@@ -157,6 +157,7 @@ export function buildPlanWorld(idlookup: Idlookup, modelId: string): PlanWorld {
     world.m2 = readMetamodel(idlookup, metamodelId);
 
     const names = makeDrawReadCtx(idlookup);
+    const listed = new Set(ids(model.objects));
     for (const id in idlookup) {
         const o = idlookup[id];
         if (o?.className === 'DClass') {
@@ -171,6 +172,7 @@ export function buildPlanWorld(idlookup: Idlookup, modelId: string): PlanWorld {
             name: names.getName(id) ?? '',
             className: idlookup[o.instanceof]?.name ?? '',
             root: o.father === modelId,
+            listed: listed.has(id),
         };
         if (father?.className === 'DValue' && typeof father.father === 'string') {
             const feature = idlookup[father.instanceof]?.name;
