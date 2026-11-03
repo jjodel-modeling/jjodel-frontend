@@ -828,13 +828,29 @@ describe('a reference the user did not retype keeps its target (R-TXT-35)', () =
         expect(printTextModel(e.c.g, afterE).text).toContain('pin Folder[1].items[0]');
     });
 
+    it('after the deletion of its kept target is applied, the next edit writes no reference to it (mutant: a gone target read as a model object)', () => {
+        const r = editAnon([[ITEM(11), '']]);
+        const model = applyOps(r.c.objects, r.plan.diff!.ops);
+        expect(pinOf(model)).toBeNull();
+        const modelOf = new Map(r.plan.diff!.match.matches.map(m => [m.text, m.model]));
+        const spans = r.parsed.spans.flatMap(s => (modelOf.has(s.id) ? [{ id: modelOf.get(s.id)!, start: s.start, end: s.end }] : []));
+        const refs: RefSpan[] = r.plan.diff!.refs!.map(t => ({ owner: modelOf.get(t.owner)!, feature: t.feature, target: (t.to as { model: string }).model, text: r.text.slice(t.start, t.end), start: t.start, end: t.end }));
+        expect(refs).toEqual([expect.objectContaining({ owner: 'watch', feature: 'pin', target: 'i1' })]);
+        // The text stays as typed: the untouched path now names i2 in it; the size edit keeps the offsets.
+        const text = r.text.replace('size 12', 'size 13');
+        const parsed = parseText(text, r.c.g, { keep: refs });
+        const plan = planTextEdit({ mm: r.c.mm, grammar: r.c.g, model, parsed, unprinted: printTextModel(r.c.g, model).unprinted, previous: spans, previousRefs: refs });
+        expect(plan.refusals).toEqual([]);
+        expect(plan.diff!.ops).toEqual([{ op: 'attribute', target: { model: 'i2' }, feature: 'size', value: 13 }]);
+    });
+
     it('a reference inside a pasted copy is a new owner: it resolves in the edited text, the original keeps its target', () => {
         const r = editAnon([[ITEM(10), ''], ['', `\nFolder copy {\n  ${PIN}\n}`]]);
         expect(r.plan.refusals).toEqual([]);
         expect(r.plan.diff!.ops.filter(op => op.op === 'reference')).toEqual([{ op: 'reference', target: { text: textIdOf(r, 'copy') }, feature: 'pin', to: { model: 'i2' } }]);
     });
 
-    it('the token at another owner, its place and text untouched, resolves in the edited text (mutant: the owner not compared)', () => {
+    it('the token in a new owner, its place and text untouched, resolves in the edited text (a new owner matches no model object)', () => {
         const r = editAnon([[ITEM(10), ''], ['Folder watch {', 'Folder watch {}\nFolder other {']], { lost: ['watch'] });
         expect(r.plan.refusals).toEqual([]);
         expect(r.plan.diff!.ops.filter(op => op.op === 'reference')).toEqual([
