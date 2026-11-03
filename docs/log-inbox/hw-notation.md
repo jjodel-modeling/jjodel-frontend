@@ -666,3 +666,16 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Priority**: low
 **Found in**: P-2026-11-03-1553
 **Detail**: `~/.jjodel-lanes/P-2026-11-03-1553/probe/warn.json`
+
+## 2026-11-03 — merge: jjtl-panel-warnings-low into alfonso-frontend-jjtl (P-2026-11-03-1619)
+**Prompt**: `claude_2026-11-03_1619_prompt_merge_jjtl-panel-warnings-low.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-panel-warnings-low` at `ef8f75764` into `alfonso-frontend-jjtl`, merge base `8f3482ab3`, 6 commits on the branch side.
+**Files touched**: merge `6fb7d2841`: 9 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1553_prompt_jjtl_panel_warnings_low.md`, `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/components/project/__tests__/jjtlSourceValues.test.ts`, `frontend/src/components/project/jjtlSourceValues.ts`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/components/JjtlDevelopmentEnv.tsx`, `frontend/src/jjtl/components/__tests__/runWarnings.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6fb7d2841` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13423 tests in 507 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 6fb7d2841; app probes on the branch, no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-panel-warnings-low` on `51ea2aad2` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1619/result.json`.
+**Prompt document name**: 2026-11-03 16:19
