@@ -16,6 +16,7 @@ import {
     awaitNestedSlots,
     formatNestedUnwritten,
     ATTRIBUTE_WAIT_CAP_MS,
+    NESTED_WALK_WAIT_CAP_MS,
     SLOT_POLL_MS,
     SLOT_WAIT_CAP_MS,
     type NestedAttributeDeps,
@@ -156,7 +157,7 @@ describe('materializeNested', () => {
         const { result, tree } = await run(store);
         expect(result.unplaced).toEqual([{
             path: 'r1.nodes[0].leaves[0].subs', count: 3,
-            reason: `feature "subs" not available after ${SLOT_WAIT_CAP_MS} ms`,
+            reason: `feature "subs" not available after ${SLOT_WAIT_CAP_MS} ms without a slot answering`,
         }]);
         expect(store.warnings).toHaveLength(1);
         expect(tree.nodes[0].leaves[0].subs).toBeUndefined();
@@ -176,6 +177,115 @@ describe('materializeNested', () => {
             { path: 'r1.nodes[1].notARef', count: 1, reason: `'notARef' is not a reference of 'Node'` },
         ]);
         expect(tree.nodes).toEqual([{ cls: 'Node', name: 'z', label: 'Z' }]);
+    });
+});
+
+/**
+ * One level of `parents` roots, one Node to create in each. Each root's slot answers on the poll
+ * `answersAt` gives it (Infinity: never); `sleepCost` is how far a sleep moves the clock, a long
+ * task when it is more than the sleep asked for. A flush, when given, answers every slot at once.
+ */
+function pacedStore(
+    parents: number,
+    answersAt: (i: number) => number,
+    sleepCost: (ms: number, call: number) => number = (ms) => ms,
+    withFlush = false,
+) {
+    let clock = 0;
+    let polls = 0;
+    let sleeps = 0;
+    let flushed = false;
+    let flushes = 0;
+    const created: string[] = [];
+    const deps: NestedDeps = {
+        slotOf(objectId, featureName) {
+            const i = Number(objectId.slice(1));
+            if (featureName !== 'nodes' || (!flushed && polls < answersAt(i))) return undefined;
+            return { addObject: () => { const id = 'c' + created.length; created.push(id); return { id }; } };
+        },
+        classInfo: (className) => {
+            const c = CLASSES[className];
+            return c && { attributeNames: new Set(c.attrs), referenceNames: new Set(c.refs) };
+        },
+        sleep: async (ms) => { clock += sleepCost(ms, sleeps++); polls++; },
+        now: () => clock,
+        warn: () => {},
+        ...(withFlush ? { flush: async () => { flushes++; flushed = true; } } : {}),
+    };
+    const jobs: NestedJob[] = Array.from({ length: parents }, (_, i) => ({
+        parentId: 'p' + i, path: 'p' + i, featureName: 'nodes', children: [N('Node', { name: 'n' + i })],
+    }));
+    return { deps, jobs, created, clock: () => clock, flushes: () => flushes };
+}
+
+describe('materializeNested, the wait counts time without progress (#486)', () => {
+    const stallPolls = SLOT_WAIT_CAP_MS / SLOT_POLL_MS;
+
+    it('a level whose slots answer slowly but steadily is not dropped, past the per-level cap', async () => {
+        // One slot every 40 polls, 2 s each: ten slots take 20 s, nearly seven caps.
+        const store = pacedStore(10, i => 40 * (i + 1));
+        const r = await materializeNested(store.jobs, store.deps);
+        expect(r.unplaced).toEqual([]);
+        expect(r.created).toBe(10);
+        expect(store.clock()).toBeGreaterThan(SLOT_WAIT_CAP_MS);
+    });
+
+    it('slots that stop answering are dropped once no slot has answered for the cap, and named', async () => {
+        const store = pacedStore(5, i => (i < 3 ? 40 * (i + 1) : Infinity));
+        const r = await materializeNested(store.jobs, store.deps);
+        expect(r.created).toBe(3);
+        expect(r.unplaced).toEqual([3, 4].map(i => ({
+            path: `p${i}.nodes`, count: 1,
+            reason: `feature "nodes" not available after ${SLOT_WAIT_CAP_MS} ms without a slot answering`,
+        })));
+        // The last answer came at poll 120: the walk gave up one stall window after it, not before.
+        expect(store.clock()).toBe((120 + stallPolls) * SLOT_POLL_MS);
+    });
+
+    it('a long task does not count as time without progress: the slot that answers after it is used', async () => {
+        // The slots answer on the third poll; the first sleep is a 7 s task, past the whole cap.
+        const store = pacedStore(2, () => 3, (ms, call) => (call === 0 ? 7000 : ms));
+        const r = await materializeNested(store.jobs, store.deps);
+        expect(r.unplaced).toEqual([]);
+        expect(r.created).toBe(2);
+    });
+
+    it('the wait is still bounded in total: a store that answers nothing under load is given up at the bound', async () => {
+        // Every sleep is a 5 s task: the stall window alone would wait 300 s.
+        const store = pacedStore(2, () => Infinity, () => 5000);
+        const r = await materializeNested(store.jobs, store.deps);
+        expect(r.created).toBe(0);
+        expect(r.unplaced.map(u => u.reason)).toEqual([0, 1].map(() =>
+            `feature "nodes" not available: the walk waited ${NESTED_WALK_WAIT_CAP_MS} ms for slots in total`));
+        expect(store.clock()).toBeGreaterThanOrEqual(NESTED_WALK_WAIT_CAP_MS);
+        expect(store.clock()).toBeLessThan(NESTED_WALK_WAIT_CAP_MS + 5000);
+    });
+
+    it('flushes once per level and does not wait for the interval commit when the flush answers the slots', async () => {
+        const store = pacedStore(3, () => Infinity, undefined, true);
+        const r = await materializeNested(store.jobs, store.deps);
+        expect(r.created).toBe(3);
+        expect(r.levels).toBe(1);
+        expect(store.flushes()).toBe(1);
+        expect(store.clock()).toBe(0);
+    });
+
+    it('a deep tree flushes once per level and never sleeps when every flush commits', async () => {
+        const store = fakeStore(300);
+        let flushes = 0;
+        // The fake's slots answer 300 ms after creation; a flush stands for that commit.
+        const deps: NestedDeps = {
+            ...store.deps,
+            flush: async () => { flushes++; await store.deps.sleep(300); },
+        };
+        let sleeps = 0;
+        const counted: NestedDeps = { ...deps, sleep: async (ms) => { sleeps++; await store.deps.sleep(ms); } };
+        const jobs: NestedJob[] = [{ parentId: store.root.id, path: 'r1', featureName: 'nodes', children: fixture() }];
+        const r = await materializeNested(jobs, counted);
+        expect(r.unplaced).toEqual([]);
+        expect(r.levels).toBe(4);
+        expect(flushes).toBe(4);
+        expect(sleeps).toBe(0);
     });
 });
 

@@ -44,6 +44,8 @@ export interface NestedDeps {
     sleep(ms: number): Promise<void>;
     now(): number;
     warn(message: string): void;
+    /** Commits the writes queued in the open transaction block, once per level before its wait (#486). */
+    flush?(): Promise<void>;
 }
 
 /** A feature of an object already in the store, and the executor objects to create inside it. */
@@ -108,7 +110,20 @@ export interface NestedMaterializationReport {
 }
 
 export const SLOT_POLL_MS = 50;
+/**
+ * The walk gives up the slots of a level after this long WITHOUT PROGRESS (#486): no slot of the
+ * level answered for this many polls, counted as `SLOT_WAIT_CAP_MS / SLOT_POLL_MS` poll intervals,
+ * not read off the clock. A long task holds the commit as well as the poll, so it is one interval,
+ * never the whole window: at load 13.4 one 3,004 ms task used to drop 2,048 `Const`.
+ */
 export const SLOT_WAIT_CAP_MS = 3000;
+/**
+ * Bound of all the walk's slot waits together, on the clock (#486): the stall window alone would
+ * wait without end under a store that keeps answering one slot at a time, or for 60 polls of any
+ * length. 60 s is above every whole run measured from the click (b11_9 at load 102.6: 44.7 s), so
+ * it fires only on a store that has stopped; what it drops is reported as not placed.
+ */
+export const NESTED_WALK_WAIT_CAP_MS = 60000;
 /** Bound of the attribute writer's wait for the slots of the last level (#482). */
 export const ATTRIBUTE_WAIT_CAP_MS = 10000;
 
@@ -197,15 +212,18 @@ export function nestedAttributesOf(child: any, info: NestedClassInfo): Record<st
 
 /**
  * Creates the nested objects of `jobs` and, level by level, the nested objects of what it created.
- * Before each level it polls the slots that level writes into, every `pollMs`, for at most `capMs`;
- * a slot that does not answer loses its objects, which are warned and counted as unplaced.
- * Attributes are not written here: they come back in `attributeSets`, keyed by the created id.
+ * Before each level it flushes once (`deps.flush`, when given), then polls the slots that level writes
+ * into, every `pollMs`, until `capMs` of polls pass with no slot answering, or every wait of the walk
+ * together reaches `totalCapMs` (#486); a slot that does not answer loses its objects, which are warned
+ * and counted as unplaced. Attributes are not written here: they come back in `attributeSets`, keyed by
+ * the created id.
  */
 export async function materializeNested(
     jobs: NestedJob[],
     deps: NestedDeps,
     pollMs: number = SLOT_POLL_MS,
     capMs: number = SLOT_WAIT_CAP_MS,
+    totalCapMs: number = NESTED_WALK_WAIT_CAP_MS,
 ): Promise<NestedResult> {
     const createdIds = new Map<any, string>();
     const referenceSets: NestedReferenceSet[] = [];
@@ -217,27 +235,41 @@ export async function materializeNested(
             + `${u.count} object(s): ${u.reason}`);
     };
 
+    let waitedMs = 0;
     let level = jobs.filter(j => j.children.length > 0);
     while (level.length > 0) {
         result.levels++;
 
-        // Wait for every slot this level writes into.
+        // Wait for every slot this level writes into: the flush commits what the level above
+        // created, so the slots need not wait for the interval's commit; the polls cover the rest.
         const ready = new Map<NestedJob, NestedSlot>();
         let waiting = level;
         const start = deps.now();
+        if (deps.flush) await deps.flush();
+        let stalledMs = 0;
+        let gaveUp = '';
         for (;;) {
+            const answered = ready.size;
             waiting = waiting.filter(job => {
                 const slot = deps.slotOf(job.parentId, job.featureName);
                 if (slot) ready.set(job, slot);
                 return !slot;
             });
-            if (waiting.length === 0 || deps.now() - start >= capMs) break;
+            if (waiting.length === 0) break;
+            if (ready.size > answered) stalledMs = 0;
+            if (stalledMs >= capMs) { gaveUp = ` after ${capMs} ms without a slot answering`; break; }
+            if (waitedMs + deps.now() - start >= totalCapMs) {
+                gaveUp = `: the walk waited ${totalCapMs} ms for slots in total`;
+                break;
+            }
             await deps.sleep(pollMs);
+            stalledMs += pollMs;
         }
+        waitedMs += deps.now() - start;
         for (const job of waiting) {
             lose({
                 path: `${job.path}.${job.featureName}`, count: subtree(job.children),
-                reason: `feature "${job.featureName}" not available after ${capMs} ms`,
+                reason: `feature "${job.featureName}" not available${gaveUp}`,
             });
         }
 

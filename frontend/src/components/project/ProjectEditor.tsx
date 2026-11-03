@@ -2058,6 +2058,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             sleep: (ms) => new Promise<void>(resolve => setTimeout(resolve, ms)),
                             now: () => performance.now(),
                             warn: (message) => console.warn('[ProjectEditor] ' + message),
+                            // Once per level (#486): the level above sits in the open transaction
+                            // block until the interval's commit; committing it here spares the wait.
+                            // The writer's flush below, the settlePendingWrites pattern.
+                            flush: async () => {
+                                await new Promise<void>(resolve => setTimeout(resolve, 0));
+                                COMMIT(undefined, false);
+                                await new Promise<void>(resolve => setTimeout(resolve, 0));
+                            },
                         };
                         console.time('[TIMING] nested DObject creation');
                         nestedDone = materializeNested(jobs, nestedDeps).then(r => {
