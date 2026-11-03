@@ -1919,27 +1919,38 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 });
                 console.timeEnd('[TIMING] TRANSACTION total');
 
-                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget)
-                // Scheduled FIRST so tab opens even if DVertex/attribute steps fail.
-                // Delay bumped to 2000ms so it fires after DVertex creation + attribute
-                // setting have settled — otherwise open2 runs while the graph/vertex
+                // STEP 7: Open the tab once the write-back has ended (#475), never before
+                // 2000ms from here — otherwise open2 runs while the graph/vertex
                 // dispatches are still in flight and ReactFlow loops on stale state.
+                // Opened at +2 s, the tab's canvas made a vertex for every object the walk
+                // delivered, level by level, while the walk and the writer were still
+                // running (2,573 vertices for b10_8, CPU 16.2 s against 3.6 s without the
+                // tab: docs/discovery/discovery_2026-11-03_jjtl_writeback_time.md §6 A).
+                // Called by STEP 8 when it ends, failed or not; at once when there is no STEP 8.
+                // The count is the roots plus the objects the walk created.
+                let openOutputTab: (nestedCount?: number) => void = () => {};
                 if (createdDModel) {
                     const modelToOpen = createdDModel;
                     const modelName = uniqueOutputName;
-                    const count = instancesCreated;
+                    const notBefore = performance.now() + 2000;
+                    let opened = false;
 
-                    setTimeout(() => {
-                        try {
-                            // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
-                            DockManager.open2(LModel.fromD(modelToOpen));
-                            U.alert('i', 'Transformation Executed',
-                                `Created model "${modelName}" with ${count} instances.`);
-                            markDirty();
-                        } catch (e) {
-                            console.error('[ProjectEditor] Error opening tab:', e);
-                        }
-                    }, 2000);
+                    openOutputTab = (nestedCount = 0) => {
+                        if (opened) return;
+                        opened = true;
+                        const count = instancesCreated + nestedCount;
+                        setTimeout(() => {
+                            try {
+                                // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
+                                DockManager.open2(LModel.fromD(modelToOpen));
+                                U.alert('i', 'Transformation Executed',
+                                    `Created model "${modelName}" with ${count} instances.`);
+                                markDirty();
+                            } catch (e) {
+                                console.error('[ProjectEditor] Error opening tab:', e);
+                            }
+                        }, Math.max(0, notBefore - performance.now()));
+                    };
                 }
 
                 // Yield one frame before creating DVertices. TRANSACTION above is an
@@ -1986,6 +1997,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             const lModel = LPointerTargetable.fromD(modelId) as LModel;
                             if (!lModel) {
                                 console.error(`[ProjectEditor] Could not get LModel for ${modelId}`);
+                                openOutputTab();
                                 return;
                             }
 
@@ -2346,15 +2358,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                         }
                                     }
                                     if (nestedCreated !== null) reportNested(nestedCreated, unwritten);
-                                });
-                            } else if (pendingReferenceSets.length > 0) {
-                                writeReferences();
+                                }).finally(() => openOutputTab(nestedCreated ?? 0));
+                            } else {
+                                if (pendingReferenceSets.length > 0) writeReferences();
+                                openOutputTab();
                             }
 
                         } catch (e) {
                             console.error(`[ProjectEditor] Error in STEP 8:`, e);
+                            openOutputTab();
                         }
                     }, 1000); // 1 second delay — generous, ensures everything is propagated
+                } else {
+                    openOutputTab();
                 }
 
                 // Return the execution result IMMEDIATELY so JjtlDevelopmentEnv can update trace display
