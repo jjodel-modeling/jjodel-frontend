@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { OpenAICompatibleProvider, openAIBaseUrl } from '../OpenAICompatibleProvider';
 import { AnthropicCompatibleProvider } from '../AnthropicCompatibleProvider';
 import { GoogleCompatibleProvider } from '../GoogleCompatibleProvider';
-import { AIModel, DEFAULT_MAX_OUTPUT_TOKENS, EAuthScheme, ECapabilities } from '../types';
+import { AIModel, DEFAULT_MAX_OUTPUT_TOKENS, EAuthScheme, ECapabilities, FailureCatalog } from '../types';
 import type { ChatRequest, ProviderSpec } from '../types';
 
 interface Call { url: string; method: string; headers: Headers; body: any; signal?: AbortSignal }
@@ -565,5 +565,36 @@ describe('Google request', () => {
         expect(calls[0].headers.get('x-goog-api-key')).toBe('AIzaTest');
         expect(models.map(m => m.apiName)).toEqual(['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash']);
         expect(models[0].contextWindow).toBe(1048576);
+    });
+});
+
+// Rows of the deleted AIProviderService.test.ts and aiModelCatalog.test.ts that no L1 test pinned
+// (#196 L3 item 8, P-2026-11-03-0020).
+describe('carried from AIProviderService', () => {
+    it.each(['custom', undefined])('refuses an empty configured Custom model (selection %s) before any call, in chat and in test()', async selection => {
+        const { fn, calls } = mockFetch(openAIReply);
+        const provider = new OpenAICompatibleProvider(CUSTOM, { apiKey: 'test-key', baseUrl: 'https://openrouter.ai/api/v1', model: '' }, { fetch: fn });
+        await expect(provider.chat({ ...CONVERSATION, model: selection })).rejects.toThrow('No model selected for Custom. Please choose a model in Settings.');
+        expect(await provider.test(selection)).toEqual({ success: false, error: 'No model selected for Custom. Please choose a model in Settings.' });
+        expect(calls).toEqual([]);
+    });
+
+    it('test() reads a 403 as AUTH, with the permission message', async () => {
+        const { fn } = mockFetch(() => json(403, { error: { message: 'nope', type: 'permission_error' } }));
+        const provider = new OpenAICompatibleProvider(GPT, { apiKey: 'sk-test', model: 'gpt-4o' }, { fetch: fn });
+        expect(await provider.test()).toEqual({
+            success: false, failure: FailureCatalog.AUTH,
+            error: 'This key is not allowed to use this model (403). Check its permissions in the OpenAI Console.',
+        });
+    });
+
+    it('Claude test() reads a 429 as RATE and a rejected fetch as NETWORK naming api.anthropic.com', async () => {
+        const rate = mockFetch(() => json(429, { type: 'error', error: { type: 'rate_limit_error', message: 'slow down' } }));
+        const limited = new AnthropicCompatibleProvider(CLAUDE, { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' }, { fetch: rate.fn });
+        expect(await limited.test()).toEqual({ success: false, failure: FailureCatalog.RATE, error: 'Rate limit exceeded. Please try again in a moment.' });
+        const down = mockFetch(() => { throw new TypeError('Failed to fetch'); });
+        const unreachable = new AnthropicCompatibleProvider(CLAUDE, { apiKey: 'sk-ant-test', model: 'claude-sonnet-4-6' }, { fetch: down.fn });
+        expect(await unreachable.test()).toEqual({ success: false, failure: FailureCatalog.NETWORK, error: 'Cannot reach api.anthropic.com (network or CORS).' });
+        expect(down.calls).toHaveLength(1);
     });
 });
