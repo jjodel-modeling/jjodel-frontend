@@ -1430,3 +1430,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: in attesa del GO di Alfonso — probe 36/36 PASS: five edits of 1451 by keystrokes, current path after Applied, caret kept, one Undo restores; caret-on-token held, rewritten on ArrowDown; crops in ~/.jjodel-lanes/P-2026-11-03-1535/
 **Notes**: Gates on 4656b4ac6: tsc exit 0; vitest 13396 passed, 3 red at import (baseline count of 1517); build exit 0; check:docs exit 0; check:codegen-lazy ALL GREEN (off, on). Bench: 11 mutants, all killed. (3): the 1451 cleanup fails without a prior mouse click: the direct write joins the text application's undo step, whose undo reverts the reorder only (stack 1, 1, 0); with a click, 1, 2, 1, 0 and t0. Core reducer history, not the Text tab.
 **Prompt document name**: 2026-11-03 15:35
+
+## 2026-11-03 — merge: textual-applied-paths into alfonso-frontend-jjtl (P-2026-11-03-1558)
+**Prompt**: `claude_2026-11-03_1558_prompt_merge_textual-applied-paths.md`, a direct merge by `lane-run merge --direct`, no session: `textual-applied-paths` at `69c1f6390` into `alfonso-frontend-jjtl`, merge base `968e7a44e`, 4 commits on the branch side.
+**Files touched**: merge `153ac0fb1`: 4 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-03_1535_prompt_textual_applied_paths.md`, `frontend/src/codegen/textual/__tests__/textualEdit.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `153ac0fb1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13414 tests in 506 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: merge of textual-applied-paths, gates green on the merge; crops of P-2026-11-03-1535 checked by the chat before the merge (RC-23)
+**Notes**: Rollback tag `pre-textual-applied-paths` on `8f3482ab3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1558/result.json`.
+**Prompt document name**: 2026-11-03 15:58
