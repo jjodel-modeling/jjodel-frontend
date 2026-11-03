@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1137
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · 8ef8b27ae · panel line of a forced slot stop read from the DOM by the probe, no manual look (unattended)
 Lane: full (behaviour of the JjTL write-back in the app)
 Depends: P-2026-11-03-1057
 Worktree: ~/jjodel-w-jjtlflush, branch jjtl-writeback-flush (the same tree, at the commit that adds this prompt)
