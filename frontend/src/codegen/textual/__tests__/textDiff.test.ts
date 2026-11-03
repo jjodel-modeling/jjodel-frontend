@@ -373,6 +373,20 @@ describe('what the text does not show is preserved; a default read is no change'
         }
     });
 
+    // Expected to fail until P-2026-11-03-1045 Phase 2: the acceptance of the fix, independent of the syntax it picks.
+    it.fails('a single-valued target outside the text: the text parses, an edit elsewhere applies, the reference is not written (P-2026-11-03-1045)', () => {
+        for (const g of [LIBRARY, LIBRARY_PLAIN]) {
+            const c: Case = { mm: LIBRARY_MM, g, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
+            const same = edit(c, [], { spans: true });
+            expect(same.parsed.errors).toEqual([]);
+            expect(same.plan.lines).toEqual([]);
+            const { parsed, plan } = edit(c, [['year 2015', 'year 2016']], { spans: true });
+            expect(parsed.errors).toEqual([]);
+            expect(codes(plan)).toEqual([]);
+            expect(plan.lines).toEqual(['set spqr.year = 2016']);
+        }
+    });
+
     it('a mandatory enumeration left empty reads as its first literal: the text printing it asks no change, and never writes it (mutant: default counted as a change)', () => {
         const defaults = new Map([['b1', new Set(['genre'])]]);
         for (const c of [LIBRARY_CASE, LIBRARY_PLAIN_CASE]) {
