@@ -326,3 +326,28 @@ describe('(vii) the printer builds the same tree (P-2026-11-03-2220)', () => {
         expect(plain(print.tree!)).toStrictEqual(plain(parsed.tree!));
     });
 });
+
+describe('(viii) linear name resolution in the printer (P-2026-11-03-2220)', () => {
+    const LIB = CASES[0];
+    /** The least of seven runs: the noise of a shared machine only adds time. */
+    const best = (objects: ReturnType<typeof libraryObjects>): number => {
+        let least = Infinity;
+        for (let i = 0; i < 7; i++) { const s = performance.now(); printTextModel(LIB.g, objects); least = Math.min(least, performance.now() - s); }
+        return least;
+    };
+    const small = libraryObjects(800, 200);
+    const large = libraryObjects(4800, 1200);
+
+    it('1,001 objects, a third of the books borrowed by name, print within the 50 ms budget per keystroke (measured)', () => {
+        expect(printTextModel(LIB.g, small).tree).toBeDefined();
+        expect(best(small)).toBeLessThan(50);
+    });
+
+    it('six times the objects cost less than twelve times the time: the resolution is not quadratic (measured)', () => {
+        // 1,001 against 6,001 objects: quadratic, the ratio is about 36; linear, about 6.
+        best(small);
+        const a = best(small);
+        const b = best(large);
+        expect(b / a, `1,001 objects ${a.toFixed(1)} ms, 6,001 objects ${b.toFixed(1)} ms`).toBeLessThan(12);
+    }, 60_000);
+});

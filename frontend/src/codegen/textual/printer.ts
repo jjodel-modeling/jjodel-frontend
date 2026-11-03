@@ -236,7 +236,8 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
             order.forEach((id, i) => {
                 if (typeof id === 'string' && byId.has(id)) {
                     parent.set(id, { owner: o, segment: `${kw}[${i}]` });
-                    contained.set(o.id, [...(contained.get(o.id) ?? []), id]);
+                    const list = contained.get(o.id);
+                    if (list) list.push(id); else contained.set(o.id, [id]);
                 }
             });
             const attr = stars[0]?.where?.attr;
@@ -273,11 +274,19 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     };
     const name = (s: string): string => (IDENTIFIER.test(s) && !style.reservedNames.includes(s) ? s : quote(s));
     const nameOf = (o: TextObject): unknown => (ruleOf(o).named ? o.slots.name : undefined);
+    // Linear resolution (step A): the objects by name, built once, in place of a scan of all objects per reference.
+    const byName = new Map<string, TextObject[]>();
+    for (const o of objects) {
+        const nm = nameOf(o);
+        if (typeof nm !== 'string') continue;
+        const list = byName.get(nm);
+        if (list) list.push(o); else byName.set(nm, [o]);
+    }
 
     // R-TXT-4: the target's name when it is unique among the instances of the reference's type, else its path.
     const ref = (n: Extract<GrammarNode, { t: 'xref' }>, t: TextObject): string => {
         const nm = nameOf(t);
-        if (typeof nm === 'string' && objects.filter(x => n.targets.includes(x.cls) && nameOf(x) === nm).length === 1) return name(nm);
+        if (typeof nm === 'string' && (byName.get(nm) ?? []).filter(x => n.targets.includes(x.cls)).length === 1) return name(nm);
         return path(t);
     };
 
