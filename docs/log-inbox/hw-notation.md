@@ -721,3 +721,29 @@ Run 1 of b11_9 went from load 4 to 21 during the run, so it is marked loaded. Th
 **Smoke visivo**: passato — chat, unattended: gates green on 6fb7d2841; app probes on the branch, no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-panel-warnings-low` on `51ea2aad2` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1619/result.json`.
 **Prompt document name**: 2026-11-03 16:19
+
+## 2026-11-03 — fix(jjtl): output tab after the write, onto the trunk, undo group kept (P-2026-11-03-2110)
+**Prompt**: merge alfonso-frontend-jjtl into jjtl-output-tab-late; try R-JTG-14's undo group with the tab opened at the end of the write (run, Undo, Redo, failing run, b10_8); force a write-back failure; b10_8 and b11_9 figures after the merge.
+**Files touched**: merge 5336934a4 (`docs/log-inbox/hw-notation.md` by union); `frontend/src/components/project/nestedMaterialization.ts`, its test, `ProjectEditor.tsx` (comment) at 9f5b0f1f8; `docs/log-inbox/hw-notation.md`, `Status:` of `docs/prompts/claude_2026-11-03_2110_prompt_jjtl_tab_with_undo.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-03 12:32
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: After the merge b10_8's group closed at 6.2 s, before the tab's canvas made its vertices; Cmd+Z left the run. Cause: the tab's 1.4 s mount render has no dispatch, so the closer saw quiet. Fix: a poll back more than 200 ms late counts as a write. Then: closed at 14.7 s, Undo clears all, tab too. Merge commit lacks the `Model:` trailer. Probes in `~/.jjodel-lanes/P-2026-11-03-2110/probe/`. Gates: typecheck 0, vitest 3 import-red, build 0, check:docs.
+**Prompt document name**: 2026-11-03 21:10
+
+**Undo trial** (undo probe of P-2026-11-03-1435, this lane's copy; real dialog, Cmd+Z and Cmd+Shift+Z): b2_1 plain, before and after the fix: one step, Undo leaves no key added or removed against before, `out1` tab gone; Redo gives the same tree (the tab stays closed, as on the trunk). Failing run (`Const -> E`, E abstract): no step pushed, nothing written, Undo and Redo inert, error in the panel. b10_8 before the fix: group closed 6,107 ms after the close call, 11,517 keys still there after Undo, tab open. After: closed 14,593 ms after the call (14,696 from the click), after the last canvas long task (13,580 + 249); Undo blocks 966 ms (longest task 903), leaves 13 objects and 14 vertices as before; Redo 356 ms, same tree. Forced write-back failure (b2_1, the writer's slot check throws once): tab `out1` opens, panel `Attributes not written in "out1": 6 value(s) of 6 object(s): the attribute writer failed: probe: forced write-back failure`, Undo still clears the run.
+
+**Figures after the merge** (wbtime probe of P-2026-11-03-1033, this lane's copy, dev server 3233 restarted after the edits; ms from the click; load from `uptime` before the run, at the end in brackets):
+
+| run | load | attributes written | tab | longest task | lag max | page quiet | `Const` | `num` kept |
+|---|---|---|---|---|---|---|---|---|
+| b10_8 | 7.0 (7.7) | 4,289 | 4,311 | 3,282 | 7,013 | 14,032 | 1,280 | 1,280 of 1,280 |
+| b11_9 run 1 | 7.4 (7.1) | 10,315 | 10,336 | 7,928 | 14,174 | 31,370 | 2,560 | 2,560 of 2,560 |
+| b11_9 run 2 | 7.1 (6.5) | 10,442 | 10,482 | 7,272 | 12,993 | 30,620 | 2,560 | 2,560 of 2,560 |
+| b11_9 run 3 | 7.4 (7.2) | 10,355 | 10,377 | 7,294 | 14,043 | 29,464 | 2,560 | 2,560 of 2,560 |
+
+Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vite served `DockManager` to the app under an HMR `?t=` URL, so the probe patched a second instance; fixed by restarting the server), and the next one, on a cold server, started at load 2.8 and ended at 14.3 (attributes 13,136, longest 14,340); its warm repeat started at 13.2 (attributes 7,957, longest 3,416).

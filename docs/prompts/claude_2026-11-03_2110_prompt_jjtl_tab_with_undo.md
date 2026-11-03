@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-2110
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · jjtl-output-tab-late · 9f5b0f1f8 · done (undo group held after a local fix in nestedMaterialization.ts) · verifica visiva non applicabile (probe, out in ~/.jjodel-lanes/P-2026-11-03-2110/probe/)
 Lane: full (continues P-2026-11-03-1232; Alfonso's ok of 2026-11-03 21:07 to merge it)
 Depends: P-2026-11-03-1232
 Worktree: ~/jjodel-w-jjtltab, branch jjtl-output-tab-late (the same tree, at the commit that adds this prompt)
