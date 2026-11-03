@@ -396,4 +396,14 @@ describe('a misplaced outer reference is marked on its line (T7 (5), R-TXT-32 co
         expect(marks[0].start).toBe(second);
         expect(marks[0].message).toContain('outside the text');
     });
+
+    it('the same @"id" in a contained object, earlier in the owner\'s span, is not the owner\'s token (mutant: token of a contained object)', () => {
+        const text = 'Library lib {\n  Book b1 { borrowedBy @"x" }\n  owner @"x"\n}';
+        const child = text.indexOf('Book b1');
+        const spans = [{ id: 'lib', start: 0, end: text.length }, { id: 'b1', start: child, end: text.indexOf('}', child) + 1 }];
+        const diff = { match: { matches: [{ model: 'lib', text: 'lib' }, { model: 'b1', text: 'b1' }] }, outer: [{ target: { model: 'lib' }, feature: 'owner', id: 'x' }] };
+        const marks = outerMarks(text, { objects: [], spans }, diff as unknown as Parameters<typeof outerMarks>[2]);
+        expect(marks).toHaveLength(1);
+        expect(marks[0].start).toBe(text.lastIndexOf('@"x"'));
+    });
 });
