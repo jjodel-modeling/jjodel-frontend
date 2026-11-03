@@ -364,3 +364,16 @@ Whether a smaller tree can hit it under load: the existing runs do not say. They
 **Smoke visivo**: non applicabile
 **Notes**: Report written from the handoff, figures from the 0703 probe on the dev server. Production NOT measured: load 15.7 at the check (limit 8). The opening-after canvas cost (WB_OPENAFTER) is also unmeasured. Ticket for the 5,119 attribute race filed (#482, high).
 **Prompt document name**: 2026-11-03 10:14
+
+## 2026-11-03 — merge: jjtl-writeback-time into alfonso-frontend-jjtl (P-2026-11-03-1021)
+**Prompt**: `claude_2026-11-03_1021_prompt_merge_jjtl-writeback-time.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-writeback-time` at `53d543df6` into `alfonso-frontend-jjtl`, merge base `b7dfcc51e`, 4 commits on the branch side.
+**Files touched**: merge `d04a598b6`: 4 files from the branch side (`docs/discovery/discovery_2026-11-03_jjtl_writeback_time.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_0703_prompt_jjtl_writeback_time.md`, `docs/prompts/claude_2026-11-03_1014_prompt_jjtl_writeback_time_report.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d04a598b6` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13231 tests in 502 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only (report and log inbox), all gates green on d04a598b6, no visual check made because nothing visible changes
+**Notes**: Rollback tag `pre-jjtl-writeback-time` on `6b4f96183` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1021/result.json`.
+**Prompt document name**: 2026-11-03 10:21
