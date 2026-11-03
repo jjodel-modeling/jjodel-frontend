@@ -748,3 +748,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Fix 1: a body result that is a forall summary adds its leaf counts; any other result is one leaf, so one-variable messages are unchanged. `data.total/successCount/errorCount` are now leaf counts; `data.results` stays one entry per outer iteration, read only by `forallById.test.ts:179`. Mutation bench (aggregation removed) kills 4 tests. Fix 2: father is always the metamodel, so `DModel`; no node-importable home for a test, checked by reading `classes.ts:577-591,996-997` and typecheck.
 **Prompt document name**: 2026-11-03 10:15
+
+## 2026-11-03 — merge: jjscript-forall-summary into alfonso-frontend-jjtl (P-2026-11-03-1041)
+**Prompt**: `claude_2026-11-03_1041_prompt_merge_jjscript-forall-summary.md`, a direct merge by `lane-run merge --direct`, no session: `jjscript-forall-summary` at `7fd560341` into `alfonso-frontend-jjtl`, merge base `6b4f96183`, 6 commits on the branch side.
+**Files touched**: merge `16c38c9e0`: 5 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-03_1015_prompt_forall_summary_and_info_package.md`, `frontend/src/components/editors/Info.tsx`, `frontend/src/jjscript/executor/__tests__/forallMultivar.test.ts`, `frontend/src/jjscript/executor/commands/forall.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `16c38c9e0` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13234 tests in 502 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: forall summary and Info.tsx: covered by unit tests and by the merge gates (13234 tests, 0 failed, 9 red at import); not repeated in the app
+**Notes**: Rollback tag `pre-jjscript-forall-summary` on `fa9e886cb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1041/result.json`.
+**Prompt document name**: 2026-11-03 10:41
