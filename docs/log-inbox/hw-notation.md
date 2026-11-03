@@ -641,3 +641,28 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: passato — chat, unattended: gates green on a5e66854b; acceptance by an app probe on the branch, no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-run-undo` on `a1d892c10` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1542/result.json`.
 **Prompt document name**: 2026-11-03 15:42
+
+## 2026-11-03 — feat(jjtl): run warnings in the Output panel (#520), unique-aware repeats (#474), #447 traced (P-2026-11-03-1553)
+**Prompt**: P-2026-11-03-1553: print a run's warnings in the JjTL panel and see the #445 line in the app, check a flood; #474, dedup only features declared `unique` after checking the canvas double write; #447, trace `init_dash`.
+**Files touched**: `c52fdaeb4`: `frontend/src/jjtl/components/JjtlDevelopmentEnv.tsx`, `frontend/src/jjtl/components/runWarnings.ts` (new), `frontend/src/jjtl/components/__tests__/runWarnings.test.ts` (new); `219083ea6`: `frontend/src/components/project/ProjectEditor.tsx` (serializer lines only), `frontend/src/components/project/jjtlSourceValues.ts`, `frontend/src/components/project/__tests__/jjtlSourceValues.test.ts`; `b9b4e01e0`: `frontend/src/jjtl/SPEC.md`; this inbox; the `Status:` line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probes, no hand run: the #445 line in the Output panel on Class2Relational; 25 warnings print 20 lines and "... and 5 more"; #474 exprs [c1, c1] gives 1 then 2 after unique=false
+**Notes**: Out of scope: runWarnings.ts (the component cannot load in the bench), jjtlSourceValues.ts (the serializer ProjectEditor calls), SPEC 9.1 besides 12.2; nine files in all. Gates on 219083ea6: tsc 0; vitest 13416 passed, 3 red at import, the baseline; build 0. Benches: #520 6/6 killed, #474 5/5. Probes: ~/.jjodel-lanes/P-2026-11-03-1553/probe/ (warn.ts, p474.ts). Not merged.
+**Prompt document name**: 2026-11-03 15:53
+
+**Ticket** (#520, #445, update, not closed before the merge): on success and on failure the panel prints `N warning(s):`, one `Warning: ...` line each up to 20, then `... and K more, listed in the Trace tab.` Seen in the app: `Warning: Rule 'Attribute -> Column', binding 'nullable' at line 27, column 5: 'nullable' is not a feature of target class 'Column'; ...` (`warn-run1-panel.png`). A flood of 25 gives 29 panel lines, not 34.
+
+**Ticket** (#474, update, not closed before the merge): repeats are kept once on a feature declared `unique` (true or absent, the EMF default) and every time on `unique=false`. The double write the dedup guarded against has no source today: the sync hooks write edges, never `DValue.values`. A reference drawn twice on the canvas between the same pair still appends a repeat (`syncCreateReferenceLink` has no `includes` check) and shows one edge; collapsed on a unique feature, a legitimate repeat on a `unique=false` one. The B2 case of the ticket (`exprs` left at the default) still gives 1: it needs `unique=false` to give 2.
+
+**Ticket** (#447, update): `init_dash` is not new. It is `console.error('init_dash')` in `RuntimeStore.init_dashboard` (`frontend/src/redux/store.tsx:240`), called on every load whose hash is not `#/project`, there since `3446baf02` (2025-02-10) and listed in `frontend/scripts/smoke/console-baseline.json:36`. Nothing fails. The fix is trivial (drop the line, rebase the smoke baseline) but `store.tsx` is outside this lane's DOVE: not fixed.
+
+## 2026-11-03 — ticket: JjTL Output panel does not follow its tail and clips long lines
+**Ticket**: The JjTL Output panel does not scroll to its last line when a run appends to it: after a Class2Relational run with one warning, the panel shows lines 1-7 of 9 and the warning sits below the fold (`~/.jjodel-lanes/P-2026-11-03-1553/probe/warn-run1.png`). Long lines, a #445 warning among them, are cut at the panel's right edge, not wrapped (`warn-run2-panel.png`). Measured by the app probe of P-2026-11-03-1553, not by hand. Suggested: scroll to the end on append, and wrap.
+**Priority**: low
+**Found in**: P-2026-11-03-1553
+**Detail**: `~/.jjodel-lanes/P-2026-11-03-1553/probe/warn.json`
