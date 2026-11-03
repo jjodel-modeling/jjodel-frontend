@@ -119,19 +119,24 @@ const messageOf = (e: unknown): string => (e instanceof Error ? e.message : Stri
  * is abstract (no instance can stand for it); a reference is many-valued when its upper bound is above one. Each
  * object keeps the slots of its class's features (own and inherited, metamodel.ts `classFeatures`): an attribute as
  * the eval context gives it, a reference by the target's id. An object with no class in the metamodel is skipped.
+ *
+ * With the lookup, each feature reads `ordered` off its D-layer element by the shell's id (step T7, D-2): ordered
+ * unless the element says `ordered: false`, the Ecore default. Without it no feature carries the flag.
  */
-export function textInputOf(globals: Readonly<Record<string, any>>): TextInput {
+export function textInputOf(globals: Readonly<Record<string, any>>, lookup?: Readonly<Record<string, any>>): TextInput {
+    const orderedOf = (f: any): { ordered?: boolean } => (lookup ? { ordered: lookup[f?.id]?.ordered !== false } : {});
     const metamodel: TextMetamodel = {
         classes: list(globals.classes).map(c => ({
             name: nameOf(c),
             isAbstract: !!c.isAbstract || !!c.isInterface,
             supers: list(c.superTypes).map(nameOf),
-            attributes: list(c.attributes).map(a => ({ name: nameOf(a), type: String(a.type ?? ''), many: !!a.multiValued })),
+            attributes: list(c.attributes).map(a => ({ name: nameOf(a), type: String(a.type ?? ''), many: !!a.multiValued, ...orderedOf(a) })),
             references: list(c.references).map(r => ({
                 name: nameOf(r),
                 type: String(r.type ?? ''),
                 containment: !!r.containment,
                 many: r.multiplicity === '*' || Number(r.upperBound) > 1,
+                ...orderedOf(r),
             })),
         })),
         enumerations: list(globals.enumerations).map(e => ({ name: nameOf(e), literals: list(e.literals).map(nameOf) })),
@@ -169,12 +174,13 @@ export interface ModelReading {
 }
 
 /** The view of `textualView` and the base an edit of its text is diffed against; a failure is reported, never thrown. */
-export function readModel(globals: Readonly<Record<string, any>>, stored: StoredNotation = NO_ANNOTATIONS): ModelReading {
+/** The lookup, when given, reads `ordered` for the diff (`textInputOf`). */
+export function readModel(globals: Readonly<Record<string, any>>, stored: StoredNotation = NO_ANNOTATIONS, lookup?: Readonly<Record<string, any>>): ModelReading {
     let input: TextInput;
     let grammar: ConcreteGrammar;
     let issues: readonly AnnotationIssue[];
     try {
-        input = textInputOf(globals);
+        input = textInputOf(globals, lookup);
         ({ grammar, issues } = textualNotation(input.metamodel, stored.decoded, stored.ids));
     } catch (e) {
         return { view: { text: '', ebnf: '', error: messageOf(e) }, base: null };
@@ -201,7 +207,7 @@ export function textualView(globals: Readonly<Record<string, any>>, stored: Stor
 function modelReading(lookup: Readonly<Record<string, any>>, modelId: string): ModelReading {
     try {
         const globals = buildEvalContext(evalContextFor(lookup, modelId, ''), { extentModelId: modelId });
-        return readModel(globals, storedNotation(lookup, lookup[modelId]?.instanceof));
+        return readModel(globals, storedNotation(lookup, lookup[modelId]?.instanceof), lookup);
     } catch (e) {
         return { view: { text: '', ebnf: '', error: messageOf(e) }, base: null };
     }
