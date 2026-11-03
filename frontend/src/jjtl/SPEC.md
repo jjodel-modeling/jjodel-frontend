@@ -266,7 +266,9 @@ outermost; without a filter the pair `(a, a)` and both orders are present, and e
 them is the filter's job. A later collection may read an earlier variable
 (`forall c in classes, a in c.attributes`). Every variable is bound in the `such that`
 and in the body, with the variables of an enclosing `forall` and the `let` bindings in
-scope. The created objects form **one flat list** in the feature; an empty product creates
+scope. The `such that` sees what the body sees (R-JTG-19, P-2026-11-04-0015): with one
+variable, the element's bare names too, so `forall x in xs such that kind == "k"` reads
+`x.kind`. The created objects form **one flat list** in the feature; an empty product creates
 nothing, without a warning. A name bound twice in the same `forall` is a parse error.
 Unlike a one-variable `forall`, the properties of the elements are not bound unqualified.
 With the source text, JjEL is the only parser of a collection, up to `such`, `->`, the comma of the next binding or the end of the line, so it reads what the legacy expression parser cannot, an object literal (`{ hi: q, lo: r }`) among them (P-2026-11-02-2345, P-2026-11-03-1135). Without the source text the collection is the legacy expression.
@@ -477,9 +479,9 @@ Each target instance is a plain JavaScript object:
 | (none) | 1 instance |
 | `[1]` | 1 instance |
 | `[N]` (N > 1) | N instances |
-| `[*]` | **Currently:** 1 instance. **Should:** create instances based on context (e.g., collection size) |
+| `[*]`, `[n..*]` | **Currently:** 1 instance, with one warning per rule: `Rule 'A -> B': the number of targets of '[*]' is not settled; today one target is created per source.` |
 
-> **Known limitation:** `[*]` always creates exactly 1 instance. The semantics of unbounded multiplicity need to be defined.
+> **Known limitation:** `[*]` always creates exactly 1 instance. The semantics of unbounded multiplicity are an open question of Alfonso's (§12.3 gap 4); until they are settled the run warns and keeps this count (P-2026-11-04-0015).
 
 ### 4.5 Attribute Binding Execution
 
@@ -709,8 +711,13 @@ The app's write-back of several targets per source element is B2 (list below).
 - **Lazy rules (R-JTG-7).** A lazy rule never matches in pass 1: it applies when a binding
   reaches a node of its source class, under the environment of that moment. The lazy rules of
   a class are candidates; the one whose guard holds applies (no guard always holds), and none
-  or several is an error naming the candidates. A class with both a matched and a lazy rule is
-  rejected before pass 1. A lazy node nothing reaches creates no target and no root.
+  or several is an error naming the candidates. A class may have both a matched and a lazy rule
+  (R-JTG-18, P-2026-11-04-0015): the lazy one never matches in pass 1, so it does not compete with
+  the matched one under R-JTG-3. Provisional, not ratified (R-JTG-20): a binding that reaches a
+  node of such a class is settled by the type of its feature: the lazy rules whose target fits it, when no matched rule's does; the
+  matched rule's pass 1 target, when no lazy rule's does; an error naming both, when both fit or
+  the feature has no known type (`binding 'f' reaches Cls 'c1', lowered by matched ... and lazy
+  ...`). `resolve()` still finds the matched target only (R-JTG-13). A lazy node nothing reaches creates no target and no root.
 - **`unique`.** A `unique lazy` rule applies once per (rule, source, environment); a later
   reach under an equal environment returns the same target. A `unique rule` (R-JTG-16,
   P-2026-11-03-2111) applies once per (rule, arguments, environment): a second call with the
@@ -1021,6 +1028,8 @@ that could not be placed is reported as above.
 | Situation | Behavior |
 |---|---|
 | Source class not found | Silently skip (no instances to match) |
+| Rule target class not in the target metamodel | **Error** before pass 1 (R-JTG-17): `Target class 'Nope' not found in target metamodel (A -> Nope). Nothing is written.` The run returns no target model, as for an abstract target. A nested creation of an unknown class stays a warning, nothing created for it (provisional, not ratified) |
+| A binding reaches a node whose class has both a matched and a lazy rule, and the feature type fits both or is unknown | **Error** naming both rules (R-JTG-20, provisional, not ratified; §5.3.3) |
 | Guard evaluation error | Log warning, skip instance (treated as false) |
 | Expression evaluation error | Log warning, return `null` |
 | Builtin call that fails inside an expression (`range(null)`, a helper, a called rule) | **Error** on both parse paths, never a warning with `null` (R-FA-11): `Builtin 'range' failed in expression at line L, column C: <reason>`. In a feature or attribute mapping the mapping stops (`Failed to map ...`); in a `where` guard the run stops (`Execution failed: ...`). A call to a name that resolves to nothing (`Function 'f' is not defined`) and a failing method on a value stay an expression evaluation error |
@@ -1102,7 +1111,7 @@ commit that made it so.
 |---|---|---|
 | `.forAll(...)` never parses | **Stale on the app path.** JjEL takes any keyword as a member name since `3aa5993c8` (P-2026-10-21-0011), and both app callers of the JjTL parser pass `source` since `d3d42310c` (P-2026-10-31-1910), so `coll.forAll(x => p)` parses and the evaluator answers `Unknown method 'forAll' for type Array. Did you mean 'all'?`. JjEL has no `forAll` by design: the quantifier is `coll.all(x => pred)` (root `CLAUDE.md` §12.6). Only the legacy path (no `source`), reached by tests alone, still refuses it | — |
 | 7 test files fail at import | **Fixed** in `e784e325d`: `executor.ts` took only `U.asNumber` from the `joiner` barrel and now holds a verbatim copy, so six of the seven load and pass (two stale expectations updated). `ai-prompt-sanitization.test.ts` still fails at import, through `services/AIMatcher`, not the executor. Full suite: import failures 9 → 3 | Low |
-| Multiplicity `[*]` | **Real.** `A -> B[*]` creates one target per source, with no warning (`createTargetInstances`); `[n]` creates n. The unbounded semantics are undefined (§12.3 gap 4): ticket "JjTL multiplicity [*] creates one target per source, silently" (P-2026-11-03-1402) | Medium |
+| Multiplicity `[*]` | **Warned** (P-2026-11-04-0015). `A -> B[*]` creates one target per source, now with one warning per rule that the count is not settled (§4.4); `[n]` creates n. The unbounded semantics stay undefined (§12.3 gap 4), Alfonso's open question; the ticket "JjTL multiplicity [*] creates one target per source, silently" (P-2026-11-03-1402) is closed by the warning | Medium |
 | Number type | **Fixed, never observable.** The `EInt` tag on a bridged number literal was a dead write: the evaluator returns the literal's value and reads no tag, so `w := 3.5` and `v := 2 + 0.25` bound 3.5 and 2.25 on both paths before the change. A decimal literal is now tagged `EDouble` (`e784e325d`) | — |
 | Duplicate values | **Stale for a flat array source**, the shape the app passes: each target receives its own source's values, on both paths. **Real and fixed** for a `{ classes, instances }` source, whose arrays the flat-object loop read a second time, matching every instance twice (`e784e325d`) | — |
 | Double execution | **Stale, by reading only** (no app probe): there is no `<StrictMode>` in `src/` (`index.tsx` renders `<Provider><App/></Provider>`), Execute is a click callback and not an effect, and `handleExecuteTransformation` has carried a re-entry guard since `40fc9ff66` | — |

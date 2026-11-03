@@ -534,6 +534,12 @@ interface TargetFeatureInfo {
     composition?: boolean;
 }
 
+/** The feature a binding's value is reached through, and its declared type when known. */
+interface Reach {
+    feature: string;
+    typeName?: string;
+}
+
 /** A class of the target metamodel, indexed by name. */
 interface TargetClassInfo {
     name: string;
@@ -704,7 +710,7 @@ export class JjtlExecutor {
             // target classes (e.g. reject abstract targets)
             this.buildTargetClassIndex();
             this.validateTargetClasses();
-            this.validateLazyRules();
+            this.warnUnsettledMultiplicity();
 
             // If validation errors, return early
             if (this.errors.length > 0) {
@@ -927,12 +933,16 @@ export class JjtlExecutor {
                 this.errors.push(
                     `Cannot use abstract class '${targetClass}' as transformation target in ${context}.${suggestion}`
                 );
+            } else if (!knownNames.has(targetClass) && skipsMapping) {
+                // A RULE target the metamodel lacks stops the run before pass 1, as an
+                // abstract target does: going on wrote a partial model that looked done
+                // (P-2026-11-04-0015, ratified by Alfonso 2026-11-03).
+                this.errors.push(`Target class '${targetClass}' not found in target metamodel (${context}). Nothing is written.`);
+                this.unknownTargetClasses.add(targetClass);
             } else if (!knownNames.has(targetClass)) {
-                // "Mapping skipped" is only true for a RULE target: unknownTargetClasses
-                // is consulted by pass1CreateTargets and nowhere else. For a nested
-                // creation nothing was ever skipped, so the message must not say so.
+                // A nested creation: nothing was ever skipped, so the message must not say so.
                 const msg = `Target class '${targetClass}' not found in target metamodel (${context}).`
-                    + (skipsMapping ? ' Mapping skipped.' : ' Nothing is created for it.');
+                    + ' Nothing is created for it.';
                 console.warn(`[JjTL] ${msg}`);
                 this.warnings.push(msg);
                 this.unknownTargetClasses.add(targetClass);
@@ -1026,6 +1036,23 @@ export class JjtlExecutor {
         const msg = `Rule '${rule || 'transformation'}', ${where}: '${feature}' is not a feature of target class ` +
             `'${className}'; the value is not written to the model.`;
         if (!this.warnings.includes(msg)) this.warnings.push(msg);
+    }
+
+    /**
+     * An unbounded upper multiplicity (`[*]`, `[n..*]`) on a rule target: one warning per
+     * rule. What drives the count is Alfonso's open question (SPEC §12.3 gap 4); until it is
+     * settled the run keeps what it does, and says so (P-2026-11-04-0015).
+     */
+    private warnUnsettledMultiplicity(): void {
+        for (const rule of [...this.ast.mappings, ...(this.ast.rules ?? [])]) {
+            const m = rule.targetMultiplicity;
+            if (!m || m.upper !== -1) continue;
+            const written = m.lower > 0 ? `[${m.lower}..*]` : '[*]';
+            this.warnings.push(
+                `Rule '${this.ruleLabel(rule)}': the number of targets of '${written}' is not settled; ` +
+                `today one target is created per source.`
+            );
+        }
     }
 
     /** A feature of `className` or of any of its (transitive) supertypes. */
@@ -2375,7 +2402,9 @@ export class JjtlExecutor {
                         }
                     }
                 }
-                const childCtx = baseCtx.child(bound);
+                // The `such that` sees what the body sees, bare names included
+                // (P-2026-11-04-0015, ratified by Alfonso 2026-11-03).
+                const childCtx = baseCtx.child(itemBindings);
 
                 if (forall.filter) {
                     const passes = this.evaluateExpression(forall.filter, childCtx);
@@ -3277,13 +3306,31 @@ export class JjtlExecutor {
 
     /** A binding's value: demands realized first, then resolved and placed as before. */
     private async resolveBinding(value: any, targetAttribute: string, owner?: any): Promise<any> {
-        return this.applyCrossTypeResolution(await this.realizeDemands(value), targetAttribute, owner);
+        const reach: Reach = { feature: targetAttribute, typeName: this.featureTypeOf(owner, targetAttribute) };
+        return this.applyCrossTypeResolution(await this.realizeDemands(value, false, reach), targetAttribute, owner);
+    }
+
+    /** The declared type of `featureName` on the class of `owner`, own or inherited, or undefined. */
+    private featureTypeOf(owner: any, featureName: string): string | undefined {
+        const start = owner?.className ?? owner?.__type;
+        if (typeof start !== 'string') return undefined;
+        const seen = new Set<string>();
+        const stack = [start];
+        while (stack.length) {
+            const n = stack.pop()!;
+            if (seen.has(n)) continue;
+            seen.add(n);
+            const f = this.resolveTargetFeature(n, featureName);
+            if (f) return f.typeName;
+            stack.push(...(this.targetClasses.get(n)?.superNames || []));
+        }
+        return undefined;
     }
 
     /** True when `value` holds something realizeDemands would replace. */
-    private needsRealization(value: any, fresh = false): boolean {
-        if (Array.isArray(value)) return value.some(el => this.needsRealization(el, fresh));
-        return this.demandOf(value) !== undefined || this.sourceRuleOf(value, fresh) !== undefined;
+    private needsRealization(value: any, fresh = false, reach?: Reach): boolean {
+        if (Array.isArray(value)) return value.some(el => this.needsRealization(el, fresh, reach));
+        return this.demandOf(value) !== undefined || this.sourceRuleOf(value, fresh, reach) !== undefined;
     }
 
     /**
@@ -3293,18 +3340,25 @@ export class JjtlExecutor {
      * environment down to the leaves, R-JTG-6). Otherwise undefined: the pass 1 target
      * answers, through the resolution that follows, unless `fresh` asks for a new
      * lowering (a bound value, step 5). For a class of lazy rules, the candidates
-     * instead: realizeLazy selects one.
+     * instead: realizeLazy selects one. A class with both is settled by `reach`, the
+     * receiving feature (lazyOrMatched).
      */
-    private sourceRuleOf(value: any, fresh = false): { element: any; rule?: ClassMappingAST; lazy?: ClassMappingAST[] } | undefined {
+    private sourceRuleOf(
+        value: any, fresh = false, reach?: Reach,
+    ): { element: any; rule?: ClassMappingAST; lazy?: ClassMappingAST[] } | undefined {
         if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
         if (value.__createdBy === 'JjTL' || this.demandOf(value) || this.environmentOf(value)) return undefined;
         const element = this.asSourceElement(value);
         if (!element) return undefined;
         const className = this.detectSourceClassName(element);
+        const rules = className ? this.context.rulesBySourceType.get(className) : undefined;
         // A class lowered by lazy rules: reaching the node is what applies one (R-JTG-7).
         const lazy = className ? this.lazyBySourceType.get(className) : undefined;
-        if (lazy && lazy.length > 0) return { element, lazy };
-        const rules = className ? this.context.rulesBySourceType.get(className) : undefined;
+        if (lazy && lazy.length > 0) {
+            if (!rules || rules.length === 0) return { element, lazy };
+            const side = this.lazyOrMatched(element, lazy, rules, reach);
+            if (side !== 'matched') return { element, lazy: side };
+        }
         // Ambiguity and absence stay with resolveValue, which reports them.
         if (!rules || rules.length !== 1) return undefined;
         const rule = rules[0];
@@ -3313,19 +3367,31 @@ export class JjtlExecutor {
     }
 
     /**
-     * A class is lowered either by matched rules or by lazy rules, never by both: which
-     * one a resolution reaching the node would mean is ambiguous (R-JTG-7).
+     * A class with both matched and lazy rules: the lazy rules never match in pass 1, so
+     * they do not compete with the matched ones there (R-JTG-3, P-2026-11-04-0015). A binding
+     * that reaches a node of the class is settled by the type of its feature: the lazy rules
+     * whose target fits it, when no matched rule's does; the matched rule's pass 1 target
+     * when no lazy rule's does. Both fitting, or a reach with no feature type, is an error
+     * naming the rules. A delegating rule's result has no declared class, so it fits any type.
      */
-    private validateLazyRules(): void {
-        for (const [className, lazy] of this.lazyBySourceType) {
-            const matched = this.context.rulesBySourceType.get(className);
-            if (!matched || matched.length === 0) continue;
-            this.errors.push(
-                `Ambiguous rules for '${className}': matched ${matched.map(r => `'${this.ruleLabel(r)}'`).join(', ')} ` +
-                `and lazy ${lazy.map(r => `'${this.ruleLabel(r)}'`).join(', ')}. A class is lowered by matched ` +
-                `rules or by lazy rules, not both.`
-            );
-        }
+    private lazyOrMatched(
+        element: any, lazy: ClassMappingAST[], matched: ClassMappingAST[], reach?: Reach,
+    ): ClassMappingAST[] | 'matched' {
+        const typeName = reach?.typeName;
+        const fits = (r: ClassMappingAST) => !!typeName && (!!r.result || this.classIsOrExtends(r.targetClass, typeName));
+        const lazyFit = lazy.filter(fits);
+        const matchedFit = matched.filter(fits);
+        if (lazyFit.length > 0 && matchedFit.length === 0) return lazyFit;
+        if (typeName && lazyFit.length === 0) return 'matched';
+        const labels = (rules: ClassMappingAST[]) => rules.map(r => `'${this.ruleLabel(r)}'`).join(', ');
+        const where = reach ? `binding '${reach.feature}'` : 'a value';
+        const why = typeName
+            ? `the type '${typeName}' of '${reach!.feature}' fits both`
+            : 'no feature type tells them apart';
+        throw new Error(
+            `${where} reaches ${this.describeSubject(element)}, lowered by matched ${labels(matched)} ` +
+            `and lazy ${labels(lazy)}: ${why}. Write resolve() for the matched target.`
+        );
     }
 
     /**
@@ -3366,12 +3432,12 @@ export class JjtlExecutor {
      * With `fresh`, a source element of a matched class is lowered anew by its rule, not
      * looked up: a bound value lowers like a lazy node (step 5, R-JTG-6, R-JTG-7).
      */
-    private async realizeDemands(value: any, fresh = false): Promise<any> {
-        if (!this.needsRealization(value, fresh)) return value;
+    private async realizeDemands(value: any, fresh = false, reach?: Reach): Promise<any> {
+        if (!this.needsRealization(value, fresh, reach)) return value;
         if (Array.isArray(value)) {
             const out: any[] = [];
             for (const el of value) {
-                const realized = await this.realizeDemands(el, fresh);
+                const realized = await this.realizeDemands(el, fresh, reach);
                 if (Array.isArray(realized) && !Array.isArray(el)) out.push(...realized);
                 else out.push(realized);
             }
@@ -3380,7 +3446,7 @@ export class JjtlExecutor {
         const demand = this.demandOf(value);
         if (demand?.kind === 'call') return this.realizeCall(demand);
         if (demand?.kind === 'closure') return this.realizeClosure(demand);
-        const { element, rule, lazy } = this.sourceRuleOf(value, fresh)!;
+        const { element, rule, lazy } = this.sourceRuleOf(value, fresh, reach)!;
         if (lazy) return this.realizeLazy(element, lazy);
         if (fresh) {
             // Untraced: a reference to the element still means its pass 1 target.

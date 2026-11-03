@@ -467,7 +467,8 @@ Main m = m.expr
         )).toBe(true);
     });
 
-    it('rejects a class with both a matched and a lazy rule', async () => {
+    it('accepts a class with both a matched and a lazy rule: the lazy one does not compete in pass 1', async () => {
+        // P-2026-11-04-0015: R-JTG-3 is a pass 1 conflict, and a lazy rule never matches there.
         const result = await run(`
 Const -> Const {
     value := value
@@ -477,9 +478,9 @@ lazy Const -> Const {
     value := value
 }
 `, [k('c1', 1, 'm1')]);
-        expect(result.success).toBe(false);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0]).toMatch(/Ambiguous rules for 'Const': matched 'Const -> Const' and lazy 'lazy Const -> Const'/);
+        expect(result.errors).toEqual([]);
+        expect(result.success).toBe(true);
+        expect(result.targetModel!.roots.map(term)).toEqual(['Const(1)']);
     });
 });
 

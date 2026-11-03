@@ -7290,6 +7290,27 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   `unique` is allowed on called rules: `unique rule f(x)` returns the same target for a second call with the same
   arguments and environment, as `unique lazy` does; the double-claim error of R-JTG-4 applies. A rule not declared
   `unique` keeps R-JTG-6's fresh target per call. Evidence: the tests of P-2026-11-03-2111.
+- **R-JTG-17** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a
+  rule whose target class is not in the target metamodel is an error before the run writes anything: nothing is
+  written. Provisional, unattended, not ratified (P-2026-11-04-0015): the error names the rule and the class, as an
+  abstract target's does, and a nested creation of an unknown class stays a warning.
+  Evidence: `language-open-points.test.ts` and the app probe of P-2026-11-04-0015 (no output model, 16 objects before
+  and after; the control run writes 27).
+- **R-JTG-18** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk): a
+  `lazy` rule is exempt from R-JTG-3 when its class also has a matched rule: it never matches in pass 1, so it does
+  not compete there. The executor's rejection of a class with both no longer holds. How a binding that reaches a node
+  of such a class is settled is R-JTG-20, provisional.
+  Evidence: `language-open-points.test.ts`, `class2relational.test.ts`, `called-lazy-rules.test.ts`.
+- **R-JTG-19** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk): the
+  `such that` of a JjTL `forall` sees bare names as its body does. Provisional, unattended, not ratified
+  (P-2026-11-04-0015): the filter sees exactly the bindings the body sees, so bare names exist only where the body has
+  them, in a one-variable `forall`. Evidence: `language-open-points.test.ts` (P-2026-11-04-0015).
+- **R-JTG-20** (2026-11-04, provisional, unattended, evidence: measured, verified: agent, reversible: trunk): not
+  ratified by Alfonso, decided by lane P-2026-11-04-0015. A binding that reaches a node whose class has both a matched
+  and a lazy rule (R-JTG-18) is settled by the type of the receiving feature: the lazy rule when only a lazy target
+  fits it, the matched rule's pass 1 target when no lazy target fits, an error naming both when both fit or the type
+  is unknown (`lazyOrMatched`, `executor.ts`). Evidence: `language-open-points.test.ts`; mutation M3 of the lane
+  bench (lazy always wins) is killed by that file only.
 
 ## Superate
 
