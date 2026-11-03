@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1522
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · commit a2bfae74e and the inbox entry · verifica visiva non applicabile
 Lane: full (continues P-2026-11-03-1435 after its context ceiling)
 Depends: P-2026-11-03-1435
 Worktree: ~/jjodel-w-jjtlundo, branch jjtl-run-undo (the same tree, at the commit that adds this prompt)

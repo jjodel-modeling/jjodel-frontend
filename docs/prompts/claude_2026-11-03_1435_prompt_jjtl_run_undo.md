@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1435
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · hard-stop at the ceiling, closed by P-2026-11-03-1522 · commits 8348487c6, 5300d78b6 · verifica visiva: app probe, no hand run
 Lane: full (undo of a JjTL run in the app)
 Depends: none
 Worktree: ~/jjodel-w-jjtlundo, branch jjtl-run-undo (at the commit that adds this prompt)
