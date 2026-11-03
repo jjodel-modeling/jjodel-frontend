@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-03-1226
 Chat: C-2026-11-03-0001
 Request: none (rendered by lane-run, no chat URL known for C-2026-11-03-0001)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane merge · c35ce731e · verifica visiva passata 2026-11-03 (merged staging c35ce731e: L3 mock probe 28/28 on port 3190 (lane-run probe, SMOKE_URL set), 0 page errors; Juri's visual GO on the L3 tree 2026-11-03)
 
 Worktree: `/Users/juridirocco/development/jjodel`, branch `staging`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/juridirocco/development/jjodel` on `staging`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-03-1226 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
