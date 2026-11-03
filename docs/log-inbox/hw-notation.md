@@ -328,3 +328,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (probes in the app: b2-writeback.v1 S1 3 objects, S3 7, S4 fails on #474; current b2-writeback all checks true)
 **Notes**: Shape was by count. #474 left: a deliberate dedup against doubled pointers, its fix is a decision. Inventory: no reliance beyond fixtures; micron Arbiter one-requester forall gained. Bench: bound check dropped kills 6/12. Gates: tsc 0; vitest 501 files, 13209 = 13193 + 16, the known 9 at import; build 0; check:docs 5/5. T write-back 16-17.5 s, unchanged.
 **Prompt document name**: 2026-11-03 05:39
+
+## 2026-11-03 — merge: jjtl-many-valued into alfonso-frontend-jjtl (P-2026-11-03-0642)
+**Prompt**: `claude_2026-11-03_0642_prompt_merge_jjtl-many-valued.md`, full lane: bring jjtl-many-valued at the explicit sha 534b79313 into the trunk with one --no-ff merge commit (RC-14); zero conflicts; stopped at step 7 for the chat's GO, resumed on it.
+**Files touched**: merge commit b7dfcc51e (the branch's 8 files, no union resolution, no file changed on both sides); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (chat GO on HTTP 200 on 3001 and the probes of P-2026-11-03-0539 on the branch tip; no hand run on the trunk)
+**Notes**: Merge-tree 9a472978d equal to the merge commit's tree; 3 probes once each, no union. Gates on b7dfcc51e: typecheck, typecheck:scripts exit 0; vitest 502 files, 13231 = trunk 13215 + 16 (56 vs 40 in the two branch test files), the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5 (the prompt said 4/4); check:agents, check:scripts, check:addonly PASS. Lane board untouched. Regressions unknown: no app run on the trunk.
+**Prompt document name**: 2026-11-03 06:42
