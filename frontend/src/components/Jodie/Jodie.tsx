@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { JodieWindow } from './JodieWindow';
 import { JodieMinimized } from './JodieMinimized';
 import {
-    AIProvider,
+    type AIProvider,
     ChatMessage,
     ChatImage,
     ChatDocument,

@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import type {Dictionary} from "../../joiner";
-import {AI} from '../../types/jodie';
+import { PROVIDER_VISUALS } from '../../components/common/providerVisuals';
 import { PROVIDER_IDS, ProviderConfigStore, registry } from '../../services/ai';
 import type { ProviderId, StoredProviderConfig } from '../../services/ai';
 import { ProviderConfigModal } from './ProviderConfigModal';
@@ -74,7 +74,7 @@ export function AIAssistantSettings() {
 
             <div className="providers-list">
                 {PROVIDER_IDS.map(provider => {
-                    const llm = AI[provider];
+                    const llm = PROVIDER_VISUALS[provider];
                     const status = providerStatus(ProviderConfigStore.load(provider), registry.get(provider).enabled());
                     const modelLabel = getModelLabel(provider);
 
@@ -94,7 +94,7 @@ export function AIAssistantSettings() {
 
                             {/* Provider info */}
                             <div className="provider-info">
-                                <span className="provider-name">{llm.name}</span>
+                                <span className="provider-name">{provider}</span>
                                 <span className="provider-model">{modelLabel}</span>
                             </div>
 

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
-import { TAIProvider, AIProvider, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor } from '../../types/jodie';
+import type { TAIProvider, AIProvider, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor } from '../../types/jodie';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';

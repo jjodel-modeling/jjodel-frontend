@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { AIProvider } from '../../types/jodie';
+import type { AIProvider } from '../../types/jodie';
 
 interface JodieMinimizedProps {
     activeProvider?: AIProvider;

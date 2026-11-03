@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {AI} from '../../types/jodie';
+import { PROVIDER_VISUALS } from '../../components/common/providerVisuals';
 import { FeaturePreferenceStore, PROVIDER_SPECS, ProviderConfigStore, registry } from '../../services/ai';
 import type { ProviderId, StoredProviderConfig } from '../../services/ai';
 import { isDeprecatedModel } from '../../components/common/ProviderModelSelector';
@@ -44,7 +44,7 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
 
     // Check if this provider requires an API key
     const requiresApiKey = PROVIDER_SPECS[provider].requiresKey;
-    let llm = AI[provider];
+    let llm = PROVIDER_VISUALS[provider];
 
     // Reset state when modal opens with new provider
     useEffect(() => {
@@ -155,7 +155,7 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                             {llm.initial}
                         </div>
                         <div className="provider-modal-title">
-                            <h3>{llm.name}</h3>
+                            <h3>{provider}</h3>
                             <span className="provider-company">Configure API access</span>
                         </div>
                     </div>
@@ -194,7 +194,7 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                                     setApiKey(e.target.value);
                                     ProviderConfigStore.save(provider, { apiKey: e.target.value });
                                 }}
-                                placeholder={requiresApiKey ? `Enter your ${llm.name} API key` : 'Optional - leave empty for local'}
+                                placeholder={requiresApiKey ? `Enter your ${provider} API key` : 'Optional - leave empty for local'}
                                 className="modal-input"
                                 autoComplete="off"
                             />
@@ -256,10 +256,10 @@ export const ProviderConfigModal: React.FC<ProviderConfigModalProps> = ({
                             className="get-api-key-link"
                         >
                             <i className="bi bi-box-arrow-up-right" />
-                            How to get your {llm.name} API key
+                            How to get your {provider} API key
                         </a>
                     )}
-                    {!llm.keyUrl && <span className="ollama-hint">Make sure {llm.name} is running locally</span>}
+                    {!llm.keyUrl && <span className="ollama-hint">Make sure {provider} is running locally</span>}
 
                     <div className="modal-actions">
                         <button className="modal-btn-secondary" onClick={onClose}>Close</button>
