@@ -580,3 +580,16 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: passato — app probe, no hand run: output equals EXPECTED_SCHEMA (6 tables, 14 columns, 3 FKs, 3 types), same tree after save and reopen; #445 warning in the result, not in the panel
 **Notes**: R-JTG-5/6/7 fit beyond hardware; one design gap, a called rule cannot create once and be referenced twice (`unique` on called rules recommended). Tickets #515-#521. Gates: tsc 0, vitest 13358 passed, 3 red at import plus irSelectionRing afterAll timeout under load (alone 5/5 green), build 0. Details in the report.
 **Prompt document name**: 2026-11-03 15:05
+
+## 2026-11-03 — merge: jjtl-class2relational into alfonso-frontend-jjtl (P-2026-11-03-1532)
+**Prompt**: `claude_2026-11-03_1532_prompt_merge_jjtl-class2relational.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-class2relational` at `7f5d686d6` into `alfonso-frontend-jjtl`, merge base `ed6367578`, 7 commits on the branch side.
+**Files touched**: merge `1cbb75d13`: 7 files from the branch side (`docs/discovery/discovery_2026-11-03_jjtl_class2relational.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1434_prompt_jjtl_class2relational.md`, `docs/prompts/claude_2026-11-03_1505_prompt_jjtl_class2relational_close.md`, `frontend/src/jjtl/__tests__/fixtures/class2relational.ts`, `frontend/src/jjtl/executor/__tests__/class2relational.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1cbb75d13` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13401 tests in 506 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 1cbb75d13; acceptance by an app probe on the branch, no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-class2relational` on `968e7a44e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1532/result.json`.
+**Prompt document name**: 2026-11-03 15:32
