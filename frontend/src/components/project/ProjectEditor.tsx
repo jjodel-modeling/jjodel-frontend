@@ -1563,12 +1563,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // The shape follows the declared upper bound of the feature
                             // (jjtlSourceValues.ts): a many-valued feature is always a list,
                             // whatever the number of values (#473).
+                            // A repeat is kept once unless the feature is declared unique=false (#474).
                             const featurePtr = (feature as any).__raw?.instanceof;
-                            const upperBound = featurePtr
-                                ? (store.getState() as any).idlookup?.[featurePtr]?.upperBound
+                            const featureDecl = featurePtr
+                                ? (store.getState() as any).idlookup?.[featurePtr]
                                 : undefined;
                             result[feature.name] = serializeFeatureValues(
-                                (feature as any).__raw?.values, upperBound, wrapIfRef
+                                (feature as any).__raw?.values, featureDecl?.upperBound, wrapIfRef, featureDecl?.unique
                             );
                         }
                     }

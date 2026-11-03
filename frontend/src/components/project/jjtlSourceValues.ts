@@ -24,20 +24,24 @@ export function isManyValued(upperBound: unknown): boolean | undefined {
  * The value of one feature as the executor reads it.
  *
  * `rawVals` are the raw `DValue.values` (primitives for attributes, Pointer ids for references).
- * Empty entries are dropped and a repeated Pointer id is kept once, as before: DValue.values can
- * hold the same id twice (an edge created via canvas and then via auto-populate, or data
- * corruption). That collapse is ticket #474, left as it was.
+ * Empty entries are dropped. On a feature declared unique (the default: `unique` true or absent)
+ * a repeated string value, a Pointer id among them, is kept once, as before: DValue.values can
+ * hold the same id twice (a reference drawn twice on the canvas, or data corruption). A feature
+ * declared `unique === false` keeps every repeat, so the rules see the value as often as the
+ * model holds it (#474).
  */
 export function serializeFeatureValues(
     rawVals: unknown,
     upperBound: unknown,
     wrap: (val: any) => any,
+    unique: unknown = true,
 ): any {
     const vals: any[] = Array.isArray(rawVals) ? rawVals : [];
+    const dedup = unique !== false;
     const seen = new Set<string>();
     const meaningful = vals.filter((v: any) => {
         if (v == null || v === '') return false;
-        if (typeof v === 'string') {
+        if (dedup && typeof v === 'string') {
             if (seen.has(v)) return false;
             seen.add(v);
         }
