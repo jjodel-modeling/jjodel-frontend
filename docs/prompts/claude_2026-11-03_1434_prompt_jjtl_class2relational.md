@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1434
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · 8a064bbbd · fixture and test committed; app probe, tickets and report completed by P-2026-11-03-1505 after the context ceiling (unattended)
 Lane: full (acceptance measure; product code only for a one-line local fix)
 Depends: none
 Worktree: ~/jjodel-w-jjtlc2r, branch jjtl-class2relational (at the commit that adds this prompt)

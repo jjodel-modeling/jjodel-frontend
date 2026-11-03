@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1505
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · 6226edf31 · app probe through the Execute dialog, output equals the expected schema, same tree after reopen; #445 not in the panel (#520); no visual check by hand (unattended)
 Lane: full (continues P-2026-11-03-1434 after its context ceiling)
 Depends: P-2026-11-03-1434
 Worktree: ~/jjodel-w-jjtlc2r, branch jjtl-class2relational (the same tree, at the commit that adds this prompt)

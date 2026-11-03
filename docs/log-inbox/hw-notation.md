@@ -567,3 +567,16 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Ticket**: The floating Execute button of the JjTL editor (`.jjtl-editor-action-btn--primary`, the play icon at the editor's top right) sits partly under Monaco's vertical scrollbar: a pointer click at its centre lands on the scrollbar (`div.visible.scrollbar.vertical` intercepts pointer events), so Playwright cannot click it, with a 72-line text that scrolls. Measured twice by the Class2Relational app probe (`executePointerClickable: false` on both runs; screenshot `~/.jjodel-lanes/P-2026-11-03-1434/probe/c2r-run1-exec-covered.png`). A user can still use the toolbar's Execute or Ctrl+Enter, or the left half of the icon. Suggested: inset the floating toolbar by the scrollbar width.
 **Priority**: low
 **Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — test(jjtl): Class2Relational acceptance, app probe and report (P-2026-11-03-1505)
+**Prompt**: P-2026-11-03-1434 continued by P-2026-11-03-1505: a non-hardware acceptance case, Class2Relational, as executor fixture, app probe through the Execute dialog with save and reopen, the #445 line in the panel, tickets per failure and a report with a verdict on R-JTG-5, 6, 7.
+**Files touched**: `8a064bbbd`: `frontend/src/jjtl/__tests__/fixtures/class2relational.ts` (new), `frontend/src/jjtl/executor/__tests__/class2relational.test.ts` (new), `frontend/src/jjtl/executor/executor.ts` (one line); `e2332b61c`, `7ec6305ae`: this inbox (seven tickets); `6226edf31`: `docs/discovery/discovery_2026-11-03_jjtl_class2relational.md`; this entry and the `Status:` lines of both prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe, no hand run: output equals EXPECTED_SCHEMA (6 tables, 14 columns, 3 FKs, 3 types), same tree after save and reopen; #445 warning in the result, not in the panel
+**Notes**: R-JTG-5/6/7 fit beyond hardware; one design gap, a called rule cannot create once and be referenced twice (`unique` on called rules recommended). Tickets #515-#521. Gates: tsc 0, vitest 13358 passed, 3 red at import plus irSelectionRing afterAll timeout under load (alone 5/5 green), build 0. Details in the report.
+**Prompt document name**: 2026-11-03 15:05
