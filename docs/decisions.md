@@ -7240,7 +7240,7 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-JTG-13 (2026-11-03)**: `resolve()`, `resolveAll()` and `{__ref}` find matched targets only, never a lazy node.
   Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03, registered by P-2026-11-03-0539; evidence: the
   lanes of slice B, verified: none, reversible: trunk.
-- **R-JTG-14** (2026-11-03, provisional, unattended, evidence: measured, verified: probe, reversible: trunk): a JjTL run
+- **R-JTG-14** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL run
   is one undo step. The group opens after the executor succeeds and closes when the store has had no writes for 800 ms
   after the write-back, capped at 180 s; the output tab and its vertices are part of the step. Redo restores the model
   and does not reopen the tab. Evidence: the probe of P-2026-11-03-1435.
