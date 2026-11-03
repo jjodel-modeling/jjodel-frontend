@@ -37,8 +37,8 @@ import type { TextParseResult } from '../parser';
 import { printTextModel } from '../printer';
 import type { ObjectSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
-import { planTextEdit } from '../textDiff';
-import type { ApplyRefusal, TextEditPlan } from '../textDiff';
+import { deletedObjects, planTextEdit } from '../textDiff';
+import type { ApplyRefusal, TextDiff, TextEditPlan } from '../textDiff';
 import { matchObjects } from '../textMatch';
 import type { TextMatch } from '../textMatch';
 import { elementIdsOf, readSyntax, textualNotation } from '../syntaxRecord';
@@ -322,6 +322,73 @@ export function appliedSpans(parsed: Pick<TextParseResult, 'spans'>, plan: Pick<
     return parsed.spans.flatMap(s => { const id = modelOf.get(s.id); return id ? [{ id, start: s.start, end: s.end }] : []; });
 }
 
+// ---- Step T7: a cut pasted whole (D-5), and the marker of a misplaced outer reference (item 5) ---------------------
+
+/** What a cut took: its text, and the carried spans wholly inside it, relative to its start (R-TXT-22). */
+export interface CutClip {
+    readonly text: string;
+    readonly spans: readonly ObjectSpan[];
+}
+
+/** The clip of a cut of `length` characters at `at` of `before`, with the spans carried then; null when it holds no whole object. */
+export function cutClip(before: string, spans: readonly ObjectSpan[], at: number, length: number): CutClip | null {
+    const end = at + length;
+    const inside = spans.filter(s => s.end > s.start && s.start >= at && s.end <= end).map(s => ({ id: s.id, start: s.start - at, end: s.end - at }));
+    return inside.length ? { text: before.slice(at, end), spans: inside } : null;
+}
+
+/**
+ * The spans a paste of `inserted` at `at` re-attaches (D-5): the clip's, when the paste is the clip's text and that text
+ * is in `after` once only. With the original or a copy still in the text, the paste is new and carries nothing.
+ */
+export function pastedSpans(clip: CutClip, at: number, inserted: string, after: string): ObjectSpan[] {
+    if (inserted !== clip.text || after.indexOf(clip.text) !== after.lastIndexOf(clip.text)) return [];
+    return clip.spans.map(s => ({ id: s.id, start: s.start + at, end: s.end + at }));
+}
+
+/** How many objects of a pending cut the plan would delete: such a plan waits for the paste (D-5). */
+export function heldByCut(clip: CutClip | null, base: Pick<EditBase, 'mm' | 'objects'>, plan: TextEditPlan): number {
+    if (!clip || !plan.diff) return 0;
+    const gone = deletedObjects(base.mm, base.objects, plan.diff.ops);
+    return clip.spans.filter(s => gone.has(s.id)).length;
+}
+
+/** A marker of the text: the offsets and the message. */
+export interface TextMark {
+    readonly start: number;
+    readonly end: number;
+    readonly message: string;
+}
+
+const OUTER_TOKEN = /@"((?:[^"\\]|\\.)*)"/g;
+
+/**
+ * R-TXT-32 code `outer`: each misplaced `@"id"`, found in its owner's span outside the spans of the objects it contains
+ * (the parser keeps no position of the token). One marker per misplaced value, in text order within the owner.
+ */
+export function outerMarks(text: string, parsed: Pick<TextParseResult, 'objects' | 'spans'>, diff: Pick<TextDiff, 'match' | 'outer'>): TextMark[] {
+    const textOf = new Map(diff.match.matches.map(m => [m.model, m.text]));
+    const spanOf = new Map(parsed.spans.map(s => [s.id, s]));
+    const used = new Set<number>();
+    const out: TextMark[] = [];
+    for (const o of diff.outer ?? []) {
+        const id = 'model' in o.target ? textOf.get(o.target.model) : 'text' in o.target ? o.target.text : undefined;
+        const own = id !== undefined ? spanOf.get(id) : undefined;
+        if (!own) continue;
+        const inner = parsed.spans.filter(s => s.id !== own.id && s.start >= own.start && s.end <= own.end);
+        for (const m of text.slice(own.start, own.end).matchAll(OUTER_TOKEN)) {
+            const start = own.start + (m.index ?? 0);
+            let value: string | null = null;
+            try { value = JSON.parse(`"${m[1]}"`); } catch { value = null; }
+            if (value !== o.id || used.has(start) || inner.some(s => start >= s.start && start < s.end)) continue;
+            used.add(start);
+            out.push({ start, end: start + m[0].length, message: `@"${o.id}" is a reference outside the text not where it was printed: such a value can only be kept, deleted or replaced (R-TXT-32)` });
+            break;
+        }
+    }
+    return out;
+}
+
 /** The issues of the notation, and the warnings of the objects left out, one line each, under the tab's bar; nothing when there is none. */
 function NotationIssues({ issues, warnings }: { readonly issues: readonly AnnotationIssue[] | undefined; readonly warnings?: readonly UnprintedIssue[] }) {
     if (!issues?.length && !warnings?.length) return null;
@@ -344,7 +411,9 @@ function NotationIssues({ issues, warnings }: { readonly issues: readonly Annota
 }
 
 /** What the bar says of the edit: a decision, or a step of the application. */
-type EditStatus = EditDecision | { readonly kind: 'editing' } | { readonly kind: 'applying' } | { readonly kind: 'applied'; readonly failed: number };
+type EditStatus = EditDecision | { readonly kind: 'editing' } | { readonly kind: 'applying' } | { readonly kind: 'applied'; readonly failed: number }
+    /** T7 D-5: a cut's objects wait for their paste. */
+    | { readonly kind: 'cut'; readonly count: number };
 
 /** The bar's line for an edit status, and whether it reads as an error. */
 export function editStatusText(s: EditStatus): { readonly text: string; readonly error: boolean } {
@@ -356,6 +425,7 @@ export function editStatusText(s: EditStatus): { readonly text: string; readonly
         case 'confirm': return { text: 'Not applied · confirm below', error: false };
         case 'refused': return { text: `Not applied: ${s.reasons[0]}${s.reasons.length > 1 ? ` (+${s.reasons.length - 1})` : ''}`, error: true };
         case 'unchanged': return { text: 'No change', error: false };
+        case 'cut': return { text: `Cut · paste to move ${s.count === 1 ? 'it' : 'them'}`, error: false };
         case 'apply': case 'applying': return { text: 'Applying…', error: false };
         case 'applied': return s.failed
             ? { text: `Applied, ${s.failed} line${s.failed === 1 ? '' : 's'} failed`, error: true }
@@ -393,6 +463,8 @@ const EDIT_MARKER_OWNER = 'textual-edit';
 const APP_UNDO_KEY = 'textualNoPendingEdit';
 
 type MonacoEditor = Parameters<OnMount>[0];
+/** A change of the Monaco model's content: what replaced which offsets. */
+type ContentChange = { readonly rangeOffset: number; readonly rangeLength: number; readonly text: string };
 type MonacoApi = Parameters<OnMount>[1];
 
 export interface TextualTabProps {
@@ -435,7 +507,10 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     const applyingRef = useRef(false);
     const decorationsRef = useRef<{ ids: string[]; model: Map<string, string> }>({ ids: [], model: new Map() });
     const undoKeyRef = useRef<{ set(v: boolean): void } | null>(null);
-    const handlers = useRef({ read: () => {}, content: () => {} });
+    // T7 D-5: the text and spans before a cut, until its change lands; then the clip, until an identical paste.
+    const armedRef = useRef<{ readonly text: string; readonly spans: readonly ObjectSpan[] } | null>(null);
+    const clipRef = useRef<CutClip | null>(null);
+    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void }>({ read: () => {}, content: () => {} });
     const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
     useEffect(() => () => pause.cancel(), [pause]);
 
@@ -468,12 +543,13 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         });
     };
 
-    const setMarkers = (parsed: TextParseResult | null): void => {
+    /** The parse's errors, and the misplaced outer references (T7 (5)), as markers. */
+    const setMarkers = (parsed: TextParseResult | null, marks: readonly TextMark[] = []): void => {
         const monaco = monacoRef.current;
         const m = editorRef.current?.getModel();
         if (!monaco || !m) return;
         const length = m.getValueLength();
-        monaco.editor.setModelMarkers(m, EDIT_MARKER_OWNER, (parsed?.errors ?? []).map(e => {
+        monaco.editor.setModelMarkers(m, EDIT_MARKER_OWNER, [...(parsed?.errors ?? []), ...marks].map(e => {
             const from = m.getPositionAt(Math.min(e.start, length));
             const to = m.getPositionAt(Math.min(Math.max(e.end, e.start + 1), length));
             return {
@@ -495,6 +571,8 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         const editor = editorRef.current;
         if (!editor || !r.base) return;
         pause.cancel();
+        armedRef.current = null;
+        clipRef.current = null;
         const viewState = editor.saveViewState();
         syncRef.current = { text: r.view.text, model: r.view.text };
         if (editor.getValue() !== r.view.text) editor.setValue(r.view.text);
@@ -553,19 +631,50 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         }
         const ev = evidence(r.base);
         const { parsed, plan } = planEdit(r.base, text, carriedSpans(), ev, confirmed);
-        setMarkers(parsed);
+        setMarkers(parsed, plan.diff ? outerMarks(text, parsed, plan.diff) : []);
         // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones.
         if (plan.diff) setDecorations(certainSpans(parsed, plan.diff.match));
         const d = editDecision(text, sync, parsed, plan, staleRef.current);
+        // T7 D-5: a cut's objects are not deleted on the pause; their paste, identical, moves them.
+        const held = heldByCut(clipRef.current, r.base, plan);
+        if (held && (d.kind === 'apply' || d.kind === 'confirm')) {
+            setConfirm(null);
+            setStatus({ kind: 'cut', count: held });
+            return;
+        }
         setConfirm(d.kind === 'confirm'
             ? { text, rows: confirmRows({ plan, parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }) }
             : null);
         if (d.kind === 'apply') void apply(text, parsed, plan); else setStatus(d);
     };
 
+    /** T7 D-5: the change of a cut makes the clip; an identical paste re-attaches its spans and ends it. */
+    const trackClip = (changes: readonly ContentChange[]): void => {
+        const m = editorRef.current?.getModel();
+        const one = changes.length === 1 ? changes[0] : null;
+        const armed = armedRef.current;
+        armedRef.current = null;
+        if (!m || !one) return;
+        if (armed && one.text === '') { clipRef.current = cutClip(armed.text, armed.spans, one.rangeOffset, one.rangeLength); return; }
+        const clip = clipRef.current;
+        if (!clip || one.text !== clip.text) return;
+        const pasted = pastedSpans(clip, one.rangeOffset, one.text, m.getValue());
+        if (!pasted.length) return;
+        const ids = new Set(pasted.map(s => s.id));
+        setDecorations([...carriedSpans().filter(s => !ids.has(s.id)), ...pasted]);
+        clipRef.current = null;
+    };
+
+    /** The pending cut's objects are deleted after all: the clip is dropped and the text read again. */
+    const dropClip = (): void => {
+        clipRef.current = null;
+        readEdit();
+    };
+
     handlers.current = {
         read: () => readEdit(),
-        content: () => {
+        content: changes => {
+            trackClip(changes);
             updateUndoKey();
             const editor = editorRef.current;
             const sync = syncRef.current;
@@ -613,7 +722,12 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
             void import('../../../joiner').then(({ UndoAction, DUser }) => { UndoAction.new(1, DUser.current, false).commit(); });
         }, APP_UNDO_KEY);
-        editor.onDidChangeModelContent(() => handlers.current.content());
+        editor.onDidChangeModelContent(e => handlers.current.content(e.changes));
+        // T7 D-5: in the capture phase the selection is still there; the change that follows is the cut.
+        editor.getDomNode()?.addEventListener('cut', () => {
+            const m = editor.getModel();
+            if (m) armedRef.current = { text: m.getValue(), spans: carriedSpans() };
+        }, true);
         updateUndoKey();
     };
 
@@ -637,6 +751,12 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                     <span className={'textual-tab__status' + (shownStatus.error ? ' textual-tab__status--error' : '')}
                           role="status" title={refusalTitle}>
                         {shownStatus.text}
+                        {status.kind === 'cut' && (
+                            <button type="button" className="textual-tab__stale-reload" title="Delete the cut objects instead of waiting for their paste"
+                                    onClick={dropClip}>
+                                Delete
+                            </button>
+                        )}
                     </span>
                 ) : null}
                 <span className="textual-tab__spacer" />

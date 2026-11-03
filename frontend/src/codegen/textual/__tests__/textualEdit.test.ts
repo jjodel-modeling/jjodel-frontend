@@ -14,7 +14,7 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { APPLY_DELAY_MS, appliedSpans, certainSpans, editDecision, editStatusText, onModelPrint, pauseOf, planEdit } from '../ui/TextualTab';
+import { APPLY_DELAY_MS, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, onModelPrint, outerMarks, pastedSpans, pauseOf, planEdit } from '../ui/TextualTab';
 import type { EditBase, TextSync } from '../ui/TextualTab';
 import { confirmRows, needsConfirmation } from '../ui/TextConfirmPanel';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
@@ -332,5 +332,68 @@ describe('the panel of the matches to confirm', () => {
         const { text, spans } = edited(baseOf(null), [['1980', '1981']]);
         const { plan } = planEdit(baseOf(null), text, spans);
         expect(needsConfirmation(plan)).toBe(false);
+    });
+});
+
+// ---- Step T7: a cut pasted whole, and the marker of a misplaced outer reference ------------------------------------
+
+describe('a cut pasted whole carries its spans (T7 D-5)', () => {
+    const plain = baseOf(null);
+    const line = '    Member ann {}\n';
+    const at = plain.text.indexOf(line);
+    const afterCut = plain.text.slice(0, at) + plain.text.slice(at + line.length);
+    const clip = cutClip(plain.text, plain.spans, at, line.length)!;
+
+    it('the cut holds the spans wholly inside it; one with no whole object holds nothing (mutant: partial spans kept)', () => {
+        expect(at).toBeGreaterThan(0);
+        expect(clip).toEqual({ text: line, spans: [{ id: 'm1', start: 4, end: 4 + 'Member ann {}'.length }] });
+        expect(cutClip(plain.text, plain.spans, at, 6)).toBeNull();
+    });
+
+    it('pasted identical elsewhere, the object is certain and moves, no panel (mutant: spans not re-attached)', () => {
+        const text = line + afterCut;
+        const carried = carry(carry(plain.spans, at, line.length, 0), 0, 0, line.length).filter(x => x.end > x.start);
+        const spans = [...carried, ...pastedSpans(clip, 0, line, text)];
+        const { parsed, plan } = planEdit(plain, text, spans);
+        expect(plan.diff!.match.matches.find(m => m.model === 'm1')).toMatchObject({ by: 'span', uncertain: false });
+        expect(plan.lines).toEqual(['set city.members -= ann']);
+        expect(editDecision(text, syncOf(plain.text), parsed, plan, false)).toEqual({ kind: 'apply' });
+        // Without the carried span the same text asks (R-TXT-18).
+        expect(editDecision(text, syncOf(plain.text), parsed, planEdit(plain, text, carried).plan, false)).toEqual({ kind: 'confirm' });
+    });
+
+    it('a paste with the original still in the text, or of another text, carries nothing: a copy is new (R-TXT-22; mutant: no count of the copies)', () => {
+        expect(pastedSpans(clip, 0, line, line + plain.text)).toEqual([]);
+        expect(pastedSpans(clip, 0, 'Member ann {}', 'Member ann {}' + afterCut)).toEqual([]);
+    });
+
+    it('until pasted, the deletion of a cut object is held (mutant: the cut deletes on the pause)', () => {
+        const free = baseOf(null, objects({ b2: { borrowedBy: null } }));
+        const where = free.text.indexOf(line);
+        const freeClip = cutClip(free.text, free.spans, where, line.length)!;
+        const { plan } = planEdit(free, free.text.slice(0, where) + free.text.slice(where + line.length), carry(free.spans, where, line.length, 0));
+        expect(plan.lines).toEqual(['delete ann']);
+        expect(heldByCut(freeClip, free, plan)).toBe(1);
+        const other = planEdit(free, free.text.replace('1980', '1981'), free.spans).plan;
+        expect(other.lines).toEqual(['set cosmos.year = 1981']);
+        expect(heldByCut(freeClip, free, other)).toBe(0);
+        expect(heldByCut(null, free, plan)).toBe(0);
+        expect(editStatusText({ kind: 'cut', count: 1 })).toEqual({ text: 'Cut · paste to move it', error: false });
+    });
+});
+
+describe('a misplaced outer reference is marked on its line (T7 (5), R-TXT-32 code outer)', () => {
+    it('the @"id" token inside its owner, not one of an object it contains (mutant: no marker; first token of the text)', () => {
+        const base = baseOf(null, objects({ b1: { borrowedBy: 'elsewhere' }, b4: { borrowedBy: 'elsewhere' } }));
+        expect(base.text.split('@"elsewhere"')).toHaveLength(3);
+        const second = base.text.indexOf('@"elsewhere"', base.text.indexOf('@"elsewhere"') + 1);
+        const text = base.text.slice(0, second) + '@"other"' + base.text.slice(second + '@"elsewhere"'.length);
+        const { parsed, plan } = planEdit(base, text, carry(base.spans, second, '@"elsewhere"'.length, '@"other"'.length));
+        expect(plan.refusals.map(r => r.code)).toEqual(['outer']);
+        const marks = outerMarks(text, parsed, plan.diff!);
+        expect(marks).toHaveLength(1);
+        expect(text.slice(marks[0].start, marks[0].end)).toBe('@"other"');
+        expect(marks[0].start).toBe(second);
+        expect(marks[0].message).toContain('outside the text');
     });
 });
