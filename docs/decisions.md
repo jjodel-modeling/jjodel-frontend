@@ -7247,6 +7247,15 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-FA-11 (2026-11-03), decided by the chat under Alfonso's «decidi tu» 2026-11-03 11:32, evidence: measured (P-2026-11-03-1016), verified: none, reversible: trunk**: a builtin that fails inside a JjTL
   expression stops the mapping with an error on every path, never a warning with `null`: a transformation that goes on writes a target model that is wrong and looks done.
   With this, JjEL can be the only parser of a forall collection.
+- **R-JTG-15** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL
+  `let` holds the value of its expression, computed once, at the binding: the calls and environment lookups it holds
+  are carried out there, so two uses of the name are the same object; a source element stays the element. Closes #515.
+  Extends R-JTG-5 and R-JTG-6, which stay unchanged. Evidence: `class2relational.test.ts`, `called-lazy-rules.test.ts`
+  and the app probe of P-2026-11-03-2111.
+- **R-JTG-16** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk):
+  `unique` is allowed on called rules: `unique rule f(x)` returns the same target for a second call with the same
+  arguments and environment, as `unique lazy` does; the double-claim error of R-JTG-4 applies. A rule not declared
+  `unique` keeps R-JTG-6's fresh target per call. Evidence: the tests of P-2026-11-03-2111.
 
 ## Superate
 
