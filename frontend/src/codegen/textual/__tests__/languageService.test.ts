@@ -69,7 +69,7 @@ describe('semantic tokens', () => {
         const c: TolerantCase = { name: 'garage, begin-end', mm: metamodelOf(GARAGE), g, objects: objectsOf(GARAGE) };
         const text = printOf(c);
         const a = analyse(c, text);
-        expect(show(text, a.tokens).slice(0, 3)).toEqual(['Car:type', 'alpha:name+declaration', 'begin:keyword']);
+        expect(show(text, a.tokens).slice(0, 5)).toEqual(['Car:type', 'alpha:name+declaration', 'begin:keyword', 'speed:feature', '1.5:number']);
         expect(a.tokens.filter(t => t.role === 'keyword').map(t => text.slice(t.start, t.end))).toEqual(expect.arrayContaining(['begin', 'end']));
     });
 
@@ -116,6 +116,14 @@ describe('semantic tokens', () => {
         }
         const expected = show(text, a.tokens).flatMap(s => (s.startsWith('/* x') ? ['/* x:comment', ' y */:comment'] : [s]));
         expect(decoded).toEqual(expected);
+        // No token runs past its line's end.
+        line = 0;
+        col = 0;
+        for (let i = 0; i < data.length; i += 5) {
+            col = data[i] ? data[i + 1] : col + data[i + 1];
+            line += data[i];
+            expect(col + data[i + 2]).toBeLessThanOrEqual(lines[line].length);
+        }
         expect(a.encodedTokens()).toBe(data);
     });
 });
@@ -193,6 +201,9 @@ describe('folding ranges', () => {
         const folds = analyse(LIB, commented).folds;
         expect(folds[0]).toEqual({ startLine: 1, endLine: 2, kind: 'comment' });
         expect(folds.filter(f => f.kind === 'comment')).toHaveLength(1);
+        // A trailing comment on the next line ends the run: one own-line comment does not fold.
+        const trailing = '// a\n' + text.replace('Library city {', 'Library city { // t');
+        expect(analyse(LIB, trailing).folds.filter(f => f.kind === 'comment')).toEqual([]);
     });
 });
 
@@ -204,6 +215,8 @@ describe('definition and references', () => {
     it('a reference goes to the name of the object it names', () => {
         const d = a.definitionAt(at(text, 'reader1') + 3);
         expect(d).toEqual({ start: declared, end: declared + 'reader1'.length });
+        // The caret just after the word still names it.
+        expect(a.definitionAt(at(text, 'reader1') + 'reader1'.length)).toEqual(d);
         expect(a.definitionAt(at(text, 'borrowedBy'))).toBeNull();
         expect(a.definitionAt(at(text, 'book1'))).toBeNull();
     });
