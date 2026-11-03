@@ -1313,3 +1313,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: no UI change, visual check not applicable
 **Notes**: Rollback tag `pre-textual-t6a` on `d52bb1c58` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-0011/result.json`.
 **Prompt document name**: 2026-11-03 00:11
+
+## 2026-11-03 — feat(codegen): edit an existing model from its text (P-2026-11-03-0021, P-2026-11-03-0049)
+**Prompt**: T6b of the textual notation: the Text tab edits an existing model through the T6a engine (R-TXT-22, R-TXT-26, R-TXT-30): apply after a pause as one undo step, refusals in the bar, a confirm panel for uncertain or referenced deletions, a stale block when the model changes under a pending edit. 0021 stopped at the context ceiling (RC-51); 0049 closed it from its handoff: gates, commit, this entry.
+**Files touched**: a5a9bb281: `frontend/src/codegen/textual/textDiff.ts`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `ui/TextConfirmPanel.tsx` (new), `__tests__/textualEdit.test.ts` (new); Status lines of the 0021 and 0049 prompts; this entry
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato 2026-11-03 (chat, unattended, RC-23) on the crops `2-attribute-applied`, `7-broken`, `9-stale`, `10-panel` of 0021: status in the bar, markers, nothing shifted, panel with Confirm, Reprint line. In-app probe of 0021: 34 PASS, crops in `~/.jjodel-lanes/P-2026-11-03-0021/`. The probe's diagram edit was a direct write to the model (`SetFieldAction` on a DValue), not a canvas click. Deleting a cross-model target, unprinted objects and a move refusal are covered by unit tests only.
+**Notes**: Gates: tsc 0; vitest src/codegen + textualPicker 54 files 2643 passed; build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Bench 12/12 killed + probe mutant "two undo steps" killed (commit body). Process: 0021 started a dev server (port 3076) for its probe, against the no-background-tasks rule of its prompt; it is stopped. Open decision: a stale text is never applied (handoff decision 1).
+**Prompt document name**: 2026-11-03 00:21, 2026-11-03 00:49

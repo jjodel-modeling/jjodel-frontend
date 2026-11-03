@@ -1,10 +1,11 @@
 /**
- * TextualTab — the model's text in the textual notation, read-only (R-TXT-23, slice T2b, P-2026-11-02-0040).
+ * TextualTab — the model's text in the textual notation (R-TXT-23, slice T2b, P-2026-11-02-0040), editable since step
+ * T6b (P-2026-11-03-0021, R-TXT-22, R-TXT-26): an edit is applied to the model on a pause in typing (`TextualTab`).
  *
  * Opened by openTextualTab.tsx, from the toolbar picker's textual entry (dataManagerOption.ts `TEXTUAL_OPTION_VALUE`).
  * The model is read as a JjGen generator reads it (`buildEvalContext` with the model as the extent, as GeneratorPane
  * does), turned into T1's input (`textInputOf`), and printed with the C-like style; a toggle shows the concrete EBNF
- * of the same grammar instead. Both are read-only.
+ * of the same grammar instead, read-only.
  *
  * `NewTextualTab` is the «new» mode (slice T2c, P-2026-11-02-0045): an empty, editable text of a new model of a
  * metamodel, read after a pause in typing (modelLines.ts `readNewModel`); errors and values JjScript cannot write are
@@ -21,7 +22,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useStore } from 'react-redux';
 import Editor from '@monaco-editor/react';
 import type { OnMount } from '@monaco-editor/react';
 import { buildEvalContext } from '../../../jjscript';
@@ -31,14 +32,23 @@ import { TEXTUAL_SYNTAX_KEY, textualLanguageNameOf, textualLanguageOf, textualOp
 import { concreteGrammarEbnf } from '../concreteGrammar';
 import { classFeatures } from '../metamodel';
 import { readNewModel } from '../modelLines';
+import { isApplicableParse, parseText } from '../parser';
+import type { TextParseResult } from '../parser';
 import { printTextModel } from '../printer';
-import type { UnprintedObject } from '../printer';
+import type { ObjectSpan, UnprintedObject } from '../printer';
+import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
+import { planTextEdit } from '../textDiff';
+import type { ApplyRefusal, TextEditPlan } from '../textDiff';
+import { matchObjects } from '../textMatch';
+import type { TextMatch } from '../textMatch';
 import { elementIdsOf, readSyntax, textualNotation } from '../syntaxRecord';
 import type { AnnotationIssue, ElementIds } from '../annotations';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import type { DecodedSyntax } from '../syntaxRecord';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import type { NewModelReading } from '../modelLines';
+import TextConfirmPanel, { confirmRows, needsConfirmation } from './TextConfirmPanel';
+import type { ConfirmRow } from './TextConfirmPanel';
 import './TextualTab.scss';
 
 /** T1's input: the metamodel and the objects as plain data (metamodel.ts). */
@@ -143,8 +153,23 @@ export function textInputOf(globals: Readonly<Record<string, any>>): TextInput {
     return { metamodel, objects };
 }
 
-/** The text and the EBNF of the C-like notation for the globals, with the stored annotations; a failure is reported, never thrown. */
-export function textualView(globals: Readonly<Record<string, any>>, stored: StoredNotation = NO_ANNOTATIONS): TextualView {
+/** What an edit of the text is diffed against (step T6b): the model as the text was printed from it, and the print's spans. */
+export interface EditBase {
+    readonly mm: TextMetamodel;
+    readonly grammar: ConcreteGrammar;
+    readonly objects: readonly TextObject[];
+    readonly spans: readonly ObjectSpan[];
+    readonly unprinted: readonly UnprintedObject[];
+}
+
+/** The view, and the base of an edit when the text could be printed. */
+export interface ModelReading {
+    readonly view: TextualView;
+    readonly base: EditBase | null;
+}
+
+/** The view of `textualView` and the base an edit of its text is diffed against; a failure is reported, never thrown. */
+export function readModel(globals: Readonly<Record<string, any>>, stored: StoredNotation = NO_ANNOTATIONS): ModelReading {
     let input: TextInput;
     let grammar: ConcreteGrammar;
     let issues: readonly AnnotationIssue[];
@@ -152,26 +177,143 @@ export function textualView(globals: Readonly<Record<string, any>>, stored: Stor
         input = textInputOf(globals);
         ({ grammar, issues } = textualNotation(input.metamodel, stored.decoded, stored.ids));
     } catch (e) {
-        return { text: '', ebnf: '', error: messageOf(e) };
+        return { view: { text: '', ebnf: '', error: messageOf(e) }, base: null };
     }
     const ebnf = concreteGrammarEbnf(grammar);
     try {
         const printed = printTextModel(grammar, input.objects);
         const warnings = unprintedIssues(printed.unprinted);
-        return { text: printed.text, ebnf, error: null, issues, ...(warnings.length ? { warnings } : {}) };
+        return {
+            view: { text: printed.text, ebnf, error: null, issues, ...(warnings.length ? { warnings } : {}) },
+            base: { mm: input.metamodel, grammar, objects: input.objects, spans: printed.spans, unprinted: printed.unprinted },
+        };
     } catch (e) {
-        return { text: '', ebnf, error: messageOf(e), issues };
+        return { view: { text: '', ebnf, error: messageOf(e), issues }, base: null };
     }
 }
 
+/** The text and the EBNF of the C-like notation for the globals, with the stored annotations; a failure is reported, never thrown. */
+export function textualView(globals: Readonly<Record<string, any>>, stored: StoredNotation = NO_ANNOTATIONS): TextualView {
+    return readModel(globals, stored).view;
+}
+
 /** The model as the eval context reads it; the project is the user's (jjscript/executor/utils.ts `getProject`). */
-function modelView(lookup: Readonly<Record<string, any>>, modelId: string): TextualView {
+function modelReading(lookup: Readonly<Record<string, any>>, modelId: string): ModelReading {
     try {
         const globals = buildEvalContext(evalContextFor(lookup, modelId, ''), { extentModelId: modelId });
-        return textualView(globals, storedNotation(lookup, lookup[modelId]?.instanceof));
+        return readModel(globals, storedNotation(lookup, lookup[modelId]?.instanceof));
     } catch (e) {
-        return { text: '', ebnf: '', error: messageOf(e) };
+        return { view: { text: '', ebnf: '', error: messageOf(e) }, base: null };
     }
+}
+
+// ---- Editing the text of a model (step T6b, P-2026-11-03-0021; R-TXT-22, R-TXT-26) -----------------------------------
+
+/** The pause in typing after which an edited text is read and, when nothing blocks it, applied (R-TXT-26). */
+export const APPLY_DELAY_MS = 800;
+
+export interface Pause {
+    /** Restarts the wait. */
+    readonly poke: () => void;
+    readonly cancel: () => void;
+}
+
+/** A pause in typing: every `poke` restarts a wait of `delay` ms, and `run` is called once a wait ends with no new poke. */
+export function pauseOf(delay: number, run: () => void): Pause {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const cancel = (): void => {
+        if (timer !== null) clearTimeout(timer);
+        timer = null;
+    };
+    return { poke: () => { cancel(); timer = setTimeout(() => { timer = null; run(); }, delay); }, cancel };
+}
+
+/** What the text and the model agreed on last, at a print or an application: the editor's text and the model's print. */
+export interface TextSync {
+    readonly text: string;
+    readonly model: string;
+}
+
+/**
+ * A change of the model's print (a diagram edit, an undo, another tab): reprint when the editor holds no pending
+ * edit, else keep the user's text and say the model changed. Never while the tab's own application runs: its result
+ * becomes the new agreement when the run ends.
+ */
+export function onModelPrint(sync: TextSync, modelText: string, editorText: string, applying: boolean): 'none' | 'reprint' | 'keep' {
+    if (applying || modelText === sync.model) return 'none';
+    return editorText === sync.text ? 'reprint' : 'keep';
+}
+
+/** What the tab does with an edited text once read (R-TXT-26). */
+export type EditDecision =
+    /** The text is the agreed one: no pending edit. */
+    | { readonly kind: 'synced' }
+    /** The text does not parse: markers, the model untouched. */
+    | { readonly kind: 'errors'; readonly count: number }
+    /** The model changed under the edit: not applied, so the other change is not undone unasked. */
+    | { readonly kind: 'stale' }
+    /** Uncertain matches or deletions referenced elsewhere only: the panel asks. */
+    | { readonly kind: 'confirm' }
+    | { readonly kind: 'refused'; readonly reasons: readonly string[] }
+    /** The text asks for no change of the model. */
+    | { readonly kind: 'unchanged' }
+    | { readonly kind: 'apply' };
+
+/** The decision on a read text: the parse's errors first, then the change under the edit, the panel, the refusals. */
+export function editDecision(text: string, sync: TextSync, parsed: TextParseResult, plan: TextEditPlan, stale: boolean): EditDecision {
+    if (text === sync.text) return { kind: 'synced' };
+    if (!isApplicableParse(parsed)) return { kind: 'errors', count: Math.max(parsed.errors.length, 1) };
+    if (stale) return { kind: 'stale' };
+    if (needsConfirmation(plan)) return { kind: 'confirm' };
+    if (plan.refusals.length) return { kind: 'refused', reasons: plan.refusals.map(r => r.message) };
+    if (!plan.lines?.length) return { kind: 'unchanged' };
+    return { kind: 'apply' };
+}
+
+/** What the lookup gives an edit besides the objects (textApply.ts `defaultedSlots`, `referencedElsewhere`). */
+export interface EditEvidence {
+    readonly defaults?: ReadonlyMap<string, ReadonlySet<string>>;
+    readonly referencedElsewhere?: ReadonlySet<string>;
+}
+
+/** Parses the text and plans its application on the base, with the spans the editor carried over the edit (R-TXT-22). */
+export function planEdit(base: EditBase, text: string, carried: readonly ObjectSpan[], evidence: EditEvidence = {},
+                         confirmed?: readonly ApplyRefusal['code'][]): { readonly parsed: TextParseResult; readonly plan: TextEditPlan } {
+    const parsed = parseText(text, base.grammar);
+    const plan = planTextEdit({
+        mm: base.mm, grammar: base.grammar, model: base.objects, parsed, unprinted: base.unprinted, previous: carried,
+        ...(evidence.defaults ? { defaults: evidence.defaults } : {}),
+        ...(evidence.referencedElsewhere ? { referencedElsewhere: evidence.referencedElsewhere } : {}),
+        ...(confirmed ? { confirmed } : {}),
+    });
+    return { parsed, plan };
+}
+
+/**
+ * The spans of a parse that identify their model object, for the editor to carry to the next parse (R-TXT-22): those
+ * of the certain matches only. An uncertain match carried as a span would read as certain the next time.
+ */
+export function certainSpans(parsed: Pick<TextParseResult, 'spans'>, match: Pick<TextMatch, 'matches'>): ObjectSpan[] {
+    const modelOf = new Map(match.matches.filter(m => !m.uncertain).map(m => [m.text, m.model]));
+    return parsed.spans.flatMap(s => { const id = modelOf.get(s.id); return id ? [{ id, start: s.start, end: s.end }] : []; });
+}
+
+/**
+ * The spans of an applied text, in the model after the run: the plan's own matches (a confirmed one included: it was
+ * applied as that object), then the re-match of the created objects against the new model (`rematch`). A created
+ * homonym pairs by order there, as the run appended them in text order; a model object is never given two spans.
+ */
+export function appliedSpans(parsed: Pick<TextParseResult, 'spans'>, plan: Pick<TextMatch, 'matches' | 'created'>,
+                             rematch: Pick<TextMatch, 'matches'>): ObjectSpan[] {
+    const modelOf = new Map(plan.matches.map(m => [m.text, m.model]));
+    const used = new Set(modelOf.values());
+    const created = new Set(plan.created);
+    for (const m of rematch.matches) {
+        if (!created.has(m.text) || used.has(m.model) || (m.uncertain && m.by !== 'homonym')) continue;
+        modelOf.set(m.text, m.model);
+        used.add(m.model);
+    }
+    return parsed.spans.flatMap(s => { const id = modelOf.get(s.id); return id ? [{ id, start: s.start, end: s.end }] : []; });
 }
 
 /** The issues of the notation, and the warnings of the objects left out, one line each, under the tab's bar; nothing when there is none. */
@@ -195,6 +337,26 @@ function NotationIssues({ issues, warnings }: { readonly issues: readonly Annota
     );
 }
 
+/** What the bar says of the edit: a decision, or a step of the application. */
+type EditStatus = EditDecision | { readonly kind: 'editing' } | { readonly kind: 'applying' } | { readonly kind: 'applied'; readonly failed: number };
+
+/** The bar's line for an edit status, and whether it reads as an error. */
+export function editStatusText(s: EditStatus): { readonly text: string; readonly error: boolean } {
+    switch (s.kind) {
+        case 'synced': return { text: 'Up to date', error: false };
+        case 'editing': return { text: 'Editing…', error: false };
+        case 'errors': return { text: `${s.count} problem${s.count === 1 ? '' : 's'} · not applied`, error: true };
+        case 'stale': return { text: 'Not applied', error: true };
+        case 'confirm': return { text: 'Not applied · confirm below', error: false };
+        case 'refused': return { text: `Not applied: ${s.reasons[0]}${s.reasons.length > 1 ? ` (+${s.reasons.length - 1})` : ''}`, error: true };
+        case 'unchanged': return { text: 'No change', error: false };
+        case 'apply': case 'applying': return { text: 'Applying…', error: false };
+        case 'applied': return s.failed
+            ? { text: `Applied, ${s.failed} line${s.failed === 1 ? '' : 's'} failed`, error: true }
+            : { text: 'Applied', error: false };
+    }
+}
+
 type TextualMode = 'text' | 'ebnf';
 
 const MODES: ReadonlyArray<{ readonly mode: TextualMode; readonly label: string; readonly icon: string; readonly title: string }> = [
@@ -205,6 +367,28 @@ const MODES: ReadonlyArray<{ readonly mode: TextualMode; readonly label: string;
 /** The glyph margin plus the decorations fill the 30 px the global Monaco rules give the margin (ScriptTab.tsx). */
 const EDITOR_DECORATIONS_WIDTH = 10;
 
+const EDITOR_OPTIONS = {
+    minimap: { enabled: false },
+    lineNumbers: 'off',
+    folding: false,
+    lineDecorationsWidth: EDITOR_DECORATIONS_WIDTH,
+    glyphMargin: true,
+    fontSize: 13,
+    fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
+    scrollBeyondLastLine: false,
+    renderLineHighlight: 'none',
+    wordWrap: 'off',
+} as const;
+
+/** The owner of the edit's markers in the Monaco model. */
+const EDIT_MARKER_OWNER = 'textual-edit';
+
+/** The context key that sends Cmd/Ctrl+Z to the app's undo: set while the text holds no pending edit (R-TXT-26). */
+const APP_UNDO_KEY = 'textualNoPendingEdit';
+
+type MonacoEditor = Parameters<OnMount>[0];
+type MonacoApi = Parameters<OnMount>[1];
+
 export interface TextualTabProps {
     readonly modelId: string;
     /** The picker entry's label: the language's name (dataManagerOption.ts `textualOptionLabel`). */
@@ -213,17 +397,222 @@ export interface TextualTabProps {
     readonly tabId: string;
 }
 
+/**
+ * The Text view is editable (step T6b, R-TXT-26): on a pause in typing the text is parsed, diffed against the model
+ * and, when nothing refuses it, applied as one undo step; the text stays as typed. The previous parse's spans, carried
+ * by Monaco decorations, are the first evidence of identity (R-TXT-22). A change of the model from elsewhere reprints
+ * a text with no pending edit and never overwrites one. With no pending edit, Cmd/Ctrl+Z is the app's undo, whose
+ * change reprints the text: one step restores model and text together. The EBNF view stays read-only.
+ */
 export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     const lookup = useSelector((state: any) => state.idlookup) as Record<string, any>;
+    const store = useStore();
     const [mode, setMode] = useState<TextualMode>('text');
-    const view = useMemo(() => modelView(lookup ?? {}, modelId), [lookup, modelId]);
+    const read = useMemo(() => modelReading(lookup ?? {}, modelId), [lookup, modelId]);
+    const view = read.view;
     const model = lookup?.[modelId];
     const modelName = typeof model?.name === 'string' && model.name ? model.name : 'Unnamed';
     // The picker's rule (Toolbar.tsx), read live: a language name set after the tab opened shows here too.
     const metamodel = lookup?.[model?.instanceof];
     const shownLabel = metamodel ? textualOptionLabel(metamodel.name, textualLanguageNameOf(lookup, modelId)) : label;
-    const shown = mode === 'text' ? view.text : view.ebnf;
     const failed = view.error !== null && (mode === 'text' || !view.ebnf);
+
+    const [status, setStatus] = useState<EditStatus>({ kind: 'synced' });
+    const [stale, setStale] = useState(false);
+    const [confirm, setConfirm] = useState<{ readonly text: string; readonly rows: readonly ConfirmRow[] } | null>(null);
+    const readRef = useRef(read);
+    readRef.current = read;
+    const editorRef = useRef<MonacoEditor | null>(null);
+    const monacoRef = useRef<MonacoApi | null>(null);
+    const syncRef = useRef<TextSync | null>(null);
+    const staleRef = useRef(false);
+    const applyingRef = useRef(false);
+    const decorationsRef = useRef<{ ids: string[]; model: Map<string, string> }>({ ids: [], model: new Map() });
+    const undoKeyRef = useRef<{ set(v: boolean): void } | null>(null);
+    const handlers = useRef({ read: () => {}, content: () => {} });
+    const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
+    useEffect(() => () => pause.cancel(), [pause]);
+
+    const setDecorations = (spans: readonly ObjectSpan[]): void => {
+        const editor = editorRef.current;
+        const monaco = monacoRef.current;
+        const m = editor?.getModel();
+        if (!monaco || !m) return;
+        const kept = spans.filter(s => s.end > s.start);
+        const ids = m.deltaDecorations(decorationsRef.current.ids, kept.map(s => {
+            const from = m.getPositionAt(s.start);
+            const to = m.getPositionAt(s.end);
+            return {
+                range: new monaco.Range(from.lineNumber, from.column, to.lineNumber, to.column),
+                options: { stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges },
+            };
+        }));
+        decorationsRef.current = { ids, model: new Map(ids.map((id, i) => [id, kept[i].id])) };
+    };
+
+    /** The previous parse's spans, where the edit carried them (R-TXT-22). */
+    const carriedSpans = (): ObjectSpan[] => {
+        const m = editorRef.current?.getModel();
+        if (!m) return [];
+        const { ids, model: owners } = decorationsRef.current;
+        return ids.flatMap(id => {
+            const r = m.getDecorationRange(id);
+            const owner = owners.get(id);
+            return r && owner ? [{ id: owner, start: m.getOffsetAt(r.getStartPosition()), end: m.getOffsetAt(r.getEndPosition()) }] : [];
+        });
+    };
+
+    const setMarkers = (parsed: TextParseResult | null): void => {
+        const monaco = monacoRef.current;
+        const m = editorRef.current?.getModel();
+        if (!monaco || !m) return;
+        const length = m.getValueLength();
+        monaco.editor.setModelMarkers(m, EDIT_MARKER_OWNER, (parsed?.errors ?? []).map(e => {
+            const from = m.getPositionAt(Math.min(e.start, length));
+            const to = m.getPositionAt(Math.min(Math.max(e.end, e.start + 1), length));
+            return {
+                severity: monaco.MarkerSeverity.Error,
+                message: e.message,
+                startLineNumber: from.lineNumber, startColumn: from.column,
+                endLineNumber: to.lineNumber, endColumn: to.column,
+            };
+        }));
+    };
+
+    const updateUndoKey = (): void => {
+        const editor = editorRef.current;
+        undoKeyRef.current?.set(!!editor && !!syncRef.current && editor.getValue() === syncRef.current.text);
+    };
+
+    /** The model's text replaces the editor's; the view state (caret, scroll) is kept where the text allows. */
+    const reprint = (r: ModelReading): void => {
+        const editor = editorRef.current;
+        if (!editor || !r.base) return;
+        pause.cancel();
+        const viewState = editor.saveViewState();
+        syncRef.current = { text: r.view.text, model: r.view.text };
+        if (editor.getValue() !== r.view.text) editor.setValue(r.view.text);
+        if (viewState) editor.restoreViewState(viewState);
+        setDecorations(r.base.spans);
+        setMarkers(null);
+        staleRef.current = false;
+        setStale(false);
+        setConfirm(null);
+        setStatus({ kind: 'synced' });
+        updateUndoKey();
+    };
+
+    const evidence = (base: EditBase): EditEvidence => {
+        const now = ((store.getState() as any)?.idlookup ?? {}) as Record<string, any>;
+        return { defaults: defaultedSlots(now, base.objects), referencedElsewhere: referencedElsewhere(now, modelId) };
+    };
+
+    const apply = async (text: string, parsed: TextParseResult, plan: TextEditPlan): Promise<void> => {
+        applyingRef.current = true;
+        setStatus({ kind: 'applying' });
+        let failedLines = 0;
+        try {
+            failedLines = (await applyTextEdit(modelId, plan)).failed;
+        } catch {
+            failedLines = plan.lines?.length ?? 1;
+        } finally {
+            applyingRef.current = false;
+        }
+        // The applied text is the new agreement: it stays as typed, with the spans of its objects in the new model.
+        const after = modelReading(((store.getState() as any)?.idlookup ?? {}) as Record<string, any>, modelId);
+        syncRef.current = { text, model: after.view.text };
+        const editor = editorRef.current;
+        if (after.base && plan.diff && editor?.getValue() === text) {
+            const b = after.base;
+            setDecorations(appliedSpans(parsed, plan.diff.match, matchObjects({ mm: b.mm, grammar: b.grammar, model: b.objects, parsed, previous: carriedSpans() })));
+        }
+        setStatus({ kind: 'applied', failed: failedLines });
+        updateUndoKey();
+        if (editor && editor.getValue() !== text) pause.poke(); // typed during the run
+    };
+
+    /** Reads the editor's text after a pause; `confirmed`, from the panel, drops the refusals it confirms. */
+    const readEdit = (confirmed?: readonly ApplyRefusal['code'][]): void => {
+        const editor = editorRef.current;
+        const sync = syncRef.current;
+        const r = readRef.current;
+        if (!editor || !sync || !r.base) return;
+        if (applyingRef.current) { pause.poke(); return; }
+        const text = editor.getValue();
+        if (text === sync.text) {
+            setMarkers(null);
+            setConfirm(null);
+            if (staleRef.current) reprint(r); else setStatus({ kind: 'synced' });
+            return;
+        }
+        const ev = evidence(r.base);
+        const { parsed, plan } = planEdit(r.base, text, carriedSpans(), ev, confirmed);
+        setMarkers(parsed);
+        // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones.
+        if (plan.diff) setDecorations(certainSpans(parsed, plan.diff.match));
+        const d = editDecision(text, sync, parsed, plan, staleRef.current);
+        setConfirm(d.kind === 'confirm'
+            ? { text, rows: confirmRows({ plan, parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }) }
+            : null);
+        if (d.kind === 'apply') void apply(text, parsed, plan); else setStatus(d);
+    };
+
+    handlers.current = {
+        read: () => readEdit(),
+        content: () => {
+            updateUndoKey();
+            const editor = editorRef.current;
+            const sync = syncRef.current;
+            if (editor && sync && editor.getValue() === sync.text && !staleRef.current) {
+                pause.cancel();
+                setMarkers(null);
+                setConfirm(null);
+                setStatus({ kind: 'synced' });
+                return;
+            }
+            setStatus({ kind: 'editing' });
+            pause.poke();
+        },
+    };
+
+    const onConfirm = (): void => {
+        const editor = editorRef.current;
+        if (!confirm || !editor || editor.getValue() !== confirm.text) { setConfirm(null); return; }
+        setConfirm(null);
+        readEdit(['uncertain', 'referenced']);
+    };
+
+    // Point 4: the model changed from elsewhere.
+    useEffect(() => {
+        const sync = syncRef.current;
+        const editor = editorRef.current;
+        if (!sync || !editor || !read.base) return;
+        const action = onModelPrint(sync, view.text, editor.getValue(), applyingRef.current);
+        if (action === 'reprint') reprint(read);
+        else if (action === 'keep') {
+            staleRef.current = true;
+            setStale(true);
+            setConfirm(null);
+        }
+    }, [view.text]);
+
+    const onMount: OnMount = (editor, monaco) => {
+        editorRef.current = editor;
+        monacoRef.current = monaco;
+        const r = readRef.current;
+        syncRef.current = { text: editor.getValue(), model: r.view.text };
+        if (r.base && editor.getValue() === r.view.text) setDecorations(r.base.spans);
+        const key = editor.createContextKey<boolean>(APP_UNDO_KEY, true);
+        undoKeyRef.current = key;
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
+            void import('../../../joiner').then(({ UndoAction, DUser }) => { UndoAction.new(1, DUser.current, false).commit(); });
+        }, APP_UNDO_KEY);
+        editor.onDidChangeModelContent(() => handlers.current.content());
+        updateUndoKey();
+    };
+
+    const shownStatus = editStatusText(stale && status.kind !== 'errors' ? { kind: 'stale' } : status);
+    const refusalTitle = status.kind === 'refused' ? status.reasons.join('\n') : shownStatus.text;
 
     return (
         <div className="textual-tab">
@@ -233,11 +622,28 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                     <span className="textual-tab__name">{modelName}</span>
                     <span className="textual-tab__language">{shownLabel}</span>
                 </span>
-                <span className="textual-tab__readonly" title="Editing the text comes in a later slice">
-                    <i className="bi bi-lock" aria-hidden="true" />
-                    Read-only
-                </span>
+                {mode === 'ebnf' ? (
+                    <span className="textual-tab__readonly" title="The grammar is derived from the metamodel">
+                        <i className="bi bi-lock" aria-hidden="true" />
+                        Read-only
+                    </span>
+                ) : model && !failed ? (
+                    <span className={'textual-tab__status' + (shownStatus.error ? ' textual-tab__status--error' : '')}
+                          role="status" title={refusalTitle}>
+                        {shownStatus.text}
+                    </span>
+                ) : null}
                 <span className="textual-tab__spacer" />
+                {stale && (
+                    <span className="textual-tab__stale" role="alert">
+                        <i className="bi bi-exclamation-triangle" aria-hidden="true" />
+                        The model changed: your text is kept, not applied
+                        <button type="button" className="textual-tab__stale-reload" title="Replace the text with the model's"
+                                onClick={() => reprint(readRef.current)}>
+                            Reprint
+                        </button>
+                    </span>
+                )}
                 <div className="textual-tab__modes" role="group" aria-label="Shown text">
                     {MODES.map(m => (
                         <button
@@ -259,7 +665,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                 </button>
             </div>
             {model && <NotationIssues issues={view.issues} warnings={view.warnings} />}
-            <div className="textual-tab__body">
+            <div className="textual-tab__body textual-tab__body--layered">
                 {!model ? (
                     <div className="textual-tab__message">
                         <i className="bi bi-question-circle" aria-hidden="true" />
@@ -271,26 +677,24 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                         {`The model cannot be printed: ${view.error}`}
                     </div>
                 ) : (
-                    <Editor
-                        width="100%"
-                        height="100%"
-                        language="plaintext"
-                        value={shown}
-                        options={{
-                            readOnly: true,
-                            domReadOnly: true,
-                            minimap: { enabled: false },
-                            lineNumbers: 'off',
-                            folding: false,
-                            lineDecorationsWidth: EDITOR_DECORATIONS_WIDTH,
-                            glyphMargin: true,
-                            fontSize: 13,
-                            fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
-                            scrollBeyondLastLine: false,
-                            renderLineHighlight: 'none',
-                            wordWrap: 'off',
-                        }}
-                    />
+                    <>
+                        {/* The text stays mounted under the EBNF, so a pending edit survives the toggle. */}
+                        <div className={'textual-tab__layer' + (mode === 'text' ? '' : ' textual-tab__layer--hidden')}>
+                            {read.base && (
+                                <Editor width="100%" height="100%" language="plaintext" defaultValue={view.text}
+                                        onMount={onMount} options={EDITOR_OPTIONS} />
+                            )}
+                        </div>
+                        {mode === 'ebnf' && (
+                            <div className="textual-tab__layer">
+                                <Editor width="100%" height="100%" language="plaintext" value={view.ebnf}
+                                        options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }} />
+                            </div>
+                        )}
+                        {mode === 'text' && confirm && confirm.rows.length > 0 && (
+                            <TextConfirmPanel rows={confirm.rows} busy={status.kind === 'applying'} onConfirm={onConfirm} />
+                        )}
+                    </>
                 )}
             </div>
         </div>

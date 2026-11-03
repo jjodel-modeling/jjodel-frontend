@@ -207,6 +207,17 @@ export interface RefusalInput {
     readonly mm: TextMetamodel;
 }
 
+/** The model objects the deletions of `ops` remove: each deleted object and what it contains, at any depth. */
+export function deletedObjects(mm: TextMetamodel, model: readonly TextObject[], ops: readonly DiffOp[]): Set<string> {
+    const places = placesOf(model, featureTable(mm));
+    const contents = new Map<string, string[]>();
+    for (const [id, p] of places) contents.set(p.owner, [...(contents.get(p.owner) ?? []), id]);
+    const gone = new Set<string>();
+    const take = (id: string): void => { if (gone.has(id)) return; gone.add(id); (contents.get(id) ?? []).forEach(take); };
+    for (const op of ops) if (op.op === 'delete') take(op.model);
+    return gone;
+}
+
 /** The reasons not to apply, in this order: parse, uncertain matches, references from other models, unprinted objects, T7. */
 export function refusalsOf(input: RefusalInput): ApplyRefusal[] {
     const out: ApplyRefusal[] = [];
@@ -220,13 +231,7 @@ export function refusalsOf(input: RefusalInput): ApplyRefusal[] {
     }
     const elsewhere = input.referencedElsewhere;
     if (elsewhere?.size) {
-        const places = placesOf(input.model, featureTable(input.mm));
-        const contents = new Map<string, string[]>();
-        for (const [id, p] of places) contents.set(p.owner, [...(contents.get(p.owner) ?? []), id]);
-        const gone = new Set<string>();
-        const take = (id: string): void => { if (gone.has(id)) return; gone.add(id); (contents.get(id) ?? []).forEach(take); };
-        for (const op of input.diff.ops) if (op.op === 'delete') take(op.model);
-        const hit = [...gone].filter(id => elsewhere.has(id)).length;
+        const hit = [...deletedObjects(input.mm, input.model, input.diff.ops)].filter(id => elsewhere.has(id)).length;
         if (hit) out.push({ code: 'referenced', message: `${hit} deleted object${hit === 1 ? ' is' : 's are'} referenced from another model` });
     }
     if (hasUnprinted(input)) out.push({ code: 'unprinted', message: `${input.unprinted.length} object${input.unprinted.length === 1 ? ' is' : 's are'} not in the text` });
@@ -346,15 +351,21 @@ export interface TextEditPlan {
 export interface PlanInput extends DiffInput {
     readonly unprinted: readonly UnprintedObject[];
     readonly referencedElsewhere?: ReadonlySet<string>;
+    /** The refusals the user confirmed in the Text tab's panel (R-TXT-26): only `uncertain` and `referenced` can be. */
+    readonly confirmed?: readonly ApplyRefusal['code'][];
 }
 
-/** Parse result, model and evidence to a plan: the diff, the refusals and, when none, the lines. */
+/** The refusals a user may confirm: the uncertain matches and the deletion of objects other models reference (R-TXT-26). */
+export const CONFIRMABLE: readonly ApplyRefusal['code'][] = ['uncertain', 'referenced'];
+
+/** Parse result, model and evidence to a plan: the diff, the refusals and, when none, the lines. A confirmed refusal is dropped. */
 export function planTextEdit(input: PlanInput): TextEditPlan {
     if (!isApplicableParse(input.parsed)) {
         return { diff: null, refusals: refusalsOf({ ...input, diff: { match: { matches: [], created: [], deleted: [] }, ops: [], unsupported: [] } }), lines: null, handles: new Map() };
     }
     const diff = diffText(input);
-    const refusals = refusalsOf({ ...input, diff });
+    const confirmed = (input.confirmed ?? []).filter(c => CONFIRMABLE.includes(c));
+    const refusals = refusalsOf({ ...input, diff }).filter(r => !confirmed.includes(r.code));
     const built = diffLines(input.mm, input.grammar, input.model, input.parsed, diff);
     for (const p of built.problems) refusals.push({ code: 'unwritable', message: p.message });
     return { diff, refusals, lines: refusals.length ? null : built.lines, handles: built.handles };
