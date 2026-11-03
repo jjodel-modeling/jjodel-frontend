@@ -1469,3 +1469,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended, 4/4: brace deleted, keyword deleted, truncation, comment kept on apply; crops of P-2026-11-03-2152 checked by the chat (RC-23)
 **Notes**: Gates on b35e18146: tsc 0; vitest 13465 passed, 3 red at import (baseline); build 0; check:codegen-lazy ALL GREEN (off, on). Deletion probe: kept-after 83.4 -> 100% (library), stopped 20/542 -> 1/542; 6,001 objects 102.5 -> 27.2 ms. Bench: every mutant killed but isApplicableParse on errors only (equivalent). Findings (a) collapsed spans after paste-back, (b) live delete of a commented-out object: ~/.jjodel-lanes/P-2026-11-03-2152/handoff.md.
 **Prompt document name**: 2026-11-03 21:20
+
+## 2026-11-03 — feat(codegen): the printer builds the parser's tree, textual step A printer half (P-2026-11-03-2220)
+**Prompt**: `claude_2026-11-03_2220_prompt_textual_a_printer.md`: the printer builds the same lossless tree as the parser, with an equality test over the corpus that closes step A; linear name resolution in the printer; the parser half closed (probe committed, log entry and Status of 1415, 2120, 2152).
+**Files touched**: `printer.ts` (8c6734ffe, c79d05b4c); `__tests__/printerTree.test.ts` and the equality tests (8c6734ffe, 5dd458ddb); `docs/discovery/harness/probe_2026-11-03_2120_tolerant_recovery.test.ts` (920e17804); docs (98898d626).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (24 prints byte-identical to the pre-lane printer: text, spans, refs, unprinted)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — nothing changes on screen; in-app check by the lane on demoESM (port 3453, 4/4): text byte-identical, tree leaves equal the text, an edit applies, one Undo restores model and text.
+**Notes**: Gates on 5dd458ddb: tsc 0; vitest 13476 passed, 3 red at import (baseline); build 0; check:docs 5/5 (before this entry); check:codegen-lazy ALL GREEN (off, on). Equality: 7/7 corpus cases, trees equal node for node, roles and trivia included; red before (tree undefined). Printer timing 1,001 objects 3.8 ms, 6,001 objects 21.7 ms, tree included (was 20.3x, now linear). Mutation bench 20/21 killed, the survivor equivalent. Briefs read-only: 0 errors, trees lossless and equal. Open: a second quadratic step for grouped containments (`printer.ts:159`); a `Canceled` console error after Meta+z that predates this lane. Log entry and Status written by the chat, since the lane stopped at the ceiling before them.
+**Prompt document name**: 2026-11-03 22:20

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-2220
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · 8c6734ffe, c79d05b4c, 5dd458ddb · verifica visiva non applicabile (nothing on screen; in-app check by the lane, 4/4), closed by the chat (RC-17)
 Lane: full (printer of the textual layer)
 Depends: P-2026-11-03-2152 (hard-stop at the ceiling, code at b35e18146, handoff in its lane folder; crops checked by the chat, RC-23)
 Worktree: ~/jjodel-w-texta, branch textual-a-tolerant-parser (the same tree)
