@@ -289,3 +289,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: passato
 **Notes**: Port 3197. B2 probe 10/10 (S1 3 obj, S3 7, S4 2 Const + 2 pointers, S5 1 + 1, S5b 2 + 2, S6/S7 fail visibly, T 2559 in 878 ms exec / 24.4 s written, reopen equal). S1/S3/S4/S5 rewritten to avoid the two serializer defects (tickets). 2108 a2: A1-A5 all checks true, reopen 8/8/9; a0-rerun and 1838 a0-writeback S1-S5 identical (4/4/6/4/2). Only page error `init_dash`. SPEC item 4 open, awaiting Alfonso.
 **Prompt document name**: 2026-11-03 00:09
+
+## 2026-11-03 — merge: jjtl-called-rules takes alfonso-frontend-jjtl (P-2026-11-03-0045)
+**Prompt**: `claude_2026-11-03_0045_prompt_jjtl-called-rules_take_trunk.md`, full lane: bring the trunk at the explicit sha b200ccbc8 into jjtl-called-rules with one --no-ff merge commit (RC-14); zero conflicts; stopped at step 8 for the chat's GO, resumed on it.
+**Files touched**: merge commit a4aa879ec (the trunk's 56 files, no union resolution: the three files changed on both sides merged clean); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (chat GO on the gates of a4aa879ec; no app run on the merged branch; the app probes of P-2026-11-03-0009 predate this trunk-into)
+**Notes**: Merge-tree 7e0dff533 equal to the staged tree; 25 probes once each, control 0, no union. Gates on a4aa879ec: typecheck, typecheck:scripts exit 0; vitest 13193 = trunk 13145 + 48 (59 vs 11 in the three branch test files), the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5 (the prompt said 4/4); check:scripts, check:addonly PASS. Regressions unknown: gates only, no app run on the merged tree.
+**Prompt document name**: 2026-11-03 00:45
