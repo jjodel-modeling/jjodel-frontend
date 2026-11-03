@@ -483,3 +483,16 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Prompt document name**: 2026-11-03 13:15
 
 **Ticket** (#446, update): fixed on `jjtl-rerun-stale-ast` at 0d0b00228; stays open until the merge. Unverified side observation: after `OPEN_TRANSFORMATION` on an already open transformation, no `.dock-tab-btn` id ends in `-tab-jjtl_<id>` and the JjTL pane is hidden after the run; the run itself was correct (2 mappings, model TOwner+TPet). Not diagnosed (`DockManager.updateTab`).
+
+## 2026-11-03 — merge: jjtl-rerun-stale-ast into alfonso-frontend-jjtl (P-2026-11-03-1350)
+**Prompt**: `claude_2026-11-03_1350_prompt_merge_jjtl-rerun-stale-ast.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-rerun-stale-ast` at `27a37b79d` into `alfonso-frontend-jjtl`, merge base `8469b98b2`, 3 commits on the branch side.
+**Files touched**: merge `ba649974e`: 4 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1315_prompt_jjtl_rerun_stale_ast.md`, `frontend/src/jjtl/hooks/__tests__/useJjtlParser.debounce.test.ts`, `frontend/src/jjtl/hooks/useJjtlParser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ba649974e` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13267 tests in 504 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on ba649974e; acceptance by an app probe on the branch, no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-rerun-stale-ast` on `8469b98b2` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1350/result.json`.
+**Prompt document name**: 2026-11-03 13:50
