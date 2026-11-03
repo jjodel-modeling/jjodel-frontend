@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0043
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane fast · 1729e329a, e11159e0b · R-JTG-20 provisional split from R-JTG-18, log and tickets closed, docs only (unattended)
 Lane: fast (docs closure of P-2026-11-04-0015, code 90ee317b5 is done and gated)
 Depends: P-2026-11-04-0015
 Worktree: ~/jjodel-w-jjtlopen, branch jjtl-language-open

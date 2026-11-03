@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0015
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · 90ee317b5 · stopped at the context ceiling (AM-8), closed by P-2026-11-04-0043 · app probe on a missing target class, nothing written; no visual check by hand (unattended)
 Lane: full (language semantics, decided by Alfonso on 2026-11-03)
 Depends: P-2026-11-04-0007
 Worktree: ~/jjodel-w-jjtlopen, branch jjtl-language-open

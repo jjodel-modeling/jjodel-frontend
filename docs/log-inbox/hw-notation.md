@@ -811,3 +811,20 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Prompt document name**: 2026-11-03 21:11
 
 **Ticket** (#515, update, closed by R-JTG-15): a `let` bound to a called-rule call or an `envLookup` now realizes it once, at the binding (`letValue`/`realizeCalls` in `executor.ts`, all five LetStatement sites), so two uses of the name are one object; a source element bound by a `let` stays the element. On Class2Relational the 8 extra root Columns are gone and no `resolve()` is left in the natural text. #517 stays open, pinned by its test on `MATCHED_KEYS`.
+
+## 2026-11-04 — feat(jjtl): missing target class, [*] warning, lazy beside matched, such that (P-2026-11-04-0015, P-2026-11-04-0043)
+**Prompt**: `claude_2026-11-04_0015_prompt_jjtl_language_open.md`: four JjTL points decided by Alfonso 2026-11-03 (missing target class an error, `[*]` warning, lazy exempt from R-JTG-3, `such that` with bare names); stopped at the context ceiling (AM-8), docs closed by `claude_2026-11-04_0043_prompt_jjtl_language_open_close.md`.
+**Files touched**: code `90ee317b5`: `frontend/src/jjtl/executor/executor.ts` and tests (`language-open-points.test.ts`, `class2relational.test.ts`, `called-lazy-rules.test.ts`); docs `1e0786024`, `1729e329a`: `docs/decisions.md` (R-JTG-17..20); `1e0786024`, `e11159e0b`: `frontend/src/jjtl/SPEC.md`; this entry and both Status lines.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `90ee317b5`: typecheck 0; vitest 13503 passed, 0 failed, 3 red at import (baseline); build exit 0. check:docs run on the docs commits.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe on port 3291, not by hand: `DataType -> Nope` fails in the panel, nothing written, 16 objects before and after; control run 27
+**Notes**: Red first: 10/10. Mutation bench 5/5 killed; M3 (lazy always wins) dies only in language-open-points. R-JTG-18 held an unattended reach rule as Alfonso's: moved to R-JTG-20, provisional; the unattended parts of R-JTG-17 and 19 are marked provisional. No GitHub issue exists for the two tickets. Evidence: `~/.jjodel-lanes/P-2026-11-04-0015/handoff.md`.
+**Prompt document name**: 2026-11-04 00:15
+
+**Ticket** (2026-11-03 — ticket: a JjTL rule whose target class does not exist runs without error and writes a partial model, closed by R-JTG-17): the run fails before pass 1 with `Target class 'Nope' not found in target metamodel (A -> Nope). Nothing is written.`, no output model. The `envLookup("nope")` in a lazy Const seen beside it was not separated and is not closed here.
+
+**Ticket** (2026-11-03 — ticket: JjTL multiplicity [*] creates one target per source, silently, closed by the warning): every `[*]` and `[n..*]` rule warns once that the count is not settled; one target per source as before. The meaning of `[*]` stays Alfonso's open question.
