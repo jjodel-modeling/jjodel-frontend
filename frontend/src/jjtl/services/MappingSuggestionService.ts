@@ -12,7 +12,7 @@ import {
 } from '../types/suggestions';
 import { SimpleMatcher } from './SimpleMatcher';
 import { AIMatcher } from './AIMatcher';
-import {TAIProvider} from "../../types/jodie";
+import type { ProviderId } from '../../services/ai';
 import { registry } from '../../services/ai';
 
 export interface AnalyzeOptions {
@@ -20,7 +20,7 @@ export interface AnalyzeOptions {
     sourceMetamodelName?: string;
     targetMetamodelName?: string;
     /** Optional: provider selected by the user in the UI. Falls back to the global active provider if omitted. */
-    aiProvider?: TAIProvider;
+    aiProvider?: ProviderId;
     /** Optional: allows the caller to cancel an in-flight analysis. */
     signal?: AbortSignal;
     /** Optional: progress callback fired at each AI-pipeline phase boundary.

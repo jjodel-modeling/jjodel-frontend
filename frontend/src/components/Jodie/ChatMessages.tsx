@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import {ChatMessage, ConsoleEntry, CodeEntry, CodeWarning, isCodeEntry, JjodieScope} from '../../types/jodie';
+import {ChatMessage, ConsoleEntry, CodeEntry, CodeWarning, isCodeEntry, JjodieScope} from './types';
 import { providerVisual } from '../common/providerVisuals';
 import { formatAmbiguousCandidates } from '../../jjel/evaluator/context';
 import { MarkdownMessage } from './MarkdownMessage';

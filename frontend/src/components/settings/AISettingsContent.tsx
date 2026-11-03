@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type {AIProvider, AIVersion} from '../../types/jodie';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
 import './AISettingsContent.scss';
@@ -7,7 +6,6 @@ import type {Dictionary, GObject} from "../../joiner";
 import {U} from "../../joiner";
 import { OpenAIIcon } from '../icons/ProviderIcons';
 import { AIEvents } from '../../events/registry';
-import type { CatalogFailure } from '../../services/aiModelCatalog';
 import { FailureCatalog, FeaturePreferenceStore, PROVIDER_IDS, PROVIDER_SPECS, ProviderConfigStore, registry } from '../../services/ai';
 import type { ConnectionTestResult, ProviderId, StoredProviderConfig } from '../../services/ai';
 import { hasCatalog, refreshLiveCatalog } from '../common/ProviderModelSelector';
@@ -44,8 +42,27 @@ interface ProviderFormState {
     custom: ProviderInfo;
 }
 
+// #196 L6: these two types came from types/jodie.ts and services/aiModelCatalog.ts, deleted; this
+// file is their only reader. Copied verbatim (AIVersion without its constructor).
+/** The kind of a failed connection test, in the words `lastTestFailure` stores. */
+type CatalogFailure = 'auth' | 'rate' | 'network' | 'server' | 'other';
+/** One model entry of the retired `AI[p].versions`. */
+interface AIVersion {
+    label: string;
+    capabilities: {
+        pdf: boolean;
+        vision: boolean;
+    }
+    deprecated: boolean;
+    contextWindow?: number;
+    family?: string;
+    rank?: number;
+    source?: 'live' | 'static';
+    unavailable?: boolean;
+}
+
 // Map settings provider IDs to PROVIDER_MODELS keys
-const SETTINGS_TO_PROVIDER: Record<string, AIProvider> = {
+const SETTINGS_TO_PROVIDER: Record<string, string> = {
     openai: 'openai',
     anthropic: 'claude',
     mistral: 'mistral',
@@ -254,7 +271,7 @@ export function AISettingsContent({
         return provider.model(model)?.displayName || model || '';
     };
 
-    // A retired model this provider was moved off at load (AIConfig.retireModels), named until a
+    // A retired model this provider was moved off at load (FeaturePreferenceStore.retireModels), named until a
     // test passes on the current one (#179). Null when there is nothing to say.
     const replacedModelNotice = (name: ProviderId): string | null => {
         const replaced = storedConfig(name).replacedModel;

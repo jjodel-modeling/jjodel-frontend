@@ -7,7 +7,7 @@
 import { MetamodelElement } from '../views/MetamodelTreeView';
 import { MappingSuggestion, SuggestionConfidence, AnalysisProgressCallback } from '../types/suggestions';
 import { PromptService } from '../../services/PromptService';
-import type { TAIProvider } from "../../types/jodie";
+import type { ProviderId } from '../../services/ai';
 import { registry } from '../../services/ai';
 import { isProviderId, preferredModelId, preferredProviderId } from '../../components/common/ProviderModelSelector';
 
@@ -24,7 +24,7 @@ export class AIMatcher {
         targetElements: MetamodelElement[],
         sourceMetamodelName: string = 'Source',
         targetMetamodelName: string = 'Target',
-        aiProvider?: TAIProvider,
+        aiProvider?: ProviderId,
         signal?: AbortSignal,
         onProgress?: AnalysisProgressCallback
     ): Promise<MappingSuggestion[]> {

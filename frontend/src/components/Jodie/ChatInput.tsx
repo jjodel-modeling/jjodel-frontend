@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, useC
 import {
     ChatImage, ChatDocument, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor,
     ConsoleEntry, ChatMessage, CodeEntry, CONSOLE_MODES, CONSOLE_MODE_LABELS,
-} from '../../types/jodie';
+} from './types';
 import { AIEvents } from '../../events/registry';
 import { registry } from '../../services/ai';
 import { getJjelSuggestions, applyJjelSuggestion } from '../../jjel/autocomplete';
@@ -188,7 +188,7 @@ export function ChatInput({
         const refresh = () => setHasProvider(registry.enabled().length > 0);
         refresh();
         window.addEventListener(AIEvents.SETTINGS_CHANGED, refresh);
-        // #168: a key saved in Settings fires PROVIDER_CHANGED only (AIConfig.save).
+        // #168: a key saved in Settings fires PROVIDER_CHANGED only (ProviderConfigStore.save).
         window.addEventListener(AIEvents.PROVIDER_CHANGED, refresh);
         return () => {
             window.removeEventListener(AIEvents.SETTINGS_CHANGED, refresh);

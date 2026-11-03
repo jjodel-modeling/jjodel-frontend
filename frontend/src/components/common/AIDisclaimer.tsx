@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import type {AIFeature} from '../../types/jodie';
+import type {AIFeature} from '../../services/ai';
 import { registry } from '../../services/ai';
 import { preferredProviderId } from './ProviderModelSelector';
 import './AIDisclaimer.scss';
