@@ -7240,6 +7240,10 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-JTG-13 (2026-11-03)**: `resolve()`, `resolveAll()` and `{__ref}` find matched targets only, never a lazy node.
   Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03, registered by P-2026-11-03-0539; evidence: the
   lanes of slice B, verified: none, reversible: trunk.
+- **R-JTG-14** (2026-11-03, provisional, unattended, evidence: measured, verified: probe, reversible: trunk): a JjTL run
+  is one undo step. The group opens after the executor succeeds and closes when the store has had no writes for 800 ms
+  after the write-back, capped at 180 s; the output tab and its vertices are part of the step. Redo restores the model
+  and does not reopen the tab. Evidence: the probe of P-2026-11-03-1435.
 - **R-FA-11 (2026-11-03), decided by the chat under Alfonso's «decidi tu» 2026-11-03 11:32, evidence: measured (P-2026-11-03-1016), verified: none, reversible: trunk**: a builtin that fails inside a JjTL
   expression stops the mapping with an error on every path, never a warning with `null`: a transformation that goes on writes a target model that is wrong and looks done.
   With this, JjEL can be the only parser of a forall collection.
