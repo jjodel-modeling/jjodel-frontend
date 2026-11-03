@@ -7123,6 +7123,10 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   as a deletion. Printing them in a block of their own stays a later option: it changes the grammar.
   Measured by P-2026-11-02-2113: a mandatory enum left empty reads as its first literal, so the warning rarely fires in
   the app; it stays as a guard.
+- **R-TXT-31** (2026-11-03). **Answers to the digest of P-2026-11-03-0543**, ratified by Alfonso («ok alle raccomandazioni»).
+  (1) A stale edit stays blocked after an external model change; Reprint discards it. (2) The printer defect on a reference
+  to an object outside the text gets a small fix before T7, independent of the model-to-model reference work. (3) The
+  `ordered` flag comes with T7. (4) The test files red at import get a ticket.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
