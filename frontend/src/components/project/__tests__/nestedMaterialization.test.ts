@@ -12,7 +12,13 @@ import { describe, it, expect } from 'vitest';
 import {
     materializeNested,
     makeRootTargetIndex,
+    writeNestedAttributeSets,
+    awaitNestedSlots,
+    ATTRIBUTE_WAIT_CAP_MS,
+    SLOT_POLL_MS,
     SLOT_WAIT_CAP_MS,
+    type NestedAttributeDeps,
+    type NestedAttributeSet,
     type NestedDeps,
     type NestedJob,
 } from '../nestedMaterialization';
@@ -282,5 +288,122 @@ describe('makeRootTargetIndex', () => {
         expect(index.nameOf(t)).toEqual({ name: 'Const_3' });
         expect(index.nameOf({ name: 'k' })).toEqual({ name: 'k' });
         expect(index.nameOf({})).toEqual({ reason: 'target has no __sourceId or name' });
+    });
+});
+
+/**
+ * The app's transaction block (#482), on a clock only `sleep` advances. An object `addObject` creates is
+ * queued in the open block; its slots answer only once a commit has dispatched it, either the interval's
+ * every `U.UpdatingTimer` (300 ms) or an explicit flush. This is the state the writer met at 5,119
+ * objects: its fixed timer fired while the last level was still queued, and 2,048 `num` were lost.
+ */
+function blockStore(opts: {
+    flushCommits?: boolean;
+    neverReady?: (id: string) => boolean;
+    refuseWrite?: (id: string, attr: string) => boolean | 'throw';
+} = {}) {
+    let clock = 0;
+    const queued = new Set<string>();
+    const committed = new Set<string>();
+    const written = new Map<string, Record<string, any>>();
+    const warnings: string[] = [];
+    const sets: NestedAttributeSet[] = [];
+    let flushes = 0;
+    const commit = () => { for (const id of queued) committed.add(id); queued.clear(); };
+    const answers = (id: string) => committed.has(id) && !(opts.neverReady?.(id));
+    const create = (n: number, attributes: Record<string, any> = { num: '0' }) => {
+        for (let i = 0; i < n; i++) {
+            const id = 'c' + (sets.length + 1);
+            queued.add(id);
+            sets.push({ objectId: id, className: 'Const', attributes: { ...attributes } });
+        }
+    };
+    const deps: NestedAttributeDeps = {
+        flush: async () => { flushes++; if (opts.flushCommits !== false) commit(); },
+        missing: (objectId, slots) => (answers(objectId) ? [] : slots),
+        write: (set, attr, value) => {
+            if (!answers(set.objectId)) return false;
+            const refused = opts.refuseWrite?.(set.objectId, attr);
+            if (refused === 'throw') throw new Error('write failed');
+            if (refused) return false;
+            (written.get(set.objectId) ?? written.set(set.objectId, {}).get(set.objectId)!)[attr] = value;
+            return true;
+        },
+        sleep: async (ms) => {
+            const before = clock;
+            clock += ms;
+            if (Math.floor(clock / 300) > Math.floor(before / 300)) commit();
+        },
+        now: () => clock,
+        warn: (m) => { warnings.push(m); },
+    };
+    return { deps, sets, create, written, warnings, clock: () => clock, flushes: () => flushes };
+}
+
+describe('writeNestedAttributeSets (#482)', () => {
+    it('writes every attribute of a level still queued in the block, at once: it flushes, it does not wait for the interval', async () => {
+        const store = blockStore();
+        store.create(2560);
+        const r = await writeNestedAttributeSets(store.sets, store.deps);
+        expect(r.unwritten).toBeUndefined();
+        expect(r.written).toBe(2560);
+        expect(store.written.size).toBe(2560);
+        // No fixed delay and no 300 ms interval: the flush is what made the slots answer.
+        expect(store.clock()).toBe(0);
+        expect(store.flushes()).toBeGreaterThanOrEqual(1);
+    });
+
+    it('when the flush cannot commit (a TRANSACTION mid-flight), waits for the interval instead of writing into nothing', async () => {
+        const store = blockStore({ flushCommits: false });
+        store.create(3);
+        const r = await writeNestedAttributeSets(store.sets, store.deps);
+        expect(r.unwritten).toBeUndefined();
+        expect(store.written.size).toBe(3);
+        expect(store.clock()).toBeGreaterThanOrEqual(300);
+        expect(store.clock()).toBeLessThan(300 + SLOT_POLL_MS + 1);
+    });
+
+    it('a slot that never answers is bounded: after the cap the rest is written and the loss is counted, objects and attributes', async () => {
+        const store = blockStore({ neverReady: (id) => id === 'c2' || id === 'c5' });
+        store.create(6, { num: '0', label: 'x' });
+        const r = await writeNestedAttributeSets(store.sets, store.deps);
+        expect(store.clock()).toBeGreaterThanOrEqual(ATTRIBUTE_WAIT_CAP_MS);
+        expect(store.clock()).toBeLessThan(ATTRIBUTE_WAIT_CAP_MS + SLOT_POLL_MS + 1);
+        expect(r.written).toBe(8);
+        expect(r.unwritten).toEqual({
+            objects: 2, attributes: 4,
+            reason: `attribute slots not available after ${ATTRIBUTE_WAIT_CAP_MS} ms`,
+        });
+        expect([...store.written.keys()]).toEqual(['c1', 'c3', 'c4', 'c6']);
+        expect(store.warnings).toHaveLength(1);
+    });
+
+    it('a slot that answers the wait but refuses the write, or throws, is counted too, never only warned', async () => {
+        const store = blockStore({
+            refuseWrite: (id, attr) => (id === 'c1' && attr === 'num') || (id === 'c3' ? 'throw' : false),
+        });
+        store.create(3, { num: '0', label: 'x' });
+        const r = await writeNestedAttributeSets(store.sets, store.deps);
+        expect(r.written).toBe(3);
+        expect(r.unwritten).toEqual({ objects: 2, attributes: 3, reason: 'attribute slot missing when written' });
+        expect(store.clock()).toBe(0);
+    });
+
+    it('nothing to write: no wait, nothing reported', async () => {
+        const store = blockStore();
+        const r = await writeNestedAttributeSets([], store.deps);
+        expect(r).toEqual({ written: 0, waitedMs: 0 });
+        expect(store.flushes()).toBe(0);
+    });
+
+    it('waits, bounded, for the reference slots of pointer holders that carry no attribute', async () => {
+        const store = blockStore({ flushCommits: false, neverReady: (id) => id === 'c3' });
+        store.create(3, {});
+        const waits = store.sets.map(s => ({ objectId: s.objectId, slots: ['subs'] }));
+        const r = await awaitNestedSlots(waits, store.deps);
+        expect(r.answered).toBe(2);
+        expect(store.clock()).toBeGreaterThanOrEqual(ATTRIBUTE_WAIT_CAP_MS);
+        expect(store.clock()).toBeLessThan(ATTRIBUTE_WAIT_CAP_MS + SLOT_POLL_MS + 1);
+        expect(await awaitNestedSlots([], store.deps)).toEqual({ answered: 0, waitedMs: 0 });
     });
 });

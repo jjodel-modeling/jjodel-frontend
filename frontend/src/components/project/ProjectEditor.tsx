@@ -65,7 +65,12 @@ import {
     type NestedReferenceSet,
     type NestedUnplaced,
     type NestedMaterializationReport,
+    writeNestedAttributeSets,
+    awaitNestedSlots,
+    type NestedUnwritten,
+    type NestedWaitDeps,
 } from './nestedMaterialization';
+import { COMMIT } from '../../redux/action/action';
 import { serializeFeatureValues } from './jjtlSourceValues';
 import './project-editor.scss';
 
@@ -2004,9 +2009,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     // same-named siblings and classes without a `name` attribute are created
                     // too (R-S1-6, docs/decisions.md).
                     let nestedDone: Promise<void> | null = null;
-                    const reportNested = (created: number) => {
+                    // The walk's count, kept for the one report sent once its attributes are written (#482).
+                    let nestedCreated: number | null = null;
+                    const reportNested = (created: number, unwritten?: NestedUnwritten) => {
                         const detail: NestedMaterializationReport = {
                             modelName: uniqueOutputName, created, unplaced: nestedUnplaced,
+                            ...(unwritten ? { unwritten } : {}),
                         };
                         window.dispatchEvent(new CustomEvent(SystemEvents.JJTL_NESTED_MATERIALIZED, { detail }));
                     };
@@ -2059,7 +2067,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             nestedUnplaced.push(...r.unplaced);
                             if (r.createdIds) nestedCreatedIds = r.createdIds;
                             nestedReferenceSets.push(...(r.referenceSets || []));
-                            reportNested(r.created);
+                            nestedCreated = r.created;
                         }).catch(e => {
                             console.error('[ProjectEditor] Error creating nested objects (non-fatal):', e);
                         });
@@ -2106,13 +2114,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // target.name for a DEnumLiteral). So a string that names a literal of the
                             // attribute's enum is written as that literal's pointer; anything else is
                             // written as-is.
-                            const writeAttribute = (lObject: LObject, attrName: string, attrValue: any, who: string): void => {
+                            // False when the slot is missing, so the nested writer can count it (#482).
+                            const writeAttribute = (lObject: LObject, attrName: string, attrValue: any, who: string): boolean => {
                                 const feature = (lObject as any)['$' + attrName];
                                 if (!feature) {
                                     console.warn(`[ProjectEditor] Feature "$${attrName}" not found on "${who}"`);
                                     const features = lObject.features || [];
                                     console.warn(`[ProjectEditor] Available features:`, features.map((f: any) => f.name));
-                                    return;
+                                    return false;
                                 }
                                 const meta: any = (lObject as any).instanceof;
                                 const attrMeta = (meta?.allAttributes || []).find((a: any) => a?.name === attrName);
@@ -2121,7 +2130,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     const literal = (attrType.literals || []).find((l: any) => l?.name === attrValue);
                                     if (literal) {
                                         feature.setValueAtPosition(0, literal.id, { isPtr: true });
-                                        return;
+                                        return true;
                                     }
                                     console.warn(
                                         `[ProjectEditor] "${who}".${attrName}: "${attrValue}" is not a literal of `
@@ -2130,6 +2139,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 }
                                 if (Array.isArray(attrValue)) feature.values = attrValue;
                                 else feature.value = attrValue;
+                                return true;
                             };
 
                             for (const pending of pendingAttributeSets) {
@@ -2156,36 +2166,58 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // Attributes of the objects STEP 6c created inside a feature.
                             // Resolved by the real id the primitive returned, never by name:
                             // two tables may each own a column called "id".
-                            // Deferred once more: addObject seeds its own json values on a
-                            // timer of U.UpdatingTimer * 2 (600ms) and the child's DValues do
-                            // not exist before that, so writing here would find no $feature.
-                            // The queue fills when the last nested level is created (STEP 6c is
-                            // asynchronous now), so the timer starts from there. `name` travels
-                            // here with the other attributes (R-S1-6).
-                            const writeNestedAttributes = () => {
-                                for (const pending of pendingChildAttributeSets) {
-                                    try {
-                                        const lChild = LPointerTargetable.fromPointer(pending.objectId) as LObject | undefined;
+                            // Not on a fixed timer (#482): the last level waits in the open
+                            // transaction block for the interval's commit, and a timer stretched
+                            // by long tasks ran before that commit's dispatch (5,119 objects,
+                            // 2,048 `num` lost). The writer flushes the block, waits, bounded, for
+                            // every slot it writes into, and returns what it could not write.
+                            // addObject's own seeding timer (U.UpdatingTimer * 2) iterates the
+                            // json, which the walk always passes empty. `name` travels here with
+                            // the other attributes (R-S1-6).
+                            const nestedChild = (objectId: string): LObject | undefined =>
+                                LPointerTargetable.fromPointer(objectId) as LObject | undefined;
+                            const nestedWaitDeps: NestedWaitDeps = {
+                                // The interval's own call (reducer.ts), made now; one macrotask
+                                // before it lets every addObject TRANSACTION reach its END, one
+                                // after it lets the dispatch, a setTimeout(0), land.
+                                flush: async () => {
+                                    await new Promise<void>(resolve => setTimeout(resolve, 0));
+                                    COMMIT(undefined, false);
+                                    await new Promise<void>(resolve => setTimeout(resolve, 0));
+                                },
+                                missing: (objectId, slots) => {
+                                    const lChild = nestedChild(objectId) as any;
+                                    if (!lChild) return slots;
+                                    return slots.filter(s => !lChild['$' + s]);
+                                },
+                                sleep: (ms) => new Promise<void>(resolve => setTimeout(resolve, ms)),
+                                now: () => performance.now(),
+                            };
+                            const writeNestedAttributes = async () => {
+                                const r = await writeNestedAttributeSets(pendingChildAttributeSets, {
+                                    ...nestedWaitDeps,
+                                    write: (set, attrName, attrValue) => {
+                                        const lChild = nestedChild(set.objectId);
                                         if (!lChild) {
                                             console.warn(
-                                                `[ProjectEditor] Nested: object ${pending.objectId} (${pending.className}) `
-                                                + `no longer resolves; its attributes were not written.`
+                                                `[ProjectEditor] Nested: object ${set.objectId} (${set.className}) `
+                                                + `no longer resolves; its ${attrName} was not written.`
                                             );
-                                            continue;
+                                            return false;
                                         }
-                                        const who = `${lChild.name || pending.objectId} (${pending.className})`;
-                                        for (const [attrName, attrValue] of Object.entries(pending.attributes)) {
-                                            try {
-                                                writeAttribute(lChild, attrName, attrValue, who);
-                                            } catch (e) {
-                                                console.error(`[ProjectEditor] Error setting ${attrName} on ${who}:`, e);
-                                            }
+                                        const who = `${lChild.name || set.objectId} (${set.className})`;
+                                        try {
+                                            return writeAttribute(lChild, attrName, attrValue, who);
+                                        } catch (e) {
+                                            console.error(`[ProjectEditor] Error setting ${attrName} on ${who}:`, e);
+                                            return false;
                                         }
-                                    } catch (e) {
-                                        console.error(`[ProjectEditor] Error seeding nested object ${pending.objectId}:`, e);
-                                    }
-                                }
-                                console.log(`[ProjectEditor] ✅ Nested attribute setting complete`);
+                                    },
+                                    warn: (message) => console.warn('[ProjectEditor] ' + message),
+                                });
+                                console.log(`[ProjectEditor] ✅ Nested attribute setting complete`
+                                    + ` (${r.written} written, waited ${Math.round(r.waitedMs)} ms)`);
+                                return r;
                             };
 
                             console.log(`[ProjectEditor] ✅ Attribute setting complete`);
@@ -2277,16 +2309,35 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // Two phases: when STEP 6c runs, every pointer is written after the
                             // whole tree exists and its attributes are seeded, so a pointer to a
                             // placed target, or held by a created object, finds both ends.
+                            // One report to the output panel, once the attributes are written,
+                            // with what was not written (#482).
                             if (nestedDone) {
-                                nestedDone.then(() => {
-                                    setTimeout(() => {
-                                        try {
-                                            if (pendingChildAttributeSets.length > 0) writeNestedAttributes();
-                                            writeReferences();
-                                        } catch (e) {
-                                            console.error(`[ProjectEditor] Error writing nested attributes or references:`, e);
+                                nestedDone.then(async () => {
+                                    let unwritten: NestedUnwritten | undefined;
+                                    let attributesDone = pendingChildAttributeSets.length === 0;
+                                    try {
+                                        if (!attributesDone) {
+                                            unwritten = (await writeNestedAttributes()).unwritten;
+                                            attributesDone = true;
                                         }
-                                    }, 1000);
+                                        // A pointer holder with no attribute was not in that wait:
+                                        // its reference slots get the same bounded one, which
+                                        // replaces the fixed timer the pointers shared.
+                                        await awaitNestedSlots(nestedReferenceSets.map(s => ({
+                                            objectId: s.objectId, slots: Object.keys(s.references),
+                                        })), nestedWaitDeps);
+                                        writeReferences();
+                                    } catch (e) {
+                                        console.error(`[ProjectEditor] Error writing nested attributes or references:`, e);
+                                        if (!attributesDone) {
+                                            unwritten = {
+                                                objects: pendingChildAttributeSets.length,
+                                                attributes: pendingChildAttributeSets.reduce((n, s) => n + Object.keys(s.attributes).length, 0),
+                                                reason: `the attribute writer failed: ${(e as any)?.message || e}`,
+                                            };
+                                        }
+                                    }
+                                    if (nestedCreated !== null) reportNested(nestedCreated, unwritten);
                                 });
                             } else if (pendingReferenceSets.length > 0) {
                                 writeReferences();

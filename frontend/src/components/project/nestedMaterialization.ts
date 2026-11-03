@@ -89,15 +89,28 @@ export interface NestedResult {
     referenceSets?: NestedReferenceSet[];
 }
 
+/** What the nested-attribute writer could not write (#482): said to the user, never only to the console. */
+export interface NestedUnwritten {
+    /** Objects with at least one attribute value not written. */
+    objects: number;
+    /** Attribute values not written. */
+    attributes: number;
+    reason: string;
+}
+
 /** Detail of `SystemEvents.JJTL_NESTED_MATERIALIZED`, read by the JjTL output panel. */
 export interface NestedMaterializationReport {
     modelName: string;
     created: number;
     unplaced: NestedUnplaced[];
+    /** Set when some attribute values of the created objects were not written (#482). */
+    unwritten?: NestedUnwritten;
 }
 
 export const SLOT_POLL_MS = 50;
 export const SLOT_WAIT_CAP_MS = 3000;
+/** Bound of the attribute writer's wait for the slots of the last level (#482). */
+export const ATTRIBUTE_WAIT_CAP_MS = 10000;
 
 const isNested = (v: any): boolean => !!(v && typeof v === 'object' && v.__nested);
 
@@ -302,4 +315,104 @@ export async function materializeNested(
         level = next;
     }
     return result;
+}
+
+/** What a bounded wait for slots needs of the store (#482). */
+export interface NestedWaitDeps {
+    /** Lets every write already queued in the open transaction block reach the store now. */
+    flush(): Promise<void>;
+    /** The slots of this object that do not answer yet; all of them while the object does not resolve. */
+    missing(objectId: string, slots: string[]): string[];
+    sleep(ms: number): Promise<void>;
+    now(): number;
+}
+
+/** An object the walk created, and the slots a writer is about to write into. */
+export interface NestedSlotWait {
+    objectId: string;
+    slots: string[];
+}
+
+/**
+ * Waits until the slots of objects the walk created answer, bounded (#482).
+ *
+ * The last level's objects sit in the app's open transaction block until a commit dispatches them:
+ * the interval's every `U.UpdatingTimer`, whose dispatch is a `setTimeout(0)`. A writer started on a
+ * fixed timer ran before that dispatch when long tasks held the thread (5,119 objects: 2,048 `num` lost,
+ * docs/discovery/discovery_2026-11-03_jjtl_writeback_time.md §5). So this flushes, then polls, every
+ * `pollMs` for at most `capMs`, in creation order, which is also commit order: the scan stops at the
+ * first object that does not answer. Returns how many answered, in order, and how long it took.
+ */
+export async function awaitNestedSlots(
+    waits: NestedSlotWait[],
+    deps: NestedWaitDeps,
+    pollMs: number = SLOT_POLL_MS,
+    capMs: number = ATTRIBUTE_WAIT_CAP_MS,
+): Promise<{ answered: number; waitedMs: number }> {
+    if (waits.length === 0) return { answered: 0, waitedMs: 0 };
+    const start = deps.now();
+    let answered = 0;
+    for (;;) {
+        await deps.flush();
+        while (answered < waits.length && deps.missing(waits[answered].objectId, waits[answered].slots).length === 0) answered++;
+        if (answered === waits.length || deps.now() - start >= capMs) break;
+        await deps.sleep(pollMs);
+    }
+    return { answered, waitedMs: deps.now() - start };
+}
+
+/** What the nested-attribute writer needs of the store (#482). */
+export interface NestedAttributeDeps extends NestedWaitDeps {
+    /** Writes one value; false when the slot is missing at write time. */
+    write(set: NestedAttributeSet, attrName: string, value: any): boolean;
+    warn(message: string): void;
+}
+
+export interface NestedAttributeResult {
+    /** Attribute values written. */
+    written: number;
+    /** From the call to the first write, flushes included. */
+    waitedMs: number;
+    /** Absent when every value was written. */
+    unwritten?: NestedUnwritten;
+}
+
+/**
+ * Writes the attributes the walk queued, once their slots answer (`awaitNestedSlots`), then counts
+ * every value it could not write, slot missing, refused or throwing, for the caller to report (#482).
+ *
+ * `addObject` also seeds its json values on a timer of `U.UpdatingTimer * 2`; the walk gives it `{}`
+ * (`nestedCreationJson`), so that timer writes nothing this writer waits for.
+ */
+export async function writeNestedAttributeSets(
+    sets: NestedAttributeSet[],
+    deps: NestedAttributeDeps,
+    pollMs: number = SLOT_POLL_MS,
+    capMs: number = ATTRIBUTE_WAIT_CAP_MS,
+): Promise<NestedAttributeResult> {
+    if (sets.length === 0) return { written: 0, waitedMs: 0 };
+    const waits = sets.map(s => ({ objectId: s.objectId, slots: Object.keys(s.attributes) }));
+    const { answered, waitedMs } = await awaitNestedSlots(waits, deps, pollMs, capMs);
+    const capped = answered < sets.length;
+
+    let written = 0;
+    let lostObjects = 0;
+    let lostValues = 0;
+    for (const set of sets) {
+        let lost = 0;
+        for (const [attrName, value] of Object.entries(set.attributes)) {
+            let ok = false;
+            try { ok = deps.write(set, attrName, value); } catch { ok = false; }
+            if (ok) written++;
+            else lost++;
+        }
+        if (lost > 0) { lostObjects++; lostValues += lost; }
+    }
+    if (lostValues === 0) return { written, waitedMs };
+    const unwritten: NestedUnwritten = {
+        objects: lostObjects, attributes: lostValues,
+        reason: capped ? `attribute slots not available after ${capMs} ms` : 'attribute slot missing when written',
+    };
+    deps.warn(`Nested: ${lostValues} attribute value(s) of ${lostObjects} object(s) not written: ${unwritten.reason}`);
+    return { written, waitedMs, unwritten };
 }
