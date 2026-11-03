@@ -106,6 +106,13 @@ describe('style check (R-TXT-16, §A.2)', () => {
         ]);
     });
 
+    it('R-TXT-32: a style token, comment opener or string quote that starts with "@" is an outer-reference error (mutants: rule removed; comments or quote not checked)', () => {
+        expect(errors(checkStyle(grammarOf(FIXTURE, { ...CLIKE_STYLE, comments: { line: '@@', block: null } })))).toEqual([['outer-reference', 'style.comments.line']]);
+        expect(errors(checkStyle(grammarOf(FIXTURE, { ...CLIKE_STYLE, comments: { line: '//', block: ['@*', '*@'] } })))).toEqual([['outer-reference', 'style.comments.block']]);
+        expect(errors(checkStyle(grammarOf(FIXTURE, { ...CLIKE_STYLE, terminator: ['@'] })))).toEqual([['outer-reference', 'style.terminator']]);
+        expect(errors(checkStyle(grammarOf(FIXTURE, { ...CLIKE_STYLE, string: { quote: '@', escape: 'double' } })))).toEqual([['outer-reference', 'style.string.quote']]);
+    });
+
     it('§A.2 (i): a feature redeclared by an heir', () => {
         const fs = checkStyle(grammarOf(REDECLARED));
         expect(errors(fs)).toEqual([['distinct-features', 'class C']]);

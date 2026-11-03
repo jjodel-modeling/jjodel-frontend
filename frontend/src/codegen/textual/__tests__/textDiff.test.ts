@@ -356,25 +356,48 @@ describe('an edit is the minimal diff, and its lines address the objects by regi
 // ---- Preservation, point 4 ----------------------------------------------------------------------------------------
 
 describe('what the text does not show is preserved; a default read is no change', () => {
-    it('a many-valued target the text cannot name is kept (mutant: preserved-hidden-feature cleared)', () => {
+    it('R-TXT-32: a many-valued target outside the text prints as @"id" among the others and is kept (mutants: outer dropped from the list; outer kept in the print but unlinked)', () => {
         const f = specCase(FIXTURE);
         const peers: Case = { ...f, objects: f.objects.map(o => (o.id === 'p1' ? { ...o, slots: { ...o.slots, peers: ['p3', 'zz', 'p2'] } } : o)) };
-        expect(edit(peers, [], { spans: true }).plan.diff!.ops).toEqual([]);
+        const same = edit(peers, [], { spans: true });
+        expect(same.text).toContain('@"zz"');
+        expect(same.parsed.errors).toEqual([]);
+        expect(same.plan.diff!.ops).toEqual([]);
+        expect(same.plan.lines).toEqual([]);
     });
 
-    it('a single-valued target the text cannot name is an expected refusal: the printer writes the keyword with no value, the text does not parse, the model is not touched (printer defect, ticket of P-2026-11-02-1942)', () => {
-        const c: Case = { ...LIBRARY_CASE, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
-        for (const replacements of [[], [['year 2015', 'year 2016']]] as const) {
-            const { parsed, plan } = edit(c, replacements, { spans: true });
-            expect(parsed.errors).not.toEqual([]);
-            expect(codes(plan)).toEqual(['parse']);
-            expect(plan.diff).toBeNull();
-            expect(plan.lines).toBeNull();
+    it('R-TXT-32: a many-valued target outside the text taken out of the list is unlinked by a handle registered against its id (mutants: outer never unlinked; outer handle not registered)', () => {
+        const f = specCase(FIXTURE);
+        const peers: Case = { ...f, objects: f.objects.map(o => (o.id === 'p1' ? { ...o, slots: { ...o.slots, peers: ['p3', 'zz', 'p2'] } } : o)) };
+        const { plan } = edit(peers, [[', @"zz"', '']], { spans: true });
+        expect(codes(plan)).toEqual([]);
+        expect(plan.diff!.ops).toEqual([{ op: 'unlink', target: { model: 'p1' }, feature: 'peers', to: { outer: 'zz' } }]);
+        expect(plan.lines).toHaveLength(1);
+        const h = /-= (\w+)$/.exec(plan.lines![0])![1];
+        expect(plan.handles.get(h)).toBe('zz');
+    });
+
+    it('R-TXT-32: an outer target repeated in a list, or copied into another list, is refused with outer (mutant: an unmatched outer token linked)', () => {
+        const f = specCase(FIXTURE);
+        const peers: Case = { ...f, objects: f.objects.map(o => (o.id === 'p1' ? { ...o, slots: { ...o.slots, peers: ['p3', 'zz', 'p2'] } } : o)) };
+        const twice = edit(peers, [['@"zz"', '@"zz", @"zz"']], { spans: true });
+        expect(codes(twice.plan)).toEqual(['outer']);
+        expect(twice.plan.lines).toBeNull();
+    });
+
+    it('R-TXT-32: a single-valued target outside the text prints as @"id" and reads back as the same value, in both notations (mutants: outer value skipped by the printer; outer read as a name)', () => {
+        for (const g of [LIBRARY, LIBRARY_PLAIN]) {
+            const c: Case = { mm: LIBRARY_MM, g, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
+            const { text, parsed } = edit(c, []);
+            expect(text).toContain('borrowedBy @"elsewhere"');
+            expect(parsed.errors).toEqual([]);
+            const b1 = parsed.objects.find(o => o.slots.name === 'dune')!;
+            expect(b1.slots.borrowedBy).toEqual({ outer: 'elsewhere' });
+            expect(printTextModel(g, parsed.objects).text).toBe(text);
         }
     });
 
-    // Expected to fail until P-2026-11-03-1045 Phase 2: the acceptance of the fix, independent of the syntax it picks.
-    it.fails('a single-valued target outside the text: the text parses, an edit elsewhere applies, the reference is not written (P-2026-11-03-1045)', () => {
+    it('a single-valued target outside the text: the text parses, an edit elsewhere applies, the reference is not written (P-2026-11-03-1045; mutant: an unchanged outer value written)', () => {
         for (const g of [LIBRARY, LIBRARY_PLAIN]) {
             const c: Case = { mm: LIBRARY_MM, g, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
             const same = edit(c, [], { spans: true });
@@ -385,6 +408,38 @@ describe('what the text does not show is preserved; a default read is no change'
             expect(codes(plan)).toEqual([]);
             expect(plan.lines).toEqual(['set spqr.year = 2016']);
         }
+    });
+
+    it('R-TXT-32: deleting a printed outer value clears the reference; retyping it to a name of the text retargets it (mutants: a deleted outer value preserved; a retarget refused)', () => {
+        const c: Case = { mm: LIBRARY_MM, g: LIBRARY_PLAIN, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
+        const cleared = edit(c, [[' borrowedBy @"elsewhere"', '']], { spans: true });
+        expect(cleared.parsed.errors).toEqual([]);
+        expect(codes(cleared.plan)).toEqual([]);
+        expect(cleared.plan.lines).toEqual(['set dune.borrowedBy = null']);
+        const retargeted = edit(c, [['borrowedBy @"elsewhere"', 'borrowedBy bob']], { spans: true });
+        expect(codes(retargeted.plan)).toEqual([]);
+        expect(retargeted.plan.lines).toEqual(['set dune.borrowedBy = bob']);
+    });
+
+    it('R-TXT-32: an edited id, or an outer token at another owner or on a new object, is refused with outer and writes nothing (mutants: refusal removed; an outer token written as a retarget)', () => {
+        const c: Case = { mm: LIBRARY_MM, g: LIBRARY_PLAIN, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
+        for (const replacements of [
+            [['@"elsewhere"', '@"other"']],
+            [['borrowedBy bob', 'borrowedBy @"elsewhere"']],
+            [['Book spqr {', 'Book neu {\n      genre POETRY\n      borrowedBy @"elsewhere"\n    }\n    Book spqr {']],
+        ] as const) {
+            const { parsed, plan } = edit(c, replacements, { spans: true });
+            expect(parsed.errors).toEqual([]);
+            expect(codes(plan)).toEqual(['outer']);
+            expect(plan.lines).toBeNull();
+        }
+    });
+
+    it('R-TXT-32: a rename outside the editor scores an unchanged outer reference as equal (textMatch similarity; mutant: outer marker unmapped)', () => {
+        const c: Case = { mm: LIBRARY_MM, g: LIBRARY_PLAIN, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
+        const { plan } = edit(c, [['Book dune', 'Book dunes']]);
+        const m = plan.diff!.match.matches.find(x => x.model === 'b1')!;
+        expect(m).toMatchObject({ by: 'rename', uncertain: true, score: 1 });
     });
 
     it('a mandatory enumeration left empty reads as its first literal: the text printing it asks no change, and never writes it (mutant: default counted as a change)', () => {
@@ -502,8 +557,9 @@ describe('applyTextEdit', () => {
         const refused = edit(LIBRARY_CASE, [['year 2015', 'year twenty']], { spans: true });
         expect((await applyTextEdit('M', refused.plan)).refused?.map(r => r.code)).toEqual(['parse']);
         expect(await applyTextEdit('M', edit(LIBRARY_CASE, [], { spans: true }).plan)).toEqual({ applied: 0, failed: 0 });
-        const hidden: Case = { ...LIBRARY_CASE, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
-        expect((await applyTextEdit('M', edit(hidden, [], { spans: true }).plan)).refused?.map(r => r.code)).toEqual(['parse']);
+        // R-TXT-32: a target outside the text prints as @"id"; kept as printed it asks no change and runs nothing.
+        const outer: Case = { ...LIBRARY_CASE, objects: libraryObjects({ b1: { borrowedBy: 'elsewhere' } }) };
+        expect(await applyTextEdit('M', edit(outer, [], { spans: true }).plan)).toEqual({ applied: 0, failed: 0 });
         expect(run.calls).toHaveLength(1);
     });
 });

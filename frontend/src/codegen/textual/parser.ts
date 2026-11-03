@@ -8,6 +8,8 @@
  * text: a name must be unique among the instances of the reference's type; a path is `keyword[k].f[i]...`, every segment
  * with its index, so a path never reads as a name; its first word is a class keyword as printed, the class name for a
  * positional class (R-TXT-28), each later f a feature keyword as printed, the feature name when it prints none (R-TXT-29).
+ * A reference to an object the text does not print is `@` and the target's id as a string (R-TXT-32): it is read as an
+ * `OuterRef`, never resolved against the text.
  * The top level
  * admits every concrete class (R-TXT-24 (a)); a single containment is a block of one object (R-TXT-24 (b)).
  *
@@ -19,7 +21,7 @@
 import type { NamePattern } from './annotations';
 import type { ConcreteGrammar, ConcreteRule, GrammarNode, ObjectRule } from './concreteGrammar';
 import { applyCase, derivedName } from './concreteGrammar';
-import type { TextFeature, TextObject } from './metamodel';
+import type { OuterRef, TextFeature, TextObject } from './metamodel';
 import type { ObjectSpan } from './printer';
 import { featureKeyword, pathKeyword } from './printer';
 
@@ -67,7 +69,7 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
     const style = g.style;
     const puncts = [...new Set([
         ...style.blockOpen, ...style.blockClose, ...style.emptyBlock, ...style.assign, ...style.terminator,
-        style.list.open, style.list.separator, style.list.close, '[', ']', '.',
+        style.list.open, style.list.separator, style.list.close, '[', ']', '.', '@',
     ].filter(s => !/^\w/.test(s)))].sort((a, b) => b.length - a.length);
     const { line: lineComment, block: blockComment } = style.comments;
     const quote = style.string.quote;
@@ -220,7 +222,7 @@ export function firstSetsOf(g: ConcreteGrammar): (n: GrammarNode) => First {
                 set: new Set({ NAME: ['ID', 'STR'], INT: ['INT'], FLOAT: ['INT', 'FLOAT'], BOOL: ['ID:true', 'ID:false'], STRING: ['STR'] }[n.terminal]),
                 nullable: false,
             }; break;
-            case 'xref': r = { set: new Set(['ID', 'STR']), nullable: false }; break;
+            case 'xref': r = { set: new Set(['ID', 'STR', 'P:@']), nullable: false }; break;
             case 'lit': r = { set: new Set(literalsOf(n.rule).map(l => `ID:${applyCase(l, g.literalCase)}`)), nullable: false }; break;
             case 'rule': { const k = rules.get(n.name); r = k ? first(k.body) : EMPTY; break; }
             case 'assign': r = first(n.item); break;
@@ -242,8 +244,9 @@ class ParseFailure extends Error {
     constructor(readonly error: TextParseError) { super(error.message); }
 }
 
-/** A reference as written, resolved after the parse: a name, or a path whose first segment is a class keyword. */
+/** A reference as written, resolved after the parse: a name, or a path whose first segment is a class keyword; or the id of an object outside the text (R-TXT-32), kept as written. */
 interface RefSyntax {
+    readonly outer?: string;
     readonly name?: string;
     readonly segments?: readonly { readonly f: string; readonly index: number }[];
 }
@@ -354,8 +357,15 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
 
     const reference = (): RefSyntax => {
         const t = peek();
+        if (hit(t, 'P:@')) {
+            p++;
+            const id = peek();
+            if (id.k !== 'STR') fail(['a string, the id of an object outside the text']);
+            p++;
+            return { outer: id.v };
+        }
         if (t.k === 'STR') { p++; return { name: t.v }; }
-        if (t.k !== 'ID') fail(['a reference (a name or a path)']);
+        if (t.k !== 'ID') fail(['a reference (a name, a path, or @ and an id)']);
         if (!hit(peek(1), 'P:[')) { p++; return { name: t.v }; }
         const segments: { f: string; index: number }[] = [];
         for (;;) {
@@ -573,7 +583,7 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
     return { objects, errors, recovered: objects.filter(o => recovered.has(o.id)).map(o => o.id), spans };
 }
 
-/** Resolves every reference left as a `PendingRef` in the slots: by name (R-TXT-4), else by path (R-TXT-11). */
+/** Resolves every reference left as a `PendingRef` in the slots: by name (R-TXT-4), else by path (R-TXT-11); an outer one (R-TXT-32) is kept as its id. */
 function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], contained: ReadonlySet<string>, errors: TextParseError[], recovered: Set<string>, where: (id: string) => string): void {
     const byId = new Map(objects.map(o => [o.id, o]));
     const roots = objects.filter(o => !contained.has(o.id));
@@ -647,7 +657,8 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
         }
         return cur;
     };
-    const fix = (r: PendingRef): string | undefined => {
+    const fix = (r: PendingRef): string | OuterRef | undefined => {
+        if (r.syntax.outer !== undefined) return { outer: r.syntax.outer };
         const t = walk(r);
         let message: string | undefined;
         if (typeof t === 'string') message = t;

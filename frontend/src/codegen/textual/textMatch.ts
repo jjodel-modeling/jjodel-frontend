@@ -17,7 +17,7 @@
  */
 
 import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
-import { classFeatures } from './metamodel';
+import { classFeatures, isOuterRef } from './metamodel';
 import type { TextFeature, TextMetamodel, TextObject } from './metamodel';
 import type { ObjectSpan } from './printer';
 
@@ -240,7 +240,8 @@ function similarity(fs: readonly TextFeature[], t: TextObject, m: TextObject, to
         const mv = asArray(m.slots[f.name]);
         if (tv.length === 0 && mv.length === 0) continue;
         union++;
-        const mapped = f.kind === 'attribute' ? tv : tv.map(id => (typeof id === 'string' ? toModel.get(id)?.model : undefined));
+        // R-TXT-32: an outer target is its own id on both sides.
+        const mapped = f.kind === 'attribute' ? tv : tv.map(id => (typeof id === 'string' ? toModel.get(id)?.model : isOuterRef(id) ? id.outer : undefined));
         if (sameValue(mapped, mv, false)) equal++;
     }
     return union === 0 ? 0 : equal / union;

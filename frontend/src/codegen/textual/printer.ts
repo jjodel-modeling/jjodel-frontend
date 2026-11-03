@@ -11,6 +11,7 @@
 
 import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
 import { applyCase, derivedName } from './concreteGrammar';
+import { isOuterRef } from './metamodel';
 import type { TextObject } from './metamodel';
 
 /** `[start, end)` offsets into the printed text. */
@@ -96,7 +97,8 @@ const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [
 
 /**
  * Prints the objects of a model. The roots are the objects no other object contains, in the order given; a
- * reference or containment slot names its targets by id, and an id that names no object is skipped.
+ * reference or containment slot names its targets by id. A containment of an id that names no object is skipped; a
+ * reference to one prints `@` and the id as a string (R-TXT-32), as does an `OuterRef` the parser read.
  */
 export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[]): TextPrintReport {
     const style = g.style;
@@ -110,6 +112,8 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     const ruleNamed = new Map(g.rules.flatMap(r => (r.t === 'object' ? [[r.name, r] as const] : [])));
 
     const resolve = (id: unknown): TextObject | undefined => (typeof id === 'string' ? byId.get(id) : undefined);
+    /** R-TXT-32: the id of a reference target the text does not print. */
+    const outerOf = (v: unknown): string | undefined => (isOuterRef(v) ? v.outer : typeof v === 'string' && !byId.has(v) ? v : undefined);
 
     /** The values a star iterates: with `where`, those whose object's attribute is one of the group's literals, in the
      *  literals' order (ties in model order). */
@@ -245,7 +249,12 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     const value = (n: GrammarNode, v: unknown): void => {
         switch (n.t) {
             case 'rule': { const c = resolve(v); if (c) object(c, n.name); return; }
-            case 'xref': { const t = resolve(v); if (t) token(ref(n, t)); return; }
+            case 'xref': {
+                const t = resolve(v);
+                const outer = t ? undefined : outerOf(v);
+                if (t) token(ref(n, t)); else if (outer !== undefined) token(`@${quote(outer)}`);
+                return;
+            }
             case 'lit': token(applyCase(String(v), g.literalCase)); return;
             case 'tok':
                 if (n.terminal === 'STRING') token(quote(String(v)));
@@ -272,7 +281,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
                 return;
             }
             case 'list': {
-                const vs = asArray(o.slots[n.feat]).filter(v => !(n.item.t === 'assign' && n.item.item.t === 'xref') || resolve(v));
+                const vs = asArray(o.slots[n.feat]).filter(v => !(n.item.t === 'assign' && n.item.item.t === 'xref') || resolve(v) || outerOf(v) !== undefined);
                 token(n.open, true);
                 vs.forEach((v, i) => { if (i) token(n.separator, true); emit(n.item, o, v); });
                 token(n.close, true);
