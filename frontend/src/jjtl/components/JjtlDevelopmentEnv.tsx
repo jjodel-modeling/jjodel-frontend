@@ -24,6 +24,7 @@ import '../styles/jjtl.scss';
 import { getGrammarRuleAtPosition } from '../utils/astToGrammar';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
 import { formatNestedUnwritten, type NestedMaterializationReport } from '../../components/project/nestedMaterialization';
+import { formatRunWarnings } from './runWarnings';
 
 export interface JjtlDevelopmentEnvProps {
     initialCode?: string;
@@ -361,6 +362,8 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                     } else {
                         addOutputMessage(`Transformation failed: ${result.errors.join(', ')}`);
                     }
+                    // #520: the run's warnings (#445 among them), capped; all of them are in the Trace tab.
+                    for (const line of formatRunWarnings(result.warnings)) addOutputMessage(line);
                 } else {
                     console.warn('[JjtlDevelopmentEnv] No result returned from onExecuteTransformation');
                     addOutputMessage('Transformation completed (no result returned).');
