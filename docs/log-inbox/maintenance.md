@@ -800,3 +800,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Builtins registered on the run context are wrapped (JjtlEvaluationContext) to throw JjtlBuiltinError; evaluateExpression names the outermost expression and rethrows on both paths. Unchanged: `Function 'f' is not defined`, failing methods. Measured: in a `where` guard the run stops (`Execution failed`). Legacy locates a binary expression at its operator, so the column differs by path there. Mutation bench: parser revert killed by the new multivar test.
 **Prompt document name**: 2026-11-03 11:35
+
+## 2026-11-03 — merge: jjtl-collection-jjel-only into alfonso-frontend-jjtl (P-2026-11-03-1148)
+**Prompt**: `claude_2026-11-03_1148_prompt_merge_jjtl-collection-jjel-only.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-collection-jjel-only` at `03967006a` into `alfonso-frontend-jjtl`, merge base `9e72593b7`, 3 commits on the branch side.
+**Files touched**: merge `e226a7625`: 7 files from the branch side (`docs/log-inbox/maintenance.md`, `docs/prompts/claude_2026-11-03_1135_prompt_jjtl_builtin_error_jjel_collection.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/builtin-error.test.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/parser/parser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `e226a7625` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13241 tests in 503 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: JjTL parser and executor, no UI change: not run in the app; merge gates green (13241 tests, 0 failed, 9 red at import)
+**Notes**: Rollback tag `pre-jjtl-collection-jjel-only-P-2026-11-03-1148` on `9e72593b7` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1148/result.json`.
+**Prompt document name**: 2026-11-03 11:48
