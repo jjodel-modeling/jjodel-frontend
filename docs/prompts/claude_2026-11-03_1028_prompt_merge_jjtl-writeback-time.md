@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-03-1028
 Chat: C-2026-11-02-1541
 Request: https://claude.ai/code/session_01DQt9R6PwbdyvU1szY334kM (merge of jjtl-writeback-time launched by chat C-2026-11-02-1541)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: non eseguito 2026-11-03 · duplicate of P-2026-11-03-1021 (launched by C-2026-11-02-1541 after the handover; blocked at the commit, the branch was already merged at d04a598b6)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-03-1028 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
