@@ -657,26 +657,14 @@ export class JjtlParser {
     /**
      * The collection of a forall, up to the forall's own stop tokens: `such`,
      * `->`, the comma that continues the bindings (R-FA-5) and the end of the
-     * line. Without the source text it is the legacy expression. With it, the
-     * legacy parser is tried first and kept only when it stops at one of those
-     * tokens, so a collection that parsed before keeps its AST; otherwise the
-     * tokens are parsed by JjEL, which reads what the legacy parser cannot, an
-     * object literal among them (P-2026-11-02-2345).
+     * line. Without the source text it is the legacy expression. With it, JjEL
+     * is its only parser, as for `where`, `:=` and `such that`
+     * (P-2026-11-03-1135): it reads what the legacy parser cannot, an object
+     * literal among them (P-2026-11-02-2345).
      */
     private forAllCollection(): ExpressionAST {
         if (this.source === undefined) return this.expression();
-        const stops = [TokenType.SUCH, TokenType.ARROW, TokenType.COMMA, TokenType.NEWLINE];
-        const start = this.current;
-        const errorCount = this.errors.length;
-        try {
-            const legacy = this.expression();
-            if (stops.includes(this.peek().type)) return legacy;
-        } catch {
-            // the legacy parser cannot read it: JjEL below
-        }
-        this.current = start;
-        this.errors.length = errorCount;
-        return this.parseJjELExpression(stops);
+        return this.parseJjELExpression([TokenType.SUCH, TokenType.ARROW, TokenType.COMMA, TokenType.NEWLINE]);
     }
 
     // conversion = valueMapping ("," valueMapping)* | expression (":" valueMapping ("," valueMapping)*)?
