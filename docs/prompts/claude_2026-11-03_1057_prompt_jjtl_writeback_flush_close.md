@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1057
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · 7146fda53 · panel line verified on the DOM by the probe, no manual look (unattended)
 Lane: full (continues P-2026-11-03-1033 after its context ceiling)
 Depends: P-2026-11-03-1033
 Worktree: ~/jjodel-w-jjtlflush, branch jjtl-writeback-flush (the same tree, at the commit that adds this prompt)

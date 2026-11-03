@@ -364,3 +364,40 @@ Whether a smaller tree can hit it under load: the existing runs do not say. They
 **Smoke visivo**: non applicabile
 **Notes**: Report written from the handoff, figures from the 0703 probe on the dev server. Production NOT measured: load 15.7 at the check (limit 8). The opening-after canvas cost (WB_OPENAFTER) is also unmeasured. Ticket for the 5,119 attribute race filed (#482, high).
 **Prompt document name**: 2026-11-03 10:14
+
+## 2026-11-03 — ticket: JjTL nested walk drops subtrees when a long task outlasts its 3 s per-level cap
+**Ticket**: The JjTL nested walk drops whole subtrees of a 5,119-object tree when a long task outlasts its 3,000 ms per-level wait (`SLOT_WAIT_CAP_MS`): the cap is wall-clock, so one task of 3 s or more exhausts it without a second poll. The loss is reported in the output panel as "not placed", not silent. Measured with the tab open, `b11_9` (2,560 `Const`): at load 102.6 (P-2026-11-03-1033 before run) 2,047 of 5,119 objects created, 1,024 subtrees not placed, longest task 7,021 ms; at load 13.4 falling from a 5-minute average of 52.8 (P-2026-11-03-1057 after run 1) 3,071 of 5,119, the last level's 2,048 `Const` not placed, longest task 3,004 ms. Runs 2 and 3 at load 5.2 and 2.3: 5,119 of 5,119. `b10_8` (2,559 objects) at load 72.7 rising to 255: 2,559 of 2,559, nothing lost. The attribute writer of #482 is not involved: every value it queued was written. Fix candidates, not measured: count polls instead of wall-clock, or flush the open transaction block once per level before polling.
+**Priority**: medium
+**Found in**: P-2026-11-03-1033
+
+## 2026-11-03 — fix(jjtl): nested attributes wait for their slots, loss in the panel (P-2026-11-03-1057)
+**Prompt**: Close #482 after P-2026-11-03-1033's context ceiling: the panel line for unwritten attribute values, the gates, the after-probes with load recorded, a ticket for the walk's per-level cap, the before/after table.
+**Files touched**: `frontend/src/components/project/ProjectEditor.tsx`, `nestedMaterialization.ts`, `__tests__/nestedMaterialization.test.ts` (347f3996d, from P-2026-11-03-1033); `nestedMaterialization.ts`, its test, `frontend/src/jjtl/components/JjtlDevelopmentEnv.tsx` (7146fda53); `docs/log-inbox/hw-notation.md`, `Status:` of `docs/prompts/claude_2026-11-03_1033_prompt_jjtl_writeback_flush.md` and `docs/prompts/claude_2026-11-03_1057_prompt_jjtl_writeback_flush_close.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato
+**Notes**: Smoke: panel lines read from the DOM by the probe, forced failure included; no manual look. Gates: typecheck 0, vitest 13,238 of 13,238 with the 9 import-red files, build 0, check:docs 0. Panel line adopted as recommended (RC-21). LIR is d8a736474. The 300 ms per-level floor did NOT go (c60 gap median 302 ms): the per-level flush needs a `flush` in `NestedDeps`, its tests and the wiring, over ten lines, so not here. Walk cap: ticket #486.
+**Prompt document name**: 2026-11-03 10:57
+
+**Before and after** (dev server, tab open; probe `~/.jjodel-lanes/P-2026-11-03-1033/probe/`; times in ms from the click; load is the 1-minute average at the start):
+
+| run | load | attributes written | longest task | page quiet | `num` kept |
+|---|---|---|---|---|---|
+| b7_7 before | 5.7 | 4,878 | 359 | 8,852 | 256 of 256 |
+| b7_7 after | 2.8 | 4,487 | 341 | 8,899 (worse by 47) | 256 of 256 |
+| b10_8 before | 8.4 | 15,312 | 2,410 | 22,610 | 1,280 of 1,280 |
+| b10_8 after | 2.2 | 14,640 | 2,362 | 21,840 | 1,280 of 1,280 |
+| b10_8 after, loaded | 72.7, 255 at the end | 17,746 | 2,892 | 22,822 | 1,280 of 1,280 |
+| b10_8 after, forced failure | 214 | 22,673 | 3,410 | 25,723 | 0 of 1,280, panel line shown |
+| b11_9 before | 102.6, not comparable | 30,407 | 7,021 | 44,666 | 512 of 2,560 (walk: 2,047 objects) |
+| b11_9 after, run 1 | 13.4 (5-min 52.8) | 19,434 | 3,004 | 26,022 | 512 of 512 created (walk: 3,071 objects, 2,048 `Const` not placed) |
+| b11_9 after, run 2 | 5.2 | 30,731 | 7,206 | 42,298 | 2,560 of 2,560 |
+| b11_9 after, run 3 | 2.3 | 28,675 | 7,885 | 32,007 | 2,560 of 2,560 |
+| c60 before | report §4 | 20,000 | not given | not given | not given |
+| c60 after | 5.1 | 19,098 | 101 | 22,325 | 62 of 62 |
+
+b11_9 has no low-load before figure; its longest task after (7,206 and 7,885) is above the loaded before (7,021). The writer does not depend on `addObject`'s 600 ms seeding: in c60 it finished 71 ms after the walk, before the 122 seeding timers fired, and `num` stayed 62 of 62 ten seconds later. Run 1's loss is the walk's, not the writer's: every queued value was written (#486).
