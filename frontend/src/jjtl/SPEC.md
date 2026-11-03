@@ -838,6 +838,21 @@ For each source instance, the executor creates a child `EvaluationContext` with:
 
 This means `name` and `source.name` are equivalent in expressions.
 
+### 7.4 All instances of a type: search `data`
+
+`data` is the whole source array (§4.2: every object of the model, contained ones included), so
+the idiom for "every instance of type T" is a collection search over it, filtered on `className`:
+
+```
+data.filter(t => t.className == "DataType" and t.name == "Integer").first()
+```
+
+This is how Class2Relational finds the Integer type from any element, whatever its container
+(`docs/discovery/discovery_2026-11-03_jjtl_class2relational.md`, W3). There is no
+`T.allInstances` (searched `frontend/src/jjtl/` and `frontend/src/jjel/`, positive control
+`resolveAll`, P-2026-11-03-1434), and none is added for now (#519, low): `data.filter` covers the
+need, and a second spelling would be a language-surface change of its own.
+
 ---
 
 ## 8. Interactive Features
