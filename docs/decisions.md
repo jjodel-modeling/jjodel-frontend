@@ -7218,6 +7218,9 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-JTG-13 (2026-11-03)**: `resolve()`, `resolveAll()` and `{__ref}` find matched targets only, never a lazy node.
   Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03, registered by P-2026-11-03-0539; evidence: the
   lanes of slice B, verified: none, reversible: trunk.
+- **R-FA-11 (2026-11-03), decided by the chat under Alfonso's «decidi tu» 2026-11-03 11:32, evidence: measured (P-2026-11-03-1016), verified: none, reversible: trunk**: a builtin that fails inside a JjTL
+  expression stops the mapping with an error on every path, never a warning with `null`: a transformation that goes on writes a target model that is wrong and looks done.
+  With this, JjEL can be the only parser of a forall collection.
 
 ## Superate
 
