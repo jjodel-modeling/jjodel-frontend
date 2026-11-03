@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-0021
 Chat: C-2026-11-02-1814
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane fast · a5a9bb281 · stopped at the context ceiling (RC-51), closed by P-2026-11-03-0049 · verifica visiva passata 2026-11-03 (chat, unattended)
 Lane: full (UI on top of the T6a engine; writes to models)
 Depends: none
 Worktree: ~/jjodel-w-textt6b, branch textual-t6b (from the trunk commit that adds this prompt)

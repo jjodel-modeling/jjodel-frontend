@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-0049
 Chat: C-2026-11-02-1814
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane fast · a5a9bb281 · closure of P-2026-11-03-0021 · verifica visiva passata 2026-11-03 (chat, unattended)
 Lane: fast (closure of work already written and probed)
 Depends: P-2026-11-03-0021 (hard-stop at the ceiling, RC-51; uncommitted work in the tree, handoff in its lane folder)
 Worktree: ~/jjodel-w-textt6b, branch textual-t6b (the same tree)
