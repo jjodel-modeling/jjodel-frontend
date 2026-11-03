@@ -49,6 +49,7 @@ import type { TextMetamodel, TextObject } from '../metamodel';
 import type { NewModelReading } from '../modelLines';
 import TextConfirmPanel, { confirmRows, needsConfirmation } from './TextConfirmPanel';
 import type { ConfirmRow } from './TextConfirmPanel';
+import type { TextualSession } from './textualMonaco';
 import './TextualTab.scss';
 
 /** T1's input: the metamodel and the objects as plain data (metamodel.ts). */
@@ -302,8 +303,10 @@ export interface EditEvidence {
  * and the reference tokens it carried (`refs`, R-TXT-35: a token the user did not retype keeps its target).
  */
 export function planEdit(base: EditBase, text: string, carried: readonly ObjectSpan[], evidence: EditEvidence = {},
-                         confirmed?: readonly ApplyRefusal['code'][], refs: readonly RefSpan[] = []): { readonly parsed: TextParseResult; readonly plan: TextEditPlan } {
-    const parsed = parseText(text, base.grammar, { keep: refs });
+                         confirmed?: readonly ApplyRefusal['code'][], refs: readonly RefSpan[] = [],
+                         given?: TextParseResult): { readonly parsed: TextParseResult; readonly plan: TextEditPlan } {
+    // Step B1: the providers' parse of this very text, grammar and carried tokens, when the caller has it.
+    const parsed = given ?? parseText(text, base.grammar, { keep: refs });
     const plan = planTextEdit({
         mm: base.mm, grammar: base.grammar, model: base.objects, parsed, unprinted: base.unprinted, previous: carried, previousRefs: refs,
         ...(evidence.defaults ? { defaults: evidence.defaults } : {}),
@@ -561,6 +564,12 @@ const EDITOR_OPTIONS = {
     wordWrap: 'off',
 } as const;
 
+/** The text's editor: folding, and the semantic highlighting of the language service (step B1). */
+const TEXT_EDITOR_OPTIONS = { ...EDITOR_OPTIONS, folding: true, 'semanticHighlighting.enabled': true } as const;
+
+/** The Monaco adapter, loaded on the tab's mount (it imports `joiner`, which the bench cannot). */
+type TextualMonacoModule = typeof import('./textualMonaco');
+
 /** The owner of the edit's markers in the Monaco model. */
 const EDIT_MARKER_OWNER = 'textual-edit';
 
@@ -621,6 +630,10 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     // R-TXT-35 (P-2026-11-03-1535): the rewrite of the paths runs; a token was held under the caret.
     const rewritingRef = useRef(false);
     const heldRef = useRef(false);
+    const [ui, setUi] = useState<TextualMonacoModule | null>(null);
+    useEffect(() => { void import('./textualMonaco').then(m => setUi(m)); }, []);
+    // Step B1: the parse and analysis of the text's current version, shared by the providers and the typing pause.
+    const sessionRef = useRef<TextualSession | null>(null);
     const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void }>({ read: () => {}, content: () => {}, cursor: () => {} });
     const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
     useEffect(() => () => pause.cancel(), [pause]);
@@ -657,6 +670,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             };
         }));
         refDecorationsRef.current = { ids, refs: new Map(ids.map((id, i) => [id, kept[i]])) };
+        sessionRef.current?.invalidate();
     };
 
     /** R-TXT-35: the reference tokens of the last agreement, where the edit carried them; each keeps the text it was printed with. */
@@ -837,7 +851,9 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             return;
         }
         const ev = evidence(r.base);
-        const { parsed, plan } = planEdit(r.base, text, carriedSpans(), ev, confirmed, carriedRefs());
+        const shared = sessionRef.current?.current();
+        const reuse = shared && shared.text === text && shared.grammar === r.base.grammar ? shared.parsed : undefined;
+        const { parsed, plan } = planEdit(r.base, text, carriedSpans(), ev, confirmed, carriedRefs(), reuse);
         setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved ?? [])] : []);
         // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones.
         if (plan.diff) setDecorations(certainSpans(parsed, plan.diff.match));
@@ -928,9 +944,20 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         }
     }, [view.text]);
 
+    // A new notation reads the same text otherwise: the session parses again.
+    useEffect(() => { sessionRef.current?.invalidate(); }, [view.ebnf]);
+
     const onMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
         monacoRef.current = monaco;
+        const m = editor.getModel();
+        if (ui && m) {
+            const session = ui.openTextualSession(m, { base: () => readRef.current.base, keep: () => carriedRefs() });
+            sessionRef.current = session;
+            editor.onDidDispose(() => { session.dispose(); if (sessionRef.current === session) sessionRef.current = null; });
+            // The theme is global: another editor may have set its own since.
+            editor.onDidFocusEditorText(() => monaco.editor.setTheme(ui.TEXTUAL_THEME_ID));
+        }
         const r = readRef.current;
         syncRef.current = { text: editor.getValue(), model: r.view.text };
         if (r.base && editor.getValue() === r.view.text) { setDecorations(r.base.spans); setRefDecorations(r.base.refs ?? []); agree(); }
@@ -1024,14 +1051,16 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                     <>
                         {/* The text stays mounted under the EBNF, so a pending edit survives the toggle. */}
                         <div className={'textual-tab__layer' + (mode === 'text' ? '' : ' textual-tab__layer--hidden')}>
-                            {read.base && (
-                                <Editor width="100%" height="100%" language="plaintext" defaultValue={view.text}
-                                        onMount={onMount} options={EDITOR_OPTIONS} />
+                            {read.base && ui && (
+                                <Editor width="100%" height="100%" language={ui.TEXTUAL_LANGUAGE_ID} defaultValue={view.text}
+                                        theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
+                                        onMount={onMount} options={TEXT_EDITOR_OPTIONS} />
                             )}
                         </div>
-                        {mode === 'ebnf' && (
+                        {mode === 'ebnf' && ui && (
                             <div className="textual-tab__layer">
-                                <Editor width="100%" height="100%" language="plaintext" value={view.ebnf}
+                                <Editor width="100%" height="100%" language={ui.EBNF_LANGUAGE_ID} value={view.ebnf}
+                                        theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
                                         options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }} />
                             </div>
                         )}

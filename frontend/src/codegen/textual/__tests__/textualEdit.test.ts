@@ -172,6 +172,14 @@ describe('what a read text does', () => {
         expect(plan.lines).toEqual(['set cosmos.year = 1981']);
     });
 
+    it('a parse handed in is the one planned on, with the same plan (step B1; mutant: parse again regardless)', () => {
+        const { text, spans } = edited(plain, [['1980', '1981']]);
+        const given = parseText(text, plain.grammar, { keep: [] });
+        const shared = planEdit(plain, text, spans, {}, undefined, [], given);
+        expect(shared.parsed).toBe(given);
+        expect(shared.plan).toEqual(planEdit(plain, text, spans).plan);
+    });
+
     it('the agreed text asks for nothing, even unparsed (mutant: a reprint read as an edit)', () => {
         const { parsed, plan } = planEdit(plain, plain.text, plain.spans);
         expect(editDecision(plain.text, syncOf(plain.text), parsed, plan, false)).toEqual({ kind: 'synced' });
