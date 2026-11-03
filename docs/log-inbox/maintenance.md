@@ -774,3 +774,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: non applicabile
 **Notes**: Phase 1 only. The two paths agree on the AST and on `range(null)`. The executor differs: a legacy builtin `FunctionCall` throws (executor.ts:2859-2863, outside the try), so the mapping fails, while a JjelExpression warns and yields null (2881-2886). Probe P2, with that path aligned: parity 145/145, and only 3 AST-shape assertions red. Each fix changes `tests#107`, which is a stop. Causa (c): the 2345 ticket put the cause in parsing. Detail in the report.
 **Prompt document name**: 2026-11-03 10:16
+
+## 2026-11-03 — merge: jjtl-collection-jjel-only into alfonso-frontend-jjtl (P-2026-11-03-1053)
+**Prompt**: direct merge of the discovery of P-2026-11-03-1016, docs only, closed by hand by the chat because the worker ended blocked.
+**Files touched**: merge `d8773e4cd`, docs only.
+**Outcome**: ⚠️ partial: merged, one gate red in the worker
+**Corregge**: —
+**Causa**: —
+**Regressions**: no: the merge changes no code. vitest 13234 tests, 1 failed: `scripts/hooks/__tests__/laneBoard.test.ts:665`, `expected null to be +0`, a spawned process with a null status. The file alone at load 3: 95 passed, 0 failed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: not applicable, docs only.
+**Notes**: Ticket: the load-sensitive tests of P-2026-11-02-2250 are not the whole class: this one has the same shape as `traceMonitor`, unmeasured here. Open question from 1016: a failing builtin in JjTL, error or warning with null; waits for Alfonso.
+**Prompt document name**: 2026-11-03 10:53
