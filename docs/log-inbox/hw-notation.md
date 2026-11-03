@@ -532,3 +532,51 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Ticket**: `merge --direct` computes the expected vitest counts from the receiving tip, overwriting only the test files the branch changes. A product change that makes an unchanged test file load (red at import before, passing after) therefore reads as a difference, and the worker ends `blocked` with the merge commit left in place, although nothing failed. Measured on P-2026-11-03-1420: 13346 tests, 0 failed, four files listed as not as expected. `go` then refuses the closure. Suggested: a file going from importRed to passing with 0 failed is not a red gate; report it apart.
 **Priority**: medium
 **Found in**: P-2026-11-03-1420
+
+## 2026-11-03 — ticket: JjTL let bound to a called rule runs the rule at each use, silently
+**Ticket**: A `let` bound to a called-rule call runs the called rule again at each use of the variable: `let $id = idColumn(c) in { columns := [$id] ... key := [$id] }` creates one Column per use (called rules are fresh per call, R-JTG-6), so on Class2Relational 8 extra Columns land at the model root and the table's key and the subclass foreign key point to Columns outside their table. No warning is emitted. Measured by `frontend/src/jjtl/executor/__tests__/class2relational.test.ts` (fixture `class2relational.ts`, workaround W5). Workaround: a second matched rule per role (`Class c -> Column`, `Attribute a -> Column where a.multiValued`) and `resolve(x, "T")` at each use. Either the `let` value is evaluated once (a closure value per R-JTG-5 is computed once per environment), or a second use of a fresh target warns.
+**Priority**: high
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL x.parent is null for any element but the rule's own source
+**Ticket**: `x.parent` is null for any element other than the rule's own source: only the bare `parent` keyword is bound to the container (executor.ts, read around 2827-2856). On Class2Relational `a.parent.name` inside a called rule gives `Cannot access property 'name' of null` warnings, and join tables lose their name, owner column name and Integer type. Measured by `class2relational.test.ts` (workaround W2: bare `parent`, owner passed as an argument). Navigating to the container of any element should read `_containerId` the same way the keyword does.
+**Priority**: medium
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL resolve(x, T) with a bare type name works only as a whole right-hand side
+**Ticket**: `resolve(x, T)` with a bare type name is intercepted only when the call is the whole right-hand side of a binding (executor.ts, read around 4004-4021). Inside `[...]`, a lambda or a `let`, `T` is evaluated as a variable (null) and the call throws the very ambiguity it was written to settle. Measured by `class2relational.test.ts` (workaround W6: quote the name, `resolve(x, "T")`). The bare-name form should be accepted wherever the call appears, or rejected with a message that says to quote it.
+**Priority**: medium
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL binding cut at the newline, continuation gives a misleading parse error
+**Ticket**: A binding ends at the end of its line: a continuation line starting with `+` (`columns := a.map(...)` then `+ b.map(...)` on the next line) is a parse error, `23:13 Expected source attribute name`, which does not say that the expression was cut at the newline. Measured by `class2relational.test.ts` (workaround W1: the whole expression on one line). Either accept a continuation that starts with a binary operator, or name the cause in the message.
+**Priority**: low
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL has no allInstances, the idiom is a search of data
+**Ticket**: JjTL has no `allInstances` (or `T.allInstances()`): a rule that needs a target-independent element of the source model, here the Integer DataType for key columns, has to search `data` (the whole source model, SPEC 7.3) in a no-arg helper, `data.filter(t => t.className == "DataType" and t.name == "Integer").first()`. It works, but a reader must know that `data` exists and what shape it has. Searched in `frontend/src/jjtl/` and `frontend/src/jjel/` with a positive control on `resolveAll`. Measured by `class2relational.test.ts` (workaround W3). Language decision: add `T.allInstances` or document `data` as the idiom.
+**Priority**: low
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL warnings, #445 included, never reach the output panel
+**Ticket**: The #445 warning never reaches the JjTL output panel. Measured by the Class2Relational app probe (`~/.jjodel-lanes/P-2026-11-03-1434/probe/c2r.ts`, real Execute dialog): with `nullable := false` added to the first `Attribute -> Column` rule, the execution result carries exactly `Rule 'Attribute -> Column', binding 'nullable' at line 27, column 5: 'nullable' is not a feature of target class 'Column'; the value is not written to the model.`, but the panel shows the same 7 lines as the run without it, and the toast says only `Created model "out2" with 1 instances.` Read: on success `JjtlDevelopmentEnv.tsx:358-360` writes two fixed lines and does not print `result.warnings`. So #445 is still invisible to a user; a one-line loop over `result.warnings` there would show it. Not fixed in P-2026-11-03-1505 (no product code in scope).
+**Priority**: medium
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL floating Execute button partly under the editor scrollbar
+**Ticket**: The floating Execute button of the JjTL editor (`.jjtl-editor-action-btn--primary`, the play icon at the editor's top right) sits partly under Monaco's vertical scrollbar: a pointer click at its centre lands on the scrollbar (`div.visible.scrollbar.vertical` intercepts pointer events), so Playwright cannot click it, with a 72-line text that scrolls. Measured twice by the Class2Relational app probe (`executePointerClickable: false` on both runs; screenshot `~/.jjodel-lanes/P-2026-11-03-1434/probe/c2r-run1-exec-covered.png`). A user can still use the toolbar's Execute or Ctrl+Enter, or the left half of the icon. Suggested: inset the floating toolbar by the scrollbar width.
+**Priority**: low
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — test(jjtl): Class2Relational acceptance, app probe and report (P-2026-11-03-1505)
+**Prompt**: P-2026-11-03-1434 continued by P-2026-11-03-1505: a non-hardware acceptance case, Class2Relational, as executor fixture, app probe through the Execute dialog with save and reopen, the #445 line in the panel, tickets per failure and a report with a verdict on R-JTG-5, 6, 7.
+**Files touched**: `8a064bbbd`: `frontend/src/jjtl/__tests__/fixtures/class2relational.ts` (new), `frontend/src/jjtl/executor/__tests__/class2relational.test.ts` (new), `frontend/src/jjtl/executor/executor.ts` (one line); `e2332b61c`, `7ec6305ae`: this inbox (seven tickets); `6226edf31`: `docs/discovery/discovery_2026-11-03_jjtl_class2relational.md`; this entry and the `Status:` lines of both prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe, no hand run: output equals EXPECTED_SCHEMA (6 tables, 14 columns, 3 FKs, 3 types), same tree after save and reopen; #445 warning in the result, not in the panel
+**Notes**: R-JTG-5/6/7 fit beyond hardware; one design gap, a called rule cannot create once and be referenced twice (`unique` on called rules recommended). Tickets #515-#521. Gates: tsc 0, vitest 13358 passed, 3 red at import plus irSelectionRing afterAll timeout under load (alone 5/5 green), build 0. Details in the report.
+**Prompt document name**: 2026-11-03 15:05
