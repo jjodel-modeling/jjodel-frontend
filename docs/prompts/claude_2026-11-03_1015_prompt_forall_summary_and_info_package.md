@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1015
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: eseguito 2026-11-03 · lane fast · jjscript-forall-summary · 53731ec92 · verifica visiva non applicabile
+Status: eseguito 2026-11-03 · lane fast · jjscript-forall-summary · 9373d1fa7, 72d1b3cf2 · verifica visiva non applicabile
 Lane: fast (two small independent fixes)
 Depends: none
 Worktree: ~/jjodel-w-jjsfsum, branch jjscript-forall-summary (from the trunk tip)
