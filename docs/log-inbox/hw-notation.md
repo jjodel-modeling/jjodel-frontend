@@ -235,3 +235,70 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (chat GO: 3001 HTTP 200 on the merged tree; behaviour measured by the P-2026-11-02-2108 probe on aa503e261; no hand run on the trunk, not a visual verification)
 **Notes**: Merge-tree 230d1041f equal to the staged tree; 22 probes as declared. Gates on c58e00349: typecheck, typecheck:scripts exit 0; vitest 13028 = trunk 12988 + 40 (190 vs 150 in the four touched test files), the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5; check:agents, check:scripts, check:addonly PASS. Trunk tip red once on one laneRun 15 s timeout under a concurrent run, green on rerun.
 **Prompt document name**: 2026-11-02 21:49
+
+## 2026-11-02 — feat(jjtl): B1 steps 2 and 3, called rules tested, the environment (P-2026-11-02-2247)
+**Prompt**: P-2026-11-02-2247, continuation of P-2026-11-02-2224 after its context ceiling: test the wip step 2 (called rules, depth limit 256) and commit; implement step 3, the environment, with the acceptance case (2), capture, and implicit resolution inheriting the environment to the leaves.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts` (8ddcc744f), `executor/__tests__/called-lazy-rules.test.ts` (4e2891bc3, 8ddcc744f), `frontend/src/jjtl/SPEC.md` (0c2e9d071), this inbox, the `Status:` lines of P-2026-11-02-2224 and P-2026-11-02-2247.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Six files, all in DOVE. Step 2 green unchanged. Step 3: closures (value, binding-site env), structural env keys, lowering per (rule, source, env) under a non-empty env, delegating rules on first demand. Mutation (closures under use-site env) kills 8/14. Gates: jjtl 462 + 7 known; full 13048 passed, 9 known + 2 Chromium hook timeouts, 18/18 alone; tsc exit 0. Steps 4 (lazy) and 5 (fresh subtree under B) are the next lane.
+**Prompt document name**: 2026-11-02 22:47
+
+## 2026-11-02 — feat(jjtl): B1 steps 4 and 5, lazy rules and containment under B (P-2026-11-02-2321)
+**Prompt**: P-2026-11-02-2321, closes B1: lazy rules (by class, guard selection, matched+lazy ambiguity, `unique` memo) and containment under B (fresh subtrees, double claim only implicit and `unique`); toy rules lazy; ruling R-JTG-6/7 on bound values; remaining acceptance tests; SPEC 5.3.3, 12, B2 list.
+**Files touched**: `frontend/src/jjtl/executor/executor.ts` (105140d39, 6bf6e6578), `executor/__tests__/called-lazy-rules.test.ts` (105140d39, 6bf6e6578), `frontend/src/jjtl/SPEC.md` (b0ad73715), this inbox, the `Status:` line of P-2026-11-02-2321.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Five files, all in DOVE. Bound values lower afresh, a matched class untraced. Mutations: unique memo dropped 2/24; closures not fresh 2/34; lazy memoised 4/34. Gates: jjtl 482 + 7 known; full 13068 passed, 9 known import failures, 0 failed tests; tsc exit 0. B2 list in SPEC 5.3.3.
+**Prompt document name**: 2026-11-02 23:21
+
+## 2026-11-03 — ticket: JjTL source serializer unwraps a one-element many-valued reference
+**Ticket**: A many-valued reference of the source model that holds one value reaches the JjTL rules as a single value, not as a one-element list: the source serializer of the Execute path (`components/project/ProjectEditor.tsx:1556-1574`) unwraps it. Measured in the app, probe `b2-writeback.ts` of P-2026-11-02-2338 (port 3197): `Bind.bindings` holding one `Binding`, the rule `b.bindings.map(x => x.bvar)` warns `Expression evaluation failed (JjelExpression): Unknown method 'map' for type Binding`; S1 wrote 0 objects instead of 3, S3 wrote 1 (`Add(null, null)`) instead of 7. The same sources with two bindings each pass (S1 3 objects, S3 7, two separate subtrees). A transformation that works on two values breaks on one.
+**Priority**: high
+**Found in**: P-2026-11-02-2338
+
+## 2026-11-03 — ticket: JjTL source serializer drops a repeated pointer of a many-valued reference
+**Ticket**: The same pointer listed twice in a many-valued source reference reaches the JjTL rules once: the source serializer of the Execute path (`components/project/ProjectEditor.tsx:1556-1574`) collapses the repeat. Measured in the app, probe `b2-writeback.ts` of P-2026-11-02-2338 (port 3197): `Main.exprs = [c1, c1]` under `items := exprs` with a non-unique lazy rule wrote 1 `Const` and `Holder.items` of 1, against 2 and 2 expected; the executor saw `inst {Holder: 1, Const: 1}`. Reaching the one source twice through two distinct elements (`m.exprs.map(e => m.expr)`) gives 2 Const and 2 distinct pointers, so the loss is on the source side, not in the write-back.
+**Priority**: medium
+**Found in**: P-2026-11-02-2338
+
+## 2026-11-03 — ticket: JjTL write-back of a 2,559-object tree takes 17 s against 603 ms in the executor
+**Ticket**: Writing a tree of 2,559 lowered objects to the store is slow in the app. Measured with probe `b2-writeback.ts` of P-2026-11-02-2338 (port 3197), scenario T: the executor ran in 603 ms and all 2,559 objects were in the store 17,061 ms after Execute (first run, 2026-11-02); reruns gave 955 ms / 22,203 ms and 878 ms / 24,413 ms. The time is the write-back, not the transformation. To find where it goes for trees of this size (actions per object, renders, sync); no fix asked.
+**Priority**: medium
+**Found in**: P-2026-11-02-2338
+
+## 2026-11-03 — feat(jjtl): B2 closed, probes rerun, SPEC 5.3.3 (P-2026-11-03-0009)
+**Prompt**: Continue P-2026-11-02-2338 after its context ceiling: rerun the B2 probe and the probes of P-2026-11-02-2108 and P-2026-11-02-1838, update the B2 list of SPEC 5.3.3, file three tickets, log entry, `Status:` lines. B2 code is 7e96a4e1c (P-2026-11-02-2338).
+**Files touched**: `frontend/src/jjtl/SPEC.md` (b1d1c45fd); `docs/log-inbox/hw-notation.md` (three tickets, this entry); `docs/prompts/` `Status:` lines of P-2026-11-03-0009 and P-2026-11-02-2338
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: Port 3197. B2 probe 10/10 (S1 3 obj, S3 7, S4 2 Const + 2 pointers, S5 1 + 1, S5b 2 + 2, S6/S7 fail visibly, T 2559 in 878 ms exec / 24.4 s written, reopen equal). S1/S3/S4/S5 rewritten to avoid the two serializer defects (tickets). 2108 a2: A1-A5 all checks true, reopen 8/8/9; a0-rerun and 1838 a0-writeback S1-S5 identical (4/4/6/4/2). Only page error `init_dash`. SPEC item 4 open, awaiting Alfonso.
+**Prompt document name**: 2026-11-03 00:09
+
+## 2026-11-03 — merge: jjtl-called-rules takes alfonso-frontend-jjtl (P-2026-11-03-0045)
+**Prompt**: `claude_2026-11-03_0045_prompt_jjtl-called-rules_take_trunk.md`, full lane: bring the trunk at the explicit sha b200ccbc8 into jjtl-called-rules with one --no-ff merge commit (RC-14); zero conflicts; stopped at step 8 for the chat's GO, resumed on it.
+**Files touched**: merge commit a4aa879ec (the trunk's 56 files, no union resolution: the three files changed on both sides merged clean); closure commit: the Status line of the prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (chat GO on the gates of a4aa879ec; no app run on the merged branch; the app probes of P-2026-11-03-0009 predate this trunk-into)
+**Notes**: Merge-tree 7e0dff533 equal to the staged tree; 25 probes once each, control 0, no union. Gates on a4aa879ec: typecheck, typecheck:scripts exit 0; vitest 13193 = trunk 13145 + 48 (59 vs 11 in the three branch test files), the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5 (the prompt said 4/4); check:scripts, check:addonly PASS. Regressions unknown: gates only, no app run on the merged tree.
+**Prompt document name**: 2026-11-03 00:45

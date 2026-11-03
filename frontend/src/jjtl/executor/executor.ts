@@ -296,12 +296,64 @@ interface TargetEntry {
 }
 
 /**
- * The environment part of a trace key (R-JTG-5, R-JTG-6). Slice B introduces
- * non-empty environments; until then every entry is registered and every lookup
- * made under EMPTY_ENVIRONMENT, so the key is (source, rule) in effect.
+ * The environment of a rule application, and the third part of a trace key (R-JTG-5,
+ * R-JTG-6). Dynamically scoped: an application inherits its caller's environment unless
+ * a called rule receives one through an `Env` parameter. Each frame binds names to
+ * closures; a lookup walks the frames innermost first. Trace keys compare environments
+ * structurally (envKey), so two frames binding the same closures are one key.
  */
-type TraceEnvironment = Readonly<Record<string, never>>;
-const EMPTY_ENVIRONMENT: TraceEnvironment = Object.freeze({});
+interface Environment {
+    readonly parent: Environment | null;
+    readonly bindings: ReadonlyMap<string, Closure>;
+}
+/** A bound value: the expression as written and the environment of its binding site. */
+interface Closure {
+    readonly value: any;
+    readonly env: Environment;
+}
+type TraceEnvironment = Environment;
+const EMPTY_ENVIRONMENT: TraceEnvironment = Object.freeze({ parent: null, bindings: new Map<string, Closure>() });
+
+/**
+ * Deepest nesting of rule applications (called, lazy, delegating, closures) before a
+ * run stops as non-terminating: a recursive call that makes no progress ends in an
+ * error naming the application stack instead of hanging the browser (P-2026-11-02-2224).
+ */
+const MAX_APPLICATION_DEPTH = 256;
+
+/**
+ * A rule application asked for during an expression and carried out by the binding that
+ * receives it (slice B). JjEL builtins are synchronous and a rule body is evaluated with
+ * the async binding machinery, so a call evaluates to a marker `{ __jjtlDemand: id }`,
+ * realized by realizeDemands before the binding resolves its value. The marker is plain
+ * data: a copy made by fromJjelValue still names the same demand.
+ */
+interface CallDemand {
+    kind: 'call';
+    rule: ClassMappingAST;
+    args: any[];
+    callerEnv: TraceEnvironment;
+}
+/** The value bound to `name`, asked for by envLookup: lowered under the closure's environment. */
+interface ClosureDemand {
+    kind: 'closure';
+    name: string;
+    closure: Closure;
+}
+type Demand = CallDemand | ClosureDemand;
+
+/** One rule application on the stack, named in errors (rule, source element, environment). */
+interface ApplicationFrame {
+    rule: string;
+    source: string;
+    env: TraceEnvironment;
+}
+
+/** Stops the run: rethrown by every binding, reported once at the top. */
+class JjtlApplicationAbort extends Error {}
+
+/** Key under which a delegating rule's error carries the application stack of its throw. */
+const APPLICATION_STACK = Symbol('jjtlApplicationStack');
 
 /** Who holds a rule target placed by a containment binding (slice A, R-JTG-4). */
 interface ContainmentClaim {
@@ -489,6 +541,23 @@ export class JjtlExecutor {
     // Objects created in a body -> the object whose feature holds them; walked with
     // containerOf to find containment cycles.
     private nestedParentOf: WeakMap<object, any> = new WeakMap();
+    // Slice B (P-2026-11-02-2224): the target model, reached by rules applied in pass 2;
+    // pending demands by id; the stack of rule applications, whose top holds the
+    // environment of the application in progress (dynamic scope).
+    private targetModelRef: TargetModel | null = null;
+    private demands: Map<number, Demand> = new Map();
+    private applicationStack: ApplicationFrame[] = [];
+    // Environments by marker id (`{ __jjtlEnv: id }` survives JjEL copies), their
+    // structural keys, and what each (rule, source, environment) realized to.
+    private environments: Map<number, Environment> = new Map();
+    private envKeys: WeakMap<Environment, string> = new WeakMap();
+    private objectKeys: WeakMap<object, number> = new WeakMap();
+    private objectKeyCount = 0;
+    private realized: Map<string, any> = new Map();
+    // Lazy rules by source class (step 4, R-JTG-7), and every rule's position, the rule
+    // part of the (rule, source, environment) key.
+    private lazyBySourceType: Map<string, ClassMappingAST[]> = new Map();
+    private ruleIds: Map<ClassMappingAST, number> = new Map();
     private stats: ExecutionStats = {
         sourceInstancesProcessed: 0,
         targetInstancesCreated: 0,
@@ -563,11 +632,15 @@ export class JjtlExecutor {
             // Register helpers
             this.registerHelpers();
 
+            // Called rules become JjEL builtins (slice B)
+            this.registerRules();
+
             // Create target model container
             const targetModel: TargetModel = {
                 instances: new Map(),
                 roots: [],
             };
+            this.targetModelRef = targetModel;
 
             // Get all source instances from the COPY
             const sourceInstances = this.extractSourceInstances(sourceModelCopy);
@@ -576,6 +649,7 @@ export class JjtlExecutor {
             // target classes (e.g. reject abstract targets)
             this.buildTargetClassIndex();
             this.validateTargetClasses();
+            this.validateLazyRules();
 
             // If validation errors, return early
             if (this.errors.length > 0) {
@@ -866,8 +940,10 @@ export class JjtlExecutor {
             }
         };
 
-        for (const mapping of this.ast.mappings) {
-            checkTarget(mapping.targetClass, `${mapping.sources.map(s => s.className).join(', ')} -> ${mapping.targetClass}`, true);
+        for (const mapping of [...this.ast.mappings, ...(this.ast.rules ?? [])]) {
+            // A delegating rule creates no target of its own (slice B).
+            if (mapping.result) continue;
+            checkTarget(mapping.targetClass, this.ruleLabel(mapping), true);
             if (mapping.body) {
                 checkBody(mapping.body, mapping.targetClass);
             }
@@ -1114,6 +1190,25 @@ export class JjtlExecutor {
         this.containerOf = new Map();
         this.containmentConflicts = [];
         this.nestedParentOf = new WeakMap();
+        this.targetModelRef = null;
+        this.demands = new Map();
+        this.applicationStack = [];
+        this.environments = new Map();
+        this.envKeys = new WeakMap();
+        this.objectKeys = new WeakMap();
+        this.objectKeyCount = 0;
+        this.realized = new Map();
+        this.lazyBySourceType = new Map();
+        this.ruleIds = new Map();
+        [...this.ast.mappings, ...(this.ast.rules ?? [])].forEach((r, i) => this.ruleIds.set(r, i));
+        for (const rule of this.ast.rules ?? []) {
+            if (rule.ruleKind !== 'lazy') continue;
+            for (const src of rule.sources) {
+                const list = this.lazyBySourceType.get(src.className) || [];
+                list.push(rule);
+                this.lazyBySourceType.set(src.className, list);
+            }
+        }
 
         // Register resolve() and resolveAll() as JjEL builtins
         this.registerTraceBuiltins();
@@ -1279,6 +1374,11 @@ export class JjtlExecutor {
     ): Promise<void> {
         if (this.unknownTargetClasses.has(mapping.targetClass)) {
             console.log(`[JjTL] Skipping mapping to unknown target class '${mapping.targetClass}'`);
+            return;
+        }
+
+        if (mapping.result) {
+            this.pass1Delegating(mapping, sourceInstances);
             return;
         }
 
@@ -1459,7 +1559,8 @@ export class JjtlExecutor {
         sourceInstance: any,
         targetInstances: any[],
         mapping: ClassMappingAST,
-        targetClass: string
+        targetClass: string,
+        environment: TraceEnvironment = EMPTY_ENVIRONMENT,
     ): void {
         const keys = new Set<string>();
         if (sourceInstance?.name) keys.add(String(sourceInstance.name));
@@ -1468,7 +1569,7 @@ export class JjtlExecutor {
         for (const key of keys) {
             const entries = this.context.targetsBySourceName.get(key) || [];
             for (const target of targetInstances) {
-                entries.push({ source: sourceInstance, target, rule: mapping, targetClass, environment: EMPTY_ENVIRONMENT });
+                entries.push({ source: sourceInstance, target, rule: mapping, targetClass, environment });
             }
             this.context.targetsBySourceName.set(key, entries);
         }
@@ -1482,6 +1583,26 @@ export class JjtlExecutor {
     private async pass2BindAttributes(mapping: ClassMappingAST): Promise<void> {
         const pending = this.context.pendingByMapping.get(mapping);
         if (!pending || pending.length === 0) return;
+
+        if (mapping.result) {
+            // A binding that reached the element first has already lowered it (realizeSource).
+            // An error of one element is that element's, as a binding's is (slice B2): the
+            // others are still lowered. The depth-limit abort still ends the run.
+            for (const entry of pending) {
+                try {
+                    await this.realizeSource(entry.sourceInstance, mapping, EMPTY_ENVIRONMENT);
+                } catch (error) {
+                    if (error instanceof JjtlApplicationAbort) throw error;
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    const stack = (error as any)?.[APPLICATION_STACK] ?? this.applicationStackSuffix();
+                    this.errors.push(
+                        `Failed to lower ${this.describeSubject(entry.sourceInstance)} by rule ` +
+                        `'${this.ruleLabel(mapping)}': ${errorMessage}${stack}`
+                    );
+                }
+            }
+            return;
+        }
 
         const ruleName = `${mapping.sources.map(s => s.className).join(', ')} -> ${mapping.targetClass}`;
         this.context.currentRuleName = ruleName;
@@ -1760,7 +1881,7 @@ export class JjtlExecutor {
             // Cross-type resolution: if the binding value is (or contains) a
             // source element whose type has a rule, swap it for the
             // corresponding target element via the trace.
-            const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute, targetInstance);
+            const resolved = await this.resolveBinding(value, mapping.targetAttribute, targetInstance);
 
             // Set target attribute
             const finalValue = fromJjelValueKeepingTargets(resolved);
@@ -1789,9 +1910,11 @@ export class JjtlExecutor {
 
             // console.log(`[JjTL Executor] Set ${mapping.targetAttribute} = ${JSON.stringify(finalValue)} (invertible: ${invertible})`);
         } catch (error) {
+            if (error instanceof JjtlApplicationAbort) throw error;
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.errors.push(
-                `Failed to map ${mapping.sourceAttribute || '(creation)'} -> ${mapping.targetAttribute}: ${errorMessage}`
+                `Failed to map ${mapping.sourceAttribute || '(creation)'} -> ${mapping.targetAttribute}: ${errorMessage}` +
+                this.applicationStackSuffix()
             );
         }
     }
@@ -1963,17 +2086,19 @@ export class JjtlExecutor {
             }
 
             // Cross-type resolution: swap source elements for target elements via trace.
-            const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute, targetInstance);
+            const resolved = await this.resolveBinding(value, mapping.targetAttribute, targetInstance);
 
             // Set target attribute
             const finalValue = fromJjelValueKeepingTargets(resolved);
             targetInstance[mapping.targetAttribute] = finalValue;
             // console.log(`[JjTL Executor] Set ${mapping.targetAttribute} = ${JSON.stringify(finalValue)}`);
         } catch (error) {
+            if (error instanceof JjtlApplicationAbort) throw error;
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('[JjTL Executor] Error in executeAttributeMapping:', errorMessage);
             this.errors.push(
-                `Failed to map ${mapping.sourceAttribute || '(creation)'} -> ${mapping.targetAttribute}: ${errorMessage}`
+                `Failed to map ${mapping.sourceAttribute || '(creation)'} -> ${mapping.targetAttribute}: ${errorMessage}` +
+                this.applicationStackSuffix()
             );
         }
     }
@@ -2301,7 +2426,7 @@ export class JjtlExecutor {
                     value = null;
                 }
 
-                newObject[attrMapping.targetAttribute] = this.applyCrossTypeResolution(value, attrMapping.targetAttribute, newObject) as JjelValue;
+                newObject[attrMapping.targetAttribute] = await this.resolveBinding(value, attrMapping.targetAttribute, newObject) as JjelValue;
             } else if (item.type === 'ForAllMapping') {
                 await this.executeForAllMappingOnObject(item as ForAllMappingAST, sourceInstance, newObject, extraBindings);
             } else if (item.type === 'AlertStatement') {
@@ -2450,7 +2575,7 @@ export class JjtlExecutor {
                 } else {
                     value = null;
                 }
-                targetInstance[mapping.targetAttribute] = fromJjelValueKeepingTargets(this.applyCrossTypeResolution(value, mapping.targetAttribute, targetInstance));
+                targetInstance[mapping.targetAttribute] = fromJjelValueKeepingTargets(await this.resolveBinding(value, mapping.targetAttribute, targetInstance));
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
                 await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance, alias, letBindings);
@@ -2531,7 +2656,7 @@ export class JjtlExecutor {
                     value = null;
                 }
 
-                const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute, targetInstance);
+                const resolved = await this.resolveBinding(value, mapping.targetAttribute, targetInstance);
                 const finalValue = fromJjelValueKeepingTargets(resolved);
                 targetInstance[mapping.targetAttribute] = finalValue;
                 const invertible = this.isBindingInvertible(mapping);
@@ -2907,6 +3032,453 @@ export class JjtlExecutor {
         if (!this.warnings.includes(msg)) this.warnings.push(msg);
     }
 
+
+    // ============================================
+    // SLICE B: CALLED, LAZY AND DELEGATING RULES (P-2026-11-02-2224)
+    // ============================================
+
+    /** `Class -> Target`, `rule name(...) -> Target`, `lazy Class -> Target`, `= ...` for delegations. */
+    private ruleLabel(rule: ClassMappingAST): string {
+        const head = rule.ruleKind === 'called'
+            ? `rule ${rule.ruleName}(${(rule.parameters ?? []).map(p => p.name).join(', ')})`
+            : `${rule.ruleKind === 'lazy' ? (rule.unique ? 'unique lazy ' : 'lazy ') : ''}` +
+              rule.sources.map(s => s.className).join(', ');
+        return rule.result ? `${head} = ...` : `${head} -> ${rule.targetClass}`;
+    }
+
+    /**
+     * Register every called rule as a JjEL builtin that returns a demand; a name taken by a
+     * helper, a builtin or another called rule is an error.
+     */
+    private registerRules(): void {
+        this.registerEnvironmentBuiltins();
+        for (const rule of this.ast.rules ?? []) {
+            if (rule.ruleKind !== 'called' || !rule.ruleName) continue;
+            const name = rule.ruleName;
+            if (this.context.evalContext.getBuiltin(name)) {
+                this.errors.push(`Called rule '${name}' has the name of a helper, a builtin or another called rule.`);
+                continue;
+            }
+            const params = (rule.parameters ?? []).map(p => p.name);
+            this.context.evalContext.registerBuiltin(name, createFunction(params, (args: JjelValue[]) =>
+                this.makeDemand({ kind: 'call', rule, args: [...args], callerEnv: this.currentEnvironment() }) as JjelValue
+            ));
+        }
+    }
+
+    /**
+     * The environment as JjEL sees it (R-JTG-5): `extendEnv(names, values)` returns a new
+     * frame over the current environment, each value a closure over the current
+     * environment, the binding site; `envHas(name)`; `envLookup(name)`, the bound value as
+     * a demand lowered under its closure's environment, or null when unbound.
+     */
+    private registerEnvironmentBuiltins(): void {
+        const ctx = this.context.evalContext;
+        const list = (v: any): any[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
+        ctx.registerBuiltin('extendEnv', createFunction(['names', 'values'], (args: JjelValue[]) => {
+            const names = list(args[0]).map(n => String(n));
+            const values = list(args[1]);
+            const site = this.currentEnvironment();
+            const bindings = new Map<string, Closure>();
+            names.forEach((n, i) => bindings.set(n, { value: values[i] ?? null, env: site }));
+            return this.envMarker({ parent: site, bindings }) as JjelValue;
+        }));
+        ctx.registerBuiltin('envHas', createFunction(['name'], (args: JjelValue[]) =>
+            this.lookupClosure(this.currentEnvironment(), String(args[0])) !== undefined
+        ));
+        ctx.registerBuiltin('envLookup', createFunction(['name'], (args: JjelValue[]) => {
+            const name = String(args[0]);
+            const closure = this.lookupClosure(this.currentEnvironment(), name);
+            return (closure ? this.makeDemand({ kind: 'closure', name, closure }) : null) as JjelValue;
+        }));
+    }
+
+    private envMarker(env: Environment): { __jjtlEnv: number } {
+        const id = this.environments.size + 1;
+        this.environments.set(id, env);
+        return { __jjtlEnv: id };
+    }
+
+    private environmentOf(value: any): Environment | undefined {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+        const id = (value as any).__jjtlEnv;
+        return typeof id === 'number' ? this.environments.get(id) : undefined;
+    }
+
+    private lookupClosure(env: Environment, name: string): Closure | undefined {
+        for (let e: Environment | null = env; e; e = e.parent) {
+            const c = e.bindings.get(name);
+            if (c) return c;
+        }
+        return undefined;
+    }
+
+    /**
+     * The structural key of an environment: the visible bindings, innermost first wins,
+     * sorted by name, each as its value's identity and its closure's key. Empty is ''.
+     */
+    private envKey(env: Environment): string {
+        if (env === EMPTY_ENVIRONMENT) return '';
+        const cached = this.envKeys.get(env);
+        if (cached !== undefined) return cached;
+        const visible = new Map<string, Closure>();
+        for (let e: Environment | null = env; e; e = e.parent) {
+            for (const [n, c] of e.bindings) if (!visible.has(n)) visible.set(n, c);
+        }
+        const key = [...visible.keys()].sort()
+            .map(n => `${n}=${this.valueKey(visible.get(n)!.value)}@{${this.envKey(visible.get(n)!.env)}}`)
+            .join(';');
+        this.envKeys.set(env, key);
+        return key;
+    }
+
+    /** The identity of a bound value: a source element by id, an object by first sight. */
+    private valueKey(value: any): string {
+        if (value == null || typeof value !== 'object') return JSON.stringify(value) ?? String(value);
+        if (Array.isArray(value)) return `[${value.map(v => this.valueKey(v)).join(',')}]`;
+        const el = this.asSourceElement(value);
+        if (el && (el.id ?? el.name) != null) return `#${el.id ?? el.name}`;
+        let n = this.objectKeys.get(value);
+        if (n === undefined) { n = ++this.objectKeyCount; this.objectKeys.set(value, n); }
+        return `@${n}`;
+    }
+
+    /** `{ x := Var 'a', ... }` for the application stack; empty for the empty environment. */
+    private describeBindings(env: Environment): string {
+        const visible = new Map<string, Closure>();
+        for (let e: Environment | null = env; e; e = e.parent) {
+            for (const [n, c] of e.bindings) if (!visible.has(n)) visible.set(n, c);
+        }
+        if (visible.size === 0) return '';
+        return ` with { ${[...visible].map(([n, c]) => `${n} := ${this.describeSubject(c.value)}`).join(', ')} }`;
+    }
+
+    private makeDemand(demand: Demand): { __jjtlDemand: number } {
+        const id = this.demands.size + 1;
+        this.demands.set(id, demand);
+        return { __jjtlDemand: id };
+    }
+
+    private demandOf(value: any): Demand | undefined {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+        const id = (value as any).__jjtlDemand;
+        return typeof id === 'number' ? this.demands.get(id) : undefined;
+    }
+
+    /** The environment of the rule application in progress; empty outside one. */
+    private currentEnvironment(): TraceEnvironment {
+        return this.applicationStack.length > 0
+            ? this.applicationStack[this.applicationStack.length - 1].env
+            : EMPTY_ENVIRONMENT;
+    }
+
+    /** A binding's value: demands realized first, then resolved and placed as before. */
+    private async resolveBinding(value: any, targetAttribute: string, owner?: any): Promise<any> {
+        return this.applyCrossTypeResolution(await this.realizeDemands(value), targetAttribute, owner);
+    }
+
+    /** True when `value` holds something realizeDemands would replace. */
+    private needsRealization(value: any, fresh = false): boolean {
+        if (Array.isArray(value)) return value.some(el => this.needsRealization(el, fresh));
+        return this.demandOf(value) !== undefined || this.sourceRuleOf(value, fresh) !== undefined;
+    }
+
+    /**
+     * The source element `value` stands for and the matched rule that lowers it now, in
+     * the current environment: a delegating rule always (its result exists only once
+     * applied), any rule under a non-empty environment (implicit resolution inherits the
+     * environment down to the leaves, R-JTG-6). Otherwise undefined: the pass 1 target
+     * answers, through the resolution that follows, unless `fresh` asks for a new
+     * lowering (a bound value, step 5). For a class of lazy rules, the candidates
+     * instead: realizeLazy selects one.
+     */
+    private sourceRuleOf(value: any, fresh = false): { element: any; rule?: ClassMappingAST; lazy?: ClassMappingAST[] } | undefined {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+        if (value.__createdBy === 'JjTL' || this.demandOf(value) || this.environmentOf(value)) return undefined;
+        const element = this.asSourceElement(value);
+        if (!element) return undefined;
+        const className = this.detectSourceClassName(element);
+        // A class lowered by lazy rules: reaching the node is what applies one (R-JTG-7).
+        const lazy = className ? this.lazyBySourceType.get(className) : undefined;
+        if (lazy && lazy.length > 0) return { element, lazy };
+        const rules = className ? this.context.rulesBySourceType.get(className) : undefined;
+        // Ambiguity and absence stay with resolveValue, which reports them.
+        if (!rules || rules.length !== 1) return undefined;
+        const rule = rules[0];
+        if (!rule.result && !fresh && this.currentEnvironment() === EMPTY_ENVIRONMENT) return undefined;
+        return { element, rule };
+    }
+
+    /**
+     * A class is lowered either by matched rules or by lazy rules, never by both: which
+     * one a resolution reaching the node would mean is ambiguous (R-JTG-7).
+     */
+    private validateLazyRules(): void {
+        for (const [className, lazy] of this.lazyBySourceType) {
+            const matched = this.context.rulesBySourceType.get(className);
+            if (!matched || matched.length === 0) continue;
+            this.errors.push(
+                `Ambiguous rules for '${className}': matched ${matched.map(r => `'${this.ruleLabel(r)}'`).join(', ')} ` +
+                `and lazy ${lazy.map(r => `'${this.ruleLabel(r)}'`).join(', ')}. A class is lowered by matched ` +
+                `rules or by lazy rules, not both.`
+            );
+        }
+    }
+
+    /**
+     * The lazy rule that lowers `element`: the one whose guard holds, a rule without a
+     * guard always holding. None or several is an error naming the candidates.
+     */
+    private selectLazyRule(element: any, candidates: ClassMappingAST[]): ClassMappingAST {
+        const holding = candidates.filter(r =>
+            !r.condition || this.evaluateCondition(r.condition, element, r.sources[0]?.alias)
+        );
+        if (holding.length === 1) return holding[0];
+        const subject = this.describeSubject(element);
+        const labels = (rules: ClassMappingAST[]) => rules.map(r => `'${this.ruleLabel(r)}'`).join(', ');
+        if (holding.length === 0) {
+            throw new Error(`No lazy rule applies to ${subject}: the guard of ${labels(candidates)} is false.`);
+        }
+        throw new Error(`Ambiguous lazy rules for ${subject}: ${labels(holding)} all apply. A guard must select one.`);
+    }
+
+    /**
+     * A node of a lazy class, reached now: the selected rule is applied afresh under the
+     * current environment, or, when `unique`, once per (rule, source, environment).
+     */
+    private async realizeLazy(element: any, candidates: ClassMappingAST[]): Promise<any> {
+        const rule = this.selectLazyRule(element, candidates);
+        const env = this.currentEnvironment();
+        if (rule.unique) return this.realizeSource(element, rule, env);
+        const lowered = await this.applyRule(rule, { source: element, env });
+        if (rule.result) this.stats.classMappingsExecuted++;
+        return lowered;
+    }
+
+    /**
+     * Carry out the demands a value holds, element by element: a call applies its rule, a
+     * closure lowers its value under its own environment, a source element is lowered as
+     * sourceRuleOf says; each is replaced by the result, flattened into an enclosing
+     * collection. Any other value is returned unchanged, for the resolution that follows.
+     * With `fresh`, a source element of a matched class is lowered anew by its rule, not
+     * looked up: a bound value lowers like a lazy node (step 5, R-JTG-6, R-JTG-7).
+     */
+    private async realizeDemands(value: any, fresh = false): Promise<any> {
+        if (!this.needsRealization(value, fresh)) return value;
+        if (Array.isArray(value)) {
+            const out: any[] = [];
+            for (const el of value) {
+                const realized = await this.realizeDemands(el, fresh);
+                if (Array.isArray(realized) && !Array.isArray(el)) out.push(...realized);
+                else out.push(realized);
+            }
+            return out;
+        }
+        const demand = this.demandOf(value);
+        if (demand?.kind === 'call') return this.applyRule(demand.rule, { args: demand.args, env: demand.callerEnv });
+        if (demand?.kind === 'closure') return this.realizeClosure(demand);
+        const { element, rule, lazy } = this.sourceRuleOf(value, fresh)!;
+        if (lazy) return this.realizeLazy(element, lazy);
+        if (fresh) {
+            // Untraced: a reference to the element still means its pass 1 target.
+            const lowered = await this.applyRule(rule!, { source: element, env: this.currentEnvironment(), untraced: true });
+            if (rule!.result) this.stats.classMappingsExecuted++;
+            return lowered;
+        }
+        return this.realizeSource(element, rule!, this.currentEnvironment());
+    }
+
+    /**
+     * A source element lowered by a matched rule under `env`, once per (rule, source,
+     * environment): the trace key of R-JTG-6. The rule's targets are registered under
+     * that key, so the resolution of a later binding finds them.
+     */
+    private async realizeSource(element: any, rule: ClassMappingAST, env: TraceEnvironment): Promise<any> {
+        const sourceKey = String(element?.id ?? element?.name ?? this.valueKey(element));
+        const key = `${this.ruleIds.get(rule)}|${sourceKey}|${this.envKey(env)}`;
+        if (this.realized.has(key)) return this.realized.get(key);
+        const lowered = await this.applyRule(rule, { source: element, env });
+        this.realized.set(key, lowered);
+        if (rule.result) {
+            const targets = (Array.isArray(lowered) ? lowered : [lowered]).filter(isRuleTarget);
+            if (targets.length > 0) this.registerTargetsBySourceName(element, targets, rule, targets[0].__type, env);
+            this.stats.classMappingsExecuted++;
+        }
+        return lowered;
+    }
+
+    /**
+     * The value bound to a name, lowered where it was written: under the environment of
+     * its binding site, so the names of the use site are not captured (R-JTG-5). The
+     * closure is a frame of its own on the application stack. Each lookup lowers it
+     * afresh, even when the binding site's environment is empty: never a shared pass 1
+     * target, so one bound value may be placed twice (R-JTG-6).
+     */
+    private async realizeClosure(demand: ClosureDemand): Promise<any> {
+        const { closure } = demand;
+        const frame: ApplicationFrame = {
+            rule: `binding ${demand.name}`, source: this.describeSubject(closure.value), env: closure.env,
+        };
+        this.checkDepth(`binding ${demand.name}`, frame);
+        this.applicationStack.push(frame);
+        try {
+            return await this.realizeDemands(closure.value, true);
+        } finally {
+            this.applicationStack.pop();
+        }
+    }
+
+    private checkDepth(label: string, frame: ApplicationFrame): void {
+        if (this.applicationStack.length >= MAX_APPLICATION_DEPTH) {
+            throw new JjtlApplicationAbort(
+                `Rule application depth limit (${MAX_APPLICATION_DEPTH}) exceeded applying '${label}' ` +
+                `to ${frame.source}: a recursion that makes no progress.` +
+                this.applicationStackSuffix([...this.applicationStack, frame], 8)
+            );
+        }
+    }
+
+    /**
+     * Apply a called, lazy or delegating rule now, during pass 2, under `env`. A rule that
+     * creates a target returns it, after its body is bound; a delegating rule returns what
+     * its expression lowers to; a guard that fails returns null with a warning.
+     */
+    private async applyRule(
+        rule: ClassMappingAST,
+        app: { source?: any; args?: any[]; env: TraceEnvironment; untraced?: boolean },
+    ): Promise<any> {
+        const label = this.ruleLabel(rule);
+        const source = rule.ruleKind === 'called' ? this.calledRuleSource(rule, app.args ?? []) : app.source;
+        const subject = rule.ruleKind === 'called' ? (app.args ?? [])[0] : app.source;
+        // An `Env` parameter sets the environment of the application; otherwise the caller's.
+        const envParam = rule.ruleKind === 'called'
+            ? (rule.parameters ?? []).findIndex(p => p.paramType === 'Env') : -1;
+        const env = envParam >= 0 ? (this.environmentOf((app.args ?? [])[envParam]) ?? app.env) : app.env;
+        const frame: ApplicationFrame = { rule: label, source: this.describeSubject(subject), env };
+        this.checkDepth(label, frame);
+
+        const savedRule = this.context.currentRuleName;
+        const savedInstance = this.context.currentInstanceName;
+        this.applicationStack.push(frame);
+        this.context.currentRuleName = label;
+        this.context.currentInstanceName = frame.source;
+        try {
+            const alias = rule.ruleKind === 'called' ? undefined : rule.sources[0]?.alias;
+            if (rule.result) {
+                try {
+                    const ctx = this.createInstanceContext(source, alias);
+                    const value = await this.evaluateExpressionAsync(rule.result, ctx);
+                    // What is left a source element resolves through the trace, as a binding would.
+                    return this.resolveValue(await this.realizeDemands(value), `<${label}>`, undefined);
+                } catch (error) {
+                    // The stack where the expression failed, innermost delegation first, for the
+                    // caller that reports it once this frame is popped (pass 2).
+                    if (error && typeof error === 'object' && !(APPLICATION_STACK in error)) {
+                        (error as any)[APPLICATION_STACK] = this.applicationStackSuffix();
+                    }
+                    throw error;
+                }
+            }
+            if (rule.condition && !this.evaluateCondition(rule.condition, source, alias)) {
+                const msg = `Rule '${label}' was applied to ${frame.source} and its guard is false: it returned null.`;
+                if (!this.warnings.includes(msg)) this.warnings.push(msg);
+                return null;
+            }
+            if (this.unknownTargetClasses.has(rule.targetClass)) return null;
+
+            const sourceElement = rule.ruleKind === 'called' ? this.asSourceElement(subject) : app.source;
+            const target = this.createTargetInstance(rule.targetClass, sourceElement);
+            const targetModel = this.targetModelRef!;
+            if (!targetModel.instances.has(rule.targetClass)) targetModel.instances.set(rule.targetClass, []);
+            targetModel.instances.get(rule.targetClass)!.push(target);
+            targetModel.roots.push(target);
+            this.stats.targetInstancesCreated++;
+
+            const sourceRef: TraceElementRef = {
+                modelName: this.ast.sourceMetamodel || 'source',
+                elementName: sourceElement?.name || sourceElement?.id || frame.source,
+                className: this.detectSourceClassName(sourceElement) ?? '?',
+            };
+            const targetRef: TraceElementRef = {
+                modelName: this.ast.targetMetamodel || 'target',
+                elementName: rule.targetClass,
+                className: rule.targetClass,
+            };
+            const traceLink = this.context.traceBuilder.addLink(label, sourceRef, [targetRef], !!rule.condition);
+            if (sourceElement && !app.untraced) {
+                this.registerTargetsBySourceName(sourceElement, [target], rule, rule.targetClass, env);
+            }
+
+            await this.executeAttributeMappingsWithTrace(rule.body, source, target, traceLink, alias);
+            this.stats.classMappingsExecuted++;
+            return target;
+        } finally {
+            this.applicationStack.pop();
+            this.context.currentRuleName = savedRule;
+            this.context.currentInstanceName = savedInstance;
+        }
+    }
+
+    /** The object a called rule's body evaluates against: one key per parameter. */
+    private calledRuleSource(rule: ClassMappingAST, args: any[]): Record<string, any> {
+        const source: Record<string, any> = {};
+        (rule.parameters ?? []).forEach((p, i) => { source[p.name] = args[i] ?? null; });
+        return source;
+    }
+
+    /** The source element a value stands for (a view, a `{ __ref }` handle), or undefined. */
+    private asSourceElement(value: any): any {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+        if (value.__createdBy === 'JjTL') return undefined;
+        if (typeof value.__ref === 'string') {
+            const found = this.derefSourceRef({ __ref: value.__ref });
+            return found && typeof found.__ref !== 'string' ? found : undefined;
+        }
+        if (typeof value.id === 'string' && this.isSourceElement(value)) return value;
+        if (typeof value.id === 'string' && this.sourceIndexById?.has(value.id)) return this.sourceIndexById.get(value.id);
+        return this.detectSourceClassName(value) ? value : undefined;
+    }
+
+    /** `Class 'name'` for a source element or argument, for errors and the stack. */
+    private describeSubject(value: any): string {
+        const el = this.asSourceElement(value) ?? value;
+        if (el == null) return 'null';
+        if (typeof el !== 'object') return JSON.stringify(el);
+        const className = this.detectSourceClassName(el) ?? 'object';
+        const name = el.name ?? el.id;
+        return name != null ? `${className} '${name}'` : className;
+    }
+
+    /** The application stack, innermost first, for an error message; empty outside one. */
+    private applicationStackSuffix(stack: ApplicationFrame[] = this.applicationStack, limit = 12): string {
+        if (stack.length === 0) return '';
+        const frames = [...stack].reverse();
+        const shown = frames.slice(0, limit).map(f => `\n  at ${f.rule} on ${f.source}${this.describeEnvironment(f.env)}`);
+        const more = frames.length > limit ? `\n  ... ${frames.length - limit} more` : '';
+        return `${shown.join('')}${more}`;
+    }
+
+    private describeEnvironment(env: TraceEnvironment): string {
+        return this.describeBindings(env);
+    }
+
+    /** Pass 1 of a delegating matched rule: its source elements, no target. */
+    private pass1Delegating(mapping: ClassMappingAST, sourceInstances: Map<string, any[]>): void {
+        if (mapping.sources.length > 1) {
+            this.errors.push(`Rule '${this.ruleLabel(mapping)}': a delegating rule takes one source class.`);
+            return;
+        }
+        const pending: PendingBinding[] = (sourceInstances.get(mapping.sources[0].className) || [])
+            .map(sourceInstance => ({
+                sourceInstance,
+                evalSource: sourceInstance,
+                targetInstance: null,
+                traceLink: undefined as unknown as TraceLinkBuilder,
+                sourceAlias: mapping.sources[0].alias,
+            }));
+        this.context.pendingByMapping.set(mapping, pending);
+    }
+
     /**
      * @param owner  The object whose feature `targetAttribute` receives the value. When that
      *               feature is a containment, resolved rule targets are placed inside `owner`
@@ -3106,16 +3678,11 @@ export class JjtlExecutor {
                         `target(s), dropped ${nullCount} unresolved element(s) (target type without a matching rule).`
                     );
                 }
-                // Deduplicate by __sourceId — duplicate entries can arise when
-                // the raw DValue.values array has the same Pointer twice.
-                const seen = new Set<string>();
-                const unique = jjtlTargets.filter(el => {
-                    const key = el.__sourceId || el.id || el.name;
-                    if (!key) return true;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
+                // Deduplicate by identity — duplicate entries can arise when the raw
+                // DValue.values array has the same Pointer twice, which resolves to the
+                // same target object. Not by __sourceId: called, lazy and fresh rules give
+                // one source element several targets, each its own pointer (slice B2).
+                const unique = [...new Set(jjtlTargets)];
                 return { __ref_result: true, targets: unique };
             }
             return value;
@@ -3245,7 +3812,8 @@ export class JjtlExecutor {
      */
     private traceEntries(sourceKey: string, environment: TraceEnvironment): TargetEntry[] | undefined {
         const entries = this.context.targetsBySourceName.get(sourceKey);
-        return entries?.filter(e => e.environment === environment);
+        const key = this.envKey(environment);
+        return entries?.filter(e => this.envKey(e.environment) === key);
     }
 
     /**
@@ -3261,7 +3829,9 @@ export class JjtlExecutor {
         targetAttribute: string,
         expectedTarget: string | undefined,
     ): any {
-        const entries = this.traceEntries(sourceId, EMPTY_ENVIRONMENT);
+        // Targets of called and lazy rules are not what a reference to the element means:
+        // they answer only their own rule (slice B).
+        const entries = this.traceEntries(sourceId, EMPTY_ENVIRONMENT)?.filter(e => !e.rule.ruleKind);
 
         if (!entries || entries.length === 0) {
             if (expectedTarget) {

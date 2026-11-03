@@ -38,8 +38,8 @@ JjTL is a declarative model-to-model (M2M) transformation language. Its declarat
 | `from`, `to` | Model references |
 | `where` | Guard |
 | `helper` | Helper definition |
-| `rule` | Called rule definition (Phase 2) |
-| `lazy`, `unique` | Rule modifiers (Phase 2) |
+| `rule` | Called rule definition (contextual, §3.4b) |
+| `lazy`, `unique` | Rule modifiers (contextual, §3.4b) |
 | `abstract`, `extends` | Rule inheritance (Phase 2) |
 | `do` | Imperative block (Phase 4) |
 | `import`, `uses`, `library` | Module system (Phase 5) |
@@ -51,6 +51,13 @@ JjTL is a declarative model-to-model (M2M) transformation language. Its declarat
 | `true`, `false`, `null` | Literals (JjEL) |
 
 Keywords are **case-insensitive** at the lexer level.
+
+`rule`, `lazy` and `unique` are **contextual** (P-2026-11-02-2224): the lexer gives them no
+token, since lowercasing would take a class `Rule` or Ecore's feature `unique` away from every
+saved transformation. The parser reads them, lowercase and by value, only at the start of a
+top-level declaration: `rule NAME (`, `lazy NAME`, `unique lazy NAME`. Everywhere else they are
+identifiers. One form changes reading: a source class called `lazy` with an alias
+(`lazy l -> T`) is now a lazy rule on `l`; `lazy -> T` still maps the class.
 
 ### 2.2 Operators and Punctuation
 
@@ -302,6 +309,40 @@ returnType = IDENTIFIER ;
 helper formatLabel(name: String, prefix: String) -> String {
     prefix + '_' + name.snakeCase()
 }
+```
+
+### 3.4b Called and Lazy Rules
+
+> **STATUS: implemented in the executor (P-2026-11-02-2224, slice B).** The app's write-back
+> of several targets per source element is slice B2. Semantics: §5.3.3.
+
+```ebnf
+calledRule = "rule" IDENTIFIER "(" [ ruleParam ( "," ruleParam )* ] ")" ruleTail ;
+ruleParam  = IDENTIFIER [ ":" IDENTIFIER ] ;
+lazyRule   = [ "unique" ] "lazy" IDENTIFIER [ IDENTIFIER ] ruleTail ;
+ruleTail   = "->" IDENTIFIER multiplicity? condition? [ "{" mappingBody "}" ]
+           | "=" expression ;                     (* a delegating rule, to the end of the line *)
+classMapping = sourcePattern ( "," sourcePattern )* ruleTail ;
+```
+
+The form follows `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md:268-322` (R-JTG-5). Called and lazy
+rules are kept in `TransformationAST.rules`, not in `mappings`: neither takes part in pass-1
+matching. A parameter typed `Env` receives the environment (§5.3.3); other parameter types are
+optional and not checked.
+
+**Delegating rules** (`= expression`) are this lane's addition to the sketch: a rule that
+creates no target of its own and lowers to what the expression lowers to. A source node with
+no target counterpart needs one: `Bind(expr, bindings)` lowers to its `expr`, and a variable
+lowers either to a `Ref` or to the expression bound to it. Any of the three kinds may delegate;
+a delegating rule has no guard, its expression decides.
+
+```jjtl
+rule mkRef(v) -> Ref { name := v.name }
+rule under(e, env: Env) = e
+lazy Add -> Add { left := left  right := right }
+unique lazy Const -> Const { value := value }
+lazy Var v = if envHas(v.name) then envLookup(v.name) else mkRef(v)
+Main m = m.expr
 ```
 
 ### 3.5 Interactive Statements
@@ -642,6 +683,68 @@ in an environment are closures (the expression with the environment of the bindi
    Matched rules stay for the elements the transformation maps as such. Containment under A
    alone therefore does not serve library expressions; that value arrives with B.
 
+#### 5.3.3 Called rules, the environment, lazy rules (B1)
+
+Implemented by P-2026-11-02-2224, P-2026-11-02-2247 and P-2026-11-02-2321, in the executor.
+The app's write-back of several targets per source element is B2 (list below).
+
+- **Calls.** A called rule is a JjEL function. Calling it during an expression yields a
+  demand, which the receiving binding carries out before it resolves its value: the rule is
+  applied, its target created and returned, then placed as any rule target (§5.3.1). Each call
+  applies the rule afresh. A delegating rule (`= expression`, §3.4b) returns what its
+  expression lowers to; what is left a source element resolves through the trace.
+- **Environment.** Each application runs under an environment, a chain of frames binding names
+  to closures. It is the caller's, unless a called rule receives one through a parameter typed
+  `Env`. `extendEnv(names, values)` returns a frame over the current environment, every value a
+  closure over the current environment, which is its binding site. `envHas(name)` tests a name;
+  `envLookup(name)` yields the bound value, lowered under the closure's environment and not the
+  caller's, so names are not captured.
+- **Implicit resolution under an environment.** Under a non-empty environment, a source element
+  reached by a binding is lowered by its matched rule under that environment, once per
+  (rule, source, environment), and its targets are traced with that key; environments compare
+  structurally, by the closures they make visible. Under the empty environment the pass-1
+  target answers, as before. A delegating matched rule is applied when a binding first reaches
+  its element, or in pass 2, whichever comes first.
+- **Lazy rules (R-JTG-7).** A lazy rule never matches in pass 1: it applies when a binding
+  reaches a node of its source class, under the environment of that moment. The lazy rules of
+  a class are candidates; the one whose guard holds applies (no guard always holds), and none
+  or several is an error naming the candidates. A class with both a matched and a lazy rule is
+  rejected before pass 1. A lazy node nothing reaches creates no target and no root.
+- **`unique`.** A `unique lazy` rule applies once per (rule, source, environment); a later
+  reach under an equal environment returns the same target.
+- **Containment under B (R-JTG-6).** A call of a rule not `unique`, a reach of a lazy rule not
+  `unique`, and the lookup of a bound value each lower to a fresh subtree, even under an
+  environment seen before: one expression may be placed twice, with the same bindings or with
+  different ones. A bound value whose class has a matched rule is lowered anew by that rule
+  under its binding site's environment, even an empty one, never resolved to the shared pass-1
+  target; that new target is not traced, so a reference to the element still means its pass-1
+  target. Its descendants follow their own rules: matched classes resolve through the trace, so
+  a value to be placed twice is lowered by lazy rules. The double-claim error (R-JTG-4)
+  remains for implicit resolutions and `unique` rules.
+- **Non-termination.** More than 256 nested applications (calls, delegations, closures) stop the
+  run with one error naming the application stack, innermost first: rule, source element, and
+  the bindings visible in each frame.
+
+**Left for B2.** Done by P-2026-11-02-2338, except item 4.
+1. Done. The app's write-back kept one target per source id (the map at
+   `components/project/ProjectEditor.tsx:1809`, as cited by P-2026-11-02-2247): lazy, called and
+   fresh targets can be several per source element. Root targets are now found by the identity
+   of the executor object (`makeRootTargetIndex`, `nestedMaterialization.ts`); `__sourceId` is a
+   fallback only when it names exactly one root, otherwise the pointer is skipped with a warning.
+   A pointer array is deduplicated by target identity, not by source id, so two fresh targets of
+   one source stay two pointers.
+2. Done. The optional `isPlacedIn` of `nestedMaterialization.ts` is removed.
+3. Done, nothing to change. The legacy `trace` Map, which called, lazy and fresh targets do not
+   fill, is read only by `hooks/useJjtlExecutor.ts`, as a fallback when `traceModel.links` is
+   empty; every called, lazy and fresh target has a trace link, so no consumer loses one.
+4. Open, awaiting a decision. `resolve()`, `resolveAll()` and `{ __ref }` lookups answer
+   matched rules only: a lazy node is reached by a binding's value, not by an explicit
+   `resolve()`.
+5. Done. A non-abort error raised under a delegating matched rule in pass 2, a lazy-rule
+   selection error among them, is an error of that element, `Failed to lower <Class 'x'> by rule
+   '<label>': <message>` with the application stack, and the other elements are still lowered;
+   the depth limit still ends the run.
+
 ### 5.4 Per-Binding Invertibility
 
 Each binding is classified at runtime:
@@ -944,6 +1047,7 @@ interface ExecutionResult {
 | UIBridge interface + React components | ✅ | `executor/UIBridge.ts`, `executor/ReactUIBridge.ts`, `components/dialogs/*` |
 | Monaco syntax highlighting | ✅ | `editor/` |
 | JjOM source model conversion | ✅ | `executor/jjodelConverter.ts` |
+| Called, lazy, `unique lazy` and delegating rules; the environment (B1, §5.3.3) | ✅ executor; app write-back B2 | `parser/parser.ts`, `executor/executor.ts` |
 
 ### 12.2 Known Bugs
 
@@ -969,15 +1073,15 @@ message, not silence.
 
 | # | Gap | Description | Priority |
 |---|---|---|---|
-| 1 | **Implicit trace resolution** | Done for references, by identity, fallbacks reported (A0, §5.3.1), and for containments (A). The (source, rule, environment) key is in place with the environment always empty; non-empty environments come with B (§5.3.2) | High |
+| 1 | **Implicit trace resolution** | Done for references, by identity, fallbacks reported (A0, §5.3.1), and for containments (A). The (source, rule, environment) key is in place; non-empty environments, lazy rules and fresh subtrees under B are done in the executor (B1, §5.3.3); the app write-back of several targets per source is B2 | High |
 | 2 | **Alert/Notify execution** | Wire executor body items to UIBridge | High |
 | 3 | **Prompt/Input execution** | Wire AST bridge to UIBridge for interactive expressions | High |
 | 4 | **Multiplicity `[*]`** | Define and implement unbounded creation semantics | Medium |
 | 5 | **Reference mapping** | References: done (§5.3.1). Containments: done in the executor, placed targets leave `roots`, second claims and cycles are errors (A, §5.3.1, R-JTG-4). App write-back: done, placed targets created inside their container by the nested path (§9.2, P-2026-11-02-2024) | High |
 | 6 | **Source alias** | Parse and bind `Person p -> Human` alias in executor | Medium |
 | 7 | **Multi-model** | `from A, B to C, D` with qualified types | Phase 1 |
-| 8 | **Called rules** | `rule name(params) -> Type { ... }` | Phase 2 |
-| 9 | **Lazy rules** | `lazy` / `unique lazy` keyword | Phase 2 |
+| 8 | **Called rules** | `rule name(params) -> Type { ... }`: done in the executor (B1, §5.3.3); write-back B2 | Phase 2 |
+| 9 | **Lazy rules** | `lazy` / `unique lazy`: done in the executor (B1, §5.3.3); write-back B2 | Phase 2 |
 | 10 | **Rule inheritance** | `abstract` / `extends` | Phase 2 |
 | 11 | **`do {}` blocks** | Imperative post-binding section | Phase 4 |
 | 12 | **Variables** | `var` declarations in imperative blocks | Phase 4 |

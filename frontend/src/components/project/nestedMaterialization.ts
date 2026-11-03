@@ -17,10 +17,10 @@
  *
  * Rule targets placed in a containment (slice A, SPEC §5.3.1) take the same path: the executor
  * marks them `__nested` in the container's feature (P-2026-11-02-2108) and lists them in
- * `targetModel.containment`, so the walk finds them with one test. An unmarked rule target is
- * walked only when the caller's optional `isPlacedIn` says it was placed there. A placed
- * target is created where it is placed and nowhere else, in the feature's order, and the walk
- * returns its created id so that pointers to it can be written once everything exists.
+ * `targetModel.containment`, so the walk finds them with one test; an unmarked rule target is
+ * never walked. A placed target is created where it is placed and nowhere else, in the
+ * feature's order, and the walk returns its created id so that pointers to it can be written
+ * once everything exists.
  *
  * Pure: no store, no joiner import (the joiner barrel does not load under vitest). The caller passes
  * the slot reader, the class table and the clock.
@@ -44,12 +44,6 @@ export interface NestedDeps {
     sleep(ms: number): Promise<void>;
     now(): number;
     warn(message: string): void;
-    /**
-     * `child` is a rule target placed in `featureName` of `parent` (slice A). Absent: only
-     * `__nested` objects are created, which since P-2026-11-02-2108 include placed targets;
-     * the app no longer passes it.
-     */
-    isPlacedIn?(child: any, parent: any, featureName: string): boolean;
 }
 
 /** A feature of an object already in the store, and the executor objects to create inside it. */
@@ -107,34 +101,69 @@ export const SLOT_WAIT_CAP_MS = 3000;
 
 const isNested = (v: any): boolean => !!(v && typeof v === 'object' && v.__nested);
 
-/** Tells whether a value of `parent.featureName` is a rule target placed there (slice A). */
-export type IsPlacedIn = (child: any, parent: any, featureName: string) => boolean;
-
 /**
- * The features of an executor object that hold nested creations or placed rule targets,
- * with those objects in the feature's order.
+ * The features of an executor object that hold nested creations or placed rule targets
+ * (both marked `__nested`), with those objects in the feature's order.
  */
-export function nestedFeaturesOf(obj: any, isPlacedIn?: IsPlacedIn): Array<[string, any[]]> {
+export function nestedFeaturesOf(obj: any): Array<[string, any[]]> {
     const out: Array<[string, any[]]> = [];
     if (!obj || typeof obj !== 'object') return out;
     for (const [key, val] of Object.entries(obj)) {
         if (key.startsWith('__')) continue;
-        const children = (Array.isArray(val) ? val : [val]).filter(
-            v => isNested(v) || (!!isPlacedIn && !!v && typeof v === 'object' && isPlacedIn(v, obj, key))
-        );
+        const children = (Array.isArray(val) ? val : [val]).filter(isNested);
         if (children.length > 0) out.push([key, children]);
     }
     return out;
 }
 
 /** The objects, nested ones included, that a list of executor objects stands for. */
-export function countSubtree(children: any[], isPlacedIn?: IsPlacedIn): number {
+export function countSubtree(children: any[]): number {
     let n = 0;
     for (const child of children) {
         n++;
-        for (const [, kids] of nestedFeaturesOf(child, isPlacedIn)) n += countSubtree(kids, isPlacedIn);
+        for (const [, kids] of nestedFeaturesOf(child)) n += countSubtree(kids);
     }
     return n;
+}
+
+/**
+ * The root targets STEP 6 created, by the executor object that stands for each (slice B2).
+ * Called, lazy and fresh rules may give one source element several targets, so a pointer
+ * resolves by the object it holds, never by its source id alone. The source id is a fallback
+ * for a target that is not the same object, and only when it names one root: two roots of one
+ * source make it ambiguous, reported rather than guessed.
+ */
+export interface RootTargetIndex {
+    add(target: any, objectName: string): void;
+    /** The D-layer name of a root target, or why there is none. */
+    nameOf(target: any): { name?: string; reason?: string };
+}
+
+export function makeRootTargetIndex(): RootTargetIndex {
+    const byIdentity = new Map<any, string>();
+    const bySourceId = new Map<string, string[]>();
+    return {
+        add(target, objectName) {
+            if (target && typeof target === 'object') byIdentity.set(target, objectName);
+            const sourceId = target?.__sourceId;
+            if (sourceId == null) return;
+            const names = bySourceId.get(String(sourceId)) ?? [];
+            names.push(objectName);
+            bySourceId.set(String(sourceId), names);
+        },
+        nameOf(target) {
+            const own = target && typeof target === 'object' ? byIdentity.get(target) : undefined;
+            if (own) return { name: own };
+            const sourceId = target?.__sourceId;
+            if (sourceId == null) {
+                return target?.name ? { name: target.name } : { reason: 'target has no __sourceId or name' };
+            }
+            const names = bySourceId.get(String(sourceId)) ?? [];
+            if (names.length === 1) return { name: names[0] };
+            if (names.length === 0) return { reason: `sourceId not found in map: ${sourceId}` };
+            return { reason: `sourceId ${sourceId} names ${names.length} root targets (${names.join(', ')}); none chosen` };
+        },
+    };
 }
 
 /** The json `addObject` receives for a nested object: always empty (R-S1-6). */
@@ -168,8 +197,7 @@ export async function materializeNested(
     const createdIds = new Map<any, string>();
     const referenceSets: NestedReferenceSet[] = [];
     const result: NestedResult = { created: 0, levels: 0, attributeSets: [], unplaced: [], createdIds, referenceSets };
-    const placedIn = deps.isPlacedIn;
-    const subtree = (children: any[]) => countSubtree(children, placedIn);
+    const subtree = (children: any[]) => countSubtree(children);
     const lose = (u: NestedUnplaced) => {
         result.unplaced.push(u);
         deps.warn(`Nested: ${u.path}${u.className ? ' (' + u.className + ')' : ''} not placed, `
@@ -233,7 +261,7 @@ export async function materializeNested(
                 }
 
                 const nestedKeys = new Set<string>();
-                for (const [key, kids] of nestedFeaturesOf(child, placedIn)) {
+                for (const [key, kids] of nestedFeaturesOf(child)) {
                     nestedKeys.add(key);
                     if (!info.referenceNames.has(key)) {
                         lose({ path: `${path}.${key}`, count: subtree(kids), reason: `'${key}' is not a reference of '${className}'` });
