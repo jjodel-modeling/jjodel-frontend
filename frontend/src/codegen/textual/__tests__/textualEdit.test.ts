@@ -14,13 +14,13 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { APPLY_DELAY_MS, appliedSpans, certainSpans, editDecision, editStatusText, onModelPrint, pauseOf, planEdit } from '../ui/TextualTab';
+import { APPLY_DELAY_MS, appliedRefs, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, onModelPrint, outerMarks, pastedRefs, pastedSpans, pauseOf, planEdit } from '../ui/TextualTab';
 import type { EditBase, TextSync } from '../ui/TextualTab';
 import { confirmRows, needsConfirmation } from '../ui/TextConfirmPanel';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import { printTextModel } from '../printer';
-import type { ObjectSpan } from '../printer';
+import type { ObjectSpan, RefSpan } from '../printer';
 import { textualNotation } from '../syntaxRecord';
 import { planTextEdit } from '../textDiff';
 import { matchObjects } from '../textMatch';
@@ -74,11 +74,11 @@ function baseOf(record: SyntaxAnnotations | null, objs: TextObject[] = objects()
     const { grammar, issues } = textualNotation(MM, { record, issues: [] }, IDS);
     expect(issues.filter(i => i.level === 'error')).toEqual([]);
     const printed = printTextModel(grammar, objs);
-    return { mm: MM, grammar, objects: objs, spans: printed.spans, unprinted: printed.unprinted, text: printed.text };
+    return { mm: MM, grammar, objects: objs, spans: printed.spans, unprinted: printed.unprinted, refs: printed.refs, text: printed.text };
 }
 
 /** Monaco's decorations over one edit (`NeverGrowsWhenTypingAtEdges`), as textDiff.test.ts carries them. */
-function carry(spans: readonly ObjectSpan[], at: number, removed: number, inserted: number): ObjectSpan[] {
+function carry<S extends { readonly start: number; readonly end: number }>(spans: readonly S[], at: number, removed: number, inserted: number): S[] {
     const delta = inserted - removed;
     return spans.map(s => {
         if (s.end <= at) return s;
@@ -89,16 +89,18 @@ function carry(spans: readonly ObjectSpan[], at: number, removed: number, insert
 }
 
 /** Applies the replacements to the base's text, carrying its spans. */
-function edited(base: { readonly text: string; readonly spans: readonly ObjectSpan[] }, replacements: readonly (readonly [string, string])[]) {
+function edited(base: { readonly text: string; readonly spans: readonly ObjectSpan[]; readonly refs?: readonly RefSpan[] }, replacements: readonly (readonly [string, string])[]) {
     let text = base.text;
     let spans: ObjectSpan[] = [...base.spans];
+    let refs: RefSpan[] = [...(base.refs ?? [])];
     for (const [from, to] of replacements) {
         const at = text.indexOf(from);
         expect(at, `"${from}" in the text`).toBeGreaterThanOrEqual(0);
         text = text.slice(0, at) + to + text.slice(at + from.length);
         spans = carry(spans, at, from.length, to.length);
+        refs = carry(refs, at, from.length, to.length);
     }
-    return { text, spans };
+    return { text, spans, refs };
 }
 
 const syncOf = (text: string): TextSync => ({ text, model: text });
@@ -332,5 +334,160 @@ describe('the panel of the matches to confirm', () => {
         const { text, spans } = edited(baseOf(null), [['1980', '1981']]);
         const { plan } = planEdit(baseOf(null), text, spans);
         expect(needsConfirmation(plan)).toBe(false);
+    });
+});
+
+// ---- Step T7: a cut pasted whole, and the marker of a misplaced outer reference ------------------------------------
+
+describe('a cut pasted whole carries its spans (T7 D-5)', () => {
+    const plain = baseOf(null);
+    const line = '    Member ann {}\n';
+    const at = plain.text.indexOf(line);
+    const afterCut = plain.text.slice(0, at) + plain.text.slice(at + line.length);
+    const clip = cutClip(plain.text, plain.spans, at, line.length)!;
+
+    it('the cut holds the spans wholly inside it; one with no whole object holds nothing (mutant: partial spans kept)', () => {
+        expect(at).toBeGreaterThan(0);
+        expect(clip).toEqual({ text: line, spans: [{ id: 'm1', start: 4, end: 4 + 'Member ann {}'.length }] });
+        expect(cutClip(plain.text, plain.spans, at, 6)).toBeNull();
+    });
+
+    it('pasted identical elsewhere, the object is certain and moves, no panel (mutant: spans not re-attached)', () => {
+        const text = line + afterCut;
+        const carried = carry(carry(plain.spans, at, line.length, 0), 0, 0, line.length).filter(x => x.end > x.start);
+        const spans = [...carried, ...pastedSpans(clip, 0, line, text)];
+        const { parsed, plan } = planEdit(plain, text, spans);
+        expect(plan.diff!.match.matches.find(m => m.model === 'm1')).toMatchObject({ by: 'span', uncertain: false });
+        expect(plan.lines).toEqual(['set city.members -= ann']);
+        expect(editDecision(text, syncOf(plain.text), parsed, plan, false)).toEqual({ kind: 'apply' });
+        // Without the carried span the same text asks (R-TXT-18).
+        expect(editDecision(text, syncOf(plain.text), parsed, planEdit(plain, text, carried).plan, false)).toEqual({ kind: 'confirm' });
+    });
+
+    it('a paste with the original still in the text, or of another text, carries nothing: a copy is new (R-TXT-22; mutant: no count of the copies)', () => {
+        expect(pastedSpans(clip, 0, line, line + plain.text)).toEqual([]);
+        expect(pastedSpans(clip, 0, 'Member ann {}', 'Member ann {}' + afterCut)).toEqual([]);
+    });
+
+    it('until pasted, the deletion of a cut object is held (mutant: the cut deletes on the pause)', () => {
+        const free = baseOf(null, objects({ b2: { borrowedBy: null } }));
+        const where = free.text.indexOf(line);
+        const freeClip = cutClip(free.text, free.spans, where, line.length)!;
+        const { plan } = planEdit(free, free.text.slice(0, where) + free.text.slice(where + line.length), carry(free.spans, where, line.length, 0));
+        expect(plan.lines).toEqual(['delete ann']);
+        expect(heldByCut(freeClip, free, plan)).toBe(1);
+        const other = planEdit(free, free.text.replace('1980', '1981'), free.spans).plan;
+        expect(other.lines).toEqual(['set cosmos.year = 1981']);
+        expect(heldByCut(freeClip, free, other)).toBe(0);
+        expect(heldByCut(null, free, plan)).toBe(0);
+        expect(editStatusText({ kind: 'cut', count: 1 })).toEqual({ text: 'Cut · paste to move it', error: false });
+    });
+});
+
+describe('a misplaced outer reference is marked on its line (T7 (5), R-TXT-32 code outer)', () => {
+    it('the @"id" token inside its owner, not one of an object it contains (mutant: no marker; first token of the text)', () => {
+        const base = baseOf(null, objects({ b1: { borrowedBy: 'elsewhere' }, b4: { borrowedBy: 'elsewhere' } }));
+        expect(base.text.split('@"elsewhere"')).toHaveLength(3);
+        const second = base.text.indexOf('@"elsewhere"', base.text.indexOf('@"elsewhere"') + 1);
+        const text = base.text.slice(0, second) + '@"other"' + base.text.slice(second + '@"elsewhere"'.length);
+        const { parsed, plan } = planEdit(base, text, carry(base.spans, second, '@"elsewhere"'.length, '@"other"'.length));
+        expect(plan.refusals.map(r => r.code)).toEqual(['outer']);
+        const marks = outerMarks(text, parsed, plan.diff!);
+        expect(marks).toHaveLength(1);
+        expect(text.slice(marks[0].start, marks[0].end)).toBe('@"other"');
+        expect(marks[0].start).toBe(second);
+        expect(marks[0].message).toContain('outside the text');
+    });
+
+    it('the same @"id" in a contained object, earlier in the owner\'s span, is not the owner\'s token (mutant: token of a contained object)', () => {
+        const text = 'Library lib {\n  Book b1 { borrowedBy @"x" }\n  owner @"x"\n}';
+        const child = text.indexOf('Book b1');
+        const spans = [{ id: 'lib', start: 0, end: text.length }, { id: 'b1', start: child, end: text.indexOf('}', child) + 1 }];
+        const diff = { match: { matches: [{ model: 'lib', text: 'lib' }, { model: 'b1', text: 'b1' }] }, outer: [{ target: { model: 'lib' }, feature: 'owner', id: 'x' }] };
+        const marks = outerMarks(text, { objects: [], spans }, diff as unknown as Parameters<typeof outerMarks>[2]);
+        expect(marks).toHaveLength(1);
+        expect(marks[0].start).toBe(text.lastIndexOf('@"x"'));
+    });
+});
+
+// ---- Step T7: the reference tokens the editor carried (R-TXT-35) ---------------------------------------------------
+
+describe('the reference tokens the editor carried (R-TXT-35)', () => {
+    const plain = baseOf(null);
+    /** bob renamed rob while a new Member takes the name bob; `borrowedBy bob` in spqr is left alone. */
+    const SWAP: readonly (readonly [string, string])[] = [['Member bob', 'Member rob'], ['members {', 'members {\n    Member bob {}']];
+    const refOps = (plan: ReturnType<typeof planEdit>['plan']) => plan.diff!.ops.filter(op => op.op === 'reference' || op.op === 'link');
+
+    /** The model after the run of SWAP: m2 renamed rob, the new Member as `n1`, first of the members. */
+    function afterSwap() {
+        const { text, spans, refs } = edited(plain, SWAP);
+        const { parsed, plan } = planEdit(plain, text, spans, {}, undefined, refs);
+        expect(plan.lines).not.toBeNull();
+        const created = plan.diff!.match.created;
+        expect(created).toHaveLength(1);
+        const fresh = { ...parsed.objects.find(o => o.id === created[0])!, id: 'n1' };
+        const model = plain.objects.map(o => (o.id === 'm2' ? { ...o, slots: { ...o.slots, name: 'rob' } } : o.id === 'lib' ? { ...o, slots: { ...o.slots, members: ['n1', 'm1', 'm2'] } } : o));
+        const next = baseOf(null, [...model, fresh]);
+        const rematch = matchObjects({ mm: MM, grammar: plain.grammar, model: next.objects, parsed, previous: spans });
+        return { text, next, spans: appliedSpans(parsed, plan.diff!.match, rematch), refs: appliedRefs(text, plan.diff!.refs ?? [], plan.diff!.match, rematch) };
+    }
+
+    it('planEdit passes them: the untouched token keeps the renamed target, the new homonym takes nothing (mutant: refs not passed)', () => {
+        const { text, spans, refs } = edited(plain, SWAP);
+        expect(text).toContain('borrowedBy bob');
+        const kept = planEdit(plain, text, spans, {}, undefined, refs);
+        expect(kept.parsed.errors).toEqual([]);
+        expect(kept.plan.refusals).toEqual([]);
+        expect(refOps(kept.plan)).toEqual([]);
+        expect(kept.plan.diff!.ops).toContainEqual({ op: 'attribute', target: { model: 'm2' }, feature: 'name', value: 'rob' });
+        // Without the tokens the same text reads `bob` as the new Member (the evidence the tokens carry).
+        const read = planEdit(plain, text, spans);
+        expect(refOps(read.plan)).toHaveLength(1);
+        expect(refOps(read.plan)[0]).toMatchObject({ target: { model: 'b4' }, feature: 'borrowedBy' });
+    });
+
+    it('after an application the next edit still keeps it, the text unchanged (mutant: appliedRefs not set after apply)', () => {
+        const { text, next, spans, refs } = afterSwap();
+        expect(refs).toContainEqual({ owner: 'b4', feature: 'borrowedBy', target: 'm2', text: 'bob', start: text.indexOf('borrowedBy bob') + 'borrowedBy '.length, end: text.indexOf('borrowedBy bob') + 'borrowedBy bob'.length });
+        const again = edited({ text, spans, refs }, [['1980', '1981']]);
+        const { plan } = planEdit(next, again.text, again.spans, {}, undefined, again.refs);
+        expect(plan.refusals).toEqual([]);
+        expect(plan.lines).toEqual(['set cosmos.year = 1981']);
+        const read = planEdit(next, again.text, again.spans).plan;
+        expect(read.lines).toEqual(['set cosmos.year = 1981', 'set spqr.borrowedBy = bob']);
+    });
+
+    it('a token whose owner the edit changed is read in the text (mutant: the owner not compared)', () => {
+        // spqr's header and odes' last line deleted: odes now holds `borrowedBy bob`, at the place and with the text carried for spqr.
+        // The deletion cuts the decorations of both books (this `carry` keeps spqr's whole): the match reads names.
+        const { text, spans: all, refs } = edited(plain, [...SWAP, ['genre POETRY\n    }\n    Book spqr {\n      ', '']]);
+        const spans = all.filter(s => s.id !== 'b3' && s.id !== 'b4');
+        expect(text).toContain('Book odes {\n      genre HISTORY\n      year 2015\n      borrowedBy bob\n    }');
+        expect(refs).toContainEqual(expect.objectContaining({ owner: 'b4', text: 'bob', target: 'm2' }));
+        const { parsed, plan } = planEdit(plain, text, spans, {}, undefined, refs);
+        expect(plan.diff!.match.matches.find(m => m.model === 'b3')).toMatchObject({ uncertain: false });
+        expect(plan.diff!.match.deleted).toEqual(['b4']);
+        const fresh = parsed.objects.find(o => o.cls === 'Member' && o.slots.name === 'bob')!.id;
+        expect(refOps(plan)).toEqual([{ op: 'reference', target: { model: 'b3' }, feature: 'borrowedBy', to: { text: fresh } }]);
+    });
+
+    it('a cut pasted whole carries its tokens; a copy carries none (mutant: pastedRefs re-attaches nothing)', () => {
+        const swapped = edited(plain, SWAP);
+        const start = swapped.text.indexOf('    Book spqr {');
+        const end = swapped.text.indexOf('}', swapped.text.indexOf('borrowedBy bob')) + 2;
+        const cut = swapped.text.slice(start, end);
+        const clip = cutClip(swapped.text, swapped.spans, start, cut.length, swapped.refs)!;
+        expect(clip.refs).toEqual([{ owner: 'b4', feature: 'borrowedBy', target: 'm2', text: 'bob', start: cut.indexOf('bob'), end: cut.indexOf('bob') + 3 }]);
+        const at = swapped.text.indexOf('    Book dune {');
+        const afterCut = { text: swapped.text.slice(0, start) + swapped.text.slice(end), spans: carry(swapped.spans, start, cut.length, 0), refs: carry(swapped.refs, start, cut.length, 0) };
+        const text = afterCut.text.slice(0, at) + cut + afterCut.text.slice(at);
+        const spans = [...carry(afterCut.spans, at, 0, cut.length).filter(x => x.end > x.start), ...pastedSpans(clip, at, cut, text)];
+        const refs = [...carry(afterCut.refs, at, 0, cut.length).filter(x => x.end > x.start), ...pastedRefs(clip, at, cut, text)];
+        expect(refs.map(r => r.owner)).toContain('b4');
+        const { plan } = planEdit(plain, text, spans, {}, undefined, refs);
+        expect(plan.refusals).toEqual([]);
+        expect(refOps(plan)).toEqual([]);
+        expect(refOps(planEdit(plain, text, spans, {}, undefined, refs.filter(r => r.owner !== 'b4')).plan)).toHaveLength(1);
+        expect(pastedRefs(clip, at, cut, cut + swapped.text)).toEqual([]);
     });
 });

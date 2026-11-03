@@ -290,3 +290,40 @@ describe('lists and enumeration literals on attributes (R-TXT-25 (2), P-2026-11-
         expect(plan.error).toMatchObject({ line: 1, code: 'LIST_NOT_SUPPORTED' });
     });
 });
+
+describe('M1 move (P-2026-11-03-1225)', () => {
+    /** The world of the other tests, with a second machine and every instance listed by the model (R-NEST-1). */
+    const moveWorld = (): PlanWorld => {
+        const w = world();
+        return {
+            ...w,
+            elements: [
+                ...w.elements.map((e) => ({ ...e, listed: true })),
+                { id: 'm2', name: 'M2', className: 'Machine', root: true, listed: true, references: { states: [] } },
+            ],
+        };
+    };
+
+    it('`+=` of a child into another containment slot moves it: the old slot no longer holds it (mutant: putIn leaves the old slot)', async () => {
+        const plan = await planEffects('set M2.states += A\nset M.states -= A', moveWorld());
+        expect(plan.references[0]).toMatchObject({ line: 1, operator: '+=', targetId: 'a', movedFrom: { owner: 'm', feature: 'states' } });
+        expect(plan.error).toMatchObject({ line: 2, code: 'NOT_LINKED' });
+    });
+
+    it('`=` on a single-valued containment moves the child too', async () => {
+        const plan = await planEffects('set M2.initial = A\nset M2.states += A', moveWorld());
+        expect(plan.references[0]).toMatchObject({ operator: '=', targetId: 'a', movedFrom: { owner: 'm', feature: 'states' } });
+        expect(plan.error).toBeNull();
+    });
+
+    it('a write that does not move carries no origin: a root, or the same slot', async () => {
+        const plan = await planEffects('set M2.states += B', moveWorld());
+        expect(plan.references[0].movedFrom).toBeUndefined();
+    });
+
+    it('`-=` of a listed child takes it to the top level, as the executor does (instance.ts:1335 isListedAtRoot; mutant: guard on root)', async () => {
+        const plan = await planEffects('set M.states -= A\nset M2.states += A', moveWorld());
+        expect(plan.error).toBeNull();
+        expect(plan.references[1].movedFrom).toBeUndefined();
+    });
+});

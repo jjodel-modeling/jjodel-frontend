@@ -12,6 +12,8 @@ export interface TextAttribute {
     /** A primitive type name (`EInt`, `EString`, ...) or the name of an enumeration. */
     readonly type: string;
     readonly many?: boolean;
+    /** Whether the order of the values matters (Ecore `ordered`, R-TXT-19); absent, the notation reads it as unordered. */
+    readonly ordered?: boolean;
 }
 
 export interface TextReference {
@@ -20,6 +22,8 @@ export interface TextReference {
     readonly type: string;
     readonly containment?: boolean;
     readonly many?: boolean;
+    /** As TextAttribute.ordered. */
+    readonly ordered?: boolean;
 }
 
 export interface TextClass {
@@ -65,6 +69,8 @@ export interface TextFeature {
     readonly kind: 'attribute' | 'reference' | 'containment';
     readonly type: string;
     readonly many: boolean;
+    /** Set only when the metamodel's data says (TextAttribute.ordered). */
+    readonly ordered?: boolean;
 }
 
 function classNamed(mm: TextMetamodel, name: string): TextClass | undefined {
@@ -101,9 +107,12 @@ export function classAncestors(mm: TextMetamodel, c: TextClass): TextClass[] {
 export function classFeatures(mm: TextMetamodel, c: TextClass): TextFeature[] {
     const out: TextFeature[] = [];
     for (const k of [...classAncestors(mm, c), c]) {
-        for (const a of k.attributes ?? []) out.push({ name: a.name, owner: k.name, kind: 'attribute', type: a.type, many: !!a.many });
+        for (const a of k.attributes ?? []) {
+            out.push({ name: a.name, owner: k.name, kind: 'attribute', type: a.type, many: !!a.many, ...(a.ordered !== undefined ? { ordered: a.ordered } : {}) });
+        }
         for (const r of k.references ?? []) {
-            out.push({ name: r.name, owner: k.name, kind: r.containment ? 'containment' : 'reference', type: r.type, many: !!r.many });
+            out.push({ name: r.name, owner: k.name, kind: r.containment ? 'containment' : 'reference', type: r.type, many: !!r.many,
+                ...(r.ordered !== undefined ? { ordered: r.ordered } : {}) });
         }
     }
     return out;
