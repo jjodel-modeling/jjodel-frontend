@@ -532,3 +532,28 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Ticket**: `merge --direct` computes the expected vitest counts from the receiving tip, overwriting only the test files the branch changes. A product change that makes an unchanged test file load (red at import before, passing after) therefore reads as a difference, and the worker ends `blocked` with the merge commit left in place, although nothing failed. Measured on P-2026-11-03-1420: 13346 tests, 0 failed, four files listed as not as expected. `go` then refuses the closure. Suggested: a file going from importRed to passing with 0 failed is not a red gate; report it apart.
 **Priority**: medium
 **Found in**: P-2026-11-03-1420
+
+## 2026-11-03 — ticket: JjTL let bound to a called rule runs the rule at each use, silently
+**Ticket**: A `let` bound to a called-rule call runs the called rule again at each use of the variable: `let $id = idColumn(c) in { columns := [$id] ... key := [$id] }` creates one Column per use (called rules are fresh per call, R-JTG-6), so on Class2Relational 8 extra Columns land at the model root and the table's key and the subclass foreign key point to Columns outside their table. No warning is emitted. Measured by `frontend/src/jjtl/executor/__tests__/class2relational.test.ts` (fixture `class2relational.ts`, workaround W5). Workaround: a second matched rule per role (`Class c -> Column`, `Attribute a -> Column where a.multiValued`) and `resolve(x, "T")` at each use. Either the `let` value is evaluated once (a closure value per R-JTG-5 is computed once per environment), or a second use of a fresh target warns.
+**Priority**: high
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL x.parent is null for any element but the rule's own source
+**Ticket**: `x.parent` is null for any element other than the rule's own source: only the bare `parent` keyword is bound to the container (executor.ts, read around 2827-2856). On Class2Relational `a.parent.name` inside a called rule gives `Cannot access property 'name' of null` warnings, and join tables lose their name, owner column name and Integer type. Measured by `class2relational.test.ts` (workaround W2: bare `parent`, owner passed as an argument). Navigating to the container of any element should read `_containerId` the same way the keyword does.
+**Priority**: medium
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL resolve(x, T) with a bare type name works only as a whole right-hand side
+**Ticket**: `resolve(x, T)` with a bare type name is intercepted only when the call is the whole right-hand side of a binding (executor.ts, read around 4004-4021). Inside `[...]`, a lambda or a `let`, `T` is evaluated as a variable (null) and the call throws the very ambiguity it was written to settle. Measured by `class2relational.test.ts` (workaround W6: quote the name, `resolve(x, "T")`). The bare-name form should be accepted wherever the call appears, or rejected with a message that says to quote it.
+**Priority**: medium
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL binding cut at the newline, continuation gives a misleading parse error
+**Ticket**: A binding ends at the end of its line: a continuation line starting with `+` (`columns := a.map(...)` then `+ b.map(...)` on the next line) is a parse error, `23:13 Expected source attribute name`, which does not say that the expression was cut at the newline. Measured by `class2relational.test.ts` (workaround W1: the whole expression on one line). Either accept a continuation that starts with a binary operator, or name the cause in the message.
+**Priority**: low
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL has no allInstances, the idiom is a search of data
+**Ticket**: JjTL has no `allInstances` (or `T.allInstances()`): a rule that needs a target-independent element of the source model, here the Integer DataType for key columns, has to search `data` (the whole source model, SPEC 7.3) in a no-arg helper, `data.filter(t => t.className == "DataType" and t.name == "Integer").first()`. It works, but a reader must know that `data` exists and what shape it has. Searched in `frontend/src/jjtl/` and `frontend/src/jjel/` with a positive control on `resolveAll`. Measured by `class2relational.test.ts` (workaround W3). Language decision: add `T.allInstances` or document `data` as the idiom.
+**Priority**: low
+**Found in**: P-2026-11-03-1434
