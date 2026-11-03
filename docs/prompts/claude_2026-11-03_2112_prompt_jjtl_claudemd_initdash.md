@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-2112
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane hw-notation · 14d7f5c18
 Lane: fast (small and disjoint; Alfonso's ok of 2026-11-03 21:07)
 Depends: none
 Worktree: ~/jjodel-w-jjtldocs, branch jjtl-claudemd-initdash (at the commit that adds this prompt)
