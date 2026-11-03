@@ -455,3 +455,88 @@ export function formatNestedUnwritten(report: NestedMaterializationReport): stri
     if (!u || u.attributes === 0) return null;
     return `Attributes not written in "${report.modelName}": ${u.attributes} value(s) of ${u.objects} object(s): ${u.reason}`;
 }
+
+/** How long the store must go without a dispatch before a run's undo group closes: above the 300 ms batch interval. */
+export const RUN_QUIET_MS = 800;
+/** How often the closer of a run's undo group looks again. */
+export const RUN_UNDO_POLL_MS = 100;
+/**
+ * The longest a run's undo group stays open, on the clock (#458): a write-back that never settles, or a store
+ * that never goes quiet, would otherwise fold every later edit into the run's step. Above the whole b11_9 run.
+ */
+export const RUN_UNDO_CAP_MS = 180000;
+
+/** What the undo step of a JjTL run needs of the store (#458). */
+export interface RunUndoDeps {
+    /** `beginUndoGroup` / `endUndoGroup` (reducer.ts, R-JJD-6). */
+    begin(): void;
+    end(): void;
+    /** Lets every write already queued in the open transaction block reach the store now. */
+    flush(): Promise<void>;
+    /** Called on every store notification; returns the unsubscribe. */
+    subscribe(listener: () => void): () => void;
+    sleep(ms: number): Promise<void>;
+    now(): number;
+}
+
+export interface RunUndoClose {
+    /** From the call to close to the end of the group. */
+    waitedMs: number;
+    /** True when the group closed at `RUN_UNDO_CAP_MS`, not after the last write. */
+    capped: boolean;
+}
+
+export interface RunUndoStep {
+    /**
+     * Closes the group once `writes` has settled and the store has been quiet for `RUN_QUIET_MS` since its last
+     * write and since `notBefore`; at `RUN_UNDO_CAP_MS` in any case. A second call returns the first call's promise.
+     */
+    close(writes?: Promise<unknown>, notBefore?: number): Promise<RunUndoClose>;
+}
+
+/**
+ * Opens the undo group of a JjTL run (#458, as a script Apply, R-PLG-5): one Undo removes everything the run
+ * wrote. The run writes after `handleExecuteTransformation` returns (STEP 7 opens the tab on a timer, STEP 8
+ * writes on another, the tab's canvas makes its vertices once mounted), so the group closes on a quiet store,
+ * not at a line. The group is not a TRANSACTION: it wraps no creator (CLAUDE.md rule 12).
+ */
+export async function openRunUndoStep(
+    deps: RunUndoDeps,
+    quietMs: number = RUN_QUIET_MS,
+    pollMs: number = RUN_UNDO_POLL_MS,
+    capMs: number = RUN_UNDO_CAP_MS,
+): Promise<RunUndoStep> {
+    await deps.flush();
+    deps.begin();
+    let closing: Promise<RunUndoClose> | null = null;
+    return {
+        close: (writes = Promise.resolve(), notBefore = 0) =>
+            closing ??= closeRunUndoStep(deps, writes, notBefore, quietMs, pollMs, capMs),
+    };
+}
+
+async function closeRunUndoStep(
+    deps: RunUndoDeps, writes: Promise<unknown>, notBefore: number, quietMs: number, pollMs: number, capMs: number,
+): Promise<RunUndoClose> {
+    const start = deps.now();
+    const deadline = start + capMs;
+    let lastWrite = start;
+    const off = deps.subscribe(() => { lastWrite = deps.now(); });
+    let settled = false;
+    writes.then(() => { settled = true; }, () => { settled = true; });
+    let capped = false;
+    try {
+        for (;;) {
+            await deps.flush();
+            const now = deps.now();
+            // Quiet counts from the deadline too: the tab opened at it writes its canvas only once mounted.
+            if (settled && now - Math.max(lastWrite, notBefore) >= quietMs) break;
+            if (now >= deadline) { capped = true; break; }
+            await deps.sleep(Math.min(pollMs, deadline - now));
+        }
+    } finally {
+        off();
+        deps.end();
+    }
+    return { waitedMs: deps.now() - start, capped };
+}
