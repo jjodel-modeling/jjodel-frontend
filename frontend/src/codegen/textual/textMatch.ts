@@ -19,6 +19,7 @@
 import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
 import { classFeatures, isOuterRef } from './metamodel';
 import type { TextFeature, TextMetamodel, TextObject } from './metamodel';
+import type { SyntaxNode, TextParseResult } from './parser';
 import type { ObjectSpan } from './printer';
 
 export type MatchEvidence = 'span' | 'name' | 'homonym' | 'move' | 'rename';
@@ -135,6 +136,8 @@ export interface MatchInput {
     readonly parsed: { readonly objects: readonly TextObject[]; readonly spans: readonly ObjectSpan[] };
     /** The previous print's spans (model ids), carried over the edit; absent outside the editor. */
     readonly previous?: readonly ObjectSpan[];
+    /** Parsed objects whose container is unknown (orphans of a broken parse): never matched by step 2. */
+    readonly unplaced?: ReadonlySet<string>;
 }
 
 /** Matches the parsed objects to the model objects (R-TXT-18, R-TXT-22). */
@@ -178,12 +181,12 @@ export function matchObjects(input: MatchInput): TextMatch {
     };
     const slotOf = (place: Place | undefined): string => (place ? place.feature : '');
     for (const t of parsed.objects) {
-        if (toModel.has(t.id)) continue;
+        if (toModel.has(t.id) || input.unplaced?.has(t.id)) continue;
         const tp = textPlace.get(t.id);
         const key = containerKey(tp);
         if (key === null) continue;
         const name = identityOf(g, t);
-        const siblings = parsed.objects.filter(x => !toModel.has(x.id) && x.cls === t.cls && identityOf(g, x) === name
+        const siblings = parsed.objects.filter(x => !toModel.has(x.id) && !input.unplaced?.has(x.id) && x.cls === t.cls && identityOf(g, x) === name
             && (textPlace.get(x.id)?.owner ?? '') === (tp?.owner ?? '') && slotOf(textPlace.get(x.id)) === slotOf(tp));
         const position = (id: string): number => modelPlace.get(id)?.index ?? modelOrder.get(id) ?? 0;
         const candidates = model.filter(m => !taken.has(m.id) && m.cls === t.cls && identityOf(g, m) === name
@@ -229,6 +232,29 @@ export function matchObjects(input: MatchInput): TextMatch {
         created: parsed.objects.filter(t => !toModel.has(t.id)).map(t => t.id),
         deleted: model.filter(m => !taken.has(m.id)).map(m => m.id),
     };
+}
+
+/** An object read inside a skipped block (step B's `unknown container`), and the model object it matched, if any. */
+export interface OrphanMatch {
+    readonly text: string;
+    readonly model?: string;
+}
+
+/**
+ * R-TXT-22 on a text that may be broken, for the outline and the synced selection only: never for the diff, which a text
+ * with an error never reaches (R-TXT-21 (8)). The orphans of the parse are matched by span, move or rename, never by
+ * class and name in a container, which they have none of.
+ */
+export function displayMatch(input: Omit<MatchInput, 'parsed' | 'unplaced'> & { readonly parsed: TextParseResult }): { readonly match: TextMatch; readonly orphans: readonly OrphanMatch[] } {
+    const ids: string[] = [];
+    const walk = (n: SyntaxNode): void => {
+        if (n.kind === 'object' && n.orphan) ids.push(n.id);
+        for (const c of n.children) if (c.kind !== 'token') walk(c);
+    };
+    if (input.parsed.tree) walk(input.parsed.tree);
+    const match = matchObjects({ ...input, unplaced: new Set(ids) });
+    const byText = new Map(match.matches.map(m => [m.text, m.model]));
+    return { match, orphans: ids.map(id => { const model = byText.get(id); return model === undefined ? { text: id } : { text: id, model }; }) };
 }
 
 /** Equal set features over the features set on either side; a reference is equal when its targets match. */
