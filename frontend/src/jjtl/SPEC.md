@@ -902,7 +902,9 @@ single-valued feature is the bare value, `null` when empty. A slot with no decla
 the shape by count (none `null`, one bare, several a list). Until then the shape was by count for
 every feature, so a many-valued feature with one value reached the rules as a single value:
 `coll.map(...)` failed with `Unknown method 'map'` and a `forall` over it produced nothing. A
-Pointer id repeated in one slot is still kept once (ticket #474, open).
+string value repeated in one slot, a Pointer id among them, is kept once on a feature declared
+`unique` (the default) and kept every time on a feature declared `unique=false`
+(P-2026-11-03-1553, #474).
 
 `jjodelConverter.ts` also provides `convertJjodelModelToSource(model)`, which converts
 `LModel.objects` to `SourceElement[]`. It is **not** on the execution path.
@@ -1078,7 +1080,7 @@ commit that made it so.
 | Duplicate values | **Stale for a flat array source**, the shape the app passes: each target receives its own source's values, on both paths. **Real and fixed** for a `{ classes, instances }` source, whose arrays the flat-object loop read a second time, matching every instance twice (`e784e325d`) | — |
 | Double execution | **Stale, by reading only** (no app probe): there is no `<StrictMode>` in `src/` (`index.tsx` renders `<Provider><App/></Provider>`), Execute is a click callback and not an effect, and `handleExecuteTransformation` has carried a re-entry guard since `40fc9ff66` | — |
 | Debug logging | **Fixed** in `e784e325d`: the seven live `console.log` of a run removed, two of them per binding per instance. A run writes nothing to `console.log` | — |
-| Binding to an undeclared feature (#445) | **Fixed by a warning** in `e784e325d`. A nested creation lost `name` on a class with no `name` attribute, silently: the nested write-back writes declared attributes only and exempts `name` from its leftover check (`components/project/nestedMaterialization.ts`, `nestedAttributesOf` and the leftover loop). Now warned once per binding with rule, line and column (§10); nothing is created | — |
+| Binding to an undeclared feature (#445) | **Fixed by a warning** in `e784e325d`. A nested creation lost `name` on a class with no `name` attribute, silently: the nested write-back writes declared attributes only and exempts `name` from its leftover check (`components/project/nestedMaterialization.ts`, `nestedAttributesOf` and the leftover loop). Now warned once per binding with rule, line and column (§10); nothing is created. The Output panel prints the warnings of a run since P-2026-11-03-1553 (#520), at most 20 lines and a count of the rest, all of them in the Trace tab; seen in the app on Class2Relational | — |
 
 **One ambiguity left by design.** The parser produces two shapes for the same node, and
 the executor tells them apart by `objectCreation.targetClass === targetAttribute`, which
