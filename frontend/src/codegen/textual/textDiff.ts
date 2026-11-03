@@ -212,11 +212,21 @@ export function diffText(input: DiffInput): TextDiff {
         }
         return false;
     };
+    // A move into a single-valued slot whose object the deletions take waits for them: the slot is emptied first.
+    const evicts = (x: typeof moves[number]): boolean => {
+        if (!x.into || !('model' in x.into.owner)) return false;
+        const owner = modelById.get(x.into.owner.model);
+        const f = owner ? featuresOf(owner.cls).find(g => g.name === x.into!.feature) : undefined;
+        const now = owner ? asArray(owner.slots[x.into.feature])[0] : undefined;
+        return !!f && !f.many && typeof now === 'string' && deleted.has(now);
+    };
     const early: DiffOp[] = [];
     for (const x of moves) {
-        if (!x.into || !('text' in x.into.owner)) early.push(moveOp(x));
+        if (evicts(x)) { if (doomed(x.model)) early.push(moveOp({ ...x, into: null })); }
+        else if (!x.into || !('text' in x.into.owner)) early.push(moveOp(x));
         else if (doomed(x.model)) early.push(moveOp({ ...x, into: null }));
     }
+    const evicting = moves.filter(evicts).map(x => moveOp({ ...x, from: doomed(x.model) ? null : x.from }));
     const late = new Map(moves.filter(x => x.into && 'text' in x.into.owner).map(x => [x.model, moveOp({ ...x, from: doomed(x.model) ? null : x.from })]));
 
     // Deletions: the topmost only, a container takes what it contains.
@@ -229,7 +239,7 @@ export function diffText(input: DiffInput): TextDiff {
         const op = createOf.get(t.id) ?? late.get(modelOf.get(t.id)?.model ?? '');
         return op ? [op] : [];
     });
-    const ops = [...removals, ...early, ...deletions, ...placedOps, ...attributes, ...additions];
+    const ops = [...removals, ...early, ...deletions, ...evicting, ...placedOps, ...attributes, ...additions];
     ops.push(...reorders(ops));
     return { match, ops, unsupported, ...(outer.length ? { outer } : {}) };
 

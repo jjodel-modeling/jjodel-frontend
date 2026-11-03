@@ -628,6 +628,34 @@ describe('a move keeps the object, and a reorder of an ordered feature is minima
         expect(plan.refusals).toEqual([]);
         expect(plan.lines).toEqual(['set docs.files += readme', 'set docs.files -= b', 'set docs.files += b', 'set docs.files -= c', 'set docs.files += c']);
     });
+
+    it('into a single-valued slot whose object is deleted: the deletion first, then the move (mutants: the move before the deletion; no detach)', () => {
+        const box: Spec = {
+            classes: [{ name: 'Folder', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'folders', type: 'Folder', containment: true, many: true },
+                { name: 'files', type: 'File', containment: true, many: true }, { name: 'main', type: 'File', containment: true }] },
+            { name: 'File', attributes: [{ name: 'name', type: 'EString' }, { name: 'size', type: 'EInt' }] }],
+            enums: {},
+            objects: [
+                { id: 'root', cls: 'Folder', slots: { name: 'root', folders: ['box'], files: ['f1'], main: null } },
+                { id: 'box', cls: 'Folder', slots: { name: 'box', folders: [], files: [], main: 'f0' } },
+                { id: 'f0', cls: 'File', slots: { name: 'old', size: 1 } },
+                { id: 'f1', cls: 'File', slots: { name: 'a', size: 2 } },
+            ],
+        };
+        const { plan } = edit(specCase(box), [['\n  files {\n    File a {\n      size 2\n    }\n  }', ''], ['File old {\n          size 1\n        }', ''],
+            ['main {\n        ', 'main {\n        File a {\n          size 2\n        }']],
+            { pasted: [['f1', 'a']] });
+        expect(plan.refusals).toEqual([]);
+        expect(plan.diff!.ops.filter(op => op.op === 'move' || op.op === 'delete').map(op => op.op)).toEqual(['delete', 'move']);
+        expect(plan.lines).toEqual(['delete old', 'set box.main = a']);
+        // Out of a container deleted too: taken out first, put in after the deletions (mutant: no detach).
+        const away: Spec = { ...box, objects: box.objects.map(o => (o.id === 'root' ? { ...o, slots: { ...o.slots, folders: ['box', 'gone'], files: [] } } : o))
+            .concat([{ id: 'gone', cls: 'Folder', slots: { name: 'gone', folders: [], files: ['f1'], main: null } }]) };
+        const both = edit(specCase(away), [['\n    Folder gone {\n      files {\n        File a {\n          size 2\n        }\n      }\n    }', ''], ['File old {\n          size 1\n        }', ''],
+            ['main {\n        ', 'main {\n        File a {\n          size 2\n        }']], { pasted: [['f1', 'a']] });
+        expect(both.plan.refusals).toEqual([]);
+        expect(both.plan.lines).toEqual(['set gone.files -= a', 'delete old', 'delete gone', 'set box.main = a']);
+    });
 });
 
 // ---- The readers of the lookup ----------------------------------------------------------------------------------
