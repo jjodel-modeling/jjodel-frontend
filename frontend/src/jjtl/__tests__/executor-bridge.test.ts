@@ -282,6 +282,10 @@ describe('Test 5: Nested object creation', () => {
             __type: 'Column',
             className: 'Column',
             name: 'id',
+            // Markers the write-back reads (SPEC.md §9.2); this file did not load until P-2026-11-03-1402.
+            __nested: true,
+            __createdBy: 'JjTL',
+            __sourceId: 'Person',
         });
     });
 });

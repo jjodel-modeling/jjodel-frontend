@@ -59,7 +59,21 @@ import {
     TraceElementRef,
     TraceLinkBuilder,
 } from './traceModel';
-import {U} from "../../joiner";
+
+/**
+ * `U.asNumber` of common/U.tsx, verbatim, and the only thing this file took from the
+ * joiner barrel, which drags monaco into every importer: seven test files failed at
+ * import with `window is not defined` under the node environment (SPEC.md §12.2).
+ */
+const U = {
+    asNumber(val: any, returnInvalid: any = 0, returnNAN: any = NaN): number {
+        if (isNaN(val)) return returnNAN;
+        if (typeof val === 'number') return val;
+        let v = +val;
+        if (isNaN(v)) return returnInvalid;
+        return v;
+    },
+};
 
 // Re-export Jjodel converter utilities for convenience
 export {
@@ -122,6 +136,7 @@ function fromJjelValueKeepingTargets(value: JjelValue): unknown {
 }
 
 /** A short form of a bound value for the console: the full one may be cyclic. */
+// TODO: cleanup — unused since the per-binding console.log went (P-2026-11-03-1402).
 function describeBoundValue(value: unknown): string {
     if (isRuleTarget(value)) return `<${(value as any).className} from ${(value as any).__sourceId}>`;
     if (value && typeof value === 'object' && (value as any).__ref_result) {
@@ -711,19 +726,13 @@ export class JjtlExecutor {
             //   regardless of rule order.
             const totalMappings = this.ast.mappings.length;
 
-            console.log(`[JjTL] ===== PASS 1: create + trace =====`);
             for (let mi = 0; mi < totalMappings; mi++) {
                 const mapping = this.ast.mappings[mi];
-                const mappingLabel = `${mapping.sources.map(s => s.className).join(', ')} -> ${mapping.targetClass}`;
-                console.log(`[JjTL] Pass1 ${mi + 1}/${totalMappings}: ${mappingLabel}`);
                 await this.pass1CreateTargets(mapping, sourceInstances, targetModel);
             }
 
-            console.log(`[JjTL] ===== PASS 2: bind attributes =====`);
             for (let mi = 0; mi < totalMappings; mi++) {
                 const mapping = this.ast.mappings[mi];
-                const mappingLabel = `${mapping.sources.map(s => s.className).join(', ')} -> ${mapping.targetClass}`;
-                console.log(`[JjTL] Pass2 ${mi + 1}/${totalMappings}: ${mappingLabel}`);
                 await this.pass2BindAttributes(mapping);
             }
 
@@ -930,12 +939,21 @@ export class JjtlExecutor {
             }
         };
 
-        const checkBody = (body: any[], parentContext: string) => {
+        // `inLet`: a let body gets the binding check (#445) and none of the creation checks,
+        // which never ran there and are left as they were.
+        let ruleLabel = '';
+        const checkBody = (body: any[], parentContext: string, inLet: boolean = false) => {
             for (const item of body) {
+                if (item.type === 'LetStatement' && item.body) {
+                    checkBody(item.body, parentContext, true);
+                }
+                if (item.type === 'AttributeMapping' && !item.objectCreation) {
+                    this.warnUndeclaredBinding(item as AttributeMappingAST, parentContext, ruleLabel);
+                }
                 if (item.type === 'ForAllMapping' && item.objectCreation) {
-                    checkTarget(item.objectCreation.targetClass, `forall in ${parentContext}`);
+                    if (!inLet) checkTarget(item.objectCreation.targetClass, `forall in ${parentContext}`);
                     if (item.objectCreation.body) {
-                        checkBody(item.objectCreation.body, item.objectCreation.targetClass);
+                        checkBody(item.objectCreation.body, item.objectCreation.targetClass, inLet);
                     }
                 }
                 if (item.type === 'AttributeMapping' && item.objectCreation) {
@@ -943,7 +961,7 @@ export class JjtlExecutor {
                     // target metamodel and NEVER validated as a class. Only the class
                     // created inside the wrapper is checked against the class names.
                     const shape = this.classifyCreation(item as AttributeMappingAST, parentContext);
-                    switch (shape.kind) {
+                    if (!inLet) switch (shape.kind) {
                         case 'featureCreation':
                             checkTarget(shape.className, `object creation in ${parentContext}.${shape.featureName}`);
                             break;
@@ -974,7 +992,7 @@ export class JjtlExecutor {
                     if (item.objectCreation.body) {
                         checkBody(item.objectCreation.body, shape.kind === 'featureCreation'
                             ? shape.className
-                            : parentContext);
+                            : parentContext, inLet);
                     }
                 }
             }
@@ -984,10 +1002,44 @@ export class JjtlExecutor {
             // A delegating rule creates no target of its own (slice B).
             if (mapping.result) continue;
             checkTarget(mapping.targetClass, this.ruleLabel(mapping), true);
+            ruleLabel = this.ruleLabel(mapping);
             if (mapping.body) {
                 checkBody(mapping.body, mapping.targetClass);
             }
         }
+    }
+
+    /**
+     * A binding to a feature its target class does not declare, own or inherited (#445):
+     * one warning per binding, in the form of warnUnresolvedReads, never a silent drop.
+     * The executor keeps the value on its object, and the write-back writes only declared
+     * features, so the warning names what the model will not receive. Silent when the
+     * metamodel or the class is unknown: nothing to check against, and an unknown class
+     * is warned already.
+     */
+    private warnUndeclaredBinding(mapping: AttributeMappingAST, className: string, rule: string): void {
+        if (!this.hasTargetClassIndex() || !this.targetClasses.has(className)) return;
+        const feature = mapping.targetAttribute;
+        if (!feature || this.targetClassHasFeature(className, feature)) return;
+        const start = mapping.location?.start;
+        const where = start ? `binding '${feature}' at line ${start.line}, column ${start.column}` : `binding '${feature}'`;
+        const msg = `Rule '${rule || 'transformation'}', ${where}: '${feature}' is not a feature of target class ` +
+            `'${className}'; the value is not written to the model.`;
+        if (!this.warnings.includes(msg)) this.warnings.push(msg);
+    }
+
+    /** A feature of `className` or of any of its (transitive) supertypes. */
+    private targetClassHasFeature(className: string, featureName: string): boolean {
+        const seen = new Set<string>();
+        const stack = [className];
+        while (stack.length) {
+            const n = stack.pop()!;
+            if (seen.has(n)) continue;
+            seen.add(n);
+            if (this.resolveTargetFeature(n, featureName)) return true;
+            stack.push(...(this.targetClasses.get(n)?.superNames || []));
+        }
+        return false;
     }
 
     /**
@@ -1375,9 +1427,11 @@ export class JjtlExecutor {
             }
         }
 
-        // Handle flat object with typed elements
+        // Handle flat object with typed elements; `classes` and `instances` were read above,
+        // and reading them again matched every instance twice (SPEC.md §12.2).
         if (sourceModel && typeof sourceModel === 'object' && !Array.isArray(sourceModel)) {
             for (const [key, value] of Object.entries(sourceModel)) {
+                if (key === 'classes' || key === 'instances') continue;
                 if (Array.isArray(value)) {
                     // Assume array property contains instances
                     for (const item of value) {
@@ -1413,7 +1467,6 @@ export class JjtlExecutor {
         targetModel: TargetModel
     ): Promise<void> {
         if (this.unknownTargetClasses.has(mapping.targetClass)) {
-            console.log(`[JjTL] Skipping mapping to unknown target class '${mapping.targetClass}'`);
             return;
         }
 
@@ -1877,7 +1930,6 @@ export class JjtlExecutor {
         alias?: string
     ): Promise<void> {
         try {
-            console.log(`[JjTL] Evaluating attribute mapping: ${mapping.targetAttribute} := ${mapping.sourceAttribute ?? '<expression>'}`);
             let value: JjelValue;
             let sourceValue: any = null;
             const hasExpression = !!mapping.conversion?.expression;
@@ -1926,7 +1978,6 @@ export class JjtlExecutor {
             // Set target attribute
             const finalValue = fromJjelValueKeepingTargets(resolved);
             targetInstance[mapping.targetAttribute] = finalValue;
-            console.log(`[JjTL] Result: ${mapping.targetAttribute} = ${describeBoundValue(finalValue)}`);
 
             // Determine invertibility
             const invertible = this.isBindingInvertible(mapping);

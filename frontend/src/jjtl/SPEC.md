@@ -1003,6 +1003,7 @@ that could not be placed is reported as above.
 | Wrapper body neither `-> Class` nor `forall` | Warning naming the feature, nothing created |
 | `forall` element is an unresolvable `{ __ref }` | One warning per collection, element iterated unresolved |
 | Value that reaches no attribute, reference or feature | Warning naming instance, key and reason |
+| Binding to a feature the target class does not declare, own or inherited (`name := ...` on a class with no `name`) | One warning per binding, before the run, with the metamodel known (#445): `Rule 'B -> Box', binding 'name' at line L, column C: 'name' is not a feature of target class 'Kid'; the value is not written to the model.` Let bodies included. Nothing is created; the executor keeps the value on its object and the write-back writes declared features only |
 
 No exceptions are thrown to the caller. All errors are caught and logged.
 
@@ -1063,15 +1064,21 @@ interface ExecutionResult {
 
 ### 12.2 Known Bugs
 
+Each row reviewed against the code on 2026-11-03 (P-2026-11-03-1402) and reproduced by
+`executor/__tests__/spec12-known-bugs.test.ts`, on both parser paths where a parse is involved.
+The verdict leads the description: **real**, **fixed** with its commit, or **stale** with the
+commit that made it so.
+
 | Bug | Description | Severity |
 |---|---|---|
-| `.forAll(...)` never parses, in either lambda form | BOTH lexers lowercase before the keyword lookup (`jjel/lexer/lexer.ts:397-400`, `jjtl/lexer/lexer.ts:330`), so `forAll` becomes the FORALL token and cannot follow a `.`. Measured 2026-09-08 calling JjEL **directly**, so the defect is not scoped to the app path as this row said until then; `useJjtlParser` calling `parse(tokens)` without `source` is a second, independent reason. There is no `forAll` collection builtin either: the boolean quantifier is `coll.all(x => pred)`. See `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` §5.3 | High |
-| 7 test files fail at import | `window is not defined` under `environment: 'node'`: `executor.ts` imports the `joiner` barrel for `U.asNumber` alone, which drags in monaco/jquery/sweetalert2/axios. `forall-mapping.test.ts` is among them, so nine forall tests do not run | High |
-| Multiplicity `[*]` | Always creates 1 instance | Medium |
-| Number type | All numbers bridged as `EInt`, never `EDouble` | Low |
-| Duplicate values | B_1 may receive A_0's attribute values | High |
-| Double execution | React StrictMode double-render causes second execution | Medium |
-| Debug logging | Extensive `console.log` in executor not cleaned up | Low |
+| `.forAll(...)` never parses | **Stale on the app path.** JjEL takes any keyword as a member name since `3aa5993c8` (P-2026-10-21-0011), and both app callers of the JjTL parser pass `source` since `d3d42310c` (P-2026-10-31-1910), so `coll.forAll(x => p)` parses and the evaluator answers `Unknown method 'forAll' for type Array. Did you mean 'all'?`. JjEL has no `forAll` by design: the quantifier is `coll.all(x => pred)` (root `CLAUDE.md` §12.6). Only the legacy path (no `source`), reached by tests alone, still refuses it | — |
+| 7 test files fail at import | **Fixed** in `e784e325d`: `executor.ts` took only `U.asNumber` from the `joiner` barrel and now holds a verbatim copy, so six of the seven load and pass (two stale expectations updated). `ai-prompt-sanitization.test.ts` still fails at import, through `services/AIMatcher`, not the executor. Full suite: import failures 9 → 3 | Low |
+| Multiplicity `[*]` | **Real.** `A -> B[*]` creates one target per source, with no warning (`createTargetInstances`); `[n]` creates n. The unbounded semantics are undefined (§12.3 gap 4): ticket "JjTL multiplicity [*] creates one target per source, silently" (P-2026-11-03-1402) | Medium |
+| Number type | **Fixed, never observable.** The `EInt` tag on a bridged number literal was a dead write: the evaluator returns the literal's value and reads no tag, so `w := 3.5` and `v := 2 + 0.25` bound 3.5 and 2.25 on both paths before the change. A decimal literal is now tagged `EDouble` (`e784e325d`) | — |
+| Duplicate values | **Stale for a flat array source**, the shape the app passes: each target receives its own source's values, on both paths. **Real and fixed** for a `{ classes, instances }` source, whose arrays the flat-object loop read a second time, matching every instance twice (`e784e325d`) | — |
+| Double execution | **Stale, by reading only** (no app probe): there is no `<StrictMode>` in `src/` (`index.tsx` renders `<Provider><App/></Provider>`), Execute is a click callback and not an effect, and `handleExecuteTransformation` has carried a re-entry guard since `40fc9ff66` | — |
+| Debug logging | **Fixed** in `e784e325d`: the seven live `console.log` of a run removed, two of them per binding per instance. A run writes nothing to `console.log` | — |
+| Binding to an undeclared feature (#445) | **Fixed by a warning** in `e784e325d`. A nested creation lost `name` on a class with no `name` attribute, silently: the nested write-back writes declared attributes only and exempts `name` from its leftover check (`components/project/nestedMaterialization.ts`, `nestedAttributesOf` and the leftover loop). Now warned once per binding with rule, line and column (§10); nothing is created | — |
 
 **One ambiguity left by design.** The parser produces two shapes for the same node, and
 the executor tells them apart by `objectCreation.targetClass === targetAttribute`, which
