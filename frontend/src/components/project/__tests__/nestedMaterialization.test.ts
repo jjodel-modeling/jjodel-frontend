@@ -563,6 +563,8 @@ function runStore() {
         deps, calls,
         /** A store notification (a dispatch) at this time. */
         dispatchAt: (at: number) => { due.push({ at, fire: () => { for (const l of listeners) l(); } }); },
+        /** A long task at this time: the clock jumps by `ms` and nothing else runs meanwhile. */
+        taskAt: (at: number, ms: number) => { due.push({ at, fire: () => { clock = at + ms; } }); },
         /** A promise that settles at this time. */
         settleAt: (at: number, reject = false) => new Promise<void>((resolve, rejectP) => {
             due.push({ at, fire: () => (reject ? rejectP(new Error('write-back failed')) : resolve()) });
@@ -600,6 +602,22 @@ describe('openRunUndoStep, a JjTL run is one undo step (#458)', () => {
         s.dispatchAt(2400);
         await step.close(Promise.resolve(), 2000);
         expect(s.endAt()).toBeGreaterThanOrEqual(2400 + RUN_QUIET_MS);
+    });
+
+    it('a long task is not quiet: the tab opened after the write-back renders, then makes its vertices (P-2026-11-03-2110)', async () => {
+        // b10_8 with the tab opened late: last write and tab at 4200, a 1434 ms mount render without a
+        // dispatch, then useJjomSync makes the vertices. Closed at the first poll after the render, Undo
+        // left the run in place.
+        const s = runStore();
+        const step = await openRunUndoStep(s.deps);
+        const writes = s.settleAt(4200);
+        s.dispatchAt(4200);
+        s.taskAt(4300, 1434);
+        s.taskAt(5900, 845);
+        for (let t = 6800; t <= 10000; t += 400) s.dispatchAt(t);
+        await step.close(writes, 2100);
+        expect(s.ends()).toHaveLength(1);
+        expect(s.endAt()).toBeGreaterThanOrEqual(10000 + RUN_QUIET_MS);
     });
 
     it('a write-back that fails still closes the group, once', async () => {

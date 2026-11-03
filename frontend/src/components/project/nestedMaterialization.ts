@@ -465,6 +465,11 @@ export const RUN_UNDO_POLL_MS = 100;
  * that never goes quiet, would otherwise fold every later edit into the run's step. Above the whole b11_9 run.
  */
 export const RUN_UNDO_CAP_MS = 180000;
+/**
+ * A poll that comes back this much later than it asked for found the main thread busy: a long task, such as the
+ * output tab's mount render, after which its canvas makes its vertices. Quiet restarts there (P-2026-11-03-2110).
+ */
+export const RUN_BUSY_MS = 200;
 
 /** What the undo step of a JjTL run needs of the store (#458). */
 export interface RunUndoDeps {
@@ -489,7 +494,8 @@ export interface RunUndoClose {
 export interface RunUndoStep {
     /**
      * Closes the group once `writes` has settled and the store has been quiet for `RUN_QUIET_MS` since its last
-     * write and since `notBefore`; at `RUN_UNDO_CAP_MS` in any case. A second call returns the first call's promise.
+     * write, since the end of the last long task and since `notBefore`; at `RUN_UNDO_CAP_MS` in any case. A second
+     * call returns the first call's promise.
      */
     close(writes?: Promise<unknown>, notBefore?: number): Promise<RunUndoClose>;
 }
@@ -525,14 +531,21 @@ async function closeRunUndoStep(
     let settled = false;
     writes.then(() => { settled = true; }, () => { settled = true; });
     let capped = false;
+    let polled = start;
+    let asked = 0;
+    let lastBusy = start;
     try {
         for (;;) {
             await deps.flush();
             const now = deps.now();
+            // Quiet is what the closer saw, not what it slept through: a long task ends as a write would.
+            if (now - polled > asked + RUN_BUSY_MS) lastBusy = now;
             // Quiet counts from the deadline too: the tab opened at it writes its canvas only once mounted.
-            if (settled && now - Math.max(lastWrite, notBefore) >= quietMs) break;
+            if (settled && now - Math.max(lastWrite, lastBusy, notBefore) >= quietMs) break;
             if (now >= deadline) { capped = true; break; }
-            await deps.sleep(Math.min(pollMs, deadline - now));
+            asked = Math.min(pollMs, deadline - now);
+            polled = now;
+            await deps.sleep(asked);
         }
     } finally {
         off();

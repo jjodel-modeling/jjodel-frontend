@@ -2410,8 +2410,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
                 window.dispatchEvent(new CustomEvent(SystemEvents.JJTL_EXECUTION_RESULT, { detail: result }));
 
-                // Close the run's undo step after STEP 8 and after STEP 7's tab, which opens 2000 ms after
-                // it is scheduled (above this line) and then writes its canvas.
+                // Close the run's undo step after STEP 8 and after STEP 7's tab, which opens when the
+                // write-back ends and not before 2000 ms, then renders and writes its canvas.
                 undoStep.close(writeBackEnd, performance.now() + 2000).then(r => console.log(
                     `[ProjectEditor] Run undo step closed after ${Math.round(r.waitedMs)} ms${r.capped ? ' (cap)' : ''}`));
 
