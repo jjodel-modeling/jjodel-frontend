@@ -557,3 +557,13 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Ticket**: JjTL has no `allInstances` (or `T.allInstances()`): a rule that needs a target-independent element of the source model, here the Integer DataType for key columns, has to search `data` (the whole source model, SPEC 7.3) in a no-arg helper, `data.filter(t => t.className == "DataType" and t.name == "Integer").first()`. It works, but a reader must know that `data` exists and what shape it has. Searched in `frontend/src/jjtl/` and `frontend/src/jjel/` with a positive control on `resolveAll`. Measured by `class2relational.test.ts` (workaround W3). Language decision: add `T.allInstances` or document `data` as the idiom.
 **Priority**: low
 **Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL warnings, #445 included, never reach the output panel
+**Ticket**: The #445 warning never reaches the JjTL output panel. Measured by the Class2Relational app probe (`~/.jjodel-lanes/P-2026-11-03-1434/probe/c2r.ts`, real Execute dialog): with `nullable := false` added to the first `Attribute -> Column` rule, the execution result carries exactly `Rule 'Attribute -> Column', binding 'nullable' at line 27, column 5: 'nullable' is not a feature of target class 'Column'; the value is not written to the model.`, but the panel shows the same 7 lines as the run without it, and the toast says only `Created model "out2" with 1 instances.` Read: on success `JjtlDevelopmentEnv.tsx:358-360` writes two fixed lines and does not print `result.warnings`. So #445 is still invisible to a user; a one-line loop over `result.warnings` there would show it. Not fixed in P-2026-11-03-1505 (no product code in scope).
+**Priority**: medium
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL floating Execute button partly under the editor scrollbar
+**Ticket**: The floating Execute button of the JjTL editor (`.jjtl-editor-action-btn--primary`, the play icon at the editor's top right) sits partly under Monaco's vertical scrollbar: a pointer click at its centre lands on the scrollbar (`div.visible.scrollbar.vertical` intercepts pointer events), so Playwright cannot click it, with a 72-line text that scrolls. Measured twice by the Class2Relational app probe (`executePointerClickable: false` on both runs; screenshot `~/.jjodel-lanes/P-2026-11-03-1434/probe/c2r-run1-exec-covered.png`). A user can still use the toolbar's Execute or Ctrl+Enter, or the left half of the icon. Suggested: inset the floating toolbar by the scrollbar width.
+**Priority**: low
+**Found in**: P-2026-11-03-1434
