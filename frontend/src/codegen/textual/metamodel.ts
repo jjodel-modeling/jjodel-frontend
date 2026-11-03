@@ -14,6 +14,11 @@ export interface TextAttribute {
     readonly many?: boolean;
     /** Whether the order of the values matters (Ecore `ordered`, R-TXT-19); absent, the notation reads it as unordered. */
     readonly ordered?: boolean;
+    /** The bounds as the metamodel declares them, `-1` an unbounded upper (step B1, hover); absent where the data has none. */
+    readonly lower?: number;
+    readonly upper?: number;
+    /** The documentation (the GenModel `documentation` detail of Ecore), where the metamodel carries it (step B1, hover). */
+    readonly doc?: string;
 }
 
 export interface TextReference {
@@ -24,6 +29,10 @@ export interface TextReference {
     readonly many?: boolean;
     /** As TextAttribute.ordered. */
     readonly ordered?: boolean;
+    /** As TextAttribute. */
+    readonly lower?: number;
+    readonly upper?: number;
+    readonly doc?: string;
 }
 
 export interface TextClass {
@@ -33,11 +42,16 @@ export interface TextClass {
     readonly supers?: readonly string[];
     readonly attributes?: readonly TextAttribute[];
     readonly references?: readonly TextReference[];
+    /** As TextAttribute.doc. */
+    readonly doc?: string;
 }
 
 export interface TextEnumeration {
     readonly name: string;
     readonly literals: readonly string[];
+    /** As TextAttribute.doc, of the enumeration and of its literals by name. */
+    readonly doc?: string;
+    readonly literalDocs?: Readonly<Record<string, string>>;
 }
 
 export interface TextMetamodel {
