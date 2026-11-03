@@ -47,6 +47,11 @@ export interface TextParseResult {
     readonly spans: readonly ObjectSpan[];
     /** R-TXT-35: one per reference token, by owner in text order, then in the order of its slot. */
     readonly refs?: readonly ParsedRef[];
+    /**
+     * The recovered objects read in full, whose only fault is a block left open, their own or an enclosing one: an outline
+     * shows them as they are, and greys the other recovered ones (step A). In text order.
+     */
+    readonly unclosed?: readonly string[];
     /** The lossless tree the lists above are derived from (step A). */
     readonly tree?: TextNode;
 }
@@ -73,6 +78,8 @@ export interface ObjectNode extends NodeBase {
      * in `recovered`. `unclosed`: read in full, but its block or an enclosing one is left open; it is in `recovered`.
      */
     readonly state: 'complete' | 'partial' | 'unclosed';
+    /** Read inside a block the parser skipped after an error: its container is unknown. It is in `recovered`. */
+    readonly orphan?: true;
 }
 /** One item of a feature: its keyword and value, one value of a list, one contained object. */
 export interface ItemNode extends NodeBase {
@@ -438,6 +445,7 @@ interface Building {
     cls?: string;
     rule?: string;
     state?: ObjectNode['state'];
+    orphan?: true;
     feature?: string;
     closed?: boolean;
     ref?: ParsedRef;
@@ -524,10 +532,47 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         if (hit(peek(), m)) return take(role);
         return fail(describeMatchers([m]));
     };
+    /**
+     * Recovery at an expected keyword or punctuation `m` (step A (a)): the current token can follow it, so `m` is missing
+     * and is taken as read; or the next token is `m`, so the current one is extra and is skipped. Either is an error, and
+     * the object being read is recovered (R-TXT-21 (8)). Otherwise the parse fails here.
+     */
+    const repair = (m: Matcher, role: TokenRole, follows: (t: Token) => boolean): void => {
+        const t = peek();
+        const message = `expected ${either(describeMatchers([m]))}; found ${describeToken(t)}`;
+        const o = owner();
+        if (t.k !== 'EOF' && hit(peek(1), m) && peek(1).line === t.line && !follows(t)) {
+            record(errorAt(t, message));
+            if (o) recovered.add(o.id);
+            within('error', { message }, () => take());
+            take(role);
+            return;
+        }
+        if (!follows(t)) fail(describeMatchers([m]), t);
+        record(errorAt(t, message));
+        if (o) recovered.add(o.id);
+        within('error', { message }, () => undefined);
+    };
+    /** What may follow in the rest of a sequence; when all of it may be absent, a token that starts a line or closes a body. */
+    const followsIn = (rest: readonly GrammarNode[], t: Token): boolean => {
+        for (const y of rest) {
+            if (y.t === 'nl') continue;
+            if (canAt(y, t)) return true;
+            if (!first(y).nullable) return false;
+        }
+        return t.k === 'EOF' || t.first || closesBody(t);
+    };
+    const closesBody = (t: Token): boolean => {
+        const f = [...frames].reverse().find(x => x.close);
+        return !!f?.close && hit(t, word(f.close[0]));
+    };
     const lastEnd = (): number => (p > 0 ? toks[Math.min(p, toks.length) - 1].end : 0);
 
     const objects: MutableObject[] = [];
     const recovered = new Set<string>();
+    /** Recovered only because a block around them was left open (`TextParseResult.unclosed`), and read inside a skipped block. */
+    const unclosed = new Set<string>();
+    const orphans = new Set<string>();
     const nodeOf = new Map<string, Building>();
     const open: MutableObject[] = [];
     const frames: Frame[] = [];
@@ -667,6 +712,26 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                     if (closing && frame.close) return;
                     if (t.line > errLine && (frame.can(t) || (t.first && frames.some(f => f !== frame && f.can(t))))) return;
                 }
+                // Step A (b): inside a block being skipped, a line that starts an object is read, as an orphan.
+                const rule = depth > 0 && t.first ? descentRule(t) : undefined;
+                if (rule) {
+                    const from = p;
+                    const id = `t${counter + 1}`;
+                    try {
+                        object(rule);
+                    } catch (e) {
+                        if (!(e instanceof ParseFailure)) throw e;
+                        record(e.error);
+                    }
+                    orphans.add(id);
+                    for (let k = from; k < p && k < toks.length; k++) {
+                        if ([...opens].some(m => hit(toks[k], m))) depth++;
+                        else if ([...closes].some(m => hit(toks[k], m))) depth--;
+                    }
+                    if (depth < 0) depth = 0;
+                    if (p === from) take();
+                    continue;
+                }
                 if ([...opens].some(m => hit(t, m))) depth++;
                 else if (closing && depth > 0) depth--;
                 take();
@@ -676,6 +741,10 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             if (!err.children.length) cur().children.pop();
         }
     };
+    /** The object rule a token starts by its keyword, for the descent into a skipped block; none for a positional class. */
+    const descentRules = g.rules.filter((r): r is ObjectRule => r.t === 'object');
+    const descentRule = (t: Token): string | undefined =>
+        descentRules.find(r => [...first(r.body).set].some(m => m.includes(':') && hit(t, m)))?.name;
     /** Skips the current token, where a turn of a loop read nothing. */
     const skipOne = (message: string): void => {
         if (peek().k === 'EOF') { p++; return; }
@@ -702,7 +771,26 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             fail(describeMatchers(first({ t: 'seq', items }).set));
         }
         const opener = peek();
-        for (const s of n.open) expect(word(s), 'punctuation');
+        if (!n.open.every((s, k) => hit(peek(k), word(s)))) {
+            // Step A (a): a missing open before an item of the block, a missing empty block before what follows the object.
+            const t = peek();
+            const message = `expected ${either(describeMatchers([word(n.open[0])]))}; found ${describeToken(t)}`;
+            if (t.k !== 'EOF' && items.some(x => canAt(x, t))) {
+                record(errorAt(t, message));
+                recovered.add(o.id);
+                within('error', { message }, () => undefined);
+            } else if (n.empty.length && nullableAll && (t.k === 'EOF' || (t.first && frames.some(f => f.can(t))) || closesBody(t))) {
+                record(errorAt(t, message));
+                recovered.add(o.id);
+                within('error', { message }, () => undefined);
+                return;
+            } else if (n.open.length === 1 && t.k !== 'EOF' && hit(peek(1), word(n.open[0])) && peek(1).line === t.line) {
+                record(errorAt(t, message));
+                recovered.add(o.id);
+                within('error', { message }, () => take());
+                take('punctuation');
+            } else for (const s of n.open) expect(word(s), 'punctuation');
+        } else for (const s of n.open) expect(word(s), 'punctuation');
         const isClose = (): boolean => n.close.every((s, k) => hit(peek(k), word(s)));
         const frame: Frame = { can: t => items.some(x => canAt(x, t)), close: n.close, open: n.open };
         const enclosing = frames.slice();
@@ -740,8 +828,8 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                 }
                 if (t.k === 'EOF' || (t.first && enclosing.some(f => f.can(t)))) {
                     record(errorAt(t, `expected "${n.close.join(' ')}" to close the "${n.open.join(' ')}" at ${opener.line}:${opener.col}; found ${describeToken(t)}`));
-                    recovered.add(o.id);
-                    for (const x of objects.slice(since)) recovered.add(x.id);
+                    unclosed.add(o.id);
+                    for (const x of objects.slice(since)) unclosed.add(x.id);
                     return;
                 }
                 const expected = describeMatchers(items.slice(i, j + 1).flatMap(x => [...first(x).set]));
@@ -771,7 +859,14 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
 
     const run = (n: GrammarNode, o: MutableObject | undefined): void => {
         switch (n.t) {
-            case 'seq': for (const x of n.items) run(x, o); return;
+            case 'seq':
+                n.items.forEach((x, i) => {
+                    // A class keyword is never inferred (step A, decision 2): its object is predicted by it.
+                    if ((x.t === 'kw' || x.t === 'p') && !classKeywords.has(x) && !hit(peek(), word(x.text))) {
+                        repair(word(x.text), x.t === 'kw' ? 'keyword' : 'punctuation', t => followsIn(n.items.slice(i + 1), t));
+                    } else run(x, o);
+                });
+                return;
             case 'opt':
                 if (can(n.item)) within('item', { feature: n.feat }, () => run(n.item, o));
                 else if (n.derive && o) derives.set(o, n.derive);
@@ -809,12 +904,15 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             case 'list': {
                 if (!o) throw new Error('a list outside an object');
                 within('list', { feature: n.feat }, () => {
-                    expect(word(n.open), 'punctuation');
+                    if (!hit(peek(), word(n.open))) repair(word(n.open), 'punctuation', t => canAt(n.item, t) || hit(t, word(n.close)));
+                    else take('punctuation');
                     if (!Array.isArray(o.slots[n.feat])) o.slots[n.feat] = [];
                     if (hit(peek(), word(n.close))) { take('punctuation'); return; }
                     run(n.item, o);
                     while (hit(peek(), word(n.separator))) { take('punctuation'); run(n.item, o); }
-                    expect(word(n.close), 'punctuation');
+                    // A list left open at the end of its line is closed there.
+                    if (!hit(peek(), word(n.close))) repair(word(n.close), 'punctuation', t => t.k === 'EOF' || t.first || closesBody(t));
+                    else take('punctuation');
                 });
                 return;
             }
@@ -845,7 +943,8 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     };
     const refs: ParsedRef[] = [];
     const keep = new Set((options.keep ?? []).map(k => `${k.start}:${k.end}:${k.text}`));
-    resolve(g, objects, contained, errors, recovered, where, r => {
+    // An orphan's container is unknown: it is no top-level object, and a path never starts at it.
+    resolve(g, objects, new Set([...contained, ...orphans]), errors, recovered, where, r => {
         const tokenText = text.slice(r.at.start, r.endAt);
         return { start: r.at.start, end: r.endAt, text: tokenText, kept: keep.has(`${r.at.start}:${r.endAt}:${tokenText}`) };
     }, refs);
@@ -857,16 +956,19 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         delete n.empty;
         if (n.kind === 'object') {
             objectNodes.push(n);
-            n.state = recovered.has(n.id!) ? 'partial' : 'complete';
+            n.state = recovered.has(n.id!) ? 'partial' : unclosed.has(n.id!) ? 'unclosed' : 'complete';
+            if (orphans.has(n.id!)) n.orphan = true;
         }
         for (const c of n.children) if (c.kind !== 'token') finish(c);
     };
     finish(root);
     root.tokens = toks;
     const spans = objectNodes.map(n => ({ id: n.id!, start: n.start, end: n.end }));
+    const isRecovered = (n: Building): boolean => n.state !== 'complete' || !!n.orphan;
     errors.sort((a, b) => a.start - b.start);
     return {
-        objects: objectNodes.map(n => byId.get(n.id!)!), errors, recovered: objectNodes.filter(n => recovered.has(n.id!)).map(n => n.id!), spans, refs,
+        objects: objectNodes.map(n => byId.get(n.id!)!), errors, recovered: objectNodes.filter(isRecovered).map(n => n.id!), spans, refs,
+        unclosed: objectNodes.filter(n => n.state === 'unclosed').map(n => n.id!),
         tree: root as unknown as TextNode,
     };
 }

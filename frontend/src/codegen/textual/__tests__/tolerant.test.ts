@@ -9,7 +9,8 @@ import { commentsOf, parseText, tokenizeText } from '../parser';
 import type { ObjectNode, SyntaxElement, SyntaxNode, SyntaxToken, TextNode } from '../parser';
 import { grammarOf } from './corpus';
 import { FIXTURE } from './spec';
-import { mutantsOf, tolerantCases } from './tolerantCorpus';
+import { printTextModel } from '../printer';
+import { libraryObjects, mutantsOf, tolerantCases } from './tolerantCorpus';
 
 const CASES = tolerantCases();
 
@@ -93,5 +94,97 @@ describe('(ii) the lossless tree', () => {
         const text = '// head\nPart a { // brace\n  size 1 // one\n  /* before close */\n}\n// tail\n';
         const owners = commentsOf(treeOf(text), grammarOf(FIXTURE)).map(c => `${c.text} -> ${c.owner.kind}${c.owner.kind === 'item' ? `(${c.owner.feature})` : ''}${c.trailing ? ' trailing' : ''}`);
         expect(owners).toEqual(['// head -> object', '// brace -> object trailing', '// one -> item(size) trailing', '/* before close */ -> block', '// tail -> text']);
+    });
+});
+
+describe('(iii) recovery: insertion, deletion, descent into skipped blocks; unclosed is not partial', () => {
+    const LIB = CASES[0];
+    const text = printTextModel(LIB.g, libraryObjects(2, 2)).text;
+    const parse = (t: string) => parseText(t, LIB.g);
+    const shape = (t: string) => {
+        const r = parse(t);
+        const nodes = objectNodes(r.tree!);
+        return {
+            errors: r.errors.map(e => e.message),
+            objects: nodes.map(n => `${n.cls}:${n.state}${n.orphan ? ':orphan' : ''}`),
+            recovered: r.recovered, unclosed: r.unclosed,
+        };
+    };
+    const all = (cls: string[], state = 'complete') => cls.map(c => `${c}:${state}`);
+
+    it('a missing "{" is inserted where the next token starts an item of the block: a single root keeps its outline', () => {
+        expect(text.startsWith('Library city {\n  books {\n    Book book0 {')).toBe(true);
+        const s = shape(text.replace('Library city {', 'Library city'));
+        expect(s.errors).toEqual(['expected "{"; found name "books"']);
+        expect(s.objects).toEqual(['Library:partial', ...all(['Book', 'Book', 'Member', 'Member'])]);
+        expect(s.recovered).toEqual(['t1']);
+        const r = parse(text.replace('Book book0 {', 'Book book0'));
+        expect(r.objects.map(o => o.slots.name)).toEqual(['city', 'book0', 'book1', 'reader0', 'reader1']);
+        expect(r.objects[1].slots).toEqual({ name: 'book0', genre: 'FICTION' });
+        expect(r.recovered).toEqual(['t2']);
+    });
+
+    it('a missing "{}" is inserted where the next line starts an item of an enclosing body', () => {
+        const s = shape(text.replace('Member reader0 {}', 'Member reader0'));
+        expect(s.errors).toEqual(['expected "{"; found name "Member"']);
+        expect(s.objects).toEqual(['Library:complete', 'Book:complete', 'Book:complete', 'Member:partial', 'Member:complete']);
+    });
+
+    it('an extra token before an expected one is deleted', () => {
+        const r = parse(text.replace('Book book0 {', 'Book book0 junk {'));
+        expect(r.errors.map(e => `${e.line}:${e.col} ${e.message}`)).toEqual(['3:16 expected "{"; found name "junk"']);
+        expect(r.objects[1].slots).toEqual({ name: 'book0', genre: 'FICTION' });
+        expect(r.recovered).toEqual(['t2']);
+    });
+
+    it('a block skipped after an error is read for the objects its lines start: orphans, whose container is unknown', () => {
+        const s = shape(text.replace('  members {', '  {'));
+        expect(s.errors).toHaveLength(1);
+        expect(s.objects).toEqual(['Library:partial', 'Book:complete', 'Book:complete', 'Member:complete:orphan', 'Member:complete:orphan']);
+        expect(s.recovered).toEqual(['t1', 't4', 't5']);
+    });
+
+    it('a deleted class keyword is not inferred (deferred): the root is lost, what it contains is read as orphans', () => {
+        const s = shape(text.replace('Library city {', 'city {'));
+        expect(s.errors).toEqual(['expected "Library", "Book" or "Member"; found name "city"']);
+        expect(s.objects).toEqual(['Book:complete:orphan', 'Book:complete:orphan', 'Member:complete:orphan', 'Member:complete:orphan']);
+    });
+
+    it('a cut text: the objects read in full inside an open block are unclosed, the one cut inside is partial', () => {
+        const cut = text.indexOf('Book book1');
+        const s = shape(text.slice(0, cut));
+        expect(s.objects).toEqual(['Library:unclosed', 'Book:unclosed']);
+        expect(s.recovered).toEqual(['t1', 't2']);
+        expect(s.unclosed).toEqual(['t1', 't2']);
+        const mid = shape(text.slice(0, text.indexOf('SCIENCE')));
+        expect(mid.objects).toEqual(['Library:unclosed', 'Book:unclosed', 'Book:partial']);
+        expect(mid.unclosed).toEqual(['t1', 't2']);
+        expect(mid.recovered).toEqual(['t1', 't2', 't3']);
+    });
+
+    it('a deleted token no longer stops the parse: the objects after it keep their spans (measured, probe of 2120)', () => {
+        // Per case, the deletion mutants after which no object past the fault kept its span; 20 of 542 before recovery.
+        const stopped = CASES.map(c => {
+            const { text: base, mutants } = mutantsOf(c);
+            const r0 = parseText(base, c.g);
+            const orig = r0.spans.map(s => ({ ...s, cls: r0.objects.find(o => o.id === s.id)!.cls }));
+            return mutants.filter(mu => mu.kind === 'delete').filter(mu => {
+                const r = parseText(mu.text, c.g);
+                if (!r.errors.length) return false;
+                const cls = new Map(r.objects.map(o => [o.id, o.cls]));
+                const kept = new Set(r.spans.map(s => `${cls.get(s.id)}:${s.start}:${s.end}`));
+                const after = orig.filter(o => o.start >= mu.at + mu.removed);
+                return after.length > 0 && after.every(o => !kept.has(`${o.cls}:${o.start - mu.removed}:${o.end - mu.removed}`));
+            }).length;
+        });
+        expect(stopped).toEqual([0, 0, 1, 0, 0, 0, 0]);
+    });
+
+    it('an orphan is no top-level object: a path does not reach it', () => {
+        expect(text).toContain('borrowedBy reader1');
+        const broken = text.replace('  members {', '  {').replace('borrowedBy reader1', 'borrowedBy Member[0]');
+        const r = parse(broken);
+        expect(r.errors.map(e => e.message)).toContain('there is no top-level Member[0]: the text has 0');
+        expect(r.refs!.filter(x => x.feature === 'borrowedBy').map(x => x.to)).toEqual([undefined]);
     });
 });
