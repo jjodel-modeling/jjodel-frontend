@@ -811,3 +811,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Prompt document name**: 2026-11-03 21:11
 
 **Ticket** (#515, update, closed by R-JTG-15): a `let` bound to a called-rule call or an `envLookup` now realizes it once, at the binding (`letValue`/`realizeCalls` in `executor.ts`, all five LetStatement sites), so two uses of the name are one object; a source element bound by a `let` stays the element. On Class2Relational the 8 extra root Columns are gone and no `resolve()` is left in the natural text. #517 stays open, pinned by its test on `MATCHED_KEYS`.
+
+## 2026-11-04 — merge: jjtl-let-unique-called into alfonso-frontend-jjtl (P-2026-11-04-0007)
+**Prompt**: `claude_2026-11-04_0007_prompt_merge_jjtl-let-unique-called.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-let-unique-called` at `5d7623c72` into `alfonso-frontend-jjtl`, merge base `bd82f5f72`, 7 commits on the branch side.
+**Files touched**: merge `d37e726aa`: 14 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_2111_prompt_jjtl_let_unique_called.md`, `docs/prompts/claude_2026-11-03_2325_prompt_jjtl_let_unique_close.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/__tests__/fixtures/class2relational.ts`, `frontend/src/jjtl/components/GrammarDiagram/diagramRenderer.ts`, `frontend/src/jjtl/components/GrammarDiagram/types.ts`, and 6 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d37e726aa` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13493 tests in 508 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on d37e726aa; app probe of the natural Class2Relational on the branch; no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-let-unique-called-P-2026-11-04-0007` on `721927b41` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0007/result.json`.
+**Prompt document name**: 2026-11-04 00:07
