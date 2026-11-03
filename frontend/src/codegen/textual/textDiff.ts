@@ -463,12 +463,14 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
                 break;
             case 'move': {
                 const h = handle({ model: op.model });
+                if (op.into && !writable(op.model, op.into.feature)) break;
+                // Out of the old slot first: put in alone, the object leaves a hole there that the core does not close (R1).
+                if (op.from && writable(op.model, op.from.feature)) lines.push(`set ${handle({ model: op.from.owner })}.${op.from.feature} -= ${h}`);
                 if (op.into) {
-                    if (!writable(op.model, op.into.feature)) break;
                     const owner = objectOf(op.into.owner);
                     const many = !!owner && featuresOf(owner.cls).some(f => f.name === op.into!.feature && f.many);
                     lines.push(`set ${handle(op.into.owner)}.${op.into.feature} ${many ? '+=' : '='} ${h}`);
-                } else if (op.from && writable(op.model, op.from.feature)) lines.push(`set ${handle({ model: op.from.owner })}.${op.from.feature} -= ${h}`);
+                }
                 break;
             }
             case 'reorder':

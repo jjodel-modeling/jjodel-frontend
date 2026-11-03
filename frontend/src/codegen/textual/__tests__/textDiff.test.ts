@@ -544,13 +544,14 @@ const FILE_B = '\n        File b {\n          size 3\n        }';
 const PICS_WITH_B = 'Folder pics {\n      files {\n        File b {\n          size 3\n        }\n      }\n    }';
 
 describe('a move keeps the object, and a reorder of an ordered feature is minimal (T7)', () => {
-    it('cut and pasted whole into another container: certain by the carried span, one containment line, id and incoming references kept (mutant: move left unsupported)', () => {
+    it('cut and pasted whole into another container: certain by the carried span, out of the old slot then into the new, id and incoming references kept (mutants: move left unsupported; the old slot left to the core)', () => {
         const { plan } = edit(treeCase(), [[FILE_B, ''], ['Folder pics {}', PICS_WITH_B]], { pasted: [['f2', 'b']] });
         expect(plan.diff!.match.matches.find(m => m.model === 'f2')).toMatchObject({ by: 'span', uncertain: false });
         expect(plan.diff!.ops).toEqual([{ op: 'move', model: 'f2', into: { owner: { model: 'pics' }, feature: 'files' }, from: { owner: 'docs', feature: 'files' } }]);
         expect(plan.refusals).toEqual([]);
-        expect(plan.lines).toEqual(['set pics.files += b']);
-        expect(new Map(plan.handles)).toEqual(new Map([['pics', 'pics'], ['b', 'f2']]));
+        // Out of the old slot first: a `+=` alone leaves a hole the core does not close (R1, measured in the app).
+        expect(plan.lines).toEqual(['set docs.files -= b', 'set pics.files += b']);
+        expect(new Map(plan.handles)).toEqual(new Map([['docs', 'docs'], ['b', 'f2'], ['pics', 'pics']]));
     });
 
     it('without the carried span the same move is uncertain and asks; confirmed, it is the same line (R-TXT-18: never a silent guess)', () => {
@@ -558,7 +559,7 @@ describe('a move keeps the object, and a reorder of an ordered feature is minima
         expect(asked.plan.diff!.match.matches.find(m => m.model === 'f2')).toMatchObject({ by: 'move', uncertain: true });
         expect(codes(asked.plan)).toEqual(['uncertain']);
         const confirmed = edit(treeCase(), [[FILE_B, ''], ['Folder pics {}', PICS_WITH_B]], { confirmed: ['uncertain'] });
-        expect(confirmed.plan.lines).toEqual(['set pics.files += b']);
+        expect(confirmed.plan.lines).toEqual(['set docs.files -= b', 'set pics.files += b']);
     });
 
     it('a pasted copy with the original still in the text is a new object (R-TXT-22)', () => {
@@ -582,7 +583,7 @@ describe('a move keeps the object, and a reorder of an ordered feature is minima
         const { plan } = edit(c, [[docs, ''], ['Folder pics {}', 'Folder pics {\n      files {\n        File a {\n          size 2\n        }\n      }\n    }'], ['\n      link b', '']],
             { pasted: [['f1', 'a']], referencedElsewhere: new Set(['f1']) });
         expect(plan.refusals).toEqual([]);
-        expect(plan.lines).toEqual(['set pics.files += a', 'delete docs']);
+        expect(plan.lines).toEqual(['set docs.files -= a', 'set pics.files += a', 'delete docs']);
         const withB = edit(c, [[docs, ''], ['Folder pics {}', 'Folder pics {\n      files {\n        File a {\n          size 2\n        }\n      }\n    }'], ['\n      link b', '']],
             { pasted: [['f1', 'a']], referencedElsewhere: new Set(['f2']) });
         expect(codes(withB.plan)).toEqual(['referenced']);
@@ -606,7 +607,7 @@ describe('a move keeps the object, and a reorder of an ordered feature is minima
         const target = printTextModel(c.g, swapped).text;
         const { plan } = edit(c, [[docsAt(printed), target.slice(target.indexOf('    Folder pics {'), target.indexOf('\n  }\n  files {'))]], { confirmed: ['uncertain'] });
         expect(plan.refusals).toEqual([]);
-        expect(plan.lines).toEqual(['set root.folders += pics', 'set pics.folders += docs']);
+        expect(plan.lines).toEqual(['set docs.folders -= pics', 'set root.folders += pics', 'set root.folders -= docs', 'set pics.folders += docs']);
     });
 
     it('an ordered containment reversed: the longest kept prefix stays, the rest is re-appended in text order (mutant: reorder dropped)', () => {
@@ -626,7 +627,7 @@ describe('a move keeps the object, and a reorder of an ordered feature is minima
         const { plan } = edit(treeCase(true), [[readme, ''], ['          size 2\n        }', '          size 2\n        }\n        File readme {\n          size 1\n          link b\n        }']],
             { spans: true, pasted: [['f0', 'readme']] });
         expect(plan.refusals).toEqual([]);
-        expect(plan.lines).toEqual(['set docs.files += readme', 'set docs.files -= b', 'set docs.files += b', 'set docs.files -= c', 'set docs.files += c']);
+        expect(plan.lines).toEqual(['set root.files -= readme', 'set docs.files += readme', 'set docs.files -= b', 'set docs.files += b', 'set docs.files -= c', 'set docs.files += c']);
     });
 
     it('into a single-valued slot whose object is deleted: the deletion first, then the move (mutants: the move before the deletion; no detach)', () => {
@@ -647,7 +648,7 @@ describe('a move keeps the object, and a reorder of an ordered feature is minima
             { pasted: [['f1', 'a']] });
         expect(plan.refusals).toEqual([]);
         expect(plan.diff!.ops.filter(op => op.op === 'move' || op.op === 'delete').map(op => op.op)).toEqual(['delete', 'move']);
-        expect(plan.lines).toEqual(['delete old', 'set box.main = a']);
+        expect(plan.lines).toEqual(['delete old', 'set root.files -= a', 'set box.main = a']);
         // Out of a container deleted too: taken out first, put in after the deletions (mutant: no detach).
         const away: Spec = { ...box, objects: box.objects.map(o => (o.id === 'root' ? { ...o, slots: { ...o.slots, folders: ['box', 'gone'], files: [] } } : o))
             .concat([{ id: 'gone', cls: 'Folder', slots: { name: 'gone', folders: [], files: ['f1'], main: null } }]) };
@@ -721,8 +722,8 @@ describe('applyTextEdit', () => {
         const readme = '\n  files {\n    File readme {\n      size 1\n      link b\n    }\n  }';
         const { plan } = edit(treeCase(true), [[readme, ''], ['          size 2\n        }', '          size 2\n        }\n        File readme {\n          size 1\n          link b\n        }']],
             { spans: true, pasted: [['f0', 'readme']] });
-        expect(await applyTextEdit('M', plan)).toEqual({ applied: 5, failed: 0 });
+        expect(await applyTextEdit('M', plan)).toEqual({ applied: 6, failed: 0 });
         expect(run.calls).toHaveLength(before + 1);
-        expect(run.calls[before].script.split('\n')).toEqual(['set docs.files += readme', 'set docs.files -= b', 'set docs.files += b', 'set docs.files -= c', 'set docs.files += c']);
+        expect(run.calls[before].script.split('\n')).toEqual(['set root.files -= readme', 'set docs.files += readme', 'set docs.files -= b', 'set docs.files += b', 'set docs.files -= c', 'set docs.files += c']);
     });
 });
