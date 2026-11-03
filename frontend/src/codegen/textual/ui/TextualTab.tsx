@@ -240,6 +240,18 @@ export function pauseOf(delay: number, run: () => void): Pause {
 export interface TextSync {
     readonly text: string;
     readonly model: string;
+    /** P-2026-11-03-2326: the agreed text's object spans and reference tokens, kept with the agreement. */
+    readonly spans?: readonly ObjectSpan[];
+    readonly refs?: readonly RefSpan[];
+}
+
+/**
+ * P-2026-11-03-2326: the spans and tokens of a text equal to the agreed one again (a delete and a paste back, Monaco's
+ * own undo, a retyped text), which the edits back to it may have collapsed: the agreement's. Null for another text.
+ */
+export function agreedEvidence(sync: TextSync, text: string): { readonly spans: readonly ObjectSpan[]; readonly refs: readonly RefSpan[] } | null {
+    if (text !== sync.text || !sync.spans) return null;
+    return { spans: sync.spans, refs: sync.refs ?? [] };
 }
 
 /**
@@ -671,6 +683,20 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         });
     };
 
+    /** P-2026-11-03-2326: the spans and tokens just set on the agreed text are kept with the agreement. */
+    const agree = (): void => {
+        const sync = syncRef.current;
+        if (sync && editorRef.current?.getValue() === sync.text) syncRef.current = { ...sync, spans: carriedSpans(), refs: carriedRefs() };
+    };
+
+    /** P-2026-11-03-2326: the text is the agreed one again; the spans and tokens the edits back to it collapsed are put back. */
+    const restoreAgreed = (text: string): void => {
+        const back = syncRef.current && agreedEvidence(syncRef.current, text);
+        if (!back) return;
+        setDecorations(back.spans);
+        setRefDecorations(back.refs);
+    };
+
     /** The parse's errors, and the misplaced outer references (T7 (5)), as markers. */
     const setMarkers = (parsed: TextParseResult | null, marks: readonly TextMark[] = []): void => {
         const monaco = monacoRef.current;
@@ -709,6 +735,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         if (viewState) editor.restoreViewState(viewState);
         setDecorations(r.base.spans);
         setRefDecorations(r.base.refs ?? []);
+        agree();
         setMarkers(null);
         staleRef.current = false;
         setStale(false);
@@ -756,6 +783,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         syncRef.current = { ...sync, text: editor.getValue() };
         setDecorations(spans.map(s => ({ ...s, start: shiftOffset(s.start, r.edits), end: shiftOffset(s.end, r.edits) })));
         setRefDecorations(r.refs);
+        agree();
         updateUndoKey();
     };
 
@@ -786,6 +814,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             setDecorations(appliedSpans(parsed, plan.diff.match, rematch));
             setRefDecorations(appliedRefs(text, plan.diff.refs ?? [], plan.diff.match, rematch));
             rewritePaths(b.refs ?? []);
+            agree();
         }
         setStatus({ kind: 'applied', failed: failedLines });
         updateUndoKey();
@@ -801,6 +830,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         if (applyingRef.current) { pause.poke(); return; }
         const text = editor.getValue();
         if (text === sync.text) {
+            restoreAgreed(text);
             setMarkers(null);
             setConfirm(null);
             if (staleRef.current) reprint(r); else setStatus({ kind: 'synced' });
@@ -860,6 +890,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             const sync = syncRef.current;
             if (editor && sync && editor.getValue() === sync.text && !staleRef.current) {
                 pause.cancel();
+                restoreAgreed(sync.text);
                 setMarkers(null);
                 setConfirm(null);
                 setStatus({ kind: 'synced' });
@@ -902,7 +933,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         monacoRef.current = monaco;
         const r = readRef.current;
         syncRef.current = { text: editor.getValue(), model: r.view.text };
-        if (r.base && editor.getValue() === r.view.text) { setDecorations(r.base.spans); setRefDecorations(r.base.refs ?? []); }
+        if (r.base && editor.getValue() === r.view.text) { setDecorations(r.base.spans); setRefDecorations(r.base.refs ?? []); agree(); }
         const key = editor.createContextKey<boolean>(APP_UNDO_KEY, true);
         undoKeyRef.current = key;
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
