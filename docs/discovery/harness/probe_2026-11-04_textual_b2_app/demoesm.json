@@ -1,0 +1,249 @@
+{
+ "mm": {
+  "classes": [
+   {
+    "name": "State",
+    "isAbstract": false,
+    "supers": [],
+    "attributes": [
+     {
+      "name": "entry",
+      "type": "Action",
+      "many": true,
+      "ordered": true
+     }
+    ],
+    "references": [
+     {
+      "name": "transitions",
+      "type": "Transition",
+      "containment": true,
+      "many": true,
+      "ordered": true
+     }
+    ]
+   },
+   {
+    "name": "Initial",
+    "isAbstract": false,
+    "supers": [
+     "State"
+    ],
+    "attributes": [],
+    "references": []
+   },
+   {
+    "name": "Terminal",
+    "isAbstract": false,
+    "supers": [
+     "State"
+    ],
+    "attributes": [],
+    "references": []
+   },
+   {
+    "name": "Transition",
+    "isAbstract": false,
+    "supers": [],
+    "attributes": [
+     {
+      "name": "guard",
+      "type": "Expression",
+      "many": false,
+      "ordered": true
+     },
+     {
+      "name": "effect",
+      "type": "Action",
+      "many": true,
+      "ordered": true
+     }
+    ],
+    "references": [
+     {
+      "name": "nextState",
+      "type": "State",
+      "containment": false,
+      "many": false,
+      "ordered": true
+     },
+     {
+      "name": "event",
+      "type": "Event",
+      "containment": false,
+      "many": false,
+      "ordered": true
+     }
+    ]
+   },
+   {
+    "name": "Event",
+    "isAbstract": false,
+    "supers": [],
+    "attributes": [
+     {
+      "name": "name",
+      "type": "EString",
+      "many": false,
+      "ordered": true
+     }
+    ],
+    "references": []
+   }
+  ],
+  "enumerations": []
+ },
+ "objects": [
+  {
+   "id": "Pointer1793747144933_USER_33",
+   "cls": "Initial",
+   "slots": {
+    "entry": [],
+    "transitions": [
+     "Pointer1793747144934_USER_48",
+     "Pointer1793747144934_USER_53",
+     "Pointer1793747144937_USER_63"
+    ]
+   }
+  },
+  {
+   "id": "Pointer1793747144933_USER_36",
+   "cls": "State",
+   "slots": {
+    "entry": [],
+    "transitions": [
+     "Pointer1793747144935_USER_58"
+    ]
+   }
+  },
+  {
+   "id": "Pointer1793747144933_USER_39",
+   "cls": "Terminal",
+   "slots": {
+    "entry": [],
+    "transitions": []
+   }
+  },
+  {
+   "id": "Pointer1793747144934_USER_42",
+   "cls": "Event",
+   "slots": {
+    "name": "coin"
+   }
+  },
+  {
+   "id": "Pointer1793747144934_USER_44",
+   "cls": "Event",
+   "slots": {
+    "name": "push"
+   }
+  },
+  {
+   "id": "Pointer1793747144934_USER_46",
+   "cls": "Event",
+   "slots": {
+    "name": "stop"
+   }
+  },
+  {
+   "id": "Pointer1793747144934_USER_48",
+   "cls": "Transition",
+   "slots": {
+    "guard": null,
+    "effect": [
+     "model.[coins] := model.[coins] + 1"
+    ],
+    "nextState": "Pointer1793747144933_USER_33",
+    "event": "Pointer1793747144934_USER_42"
+   }
+  },
+  {
+   "id": "Pointer1793747144934_USER_53",
+   "cls": "Transition",
+   "slots": {
+    "guard": "model.[paid]",
+    "effect": [
+     "model.[coins] := 0"
+    ],
+    "nextState": "Pointer1793747144933_USER_36",
+    "event": "Pointer1793747144934_USER_44"
+   }
+  },
+  {
+   "id": "Pointer1793747144935_USER_58",
+   "cls": "Transition",
+   "slots": {
+    "guard": null,
+    "effect": [],
+    "nextState": "Pointer1793747144933_USER_33",
+    "event": "Pointer1793747144934_USER_44"
+   }
+  },
+  {
+   "id": "Pointer1793747144937_USER_63",
+   "cls": "Transition",
+   "slots": {
+    "guard": null,
+    "effect": [],
+    "nextState": "Pointer1793747144933_USER_39",
+    "event": "Pointer1793747144934_USER_46"
+   }
+  }
+ ],
+ "stored": {
+  "decoded": {
+   "record": null,
+   "issues": []
+  },
+  "ids": {
+   "classes": {
+    "Pointer1793747144931_USER_8": "State",
+    "Pointer1793747144931_USER_9": "Initial",
+    "Pointer1793747144931_USER_10": "Terminal",
+    "Pointer1793747144931_USER_11": "Transition",
+    "Pointer1793747144932_USER_12": "Event"
+   },
+   "features": {
+    "Pointer1793747144932_USER_24": {
+     "owner": "State",
+     "name": "entry",
+     "lower": 0
+    },
+    "Pointer1793747144932_USER_18": {
+     "owner": "State",
+     "name": "transitions",
+     "lower": 0
+    },
+    "Pointer1793747144932_USER_22": {
+     "owner": "Transition",
+     "name": "guard",
+     "lower": 0
+    },
+    "Pointer1793747144932_USER_23": {
+     "owner": "Transition",
+     "name": "effect",
+     "lower": 0
+    },
+    "Pointer1793747144932_USER_19": {
+     "owner": "Transition",
+     "name": "nextState",
+     "lower": 0
+    },
+    "Pointer1793747144932_USER_20": {
+     "owner": "Transition",
+     "name": "event",
+     "lower": 0
+    },
+    "Pointer1793747144932_USER_21": {
+     "owner": "Event",
+     "name": "name",
+     "lower": 0
+    }
+   },
+   "enums": {}
+  }
+ },
+ "text": "Initial {\n  transitions {\n    Transition {\n      effect [\"model.[coins] := model.[coins] + 1\"]\n      nextState Initial[0]\n      event coin\n    }\n    Transition {\n      guard \"model.[paid]\"\n      effect [\"model.[coins] := 0\"]\n      nextState State[0]\n      event push\n    }\n    Transition {\n      nextState Terminal[0]\n      event stop\n    }\n  }\n}\nState {\n  transitions {\n    Transition {\n      nextState Initial[0]\n      event push\n    }\n  }\n}\nTerminal {}\nEvent coin {}\nEvent push {}\nEvent stop {}",
+ "editorText": "Initial {\n  transitions {\n    Transition {\n      effect [\"model.[coins] := model.[coins] + 1\"]\n      nextState Initial[0]\n      event coin\n    }\n    Transition {\n      guard \"model.[paid]\"\n      effect [\"model.[coins] := 0\"]\n      nextState State[0]\n      event push\n    }\n    Transition {\n      nextState Terminal[0]\n      event stop\n    }\n  }\n}\nState {\n  transitions {\n    Transition {\n      nextState Initial[0]\n      event push\n    }\n  }\n}\nTerminal {}\nEvent coin {}\nEvent push {}\nEvent stop {}",
+ "monaco": null
+}

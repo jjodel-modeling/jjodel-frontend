@@ -1,0 +1,6 @@
+MEAS  setup  {"coin":6,"push":12,"col":14,"actions":["editor.action.showDefinitionPreviewHover «Show Definition Preview Hover»"]}
+MEAS  Shift+F12 on coin (one use)  {"calls":["references:6:true:2","references:6:false:1"],"cursorLine":6,"peek":[]}
+MEAS  Shift+F12 on push (two uses)  {"calls":["references:12:true:3"],"cursorLine":12,"peek":[{"cls":"zone-widget","rows":3,"title":"ReferencesReferences (3)","inTab":true},{"cls":"zone-widget-container peekview-widget reference-zone-widget","rows":3,"title":"ReferencesReferences (3)","inTab":true}]}
+MEAS  goToReferences action on coin  {"calls":[],"cursorLine":6,"peek":[]}
+MEAS  errors  ["console: init_dash"]
+FAILURES 0

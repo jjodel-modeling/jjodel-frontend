@@ -1,0 +1,48 @@
+MEAS  setup  {"useLine":6,"useCol":14,"declLine":29,"pushLine":12,"pushCol":14,"lines":31}
+PASS  A1 hover shows on the reference  "coin"
+MEAS  A1 links rendered  {"go":{"x":546,"y":156,"href":"","dataHref":"command:probe.goto?%5B29%5D"},"line":{"x":570,"y":176,"href":"","dataHref":"command:probe.reveal?%5B6%5D"},"untrusted":null}
+MEAS  A1 mouse inside the hover  "500ms:coin 1500ms:coin"
+MEAS  A1 click «Go to definition»  {"calls":["cmd-goto:29"],"cursorLine":29,"hoverAfter":null}
+MEAS  A1 the untrusted command link  {"anchor":null,"rendered":{"tag":"p","href":null,"dataHref":null},"calls":[]}
+MEAS  A1 mouse onto empty text  "150ms:coin 600ms:- 1500ms:-"
+MEAS  A1 click on the text  "200ms:-"
+MEAS  A1 Shift alone  "300ms:coin"
+MEAS  A1 ArrowDown  "300ms:-"
+MEAS  A1 scroll by one line  "300ms:-"
+MEAS  A1 mouse out of the editor  "300ms:- 1000ms:-"
+MEAS  A1 move onto another reference  "200ms:coin 800ms:push 1500ms:push"
+MEAS  A2 mouse onto empty text  "600ms:coin 2000ms:coin 4000ms:coin"
+MEAS  A2 then onto another reference  "800ms:coin 2000ms:coin"
+MEAS  A2 click on the text  "200ms:-"
+MEAS  A2 mouse out of the editor  "300ms:- 1500ms:-"
+MEAS  A2 ArrowDown  "300ms:-"
+MEAS  A2 scroll by one line  "300ms:-"
+MEAS  A2 marker hover while the card is up  {"card":"coin","marker":false}
+MEAS  A3 keyboard hover  {"hover":"coin","focus":"div in hover"}
+MEAS  A3 mouse onto another reference  "800ms:coin 1500ms:coin"
+MEAS  A3 Tab  {"focus":"div in hover","hover":"coin"}
+MEAS  A3 Enter  {"calls":[],"hover":"coin"}
+MEAS  A3 mouse out of the editor  "300ms:- 1000ms:-"
+MEAS  A3 Escape  "300ms:-"
+MEAS  A4 card added  {"top":241,"left":468,"h":86}
+MEAS  A4 Monaco hover on another reference while the card is up  {"hover":"push","card":{"top":241,"left":468,"h":86}}
+MEAS  A4 click «Go to definition» in the card  {"calls":["card-go"],"cursorBefore":6,"cursorAfter":29,"card":{"top":-879,"left":468,"h":86},"editorFocus":false}
+MEAS  A4 scroll by two lines  {"before":{"top":241,"left":468,"h":86},"after":{"top":203,"left":468,"h":86}}
+MEAS  A4 its line scrolled out of view  {"card":{"top":-879,"left":468,"h":86}}
+MEAS  A4 click on the text (no close handler)  {"card":{"top":241,"left":468,"h":86}}
+MEAS  A4 typing in the text  {"card":{"top":241,"left":468,"h":86}}
+MEAS  A4 keyboard: Enter on the focused button  {"calls":["card-go"]}
+MEAS  A4 keyboard: Escape in the card  {"calls":["card-go","card-escape"],"card":null,"editorFocus":true}
+MEAS  A5 overlay widget, scroll by two lines  {"before":{"top":241,"left":468},"after":{"top":241,"left":468},"lineMovedBy":-38}
+MEAS  A6 page card, scroll by two lines and a click on it  {"before":{"top":241},"after":{"top":203},"calls":["pagecard-go"],"cursorBefore":29,"cursorAfter":29,"editorFocus":false}
+MEAS  B F12  {"calls":["definition:6"],"cursorLine":29,"expected":29}
+MEAS  B Shift+F12  {"calls":["references:6:true","references:6:false"],"peek":null}
+MEAS  B Alt+F12  {"calls":["definition:6"],"peek":{"rows":1,"title":"ReferencesDefinitions (1)"}}
+MEAS  B Cmd+click  {"calls":["definition:6","hover:6","definition:6","hover:6"],"cursorLine":29}
+MEAS  B context menu  {"items":["Go to Definition","Go to References","Peek","Change All Occurrences","Cut","Copy","Paste","Command Palette"]}
+MEAS  B context menu «Go to Definition»  {"found":true,"calls":["definition:6"],"cursorLine":29}
+MEAS  B hover on the tab  {"hover":"coin"}
+MEAS  B hover «Go to definition» on the tab  {"calls":["cmd-goto:29"],"cursorLine":29}
+MEAS  B tab status at the end  {"status":"Up to date","textUnchanged":true}
+MEAS  errors  ["console: init_dash"]
+FAILURES 0
