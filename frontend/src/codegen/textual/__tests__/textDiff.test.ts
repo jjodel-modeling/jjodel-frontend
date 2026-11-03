@@ -15,10 +15,10 @@ import { classFeatures } from '../metamodel';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import { parseText } from '../parser';
 import { printTextModel } from '../printer';
-import type { ObjectSpan } from '../printer';
+import type { ObjectSpan, RefSpan } from '../printer';
 import { textualNotation } from '../syntaxRecord';
 import { diffText, planTextEdit } from '../textDiff';
-import type { PlanInput } from '../textDiff';
+import type { DiffOp, ObjectRef, PlanInput } from '../textDiff';
 import { defaultedSlots, referencedElsewhere } from '../textApply';
 import { BOX, CASES, DIAMOND, GARAGE, INNER, LOWER, NON_DIAMOND, grammarOf } from './corpus';
 import { FIXTURE, metamodelOf, objectsOf } from './spec';
@@ -133,7 +133,7 @@ interface Case { readonly mm: TextMetamodel; readonly g: ConcreteGrammar; readon
 const specCase = (spec: Spec, g: ConcreteGrammar = grammarOf(spec)): Case => ({ mm: metamodelOf(spec), g, objects: objectsOf(spec) });
 
 /** Monaco's decorations over one edit (`NeverGrowsWhenTypingAtEdges`): a span after it shifts, one around it stretches. */
-function carry(spans: readonly ObjectSpan[], at: number, removed: number, inserted: number): ObjectSpan[] {
+function carry<S extends { readonly start: number; readonly end: number }>(spans: readonly S[], at: number, removed: number, inserted: number): S[] {
     const delta = inserted - removed;
     return spans.map(s => {
         if (s.end <= at) return s;
@@ -159,13 +159,17 @@ function edit(c: Case, replacements: readonly (readonly [string, string])[], o: 
     const printed = printTextModel(c.g, c.objects);
     let text = printed.text;
     let spans: ObjectSpan[] = [...printed.spans];
+    let refs: RefSpan[] = [...(printed.refs ?? [])];
     for (const [from, to] of replacements) {
         const at = text.indexOf(from);
         expect(at, `"${from}" in the text`).toBeGreaterThanOrEqual(0);
         text = text.slice(0, at) + to + text.slice(at + from.length);
         spans = carry(spans, at, from.length, to.length);
+        refs = carry(refs, at, from.length, to.length);
     }
-    const parsed = parseText(text, c.g);
+    // R-TXT-35: the reference tokens are carried as the objects are, in the editor only.
+    const carried = o.spans || o.pasted;
+    const parsed = parseText(text, c.g, carried ? { keep: refs } : undefined);
     for (const [id, name] of o.pasted ?? []) {
         const t = parsed.objects.find(x => x.slots.name === name)!;
         const s = parsed.spans.find(x => x.id === t.id)!;
@@ -173,7 +177,7 @@ function edit(c: Case, replacements: readonly (readonly [string, string])[], o: 
     }
     const plan = planTextEdit({
         mm: c.mm, grammar: c.g, model: c.objects, parsed, unprinted: printed.unprinted,
-        ...(o.spans || o.pasted ? { previous: spans } : {}),
+        ...(carried ? { previous: spans, previousRefs: refs } : {}),
         ...(o.defaults ? { defaults: o.defaults } : {}),
         ...(o.referencedElsewhere ? { referencedElsewhere: o.referencedElsewhere } : {}),
         ...(o.ordered ? { ordered: o.ordered } : {}),
@@ -659,77 +663,193 @@ describe('a move keeps the object, and a reorder of an ordered feature is minima
     });
 });
 
-// ---- Positional paths after a move or reorder (P-2026-11-03-1356, measurement) ------------------------------------
+// ---- A reference the user did not retype keeps its target (R-TXT-35; P-2026-11-03-1356, P-2026-11-03-1425) -------
 
 /**
- * Items have no name, so a reference to one prints as a path (R-TXT-4): `pin Folder[0].items[1]` names i1. The parser
- * resolves a path against the edited text, so an edit that shifts the list retargets a reference whose text the user
- * did not retype. The tests below assert the absence of that silent retarget and are expected to fail until a rule
- * lands (docs/discovery/discovery_2026-11-03_textual_positional_paths.md); keeping or refusing both turn them green.
+ * Items have no name, so a reference to one prints as a path (R-TXT-4): `pin Folder[0].items[1]` names i1. Measured by
+ * P-2026-11-03-1356 (docs/discovery/discovery_2026-11-03_textual_positional_paths.md): the parser resolved a path
+ * against the edited text, so an edit that shifts the list retargeted a reference whose text the user did not retype.
+ * R-TXT-35: a token whose text, owner and feature are the previous print's keeps the target the print wrote it for; a
+ * retyped one is resolved against the edited text as before. `tag` is there for the feature guard only.
  */
 const ANON: Spec = {
-    classes: [{ name: 'Folder', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'items', type: 'Item', containment: true, many: true }, { name: 'pin', type: 'Item' }] },
+    classes: [{ name: 'Folder', attributes: [{ name: 'name', type: 'EString' }], references: [{ name: 'items', type: 'Item', containment: true, many: true }, { name: 'pin', type: 'Item' }, { name: 'tag', type: 'Item' }] },
         { name: 'Item', attributes: [{ name: 'size', type: 'EInt' }] }],
     enums: {},
     objects: [
-        { id: 'docs', cls: 'Folder', slots: { name: 'docs', items: ['i0', 'i1', 'i2'], pin: null } },
-        { id: 'pics', cls: 'Folder', slots: { name: 'pics', items: [], pin: null } },
-        { id: 'watch', cls: 'Folder', slots: { name: 'watch', items: [], pin: 'i1' } },
+        { id: 'docs', cls: 'Folder', slots: { name: 'docs', items: ['i0', 'i1', 'i2'], pin: null, tag: null } },
+        { id: 'pics', cls: 'Folder', slots: { name: 'pics', items: [], pin: null, tag: null } },
+        { id: 'watch', cls: 'Folder', slots: { name: 'watch', items: [], pin: 'i1', tag: null } },
         { id: 'i0', cls: 'Item', slots: { size: 10 } },
         { id: 'i1', cls: 'Item', slots: { size: 11 } },
         { id: 'i2', cls: 'Item', slots: { size: 12 } },
     ],
 };
 const ITEM = (size: number, indent = '    '): string => `\n${indent}Item {\n${indent}  size ${size}\n${indent}}`;
-const PICS_WITH = (size: number): string => `Folder pics {\n  items {${ITEM(size)}\n  }\n}`;
+const PICS_WITH = (...sizes: number[]): string => `Folder pics {\n  items {${sizes.map(n => ITEM(n)).join('')}\n  }\n}`;
+const PIN = 'pin Folder[0].items[1]';
 
-/** `edit` for nameless objects, in the editor: the spans are carried, and a pasted cut takes its model object's span by its size. */
-function editAnon(replacements: readonly (readonly [string, string])[], pasted: readonly (readonly [id: string, size: number])[] = []) {
+interface AnonOptions {
+    /** A cut pasted whole: its model object's span carried to the parsed item of that size (D-5 of T7). */
+    readonly pasted?: readonly (readonly [id: string, size: number])[];
+    /** Object spans the edit lost (a decoration gone). */
+    readonly lost?: readonly string[];
+}
+
+/** `edit` for nameless objects, in the editor: the object and reference spans are carried over the edit. An empty `from` appends. */
+function editAnon(replacements: readonly (readonly [string, string])[], o: AnonOptions = {}) {
     const c = specCase(ANON);
     const printed = printTextModel(c.g, c.objects);
-    expect(printed.text).toContain('pin Folder[0].items[1]');
+    expect(printed.text).toContain(PIN);
     let text = printed.text;
-    let spans: ObjectSpan[] = [...printed.spans];
+    let spans: ObjectSpan[] = printed.spans.filter(s => !(o.lost ?? []).includes(s.id));
+    let refs: RefSpan[] = [...(printed.refs ?? [])];
     for (const [from, to] of replacements) {
-        const at = text.indexOf(from);
+        const at = from === '' ? text.length : text.indexOf(from);
         expect(at, `"${from}" in the text`).toBeGreaterThanOrEqual(0);
         text = text.slice(0, at) + to + text.slice(at + from.length);
         spans = carry(spans, at, from.length, to.length);
+        refs = carry(refs, at, from.length, to.length);
     }
-    const parsed = parseText(text, c.g);
-    for (const [id, size] of pasted) {
-        const s = parsed.spans.find(x => x.id === parsed.objects.find(o => o.slots.size === size)!.id)!;
+    const parsed = parseText(text, c.g, { keep: refs });
+    for (const [id, size] of o.pasted ?? []) {
+        const s = parsed.spans.find(x => x.id === parsed.objects.find(t => t.slots.size === size)!.id)!;
         spans = [...spans.filter(x => x.id !== id), { id, start: s.start, end: s.end }];
     }
-    const plan = planTextEdit({ mm: c.mm, grammar: c.g, model: c.objects, parsed, unprinted: printed.unprinted, previous: spans });
-    return { text, parsed, plan };
+    const plan = planTextEdit({ mm: c.mm, grammar: c.g, model: c.objects, parsed, unprinted: printed.unprinted, previous: spans, previousRefs: refs });
+    return { c, text, parsed, plan };
 }
-/** The path text untouched and parsed without error: whether the plan applies a write of `watch.pin` (a refusal applies none). */
-const retargeted = (r: ReturnType<typeof editAnon>): boolean => {
-    expect(r.text).toContain('pin Folder[0].items[1]');
+
+/** The ops of a plan on plain objects, as the run writes them: deletions (with the pointers to the deleted), moves and references. */
+function applyOps(objects: readonly TextObject[], ops: readonly DiffOp[]): TextObject[] {
+    const out = new Map(objects.map(o => [o.id, { ...o, slots: { ...o.slots } }]));
+    const id = (r: ObjectRef): string => { if ('model' in r) return r.model; throw new Error('a text object: not in this helper'); };
+    for (const op of ops) {
+        if (op.op === 'delete') {
+            out.delete(op.model);
+            for (const x of out.values()) for (const [k, v] of Object.entries(x.slots)) x.slots[k] = Array.isArray(v) ? v.filter(y => y !== op.model) : v === op.model ? null : v;
+        } else if (op.op === 'move') {
+            if (op.from) { const f = out.get(op.from.owner)!; f.slots[op.from.feature] = (f.slots[op.from.feature] as string[]).filter(y => y !== op.model); }
+            if (op.into) { const t = out.get(id(op.into.owner))!; t.slots[op.into.feature] = [...(t.slots[op.into.feature] as string[]), op.model]; }
+        } else if (op.op === 'reference') out.get(id(op.target))!.slots[op.feature] = op.to ? id(op.to) : null;
+        else throw new Error(`${op.op}: not in this helper`);
+    }
+    return [...out.values()];
+}
+
+/** The path untouched and read without error: the plan applies, and writes nothing to `watch.pin`. */
+const keeps = (r: ReturnType<typeof editAnon>): void => {
+    expect(r.text).toContain(PIN);
     expect(r.parsed.errors).toEqual([]);
-    return r.plan.refusals.length === 0 && !!r.plan.diff?.ops.some(op => op.op === 'reference' && 'model' in op.target && op.target.model === 'watch');
+    expect(r.plan.refusals).toEqual([]);
+    expect(r.plan.diff!.ops.filter(op => op.op === 'reference')).toEqual([]);
 };
+const pinOf = (objects: readonly TextObject[]): unknown => objects.find(o => o.id === 'watch')!.slots.pin;
+const textIdOf = (r: ReturnType<typeof editAnon>, name: string): string => r.parsed.objects.find(o => o.slots.name === name)!.id;
 
-describe('a path reference the user did not retype keeps its target (measured: retargeted; expected to fail)', () => {
-    it.fails('(a) pin Folder[0].items[1] after a reorder of docs.items (i0 pasted after i1): retargeted to i0', () => {
-        expect(retargeted(editAnon([[ITEM(10), ''], [ITEM(11), ITEM(11) + ITEM(10)]], [['i0', 10]]))).toBe(false);
+describe('a reference the user did not retype keeps its target (R-TXT-35)', () => {
+    it('(a) after a reorder of docs.items (i0 pasted after i1): kept on i1, no write (mutant: the keep rule dropped)', () => {
+        keeps(editAnon([[ITEM(10), ''], [ITEM(11), ITEM(11) + ITEM(10)]], { pasted: [['i0', 10]] }));
     });
 
-    it.fails('(b) pin Folder[0].items[1] after i0 is cut and pasted into pics: retargeted to i2', () => {
-        expect(retargeted(editAnon([[ITEM(10), ''], ['Folder pics {}', PICS_WITH(10)]], [['i0', 10]]))).toBe(false);
+    it('(b) after i0 is cut and pasted into pics: kept on i1, only the move is written', () => {
+        const r = editAnon([[ITEM(10), ''], ['Folder pics {}', PICS_WITH(10)]], { pasted: [['i0', 10]] });
+        keeps(r);
+        expect(r.plan.diff!.ops.map(op => op.op)).toEqual(['move']);
     });
 
-    it.fails('(c) pin Folder[0].items[1] after i0 is deleted: retargeted to i2', () => {
-        expect(retargeted(editAnon([[ITEM(10), '']]))).toBe(false);
+    it('(c) after i0 is deleted: kept on i1, only the deletion is written', () => {
+        const r = editAnon([[ITEM(10), '']]);
+        keeps(r);
+        expect(r.plan.diff!.ops).toEqual([{ op: 'delete', model: 'i0' }]);
     });
 
-    it.fails('(d) pin Folder[0].items[1] after a new item is inserted before i0: retargeted to i0', () => {
-        expect(retargeted(editAnon([['  items {', `  items {${ITEM(9)}`]]))).toBe(false);
+    it('(d) after a new item is inserted before i0: kept on i1', () => {
+        const r = editAnon([['  items {', `  items {${ITEM(9)}`]]);
+        keeps(r);
+        expect(r.plan.diff!.ops.map(op => op.op)).toEqual(['create', 'attribute']);
     });
 
-    it.fails('(e) pin Folder[0].items[1] after its target i1 is moved into pics and i2 shifts into [1]: retargeted to i2', () => {
-        expect(retargeted(editAnon([[ITEM(11), ''], ['Folder pics {}', PICS_WITH(11)]], [['i1', 11]]))).toBe(false);
+    it('(e) after its target i1 is moved into pics and i2 shifts into [1]: kept on i1, which moved', () => {
+        const r = editAnon([[ITEM(11), ''], ['Folder pics {}', PICS_WITH(11)]], { pasted: [['i1', 11]] });
+        keeps(r);
+        expect(r.plan.diff!.ops).toEqual([{ op: 'move', model: 'i1', into: { owner: { model: 'pics' }, feature: 'items' }, from: { owner: 'docs', feature: 'items' } }]);
+    });
+
+    it('(e2) after i1 and i2 both move to pics the old index names nothing: kept, not a parse error (mutant: the parser refuses a kept token)', () => {
+        const r = editAnon([[ITEM(11), ''], [ITEM(12), ''], ['Folder pics {}', PICS_WITH(11, 12)]], { pasted: [['i1', 11], ['i2', 12]] });
+        keeps(r);
+        expect(r.plan.diff!.ops.map(op => op.op)).toEqual(['move', 'move']);
+    });
+
+    it('a retyped path resolves against the edited text, as before (mutant: the token text not compared)', () => {
+        const r = editAnon([['items[1]', 'items[2]']]);
+        expect(r.plan.refusals).toEqual([]);
+        expect(r.plan.diff!.ops).toEqual([{ op: 'reference', target: { model: 'watch' }, feature: 'pin', to: { model: 'i2' } }]);
+    });
+
+    it('a path retyped identically, its decoration lost, resolves against the edited text (mutant: the token place not compared)', () => {
+        const r = editAnon([[ITEM(10), ''], [PIN, PIN]]);
+        expect(r.plan.refusals).toEqual([]);
+        expect(r.plan.diff!.ops).toEqual([{ op: 'delete', model: 'i0' }, { op: 'reference', target: { model: 'watch' }, feature: 'pin', to: { model: 'i2' } }]);
+    });
+
+    it('a retyped path that names nothing is still a parse error', () => {
+        const r = editAnon([['items[1]', 'items[7]']]);
+        expect(r.parsed.errors.map(e => e.message)).toEqual(['items[7] names no object']);
+        expect(codes(r.plan)).toEqual(['parse']);
+    });
+
+    it('a kept target deleted in the same edit: the deletion clears the reference, nothing else is written', () => {
+        const r = editAnon([[ITEM(11), '']]);
+        expect(r.parsed.errors).toEqual([]);
+        expect(r.plan.refusals).toEqual([]);
+        expect(r.plan.diff!.ops).toEqual([{ op: 'delete', model: 'i1' }]);
+        expect(pinOf(applyOps(r.c.objects, r.plan.diff!.ops))).toBeNull();
+    });
+
+    it('a name reference whose target is renamed while a new object takes the old name: kept on the renamed one', () => {
+        const { parsed, plan, text } = edit(LIBRARY_CASE, [['Member bob', 'Member rob'], ['patrons {', 'patrons {\n    Member bob {}']], { spans: true });
+        expect(text).toContain('borrowedBy bob');
+        expect(parsed.errors).toEqual([]);
+        expect(plan.refusals).toEqual([]);
+        expect(plan.diff!.ops.filter(op => op.op === 'reference' || op.op === 'link')).toEqual([]);
+        expect(plan.diff!.ops).toContainEqual({ op: 'attribute', target: { model: 'm2' }, feature: 'name', value: 'rob' });
+    });
+
+    it('applied, the reprint shows the new path of the same object: (c) Folder[0].items[0], (e) Folder[1].items[0]', () => {
+        const c = editAnon([[ITEM(10), '']]);
+        const afterC = applyOps(c.c.objects, c.plan.diff!.ops);
+        expect(pinOf(afterC)).toBe('i1');
+        expect(printTextModel(c.c.g, afterC).text).toContain('pin Folder[0].items[0]');
+        const e = editAnon([[ITEM(11), ''], ['Folder pics {}', PICS_WITH(11)]], { pasted: [['i1', 11]] });
+        const afterE = applyOps(e.c.objects, e.plan.diff!.ops);
+        expect(pinOf(afterE)).toBe('i1');
+        expect(printTextModel(e.c.g, afterE).text).toContain('pin Folder[1].items[0]');
+    });
+
+    it('a reference inside a pasted copy is a new owner: it resolves in the edited text, the original keeps its target', () => {
+        const r = editAnon([[ITEM(10), ''], ['', `\nFolder copy {\n  ${PIN}\n}`]]);
+        expect(r.plan.refusals).toEqual([]);
+        expect(r.plan.diff!.ops.filter(op => op.op === 'reference')).toEqual([{ op: 'reference', target: { text: textIdOf(r, 'copy') }, feature: 'pin', to: { model: 'i2' } }]);
+    });
+
+    it('the token at another owner, its place and text untouched, resolves in the edited text (mutant: the owner not compared)', () => {
+        const r = editAnon([[ITEM(10), ''], ['Folder watch {', 'Folder watch {}\nFolder other {']], { lost: ['watch'] });
+        expect(r.plan.refusals).toEqual([]);
+        expect(r.plan.diff!.ops.filter(op => op.op === 'reference')).toEqual([
+            { op: 'reference', target: { model: 'watch' }, feature: 'pin', to: null },
+            { op: 'reference', target: { text: textIdOf(r, 'other') }, feature: 'pin', to: { model: 'i2' } },
+        ]);
+    });
+
+    it('the token under another feature, its place and text untouched, resolves in the edited text (mutant: the feature not compared)', () => {
+        const r = editAnon([[ITEM(10), ''], ['  pin ', '  tag ']]);
+        expect(r.plan.refusals).toEqual([]);
+        expect(r.plan.diff!.ops.filter(op => op.op === 'reference')).toEqual([
+            { op: 'reference', target: { model: 'watch' }, feature: 'pin', to: null },
+            { op: 'reference', target: { model: 'watch' }, feature: 'tag', to: { model: 'i2' } },
+        ]);
     });
 });
 

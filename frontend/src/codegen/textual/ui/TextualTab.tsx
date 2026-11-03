@@ -35,10 +35,10 @@ import { readNewModel } from '../modelLines';
 import { isApplicableParse, parseText } from '../parser';
 import type { TextParseResult } from '../parser';
 import { printTextModel } from '../printer';
-import type { ObjectSpan, UnprintedObject } from '../printer';
+import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
 import { deletedObjects, planTextEdit } from '../textDiff';
-import type { ApplyRefusal, TextDiff, TextEditPlan } from '../textDiff';
+import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
 import { matchObjects } from '../textMatch';
 import type { TextMatch } from '../textMatch';
 import { elementIdsOf, readSyntax, textualNotation } from '../syntaxRecord';
@@ -165,6 +165,8 @@ export interface EditBase {
     readonly objects: readonly TextObject[];
     readonly spans: readonly ObjectSpan[];
     readonly unprinted: readonly UnprintedObject[];
+    /** R-TXT-35: the print's reference tokens. */
+    readonly refs?: readonly RefSpan[];
 }
 
 /** The view, and the base of an edit when the text could be printed. */
@@ -191,7 +193,7 @@ export function readModel(globals: Readonly<Record<string, any>>, stored: Stored
         const warnings = unprintedIssues(printed.unprinted);
         return {
             view: { text: printed.text, ebnf, error: null, issues, ...(warnings.length ? { warnings } : {}) },
-            base: { mm: input.metamodel, grammar, objects: input.objects, spans: printed.spans, unprinted: printed.unprinted },
+            base: { mm: input.metamodel, grammar, objects: input.objects, spans: printed.spans, unprinted: printed.unprinted, refs: printed.refs ?? [] },
         };
     } catch (e) {
         return { view: { text: '', ebnf, error: messageOf(e), issues }, base: null };
@@ -254,7 +256,7 @@ export function onModelPrint(sync: TextSync, modelText: string, editorText: stri
 export type EditDecision =
     /** The text is the agreed one: no pending edit. */
     | { readonly kind: 'synced' }
-    /** The text does not parse: markers, the model untouched. */
+    /** The text does not parse, or a token names nothing and keeps no target (R-TXT-35): markers, the model untouched. */
     | { readonly kind: 'errors'; readonly count: number }
     /** The model changed under the edit: not applied, so the other change is not undone unasked. */
     | { readonly kind: 'stale' }
@@ -268,7 +270,8 @@ export type EditDecision =
 /** The decision on a read text: the parse's errors first, then the change under the edit, the panel, the refusals. */
 export function editDecision(text: string, sync: TextSync, parsed: TextParseResult, plan: TextEditPlan, stale: boolean): EditDecision {
     if (text === sync.text) return { kind: 'synced' };
-    if (!isApplicableParse(parsed)) return { kind: 'errors', count: Math.max(parsed.errors.length, 1) };
+    const unresolved = plan.diff?.unresolved?.length ?? 0;
+    if (!isApplicableParse(parsed) || unresolved) return { kind: 'errors', count: Math.max(parsed.errors.length + unresolved, 1) };
     if (stale) return { kind: 'stale' };
     if (needsConfirmation(plan)) return { kind: 'confirm' };
     if (plan.refusals.length) return { kind: 'refused', reasons: plan.refusals.map(r => r.message) };
@@ -282,12 +285,15 @@ export interface EditEvidence {
     readonly referencedElsewhere?: ReadonlySet<string>;
 }
 
-/** Parses the text and plans its application on the base, with the spans the editor carried over the edit (R-TXT-22). */
+/**
+ * Parses the text and plans its application on the base, with the spans the editor carried over the edit (R-TXT-22)
+ * and the reference tokens it carried (`refs`, R-TXT-35: a token the user did not retype keeps its target).
+ */
 export function planEdit(base: EditBase, text: string, carried: readonly ObjectSpan[], evidence: EditEvidence = {},
-                         confirmed?: readonly ApplyRefusal['code'][]): { readonly parsed: TextParseResult; readonly plan: TextEditPlan } {
-    const parsed = parseText(text, base.grammar);
+                         confirmed?: readonly ApplyRefusal['code'][], refs: readonly RefSpan[] = []): { readonly parsed: TextParseResult; readonly plan: TextEditPlan } {
+    const parsed = parseText(text, base.grammar, { keep: refs });
     const plan = planTextEdit({
-        mm: base.mm, grammar: base.grammar, model: base.objects, parsed, unprinted: base.unprinted, previous: carried,
+        mm: base.mm, grammar: base.grammar, model: base.objects, parsed, unprinted: base.unprinted, previous: carried, previousRefs: refs,
         ...(evidence.defaults ? { defaults: evidence.defaults } : {}),
         ...(evidence.referencedElsewhere ? { referencedElsewhere: evidence.referencedElsewhere } : {}),
         ...(confirmed ? { confirmed } : {}),
@@ -311,6 +317,12 @@ export function certainSpans(parsed: Pick<TextParseResult, 'spans'>, match: Pick
  */
 export function appliedSpans(parsed: Pick<TextParseResult, 'spans'>, plan: Pick<TextMatch, 'matches' | 'created'>,
                              rematch: Pick<TextMatch, 'matches'>): ObjectSpan[] {
+    const modelOf = appliedIds(plan, rematch);
+    return parsed.spans.flatMap(s => { const id = modelOf.get(s.id); return id ? [{ id, start: s.start, end: s.end }] : []; });
+}
+
+/** The model object of each parsed object of an applied text (`appliedSpans`). */
+function appliedIds(plan: Pick<TextMatch, 'matches' | 'created'>, rematch: Pick<TextMatch, 'matches'>): Map<string, string> {
     const modelOf = new Map(plan.matches.map(m => [m.text, m.model]));
     const used = new Set(modelOf.values());
     const created = new Set(plan.created);
@@ -319,7 +331,22 @@ export function appliedSpans(parsed: Pick<TextParseResult, 'spans'>, plan: Pick<
         modelOf.set(m.text, m.model);
         used.add(m.model);
     }
-    return parsed.spans.flatMap(s => { const id = modelOf.get(s.id); return id ? [{ id, start: s.start, end: s.end }] : []; });
+    return modelOf;
+}
+
+/**
+ * R-TXT-35: the reference tokens of an applied text, in the model after the run, each with the target the plan read for
+ * it (kept or read in the text): the next edit keeps the tokens the user leaves alone. The text stays as typed, so a
+ * kept path may name another object there; the reprint writes its new path.
+ */
+export function appliedRefs(text: string, refs: readonly RefTarget[], plan: Pick<TextMatch, 'matches' | 'created'>,
+                            rematch: Pick<TextMatch, 'matches'>): RefSpan[] {
+    const modelOf = appliedIds(plan, rematch);
+    return refs.flatMap(r => {
+        const owner = modelOf.get(r.owner);
+        const target = 'model' in r.to ? r.to.model : 'text' in r.to ? modelOf.get(r.to.text) : r.to.outer;
+        return owner !== undefined && target !== undefined ? [{ owner, feature: r.feature, target, text: text.slice(r.start, r.end), start: r.start, end: r.end }] : [];
+    });
 }
 
 // ---- Step T7: a cut pasted whole (D-5), and the marker of a misplaced outer reference (item 5) ---------------------
@@ -328,13 +355,16 @@ export function appliedSpans(parsed: Pick<TextParseResult, 'spans'>, plan: Pick<
 export interface CutClip {
     readonly text: string;
     readonly spans: readonly ObjectSpan[];
+    /** R-TXT-35: the carried reference tokens wholly inside it, relative to its start. */
+    readonly refs?: readonly RefSpan[];
 }
 
 /** The clip of a cut of `length` characters at `at` of `before`, with the spans carried then; null when it holds no whole object. */
-export function cutClip(before: string, spans: readonly ObjectSpan[], at: number, length: number): CutClip | null {
+export function cutClip(before: string, spans: readonly ObjectSpan[], at: number, length: number, refs: readonly RefSpan[] = []): CutClip | null {
     const end = at + length;
     const inside = spans.filter(s => s.end > s.start && s.start >= at && s.end <= end).map(s => ({ id: s.id, start: s.start - at, end: s.end - at }));
-    return inside.length ? { text: before.slice(at, end), spans: inside } : null;
+    const tokens = refs.filter(s => s.end > s.start && s.start >= at && s.end <= end).map(s => ({ ...s, start: s.start - at, end: s.end - at }));
+    return inside.length ? { text: before.slice(at, end), spans: inside, ...(tokens.length ? { refs: tokens } : {}) } : null;
 }
 
 /**
@@ -344,6 +374,12 @@ export function cutClip(before: string, spans: readonly ObjectSpan[], at: number
 export function pastedSpans(clip: CutClip, at: number, inserted: string, after: string): ObjectSpan[] {
     if (inserted !== clip.text || after.indexOf(clip.text) !== after.lastIndexOf(clip.text)) return [];
     return clip.spans.map(s => ({ id: s.id, start: s.start + at, end: s.end + at }));
+}
+
+/** R-TXT-35: the reference tokens the same paste re-attaches: those of the clip, when `pastedSpans` re-attaches its objects. */
+export function pastedRefs(clip: CutClip, at: number, inserted: string, after: string): RefSpan[] {
+    if (!pastedSpans(clip, at, inserted, after).length) return [];
+    return (clip.refs ?? []).map(s => ({ ...s, start: s.start + at, end: s.end + at }));
 }
 
 /** How many objects of a pending cut the plan would delete: such a plan waits for the paste (D-5). */
@@ -508,7 +544,9 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     const decorationsRef = useRef<{ ids: string[]; model: Map<string, string> }>({ ids: [], model: new Map() });
     const undoKeyRef = useRef<{ set(v: boolean): void } | null>(null);
     // T7 D-5: the text and spans before a cut, until its change lands; then the clip, until an identical paste.
-    const armedRef = useRef<{ readonly text: string; readonly spans: readonly ObjectSpan[] } | null>(null);
+    const armedRef = useRef<{ readonly text: string; readonly spans: readonly ObjectSpan[]; readonly refs: readonly RefSpan[] } | null>(null);
+    // R-TXT-35: the reference tokens of the last agreement (a print or an application), carried as decorations.
+    const refDecorationsRef = useRef<{ ids: string[]; refs: Map<string, RefSpan> }>({ ids: [], refs: new Map() });
     const clipRef = useRef<CutClip | null>(null);
     const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void }>({ read: () => {}, content: () => {} });
     const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
@@ -529,6 +567,35 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             };
         }));
         decorationsRef.current = { ids, model: new Map(ids.map((id, i) => [id, kept[i].id])) };
+    };
+
+    const setRefDecorations = (refs: readonly RefSpan[]): void => {
+        const editor = editorRef.current;
+        const monaco = monacoRef.current;
+        const m = editor?.getModel();
+        if (!monaco || !m) return;
+        const kept = refs.filter(s => s.end > s.start);
+        const ids = m.deltaDecorations(refDecorationsRef.current.ids, kept.map(s => {
+            const from = m.getPositionAt(s.start);
+            const to = m.getPositionAt(s.end);
+            return {
+                range: new monaco.Range(from.lineNumber, from.column, to.lineNumber, to.column),
+                options: { stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges },
+            };
+        }));
+        refDecorationsRef.current = { ids, refs: new Map(ids.map((id, i) => [id, kept[i]])) };
+    };
+
+    /** R-TXT-35: the reference tokens of the last agreement, where the edit carried them; each keeps the text it was printed with. */
+    const carriedRefs = (): RefSpan[] => {
+        const m = editorRef.current?.getModel();
+        if (!m) return [];
+        const { ids, refs } = refDecorationsRef.current;
+        return ids.flatMap(id => {
+            const r = m.getDecorationRange(id);
+            const s = refs.get(id);
+            return r && s ? [{ ...s, start: m.getOffsetAt(r.getStartPosition()), end: m.getOffsetAt(r.getEndPosition()) }] : [];
+        });
     };
 
     /** The previous parse's spans, where the edit carried them (R-TXT-22). */
@@ -578,6 +645,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         if (editor.getValue() !== r.view.text) editor.setValue(r.view.text);
         if (viewState) editor.restoreViewState(viewState);
         setDecorations(r.base.spans);
+        setRefDecorations(r.base.refs ?? []);
         setMarkers(null);
         staleRef.current = false;
         setStale(false);
@@ -608,7 +676,9 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         const editor = editorRef.current;
         if (after.base && plan.diff && editor?.getValue() === text) {
             const b = after.base;
-            setDecorations(appliedSpans(parsed, plan.diff.match, matchObjects({ mm: b.mm, grammar: b.grammar, model: b.objects, parsed, previous: carriedSpans() })));
+            const rematch = matchObjects({ mm: b.mm, grammar: b.grammar, model: b.objects, parsed, previous: carriedSpans() });
+            setDecorations(appliedSpans(parsed, plan.diff.match, rematch));
+            setRefDecorations(appliedRefs(text, plan.diff.refs ?? [], plan.diff.match, rematch));
         }
         setStatus({ kind: 'applied', failed: failedLines });
         updateUndoKey();
@@ -630,8 +700,8 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             return;
         }
         const ev = evidence(r.base);
-        const { parsed, plan } = planEdit(r.base, text, carriedSpans(), ev, confirmed);
-        setMarkers(parsed, plan.diff ? outerMarks(text, parsed, plan.diff) : []);
+        const { parsed, plan } = planEdit(r.base, text, carriedSpans(), ev, confirmed, carriedRefs());
+        setMarkers(parsed, plan.diff ? [...outerMarks(text, parsed, plan.diff), ...(plan.diff.unresolved ?? [])] : []);
         // Spans are re-derived from every parse that matched (R-TXT-22); a broken one keeps the carried ones.
         if (plan.diff) setDecorations(certainSpans(parsed, plan.diff.match));
         const d = editDecision(text, sync, parsed, plan, staleRef.current);
@@ -655,13 +725,15 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         const armed = armedRef.current;
         armedRef.current = null;
         if (!m || !one) return;
-        if (armed && one.text === '') { clipRef.current = cutClip(armed.text, armed.spans, one.rangeOffset, one.rangeLength); return; }
+        if (armed && one.text === '') { clipRef.current = cutClip(armed.text, armed.spans, one.rangeOffset, one.rangeLength, armed.refs); return; }
         const clip = clipRef.current;
         if (!clip || one.text !== clip.text) return;
         const pasted = pastedSpans(clip, one.rangeOffset, one.text, m.getValue());
         if (!pasted.length) return;
         const ids = new Set(pasted.map(s => s.id));
         setDecorations([...carriedSpans().filter(s => !ids.has(s.id)), ...pasted]);
+        const tokens = pastedRefs(clip, one.rangeOffset, one.text, m.getValue());
+        if (tokens.length) setRefDecorations([...carriedRefs(), ...tokens]);
         clipRef.current = null;
     };
 
@@ -716,7 +788,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         monacoRef.current = monaco;
         const r = readRef.current;
         syncRef.current = { text: editor.getValue(), model: r.view.text };
-        if (r.base && editor.getValue() === r.view.text) setDecorations(r.base.spans);
+        if (r.base && editor.getValue() === r.view.text) { setDecorations(r.base.spans); setRefDecorations(r.base.refs ?? []); }
         const key = editor.createContextKey<boolean>(APP_UNDO_KEY, true);
         undoKeyRef.current = key;
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
@@ -726,7 +798,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         // T7 D-5: in the capture phase the selection is still there; the change that follows is the cut.
         editor.getDomNode()?.addEventListener('cut', () => {
             const m = editor.getModel();
-            if (m) armedRef.current = { text: m.getValue(), spans: carriedSpans() };
+            if (m) armedRef.current = { text: m.getValue(), spans: carriedSpans(), refs: carriedRefs() };
         }, true);
         updateUndoKey();
     };

@@ -6,7 +6,8 @@
  * `public/examples/codegen/default-text.generator.json` is the reference it must agree with (R-TXT-14).
  *
  * The span of each object (from its first token to its last) is returned with the text: the origins that step T6
- * matches a re-parsed text against (R-TXT-22).
+ * matches a re-parsed text against (R-TXT-22). So is the span of each reference token, with the target it names: a
+ * token the user did not retype keeps that target (R-TXT-35).
  */
 
 import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
@@ -21,10 +22,25 @@ export interface ObjectSpan {
     readonly end: number;
 }
 
+/**
+ * R-TXT-35: a reference token of the print: `[start, end)` offsets, the token as printed, the object and feature it is
+ * written for and the id of the target it names (an object outside the text too, R-TXT-32).
+ */
+export interface RefSpan {
+    readonly owner: string;
+    readonly feature: string;
+    readonly target: string;
+    readonly text: string;
+    readonly start: number;
+    readonly end: number;
+}
+
 export interface TextPrintResult {
     readonly text: string;
     /** One per printed object, in text order (an object before the objects it contains). */
     readonly spans: readonly ObjectSpan[];
+    /** One per printed reference token, in text order (R-TXT-35). */
+    readonly refs?: readonly RefSpan[];
 }
 
 /**
@@ -206,6 +222,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     let bodyStart = true;
     const spans: ObjectSpan[] = [];
     const starts = new Map<string, number>();
+    const refs: RefSpan[] = [];
 
     const token = (s: string, punct = false): void => {
         if (breakPending) { out += blankPending ? '\n\n' : '\n'; breakPending = false; atLineStart = true; }
@@ -246,13 +263,17 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         }
     };
 
-    const value = (n: GrammarNode, v: unknown): void => {
+    /** `o` and `feat`: the object and feature a reference token is written for. */
+    const value = (n: GrammarNode, v: unknown, o?: TextObject, feat?: string): void => {
         switch (n.t) {
             case 'rule': { const c = resolve(v); if (c) object(c, n.name); return; }
             case 'xref': {
                 const t = resolve(v);
                 const outer = t ? undefined : outerOf(v);
-                if (t) token(ref(n, t)); else if (outer !== undefined) token(`@${quote(outer)}`);
+                const s = t ? ref(n, t) : outer !== undefined ? `@${quote(outer)}` : undefined;
+                if (s === undefined) return;
+                token(s);
+                if (o && feat !== undefined) refs.push({ owner: o.id, feature: feat, target: t ? t.id : outer!, text: s, start: out.length - s.length, end: out.length });
                 return;
             }
             case 'lit': token(applyCase(String(v), g.literalCase)); return;
@@ -277,7 +298,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
             case 'assign': {
                 // A required name left unset prints nothing: the text then reads back with the error at its place.
                 if (elem === undefined && o.slots[n.feat] == null) return;
-                value(n.item, elem !== undefined ? elem : o.slots[n.feat]);
+                value(n.item, elem !== undefined ? elem : o.slots[n.feat], o, n.feat);
                 return;
             }
             case 'list': {
@@ -312,5 +333,5 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         return n;
     };
     const unprinted = left.filter(u => printed.has(u.owner)).map(u => ({ ...u, inside: insideOf(u.id) }));
-    return { text: out, spans: [...spans].sort((a, b) => a.start - b.start), unprinted };
+    return { text: out, spans: [...spans].sort((a, b) => a.start - b.start), refs, unprinted };
 }

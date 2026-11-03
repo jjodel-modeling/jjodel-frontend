@@ -9,7 +9,9 @@
  * with its index, so a path never reads as a name; its first word is a class keyword as printed, the class name for a
  * positional class (R-TXT-28), each later f a feature keyword as printed, the feature name when it prints none (R-TXT-29).
  * A reference to an object the text does not print is `@` and the target's id as a string (R-TXT-32): it is read as an
- * `OuterRef`, never resolved against the text.
+ * `OuterRef`, never resolved against the text. Every reference token is listed with its place and text (R-TXT-35): in
+ * the editor, a token the user did not retype keeps the target the previous print wrote it for, and one of them that
+ * names nothing in the edited text is not an error (`ParseOptions.keep`); the diff decides (textDiff.ts).
  * The top level
  * admits every concrete class (R-TXT-24 (a)); a single containment is a block of one object (R-TXT-24 (b)).
  *
@@ -43,6 +45,32 @@ export interface TextParseResult {
     readonly recovered: readonly string[];
     /** One per object, from its keyword to its last token read, in text order. */
     readonly spans: readonly ObjectSpan[];
+    /** R-TXT-35: one per reference token, by owner in text order, then in the order of its slot. */
+    readonly refs?: readonly ParsedRef[];
+}
+
+/** R-TXT-35: a reference token as read: the parsed object and feature it is written for, its place and text, what it names. */
+export interface ParsedRef {
+    readonly owner: string;
+    readonly feature: string;
+    readonly start: number;
+    readonly end: number;
+    readonly text: string;
+    /** `@"id"` (R-TXT-32): kept or refused by its own rule, never by R-TXT-35. */
+    readonly outer: boolean;
+    /** The parsed object it names, or the outer reference; absent when it names nothing in the text. */
+    readonly to?: string | OuterRef;
+    /** Why it names nothing: an error of the parse, unless the token is one of `ParseOptions.keep`. */
+    readonly error?: TextParseError;
+}
+
+export interface ParseOptions {
+    /**
+     * R-TXT-35: the previous print's reference tokens, where the editor carried them. A name or path read at one of them
+     * with its text that names nothing in the edited text is not an error: the diff keeps its target, or refuses it
+     * when its owner or feature is not the print's. Outside the editor there are none (T8).
+     */
+    readonly keep?: readonly { readonly start: number; readonly end: number; readonly text: string }[];
 }
 
 /** R-TXT-21 (8): only a text read without any error may be applied. */
@@ -269,7 +297,7 @@ interface Frame {
 }
 
 /** Parses a text of the concrete grammar `g`. Never throws on a broken text: every problem is an error of the result. */
-export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
+export function parseText(text: string, g: ConcreteGrammar, options: ParseOptions = {}): TextParseResult {
     const errors: TextParseError[] = [];
     const toks = tokenize(g, text, errors);
     const rules = new Map<string, ConcreteRule>(g.rules.map(r => [r.name, r]));
@@ -576,15 +604,21 @@ export function parseText(text: string, g: ConcreteGrammar): TextParseResult {
         const at = toks.find(t => t.start === starts.get(id));
         return at ? `${at.line}:${at.col}` : id;
     };
-    resolve(g, objects, contained, errors, recovered, where);
+    const refs: ParsedRef[] = [];
+    const keep = new Set((options.keep ?? []).map(k => `${k.start}:${k.end}:${k.text}`));
+    resolve(g, objects, contained, errors, recovered, where, r => {
+        const tokenText = text.slice(r.at.start, r.endAt);
+        return { start: r.at.start, end: r.endAt, text: tokenText, kept: keep.has(`${r.at.start}:${r.endAt}:${tokenText}`) };
+    }, refs);
 
     const spans = objects.map(o => ({ id: o.id, start: starts.get(o.id) ?? 0, end: ends.get(o.id) ?? 0 }));
     errors.sort((a, b) => a.start - b.start);
-    return { objects, errors, recovered: objects.filter(o => recovered.has(o.id)).map(o => o.id), spans };
+    return { objects, errors, recovered: objects.filter(o => recovered.has(o.id)).map(o => o.id), spans, refs };
 }
 
 /** Resolves every reference left as a `PendingRef` in the slots: by name (R-TXT-4), else by path (R-TXT-11); an outer one (R-TXT-32) is kept as its id. */
-function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], contained: ReadonlySet<string>, errors: TextParseError[], recovered: Set<string>, where: (id: string) => string): void {
+function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], contained: ReadonlySet<string>, errors: TextParseError[], recovered: Set<string>, where: (id: string) => string,
+                 tokenOf: (r: PendingRef) => { readonly start: number; readonly end: number; readonly text: string; readonly kept: boolean }, refs: ParsedRef[]): void {
     const byId = new Map(objects.map(o => [o.id, o]));
     const roots = objects.filter(o => !contained.has(o.id));
     const nameOf = (o: MutableObject): unknown => (g.objects[o.cls]?.named ? o.slots.name : undefined);
@@ -658,13 +692,26 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
         return cur;
     };
     const fix = (r: PendingRef): string | OuterRef | undefined => {
-        if (r.syntax.outer !== undefined) return { outer: r.syntax.outer };
+        const tok = tokenOf(r);
+        const token = { owner: r.owner.id, feature: r.feat, start: tok.start, end: tok.end, text: tok.text };
+        if (r.syntax.outer !== undefined) {
+            const outer: OuterRef = { outer: r.syntax.outer };
+            refs.push({ ...token, outer: true, to: outer });
+            return outer;
+        }
         const t = walk(r);
         let message: string | undefined;
         if (typeof t === 'string') message = t;
         else if (!r.node.targets.includes(t.cls)) message = `"${r.feat}" expects ${r.node.type}; the reference names a ${t.cls}`;
-        if (message === undefined && typeof t !== 'string') return t.id;
-        errors.push({ line: r.at.line, col: r.at.col, start: r.at.start, end: r.endAt, message: message ?? '' });
+        if (message === undefined && typeof t !== 'string') {
+            refs.push({ ...token, outer: false, to: t.id });
+            return t.id;
+        }
+        const error: TextParseError = { line: r.at.line, col: r.at.col, start: r.at.start, end: r.endAt, message: message ?? '' };
+        refs.push({ ...token, outer: false, error });
+        // R-TXT-35: a token the user did not retype is the diff's to keep or refuse; out of the slot, it is no error here.
+        if (tok.kept) return undefined;
+        errors.push(error);
         recovered.add(r.owner.id);
         return undefined;
     };

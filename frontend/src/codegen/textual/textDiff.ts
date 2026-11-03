@@ -15,6 +15,12 @@
  * single one, `-=` out of the old slot to the top level). A reorder of an ordered feature re-appends, `-=` then `+=`,
  * what follows the longest prefix of the text order the slot already holds in that order: JjScript appends only.
  *
+ * R-TXT-35 (P-2026-11-03-1425): a name or path token the user did not retype keeps the target the previous print wrote
+ * it for: same place (the editor carried it) and same text, in the object and feature the print wrote it for. It is
+ * never re-resolved by name or position, so a reorder, a move, a deletion or an insertion does not retarget it, and one
+ * that names nothing in the edited text is kept, not refused. A retyped token is read in the edited text, as is every
+ * token outside the editor (T8: there is no previous print). A kept target the edit deletes is cleared by `delete`.
+ *
  * A value the model reads through a default (eval.ts `emptyAttributeDefault`: a declared default, or a mandatory
  * enumeration left empty read as its first literal) is stored empty: the text that prints that default, or omits the
  * attribute, asks for no change, and applying never writes the default unasked (the ticket of P-2026-11-02-2113).
@@ -33,8 +39,8 @@ import type { TextFeature, TextMetamodel, TextObject } from './metamodel';
 import { isWord, jjscriptString, valueText } from './modelLines';
 import type { LineProblem } from './modelLines';
 import { isApplicableParse } from './parser';
-import type { TextParseResult } from './parser';
-import type { ObjectSpan, UnprintedObject } from './printer';
+import type { ParsedRef, TextParseError, TextParseResult } from './parser';
+import type { ObjectSpan, RefSpan, UnprintedObject } from './printer';
 import { hasUnprinted } from './printer';
 import { featureTable, identityOf, matchObjects, placesOf, sameValue, shownFeatures } from './textMatch';
 import type { ObjectMatch, TextMatch } from './textMatch';
@@ -77,12 +83,25 @@ export interface MisplacedOuter {
     readonly id: string;
 }
 
+/** R-TXT-35: a reference token of the text (`owner` a parsed object) and the target the diff reads for it, kept or resolved. */
+export interface RefTarget {
+    readonly owner: string;
+    readonly feature: string;
+    readonly start: number;
+    readonly end: number;
+    readonly to: ObjectRef;
+}
+
 export interface TextDiff {
     readonly match: TextMatch;
     readonly ops: readonly DiffOp[];
     readonly unsupported: readonly UnsupportedChange[];
     /** R-TXT-32: refused with `outer`; absent when none. */
     readonly outer?: readonly MisplacedOuter[];
+    /** R-TXT-35: tokens left out of the parse's errors as kept, that keep nothing (another owner or feature): refused with `parse`. */
+    readonly unresolved?: readonly TextParseError[];
+    /** R-TXT-35: every reference token with its target, when the parse lists them. */
+    readonly refs?: readonly RefTarget[];
 }
 
 export interface DiffInput {
@@ -95,6 +114,8 @@ export interface DiffInput {
     readonly parsed: TextParseResult;
     /** The previous print's spans, carried over the edit (R-TXT-22). */
     readonly previous?: readonly ObjectSpan[];
+    /** R-TXT-35: the previous print's reference tokens, carried over the edit; the parse took them as `ParseOptions.keep`. */
+    readonly previousRefs?: readonly RefSpan[];
     /** Whether a feature is declared ordered (R-TXT-19); by default its `ordered` in the metamodel, absent read as unordered. */
     readonly ordered?: (cls: string, feature: string) => boolean;
 }
@@ -129,6 +150,30 @@ export function diffText(input: DiffInput): TextDiff {
         asArray(v).filter((id): id is string => typeof id === 'string').map(id => (modelById.has(id) ? { model: id } : { outer: id }));
     const parsedTargets = (v: unknown): ObjectRef[] => asArray(v).flatMap((id): ObjectRef[] =>
         (typeof id === 'string' ? [ref(id)] : isOuterRef(id) ? [{ outer: id.outer }] : []));
+    // R-TXT-35: each token's target. Kept: at a carried token's place, with its text, in the object and feature the
+    // print wrote it for; a kept target gone from the model (an applied deletion) reads as none. Else read in the text.
+    const carriedRefs = input.previousRefs ?? [];
+    const keptTarget = (r: ParsedRef): string | undefined => {
+        const owner = r.outer ? undefined : modelOf.get(r.owner)?.model;
+        if (owner === undefined) return undefined;
+        return carriedRefs.find(k => k.start === r.start && k.end === r.end && k.text === r.text && k.owner === owner && k.feature === r.feature)?.target;
+    };
+    const unresolved: TextParseError[] = [];
+    const tokens: RefTarget[] = [];
+    const targetsOf = new Map<string, ObjectRef[]>();
+    for (const r of parsed.refs ?? []) {
+        const k = `${r.owner}\u0000${r.feature}`;
+        if (!targetsOf.has(k)) targetsOf.set(k, []);
+        const kept = keptTarget(r);
+        const to: ObjectRef | undefined = kept !== undefined ? { model: kept }
+            : r.to !== undefined ? (typeof r.to === 'string' ? ref(r.to) : { outer: r.to.outer }) : undefined;
+        if (!to) { if (r.error) unresolved.push(r.error); continue; }
+        tokens.push({ owner: r.owner, feature: r.feature, start: r.start, end: r.end, to });
+        if (kept === undefined || modelById.has(kept)) targetsOf.get(k)!.push(to);
+    }
+    /** A reference slot's targets as the text gives them: by token when the parse lists them. */
+    const textTargets = (t: TextObject, feature: string): ObjectRef[] =>
+        (parsed.refs ? targetsOf.get(`${t.id}\u0000${feature}`) ?? [] : parsedTargets(t.slots[feature]));
     const misplaced = (target: ObjectRef, feature: string, r: ObjectRef): boolean => {
         if (!('outer' in r)) return false;
         outer.push({ target, feature, id: r.outer });
@@ -160,7 +205,7 @@ export function diffText(input: DiffInput): TextDiff {
     };
 
     const reference = (target: ObjectRef, f: TextFeature, t: TextObject, m: TextObject | undefined): void => {
-        const now = parsedTargets(t.slots[f.name]);
+        const now = textTargets(t, f.name);
         const was = m ? modelTargets(m.slots[f.name]) : [];
         if (!f.many) {
             const to = now[0] ?? null;
@@ -241,7 +286,7 @@ export function diffText(input: DiffInput): TextDiff {
     });
     const ops = [...removals, ...early, ...deletions, ...evicting, ...placedOps, ...attributes, ...additions];
     ops.push(...reorders(ops));
-    return { match, ops, unsupported, ...(outer.length ? { outer } : {}) };
+    return { match, ops, unsupported, ...(outer.length ? { outer } : {}), ...(unresolved.length ? { unresolved } : {}), ...(parsed.refs ? { refs: tokens } : {}) };
 
     /**
      * The reorders: the ops run on a copy of every ordered many-valued slot the text prints, then each slot is compared
@@ -298,7 +343,7 @@ export function diffText(input: DiffInput): TextDiff {
                 if (!f.many || f.kind === 'attribute' || !shown.has(f.name) || !ordered(t.cls, f.name)) continue;
                 const want = (f.kind === 'containment'
                     ? asArray(t.slots[f.name]).filter((id): id is string => typeof id === 'string').map(ref)
-                    : parsedTargets(t.slots[f.name])).map(keyed);
+                    : textTargets(t, f.name)).map(keyed);
                 const have = slots.get(slotKey(owner, f.name)) ?? [];
                 if (want.join('\u0000') === have.join('\u0000')) continue;
                 let from = 0;
@@ -349,8 +394,9 @@ export function deletedObjects(mm: TextMetamodel, model: readonly TextObject[], 
 /** The reasons not to apply, in this order: parse, uncertain matches, references from other models, unprinted objects, misplaced outer references (R-TXT-32), T7. */
 export function refusalsOf(input: RefusalInput): ApplyRefusal[] {
     const out: ApplyRefusal[] = [];
-    if (!isApplicableParse(input.parsed)) {
-        out.push({ code: 'parse', message: `the text has ${input.parsed.errors.length || 'unread'} error${input.parsed.errors.length === 1 ? '' : 's'}` });
+    const errors = input.parsed.errors.length + (input.diff.unresolved?.length ?? 0);
+    if (!isApplicableParse(input.parsed) || input.diff.unresolved?.length) {
+        out.push({ code: 'parse', message: `the text has ${errors || 'unread'} error${errors === 1 ? '' : 's'}` });
     }
     const uncertain = input.diff.match.matches.filter(m => m.uncertain);
     for (const by of ['homonym', 'move', 'rename'] as const) {
