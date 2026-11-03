@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-2325
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane fast · 5f05b418c, 427c51d0c · SPEC and log closed, #515 commented (left open until merge), docs only (unattended)
 Lane: fast (docs closure of P-2026-11-03-2111, code d8c281211 is done and gated)
 Depends: P-2026-11-03-2111
 Worktree: ~/jjodel-w-jjtllet, branch jjtl-let-unique-called

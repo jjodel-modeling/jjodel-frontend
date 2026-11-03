@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-2111
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · d8c281211 · stopped at the context ceiling (AM-8), closed by P-2026-11-03-2325 · app probe on C2R, output equals the expected schema, same tree after reopen; no visual check by hand (unattended)
 Lane: full (language semantics, decided by Alfonso on 2026-11-03)
 Depends: none
 Worktree: ~/jjodel-w-jjtllet, branch jjtl-let-unique-called (at the commit that adds this prompt)
