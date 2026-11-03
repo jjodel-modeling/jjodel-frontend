@@ -122,3 +122,18 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: passato — chat, unattended: merged staging c35ce731e: L3 mock probe 28/28 on port 3190 (lane-run probe, SMOKE_URL set), 0 page errors; Juri's visual GO on the L3 tree 2026-11-03
 **Notes**: Rollback tag `pre-feat/196-l3-chat-cutover` on `fa1546805` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1226/result.json`.
 **Prompt document name**: 2026-11-03 12:26
+
+## 2026-11-03 — ticket: Kimi keys from platform.moonshot.ai always fail, the endpoint is hardcoded to api.moonshot.cn
+**Ticket**: `frontend/src/services/ai/registry.ts:142` sends every Kimi request to `https://api.moonshot.cn/v1/chat/completions`. A key made on the international console (`platform.moonshot.ai`) is valid only on `api.moonshot.ai` and gets 401 on `.cn`, so the user reads «Invalid key» for a good key. The Base URL field is shown only for keyless providers, so the user cannot point Kimi elsewhere. Pre-existing: the old `types/jodie.ts` path hardcoded the same host. Measured in the chat's real-key run of #196 L3: one `.ai` key, 401 on `.cn`, a readable answer on `.ai` (that account was then suspended for no balance).
+**Priority**: low
+**Found in**: C-2026-11-03-0001
+
+## 2026-11-03 — ticket: the GPT-4o and Pixtral seeds declare no image input
+**Ticket**: `frontend/src/services/ai/registry.ts:41-43` (`gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`) and `:74-75` (`pixtral-large-latest`, `pixtral-12b-2409`) set `vision` to false, though these models accept images. The attach-image button follows the chat model's capabilities (L2), so it stays hidden for them. Pre-existing: L1 copied the `.add(...)` rows of `types/jodie.ts` verbatim (static seeds). `BaseProvider.ts:51` already declares `gpt-4o` as `vision: true` for prefix matching, so the two tables disagree.
+**Priority**: low
+**Found in**: C-2026-11-03-0001
+
+## 2026-11-03 — ticket: a Gemini 503 (model overloaded) shows as «Unreachable» in AI settings
+**Ticket**: In Juri's visual check of #196 L3, Test connection on Gemini with the default `gemini-3.7-flash` showed «Unreachable» (NETWORK). The chat's Node run got a readable 503 «high demand» from the same model at the same time. `BaseProvider.classify` (`frontend/src/services/ai/BaseProvider.ts:290`) maps 5xx to SERVER («Provider error») and only a missing status to NETWORK. So in the browser, either `statusOf` (`:98`) does not find the status on the `@google/genai` error, or the 503 answer carries no CORS header and the fetch fails with no status. Not measured: run the Gemini test() in a browser against a 503 (real or routed) and read the thrown error's shape before choosing a fix.
+**Priority**: low
+**Found in**: P-2026-11-03-0020
