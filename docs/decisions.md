@@ -7168,6 +7168,17 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   application is the disappearance of whole objects covered by a comment just typed, the Text tab asks for confirmation
   instead of applying on the pause (an exception to R-TXT-26). Measured by P-2026-11-03-2152: typing `//` at the start of
   `Terminal {}` applied the deletion while the user was still typing. Implemented in step D of the IDE plan.
+- **R-TXT-38** (2026-11-03, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step B design, as recommended by
+  P-2026-11-03-2300** (report docs/discovery/discovery_2026-11-03_textual_language_service.md). One language service beside the parser,
+  with no Monaco import, one analysis per text version; a thin adapter registers the language, its six providers, a Monarch
+  tokenizer for the EBNF tab and one theme that also carries the JjScript rules, since a Monaco theme is global; the outline
+  and breadcrumb are React components inside the Text tab, the outline windowed, following the cursor, filterable, with
+  recovered objects under `unknown container`. The typing pause reuses the providers' parse (`planEdit` takes an optional
+  parsed text). Light theme only: Jjodel has no dark theme (D-UI-15). Hover reads an element's GenModel `documentation`
+  and its bounds through optional fields of the textual metamodel. `displayMatch` does not run on every keystroke; a
+  linear `matchObjects` gets a ticket. The paste-back loss of spans (a deleted and pasted-back text keeps no agreed spans,
+  `TextualTab.tsx:803-807`) is fixed in its own fast lane before step B: the agreed text keeps its spans and reference
+  tokens and they return whenever the text equals it again.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
