@@ -336,8 +336,8 @@ function appliedIds(plan: Pick<TextMatch, 'matches' | 'created'>, rematch: Pick<
 
 /**
  * R-TXT-35: the reference tokens of an applied text, in the model after the run, each with the target the plan read for
- * it (kept or read in the text): the next edit keeps the tokens the user leaves alone. The text stays as typed, so a
- * kept path may name another object there; the reprint writes its new path.
+ * it (kept or read in the text): the next edit keeps the tokens the user leaves alone. A kept path may name another
+ * object in the text as typed; `pathRewrites` writes its new path (P-2026-11-03-1535).
  */
 export function appliedRefs(text: string, refs: readonly RefTarget[], plan: Pick<TextMatch, 'matches' | 'created'>,
                             rematch: Pick<TextMatch, 'matches'>): RefSpan[] {
@@ -347,6 +347,63 @@ export function appliedRefs(text: string, refs: readonly RefTarget[], plan: Pick
         const target = 'model' in r.to ? r.to.model : 'text' in r.to ? modelOf.get(r.to.text) : r.to.outer;
         return owner !== undefined && target !== undefined ? [{ owner, feature: r.feature, target, text: text.slice(r.start, r.end), start: r.start, end: r.end }] : [];
     });
+}
+
+/** A replacement in the text: `[start, end)` becomes `text`. */
+export interface TextEdit {
+    readonly start: number;
+    readonly end: number;
+    readonly text: string;
+}
+
+/** The reference tokens of an agreed text rewritten to the print (`pathRewrites`). */
+export interface PathRewrite {
+    /** The text after the edits. */
+    readonly text: string;
+    /** In text order, none overlapping. */
+    readonly edits: readonly TextEdit[];
+    /** Every carried token, in the rewritten text; a rewritten one with its new text. */
+    readonly refs: readonly RefSpan[];
+    /** The tokens left as typed because a selection is on them. */
+    readonly held: number;
+}
+
+/**
+ * R-TXT-35 (P-2026-11-03-1535): after an application the text shows the current paths. Each carried token is paired
+ * with the token the new print writes for the same owner, feature and target (by order among equals); one whose text
+ * differs from the print's is rewritten to it, unless a selection touches it, edges included. Nothing else changes.
+ */
+export function pathRewrites(text: string, carried: readonly RefSpan[], printed: readonly RefSpan[],
+                             selections: readonly { readonly start: number; readonly end: number }[] = []): PathRewrite {
+    const keyOf = (r: RefSpan): string => `${r.owner}\u0000${r.feature}\u0000${r.target}`;
+    const queues = new Map<string, RefSpan[]>();
+    for (const p of printed) {
+        if (!queues.has(keyOf(p))) queues.set(keyOf(p), []);
+        queues.get(keyOf(p))!.push(p);
+    }
+    const edits: TextEdit[] = [];
+    const rewritten = new Map<RefSpan, string>();
+    let held = 0;
+    for (const r of [...carried].sort((a, b) => a.start - b.start)) {
+        const p = queues.get(keyOf(r))?.shift();
+        if (!p || p.text === text.slice(r.start, r.end)) continue;
+        if (selections.some(s => s.start <= r.end && s.end >= r.start)) { held++; continue; }
+        edits.push({ start: r.start, end: r.end, text: p.text });
+        rewritten.set(r, p.text);
+    }
+    let out = text;
+    for (const e of [...edits].reverse()) out = out.slice(0, e.start) + e.text + out.slice(e.end);
+    const refs = carried.map(r => {
+        const start = shiftOffset(r.start, edits);
+        const now = rewritten.get(r);
+        return now === undefined ? { ...r, start, end: shiftOffset(r.end, edits) } : { ...r, text: now, start, end: start + now.length };
+    });
+    return { text: out, edits, refs, held };
+}
+
+/** An offset of the text before `edits`, in the text after them; an offset inside a replaced range is not asked for. */
+export function shiftOffset(offset: number, edits: readonly TextEdit[]): number {
+    return edits.reduce((at, e) => (e.end <= offset ? at + e.text.length - (e.end - e.start) : at), offset);
 }
 
 // ---- Step T7: a cut pasted whole (D-5), and the marker of a misplaced outer reference (item 5) ---------------------
@@ -513,7 +570,8 @@ export interface TextualTabProps {
 
 /**
  * The Text view is editable (step T6b, R-TXT-26): on a pause in typing the text is parsed, diffed against the model
- * and, when nothing refuses it, applied as one undo step; the text stays as typed. The previous parse's spans, carried
+ * and, when nothing refuses it, applied as one undo step; the text stays as typed but for the reference tokens whose
+ * print changed, rewritten to the new print (R-TXT-35, P-2026-11-03-1535). The previous parse's spans, carried
  * by Monaco decorations, are the first evidence of identity (R-TXT-22). A change of the model from elsewhere reprints
  * a text with no pending edit and never overwrites one. With no pending edit, Cmd/Ctrl+Z is the app's undo, whose
  * change reprints the text: one step restores model and text together. The EBNF view stays read-only.
@@ -548,7 +606,10 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     // R-TXT-35: the reference tokens of the last agreement (a print or an application), carried as decorations.
     const refDecorationsRef = useRef<{ ids: string[]; refs: Map<string, RefSpan> }>({ ids: [], refs: new Map() });
     const clipRef = useRef<CutClip | null>(null);
-    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void }>({ read: () => {}, content: () => {} });
+    // R-TXT-35 (P-2026-11-03-1535): the rewrite of the paths runs; a token was held under the caret.
+    const rewritingRef = useRef(false);
+    const heldRef = useRef(false);
+    const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void }>({ read: () => {}, content: () => {}, cursor: () => {} });
     const pause = useMemo(() => pauseOf(APPLY_DELAY_MS, () => handlers.current.read()), []);
     useEffect(() => () => pause.cancel(), [pause]);
 
@@ -640,6 +701,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         pause.cancel();
         armedRef.current = null;
         clipRef.current = null;
+        heldRef.current = false;
         const viewState = editor.saveViewState();
         syncRef.current = { text: r.view.text, model: r.view.text };
         if (editor.getValue() !== r.view.text) editor.setValue(r.view.text);
@@ -651,6 +713,48 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         setStale(false);
         setConfirm(null);
         setStatus({ kind: 'synced' });
+        updateUndoKey();
+    };
+
+    /**
+     * R-TXT-35: the agreed text's reference tokens rewritten to the print's (`pathRewrites`), as one step of the editor's
+     * own stack. No model write and no application: the rewritten text becomes the agreement, so Cmd/Ctrl+Z stays the
+     * app's undo and its reprint restores the text before the application. A token under the caret waits for it to leave.
+     */
+    const rewritePaths = (printed: readonly RefSpan[]): void => {
+        const editor = editorRef.current;
+        const monaco = monacoRef.current;
+        const m = editor?.getModel();
+        const sync = syncRef.current;
+        if (!editor || !monaco || !m || !sync || editor.getValue() !== sync.text) return;
+        const offsets = (editor.getSelections() ?? []).map(s => ({
+            anchor: m.getOffsetAt({ lineNumber: s.selectionStartLineNumber, column: s.selectionStartColumn }),
+            head: m.getOffsetAt(s.getPosition()),
+        }));
+        const r = pathRewrites(sync.text, carriedRefs(), printed, offsets.map(o => ({ start: Math.min(o.anchor, o.head), end: Math.max(o.anchor, o.head) })));
+        heldRef.current = r.held > 0;
+        if (!r.edits.length) return;
+        const spans = carriedSpans();
+        const range = (e: TextEdit) => {
+            const from = m.getPositionAt(e.start);
+            const to = m.getPositionAt(e.end);
+            return new monaco.Range(from.lineNumber, from.column, to.lineNumber, to.column);
+        };
+        rewritingRef.current = true;
+        try {
+            editor.pushUndoStop();
+            editor.executeEdits('textual-paths', r.edits.map(e => ({ range: range(e), text: e.text })), () => offsets.map(o => {
+                const a = m.getPositionAt(shiftOffset(o.anchor, r.edits));
+                const h = m.getPositionAt(shiftOffset(o.head, r.edits));
+                return new monaco.Selection(a.lineNumber, a.column, h.lineNumber, h.column);
+            }));
+            editor.pushUndoStop();
+        } finally {
+            rewritingRef.current = false;
+        }
+        syncRef.current = { ...sync, text: editor.getValue() };
+        setDecorations(spans.map(s => ({ ...s, start: shiftOffset(s.start, r.edits), end: shiftOffset(s.end, r.edits) })));
+        setRefDecorations(r.refs);
         updateUndoKey();
     };
 
@@ -670,7 +774,8 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         } finally {
             applyingRef.current = false;
         }
-        // The applied text is the new agreement: it stays as typed, with the spans of its objects in the new model.
+        // The applied text is the new agreement: as typed, with the spans of its objects in the new model, and its reference
+        // tokens rewritten to the new print's (R-TXT-35).
         const after = modelReading(((store.getState() as any)?.idlookup ?? {}) as Record<string, any>, modelId);
         syncRef.current = { text, model: after.view.text };
         const editor = editorRef.current;
@@ -679,10 +784,11 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             const rematch = matchObjects({ mm: b.mm, grammar: b.grammar, model: b.objects, parsed, previous: carriedSpans() });
             setDecorations(appliedSpans(parsed, plan.diff.match, rematch));
             setRefDecorations(appliedRefs(text, plan.diff.refs ?? [], plan.diff.match, rematch));
+            rewritePaths(b.refs ?? []);
         }
         setStatus({ kind: 'applied', failed: failedLines });
         updateUndoKey();
-        if (editor && editor.getValue() !== text) pause.poke(); // typed during the run
+        if (editor && editor.getValue() !== syncRef.current?.text) pause.poke(); // typed during the run (not the rewrite of the paths)
     };
 
     /** Reads the editor's text after a pause; `confirmed`, from the panel, drops the refusals it confirms. */
@@ -746,6 +852,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     handlers.current = {
         read: () => readEdit(),
         content: changes => {
+            if (rewritingRef.current) return;
             trackClip(changes);
             updateUndoKey();
             const editor = editorRef.current;
@@ -759,6 +866,12 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             }
             setStatus({ kind: 'editing' });
             pause.poke();
+        },
+        // R-TXT-35: a held token is rewritten once the caret leaves it, while the text is the agreed one.
+        cursor: () => {
+            const r = readRef.current;
+            if (!heldRef.current || applyingRef.current || rewritingRef.current || !r.base || r.view.text !== syncRef.current?.model) return;
+            rewritePaths(r.base.refs ?? []);
         },
     };
 
@@ -795,6 +908,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             void import('../../../joiner').then(({ UndoAction, DUser }) => { UndoAction.new(1, DUser.current, false).commit(); });
         }, APP_UNDO_KEY);
         editor.onDidChangeModelContent(e => handlers.current.content(e.changes));
+        editor.onDidChangeCursorSelection(() => handlers.current.cursor());
         // T7 D-5: in the capture phase the selection is still there; the change that follows is the cut.
         editor.getDomNode()?.addEventListener('cut', () => {
             const m = editor.getModel();
