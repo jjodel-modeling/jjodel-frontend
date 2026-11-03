@@ -514,3 +514,16 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: non applicabile
 **Notes**: Nine files, all inside the prompt's DOVE. Stale: forAll (3aa5993c8, d3d42310c), flat-array duplicates, double execution (read only, no app probe). Fixed: import-red 9 to 3 (six jjtl files load; two stale expectations updated), {classes,instances} twice, console.log, EDouble tag. Real: [*], ticketed medium (GitHub card skipped on a 504). Regressions unknown: the panel line was not seen in the app. Gates: tsc 0, vitest 13346 passed, build 0.
 **Prompt document name**: 2026-11-03 14:02
+
+## 2026-11-03 — merge: jjtl-spec-12-review into the trunk, closure by hand (P-2026-11-03-1420)
+**Prompt**: P-2026-11-03-1420, direct merge of jjtl-spec-12-review.
+**Files touched**: `docs/prompts/claude_2026-11-03_1420_prompt_merge_jjtl-spec-12-review.md`, `docs/log-inbox/hw-notation.md`
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Merge `89841fc92` stands. The worker reported `blocked` on vitest: 13346 tests, 0 failed, 3 red at import against a before of 13267, 0 failed, 9 red. Compared per file, every difference is a file going from red at import to passing, or the new test file. `lane-run go` refuses a blocked merge, so this closure is by hand; `result.json` was not edited. Unit tests only: the #445 warning has not been seen in the app, and #445 stays open.
+**Prompt document name**: 2026-11-03 14:20
