@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1045
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane fast · 5a9ce5ec4 · hard-stop at the context ceiling (RC-51), closed by P-2026-11-03-1141 · verifica visiva passata 2026-11-03 (chat, RC-23, crops in ~/.jjodel-lanes/P-2026-11-03-1141/; R-TXT-32 ratified by Alfonso)
 Lane: full (printer and parser grammar, design choice before the code)
 Depends: none
 Worktree: ~/jjodel-w-textrefs, branch textual-refs-outside

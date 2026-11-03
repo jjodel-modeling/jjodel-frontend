@@ -28,11 +28,13 @@ export type StyleRule =
     | 'list-tokens'
     /** The item terminator occurs inside no item: it is where the parser's recovery resynchronises (§A.2, R-TXT-21 (1)). */
     | 'terminator'
+    /** No style token, comment opener or string quote starts with `@`: it starts a reference outside the text (R-TXT-32). */
+    | 'outer-reference'
     /** The syntax annotations resolve and apply, and the grammar they give is LL(1) (step T4). */
     | 'annotations';
 
 /** Every rule the check evaluates, in the order of its findings. */
-export const STYLE_RULES: readonly StyleRule[] = ['distinct-features', 'distinct-classes', 'case-injective', 'reserved-words', 'block-delimiters', 'list-tokens', 'terminator', 'annotations'];
+export const STYLE_RULES: readonly StyleRule[] = ['distinct-features', 'distinct-classes', 'case-injective', 'reserved-words', 'block-delimiters', 'list-tokens', 'terminator', 'outer-reference', 'annotations'];
 
 export interface StyleFinding {
     /** `ok`: the rule holds. `notice`: it holds after a fallback the author did not ask for. `error`: it fails. */
@@ -170,6 +172,16 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
     const inside = new Set([...s.assign, open, separator, close]);
     for (const t of s.terminator) {
         if (inside.has(t)) error('terminator', 'style.terminator', `"${t}" also occurs inside an item (assignment or list)`);
+    }
+
+    // R-TXT-32: `@` followed by a string is a reference outside the text; a style token, comment or quote starting with it would read as one.
+    const outerTokens: [string, readonly string[]][] = [
+        ...styleTokens,
+        ['comments.line', s.comments.line ? [s.comments.line] : []], ['comments.block', s.comments.block ? [s.comments.block[0]] : []],
+        ['string.quote', [s.string.quote]],
+    ];
+    for (const [param, ts] of outerTokens) {
+        if (ts.some(t => t.startsWith('@'))) error('outer-reference', `style.${param}`, `"${ts.find(t => t.startsWith('@'))}" starts with "@", which starts a reference outside the text`);
     }
 
     // Step T4: the annotations' issues, and the LL(1) conditions an annotated grammar must keep.

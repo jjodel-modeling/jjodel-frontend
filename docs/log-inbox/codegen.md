@@ -1339,3 +1339,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: visual check passed on the branch, crops of P-2026-11-03-0021 checked by the chat, unattended
 **Notes**: Rollback tag `pre-textual-t6b` on `b3c82f86d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-0543/result.json`.
 **Prompt document name**: 2026-11-03 05:43
+
+## 2026-11-03 — test(codegen): in-app acceptance of references outside the text (P-2026-11-03-1141)
+**Prompt**: P-2026-11-03-1141, continuation of P-2026-11-03-1045 after the context ceiling (RC-51): rerun tsc and check:docs on 5a9ce5ec4; accept `@"<id>"` in the app (print, parse, attribute edit, reference intact, one Undo); measure open questions 1 and 3; Briefs read-only; crops; log and Status flips left uncommitted (RC-17).
+**Files touched**: this inbox; the `Status:` lines of the 1045 and 1141 prompts. No code: the code is 5a9ce5ec4 (P-2026-11-03-1045). Probes and crops in `~/.jjodel-lanes/P-2026-11-03-1141/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passed 2026-11-03 (chat, RC-23) — probe ALL PASS (port 3141, light theme, scale 1); crops 1 to 6 in the lane folder await Alfonso's visual check
+**Notes**: tsc exit 0, check:docs 5/5. Setup is a direct model write, not a canvas gesture: State.listens (Event, many) added via the L-layer, outer values via `$f.values`; the second model through «New model from text» typed in the app. Q3: deleting `@"near"` from the list unlinks it, one Undo restores. Q1: deleting the target clears the referring slots, so no dangling id reaches the text and no missing-target warning exists to fire. Briefs: print parses, 0 errors, print-parse-print identical.
+**Prompt document name**: 2026-11-03 11:41

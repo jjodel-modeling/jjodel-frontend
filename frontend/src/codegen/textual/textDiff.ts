@@ -4,8 +4,10 @@
  * JjScript lines that apply it. Pure, on plain objects; the run is textApply.ts.
  *
  * The diff (R-TXT-19): create, update an attribute, update a reference, delete. Only the features the object's rule
- * prints are compared: what the notation does not show is preserved, never cleared, and so is a reference target the
- * text cannot name (an object outside the printed ones). An attribute omitted because unset reads back as unset. A
+ * prints are compared: what the notation does not show is preserved, never cleared. A reference target outside the
+ * printed objects prints as `@"id"` (R-TXT-32): kept as printed it asks no change, deleted it is cleared or unlinked,
+ * anywhere else (an edited id, another owner or feature, a new object) it is refused. An attribute omitted because unset
+ * reads back as unset. A
  * many-valued feature compares as a multiset unless declared ordered (R-TXT-21 (5)); a reorder of an ordered one, and a
  * move, are step T7 and block the application.
  *
@@ -20,6 +22,7 @@
  */
 
 import type { ConcreteGrammar } from './concreteGrammar';
+import { isOuterRef } from './metamodel';
 import type { TextFeature, TextMetamodel, TextObject } from './metamodel';
 import { isWord, jjscriptString, valueText } from './modelLines';
 import type { LineProblem } from './modelLines';
@@ -30,8 +33,11 @@ import { hasUnprinted } from './printer';
 import { featureTable, identityOf, matchObjects, placesOf, sameValue, shownFeatures } from './textMatch';
 import type { ObjectMatch, TextMatch } from './textMatch';
 
-/** An object of the model (`model`) or a new one of the text (`text`); the ids of the two sides may coincide. */
-export type ObjectRef = { readonly model: string } | { readonly text: string };
+/**
+ * An object of the model (`model`) or a new one of the text (`text`); the ids of the two sides may coincide. `outer`: a
+ * reference target outside the printed objects, by its id (R-TXT-32).
+ */
+export type ObjectRef = { readonly model: string } | { readonly text: string } | { readonly outer: string };
 
 export type DiffOp =
     | { readonly op: 'create'; readonly text: string; readonly cls: string; readonly into?: { readonly owner: ObjectRef; readonly feature: string } }
@@ -50,10 +56,19 @@ export interface UnsupportedChange {
     readonly feature: string;
 }
 
+/** R-TXT-32: an `@"id"` of the text that is not where the model holds that id: an edited id, another owner or feature, a new object. */
+export interface MisplacedOuter {
+    readonly target: ObjectRef;
+    readonly feature: string;
+    readonly id: string;
+}
+
 export interface TextDiff {
     readonly match: TextMatch;
     readonly ops: readonly DiffOp[];
     readonly unsupported: readonly UnsupportedChange[];
+    /** R-TXT-32: refused with `outer`; absent when none. */
+    readonly outer?: readonly MisplacedOuter[];
 }
 
 export interface DiffInput {
@@ -72,7 +87,7 @@ export interface DiffInput {
 
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
 const isUnset = (v: unknown): boolean => asArray(v).length === 0;
-const keyOf = (r: ObjectRef): string => ('model' in r ? `m:${r.model}` : `t:${r.text}`);
+const keyOf = (r: ObjectRef): string => ('model' in r ? `m:${r.model}` : 'text' in r ? `t:${r.text}` : `o:${r.outer}`);
 
 /** The diff between the model and the parsed text (R-TXT-19). The parse must be applicable (`isApplicableParse`). */
 export function diffText(input: DiffInput): TextDiff {
@@ -92,10 +107,18 @@ export function diffText(input: DiffInput): TextDiff {
     const attributes: DiffOp[] = [];
     const additions: DiffOp[] = [];
     const unsupported: UnsupportedChange[] = [];
+    const outer: MisplacedOuter[] = [];
 
-    /** A reference slot's targets the text can name: the printed objects. The others are preserved. */
-    const printable = (v: unknown): string[] => asArray(v).filter((id): id is string => typeof id === 'string' && modelById.has(id));
-    const parsedTargets = (v: unknown): ObjectRef[] => asArray(v).filter((id): id is string => typeof id === 'string').map(ref);
+    /** A reference slot's targets as the text prints them: a model object, or by its id one outside them (R-TXT-32). */
+    const modelTargets = (v: unknown): ObjectRef[] =>
+        asArray(v).filter((id): id is string => typeof id === 'string').map(id => (modelById.has(id) ? { model: id } : { outer: id }));
+    const parsedTargets = (v: unknown): ObjectRef[] => asArray(v).flatMap((id): ObjectRef[] =>
+        (typeof id === 'string' ? [ref(id)] : isOuterRef(id) ? [{ outer: id.outer }] : []));
+    const misplaced = (target: ObjectRef, feature: string, r: ObjectRef): boolean => {
+        if (!('outer' in r)) return false;
+        outer.push({ target, feature, id: r.outer });
+        return true;
+    };
 
     const compare = (target: ObjectRef, t: TextObject, m: TextObject | undefined): void => {
         const rule = g.objects[t.cls];
@@ -123,11 +146,12 @@ export function diffText(input: DiffInput): TextDiff {
 
     const reference = (target: ObjectRef, f: TextFeature, t: TextObject, m: TextObject | undefined): void => {
         const now = parsedTargets(t.slots[f.name]);
-        const was = m ? printable(m.slots[f.name]).map(id => ({ model: id }) as ObjectRef) : [];
+        const was = m ? modelTargets(m.slots[f.name]) : [];
         if (!f.many) {
             const to = now[0] ?? null;
             const from = was[0] ?? null;
             if ((to && keyOf(to)) === (from && keyOf(from))) return;
+            if (to && misplaced(target, f.name, to)) return;
             if (to === null && m && !isUnset(m.slots[f.name]) && from === null) return; // a target the text cannot name
             if (to === null && from && 'model' in from && deleted.has(from.model)) return; // `delete` clears it
             (to === null ? removals : additions).push({ op: 'reference', target, feature: f.name, to });
@@ -140,7 +164,7 @@ export function diffText(input: DiffInput): TextDiff {
             if (i >= 0) rest.splice(i, 1); else added.push(r);
         }
         for (const r of rest) if (!('model' in r && deleted.has(r.model))) removals.push({ op: 'unlink', target, feature: f.name, to: r });
-        for (const r of added) additions.push({ op: 'link', target, feature: f.name, to: r });
+        for (const r of added) if (!misplaced(target, f.name, r)) additions.push({ op: 'link', target, feature: f.name, to: r });
         if (m && ordered(t.cls, f.name)) {
             const kept = was.filter(x => !rest.includes(x)).map(keyOf);
             const after = [...kept, ...added.map(keyOf)];
@@ -186,12 +210,12 @@ export function diffText(input: DiffInput): TextDiff {
         .filter(id => { const p = modelPlace.get(id); return !(p && deleted.has(p.owner)); })
         .map(id => ({ op: 'delete', model: id }));
 
-    return { match, ops: [...removals, ...deletions, ...creates, ...attributes, ...additions], unsupported };
+    return { match, ops: [...removals, ...deletions, ...creates, ...attributes, ...additions], unsupported, ...(outer.length ? { outer } : {}) };
 }
 
 /** Why a diff is not applied (R-TXT-26, R-TXT-30, R-TXT-21 (8)); none means it may be. */
 export interface ApplyRefusal {
-    readonly code: 'parse' | 'uncertain' | 'referenced' | 'unprinted' | 'unsupported' | 'unwritable';
+    readonly code: 'parse' | 'uncertain' | 'referenced' | 'unprinted' | 'outer' | 'unsupported' | 'unwritable';
     readonly message: string;
 }
 
@@ -218,7 +242,7 @@ export function deletedObjects(mm: TextMetamodel, model: readonly TextObject[], 
     return gone;
 }
 
-/** The reasons not to apply, in this order: parse, uncertain matches, references from other models, unprinted objects, T7. */
+/** The reasons not to apply, in this order: parse, uncertain matches, references from other models, unprinted objects, misplaced outer references (R-TXT-32), T7. */
 export function refusalsOf(input: RefusalInput): ApplyRefusal[] {
     const out: ApplyRefusal[] = [];
     if (!isApplicableParse(input.parsed)) {
@@ -235,6 +259,8 @@ export function refusalsOf(input: RefusalInput): ApplyRefusal[] {
         if (hit) out.push({ code: 'referenced', message: `${hit} deleted object${hit === 1 ? ' is' : 's are'} referenced from another model` });
     }
     if (hasUnprinted(input)) out.push({ code: 'unprinted', message: `${input.unprinted.length} object${input.unprinted.length === 1 ? ' is' : 's are'} not in the text` });
+    const outer = input.diff.outer?.length ?? 0;
+    if (outer) out.push({ code: 'outer', message: `${outer} reference${outer === 1 ? '' : 's'} outside the text not where ${outer === 1 ? 'it was' : 'they were'} printed: such a value can only be kept, deleted or replaced` });
     for (const kind of ['move', 'reorder'] as const) {
         const n = input.diff.unsupported.filter(u => u.kind === kind).length;
         if (n) out.push({ code: 'unsupported', message: `${n} ${kind}${n === 1 ? '' : 's'}, not applied before step T7` });
@@ -256,7 +282,7 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
     const featuresOf = featureTable(mm);
     const modelById = new Map(model.map(o => [o.id, o]));
     const textById = new Map(parsed.objects.map(o => [o.id, o]));
-    const objectOf = (r: ObjectRef): TextObject | undefined => ('model' in r ? modelById.get(r.model) : textById.get(r.text));
+    const objectOf = (r: ObjectRef): TextObject | undefined => ('model' in r ? modelById.get(r.model) : 'text' in r ? textById.get(r.text) : undefined);
 
     // Handles: a name no other object on either side carries, else `<Class>_<n>` free of every name.
     const owners = new Map<string, Set<string>>();
@@ -294,7 +320,7 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
         problems.push({ id, feature, message: `the feature name ${feature} is not writable by JjScript yet` });
         return false;
     };
-    const idOf = (r: ObjectRef): string => ('model' in r ? r.model : r.text);
+    const idOf = (r: ObjectRef): string => ('model' in r ? r.model : 'text' in r ? r.text : r.outer);
     const literalsOf = (cls: string, feature: string): readonly string[] | undefined => {
         const f = featuresOf(cls).find(x => x.name === feature);
         return f ? mm.enumerations.find(e => e.name === f.type)?.literals : undefined;
@@ -334,7 +360,8 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
         }
     }
     const handles = new Map<string, string>();
-    for (const [key, h] of handleOf) if (key.startsWith('m:')) handles.set(h, key.slice(2));
+    // R-TXT-32: a target outside the text is addressed by its id like a model object (the registry resolves any id).
+    for (const [key, h] of handleOf) if (key.startsWith('m:') || key.startsWith('o:')) handles.set(h, key.slice(2));
     return { lines, problems, handles };
 }
 

@@ -101,6 +101,13 @@ describe('errors carry line, column and a readable message', () => {
         expect(brief('Sys s {\n  main nobody\n}')).toEqual(['2:8 no object of type Part is named "nobody"']);
     });
 
+    it('R-TXT-32: "@" takes a string; the id is read as written, never resolved against the text (mutants: "@" read as a name; the id resolved by name)', () => {
+        expect(brief('Sys s {\n  main @nobody\n}')).toEqual(['2:9 expected a string, the id of an object outside the text; found name "nobody"']);
+        const r = parse('Part a {}\nSys s {\n  main @"a"\n}');
+        expect(r.errors).toEqual([]);
+        expect(r.objects.find(o => o.cls === 'Sys')!.slots.main).toEqual({ outer: 'a' });
+    });
+
     it('a duplicate name where a reference needs it unique (R-TXT-4)', () => {
         expect(brief('Sys s {\n  parts {\n    Part dup {}\n    Part dup {}\n  }\n  main dup\n}'))
             .toEqual(['6:8 "dup" is ambiguous: 2 objects of type Part carry that name (3:5, 4:5); write a path']);
@@ -137,7 +144,7 @@ describe('paths (R-TXT-25 (5, 6))', () => {
 
     it('the forms R-TXT-25 retires, and paths that name nothing, are errors', () => {
         expect(brief2('Room[0].inner')).toEqual(['expected "["; found "]"']);
-        expect(brief2('[0]')).toEqual(['expected a reference (a name or a path); found "["']);
+        expect(brief2('[0]')).toEqual(['expected a reference (a name, a path, or @ and an id); found "["']);
         expect(brief2('Room[0].inner[1]')).toEqual(['"inner" holds one object: write inner[0]']);
         expect(brief2('Room[1]')).toEqual(['there is no top-level Room[1]: the text has 1']);
         expect(brief2('Hall[0]')).toEqual(['a path starts with a class: there is no class "Hall"']);

@@ -48,6 +48,16 @@ export interface TextObject {
     readonly slots: Readonly<Record<string, unknown>>;
 }
 
+/**
+ * R-TXT-32: a reference to an object the text does not print, as the parser reads `@"id"`: the target's id as written,
+ * never resolved against the text. In the model's objects the same reference is a plain id that names no printed object.
+ */
+export interface OuterRef {
+    readonly outer: string;
+}
+
+export const isOuterRef = (v: unknown): v is OuterRef => typeof v === 'object' && v !== null && typeof (v as OuterRef).outer === 'string';
+
 /** A feature as the notation sees it: where it is declared, and whether it is a value, a link or a containment. */
 export interface TextFeature {
     readonly name: string;
