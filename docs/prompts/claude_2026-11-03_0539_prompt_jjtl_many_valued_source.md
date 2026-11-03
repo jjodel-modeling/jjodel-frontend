@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-0539
 Chat: C-2026-11-02-1541
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane hw-notation · 4291b39c9
 Lane: full (source serialisation of the JjTL run; behaviour that is committed changes)
 Depends: P-2026-11-03-0121
 Worktree: ~/jjodel-w-jjtlmany, branch jjtl-many-valued (from the trunk commit that adds this prompt)

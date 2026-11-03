@@ -315,3 +315,16 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 **Smoke visivo**: non applicabile (chat GO on HTTP 200 on 3001 and the B2 probe rerun on the branch at 4acda9332; no hand run on the trunk)
 **Notes**: Merge-tree dc7859d21 equal to the staged tree; 7 probes once each, no union. Gates on f716c5f31: typecheck, typecheck:scripts exit 0; vitest 500 files, 13193 = trunk 13145 + 48, the known 9 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5 (the prompt said 4/4); check:agents, check:scripts, check:addonly PASS. Lane board untouched. vitest ran twice on the merge by mistake. Regressions unknown: no app run on the trunk.
 **Prompt document name**: 2026-11-03 01:21
+
+## 2026-11-03 — fix(jjtl): a many-valued source feature is a collection (P-2026-11-03-0539)
+**Prompt**: `claude_2026-11-03_0539_prompt_jjtl_many_valued_source.md`, full lane: ticket #473, source shape by the declared upper bound; inventory; #474 read; B2 probes rerun; R-JTG-12 test; R-JTG-10..13 rows.
+**Files touched**: `components/project/ProjectEditor.tsx`, `components/project/jjtlSourceValues.ts` (new), `components/project/__tests__/jjtlSourceValues.test.ts` (new), `jjtl/executor/__tests__/called-lazy-rules.test.ts`, `jjtl/SPEC.md` (code commit 4291b39c9); `docs/decisions.md`, this entry, the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (probes in the app: b2-writeback.v1 S1 3 objects, S3 7, S4 fails on #474; current b2-writeback all checks true)
+**Notes**: Shape was by count. #474 left: a deliberate dedup against doubled pointers, its fix is a decision. Inventory: no reliance beyond fixtures; micron Arbiter one-requester forall gained. Bench: bound check dropped kills 6/12. Gates: tsc 0; vitest 501 files, 13209 = 13193 + 16, the known 9 at import; build 0; check:docs 5/5. T write-back 16-17.5 s, unchanged.
+**Prompt document name**: 2026-11-03 05:39

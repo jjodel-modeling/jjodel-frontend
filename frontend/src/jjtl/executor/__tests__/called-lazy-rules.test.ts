@@ -431,6 +431,39 @@ describe.each([
         expect(rootTerms(result)).toEqual(['Add(Const(5), Const(5))', 'Const(5)']);
     });
 
+    // Bind(Add(Var x, Var x), [x := Add(Const 5, Const 6)]): the bound value is placed twice
+    // (R-JTG-12, P-2026-11-03-0539).
+    const boundTree = [
+        el('m1', 'Main', { expr: ref('b1') }),
+        bind('b1', 'a1', ['bd1'], 'm1'),
+        add('a1', 'vx', 'vx2', 'b1'),
+        v('vx', 'x', 'a1'),
+        v('vx2', 'x', 'a1'),
+        binding('bd1', 'x', 'a5', 'b1'),
+        add('a5', 'c5', 'c6', 'bd1'),
+        k('c5', 5, 'a5'),
+        k('c6', 6, 'a5'),
+    ];
+
+    it('resolves the matched descendants of a bound value through the trace: placed twice, a second claim', async () => {
+        const rules = ENV_RULES.replace('lazy Const -> Const', 'Const -> Const');
+        const result = await run(rules, boundTree);
+        const conflicts = result.errors.filter(e => /Containment conflict/.test(e));
+        expect(conflicts).toHaveLength(2);
+        expect(conflicts[0]).toMatch(/Const '?.*'? is claimed by Add .*\.left .* and by Add .*\.left/);
+        expect(conflicts[1]).toMatch(/Const '?.*'? is claimed by Add .*\.right .* and by Add .*\.right/);
+        // The bound Add itself is lowered afresh, once per placement.
+        expect(result.targetModel!.instances.get('Add')).toHaveLength(3);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(2);
+    });
+
+    it('places the same bound tree twice when its descendants are written with lazy rules', async () => {
+        const result = await run(ENV_RULES, boundTree);
+        expect(result.errors).toEqual([]);
+        expect(rootTerms(result)).toEqual(['Add(Add(Const(5), Const(6)), Add(Const(5), Const(6)))']);
+        expect(result.targetModel!.instances.get('Const')).toHaveLength(4);
+    });
+
     it('still reports a second claim through an implicit resolution', async () => {
         const result = await run(`
 lazy Var v = mkRef(v)

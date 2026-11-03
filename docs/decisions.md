@@ -7195,6 +7195,19 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   walk runs, all pointers, root ones included, are written after the tree; the optional `isPlacedIn` is removed with B.
   Ratified by Alfonso (2026-11-02, ok to the recommendations on P-2026-11-02-2108); evidence: measured, verified: the
   lane probes, reversible: trunk.
+- **R-JTG-10 (2026-11-03)**: the delegating rule form `= expression` is part of JjTL: it creates no target of its own and
+  returns what the expression lowers to. Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03,
+  registered by P-2026-11-03-0539; evidence: the lanes of slice B, verified: the slice B tests, reversible: trunk.
+- **R-JTG-11 (2026-11-03)**: `extendEnv`, `envHas`, `envLookup` are builtins, reserved for called rules. Extends R-JTG-5,
+  which stays unchanged. Ratified by Alfonso 2026-11-03, registered by P-2026-11-03-0539; evidence: the lanes of slice B,
+  verified: the slice B tests, reversible: trunk.
+- **R-JTG-12 (2026-11-03)**: a bound value's matched descendants resolve through the trace; what must be lowered several
+  times is written with lazy rules. Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03, registered
+  by P-2026-11-03-0539; evidence: the lanes of slice B, verified: `called-lazy-rules.test.ts` (P-2026-11-03-0539),
+  reversible: trunk.
+- **R-JTG-13 (2026-11-03)**: `resolve()`, `resolveAll()` and `{__ref}` find matched targets only, never a lazy node.
+  Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03, registered by P-2026-11-03-0539; evidence: the
+  lanes of slice B, verified: none, reversible: trunk.
 
 ## Superate
 

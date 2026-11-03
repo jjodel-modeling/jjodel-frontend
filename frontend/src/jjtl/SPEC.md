@@ -719,13 +719,15 @@ The app's write-back of several targets per source element is B2 (list below).
   under its binding site's environment, even an empty one, never resolved to the shared pass-1
   target; that new target is not traced, so a reference to the element still means its pass-1
   target. Its descendants follow their own rules: matched classes resolve through the trace, so
-  a value to be placed twice is lowered by lazy rules. The double-claim error (R-JTG-4)
-  remains for implicit resolutions and `unique` rules.
+  a value to be placed twice is lowered by lazy rules (R-JTG-12). The double-claim error (R-JTG-4)
+  remains for implicit resolutions and `unique` rules. Tested: a bound `Add(Const 5, Const 6)`
+  placed twice with `Const` matched raises one containment conflict per `Const`, and with `Const`
+  lazy places two separate subtrees (`called-lazy-rules.test.ts`, P-2026-11-03-0539).
 - **Non-termination.** More than 256 nested applications (calls, delegations, closures) stop the
   run with one error naming the application stack, innermost first: rule, source element, and
   the bindings visible in each frame.
 
-**Left for B2.** Done by P-2026-11-02-2338, except item 4.
+**Left for B2.** Done by P-2026-11-02-2338; item 4 decided by R-JTG-13.
 1. Done. The app's write-back kept one target per source id (the map at
    `components/project/ProjectEditor.tsx:1809`, as cited by P-2026-11-02-2247): lazy, called and
    fresh targets can be several per source element. Root targets are now found by the identity
@@ -737,9 +739,9 @@ The app's write-back of several targets per source element is B2 (list below).
 3. Done, nothing to change. The legacy `trace` Map, which called, lazy and fresh targets do not
    fill, is read only by `hooks/useJjtlExecutor.ts`, as a fallback when `traceModel.links` is
    empty; every called, lazy and fresh target has a trace link, so no consumer loses one.
-4. Open, awaiting a decision. `resolve()`, `resolveAll()` and `{ __ref }` lookups answer
-   matched rules only: a lazy node is reached by a binding's value, not by an explicit
-   `resolve()`.
+4. Decided (R-JTG-13, 2026-11-03), nothing to change. `resolve()`, `resolveAll()` and
+   `{ __ref }` lookups find matched targets only, never a lazy node: a lazy node is reached by a
+   binding's value, not by an explicit `resolve()`.
 5. Done. A non-abort error raised under a delegating matched rule in pass 2, a lazy-rule
    selection error among them, is an error of that element, `Failed to lower <Class 'x'> by rule
    '<label>': <message>` with the application stack, and the other elements are still lowered;
@@ -892,6 +894,15 @@ it reads `sourceModel.allSubObjects` **once** per Execute (the accessor rescans 
 store on each access), maps each object to `{ id, name, className, __type, ...features }`,
 wraps reference values as `{ __ref: pointerId }` and enum values as the literal's **name**,
 and computes `_containerId` for contained objects. See §4.2.
+
+The shape of a feature follows its declared upper bound (`components/project/jjtlSourceValues.ts`,
+P-2026-11-03-0539): a many-valued feature (upper bound `-1` or above `1`), attribute, reference or
+containment alike, is always a list, `[]` when empty and a one-element list for one value; a
+single-valued feature is the bare value, `null` when empty. A slot with no declared feature keeps
+the shape by count (none `null`, one bare, several a list). Until then the shape was by count for
+every feature, so a many-valued feature with one value reached the rules as a single value:
+`coll.map(...)` failed with `Unknown method 'map'` and a `forall` over it produced nothing. A
+Pointer id repeated in one slot is still kept once (ticket #474, open).
 
 `jjodelConverter.ts` also provides `convertJjodelModelToSource(model)`, which converts
 `LModel.objects` to `SourceElement[]`. It is **not** on the execution path.

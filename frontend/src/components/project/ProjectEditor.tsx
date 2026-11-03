@@ -66,6 +66,7 @@ import {
     type NestedUnplaced,
     type NestedMaterializationReport,
 } from './nestedMaterialization';
+import { serializeFeatureValues } from './jjtlSourceValues';
 import './project-editor.scss';
 
 // The GENERATORS section, lazy: codegen code but setting.ts stays out of the dashboard's eager closure (R-GEN-2).
@@ -1549,29 +1550,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // that freeze the thread during deep copy.
                             // Raw values are either primitives (for attributes) or Pointer
                             // ID strings (for references).
-                            const rawVals: any[] = (() => {
-                                const r = (feature as any).__raw?.values;
-                                return Array.isArray(r) ? r : [];
-                            })();
-                            // Filter empty and deduplicate: DValue.values can contain
-                            // the same Pointer ID twice (e.g., edge created via canvas
-                            // and then via auto-populate, or data corruption).
-                            const seen = new Set<string>();
-                            const meaningful = rawVals.filter((v: any) => {
-                                if (v == null || v === '') return false;
-                                if (typeof v === 'string') {
-                                    if (seen.has(v)) return false;
-                                    seen.add(v);
-                                }
-                                return true;
-                            });
-                            if (meaningful.length === 0) {
-                                result[feature.name] = null;
-                            } else if (meaningful.length === 1) {
-                                result[feature.name] = wrapIfRef(meaningful[0]);
-                            } else {
-                                result[feature.name] = meaningful.map(wrapIfRef);
-                            }
+                            // The shape follows the declared upper bound of the feature
+                            // (jjtlSourceValues.ts): a many-valued feature is always a list,
+                            // whatever the number of values (#473).
+                            const featurePtr = (feature as any).__raw?.instanceof;
+                            const upperBound = featurePtr
+                                ? (store.getState() as any).idlookup?.[featurePtr]?.upperBound
+                                : undefined;
+                            result[feature.name] = serializeFeatureValues(
+                                (feature as any).__raw?.values, upperBound, wrapIfRef
+                            );
                         }
                     }
 
