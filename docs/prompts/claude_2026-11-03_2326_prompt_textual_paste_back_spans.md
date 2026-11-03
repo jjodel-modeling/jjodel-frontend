@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-2326
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane fast · b57178053 · verifica visiva passata 2026-11-03 (chat, RC-23, crops in the lane folder, control run on the old code shows the defect)
 Lane: fast (one defect, Text tab only)
 Depends: P-2026-11-03-2300
 Worktree: ~/jjodel-w-textb, branch textual-b-navigation (the same tree)

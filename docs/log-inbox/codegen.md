@@ -1495,3 +1495,18 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: crops of P-2026-11-03-2152 checked before the merge (RC-23); the printer half changes nothing on screen.
 **Notes**: Blocked on check:docs by a 711-char Notes field the chat wrote for P-2026-11-03-2220; shortened in `607ec2ead`, check:docs 5/5, lane resolved (`resolved.txt`). Rollback tag `pre-textual-a-tolerant-parser` on `00e4bcea4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-2245/result.json`.
 **Prompt document name**: 2026-11-03 22:45
+
+## 2026-11-03 — fix(codegen): a pasted-back text gets its agreed spans back (P-2026-11-03-2326)
+**Prompt**: `claude_2026-11-03_2326_prompt_textual_paste_back_spans.md`, fast lane: the defect of F7 in `discovery_2026-11-03_textual_language_service.md`. The agreement keeps its spans and reference tokens, and they are put back whenever the editor's text equals it again; red test first, mutation bench, gates, in-app keystrokes.
+**Files touched**: `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/__tests__/textualEdit.test.ts` (`b57178053`); this entry and the Status line of the prompt (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc 0 errors; vitest 13479/13480, the 3 baseline files red at import, plus a timing test of the printer (`tolerant.test.ts` (viii), ratio 13.5 over 12 under full-suite load) green alone at 53/53; build exit 0; check:docs 5/5; check:codegen-lazy off and on green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3461 (demoESM): Cmd+A, Backspace, Cmd+V and the 168-to-end block, then a comment: «No change», no panel, model untouched, 5/5 each; the chat's GO pending (RC-23).
+**Notes**: Red first: 4 of 4 new cases failed on a stub that restored nothing. Bench on `agreedEvidence`: null 4 die, tokens dropped 1, text not compared 3, guard dropped 1. The wiring in the component is not reachable from the bench; the probe covers it, and its control on HEAD reproduces F7 («confirm below», two unnamed Transitions). One Undo after the comment is Monaco's own, one word. Probe, logs, crops: `~/.jjodel-lanes/P-2026-11-03-2326/`.
+**Prompt document name**: 2026-11-03 23:26
+
+**Ticket** (not filed as an entry): with the whole text deleted and a wait of more than 800 ms before the paste, the pause applies the empty text (every object deleted, «Applied») and the paste recreates the objects under new ids. Measured in run 1 of the probe (`probe-all-run1-settled.log`). The D-5 clip holds only a cut, not a select-and-delete.
