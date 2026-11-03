@@ -96,3 +96,16 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: passato — chat, unattended: visual GO by Juri on port 3197 (lane tree of feat/196-l2-settings-cutover, 10-item checklist, chat C-2026-11-02-1311); lane probe 14/14 with mocked providers; merge gates 8/8 green
 **Notes**: Rollback tag `pre-feat/196-l2-settings-cutover` on `4ecb408bb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-02-2338/result.json`.
 **Prompt document name**: 2026-11-02 23:38
+
+## 2026-11-03 — feat: #196 L3, chat consumers on src/services/ai, AIProviderService deleted (P-2026-11-03-0005, P-2026-11-03-0020, P-2026-11-03-1201)
+**Prompt**: #196 L3, one lane in two phases (R-AI-14): phase 1 moves the four chat consumers onto src/services/ai and stops for Juri's real-key smoke; phase 2, after his GO, deletes `AIProviderService.ts` and its test and rewrites the catalog test. P-2026-11-03-0005 and P-2026-11-03-0020 each stopped at the context ceiling (RC-51); P-2026-11-03-1201 closed phase 2 from the handoff.
+**Files touched**: `b73651997` services/ai/types.ts, AnthropicCompatibleProvider.ts, GoogleCompatibleProvider.ts, OpenAICompatibleProvider.ts, BaseProvider.ts, ai/__tests__/requestShaping.test.ts; `cc78e8e3f` ExplainModal.tsx, jjodieProvider.ts, AIMatcher.ts, DocumentationService.ts; `24db6dcc8` OpenAICompatibleProvider.ts, requestShaping.test.ts; `f68935ecd` requestShaping.test.ts; `9ae6c479f` aiModelCatalog.test.ts, deleted AIProviderService.ts and AIProviderService.test.ts; this inbox; the `Status:` lines of the three prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9ae6c479f`: typecheck exit 0; vitest 446 files passed, 9 red at import (the nine known), 12263 tests passed; build exit 0. Probe `_tmp_196_l3_probe.ts` under `lane-run probe` on 3199: 28/28 (also 28/28 on 24db6dcc8).
+**Out-of-scope changes**: no. 13 code files, above five: rule 19 confirmed by Juri for L3 (R-AI-14, R-AI-18); OpenAICompatibleProvider.ts beyond R-AI-15 under R-AI-19.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Juri's visual GO on port 3198 and the chat's real-key run (chat C-2026-11-03-0001)
+**Notes**: R-AI-15 signal to the SDKs; R-AI-16 smoke keys; R-AI-17 earlier-turn attachments; R-AI-18 Custom Base URL in BaseProvider.prepare; R-AI-19 no X-Stainless headers. Bridge kept: AI[p].versions read live by AISettingsContent.tsx:300 (L6). failureDisablesProvider: live copy untested (L6). Unattended decisions, coverage map, and Juri's Gemini «Unreachable» (a 503 read as network, gemini-3.7-flash overloaded; to verify): handoffs of P-2026-11-03-0020 and P-2026-11-03-1201.
+**Prompt document name**: 2026-11-03 12:01
