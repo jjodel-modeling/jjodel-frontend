@@ -76,22 +76,42 @@ export interface ParseOptions {
 /** R-TXT-21 (8): only a text read without any error may be applied. */
 export const isApplicableParse = (r: TextParseResult): boolean => r.errors.length === 0 && r.recovered.length === 0;
 
-type TokenKind = 'ID' | 'INT' | 'FLOAT' | 'STR' | 'P' | 'EOF';
+export type TokenKind = 'ID' | 'INT' | 'FLOAT' | 'STR' | 'P' | 'EOF';
+
+/** What a token is in the concrete grammar, set by the parser on the tokens it read; a skipped token has none. */
+export type TokenRole = 'class' | 'keyword' | 'name' | 'value' | 'literal' | 'reference' | 'punctuation';
 
 interface Token {
+    readonly kind: 'token';
     readonly k: TokenKind;
     /** The identifier, the punctuation, the number as written, or the string unescaped. */
     readonly v: string;
+    /** The token as written. */
+    readonly raw: string;
     readonly line: number;
     readonly col: number;
     readonly start: number;
     readonly end: number;
     /** No other token before it on its line. */
     readonly first: boolean;
+    /** The whitespace and comments before it, after the trailing trivia of the token before. */
+    leading: string;
+    /** What follows it up to and including the end of its line, when the line ends before the next token; else empty. */
+    trailing: string;
+    role?: TokenRole;
 }
+
+/** A token with its trivia: the concatenation of `leading`, `raw` and `trailing` over the tokens is the text, byte for byte. */
+export type SyntaxToken = Readonly<Token>;
 
 const IDENT = /[A-Za-z_][A-Za-z0-9_]*/y;
 const NUMBER = /-?\d+(\.\d+)?([eE][+-]?\d+)?/y;
+
+/** The tokens of a text, the last one `EOF`, with their trivia, and the lexical errors. */
+export function tokenizeText(text: string, g: ConcreteGrammar): { readonly tokens: readonly SyntaxToken[]; readonly errors: readonly TextParseError[] } {
+    const errors: TextParseError[] = [];
+    return { tokens: tokenize(g, text, errors), errors };
+}
 
 function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): Token[] {
     const style = g.style;
@@ -114,7 +134,7 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
         return { line: l, col: at - s + 1 };
     };
     const push = (k: TokenKind, v: string, start: number, end: number): void => {
-        toks.push({ k, v, line, col: start - lineStart + 1, start, end, first: line !== lastLine });
+        toks.push({ kind: 'token', k, v, raw: text.slice(start, end), line, col: start - lineStart + 1, start, end, first: line !== lastLine, leading: '', trailing: '' });
         lastLine = line;
     };
     const skipTo = (end: number): void => {
@@ -173,7 +193,33 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
         errors.push({ line, col: i - lineStart + 1, start: i, end: i + 1, message: `unexpected character ${JSON.stringify(ch)}` });
         i++;
     }
-    toks.push({ k: 'EOF', v: '', line, col: i - lineStart + 1, start: i, end: i, first: line !== lastLine });
+    toks.push({ kind: 'token', k: 'EOF', v: '', raw: '', line, col: i - lineStart + 1, start: i, end: i, first: line !== lastLine, leading: '', trailing: '' });
+
+    // Trivia (§A.6): what lies between two tokens goes, up to and including the first line end outside a comment, to the
+    // token before as trailing trivia; the rest to the token after as leading. A gap with no line end is leading trivia,
+    // unless it ends the text. A stray character or an unterminated comment stays in the trivia, with its error.
+    const trailEnd = (from: number, to: number): number => {
+        let j = from;
+        while (j < to) {
+            if (lineComment && text.startsWith(lineComment, j)) { const e = text.indexOf('\n', j); j = e < 0 || e > to ? to : e; continue; }
+            if (blockComment && text.startsWith(blockComment[0], j)) {
+                const e = text.indexOf(blockComment[1], j + blockComment[0].length);
+                j = e < 0 ? to : Math.min(to, e + blockComment[1].length);
+                continue;
+            }
+            if (text[j] === '\n') return j + 1;
+            j++;
+        }
+        return to === text.length ? to : from;
+    };
+    let at = 0;
+    for (let k = 0; k < toks.length; k++) {
+        const t = toks[k];
+        t.leading = text.slice(at, t.start);
+        const next = k + 1 < toks.length ? toks[k + 1].start : t.end;
+        at = trailEnd(t.end, next);
+        t.trailing = text.slice(t.end, at);
+    }
     return toks;
 }
 
