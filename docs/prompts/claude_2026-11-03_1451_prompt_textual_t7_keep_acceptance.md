@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1451
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane fast · 4b34517b0 · verifica visiva passata 2026-11-03 (chat, RC-23, crops of P-2026-11-03-1451; the as-typed path after an application goes to the next lane)
 Lane: fast (closure of work already written and unit-tested)
 Depends: P-2026-11-03-1425 (hard-stop at the ceiling, RC-51; code at 74b0703d5, handoff in its lane folder)
 Worktree: ~/jjodel-w-textt7, branch textual-t7 (the same tree)

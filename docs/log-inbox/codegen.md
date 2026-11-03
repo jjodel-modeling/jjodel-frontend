@@ -1391,3 +1391,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: All five edits retarget the reference silently (parser.ts:652 resolves the path in the edited text); the old index gone is refused by the parse. Five it.fails tests, bench in the commit body; 74 passed, 5 expected fail; tsc exit 0. Recommended: an untouched reference token keeps its target (amends R-TXT-4), awaiting Alfonso.
 **Prompt document name**: 2026-11-03 13:56
+
+## 2026-11-03 — feat(codegen): an untouched reference token keeps its target (P-2026-11-03-1425, P-2026-11-03-1451)
+**Prompt**: P-2026-11-03-1425: R-TXT-35, a reference token the user did not retype keeps the target the print wrote it for; stopped at the ceiling after the code. P-2026-11-03-1451: its Text tab tests, mutation bench, gates, in-app check of five edits, the reprint measured, Briefs, crops.
+**Files touched**: `printer.ts`, `parser.ts`, `textDiff.ts`, `ui/TextualTab.tsx`, `__tests__/textDiff.test.ts` (74b0703d5); `__tests__/textualEdit.test.ts`, `__tests__/textDiff.test.ts` (4b34517b0); this inbox; the Status lines of 1425 and 1451.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa del GO di Alfonso — probe 30 of 31 PASS (the failure is the cleanup of a direct write); crops 1 to 7 in ~/.jjodel-lanes/P-2026-11-03-1451/
+**Notes**: Gates on 4b34517b0: tsc exit 0; vitest 13292 passed, 9 red at import (baseline); build exit 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Bench: 11 mutants, all killed; M5 (owner) and M7 (gone target) survived until two new tests. After an application the text stays as typed until a model change from elsewhere, an Undo, or a reopen. Evidence: ~/.jjodel-lanes/P-2026-11-03-1451/.
+**Prompt document name**: 2026-11-03 14:51

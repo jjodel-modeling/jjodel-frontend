@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1425
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane fast · 74b0703d5 · stopped at the context ceiling (RC-51), closed by P-2026-11-03-1451 · verifica visiva passata 2026-11-03 (chat, RC-23, crops of P-2026-11-03-1451; the as-typed path after an application goes to the next lane)
 Lane: full (write path to a model, printer and diff)
 Depends: P-2026-11-03-1356
 Worktree: ~/jjodel-w-textt7, branch textual-t7 (the same tree)
