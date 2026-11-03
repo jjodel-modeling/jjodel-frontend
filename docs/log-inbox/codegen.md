@@ -1365,3 +1365,81 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: docs and code merge of textual-refs-outside; gates green on the merge; in-app acceptance and crops checked before the merge (P-2026-11-03-1141, RC-23); no new visual check
 **Notes**: Rollback tag `pre-textual-refs-outside` on `7690502cb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1207/result.json`.
 **Prompt document name**: 2026-11-03 12:07
+
+## 2026-11-03 — feat(codegen): text edits move objects and reorder ordered features (P-2026-11-03-1225, P-2026-11-03-1251, P-2026-11-03-1321)
+**Prompt**: Textual T7 in three lanes: 1225 discovery and the JjScript M1 move plan; 1251 moves and reorders in the diff and the Text tab; 1321 in-app acceptance, stopped at the context ceiling (RC-51) after item (6), closed by P-2026-11-03-1356.
+**Files touched**: 10 code files (ee2f4ccc6, 2f16d3f39, ff2c371fd, b2e9bae4d, 1b4064899, 0395e708b, d2125a90f): `codegen/textual/{textDiff.ts, metamodel.ts, ui/TextualTab.tsx}`, `jjscript/executor/{effectsPlanner.ts, planWorld.ts}` and their 5 tests; docs: T7 discovery, this inbox, 4 prompt Status lines.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no — above five files (RC-11), listed in Files touched; the planner files were in 1225's declared reach.
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa del GO di Alfonso — probe ALL PASS, 19 checks (run 3 on d2125a90f); crops 1 to 9 in ~/.jjodel-lanes/P-2026-11-03-1321/
+**Notes**: Gates on d2125a90f: tsc exit 0; vitest 13272 passed, 9 red at import (baseline); build exit 0; check:codegen-lazy green. R1 fixed in the text layer: `-=` out of the old slot before `+=` (a `+=` alone left a hole, measured in the app). Evidence: ~/.jjodel-lanes/P-2026-11-03-1321/handoff.md.
+**Prompt document name**: 2026-11-03 13:21
+
+## 2026-11-03 — test(codegen): positional paths after a move or reorder (P-2026-11-03-1356)
+**Prompt**: P-2026-11-03-1356: measure, with no fix, what an untouched path reference does after a reorder, a cut of an earlier sibling, a deletion, an insertion, and a move of the target; it.fails tests, discovery with a recommended rule; then step (7) of the 1321 handoff.
+**Files touched**: `frontend/src/codegen/textual/__tests__/textDiff.test.ts` (d23d39e7f); `docs/discovery/discovery_2026-11-03_textual_positional_paths.md` (8277287b8); this inbox; the Status lines of the 1225, 1251, 1321 and 1356 prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: All five edits retarget the reference silently (parser.ts:652 resolves the path in the edited text); the old index gone is refused by the parse. Five it.fails tests, bench in the commit body; 74 passed, 5 expected fail; tsc exit 0. Recommended: an untouched reference token keeps its target (amends R-TXT-4), awaiting Alfonso.
+**Prompt document name**: 2026-11-03 13:56
+
+## 2026-11-03 — feat(codegen): an untouched reference token keeps its target (P-2026-11-03-1425, P-2026-11-03-1451)
+**Prompt**: P-2026-11-03-1425: R-TXT-35, a reference token the user did not retype keeps the target the print wrote it for; stopped at the ceiling after the code. P-2026-11-03-1451: its Text tab tests, mutation bench, gates, in-app check of five edits, the reprint measured, Briefs, crops.
+**Files touched**: `printer.ts`, `parser.ts`, `textDiff.ts`, `ui/TextualTab.tsx`, `__tests__/textDiff.test.ts` (74b0703d5); `__tests__/textualEdit.test.ts`, `__tests__/textDiff.test.ts` (4b34517b0); this inbox; the Status lines of 1425 and 1451.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa del GO di Alfonso — probe 30 of 31 PASS (the failure is the cleanup of a direct write); crops 1 to 7 in ~/.jjodel-lanes/P-2026-11-03-1451/
+**Notes**: Gates on 4b34517b0: tsc exit 0; vitest 13292 passed, 9 red at import (baseline); build exit 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Bench: 11 mutants, all killed; M5 (owner) and M7 (gone target) survived until two new tests. After an application the text stays as typed until a model change from elsewhere, an Undo, or a reopen. Evidence: ~/.jjodel-lanes/P-2026-11-03-1451/.
+**Prompt document name**: 2026-11-03 14:51
+
+## 2026-11-03 — merge: textual-t7 into alfonso-frontend-jjtl (P-2026-11-03-1517)
+**Prompt**: `claude_2026-11-03_1517_prompt_merge_textual-t7.md`, a direct merge by `lane-run merge --direct`, no session: `textual-t7` at `d1aea42a1` into `alfonso-frontend-jjtl`, merge base `faa85e8ac`, 21 commits on the branch side.
+**Files touched**: merge `ec570ca11`: 21 files from the branch side (`docs/discovery/discovery_2026-11-03_textual_positional_paths.md`, `docs/discovery/discovery_2026-11-03_textual_t7_moves.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-03_1225_prompt_textual_t7.md`, `docs/prompts/claude_2026-11-03_1251_prompt_textual_t7_continuation.md`, `docs/prompts/claude_2026-11-03_1321_prompt_textual_t7_acceptance.md`, `docs/prompts/claude_2026-11-03_1356_prompt_textual_t7_paths.md`, `docs/prompts/claude_2026-11-03_1425_prompt_textual_t7_keep_refs.md`, and 13 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ec570ca11` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13389 tests in 505 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: merge of textual-t7, gates green on the merge; crops of P-2026-11-03-1321 and P-2026-11-03-1451 checked by the chat before the merge (RC-23); the as-typed path after an application goes to P-2026-11-03-1530
+**Notes**: Rollback tag `pre-textual-t7` on `ed6367578` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1517/result.json`.
+**Prompt document name**: 2026-11-03 15:17
+
+## 2026-11-03 — feat(codegen): after an application the text shows the current paths (P-2026-11-03-1535)
+**Prompt**: R-TXT-35: after an application, rewrite only the reference tokens whose print changed (not the one under the caret, which waits); one Undo per application in model and text; measure the failed cleanup of P-2026-11-03-1451.
+**Files touched**: `ui/TextualTab.tsx`, `__tests__/textualEdit.test.ts` (2c68de01b); `ui/TextualTab.tsx` (4656b4ac6); this inbox; the Status of 1535.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa del GO di Alfonso — probe 36/36 PASS: five edits of 1451 by keystrokes, current path after Applied, caret kept, one Undo restores; caret-on-token held, rewritten on ArrowDown; crops in ~/.jjodel-lanes/P-2026-11-03-1535/
+**Notes**: Gates on 4656b4ac6: tsc exit 0; vitest 13396 passed, 3 red at import (baseline count of 1517); build exit 0; check:docs exit 0; check:codegen-lazy ALL GREEN (off, on). Bench: 11 mutants, all killed. (3): the 1451 cleanup fails without a prior mouse click: the direct write joins the text application's undo step, whose undo reverts the reorder only (stack 1, 1, 0); with a click, 1, 2, 1, 0 and t0. Core reducer history, not the Text tab.
+**Prompt document name**: 2026-11-03 15:35
+
+## 2026-11-03 — merge: textual-applied-paths into alfonso-frontend-jjtl (P-2026-11-03-1558)
+**Prompt**: `claude_2026-11-03_1558_prompt_merge_textual-applied-paths.md`, a direct merge by `lane-run merge --direct`, no session: `textual-applied-paths` at `69c1f6390` into `alfonso-frontend-jjtl`, merge base `968e7a44e`, 4 commits on the branch side.
+**Files touched**: merge `153ac0fb1`: 4 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-03_1535_prompt_textual_applied_paths.md`, `frontend/src/codegen/textual/__tests__/textualEdit.test.ts`, `frontend/src/codegen/textual/ui/TextualTab.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `153ac0fb1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13414 tests in 506 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: merge of textual-applied-paths, gates green on the merge; crops of P-2026-11-03-1535 checked by the chat before the merge (RC-23)
+**Notes**: Rollback tag `pre-textual-applied-paths` on `8f3482ab3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1558/result.json`.
+**Prompt document name**: 2026-11-03 15:58

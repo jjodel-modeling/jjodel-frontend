@@ -510,3 +510,214 @@ Run 1 of b11_9 went from load 4 to 21 during the run, so it is marked loaded. Th
 **Ticket**: Between the click and the output tab the JjTL panel already says "Transformation completed successfully", the status bar says "Success · 122ms · 2559 mapped", and nothing says the write-back is running. Measured with the tab opened after the write-back (P-2026-11-03-1232, dev server): click to tab 4,361-4,416 ms for b10_8 (2,559 objects), 10,667-10,878 ms for b11_9 (5,119 objects), 44,117 ms for b11_9 under load. Above 2 s from about 2,500 objects. No progress UI added: it needs its own lane.
 **Priority**: medium
 **Found in**: P-2026-11-03-1232
+
+## 2026-11-03 — fix(jjtl): a re-run in the same tab no longer executes a stale AST (P-2026-11-03-1315)
+**Prompt**: P-2026-11-03-1315, #446: reproduce the stale AST on a same-tab re-run without the fresh-tab workaround, test first, root cause, fix where the cause is.
+**Files touched**: `frontend/src/jjtl/hooks/useJjtlParser.ts`, `frontend/src/jjtl/hooks/__tests__/useJjtlParser.debounce.test.ts` (new) at 0d0b00228; `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1315_prompt_jjtl_rerun_stale_ast.md` (Status line)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Cause: Monaco delivers one edit as several change events reading the final value; each repeat cleared the 300 ms timer, then hit the same-source return, so the parse never ran and Execute used the old AST. Probe (not a hand run), `~/.jjodel-lanes/P-2026-11-03-1315/stale-ast.ts`, port 3191, one tab, 7 runs: before, R2/R3 ran R1's 1 rule; after, all runs match the source. One app parse path: the legacy no-source parser has no app caller.
+**Prompt document name**: 2026-11-03 13:15
+
+**Ticket** (#446, update): fixed on `jjtl-rerun-stale-ast` at 0d0b00228; stays open until the merge. Unverified side observation: after `OPEN_TRANSFORMATION` on an already open transformation, no `.dock-tab-btn` id ends in `-tab-jjtl_<id>` and the JjTL pane is hidden after the run; the run itself was correct (2 mappings, model TOwner+TPet). Not diagnosed (`DockManager.updateTab`).
+
+## 2026-11-03 — merge: jjtl-rerun-stale-ast into alfonso-frontend-jjtl (P-2026-11-03-1350)
+**Prompt**: `claude_2026-11-03_1350_prompt_merge_jjtl-rerun-stale-ast.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-rerun-stale-ast` at `27a37b79d` into `alfonso-frontend-jjtl`, merge base `8469b98b2`, 3 commits on the branch side.
+**Files touched**: merge `ba649974e`: 4 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1315_prompt_jjtl_rerun_stale_ast.md`, `frontend/src/jjtl/hooks/__tests__/useJjtlParser.debounce.test.ts`, `frontend/src/jjtl/hooks/useJjtlParser.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ba649974e` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13267 tests in 504 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on ba649974e; acceptance by an app probe on the branch, no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-rerun-stale-ast` on `8469b98b2` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1350/result.json`.
+**Prompt document name**: 2026-11-03 13:50
+
+## 2026-11-03 — ticket: JjTL multiplicity [*] creates one target per source, silently
+**Ticket**: `A -> B[*]` creates exactly one target per source, silently: `createTargetInstances` (executor.ts) sets count 1 when the upper bound is -1, and no warning says the multiplicity was ignored. `[n]` creates n. Reproduced on both parser paths by `spec12-known-bugs.test.ts` ("row: multiplicity [*]"). The unbounded semantics are undefined (SPEC §12.3 gap 4), so this is a language decision before it is a fix: what drives the count (a collection expression, the source's own multiplicity), and whether `[*]` should warn until then.
+**Priority**: medium
+**Found in**: P-2026-11-03-1402
+
+## 2026-11-03 — fix(jjtl): SPEC 12.2 rows reviewed, undeclared bindings warned (#445) (P-2026-11-03-1402)
+**Prompt**: P-2026-11-03-1402, each SPEC 12.2 row reproduced and classified real or stale, local fixes here, a ticket for the rest; #445 cause confirmed and a binding to an undeclared feature warned with rule, line and column, never dropped silently.
+**Files touched**: `e784e325d`: `frontend/src/jjtl/executor/executor.ts`, `executor/astBridge.ts`, `executor/__tests__/spec12-known-bugs.test.ts` (new), `executor/__tests__/nested-name-undeclared.test.ts`, `jjtl/__tests__/executor-bridge.test.ts`, `jjtl/__tests__/executor-llayer.test.ts`; `207cd0252`: `frontend/src/jjtl/SPEC.md`, the prompt's `Status:`; this inbox (ticket and entry).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Nine files, all inside the prompt's DOVE. Stale: forAll (3aa5993c8, d3d42310c), flat-array duplicates, double execution (read only, no app probe). Fixed: import-red 9 to 3 (six jjtl files load; two stale expectations updated), {classes,instances} twice, console.log, EDouble tag. Real: [*], ticketed medium (GitHub card skipped on a 504). Regressions unknown: the panel line was not seen in the app. Gates: tsc 0, vitest 13346 passed, build 0.
+**Prompt document name**: 2026-11-03 14:02
+
+## 2026-11-03 — merge: jjtl-spec-12-review into the trunk, closure by hand (P-2026-11-03-1420)
+**Prompt**: P-2026-11-03-1420, direct merge of jjtl-spec-12-review.
+**Files touched**: `docs/prompts/claude_2026-11-03_1420_prompt_merge_jjtl-spec-12-review.md`, `docs/log-inbox/hw-notation.md`
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Merge `89841fc92` stands. The worker reported `blocked` on vitest: 13346 tests, 0 failed, 3 red at import against a before of 13267, 0 failed, 9 red. Compared per file, every difference is a file going from red at import to passing, or the new test file. `lane-run go` refuses a blocked merge, so this closure is by hand; `result.json` was not edited. Unit tests only: the #445 warning has not been seen in the app, and #445 stays open.
+**Prompt document name**: 2026-11-03 14:20
+
+## 2026-11-03 — ticket: merge --direct reads a test file fixed from red at import as a red gate
+**Ticket**: `merge --direct` computes the expected vitest counts from the receiving tip, overwriting only the test files the branch changes. A product change that makes an unchanged test file load (red at import before, passing after) therefore reads as a difference, and the worker ends `blocked` with the merge commit left in place, although nothing failed. Measured on P-2026-11-03-1420: 13346 tests, 0 failed, four files listed as not as expected. `go` then refuses the closure. Suggested: a file going from importRed to passing with 0 failed is not a red gate; report it apart.
+**Priority**: medium
+**Found in**: P-2026-11-03-1420
+
+## 2026-11-03 — ticket: JjTL let bound to a called rule runs the rule at each use, silently
+**Ticket**: A `let` bound to a called-rule call runs the called rule again at each use of the variable: `let $id = idColumn(c) in { columns := [$id] ... key := [$id] }` creates one Column per use (called rules are fresh per call, R-JTG-6), so on Class2Relational 8 extra Columns land at the model root and the table's key and the subclass foreign key point to Columns outside their table. No warning is emitted. Measured by `frontend/src/jjtl/executor/__tests__/class2relational.test.ts` (fixture `class2relational.ts`, workaround W5). Workaround: a second matched rule per role (`Class c -> Column`, `Attribute a -> Column where a.multiValued`) and `resolve(x, "T")` at each use. Either the `let` value is evaluated once (a closure value per R-JTG-5 is computed once per environment), or a second use of a fresh target warns.
+**Priority**: high
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL x.parent is null for any element but the rule's own source
+**Ticket**: `x.parent` is null for any element other than the rule's own source: only the bare `parent` keyword is bound to the container (executor.ts, read around 2827-2856). On Class2Relational `a.parent.name` inside a called rule gives `Cannot access property 'name' of null` warnings, and join tables lose their name, owner column name and Integer type. Measured by `class2relational.test.ts` (workaround W2: bare `parent`, owner passed as an argument). Navigating to the container of any element should read `_containerId` the same way the keyword does.
+**Priority**: medium
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL resolve(x, T) with a bare type name works only as a whole right-hand side
+**Ticket**: `resolve(x, T)` with a bare type name is intercepted only when the call is the whole right-hand side of a binding (executor.ts, read around 4004-4021). Inside `[...]`, a lambda or a `let`, `T` is evaluated as a variable (null) and the call throws the very ambiguity it was written to settle. Measured by `class2relational.test.ts` (workaround W6: quote the name, `resolve(x, "T")`). The bare-name form should be accepted wherever the call appears, or rejected with a message that says to quote it.
+**Priority**: medium
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL binding cut at the newline, continuation gives a misleading parse error
+**Ticket**: A binding ends at the end of its line: a continuation line starting with `+` (`columns := a.map(...)` then `+ b.map(...)` on the next line) is a parse error, `23:13 Expected source attribute name`, which does not say that the expression was cut at the newline. Measured by `class2relational.test.ts` (workaround W1: the whole expression on one line). Either accept a continuation that starts with a binary operator, or name the cause in the message.
+**Priority**: low
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL has no allInstances, the idiom is a search of data
+**Ticket**: JjTL has no `allInstances` (or `T.allInstances()`): a rule that needs a target-independent element of the source model, here the Integer DataType for key columns, has to search `data` (the whole source model, SPEC 7.3) in a no-arg helper, `data.filter(t => t.className == "DataType" and t.name == "Integer").first()`. It works, but a reader must know that `data` exists and what shape it has. Searched in `frontend/src/jjtl/` and `frontend/src/jjel/` with a positive control on `resolveAll`. Measured by `class2relational.test.ts` (workaround W3). Language decision: add `T.allInstances` or document `data` as the idiom.
+**Priority**: low
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL warnings, #445 included, never reach the output panel
+**Ticket**: The #445 warning never reaches the JjTL output panel. Measured by the Class2Relational app probe (`~/.jjodel-lanes/P-2026-11-03-1434/probe/c2r.ts`, real Execute dialog): with `nullable := false` added to the first `Attribute -> Column` rule, the execution result carries exactly `Rule 'Attribute -> Column', binding 'nullable' at line 27, column 5: 'nullable' is not a feature of target class 'Column'; the value is not written to the model.`, but the panel shows the same 7 lines as the run without it, and the toast says only `Created model "out2" with 1 instances.` Read: on success `JjtlDevelopmentEnv.tsx:358-360` writes two fixed lines and does not print `result.warnings`. So #445 is still invisible to a user; a one-line loop over `result.warnings` there would show it. Not fixed in P-2026-11-03-1505 (no product code in scope).
+**Priority**: medium
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — ticket: JjTL floating Execute button partly under the editor scrollbar
+**Ticket**: The floating Execute button of the JjTL editor (`.jjtl-editor-action-btn--primary`, the play icon at the editor's top right) sits partly under Monaco's vertical scrollbar: a pointer click at its centre lands on the scrollbar (`div.visible.scrollbar.vertical` intercepts pointer events), so Playwright cannot click it, with a 72-line text that scrolls. Measured twice by the Class2Relational app probe (`executePointerClickable: false` on both runs; screenshot `~/.jjodel-lanes/P-2026-11-03-1434/probe/c2r-run1-exec-covered.png`). A user can still use the toolbar's Execute or Ctrl+Enter, or the left half of the icon. Suggested: inset the floating toolbar by the scrollbar width.
+**Priority**: low
+**Found in**: P-2026-11-03-1434
+
+## 2026-11-03 — test(jjtl): Class2Relational acceptance, app probe and report (P-2026-11-03-1505)
+**Prompt**: P-2026-11-03-1434 continued by P-2026-11-03-1505: a non-hardware acceptance case, Class2Relational, as executor fixture, app probe through the Execute dialog with save and reopen, the #445 line in the panel, tickets per failure and a report with a verdict on R-JTG-5, 6, 7.
+**Files touched**: `8a064bbbd`: `frontend/src/jjtl/__tests__/fixtures/class2relational.ts` (new), `frontend/src/jjtl/executor/__tests__/class2relational.test.ts` (new), `frontend/src/jjtl/executor/executor.ts` (one line); `e2332b61c`, `7ec6305ae`: this inbox (seven tickets); `6226edf31`: `docs/discovery/discovery_2026-11-03_jjtl_class2relational.md`; this entry and the `Status:` lines of both prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe, no hand run: output equals EXPECTED_SCHEMA (6 tables, 14 columns, 3 FKs, 3 types), same tree after save and reopen; #445 warning in the result, not in the panel
+**Notes**: R-JTG-5/6/7 fit beyond hardware; one design gap, a called rule cannot create once and be referenced twice (`unique` on called rules recommended). Tickets #515-#521. Gates: tsc 0, vitest 13358 passed, 3 red at import plus irSelectionRing afterAll timeout under load (alone 5/5 green), build 0. Details in the report.
+**Prompt document name**: 2026-11-03 15:05
+
+## 2026-11-03 — merge: jjtl-class2relational into alfonso-frontend-jjtl (P-2026-11-03-1532)
+**Prompt**: `claude_2026-11-03_1532_prompt_merge_jjtl-class2relational.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-class2relational` at `7f5d686d6` into `alfonso-frontend-jjtl`, merge base `ed6367578`, 7 commits on the branch side.
+**Files touched**: merge `1cbb75d13`: 7 files from the branch side (`docs/discovery/discovery_2026-11-03_jjtl_class2relational.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1434_prompt_jjtl_class2relational.md`, `docs/prompts/claude_2026-11-03_1505_prompt_jjtl_class2relational_close.md`, `frontend/src/jjtl/__tests__/fixtures/class2relational.ts`, `frontend/src/jjtl/executor/__tests__/class2relational.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `1cbb75d13` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13401 tests in 506 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 1cbb75d13; acceptance by an app probe on the branch, no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-class2relational` on `968e7a44e` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1532/result.json`.
+**Prompt document name**: 2026-11-03 15:32
+
+## 2026-11-03 — ticket: a JjTL rule whose target class does not exist runs without error and writes a partial model
+**Ticket**: a rule whose target class is not declared in the target metamodel (`-> Nope`) is not rejected: the run reports no error and writes a partial target model, 4 nested objects of the 10 the same transformation writes with the class declared. Measured in the app by the probe of P-2026-11-03-1435 (`fix-fail2`), not by hand. It is the case R-FA-11 names: a transformation that goes on writes a target model that is wrong and looks done. Expected: the run stops with an error naming the rule and the class, as an abstract target already does (`fix-fail4`), and writes nothing. Seen beside it, not separated: `envLookup("nope")` in a lazy Const did not fail either (`fix-fail`).
+**Priority**: high
+**Found in**: P-2026-11-03-1435
+
+## 2026-11-03 — ticket: an edit made while a JjTL run is writing is undone with the run
+**Ticket**: the undo step of a JjTL run (R-JTG-14) stays open until the store has been quiet 800 ms after the write-back, so a user edit made inside that window is folded into the run's step: Undo reverts the edit together with the run, Redo reapplies both. Measured by the probe of P-2026-11-03-1435 (`fix-edit2`): an edit at +1.35 s (`c0.num` 0 to 7) is reverted to 0 by Undo and back to 7 by Redo. Reported, not fixed; no fix was designed.
+**Priority**: low
+**Found in**: P-2026-11-03-1435
+
+## 2026-11-03 — feat(jjtl): a JjTL run is one undo step (#458) (P-2026-11-03-1435, P-2026-11-03-1522)
+**Prompt**: P-2026-11-03-1435, Undo after a JjTL run did nothing (#458): one run one undo step, Redo brings it back, no TRANSACTION around creators (NN-12); closed by P-2026-11-03-1522 after the context ceiling of the first session.
+**Files touched**: `8348487c6`: the Layer Impact Report; `5300d78b6`: `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/components/project/nestedMaterialization.ts`, `frontend/src/components/project/__tests__/nestedMaterialization.test.ts`; `a2bfae74e`: `docs/decisions.md` (R-JTG-14); this inbox (two tickets and this entry); the `Status:` lines of both prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — unattended: acceptance by an app probe on the branch (`~/.jjodel-lanes/P-2026-11-03-1435/probe/`), no hand run and no visual check
+**Probe**: this is the app probe of P-2026-11-03-1435, driven by script, not a hand run.
+
+| Case | Before / after | Result |
+|------|----------------|--------|
+| baseline-plain-b2_1 | before the fix | undo 0 after the run; Cmd+Z and Shift+Cmd+Z change nothing |
+| fix-plain-b2_1 | fix | undo 1; Undo: idlookup keys identical to before (model, tab, 11 vertices gone); Redo: keys and tree identical to after the run; the tab is not reopened |
+| fix-second-b2_1 | fix | Undo, second run, Undo: clean; a new run does not clear the redo stack (pre-existing) |
+| fix-fail4-b2_1 | fix | abstract target rejected with the error in the panel, no writes, no undo entry |
+| fix-fail2 | fix | `-> Nope` runs without error, partial model, 4 nested of 10 (ticket, high) |
+| fix-edit2-b2_1 | fix | edit at +1.35 s (`c0.num` 0 to 7) folded into the run's step: Undo 0, Redo 7 (ticket, low) |
+| fix-plain2-b10_8 | fix | group closed after 15339 ms, not capped; Undo blocks about 933 ms (longest task 875 ms), Redo about 309 ms; 11517 keys added, all removed by Undo, all back with an identical tree on Redo |
+
+**Notes**: Root cause measured: after a programmatic run `U.userHasInteracted` stays false, so every delta was dropped. The run raises it (R-UNDO-2) and opens an undo group after the executor succeeds, closed by R-JTG-14 (provisional, unattended). STEP 7 untouched. Unit: 6 new tests, 32/32, mutation bench kills all 6. Gates at `eb432d962`: vitest 13352 passed, 3 red at import (`window is not defined`, the expected three); build 0; tsc 0. Not merged.
+**Prompt document name**: 2026-11-03 14:35
+
+## 2026-11-03 — merge: jjtl-run-undo into alfonso-frontend-jjtl (P-2026-11-03-1542)
+**Prompt**: `claude_2026-11-03_1542_prompt_merge_jjtl-run-undo.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-run-undo` at `a6e9a4b24` into `alfonso-frontend-jjtl`, merge base `ed6367578`, 6 commits on the branch side.
+**Files touched**: merge `a5e66854b`: 8 files from the branch side (`docs/decisions.md`, `docs/discovery/lir_2026-11-03_jjtl_run_undo.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1435_prompt_jjtl_run_undo.md`, `docs/prompts/claude_2026-11-03_1522_prompt_jjtl_run_undo_close.md`, `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/components/project/__tests__/nestedMaterialization.test.ts`, `frontend/src/components/project/nestedMaterialization.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a5e66854b` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13407 tests in 506 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on a5e66854b; acceptance by an app probe on the branch, no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-run-undo` on `a1d892c10` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1542/result.json`.
+**Prompt document name**: 2026-11-03 15:42
+
+## 2026-11-03 — feat(jjtl): run warnings in the Output panel (#520), unique-aware repeats (#474), #447 traced (P-2026-11-03-1553)
+**Prompt**: P-2026-11-03-1553: print a run's warnings in the JjTL panel and see the #445 line in the app, check a flood; #474, dedup only features declared `unique` after checking the canvas double write; #447, trace `init_dash`.
+**Files touched**: `c52fdaeb4`: `frontend/src/jjtl/components/JjtlDevelopmentEnv.tsx`, `frontend/src/jjtl/components/runWarnings.ts` (new), `frontend/src/jjtl/components/__tests__/runWarnings.test.ts` (new); `219083ea6`: `frontend/src/components/project/ProjectEditor.tsx` (serializer lines only), `frontend/src/components/project/jjtlSourceValues.ts`, `frontend/src/components/project/__tests__/jjtlSourceValues.test.ts`; `b9b4e01e0`: `frontend/src/jjtl/SPEC.md`; this inbox; the `Status:` line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probes, no hand run: the #445 line in the Output panel on Class2Relational; 25 warnings print 20 lines and "... and 5 more"; #474 exprs [c1, c1] gives 1 then 2 after unique=false
+**Notes**: Out of scope: runWarnings.ts (the component cannot load in the bench), jjtlSourceValues.ts (the serializer ProjectEditor calls), SPEC 9.1 besides 12.2; nine files in all. Gates on 219083ea6: tsc 0; vitest 13416 passed, 3 red at import, the baseline; build 0. Benches: #520 6/6 killed, #474 5/5. Probes: ~/.jjodel-lanes/P-2026-11-03-1553/probe/ (warn.ts, p474.ts). Not merged.
+**Prompt document name**: 2026-11-03 15:53
+
+**Ticket** (#520, #445, update, not closed before the merge): on success and on failure the panel prints `N warning(s):`, one `Warning: ...` line each up to 20, then `... and K more, listed in the Trace tab.` Seen in the app: `Warning: Rule 'Attribute -> Column', binding 'nullable' at line 27, column 5: 'nullable' is not a feature of target class 'Column'; ...` (`warn-run1-panel.png`). A flood of 25 gives 29 panel lines, not 34.
+
+**Ticket** (#474, update, not closed before the merge): repeats are kept once on a feature declared `unique` (true or absent, the EMF default) and every time on `unique=false`. The double write the dedup guarded against has no source today: the sync hooks write edges, never `DValue.values`. A reference drawn twice on the canvas between the same pair still appends a repeat (`syncCreateReferenceLink` has no `includes` check) and shows one edge; collapsed on a unique feature, a legitimate repeat on a `unique=false` one. The B2 case of the ticket (`exprs` left at the default) still gives 1: it needs `unique=false` to give 2.
+
+**Ticket** (#447, update): `init_dash` is not new. It is `console.error('init_dash')` in `RuntimeStore.init_dashboard` (`frontend/src/redux/store.tsx:240`), called on every load whose hash is not `#/project`, there since `3446baf02` (2025-02-10) and listed in `frontend/scripts/smoke/console-baseline.json:36`. Nothing fails. The fix is trivial (drop the line, rebase the smoke baseline) but `store.tsx` is outside this lane's DOVE: not fixed.
+
+## 2026-11-03 — ticket: JjTL Output panel does not follow its tail and clips long lines
+**Ticket**: The JjTL Output panel does not scroll to its last line when a run appends to it: after a Class2Relational run with one warning, the panel shows lines 1-7 of 9 and the warning sits below the fold (`~/.jjodel-lanes/P-2026-11-03-1553/probe/warn-run1.png`). Long lines, a #445 warning among them, are cut at the panel's right edge, not wrapped (`warn-run2-panel.png`). Measured by the app probe of P-2026-11-03-1553, not by hand. Suggested: scroll to the end on append, and wrap.
+**Priority**: low
+**Found in**: P-2026-11-03-1553
+**Detail**: `~/.jjodel-lanes/P-2026-11-03-1553/probe/warn.json`
+
+## 2026-11-03 — merge: jjtl-panel-warnings-low into alfonso-frontend-jjtl (P-2026-11-03-1619)
+**Prompt**: `claude_2026-11-03_1619_prompt_merge_jjtl-panel-warnings-low.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-panel-warnings-low` at `ef8f75764` into `alfonso-frontend-jjtl`, merge base `8f3482ab3`, 6 commits on the branch side.
+**Files touched**: merge `6fb7d2841`: 9 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1553_prompt_jjtl_panel_warnings_low.md`, `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/components/project/__tests__/jjtlSourceValues.test.ts`, `frontend/src/components/project/jjtlSourceValues.ts`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/components/JjtlDevelopmentEnv.tsx`, `frontend/src/jjtl/components/__tests__/runWarnings.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6fb7d2841` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13423 tests in 507 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 6fb7d2841; app probes on the branch, no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-panel-warnings-low` on `51ea2aad2` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1619/result.json`.
+**Prompt document name**: 2026-11-03 16:19

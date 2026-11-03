@@ -94,6 +94,22 @@ describe('textInputOf', () => {
     it('reads no globals as an empty input', () => {
         expect(textInputOf({})).toEqual({ metamodel: { classes: [], enumerations: [] }, objects: [] });
     });
+
+    it('reads `ordered` off the lookup by the feature id, ordered unless it says false (T7 D-2; dies on the flag dropped, on false read as ordered)', () => {
+        const g = garageGlobals();
+        const [, , car, garage] = g.classes;
+        car.attributes[1].id = 'A_tags';
+        garage.references[0].id = 'R_cars';
+        garage.references[1].id = 'R_people';
+        const lookup = { A_tags: { id: 'A_tags', ordered: false }, R_cars: { id: 'R_cars', ordered: true }, R_people: { id: 'R_people' } };
+        const mm = textInputOf(g, lookup).metamodel;
+        const cls = (name: string) => mm.classes.find(c => c.name === name)!;
+        expect(cls('Car').attributes!.find(a => a.name === 'tags')!.ordered).toBe(false);
+        expect(cls('Garage').references!.find(r => r.name === 'cars')!.ordered).toBe(true);
+        expect(cls('Garage').references!.find(r => r.name === 'people')!.ordered).toBe(true);
+        // Without the lookup the pure layer reads no flag: every feature unordered (R-TXT-21 (5)).
+        expect(textInputOf(g).metamodel).toEqual(EXPECTED_MM);
+    });
 });
 
 describe('textualView', () => {

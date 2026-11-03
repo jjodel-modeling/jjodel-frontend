@@ -15,6 +15,10 @@ import {
     writeNestedAttributeSets,
     awaitNestedSlots,
     formatNestedUnwritten,
+    openRunUndoStep,
+    RUN_QUIET_MS,
+    RUN_UNDO_CAP_MS,
+    type RunUndoDeps,
     ATTRIBUTE_WAIT_CAP_MS,
     NESTED_WALK_WAIT_CAP_MS,
     SLOT_POLL_MS,
@@ -526,5 +530,105 @@ describe('formatNestedUnwritten (#482)', () => {
         expect(formatNestedUnwritten({ ...base, unwritten: { objects: 0, attributes: 0, reason: 'x' } })).toBeNull();
         expect(formatNestedUnwritten({ ...base, unwritten: { objects: 2, attributes: 3, reason: 'attribute slot missing when written' } }))
             .toBe('Attributes not written in "T": 3 value(s) of 2 object(s): attribute slot missing when written');
+    });
+});
+
+/**
+ * A fake store and clock for the run's undo step (#458): `sleep` moves the clock and fires, in order, the
+ * store notifications and the timers due on the way, so a write-back is a script of times.
+ */
+function runStore() {
+    let clock = 0;
+    const calls: string[] = [];
+    const listeners = new Set<() => void>();
+    const due: Array<{ at: number; fire: () => void }> = [];
+    const runDue = (until: number) => {
+        due.sort((a, b) => a.at - b.at);
+        while (due.length && due[0].at <= until) {
+            const d = due.shift()!;
+            clock = Math.max(clock, d.at);
+            d.fire();
+        }
+        clock = Math.max(clock, until);
+    };
+    const deps: RunUndoDeps = {
+        begin: () => { calls.push('begin'); },
+        end: () => { calls.push(`end@${clock}`); },
+        flush: async () => { calls.push('flush'); },
+        subscribe: (l) => { listeners.add(l); return () => { listeners.delete(l); }; },
+        sleep: async (ms) => { runDue(clock + ms); },
+        now: () => clock,
+    };
+    return {
+        deps, calls,
+        /** A store notification (a dispatch) at this time. */
+        dispatchAt: (at: number) => { due.push({ at, fire: () => { for (const l of listeners) l(); } }); },
+        /** A promise that settles at this time. */
+        settleAt: (at: number, reject = false) => new Promise<void>((resolve, rejectP) => {
+            due.push({ at, fire: () => (reject ? rejectP(new Error('write-back failed')) : resolve()) });
+        }),
+        ends: () => calls.filter(c => c.startsWith('end')),
+        endAt: () => Number(calls.find(c => c.startsWith('end'))?.slice(4)),
+    };
+}
+
+describe('openRunUndoStep, a JjTL run is one undo step (#458)', () => {
+    it('flushes the pending batch before the group opens, so a write queued before the run stays out of it', async () => {
+        const s = runStore();
+        await openRunUndoStep(s.deps);
+        expect(s.calls).toEqual(['flush', 'begin']);
+    });
+
+    it('stays open until the write-back has settled and the store has been quiet since its last write', async () => {
+        const s = runStore();
+        const step = await openRunUndoStep(s.deps);
+        const writes = s.settleAt(5000);
+        s.dispatchAt(4900);
+        s.dispatchAt(5100);
+        const r = await step.close(writes);
+        expect(s.ends()).toHaveLength(1);
+        expect(s.endAt()).toBeGreaterThanOrEqual(5100 + RUN_QUIET_MS);
+        expect(s.endAt()).toBeLessThan(5100 + RUN_QUIET_MS + 200);
+        expect(r.capped).toBe(false);
+    });
+
+    it('does not close before the tab deadline, and takes in the writes the tab makes when it opens', async () => {
+        const s = runStore();
+        const step = await openRunUndoStep(s.deps);
+        // Nothing left to write, the store quiet: only the deadline holds the group.
+        s.dispatchAt(2050); // the canvas of the tab, mounted at 2000, makes its vertices
+        s.dispatchAt(2400);
+        await step.close(Promise.resolve(), 2000);
+        expect(s.endAt()).toBeGreaterThanOrEqual(2400 + RUN_QUIET_MS);
+    });
+
+    it('a write-back that fails still closes the group, once', async () => {
+        const s = runStore();
+        const step = await openRunUndoStep(s.deps);
+        const first = step.close(s.settleAt(1000, true));
+        const second = step.close(Promise.resolve());
+        expect(second).toBe(first);
+        await first;
+        expect(s.ends()).toHaveLength(1);
+        expect(s.endAt()).toBeGreaterThanOrEqual(1000);
+    });
+
+    it('a store that never goes quiet, or a write-back that never settles, is bounded: the group closes at the cap', async () => {
+        const s = runStore();
+        const step = await openRunUndoStep(s.deps);
+        for (let t = 100; t < RUN_UNDO_CAP_MS + 5000; t += 300) s.dispatchAt(t);
+        const r = await step.close(new Promise<void>(() => {}));
+        expect(r.capped).toBe(true);
+        expect(s.endAt()).toBe(RUN_UNDO_CAP_MS);
+        expect(s.ends()).toHaveLength(1);
+    });
+
+    it('nothing left to write: closes after one quiet window', async () => {
+        const s = runStore();
+        const step = await openRunUndoStep(s.deps);
+        const r = await step.close();
+        expect(s.endAt()).toBeGreaterThanOrEqual(RUN_QUIET_MS);
+        expect(s.endAt()).toBeLessThan(RUN_QUIET_MS + 200);
+        expect(r).toEqual({ waitedMs: s.endAt(), capped: false });
     });
 });

@@ -7133,6 +7133,28 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   the inner targets. Kept verbatim it writes nothing; deleted it clears or unlinks; retyped to a name or path it is an
   ordinary retarget; an edited id, or the token at another owner or feature, is refused. It is never re-resolved by name
   or position. R-TXT-4 is unchanged for targets inside the text.
+- **R-TXT-33** (2026-11-03, Alfonso 14:21). Evidence: read, report docs/discovery/discovery_2026-11-03_textual_t7_moves.md. For R-TXT-19, a feature
+  is declared ordered unless `ordered === false`, the Ecore default: reversing a list in the text reorders the model. For
+  R-TXT-22, a cut followed by a paste of the identical text is certain identity, with no confirmation; any other move is
+  uncertain and confirmed; a paste with the original still in the text is a new object.
+- **R-TXT-34** (2026-11-03, Alfonso 13:53). **The goal of the textual syntax front becomes an IDE-level editor.** (1) Writing
+  expressions with binary operators enters the plan: `driver` reads as `st & (is_sw)` instead of Conj/Disj/ops pyramids,
+  with a round trip to the model. (2) The outline lives inside the Text tab, left of the text, and can be collapsed. (3)
+  This work goes ahead of the rest of the plan; T8 comes after it. One language service derived from grammar and
+  metamodel, wired to the Monaco providers, with no code specific to a metamodel. Acceptance on a non-hardware metamodel
+  first; the Briefs stay a read-only regression check. Order after T7: A tolerant parser with positions together with T9;
+  B semantic highlighting, outline, breadcrumb, folding, go to definition, find references, hover; C expression notation,
+  T4b, T5; D contextual completion, line errors with quick fixes, safe rename, formatting; E T10 with selection synced
+  between text and canvas; F embedded JjEL strings, generated line to model line, then T8. Out for now: debugger, terminal,
+  multi-file editing; the minimap only if Monaco offers it at no cost. R-TXT-21 (8) stands: objects recovered from a broken
+  text are never applied.
+- **R-TXT-35** (2026-11-03, Alfonso 14:21, «ok alle raccomandazioni»). **Amends R-TXT-4: a reference the user did not retype keeps its target.** Evidence: measured,
+  report docs/discovery/discovery_2026-11-03_textual_positional_paths.md (five silent retargets on an untouched path). A
+  printed reference with the same text, owner and feature as in the previous print stays on the object it was printed for
+  and writes nothing, for paths and for names alike. A retyped reference resolves in the edited text as before. A target
+  deleted in the same edit clears the reference. After an application the reprint shows the new path. Paths are not
+  rewritten during an edit or a paste. R-TXT-33 is ratified with this answer, as is holding a cut until its paste, with the
+  status `Cut · paste to move it` and a Delete button.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
@@ -7218,6 +7240,10 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-JTG-13 (2026-11-03)**: `resolve()`, `resolveAll()` and `{__ref}` find matched targets only, never a lazy node.
   Extends R-JTG-5, which stays unchanged. Ratified by Alfonso 2026-11-03, registered by P-2026-11-03-0539; evidence: the
   lanes of slice B, verified: none, reversible: trunk.
+- **R-JTG-14** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL run
+  is one undo step. The group opens after the executor succeeds and closes when the store has had no writes for 800 ms
+  after the write-back, capped at 180 s; the output tab and its vertices are part of the step. Redo restores the model
+  and does not reopen the tab. Evidence: the probe of P-2026-11-03-1435.
 - **R-FA-11 (2026-11-03), decided by the chat under Alfonso's «decidi tu» 2026-11-03 11:32, evidence: measured (P-2026-11-03-1016), verified: none, reversible: trunk**: a builtin that fails inside a JjTL
   expression stops the mapping with an error on every path, never a warning with `null`: a transformation that goes on writes a target model that is wrong and looks done.
   With this, JjEL can be the only parser of a forall collection.

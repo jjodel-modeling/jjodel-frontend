@@ -78,6 +78,63 @@ describe('serializeFeatureValues', () => {
         expect(serializeFeatureValues(['Pointer1_a_1', 'Pointer1_a_1'], -1, wrap))
             .toEqual([{ __ref: 'Pointer1_a_1' }]);
     });
+
+    // #474: the collapse applies to features declared unique only, the EMF default; a feature
+    // declared unique=false hands every repeat to the rules.
+    it('keeps a repeated value once on a feature declared unique, or with no unique flag', () => {
+        expect(serializeFeatureValues(['Pointer1_a_1', 'Pointer1_a_1'], -1, wrap, true))
+            .toEqual([{ __ref: 'Pointer1_a_1' }]);
+        expect(serializeFeatureValues(['Pointer1_a_1', 'Pointer1_a_1'], -1, wrap, undefined))
+            .toEqual([{ __ref: 'Pointer1_a_1' }]);
+        expect(serializeFeatureValues(['x', 'x'], -1, wrap, true)).toEqual(['x']);
+        // Only an explicit false turns the collapse off.
+        expect(serializeFeatureValues(['x', 'x'], -1, wrap, null)).toEqual(['x']);
+    });
+
+    it('keeps every repeat on a feature declared unique=false (#474)', () => {
+        expect(serializeFeatureValues(['Pointer1_a_1', 'Pointer1_a_1'], -1, wrap, false))
+            .toEqual([{ __ref: 'Pointer1_a_1' }, { __ref: 'Pointer1_a_1' }]);
+        expect(serializeFeatureValues(['x', 'x', null, ''], -1, wrap, false)).toEqual(['x', 'x']);
+        expect(serializeFeatureValues(['Pointer1_a_1', 'Pointer1_a_1'], undefined, wrap, false))
+            .toEqual([{ __ref: 'Pointer1_a_1' }, { __ref: 'Pointer1_a_1' }]);
+    });
+});
+
+describe('a repeated pointer in a many-valued reference (#474)', () => {
+    const RULE_474 = `
+Arbiter a -> M {
+    a := requirements.size()
+    -> regs {
+        forall p in requirements -> Reg {
+            name := p.name
+        }
+    }
+}
+`;
+    const run = async (unique: boolean) => {
+        const src = [
+            {
+                id: 'A1', name: 'arb', className: 'Arbiter', __type: 'Arbiter',
+                requirements: serializeFeatureValues(['Pointer1_r_1', 'Pointer1_r_1'], -1, wrap, unique),
+            },
+            { id: 'Pointer1_r_1', name: 'r1', className: 'Requirement', __type: 'Requirement', _containerId: 'A1' },
+        ];
+        const result = await execute(parseJjtl(RULE_474, true), src, TARGET);
+        expect(result.success).toBe(true);
+        return result.targetModel!.instances.get('M')![0];
+    };
+
+    it('reaches the rules twice when the reference is declared unique=false', async () => {
+        const m = await run(false);
+        expect(m.a).toBe(2);
+        expect((m.regs ?? []).map((r: any) => r.name)).toEqual(['r1', 'r1']);
+    });
+
+    it('reaches the rules once when the reference is unique', async () => {
+        const m = await run(true);
+        expect(m.a).toBe(1);
+        expect((m.regs ?? []).map((r: any) => r.name)).toEqual(['r1']);
+    });
 });
 
 function cls(name: string, attributes: string[], references: any[] = []) {

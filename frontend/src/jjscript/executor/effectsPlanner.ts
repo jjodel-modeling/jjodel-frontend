@@ -42,6 +42,9 @@
  * values in a conforming model (`FEATURE_HAS_VALUES`, one per model, from `PlanMetamodel.slotValues`;
  * the line still plans). A mixed script is planned per level (`lineLevel`).
  *
+ * M1 move (P-2026-11-03-1225): a containment `+=` or `=` takes the target out of the slot that held it, and the
+ * reference effect carries `movedFrom`; a `-=` of a child the model lists takes it to the top level.
+ *
  * Declared limits: `let`, `forall`, blocks, `move`, `copy` and an M2 `remove` are `unsupported`;
  * a `delete` lists the contained elements it cascades to but not the incoming links it clears;
  * M2 names resolve inside the metamodel only (the executor's project-wide fallback is not mirrored).
@@ -94,6 +97,8 @@ export interface PlanElement {
     className: string;
     /** Listed in `model.objects`. */
     root: boolean;
+    /** Listed in `model.objects`, contained or not (R-NEST-1): the executor's `isListedAtRoot` (`instance.ts:440-443`). */
+    listed?: boolean;
     /** The slot that is its father, when it is a contained instance. */
     container?: { owner: string; feature: string };
     /** Reference slots by feature: the ids they hold (`__raw.values`, holes dropped). */
@@ -213,6 +218,8 @@ export interface PlannedReference {
     targetCreated: boolean;
     /** Ids taken out of the slot. */
     removed: string[];
+    /** A containment write that took the target out of another slot: a move (`LModelElement.tsx:7961-7978`). */
+    movedFrom?: { owner: string; feature: string };
 }
 
 export interface PlannedRename { line: number; id: string; from: string; to: string; level?: 'M2' }
@@ -260,6 +267,8 @@ interface SimElement {
     name: string;
     className: string;
     root: boolean;
+    /** `PlanElement.listed`; an instance this run creates is not (its listing lands after the run's writes). */
+    listed: boolean;
     container?: { owner: string; feature: string };
     references: Record<string, string[]>;
     created: boolean;
@@ -294,7 +303,7 @@ class Simulation {
 
     constructor(readonly world: PlanWorld) {
         this.elements = world.elements.map((e) => ({
-            id: e.id, name: e.name, className: e.className, root: e.root,
+            id: e.id, name: e.name, className: e.className, root: e.root, listed: !!e.listed,
             container: e.container ? { ...e.container } : undefined,
             references: Object.fromEntries(Object.entries(e.references ?? {}).map(([k, v]) => [k, [...v]])),
             created: false, deleted: false,
@@ -441,7 +450,7 @@ function planCreate(sim: Simulation, args: CreateArgs, line: number): LineResult
 
     const id = sim.nextId();
     sim.elements.push({
-        id, name, className, root: !container, references: {}, created: true, deleted: false,
+        id, name, className, root: !container, listed: false, references: {}, created: true, deleted: false,
         container: container ? { owner: container.owner.id, feature: container.feature } : undefined,
     });
     sim.handles.set(name, id);                                                                                        // :633-634
@@ -506,20 +515,22 @@ function planSet(sim: Simulation, args: SetArgs, line: number): LineResult {
     if (operator !== '-=' && !conforms(sim.world, target.className, ref.type)) {
         return fail('TYPE_MISMATCH', `'${targetName}' is a ${target.className}: ${cls.name}.${ref.name} holds ${ref.type} and its subclasses`);
     }
-    const effect = (op: PlannedReference['operator'], removed: string[]): LineResult =>
-        ok({ kind: 'reference', value: { ...base, operator: op, target: targetName, targetId: target.id, targetCreated: target.created, removed } });
+    const effect = (op: PlannedReference['operator'], removed: string[], moved?: Map<string, { owner: string; feature: string }>): LineResult => {
+        const movedFrom = moved?.get(target.id);
+        return ok({ kind: 'reference', value: { ...base, operator: op, target: targetName, targetId: target.id, targetCreated: target.created, removed, ...(movedFrom ? { movedFrom } : {}) } });
+    };
 
     if (operator === '+=') {                                                                                          // :1230-1240
         const plan = planAdd(slot, target.id, ref.upper);
         if ('full' in plan) return fail('MULTIPLICITY_EXCEEDED', `'${ownerName}.${ref.name}' is full (at most ${plan.full})`);
-        if ('write' in plan) putIn(sim, source, ref, plan.write);
-        return effect('+=', []);
+        return effect('+=', [], 'write' in plan ? putIn(sim, source, ref, plan.write) : undefined);
     }
     if (operator === '-=') {                                                                                          // :1241-1253
         const plan = planRemove(slot, target.id);
         if ('absent' in plan) return fail('NOT_LINKED', `'${targetName}' is not in ${ownerName}.${ref.name}`);
         const bornHere = target.container?.owner === source.id && target.container.feature === ref.name;
-        if (ref.containment && bornHere && !target.root) {
+        // The executor refuses only a child the model does not list (`isListedAtRoot`); a listed one goes to the top level.
+        if (ref.containment && bornHere && !target.root && !target.listed) {
             return fail('WOULD_ORPHAN', `Cannot remove '${targetName}' from ${ownerName}.${ref.name}: it would be left outside the model`);
         }
         takeOut(sim, source, ref, plan.remove);
@@ -527,8 +538,7 @@ function planSet(sim: Simulation, args: SetArgs, line: number): LineResult {
     }
     const plan = planLink(slot, target.id, isManyValued(ref.upper));                                                 // :1162-1166
     takeOut(sim, source, ref, plan.remove);
-    if (plan.write) putIn(sim, source, ref, plan.write);
-    return effect('=', plan.remove);
+    return effect('=', plan.remove, plan.write ? putIn(sim, source, ref, plan.write) : undefined);
 }
 
 /** `removeLinked` (`instance.ts:344-351`): out by value; a contained child fathered here goes back to the model. */
@@ -540,14 +550,26 @@ function takeOut(sim: Simulation, source: SimElement, ref: PlanReference, ids: r
     }
 }
 
-/** `refProxy.values = write`: a containment target moves into the slot (`referenceWrite.ts:13-14`). */
-function putIn(sim: Simulation, source: SimElement, ref: PlanReference, write: string[]): void {
+/**
+ * `refProxy.values = write`: a containment target moves into the slot (`referenceWrite.ts:13-14`), out of the slot
+ * that held it (`LModelElement.tsx:7964-7978`, the detach from the old parent). Returns the moved ids, by origin.
+ */
+function putIn(sim: Simulation, source: SimElement, ref: PlanReference, write: string[]): Map<string, { owner: string; feature: string }> {
+    const moved = new Map<string, { owner: string; feature: string }>();
     source.references[ref.name] = [...write];
-    if (!ref.containment) return;
+    if (!ref.containment) return moved;
     for (const id of write) {
         const e = sim.byId(id);
-        if (e) e.container = { owner: source.id, feature: ref.name };
+        if (!e) continue;
+        const from = e.container;
+        if (from && (from.owner !== source.id || from.feature !== ref.name)) {
+            const owner = sim.byId(from.owner);
+            if (owner) owner.references[from.feature] = sim.slot(owner, from.feature).filter((v) => v !== id);
+            moved.set(id, { ...from });
+        }
+        e.container = { owner: source.id, feature: ref.name };
     }
+    return moved;
 }
 
 /** `executeRenameInstance` (`instance.ts:790-897`). */
