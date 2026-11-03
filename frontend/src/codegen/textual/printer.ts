@@ -8,12 +8,17 @@
  * The span of each object (from its first token to its last) is returned with the text: the origins that step T6
  * matches a re-parsed text against (R-TXT-22). So is the span of each reference token, with the target it names: a
  * token the user did not retype keeps that target (R-TXT-35).
+ *
+ * So is the lossless tree of the text (step A, design item 8): the nodes `parseText` builds when it reads the text back,
+ * so that a printed text and its parse give equal trees and step T10 can splice nodes.
  */
 
 import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
 import { applyCase, derivedName } from './concreteGrammar';
 import { isOuterRef } from './metamodel';
-import type { TextObject } from './metamodel';
+import type { OuterRef, TextObject } from './metamodel';
+import { tokenizeText } from './parser';
+import type { ObjectNode, ParsedRef, SyntaxNode, SyntaxToken, TextNode, TokenRole } from './parser';
 
 /** `[start, end)` offsets into the printed text. */
 export interface ObjectSpan {
@@ -63,6 +68,11 @@ export interface UnprintedObject {
 /** What `printTextModel` returns: the text, its spans, and the objects it leaves out. */
 export interface TextPrintReport extends TextPrintResult {
     readonly unprinted: readonly UnprintedObject[];
+    /**
+     * The lossless tree of the text, equal to the one `parseText` builds from it, the object ids being the model's
+     * (step A). Absent when the tokens read in the text do not match the tokens printed.
+     */
+    readonly tree?: TextNode;
 }
 
 /** R-TXT-30: whether the text leaves objects out. Step T6 never applies a text while it does: their absence would read as a deletion. */
@@ -106,6 +116,71 @@ function groupStars(n: GrammarNode | undefined): Extract<GrammarNode, { t: 'star
     if (n.t === 'star') return n.where ? [n] : [];
     if (n.t === 'opt') return groupStars(n.item);
     return n.t === 'seq' || n.t === 'block' ? n.items.flatMap(groupStars) : [];
+}
+
+/** A token as printed, before the tokenizer reads it: a reference prints as one, and may read as several. */
+interface Emitted {
+    readonly kind: 'emitted';
+    readonly start: number;
+    readonly end: number;
+    readonly role: TokenRole;
+}
+
+/** A node of the tree while the print builds it. */
+interface Building {
+    readonly kind: SyntaxNode['kind'];
+    start: number;
+    end: number;
+    children: (Building | Emitted | SyntaxToken)[];
+    readonly id?: string;
+    readonly cls?: string;
+    readonly rule?: string;
+    readonly state?: ObjectNode['state'];
+    readonly feature?: string;
+    readonly closed?: boolean;
+    ref?: ParsedRef;
+    tokens?: readonly SyntaxToken[];
+}
+
+/**
+ * The tree of a printed text: each printed token is replaced by the tokens the tokenizer reads in it, with its role (in
+ * a reference, the punctuation of a path is punctuation, as the parser reads it), and each node spans its tokens as
+ * `parseText` seals it. A node that printed nothing is dropped. Undefined when a token read lies outside every printed one.
+ */
+function treeOf(g: ConcreteGrammar, text: string, root: Building): TextNode | undefined {
+    const read = tokenizeText(text, g).tokens;
+    const tokens: SyntaxToken[] = [];
+    let k = 0;
+    let ok = true;
+    const fill = (n: Building): boolean => {
+        const children: Building['children'] = [];
+        for (const c of n.children) {
+            if (c.kind === 'emitted') {
+                for (; k < read.length - 1 && read[k].start >= c.start && read[k].end <= c.end; k++) {
+                    const t = read[k];
+                    const role: TokenRole = c.role === 'reference' && t.k === 'P' && t.v !== '@' ? 'punctuation' : c.role;
+                    const leaf: SyntaxToken = { ...t, role };
+                    tokens.push(leaf);
+                    children.push(leaf);
+                }
+                if (k < read.length - 1 && read[k].start < c.end) ok = false;
+            } else if (c.kind !== 'token' && fill(c)) children.push(c);
+        }
+        n.children = children;
+        if (!children.length) return false;
+        n.start = children[0].start;
+        n.end = children[children.length - 1].end;
+        return true;
+    };
+    fill(root);
+    if (!ok || k !== read.length - 1) return undefined;
+    const eof = read[read.length - 1];
+    tokens.push(eof);
+    root.children.push(eof);
+    root.start = root.children[0].start;
+    root.end = eof.end;
+    root.tokens = tokens;
+    return root as unknown as TextNode;
 }
 
 const isSet = (v: unknown): boolean => v != null && !(Array.isArray(v) && v.length === 0);
@@ -224,7 +299,26 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     const starts = new Map<string, number>();
     const refs: RefSpan[] = [];
 
-    const token = (s: string, punct = false): void => {
+    // The tree (step A): the nodes the parser opens for each part it reads, opened by the walk where the part prints.
+    const root: Building = { kind: 'text', start: 0, end: 0, children: [] };
+    const stack: Building[] = [root];
+    const cur = (): Building => stack[stack.length - 1];
+    const within = (n: Omit<Building, 'start' | 'end' | 'children'>, fn: (b: Building) => void): void => {
+        const b: Building = { ...n, start: 0, end: 0, children: [] };
+        cur().children.push(b);
+        stack.push(b);
+        try { fn(b); } finally { stack.pop(); }
+    };
+    /** An item node for a value of `feat`, unless the current node is one already, or a list of it (as `parseText` opens them). */
+    const itemFor = (feat: string, fn: () => void): void => {
+        const c = cur();
+        if ((c.kind === 'item' || c.kind === 'list') && c.feature === feat) fn();
+        else within({ kind: 'item', feature: feat }, fn);
+    };
+    /** The first keyword of an object rule's body: its class keyword (`parseText` reads it with the role `class`). */
+    const classKeywords = new Set<GrammarNode>(g.rules.flatMap(r => (r.t === 'object' && r.body.t === 'seq' && r.body.items[0]?.t === 'kw' ? [r.body.items[0]] : [])));
+
+    const token = (s: string, punct = false, role: TokenRole = punct ? 'punctuation' : 'keyword'): void => {
         if (breakPending) { out += blankPending ? '\n\n' : '\n'; breakPending = false; atLineStart = true; }
         blankPending = false;
         bodyStart = false;
@@ -232,6 +326,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         else if (!(punct && glueBefore.has(s)) && !(lastPunct && glueAfter.has(last))) out += ' ';
         for (const id of opening) starts.set(id, out.length);
         opening = [];
+        cur().children.push({ kind: 'emitted', start: out.length, end: out.length + s.length, role });
         out += s;
         atLineStart = false;
         last = s;
@@ -241,8 +336,9 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
 
     const object = (o: TextObject, ruleName?: string): void => {
         const named = ruleName !== undefined ? ruleNamed.get(ruleName) : undefined;
+        const rule = named?.cls === o.cls ? named : ruleOf(o);
         opening.push(o.id);
-        emit((named?.cls === o.cls ? named : ruleOf(o)).body, o, undefined);
+        within({ kind: 'object', id: o.id, cls: o.cls, rule: rule.name, state: 'complete' }, () => emit(rule.body, o, undefined));
         spans.push({ id: o.id, start: starts.get(o.id) ?? out.length, end: out.length });
     };
 
@@ -272,15 +368,21 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
                 const outer = t ? undefined : outerOf(v);
                 const s = t ? ref(n, t) : outer !== undefined ? `@${quote(outer)}` : undefined;
                 if (s === undefined) return;
-                token(s);
+                within({ kind: 'ref', feature: feat }, b => {
+                    token(s, false, 'reference');
+                    if (o && feat !== undefined) {
+                        const to: string | OuterRef = t ? t.id : { outer: outer! };
+                        b.ref = { owner: o.id, feature: feat, start: out.length - s.length, end: out.length, text: s, outer: !t, to };
+                    }
+                });
                 if (o && feat !== undefined) refs.push({ owner: o.id, feature: feat, target: t ? t.id : outer!, text: s, start: out.length - s.length, end: out.length });
                 return;
             }
-            case 'lit': token(applyCase(String(v), g.literalCase)); return;
+            case 'lit': token(applyCase(String(v), g.literalCase), false, 'literal'); return;
             case 'tok':
-                if (n.terminal === 'STRING') token(quote(String(v)));
-                else if (n.terminal === 'NAME') token(name(String(v)));
-                else token(String(v));
+                if (n.terminal === 'STRING') token(quote(String(v)), false, 'value');
+                else if (n.terminal === 'NAME') token(name(String(v)), false, feat === 'name' ? 'name' : 'value');
+                else token(String(v), false, 'value');
                 return;
             default: throw new Error(`a ${n.t} node is not a value`);
         }
@@ -290,34 +392,45 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     const emit = (n: GrammarNode, o: TextObject, elem: unknown): void => {
         switch (n.t) {
             case 'seq': for (const x of n.items) emit(x, o, elem); return;
-            case 'opt': if (shown(n, o)) emit(n.item, o, elem); return;
-            case 'star': for (const v of values(n, o)) emit(n.item, o, v); return;
-            case 'kw': token(n.text); return;
+            case 'opt': if (shown(n, o)) within({ kind: 'item', feature: n.feat }, () => emit(n.item, o, elem)); return;
+            case 'star':
+                for (const v of values(n, o)) {
+                    if (n.feat !== undefined) within({ kind: 'item', feature: n.feat }, () => emit(n.item, o, v));
+                    else emit(n.item, o, v);
+                }
+                return;
+            case 'kw': token(n.text, false, classKeywords.has(n) ? 'class' : 'keyword'); return;
             case 'p': token(n.text, true); return;
             case 'nl': if (!n.blank) newline(); else if (!bodyStart) blankPending = true; return;
             case 'assign': {
                 // A required name left unset prints nothing: the text then reads back with the error at its place.
                 if (elem === undefined && o.slots[n.feat] == null) return;
-                value(n.item, elem !== undefined ? elem : o.slots[n.feat], o, n.feat);
+                const item = n.item;
+                itemFor(n.feat, () => value(item, elem !== undefined ? elem : o.slots[n.feat], o, n.feat));
                 return;
             }
             case 'list': {
                 const vs = asArray(o.slots[n.feat]).filter(v => !(n.item.t === 'assign' && n.item.item.t === 'xref') || resolve(v) || outerOf(v) !== undefined);
-                token(n.open, true);
-                vs.forEach((v, i) => { if (i) token(n.separator, true); emit(n.item, o, v); });
-                token(n.close, true);
+                within({ kind: 'list', feature: n.feat }, () => {
+                    token(n.open, true);
+                    vs.forEach((v, i) => { if (i) token(n.separator, true); emit(n.item, o, v); });
+                    token(n.close, true);
+                });
                 return;
             }
             case 'block':
-                if (!n.items.some(x => present(x, o))) { for (const s of n.empty) token(s, !/^\w/.test(s)); return; }
-                for (const s of n.open) token(s, !/^\w/.test(s));
-                newline();
-                bodyStart = true;
-                depth++;
-                for (const x of n.items) emit(x, o, elem);
-                newline();
-                depth--;
-                for (const s of n.close) token(s, !/^\w/.test(s));
+                // Open, close and empty block are punctuation to the parser, words included.
+                within({ kind: 'block', closed: true }, () => {
+                    if (!n.items.some(x => present(x, o))) { for (const s of n.empty) token(s, !/^\w/.test(s), 'punctuation'); return; }
+                    for (const s of n.open) token(s, !/^\w/.test(s), 'punctuation');
+                    newline();
+                    bodyStart = true;
+                    depth++;
+                    for (const x of n.items) emit(x, o, elem);
+                    newline();
+                    depth--;
+                    for (const s of n.close) token(s, !/^\w/.test(s), 'punctuation');
+                });
                 return;
             default: throw new Error(`a ${n.t} node is not printed inside an object`);
         }
@@ -333,5 +446,5 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         return n;
     };
     const unprinted = left.filter(u => printed.has(u.owner)).map(u => ({ ...u, inside: insideOf(u.id) }));
-    return { text: out, spans: [...spans].sort((a, b) => a.start - b.start), refs, unprinted };
+    return { text: out, spans: [...spans].sort((a, b) => a.start - b.start), refs, unprinted, tree: treeOf(g, out, root) };
 }

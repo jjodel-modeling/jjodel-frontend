@@ -296,3 +296,33 @@ describe('(vi) the match of a broken parse, for display only', () => {
         expect(r.match.created).toEqual([]);
     });
 });
+
+describe('(vii) the printer builds the same tree (P-2026-11-03-2220)', () => {
+    /**
+     * A tree as plain data, every field compared and none skipped, but the object ids replaced by their place in text
+     * order: a print names the model's ids, a parse its own `t1`, `t2`, ...
+     */
+    const plain = (tree: TextNode): unknown => {
+        const ids = new Map(objectNodes(tree).map((n, i) => [n.id, `#${i}`]));
+        const id = (v: unknown): unknown => (typeof v === 'string' ? ids.get(v) ?? `unknown ${v}` : v);
+        const defined = (x: object): Record<string, unknown> => Object.fromEntries(Object.entries(x).filter(([, v]) => v !== undefined));
+        const node = (n: SyntaxElement): unknown => {
+            if (n.kind === 'token') return defined(n);
+            const out = defined(n);
+            if (n.kind === 'object') out.id = id(n.id);
+            if (n.kind === 'text') out.tokens = n.tokens.map(node);
+            if (n.kind === 'ref' && n.ref) out.ref = { ...defined(n.ref), owner: id(n.ref.owner), to: id(n.ref.to) };
+            out.children = n.children.map(node);
+            return out;
+        };
+        return node(tree);
+    };
+
+    it.each(CASES.map(c => [c.name, c] as const))('%s: the tree of the print and the tree of its parse are equal, node for node, token for token', (_, c) => {
+        const print = printTextModel(c.g, c.objects);
+        const parsed = parseText(print.text, c.g);
+        expect(parsed.errors).toEqual([]);
+        expect(print.tree).toBeDefined();
+        expect(plain(print.tree!)).toStrictEqual(plain(parsed.tree!));
+    });
+});
