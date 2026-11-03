@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1016
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane jjtl-collection-jjel-only · branch jjtl-collection-jjel-only · 1300be2cc (Phase 1; Phase 2 not started, question to the chat)
 Lane: full (two-phase in one session; Phase 2 only under the condition below)
 Depends: none
 Worktree: ~/jjodel-w-jjtlonly, branch jjtl-collection-jjel-only (from the trunk tip)
