@@ -114,6 +114,8 @@ const list = (v: unknown): any[] => (Array.isArray(v) ? v : []);
 const nameOf = (v: any): string => (typeof v?.name === 'string' ? v.name : '');
 const idOf = (v: any): string | null => (typeof v?.id === 'string' && v.id ? v.id : null);
 const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+/** The source of a GenModel documentation annotation as the Ecore import writes it (api/data.ts `parseDAnnotation`). */
+const GENMODEL_DOCUMENTATION = 'http://www.eclipse.org/emf/2002/GenModel/documentation=';
 
 /**
  * The globals of `buildEvalContext` as T1's input. A class shell's supertypes are shells, read by name; an interface
@@ -122,25 +124,45 @@ const messageOf = (e: unknown): string => (e instanceof Error ? e.message : Stri
  * the eval context gives it, a reference by the target's id. An object with no class in the metamodel is skipped.
  *
  * With the lookup, each feature reads `ordered` off its D-layer element by the shell's id (step T7, D-2): ordered
- * unless the element says `ordered: false`, the Ecore default. Without it no feature carries the flag.
+ * unless the element says `ordered: false`, the Ecore default. Without it no feature carries the flag. With it too,
+ * for the hover (step B1): a feature's bounds, and the GenModel documentation of a class, a feature, an enumeration and
+ * a literal, which the Ecore import stores as a `DAnnotation` whose source ends in `documentation=<value>`.
  */
 export function textInputOf(globals: Readonly<Record<string, any>>, lookup?: Readonly<Record<string, any>>): TextInput {
     const orderedOf = (f: any): { ordered?: boolean } => (lookup ? { ordered: lookup[f?.id]?.ordered !== false } : {});
+    const boundsOf = (f: any): { lower?: number; upper?: number } => {
+        const d = lookup?.[f?.id];
+        return typeof d?.lowerBound === 'number' && typeof d?.upperBound === 'number' ? { lower: d.lowerBound, upper: d.upperBound } : {};
+    };
+    const docOf = (el: any): string | undefined => {
+        for (const a of list(lookup?.[el?.id]?.annotations)) {
+            const source = lookup?.[a]?.source;
+            if (typeof source === 'string' && source.startsWith(GENMODEL_DOCUMENTATION)) return source.slice(GENMODEL_DOCUMENTATION.length);
+        }
+        return undefined;
+    };
+    const withDoc = (el: any): { doc?: string } => { const doc = docOf(el); return doc === undefined ? {} : { doc }; };
     const metamodel: TextMetamodel = {
         classes: list(globals.classes).map(c => ({
             name: nameOf(c),
             isAbstract: !!c.isAbstract || !!c.isInterface,
             supers: list(c.superTypes).map(nameOf),
-            attributes: list(c.attributes).map(a => ({ name: nameOf(a), type: String(a.type ?? ''), many: !!a.multiValued, ...orderedOf(a) })),
+            attributes: list(c.attributes).map(a => ({ name: nameOf(a), type: String(a.type ?? ''), many: !!a.multiValued, ...orderedOf(a), ...boundsOf(a), ...withDoc(a) })),
             references: list(c.references).map(r => ({
                 name: nameOf(r),
                 type: String(r.type ?? ''),
                 containment: !!r.containment,
                 many: r.multiplicity === '*' || Number(r.upperBound) > 1,
                 ...orderedOf(r),
+                ...boundsOf(r),
+                ...withDoc(r),
             })),
+            ...withDoc(c),
         })),
-        enumerations: list(globals.enumerations).map(e => ({ name: nameOf(e), literals: list(e.literals).map(nameOf) })),
+        enumerations: list(globals.enumerations).map(e => {
+            const literalDocs = Object.fromEntries(list(e.literals).flatMap(l => { const doc = docOf(l); return doc === undefined ? [] : [[nameOf(l), doc]]; }));
+            return { name: nameOf(e), literals: list(e.literals).map(nameOf), ...withDoc(e), ...(Object.keys(literalDocs).length ? { literalDocs } : {}) };
+        }),
     };
     const objects: TextObject[] = [];
     for (const h of list(globals.instances)) {

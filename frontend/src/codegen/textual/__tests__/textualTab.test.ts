@@ -110,6 +110,33 @@ describe('textInputOf', () => {
         // Without the lookup the pure layer reads no flag: every feature unordered (R-TXT-21 (5)).
         expect(textInputOf(g).metamodel).toEqual(EXPECTED_MM);
     });
+
+    it('reads bounds and the GenModel documentation off the lookup, as the Ecore import stores them (step B1; dies on either dropped, on another source read as documentation)', () => {
+        const g = garageGlobals();
+        const [, , car, garage] = g.classes;
+        car.id = 'C_car';
+        car.attributes[1].id = 'A_tags';
+        garage.references[2].id = 'R_favs';
+        g.enumerations[0].id = 'E_mode';
+        g.enumerations[0].literals[0].id = 'L_fast';
+        const DOC = 'http://www.eclipse.org/emf/2002/GenModel/documentation=';
+        const lookup: Record<string, any> = {
+            C_car: { id: 'C_car', annotations: ['n1', 'n2'] }, n1: { source: 'http://example.org/other=no' }, n2: { source: `${DOC}A car, with = in it.` },
+            A_tags: { id: 'A_tags', lowerBound: 1, upperBound: -1, annotations: [] },
+            R_favs: { id: 'R_favs', lowerBound: 0, upperBound: 2, annotations: ['n3'] }, n3: { source: `${DOC}The best ones.` },
+            E_mode: { id: 'E_mode', annotations: ['n4'] }, n4: { source: `${DOC}How it drives.` },
+            L_fast: { id: 'L_fast', annotations: ['n5'] }, n5: { source: `${DOC}Quick.` },
+        };
+        const mm = textInputOf(g, lookup).metamodel;
+        const cls = (name: string) => mm.classes.find(c => c.name === name)!;
+        expect(cls('Car').doc).toBe('A car, with = in it.');
+        expect(cls('Car').attributes!.find(a => a.name === 'tags')).toMatchObject({ lower: 1, upper: -1 });
+        expect(cls('Car').attributes!.find(a => a.name === 'tags')!.doc).toBeUndefined();
+        expect(cls('Garage').references!.find(r => r.name === 'favourites')).toMatchObject({ lower: 0, upper: 2, doc: 'The best ones.' });
+        expect(cls('Garage').doc).toBeUndefined();
+        expect(mm.enumerations[0]).toEqual({ name: 'Mode', literals: ['Fast', 'Slow'], doc: 'How it drives.', literalDocs: { Fast: 'Quick.' } });
+        expect(textInputOf(g).metamodel).toEqual(EXPECTED_MM);
+    });
 });
 
 describe('textualView', () => {
