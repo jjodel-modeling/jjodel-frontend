@@ -23,7 +23,7 @@ import { SystemEvents, JjodelEvents } from '../../events/registry';
 import '../styles/jjtl.scss';
 import { getGrammarRuleAtPosition } from '../utils/astToGrammar';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
-import type { NestedMaterializationReport } from '../../components/project/nestedMaterialization';
+import { formatNestedUnwritten, type NestedMaterializationReport } from '../../components/project/nestedMaterialization';
 
 export interface JjtlDevelopmentEnvProps {
     initialCode?: string;
@@ -268,8 +268,9 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         setOutputMessages([]);
     }, []);
 
-    // Nested objects of the last run, reported by ProjectEditor when STEP 6c ends, seconds
-    // after the result: how many were created, and every one that was not placed, with its path.
+    // Nested objects of the last run, reported by ProjectEditor once STEP 8 has written their
+    // attributes, seconds after the result: how many were created, every one that was not placed,
+    // with its path, and the attribute values that were not written.
     useEffect(() => {
         const MAX_LISTED = 20;
         const handler = (e: Event) => {
@@ -284,6 +285,9 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
             if (report.unplaced.length > MAX_LISTED) {
                 addOutputMessage(`... and ${report.unplaced.length - MAX_LISTED} more, listed in the browser console.`);
             }
+            // Attribute values of the created objects that were not written (#482).
+            const unwritten = formatNestedUnwritten(report);
+            if (unwritten) addOutputMessage(unwritten);
         };
         window.addEventListener(SystemEvents.JJTL_NESTED_MATERIALIZED, handler);
         return () => window.removeEventListener(SystemEvents.JJTL_NESTED_MATERIALIZED, handler);

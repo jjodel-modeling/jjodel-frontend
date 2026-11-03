@@ -377,3 +377,81 @@ Whether a smaller tree can hit it under load: the existing runs do not say. They
 **Smoke visivo**: passato — chat, unattended: docs only (report and log inbox), all gates green on d04a598b6, no visual check made because nothing visible changes
 **Notes**: Rollback tag `pre-jjtl-writeback-time` on `6b4f96183` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1021/result.json`.
 **Prompt document name**: 2026-11-03 10:21
+
+## 2026-11-03 — ticket: JjTL nested walk drops subtrees when a long task outlasts its 3 s per-level cap
+**Ticket**: The JjTL nested walk drops whole subtrees of a 5,119-object tree when a long task outlasts its 3,000 ms per-level wait (`SLOT_WAIT_CAP_MS`): the cap is wall-clock, so one task of 3 s or more exhausts it without a second poll. The loss is reported in the output panel as "not placed", not silent. Measured with the tab open, `b11_9` (2,560 `Const`): at load 102.6 (P-2026-11-03-1033 before run) 2,047 of 5,119 objects created, 1,024 subtrees not placed, longest task 7,021 ms; at load 13.4 falling from a 5-minute average of 52.8 (P-2026-11-03-1057 after run 1) 3,071 of 5,119, the last level's 2,048 `Const` not placed, longest task 3,004 ms. Runs 2 and 3 at load 5.2 and 2.3: 5,119 of 5,119. `b10_8` (2,559 objects) at load 72.7 rising to 255: 2,559 of 2,559, nothing lost. The attribute writer of #482 is not involved: every value it queued was written. Fix candidates, not measured: count polls instead of wall-clock, or flush the open transaction block once per level before polling.
+**Priority**: medium
+**Found in**: P-2026-11-03-1033
+
+## 2026-11-03 — fix(jjtl): nested attributes wait for their slots, loss in the panel (P-2026-11-03-1057)
+**Prompt**: Close #482 after P-2026-11-03-1033's context ceiling: the panel line for unwritten attribute values, the gates, the after-probes with load recorded, a ticket for the walk's per-level cap, the before/after table.
+**Files touched**: `frontend/src/components/project/ProjectEditor.tsx`, `nestedMaterialization.ts`, `__tests__/nestedMaterialization.test.ts` (347f3996d, from P-2026-11-03-1033); `nestedMaterialization.ts`, its test, `frontend/src/jjtl/components/JjtlDevelopmentEnv.tsx` (7146fda53); `docs/log-inbox/hw-notation.md`, `Status:` of `docs/prompts/claude_2026-11-03_1033_prompt_jjtl_writeback_flush.md` and `docs/prompts/claude_2026-11-03_1057_prompt_jjtl_writeback_flush_close.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato
+**Notes**: Smoke: panel lines read from the DOM by the probe, forced failure included; no manual look. Gates: typecheck 0, vitest 13,238 of 13,238 with the 9 import-red files, build 0, check:docs 0. Panel line adopted as recommended (RC-21). LIR is d8a736474. The 300 ms per-level floor did NOT go (c60 gap median 302 ms): the per-level flush needs a `flush` in `NestedDeps`, its tests and the wiring, over ten lines, so not here. Walk cap: ticket #486.
+**Prompt document name**: 2026-11-03 10:57
+
+**Before and after** (dev server, tab open; probe `~/.jjodel-lanes/P-2026-11-03-1033/probe/`; times in ms from the click; load is the 1-minute average at the start):
+
+| run | load | attributes written | longest task | page quiet | `num` kept |
+|---|---|---|---|---|---|
+| b7_7 before | 5.7 | 4,878 | 359 | 8,852 | 256 of 256 |
+| b7_7 after | 2.8 | 4,487 | 341 | 8,899 (worse by 47) | 256 of 256 |
+| b10_8 before | 8.4 | 15,312 | 2,410 | 22,610 | 1,280 of 1,280 |
+| b10_8 after | 2.2 | 14,640 | 2,362 | 21,840 | 1,280 of 1,280 |
+| b10_8 after, loaded | 72.7, 255 at the end | 17,746 | 2,892 | 22,822 | 1,280 of 1,280 |
+| b10_8 after, forced failure | 214 | 22,673 | 3,410 | 25,723 | 0 of 1,280, panel line shown |
+| b11_9 before | 102.6, not comparable | 30,407 | 7,021 | 44,666 | 512 of 2,560 (walk: 2,047 objects) |
+| b11_9 after, run 1 | 13.4 (5-min 52.8) | 19,434 | 3,004 | 26,022 | 512 of 512 created (walk: 3,071 objects, 2,048 `Const` not placed) |
+| b11_9 after, run 2 | 5.2 | 30,731 | 7,206 | 42,298 | 2,560 of 2,560 |
+| b11_9 after, run 3 | 2.3 | 28,675 | 7,885 | 32,007 | 2,560 of 2,560 |
+| c60 before | report §4 | 20,000 | not given | not given | not given |
+| c60 after | 5.1 | 19,098 | 101 | 22,325 | 62 of 62 |
+
+b11_9 has no low-load before figure; its longest task after (7,206 and 7,885) is above the loaded before (7,021). The writer does not depend on `addObject`'s 600 ms seeding: in c60 it finished 71 ms after the walk, before the 122 seeding timers fired, and `num` stayed 62 of 62 ten seconds later. Run 1's loss is the walk's, not the writer's: every queued value was written (#486).
+
+## 2026-11-03 — ticket: JjTL nested walk cap raised to high, it breaks #482's acceptance at ordinary load (#486)
+**Ticket**: #486 goes from medium to high. The acceptance of #482 is not met: `b11_9` run 1 at load 13.4 never created 2,048 `Const` because `SLOT_WAIT_CAP_MS` (3 s of wall-clock per level, `nestedMaterialization.ts:111`) ran out on one 3,004 ms task, and a load of 13 is ordinary on this machine. No row of `docs/decisions.md` fixes the cap.
+**Priority**: high
+**Found in**: P-2026-11-03-1137
+
+## 2026-11-03 — fix(jjtl): the nested walk gives up on no progress, not on time (P-2026-11-03-1137)
+**Prompt**: #486: the walk's per-level cap counts time without progress, still bounded in total and reported in the panel; one flush per level if it fits in the two files.
+**Files touched**: `frontend/src/components/project/nestedMaterialization.ts`, `__tests__/nestedMaterialization.test.ts`, `ProjectEditor.tsx` (8ef8b27ae); `docs/log-inbox/hw-notation.md`, `Status:` of `docs/prompts/claude_2026-11-03_1137_prompt_jjtl_walk_cap.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-03 10:57
+**Causa**: (c)
+**Regressions**: yes
+**Out-of-scope changes**: no
+**Layer Impact Report**: skipped
+**Smoke visivo**: passato
+**Notes**: Regression: the longest task is worse in every shape (b7_7 341 to 1,829 and 2,238), the walk ends sooner and the tab's render lumps; quiet worse in b7_7 and b11_9. Stall: 60 polls without an answer; total bound 60 s. Smoke: panel read by the probe. LIR skipped: d8a736474 covers this flush. #482 and #486 met here, open until merge. Gates: typecheck 0, vitest 13,244 (9 import-red), build 0, check:docs.
+**Prompt document name**: 2026-11-03 11:37
+
+**Before and after** (dev server, tab open; probe `~/.jjodel-lanes/P-2026-11-03-1033/probe/`; before is `208731e0e` from the P-2026-11-03-1057 table; times in ms from the click; load is the 1-minute average at the start, from `uptime`; `Const` created is objects plus one, halved):
+
+| run | load | attributes written | longest task | page quiet | `Const` created | `num` kept |
+|---|---|---|---|---|---|---|
+| b7_7 before | 2.8 | 4,487 | 341 | 8,899 | 256 | 256 of 256 |
+| b7_7 after | 2.6 | 1,704 | 1,829 (worse) | 10,307 (worse) | 256 | 256 of 256 |
+| b7_7 after, again | 8.4, 24.5 at the end | 4,820 | 2,238 (worse) | 10,929 (worse) | 256 | 256 of 256 |
+| b10_8 before | 2.2 | 14,640 | 2,362 | 21,840 | 1,280 | 1,280 of 1,280 |
+| b10_8 after | 4.6 | 13,218 | 3,044 (worse) | 17,518 | 1,280 | 1,280 of 1,280 |
+| b10_8 after, forced slot stop | 5.9 | 10,244 | 519 | 14,251 | 1,023 objects of 2,559 | 256, panel line shown |
+| b11_9 before, run 1 | 13.4 | 19,434 | 3,004 | 26,022 | 512 of 2,560 | 512 of 512 |
+| b11_9 before, run 2 | 5.2 | 30,731 | 7,206 | 42,298 | 2,560 | 2,560 of 2,560 |
+| b11_9 before, run 3 | 2.3 | 28,675 | 7,885 | 32,007 | 2,560 | 2,560 of 2,560 |
+| b11_9 after, run 1 | 7.9 | 32,997 | 9,823 (worse) | 44,038 (worse) | 2,560 | 2,560 of 2,560 |
+| b11_9 after, run 2 | 13.6 | 27,481 | 7,800 | 39,060 | 2,560 | 2,560 of 2,560 |
+| b11_9 after, run 3 | 4.1 | 29,391 | 7,958 | 38,863 (worse) | 2,560 | 2,560 of 2,560 |
+| b11_9 after, loaded | 17.5 | 30,461 | 7,637 | 38,892 | 2,560 | 2,560 of 2,560 |
+| b11_9 after, heavy load | 25.8, 50.5 at the end | 74,403 | 22,405 | 92,904 | 2,560 | 2,560 of 2,560 |
+| c60 before | 5.1 | 19,098 | 101 | 22,325 | 62 | 62 of 62 |
+| c60 after, loaded | 40.2, 16.0 at the end | 6,607 | 191 (worse) | 9,867 | 62 | 62 of 62 |
+
+c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the probe's median, over bursts of `addObject` closer than 30 ms, 302 over 61 bursts before and 143 over 23 after, because flushed levels now fall into one burst. The walk ends sooner in every shape (b7_7 3,876 to 1,592; b10_8 10,440 to 4,921; c60 19,027 to 6,479); the longest task now sits just after the walk's end (b7_7 at 3,972, b10_8 at 5,095), where the open tab renders what earlier arrived level by level. The slow levels the old cap would have dropped are in the after runs: a level gap of 10,739 ms in the loaded run and 18,656 ms in the heavy one, with every `Const` created. The forced stop is a scratch probe mode, `WB_FORCESTALL=300`: after 300 `addObject` calls `Tgt.Add.left` is renamed, and the panel reads "feature "left" not available after 3000 ms without a slot answering": 2 lines shown, "... and 492 more" in the console. The 60 s total bound is covered by its unit test only.

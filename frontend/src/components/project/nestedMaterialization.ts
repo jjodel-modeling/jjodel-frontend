@@ -44,6 +44,8 @@ export interface NestedDeps {
     sleep(ms: number): Promise<void>;
     now(): number;
     warn(message: string): void;
+    /** Commits the writes queued in the open transaction block, once per level before its wait (#486). */
+    flush?(): Promise<void>;
 }
 
 /** A feature of an object already in the store, and the executor objects to create inside it. */
@@ -89,15 +91,41 @@ export interface NestedResult {
     referenceSets?: NestedReferenceSet[];
 }
 
+/** What the nested-attribute writer could not write (#482): said to the user, never only to the console. */
+export interface NestedUnwritten {
+    /** Objects with at least one attribute value not written. */
+    objects: number;
+    /** Attribute values not written. */
+    attributes: number;
+    reason: string;
+}
+
 /** Detail of `SystemEvents.JJTL_NESTED_MATERIALIZED`, read by the JjTL output panel. */
 export interface NestedMaterializationReport {
     modelName: string;
     created: number;
     unplaced: NestedUnplaced[];
+    /** Set when some attribute values of the created objects were not written (#482). */
+    unwritten?: NestedUnwritten;
 }
 
 export const SLOT_POLL_MS = 50;
+/**
+ * The walk gives up the slots of a level after this long WITHOUT PROGRESS (#486): no slot of the
+ * level answered for this many polls, counted as `SLOT_WAIT_CAP_MS / SLOT_POLL_MS` poll intervals,
+ * not read off the clock. A long task holds the commit as well as the poll, so it is one interval,
+ * never the whole window: at load 13.4 one 3,004 ms task used to drop 2,048 `Const`.
+ */
 export const SLOT_WAIT_CAP_MS = 3000;
+/**
+ * Bound of all the walk's slot waits together, on the clock (#486): the stall window alone would
+ * wait without end under a store that keeps answering one slot at a time, or for 60 polls of any
+ * length. 60 s is above every whole run measured from the click (b11_9 at load 102.6: 44.7 s), so
+ * it fires only on a store that has stopped; what it drops is reported as not placed.
+ */
+export const NESTED_WALK_WAIT_CAP_MS = 60000;
+/** Bound of the attribute writer's wait for the slots of the last level (#482). */
+export const ATTRIBUTE_WAIT_CAP_MS = 10000;
 
 const isNested = (v: any): boolean => !!(v && typeof v === 'object' && v.__nested);
 
@@ -184,15 +212,18 @@ export function nestedAttributesOf(child: any, info: NestedClassInfo): Record<st
 
 /**
  * Creates the nested objects of `jobs` and, level by level, the nested objects of what it created.
- * Before each level it polls the slots that level writes into, every `pollMs`, for at most `capMs`;
- * a slot that does not answer loses its objects, which are warned and counted as unplaced.
- * Attributes are not written here: they come back in `attributeSets`, keyed by the created id.
+ * Before each level it flushes once (`deps.flush`, when given), then polls the slots that level writes
+ * into, every `pollMs`, until `capMs` of polls pass with no slot answering, or every wait of the walk
+ * together reaches `totalCapMs` (#486); a slot that does not answer loses its objects, which are warned
+ * and counted as unplaced. Attributes are not written here: they come back in `attributeSets`, keyed by
+ * the created id.
  */
 export async function materializeNested(
     jobs: NestedJob[],
     deps: NestedDeps,
     pollMs: number = SLOT_POLL_MS,
     capMs: number = SLOT_WAIT_CAP_MS,
+    totalCapMs: number = NESTED_WALK_WAIT_CAP_MS,
 ): Promise<NestedResult> {
     const createdIds = new Map<any, string>();
     const referenceSets: NestedReferenceSet[] = [];
@@ -204,27 +235,41 @@ export async function materializeNested(
             + `${u.count} object(s): ${u.reason}`);
     };
 
+    let waitedMs = 0;
     let level = jobs.filter(j => j.children.length > 0);
     while (level.length > 0) {
         result.levels++;
 
-        // Wait for every slot this level writes into.
+        // Wait for every slot this level writes into: the flush commits what the level above
+        // created, so the slots need not wait for the interval's commit; the polls cover the rest.
         const ready = new Map<NestedJob, NestedSlot>();
         let waiting = level;
         const start = deps.now();
+        if (deps.flush) await deps.flush();
+        let stalledMs = 0;
+        let gaveUp = '';
         for (;;) {
+            const answered = ready.size;
             waiting = waiting.filter(job => {
                 const slot = deps.slotOf(job.parentId, job.featureName);
                 if (slot) ready.set(job, slot);
                 return !slot;
             });
-            if (waiting.length === 0 || deps.now() - start >= capMs) break;
+            if (waiting.length === 0) break;
+            if (ready.size > answered) stalledMs = 0;
+            if (stalledMs >= capMs) { gaveUp = ` after ${capMs} ms without a slot answering`; break; }
+            if (waitedMs + deps.now() - start >= totalCapMs) {
+                gaveUp = `: the walk waited ${totalCapMs} ms for slots in total`;
+                break;
+            }
             await deps.sleep(pollMs);
+            stalledMs += pollMs;
         }
+        waitedMs += deps.now() - start;
         for (const job of waiting) {
             lose({
                 path: `${job.path}.${job.featureName}`, count: subtree(job.children),
-                reason: `feature "${job.featureName}" not available after ${capMs} ms`,
+                reason: `feature "${job.featureName}" not available${gaveUp}`,
             });
         }
 
@@ -302,4 +347,111 @@ export async function materializeNested(
         level = next;
     }
     return result;
+}
+
+/** What a bounded wait for slots needs of the store (#482). */
+export interface NestedWaitDeps {
+    /** Lets every write already queued in the open transaction block reach the store now. */
+    flush(): Promise<void>;
+    /** The slots of this object that do not answer yet; all of them while the object does not resolve. */
+    missing(objectId: string, slots: string[]): string[];
+    sleep(ms: number): Promise<void>;
+    now(): number;
+}
+
+/** An object the walk created, and the slots a writer is about to write into. */
+export interface NestedSlotWait {
+    objectId: string;
+    slots: string[];
+}
+
+/**
+ * Waits until the slots of objects the walk created answer, bounded (#482).
+ *
+ * The last level's objects sit in the app's open transaction block until a commit dispatches them:
+ * the interval's every `U.UpdatingTimer`, whose dispatch is a `setTimeout(0)`. A writer started on a
+ * fixed timer ran before that dispatch when long tasks held the thread (5,119 objects: 2,048 `num` lost,
+ * docs/discovery/discovery_2026-11-03_jjtl_writeback_time.md §5). So this flushes, then polls, every
+ * `pollMs` for at most `capMs`, in creation order, which is also commit order: the scan stops at the
+ * first object that does not answer. Returns how many answered, in order, and how long it took.
+ */
+export async function awaitNestedSlots(
+    waits: NestedSlotWait[],
+    deps: NestedWaitDeps,
+    pollMs: number = SLOT_POLL_MS,
+    capMs: number = ATTRIBUTE_WAIT_CAP_MS,
+): Promise<{ answered: number; waitedMs: number }> {
+    if (waits.length === 0) return { answered: 0, waitedMs: 0 };
+    const start = deps.now();
+    let answered = 0;
+    for (;;) {
+        await deps.flush();
+        while (answered < waits.length && deps.missing(waits[answered].objectId, waits[answered].slots).length === 0) answered++;
+        if (answered === waits.length || deps.now() - start >= capMs) break;
+        await deps.sleep(pollMs);
+    }
+    return { answered, waitedMs: deps.now() - start };
+}
+
+/** What the nested-attribute writer needs of the store (#482). */
+export interface NestedAttributeDeps extends NestedWaitDeps {
+    /** Writes one value; false when the slot is missing at write time. */
+    write(set: NestedAttributeSet, attrName: string, value: any): boolean;
+    warn(message: string): void;
+}
+
+export interface NestedAttributeResult {
+    /** Attribute values written. */
+    written: number;
+    /** From the call to the first write, flushes included. */
+    waitedMs: number;
+    /** Absent when every value was written. */
+    unwritten?: NestedUnwritten;
+}
+
+/**
+ * Writes the attributes the walk queued, once their slots answer (`awaitNestedSlots`), then counts
+ * every value it could not write, slot missing, refused or throwing, for the caller to report (#482).
+ *
+ * `addObject` also seeds its json values on a timer of `U.UpdatingTimer * 2`; the walk gives it `{}`
+ * (`nestedCreationJson`), so that timer writes nothing this writer waits for.
+ */
+export async function writeNestedAttributeSets(
+    sets: NestedAttributeSet[],
+    deps: NestedAttributeDeps,
+    pollMs: number = SLOT_POLL_MS,
+    capMs: number = ATTRIBUTE_WAIT_CAP_MS,
+): Promise<NestedAttributeResult> {
+    if (sets.length === 0) return { written: 0, waitedMs: 0 };
+    const waits = sets.map(s => ({ objectId: s.objectId, slots: Object.keys(s.attributes) }));
+    const { answered, waitedMs } = await awaitNestedSlots(waits, deps, pollMs, capMs);
+    const capped = answered < sets.length;
+
+    let written = 0;
+    let lostObjects = 0;
+    let lostValues = 0;
+    for (const set of sets) {
+        let lost = 0;
+        for (const [attrName, value] of Object.entries(set.attributes)) {
+            let ok = false;
+            try { ok = deps.write(set, attrName, value); } catch { ok = false; }
+            if (ok) written++;
+            else lost++;
+        }
+        if (lost > 0) { lostObjects++; lostValues += lost; }
+    }
+    if (lostValues === 0) return { written, waitedMs };
+    const unwritten: NestedUnwritten = {
+        objects: lostObjects, attributes: lostValues,
+        reason: capped ? `attribute slots not available after ${capMs} ms` : 'attribute slot missing when written',
+    };
+    deps.warn(`Nested: ${lostValues} attribute value(s) of ${lostObjects} object(s) not written: ${unwritten.reason}`);
+    return { written, waitedMs, unwritten };
+}
+
+/** The output panel's line for attribute values the writer could not write (#482); null when none. */
+export function formatNestedUnwritten(report: NestedMaterializationReport): string | null {
+    const u = report.unwritten;
+    if (!u || u.attributes === 0) return null;
+    return `Attributes not written in "${report.modelName}": ${u.attributes} value(s) of ${u.objects} object(s): ${u.reason}`;
 }
