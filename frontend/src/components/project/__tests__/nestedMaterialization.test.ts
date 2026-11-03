@@ -14,6 +14,7 @@ import {
     makeRootTargetIndex,
     writeNestedAttributeSets,
     awaitNestedSlots,
+    formatNestedUnwritten,
     ATTRIBUTE_WAIT_CAP_MS,
     SLOT_POLL_MS,
     SLOT_WAIT_CAP_MS,
@@ -405,5 +406,15 @@ describe('writeNestedAttributeSets (#482)', () => {
         expect(store.clock()).toBeGreaterThanOrEqual(ATTRIBUTE_WAIT_CAP_MS);
         expect(store.clock()).toBeLessThan(ATTRIBUTE_WAIT_CAP_MS + SLOT_POLL_MS + 1);
         expect(await awaitNestedSlots([], store.deps)).toEqual({ answered: 0, waitedMs: 0 });
+    });
+});
+
+describe('formatNestedUnwritten (#482)', () => {
+    it('one panel line with values, objects and reason; none when everything was written', () => {
+        const base = { modelName: 'T', created: 5, unplaced: [] };
+        expect(formatNestedUnwritten(base)).toBeNull();
+        expect(formatNestedUnwritten({ ...base, unwritten: { objects: 0, attributes: 0, reason: 'x' } })).toBeNull();
+        expect(formatNestedUnwritten({ ...base, unwritten: { objects: 2, attributes: 3, reason: 'attribute slot missing when written' } }))
+            .toBe('Attributes not written in "T": 3 value(s) of 2 object(s): attribute slot missing when written');
     });
 });

@@ -416,3 +416,10 @@ export async function writeNestedAttributeSets(
     deps.warn(`Nested: ${lostValues} attribute value(s) of ${lostObjects} object(s) not written: ${unwritten.reason}`);
     return { written, waitedMs, unwritten };
 }
+
+/** The output panel's line for attribute values the writer could not write (#482); null when none. */
+export function formatNestedUnwritten(report: NestedMaterializationReport): string | null {
+    const u = report.unwritten;
+    if (!u || u.attributes === 0) return null;
+    return `Attributes not written in "${report.modelName}": ${u.attributes} value(s) of ${u.objects} object(s): ${u.reason}`;
+}
