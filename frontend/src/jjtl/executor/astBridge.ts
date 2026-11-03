@@ -61,7 +61,7 @@ export function toJjelAst(expr: ExpressionAST): JjelExpression {
             return {
                 type: 'Literal',
                 value: lit.value,
-                dataType: mapLiteralType(lit.literalType),
+                dataType: mapLiteralType(lit.literalType, lit.value),
             };
         }
 
@@ -274,10 +274,11 @@ function convertNullSafeFunctionCall(nfc: NullSafeFunctionCallAST): JjelExpressi
 /**
  * Map JjTL literal type to JjEL dataType
  */
-function mapLiteralType(literalType: 'string' | 'number' | 'boolean' | 'null'): 'EString' | 'EInt' | 'EDouble' | 'EBoolean' | 'null' {
+function mapLiteralType(literalType: 'string' | 'number' | 'boolean' | 'null', value?: unknown): 'EString' | 'EInt' | 'EDouble' | 'EBoolean' | 'null' {
     switch (literalType) {
         case 'string': return 'EString';
-        case 'number': return 'EInt'; // Note: JjEL distinguishes EInt/EDouble but JjTL doesn't
+        // The evaluator returns the literal's value and reads no tag (SPEC.md §12.2), so this is descriptive only.
+        case 'number': return typeof value === 'number' && !Number.isInteger(value) ? 'EDouble' : 'EInt';
         case 'boolean': return 'EBoolean';
         case 'null': return 'null';
     }
