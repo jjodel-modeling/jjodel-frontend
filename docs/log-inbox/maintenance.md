@@ -787,3 +787,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: not applicable, docs only.
 **Notes**: Ticket: the load-sensitive tests of P-2026-11-02-2250 are not the whole class: this one has the same shape as `traceMonitor`, unmeasured here. Open question from 1016: a failing builtin in JjTL, error or warning with null; waits for Alfonso.
 **Prompt document name**: 2026-11-03 10:53
+
+## 2026-11-03 — fix(jjtl): a failing builtin is an error on both paths; JjEL alone parses a forall collection (P-2026-11-03-1135)
+**Prompt**: `claude_2026-11-03_1135_prompt_jjtl_builtin_error_jjel_collection.md`: apply R-FA-11 (a builtin that fails inside a JjTL expression stops the mapping with an error on every path) and drop the legacy-first fallback of P-2026-11-02-2345 for a forall collection when the source text is present.
+**Files touched**: `9afbe4376`: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/parser/parser.ts`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/parser/__tests__/forall-multivar.test.ts`, `frontend/src/jjtl/executor/__tests__/builtin-error.test.ts` (new); this commit: this entry and the Status line of the 1135 prompt.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-03 10:16 (the stopped Phase 2 of P-2026-11-03-1016)
+**Causa**: (f)
+**Regressions**: no. tsc exit 0; vitest src/jjtl src/jjel 1055 passed, 0 failed, 7 files red at import (the known list); build exit 0; parity 145/145, `tests#107` an error on both paths.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Builtins registered on the run context are wrapped (JjtlEvaluationContext) to throw JjtlBuiltinError; evaluateExpression names the outermost expression and rethrows on both paths. Unchanged: `Function 'f' is not defined`, failing methods. Measured: in a `where` guard the run stops (`Execution failed`). Legacy locates a binary expression at its operator, so the column differs by path there. Mutation bench: parser revert killed by the new multivar test.
+**Prompt document name**: 2026-11-03 11:35

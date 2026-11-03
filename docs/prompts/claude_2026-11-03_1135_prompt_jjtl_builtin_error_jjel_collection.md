@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1135
 Chat: C-2026-11-02-1319
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · branch jjtl-collection-jjel-only · 9afbe4376 · verifica visiva non applicabile
 Lane: full (executor and parser, two-phase in one session)
 Depends: none
 Worktree: ~/jjodel-w-jjtlonly, branch jjtl-collection-jjel-only (from the trunk tip)
