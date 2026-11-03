@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-03-1207
 Chat: C-2026-11-03-1037
 Request: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH (merge of textual-refs-outside launched by chat C-2026-11-03-1037)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane merge · 336f39188 · verifica visiva passata 2026-11-03 (docs and code merge of textual-refs-outside; gates green on the merge; in-app acceptance and crops checked before the merge (P-2026-11-03-1141, RC-23); no new visual check)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-03-1207 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

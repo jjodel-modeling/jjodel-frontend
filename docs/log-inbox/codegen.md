@@ -1352,3 +1352,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passed 2026-11-03 (chat, RC-23) — probe ALL PASS (port 3141, light theme, scale 1); crops 1 to 6 in the lane folder await Alfonso's visual check
 **Notes**: tsc exit 0, check:docs 5/5. Setup is a direct model write, not a canvas gesture: State.listens (Event, many) added via the L-layer, outer values via `$f.values`; the second model through «New model from text» typed in the app. Q3: deleting `@"near"` from the list unlinks it, one Undo restores. Q1: deleting the target clears the referring slots, so no dangling id reaches the text and no missing-target warning exists to fire. Briefs: print parses, 0 errors, print-parse-print identical.
 **Prompt document name**: 2026-11-03 11:41
+
+## 2026-11-03 — merge: textual-refs-outside into alfonso-frontend-jjtl (P-2026-11-03-1207)
+**Prompt**: `claude_2026-11-03_1207_prompt_merge_textual-refs-outside.md`, a direct merge by `lane-run merge --direct`, no session: `textual-refs-outside` at `b8712daa6` into `alfonso-frontend-jjtl`, merge base `fa9e886cb`, 5 commits on the branch side.
+**Files touched**: merge `336f39188`: 13 files from the branch side (`docs/discovery/discovery_2026-11-03_textual_refs_outside_text.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-03_1045_prompt_textual_refs_outside.md`, `docs/prompts/claude_2026-11-03_1141_prompt_textual_refs_acceptance.md`, `frontend/src/codegen/textual/__tests__/parser.test.ts`, `frontend/src/codegen/textual/__tests__/styleCheck.test.ts`, `frontend/src/codegen/textual/__tests__/textDiff.test.ts`, `frontend/src/codegen/textual/metamodel.ts`, and 5 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `336f39188` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13249 tests in 503 files, 9 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs and code merge of textual-refs-outside; gates green on the merge; in-app acceptance and crops checked before the merge (P-2026-11-03-1141, RC-23); no new visual check
+**Notes**: Rollback tag `pre-textual-refs-outside` on `7690502cb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1207/result.json`.
+**Prompt document name**: 2026-11-03 12:07
