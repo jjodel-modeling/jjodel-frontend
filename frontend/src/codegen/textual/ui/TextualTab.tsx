@@ -788,7 +788,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
         }
         setStatus({ kind: 'applied', failed: failedLines });
         updateUndoKey();
-        if (editor && editor.getValue() !== text) pause.poke(); // typed during the run
+        if (editor && editor.getValue() !== syncRef.current?.text) pause.poke(); // typed during the run (not the rewrite of the paths)
     };
 
     /** Reads the editor's text after a pause; `confirmed`, from the panel, drops the refusals it confirms. */
