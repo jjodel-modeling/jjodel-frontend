@@ -18,7 +18,7 @@ T7 finishes and merges, with the rule on positional paths settled (`docs/discove
 
 **A. Tolerant parser with positions, and T9.** Concrete syntax tree, comments survive an application (R-TXT-20). Starts with a short discovery measuring how the parser holds up on incomplete text. R-TXT-21 (8) stands: what is recovered from a broken text shows as outline and markers and is never applied.
 
-**B. Navigation and reading.** Semantic highlighting (keywords, types, resolved and unresolved references, values); an outline inside the Text tab, left of the text, collapsible, following the cursor and filterable; breadcrumb; folding; go to definition; find references; hover with metaclass, multiplicity and documentation.
+**B. Navigation and reading.** Semantic highlighting (keywords, types, resolved and unresolved references, values); an outline inside the Text tab, left of the text, collapsible, following the cursor and filterable; breadcrumb; folding; go to definition; find references; hover with metaclass, multiplicity and documentation. The read-only EBNF tab gets syntax highlighting too.
 
 **C. Compact notation.** Expression notation (`driver` as `st & (is_sw)`, round trip to the model), T4b (annotations form), T5 (other styles). Test case: a port on one line, `input instr : Word(32)`. To settle at its start: R-TXT-16 (3) speaks of a class as a binary operator, while Conj/Disj hold an `ops` list, so the annotation has to cover n-ary containment; redundant parentheses have no model element and survive only through the tree of A; precedence has to fit the LL(1) check of T3.
 
