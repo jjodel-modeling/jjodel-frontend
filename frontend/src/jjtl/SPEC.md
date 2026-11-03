@@ -713,8 +713,8 @@ The app's write-back of several targets per source element is B2 (list below).
   a class are candidates; the one whose guard holds applies (no guard always holds), and none
   or several is an error naming the candidates. A class may have both a matched and a lazy rule
   (R-JTG-18, P-2026-11-04-0015): the lazy one never matches in pass 1, so it does not compete with
-  the matched one under R-JTG-3. A binding that reaches a node of such a class is settled by the
-  type of its feature: the lazy rules whose target fits it, when no matched rule's does; the
+  the matched one under R-JTG-3. Provisional, not ratified (R-JTG-20): a binding that reaches a
+  node of such a class is settled by the type of its feature: the lazy rules whose target fits it, when no matched rule's does; the
   matched rule's pass 1 target, when no lazy rule's does; an error naming both, when both fit or
   the feature has no known type (`binding 'f' reaches Cls 'c1', lowered by matched ... and lazy
   ...`). `resolve()` still finds the matched target only (R-JTG-13). A lazy node nothing reaches creates no target and no root.
@@ -1028,8 +1028,8 @@ that could not be placed is reported as above.
 | Situation | Behavior |
 |---|---|
 | Source class not found | Silently skip (no instances to match) |
-| Rule target class not in the target metamodel | **Error** before pass 1 (R-JTG-17): `Target class 'Nope' not found in target metamodel (A -> Nope). Nothing is written.` The run returns no target model, as for an abstract target. A nested creation of an unknown class stays a warning, nothing created for it |
-| A binding reaches a node whose class has both a matched and a lazy rule, and the feature type fits both or is unknown | **Error** naming both rules (R-JTG-18, §5.3.3) |
+| Rule target class not in the target metamodel | **Error** before pass 1 (R-JTG-17): `Target class 'Nope' not found in target metamodel (A -> Nope). Nothing is written.` The run returns no target model, as for an abstract target. A nested creation of an unknown class stays a warning, nothing created for it (provisional, not ratified) |
+| A binding reaches a node whose class has both a matched and a lazy rule, and the feature type fits both or is unknown | **Error** naming both rules (R-JTG-20, provisional, not ratified; §5.3.3) |
 | Guard evaluation error | Log warning, skip instance (treated as false) |
 | Expression evaluation error | Log warning, return `null` |
 | Builtin call that fails inside an expression (`range(null)`, a helper, a called rule) | **Error** on both parse paths, never a warning with `null` (R-FA-11): `Builtin 'range' failed in expression at line L, column C: <reason>`. In a feature or attribute mapping the mapping stops (`Failed to map ...`); in a `where` guard the run stops (`Execution failed: ...`). A call to a name that resolves to nothing (`Function 'f' is not defined`) and a failing method on a value stay an expression evaluation error |
