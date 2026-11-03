@@ -469,6 +469,48 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Notes**: Rollback tag `pre-jjtl-writeback-flush` on `336f39188` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1219/result.json`.
 **Prompt document name**: 2026-11-03 12:19
 
+## 2026-11-03 — fix(jjtl): open the output tab after the write-back (P-2026-11-03-1232)
+**Prompt**: #475, candidate A: STEP 7 opens the output tab after the write-back, also on failure; measure what moves; say whether the flush-per-level regression goes; honest toast and status bar; what the user sees between click and tab.
+**Files touched**: `docs/discovery/lir_2026-11-03_jjtl_output_tab_late.md` (ce6c7334a); `frontend/src/components/project/ProjectEditor.tsx` (3b8c3b51b); `docs/log-inbox/hw-notation.md`, `Status:` of `docs/prompts/claude_2026-11-03_1232_prompt_jjtl_output_tab_late.md`
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-03 11:37
+**Causa**: (c)
+**Regressions**: yes
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile
+**Notes**: Attributes written 2.7-2.8x sooner, no loss, save/reopen same tree, toast counts all objects, status bar silent until the tab. Regression kept: the canvas freeze moved after the tab and is not smaller (b10_8 longest task 2,554 to 3,046-3,097). Item 3 open: spreading it needs useJjomSync.ts (critical zone), question to the chat. No unit seam: STEP 7 is inline. Gates: typecheck 0, vitest 13,262 (9 import-red), build 0, check:docs.
+**Prompt document name**: 2026-11-03 12:32
+
+**Before and after** (dev server, output tab open; probe `~/.jjodel-lanes/P-2026-11-03-1033/probe/`, labels `pre`/`post*`; before is `6571f548a`, the trunk commit of this branch; times in ms from the click; load is the 1-minute average from `uptime` before the run, and at the end in brackets):
+
+| run | load | attributes written | tab | longest task | lag max | page quiet | `Const` | `num` kept |
+|---|---|---|---|---|---|---|---|---|
+| b7_7 before | 3.8 (3.5) | 1,672 | 2,086 | 497 | 955 | 7,142 | 256 | 256 of 256 |
+| b7_7 after | 4.1 (2.6) | 1,717 | 2,113 | 506 (worse) | 1,164 (worse) | 7,270 (worse) | 256 | 256 of 256 |
+| b10_8 before | 3.3 (2.8) | 11,549 | 2,624 | 2,554 | 6,628 | 18,113 | 1,280 | 1,280 of 1,280 |
+| b10_8 after | 2.3 (4.5) | 4,392 | 4,416 (later) | 3,097 (worse) | 5,627 | 17,554 | 1,280 | 1,280 of 1,280, reopen same tree |
+| b10_8 after, again | 11.7 (5.8) | 4,341 | 4,361 (later) | 3,046 (worse) | 5,374 | 17,128 | 1,280 | 1,280 of 1,280 |
+| b11_9 before | 3.0 (9.5) | 30,182 | 3,082 | 8,471 | 12,297 | 42,368 | 2,560 | 2,560 of 2,560 |
+| b11_9 after, run 1, loaded | 4.2 (21.0) | 44,079 (worse) | 44,117 | 7,815 | 11,342 | 50,400 (worse) | 2,560 | 2,560 of 2,560 |
+| b11_9 after, run 2 | 9.4 (6.8) | 10,854 | 10,878 (later) | 10,150 (worse) | 18,933 (worse) | 35,274 | 2,560 | 2,560 of 2,560 |
+| b11_9 after, run 3 | 6.1 (8.2) | 10,642 | 10,667 (later) | 3,664 | 3,792 | 15,234 | 2,560 | 2,560 of 2,560 |
+| c60 before | 3.0 (6.1) | 3,653 | 2,090 | 100 | 143 | 6,732 | 62 | 62 of 62 |
+| c60 after | 4.2 (9.7) | 2,378 | 2,394 (later) | 111 (worse) | 144 (worse) | 6,501 | 62 | 62 of 62 |
+
+Run 1 of b11_9 went from load 4 to 21 during the run, so it is marked loaded. The flush-per-level figures of P-2026-11-03-1137 (b7_7 longest 1,829) did not come back on the trunk today: 497 before, 506 after. A profiled b10_8 after run (`postprof`, slower by the profiler) puts the window after the tab at 22.8 s busy of 23.7: react-dom 13.6 s inclusive, `action.ts` 4.6 s, `useJjomSync.ts` 2.6 s, `GraphDataElements` 2.1 s, `DynamicHandles.tsx` 0.8 s self. The tab mounts on 2,559 objects and Step 2bis of `useJjomSync` makes 2,558 vertices in one loop, then React renders them: yielding before `open2` cannot split that. Frames for b10_8 in `~/.jjodel-lanes/P-2026-11-03-1232/post2-b10_8-{1-click,2-writing,3-tab,4-tab+2s}.png` (full viewport, not cropped); the `4-tab+2s` frame was meant for 6.4 s and was taken at 13.9 s because the page was frozen.
+
+## 2026-11-03 — ticket: JjTL output canvas freezes the page once the tab opens on a large tree
+**Ticket**: With the output tab opened after the write-back (P-2026-11-03-1232), the canvas mounts on the whole tree: `useJjomSync` Step 2bis (`useJjomSync.ts:741-772`) makes one `DVertex.new` per object in one synchronous loop and React renders them all. Measured in the app, dev server: longest task after the tab b10_8 3,046-3,097 ms (2,554 before), b11_9 3,664-10,150 ms (8,471 before), lag max up to 18,933 ms. Spreading it needs a critical-zone file (chunking Step 2bis over frames, or rendering only visible nodes); `ProjectEditor.tsx` cannot split it.
+**Priority**: high
+**Found in**: P-2026-11-03-1232
+**Detail**: docs/discovery/lir_2026-11-03_jjtl_output_tab_late.md
+
+## 2026-11-03 — ticket: nothing tells the user a JjTL run is still writing its output
+**Ticket**: Between the click and the output tab the JjTL panel already says "Transformation completed successfully", the status bar says "Success · 122ms · 2559 mapped", and nothing says the write-back is running. Measured with the tab opened after the write-back (P-2026-11-03-1232, dev server): click to tab 4,361-4,416 ms for b10_8 (2,559 objects), 10,667-10,878 ms for b11_9 (5,119 objects), 44,117 ms for b11_9 under load. Above 2 s from about 2,500 objects. No progress UI added: it needs its own lane.
+**Priority**: medium
+**Found in**: P-2026-11-03-1232
+
 ## 2026-11-03 — fix(jjtl): a re-run in the same tab no longer executes a stale AST (P-2026-11-03-1315)
 **Prompt**: P-2026-11-03-1315, #446: reproduce the stale AST on a same-tab re-run without the fresh-tab workaround, test first, root cause, fix where the cause is.
 **Files touched**: `frontend/src/jjtl/hooks/useJjtlParser.ts`, `frontend/src/jjtl/hooks/__tests__/useJjtlParser.debounce.test.ts` (new) at 0d0b00228; `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1315_prompt_jjtl_rerun_stale_ast.md` (Status line)
@@ -679,3 +721,29 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: passato — chat, unattended: gates green on 6fb7d2841; app probes on the branch, no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-panel-warnings-low` on `51ea2aad2` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1619/result.json`.
 **Prompt document name**: 2026-11-03 16:19
+
+## 2026-11-03 — fix(jjtl): output tab after the write, onto the trunk, undo group kept (P-2026-11-03-2110)
+**Prompt**: merge alfonso-frontend-jjtl into jjtl-output-tab-late; try R-JTG-14's undo group with the tab opened at the end of the write (run, Undo, Redo, failing run, b10_8); force a write-back failure; b10_8 and b11_9 figures after the merge.
+**Files touched**: merge 5336934a4 (`docs/log-inbox/hw-notation.md` by union); `frontend/src/components/project/nestedMaterialization.ts`, its test, `ProjectEditor.tsx` (comment) at 9f5b0f1f8; `docs/log-inbox/hw-notation.md`, `Status:` of `docs/prompts/claude_2026-11-03_2110_prompt_jjtl_tab_with_undo.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-03 12:32
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: After the merge b10_8's group closed at 6.2 s, before the tab's canvas made its vertices; Cmd+Z left the run. Cause: the tab's 1.4 s mount render has no dispatch, so the closer saw quiet. Fix: a poll back more than 200 ms late counts as a write. Then: closed at 14.7 s, Undo clears all, tab too. Merge commit lacks the `Model:` trailer. Probes in `~/.jjodel-lanes/P-2026-11-03-2110/probe/`. Gates: typecheck 0, vitest 3 import-red, build 0, check:docs.
+**Prompt document name**: 2026-11-03 21:10
+
+**Undo trial** (undo probe of P-2026-11-03-1435, this lane's copy; real dialog, Cmd+Z and Cmd+Shift+Z): b2_1 plain, before and after the fix: one step, Undo leaves no key added or removed against before, `out1` tab gone; Redo gives the same tree (the tab stays closed, as on the trunk). Failing run (`Const -> E`, E abstract): no step pushed, nothing written, Undo and Redo inert, error in the panel. b10_8 before the fix: group closed 6,107 ms after the close call, 11,517 keys still there after Undo, tab open. After: closed 14,593 ms after the call (14,696 from the click), after the last canvas long task (13,580 + 249); Undo blocks 966 ms (longest task 903), leaves 13 objects and 14 vertices as before; Redo 356 ms, same tree. Forced write-back failure (b2_1, the writer's slot check throws once): tab `out1` opens, panel `Attributes not written in "out1": 6 value(s) of 6 object(s): the attribute writer failed: probe: forced write-back failure`, Undo still clears the run.
+
+**Figures after the merge** (wbtime probe of P-2026-11-03-1033, this lane's copy, dev server 3233 restarted after the edits; ms from the click; load from `uptime` before the run, at the end in brackets):
+
+| run | load | attributes written | tab | longest task | lag max | page quiet | `Const` | `num` kept |
+|---|---|---|---|---|---|---|---|---|
+| b10_8 | 7.0 (7.7) | 4,289 | 4,311 | 3,282 | 7,013 | 14,032 | 1,280 | 1,280 of 1,280 |
+| b11_9 run 1 | 7.4 (7.1) | 10,315 | 10,336 | 7,928 | 14,174 | 31,370 | 2,560 | 2,560 of 2,560 |
+| b11_9 run 2 | 7.1 (6.5) | 10,442 | 10,482 | 7,272 | 12,993 | 30,620 | 2,560 | 2,560 of 2,560 |
+| b11_9 run 3 | 7.4 (7.2) | 10,355 | 10,377 | 7,294 | 14,043 | 29,464 | 2,560 | 2,560 of 2,560 |
+
+Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vite served `DockManager` to the app under an HMR `?t=` URL, so the probe patched a second instance; fixed by restarting the server), and the next one, on a cold server, started at load 2.8 and ended at 14.3 (attributes 13,136, longest 14,340); its warm repeat started at 13.2 (attributes 7,957, longest 3,416).
