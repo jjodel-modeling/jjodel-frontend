@@ -496,3 +496,21 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: passato — chat, unattended: gates green on ba649974e; acceptance by an app probe on the branch, no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-rerun-stale-ast` on `8469b98b2` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1350/result.json`.
 **Prompt document name**: 2026-11-03 13:50
+
+## 2026-11-03 — ticket: JjTL multiplicity [*] creates one target per source, silently
+**Ticket**: `A -> B[*]` creates exactly one target per source, silently: `createTargetInstances` (executor.ts) sets count 1 when the upper bound is -1, and no warning says the multiplicity was ignored. `[n]` creates n. Reproduced on both parser paths by `spec12-known-bugs.test.ts` ("row: multiplicity [*]"). The unbounded semantics are undefined (SPEC §12.3 gap 4), so this is a language decision before it is a fix: what drives the count (a collection expression, the source's own multiplicity), and whether `[*]` should warn until then.
+**Priority**: medium
+**Found in**: P-2026-11-03-1402
+
+## 2026-11-03 — fix(jjtl): SPEC 12.2 rows reviewed, undeclared bindings warned (#445) (P-2026-11-03-1402)
+**Prompt**: P-2026-11-03-1402, each SPEC 12.2 row reproduced and classified real or stale, local fixes here, a ticket for the rest; #445 cause confirmed and a binding to an undeclared feature warned with rule, line and column, never dropped silently.
+**Files touched**: `e784e325d`: `frontend/src/jjtl/executor/executor.ts`, `executor/astBridge.ts`, `executor/__tests__/spec12-known-bugs.test.ts` (new), `executor/__tests__/nested-name-undeclared.test.ts`, `jjtl/__tests__/executor-bridge.test.ts`, `jjtl/__tests__/executor-llayer.test.ts`; `207cd0252`: `frontend/src/jjtl/SPEC.md`, the prompt's `Status:`; this inbox (ticket and entry).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Nine files, all inside the prompt's DOVE. Stale: forAll (3aa5993c8, d3d42310c), flat-array duplicates, double execution (read only, no app probe). Fixed: import-red 9 to 3 (six jjtl files load; two stale expectations updated), {classes,instances} twice, console.log, EDouble tag. Real: [*], ticketed medium (GitHub card skipped on a 504). Regressions unknown: the panel line was not seen in the app. Gates: tsc 0, vitest 13346 passed, build 0.
+**Prompt document name**: 2026-11-03 14:02
