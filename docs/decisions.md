@@ -7155,7 +7155,7 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   deleted in the same edit clears the reference. After an application the reprint shows the new path. Paths are not
   rewritten during an edit or a paste. R-TXT-33 is ratified with this answer, as is holding a cut until its paste, with the
   status `Cut · paste to move it` and a Delete button.
-- **R-TXT-36** (2026-11-03, Alfonso 21:16, evidence: measured). **Step A, answers to the report of P-2026-11-03-1415.** Report: docs/discovery/discovery_2026-11-03_textual_tolerant_parser.md. (1) A lossless
+- **R-TXT-36** (2026-11-03, Alfonso 21:16). **Step A, answers to the report of P-2026-11-03-1415.** Measured, report: docs/discovery/discovery_2026-11-03_textual_tolerant_parser.md. (1) A lossless
   concrete syntax tree with trivia on tokens, built by parser and printer. (2) Recovery in A: token insertion and deletion,
   and descent into skipped blocks; inferring a class keyword is deferred. (3) An optional `unclosed` flag next to
   `recovered`. (4) Reference errors after a syntax error are secondary warnings, listed after the syntax errors. (5) The
