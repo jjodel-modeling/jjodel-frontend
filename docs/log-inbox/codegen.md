@@ -1529,3 +1529,29 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Priority**: medium
 **Found in**: P-2026-11-04-0046
 **Detail**: ~/.jjodel-lanes/P-2026-11-04-0046/crops/library-4-hover-reference.png
+
+## 2026-11-04 — discovery(codegen): textual step B2, outline groups, unnamed labels, hover card (P-2026-11-04-0005, P-2026-11-04-0021)
+**Prompt**: `claude_2026-11-04_0005_prompt_textual_b2_discovery.md`, full lane, read-only: outline group nodes, a label rule for unnamed objects, how far Monaco 0.52.2 allows a hover card that stays open; stopped at the context ceiling with the measurements done. `claude_2026-11-04_0021_prompt_textual_b2_report.md`, fast lane (RC-51): the report written from the handoff, no new measurement.
+**Files touched**: `docs/discovery/discovery_2026-11-04_textual_b2_outline_hover.md`, `docs/discovery/harness/probe_2026-11-04_textual_b2_outline.test.ts`, `docs/discovery/harness/probe_2026-11-04_textual_b2_app/` (11 files) (`10133057a`); this entry and the Status lines of both prompts (closure commit).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Docs only; probes ran on a vite server on 3470 (stopped). Group node = item holding a keyword token; label rule C4' gives `Transition coin`, 0 changes on reprint over the corpus. Monaco's own hover cannot stay open (`_sticky = false` is a constant); trusted command links plus a pinned content-widget card work. Shift+F12 with one use shows nothing. R-TXT-36..39 are on trunk only. Crops in `~/.jjodel-lanes/P-2026-11-04-0005/`.
+**Prompt document name**: 2026-11-04 00:05
+
+## 2026-11-04 — discovery(codegen): textual step B2, outline groups, unnamed labels, hover card (P-2026-11-04-0005, P-2026-11-04-0021)
+**Prompt**: `claude_2026-11-04_0005_prompt_textual_b2_discovery.md`, full lane, read-only: outline group nodes, a label rule for unnamed objects, how far Monaco 0.52.2 allows a hover card that stays open; stopped at the context ceiling with the measurements done. `claude_2026-11-04_0021_prompt_textual_b2_report.md`, fast lane (RC-51): the report written from the handoff, no new measurement.
+**Files touched**: `docs/discovery/discovery_2026-11-04_textual_b2_outline_hover.md`, `docs/discovery/harness/probe_2026-11-04_textual_b2_outline.test.ts`, `docs/discovery/harness/probe_2026-11-04_textual_b2_app/` (11 files) (`10133057a`); this entry and the Status lines of both prompts (closure commit).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Docs only; probes ran on a vite server on 3470 (stopped). Group node = item holding a keyword token; label rule C4' gives `Transition coin`, 0 changes on reprint over the corpus. Monaco's own hover cannot stay open (`_sticky = false` is a constant); trusted command links plus a pinned content-widget card work. Shift+F12 with one use shows nothing. R-TXT-36..39 are on trunk only. Crops in `~/.jjodel-lanes/P-2026-11-04-0005/`.
+**Prompt document name**: 2026-11-04 00:05
