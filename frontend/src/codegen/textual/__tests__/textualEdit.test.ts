@@ -14,7 +14,7 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { APPLY_DELAY_MS, appliedRefs, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, onModelPrint, outerMarks, pastedRefs, pastedSpans, pauseOf, planEdit } from '../ui/TextualTab';
+import { APPLY_DELAY_MS, appliedRefs, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, onModelPrint, outerMarks, pastedRefs, pastedSpans, pathRewrites, pauseOf, planEdit, shiftOffset } from '../ui/TextualTab';
 import type { EditBase, TextSync } from '../ui/TextualTab';
 import { confirmRows, needsConfirmation } from '../ui/TextConfirmPanel';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
@@ -489,5 +489,124 @@ describe('the reference tokens the editor carried (R-TXT-35)', () => {
         expect(refOps(plan)).toEqual([]);
         expect(refOps(planEdit(plain, text, spans, {}, undefined, refs.filter(r => r.owner !== 'b4')).plan)).toHaveLength(1);
         expect(pastedRefs(clip, at, cut, cut + swapped.text)).toEqual([]);
+    });
+});
+
+// ---- After an application the text shows the current paths (R-TXT-35, P-2026-11-03-1535) ---------------------------
+
+describe('after an application the text shows the current paths (R-TXT-35)', () => {
+    /** Three Members named ann: a reference to one prints as its path. spqr borrows the third, cosmos nobody. */
+    const ANNS = (): TextObject[] => [
+        ...objects({ lib: { members: ['m1', 'm2', 'm3'] }, m2: { name: 'ann' }, b2: { borrowedBy: null }, b4: { borrowedBy: 'm3' } }),
+        { id: 'm3', cls: 'Member', slots: { name: 'ann' } },
+    ];
+    const tokenOf = (refs: readonly RefSpan[] | undefined, owner: string) => refs!.find(r => r.owner === owner)!;
+    const shiftSpan = <S extends { readonly start: number; readonly end: number }>(s: S, edits: Parameters<typeof shiftOffset>[1]): S =>
+        ({ ...s, start: shiftOffset(s.start, edits), end: shiftOffset(s.end, edits) });
+
+    /** The text edit applied: the edited text, the model after the run (`model`), and what the tab carries then. */
+    function applied(base: ReturnType<typeof baseOf>, replacements: readonly (readonly [string, string])[], model: TextObject[]) {
+        const { text, spans, refs } = edited(base, replacements);
+        const { parsed, plan } = planEdit(base, text, spans, {}, undefined, refs);
+        expect(plan.refusals).toEqual([]);
+        expect(plan.lines?.length).toBeGreaterThan(0);
+        const next = baseOf(null, model);
+        const rematch = matchObjects({ mm: MM, grammar: base.grammar, model: next.objects, parsed, previous: spans });
+        return { text, next, spans: appliedSpans(parsed, plan.diff!.match, rematch), refs: appliedRefs(text, plan.diff!.refs ?? [], plan.diff!.match, rematch) };
+    }
+
+    /** The first ann deleted, a comment typed on the library's line: spqr's kept path names a slot that is gone. */
+    function deletedFirst() {
+        const base = baseOf(null, ANNS());
+        const m1 = base.spans.find(s => s.id === 'm1')!;
+        const line = base.text.slice(base.text.lastIndexOf('\n', m1.start) + 1, m1.end + 1);
+        const model = ANNS().filter(o => o.id !== 'm1').map(o => (o.id === 'lib' ? { ...o, slots: { ...o.slots, members: ['m2', 'm3'] } } : o));
+        return { base, ...applied(base, [[line, ''], ['city {', 'city { // kept as typed']], model) };
+    }
+
+    it('rewrites the kept path to the new one, and nothing else (mutant: no rewrite; the whole text reprinted)', () => {
+        const { base, text, next, refs } = deletedFirst();
+        const was = tokenOf(base.refs, 'b4').text, now = tokenOf(next.refs, 'b4').text;
+        expect(was).not.toBe(now);
+        const at = text.indexOf(was);
+        expect(text.lastIndexOf(was)).toBe(at);
+        const r = pathRewrites(text, refs, next.refs!);
+        expect(r.edits).toEqual([{ start: at, end: at + was.length, text: now }]);
+        expect(r.text).toBe(text.slice(0, at) + now + text.slice(at + was.length));
+        expect(r.text).toContain('city { // kept as typed');
+        expect(r.text).not.toBe(next.text);
+        expect(r.held).toBe(0);
+    });
+
+    it('rewrites a kept name too, and leaves an unchanged token alone (mutant: every token rewritten; the text compared)', () => {
+        const plain = baseOf(null);
+        const SWAP: readonly (readonly [string, string])[] = [['Member bob', 'Member rob'], ['members {', 'members {\n    Member bob {}']];
+        const fresh = (n: TextObject): TextObject => ({ ...n, id: 'n1' });
+        const { text: typed, spans, refs: carried } = edited(plain, SWAP);
+        const { parsed } = planEdit(plain, typed, spans, {}, undefined, carried);
+        const made = parsed.objects.find(o => o.cls === 'Member' && o.slots.name === 'bob')!;
+        const model = plain.objects.map(o => (o.id === 'm2' ? { ...o, slots: { ...o.slots, name: 'rob' } } : o.id === 'lib' ? { ...o, slots: { ...o.slots, members: ['n1', 'm1', 'm2'] } } : o));
+        const { text, next, refs } = applied(plain, SWAP, [...model, fresh(made)]);
+        const r = pathRewrites(text, refs, next.refs!);
+        const at = text.indexOf('borrowedBy bob') + 'borrowedBy '.length;
+        expect(r.edits).toEqual([{ start: at, end: at + 3, text: 'rob' }]);
+        expect(r.refs.filter(t => t.text !== text.slice(t.start, t.end))).toEqual([{ owner: 'b4', feature: 'borrowedBy', target: 'm2', text: 'rob', start: at, end: at + 3 }]);
+        expect(r.refs).toContainEqual(expect.objectContaining({ owner: 'b2', target: 'm1', text: 'ann' }));
+        expect(r.text).toBe(next.text);
+    });
+
+    it('pairs by owner, feature and target, and writes every edit in text order (mutant: target not in the key; no sort; applied front to back)', () => {
+        const tok = (target: string, text: string, start: number): RefSpan => ({ owner: 'o', feature: 'f', target, text, start, end: start + text.length });
+        const text = 'a X b Y c';
+        const r = pathRewrites(text, [tok('t2', 'Y', 6), tok('t1', 'X', 2)], [tok('t2', 'YYY', 0), tok('t1', 'XX', 0)]);
+        expect(r.text).toBe('a XX b YYY c');
+        expect(r.refs).toEqual([tok('t2', 'YYY', 7), tok('t1', 'XX', 2)]);
+    });
+
+    it('the next edit keeps the rewritten token, and the rewrite alone asks for no change (mutant: the refs keep the old text)', () => {
+        const { text, next, spans, refs } = deletedFirst();
+        const r = pathRewrites(text, refs, next.refs!);
+        const moved = spans.map(s => shiftSpan(s, r.edits));
+        expect(planEdit(next, r.text, moved, {}, undefined, r.refs).plan.lines).toEqual([]);
+        // A new ann ahead of the others: the rewritten path now names m2 in the text, and is kept on m3.
+        const again = edited({ text: r.text, spans: moved, refs: [...r.refs] }, [['members {', 'members {\n    Member ann {}']]);
+        const { plan } = planEdit(next, again.text, again.spans, {}, undefined, again.refs);
+        expect(plan.refusals).toEqual([]);
+        expect(plan.diff!.ops.filter(op => op.op === 'reference' || op.op === 'link')).toEqual([]);
+        expect(plan.diff!.match.created).toHaveLength(1);
+    });
+
+    it('a token under the caret or a selection waits, edges included (mutant: the caret ignored; the edges exclusive)', () => {
+        const { text, next, refs } = deletedFirst();
+        const t = tokenOf(refs, 'b4');
+        for (const sel of [{ start: t.start, end: t.start }, { start: t.end, end: t.end }, { start: t.start + 2, end: t.start + 2 }, { start: t.start - 5, end: t.start + 1 }]) {
+            const r = pathRewrites(text, refs, next.refs!, [sel]);
+            expect(r.edits, JSON.stringify(sel)).toEqual([]);
+            expect(r.text).toBe(text);
+            expect(r.held).toBe(1);
+            expect(r.refs).toContainEqual(t);
+        }
+        // The caret leaves it: the same call rewrites.
+        expect(pathRewrites(text, refs, next.refs!, [{ start: t.end + 1, end: t.end + 1 }]).edits).toHaveLength(1);
+    });
+
+    it('the caret keeps its place in the text (mutant: offsets not shifted; shifted before the edit too; one edit counted)', () => {
+        const { text, next, refs } = deletedFirst();
+        const t = tokenOf(refs, 'b4');
+        const r = pathRewrites(text, refs, next.refs!);
+        const after = text.indexOf('}', t.end);
+        expect(r.text.slice(shiftOffset(after, r.edits))).toBe(text.slice(after));
+        expect(r.text.slice(0, shiftOffset(t.start - 1, r.edits))).toBe(text.slice(0, t.start - 1));
+        // Edits that change the length: `ab|cd|ef|gh` with `cd` to `xyz` and `gh` to `g`.
+        const edits = [{ start: 2, end: 4, text: 'xyz' }, { start: 6, end: 8, text: 'g' }];
+        expect([0, 2, 4, 5, 6, 8].map(o => shiftOffset(o, edits))).toEqual([0, 2, 5, 6, 7, 8]);
+    });
+
+    it('one Undo reprints the text before the application: the rewritten text is the agreement (mutant: the agreement kept as typed)', () => {
+        const { base, text, next, refs } = deletedFirst();
+        const r = pathRewrites(text, refs, next.refs!);
+        // The app's undo restores the model: its print is the base's again.
+        expect(onModelPrint({ text: r.text, model: next.text }, base.text, r.text, false)).toBe('reprint');
+        expect(onModelPrint({ text, model: next.text }, base.text, r.text, false)).toBe('keep');
     });
 });
