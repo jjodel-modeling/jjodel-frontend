@@ -5,7 +5,8 @@ import { describe, it, expect, vi } from 'vitest';
  *
  * Fixture: `../../__tests__/fixtures/class2relational.ts`: the two metamodels, a source model
  * with every case, the transformation as first written (NATURAL) and the version that runs
- * (WORKAROUND), each difference with its reason. Report:
+ * (WORKAROUND), each difference with its reason, and the matched-rule form of the keys
+ * (MATCHED_KEYS), the text that ran before a `let` held its value (P-2026-11-03-2111). Report:
  * `docs/discovery/discovery_2026-11-03_jjtl_class2relational.md`.
  *
  * Runs on the JjEL parse path (with the source text), the one the app takes. The `joiner`
@@ -27,7 +28,9 @@ vi.mock('../../../joiner', () => ({
 import { JjtlLexer } from '../../lexer/lexer';
 import { JjtlParser } from '../../parser/parser';
 import { execute } from '../executor';
-import { NATURAL, WORKAROUND, WORKAROUNDS, RELATIONAL, SHOP, EXPECTED_SCHEMA } from '../../__tests__/fixtures/class2relational';
+import {
+    NATURAL, WORKAROUND, WORKAROUNDS, MATCHED_KEYS, MATCHED_KEY_EDITS, applyEdits, RELATIONAL, SHOP, EXPECTED_SCHEMA,
+} from '../../__tests__/fixtures/class2relational';
 
 function parse(text: string) {
     const { tokens, errors: lexErrors } = new JjtlLexer(text).tokenize();
@@ -68,12 +71,16 @@ function render(result: any): string[] {
 }
 
 /** NATURAL with the workarounds before index `n` applied, as WORKAROUND applies them all. */
-function partly(n: number): string {
-    return WORKAROUNDS.slice(0, n).reduce((text, w) => (w.from === '__ALL__'
-        ? text.replace(/resolve\(([^,()]+(?:\([^()]*\))?), (\w+)\)/g, 'resolve($1, "$2")')
-        : text.replace(w.from, w.to)), NATURAL);
-}
+const partly = (n: number): string => applyEdits(NATURAL, WORKAROUNDS.slice(0, n));
 const firstOf = (tag: string) => WORKAROUNDS.findIndex(w => w.why.startsWith(tag));
+const firstKeyEdit = (tag: string) => MATCHED_KEY_EDITS.findIndex(w => w.why.startsWith(tag));
+
+/** WORKAROUND with each use of `$id` written as a call of idColumn, and the let gone. */
+const ID_CALLED_THRICE = WORKAROUND
+    .replace('    let $id = idColumn(c) in {\n        columns := [$id]', '    columns := [idColumn(c)]')
+    .replace('        key := [$id]\n', '    key := [idColumn(c)]\n')
+    .replace('        foreignKeys := c.attributes', '    foreignKeys := c.attributes')
+    .replace('[superFk(c, $id)])\n    }\n}', '[superFk(c, idColumn(c))])\n}');
 
 describe('Class2Relational', () => {
     it('builds the expected schema: tables, columns, keys, foreign keys and join tables', async () => {
@@ -107,7 +114,19 @@ describe('Class2Relational', () => {
 
     it('records each workaround against a passage of the natural text', () => {
         expect(WORKAROUND).not.toEqual(NATURAL);
-        for (const tag of ['W1', 'W2', 'W3', 'W4', 'W5', 'W6']) expect(firstOf(tag)).toBeGreaterThanOrEqual(0);
+        for (const tag of ['W1', 'W2', 'W3', 'W4']) expect(firstOf(tag)).toBeGreaterThanOrEqual(0);
+        for (const tag of ['W5', 'W6']) expect(firstOf(tag)).toBe(-1);
+        expect(WORKAROUNDS).toHaveLength(10);
+        // The natural keys: the let stays, no resolve() is written.
+        expect(WORKAROUND).toContain('let $id = idColumn(c) in {');
+        expect(WORKAROUND).not.toContain('resolve(');
+    });
+
+    it('the matched-rule form of the keys builds the same schema', async () => {
+        const result = await run(MATCHED_KEYS);
+        expect(result.errors).toEqual([]);
+        expect(result.warnings).toEqual([]);
+        expect(render(result)).toEqual(EXPECTED_SCHEMA);
     });
 
     // -----------------------------------------------------------------------
@@ -125,27 +144,32 @@ describe('Class2Relational', () => {
             "Expression evaluation failed (JjelExpression): Cannot access property 'types' of null",
             "Expression evaluation failed (JjelExpression): Cannot access property 'name' of null",
         ]));
-        // The join tables lose their name, their owner column's name and every Integer type.
+        // The join tables lose their name, their owner column's name and every Integer type. The
+        // key is the table's own owner column (#515); before P-2026-11-03-2111 it was a second one.
         expect(render(result).filter(l => l.startsWith('table null'))).toEqual([
-            'table null: null:null, phones:String | key ?(not a column of the table)',
-            'table null: null:null, itemsId:null | key ?(not a column of the table)',
+            'table null: null:null, phones:String | key ?',
+            'table null: null:null, itemsId:null | key ?',
         ]);
     });
 
-    it('W5: a let bound to a called rule applies the rule at each use, and the extra targets stay at the root, silently', async () => {
-        const result = await run(partly(firstOf('W5')));
+    it('#515: a let holds its value: $id used three times is one column, the table\'s own, and nothing is left at the root', async () => {
+        const result = await run(WORKAROUND);
         expect(result.errors).toEqual([]);
-        expect(result.warnings).toEqual([]);
-        const lines = render(result);
-        expect(lines).toContain('table Customer: id:Integer, email:String, vip:Boolean | key id(not a column of the table)'
-            + ' | fk_Customer_super(id(not a column of the table) -> Named)');
-        expect(lines.filter(l => l.startsWith('root Column'))).toEqual([
-            ...Array(6).fill('root Column id'), 'root Column customerId', 'root Column orderId',
-        ]);
+        expect(result.targetModel!.roots.map((r: any) => r.className)).toEqual(['Schema']);
+        const tables = ptr((result.targetModel!.roots[0] as any).tables);
+        const customer = tables.find((t: any) => t.name === 'Customer');
+        const id = ptr(customer.columns)[0];
+        expect(id.name).toBe('id');
+        expect(ptr(customer.key)).toEqual([id]);
+        expect(ptr(ptr(customer.foreignKeys)[0].column)[0]).toBe(id);
+        // The owner column of a join table, bound by `let $owner`, is its key by identity too.
+        const phones = tables.find((t: any) => t.name === 'Customer_phones');
+        expect(ptr(phones.key)[0]).toBe(ptr(phones.columns)[0]);
+        expect(result.targetModel!.instances.get('Column')).toHaveLength(14);
     });
 
     it('W6: a bare type name in a nested resolve() is evaluated, so the call reports the ambiguity it settles', async () => {
-        const result = await run(partly(firstOf('W6')));
+        const result = await run(applyEdits(WORKAROUND, MATCHED_KEY_EDITS.slice(0, firstKeyEdit('W6'))));
         expect(result.success).toBe(false);
         expect(result.errors[0]).toMatch(/Ambiguous cross-type resolution .* source id 'cNamed' has targets from 2 rules \(Table, Column\)\. Use resolve\(expr, TargetType\) to disambiguate\./);
     });
@@ -154,7 +178,7 @@ describe('Class2Relational', () => {
         // The join tables' owner columns: Attribute has three rules to Column, the third matching
         // only multi-valued attributes. Before P-2026-11-03-1434 the first rule to Column was
         // chosen and its missing trace entry threw "Unresolved reference".
-        const result = await run(WORKAROUND);
+        const result = await run(MATCHED_KEYS);
         expect(result.errors).toEqual([]);
         expect(render(result).slice(-2)).toEqual(EXPECTED_SCHEMA.slice(-2));
     });
@@ -168,13 +192,24 @@ describe('Class2Relational', () => {
         expect(render(result)).toEqual(EXPECTED_SCHEMA);
     });
 
-    it('a called rule cannot be declared unique', () => {
-        const { errors } = parse(WORKAROUND.replace('rule valueColumn(a)', 'unique rule valueColumn(a)'));
-        expect(errors.length).toBeGreaterThan(0);
+    it('unique rule idColumn(c): three calls with the same argument return one column, placed once', async () => {
+        const result = await run(ID_CALLED_THRICE.replace('rule idColumn(c)', 'unique rule idColumn(c)'));
+        expect(result.errors).toEqual([]);
+        expect(render(result)).toEqual(EXPECTED_SCHEMA);
+        expect(result.targetModel!.roots).toHaveLength(1);
+    });
+
+    it('without unique the same three calls create three columns: a called rule is fresh per call (R-JTG-6)', async () => {
+        const result = await run(ID_CALLED_THRICE);
+        expect(result.errors).toEqual([]);
+        expect(render(result)).toContain('table Customer: id:Integer, email:String, vip:Boolean | key id(not a column of the table)'
+            + ' | fk_Customer_super(id(not a column of the table) -> Named)');
+        // 10 calls on 4 classes (2 each, 3 with a superclass), one placed per table: 6 left at the root.
+        expect(render(result).filter(l => l.startsWith('root Column'))).toEqual(Array(6).fill('root Column id'));
     });
 
     it('a lazy rule on Class beside the matched one is rejected before pass 1', async () => {
-        const text = WORKAROUND.replace('-- The key column of a class\'s table.\nClass c -> Column {', 'unique lazy Class c -> Column {');
+        const text = MATCHED_KEYS.replace('-- The key column of a class\'s table.\nClass c -> Column {', 'unique lazy Class c -> Column {');
         const { ast, errors } = parse(text);
         expect(errors).toEqual([]);
         const result = await execute(ast!, SHOP, RELATIONAL);
@@ -187,7 +222,7 @@ describe('Class2Relational', () => {
         const result = await run(text);
         expect(result.success).toBe(true);
         expect(result.warnings).toEqual([
-            "Rule 'Attribute -> Column', binding 'nullable' at line 27, column 5: 'nullable' is not a feature of target class 'Column'; "
+            "Rule 'Attribute -> Column', binding 'nullable' at line 29, column 5: 'nullable' is not a feature of target class 'Column'; "
             + 'the value is not written to the model.',
         ]);
     });

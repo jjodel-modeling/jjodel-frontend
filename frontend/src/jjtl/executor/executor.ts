@@ -1858,7 +1858,7 @@ export class JjtlExecutor {
                 let letCtx = this.createInstanceContext(sourceInstance, alias);
                 const letVars: Record<string, JjelValue> = {};
                 for (const binding of letItem.bindings) {
-                    const value = await this.evaluateExpressionAsync(binding.value, letCtx);
+                    const value = await this.letValue(binding.value, letCtx);
                     letVars[binding.name] = value;
                     letCtx = letCtx.child({ [binding.name]: value });
                 }
@@ -1908,7 +1908,7 @@ export class JjtlExecutor {
                 let letCtx = this.createInstanceContext(sourceInstance, alias);
                 const letVars: Record<string, JjelValue> = {};
                 for (const binding of letItem.bindings) {
-                    const value = await this.evaluateExpressionAsync(binding.value, letCtx);
+                    const value = await this.letValue(binding.value, letCtx);
                     letVars[binding.name] = value;
                     letCtx = letCtx.child({ [binding.name]: value });
                 }
@@ -2541,7 +2541,7 @@ export class JjtlExecutor {
                     : this.createInstanceContext(sourceInstance);
                 const letVars: Record<string, JjelValue> = {};
                 for (const binding of letItem.bindings) {
-                    const value = await this.evaluateExpressionAsync(binding.value, letCtx);
+                    const value = await this.letValue(binding.value, letCtx);
                     letVars[binding.name] = value;
                     letCtx = letCtx.child({ [binding.name]: value });
                 }
@@ -2682,7 +2682,7 @@ export class JjtlExecutor {
                 let nestedCtx = letCtx;
                 const nestedVars: Record<string, JjelValue> = { ...letBindings };
                 for (const binding of nested.bindings) {
-                    const value = await this.evaluateExpressionAsync(binding.value, nestedCtx);
+                    const value = await this.letValue(binding.value, nestedCtx);
                     nestedVars[binding.name] = value;
                     nestedCtx = nestedCtx.child({ [binding.name]: value });
                 }
@@ -2778,7 +2778,7 @@ export class JjtlExecutor {
                 let nestedCtx = letCtx;
                 const nestedVars: Record<string, JjelValue> = { ...letBindings };
                 for (const binding of nested.bindings) {
-                    const value = await this.evaluateExpressionAsync(binding.value, nestedCtx);
+                    const value = await this.letValue(binding.value, nestedCtx);
                     nestedVars[binding.name] = value;
                     nestedCtx = nestedCtx.child({ [binding.name]: value });
                 }
@@ -3143,7 +3143,7 @@ export class JjtlExecutor {
     /** `Class -> Target`, `rule name(...) -> Target`, `lazy Class -> Target`, `= ...` for delegations. */
     private ruleLabel(rule: ClassMappingAST): string {
         const head = rule.ruleKind === 'called'
-            ? `rule ${rule.ruleName}(${(rule.parameters ?? []).map(p => p.name).join(', ')})`
+            ? `${rule.unique ? 'unique ' : ''}rule ${rule.ruleName}(${(rule.parameters ?? []).map(p => p.name).join(', ')})`
             : `${rule.ruleKind === 'lazy' ? (rule.unique ? 'unique lazy ' : 'lazy ') : ''}` +
               rule.sources.map(s => s.className).join(', ');
         return rule.result ? `${head} = ...` : `${head} -> ${rule.targetClass}`;
@@ -3378,7 +3378,7 @@ export class JjtlExecutor {
             return out;
         }
         const demand = this.demandOf(value);
-        if (demand?.kind === 'call') return this.applyRule(demand.rule, { args: demand.args, env: demand.callerEnv });
+        if (demand?.kind === 'call') return this.realizeCall(demand);
         if (demand?.kind === 'closure') return this.realizeClosure(demand);
         const { element, rule, lazy } = this.sourceRuleOf(value, fresh)!;
         if (lazy) return this.realizeLazy(element, lazy);
@@ -3389,6 +3389,55 @@ export class JjtlExecutor {
             return lowered;
         }
         return this.realizeSource(element, rule!, this.currentEnvironment());
+    }
+
+    /**
+     * A call of a called rule: applied afresh (R-JTG-6), or, when the rule is `unique`, once
+     * per (rule, arguments, environment), a later equal call returning the same target
+     * (P-2026-11-03-2111). Arguments compare as bound values do: a source element by id, any
+     * other object by identity; the environment is the one the application runs under.
+     */
+    private async realizeCall(demand: CallDemand): Promise<any> {
+        const { rule, args, callerEnv } = demand;
+        if (!rule.unique) return this.applyRule(rule, { args, env: callerEnv });
+        const envParam = (rule.parameters ?? []).findIndex(p => p.paramType === 'Env');
+        const env = envParam >= 0 ? (this.environmentOf(args[envParam]) ?? callerEnv) : callerEnv;
+        const argKey = args.filter((_, i) => i !== envParam).map(a => this.valueKey(a)).join(',');
+        const key = `call|${this.ruleIds.get(rule)}|(${argKey})|${this.envKey(env)}`;
+        if (this.realized.has(key)) return this.realized.get(key);
+        const lowered = await this.applyRule(rule, { args, env: callerEnv });
+        this.realized.set(key, lowered);
+        return lowered;
+    }
+
+    /**
+     * The value a `let` binds: its expression evaluated once, at the binding, with the calls
+     * and environment lookups it holds carried out there, so every use of the name means the
+     * same target (#515, P-2026-11-03-2111). A source element stays the element, for the
+     * binding that uses it to resolve.
+     */
+    private async letValue(expression: ExpressionAST, ctx: EvaluationContext): Promise<JjelValue> {
+        return this.realizeCalls(await this.evaluateExpressionAsync(expression, ctx));
+    }
+
+    private holdsDemand(value: any): boolean {
+        return Array.isArray(value) ? value.some(el => this.holdsDemand(el)) : this.demandOf(value) !== undefined;
+    }
+
+    /** realizeDemands for demands only: source elements are left as they are. */
+    private async realizeCalls(value: any): Promise<any> {
+        if (!this.holdsDemand(value)) return value;
+        if (Array.isArray(value)) {
+            const out: any[] = [];
+            for (const el of value) {
+                const realized = await this.realizeCalls(el);
+                if (Array.isArray(realized) && !Array.isArray(el)) out.push(...realized);
+                else out.push(realized);
+            }
+            return out;
+        }
+        const demand = this.demandOf(value)!;
+        return demand.kind === 'call' ? this.realizeCall(demand) : this.realizeClosure(demand);
     }
 
     /**

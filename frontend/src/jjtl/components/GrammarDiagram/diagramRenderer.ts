@@ -318,6 +318,7 @@ function getDiagramForRule(rule: GrammarRule): DiagramNode {
 
         case 'calledRule':
             return Sequence(
+                Optional(Terminal('unique')),
                 Terminal('rule'),
                 NonTerminal('ID'),
                 Terminal('('),

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 /**
  * Grammar of slice B (P-2026-11-02-2224, R-JTG-5, R-JTG-7): called rules
- * `rule name(params) -> T { ... }`, lazy rules `[unique] lazy S -> T { ... }`, and the
+ * `[unique] rule name(params) -> T { ... }` (unique: P-2026-11-03-2111), lazy rules `[unique] lazy S -> T { ... }`, and the
  * delegating form `... = expression`, on both parser paths. `rule`, `lazy` and `unique`
  * are contextual: a class or a feature with one of those names keeps parsing.
  */
@@ -62,6 +62,21 @@ describe.each([false, true])('called and lazy rules parse (JjEL path: %s)', (wit
         expect(varRule.result).toBeDefined();
         expect(ast!.mappings[0].result).toBeDefined();
         expect(ast!.mappings[0].targetClass).toBe('');
+    });
+
+    it('reads unique on a called rule, which a class or alias named unique or rule does not take', () => {
+        const { ast, errors } = parse(
+            'transformation T from A to B\nunique rule key(c) -> Column {\n    name := "id"\n}\nrule plain(c) -> Column {\n    name := c.name\n}\n'
+            + 'unique u -> Rule {\n    name := name\n}\n',
+            withSource,
+        );
+        expect(errors).toEqual([]);
+        expect(ast!.rules!.map(r => [r.ruleKind, r.ruleName, r.unique])).toEqual([
+            ['called', 'key', true],
+            ['called', 'plain', undefined],
+        ]);
+        expect(ast!.rules![0].parameters!.map(p => p.name)).toEqual(['c']);
+        expect(ast!.mappings.map(m => [m.sources[0].className, m.sources[0].alias])).toEqual([['unique', 'u']]);
     });
 
     it('leaves a transformation without them as it was: no rules key', () => {

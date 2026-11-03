@@ -58,12 +58,13 @@ State -> Place { ... }`,
     {
         id: 'calledRule',
         name: 'Called Rule',
-        description: 'A rule invoked by name from a binding; never matched. A parameter of type Env receives the environment',
-        ebnf: 'calledRule = "rule" ID "(" (ID (":" TYPE)?)* ")" ("->" TargetClass condition? "{" mappingBody "}" | "=" expression)',
+        description: 'A rule invoked by name from a binding; never matched. A parameter of type Env receives the environment; unique returns the same target for a second call with the same arguments and environment',
+        ebnf: 'calledRule = "unique"? "rule" ID "(" (ID (":" TYPE)?)* ")" ("->" TargetClass condition? "{" mappingBody "}" | "=" expression)',
         example: `rule mkRef(v) -> Ref {
     name := v.name
 }
-rule under(e, env: Env) = e`,
+rule under(e, env: Env) = e
+unique rule key(c) -> Column { name := "id" }`,
     },
     {
         id: 'lazyRule',
