@@ -7155,6 +7155,15 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   deleted in the same edit clears the reference. After an application the reprint shows the new path. Paths are not
   rewritten during an edit or a paste. R-TXT-33 is ratified with this answer, as is holding a cut until its paste, with the
   status `Cut · paste to move it` and a Delete button.
+- **R-TXT-36** (2026-11-03, Alfonso 21:16, evidence: measured). **Step A, answers to the report of P-2026-11-03-1415.** Report: docs/discovery/discovery_2026-11-03_textual_tolerant_parser.md. (1) A lossless
+  concrete syntax tree with trivia on tokens, built by parser and printer. (2) Recovery in A: token insertion and deletion,
+  and descent into skipped blocks; inferring a class keyword is deferred. (3) An optional `unclosed` flag next to
+  `recovered`. (4) Reference errors after a syntax error are secondary warnings, listed after the syntax errors. (5) The
+  match of R-TXT-22 also runs on a broken text, for outline and synced selection only, never for the diff. (6) Linear name
+  resolution in parser and printer, inside A. (7) The printer's half of the tree is inside A, in a separate lane after the
+  parser's; a test of equality between the two trees closes A. Sizes: models in use reach the order of 1,000 objects in a
+  text; no incremental parsing; the budget is 50 ms per keystroke at 1,000 objects; highlighting and outline are measured
+  at B and D. With a broken root, the outline puts recovered objects under an `unknown container` node.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
