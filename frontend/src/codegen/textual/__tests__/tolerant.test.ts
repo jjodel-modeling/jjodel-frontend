@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { commentsOf, parseText, tokenizeText } from '../parser';
 import type { ObjectNode, SyntaxElement, SyntaxNode, SyntaxToken, TextNode } from '../parser';
 import { grammarOf } from './corpus';
-import { FIXTURE } from './spec';
+import { FIXTURE, objectsOf } from './spec';
 import { printTextModel } from '../printer';
 import { libraryObjects, mutantsOf, tolerantCases } from './tolerantCorpus';
 import { nearleyGrammarOf, parseCount } from './oracle';
@@ -324,6 +324,21 @@ describe('(vii) the printer builds the same tree (P-2026-11-03-2220)', () => {
         expect(parsed.errors).toEqual([]);
         expect(print.tree).toBeDefined();
         expect(plain(print.tree!)).toStrictEqual(plain(parsed.tree!));
+    });
+
+    it('a part that prints nothing opens no node: a contained id that names no object; every node spans a token, the leaves are the text', () => {
+        const spec = { ...FIXTURE, objects: FIXTURE.objects.map(o => (o.id === 's1' ? { ...o, slots: { ...o.slots, parts: [...(o.slots.parts as string[]), 'ghost'] } } : o)) };
+        const print = printTextModel(grammarOf(spec), objectsOf(spec));
+        const tree = print.tree!;
+        expect(leavesOf(tree).map(k => k.leading + k.raw + k.trailing).join('')).toBe(print.text);
+        for (const n of nodesOf(tree)) expect(n.children.length, n.kind).toBeGreaterThan(0);
+    });
+
+    it('a print whose tokens read across the printed ones has no tree: a value of an integer list holding a quote', () => {
+        const spec = { classes: [{ name: 'Box', attributes: [{ name: 'name', type: 'EString' }, { name: 'nums', type: 'EInt', many: true }] }], enums: {}, objects: [{ id: 'b', cls: 'Box', slots: { name: 'b', nums: ['"x', 2] } }] };
+        const print = printTextModel(grammarOf(spec), objectsOf(spec));
+        expect(print.text).toContain('"x, 2]');
+        expect(print.tree).toBeUndefined();
     });
 });
 
