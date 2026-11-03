@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1535
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · 2c68de01b, 4656b4ac6 · in attesa della verifica visiva (crops in ~/.jjodel-lanes/P-2026-11-03-1535/)
 Lane: full (Text tab, undo, write path)
 Depends: P-2026-11-03-1517 (merged); replaces P-2026-11-03-1530, launched by mistake in a stale worktree, blocked by its guard with no work done
 Worktree: ~/jjodel-w-textapplied, branch textual-applied-paths

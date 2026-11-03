@@ -1417,3 +1417,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: merge of textual-t7, gates green on the merge; crops of P-2026-11-03-1321 and P-2026-11-03-1451 checked by the chat before the merge (RC-23); the as-typed path after an application goes to P-2026-11-03-1530
 **Notes**: Rollback tag `pre-textual-t7` on `ed6367578` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1517/result.json`.
 **Prompt document name**: 2026-11-03 15:17
+
+## 2026-11-03 — feat(codegen): after an application the text shows the current paths (P-2026-11-03-1535)
+**Prompt**: R-TXT-35: after an application, rewrite only the reference tokens whose print changed (not the one under the caret, which waits); one Undo per application in model and text; measure the failed cleanup of P-2026-11-03-1451.
+**Files touched**: `ui/TextualTab.tsx`, `__tests__/textualEdit.test.ts` (2c68de01b); `ui/TextualTab.tsx` (4656b4ac6); this inbox; the Status of 1535.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa del GO di Alfonso — probe 36/36 PASS: five edits of 1451 by keystrokes, current path after Applied, caret kept, one Undo restores; caret-on-token held, rewritten on ArrowDown; crops in ~/.jjodel-lanes/P-2026-11-03-1535/
+**Notes**: Gates on 4656b4ac6: tsc exit 0; vitest 13396 passed, 3 red at import (baseline count of 1517); build exit 0; check:docs exit 0; check:codegen-lazy ALL GREEN (off, on). Bench: 11 mutants, all killed. (3): the 1451 cleanup fails without a prior mouse click: the direct write joins the text application's undo step, whose undo reverts the reorder only (stack 1, 1, 0); with a click, 1, 2, 1, 0 and t0. Core reducer history, not the Text tab.
+**Prompt document name**: 2026-11-03 15:35
