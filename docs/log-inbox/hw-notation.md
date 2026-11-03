@@ -527,3 +527,8 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: non applicabile
 **Notes**: Merge `89841fc92` stands. The worker reported `blocked` on vitest: 13346 tests, 0 failed, 3 red at import against a before of 13267, 0 failed, 9 red. Compared per file, every difference is a file going from red at import to passing, or the new test file. `lane-run go` refuses a blocked merge, so this closure is by hand; `result.json` was not edited. Unit tests only: the #445 warning has not been seen in the app, and #445 stays open.
 **Prompt document name**: 2026-11-03 14:20
+
+## 2026-11-03 — ticket: merge --direct reads a test file fixed from red at import as a red gate
+**Ticket**: `merge --direct` computes the expected vitest counts from the receiving tip, overwriting only the test files the branch changes. A product change that makes an unchanged test file load (red at import before, passing after) therefore reads as a difference, and the worker ends `blocked` with the merge commit left in place, although nothing failed. Measured on P-2026-11-03-1420: 13346 tests, 0 failed, four files listed as not as expected. `go` then refuses the closure. Suggested: a file going from importRed to passing with 0 failed is not a red gate; report it apart.
+**Priority**: medium
+**Found in**: P-2026-11-03-1420
