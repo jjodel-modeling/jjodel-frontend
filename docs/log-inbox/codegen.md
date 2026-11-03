@@ -1365,3 +1365,29 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: docs and code merge of textual-refs-outside; gates green on the merge; in-app acceptance and crops checked before the merge (P-2026-11-03-1141, RC-23); no new visual check
 **Notes**: Rollback tag `pre-textual-refs-outside` on `7690502cb` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1207/result.json`.
 **Prompt document name**: 2026-11-03 12:07
+
+## 2026-11-03 — feat(codegen): text edits move objects and reorder ordered features (P-2026-11-03-1225, P-2026-11-03-1251, P-2026-11-03-1321)
+**Prompt**: Textual T7 in three lanes: 1225 discovery and the JjScript M1 move plan; 1251 moves and reorders in the diff and the Text tab; 1321 in-app acceptance, stopped at the context ceiling (RC-51) after item (6), closed by P-2026-11-03-1356.
+**Files touched**: 10 code files (ee2f4ccc6, 2f16d3f39, ff2c371fd, b2e9bae4d, 1b4064899, 0395e708b, d2125a90f): `codegen/textual/{textDiff.ts, metamodel.ts, ui/TextualTab.tsx}`, `jjscript/executor/{effectsPlanner.ts, planWorld.ts}` and their 5 tests; docs: T7 discovery, this inbox, 4 prompt Status lines.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no — above five files (RC-11), listed in Files touched; the planner files were in 1225's declared reach.
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa del GO di Alfonso — probe ALL PASS, 19 checks (run 3 on d2125a90f); crops 1 to 9 in ~/.jjodel-lanes/P-2026-11-03-1321/
+**Notes**: Gates on d2125a90f: tsc exit 0; vitest 13272 passed, 9 red at import (baseline); build exit 0; check:codegen-lazy green. R1 fixed in the text layer: `-=` out of the old slot before `+=` (a `+=` alone left a hole, measured in the app). Evidence: ~/.jjodel-lanes/P-2026-11-03-1321/handoff.md.
+**Prompt document name**: 2026-11-03 13:21
+
+## 2026-11-03 — test(codegen): positional paths after a move or reorder (P-2026-11-03-1356)
+**Prompt**: P-2026-11-03-1356: measure, with no fix, what an untouched path reference does after a reorder, a cut of an earlier sibling, a deletion, an insertion, and a move of the target; it.fails tests, discovery with a recommended rule; then step (7) of the 1321 handoff.
+**Files touched**: `frontend/src/codegen/textual/__tests__/textDiff.test.ts` (d23d39e7f); `docs/discovery/discovery_2026-11-03_textual_positional_paths.md` (8277287b8); this inbox; the Status lines of the 1225, 1251, 1321 and 1356 prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: All five edits retarget the reference silently (parser.ts:652 resolves the path in the edited text); the old index gone is refused by the parse. Five it.fails tests, bench in the commit body; 74 passed, 5 expected fail; tsc exit 0. Recommended: an untouched reference token keeps its target (amends R-TXT-4), awaiting Alfonso.
+**Prompt document name**: 2026-11-03 13:56

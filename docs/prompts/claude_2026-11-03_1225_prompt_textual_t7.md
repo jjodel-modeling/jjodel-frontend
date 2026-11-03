@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1225
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · ee2f4ccc6 (discovery cbec3d1bf) · verifica visiva passata 2026-11-03 (chat, RC-23, crops of P-2026-11-03-1321)
 Lane: full (write path to a model, JjScript planner outside codegen)
 Depends: P-2026-11-03-1207 (merged)
 Worktree: ~/jjodel-w-textt7, branch textual-t7

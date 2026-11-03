@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1251
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · b2e9bae4d · verifica visiva passata 2026-11-03 (chat, RC-23, crops of P-2026-11-03-1321)
 Lane: full (write path to a model; continuation under RC-51)
 Depends: P-2026-11-03-1225 (hard-stop at the ceiling; planner commit ee2f4ccc6, handoff in its lane folder)
 Worktree: ~/jjodel-w-textt7, branch textual-t7 (the same tree)
