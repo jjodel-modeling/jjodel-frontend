@@ -7133,7 +7133,7 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   the inner targets. Kept verbatim it writes nothing; deleted it clears or unlinks; retyped to a name or path it is an
   ordinary retarget; an edited id, or the token at another owner or feature, is refused. It is never re-resolved by name
   or position. R-TXT-4 is unchanged for targets inside the text.
-- **R-TXT-33** (2026-11-03). **Provisional, unattended (RC-25).** Evidence: read, report docs/discovery/discovery_2026-11-03_textual_t7_moves.md. For R-TXT-19, a feature
+- **R-TXT-33** (2026-11-03, provisional, unattended). Evidence: read, report docs/discovery/discovery_2026-11-03_textual_t7_moves.md. For R-TXT-19, a feature
   is declared ordered unless `ordered === false`, the Ecore default: reversing a list in the text reorders the model. For
   R-TXT-22, a cut followed by a paste of the identical text is certain identity, with no confirmation; any other move is
   uncertain and confirmed; a paste with the original still in the text is a new object.
