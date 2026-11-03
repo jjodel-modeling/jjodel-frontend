@@ -841,3 +841,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Ticket** (2026-11-03 — ticket: a JjTL rule whose target class does not exist runs without error and writes a partial model, closed by R-JTG-17): the run fails before pass 1 with `Target class 'Nope' not found in target metamodel (A -> Nope). Nothing is written.`, no output model. The `envLookup("nope")` in a lazy Const seen beside it was not separated and is not closed here.
 
 **Ticket** (2026-11-03 — ticket: JjTL multiplicity [*] creates one target per source, silently, closed by the warning): every `[*]` and `[n..*]` rule warns once that the count is not settled; one target per source as before. The meaning of `[*]` stays Alfonso's open question.
+
+## 2026-11-04 — merge: jjtl-language-open into alfonso-frontend-jjtl (P-2026-11-04-0048)
+**Prompt**: `claude_2026-11-04_0048_prompt_merge_jjtl-language-open.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-language-open` at `83a944575` into `alfonso-frontend-jjtl`, merge base `d37e726aa`, 7 commits on the branch side.
+**Files touched**: merge `73758798f`: 9 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_0015_prompt_jjtl_language_open.md`, `docs/prompts/claude_2026-11-04_0043_prompt_jjtl_language_open_close.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/called-lazy-rules.test.ts`, `frontend/src/jjtl/executor/__tests__/class2relational.test.ts`, `frontend/src/jjtl/executor/__tests__/language-open-points.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `73758798f` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13503 tests in 509 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 73758798f; unit tests, mutation bench and an app probe on the branch; no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-language-open` on `10fadd8ab` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0048/result.json`.
+**Prompt document name**: 2026-11-04 00:48
