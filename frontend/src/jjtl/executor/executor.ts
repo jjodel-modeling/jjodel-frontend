@@ -3896,7 +3896,7 @@ export class JjtlExecutor {
         }
 
         const entries = this.traceEntries(String(elementName), EMPTY_ENVIRONMENT);
-        const match = entries?.find(e => e.rule === chosenRule);
+        const match = entries?.find(e => (expectedTarget ? e.targetClass === expectedTarget : e.rule === chosenRule));
         if (!match) {
             throw new Error(
                 `Unresolved reference: no target found for ${className} '${elementName}' ` +
