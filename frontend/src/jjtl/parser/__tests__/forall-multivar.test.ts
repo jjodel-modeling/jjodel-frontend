@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 
 import { JjtlLexer } from '../../lexer/lexer';
 import { JjtlParser } from '../parser';
-import type { TransformationAST, ForAllMappingAST } from '../../types/ast';
+import type { TransformationAST, ForAllMappingAST, ExpressionAST } from '../../types/ast';
 
 const HEAD = 'transformation T\nfrom S\nto U\n\n';
 
@@ -29,6 +29,15 @@ function forallOf(body: string, withSource: boolean): ForAllMappingAST {
 }
 
 const names = (f: ForAllMappingAST) => (f.bindings ?? []).map(b => b.variable);
+
+/**
+ * With the source text a forall collection is a JjEL expression in its wrapper
+ * (P-2026-11-03-1135); without it, the legacy node. The two read the same name
+ * and node type, one level down in the wrapper.
+ */
+const inner = (c: ExpressionAST): any => (c.type === 'JjelExpression' ? (c as any).expression : c);
+const nameOf = (c: ExpressionAST): string | undefined => inner(c).name;
+const typeOf = (c: ExpressionAST): string => inner(c).type;
 
 describe.each([
     ['without source (legacy expression path)', false],
@@ -53,15 +62,15 @@ describe.each([
     it('`forall q in xs, r in ys`: one collection each', () => {
         const f = forallOf(`A a -> B {\n    forall q in xs, r in ys -> C { }\n}`, withSource);
         expect(names(f)).toEqual(['q', 'r']);
-        expect((f.bindings![0].collection as any).name).toBe('xs');
-        expect((f.bindings![1].collection as any).name).toBe('ys');
+        expect(nameOf(f.bindings![0].collection)).toBe('xs');
+        expect(nameOf(f.bindings![1].collection)).toBe('ys');
     });
 
     it('the spellings mix: `forall a, b in xs, c in a.children`', () => {
         const f = forallOf(`A a -> B {\n    forall a, b in xs, c in a.children -> C { }\n}`, withSource);
         expect(names(f)).toEqual(['a', 'b', 'c']);
         expect(f.bindings![0].collection).toBe(f.bindings![1].collection);
-        expect(f.bindings![2].collection.type).toBe('MemberAccess');
+        expect(typeOf(f.bindings![2].collection)).toBe('MemberAccess');
     });
 
     it('accepted inside a feature of a created object', () => {
@@ -90,6 +99,12 @@ describe('a forall collection the legacy parser cannot read goes to JjEL (P-2026
         expect(f.collection.type).toBe('JjelExpression');
     });
 
+    it('with source, a collection the legacy parser reads is parsed by JjEL too (P-2026-11-03-1135)', () => {
+        const f = forallOf(`A a -> B {\n    forall q in xs, r in a.children -> C { }\n}`, true);
+        expect(f.bindings!.map(b => b.collection.type)).toEqual(['JjelExpression', 'JjelExpression']);
+        expect(forallOf(`A a -> B {\n    forall q in xs -> C { }\n}`, false).collection.type).toBe('Identifier');
+    });
+
     it('without source the legacy path stays, and still rejects it', () => {
         expect(parse(`A a -> B {\n    forall pr in ${PAIRS} -> C { }\n}`, false).errors.length).toBeGreaterThan(0);
     });
@@ -98,7 +113,7 @@ describe('a forall collection the legacy parser cannot read goes to JjEL (P-2026
         const f = forallOf(`A a -> B {\n    forall pr in ${PAIRS}, s in ys such that s.p == pr.hi.p -> C { }\n}`, true);
         expect(names(f)).toEqual(['pr', 's']);
         expect(f.bindings![0].collection.type).toBe('JjelExpression');
-        expect((f.bindings![1].collection as any).name).toBe('ys');
+        expect(nameOf(f.bindings![1].collection)).toBe('ys');
         expect(f.filter).toBeDefined();
     });
 

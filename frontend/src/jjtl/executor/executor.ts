@@ -352,6 +352,46 @@ interface ApplicationFrame {
 /** Stops the run: rethrown by every binding, reported once at the top. */
 class JjtlApplicationAbort extends Error {}
 
+/**
+ * A builtin that threw inside a JjTL expression (R-FA-11): it stops the mapping
+ * with an error on both parser paths, never a warning with `null`. The message
+ * names the builtin and, once `evaluateExpression` has located it, the outermost
+ * expression it was evaluated in.
+ */
+class JjtlBuiltinError extends Error {
+    constructor(readonly builtin: string, readonly reason: string) {
+        super(`Builtin '${builtin}' failed: ${reason}`);
+    }
+
+    /** Called by each enclosing evaluateExpression: the outermost call names the expression. */
+    locate(expr: ExpressionAST): void {
+        const start = expr.location?.start;
+        const where = start ? `expression at line ${start.line}, column ${start.column}` : 'expression';
+        this.message = `Builtin '${this.builtin}' failed in ${where}: ${this.reason}`;
+    }
+}
+
+/**
+ * The evaluation context of a run. Every builtin registered on it (range, resolve,
+ * helpers, called rules, the environment functions) throws a JjtlBuiltinError
+ * when it fails, whichever evaluator calls it. Child contexts share its builtins.
+ */
+class JjtlEvaluationContext extends EvaluationContext {
+    registerBuiltin(name: string, fn: JjelFunction): void {
+        super.registerBuiltin(name, {
+            ...fn,
+            call: (args, ctx) => {
+                try {
+                    return fn.call(args, ctx);
+                } catch (error) {
+                    if (error instanceof JjtlBuiltinError || error instanceof JjtlApplicationAbort) throw error;
+                    throw new JjtlBuiltinError(name, error instanceof Error ? error.message : String(error));
+                }
+            },
+        });
+    }
+}
+
 /** Key under which a delegating rule's error carries the application stack of its throw. */
 const APPLICATION_STACK = Symbol('jjtlApplicationStack');
 
@@ -1177,7 +1217,7 @@ export class JjtlExecutor {
             sourceModel,
             targetMetamodel,
             trace: new Map(),
-            evalContext: new EvaluationContext(bindings),
+            evalContext: new JjtlEvaluationContext(bindings),
             helpers: new Map(),
             traceBuilder,
             rulesBySourceType,
@@ -2858,8 +2898,13 @@ export class JjtlExecutor {
                 const fnName = (fc.callee as IdentifierAST).name;
                 const builtin = ctx.getBuiltin(fnName);
                 if (builtin) {
-                    const args = fc.arguments.map(arg => this.evaluateExpression(arg, ctx));
-                    return builtin.call(args, ctx);
+                    try {
+                        const args = fc.arguments.map(arg => this.evaluateExpression(arg, ctx));
+                        return builtin.call(args, ctx);
+                    } catch (error) {
+                        if (error instanceof JjtlBuiltinError) error.locate(expr);
+                        throw error;
+                    }
                 }
                 // Also check if it's a function value in context
                 const fnValue = ctx.get(fnName);
@@ -2879,7 +2924,14 @@ export class JjtlExecutor {
             const jjelExpr = toJjelAst(expr);
             return this.jjelEvaluator.evaluate(jjelExpr, ctx);
         } catch (error) {
-            // Log and fall back to null on evaluation errors
+            // A builtin that failed stops the mapping, as on the legacy fast path
+            // above (R-FA-11): rethrown, naming the expression. Any other
+            // evaluation error, a call to a name that resolves to nothing among
+            // them, is logged and falls back to null.
+            if (error instanceof JjtlBuiltinError) {
+                error.locate(expr);
+                throw error;
+            }
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.warn(`[JjTL Executor] JjEL evaluation failed for ${expr.type}: ${errorMessage}`);
             this.warnings.push(`Expression evaluation failed (${expr.type}): ${errorMessage}`);

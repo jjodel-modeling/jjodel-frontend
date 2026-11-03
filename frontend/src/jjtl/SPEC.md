@@ -268,7 +268,7 @@ and in the body, with the variables of an enclosing `forall` and the `let` bindi
 scope. The created objects form **one flat list** in the feature; an empty product creates
 nothing, without a warning. A name bound twice in the same `forall` is a parse error.
 Unlike a one-variable `forall`, the properties of the elements are not bound unqualified.
-With the source text, a collection the legacy expression parser cannot read (an object literal, `{ hi: q, lo: r }`) is parsed by JjEL up to `such`, `->`, the comma of the next binding or the end of the line; one it can read keeps its legacy AST (P-2026-11-02-2345).
+With the source text, JjEL is the only parser of a collection, up to `such`, `->`, the comma of the next binding or the end of the line, so it reads what the legacy expression parser cannot, an object literal (`{ hi: q, lo: r }`) among them (P-2026-11-02-2345, P-2026-11-03-1135). Without the source text the collection is the legacy expression.
 
 ```jjtl
 -- same collection: every unordered pair of requesters, once
@@ -994,6 +994,7 @@ that could not be placed is reported as above.
 | Source class not found | Silently skip (no instances to match) |
 | Guard evaluation error | Log warning, skip instance (treated as false) |
 | Expression evaluation error | Log warning, return `null` |
+| Builtin call that fails inside an expression (`range(null)`, a helper, a called rule) | **Error** on both parse paths, never a warning with `null` (R-FA-11): `Builtin 'range' failed in expression at line L, column C: <reason>`. In a feature or attribute mapping the mapping stops (`Failed to map ...`); in a `where` guard the run stops (`Execution failed: ...`). A call to a name that resolves to nothing (`Function 'f' is not defined`) and a failing method on a value stay an expression evaluation error |
 | Property path not found | Return `null` after trying all 4 strategies |
 | Value mapping: no match | Return `null` |
 | Object creation error | Log warning, assign `null` |
