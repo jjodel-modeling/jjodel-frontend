@@ -1404,3 +1404,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: in attesa del GO di Alfonso — probe 30 of 31 PASS (the failure is the cleanup of a direct write); crops 1 to 7 in ~/.jjodel-lanes/P-2026-11-03-1451/
 **Notes**: Gates on 4b34517b0: tsc exit 0; vitest 13292 passed, 9 red at import (baseline); build exit 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Bench: 11 mutants, all killed; M5 (owner) and M7 (gone target) survived until two new tests. After an application the text stays as typed until a model change from elsewhere, an Undo, or a reopen. Evidence: ~/.jjodel-lanes/P-2026-11-03-1451/.
 **Prompt document name**: 2026-11-03 14:51
+
+## 2026-11-03 — merge: textual-t7 into alfonso-frontend-jjtl (P-2026-11-03-1517)
+**Prompt**: `claude_2026-11-03_1517_prompt_merge_textual-t7.md`, a direct merge by `lane-run merge --direct`, no session: `textual-t7` at `d1aea42a1` into `alfonso-frontend-jjtl`, merge base `faa85e8ac`, 21 commits on the branch side.
+**Files touched**: merge `ec570ca11`: 21 files from the branch side (`docs/discovery/discovery_2026-11-03_textual_positional_paths.md`, `docs/discovery/discovery_2026-11-03_textual_t7_moves.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-03_1225_prompt_textual_t7.md`, `docs/prompts/claude_2026-11-03_1251_prompt_textual_t7_continuation.md`, `docs/prompts/claude_2026-11-03_1321_prompt_textual_t7_acceptance.md`, `docs/prompts/claude_2026-11-03_1356_prompt_textual_t7_paths.md`, `docs/prompts/claude_2026-11-03_1425_prompt_textual_t7_keep_refs.md`, and 13 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ec570ca11` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13389 tests in 505 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: merge of textual-t7, gates green on the merge; crops of P-2026-11-03-1321 and P-2026-11-03-1451 checked by the chat before the merge (RC-23); the as-typed path after an application goes to P-2026-11-03-1530
+**Notes**: Rollback tag `pre-textual-t7` on `ed6367578` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1517/result.json`.
+**Prompt document name**: 2026-11-03 15:17
