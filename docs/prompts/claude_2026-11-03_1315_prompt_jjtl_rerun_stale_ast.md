@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-03-1315
 Chat: C-2026-11-03-1020
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-03 · lane full · jjtl-rerun-stale-ast · 0d0b00228 · trace, mapping count and output model read by the app probe, no manual look (unattended)
 Lane: full (a wrong result with no signal)
 Depends: none
 Worktree: ~/jjodel-w-jjtlrerun, branch jjtl-rerun-stale-ast (at the commit that adds this prompt)

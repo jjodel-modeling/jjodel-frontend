@@ -468,3 +468,18 @@ c60 gap between levels: mean over the 60 levels 299 ms before, 90 after; the pro
 **Smoke visivo**: passato — chat, unattended: gates green on f4232f784; acceptance by app probes on the branch at a3317694b, no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-writeback-flush` on `336f39188` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1219/result.json`.
 **Prompt document name**: 2026-11-03 12:19
+
+## 2026-11-03 — fix(jjtl): a re-run in the same tab no longer executes a stale AST (P-2026-11-03-1315)
+**Prompt**: P-2026-11-03-1315, #446: reproduce the stale AST on a same-tab re-run without the fresh-tab workaround, test first, root cause, fix where the cause is.
+**Files touched**: `frontend/src/jjtl/hooks/useJjtlParser.ts`, `frontend/src/jjtl/hooks/__tests__/useJjtlParser.debounce.test.ts` (new) at 0d0b00228; `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_1315_prompt_jjtl_rerun_stale_ast.md` (Status line)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Cause: Monaco delivers one edit as several change events reading the final value; each repeat cleared the 300 ms timer, then hit the same-source return, so the parse never ran and Execute used the old AST. Probe (not a hand run), `~/.jjodel-lanes/P-2026-11-03-1315/stale-ast.ts`, port 3191, one tab, 7 runs: before, R2/R3 ran R1's 1 rule; after, all runs match the source. One app parse path: the legacy no-source parser has no app caller.
+**Prompt document name**: 2026-11-03 13:15
+
+**Ticket** (#446, update): fixed on `jjtl-rerun-stale-ast` at 0d0b00228; stays open until the merge. Unverified side observation: after `OPEN_TRANSFORMATION` on an already open transformation, no `.dock-tab-btn` id ends in `-tab-jjtl_<id>` and the JjTL pane is hidden after the run; the run itself was correct (2 mappings, model TOwner+TPet). Not diagnosed (`DockManager.updateTab`).
