@@ -783,3 +783,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: Measured before editing: vitest 3 failed / 504 passed (context-binding, ai-prompt-sanitization, UDComparator). Gates: tsc 0, vitest same 3 red, build 0, check:docs 5/5, check:agents PASS. Smoke baseline not run: port 3000 answers but its tree is unknown, so a run would not measure this branch. #519 note is in SPEC 7.4; no comment posted on the issue.
 **Prompt document name**: 2026-11-03 21:12
+
+## 2026-11-03 — merge: jjtl-claudemd-initdash into alfonso-frontend-jjtl (P-2026-11-03-2329)
+**Prompt**: `claude_2026-11-03_2329_prompt_merge_jjtl-claudemd-initdash.md`, a merge in a `lane-run` session: `jjtl-claudemd-initdash` at `34e8e7bc6` into `alfonso-frontend-jjtl`, merge base `bd82f5f72`, 5 commits on the branch side, 1 conflict measured (`docs/log-inbox/hw-notation.md`); governance files on the branch (`CLAUDE.md`, `AGENTS.md`).
+**Files touched**: merge `8bd217f08`: 9 files from the branch side (`AGENTS.md`, `CLAUDE.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-03_2112_prompt_jjtl_claudemd_initdash.md`, `frontend/scripts/smoke/console-baseline.json`, `frontend/src/jjtl/AGENTS.md`, `frontend/src/jjtl/CLAUDE.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/redux/store.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `8bd217f08`: typecheck exit 0, no `error TS`; typecheck:scripts exit 0; vitest 13477 tests in 508 files, 0 failed, 3 red at import (the trunk tip's count and files; the branch adds no test); hooks 967 in 21 files; build exit 0; check:docs 5/5; check:agents PASS; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 8bd217f08; docs, one console line and its baseline entry; no hand run and no visual check
+**Notes**: Stopped once at step 2 on the governance files; resumed on Alfonso's yes (question 4 of 16:50, closed 21:07). Union in hw-notation.md: trunk blocks first, then the branch's, additions only against each side, 15 probes once, R-TXT-39 absent. check:docs is 5/5, not the 4/4 the prompt named (Check E). Lane board untouched; 3001 up, not restarted. Not pushed.
+**Prompt document name**: 2026-11-03 23:29
