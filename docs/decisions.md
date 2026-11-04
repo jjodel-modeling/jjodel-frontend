@@ -7225,6 +7225,13 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   the keyword `driver`, since `=` is the symbol of `Eq`; inline refusals scoped to one-line owners; head words reserved
   after an optional name, a colliding name quoted; call arguments mandatory and single-valued; empty braces omitted only
   for a positional one-line class whose only part is the optional name.
+- **R-TXT-45** (2026-11-04, Alfonso 16:28, «A»). **Amends R-TXT-44 (1) and (2): an object can be nameless in the model.**
+  The core's read of the identity slot (`name : EString`, LModelElement.tsx, the fallback to `initialName`) falls back
+  only while the slot has never been written; a slot written with the empty string reads as nameless everywhere
+  (canvas, JjEL, export, the Text tab). The textual layer then clears the name the app gives to an object the text
+  leaves nameless, and removing a name from the text leaves the object nameless; the reprint of R-TXT-44 (1) remains
+  only where the core still assigns a name. A core change: its lane runs discovery first with the Layer Impact Report of
+  CLAUDE.md §3.2 and smoke tests on canvas, JjEL and export before the implementation.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
