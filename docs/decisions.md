@@ -7189,6 +7189,15 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   and if it does not, the chat reports it with a proposal instead of working around it. Go to definition and find
   references also work through Monaco's shortcuts and context menu. (4) With a broken root, recovered objects sit under
   the `Unknown container` node (R-TXT-36). The order of the plan and the running lanes are unchanged.
+- **R-TXT-40** (2026-11-04, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step C, the additions of the
+  report docs/discovery/discovery_2026-11-04_textual_step_c.md taken as recommended.** (D2) The indentation style ships only
+  with a deletion guard in the Text tab (an edit whose plan deletes objects past the last edited line, or more than one object
+  at once, asks before it applies), and last. (D4) A newline inside a string under a doubling style prints as Pascal's
+  `'line1'#10'line2'` and is read back by the lexer. (D5) Lane order C1a, C1b, C1c, C1d, C3a, C2, C3b, each at five files
+  or fewer; C3a may run before C1 since it shares no file with it. (D6) The annotations form (T4b) is a third mode
+  «Syntax» of the Text tab. The style picker is an optional `style` in the syntax annotations, absent meaning C-like, and a
+  switch changes the record only, never the model. Awaiting Alfonso: D1 (n-ary operators as flat chains, amends R-TXT-16
+  (3)) and D3 (optional name in a one-line head, amends R-TXT-27 (2)); lanes C1a..C1d wait for them.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
