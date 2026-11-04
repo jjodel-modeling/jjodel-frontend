@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-2342
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane textual-c2-syntax-form · 5c459d039
 Lane: full (discovery, read only)
 Depends: P-2026-11-04-2321 (core nameless merged, c7cd7e479)
 Worktree: ~/jjodel-w-textc2, branch textual-c2-syntax-form, from c09e8f22f
