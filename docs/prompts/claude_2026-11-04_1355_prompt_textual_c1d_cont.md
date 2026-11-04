@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1355
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane textual-c1-operators · cc7235435 · hard-stop at the context ceiling after items 1-7, closed by P-2026-11-04-1447
 Lane: full (parser and printer of the textual layer)
 Depends: P-2026-11-04-1312 (hard-stop at the ceiling; handoff in its lane folder; work uncommitted in this tree)
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)

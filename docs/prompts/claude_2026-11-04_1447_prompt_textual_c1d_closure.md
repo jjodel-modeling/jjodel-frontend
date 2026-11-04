@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1447
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane textual-c1-operators · cc7235435 · app check 4 of 6 edits applied, unname No change, crops of P-2026-11-04-1447; GO di Alfonso sulle crop in attesa
 Lane: fast (closure of C1d; code at cc7235435)
 Depends: P-2026-11-04-1355 (hard-stop at the ceiling after items 1-7; handoff in its lane folder)
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)

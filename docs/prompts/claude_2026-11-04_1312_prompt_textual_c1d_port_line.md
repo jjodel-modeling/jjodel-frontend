@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1312
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane textual-c1-operators · 9d5d474be..cc7235435 · items (1)-(7) by P-2026-11-04-1355, (8)-(9) by P-2026-11-04-1447; GO di Alfonso sulle crop in attesa
 Lane: full (annotations, grammar, parser and printer of the textual layer)
 Depends: P-2026-11-04-1241 (C1c closed on the branch at 75fdfa6cb)
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)
