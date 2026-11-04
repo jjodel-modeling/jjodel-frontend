@@ -1580,3 +1580,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: Flat n-ary keeps 312/312 SyncRTL roots, left-fold 269. Paren node, not trivia. Amends R-TXT-16 (3) and, if D3 (a), R-TXT-27 (2). Indentation: a truncation applies deletions (arb3 178/281). Pascal fails on a newline in a string. Section 1d unmeasured (needles not found), moved to C1c. Decisions D1-D6 in the report.
 **Prompt document name**: 2026-11-04 03:30
+
+## 2026-11-04 — feat(codegen): Pascal/Ada style and the style picker, textual step C lane C3a (P-2026-11-04-0345, P-2026-11-04-0412)
+**Prompt**: `claude_2026-11-04_0345_prompt_textual_c3a_pascal.md` and its continuation `claude_2026-11-04_0412_prompt_textual_c3a_cont.md` (RC-51): Pascal/Ada in the style catalog, the style named in the syntax record, a newline in a string as `'a'#10'b'` (R-TXT-40 D4), byte-identical round trips per style on the corpus, a style switch that leaves the model unchanged, a style picker in the Text tab writing the record in one undo step (first caller of `writeTextualSyntax`); the step C probe reads the prototype folder from `PROTO`.
+**Files touched**: `style.ts`, `annotations.ts`, `syntaxRecord.ts`, `printer.ts`, `parser.ts`, `concreteGrammar.ts`, `ui/TextualTab.tsx`, `ui/openTextualTab.tsx`, their tests (0f6f7fa8b, b4e6eae69, 0349387ef, 794041be3, 076b38d18, c6d22de51, 7852e462b); `docs/discovery/harness/probe_2026-11-04_textual_c3a_app/`.
+**Outcome**: ✅ completed
+**Corregge**: a keyword-less feature printed `:=` under Pascal (concreteGrammar.ts:331,336); under Pascal an unnamed object with an empty body was read as an object named `begin` (parser.ts).
+**Causa**: the assign token was emitted without checking for a keyword; `begin` and `end` were accepted as names.
+**Regressions**: no. Gates on 7852e462b: tsc 0; vitest 13689 passed, 3 red at import (baseline), the timing test of tolerant.test.ts over its ratio once under load (fixed on the trunk by #205, not yet on this branch); build 0; check:codegen-lazy ALL GREEN; check:docs 5/5 (chat).
+**Out-of-scope changes**: no (eight files, above five: all named by the prompts, RC-11)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3471 (demoESM 17/17, library 18/18): switch to Pascal, text and EBNF follow, an edit applies, one Undo, switch back byte for byte; a typed line break stored and shown as `'…'#10'x'`; crops `~/.jjodel-lanes/P-2026-11-04-0345/c3a-*.png` checked by the chat (RC-23); Alfonso's GO on the picker pending for the merge.
+**Notes**: Mutation benches 2/2, 6/6, 8/8, 11/11 and 8/9 killed (the survivor leaves an unread `base`). Open: switching back to C-like leaves `{"v":1}` stored instead of removing the key (prints the same); lanes C1a..C1d wait for Alfonso's D1 and D3. Docs written by the chat: the lane stopped at the ceiling.
+**Prompt document name**: 2026-11-04 03:45
