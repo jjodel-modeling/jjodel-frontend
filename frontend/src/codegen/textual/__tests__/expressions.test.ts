@@ -9,7 +9,7 @@ import type { SyntaxElement, SyntaxNode, TextNode, TextParseResult } from '../pa
 import { isApplicableParse, parseText, tokenizeText } from '../parser';
 import { printTextModel } from '../printer';
 import { generateSamples, nearleyGrammarOf, parseCount } from './oracle';
-import { BOOL_CLIKE, BOOL_PASCAL, BOOL_PRINTS, arithGrammar, boolGrammar, boolSheet, withOperator } from './boolCorpus';
+import { ARITH_CLIKE, ARITH_IDS, ARITH_MM, BOOL_CLIKE, BOOL_PASCAL, BOOL_PRINTS, arithGrammar, boolGrammar, boolSheet, withOperator } from './boolCorpus';
 
 const tokensOf = (text: string, g: ConcreteGrammar): string[] => tokenizeText(text, g).tokens.filter(t => t.k !== 'EOF').map(t => `${t.k}:${t.v}`);
 
@@ -85,6 +85,26 @@ describe('(2) the parser: precedence climbing on the expression', () => {
             'Add(Sub(st, ld), rdy)', 'Sub(Add(st, ld), rdy)', 'Sub(Neg(st), ld)', 'Sub(st, Neg(ld))', 'Sub(st, 1)', 'Sub(st, -1)', '-1', 'Neg(1)',
             'And(Neg(st), ld)', 'Neg(Add(st, ld))', 'And(Add(st, ld), rdy)', 'Neg(Neg(st))',
         ]);
+    });
+
+    it('a prefix looser than an infix: its operand is read tighter than the level it stands in (kills: prefix-min)', () => {
+        const g = arithGrammar(withOperator(ARITH_CLIKE, 'C_Neg', { symbol: '-', precedence: 1 }));
+        const r = read(g, 'st + -ld + rdy', '-st + ld', '(-st) + ld');
+        expect(r.errors).toEqual([]);
+        expect(termsOf(r)).toEqual(['Add(Add(st, Neg(ld)), rdy)', 'Neg(Add(st, ld))', 'Add(Neg(st), ld)']);
+        expect(printTextModel(g, r.objects).text).toBe(sheet('st + -ld + rdy', '-st + ld', '(-st) + ld'));
+    });
+
+    it('a negative number in a value position, where the grammar has a "-" operator: a glued "-" is its sign (kills: sign-parse)', () => {
+        const mm = { ...ARITH_MM, classes: ARITH_MM.classes.map(c => (c.name === 'Rule' ? { ...c, attributes: [...(c.attributes ?? []), { name: 'weight', type: 'EInt' }] } : c)) };
+        const g = boolGrammar(ARITH_CLIKE, mm, ARITH_IDS);
+        const objects = parseText(sheet('st - 1'), g).objects.map(o => (o.cls === 'Rule' ? { ...o, slots: { ...o.slots, weight: -1 } } : o));
+        const text = printTextModel(g, objects).text;
+        expect(text).toMatch(/weight -1\b/);
+        const r = parseText(text, g);
+        expect(r.errors).toEqual([]);
+        expect(r.objects.find(o => o.cls === 'Rule')?.slots.weight).toBe(-1);
+        expect(termsOf(r)).toEqual(['Sub(st, 1)']);
     });
 
     it('st & (is_sw) reads And(st, is_sw), with a paren node around the operand; the operator object holds its operands', () => {
