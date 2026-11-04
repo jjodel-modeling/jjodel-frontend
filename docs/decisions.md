@@ -7305,8 +7305,8 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   `such that` of a JjTL `forall` sees bare names as its body does. Provisional, unattended, not ratified
   (P-2026-11-04-0015): the filter sees exactly the bindings the body sees, so bare names exist only where the body has
   them, in a one-variable `forall`. Evidence: `language-open-points.test.ts` (P-2026-11-04-0015).
-- **R-JTG-20** (2026-11-04, provisional, unattended, evidence: measured, verified: agent, reversible: trunk): not
-  ratified by Alfonso, decided by lane P-2026-11-04-0015. A binding that reaches a node whose class has both a matched
+- **R-JTG-20** (2026-11-04, ratified by Alfonso 2026-11-04, evidence: measured, verified: agent, reversible: trunk):
+  proposed by lane P-2026-11-04-0015. A binding that reaches a node whose class has both a matched
   and a lazy rule (R-JTG-18) is settled by the type of the receiving feature: the lazy rule when only a lazy target
   fits it, the matched rule's pass 1 target when no lazy target fits, an error naming both when both fit or the type
   is unknown (`lazyOrMatched`, `executor.ts`). Evidence: `language-open-points.test.ts`; mutation M3 of the lane
