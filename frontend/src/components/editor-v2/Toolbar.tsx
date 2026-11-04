@@ -1248,10 +1248,11 @@ function Toolbar({
                     </>
                 )}
                 {/* Fit to view retired from this group on 2026-08-26 (mockup 1c): the
-                    group is zoom and nothing else. Nothing is lost with it — the level
-                    button beside it runs `handleResetZoom`, which is the SAME call as
-                    `handleFitView` (`fitView({padding, maxZoom: 1, duration: 200})`,
-                    EditorV2.tsx:3313-3316), so the affordance survives under the `%`. */}
+                    group is zoom and nothing else. The level button beside it does NOT
+                    fit the view: it runs `handleActiveResetZoom` (EditorV2.tsx), which
+                    calls `activeController.setZoom(1)` — an absolute 100%, no fit, no
+                    recentering. `handleFitView` (`fitView({padding, maxZoom: 1,
+                    duration: 200})`) is a separate handler, not reachable from this group. */}
 
                 <div className="toolbar-commands__hairline" aria-hidden="true" />
 
