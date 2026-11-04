@@ -929,3 +929,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile — no app probe and no hand run; unit tests and mutation bench only
 **Notes**: Red first 16/32 for the intended reason. `[3..*]` on 2 sources: 2 before, 6 after; `[*]`, `[0..*]`, `[1..*]` unchanged at one per source. The static walk reaches every let body (rule, objectCreation and let bodies are the only mappingBody sites). Bench 4/5 (`~/.jjodel-lanes/P-2026-11-04-0900/bench.txt`): M3, the abstract check entering let bodies, survives, undecided. Class2Relational and parity fixtures unchanged, no assertion edited.
 **Prompt document name**: 2026-11-04 09:00
+
+## 2026-11-04 — feat(jjtl): abstract class in a let body is an error (P-2026-11-04-0900, follow-up)
+**Prompt**: GO on the lane's Recommended, on Alfonso's delegation: an abstract class created inside a let body is an error, as for rule and nested targets; the shape check stays; amend R-JTG-22 with a new sentence.
+**Files touched**: code `06ce85232`: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/executor/__tests__/language-open-points.test.ts`; docs: `docs/decisions.md` (R-JTG-22 amended), `frontend/src/jjtl/SPEC.md` §10, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `06ce85232`: typecheck exit 0; vitest 13720 passed, 3 red at import (baseline); build exit 0. check:docs on the docs commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no app probe and no hand run; unit tests and mutation bench only
+**Notes**: Red first 4/38 for the intended reason; the concrete-subclass control green. Bench rerun 6/6 killed (`~/.jjodel-lanes/P-2026-11-04-0900/bench.txt`): M3 (abstract skipped in a let feature) and the new M3b (in a let forall) die in language-open-points only.
+**Prompt document name**: 2026-11-04 09:00

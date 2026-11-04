@@ -7347,7 +7347,9 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   the target metamodel lacks inside a let body, in a feature or a forall, at rule level, in a nested let or in a let
   inside a nested creation, is the same error, nothing is written. Only the missing class is checked there; an
   abstract class and the creation shape stay unchecked in a let body, as before. Evidence: `language-open-points.test.ts`
-  (P-2026-11-04-0900).
+  (P-2026-11-04-0900). Amended 2026-11-04 on Alfonso's delegation, the lane's recommendation taken (P-2026-11-04-0900,
+  `06ce85232`): an abstract class created inside a let body is an error too, as for rule and nested targets; only the
+  creation shape stays unchecked there.
 
 ## Superate
 
