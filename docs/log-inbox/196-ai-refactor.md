@@ -176,3 +176,16 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: passato — probes on port 3195 (SMOKE_URL set), 0 page errors: L2 14/14, L4 30/30, L6 13/13 on both lanes; L6b startup migrations 5/5 (mutant without `registry.load()` 2/5). Juri's visual check (lane 2 checklist, 9 items) still owed before the merge
 **Notes**: Handoffs: `~/.jjodel-lanes/P-2026-11-03-1445/handoff.md`, `.../P-2026-11-03-1446/handoff.md`. Key unattended choice: `registry.load()` at module scope of Jodie.tsx keeps the four startup preference migrations once types/jodie.ts is gone. CHANGELOG [Unreleased]/Changed: AI runtime names unregistered from OCL/JjEL. Still owed: Juri's visual check, the Worker removal (R-AI-22), the merge into staging.
 **Prompt document name**: 2026-11-03 14:47
+
+## 2026-11-04 — merge: feat/196-l6-consolidation into staging (P-2026-11-04-1602)
+**Prompt**: `claude_2026-11-04_1602_prompt_merge_feat-196-l6-consolidation.md`, a merge lane by `lane-run merge`: `feat/196-l6-consolidation` at `e7eacab7f` into `staging`, `--no-ff` of the explicit sha, merge base `b443faf2b`, 11 commits on the branch side, 0 on the trunk side besides the prompt `3948e41e0`.
+**Files touched**: merge `c0e1e70dc`: 42 files from the branch side (AI layer consolidation of #196 L6: `types/jodie.ts` and `services/aiModelCatalog.ts` deleted, `components/Jodie/types.ts`, `types/documentation.ts`, `components/common/providerVisuals.ts` added, readers moved; `CLAUDE.md`, `AGENTS.md`, `docs/CODEBASE-MAP.md`, `docs/decisions.md`, `CHANGELOG.md`, this inbox, three prompts); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c0e1e70dc`: typecheck exit 0, no error; typecheck:scripts exit 0; vitest 12232 tests, 444/453 files, the nine known import reds (stated before the merge: trunk 12241/454, branch -9 tests and -1 file); hooks 967/21; build exit 0; check:docs 5/5; check:agents PASS; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — Juri's visual GO on the l6 tree (lane 2's 9-item checklist, port 3195); chat probes on `464398d4e` via lane-run probe, port 3190: _tmp_196_l2 14/14, _tmp_196_l4 30/30, _tmp_196_l6 13/13, _tmp_196_l6b 5/5, 0 page errors
+**Notes**: Zero conflicts, no union; probes R-AI-22/23 once, R-AI-24 absent. The governance yes for CLAUDE.md/AGENTS.md was Juri's, director of #196, not Alfonso's as the merge body says. The push was Juri's (`464398d4e`, origin/staging with release 3.1.1 `9dc6e3906` pulled in), not the lane's. Ticket owed: `9dc6e3906` moved the welcome key to `jjodel_welcome_3_1_1_seen`, `frontend/scripts/smoke/states.ts` sets only `_3_` and `_3_1_`; the l4 probe needed it set by hand.
+**Prompt document name**: 2026-11-04 16:02
