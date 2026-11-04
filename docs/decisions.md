@@ -7337,6 +7337,19 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   fits it, the matched rule's pass 1 target when no lazy target fits, an error naming both when both fit or the type
   is unknown (`lazyOrMatched`, `executor.ts`). Evidence: `language-open-points.test.ts`; mutation M3 of the lane
   bench (lazy always wins) is killed by that file only.
+- **R-JTG-21** (2026-11-04, decided by the chat on Alfonso's delegation of 2026-11-04, not ratified word by word,
+  evidence: measured, verified: agent, reversible: trunk): a JjTL rule multiplicity with an unbounded upper bound fixes
+  no count. `[*]` (the same as `[0..*]`) creates one target per source; `[n..*]` creates n per source, its lower
+  bound. No warning: the warning of P-2026-11-04-0015 is removed. Before, every unbounded bound created one per source: `[3..*]`
+  on 2 sources created 2, now 6. Evidence: `language-open-points.test.ts` (P-2026-11-04-0900).
+- **R-JTG-22** (2026-11-04, decided by the chat on Alfonso's delegation of 2026-11-04, not ratified word by word,
+  evidence: measured, verified: agent, reversible: trunk): R-JTG-17 reaches every `let` body: a creation of a class
+  the target metamodel lacks inside a let body, in a feature or a forall, at rule level, in a nested let or in a let
+  inside a nested creation, is the same error, nothing is written. Only the missing class is checked there; an
+  abstract class and the creation shape stay unchecked in a let body, as before. Evidence: `language-open-points.test.ts`
+  (P-2026-11-04-0900). Amended 2026-11-04 on Alfonso's delegation, the lane's recommendation taken (P-2026-11-04-0900,
+  `06ce85232`): an abstract class created inside a let body is an error too, as for rule and nested targets; only the
+  creation shape stays unchecked there.
 
 ## Superate
 

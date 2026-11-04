@@ -917,6 +917,89 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Priority**: high
 **Found in**: P-2026-11-04-0256
 
+## 2026-11-04 — feat(jjtl): missing class in a let body is an error; [*] settled (P-2026-11-04-0900)
+**Prompt**: `claude_2026-11-04_0900_prompt_jjtl_let_multiplicity.md`: R-JTG-17 reaches let bodies; `[*]` one target per source, `[n..*]` n, warning and open-gap passages removed; rows decided by the chat on Alfonso's delegation of 2026-11-04.
+**Files touched**: code `96b79cec3`: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/executor/__tests__/language-open-points.test.ts`; docs `5eaae6544`: `docs/decisions.md` (R-JTG-21, R-JTG-22), `frontend/src/jjtl/SPEC.md` (4.4, 10, 12.2, 12.3 gap 4, Appendix C); this entry and the Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `96b79cec3`: typecheck exit 0; vitest 13714 passed, 3 red at import (baseline); build exit 0. check:docs exit 0 on the docs commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no app probe and no hand run; unit tests and mutation bench only
+**Notes**: Red first 16/32 for the intended reason. `[3..*]` on 2 sources: 2 before, 6 after; `[*]`, `[0..*]`, `[1..*]` unchanged at one per source. The static walk reaches every let body (rule, objectCreation and let bodies are the only mappingBody sites). Bench 4/5 (`~/.jjodel-lanes/P-2026-11-04-0900/bench.txt`): M3, the abstract check entering let bodies, survives, undecided. Class2Relational and parity fixtures unchanged, no assertion edited.
+**Prompt document name**: 2026-11-04 09:00
+
+## 2026-11-04 — feat(jjtl): abstract class in a let body is an error (P-2026-11-04-0900, follow-up)
+**Prompt**: GO on the lane's Recommended, on Alfonso's delegation: an abstract class created inside a let body is an error, as for rule and nested targets; the shape check stays; amend R-JTG-22 with a new sentence.
+**Files touched**: code `06ce85232`: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/executor/__tests__/language-open-points.test.ts`; docs: `docs/decisions.md` (R-JTG-22 amended), `frontend/src/jjtl/SPEC.md` §10, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `06ce85232`: typecheck exit 0; vitest 13720 passed, 3 red at import (baseline); build exit 0. check:docs on the docs commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no app probe and no hand run; unit tests and mutation bench only
+**Notes**: Red first 4/38 for the intended reason; the concrete-subclass control green. Bench rerun 6/6 killed (`~/.jjodel-lanes/P-2026-11-04-0900/bench.txt`): M3 (abstract skipped in a let feature) and the new M3b (in a let forall) die in language-open-points only.
+**Prompt document name**: 2026-11-04 09:00
+
+## 2026-11-04 — merge: jjtl-let-multiplicity into alfonso-frontend-jjtl (P-2026-11-04-0936)
+**Prompt**: `claude_2026-11-04_0936_prompt_merge_jjtl-let-multiplicity.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-let-multiplicity` at `46da7fabe` into `alfonso-frontend-jjtl`, merge base `32b9c87d3`, 6 commits on the branch side.
+**Files touched**: merge `3161cc583`: 6 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_0900_prompt_jjtl_let_multiplicity.md`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/language-open-points.test.ts`, `frontend/src/jjtl/executor/executor.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `3161cc583` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13720 tests in 513 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 3161cc583; unit tests and mutation bench on the branch, no app probe, no hand run
+**Notes**: Rollback tag `pre-jjtl-let-multiplicity` on `32b9c87d3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0936/result.json`.
+**Prompt document name**: 2026-11-04 09:36
+
+## 2026-11-04 — feat(editor-v2): skip React Flow's forced first mount on large canvases (P-2026-11-04-0901, P-2026-11-04-0925)
+**Prompt**: `claude_2026-11-04_0925_prompt_canvas_mount_cont.md`, continuing `claude_2026-11-04_0901_prompt_canvas_mount_unmeasured.md` after its ceiling stop: route A in EditorV2.tsx, gates, figures before and after, crops, entry, Status.
+**Files touched**: `b5cfa4a85` LIR (0901); `be8e2eed2` `editor-v2/unmeasuredNodes.ts` + its test; `0740d511f` `EditorV2.tsx`, `unmeasuredNodes.ts`, the test; docs commit: LIR amendment, the two Status lines; this entry.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile
+**Notes**: Gates: tsc 0; vitest 3 red at import + 2 load-timing reds green on rerun; build 0. b10_8 dev, mounted node els 2,559 -> 9, longest 5,008 -> 2,049-2,362 ms, total 16,727 -> 11,330-14,658; prod longest 2,055-2,148 -> 1,369-1,464 ms. 0 edge warnings. b11_9 did not mount on either tree. Partial: no pan crop (out1 ends with 1 node, both trees), no src1 crop. Figures: LIR amendment, ~/.jjodel-lanes/P-2026-11-04-0925/probe/out.
+**Prompt document name**: 2026-11-04 09:25
+
+## 2026-11-04 — ticket: Auto layout throws an ELK RangeError on a 200-class metamodel, on trunk too
+**Ticket**: Measured by P-2026-11-04-1012, dev server: the toolbar Auto layout on a metamodel of 200 classes throws `RangeError: Maximum call stack size exceeded` inside elkjs, so no layout and no fit follow. Seen on both graphs of the probe (a 400-reference ring with chords; an acyclic 299-reference chain), with route A on and with MOUNT_ALL_MAX_NODES raised to 1e9 by page.route (trunk behaviour). Which ELK phase recurses, and from what size, is not traced.
+**Priority**: medium
+**Found in**: P-2026-11-04-1012
+
+## 2026-11-04 — test(editor-v2): off-screen edges of route A on 200 flat classes (P-2026-11-04-1012)
+**Prompt**: `claude_2026-11-04_1012_prompt_canvas_mount_edge_check.md`: on a probe graph over 150 flat nodes, check an edge with one end off-screen, pan, select, fit, export; compare with trunk; fix in EditorV2.tsx or unmeasuredNodes.ts on failure.
+**Files touched**: `docs/log-inbox/hw-notation.md` (this entry, one ticket); the Status line of the 1012 prompt file. No code.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 200 classes, 400 refs. Branch: off-screen edge drawn (DOM, crop), 0 edge warnings; after pan the far end is 2 px from its handle at +150 ms, +2 s and pre-paint of the first frame shown; select, export ok; trunk (threshold 1e9) the same. Open fit frames 200/200 on both. Partial: no fit button exists, and Auto layout throws in ELK on both (ticket above). Probe and figures: ~/.jjodel-lanes/P-2026-11-04-1012.
+**Prompt document name**: 2026-11-04 10:12
+
+## 2026-11-04 — merge: canvas-mount-unmeasured into alfonso-frontend-jjtl (P-2026-11-04-1038)
+**Prompt**: `claude_2026-11-04_1038_prompt_merge_canvas-mount-unmeasured.md`, a direct merge by `lane-run merge --direct`, no session: `canvas-mount-unmeasured` at `58bcb36f8` into `alfonso-frontend-jjtl`, merge base `32b9c87d3`, 10 commits on the branch side.
+**Files touched**: merge `9abc989ff`: 8 files from the branch side (`docs/discovery/lir_2026-11-04_canvas_mount_unmeasured.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_0901_prompt_canvas_mount_unmeasured.md`, `docs/prompts/claude_2026-11-04_0925_prompt_canvas_mount_cont.md`, `docs/prompts/claude_2026-11-04_1012_prompt_canvas_mount_edge_check.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/__tests__/unmeasuredNodes.test.ts`, `frontend/src/components/editor-v2/unmeasuredNodes.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9abc989ff` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13740 tests in 514 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 9abc989ff; probes on the branch, no hand run. Known visible difference on models above 150 nodes: parallel edges look stacked in one band; fix lane P-2026-11-04-1050 open, #475 stays open until it closes
+**Notes**: Rollback tag `pre-canvas-mount-unmeasured` on `ad34b896f` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1038/result.json`.
+**Prompt document name**: 2026-11-04 10:38
+
 ## 2026-11-04 — docs: discovery, ELK auto-layout on open freeze (P-2026-11-04-0902)
 **Prompt**: P-2026-11-04-0902, read-only trace of the ticket at this inbox (ELK auto-layout on open, 117 s in 1 of 9 b10_8 runs): why it is intermittent, which inputs ELK gets in the slow case, and a cap, a worker and removing the race compared.
 **Files touched**: `docs/discovery/discovery_2026-11-04_elk_open_freeze.md` (new, `62ddd6b09`), the `Status:` line of the prompt.
