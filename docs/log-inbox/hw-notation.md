@@ -885,3 +885,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: gates green on efe1d320b; unit tests, mutation bench and an app probe on the branch; no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-nested-hidden` on `1f58fece6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0312/result.json`.
 **Prompt document name**: 2026-11-04 03:12
+
+## 2026-11-04 — docs: discovery, JjTL canvas render routes A and B (P-2026-11-04-0256, P-2026-11-04-0400)
+**Prompt**: P-2026-11-04-0256, read-only discovery of the React rendering of a large output canvas (#475, #547), route A (skip the forced initial render) against route B (cheaper per-node selectors) on b10_8 and b11_9; stopped at the context ceiling, closed by P-2026-11-04-0400 (handoff items: §4 caller sentence, Status lines, check:docs, commit).
+**Files touched**: `docs/discovery/discovery_2026-11-04_jjtl_canvas_render.md` (new), this inbox, the `Status:` lines of both prompts.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Partial only because 0256 hit the context ceiling (RC-51) before its commit; the discovery itself is complete. No source change; throwaway patches in `~/.jjodel-lanes/P-2026-11-04-0256/probe/`, each reverted. Route A: b10_8 longest 4,248 -> 1,571 ms, breaks edges to unmeasured nodes and fitView. Route B: mount -25%/-33%, cull unchanged. Side finding: ELK auto-layout of 117 s in 1 of 9 runs. Open questions in report §8.
+**Prompt document name**: 2026-11-04 02:56
