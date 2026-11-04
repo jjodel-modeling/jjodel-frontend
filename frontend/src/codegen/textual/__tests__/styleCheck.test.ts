@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { printTextModel } from '../printer';
-import { CLIKE_STYLE } from '../style';
+import { CLIKE_STYLE, PASCAL_STYLE, STYLE_CATALOG, styleOf } from '../style';
 import type { NotationStyle } from '../style';
 import { checkStyle, STYLE_RULES } from '../styleCheck';
 import type { StyleFinding } from '../styleCheck';
@@ -32,6 +32,10 @@ const CORPUS: [string, Spec, NotationStyle][] = [
     ['the fixture, lower case after the fallback', FIXTURE, LOWER],
     ['two class keywords, lower case after the fallback', CASES, LOWER],
 ];
+
+// Step C3a (P-2026-11-04-0345): the corpus under the Pascal/Ada style of the catalog, in both cases.
+const PASCAL_LOWER: NotationStyle = { ...PASCAL_STYLE, id: 'pascal-lower', classCase: 'lower', literalCase: 'lower' };
+const PASCAL_CORPUS: [string, Spec, NotationStyle][] = CORPUS.map(([name, spec, style]) => [name, spec, style === LOWER ? PASCAL_LOWER : PASCAL_STYLE]);
 
 // Broken metamodels: an inherited feature redeclared (§A.2 (i)); two classes of one name (§A.2 (ii), report §3).
 const REDECLARED = mm([
@@ -58,6 +62,24 @@ describe('style check (R-TXT-16, §A.2)', () => {
     it.each(CORPUS.filter(([, , style]) => style === CLIKE_STYLE))('C-like on %s: every rule ok', (_, spec) => {
         const fs = checkStyle(grammarOf(spec));
         expect(fs.map(f => [f.level, f.rule])).toEqual(STYLE_RULES.map(r => ['ok', r]));
+    });
+
+    it.each(PASCAL_CORPUS.filter(([, , style]) => style === PASCAL_STYLE))('Pascal/Ada on %s: every rule ok (kills: a catalog entry the check refuses)', (_, spec) => {
+        const g = grammarOf(spec, PASCAL_STYLE);
+        expect(g.style.id).toBe('pascal');
+        const fs = checkStyle(g);
+        expect(fs.map(f => [f.level, f.rule])).toEqual(STYLE_RULES.map(r => ['ok', r]));
+    });
+
+    it.each(PASCAL_CORPUS.filter(([, , style]) => style === PASCAL_LOWER))('Pascal/Ada lower case on %s: no error', (_, spec) => {
+        expect(errors(checkStyle(grammarOf(spec, PASCAL_LOWER)))).toEqual([]);
+    });
+
+    it('the catalog: C-like and Pascal/Ada by their record ids, C-like when the record names none (kills: a default other than C-like)', () => {
+        expect(STYLE_CATALOG).toEqual({ clike: CLIKE_STYLE, pascal: PASCAL_STYLE });
+        expect(styleOf(undefined)).toBe(CLIKE_STYLE);
+        expect(styleOf('pascal')).toBe(PASCAL_STYLE);
+        expect(PASCAL_STYLE).toMatchObject({ blockOpen: ['begin'], blockClose: ['end', ';'], assign: [':='], terminator: [';'], string: { quote: "'", escape: 'double' } });
     });
 
     it('the FAST/Fast fixture under a lower-case style: the R-TXT-21 (10) fallback is a notice, nothing fails', () => {
@@ -129,7 +151,7 @@ describe('style check (R-TXT-16, §A.2)', () => {
 });
 
 describe('nearley as the unambiguity oracle (R-TXT-21 (1))', () => {
-    it.each(CORPUS)('%s: every sample has exactly one parse', (_, spec, style) => {
+    it.each([...CORPUS, ...PASCAL_CORPUS.map(([n, sp, st]) => [`${n}, Pascal/Ada`, sp, st] as [string, Spec, NotationStyle])])('%s: every sample has exactly one parse', (_, spec, style) => {
         const g = grammarOf(spec, style);
         const ng = nearleyGrammarOf(g);
         const samples = generateSamples(g);

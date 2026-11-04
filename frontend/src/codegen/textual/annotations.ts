@@ -10,7 +10,8 @@
 
 import type { TextMetamodel } from './metamodel';
 import { classFeatures, isNameFeature } from './metamodel';
-import type { LetterCase, NotationStyle } from './style';
+import { isStyleBase } from './style';
+import type { LetterCase, NotationStyle, StyleBase } from './style';
 
 export interface OperatorAnnotation {
     readonly symbol: string;
@@ -55,7 +56,8 @@ export interface SyntaxAnnotations {
     readonly v: 1;
     /** The language's name (by default the metamodel's, R-TXT-25 (12)). */
     readonly language?: string;
-    readonly style?: { readonly classCase?: LetterCase; readonly literalCase?: LetterCase; readonly blankBeforeContainment?: boolean };
+    /** `base`: the style of the catalog (style.ts `STYLE_CATALOG`), C-like when absent (step C3a); the options apply over it. */
+    readonly style?: { readonly base?: StyleBase; readonly classCase?: LetterCase; readonly literalCase?: LetterCase; readonly blankBeforeContainment?: boolean };
     /** The classes the top level admits: `uncontained` (the concrete classes no containment can hold) or a list of class ids (R-TXT-24 (a)). */
     readonly roots?: 'uncontained' | readonly string[];
     readonly classes?: Readonly<Record<string, ClassAnnotation>>;
@@ -103,7 +105,7 @@ export interface ResolvedFeature {
 /** The annotations keyed by names: classes by name, features by `Owner.f`, enumerations by name. */
 export interface ResolvedAnnotations {
     readonly language?: string;
-    readonly style: { readonly classCase?: LetterCase; readonly literalCase?: LetterCase; readonly blankBeforeContainment?: boolean };
+    readonly style: { readonly base?: StyleBase; readonly classCase?: LetterCase; readonly literalCase?: LetterCase; readonly blankBeforeContainment?: boolean };
     readonly roots?: 'uncontained' | readonly string[];
     readonly classes: Readonly<Record<string, ResolvedClass>>;
     readonly features: Readonly<Record<string, ResolvedFeature>>;
@@ -187,7 +189,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
     const classes: Record<string, ResolvedClass> = {};
     const features: Record<string, ResolvedFeature> = {};
     const enums: Record<string, { subsets: EnumSubset[] }> = {};
-    const style: { classCase?: LetterCase; literalCase?: LetterCase; blankBeforeContainment?: boolean } = {};
+    const style: { base?: StyleBase; classCase?: LetterCase; literalCase?: LetterCase; blankBeforeContainment?: boolean } = {};
 
     const mandatory = new Set(Object.values(ids.features).filter(f => (f.lower ?? 0) >= 1).map(f => `${f.owner}.${f.name}`));
     const mandatoryName = new Set(mm.classes.flatMap(c => {
@@ -208,6 +210,10 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
     }
 
     const s = record.style ?? {};
+    if (s.base !== undefined) {
+        if (isStyleBase(s.base)) style.base = s.base;
+        else error('style', `base ${JSON.stringify(s.base)} is not a style of the catalog (clike, pascal): C-like applied`);
+    }
     if (s.classCase !== undefined) { if (isCase(s.classCase)) style.classCase = s.classCase; else error('style', `classCase ${JSON.stringify(s.classCase)} is not declared or lower`); }
     if (s.literalCase !== undefined) { if (isCase(s.literalCase)) style.literalCase = s.literalCase; else error('style', `literalCase ${JSON.stringify(s.literalCase)} is not declared or lower`); }
     if (s.blankBeforeContainment !== undefined) {
@@ -287,7 +293,8 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
     return { ...(language !== undefined ? { language } : {}), style, ...(roots !== undefined ? { roots } : {}), classes, features, enums, mandatoryName, issues };
 }
 
-/** The style with the record's style options applied. */
+/** The style with the record's style options applied; the base is not an option, it chose `style` (syntaxRecord.ts). */
 export function withStyleOptions(style: NotationStyle, a: ResolvedAnnotations): NotationStyle {
-    return { ...style, ...a.style };
+    const { base: _base, ...options } = a.style;
+    return { ...style, ...options };
 }

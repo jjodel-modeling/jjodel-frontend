@@ -72,6 +72,34 @@
         flex: 1;
     }
 
+    &__style {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+    }
+
+    &__style-select {
+        height: 22px;
+        padding: 0 4px;
+        border: 1px solid var(--color-border-secondary);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-primary);
+        font: inherit;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-hover);
+        }
+
+        &:disabled {
+            color: var(--color-text-tertiary);
+            cursor: not-allowed;
+        }
+    }
+
     &__modes {
         display: inline-flex;
         border: 1px solid var(--color-border-secondary);

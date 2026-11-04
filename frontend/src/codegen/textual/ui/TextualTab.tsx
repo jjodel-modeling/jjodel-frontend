@@ -44,8 +44,10 @@ import { deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
 import { matchObjects } from '../textMatch';
 import type { TextMatch } from '../textMatch';
-import { elementIdsOf, readSyntax, textualNotation } from '../syntaxRecord';
-import type { AnnotationIssue, ElementIds } from '../annotations';
+import { elementIdsOf, readSyntax, styleBaseOf, textualNotation, withStyleBase } from '../syntaxRecord';
+import { STYLE_CATALOG, isStyleBase } from '../style';
+import type { StyleBase } from '../style';
+import type { AnnotationIssue, ElementIds, SyntaxAnnotations } from '../annotations';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import type { DecodedSyntax } from '../syntaxRecord';
 import type { TextMetamodel, TextObject } from '../metamodel';
@@ -837,12 +839,30 @@ type MonacoEditor = Parameters<OnMount>[0];
 type ContentChange = { readonly rangeOffset: number; readonly rangeLength: number; readonly text: string };
 type MonacoApi = Parameters<OnMount>[1];
 
+/**
+ * Step C3a (P-2026-11-04-0412): the style picker writes only while the text is the agreed one, so the reprint of the
+ * new style replaces no pending edit (`onModelPrint` reprints such a text, and would keep any other one as stale).
+ */
+export function canSwitchStyle(status: { readonly kind: string }, stale: boolean): boolean {
+    return !stale && (status.kind === 'synced' || status.kind === 'applied');
+}
+
+/** The record the picker writes for `base`: null when the record already names it, nothing to write. */
+export function styleSwitchRecord(decoded: DecodedSyntax, base: StyleBase): SyntaxAnnotations | null {
+    return styleBaseOf(decoded) === base ? null : withStyleBase(decoded.record, base);
+}
+
+/** The picker's entries, in the catalog's order. */
+const STYLE_ENTRIES = (Object.keys(STYLE_CATALOG) as StyleBase[]).map(base => ({ base, name: STYLE_CATALOG[base].name }));
+
 export interface TextualTabProps {
     readonly modelId: string;
     /** The picker entry's label: the language's name (dataManagerOption.ts `textualOptionLabel`). */
     readonly label: string;
     /** The dock tab's id, for the close control. */
     readonly tabId: string;
+    /** Stores a metamodel's syntax record as one undo step (openTextualTab.tsx `writeTextualSyntax`); no style picker without it. */
+    readonly writeSyntax?: (metamodelId: string, record: SyntaxAnnotations) => boolean;
 }
 
 /**
@@ -853,7 +873,7 @@ export interface TextualTabProps {
  * a text with no pending edit and never overwrites one. With no pending edit, Cmd/Ctrl+Z is the app's undo, whose
  * change reprints the text: one step restores model and text together. The EBNF view stays read-only.
  */
-export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
+export default function TextualTab({ modelId, label, tabId, writeSyntax }: TextualTabProps) {
     const lookup = useSelector((state: any) => state.idlookup) as Record<string, any>;
     const store = useStore();
     const [mode, setMode] = useState<TextualMode>('text');
@@ -865,6 +885,8 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     const metamodel = lookup?.[model?.instanceof];
     const shownLabel = metamodel ? textualOptionLabel(metamodel.name, textualLanguageNameOf(lookup, modelId)) : label;
     const failed = view.error !== null && (mode === 'text' || !view.ebnf);
+    const metamodelId: string | undefined = typeof model?.instanceof === 'string' ? model.instanceof : undefined;
+    const decoded = useMemo(() => storedNotation(lookup ?? {}, metamodelId).decoded, [lookup, metamodelId]);
 
     const [status, setStatus] = useState<EditStatus>({ kind: 'synced' });
     const [stale, setStale] = useState(false);
@@ -1237,6 +1259,12 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     };
 
     const shownStatus = editStatusText(stale && status.kind !== 'errors' ? { kind: 'stale' } : status);
+    const styleFree = canSwitchStyle(status, stale);
+    const onStyle = (value: string): void => {
+        if (!writeSyntax || !metamodelId || !isStyleBase(value) || !canSwitchStyle(status, staleRef.current)) return;
+        const record = styleSwitchRecord(decoded, value);
+        if (record) writeSyntax(metamodelId, record);
+    };
     const refusalTitle = status.kind === 'refused' ? status.reasons.join('\n') : shownStatus.text;
 
     return (
@@ -1274,6 +1302,16 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                             Reprint
                         </button>
                     </span>
+                )}
+                {writeSyntax && metamodel && (
+                    <label className="textual-tab__style"
+                           title={styleFree ? 'The style of the notation, stored with the metamodel' : 'Apply or discard the edit to change the style'}>
+                        <i className="bi bi-type" aria-hidden="true" />
+                        <select className="textual-tab__style-select" aria-label="Notation style" value={styleBaseOf(decoded)}
+                                disabled={!styleFree} onChange={e => onStyle(e.target.value)}>
+                            {STYLE_ENTRIES.map(s => <option key={s.base} value={s.base}>{s.name}</option>)}
+                        </select>
+                    </label>
                 )}
                 {mode === 'text' && model && !failed && (
                     <button type="button" className={'textual-tab__outline-toggle' + (outlineOpen ? ' textual-tab__outline-toggle--on' : '')}

@@ -328,12 +328,12 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
         if (a.groupBy) refuse(key, 'groupBy applies to a containment; not applied');
         if (override && f.name === override.attr.name && f.owner === override.attr.owner) {
             const value: GrammarNode = { t: 'assign', feat: f.name, op: '=', item: { t: 'lit', rule: override.rule } };
-            return { t: 'seq', items: [...kw, ...tokens(style.assign), value, ...tokens(style.terminator), ...nl] };
+            return { t: 'seq', items: [...kw, ...(kw.length ? tokens(style.assign) : []), value, ...tokens(style.terminator), ...nl] };
         }
         const value: GrammarNode = v.t === 'list'
             ? { t: 'list', feat: f.name, open: style.list.open, separator: style.list.separator, close: style.list.close, item: { t: 'assign', feat: f.name, op: '+=', item: single(v.item, f) } }
             : { t: 'assign', feat: f.name, op: '=', item: single(v, f) };
-        return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...kw, ...tokens(style.assign), value, ...tokens(style.terminator), ...nl] } };
+        return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...kw, ...(kw.length ? tokens(style.assign) : []), value, ...tokens(style.terminator), ...nl] } };
     };
 
     function objectBody(r: Extract<BaseRule, { t: 'object' }>, override?: { readonly attr: TextFeature; readonly rule: string }): GrammarNode {

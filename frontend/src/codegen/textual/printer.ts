@@ -273,10 +273,12 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
 
     const quote = (s: string): string => {
         const q = style.string.quote;
-        const body = style.string.escape === 'double'
-            ? s.split(q).join(q + q)
-            : s.replace(/\\/g, '\\\\').split(q).join(`\\${q}`).replace(/\n/g, '\\n');
-        return q + body + q;
+        // D4 (P-2026-11-04-0345): a line break cannot stand in a doubling-style string, the lexer stops a string at a line
+        // end; it prints as a joined character code, `'line1'#10'line2'`. The first piece is always quoted, empty or not.
+        if (style.string.escape === 'double') {
+            return s.split(/([\n\r])/).map((part, k) => (k % 2 ? `#${part.charCodeAt(0)}` : k && !part ? '' : q + part.split(q).join(q + q) + q)).join('');
+        }
+        return q + s.replace(/\\/g, '\\\\').split(q).join(`\\${q}`).replace(/\n/g, '\\n') + q;
     };
     const name = (s: string): string => (IDENTIFIER.test(s) && !style.reservedNames.includes(s) ? s : quote(s));
     const nameOf = (o: TextObject): unknown => (ruleOf(o).named ? o.slots.name : undefined);

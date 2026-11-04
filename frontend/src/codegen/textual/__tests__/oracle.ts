@@ -40,6 +40,14 @@ export function tokenize(g: ConcreteGrammar, text: string): Tok[] {
                 if (s.string.escape === 'backslash' && rest[j] === '\\') { body += rest.slice(j, j + 2); j += 2; continue; }
                 if (rest.startsWith(q, j)) {
                     if (s.string.escape === 'double' && rest.startsWith(q, j + q.length)) { body += q; j += 2 * q.length; continue; }
+                    // D4: under a doubling style, character codes and quoted pieces join the string with nothing between.
+                    const code = s.string.escape === 'double' ? /^(#\d+)+/.exec(rest.slice(j + q.length)) : null;
+                    if (code) {
+                        body += code[0];
+                        j += q.length + code[0].length;
+                        if (rest.startsWith(q, j)) { j += q.length; continue; }
+                        j -= q.length;
+                    }
                     break;
                 }
                 body += rest[j++];
@@ -171,7 +179,9 @@ export function generateSamples(g: ConcreteGrammar): Sample[] {
     const keywords = [...new Set(g.rules.flatMap(r => (r.t === 'object' ? [r.cls, ...r.features.map(f => f.name)] : [])))];
     const quote = (v: string): string => {
         const q = s.string.quote;
-        return q + (s.string.escape === 'double' ? v.split(q).join(q + q) : v.replace(/\\/g, '\\\\').split(q).join(`\\${q}`).replace(/\n/g, '\\n')) + q;
+        // D4: a doubling style prints a line break as a joined character code, as printer.ts does.
+        if (s.string.escape === 'double') return v.split(/([\n\r])/).map((p, k) => (k % 2 ? `#${p.charCodeAt(0)}` : k && !p ? '' : q + p.split(q).join(q + q) + q)).join('');
+        return q + v.replace(/\\/g, '\\\\').split(q).join(`\\${q}`).replace(/\n/g, '\\n') + q;
     };
     const asName = (v: string): string => (WORD.exec(v)?.[0] === v && !s.reservedNames.includes(v) ? v : quote(v));
     const pools: Record<string, readonly string[]> = {

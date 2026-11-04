@@ -9,7 +9,9 @@ import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import { printTextModel } from '../printer';
-import { textualNotation } from '../syntaxRecord';
+import type { NotationStyle, StyleBase } from '../style';
+import { styleOf } from '../style';
+import { textualNotation, withStyleBase } from '../syntaxRecord';
 import { GARAGE, grammarOf, LOWER } from './corpus';
 import { metamodelOf, objectsOf } from './spec';
 
@@ -90,24 +92,35 @@ export interface TolerantCase {
     readonly objects: readonly TextObject[];
 }
 
-/** The seven cases of the probe: library in three forms, turnstile in two, garage in two styles. */
-export function tolerantCases(): TolerantCase[] {
-    const lib = (name: string, r: SyntaxAnnotations | null): TolerantCase => ({ name, mm: LIBRARY_MM, g: notation(LIBRARY_MM, r, LIBRARY_IDS), objects: libraryObjects(6, 3) });
+/**
+ * The seven cases of the probe: library in three forms, turnstile in two, garage in two cases. Under `base` (step C3a,
+ * P-2026-11-04-0412) the records name that style and the garage takes it; C-like gives the probe's cases as they were.
+ */
+export function tolerantCases(base: StyleBase = 'clike'): TolerantCase[] {
+    const rec = (r: SyntaxAnnotations | null): SyntaxAnnotations | null => (base === 'clike' ? r : withStyleBase(r, base));
+    const lib = (name: string, r: SyntaxAnnotations | null): TolerantCase => ({ name, mm: LIBRARY_MM, g: notation(LIBRARY_MM, rec(r), LIBRARY_IDS), objects: libraryObjects(6, 3) });
+    const style = styleOf(base);
+    const lower: NotationStyle = base === 'clike' ? LOWER : { ...style, id: `${style.id}-lower`, classCase: 'lower', literalCase: 'lower' };
     return [
         lib('library, plain', null),
         lib('library, annotated', LIBRARY_RECORD),
         lib('library, lines', LIBRARY_LINES),
-        { name: 'turnstile, plain', mm: TS.mm, g: notation(TS.mm, null, TS.ids), objects: TS.objects },
-        { name: 'turnstile, annotated', mm: TS.mm, g: notation(TS.mm, TURNSTILE_RECORD, TS.ids), objects: TS.objects },
-        { name: 'garage, c-like', mm: metamodelOf(GARAGE), g: grammarOf(GARAGE), objects: objectsOf(GARAGE) },
-        { name: 'garage, lower', mm: metamodelOf(GARAGE), g: grammarOf(GARAGE, LOWER), objects: objectsOf(GARAGE) },
+        { name: 'turnstile, plain', mm: TS.mm, g: notation(TS.mm, rec(null), TS.ids), objects: TS.objects },
+        { name: 'turnstile, annotated', mm: TS.mm, g: notation(TS.mm, rec(TURNSTILE_RECORD), TS.ids), objects: TS.objects },
+        { name: `garage, ${style.id}`, mm: metamodelOf(GARAGE), g: grammarOf(GARAGE, style), objects: objectsOf(GARAGE) },
+        { name: 'garage, lower', mm: metamodelOf(GARAGE), g: grammarOf(GARAGE, lower), objects: objectsOf(GARAGE) },
     ];
 }
 
-/** The tokens of a C-like print, as the probe cut them: words, numbers, strings, `{}`, single characters. */
-export function probeTokens(text: string): { readonly start: number; readonly end: number }[] {
+/**
+ * The tokens of a C-like print, as the probe cut them: words, numbers, strings, `{}`, single characters. Under a doubling
+ * style (step C3a) a string is its quoted pieces and `#N` codes joined, and `:=` is one token.
+ */
+export function probeTokens(text: string, style?: NotationStyle): { readonly start: number; readonly end: number }[] {
     const out: { start: number; end: number }[] = [];
-    const re = /[A-Za-z_][A-Za-z0-9_]*|-?\d+(\.\d+)?([eE][+-]?\d+)?|"(?:[^"\\\n]|\\.)*"|\{\}|[^\s]/g;
+    const re = style?.string.escape === 'double'
+        ? /[A-Za-z_][A-Za-z0-9_]*|-?\d+(\.\d+)?([eE][+-]?\d+)?|'(?:[^'\n]|'')*'(?:#\d+|'(?:[^'\n]|'')*')*|:=|[^\s]/g
+        : /[A-Za-z_][A-Za-z0-9_]*|-?\d+(\.\d+)?([eE][+-]?\d+)?|"(?:[^"\\\n]|\\.)*"|\{\}|[^\s]/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text))) out.push({ start: m.index, end: m.index + m[0].length });
     return out;
@@ -125,7 +138,7 @@ export interface Mutant {
 /** The print of a case, and every mutant of it. */
 export function mutantsOf(c: TolerantCase): { readonly text: string; readonly mutants: readonly Mutant[] } {
     const text = printTextModel(c.g, c.objects).text;
-    const toks = probeTokens(text);
+    const toks = probeTokens(text, c.g.style);
     return {
         text,
         mutants: [

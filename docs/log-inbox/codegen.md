@@ -1593,3 +1593,42 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: merge of textual-fix-205, gates green on the merge; a test change, nothing on screen
 **Notes**: Rollback tag `pre-textual-fix-205` on `a5dee44d4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0328/result.json`.
 **Prompt document name**: 2026-11-04 03:28
+
+## 2026-11-04 — discovery(codegen): textual step C, expression notation, T4b form, T5 styles (P-2026-11-04-0303, P-2026-11-04-0330)
+**Prompt**: `claude_2026-11-04_0303_prompt_textual_c_discovery.md` (probe run, stopped at the context soft ceiling) continued by `claude_2026-11-04_0330_prompt_textual_c_report.md` from its handoff: write the step C report, one design per part, lanes, decisions.
+**Files touched**: `docs/discovery/harness/probe_2026-11-04_textual_c_notation.test.ts` and `.out.txt` (`d5e38cb8b`); `docs/discovery/discovery_2026-11-04_textual_step_c.md` (`8906621a1`); Status of the two prompts and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Flat n-ary keeps 312/312 SyncRTL roots, left-fold 269. Paren node, not trivia. Amends R-TXT-16 (3) and, if D3 (a), R-TXT-27 (2). Indentation: a truncation applies deletions (arb3 178/281). Pascal fails on a newline in a string. Section 1d unmeasured (needles not found), moved to C1c. Decisions D1-D6 in the report.
+**Prompt document name**: 2026-11-04 03:30
+
+## 2026-11-04 — feat(codegen): Pascal/Ada style and the style picker, textual step C lane C3a (P-2026-11-04-0345, P-2026-11-04-0412)
+**Prompt**: `claude_2026-11-04_0345_prompt_textual_c3a_pascal.md` and its continuation `claude_2026-11-04_0412_prompt_textual_c3a_cont.md` (RC-51): Pascal/Ada in the style catalog, the style named in the syntax record, a newline in a string as `'a'#10'b'` (R-TXT-40 D4), byte-identical round trips per style on the corpus, a style switch that leaves the model unchanged, a style picker in the Text tab writing the record in one undo step (first caller of `writeTextualSyntax`); the step C probe reads the prototype folder from `PROTO`.
+**Files touched**: `style.ts`, `annotations.ts`, `syntaxRecord.ts`, `printer.ts`, `parser.ts`, `concreteGrammar.ts`, `ui/TextualTab.tsx`, `ui/openTextualTab.tsx`, their tests (0f6f7fa8b, b4e6eae69, 0349387ef, 794041be3, 076b38d18, c6d22de51, 7852e462b); `docs/discovery/harness/probe_2026-11-04_textual_c3a_app/`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on 7852e462b: tsc 0; vitest 13689 passed, 3 red at import (baseline), the timing test of tolerant.test.ts over its ratio once under load (fixed on the trunk by #205, not yet on this branch); build 0; check:codegen-lazy ALL GREEN; check:docs 5/5 (chat).
+**Out-of-scope changes**: no (eight files, above five: all named by the prompts, RC-11)
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3471 (demoESM 17/17, library 18/18): switch to Pascal, text and EBNF follow, an edit applies, one Undo, switch back byte for byte; a typed line break stored and shown as `'…'#10'x'`; crops `~/.jjodel-lanes/P-2026-11-04-0345/c3a-*.png` checked by the chat (RC-23); Alfonso's GO on the picker pending for the merge.
+**Notes**: Mutation benches 2/2, 6/6, 8/8, 11/11 and 8/9 killed (the survivor leaves an unread `base`). Open: switching back to C-like leaves `{"v":1}` stored instead of removing the key (prints the same); lanes C1a..C1d wait for Alfonso's D1 and D3. Docs written by the chat: the lane stopped at the ceiling. Two defects fixed on the way, both new to the Pascal style: a keyword-less feature printed `:=` (concreteGrammar.ts:331,336); an unnamed object with an empty body read as named `begin` (parser.ts).
+**Prompt document name**: 2026-11-04 03:45
+
+## 2026-11-04 — merge: textual-c-notation takes alfonso-frontend-jjtl (P-2026-11-04-0653)
+**Prompt**: `claude_2026-11-04_0653_prompt_textual-c-notation_take_trunk.md`, full lane (RC-14): the trunk `alfonso-frontend-jjtl` at `26a0b21fa` into `textual-c-notation` at `ba24f6dcb`, one `--no-ff` merge commit, merge base `1f58fece6`; 20 trunk commits, 17 branch commits.
+**Files touched**: merge `df01f813c`: union of `docs/log-inbox/codegen.md` (the one conflict), the rest auto-merged from the trunk side; this commit: this entry and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `df01f813c`: typecheck exit 0, 0 `error TS`; typecheck:scripts exit 0; vitest 13696 passed in 513 files, 3 red at import (baseline), expectation 13568 + 7 trunk + 121 branch; hooks 967; build exit 0; check:docs 5/5; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: the trunk side adds only test counters (#205) to the textual code, the branch crops of P-2026-11-04-0345 stand (Alfonso's GO 06:52); no new visual check.
+**Notes**: Union: trunk entries (#205, textual-fix-205 merge) then branch entries (step C discovery, C3a), +26 lines against each parent; probes R-TXT-40..43 once, R-TXT-44 none, 8 headings once. Step 5: parser.ts and printer.ts coherent, counters declared once. Trunk count 13575 had `irCollapsedRender.test.ts` red once (Chromium hook timeout under parallel typecheck load), green on the merge run.
+**Prompt document name**: 2026-11-04 06:53

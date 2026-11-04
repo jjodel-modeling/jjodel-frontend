@@ -55,7 +55,7 @@ vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab
 
 const { VersionFixer } = await import('../../../redux/VersionFixer');
 const { default: first } = await import('../../../examples/first');
-const { decodeSyntax, elementIdsOf, encodeSyntax, readSyntax, syntaxPatch, textualNotation, TEXTUAL_SYNTAX_KEY } = await import('../syntaxRecord');
+const { decodeSyntax, elementIdsOf, encodeSyntax, readSyntax, styleBaseOf, syntaxPatch, textualNotation, TEXTUAL_SYNTAX_KEY, withStyleBase } = await import('../syntaxRecord');
 const { metamodelGrammar, storedNotation, textInputOf, textualView } = await import('../ui/TextualTab');
 const { textualLanguageNameOf, textualOptionLabel } = await import('../../../components/editor-v2/dataManagerOption');
 const { concreteGrammarEbnf, deriveConcreteGrammar } = await import('../concreteGrammar');
@@ -367,6 +367,76 @@ describe('stale ids and renames', () => {
         expect(after.ebnf).toContain('Volume_prose      ::= "title" [name=NAME]');
         const lookup = libraryLookup('Volume', encodeSyntax(record));
         expect(textualOptionLabel(lookup.MM.name, textualLanguageNameOf(lookup, 'M'))).toBe('Shelf');
+    });
+});
+
+// ---- The style of the record (step C3a, P-2026-11-04-0345; R-TXT-16 (2)) --------------------------------------
+
+describe('the style base of the record', () => {
+    const withBase = (r: SyntaxAnnotations, base: unknown): SyntaxAnnotations => ({ ...r, style: { ...(r.style ?? {}), base } } as SyntaxAnnotations);
+    const PASCAL_RECORD = withBase(LIBRARY_RECORD, 'pascal');
+
+    it('every stored record with no base keeps its print: it is the C-like one (mutants: the default base is not C-like; the base read from another field)', () => {
+        const stored: (SyntaxAnnotations | undefined)[] = [undefined, { v: 1 }, LIBRARY_RECORD, { ...LIBRARY_RECORD, style: { blankBeforeContainment: true } }, { ...LIBRARY_RECORD, style: { classCase: 'lower' } }];
+        for (const r of stored) {
+            const view = libraryView(r && encodeSyntax(r));
+            const clike = libraryView(encodeSyntax(withBase(r ?? { v: 1 }, 'clike')));
+            expect(view.error).toBeNull();
+            expect(view.text).toBe(clike.text);
+            expect(view.ebnf).toBe(clike.ebnf);
+            expect(view.text).not.toContain('begin');
+        }
+        expect(libraryView(encodeSyntax(LIBRARY_RECORD)).text).toBe(LIBRARY_TEXT);
+    });
+
+    it('base pascal prints the library in Pascal/Ada, which parses with no error, reprints byte for byte and holds the same model (mutant: the base ignored)', () => {
+        const view = libraryView(encodeSyntax(PASCAL_RECORD));
+        expect(errors(view.issues)).toEqual([]);
+        expect(view.text.split('\n').slice(0, 6)).toEqual(['Library city begin', '  books begin', '    prose begin', '      Book dune begin', '        FICTION;', '      end;']);
+        expect(view.text).toContain('        year := 2015;');
+        expect(view.text).toContain('    Member ann begin end;');
+        expect(view.ebnf).toContain('"begin"');
+        const mm = textInputOf(libraryGlobals()).metamodel;
+        const ids = elementIdsOf(libraryLookup(), 'MM');
+        const pascal = textualNotation(mm, decodeSyntax(encodeSyntax(PASCAL_RECORD)), ids).grammar;
+        const clike = textualNotation(mm, decodeSyntax(encodeSyntax(LIBRARY_RECORD)), ids).grammar;
+        expect(pascal.style.id).toBe('pascal');
+        const r = parseText(view.text, pascal);
+        expect(r.errors).toEqual([]);
+        expect(printTextModel(pascal, r.objects).text).toBe(view.text);
+        expect(printTextModel(clike, r.objects).text).toBe(LIBRARY_TEXT);
+    });
+
+    it('an unknown base is an issue and C-like applies (mutants: an unknown base throws; it is kept and indexes no style)', () => {
+        for (const base of ['cobol', 3, 'toString']) {
+            const view = libraryView(encodeSyntax(withBase(LIBRARY_RECORD, base)));
+            expect(view.error).toBeNull();
+            expect(view.text).toBe(LIBRARY_TEXT);
+            expect(errors(view.issues)).toEqual([`style: base ${JSON.stringify(base)} is not a style of the catalog (clike, pascal): C-like applied`]);
+        }
+    });
+
+    it('the style options apply over the chosen base (mutant: the options replace the base, or the base the options)', () => {
+        const view = libraryView(encodeSyntax({ ...LIBRARY_RECORD, style: { base: 'pascal', classCase: 'lower' } }));
+        expect(errors(view.issues)).toEqual([]);
+        expect(view.text.split('\n')[0]).toBe('library city begin');
+        expect(view.text).toContain('      book dune begin');
+    });
+
+    it('withStyleBase sets the base and keeps the rest; C-like drops it, and an emptied style goes (mutants: clike written; other fields lost)', () => {
+        expect(withStyleBase(null, 'pascal')).toEqual({ v: 1, style: { base: 'pascal' } });
+        expect(withStyleBase(LIBRARY_RECORD, 'pascal')).toEqual(PASCAL_RECORD);
+        expect(encodeSyntax(withStyleBase(PASCAL_RECORD, 'clike'))).toBe(encodeSyntax(LIBRARY_RECORD));
+        expect(withStyleBase({ v: 1, style: { base: 'pascal', classCase: 'lower' } }, 'clike')).toEqual({ v: 1, style: { classCase: 'lower' } });
+        expect(withStyleBase(null, 'clike')).toEqual({ v: 1 });
+        expect(decodeSyntax(encodeSyntax(PASCAL_RECORD))).toEqual({ record: PASCAL_RECORD, issues: [] });
+    });
+
+    it('styleBaseOf reads the base a picker shows: C-like for no record, no base or an unknown one (mutant: an unknown base shown as chosen)', () => {
+        expect(styleBaseOf(decodeSyntax(undefined))).toBe('clike');
+        expect(styleBaseOf(decodeSyntax(encodeSyntax(LIBRARY_RECORD)))).toBe('clike');
+        expect(styleBaseOf(decodeSyntax(encodeSyntax(PASCAL_RECORD)))).toBe('pascal');
+        expect(styleBaseOf(decodeSyntax(encodeSyntax(withBase(LIBRARY_RECORD, 'cobol'))))).toBe('clike');
     });
 });
 
