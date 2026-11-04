@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-04-0712
 Chat: C-2026-11-03-1037
 Request: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH (merge of textual-c-notation launched by chat C-2026-11-03-1037)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane merge · 4325ec678 · verifica visiva passata 2026-11-04 (crops c3a-* checked by the chat, RC-23, and by Alfonso, «go» 06:52; vitest red only on an environmental port clash in laneRun.test.ts, 145/145 alone twice)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-04-0712 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

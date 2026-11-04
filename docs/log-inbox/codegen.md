@@ -1632,3 +1632,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: the trunk side adds only test counters (#205) to the textual code, the branch crops of P-2026-11-04-0345 stand (Alfonso's GO 06:52); no new visual check.
 **Notes**: Union: trunk entries (#205, textual-fix-205 merge) then branch entries (step C discovery, C3a), +26 lines against each parent; probes R-TXT-40..43 once, R-TXT-44 none, 8 headings once. Step 5: parser.ts and printer.ts coherent, counters declared once. Trunk count 13575 had `irCollapsedRender.test.ts` red once (Chromium hook timeout under parallel typecheck load), green on the merge run.
 **Prompt document name**: 2026-11-04 06:53
+
+## 2026-11-04 — merge: textual-c-notation into alfonso-frontend-jjtl (P-2026-11-04-0712)
+**Prompt**: `claude_2026-11-04_0712_prompt_merge_textual-c-notation.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c-notation` at `7a0ae847b` into `alfonso-frontend-jjtl`, merge base `26a0b21fa` (the branch had taken the trunk in P-2026-11-04-0653, RC-14). Step C lane C3a: Pascal/Ada style, style in the record, newline in strings, style picker; the step C discovery report. Alfonso's GO on the picker crops 06:52.
+**Files touched**: merge `4325ec678`, the branch side (`frontend/src/codegen/textual/style.ts`, `annotations.ts`, `syntaxRecord.ts`, `concreteGrammar.ts`, `parser.ts`, `printer.ts`, `ui/TextualTab.tsx`, `ui/openTextualTab.tsx`, their tests, `docs/discovery/discovery_2026-11-04_textual_step_c.md`, harness probes, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4325ec678` in the worker: typecheck 0 errors; typecheck:scripts exit 0; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0; vitest red on one harness test only, `scripts/hooks/__tests__/laneRun.test.ts` (port 54310 in use, environmental); run alone on the merge commit twice: 145/145 both times.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — crops c3a-* of P-2026-11-04-0345 checked by the chat (RC-23) and by Alfonso («go», 06:52).
+**Notes**: Blocked only by the environmental port clash, resolved with the evidence above (`resolved.txt`). Rollback tag `pre-textual-c-notation` on `26a0b21fa` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0712/result.json`.
+**Prompt document name**: 2026-11-04 07:12
