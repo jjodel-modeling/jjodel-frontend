@@ -25,6 +25,10 @@ import type { ParseOptions, TextParseResult } from '../parser';
 export const TEXTUAL_LANGUAGE_ID = 'jjodel-textual';
 export const EBNF_LANGUAGE_ID = 'jjodel-ebnf';
 export const TEXTUAL_THEME_ID = 'jjodel-textual-theme';
+/** The command a hover link runs (step B2, R-TXT-39 (3)): the caret to an offset of a Text tab's model, its line revealed. */
+export const TEXTUAL_REVEAL_COMMAND = 'jjodel.textual.reveal';
+/** The lines of uses a hover lists before it counts the rest. */
+const HOVER_USE_LINES = 12;
 
 const tokenType = (role: SemanticRole): string => `textual-${role}`;
 
@@ -202,10 +206,48 @@ export function registerTextualMonaco(monaco: typeof Monaco): void {
             locations(model, readingOf(model)?.analysis.referencesAt(model.getOffsetAt(position), context.includeDeclaration) ?? []),
     });
 
+    // Step B2: the hover's links run the reveal command on the editor of the hovered model, so they move the caret where
+    // F12 would (the definition) or to a line that uses the reference. A link is trusted for that one command only.
+    monaco.editor.registerCommand(TEXTUAL_REVEAL_COMMAND, (_accessor, uri: unknown, offset: unknown) => {
+        if (typeof uri !== 'string' || typeof offset !== 'number') return;
+        const editor = monaco.editor.getEditors().find(e => e.getModel()?.uri.toString() === uri);
+        const m = editor?.getModel();
+        if (!editor || !m) return;
+        const p = m.getPositionAt(offset);
+        editor.setPosition(p);
+        editor.revealLineInCenterIfOutsideViewport(p.lineNumber);
+        editor.focus();
+    });
+    const trusted = { enabledCommands: [TEXTUAL_REVEAL_COMMAND] };
+    const link = (model: Monaco.editor.ITextModel, label: string, offset: number): string =>
+        `[${label}](command:${TEXTUAL_REVEAL_COMMAND}?${encodeURIComponent(JSON.stringify([model.uri.toString(), offset]))})`;
+    const linksOf = (model: Monaco.editor.ITextModel, a: TextAnalysis, offset: number): string[] => {
+        const out: string[] = [];
+        const d = a.definitionAt(offset);
+        if (d) out.push(`${link(model, 'Go to definition', d.start)} · line ${model.getPositionAt(d.start).lineNumber}`);
+        // One link per line that uses the object declared or named here.
+        const lines = new Map<number, number>();
+        for (const r of a.referencesAt(offset, false)) {
+            const line = model.getPositionAt(r.start).lineNumber;
+            if (!lines.has(line)) lines.set(line, r.start);
+        }
+        if (!lines.size) return out;
+        const shown = [...lines].slice(0, HOVER_USE_LINES).map(([line, at]) => {
+            const text = model.getLineContent(line).trim();
+            return `${link(model, `line ${line}`, at)} \`${(text.length > 40 ? `${text.slice(0, 39)}…` : text).replace(/`/g, "'")}\``;
+        });
+        const more = lines.size > HOVER_USE_LINES ? [`and ${lines.size - HOVER_USE_LINES} more lines`] : [];
+        out.push([`Used on ${lines.size} line${lines.size === 1 ? '' : 's'}:`, ...shown, ...more].join('  \n'));
+        return out;
+    };
     monaco.languages.registerHoverProvider(TEXTUAL_LANGUAGE_ID, {
         provideHover: (model, position) => {
-            const h = readingOf(model)?.analysis.hoverAt(model.getOffsetAt(position));
-            return h ? { range: rangeOf(model, h), contents: h.contents.map(value => ({ value })) } : null;
+            const r = readingOf(model);
+            const offset = model.getOffsetAt(position);
+            const h = r?.analysis.hoverAt(offset);
+            if (!r || !h) return null;
+            const links = linksOf(model, r.analysis, offset).map(value => ({ value, isTrusted: trusted }));
+            return { range: rangeOf(model, h), contents: [...h.contents.map(value => ({ value })), ...links] };
         },
     });
 
