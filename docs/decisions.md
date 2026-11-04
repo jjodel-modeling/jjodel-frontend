@@ -7213,6 +7213,18 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
 - **R-TXT-43** (2026-11-04, Alfonso 06:52). **Extends R-TXT-37.** An application whose effect is the deletion of every object
   of the model asks for confirmation instead of applying on the pause, as commenting whole objects out does (#204: select
   all, delete, a pause over 800 ms applied the empty text; a later paste recreated the objects under new ids). Step D.
+- **R-TXT-44** (2026-11-04, Alfonso 15:53, «decidi tu»). **Answers the four open points of C1 (P-2026-11-04-1447), against
+  the goal of a lower cognitive load.** (1) The text is what the model holds: an object the text gives no name stays
+  nameless; when the app assigns its default name to an object created from the text, the same application clears it, in
+  the same undo step. Where the core refuses an empty name, the tab reprints once with the assigned name and the status
+  line says why; it never keeps a text that differs from the model's print. (2) Removing a name from the text applies:
+  the name is cleared, one Undo restores it; `No change` is never shown for an edit that changes the text's meaning.
+  (3) The outline shows one group per containment feature, labelled by its per-item keyword (`input`), whatever the
+  number of items, as R-TXT-39 (1) says for feature groups. (4) Ratified: an optional head name is refused also when
+  every part after it is optional (R-TXT-41 D3 made stricter); the prototype's record uses `roots: 'uncontained'` and
+  the keyword `driver`, since `=` is the symbol of `Eq`; inline refusals scoped to one-line owners; head words reserved
+  after an optional name, a colliding name quoted; call arguments mandatory and single-valued; empty braces omitted only
+  for a positional one-line class whose only part is the optional name.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
