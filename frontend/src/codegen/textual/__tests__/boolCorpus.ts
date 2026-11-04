@@ -107,3 +107,37 @@ export function boolObjects(): TextObject[] {
     const sheet: TextObject = { id: 'sheet', cls: 'Sheet', slots: { name: 'core', atoms, rules } };
     return [sheet, ...os];
 }
+
+/** ARITH (step C lane C1b): BOOL with a unary and a binary minus, and `+` on the level of the binary minus. */
+export const ARITH_MM: TextMetamodel = {
+    classes: [
+        ...BOOL_MM.classes,
+        { name: 'Neg', supers: ['Expr'], references: [{ name: 'op', type: 'Expr', containment: true }] },
+        { name: 'Add', supers: ['Expr'], references: [{ name: 'left', type: 'Expr', containment: true }, { name: 'right', type: 'Expr', containment: true }] },
+        { name: 'Sub', supers: ['Expr'], references: [{ name: 'left', type: 'Expr', containment: true }, { name: 'right', type: 'Expr', containment: true }] },
+    ],
+    enumerations: [],
+};
+
+export const ARITH_IDS: ElementIds = {
+    classes: { ...BOOL_IDS.classes, C_Neg: 'Neg', C_Add: 'Add', C_Sub: 'Sub' },
+    features: {
+        ...BOOL_IDS.features, F_Neg_op: { owner: 'Neg', name: 'op', lower: 1 },
+        F_Add_left: { owner: 'Add', name: 'left', lower: 1 }, F_Add_right: { owner: 'Add', name: 'right', lower: 1 },
+        F_Sub_left: { owner: 'Sub', name: 'left', lower: 1 }, F_Sub_right: { owner: 'Sub', name: 'right', lower: 1 },
+    },
+    enums: {},
+};
+
+/** C-like: `-` prefix (Neg) and binary (Sub), `+` and `-` one level. */
+export const ARITH_CLIKE: SyntaxAnnotations = {
+    ...BOOL_CLIKE,
+    classes: {
+        ...BOOL_CLIKE.classes,
+        C_Add: { operator: { symbol: '+', precedence: 5 } },
+        C_Sub: { operator: { symbol: '-', precedence: 5 } },
+        C_Neg: { operator: { symbol: '-', precedence: 9 } },
+    },
+};
+
+export const arithGrammar = (record: SyntaxAnnotations = ARITH_CLIKE): ConcreteGrammar => boolGrammar(record, ARITH_MM, ARITH_IDS);

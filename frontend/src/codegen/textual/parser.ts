@@ -222,12 +222,24 @@ export function tokenizeText(text: string, g: ConcreteGrammar): { readonly token
     return { tokens: tokenize(g, text, errors), errors };
 }
 
+/** The expressions of a grammar (step C lane C1a): the bodies of its expression rules. */
+const exprsOf = (g: ConcreteGrammar): Extract<GrammarNode, { t: 'expr' }>[] => g.rules.flatMap(r => (r.body.t === 'expr' ? [r.body] : []));
+
+/** A token after which an operand has ended: a number written after it with a sign is an infix minus and a number (C1b). */
+const endsOperand = (t: Token | undefined): boolean => !!t && (t.k === 'ID' || t.k === 'INT' || t.k === 'FLOAT' || t.k === 'STR' || (t.k === 'P' && t.v === ')'));
+
 function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): Token[] {
     const style = g.style;
+    // Step C lane C1b: the operator symbols and the tokens of an expression join the punctuation, longest match first.
+    const exprs = exprsOf(g);
+    const symbols = exprs.flatMap(e => [e.open, e.close, e.separator, ...e.operators.map(o => o.symbol)]);
     const puncts = [...new Set([
         ...style.blockOpen, ...style.blockClose, ...style.emptyBlock, ...style.assign, ...style.terminator,
-        style.list.open, style.list.separator, style.list.close, '[', ']', '.', '@',
+        style.list.open, style.list.separator, style.list.close, '[', ']', '.', '@', ...symbols,
     ].filter(s => !/^\w/.test(s)))].sort((a, b) => b.length - a.length);
+    // The sign is folded into a number unless an operator symbol starts with "-", reads there, and an operand ends before it.
+    const signed = exprs.some(e => e.operators.some(o => o.symbol.startsWith('-')));
+    const symbolAt = (at: number): boolean => symbols.some(s => s.startsWith('-') && text.startsWith(s, at));
     const { line: lineComment, block: blockComment } = style.comments;
     const quote = style.string.quote;
 
@@ -270,6 +282,7 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
         if (m) { push('ID', m[0], i, i + m[0].length); i += m[0].length; continue; }
         NUMBER.lastIndex = i;
         m = NUMBER.exec(text);
+        if (m && signed && ch === '-' && symbolAt(i) && endsOperand(toks[toks.length - 1])) m = null;
         if (m) { push(m[1] || m[2] ? 'FLOAT' : 'INT', m[0], i, i + m[0].length); i += m[0].length; continue; }
         if (ch === quote) {
             let j = i;
