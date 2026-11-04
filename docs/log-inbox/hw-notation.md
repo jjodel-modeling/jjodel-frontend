@@ -1156,3 +1156,42 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: gates green on c79e1a1ca; crops and layouts compared by the lane below the budget, no hand run
 **Notes**: Rollback tag `pre-elk-rangeerror` on `e38500ec9` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1614/result.json`.
 **Prompt document name**: 2026-11-04 16:14
+
+## 2026-11-04 — fix(editor-v2): open-time ELK layout waits for the open to settle (P-2026-11-04-1444, P-2026-11-04-1500, P-2026-11-04-1616)
+**Prompt**: `claude_2026-11-04_1616_prompt_elk_open_race_close.md`, closing `claude_2026-11-04_1444_prompt_elk_open_race.md` and `claude_2026-11-04_1500_prompt_elk_open_race_cont.md` (context ceiling): remove the open-time ELK race in `useJjomSync.ts`; LIR, tests, b6_5 and b10_8 probes with ELK calls and undo count, gallery demos before and after, crops read, entry, Status.
+**Files touched**: `e78ebdffd` LIR `docs/discovery/lir_2026-11-04_elk_open_race.md`; `470719b0d`, `2b3ca5dc0` `editor-v2/hooks/useJjomSync.ts` + `hooks/__tests__/useJjomSyncOpenSettle.test.ts`; docs commit: the three Status lines, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — no hand run and no production run; on dev the probes and gates show none (undo 0->1 in every run, 17 gallery diagrams unchanged)
+**Out-of-scope changes**: no; 7 files over the lane, above five (RC-11), all declared: the LIR, `useJjomSync.ts`, its test, this inbox, the Status lines of 1444, 1500, 1616
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — lane, unattended: crops read with the Read tool (b6_5 a laid-out tree, b10_8, gallery Families M2/M1 base vs branch); no hand run and no visual check
+**Notes**: b6_5: ELK 1 call on 191 nodes 5/5 (base 1 node 4/5). b10_8 x7: 0 ELK, skip at 2,559/2,558, fit with RF holding 2,559 of 2,559 measured, view translate(414,-63515) z 0.5 and 21 on screen 7/7, as base 5/5; tab->decision 4.7/5.1/6.7 s at load under 15 (base 3.5-4.1), all 7 under the 10 s deadline. Gallery, 17 diagrams: ELK calls, positions, view equal base vs branch. Gates on 2b3ca5dc0: tsc 0, vitest 13,768 green + 3 red at import, build 0. Figures: ~/.jjodel-lanes/P-2026-11-04-1500 and -1616.
+**Prompt document name**: 2026-11-04 16:16
+
+## 2026-11-04 — measure: production b10_8 figure of the settled view after the ELK open race fix (P-2026-11-04-2131)
+**Prompt**: `claude_2026-11-04_2131_prompt_elk_race_prod.md`: build production in the elkrace tree, five b10_8 runs with the 1204 probe plus the 1616 viewport watcher, uptime before each, report the settled view (RF nodes at the fit, zoom and position, nodes on screen, longest task, long-task total).
+**Files touched**: no code; this inbox, the Status line of the 2131 prompt. Probe and figures outside the repo: `~/.jjodel-lanes/P-2026-11-04-2131/probe/` (wbtime.ts, run1.sh, out/).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — production, b10_8 x5: no page errors, same view every run
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — measurement, unattended; the view is read from the React Flow store and the viewport transform, not from a screenshot
+**Notes**: Build exit 0 (1m52s). 5 counted runs r3-r7, load at start 13.98/7.91/9.06/7.51/14.39. Every run: first fit at 8.7-10.1 s with RF holding 2,559 of 2,559 measured, settled translate(413.996px, -63515px) scale(0.5), 21 on screen, no later viewport change. Longest task 1,359-1,662 ms, long-task total 8.0-10.3 s (27-31 tasks). r1 (load 31) and r2 (load 245, killed) excluded.
+**Prompt document name**: 2026-11-04 21:31
+
+## 2026-11-04 — merge: elk-open-race takes alfonso-frontend-jjtl (P-2026-11-04-2204)
+**Prompt**: `claude_2026-11-04_2204_prompt_elk-open-race_take_trunk.md`: bring the trunk `alfonso-frontend-jjtl` at `091e62bac` into `elk-open-race` with one `--no-ff` merge commit before the trunk takes the branch (RC-14), merge base `a9f0b75f7`, 155 trunk commits, 9 branch commits.
+**Files touched**: merge `9ef2eeab5`: 178 files from the trunk side, union in `docs/log-inbox/hw-notation.md`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9ef2eeab5`: typecheck exit 0, 0 errors; typecheck:scripts exit 0; vitest 14034 passed, 2 skipped, 525 files (trunk 14020 + 14 of the branch), the same 3 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 9ef2eeab5; only the log conflicted, by union; the branch's probes ran before the trunk merge and were not rerun; no hand run
+**Notes**: Conflict only in this inbox, union: trunk's 4 entries, then the branch's 2, verbatim; first 1158 lines equal the trunk's file byte for byte, last 26 the branch's. 28 decision rows and 36 headings once each, R-AI-24 none. docs/decisions.md merged clean. check:docs has 5 checks, the prompt said 4/4. Not pushed.
+**Prompt document name**: 2026-11-04 22:04
