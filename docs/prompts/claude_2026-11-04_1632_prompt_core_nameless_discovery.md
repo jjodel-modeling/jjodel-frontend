@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1632
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · 6cd4a8b27 · discovery only, awaiting Alfonso on D1-D10 of the report
 Lane: full (discovery, read only, core)
 Depends: R-TXT-45 (604273359)
 Worktree: ~/jjodel-w-nameless, branch core-nameless-identity, from 604273359
