@@ -201,3 +201,79 @@ changes state, not size.
 **Rejected.** Saving on every change (each keystroke an undo step, and an ambiguous record would reach the parser);
 the bar's `NotationIssues` as the gate (F3); a JSON editor (F11's reason); a Basic/Advanced toggle of the form's own
 (the global mode is the one control the author already knows).
+
+## 3. The three follow-ups
+
+### 3.1 Item (2) — the leftover `{"v":1}`
+
+**Root cause.** By design, not by slip. `withStyleBase` drops a style left empty and returns the rest of the record,
+`{ v: 1 }` when nothing else is set (syntaxRecord.ts:212-217); `syntaxPatch` writes whenever the encoded record differs
+from the stored string (:121-124), and the module's contract says an emptied record is written `{"v":1}`, never
+removed, because the undo of a removed bag key does not restore it (:8-9; the same measurement as R-SIM-99, «off
+writes `false` and does not remove the key»). Probe (c), out :24: from Pascal, the switch back writes
+`{"textSyntax":"{\"v\":1}"}`; and `syntaxPatch(undefined, { v: 1 })` also writes `{"v":1}`, so a first save of an
+empty draft from the form would create the key on a metamodel that had none.
+
+**Effect.** None on the notation: on library, bool and port, `{"v":1}` and no record give the same EBNF, the same print
+and no issue (out :21-23). The visible differences are only the key in the bag (a saved project carries it) and that a
+clike, pascal, clike round trip does not return the bag byte for byte.
+
+**Minimal fix.** Keep the contract (removing the key would bring back the undo defect R-SIM-99 measured) and make the
+empty record equal to no key in the one comparison that decides a write: in `syntaxPatch`, `encoded === raw ||
+(raw == null && encoded === EMPTY)` returns `null`, with `EMPTY = encodeSyntax({ v: 1 })`. A switch with no record
+before it then writes nothing; a switch back from Pascal still writes `{"v":1}`, which is the record's empty form and
+reads as no record. The form's `dirty` uses the same equality (§2.2). One file (`syntaxRecord.ts`) and its test.
+Removing the key instead would need a measured undo of a removed `_state` key first, a reducer question outside this
+front (D3).
+
+### 3.2 Item (3) — the false «the app named»
+
+**Root cause.** textDiff.ts:559: removing a name writes `set h.name = ""` and pushes the handle into `named`, the list of
+objects «the app may name although the text gives them none» (:428-433). That held under R-TXT-44, when the core read
+an empty slot as the initial name. Under R-TXT-45 and R-TXT-46 D1 (variant B, merged in `c7cd7e479`) a slot written
+`""` reads nameless, so the object is not named. The create path was already corrected for the same reason
+(:544-549, its comment), the attribute path was not. Then `apply` (TextualTab.tsx:1132-1135): `namedReprint` returns the
+print whenever `plan.named` is non-empty and the print differs from the typed text (:301-303). A typed text that
+differs from the print only in layout makes the two differ, the tab reprints, and the status says «the app named 1
+object the text leaves nameless» (:590-591), for an object the core left nameless. The tests pin the old list:
+textualEdit.test.ts:775 (`['result']`) and :782.
+
+**Fix.** Measure instead of predicting. Keep `named` as the candidates (rename the doc to «may name»), and in `apply`
+keep only those the model actually names after the run: for each handle in `plan.named`, its id from `plan.handles`,
+its object in `after.base.objects`, kept when `identityOf(after.base.grammar, o) !== null` (textMatch.ts:115). Reprint
+and the status sentence only for that list; when it is empty the typed text stays the agreement, as for any applied
+edit. This also keeps R-TXT-44 (1)'s reprint for the case R-TXT-45 left to it, «only where the core still assigns a
+name». Simpler but blind: drop `named.push(h)` at :559, as the create path did; if the core ever names a cleared
+object again, the tab would keep a text that differs from the model. Recommended: the measured filter (D4). Files:
+`ui/TextualTab.tsx` (`apply`, `namedReprint` takes the measured list), `__tests__/textualEdit.test.ts`; `textDiff.ts`
+only for the comment.
+
+### 3.3 Item (4) — a reference to a nameless target drawn as `—`
+
+**What the crop shows** (sD4): the node `cpu : Module` has `inputs [3] —`: three nameless Ports, rendered as an empty
+slot, while each Port's own header reads `: Port`. This is the default object node (ObjectNode, `RowValue`), not the IR
+form.
+
+**Where the label is computed.** `objectVertexToRFNode`, the reference branch, in
+`frontend/src/components/editor-v2/utils/jjomTransformers.ts`: a resolved nameless target gets `rv.name ?? ''` (:369),
+pushed into `names` and `targets` as `''` (:378-381); `value = names.join(', ') || '—'` (:397). The row's decision is
+then `dash`: `isEmptySlot` reads `values` `['', '', '']` as blank (nodes/valueRenderer.ts:384), and `RowValue` paints
+`—` (nodes/RowValue.tsx:246-247), the same as an unset slot. A row with a pill would paint `t.name`, `''`
+(RowValue.tsx:335).
+
+**Critical zone.** `jjomTransformers.ts` is not in the CLAUDE.md §3.1 table, and it has no §3.2 trigger (it reads; it
+writes no D-layer field). It is imported by two files that are in §3.1, `useJjomSync.ts` (:33, `jjomVertexToRFNode` at
+:1257) and `portDistribution.ts`, as a pure transformer of node data; the change is confined to the `features` rows of an
+object node, which neither of them reads for edges or handles (to be confirmed by the lane, §5 R4). The IR form's chip,
+`displayValue` in `frontend/src/components/editor-v2/viewpoint/ir/IRFormField.tsx:147-161`, labels a nameless target
+`''` too; that file **is** in the critical zone (§3.1, `viewpoint/ir/`), so for it this report stops at the proposal.
+
+**Proposal.** A resolved target whose name is empty is labelled `: <Class>`, the target's metaclass name, as its header
+shows (ObjectNode.tsx:1324-1330). In jjomTransformers.ts, next to :369, keep `name: ''` in `refTargets` (the test
+namelessRefTarget.test.ts:80 pins it, and `rememberRefTargetName` should not remember a label as a name) and add an
+optional `label` to the target (types.ts:246, an optional property, rule 11), `: ${rv.instanceof?.name ?? 'Object'}`;
+`names` takes the label, so `value` and `values` are not blank and the decision is `refPill`; `RowValue` paints
+`t.label ?? t.name` (:322, :331, :335). Three chips `: Port` in sD4's `inputs` row. A deleted nameless target keeps the
+broken path (`lastSeenRefTargetName`, :391), unchanged. For the IR chip the same label at IRFormField.tsx:154
+(`l.name || ': ' + l.instanceof?.name`), in a lane of its own with the critical-zone rules (D6). Files of the
+default-view lane: `jjomTransformers.ts`, `types.ts`, `nodes/RowValue.tsx`, `utils/__tests__/namelessRefTarget.test.ts`.
