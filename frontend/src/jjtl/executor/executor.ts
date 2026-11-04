@@ -710,7 +710,6 @@ export class JjtlExecutor {
             // target classes (e.g. reject abstract targets)
             this.buildTargetClassIndex();
             this.validateTargetClasses();
-            this.warnUnsettledMultiplicity();
 
             // If validation errors, return early
             if (this.errors.length > 0) {
@@ -937,14 +936,15 @@ export class JjtlExecutor {
                 // A target the metamodel lacks stops the run before pass 1, as an abstract
                 // target does: going on wrote a partial model that looked done. Rule targets
                 // P-2026-11-04-0015 (ratified 2026-11-03); nested creations P-2026-11-04-0255
-                // (ratified 2026-11-04), R-JTG-17.
+                // (ratified 2026-11-04), R-JTG-17; inside a let body P-2026-11-04-0900.
                 this.errors.push(`Target class '${targetClass}' not found in target metamodel (${context}). Nothing is written.`);
                 this.unknownTargetClasses.add(targetClass);
             }
         };
 
-        // `inLet`: a let body gets the binding check (#445) and none of the creation checks,
-        // which never ran there and are left as they were.
+        // `inLet`: a let body gets the binding check (#445) and the class checks, missing and
+        // abstract (R-JTG-17, R-JTG-22, P-2026-11-04-0900); the shape checks never ran there
+        // and are left as they were.
         let ruleLabel = '';
         const checkBody = (body: any[], parentContext: string, inLet: boolean = false) => {
             for (const item of body) {
@@ -955,7 +955,7 @@ export class JjtlExecutor {
                     this.warnUndeclaredBinding(item as AttributeMappingAST, parentContext, ruleLabel);
                 }
                 if (item.type === 'ForAllMapping' && item.objectCreation) {
-                    if (!inLet) checkTarget(item.objectCreation.targetClass, `forall in ${parentContext}`);
+                    checkTarget(item.objectCreation.targetClass, `forall in ${parentContext}`);
                     if (item.objectCreation.body) {
                         checkBody(item.objectCreation.body, item.objectCreation.targetClass, inLet);
                     }
@@ -965,7 +965,11 @@ export class JjtlExecutor {
                     // target metamodel and NEVER validated as a class. Only the class
                     // created inside the wrapper is checked against the class names.
                     const shape = this.classifyCreation(item as AttributeMappingAST, parentContext);
-                    if (!inLet) switch (shape.kind) {
+                    if (inLet) {
+                        if (shape.kind === 'featureCreation') {
+                            checkTarget(shape.className, `object creation in ${parentContext}.${shape.featureName}`);
+                        }
+                    } else switch (shape.kind) {
                         case 'featureCreation':
                             checkTarget(shape.className, `object creation in ${parentContext}.${shape.featureName}`);
                             break;
@@ -1030,23 +1034,6 @@ export class JjtlExecutor {
         const msg = `Rule '${rule || 'transformation'}', ${where}: '${feature}' is not a feature of target class ` +
             `'${className}'; the value is not written to the model.`;
         if (!this.warnings.includes(msg)) this.warnings.push(msg);
-    }
-
-    /**
-     * An unbounded upper multiplicity (`[*]`, `[n..*]`) on a rule target: one warning per
-     * rule. What drives the count is Alfonso's open question (SPEC §12.3 gap 4); until it is
-     * settled the run keeps what it does, and says so (P-2026-11-04-0015).
-     */
-    private warnUnsettledMultiplicity(): void {
-        for (const rule of [...this.ast.mappings, ...(this.ast.rules ?? [])]) {
-            const m = rule.targetMultiplicity;
-            if (!m || m.upper !== -1) continue;
-            const written = m.lower > 0 ? `[${m.lower}..*]` : '[*]';
-            this.warnings.push(
-                `Rule '${this.ruleLabel(rule)}': the number of targets of '${written}' is not settled; ` +
-                `today one target is created per source.`
-            );
-        }
     }
 
     /** A feature of `className` or of any of its (transitive) supertypes. */
@@ -1765,8 +1752,9 @@ export class JjtlExecutor {
         let count = 1;
         if (multiplicity) {
             if (multiplicity.upper === -1) {
-                // Unbounded: create based on source or default to 1
-                count = 1;
+                // Unbounded: the bound fixes no count. `[*]` (= `[0..*]`) creates one target
+                // per source, `[n..*]` creates n, its lower bound (P-2026-11-04-0900).
+                count = Math.max(1, multiplicity.lower);
             } else {
                 count = multiplicity.upper;
             }

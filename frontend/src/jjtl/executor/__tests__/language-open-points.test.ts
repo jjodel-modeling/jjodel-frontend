@@ -3,7 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 /**
  * Four JjTL language points decided by Alfonso on 2026-11-03 (P-2026-11-04-0015):
  * a rule on a class the target metamodel lacks is an error and nothing is written;
- * `[*]` warns that its count is not settled, and keeps what it does; a lazy rule
+ * `[*]` warned that its count was not settled (settled by P-2026-11-04-0900: one per
+ * source, `[n..*]` creates n, no warning); a lazy rule
  * beside a matched rule on one class does not compete in pass 1 (R-JTG-3); the
  * `such that` of a forall sees the element's bare names, as the body does.
  *
@@ -94,19 +95,127 @@ describe('a nested creation whose class is not in the target metamodel', () => {
     });
 });
 
-describe('multiplicity [*]', () => {
-    it.each(PATHS)('warns once per rule that the count is not settled, and still creates one per source — %s', async (_l, withSource) => {
-        const target = { classes: [cls('B', ['name'])] };
-        const sources = [el('a0', 'A'), el('a1', 'A')];
-        const star = await execute(parse(HEAD + 'A -> B[*] {\n    name := name\n}', withSource), sources, target);
-        expect(star.success).toBe(true);
-        expect(star.targetModel!.instances.get('B')!.length).toBe(2);
-        expect(star.warnings).toEqual([
-            "Rule 'A -> B': the number of targets of '[*]' is not settled; today one target is created per source.",
-        ]);
-        const three = await execute(parse(HEAD + 'A -> B[3] {\n    name := name\n}', withSource), sources, target);
-        expect(three.targetModel!.instances.get('B')!.length).toBe(6);
-        expect(three.warnings).toEqual([]);
+describe('a creation inside a let body whose class is not in the target metamodel', () => {
+    // R-JTG-17 reaches every let body: rule, nested let, let inside a nested creation.
+    const target = {
+        classes: [
+            cls('B', ['name'], [contains('items', 'Item')]),
+            cls('Item', ['name'], [contains('parts', 'Item')]),
+        ],
+    };
+    const ghostError = (where: string) =>
+        `Target class 'Ghost' not found in target metamodel (${where}). Nothing is written.`;
+    const cases: Array<[string, string, string]> = [
+        ['a feature creation in a rule-level let',
+            'A -> B {\n    let $n = name in {\n        -> items {\n            -> Ghost {\n'
+            + '                name := $n\n            }\n        }\n    }\n}',
+            'object creation in B.items'],
+        ['a forall in a feature in a rule-level let',
+            'A -> B {\n    let $n = name in {\n        -> items {\n            forall x in xs -> Ghost {\n'
+            + '                name := $n\n            }\n        }\n    }\n}',
+            'forall in B'],
+        ['a feature creation in a let nested in a let',
+            'A -> B {\n    let $n = name in {\n        let $m = $n in {\n            -> items {\n'
+            + '                -> Ghost {\n                    name := $m\n                }\n            }\n        }\n    }\n}',
+            'object creation in B.items'],
+        ['a feature creation in a let inside a nested creation',
+            'A -> B {\n    -> items {\n        -> Item {\n            let $n = name in {\n'
+            + '                -> parts {\n                    -> Ghost {\n                        name := $n\n'
+            + '                    }\n                }\n            }\n        }\n    }\n}',
+            'object creation in Item.parts'],
+    ];
+    for (const [label, body, where] of cases) {
+        it.each(PATHS)(`${label} is an error naming the class, and nothing is written — %s`, async (_l, withSource) => {
+            const result = await execute(parse(HEAD + body, withSource), [el('a0', 'A', { xs: [{ name: 'i1' }] })], target);
+            expect(result.success).toBe(false);
+            expect(result.targetModel).toBeUndefined();
+            expect(result.errors).toEqual([ghostError(where)]);
+        });
+    }
+
+    it.each(PATHS)('a class the metamodel has, in the same let, is still created — %s', async (_l, withSource) => {
+        const text = HEAD + 'A -> B {\n    let $n = name in {\n        -> items {\n            -> Item {\n'
+            + '                name := $n\n            }\n        }\n    }\n}';
+        const result = await execute(parse(text, withSource), [el('a0', 'A')], target);
+        expect(result.errors).toEqual([]);
+        expect(result.success).toBe(true);
+        const b = result.targetModel!.instances.get('B')![0];
+        expect(ptr(b.items).map((i: any) => [i.__type, i.name])).toEqual([['Item', 'a0']]);
+    });
+});
+
+describe('a creation inside a let body of an abstract class', () => {
+    // R-JTG-22 amended (P-2026-11-04-0900, on Alfonso's delegation): an abstract class created
+    // inside a let body is the same error as an abstract rule or nested target.
+    const target = {
+        classes: [
+            cls('B', ['name'], [contains('items', 'Item')]),
+            { ...cls('Item', ['name']), isAbstract: true },
+            cls('Leaf', ['name'], [], ['Item']),
+        ],
+    };
+    const abstractError = (where: string) =>
+        `Cannot use abstract class 'Item' as transformation target in ${where}. Use concrete subclasses: B, Leaf`;
+    const cases: Array<[string, string, string]> = [
+        ['a feature creation in a rule-level let',
+            'A -> B {\n    let $n = name in {\n        -> items {\n            -> Item {\n'
+            + '                name := $n\n            }\n        }\n    }\n}',
+            'object creation in B.items'],
+        ['a forall in a feature in a rule-level let',
+            'A -> B {\n    let $n = name in {\n        -> items {\n            forall x in xs -> Item {\n'
+            + '                name := $n\n            }\n        }\n    }\n}',
+            'forall in B'],
+    ];
+    for (const [label, body, where] of cases) {
+        it.each(PATHS)(`${label} is an error naming the class, and nothing is written — %s`, async (_l, withSource) => {
+            const result = await execute(parse(HEAD + body, withSource), [el('a0', 'A', { xs: [{ name: 'i1' }] })], target);
+            expect(result.success).toBe(false);
+            expect(result.targetModel).toBeUndefined();
+            expect(result.errors).toEqual([abstractError(where)]);
+        });
+    }
+
+    it.each(PATHS)('a concrete subclass in the same let is still created — %s', async (_l, withSource) => {
+        const text = HEAD + 'A -> B {\n    let $n = name in {\n        -> items {\n            -> Leaf {\n'
+            + '                name := $n\n            }\n        }\n    }\n}';
+        const result = await execute(parse(text, withSource), [el('a0', 'A')], target);
+        expect(result.errors).toEqual([]);
+        expect(result.success).toBe(true);
+        const b = result.targetModel!.instances.get('B')![0];
+        expect(ptr(b.items).map((i: any) => [i.__type, i.name])).toEqual([['Leaf', 'a0']]);
+    });
+});
+
+describe('multiplicity with an unbounded upper bound', () => {
+    // Settled 2026-11-04 (chat, on Alfonso's delegation): the bound fixes no count. `[*]`
+    // creates one target per source; `[n..*]` creates n, its lower bound. No warning.
+    const target = { classes: [cls('B', ['name'])] };
+    const sources = [el('a0', 'A'), el('a1', 'A')];
+    const count = async (mult: string, withSource: boolean) => {
+        const r = await execute(parse(HEAD + `A -> B${mult} {\n    name := name\n}`, withSource), sources, target);
+        expect(r.success).toBe(true);
+        expect(r.warnings).toEqual([]);
+        return r.targetModel!.instances.get('B')!.length;
+    };
+
+    it.each(PATHS)('[*] creates one target per source, with no warning — %s', async (_l, withSource) => {
+        expect(await count('[*]', withSource)).toBe(2);
+    });
+
+    it.each(PATHS)('[0..*] is [*]: one target per source — %s', async (_l, withSource) => {
+        expect(await count('[0..*]', withSource)).toBe(2);
+    });
+
+    it.each(PATHS)('[1..*] creates one target per source — %s', async (_l, withSource) => {
+        expect(await count('[1..*]', withSource)).toBe(2);
+    });
+
+    it.each(PATHS)('[3..*] creates three targets per source, its lower bound — %s', async (_l, withSource) => {
+        expect(await count('[3..*]', withSource)).toBe(6);
+    });
+
+    it.each(PATHS)('[3] still creates three per source — %s', async (_l, withSource) => {
+        expect(await count('[3]', withSource)).toBe(6);
     });
 });
 
