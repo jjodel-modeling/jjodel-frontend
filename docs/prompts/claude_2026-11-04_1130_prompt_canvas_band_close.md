@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1130
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane fast · no code change · prod b10_8 figure not comparable (load 22-73) · verifica visiva non applicabile (unattended)
 Lane: fast (closes P-2026-11-04-1050, code b6c2cdfa0)
 Depends: P-2026-11-04-1050
 Worktree: ~/jjodel-w-canvasband, branch canvas-mount-band

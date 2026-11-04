@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1050
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · b6c2cdfa0 · closed by P-2026-11-04-1130 · verifica visiva non applicabile (unattended: probe crops, no hand run)
 Lane: full (regression of the route A merge 9abc989ff)
 Depends: P-2026-11-04-1038
 Worktree: ~/jjodel-w-canvasband, branch canvas-mount-band

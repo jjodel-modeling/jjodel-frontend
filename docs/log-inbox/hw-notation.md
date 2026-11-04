@@ -986,3 +986,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: 200 classes, 400 refs. Branch: off-screen edge drawn (DOM, crop), 0 edge warnings; after pan the far end is 2 px from its handle at +150 ms, +2 s and pre-paint of the first frame shown; select, export ok; trunk (threshold 1e9) the same. Open fit frames 200/200 on both. Partial: no fit button exists, and Auto layout throws in ELK on both (ticket above). Probe and figures: ~/.jjodel-lanes/P-2026-11-04-1012.
 **Prompt document name**: 2026-11-04 10:12
+
+## 2026-11-04 — fix(editor-v2): estimate unmeasured nodes at the measured size (P-2026-11-04-1050, P-2026-11-04-1130)
+**Prompt**: `claude_2026-11-04_1130_prompt_canvas_band_close.md`, closing `claude_2026-11-04_1050_prompt_canvas_mount_band.md`: parallel edges drawn as one band on canvases over 150 nodes; fix, crops, prod b10_8 figure twice, entry, Status.
+**Files touched**: `b6c2cdfa0` `editor-v2/unmeasuredNodes.ts` + its test; docs commit: the two Status lines, this entry.
+**Outcome**: ⚠️ partial
+**Corregge**: 2026-11-04 09:25
+**Causa**: (g)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Cause: open fit framed the 180.5x80.5 estimate, not 140x42; lines 1.7 px apart merged at that offset. Fix: most frequent measured size + 1/64. Pixel diff vs trunk: open 47,165 -> 3,072, pan 11,550 -> 1,878; 0 edge warnings. Unit 24/24, tsc 0, build 0. Prod b10_8 x2: longest 1,981/1,894 ms, total 10,675/10,940, load 22-73 (route A 1,369-1,464 at 5-7): not comparable, so partial. Second Causa (d), the band of 0925. Figures: ~/.jjodel-lanes/P-2026-11-04-1050 and -1130.
+**Prompt document name**: 2026-11-04 11:30
