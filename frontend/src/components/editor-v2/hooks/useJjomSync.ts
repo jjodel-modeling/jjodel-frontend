@@ -225,6 +225,51 @@ function deduplicateInheritanceEdges(edges: Edge[]): Edge[] {
 }
 
 // ---------------------------------------------------------------------------
+// Open settle gate (P-2026-11-04-1500)
+// ---------------------------------------------------------------------------
+// The creators of a populate run reach the store through an async TRANSACTION
+// and a setTimeout(0) dispatch (action.ts:210-226, :349), after the init effect
+// of the same commit has pushed what the graph held. `onInitialized` (EditorV2's
+// open-time layout decision) therefore waits until the open has settled.
+// See docs/discovery/lir_2026-11-04_elk_open_race.md.
+
+/** Re-check interval while the open has not settled. */
+const OPEN_SETTLE_POLL_MS = 50;
+/** Past this time from the init push the open-time layout is given up: it would move nodes the user may be looking at. */
+export const OPEN_SETTLE_DEADLINE_MS = 10_000;
+
+export type OpenSettleVerdict = 'wait' | 'settled' | 'touched' | 'deadline';
+
+export interface OpenSettleInput {
+    /** Ids the populate runs of this mount got back from DVertex.new / DVoidEdge.new2. */
+    created: readonly string[];
+    idlookup: Record<string, unknown>;
+    /** The graph's subElements in the store. */
+    listed: readonly string[];
+    /** The subElements the last canvas push processed (init effect or incremental sync). */
+    processed: readonly string[];
+    /** A React Flow patch is queued or its flush is scheduled. */
+    patchQueued: boolean;
+    /** A canvas write-back marked an element of the graph: the user has started working. */
+    touched: boolean;
+    elapsedMs: number;
+    deadlineMs: number;
+}
+
+/**
+ * Settled: every created element is in the store, every one the graph lists has been
+ * pushed to the canvas, no patch is queued. `pending` is the created ids still awaited.
+ */
+export function openSettleVerdict(i: OpenSettleInput): { verdict: OpenSettleVerdict; pending: string[] } {
+    const listed = new Set(i.listed);
+    const processed = new Set(i.processed);
+    const pending = i.created.filter(id => !(id in i.idlookup) || (listed.has(id) && !processed.has(id)));
+    if (i.touched) return { verdict: 'touched', pending };
+    if (pending.length === 0 && !i.patchQueued) return { verdict: 'settled', pending };
+    return { verdict: i.elapsedMs >= i.deadlineMs ? 'deadline' : 'wait', pending };
+}
+
+// ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
@@ -253,6 +298,23 @@ export function useJjomSync(
     const pendingEdgePatchRef = useRef<((prev: Edge[]) => Edge[])[]>([]);
     const rafIdRef = useRef<number>(0);
 
+    // ── Open settle gate state, keyed by modelid (see openSettleVerdict) ──
+    const openGateRef = useRef<{
+        modelid?: string; graphId?: string; created: string[];
+        active: boolean; done: boolean; startedAt: number; timer?: ReturnType<typeof setTimeout>;
+    }>({ created: [], active: false, done: false, startedAt: 0 });
+    const openSettleCheckRef = useRef<() => void>(() => {});
+    const onInitializedRef = useRef(onInitialized);
+    onInitializedRef.current = onInitialized;
+    const openGateFor = (id: string) => {
+        const gate = openGateRef.current;
+        if (gate.modelid !== id) {
+            if (gate.timer !== undefined) clearTimeout(gate.timer);
+            openGateRef.current = { modelid: id, created: [], active: false, done: false, startedAt: 0 };
+        }
+        return openGateRef.current;
+    };
+
     const scheduleFlush = useCallback(() => {
         if (rafIdRef.current) return; // already scheduled
         rafIdRef.current = requestAnimationFrame(() => {
@@ -265,6 +327,7 @@ export function useJjomSync(
             if (edgeFns.length > 0) {
                 setEdges(prev => edgeFns.reduce((acc, fn) => fn(acc), prev));
             }
+            openSettleCheckRef.current();
         });
     }, [setNodes, setEdges]);
 
@@ -703,6 +766,9 @@ export function useJjomSync(
         // causes x/y coordinates to be lost).
         creatingGraphRef.current = true;
         justCreatedGraphRef.current = true;
+        // The open settle gate waits for what this run creates.
+        const openGate = openGateFor(modelid);
+        const recordCreated = (id: string | undefined) => { if (id && !openGate.done) openGate.created.push(id); };
 
         try {
             // Step 1: Create graph if needed
@@ -734,6 +800,7 @@ export function useJjomSync(
                     const dv = DVertex.new(0, entry.id, graphId, graphId, undefined, size);
                     if (dv?.id) {
                         vertexIdByModelId.set(entry.id, dv.id);
+                        recordCreated(dv.id);
                     }
                 }
             }
@@ -766,6 +833,7 @@ export function useJjomSync(
                     const dv = DVertex.new(0, objId, graphId, graphId, undefined, size);
                     if (dv?.id) {
                         vertexIdByModelId.set(objId, dv.id);
+                        recordCreated(dv.id);
                         createdSoFar++;
                     }
                 }
@@ -847,11 +915,11 @@ export function useJjomSync(
                     if (srcVertex && tgtVertex && srcVertex !== tgtVertex) {
                         const ek = `${srcVertex}→${tgtVertex}`;
                         if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
-                            DVoidEdge.new2(
+                            recordCreated(DVoidEdge.new2(
                                 undefined, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
                                 (d: DEdge) => { d.isExtend = true; }
-                            );
+                            )?.id);
                             existingEdgeKeys.add(ek);
                             // Register pair so subsequent auto-populate runs
                             // won't recreate this edge even if DVoidEdge.new2
@@ -937,11 +1005,11 @@ export function useJjomSync(
                         // so it's not consulted here — race-window protection is
                         // provided by the idlookup scan above.
                         if (!existingEdgeKeys.has(ek)) {
-                            DVoidEdge.new2(
+                            recordCreated(DVoidEdge.new2(
                                 refId, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
                                 (d: DEdge) => { d.isReference = true; }
-                            );
+                            )?.id);
                             existingEdgeKeys.add(ek);
                             markCanvasEdgePair(srcVertex, tgtVertex);
                         }
@@ -1045,11 +1113,11 @@ export function useJjomSync(
                             // its own edge.
                             const ek = `${metaId}:${srcVertex}→${tgtVertex}`;
                             if (!existingEdgeKeys.has(ek)) {
-                                DVoidEdge.new2(
+                                recordCreated(DVoidEdge.new2(
                                     metaId, graphId, graphId, undefined,
                                     srcVertex, tgtVertex,
                                     (d: DEdge) => { d.isReference = true; }
-                                );
+                                )?.id);
                                 existingEdgeKeys.add(ek);
                                 markCanvasEdgePair(srcVertex, tgtVertex);
                             }
@@ -1094,6 +1162,42 @@ export function useJjomSync(
         }
         return result;
     }, mapReferenceEqual);
+
+    // ── Open settle check: fires onInitialized once (openSettleVerdict) ──
+    // Called by the init push, by the flush after its patches, and by its own poll.
+    // The two exits other than a settled open lower justCreatedGraphRef first, so
+    // no open-time layout runs over the user's work or late.
+    openSettleCheckRef.current = () => {
+        const gate = openGateRef.current;
+        if (!gate.active || !gate.graphId) return;
+        const idlookup = (store.getState()?.idlookup ?? {}) as Record<string, any>;
+        const listed: string[] = idlookup[gate.graphId]?.subElements ?? EMPTY_ARRAY;
+        const { verdict, pending } = openSettleVerdict({
+            created: gate.created,
+            idlookup,
+            listed,
+            processed: prevSubElementsRef.current,
+            patchQueued: rafIdRef.current !== 0 || pendingNodePatchRef.current.length > 0 || pendingEdgePatchRef.current.length > 0,
+            touched: listed.some(id => isCanvasUpdated(id)),
+            elapsedMs: Date.now() - gate.startedAt,
+            deadlineMs: OPEN_SETTLE_DEADLINE_MS,
+        });
+        gate.created = pending;
+        if (verdict === 'wait') {
+            if (gate.timer === undefined) {
+                gate.timer = setTimeout(() => { gate.timer = undefined; openSettleCheckRef.current(); }, OPEN_SETTLE_POLL_MS);
+            }
+            return;
+        }
+        if (gate.timer !== undefined) clearTimeout(gate.timer);
+        gate.timer = undefined;
+        gate.active = false;
+        gate.done = true;
+        gate.created = [];
+        if (verdict !== 'settled') justCreatedGraphRef.current = false;
+        const cb = onInitializedRef.current;
+        if (cb) requestAnimationFrame(() => cb());
+    };
 
     // ── Initialization: full transform on mount or modelid change ──────
     useEffect(() => {
@@ -1163,10 +1267,14 @@ export function useJjomSync(
 
             initializedRef.current = true;
 
-            // Notify caller (e.g. to fitView) — delay to let RF measure nodes
-            if (onInitialized) {
-                requestAnimationFrame(() => onInitialized());
-            }
+            // Notify caller (e.g. to fitView) once the open has settled — the check
+            // delays by a frame to let RF measure nodes, as before.
+            const gate = openGateFor(modelid);
+            gate.graphId = graphInfo!.graphId;
+            gate.startedAt = Date.now();
+            gate.active = true;
+            gate.done = false;
+            openSettleCheckRef.current();
         } catch (err) {
             console.warn('[useJjomSync] Initialization error:', err);
         }
@@ -1497,6 +1605,9 @@ export function useJjomSync(
         return () => {
             if (antiBounceTimerRef.current !== undefined) clearTimeout(antiBounceTimerRef.current);
             antiBounceTimerRef.current = undefined;
+            if (openGateRef.current.timer !== undefined) clearTimeout(openGateRef.current.timer);
+            openGateRef.current.timer = undefined;
+            openGateRef.current.active = false;
             clearAllCanvasUpdated();
             clearSyncModes();
             clearDropCreated();
