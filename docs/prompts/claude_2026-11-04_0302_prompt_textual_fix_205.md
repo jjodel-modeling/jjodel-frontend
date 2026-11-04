@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0302
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane fast · 43057efc5 · verifica visiva non applicabile (tests only; #205 closed)
 Lane: fast (one test file and, if needed, one counter in the printer)
 Depends: P-2026-11-04-0250 (merged)
 Worktree: ~/jjodel-w-textfix205, branch textual-fix-205
