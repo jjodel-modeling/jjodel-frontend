@@ -162,3 +162,17 @@ describe('(3) the printer: flat chains, parentheses where the parser needs them,
         expect(parseText(text, boolGrammar(BOOL_CLIKE)).errors).toEqual([]);
     });
 });
+
+describe('(4) the round trip: print, parse, print, byte for byte', () => {
+    it.each([
+        ['BOOL, C-like', boolGrammar(BOOL_CLIKE), boolGrammar(BOOL_CLIKE), BOOL_PRINTS.map(([w]) => w)],
+        ['BOOL, Pascal/Ada', boolGrammar(BOOL_CLIKE), boolGrammar(BOOL_PASCAL), BOOL_PRINTS.map(([w]) => w).filter(w => !/\b(and|or)\(/.test(w))],
+        ['ARITH', arithGrammar(), arithGrammar(), ['st - ld + rdy', '-st - (ld + -1)', '- 1 + st', '--st', 'st & -(ld - 1)', '- -1', 'st - -1']],
+    ] as const)('%s', (_, source, g, whens) => {
+        const first = printTextModel(g, parseText(sheet(...whens), source).objects).text;
+        const r = parseText(first, g);
+        expect(r.errors).toEqual([]);
+        expect(isApplicableParse(r)).toBe(true);
+        expect(printTextModel(g, r.objects).text).toBe(first);
+    });
+});

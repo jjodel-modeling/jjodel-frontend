@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { ConcreteGrammar } from '../concreteGrammar';
+import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE, PASCAL_STYLE, STYLE_CATALOG, styleOf } from '../style';
 import type { NotationStyle } from '../style';
@@ -14,7 +15,7 @@ import { checkStyle, STYLE_RULES } from '../styleCheck';
 import type { StyleFinding } from '../styleCheck';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import { operatorFixity } from '../annotations';
-import type { TextMetamodel } from '../metamodel';
+import type { TextMetamodel, TextObject } from '../metamodel';
 import { classFeatures } from '../metamodel';
 import { arithGrammar, BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar, withOperator } from './boolCorpus';
 import { generateSamples, nearleyGrammarOf, parseCount } from './oracle';
@@ -326,10 +327,29 @@ function syncRtl(): { mm: TextMetamodel; ids: ElementIds } {
     return { mm: { classes, enumerations }, ids };
 }
 
+/** A SyncRTL model from its JSON (nested objects): ids `o1`, `o2`, ... in document order (the probe's loader, C1b). */
+function loadSync(path: string): TextObject[] {
+    const out: TextObject[] = [];
+    let n = 0;
+    const walk = (e: Record<string, unknown>): string => {
+        const id = `o${++n}`;
+        const slots: Record<string, unknown> = {};
+        out.push({ id, cls: String(e.__type), slots });
+        for (const [k, v] of Object.entries(e)) {
+            if (k.startsWith('__') || k === 'className') continue;
+            if (Array.isArray(v)) slots[k] = v.map(x => (x && typeof x === 'object' ? walk(x as Record<string, unknown>) : x));
+            else if (v && typeof v === 'object') slots[k] = walk(v as Record<string, unknown>);
+            else slots[k] = v;
+        }
+        return id;
+    };
+    walk(JSON.parse(readFileSync(path, 'utf8')));
+    return out;
+}
+const SYNC_FILES = ['out/arb3-syncrtl.json', 'out/arb3_rr-syncrtl.json', 'out/arb3_fixed-syncrtl.json', 'out/scaling-ref/mc_w4_r4-syncrtl.json', 'out/scaling-ref/pf_w4_r4-syncrtl.json', 'out/scaling-ref/mc_w32_r32-syncrtl.json'];
+
 describe.skipIf(!PROTO)('the Briefs: SyncRTL with the operator table of the probe (PROTO)', () => {
-    it('derives the fixities and holds the five operator rules', () => {
-        const { mm, ids } = syncRtl();
-        const table: [string, { symbol: string; precedence: number; assoc?: 'left' | 'right'; call?: string }, string][] = [
+    const table: [string, { symbol: string; precedence: number; assoc?: 'left' | 'right'; call?: string }, string][] = [
             ['Implies', { symbol: '->', precedence: 1, assoc: 'right' }, 'binary'],
             ['Disj', { symbol: '|', precedence: 2, call: 'or' }, 'nary'],
             ['Conj', { symbol: '&', precedence: 3, call: 'and' }, 'nary'],
@@ -338,15 +358,35 @@ describe.skipIf(!PROTO)('the Briefs: SyncRTL with the operator table of the prob
             ['Add', { symbol: '+', precedence: 5 }, 'binary'],
             ['Sub', { symbol: '-', precedence: 5 }, 'binary'],
             ['Neg', { symbol: '!', precedence: 9 }, 'prefix'],
-        ];
+    ];
+    const record: SyntaxAnnotations = { v: 1, classes: Object.fromEntries(table.map(([cls, operator]) => [`C_${cls}`, { operator }])) };
+
+    it('derives the fixities and holds the five operator rules', () => {
+        const { mm, ids } = syncRtl();
         for (const [cls, , fixity] of table) {
             expect([cls, operatorFixity(classFeatures(mm, mm.classes.find(c => c.name === cls)!))?.fixity]).toEqual([cls, fixity]);
         }
-        const record: SyntaxAnnotations = { v: 1, classes: Object.fromEntries(table.map(([cls, operator]) => [`C_${cls}`, { operator }])) };
         const g = boolGrammar(record, mm, ids);
         const expr = g.rules.find(r => r.body.t === 'expr')?.body;
         expect(expr?.t === 'expr' && expr.operators.map(o => o.cls)).toEqual(['Implies', 'Disj', 'Conj', 'Eq', 'Le', 'Add', 'Sub', 'Neg']);
         const rules = new Set(STYLE_RULES.slice(-5));
         expect(checkStyle(g).filter(f => rules.has(f.rule)).map(f => [f.level, f.rule])).toEqual(STYLE_RULES.slice(-5).map(r => ['ok', r]));
+    });
+
+    it('print-parse-print is byte-identical on the six models; dmem_we.driver reads on one line (C1b)', () => {
+        const { mm, ids } = syncRtl();
+        const g = boolGrammar(record, mm, ids);
+        for (const f of SYNC_FILES) {
+            const first = printTextModel(g, loadSync(`${PROTO}/${f}`)).text;
+            const r = parseText(first, g);
+            expect(r.errors, f).toEqual([]);
+            expect(printTextModel(g, r.objects).text === first, f).toBe(true);
+            if (f.includes('mc_w4_r4')) {
+                const lines = first.split('\n');
+                const at = lines.findIndex(l => /\bdmem_we\b/.test(l) && /^\s*Port\b/.test(l));
+                const driver = at + lines.slice(at).findIndex(l => /^\s*driver\b/.test(l));
+                expect(lines.slice(driver, driver + 3).map(l => l.trim())).toEqual(['driver {', 'Ref st {} & or(Ref is_sw {})', '}']);
+            }
+        }
     });
 });
