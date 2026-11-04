@@ -128,3 +128,53 @@ describe('(1) variant B — LObject.get_name', () => {
         expect(nameOf(['a'], 'a', 'b')).toBe('a');
     });
 });
+
+// ── LObject.set_name, the post-commit name -> slot write (D10) ───────────────
+const SET_NAME_SIG = '    protected set_name(val: this["name"], c: Context): boolean {';
+const afterUpdateBody = (() => {
+    const sigAt = source.indexOf(SET_NAME_SIG, source.indexOf('protected get_model(context: Context)'));
+    expect(sigAt, 'the signature of LObject.set_name changed: update the test').toBeGreaterThan(-1);
+    const auAt = source.indexOf('AFTER_UPDATE(() => {', sigAt);
+    expect(auAt, 'the AFTER_UPDATE of LObject.set_name changed: update the test').toBeGreaterThan(sigAt);
+    return blockAt(source, auAt, 'the AFTER_UPDATE callback of set_name');
+})();
+const afterUpdate = compile(afterUpdateBody, ['LPointerTargetable', 'SetFieldAction', 'dObjId', 'identAttrName', 'newName']) as Function;
+
+/** Runs the callback on a slot holding `raw`; returns the writes it made. */
+function nameToSlot(raw: unknown[], newName: any) {
+    const writes: any[] = [];
+    const slot = {
+        id: 'ptr_slot', className: 'DValue', __raw: { values: raw },
+        set value(v: any) { writes.push(['value', v]); },
+    };
+    const LPT = { fromPointer: (p: any) => (p === 'ptr_obj' ? { $name: slot } : undefined) };
+    const SFA = { new: (...a: any[]) => { writes.push(['SetFieldAction', ...a]); } };
+    afterUpdate(LPT, SFA, 'ptr_obj', 'name', newName);
+    return writes;
+}
+
+describe("(2) D10 — set_name('') on a never-written slot writes ['']", () => {
+    it("`[]` + '' -> appends '' through the existing '+=' path and clears isMirage", () => {
+        expect(nameToSlot([], '')).toEqual([
+            ['SetFieldAction', 'ptr_slot', 'values', '', '+=', false],
+            ['SetFieldAction', 'ptr_slot', 'isMirage', false, '', false],
+        ]);
+    });
+
+    it("`[]` + a name -> appended, as before (control)", () => {
+        expect(nameToSlot([], 'Port_9')[0]).toEqual(['SetFieldAction', 'ptr_slot', 'values', 'Port_9', '+=', false]);
+    });
+
+    it('`[]` + null / undefined -> nothing (D9: null stays unset)', () => {
+        expect(nameToSlot([], null)).toEqual([]);
+        expect(nameToSlot([], undefined)).toEqual([]);
+    });
+
+    it("a populated slot + '' -> overwritten through slot.value, as before", () => {
+        expect(nameToSlot(['Port_2'], '')).toEqual([['value', '']]);
+    });
+
+    it("a written-empty slot [''] + a name -> left alone, as before (variant B reads data.name)", () => {
+        expect(nameToSlot([''], 'X')).toEqual([]);
+    });
+});
