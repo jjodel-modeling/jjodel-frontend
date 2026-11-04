@@ -859,3 +859,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Ticket**: Measured by P-2026-11-03-2332 on b10_8, probe only: the longest task after the JjTL output tab mounts (3,354 ms, three React commits) contains no vertex or edge creation. The useJjomSync Step 2bis loop takes 332 to 363 ms inside a separate 1,478 ms task, with 717 to 757 ms of edges. In the profiled longest task react-dom is 82 % of 3,791 ms; DynamicHandles 575 ms, store subscriptions 472 ms, ObjectNode 377 ms, overlapping. Spreading Step 2bis across frames would not shorten the longest task. #475 is re-aimed at the React side by Alfonso, 2026-11-04.
 **Priority**: medium
 **Found in**: P-2026-11-03-2332
+
+## 2026-11-04 — docs: discovery, JjTL canvas render routes A and B (P-2026-11-04-0256, P-2026-11-04-0400)
+**Prompt**: P-2026-11-04-0256, read-only discovery of the React rendering of a large output canvas (#475, #547), route A (skip the forced initial render) against route B (cheaper per-node selectors) on b10_8 and b11_9; stopped at the context ceiling, closed by P-2026-11-04-0400 (handoff items: §4 caller sentence, Status lines, check:docs, commit).
+**Files touched**: `docs/discovery/discovery_2026-11-04_jjtl_canvas_render.md` (new), this inbox, the `Status:` lines of both prompts.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Partial only because 0256 hit the context ceiling (RC-51) before its commit; the discovery itself is complete. No source change; throwaway patches in `~/.jjodel-lanes/P-2026-11-04-0256/probe/`, each reverted. Route A: b10_8 longest 4,248 -> 1,571 ms, breaks edges to unmeasured nodes and fitView. Route B: mount -25%/-33%, cull unchanged. Side finding: ELK auto-layout of 117 s in 1 of 9 runs. Open questions in report §8.
+**Prompt document name**: 2026-11-04 02:56
