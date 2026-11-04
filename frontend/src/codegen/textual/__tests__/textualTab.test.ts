@@ -91,6 +91,15 @@ describe('textInputOf', () => {
         expect(textInputOf(garageGlobals()).objects).toEqual(EXPECTED_OBJECTS);
     });
 
+    it("reads a nameless object's name '' as unset (R-TXT-46 D6; dies when '' is kept)", () => {
+        const g = garageGlobals();
+        g.instances.find((o: any) => o.id === 'a').name = '';
+        const objects = textInputOf(g).objects;
+        expect(objects.find(o => o.id === 'a')!.slots.name).toBeNull();
+        // only the identity slot: the other slots of the other objects read as before
+        expect(objects.filter(o => o.id !== 'a')).toEqual(EXPECTED_OBJECTS.filter(o => o.id !== 'a'));
+    });
+
     it('reads no globals as an empty input', () => {
         expect(textInputOf({})).toEqual({ metamodel: { classes: [], enumerations: [] }, objects: [] });
     });
@@ -149,6 +158,16 @@ describe('textualView', () => {
         expect(view.text).toContain('home');
         expect(view.ebnf).toBe(concreteGrammarEbnf(grammar));
         expect(view.ebnf).toContain('::=');
+    });
+
+    it("prints a nameless object without a name, never as \"\" (R-TXT-46 D6)", () => {
+        const g = garageGlobals();
+        g.instances.find((o: any) => o.id === 'a').name = '';
+        const view = textualView(g);
+        expect(view.error).toBeNull();
+        expect(view.text).not.toContain('""');
+        const objects = EXPECTED_OBJECTS.map(o => (o.id === 'a' ? { ...o, slots: { ...o.slots, name: null } } : o));
+        expect(view.text).toBe(printTextModel(grammar, objects).text);
     });
 
     it('reports a model it cannot print instead of throwing (dies when the printer error escapes)', () => {

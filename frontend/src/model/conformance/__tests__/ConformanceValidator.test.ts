@@ -706,9 +706,16 @@ describe('CHECK 2 — missing_required_attr (raw presence)', () => {
 describe('CHECK 12 — name shape', () => {
     const C = klass({ id: 'C', name: 'Person' });
 
-    it('flags an object with no name', () => {
-        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+    it('flags an object with no name read at all (undefined)', () => {
+        const res = run([obj({ id: 'o1', name: undefined, instanceof: C })], [C]);
         expect(types(res)).toContain('missing_name');
+    });
+
+    it("does not flag a nameless object, name '' (R-TXT-45, R-TXT-46 D3)", () => {
+        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+        expect(types(res)).not.toContain('missing_name');
+        expect(types(res)).not.toContain('invalid_name_format');
+        expect(res.status).toBe('conformant');
     });
 
     it('flags a name that does not begin with a letter', () => {
@@ -728,18 +735,18 @@ describe('CHECK 12 — name shape', () => {
     });
 
     it('is a warning, so a name problem alone never reports errors', () => {
-        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+        const res = run([obj({ id: 'o1', name: undefined, instanceof: C })], [C]);
         expect(res.status).toBe('warnings');
     });
 
     it('runs before CHECK 1, so an unnamed orphan is told both things', () => {
-        const res = run([obj({ id: 'o1', name: '', instanceof: undefined })], []);
+        const res = run([obj({ id: 'o1', name: undefined, instanceof: undefined })], []);
         expect(types(res)).toContain('missing_name');
         expect(types(res)).toContain('orphan_object');
     });
 
     it('attaches the violation to the object, with the id as fallback label', () => {
-        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+        const res = run([obj({ id: 'o1', name: undefined, instanceof: C })], [C]);
         const v = res.violations.find((x: AnyObj) => x.violationType === 'missing_name')!;
         expect(v.objectId).toBe('o1');
         expect(v.message).toContain('o1');

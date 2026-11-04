@@ -364,7 +364,9 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                     const resolved = new Map<string, string>();
                     try {
                         for (const rv of (fv.values ?? []) as any[]) {
-                            if (rv && typeof rv !== 'string' && rv.id && rv.name) resolved.set(rv.id, rv.name);
+                            // Presence, not a truthy name: a nameless target ('' , R-TXT-46 D4)
+                            // resolves and is not broken.
+                            if (rv && typeof rv !== 'string' && rv.id) resolved.set(rv.id, rv.name ?? '');
                         }
                     } catch { /* proxy access can throw */ }
 
@@ -374,7 +376,7 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                         const id = typeof v === 'string' ? v : ((v as any)?.id ?? '');
                         if (!id) continue;
                         const name = resolved.get(id) ?? (typeof v !== 'string' ? (v as any)?.name : undefined);
-                        if (name) {
+                        if (resolved.has(id) || name) {
                             names.push(name);
                             targets.push({ id, name });
                             // Every resolving pass feeds the memory, so the name is

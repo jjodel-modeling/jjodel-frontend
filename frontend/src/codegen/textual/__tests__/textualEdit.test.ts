@@ -716,16 +716,30 @@ describe('the names the app gives (R-TXT-44 (1), (2))', () => {
         : o.id === 'r2' ? { ...o, slots: { ...o.slots, name: 'Ref_2' } } : o));
     const DEFAULTS = new Map([['p2', new Set(['name'])], ['r2', new Set(['name'])], ['p3', new Set(['name'])]]);
 
-    it('a nameless object created from the text is one the app names, by its handle (mutant: creates not listed)', () => {
+    it('R-TXT-45: a nameless object created from the text is created by its handle, and the same application clears that name (mutant: no clearing line)', () => {
         const { plan } = planEdit(portBase([]), PORT_TEXT_CLIKE, []);
         expect(plan.refusals).toEqual([]);
-        expect(plan.named).toHaveLength(2);
-        const [port, ref] = plan.named!;
-        expect(plan.lines).toContain(`create instance of Port "${port}" in cpu.inputs`);
-        expect(plan.lines!.some(l => l.startsWith(`create instance of Ref "${ref}" in `))).toBe(true);
-        // A named one, and a class whose rule prints no name, are not listed.
-        expect(plan.named).not.toContain('instr');
-        expect(plan.named!.some(h => h.startsWith('Bool') || h.startsWith('Word'))).toBe(false);
+        const cleared = plan.lines!.flatMap(l => /^set ([A-Za-z_][A-Za-z0-9_]*)\.name = ""$/.exec(l)?.[1] ?? []);
+        expect(cleared).toHaveLength(2);
+        for (const h of cleared) {
+            const at = plan.lines!.findIndex(l => l.startsWith(`create instance of ${h.split('_')[0]} "${h}"`));
+            expect(at).toBeGreaterThanOrEqual(0);
+            expect(plan.lines![at + 1]).toBe(`set ${h}.name = ""`);
+        }
+        expect(cleared.some(h => h.startsWith('Port_'))).toBe(true);
+        expect(cleared.some(h => h.startsWith('Ref_'))).toBe(true);
+        // A named one, and a class whose rule prints no name, are not cleared.
+        expect(cleared).not.toContain('instr');
+        expect(cleared.some(h => h.startsWith('Bool') || h.startsWith('Word'))).toBe(false);
+    });
+
+    it('R-TXT-45: a cleared create is not one the app names, so a typed text differing from the print only in layout is kept (mutant: creates still listed)', () => {
+        const { plan } = planEdit(portBase([]), PORT_TEXT_CLIKE + '\n', []);
+        // The model after it holds the two objects nameless: its print is the typed text, no reprint, no status sentence.
+        const print = portBase(portObjects()).text;
+        expect(print).toContain('  input : Bool\n');
+        expect(plan.named).toBeUndefined();
+        expect(namedReprint(plan, print, PORT_TEXT_CLIKE + '\n')).toBeNull();
     });
 
     it('after such an application the tab reprints the model\'s print, else it keeps the typed text (mutant: never reprint; always reprint)', () => {

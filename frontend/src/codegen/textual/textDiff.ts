@@ -426,9 +426,9 @@ export interface DiffLines {
     /** The handle of every model object the lines address, to register against its id before the run. */
     readonly handles: ReadonlyMap<string, string>;
     /**
-     * R-TXT-44 (1), (2): the handles of the objects the app names although the text gives them none: a nameless object
-     * created in a named rule takes its handle as name, a cleared name reads the instance's initial name (the core's
-     * identity slot read). Absent when none.
+     * R-TXT-44 (1), (2): the handles of the objects the app may name although the text gives them none: a name the text
+     * removes. A nameless object created in a named rule is not listed: its handle name is cleared in the same lines
+     * (R-TXT-45). Absent when none.
      */
     readonly named?: readonly string[];
 }
@@ -542,9 +542,11 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
                 lines.push(`create instance of ${o.cls} ${jjscriptString(h)}${into}`);
                 if (into) filled.set(slotKey(op.into!.owner, op.into!.feature), h);
                 // A nameless object of a class with a name takes its handle as name, as any instance created without one.
+                // R-TXT-45: the same application clears it, and an empty slot reads nameless, so it is not one the app
+                // names: listed, it made a text differing from the print only in layout reprint with a false status.
                 const name = identityOf(g, o);
                 if (name !== null && name !== h) lines.push(`set ${h}.name = ${jjscriptString(name)}`);
-                if (name === null && g.objects[o.cls]?.named) named.push(h);
+                if (name === null && g.objects[o.cls]?.named) lines.push(`set ${h}.name = ""`);
                 break;
             }
             case 'attribute': {

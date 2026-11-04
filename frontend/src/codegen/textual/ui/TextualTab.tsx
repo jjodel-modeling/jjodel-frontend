@@ -177,7 +177,8 @@ export function textInputOf(globals: Readonly<Record<string, any>>, lookup?: Rea
         const slots: Record<string, unknown> = {};
         for (const f of classFeatures(metamodel, cls)) {
             const v = h[f.name];
-            if (f.kind === 'attribute') slots[f.name] = v;
+            // A nameless object reads name '' (R-TXT-45): unset for the text, so it never prints `Port ""` (R-TXT-46 D6).
+            if (f.kind === 'attribute') slots[f.name] = f.name === 'name' && v === '' ? null : v;
             else if (f.many) slots[f.name] = (Array.isArray(v) ? v : v == null ? [] : [v]).map(idOf).filter((t): t is string => t !== null);
             else slots[f.name] = idOf(v);
         }

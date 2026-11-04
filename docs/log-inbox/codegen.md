@@ -1749,3 +1749,43 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — app check of P-2026-11-04-1605, 13 checks ALL PASS, crops c1e-* checked by the chat (RC-23).
 **Notes**: Rollback tag `pre-textual-c1e-names` on `d6fc11ebf` (RC-31). Union: none. The removed-name reprint is closed by the core lane of R-TXT-45 and R-TXT-46. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-2113/result.json`.
 **Prompt document name**: 2026-11-04 21:13
+
+## 2026-11-04 — merge: core-nameless-identity takes alfonso-frontend-jjtl (P-2026-11-04-2128)
+
+**Prompt**: `claude_2026-11-04_2128_prompt_core-nameless-identity_take_trunk.md`, a direct merge by `lane-run merge --trunk-into`, no session: `alfonso-frontend-jjtl` at `addb481f0` (the C1e merge and R-TXT-46) into `core-nameless-identity`, merge base `604273359`, so the core lane of R-TXT-45 runs on C1e (R-TXT-46 D7).
+**Files touched**: merge `fa8f17a5a`, the trunk side (`frontend/src/codegen/textual/`, `docs/decisions.md`, `docs/log-inbox/codegen.md`, prompts); the branch side is docs only.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fa8f17a5a`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 48 failures in 16 files under load average 200, all timeouts or timing bounds; the 16 files rerun alone: 704/704.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no code on the branch side.
+**Notes**: Resolved with the rerun evidence above. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-2128/result.json`.
+**Prompt document name**: 2026-11-04 21:28
+
+## 2026-11-04 — discovery: core nameless identity, variant B and its Layer Impact Report (P-2026-11-04-1632)
+**Prompt**: `claude_2026-11-04_1632_prompt_core_nameless_discovery.md`: discovery for R-TXT-45, an object can be nameless in the model; the core's identity read, the consumers of the empty name, the Layer Impact Report of CLAUDE.md §3.2, the decisions D1-D10 for Alfonso.
+**Files touched**: `docs/discovery/discovery_2026-11-04_core_nameless_identity.md` (6cd4a8b27); no code.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile
+**Notes**: Stopped at the context ceiling (RC-51) right after the report was committed; the log entry was left to this continuation. D1-D10 answered by R-TXT-46, each as recommended.
+**Prompt document name**: 2026-11-04 16:32
+
+## 2026-11-04 — fix(model): an object can be nameless, variant B (P-2026-11-04-2206, P-2026-11-04-2255)
+**Prompt**: `claude_2026-11-04_2206_prompt_core_nameless_impl.md` (R-TXT-45, R-TXT-46 D1-D10), stopped at the context ceiling after items 1-8, continued by `claude_2026-11-04_2255_prompt_core_nameless_cont.md`: the textual create path, smoke run 2, gates, docs.
+**Files touched**: 2206: `LModelElement.tsx`, `nameUniqueness.ts`, `ConformanceValidator.ts`, `jjomTransformers.ts`, `IRFormField.tsx`, `TextualTab.tsx` and their tests (fa9d17491, 412df810e, 2b7a62fe0, 9ec6c4320, 0a8ed2db2, 8bd59bf94); 2255: `codegen/textual/textDiff.ts`, `__tests__/textualEdit.test.ts` (c317c90ef, b091ed0fa).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on b091ed0fa: typecheck 0; vitest 516 files, 13942 passed, 2 skipped, 3 red at import (baseline); build 0, chunk warning only; check:docs pass; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — smoke run 2 (`.agent-logs/probe2g-20261104-230543.log`): two nameless siblings created from the text hold `[""]` and print as typed; name removal by keystroke, Undo, Redo; peer to a nameless port, 0 broken on v2-flow; JjEL `self.name == ''`; controls `[]` and D9. Crops in the 2255 lane folder.
+**Notes**: Report §5 holds the LIR, kept as the 2206 final message says. The create clears its handle name in the same lines; created objects leave `named`, measured: a layout-only difference reprinted with a false status. Open for Alfonso: a removal still lists `named`, same false status; a reference to a nameless object shows `—` on v2-flow. Classic canvas shut down in this build (`EditorSwitch.tsx:123-129`).
+**Prompt document name**: 2026-11-04 22:06

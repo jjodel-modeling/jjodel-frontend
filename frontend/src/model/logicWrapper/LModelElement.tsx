@@ -6211,11 +6211,13 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         // load-bearing direction of the identity binding (CLAUDE.md §3.12) and is untouched here.
         //
         // Raw read via `__raw.values`: the same idiom `set_name` uses at :6385 to bypass this very
-        // read-fallback. Only the literal empty array counts as empty — a slot deliberately
-        // holding '' is a different case, not measured, and left as it was.
+        // read-fallback. Only the literal empty array counts as never written. A slot written with
+        // '' (raw first value '') is nameless (R-TXT-45, R-TXT-46 D1, variant B): it yields to
+        // `data.name` only, never to the auto-name or the metaclass name.
         const slot = (context.proxyObject as GObject)['$name'];
         const rawValues = (slot as GObject)?.__raw?.values;
         if (Array.isArray(rawValues) && rawValues.length === 0 && context.data.name) return context.data.name;
+        if (Array.isArray(rawValues) && rawValues[0] === '') return context.data.name || '';
         return slot?.value || context.data.name || context.proxyObject.instanceof?.name;
     }
 
@@ -6525,14 +6527,16 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                     // Populated slot → overwrite (equality-guarded on the pre-write value).
                     if (cur !== newName) slot.value = newName; // existing setValueAtPosition path — the write Direction B uses
                 } else if (isValueSlot && Array.isArray(rawValues) && rawValues.length === 0
-                           && newName !== undefined && newName !== null && newName !== '') {
-                    // Empty existing slot → populate it post-commit, mirroring Direction B:
+                           && newName !== undefined && newName !== null) {
+                    // Empty existing slot → populate it post-commit, mirroring Direction B.
+                    // '' included (R-TXT-46 D10): a clear writes [''], so the object reads nameless
+                    // instead of falling back to the auto-name; null/undefined stay unset (D9).
                     //   1) append the real name via the proven '+=' path (NOT addValue / a new DValue);
                     //   2) clear isMirage so a placeholder slot's value persists (no-op if already false).
                     SetFieldAction.new(slot.id, 'values', newName, '+=', false);
                     SetFieldAction.new(slot.id, 'isMirage', false, '', false);
                 }
-                // else: no existing slot DValue, only an explicit empty-string value, or empty newName → nothing to do.
+                // else: no existing slot DValue, only an explicit empty-string value, or null/undefined newName → nothing to do.
             });
         }
         return true;
@@ -7796,7 +7800,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     // (slot + initialName + data.name all empty) → ret[0] stays unset,
                     // caller default applies.
                     let o = DObject.fromPointer(context.data.father);
-                    const fallback = o && (o.initialName || o.name);
+                    // R-TXT-45, R-TXT-46 D1 (variant B): a slot WRITTEN with '' (raw first value
+                    // '') is nameless; it yields only to data.name (a rename that wrote data.name
+                    // alone), never to the auto-name. [] / hole / null (never written, D9): as before.
+                    const writtenEmpty = context.data.values?.[0] === '';
+                    const fallback = o && (writtenEmpty ? o.name : (o.initialName || o.name));
                     if (fallback) ret[0] = fallback;
                 }
                 break;
