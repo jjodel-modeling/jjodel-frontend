@@ -9,14 +9,18 @@
 import { describe, it, expect } from 'vitest';
 import { parseText, tokenizeText } from '../parser';
 import { printTextModel } from '../printer';
-import { CLIKE_STYLE, PASCAL_STYLE } from '../style';
+import { CLIKE_STYLE, PASCAL_STYLE, styleOf } from '../style';
+import type { StyleBase } from '../style';
+import { diffText, planTextEdit } from '../textDiff';
 import type { SyntaxAnnotations } from '../annotations';
 import { textualNotation } from '../syntaxRecord';
 import type { NotationStyle } from '../style';
-import { GARAGE, grammarOf } from './corpus';
-import { objectsOf } from './spec';
+import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, NON_DIAMOND } from './corpus';
+import { nearleyGrammarOf, parseCount } from './oracle';
+import { FIXTURE, metamodelOf, objectsOf } from './spec';
 import type { Spec } from './spec';
-import { LIBRARY_IDS, LIBRARY_MM, libraryObjects } from './tolerantCorpus';
+import { LIBRARY_IDS, LIBRARY_MM, libraryObjects, mutantsOf, tolerantCases } from './tolerantCorpus';
+import type { TolerantCase } from './tolerantCorpus';
 
 const PASCAL_LOWER: NotationStyle = { ...PASCAL_STYLE, id: 'pascal-lower', classCase: 'lower', literalCase: 'lower' };
 
@@ -95,5 +99,95 @@ describe('a keyword-less feature under Pascal/Ada', () => {
 
     it('the C-like print of a keyword-less feature is unchanged (mutant: a terminator dropped with the assign)', () => {
         expect(print({ v: 1, features: { A_Book_genre: { keyword: '' } } })).toMatch(/^\s*FICTION$/m);
+    });
+});
+
+// Item 4: the whole corpus per style, the style check's cases and the tolerant parser's seven.
+const BASES: readonly StyleBase[] = ['clike', 'pascal'];
+const lowerOf = (style: NotationStyle): NotationStyle => ({ ...style, id: `${style.id}-lower`, classCase: 'lower', literalCase: 'lower' });
+const corpusOf = (base: StyleBase): TolerantCase[] => {
+    const style = styleOf(base);
+    const spec = (name: string, sp: Spec, st: NotationStyle): TolerantCase => ({ name, mm: metamodelOf(sp), g: grammarOf(sp, st), objects: objectsOf(sp) });
+    return [
+        spec('the 1709 fixture', FIXTURE, style), spec('a diamond', DIAMOND, style), spec('a multiple inheritance without a diamond', NON_DIAMOND, style),
+        spec('the garage', GARAGE, style), spec('a nameless recursive class', BOX, style), spec('a single containment', INNER, style),
+        spec('two class keywords one case apart', CASES, style), spec('the garage, lower case', GARAGE, lowerOf(style)),
+        spec('the fixture, lower case', FIXTURE, lowerOf(style)), spec('two class keywords, lower case', CASES, lowerOf(style)),
+        ...tolerantCases(base).map(c => ({ ...c, name: `tolerant: ${c.name}` })),
+    ];
+};
+const PER_STYLE = BASES.flatMap(b => corpusOf(b).map(c => [b, c.name, c] as const));
+
+describe('the whole corpus, per style', () => {
+    it('each case is derived in the style it names (mutant: the base dropped from the tolerant records)', () => {
+        for (const b of BASES) for (const c of corpusOf(b)) expect(c.g.style.string.escape, `${b} ${c.name}`).toBe(styleOf(b).string.escape);
+    });
+
+    it.each(PER_STYLE)('%s, %s: print, parse with no error, print byte for byte (mutant: the newline left raw)', (_, __, c) => {
+        const text = printTextModel(c.g, c.objects).text;
+        const r = parseText(text, c.g);
+        expect(r.errors).toEqual([]);
+        expect(printTextModel(c.g, r.objects).text).toBe(text);
+    });
+
+    it.each(PER_STYLE)('%s, %s: a switch to this style leaves the model unchanged, its diff is empty (mutant: a reserved word read as a name, both guards dropped)', (_, __, c) => {
+        const print = printTextModel(c.g, c.objects);
+        const parsed = parseText(print.text, c.g);
+        const d = diffText({ mm: c.mm, grammar: c.g, model: c.objects, parsed, previous: print.spans });
+        expect(d.ops).toEqual([]);
+        expect(d.unsupported).toEqual([]);
+    });
+});
+
+describe('the tolerant corpus under Pascal/Ada', () => {
+    it.each(tolerantCases('pascal').map(c => [c.name, c] as const))('%s: every mutant outside the language has a syntax error, and its diff is null (oracle)', (_, c) => {
+        const { mutants } = mutantsOf(c);
+        const ng = nearleyGrammarOf(c.g);
+        const print = printTextModel(c.g, c.objects);
+        let outside = 0;
+        for (const mu of mutants) {
+            let n = 0;
+            try { n = parseCount(c.g, mu.text, ng); } catch { n = 0; }
+            if (n > 0) continue;
+            outside++;
+            const parsed = parseText(mu.text, c.g);
+            expect(parsed.errors.some(e => !(e as { secondary?: boolean }).secondary), mu.text).toBe(true);
+            const plan = planTextEdit({ mm: c.mm, grammar: c.g, model: c.objects, parsed, unprinted: [], previous: print.spans });
+            expect(plan.diff).toBeNull();
+        }
+        expect(outside).toBeGreaterThan(mutants.length / 2);
+    });
+
+    it('a Pascal string and ":=" are one mutant token each (mutant: the C-like cut on a Pascal print)', () => {
+        const c = tolerantCases('pascal').find(x => x.name === 'garage, pascal')!;
+        const { text, mutants } = mutantsOf(c);
+        const at = text.indexOf(`'line1'#10'line2 "q"'`);
+        expect(mutants.some(m => m.kind === 'delete' && m.at === at && m.removed === `'line1'#10'line2 "q"'`.length)).toBe(true);
+        const assign = text.indexOf(':=');
+        expect(mutants.some(m => m.kind === 'delete' && m.at === assign && m.removed === 2)).toBe(true);
+    });
+});
+
+describe('a reserved word is no name under Pascal/Ada', () => {
+    const g = grammarOf(INNER, PASCAL_STYLE);
+    const names = (text: string) => { const r = parseText(text, g); return { errors: r.errors.map(e => e.message), names: r.objects.map(o => o.slots.name ?? null) }; };
+
+    it('an unnamed object with an empty body reads "begin" as its body (mutants: "begin" taken as a name on entering the optional name; taken by the name terminal)', () => {
+        expect(names('Room begin end;\n')).toEqual({ errors: [], names: [null] });
+        expect(names('Room begin\n  inner begin\n    Room begin end;\n  end;\nend;\n').errors).toEqual([]);
+    });
+
+    it('a bare reserved word in a required name is an error (mutant: taken by the name terminal)', () => {
+        const lines = textualNotation(LIBRARY_MM, { record: { v: 1, classes: { C_Mem: { layout: 'line' } }, style: { base: 'pascal' } }, issues: [] }, LIBRARY_IDS).grammar;
+        const text = printTextModel(lines, [{ id: 'l', cls: 'Library', slots: { name: 'city', members: ['m'] } }, { id: 'm', cls: 'Member', slots: { name: 'begin' } }]).text;
+        expect(text).toContain(`    Member 'begin'\n`);
+        expect(parseText(text, lines).errors).toEqual([]);
+        expect(parseText(text.replace(`'begin'`, 'begin'), lines).errors[0].message).toBe('expected a name; found name "begin"');
+    });
+
+    it('a name equal to a reserved word is quoted and reads back (a guard: the printer quotes it)', () => {
+        const text = printTextModel(g, [{ id: 'r', cls: 'Room', slots: { name: 'begin' } }]).text;
+        expect(text).toBe(`Room 'begin' begin end;`);
+        expect(names(text)).toEqual({ errors: [], names: ['begin'] });
     });
 });

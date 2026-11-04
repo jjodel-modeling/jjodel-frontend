@@ -504,7 +504,10 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         const r = rules.get(rule);
         return r && r.t === 'enum' ? r.literals : [];
     };
-    const canAt = (n: GrammarNode, t: Token): boolean => [...first(n).set].some(m => hit(t, m));
+    // A style word reserved in name positions (Pascal/Ada `begin`, `end`) is no name: the printer quotes such a name (step C3a).
+    const reserved = new Set(g.style.reservedNames);
+    const isReserved = (t: Token): boolean => t.k === 'ID' && reserved.has(t.v);
+    const canAt = (n: GrammarNode, t: Token): boolean => [...first(n).set].some(m => hit(t, m) && !(m === 'ID' && isReserved(t)));
 
     let p = 0;
     const peek = (k = 0): Token => toks[Math.min(p + k, toks.length - 1)];
@@ -691,7 +694,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                     case 'FLOAT': if (t.k === 'INT' || t.k === 'FLOAT') { take('value'); return Number(t.v); } return fail(['a number']);
                     case 'BOOL': if (t.k === 'ID' && (t.v === 'true' || t.v === 'false')) { take('value'); return t.v === 'true'; } return fail(['"true"', '"false"']);
                     case 'STRING': if (t.k === 'STR') { take('value'); return t.v; } return fail(['a string']);
-                    case 'NAME': if (t.k === 'ID' || t.k === 'STR') { take(feat === 'name' ? 'name' : 'value'); return t.v; } return fail(['a name']);
+                    case 'NAME': if ((t.k === 'ID' && !isReserved(t)) || t.k === 'STR') { take(feat === 'name' ? 'name' : 'value'); return t.v; } return fail(['a name']);
                 }
                 return fail(['a value']);
             case 'lit': {
