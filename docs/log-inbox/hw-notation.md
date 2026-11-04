@@ -911,3 +911,8 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: docs only, gates green, no hand run
 **Notes**: Rollback tag `pre-jjtl-canvas-render` on `94a196964` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0404/result.json`.
 **Prompt document name**: 2026-11-04 04:04
+
+## 2026-11-04 — ticket: Auto-layout on open can block the main thread for minutes on large models, intermittently
+**Ticket**: Measured by P-2026-11-04-0256, dev server, load 36 to 38, one run of nine on b10_8: the ELK auto-layout on open ran 117,474 ms on the main thread over 2,559 nodes (EditorV2.tsx:603). Intermittent, no size cap, a timing race not traced. Separately, one profiled b11_9 run blocked the main thread over 7 minutes; cause not captured. See docs/discovery/discovery_2026-11-04_jjtl_canvas_render.md section 5. Trace it before choosing a node cap or a worker.
+**Priority**: high
+**Found in**: P-2026-11-04-0256
