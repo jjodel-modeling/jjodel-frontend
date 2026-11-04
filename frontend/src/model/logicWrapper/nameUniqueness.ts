@@ -251,8 +251,9 @@ function refusalReason(
  *
  * `undefined`/`null` is «no name asked for», not a name, and never collides — that is
  * the case a create hits when it lets `DObject.new3` compute the auto-name. The EMPTY
- * STRING is left to compare like any other value, because that is what
- * `validateNameUniqueness` has always done and the rename must not change verdict.
+ * STRING never collides either: an object whose identity slot is written `''` is nameless
+ * (R-TXT-45, R-TXT-46 D2), and two nameless siblings are not homonyms, as
+ * `jjform/create.ts` already says for the form path.
  */
 export function checkNameUniqueness(args: {
     father: LModelElement | undefined | null;
@@ -261,7 +262,7 @@ export function checkNameUniqueness(args: {
     excludeId?: string;
 } & NamespaceOptions): UniquenessVerdict {
     const name = args?.name;
-    if (name === undefined || name === null) return { ok: true };
+    if (name === undefined || name === null || name === '') return { ok: true };
     const collidingWith = getNamespaceOf(
         args.father, args.excludeId, {includePending: args.includePending}
     ).filter(o => o.name === name);
@@ -308,12 +309,16 @@ export function detectDuplicateNames(model: LModel, opts: NamespaceOptions = {})
     const groupsByFather = new Map<string, Map<unknown, LObject[]>>();
     for (const obj of all) {
         if (!obj) continue;
+        // A nameless object ('') is never a duplicate (R-TXT-46 D2), and it can never appear
+        // in a named object's group, since groups compare names with `===`.
+        const objName = obj.name; // read once: the scan's name-read budget (P-2026-10-21-0030)
+        if (objName === '') continue;
         const father = obj.father as LModelElement | undefined;
         const fatherId = idOf(father);
         let colliding: LObject[];
         if (!fatherId) {
             // No father id to share a namespace under: the per-object rule, unchanged.
-            colliding = getSiblingNamespace(obj, {includePending}).filter(s => s.name === obj.name);
+            colliding = getSiblingNamespace(obj, {includePending}).filter(s => s.name === objName);
         } else {
             let groups = groupsByFather.get(fatherId);
             if (!groups) {
@@ -325,7 +330,7 @@ export function detectDuplicateNames(model: LModel, opts: NamespaceOptions = {})
                 }
                 groupsByFather.set(fatherId, groups);
             }
-            colliding = (groups.get(obj.name) ?? []).filter(s => s.id !== obj.id);
+            colliding = (groups.get(objName) ?? []).filter(s => s.id !== obj.id);
         }
         if (colliding.length > 0) {
             result.set(obj.id, colliding);
