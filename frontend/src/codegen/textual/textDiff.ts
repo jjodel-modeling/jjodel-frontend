@@ -423,6 +423,12 @@ export interface DiffLines {
     readonly problems: readonly LineProblem[];
     /** The handle of every model object the lines address, to register against its id before the run. */
     readonly handles: ReadonlyMap<string, string>;
+    /**
+     * R-TXT-44 (1), (2): the handles of the objects the app names although the text gives them none: a nameless object
+     * created in a named rule takes its handle as name, a cleared name reads the instance's initial name (the core's
+     * identity slot read). Absent when none.
+     */
+    readonly named?: readonly string[];
 }
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -469,6 +475,7 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
 
     const lines: string[] = [];
     const problems: LineProblem[] = [];
+    const named: string[] = [];
     const writable = (id: string, feature: string): boolean => {
         if (IDENTIFIER.test(feature)) return true;
         problems.push({ id, feature, message: `the feature name ${feature} is not writable by JjScript yet` });
@@ -535,6 +542,7 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
                 // A nameless object of a class with a name takes its handle as name, as any instance created without one.
                 const name = identityOf(g, o);
                 if (name !== null && name !== h) lines.push(`set ${h}.name = ${jjscriptString(name)}`);
+                if (name === null && g.objects[o.cls]?.named) named.push(h);
                 break;
             }
             case 'attribute': {
@@ -581,7 +589,7 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
     const handles = new Map<string, string>();
     // R-TXT-32: a target outside the text is addressed by its id like a model object (the registry resolves any id).
     for (const [key, h] of handleOf) if (key.startsWith('m:') || key.startsWith('o:')) handles.set(h, key.slice(2));
-    return { lines, problems, handles };
+    return { lines, problems, handles, ...(named.length ? { named } : {}) };
 }
 
 /** What applying an edited text would do, and whether it may (R-TXT-26). */
@@ -592,6 +600,8 @@ export interface TextEditPlan {
     readonly lines: readonly string[] | null;
     /** Handle to model object id, registered before the run. */
     readonly handles: ReadonlyMap<string, string>;
+    /** R-TXT-44: `DiffLines.named` of the lines; absent when none. */
+    readonly named?: readonly string[];
 }
 
 export interface PlanInput extends DiffInput {
@@ -616,5 +626,5 @@ export function planTextEdit(input: PlanInput): TextEditPlan {
     const refusals = refusalsOf({ ...input, diff }).filter(r => !confirmed.includes(r.code));
     const built = diffLines(input.mm, input.grammar, input.model, input.parsed, diff, input.reserved);
     for (const p of built.problems) refusals.push({ code: 'unwritable', message: p.message });
-    return { diff, refusals, lines: refusals.length ? null : built.lines, handles: built.handles };
+    return { diff, refusals, lines: refusals.length ? null : built.lines, handles: built.handles, ...(built.named ? { named: built.named } : {}) };
 }
