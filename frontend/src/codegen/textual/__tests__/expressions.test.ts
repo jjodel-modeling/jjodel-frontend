@@ -204,7 +204,7 @@ describe('(5) the nearley oracle agrees with the parser on every sample', () => 
     const syntaxErrors = (g: ConcreteGrammar, text: string): string[] =>
         parseText(text, g).errors.map(e => e.message).filter(m => /^(expected|unexpected|unterminated|character code)/.test(m));
     it.each([['BOOL, C-like', boolGrammar(BOOL_CLIKE)], ['BOOL, Pascal/Ada', boolGrammar(BOOL_PASCAL)], ['ARITH', arithGrammar()]] as const)(
-        '%s: one parse in nearley exactly where parseText finds no syntax error, never two', (name, g) => {
+        '%s: one parse in nearley exactly where parseText finds no syntax error, never two', (_, g) => {
             const ng = nearleyGrammarOf(g);
             const samples = generateSamples(g).map(s => ({ text: s.text, n: parseCount(g, s.text, ng), errors: syntaxErrors(g, s.text) }));
             expect(samples.filter(s => s.n > 1 || (s.n === 1) !== (s.errors.length === 0))).toEqual([]);
@@ -212,8 +212,7 @@ describe('(5) the nearley oracle agrees with the parser on every sample', () => 
             const read = samples.filter(s => s.n === 1);
             expect(read.length).toBeGreaterThan(g.rules.length);
             const symbols = g.rules.flatMap(r => (r.body.t === 'expr' ? r.body.operators.filter(o => o.fixity !== 'prefix').map(o => ` ${o.symbol} `) : []));
-            // Measured: generateSamples writes no ARITH sample with "+" (its rounds reach Sub, not Add); the agreement holds
-            // on what it writes, and the gap is the generator's.
-            expect(symbols.filter(sym => !read.some(s => s.text.includes(sym)))).toEqual(name === 'ARITH' ? [' + '] : []);
+            // Every infix symbol is in a sample that reads: ARITH's "+" too, which a shared form counter skipped (P-2026-11-04-1045).
+            expect(symbols.filter(sym => !read.some(s => s.text.includes(sym)))).toEqual([]);
         });
 });

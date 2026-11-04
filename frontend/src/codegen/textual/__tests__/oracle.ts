@@ -251,11 +251,16 @@ export function generateSamples(g: ConcreteGrammar): Sample[] {
     /** The forms of an expression a sample cycles through: each operator, each call form, each primary, the parentheses. */
     const exprForms = (n: Expr): number => n.operators.length * 2 + n.primaries.length + 1;
 
-    /** `only`: at the top object, the index of the one optional part present, the name first (`null`: none; `undefined`: all). */
-    const sample = (root: ConcreteRule, only?: number | null): Sample => {
+    /**
+     * `only`: at the top object, the index of the one optional part present, the name first (`null`: none; `undefined`: all).
+     * `round`: the form of the sample's first expression, so that the rounds go through every form; the counter shared by
+     * the other occurrences advances by a stride that can skip one (ARITH's Add, P-2026-11-04-1045).
+     */
+    const sample = (root: ConcreteRule, only?: number | null, round?: number): Sample => {
         const covered = new Set<string>(['Model']);
         const toks: string[] = [];
         let topOpt = 0;
+        let lead = round;
         const walk = (n: GrammarNode, depth: number, cls: string | undefined, top: boolean): void => {
             switch (n.t) {
                 case 'seq': for (const x of n.items) walk(x, depth, cls, top); return;
@@ -304,7 +309,8 @@ export function generateSamples(g: ConcreteGrammar): Sample[] {
                     };
                     if (depth >= MAX_DEPTH) { walk(n.primaries[next(n.primaries, n.primaries.length)], depth, cls, false); return; }
                     const forms = n.operators.flatMap(o => [o, ...(o.call !== undefined ? [{ ...o, fixity: 'call' as const }] : [])]);
-                    const k = next(n, exprForms(n));
+                    const k = lead !== undefined ? lead % exprForms(n) : next(n, exprForms(n));
+                    lead = undefined;
                     const f = forms[k];
                     if (!f) {
                         const j = k - forms.length;
@@ -341,7 +347,7 @@ export function generateSamples(g: ConcreteGrammar): Sample[] {
     const roots = g.rules.flatMap(r => (r.t === 'object' ? [r] : []));
     const rounds = Math.max(1, ...g.rules.map(r => (r.body.t === 'alt' ? r.body.alts.length : r.body.t === 'expr' ? exprForms(r.body) : 1)));
     const out: Sample[] = [];
-    for (let i = 0; i < rounds; i++) for (const r of roots) out.push(sample(r));
+    for (let i = 0; i < rounds; i++) for (const r of roots) out.push(sample(r, undefined, i));
     for (const r of roots) {
         out.push(sample(r, null));
         for (let i = 0; i < r.features.length + (r.named ? 1 : 0); i++) out.push(sample(r, i));
