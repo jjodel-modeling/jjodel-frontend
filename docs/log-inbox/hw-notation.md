@@ -916,3 +916,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Ticket**: Measured by P-2026-11-04-0256, dev server, load 36 to 38, one run of nine on b10_8: the ELK auto-layout on open ran 117,474 ms on the main thread over 2,559 nodes (EditorV2.tsx:603). Intermittent, no size cap, a timing race not traced. Separately, one profiled b11_9 run blocked the main thread over 7 minutes; cause not captured. See docs/discovery/discovery_2026-11-04_jjtl_canvas_render.md section 5. Trace it before choosing a node cap or a worker.
 **Priority**: high
 **Found in**: P-2026-11-04-0256
+
+## 2026-11-04 — feat(editor-v2): skip React Flow's forced first mount on large canvases (P-2026-11-04-0901, P-2026-11-04-0925)
+**Prompt**: `claude_2026-11-04_0925_prompt_canvas_mount_cont.md`, continuing `claude_2026-11-04_0901_prompt_canvas_mount_unmeasured.md` after its ceiling stop: route A in EditorV2.tsx, gates, figures before and after, crops, entry, Status.
+**Files touched**: `b5cfa4a85` LIR (0901); `be8e2eed2` `editor-v2/unmeasuredNodes.ts` + its test; `0740d511f` `EditorV2.tsx`, `unmeasuredNodes.ts`, the test; docs commit: LIR amendment, the two Status lines; this entry.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced
+**Smoke visivo**: non applicabile
+**Notes**: Gates: tsc 0; vitest 3 red at import + 2 load-timing reds green on rerun; build 0. b10_8 dev, mounted node els 2,559 -> 9, longest 5,008 -> 2,049-2,362 ms, total 16,727 -> 11,330-14,658; prod longest 2,055-2,148 -> 1,369-1,464 ms. 0 edge warnings. b11_9 did not mount on either tree. Partial: no pan crop (out1 ends with 1 node, both trees), no src1 crop. Figures: LIR amendment, ~/.jjodel-lanes/P-2026-11-04-0925/probe/out.
+**Prompt document name**: 2026-11-04 09:25

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0901
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · be8e2eed2 0740d511f · stopped at the context ceiling, closed by P-2026-11-04-0925 · verifica visiva non applicabile (unattended: probe crops, no hand run)
 Lane: full (Route A of the discovery, chosen on Alfonso's delegation, 2026-11-04 08:57)
 Depends: P-2026-11-04-0404
 Worktree: ~/jjodel-w-canvasmount, branch canvas-mount-unmeasured

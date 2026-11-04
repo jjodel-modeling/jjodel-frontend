@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0925
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · be8e2eed2 0740d511f · verifica visiva non applicabile (unattended: probe crops, no hand run)
 Lane: full (continues P-2026-11-04-0901)
 Depends: P-2026-11-04-0901
 Worktree: ~/jjodel-w-canvasmount, branch canvas-mount-unmeasured
