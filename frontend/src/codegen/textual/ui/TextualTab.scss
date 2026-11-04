@@ -205,6 +205,20 @@
         .monaco-editor.focused {
             outline: none !important;
         }
+
+        // Step B2 (P-2026-11-04-0146): the global `.monaco-scrollable-element { left: 30px !important }` of
+        // skeleton.scss shifted the hover's content 30 px inside a box sized to it, so the last 30 px were clipped.
+        // Monaco already fits the box to its content up to its own max width; the code spans take the editor's font.
+        .monaco-hover .monaco-scrollable-element {
+            left: 0 !important;
+        }
+
+        .monaco-hover code {
+            padding: 0;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: inherit;
+        }
     }
 
     &__message {
