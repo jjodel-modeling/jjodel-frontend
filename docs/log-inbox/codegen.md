@@ -1735,3 +1735,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Prompt document name**: 2026-11-04 16:27
 
 **Ticket** (textual tab, medium, found in P-2026-11-04-1605): removing a name whose initialName is that same name (an `output result` created from the text with it) brings the name back in the print, because the core's identity read falls back to initialName for an empty slot (`LModelElement.tsx:7786-7800`); only the status line says why. Keeping it nameless needs a core change or a textual reader that reads an explicit "" slot as nameless; neither done here, decision owed to Alfonso.
+
+## 2026-11-04 — merge: textual-c1e-names into alfonso-frontend-jjtl (P-2026-11-04-2113)
+
+**Prompt**: `claude_2026-11-04_2113_prompt_merge_textual-c1e-names.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c1e-names` at `77a4dd682` into `alfonso-frontend-jjtl`, merge base `e38500ec9`. Step C lane C1e (R-TXT-44): the tab reprints the names the app gives to nameless objects, removing a name applies, one outline group per per-item keyword feature.
+**Files touched**: merge `ddbf72645`, the branch side (`frontend/src/codegen/textual/textDiff.ts`, `languageService.ts`, `ui/TextualTab.tsx`, `__tests__/outline.test.ts`, `__tests__/textualEdit.test.ts`, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ddbf72645` in the worker: typecheck 0 errors; typecheck:scripts exit 0; vitest 13918 tests, 3 red at import (baseline), hooks 967; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app check of P-2026-11-04-1605, 13 checks ALL PASS, crops c1e-* checked by the chat (RC-23).
+**Notes**: Rollback tag `pre-textual-c1e-names` on `d6fc11ebf` (RC-31). Union: none. The removed-name reprint is closed by the core lane of R-TXT-45 and R-TXT-46. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-2113/result.json`.
+**Prompt document name**: 2026-11-04 21:13
