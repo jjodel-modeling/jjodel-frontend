@@ -1658,3 +1658,21 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — grammar and check only; the EBNF of an expression metamodel is shown with the crops of C1b, when the text prints expressions.
 **Notes**: Tests red first (6, 3, 8). Nearley oracle: one parse per BOOL sample in both styles. Briefs 71/71 under PROTO. Mutation bench 16/16 killed. New rules operator-fixity, operator-symbols, operator-tokens, operator-follow, call-words. Open for C1b: operators of equal precedence as one level; a symbol both prefix and infix (unary minus). Open for C1d: the Pascal terminator after a primary. Docs written by the chat: the lane stopped at the ceiling.
 **Prompt document name**: 2026-11-04 07:32
+
+## 2026-11-04 — test(codegen): C1b closure, call form under Pascal, "+" in the oracle samples, in-app check (P-2026-11-04-1045)
+**Prompt**: `claude_2026-11-04_1045_prompt_textual_c1b_closure.md` (RC-51, continues `claude_2026-11-04_1005_prompt_textual_c1b_cont.md` and `claude_2026-11-04_0938_prompt_textual_c1b_parser_printer.md`): the chat's answers to the 1005 handoff (an and/or under two operands never loses the object; `+` samples in the generator), the three probe fixes, one probe run with crops, the gates, the log entry.
+**Files touched**: `__tests__/expressions.test.ts`, `__tests__/oracle.ts` (fdc328a72, 8c376d5f0).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-04 10:05
+**Causa**: (c)
+**Regressions**: unknown. Gates on 8c376d5f0: tsc 0; vitest 13740 passed, 2 skipped, 3 red at import (baseline); build 0; check:codegen-lazy ALL GREEN (off, on). The failing edit below is a path C1b opens; whether the executor fails the same way outside expressions was not measured.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito (dettaglio) — Text tab is the model's print (`a & (b | c)`, `-x`), EBNF shows `Expr_` with its operators and call forms, one Undo restores text and model; the edit ` | a` leaves a Use without its var (ticket below).
+**Notes**: The 1005 premise for the call form did not reproduce: the grammar defaults the word (concreteGrammar.ts:260), Pascal prints `And()`, `Or(is_sw;)` and reads them back to the same model; tests pin it, killed by dropping the default (2 of 23). The generator gap was a form counter shared by every occurrence: the first expression of a sample now takes its round's form, red first. The EBNF crop kept the donation banner (it came back after a close); `c1b-ebnf-top.png` is cut from the same PNG.
+**Prompt document name**: 2026-11-04 10:45
+
+## 2026-11-04 — ticket: a Text tab edit adding an operand runs a set that cannot resolve the new Use
+**Ticket**: In the Text tab, typing ` | a` into `a & (b | c)` runs two JjScript lines: `create instance of Use "Use_1" in Or_1.ops` (success) and `set Use_1.var = a`, which fails with "Cannot resolve metaclass for instance 'Use_1'" (jjscript/executor/commands/instance.ts:1031-1039: the resolved object has no `instanceof`). The bar reads "Applied, 1 line failed", the tab keeps `a & (b | c | a)`, the model prints `a & (b | c |)`. Use has no name feature. Measured by the 1045 probe, one run.
+**Priority**: medium
+**Found in**: P-2026-11-04-1045

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0938
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane textual-c1-operators · b81eaf6c2..5e83da5cf, chiuso da P-2026-11-04-1045 · verifica visiva della chat passata 2026-11-04 (RC-23, crops of P-2026-11-04-1045: text and EBNF of expressions; the add-operand edit fails in the JjScript executor, ticketed, C1c); GO di Alfonso sulle crop in attesa per il merge di C1
 Lane: full (parser and printer of the textual layer)
 Depends: P-2026-11-04-0910 (C1a at d6cee1805)
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)
