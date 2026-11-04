@@ -479,9 +479,10 @@ Each target instance is a plain JavaScript object:
 | (none) | 1 instance |
 | `[1]` | 1 instance |
 | `[N]` (N > 1) | N instances |
-| `[*]`, `[n..*]` | **Currently:** 1 instance, with one warning per rule: `Rule 'A -> B': the number of targets of '[*]' is not settled; today one target is created per source.` |
+| `[*]`, `[0..*]` | 1 instance |
+| `[n..*]` (n > 0) | n instances, the lower bound |
 
-> **Known limitation:** `[*]` always creates exactly 1 instance. The semantics of unbounded multiplicity are an open question of Alfonso's (§12.3 gap 4); until they are settled the run warns and keeps this count (P-2026-11-04-0015).
+The counts are per source instance. An unbounded upper bound fixes no count, so the rule creates its lower bound, at least one (R-JTG-21, P-2026-11-04-0900); no warning.
 
 ### 4.5 Attribute Binding Execution
 
@@ -1029,7 +1030,7 @@ that could not be placed is reported as above.
 |---|---|
 | Source class not found | Silently skip (no instances to match) |
 | Rule target class not in the target metamodel | **Error** before pass 1 (R-JTG-17): `Target class 'Nope' not found in target metamodel (A -> Nope). Nothing is written.` The run returns no target model, as for an abstract target |
-| Nested creation of a class not in the target metamodel (`-> feature { -> Ghost { ... } }`, `forall x in xs -> Ghost { ... }`) | **Error** before pass 1, the same as a rule target (R-JTG-17, nested case, ratified 2026-11-04): `Target class 'Ghost' not found in target metamodel (object creation in Table.columns). Nothing is written.`, or `(forall in B)`. No target model. A creation inside a `let` body is not checked, as before |
+| Nested creation of a class not in the target metamodel (`-> feature { -> Ghost { ... } }`, `forall x in xs -> Ghost { ... }`) | **Error** before pass 1, the same as a rule target (R-JTG-17, nested case, ratified 2026-11-04): `Target class 'Ghost' not found in target metamodel (object creation in Table.columns). Nothing is written.`, or `(forall in B)`. No target model. A creation inside a `let` body is checked the same way, at any depth (R-JTG-22); there only the missing class is checked, not an abstract class or the shape of the creation |
 | A binding reaches a node whose class has both a matched and a lazy rule, and the feature type fits both or is unknown | **Error** naming both rules (R-JTG-20, provisional, not ratified; §5.3.3) |
 | Guard evaluation error | Log warning, skip instance (treated as false) |
 | Expression evaluation error | Log warning, return `null` |
@@ -1112,7 +1113,7 @@ commit that made it so.
 |---|---|---|
 | `.forAll(...)` never parses | **Stale on the app path.** JjEL takes any keyword as a member name since `3aa5993c8` (P-2026-10-21-0011), and both app callers of the JjTL parser pass `source` since `d3d42310c` (P-2026-10-31-1910), so `coll.forAll(x => p)` parses and the evaluator answers `Unknown method 'forAll' for type Array. Did you mean 'all'?`. JjEL has no `forAll` by design: the quantifier is `coll.all(x => pred)` (root `CLAUDE.md` §12.6). Only the legacy path (no `source`), reached by tests alone, still refuses it | — |
 | 7 test files fail at import | **Fixed** in `e784e325d`: `executor.ts` took only `U.asNumber` from the `joiner` barrel and now holds a verbatim copy, so six of the seven load and pass (two stale expectations updated). `ai-prompt-sanitization.test.ts` still fails at import, through `services/AIMatcher`, not the executor. Full suite: import failures 9 → 3 | Low |
-| Multiplicity `[*]` | **Warned** (P-2026-11-04-0015). `A -> B[*]` creates one target per source, now with one warning per rule that the count is not settled (§4.4); `[n]` creates n. The unbounded semantics stay undefined (§12.3 gap 4), Alfonso's open question; the ticket "JjTL multiplicity [*] creates one target per source, silently" (P-2026-11-03-1402) is closed by the warning | Medium |
+| Multiplicity `[*]` | **Settled** (R-JTG-21, P-2026-11-04-0900). `A -> B[*]` creates one target per source, `[n..*]` creates n, `[n]` creates n; no warning (§4.4). The warning of P-2026-11-04-0015 is removed | — |
 | Number type | **Fixed, never observable.** The `EInt` tag on a bridged number literal was a dead write: the evaluator returns the literal's value and reads no tag, so `w := 3.5` and `v := 2 + 0.25` bound 3.5 and 2.25 on both paths before the change. A decimal literal is now tagged `EDouble` (`e784e325d`) | — |
 | Duplicate values | **Stale for a flat array source**, the shape the app passes: each target receives its own source's values, on both paths. **Real and fixed** for a `{ classes, instances }` source, whose arrays the flat-object loop read a second time, matching every instance twice (`e784e325d`) | — |
 | Double execution | **Stale, by reading only** (no app probe): there is no `<StrictMode>` in `src/` (`index.tsx` renders `<Provider><App/></Provider>`), Execute is a click callback and not an effect, and `handleExecuteTransformation` has carried a re-entry guard since `40fc9ff66` | — |
@@ -1134,7 +1135,6 @@ message, not silence.
 | 1 | **Implicit trace resolution** | Done for references, by identity, fallbacks reported (A0, §5.3.1), and for containments (A). The (source, rule, environment) key is in place; non-empty environments, lazy rules and fresh subtrees under B are done in the executor (B1, §5.3.3); the app write-back of several targets per source is B2 | High |
 | 2 | **Alert/Notify execution** | Wire executor body items to UIBridge | High |
 | 3 | **Prompt/Input execution** | Wire AST bridge to UIBridge for interactive expressions | High |
-| 4 | **Multiplicity `[*]`** | Define and implement unbounded creation semantics | Medium |
 | 5 | **Reference mapping** | References: done (§5.3.1). Containments: done in the executor, placed targets leave `roots`, second claims and cycles are errors (A, §5.3.1, R-JTG-4). App write-back: done, placed targets created inside their container by the nested path (§9.2, P-2026-11-02-2024) | High |
 | 6 | **Source alias** | Parse and bind `Person p -> Human` alias in executor | Medium |
 | 7 | **Multi-model** | `from A, B to C, D` with qualified types | Phase 1 |
@@ -1414,7 +1414,6 @@ NotifyStatementAST {
 
 - Helpers
 - Multiple class mappings in one transformation
-- Multiplicity `[*]`
 - Alert/Notify execution
 - Cross-reference resolution
 - Multi-attribute with complex conversions
