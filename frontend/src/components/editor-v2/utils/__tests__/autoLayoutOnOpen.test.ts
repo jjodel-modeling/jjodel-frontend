@@ -107,3 +107,37 @@ describe('shouldAutoLayoutOnOpen: the size cap (P-2026-11-04-0926)', () => {
         });
     });
 });
+
+describe('shouldAutoLayoutOnOpen: the cap counts the objects of the graph\'s model', () => {
+    /** Graph `g` over `n` vertices, its model `m` holding `objects` object ids. */
+    function withModel(n: number, objects: number): Record<string, unknown> {
+        const L = lookup(n);
+        (L.g as any).model = 'm';
+        L.m = { id: 'm', className: 'DModel', objects: Array.from({ length: objects }, (_, i) => `o${i}`) };
+        return L;
+    }
+    let info: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => { info = vi.spyOn(console, 'info').mockImplementation(() => {}); });
+    afterEach(() => { info.mockRestore(); });
+
+    // Measured by the P-2026-11-04-0926 probe on b10_8: at the decision the canvas held 1 node and no edge,
+    // while DModel.objects already held all 2,559 objects (they exist before the output tab opens).
+    it('skips the b10_8 open: 1 node and 0 edges in the canvas, 2,559 objects in the model', () => {
+        expect(shouldAutoLayoutOnOpen(true, 'g', withModel(1, 2559), { nodes: 1, edges: 0 })).toBe(false);
+        expect(String(info.mock.calls[0]?.join(' '))).toContain('2559 nodes');
+    });
+
+    it('skips on the model alone, without a canvas size', () => {
+        expect(shouldAutoLayoutOnOpen(true, 'g', withModel(1, 501))).toBe(false);
+    });
+
+    it('lays out at the cap: 500 objects', () => {
+        expect(shouldAutoLayoutOnOpen(true, 'g', withModel(1, 500), { nodes: 1, edges: 0 })).toBe(true);
+    });
+
+    it('a graph whose model has no objects array (a metamodel) falls back on the canvas size', () => {
+        const L = lookup(2); (L.g as any).model = 'mm'; L.mm = { id: 'mm', className: 'DModel', packages: ['p'] };
+        expect(shouldAutoLayoutOnOpen(true, 'g', L, { nodes: 2, edges: 1 })).toBe(true);
+        expect(shouldAutoLayoutOnOpen(true, 'g', L, { nodes: 501, edges: 1 })).toBe(false);
+    });
+});

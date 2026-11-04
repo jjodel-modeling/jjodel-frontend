@@ -43,15 +43,24 @@ function graphHasLayoutRecord(graphId: string, idlookup: Readonly<Record<string,
  * 1,535 took 61 s, 2,559 took 153 s, while 2,559 nodes with no edge took under 1 s
  * (docs/discovery/discovery_2026-11-04_elk_open_freeze.md F2). The edges drive the cost, but at the
  * decision the reference edges may not be in the canvas yet, and the re-layout watcher would then rerun
- * ELK with them; the node count is there already and, on a tree, is the edge count plus one. So both
- * count. The explicit layout command is not capped.
+ * ELK with them; on a tree the node count is the edge count plus one. So both count. The canvas is not
+ * complete at the decision either: on b10_8 the probe of P-2026-11-04-0926 saw 1 node and no edge in it,
+ * and 15 vertices in D-state, while the model already held its 2,559 objects. So the nodes are the larger
+ * of the canvas count and the objects of the graph's model. The explicit layout command is not capped.
  */
 export const AUTO_LAYOUT_ON_OPEN_CAP = 500;
+
+/** The objects of the model the graph shows; 0 when the graph, its model or the array is absent. */
+function graphModelObjectCount(graphId: string, idlookup: Readonly<Record<string, unknown>>): number {
+    const graph = idlookup[graphId] as { model?: unknown } | undefined;
+    const model = typeof graph?.model === 'string' ? idlookup[graph.model] as { objects?: unknown } | undefined : undefined;
+    return Array.isArray(model?.objects) ? model.objects.length : 0;
+}
 
 /**
  * `createdOnOpen`: the populate run of this mount created something (`justCreatedGraphRef`).
  * `graphId`: the model's v2-flow graph; absent means nothing was ever laid out.
- * `size`: the nodes and edges the layout would get; absent means no cap.
+ * `size`: the nodes and edges in the canvas at the decision; absent, only the model's objects count.
  */
 export function shouldAutoLayoutOnOpen(
     createdOnOpen: boolean,
@@ -61,8 +70,10 @@ export function shouldAutoLayoutOnOpen(
 ): boolean {
     if (!createdOnOpen) return false;
     if (graphId && graphHasLayoutRecord(graphId, idlookup)) return false;
-    if (size && (size.nodes > AUTO_LAYOUT_ON_OPEN_CAP || size.edges > AUTO_LAYOUT_ON_OPEN_CAP)) {
-        console.info(`[autoLayoutOnOpen] auto-layout on open skipped: ${size.nodes} nodes, ${size.edges} edges, above the cap of ${AUTO_LAYOUT_ON_OPEN_CAP}. The vertices keep their default placement; the layout command still lays them out.`);
+    const nodes = Math.max(size?.nodes ?? 0, graphId ? graphModelObjectCount(graphId, idlookup) : 0);
+    const edges = size?.edges ?? 0;
+    if (nodes > AUTO_LAYOUT_ON_OPEN_CAP || edges > AUTO_LAYOUT_ON_OPEN_CAP) {
+        console.info(`[autoLayoutOnOpen] auto-layout on open skipped: ${nodes} nodes, ${edges} edges, above the cap of ${AUTO_LAYOUT_ON_OPEN_CAP}. The vertices keep their default placement; the layout command still lays them out.`);
         return false;
     }
     return true;
