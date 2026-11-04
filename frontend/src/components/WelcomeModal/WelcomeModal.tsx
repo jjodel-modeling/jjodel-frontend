@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import './WelcomeModal.scss';
 
-// 3.1 screen: a new key, so a user who dismissed the 3.0 screen sees this one.
-// The 3.0 key (jjodel_welcome_3_seen) is neither read nor deleted.
-const STORAGE_KEY = 'jjodel_welcome_3_1_seen';
+// 3.1.1 screen: a new key, so a user who dismissed the earlier 3.1 screen sees this one.
+// The older keys (jjodel_welcome_3_seen, jjodel_welcome_3_1_seen) are neither read nor deleted.
+const STORAGE_KEY = 'jjodel_welcome_3_1_1_seen';
 
 // Static illustration of the featured block: a three-place Petri net at step 2
 // of a run (3 tokens in `ready` at start; one `start` and one `finish` fired).
@@ -52,7 +52,7 @@ const WelcomeModal: React.FC = () => {
             <div className="wm-hero-label">What's new</div>
             <div className="wm-hero-title" id="wm-title">Jjodel 3.1</div>
             <div className="wm-hero-sub">
-              Simulation, derived viewpoints, containers and validation.
+              Simulation, derived viewpoints, containers, validation and a new Jjodie panel.
             </div>
           </div>
         </div>
@@ -136,6 +136,36 @@ const WelcomeModal: React.FC = () => {
               </div>
             </div>
 
+          </div>
+
+          <div className="wm-grid wm-grid--three">
+            <div className="wm-card wm-card--static">
+              <div className="wm-card-top">
+                <span className="wm-card-tag wm-card-tag--sky">AI</span>
+              </div>
+              <div className="wm-card-title">Jjodie panel</div>
+              <div className="wm-card-desc">
+                Docked beside the editor. A generated script previews on the canvas, and Apply is one undo step.
+              </div>
+            </div>
+            <div className="wm-card wm-card--static">
+              <div className="wm-card-top">
+                <span className="wm-card-tag wm-card-tag--rose">Scripts</span>
+              </div>
+              <div className="wm-card-title">Refactorings</div>
+              <div className="wm-card-desc">
+                Save a script in the project and run it on a metamodel or a model from the Tools menu.
+              </div>
+            </div>
+            <div className="wm-card wm-card--static">
+              <div className="wm-card-top">
+                <span className="wm-card-tag wm-card-tag--amber">Examples</span>
+              </div>
+              <div className="wm-card-title">Templates</div>
+              <div className="wm-card-desc">
+                Starter projects and worked examples to clone, on the new Templates page.
+              </div>
+            </div>
           </div>
 
           <div className="wm-recall">

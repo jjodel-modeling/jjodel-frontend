@@ -21,13 +21,13 @@ import { downloadSuggestedMappings } from '../utils/exportSuggestedMappings';
 import { MappingCard } from './MappingCard';
 import GrammarTab from './GrammarTab';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
-import { ProviderModelSelector } from '../../components/common/ProviderModelSelector';
+import { ProviderModelSelector, preferredModelId, preferredProviderId } from '../../components/common/ProviderModelSelector';
 import { MappingAnalysisProgressModal } from '../components/MappingAnalysisProgressModal';
 import {
     MappingAnalysisStep,
     MappingAnalysisStepEntry,
 } from '../types/suggestions';
-import {AI, AIConfig, JodieConfig} from "../../types/jodie";
+import { registry } from '../../services/ai';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 
 export interface SuggestedMappingsPanelProps {
@@ -259,7 +259,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     const settingsModal = useSettingsModalSafe();
 
     // AI provider preference for mappings feature
-    const resolvedProvider= AIConfig.getPreferred('mappings');
+    const resolvedProvider= preferredProviderId('mappings');
 
     // Determine current mode. LocalOption was removed 2026-04-21: Mappings is AI-first.
     // The Grammar tab remains an orthogonal option; AI is the default matcher.
@@ -273,7 +273,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     const hoveredId = hoveredMapping ?? internalHoveredId;
 
     // Check AI availability
-    const isAIAvailable = useMemo(() => JodieConfig.hasEnabledProviders(), []);
+    const isAIAvailable = useMemo(() => registry.enabled().length > 0, []);
     const aiProviderName = useMemo(() => resolvedProvider, [resolvedProvider]);
 
     // Filter suggestions by status
@@ -515,11 +515,11 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     const handleExportJson = useCallback(() => {
         if (!result || result.suggestions.length === 0) return;
 
-        const modelId = AIConfig.getPreferredModel('mappings') ?? null;
-        const version = resolvedProvider && modelId ? AI[resolvedProvider]?.versions[modelId] : undefined;
+        const modelId = preferredModelId('mappings') ?? null;
+        const version = resolvedProvider && modelId ? registry.get(resolvedProvider).model(modelId) : undefined;
         const modelLabel = (() => {
             if (!modelId || !version) return null;
-            const label = version.label;
+            const label = version.displayName;
             const startsWithProvider = label.toLowerCase().startsWith(resolvedProvider.toLowerCase());
             return startsWithProvider ? label : `${resolvedProvider} ${label}`;
         })();

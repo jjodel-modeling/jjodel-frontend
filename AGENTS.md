@@ -554,25 +554,30 @@ The runtime store is exposed as `windoww.store` to avoid collision with React De
 
 ## 16. AI Provider System
 
-Unified system for AI providers: OpenAI, Anthropic, DeepSeek, Mistral, Gemini, Groq, Kimi, Ollama, Local.
+One module, `frontend/src/services/ai/` (#196), serves every AI feature. Providers (`PROVIDER_IDS`): Claude, GPT, DeepSeek, Gemini, Mistral, Groq, Ollama, Kimi, Custom. Claude, GPT and Gemini also have a live model catalog (`CATALOG_PROVIDERS`).
 
-**Full details**: `docs/discovery/2026-06-13_ai-provider-subsystem.md`.
+**Public surface**: `services/ai/index.ts`. Import from it, not from the files under it. It exports `registry` (`get`, `all`, `enabled`, `load`), `ProviderConfigStore` (key, endpoint and model per provider), `FeaturePreferenceStore` (provider and model per feature), the catalog cache (`cachedModels`, `refreshIfStale`) and the types (`ProviderId`, `AIFeature`, `ChatRequest`, ...).
+
+**Boundary**: `src/services/ai` imports neither `joiner` nor UI code. Its only app import is `events/registry.ts`. Logos, colours, initials, key placeholders and key URLs live UI-side in `components/common/providerVisuals.ts` (`PROVIDER_VISUALS`, `providerVisual(id)`).
 
 **Usage pattern**:
 ```typescript
-// Per-feature preference hook
-const provider = useAIProviderPreference('documentation');
+// A feature reads its provider and model (helpers in components/common/ProviderModelSelector.tsx)
+const provider = registry.get(preferredProviderId('explain'));
+yield* provider.chatStream({ history, model: preferredModelId('explain') });
 
-// Reusable dropdown (supports non-AI local options)
-<ProviderSelector feature="chat" compact />
+// Provider + model dropdown of a feature
+<ProviderModelSelector feature="documentation" compact onNavigateToSettings={...} />
 
 // Open Settings on Providers section
 settingsModal?.openSettings('providers');
 ```
 
-**Feature IDs**: `'documentation'`, `'chat'`, `'scriptblock'`, `'mappings'`.
+**Feature IDs** (`AI_FEATURES`): `'documentation'`, `'chat'`, `'scriptblock'`, `'mappings'`, `'explain'`.
 
-**Provider resolution order**: feature override → global default → first configured.
+**Provider resolution order** (`preferredProviderId`): feature preference → first enabled provider → first of `PROVIDER_IDS`. The legacy global default is no longer read at runtime: `registry.load()`, called once at module scope of `components/Jodie/Jodie.tsx`, copies it into the features that have none and runs the other load-time model migrations. `preferredModelId` returns the stored model through the legacy and retired-model map, or `undefined`, and the provider then uses its own configured model.
+
+**Full details**: `docs/discovery/discovery_2026-11-02_196_l0_ai_layer.md` (L0 inventory) and the frozen spec `docs/spec/claude_spec_2026-11-02_ai_provider_refactor.md`.
 
 ---
 
