@@ -8,7 +8,7 @@
  * and the derivation refused, and checks the grammar is LL(1): an annotation can make a style's argument fail locally.
  */
 
-import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
+import type { ConcreteGrammar, ExprOperator, GrammarNode, ObjectRule } from './concreteGrammar';
 import type { Matcher } from './parser';
 import { firstSetsOf, word } from './parser';
 import { featureKeyword } from './printer';
@@ -31,10 +31,21 @@ export type StyleRule =
     /** No style token, comment opener or string quote starts with `@`: it starts a reference outside the text (R-TXT-32). */
     | 'outer-reference'
     /** The syntax annotations resolve and apply, and the grammar they give is LL(1) (step T4). */
-    | 'annotations';
+    | 'annotations'
+    /** Step C lane C1a: a symbol has one fixity in an expression. */
+    | 'operator-fixity'
+    /** Two operator classes of an expression do not share a symbol. */
+    | 'operator-symbols'
+    /** A symbol is no style token, no token of the expression or of a reference, no prefix of a comment opener or a punctuation token, and starts no comment. */
+    | 'operator-tokens'
+    /** An infix symbol cannot follow an expression: after an operand it always continues the expression. */
+    | 'operator-follow'
+    /** A call word is not the keyword of another class, not a symbol, not a style word, and the call word of one class only. */
+    | 'call-words';
 
 /** Every rule the check evaluates, in the order of its findings. */
-export const STYLE_RULES: readonly StyleRule[] = ['distinct-features', 'distinct-classes', 'case-injective', 'reserved-words', 'block-delimiters', 'list-tokens', 'terminator', 'outer-reference', 'annotations'];
+export const STYLE_RULES: readonly StyleRule[] = ['distinct-features', 'distinct-classes', 'case-injective', 'reserved-words', 'block-delimiters', 'list-tokens', 'terminator', 'outer-reference', 'annotations',
+    'operator-fixity', 'operator-symbols', 'operator-tokens', 'operator-follow', 'call-words'];
 
 export interface StyleFinding {
     /** `ok`: the rule holds. `notice`: it holds after a fallback the author did not ask for. `error`: it fails. */
@@ -57,14 +68,21 @@ function headKeyword(r: ObjectRule): string {
 function bodyItems(r: ObjectRule): readonly GrammarNode[] {
     const last = r.body.t === 'seq' ? r.body.items[r.body.items.length - 1] : undefined;
     if (last?.t === 'block') return last.items;
-    return r.body.t === 'seq' ? r.body.items.filter(x => x.t === 'opt') : [];
+    // C1d: a required inline child of a one-line head with an optional name is a sequence, not an opt.
+    return r.body.t === 'seq' ? r.body.items.filter(x => x.t === 'opt' || x.t === 'seq') : [];
 }
 
-/** The keyword a body item starts with, and the feature it sets. */
+/** The keyword a body item starts with, and the feature it sets: a punctuation keyword too, and the per-item keyword of a star (C1d). */
 function itemKeyword(n: GrammarNode): { readonly kw: string; readonly feat: string } | undefined {
-    if (n.t !== 'opt') return undefined;
-    const first = n.item.t === 'seq' ? n.item.items.find(x => x.t !== 'nl') : n.item;
-    return first?.t === 'kw' ? { kw: first.text, feat: n.feat } : undefined;
+    const body = n.t === 'opt' ? n.item : n.t === 'seq' ? n : undefined;
+    if (!body) return undefined;
+    const first = body.t === 'seq' ? body.items.find(x => x.t !== 'nl') : body;
+    if (first?.t === 'star' && first.feat !== undefined) {
+        const inner = first.item.t === 'seq' ? first.item.items[0] : first.item;
+        return inner?.t === 'kw' ? { kw: inner.text, feat: first.feat } : undefined;
+    }
+    const feat = n.t === 'opt' ? n.feat : body.t === 'seq' ? body.items.flatMap(x => (x.t === 'assign' ? [x.feat] : []))[0] : undefined;
+    return feat !== undefined && (first?.t === 'kw' || first?.t === 'p') ? { kw: first.text, feat } : undefined;
 }
 
 /** Checks a concrete grammar; one `ok` for each rule without a notice or an error. */
@@ -76,11 +94,13 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
 
     // §A.2 (i).
     for (const r of objectRules) {
-        const items = new Map<string, number>();
-        for (const it of bodyItems(r).map(itemKeyword)) if (it) items.set(it.kw, (items.get(it.kw) ?? 0) + 1);
-        for (const [kw, n] of items) {
+        const items = new Map<string, string[]>();
+        for (const it of bodyItems(r).map(itemKeyword)) if (it) items.set(it.kw, [...(items.get(it.kw) ?? []), it.feat]);
+        for (const [kw, feats] of items) {
+            const n = feats.length;
             if (n < 2) continue;
-            const owners = r.features.filter(f => f.name === kw).map(f => `${f.owner}.${f.name}`);
+            // C1d: the features the keyword starts, which an item keyword or a punctuation keyword does not name.
+            const owners = r.features.filter(f => feats.includes(f.name)).map(f => `${f.owner}.${f.name}`);
             error('distinct-features', `class ${r.cls}`, `the keyword "${kw}" starts ${n} features: ${owners.join(', ')}`);
         }
     }
@@ -185,14 +205,62 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
     }
 
     // Step T4: the annotations' issues, and the LL(1) conditions an annotated grammar must keep.
+    let follow: ReadonlyMap<string, ReadonlySet<Matcher>> = new Map();
     if (g.annotationIssues) {
         for (const i of g.annotationIssues) out.push({ level: i.level, rule: 'annotations', where: i.where, message: i.message });
         const seen = new Set<string>();
-        for (const c of ll1Conflicts(g)) {
+        const ll1 = ll1Conflicts(g);
+        follow = ll1.follow;
+        for (const c of ll1.conflicts) {
             const k = `${c.where}|${c.message}`;
             if (seen.has(k)) continue;
             seen.add(k);
             error('annotations', c.where, `not LL(1): ${c.message}`);
+        }
+    }
+
+    // Step C lane C1a: the operators of each expression.
+    const reserved = reservedWords(g);
+    const comments = [s.comments.line, s.comments.block?.[0]].filter((c): c is string => !!c);
+    const puncts = styleTokens.flatMap(([, ts]) => ts.filter(t => !isWord(t)));
+    for (const r of g.rules) {
+        if (r.body.t !== 'expr') continue;
+        const e = r.body;
+        const bySymbol = new Map<string, ExprOperator[]>();
+        const byCall = new Map<string, ExprOperator>();
+        for (const o of e.operators) {
+            const at = `class ${o.cls}`;
+            const sym = o.symbol;
+            // One symbol is prefix on one class and infix on another at most, as the unary and the binary minus (C1b).
+            const priors = bySymbol.get(sym) ?? [];
+            const same = priors.find(x => x.fixity === o.fixity);
+            const infix = priors.find(x => x.fixity !== 'prefix');
+            if (same) error('operator-symbols', at, `the symbol "${sym}" is the symbol of ${same.cls} too`);
+            else if (o.fixity !== 'prefix' && infix) error('operator-fixity', at, `the symbol "${sym}" is ${FIXITY[o.fixity]} here and ${FIXITY[infix.fixity]} for ${infix.cls}: one fixity per symbol`);
+            else bySymbol.set(sym, [...priors, o]);
+
+            const styled = styleTokens.find(([, ts]) => ts.includes(sym));
+            const opener = comments.find(c => sym.startsWith(c));
+            const longer = [...comments, ...puncts].find(t => t !== sym && t.startsWith(sym));
+            if (styled) error('operator-tokens', at, `the symbol "${sym}" is the style token style.${styled[0]}`);
+            else if ([e.open, e.close, e.separator].includes(sym)) error('operator-tokens', at, `the symbol "${sym}" is a token of the expression itself`);
+            else if (['.', '[', ']'].includes(sym) || sym.startsWith('@')) error('operator-tokens', at, `the symbol "${sym}" is a token of a reference`);
+            else if (opener) error('operator-tokens', at, `the symbol "${sym}" starts with the comment opener "${opener}"`);
+            else if (!isWord(sym) && longer) error('operator-tokens', at, `the symbol "${sym}" is a prefix of "${longer}": the longer token would be read`);
+
+            if (o.fixity !== 'prefix') {
+                const after = new Set([...(follow.get(r.name) ?? []), word(e.close), word(e.separator)]);
+                if (common(after, new Set([word(sym)]), reserved).length) error('operator-follow', at, `the infix symbol "${sym}" can also follow an expression of ${r.name}`);
+            }
+
+            if (o.call === undefined) continue;
+            const other = Object.values(g.objects).find(x => x.cls !== o.cls && headKeyword(x) === o.call);
+            const twice = byCall.get(o.call);
+            if (other) error('call-words', at, `the call word "${o.call}" is the keyword of ${other.cls}`);
+            else if (e.operators.some(x => x.symbol === o.call)) error('call-words', at, `the call word "${o.call}" is an operator symbol`);
+            else if (words.has(o.call)) error('call-words', at, `the call word "${o.call}" is a style word`);
+            else if (twice) error('call-words', at, `the call word "${o.call}" is the call word of ${twice.cls} too`);
+            byCall.set(o.call, o);
         }
     }
 
@@ -202,9 +270,19 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
     return STYLE_RULES.flatMap(rule => out.filter(f => f.rule === rule));
 }
 
-/** Two token classes overlap when one token can match both: equal, or `ID` and an `ID:x`. */
-const overlap = (a: Matcher, b: Matcher): boolean => a === b || (a === 'ID' && b.startsWith('ID:')) || (b === 'ID' && a.startsWith('ID:'));
-const common = (xs: ReadonlySet<Matcher>, ys: ReadonlySet<Matcher>): Matcher[] => [...xs].filter(x => [...ys].some(y => overlap(x, y)));
+const FIXITY: Readonly<Record<ExprOperator['fixity'], string>> = { nary: 'n-ary', binary: 'binary', prefix: 'prefix' };
+
+/** The words no name can be (as the parser's `canAt`): the style's reserved names, an expression's word symbols and call
+ *  words (C1a), and the head words of an optional head name (R-TXT-41, D3; C1d). */
+function reservedWords(g: ConcreteGrammar): ReadonlySet<string> {
+    const exprWords = g.rules.flatMap(r => (r.body.t === 'expr' ? r.body.operators.flatMap(o => [o.symbol, ...(o.call !== undefined ? [o.call] : [])]) : []));
+    return new Set([...g.style.reservedNames, ...exprWords.filter(isWord), ...(g.headWords ?? [])]);
+}
+
+/** Two token classes overlap when one token can match both: equal, or `ID` and an `ID:x` whose word is not reserved. */
+const overlap = (a: Matcher, b: Matcher, reserved: ReadonlySet<string>): boolean =>
+    a === b || (a === 'ID' && b.startsWith('ID:') && !reserved.has(b.slice(3))) || (b === 'ID' && a.startsWith('ID:') && !reserved.has(a.slice(3)));
+const common = (xs: ReadonlySet<Matcher>, ys: ReadonlySet<Matcher>, reserved: ReadonlySet<string>): Matcher[] => [...xs].filter(x => [...ys].some(y => overlap(x, y, reserved)));
 const shownMatchers = (ms: readonly Matcher[]): string => [...new Set(ms)].map(m => (m.includes(':') ? `"${m.slice(m.indexOf(':') + 1)}"` : m)).join(', ');
 
 /**
@@ -213,8 +291,9 @@ const shownMatchers = (ms: readonly Matcher[]): string => [...new Set(ms)].map(m
  * a repeated part is never empty; the alternatives of a choice start with distinct tokens, and at most one is empty.
  * The parser predicts with one token, so a conflict here is a text it reads differently from the printer.
  */
-function ll1Conflicts(g: ConcreteGrammar): { readonly where: string; readonly message: string }[] {
+function ll1Conflicts(g: ConcreteGrammar): { readonly conflicts: { readonly where: string; readonly message: string }[]; readonly follow: ReadonlyMap<string, ReadonlySet<Matcher>> } {
     const first = firstSetsOf(g);
+    const reserved = reservedWords(g);
     const follow = new Map<string, Set<Matcher>>(g.rules.map(r => [r.name, new Set<Matcher>()]));
     follow.get('Model')?.add('EOF');
     const out: { where: string; message: string }[] = [];
@@ -232,7 +311,7 @@ function ll1Conflicts(g: ConcreteGrammar): { readonly where: string; readonly me
         switch (n.t) {
             case 'seq': walkSeq(n.items, after); return;
             case 'opt': {
-                const both = common(first(n.item).set, after);
+                const both = common(first(n.item).set, after, reserved);
                 if (both.length) conflict(n, `${shownMatchers(both)} can both start the optional part and follow it`);
                 walk(n.item, after);
                 return;
@@ -240,7 +319,7 @@ function ll1Conflicts(g: ConcreteGrammar): { readonly where: string; readonly me
             case 'star': {
                 const f = first(n.item);
                 if (f.nullable) conflict(n, 'the repeated part can be empty');
-                const both = common(f.set, after);
+                const both = common(f.set, after, reserved);
                 if (both.length) conflict(n, `${shownMatchers(both)} can both start the repeated part and follow it`);
                 walk(n.item, new Set([...f.set, ...after]));
                 return;
@@ -249,14 +328,14 @@ function ll1Conflicts(g: ConcreteGrammar): { readonly where: string; readonly me
                 const fs = n.alts.map(first);
                 for (let i = 0; i < fs.length; i++) {
                     for (let j = i + 1; j < fs.length; j++) {
-                        const both = common(fs[i].set, fs[j].set);
+                        const both = common(fs[i].set, fs[j].set, reserved);
                         if (both.length) conflict(n, `${shownMatchers(both)} can start two alternatives`);
                     }
                 }
                 const empties = fs.filter(f => f.nullable).length;
                 if (empties > 1) conflict(n, `${empties} alternatives can be empty`);
                 if (empties) {
-                    const both = common(new Set(fs.flatMap(f => [...f.set])), after);
+                    const both = common(new Set(fs.flatMap(f => [...f.set])), after, reserved);
                     if (both.length) conflict(n, `${shownMatchers(both)} can both start an alternative and follow the empty one`);
                 }
                 for (const a of n.alts) walk(a, after);
@@ -271,6 +350,27 @@ function ll1Conflicts(g: ConcreteGrammar): { readonly where: string; readonly me
             case 'assign': walk(n.item, after); return;
             case 'list': walk(n.item, new Set([word(n.separator), word(n.close)])); return;
             case 'block': walkSeq(n.items, new Set(n.close.length ? [word(n.close[0])] : [])); return;
+            case 'expr': {
+                // C1a: no primary is empty, and the starts of an expression are pairwise disjoint.
+                const name = (p: GrammarNode): string => (p.t === 'rule' ? p.name : 'a primary');
+                const starts: [string, ReadonlySet<Matcher>][] = n.primaries.map(p => [name(p), first(p).set]);
+                for (const p of n.primaries) if (first(p).nullable) conflict(n, `the primary ${name(p)} can be empty`);
+                for (const o of n.operators) {
+                    if (o.fixity === 'prefix') starts.push([`the prefix operator ${o.cls}`, new Set([word(o.symbol)])]);
+                    if (o.call !== undefined) starts.push([`the call form of ${o.cls}`, new Set([word(o.call)])]);
+                }
+                starts.push(['the parentheses', new Set([word(n.open)])]);
+                for (let i = 0; i < starts.length; i++) {
+                    for (let j = i + 1; j < starts.length; j++) {
+                        const both = common(starts[i][1], starts[j][1], reserved);
+                        if (both.length) conflict(n, `${shownMatchers(both)} can start ${starts[i][0]} and ${starts[j][0]}`);
+                    }
+                }
+                const infix = n.operators.filter(o => o.fixity !== 'prefix').map(o => word(o.symbol));
+                const inner = new Set([...after, ...infix, word(n.close), word(n.separator)]);
+                for (const p of n.primaries) walk(p, inner);
+                return;
+            }
             default: return;
         }
     };
@@ -291,5 +391,5 @@ function ll1Conflicts(g: ConcreteGrammar): { readonly where: string; readonly me
     }
     report = true;
     for (const r of g.rules) { rule = r.name; walk(r.body, follow.get(r.name) ?? new Set()); }
-    return out;
+    return { conflicts: out, follow };
 }

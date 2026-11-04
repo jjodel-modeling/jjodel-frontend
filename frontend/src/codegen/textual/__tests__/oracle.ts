@@ -13,10 +13,19 @@ const isWord = (s: string): boolean => /^\w/.test(s);
 const WORD = /^[A-Za-z_][A-Za-z0-9_]*/;
 const NUMBER = /^-?\d+(\.\d+([eE][-+]?\d+)?)?/;
 
+type Expr = Extract<GrammarNode, { t: 'expr' }>;
+
+/** The expressions of a grammar (step C lane C1a): the bodies of its expression rules. */
+const exprsOf = (g: ConcreteGrammar): Expr[] => g.rules.flatMap(r => (r.body.t === 'expr' ? [r.body] : []));
+
+/** The words an expression reserves (decision 7 of P-2026-11-04-0732): its word symbols and its call words. */
+const exprWords = (g: ConcreteGrammar): string[] => exprsOf(g).flatMap(e => e.operators.flatMap(o => [o.symbol, ...(o.call !== undefined ? [o.call] : [])])).filter(isWord);
+
 /** The tokens of a text in the grammar's style: words, numbers, quoted strings, the style's punctuation; comments skipped. */
 export function tokenize(g: ConcreteGrammar, text: string): Tok[] {
     const s = g.style;
-    const puncts = [...new Set([...s.blockOpen, ...s.blockClose, ...s.emptyBlock, ...s.assign, ...s.terminator, s.list.open, s.list.separator, s.list.close, '.', '[', ']'])]
+    const puncts = [...new Set([...s.blockOpen, ...s.blockClose, ...s.emptyBlock, ...s.assign, ...s.terminator, s.list.open, s.list.separator, s.list.close, '.', '[', ']',
+        ...exprsOf(g).flatMap(e => [e.open, e.close, e.separator, ...e.operators.map(o => o.symbol)])])]
         .filter(p => p && !isWord(p)).sort((a, b) => b.length - a.length);
     const out: Tok[] = [];
     let i = 0;
@@ -85,7 +94,7 @@ export function nearleyGrammarOf(g: ConcreteGrammar): nearley.Grammar {
     const add = (name: string, symbols: readonly Sym[]): void => { rules.push({ name, symbols: [...symbols] }); };
     let fresh = 0;
     const helper = (): string => `$${fresh++}`;
-    const reserved = new Set(g.style.reservedNames);
+    const reserved = new Set([...g.style.reservedNames, ...exprWords(g)]);
 
     add('$NAME', [{ test: t => t.kind === 'word' && !reserved.has(t.value) }]);
     add('$NAME', [kind('string')]);
@@ -131,7 +140,36 @@ export function nearleyGrammarOf(g: ConcreteGrammar): nearley.Grammar {
                 return [h];
             }
             case 'nl': return [];
+            case 'expr': return exprSymbols(n);
         }
+    };
+    /** An expression stratified by its operators, one level each, loosest first; a primary, a call form or parentheses last. */
+    const exprSymbols = (n: Expr): Sym[] => {
+        const level = (i: number): string => `${n.rule}$${i}`;
+        n.operators.forEach((o, i) => {
+            const [L, next, sym] = [level(i), level(i + 1), styleToken(o.symbol)];
+            add(L, [next]);
+            if (o.fixity === 'prefix') add(L, [sym, L]);
+            else if (o.fixity === 'binary') add(L, o.assoc === 'right' ? [next, sym, L] : [L, sym, next]);
+            else {
+                const rest = helper();
+                add(rest, [sym, next]);
+                add(rest, [rest, sym, next]);
+                add(L, [next, rest]);
+            }
+        });
+        const P = level(n.operators.length);
+        for (const p of n.primaries) add(P, symbols(p));
+        add(P, [punct(n.open), n.rule, punct(n.close)]);
+        for (const o of n.operators) {
+            if (o.call === undefined) continue;
+            const items = helper();
+            add(items, [n.rule]);
+            add(items, [items, styleToken(n.separator), n.rule]);
+            add(P, [word(o.call), punct(n.open), punct(n.close)]);
+            add(P, [word(o.call), punct(n.open), items, punct(n.close)]);
+        }
+        return [level(0)];
     };
     for (const r of g.rules) add(r.name, symbols(r.body));
     return nearley.Grammar.fromCompiled({ ParserRules: rules, ParserStart: 'Model' });
@@ -206,15 +244,23 @@ export function generateSamples(g: ConcreteGrammar): Sample[] {
             case 'opt': case 'star': case 'assign': case 'list': return containsRule(n.item);
             case 'alt': return n.alts.some(containsRule);
             case 'block': return n.items.some(containsRule);
+            case 'expr': return true;
             default: return false;
         }
     };
+    /** The forms of an expression a sample cycles through: each operator, each call form, each primary, the parentheses. */
+    const exprForms = (n: Expr): number => n.operators.length * 2 + n.primaries.length + 1;
 
-    /** `only`: at the top object, the index of the one optional part present, the name first (`null`: none; `undefined`: all). */
-    const sample = (root: ConcreteRule, only?: number | null): Sample => {
+    /**
+     * `only`: at the top object, the index of the one optional part present, the name first (`null`: none; `undefined`: all).
+     * `round`: the form of the sample's first expression, so that the rounds go through every form; the counter shared by
+     * the other occurrences advances by a stride that can skip one (ARITH's Add, P-2026-11-04-1045).
+     */
+    const sample = (root: ConcreteRule, only?: number | null, round?: number): Sample => {
         const covered = new Set<string>(['Model']);
         const toks: string[] = [];
         let topOpt = 0;
+        let lead = round;
         const walk = (n: GrammarNode, depth: number, cls: string | undefined, top: boolean): void => {
             switch (n.t) {
                 case 'seq': for (const x of n.items) walk(x, depth, cls, top); return;
@@ -253,6 +299,36 @@ export function generateSamples(g: ConcreteGrammar): Sample[] {
                     return;
                 }
                 case 'nl': toks.push('\n'); return;
+                case 'expr': {
+                    // Operands one level deeper, in parentheses unless a primary; below MAX_DEPTH only primaries.
+                    const operand = (): void => {
+                        if (depth + 1 >= MAX_DEPTH) { walk(n.primaries[next(n.primaries, n.primaries.length)], depth + 1, cls, false); return; }
+                        toks.push(n.open);
+                        walk(n, depth + 1, cls, false);
+                        toks.push(n.close);
+                    };
+                    if (depth >= MAX_DEPTH) { walk(n.primaries[next(n.primaries, n.primaries.length)], depth, cls, false); return; }
+                    const forms = n.operators.flatMap(o => [o, ...(o.call !== undefined ? [{ ...o, fixity: 'call' as const }] : [])]);
+                    const k = lead !== undefined ? lead % exprForms(n) : next(n, exprForms(n));
+                    lead = undefined;
+                    const f = forms[k];
+                    if (!f) {
+                        const j = k - forms.length;
+                        if (j < n.primaries.length) { covered.add(`${n.rule}>${j}`); walk(n.primaries[j], depth, cls, false); return; }
+                        covered.add(`${n.rule}()`);
+                        toks.push(n.open); operand(); toks.push(n.close);
+                        return;
+                    }
+                    covered.add(`${n.rule}>${f.cls}${f.fixity === 'call' ? '()' : ''}`);
+                    if (f.fixity === 'prefix') { toks.push(f.symbol); operand(); return; }
+                    if (f.fixity === 'binary') { operand(); toks.push(f.symbol); operand(); return; }
+                    if (f.fixity === 'nary') { operand(); toks.push(f.symbol); operand(); toks.push(f.symbol); operand(); return; }
+                    const m = next(n.operators.find(o => o.cls === f.cls) ?? n, 3);
+                    toks.push(f.call ?? '', n.open);
+                    for (let i = 0; i < m; i++) { if (i) toks.push(n.separator); operand(); }
+                    toks.push(n.close);
+                    return;
+                }
             }
         };
         const rule = (r: ConcreteRule, depth: number): void => {
@@ -269,9 +345,9 @@ export function generateSamples(g: ConcreteGrammar): Sample[] {
     };
 
     const roots = g.rules.flatMap(r => (r.t === 'object' ? [r] : []));
-    const rounds = Math.max(1, ...g.rules.map(r => (r.body.t === 'alt' ? r.body.alts.length : 1)));
+    const rounds = Math.max(1, ...g.rules.map(r => (r.body.t === 'alt' ? r.body.alts.length : r.body.t === 'expr' ? exprForms(r.body) : 1)));
     const out: Sample[] = [];
-    for (let i = 0; i < rounds; i++) for (const r of roots) out.push(sample(r));
+    for (let i = 0; i < rounds; i++) for (const r of roots) out.push(sample(r, undefined, i));
     for (const r of roots) {
         out.push(sample(r, null));
         for (let i = 0; i < r.features.length + (r.named ? 1 : 0); i++) out.push(sample(r, i));
