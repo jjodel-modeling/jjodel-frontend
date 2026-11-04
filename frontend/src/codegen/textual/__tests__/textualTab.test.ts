@@ -13,7 +13,7 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { TEXT_EDITOR_OPTIONS, textInputOf, textualView } from '../ui/TextualTab';
+import { canSwitchStyle, styleSwitchRecord, TEXT_EDITOR_OPTIONS, textInputOf, textualView } from '../ui/TextualTab';
 import { deriveBaseGrammar } from '../baseGrammar';
 import { concreteGrammarEbnf, deriveConcreteGrammar } from '../concreteGrammar';
 import { printTextModel } from '../printer';
@@ -168,5 +168,22 @@ describe('TEXT_EDITOR_OPTIONS', () => {
         const o = TEXT_EDITOR_OPTIONS;
         expect(o.folding).toBe(true);
         expect((o.glyphMargin ? 20 : 0) + o.lineDecorationsWidth + (o.folding ? 16 : 0)).toBe(30);
+    });
+});
+
+describe('the style picker (step C3a, P-2026-11-04-0412)', () => {
+    it('is free only on the agreed text: synced or just applied, never stale (mutants: free while editing; free while stale)', () => {
+        expect(canSwitchStyle({ kind: 'synced' }, false)).toBe(true);
+        expect(canSwitchStyle({ kind: 'applied' }, false)).toBe(true);
+        for (const kind of ['editing', 'applying', 'errors', 'refused', 'confirm', 'unchanged', 'cut']) expect(canSwitchStyle({ kind }, false), kind).toBe(false);
+        expect(canSwitchStyle({ kind: 'synced' }, true)).toBe(false);
+    });
+
+    it('writes the record with the base chosen, nothing for the base it names (mutants: the current base rewritten; the record dropped)', () => {
+        const record = { v: 1 as const, language: 'Shelf' };
+        expect(styleSwitchRecord({ record, issues: [] }, 'pascal')).toEqual({ v: 1, language: 'Shelf', style: { base: 'pascal' } });
+        expect(styleSwitchRecord({ record, issues: [] }, 'clike')).toBeNull();
+        expect(styleSwitchRecord({ record: { ...record, style: { base: 'pascal' } }, issues: [] }, 'clike')).toEqual(record);
+        expect(styleSwitchRecord({ record: null, issues: [] }, 'pascal')).toEqual({ v: 1, style: { base: 'pascal' } });
     });
 });

@@ -12,8 +12,8 @@
  * model or the metamodel is gone. The label is the picker's (dataManagerOption.ts `textualOptionLabel`), read live
  * from the store, so the language's name a record sets after the tab opened shows in the app bar too.
  *
- * `writeTextualSyntax` stores a metamodel's syntax annotations (syntaxRecord.ts), the one write of the record until
- * its editing UI (step T4b).
+ * `writeTextualSyntax` stores a metamodel's syntax annotations (syntaxRecord.ts), the one write of the record: the Text
+ * tab's style picker calls it (step C3a, P-2026-11-04-0412), until the record's editing UI (step T4b).
  */
 
 import type { TabData } from 'rc-dock';
@@ -83,7 +83,7 @@ export function openTextualTab(modelId: string, label: string): boolean {
         group: 'models',
         closable: true,
         title: <div className="tab-title active-on-mouseenter" data-type="textual">{`${name} · ${label}`}</div>,
-        content: <TextualTab key={id} modelId={modelId} label={label} tabId={id} />,
+        content: <TextualTab key={id} modelId={modelId} label={label} tabId={id} writeSyntax={writeTextualSyntax} />,
     };
     void DockManager.open('models', tab);
     return true;
