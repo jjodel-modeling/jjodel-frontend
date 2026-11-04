@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0926
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane elk-open-cap · commits ca94f5a36, f33424346 · cap 500 nodes or edges, model objects counted · app probe on b10_8, no hand run
 Lane: full (recommendation of P-2026-11-04-0902, adopted on Alfonso's delegation, 2026-11-04 08:57)
 Depends: P-2026-11-04-0902
 Worktree: ~/jjodel-w-elkcap, branch elk-open-cap (includes the discovery report)
