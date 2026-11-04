@@ -114,14 +114,24 @@ export interface DecorationEntry { src: Node; key: string; handles: NodeHandle[]
  * `nodes` with every node that needs it decorated; the array itself when none does. `cache` (one per canvas) keeps a
  * decorated object while its node object and its own edges stay, so React Flow keeps its internal node; its handles
  * are recomputed on the node's own edges only, never on positions, as DynamicHandles recomputes them.
+ *
+ * `measuredOnce` holds the ids React Flow has measured at least once. Such a node is never decorated, even with no
+ * `measured`: the sync drops `measured` on a size change so that React Flow measures the node again
+ * (useJjomSync.ts), and an estimate there would stand in for that measurement.
  */
-export function decorateUnmeasured(nodes: Node[], edges: readonly Edge[], cache: Map<string, DecorationEntry>): Node[] {
-    if (!nodes.some(needsDecoration)) {
+export function decorateUnmeasured(
+    nodes: Node[],
+    edges: readonly Edge[],
+    cache: Map<string, DecorationEntry>,
+    measuredOnce?: { has(id: string): boolean },
+): Node[] {
+    const needs = (n: Node): boolean => needsDecoration(n) && !measuredOnce?.has(n.id);
+    if (!nodes.some(needs)) {
         cache.clear();
         return nodes;
     }
     const own = new Map<string, Edge[]>();
-    for (const n of nodes) if (needsDecoration(n)) own.set(n.id, []);
+    for (const n of nodes) if (needs(n)) own.set(n.id, []);
     for (const e of edges) {
         own.get(e.source)?.push(e);
         if (e.target !== e.source) own.get(e.target)?.push(e);

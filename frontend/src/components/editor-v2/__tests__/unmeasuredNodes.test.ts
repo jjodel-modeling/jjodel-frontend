@@ -99,6 +99,14 @@ describe('decorateUnmeasured', () => {
         out.slice(1).forEach((n, i) => expect(n).toBe(nodes[i + 1]));
     });
 
+    it('never decorates a node measured once, whose size the sync dropped to have it measured again', () => {
+        const nodes = [node('A', 0, 0), node('B', 300, 0)];
+        const out = decorateUnmeasured(nodes, [], new Map(), new Set(['A']));
+        expect(out[0]).toBe(nodes[0]);
+        expect(isDecorated(out[1])).toBe(true);
+        expect(decorateUnmeasured(nodes, [], new Map(), new Set(['A', 'B']))).toBe(nodes);
+    });
+
     it('hands back the array itself when nothing needs it', () => {
         const nodes = [measured('A', 0, 0), measured('B', 300, 0)];
         expect(decorateUnmeasured(nodes, [], new Map())).toBe(nodes);
