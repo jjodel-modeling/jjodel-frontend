@@ -1555,3 +1555,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: Docs only; probes ran on a vite server on 3470 (stopped). Group node = item holding a keyword token; label rule C4' gives `Transition coin`, 0 changes on reprint over the corpus. Monaco's own hover cannot stay open (`_sticky = false` is a constant); trusted command links plus a pinned content-widget card work. Shift+F12 with one use shows nothing. R-TXT-36..39 are on trunk only. Crops in `~/.jjodel-lanes/P-2026-11-04-0005/`.
 **Prompt document name**: 2026-11-04 00:05
+
+## 2026-11-04 — feat(codegen): Text tab outline, breadcrumb, hover links, hover box and folding margin, step B2 (P-2026-11-04-0125, P-2026-11-04-0146)
+**Prompt**: `claude_2026-11-04_0125_prompt_textual_b2_outline.md`, full lane: outline, breadcrumb, trusted hover links, hover box, folding margin; stopped at the context ceiling after item (4). `claude_2026-11-04_0146_prompt_textual_b2_closure.md`, full lane (RC-51): items (5) and (6), gates, in-app check by keystrokes, crops.
+**Files touched**: `frontend/src/codegen/textual/languageService.ts`, `__tests__/outline.test.ts` (`fc5e898b6`); `ui/TextualTab.tsx`, `ui/TextualTab.scss` (`f7b094494`); `ui/textualMonaco.ts` (`e482a33d7`); `ui/TextualTab.scss` (`8cfd25833`); `ui/TextualTab.tsx`, `__tests__/textualTab.test.ts` (`e64b95c02`); this entry and both Status lines (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: The hover clip came from skeleton.scss `.monaco-scrollable-element { left: 30px !important }`, undone inside the tab. The same rules paint text at 30 px, so the text never started later with folding; Monaco laid it at 46, chevrons hid under it and first-char clicks hit the gutter. Fix: no glyph margin, decorations 14, contentLeft 30. Gates green bar a timing test in tolerant.test.ts, red once under full-suite load, green alone. App: 24/25 PASS (the FAIL a wrong probe assertion). GO pending.
+**Prompt document name**: 2026-11-04 01:25
