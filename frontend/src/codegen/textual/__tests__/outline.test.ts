@@ -18,6 +18,7 @@ import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import { textualNotation } from '../syntaxRecord';
 import { OUTLINE_ROW_HEIGHT, outlineRows, outlineWindow } from '../ui/TextualTab';
+import { PORT_CLIKE, PORT_PASCAL, portGrammar, portObjects } from './portCorpus';
 import { LIBRARY_IDS, LIBRARY_MM, libraryObjects, tolerantCases } from './tolerantCorpus';
 import type { TolerantCase } from './tolerantCorpus';
 
@@ -86,6 +87,12 @@ describe('outline groups (R-TXT-39 (1))', () => {
         expect(subset.feature).toBe('books');
     });
 
+    it('library, annotated: the subsets of one grouped feature stay a group each (R-TXT-44 (3); mutant: merge by feature alone)', () => {
+        const subsets = outlineOf(LIB_ANNOTATED, printOf(LIB_ANNOTATED)).nodes[0].children[0].children;
+        expect(subsets.length).toBeGreaterThan(1);
+        expect(new Set(subsets.map(s => s.label)).size).toBe(subsets.length);
+    });
+
     it('library, plain: named objects take their name, the class as secondary text', () => {
         const text = printOf(LIB);
         const lib = outlineOf(LIB, text).nodes[0];
@@ -120,6 +127,20 @@ describe('outline groups (R-TXT-39 (1))', () => {
         const ts = initial.children[0].children;
         expect(initial).toMatchObject({ unclosed: true, recovered: true });
         expect(ts.map(s => [s.label, s.recovered, s.unclosed])).toEqual([['Transition coin', true, false], ['Transition push', true, false]]);
+    });
+
+    it.each([['C-like', PORT_CLIKE], ['Pascal/Ada', PORT_PASCAL]] as const)('%s ports: one group per per-item feature, its keyword and item count (R-TXT-44 (3); mutant: a group per item)', (_s, record) => {
+        const g = portGrammar(record);
+        const text = printTextModel(g, portObjects()).text;
+        const o = textOutline(text, parseText(text, g), g);
+        const groups = o.nodes[0].children;
+        expect(groups.map(s => [s.kind, s.label, s.detail, s.feature])).toEqual([['group', 'input', '2', 'inputs'], ['group', 'output', '1', 'outputs']]);
+        expect(groups[0].children.map(s => s.label)).toEqual(['instr', 'Port[1]']);
+        expect(groups[0].children.map(s => s.feature)).toEqual(['inputs', 'inputs']);
+        expect(new Set(flat(o.nodes).map(s => s.key)).size).toBe(flat(o.nodes).length);
+        // The breadcrumb reads the merged group: the second input sits under the same `input` node as the first.
+        expect(o.pathAt(text.indexOf('Bool')).map(s => s.label)).toEqual(['cpu', 'input', 'Port[1]', 'Bool[0]']);
+        expect(o.pathAt(text.indexOf('Bool'))[1]).toBe(o.pathAt(text.indexOf('32'))[1]);
     });
 });
 

@@ -581,8 +581,13 @@ export function textOutline(text: string, parsed: TextParseResult, grammar: Conc
             const rank = c.role === 'name' ? 0 : c.role === 'class' ? 1 : 2;
             if (rank < at.selectRank) { at.selectStart = c.start; at.selectEnd = c.end; at.selectRank = rank; }
         }
-        // A keyword item holding no object is a single value, not a group.
-        if (group && group.children.length) into.push(group);
+        // A keyword item holding no object is a single value, not a group. R-TXT-44 (3): the items of one per-item keyword
+        // feature, which the grammar reads one after the other, share the group of the first.
+        const last = into[into.length - 1];
+        if (group && group.children.length && last?.kind === 'group' && last.feature === group.feature && last.label === group.label) {
+            last.children.push(...group.children);
+            last.end = group.end;
+        } else if (group && group.children.length) into.push(group);
     };
     if (parsed.tree) walk(parsed.tree, null, null, top, null, false);
 
