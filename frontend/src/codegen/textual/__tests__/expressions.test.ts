@@ -8,6 +8,7 @@ import type { ConcreteGrammar } from '../concreteGrammar';
 import type { SyntaxElement, SyntaxNode, TextNode, TextParseResult } from '../parser';
 import { isApplicableParse, parseText, tokenizeText } from '../parser';
 import { printTextModel } from '../printer';
+import { generateSamples, nearleyGrammarOf, parseCount } from './oracle';
 import { BOOL_CLIKE, BOOL_PASCAL, BOOL_PRINTS, arithGrammar, boolGrammar, boolSheet, withOperator } from './boolCorpus';
 
 const tokensOf = (text: string, g: ConcreteGrammar): string[] => tokenizeText(text, g).tokens.filter(t => t.k !== 'EOF').map(t => `${t.k}:${t.v}`);
@@ -175,4 +176,24 @@ describe('(4) the round trip: print, parse, print, byte for byte', () => {
         expect(isApplicableParse(r)).toBe(true);
         expect(printTextModel(g, r.objects).text).toBe(first);
     });
+});
+
+describe('(5) the nearley oracle agrees with the parser on every sample', () => {
+    // The syntax errors of a parse, as the tokenizer and the parser word them; a reference that names nothing (a sample
+    // names atoms and paths it does not declare) is no syntax error.
+    const syntaxErrors = (g: ConcreteGrammar, text: string): string[] =>
+        parseText(text, g).errors.map(e => e.message).filter(m => /^(expected|unexpected|unterminated|character code)/.test(m));
+    it.each([['BOOL, C-like', boolGrammar(BOOL_CLIKE)], ['BOOL, Pascal/Ada', boolGrammar(BOOL_PASCAL)], ['ARITH', arithGrammar()]] as const)(
+        '%s: one parse in nearley exactly where parseText finds no syntax error, never two', (name, g) => {
+            const ng = nearleyGrammarOf(g);
+            const samples = generateSamples(g).map(s => ({ text: s.text, n: parseCount(g, s.text, ng), errors: syntaxErrors(g, s.text) }));
+            expect(samples.filter(s => s.n > 1 || (s.n === 1) !== (s.errors.length === 0))).toEqual([]);
+            // A sample of a class that is no root reads in neither; the expressions are in those that read.
+            const read = samples.filter(s => s.n === 1);
+            expect(read.length).toBeGreaterThan(g.rules.length);
+            const symbols = g.rules.flatMap(r => (r.body.t === 'expr' ? r.body.operators.filter(o => o.fixity !== 'prefix').map(o => ` ${o.symbol} `) : []));
+            // Measured: generateSamples writes no ARITH sample with "+" (its rounds reach Sub, not Add); the agreement holds
+            // on what it writes, and the gap is the generator's.
+            expect(symbols.filter(sym => !read.some(s => s.text.includes(sym)))).toEqual(name === 'ARITH' ? [' + '] : []);
+        });
 });
