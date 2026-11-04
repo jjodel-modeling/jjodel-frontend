@@ -1789,3 +1789,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — smoke run 2 (`.agent-logs/probe2g-20261104-230543.log`): two nameless siblings created from the text hold `[""]` and print as typed; name removal by keystroke, Undo, Redo; peer to a nameless port, 0 broken on v2-flow; JjEL `self.name == ''`; controls `[]` and D9. Crops in the 2255 lane folder.
 **Notes**: Report §5 holds the LIR, kept as the 2206 final message says. The create clears its handle name in the same lines; created objects leave `named`, measured: a layout-only difference reprinted with a false status. Open for Alfonso: a removal still lists `named`, same false status; a reference to a nameless object shows `—` on v2-flow. Classic canvas shut down in this build (`EditorSwitch.tsx:123-129`).
 **Prompt document name**: 2026-11-04 22:06
+
+## 2026-11-04 — merge: core-nameless-identity into alfonso-frontend-jjtl (P-2026-11-04-2321)
+
+**Prompt**: `claude_2026-11-04_2321_prompt_merge_core-nameless-identity.md`, a direct merge by `lane-run merge --direct`, no session: `core-nameless-identity` at `945c74aeb` into `alfonso-frontend-jjtl`, merge base `addb481f0`. R-TXT-45 and R-TXT-46: a written empty identity slot reads nameless (variant B), uniqueness and CHECK 12 accept it, v2-flow references to it resolve, the Text tab keeps objects created without a name nameless. Alfonso's «go» 23:06.
+**Files touched**: merge `c7cd7e479`, the branch side (`frontend/src/model/logicWrapper/LModelElement.tsx`, `nameUniqueness.ts`, `ConformanceValidator.ts`, `editor-v2` `jjomTransformers.ts` and `IRFormField.tsx`, `codegen/textual/ui/TextualTab.tsx`, `codegen/textual/textDiff.ts`, their tests, the discovery report, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c7cd7e479` in the worker: typecheck 0 errors; typecheck:scripts exit 0; vitest 14062 tests in 527 files, 3 red at import (baseline), hooks 967; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (discovery report §5), held: L-layer and JjOM reads, one write through the existing set_name path.
+**Smoke visivo**: passato — smoke run 2 of P-2026-11-04-2255, 8 checks pass; crops s8a, s8b, sD4 checked by the chat (RC-23). Classic canvas not smoked: shut down in this build.
+**Notes**: Rollback tag `pre-core-nameless-identity` on `f001f2fbd` (RC-31). Union: none. Open, cosmetic: a false «the app named» after removing a name when the text differs from the print only in layout; a v2-flow reference to a nameless target shows —. Worker: `~/.jjodel-lanes/P-2026-11-04-2321/result.json`.
+**Prompt document name**: 2026-11-04 23:21
