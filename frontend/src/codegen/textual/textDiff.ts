@@ -480,15 +480,58 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
         return f ? mm.enumerations.find(e => e.name === f.type)?.literals : undefined;
     };
 
+    // A create into a slot lands later than the lines after it (P-2026-11-04-1158). The executor counts a slot's
+    // committed values, so a deleted holder of a single-valued slot stays there until its deletion lands, and a `+=` or
+    // `-=` on the slot rewrites its committed values, dropping the pending child. So what leaves a slot a create fills
+    // leaves it before the create (a moved object) or before its `delete` (the holder of a single-valued slot), and any
+    // other update of that slot is refused until a line addresses the created object: the executor waits for it there,
+    // and its place in the model lands with it (instance.ts `hasReadyInstance`).
+    const slotKey = (owner: ObjectRef, feature: string): string => `${keyOf(owner)}.${feature}`;
+    const filledByCreate = new Set(diff.ops.flatMap(op => (op.op === 'create' && op.into ? [slotKey(op.into.owner, op.into.feature)] : [])));
+    const vacate = new Map<string, { readonly owner: ObjectRef; readonly feature: string; done: boolean }>();
     for (const op of diff.ops) {
+        if (op.op === 'move' && op.from && filledByCreate.has(slotKey({ model: op.from.owner }, op.from.feature))) {
+            vacate.set(op.model, { owner: { model: op.from.owner }, feature: op.from.feature, done: false });
+        }
+    }
+    const deleted = new Set(diff.ops.flatMap(op => (op.op === 'delete' ? [op.model] : [])));
+    for (const op of diff.ops) {
+        if (op.op !== 'create' || !op.into || !('model' in op.into.owner)) continue;
+        const owner = modelById.get(op.into.owner.model);
+        const f = owner && featuresOf(owner.cls).find(x => x.name === op.into!.feature);
+        const held = owner?.slots[op.into.feature];
+        if (f && !f.many && typeof held === 'string' && deleted.has(held)) vacate.set(held, { owner: op.into.owner, feature: op.into.feature, done: false });
+        // Measured in the app: a holder taken out by `-=` still fills the slot when the create counts it (a deleted
+        // one does not, once its `delete` ran). Wrapping a single-valued slot's value waits for the executor.
+        else if (f && !f.many && typeof held === 'string' && vacate.has(held)) {
+            problems.push({ id: op.text, feature: op.into.feature, message: `wrapping the value of ${handle(op.into.owner)}.${op.into.feature} in a new object is not applied yet` });
+        }
+    }
+    const letGo = (held: string): void => {
+        const v = vacate.get(held);
+        if (!v || v.done || !writable(held, v.feature)) return;
+        lines.push(`set ${handle(v.owner)}.${v.feature} -= ${handle({ model: held })}`);
+        v.done = true;
+    };
+    const filled = new Map<string, string>();
+    const update = (id: string, owner: ObjectRef, feature: string): boolean => {
+        if (!filled.has(slotKey(owner, feature))) return true;
+        problems.push({ id, feature, message: `an update of ${handle(owner)}.${feature} after an object is created in it is not applied yet` });
+        return false;
+    };
+
+    for (const op of diff.ops) {
+        const from = lines.length;
         switch (op.op) {
-            case 'delete': lines.push(`delete ${handle({ model: op.model })}`); break;
+            case 'delete': letGo(op.model); lines.push(`delete ${handle({ model: op.model })}`); break;
             case 'create': {
                 const o = textById.get(op.text)!;
                 if (!isWord(o.cls)) problems.push({ id: op.text, feature: '', message: `the class name ${o.cls} is not writable by JjScript yet` });
+                for (const [held, v] of vacate) if (op.into && slotKey(v.owner, v.feature) === slotKey(op.into.owner, op.into.feature)) letGo(held);
                 const h = handle({ text: op.text });
                 const into = op.into && writable(op.text, op.into.feature) ? ` in ${handle(op.into.owner)}.${op.into.feature}` : '';
                 lines.push(`create instance of ${o.cls} ${jjscriptString(h)}${into}`);
+                if (into) filled.set(slotKey(op.into!.owner, op.into!.feature), h);
                 // A nameless object of a class with a name takes its handle as name, as any instance created without one.
                 const name = identityOf(g, o);
                 if (name !== null && name !== h) lines.push(`set ${h}.name = ${jjscriptString(name)}`);
@@ -509,14 +552,16 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
                 if (writable(idOf(op.target), op.feature)) lines.push(`set ${handle(op.target)}.${op.feature} = ${op.to ? handle(op.to) : 'null'}`);
                 break;
             case 'link': case 'unlink':
-                if (writable(idOf(op.target), op.feature)) lines.push(`set ${handle(op.target)}.${op.feature} ${op.op === 'link' ? '+=' : '-='} ${handle(op.to)}`);
+                if (writable(idOf(op.target), op.feature) && update(idOf(op.target), op.target, op.feature)) lines.push(`set ${handle(op.target)}.${op.feature} ${op.op === 'link' ? '+=' : '-='} ${handle(op.to)}`);
                 break;
             case 'move': {
                 const h = handle({ model: op.model });
                 if (op.into && !writable(op.model, op.into.feature)) break;
                 // Out of the old slot first: put in alone, the object leaves a hole there that the core does not close (R1).
-                if (op.from && writable(op.model, op.from.feature)) lines.push(`set ${handle({ model: op.from.owner })}.${op.from.feature} -= ${h}`);
-                if (op.into) {
+                const gone = vacate.get(op.model);
+                const left = !!gone?.done && !!op.from && slotKey(gone.owner, gone.feature) === slotKey({ model: op.from.owner }, op.from.feature);
+                if (op.from && !left && writable(op.model, op.from.feature) && update(op.model, { model: op.from.owner }, op.from.feature)) lines.push(`set ${handle({ model: op.from.owner })}.${op.from.feature} -= ${h}`);
+                if (op.into && update(op.model, op.into.owner, op.into.feature)) {
                     const owner = objectOf(op.into.owner);
                     const many = !!owner && featuresOf(owner.cls).some(f => f.name === op.into!.feature && f.many);
                     lines.push(`set ${handle(op.into.owner)}.${op.into.feature} ${many ? '+=' : '='} ${h}`);
@@ -524,9 +569,13 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
                 break;
             }
             case 'reorder':
-                if (!writable(idOf(op.target), op.feature)) break;
+                if (!writable(idOf(op.target), op.feature) || !update(idOf(op.target), op.target, op.feature)) break;
                 lines.push(`set ${handle(op.target)}.${op.feature} -= ${handle(op.to)}`, `set ${handle(op.target)}.${op.feature} += ${handle(op.to)}`);
                 break;
+        }
+        for (const l of lines.slice(from)) {
+            const addressed = /^set ([A-Za-z_][A-Za-z0-9_]*)\./.exec(l)?.[1];
+            if (addressed) for (const [k, h] of filled) if (h === addressed) filled.delete(k);
         }
     }
     const handles = new Map<string, string>();

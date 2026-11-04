@@ -128,7 +128,7 @@ describe('(1) measurement: nested expression edits on BOOL, today', () => {
         it.each(EDITS)(`%s (${mode})`, (label, rule, whens) => {
             const states = mode === 'typed' ? whens : [whens[0], whens[whens.length - 1]];
             const r = edit(rule, states, { spans: mode !== 'nospan' });
-            if (process.env.C1C_MEAS) appendFileSync(process.env.C1C_MEAS, `MEAS ${mode} | ${label} | ${states.join(' => ')} | refusals ${JSON.stringify(r.refusals)} | by ${r.by.join('; ')} | ops ${r.ops.join('; ')}\n`);
+            if (process.env.C1C_MEAS) appendFileSync(process.env.C1C_MEAS, `MEAS ${mode} | ${label} | ${states.join(' => ')} | refusals ${JSON.stringify(r.refusals)} | by ${r.by.join('; ')} | ops ${r.ops.join('; ')}${process.env.C1C_LINES ? ` | lines ${(r.plan.lines ?? []).join('; ')}` : ''}\n`);
         });
     }
 });
@@ -182,5 +182,56 @@ describe('(3) the handle of a created object avoids every instance name of the m
         const h = createdHandle(plan.lines);
         expect(h).toBeDefined();
         expect(names.has(h!)).toBe(false);
+    });
+});
+
+describe('(3b) a single-valued slot is emptied before a create fills it (the executor counts a deleted holder until it lands)', () => {
+    it('operator changed: the slot lets the old And go before its delete, and the Or is created after', () => {
+        const lines = edit('chain', ['st & ld & rdy', 'st | ld & rdy', 'st | ld | rdy']).plan.lines ?? [];
+        const out = lines.indexOf('set chain.when -= And_1');
+        expect(out).toBeGreaterThanOrEqual(0);
+        expect(out).toBeLessThan(lines.indexOf('delete And_1'));
+        expect(lines.indexOf('delete And_1')).toBeLessThan(lines.indexOf('create instance of Or "Or_1" in chain.when'));
+    });
+
+    it('wrap whole: refused with a reason, the moved holder still fills the single-valued slot when the create counts it (in the app, P-2026-11-04-1158)', () => {
+        const r = edit('guard', ['st & ld | !rdy', '!(st & ld | !rdy', '!(st & ld | !rdy)']);
+        expect(r.plan.lines).toBeNull();
+        expect(r.plan.refusals.map(x => x.message)).toEqual(['wrapping the value of guard.when in a new object is not applied yet']);
+    });
+
+    it('a create into a many-valued slot, or into a slot nobody leaves, adds no line', () => {
+        expect(edit('chain', ['st & ld & rdy', 'st & ld & rdy & is_sw']).plan.lines?.some(l => l.includes('-='))).toBe(false);
+        expect(edit('chain', ['st & ld & rdy', 'st & (ld & rdy', 'st & (ld & rdy)', 'st & (ld | rdy)']).plan.lines?.filter(l => l.includes('-=')).length).toBe(2);
+    });
+});
+
+describe('(3c) no collection update on a slot after a create into it (the update reads committed values only and drops the pending child)', () => {
+    it('wrap two operands: both operands leave And.ops before the Or is created there', () => {
+        const lines = edit('chain', ['st & ld & rdy', 'st & (ld & rdy', 'st & (ld & rdy)', 'st & (ld | rdy)']).plan.lines ?? [];
+        const create = lines.findIndex(l => l.startsWith('create instance of Or '));
+        expect(create).toBeGreaterThan(0);
+        expect(lines.slice(create + 1).some(l => l.startsWith('set And_1.ops'))).toBe(false);
+        expect(lines.filter(l => l.startsWith('set And_1.ops -= ')).length).toBe(2);
+    });
+
+    it('add first and wrap operand: the reorders of And.ops come after a line addressing the created object, which the executor waits on', () => {
+        for (const whens of [['st & ld & rdy', 'is_sw & st & ld & rdy'], ['st & ld & rdy', 'st & !ld & rdy']]) {
+            const r = edit('chain', whens);
+            expect(r.refusals).toEqual([]);
+            const lines = r.plan.lines ?? [];
+            const h = /^create instance of \w+ "(\w+)" in And_1\.ops$/.exec(lines.find(l => l.startsWith('create')) ?? '')?.[1];
+            expect(h).toBeDefined();
+            const create = lines.findIndex(l => l.startsWith('create'));
+            const addressed = lines.findIndex(l => l.startsWith(`set ${h!}.`));
+            expect(addressed).toBeGreaterThan(create);
+            expect(lines.slice(create + 1, addressed).some(l => l.startsWith('set And_1.ops'))).toBe(false);
+        }
+    });
+
+    it('a created object no line addresses: a later update of its slot is refused with a reason', () => {
+        const r = edit('chain', ['st & ld & rdy', 'and() & st & ld & rdy']);
+        expect(r.plan.lines).toBeNull();
+        expect(r.plan.refusals.map(x => x.message).join(' | ')).toMatch(/^an update of And_\d\.ops after an object is created in it is not applied yet/);
     });
 });
