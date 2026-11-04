@@ -1104,3 +1104,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: docs only, gates green, no hand run
 **Notes**: Rollback tag `pre-canvas-prod-figure` on `5d06b16f0` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1218/result.json`.
 **Prompt document name**: 2026-11-04 12:18
+
+## 2026-11-04 — fix(editor-v2): open-time ELK layout waits for the open to settle (P-2026-11-04-1444, P-2026-11-04-1500, P-2026-11-04-1616)
+**Prompt**: `claude_2026-11-04_1616_prompt_elk_open_race_close.md`, closing `claude_2026-11-04_1444_prompt_elk_open_race.md` and `claude_2026-11-04_1500_prompt_elk_open_race_cont.md` (context ceiling): remove the open-time ELK race in `useJjomSync.ts`; LIR, tests, b6_5 and b10_8 probes with ELK calls and undo count, gallery demos before and after, crops read, entry, Status.
+**Files touched**: `e78ebdffd` LIR `docs/discovery/lir_2026-11-04_elk_open_race.md`; `470719b0d`, `2b3ca5dc0` `editor-v2/hooks/useJjomSync.ts` + `hooks/__tests__/useJjomSyncOpenSettle.test.ts`; docs commit: the three Status lines, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — no hand run and no production run; on dev the probes and gates show none (undo 0->1 in every run, 17 gallery diagrams unchanged)
+**Out-of-scope changes**: no; 7 files over the lane, above five (RC-11), all declared: the LIR, `useJjomSync.ts`, its test, this inbox, the Status lines of 1444, 1500, 1616
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — lane, unattended: crops read with the Read tool (b6_5 a laid-out tree, b10_8, gallery Families M2/M1 base vs branch); no hand run and no visual check
+**Notes**: b6_5: ELK 1 call on 191 nodes 5/5 (base 1 node 4/5). b10_8 x7: 0 ELK, skip at 2,559/2,558, fit with RF holding 2,559 of 2,559 measured, view translate(414,-63515) z 0.5 and 21 on screen 7/7, as base 5/5; tab->decision 4.7/5.1/6.7 s at load under 15 (base 3.5-4.1), all 7 under the 10 s deadline. Gallery, 17 diagrams: ELK calls, positions, view equal base vs branch. Gates on 2b3ca5dc0: tsc 0, vitest 13,768 green + 3 red at import, build 0. Figures: ~/.jjodel-lanes/P-2026-11-04-1500 and -1616.
+**Prompt document name**: 2026-11-04 16:16

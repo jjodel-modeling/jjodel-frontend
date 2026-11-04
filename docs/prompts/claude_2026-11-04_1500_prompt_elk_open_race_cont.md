@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1500
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane elk-open-race · commits 470719b0d, 2b3ca5dc0 · open-time layout once the open settles, 10 s deadline · closed by P-2026-11-04-1616 · app probes, no hand run
 Lane: full (critical zone, go-ahead by Alfonso of 2026-11-04 14:41, continues P-2026-11-04-1444)
 Depends: P-2026-11-04-1444
 Worktree: ~/jjodel-w-elkrace, branch elk-open-race
