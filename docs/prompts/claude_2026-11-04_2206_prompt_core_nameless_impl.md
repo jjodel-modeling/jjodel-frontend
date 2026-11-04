@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-2206
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · 8bd59bf94 · items 1-8; smoke run 2, gates and docs completed by P-2026-11-04-2255 after the context ceiling (unattended)
 Lane: full (core read path, L-layer; Layer Impact Report in the discovery report §5)
 Depends: P-2026-11-04-1632 (discovery and LIR, 6cd4a8b27), the merge of textual-c1e-names (P-2026-11-04-2113), R-TXT-46
 Worktree: ~/jjodel-w-nameless, branch core-nameless-identity (it took the trunk after the C1e merge)

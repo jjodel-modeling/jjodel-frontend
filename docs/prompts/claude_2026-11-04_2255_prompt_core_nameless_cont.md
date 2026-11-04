@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-2255
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · b091ed0fa · create path clears the handle name (c317c90ef, b091ed0fa), smoke run 2 ALL PASS, awaiting Alfonso on the removal status line and the nameless reference chip
 Lane: full (continuation; code at 8bd59bf94)
 Depends: P-2026-11-04-2206 (hard-stop at the ceiling after items 1-8; handoff in its lane folder)
 Worktree: ~/jjodel-w-nameless, branch core-nameless-identity (the same tree)
