@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1526
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane fast · no code change · 68b146c32 discovery · 35 canvases below the budget equal before/after, no demo above · verifica visiva non applicabile (unattended: probe crops, no hand run)
 Lane: fast (closes P-2026-11-04-1443, code c4dfabf3b)
 Depends: P-2026-11-04-1443
 Worktree: ~/jjodel-w-elkrange, branch elk-rangeerror

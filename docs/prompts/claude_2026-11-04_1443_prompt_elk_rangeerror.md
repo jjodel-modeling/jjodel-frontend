@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1443
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · c4dfabf3b · closed by P-2026-11-04-1526 · b10_8 settled view not fixed (useJjomSync, lane P-2026-11-04-1500) · verifica visiva non applicabile (unattended: probe crops, no hand run)
 Lane: full (root cause first; Alfonso's ok of 2026-11-04 14:41, high priority)
 Depends: none
 Worktree: ~/jjodel-w-elkrange, branch elk-rangeerror
