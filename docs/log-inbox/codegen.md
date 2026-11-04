@@ -1749,3 +1749,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — app check of P-2026-11-04-1605, 13 checks ALL PASS, crops c1e-* checked by the chat (RC-23).
 **Notes**: Rollback tag `pre-textual-c1e-names` on `d6fc11ebf` (RC-31). Union: none. The removed-name reprint is closed by the core lane of R-TXT-45 and R-TXT-46. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-2113/result.json`.
 **Prompt document name**: 2026-11-04 21:13
+
+## 2026-11-04 — merge: core-nameless-identity takes alfonso-frontend-jjtl (P-2026-11-04-2128)
+
+**Prompt**: `claude_2026-11-04_2128_prompt_core-nameless-identity_take_trunk.md`, a direct merge by `lane-run merge --trunk-into`, no session: `alfonso-frontend-jjtl` at `addb481f0` (the C1e merge and R-TXT-46) into `core-nameless-identity`, merge base `604273359`, so the core lane of R-TXT-45 runs on C1e (R-TXT-46 D7).
+**Files touched**: merge `fa8f17a5a`, the trunk side (`frontend/src/codegen/textual/`, `docs/decisions.md`, `docs/log-inbox/codegen.md`, prompts); the branch side is docs only.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fa8f17a5a`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 48 failures in 16 files under load average 200, all timeouts or timing bounds; the 16 files rerun alone: 704/704.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no code on the branch side.
+**Notes**: Resolved with the rerun evidence above. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-2128/result.json`.
+**Prompt document name**: 2026-11-04 21:28
