@@ -250,6 +250,9 @@ export interface OpenSettleInput {
     processed: readonly string[];
     /** A React Flow patch is queued or its flush is scheduled. */
     patchQueued: boolean;
+    /** Objects of the model Step 2bis has still to give a vertex (collectPendingVertexObjects):
+     *  the creating populate run can come in a later commit than the init push. */
+    unplacedObjects: number;
     /** A canvas write-back marked an element of the graph: the user has started working. */
     touched: boolean;
     elapsedMs: number;
@@ -257,15 +260,16 @@ export interface OpenSettleInput {
 }
 
 /**
- * Settled: every created element is in the store, every one the graph lists has been
- * pushed to the canvas, no patch is queued. `pending` is the created ids still awaited.
+ * Settled: every object of the model has a vertex, every created element is in the store,
+ * every one the graph lists has been pushed to the canvas, no patch is queued. `pending` is
+ * the created ids still awaited.
  */
 export function openSettleVerdict(i: OpenSettleInput): { verdict: OpenSettleVerdict; pending: string[] } {
     const listed = new Set(i.listed);
     const processed = new Set(i.processed);
     const pending = i.created.filter(id => !(id in i.idlookup) || (listed.has(id) && !processed.has(id)));
     if (i.touched) return { verdict: 'touched', pending };
-    if (pending.length === 0 && !i.patchQueued) return { verdict: 'settled', pending };
+    if (i.unplacedObjects === 0 && pending.length === 0 && !i.patchQueued) return { verdict: 'settled', pending };
     return { verdict: i.elapsedMs >= i.deadlineMs ? 'deadline' : 'wait', pending };
 }
 
@@ -1172,12 +1176,24 @@ export function useJjomSync(
         if (!gate.active || !gate.graphId) return;
         const idlookup = (store.getState()?.idlookup ?? {}) as Record<string, any>;
         const listed: string[] = idlookup[gate.graphId]?.subElements ?? EMPTY_ARRAY;
+        const vertexByObject = new Map<string, string>();
+        for (const id of listed) {
+            const se = idlookup[id];
+            if (se?.className?.includes('Vertex') && se.model) vertexByObject.set(se.model, id);
+        }
+        const unplacedObjects = collectPendingVertexObjects({
+            objects: idlookup[gate.modelid ?? '']?.objects ?? [],
+            idlookup,
+            vertexByObject,
+            isSuppressed: isSingletonSuppressed,
+        }).size;
         const { verdict, pending } = openSettleVerdict({
             created: gate.created,
             idlookup,
             listed,
             processed: prevSubElementsRef.current,
             patchQueued: rafIdRef.current !== 0 || pendingNodePatchRef.current.length > 0 || pendingEdgePatchRef.current.length > 0,
+            unplacedObjects,
             touched: listed.some(id => isCanvasUpdated(id)),
             elapsedMs: Date.now() - gate.startedAt,
             deadlineMs: OPEN_SETTLE_DEADLINE_MS,

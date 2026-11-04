@@ -5,8 +5,10 @@
  * The creators of the populate run of the same commit (`DVertex.new`, `DVoidEdge.new2`) reach the
  * store later, through the async `TRANSACTION` and the `setTimeout(0)` dispatch, so EditorV2's
  * auto-layout decision read a prefix of the graph: measured on b6_5 (191 objects), ELK on 1 node and
- * 0 edges in three of five runs, on 191 and 190 in one, on both in one. Now `onInitialized` fires
- * once, when every created element has landed and the canvas push has processed it, or earlier
+ * 0 edges in three of five runs, on 191 and 190 in one, on both in one. The creating populate run
+ * can also come in a later commit than the init push (measured on the first version of this gate,
+ * run r3). Now `onInitialized` fires once, when every object of the model has a vertex, every
+ * created element has landed and the canvas push has processed it, or earlier
  * through two exits that lower `justCreatedGraphRef`: the user has started working (a canvas
  * write-back marked an element of the graph), or the deadline.
  *
@@ -68,6 +70,7 @@ vi.mock('react-redux', () => ({
 
 const lookup = () => redux.state.idlookup as Record<string, any>;
 const created: string[] = [];
+const creators = { on: true };
 vi.mock('../../../../joiner', () => {
     const fromId = (id: string) => (lookup()[id] ? { ...lookup()[id] } : undefined);
     const action = { new: () => undefined };
@@ -83,7 +86,7 @@ vi.mock('../../../../joiner', () => {
             },
         },
         LPointerTargetable: { fromPointer: fromId },
-        DVertex: { new: (_a: unknown, modelId: string) => { const id = `v-${modelId}`; created.push(id); return { id }; } },
+        DVertex: { new: (_a: unknown, modelId: string) => { if (!creators.on) return undefined; const id = `v-${modelId}`; created.push(id); return { id }; } },
         DVoidEdge: { new2: (_m: unknown, _p: unknown, _g: unknown, _n: unknown, s: string, t: string) => { const id = `e-${s}-${t}`; created.push(id); return { id }; } },
         DEdge: {}, DState: {},
         GraphSize: class { constructor(public x: number, public y: number, public w: number, public h: number) {} },
@@ -153,7 +156,7 @@ function land(ids = created.splice(0)) {
 beforeEach(() => {
     vi.useFakeTimers();
     runtime.slots = []; runtime.effects = [];
-    rf.nodes = []; rf.edges = []; frames = []; calls.length = 0; created.length = 0;
+    rf.nodes = []; rf.edges = []; frames = []; calls.length = 0; created.length = 0; creators.on = true;
     clearAllCanvasUpdated();
     vi.stubGlobal('requestAnimationFrame', (f: () => void) => { frames.push(f); return frames.length; });
     vi.stubGlobal('cancelAnimationFrame', () => {});
@@ -161,7 +164,7 @@ beforeEach(() => {
 afterEach(() => { unmount(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('openSettleVerdict', () => {
-    const base = { created: ['v1', 'e1'], idlookup: { v1: {}, e1: {} } as Record<string, unknown>, listed: ['v1', 'e1'], processed: ['v1', 'e1'], patchQueued: false, touched: false, elapsedMs: 0, deadlineMs: 1000 };
+    const base = { created: ['v1', 'e1'], idlookup: { v1: {}, e1: {} } as Record<string, unknown>, listed: ['v1', 'e1'], processed: ['v1', 'e1'], patchQueued: false, unplacedObjects: 0, touched: false, elapsedMs: 0, deadlineMs: 1000 };
     it('settled when every created element has landed and been pushed, no patch queued', () => {
         expect(openSettleVerdict(base)).toEqual({ verdict: 'settled', pending: [] });
     });
@@ -173,6 +176,9 @@ describe('openSettleVerdict', () => {
     });
     it('does not wait for a landed element the graph does not list', () => {
         expect(openSettleVerdict({ ...base, listed: ['v1'], processed: ['v1'] }).verdict).toBe('settled');
+    });
+    it('waits while an object of the model has no vertex yet', () => {
+        expect(openSettleVerdict({ ...base, unplacedObjects: 1 }).verdict).toBe('wait');
     });
     it('waits for a queued patch', () => {
         expect(openSettleVerdict({ ...base, patchQueued: true }).verdict).toBe('wait');
@@ -216,6 +222,24 @@ describe('useJjomSync open-time callback', () => {
         };
         expect(run(false)).toEqual(run(true));
         expect(run(false)).toEqual([{ nodes: 3, edges: 2, justCreated: true }]);
+    });
+
+    it('the creating populate run comes after the init push: the callback waits for it', () => {
+        openModel(3, true);
+        creators.on = false;
+        render();
+        expect(created).toEqual([]);
+        frame(); vi.advanceTimersByTime(60); frame();
+        expect(calls).toEqual([]);
+        creators.on = true;
+        vi.advanceTimersByTime(200);
+        const idl = lookup();
+        redux.state = { ...redux.state, idlookup: { ...idl, m: { ...idl.m, objects: [...idl.m.objects, 'o3'] }, o3: { id: 'o3', className: 'DObject', name: 'o3', father: 'm', model: 'm', features: [] } } };
+        render();
+        expect(created).toEqual(['v-o0', 'v-o1', 'v-o2', 'v-o3', 'e-v-o0-v-o1', 'e-v-o1-v-o2']);
+        land(); render();
+        frame(); vi.advanceTimersByTime(60); frame(); frame();
+        expect(calls).toEqual([{ nodes: 4, edges: 2, justCreated: true }]);
     });
 
     it('the user starts working during the wait: callback with the flag down', () => {
