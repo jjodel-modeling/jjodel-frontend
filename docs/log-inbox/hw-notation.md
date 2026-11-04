@@ -1039,3 +1039,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: gates green on 80f03e1b6; the cap probe ran on the branch before this merge and was not rerun; no hand run
 **Notes**: Conflict only in this inbox, union: trunk's 7 entries, then the branch's 2, verbatim, 93 headings, none twice. EditorV2.tsx auto-merged on disjoint regions; changed regions read, not the whole file. check:docs has 5 checks now, the prompt said 4/4.
 **Prompt document name**: 2026-11-04 10:53
+
+## 2026-11-04 — merge: elk-open-cap into alfonso-frontend-jjtl (P-2026-11-04-1127)
+**Prompt**: `claude_2026-11-04_1127_prompt_merge_elk-open-cap.md`, a direct merge by `lane-run merge --direct`, no session: `elk-open-cap` at `4dc49956e` into `alfonso-frontend-jjtl`, merge base `32ca59c2d`, 12 commits on the branch side.
+**Files touched**: merge `b35f43b84`: 9 files from the branch side (`docs/discovery/discovery_2026-11-04_elk_open_freeze.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_0902_prompt_elk_open_trace.md`, `docs/prompts/claude_2026-11-04_0926_prompt_elk_open_cap.md`, `docs/prompts/claude_2026-11-04_1042_prompt_canvas_crop_read.md`, `docs/prompts/claude_2026-11-04_1053_prompt_elk-open-cap_take_trunk.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/utils/__tests__/autoLayoutOnOpen.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `b35f43b84` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13750 tests in 514 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on b35f43b84; the cap probe ran on the branch before the trunk merge and was not rerun; no hand run
+**Notes**: Rollback tag `pre-elk-open-cap` on `32ca59c2d` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1127/result.json`.
+**Prompt document name**: 2026-11-04 11:27
