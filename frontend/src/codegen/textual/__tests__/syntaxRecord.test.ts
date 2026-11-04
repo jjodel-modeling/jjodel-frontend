@@ -209,6 +209,19 @@ describe('encodeSyntax, decodeSyntax and syntaxPatch', () => {
         expect(syntaxPatch(raw, { v: 1 })).toEqual({ [TEXTUAL_SYNTAX_KEY]: '{"v":1}' });
     });
 
+    it('C2a, D3: the empty record is no record, so C-like over no key writes nothing; a stored {"v":1} stays what it is (mutants: the empty record written over no key; any write over a stored {"v":1} dropped)', () => {
+        for (const none of [undefined, null]) {
+            expect(syntaxPatch(none, { v: 1 })).toBeNull();
+            expect(syntaxPatch(none, withStyleBase(null, 'clike'))).toBeNull();
+            expect(syntaxPatch(none, LIBRARY_RECORD)).toEqual({ [TEXTUAL_SYNTAX_KEY]: encodeSyntax(LIBRARY_RECORD) });
+        }
+        // The switch back from Pascal still writes the empty form, and C-like over it writes nothing more.
+        const pascal = encodeSyntax(withStyleBase(null, 'pascal'));
+        expect(syntaxPatch(pascal, withStyleBase(decodeSyntax(pascal).record, 'clike'))).toEqual({ [TEXTUAL_SYNTAX_KEY]: '{"v":1}' });
+        expect(syntaxPatch('{"v":1}', withStyleBase(decodeSyntax('{"v":1}').record, 'clike'))).toBeNull();
+        expect(syntaxPatch('{"v":1}', withStyleBase(null, 'pascal'))).toEqual({ [TEXTUAL_SYNTAX_KEY]: pascal });
+    });
+
     it('reads no key as no record and no issue', () => {
         expect(decodeSyntax(undefined)).toEqual({ record: null, issues: [] });
         expect(decodeSyntax(null)).toEqual({ record: null, issues: [] });
