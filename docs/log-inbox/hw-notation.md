@@ -1078,3 +1078,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: gates green on fa9d8611c; crops read by the lane on the branch, pixel difference from trunk behaviour 47,165 to 3,072 at open; no hand run
 **Notes**: Rollback tag `pre-canvas-mount-band` on `6cdc9d933` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1153/result.json`.
 **Prompt document name**: 2026-11-04 11:53
+
+## 2026-11-04 — measure: production b10_8 figure of route A with the band fix (P-2026-11-04-1204)
+**Prompt**: `claude_2026-11-04_1204_prompt_canvas_prod_figure.md`: build production on canvas-prod-figure, probe copied and retargeted to this worktree, b10_8 three times (longest task, long-task total, nodes mounted), uptime before and after, compare with route A alone and with before route A.
+**Files touched**: no code. Docs commit: the Status line of the 1204 prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Three valid runs (load1 at start 7.86, 8.75, 6.73): longest 1,385 / 1,451 / 1,431 ms, total 7,828 / 8,279 / 8,451 ms. Nodes mounted at settle 4 (10 edges) / 21 / 21 (800 edges, z 0.5). A run at load 14.16 set aside: 1,373 / 7,682.
+**Prompt document name**: 2026-11-04 12:04
