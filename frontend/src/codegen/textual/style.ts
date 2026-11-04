@@ -3,6 +3,10 @@
  * (docs/discovery/discovery_2026-11-01_textual_viewpoint.md §A.2). The record already holds the Pascal/Ada and the
  * indentation styles of step T5 (`begin`/`end ;`, `:=`, `;`, quote doubling, reserved names; `layout: 'indent'` with
  * no delimiters); only C-like is defined and tested in T1.
+ *
+ * The catalog (step C3a, P-2026-11-04-0345; R-TXT-16 (2)): the styles a syntax record can name by `style.base`, C-like
+ * when it names none. Pascal/Ada is the probe's record of P-2026-11-04-0303 (report §4, F16), whose check passes on every
+ * corpus case.
  */
 
 export type LetterCase = 'declared' | 'lower';
@@ -53,3 +57,33 @@ export const CLIKE_STYLE: NotationStyle = {
     literalCase: 'declared',
     indent: 2,
 };
+
+/** Pascal/Ada: `begin ... end ;`, `f := v ;`, `( a, b )`, `'it''s'`, `--` and `(* *)`; `begin` and `end` are reserved. */
+export const PASCAL_STYLE: NotationStyle = {
+    id: 'pascal',
+    name: 'Pascal/Ada',
+    layout: 'free',
+    blockOpen: ['begin'],
+    blockClose: ['end', ';'],
+    emptyBlock: ['begin', 'end', ';'],
+    assign: [':='],
+    terminator: [';'],
+    list: { open: '(', separator: ',', close: ')' },
+    string: { quote: "'", escape: 'double' },
+    comments: { line: '--', block: ['(*', '*)'] },
+    reservedNames: ['begin', 'end'],
+    classCase: 'declared',
+    literalCase: 'declared',
+    indent: 2,
+};
+
+/** The id a syntax record names a style by (annotations.ts `SyntaxAnnotations.style.base`). */
+export type StyleBase = 'clike' | 'pascal';
+
+/** The styles of the catalog, by their record id, in the order a picker lists them. */
+export const STYLE_CATALOG: Readonly<Record<StyleBase, NotationStyle>> = { clike: CLIKE_STYLE, pascal: PASCAL_STYLE };
+
+export const isStyleBase = (v: unknown): v is StyleBase => typeof v === 'string' && Object.prototype.hasOwnProperty.call(STYLE_CATALOG, v);
+
+/** The style a record names; C-like when it names none. */
+export const styleOf = (base: StyleBase | undefined): NotationStyle => STYLE_CATALOG[base ?? 'clike'];
