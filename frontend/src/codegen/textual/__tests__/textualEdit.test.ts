@@ -25,7 +25,7 @@ import { textualNotation } from '../syntaxRecord';
 import { planTextEdit } from '../textDiff';
 import { matchObjects } from '../textMatch';
 import { parseText } from '../parser';
-import { PORT_CLIKE, PORT_MM, PORT_TEXT_CLIKE, portGrammar, portObjects } from './portCorpus';
+import { PORT_CLIKE, PORT_MM, PORT_PASCAL, PORT_TEXT_CLIKE, portGrammar, portObjects } from './portCorpus';
 
 // ---- The library fixture (textDiff.test.ts) -----------------------------------------------------------------------
 
@@ -750,5 +750,21 @@ describe('the names the app gives (R-TXT-44 (1), (2))', () => {
         expect(plan.lines).toHaveLength(1);
         expect(plan.lines![0]).toMatch(/^set Word_\d+\.width = 16$/);
         expect(plan.named ?? []).toEqual([]);
+    });
+
+    it.each([['C-like', PORT_CLIKE], ['Pascal/Ada', PORT_PASCAL]] as const)('%s: removing a name applies, a clearing line (mutants: the default skip kept for the name; null written)', (_s, record) => {
+        const base = portBase(named(), record);
+        const e = edited(base, [['output result ', 'output ']]);
+        const { parsed, plan } = planEdit(base, e.text, e.spans, { defaults: DEFAULTS }, undefined, e.refs);
+        expect(editDecision(e.text, syncOf(base.text), parsed, plan, false).kind).toBe('apply');
+        expect(plan.lines).toEqual(['set result.name = ""']);
+        expect(plan.named).toEqual(['result']);
+        // A name the slot holds (not read through the initial name) clears the same way; `instr` is also the Ref's name,
+        // so the Port's handle is its class's.
+        const i = edited(base, [['input instr ', 'input ']]);
+        const p2 = planEdit(base, i.text, i.spans, { defaults: DEFAULTS }, undefined, i.refs).plan;
+        expect(p2.lines).toHaveLength(1);
+        expect(p2.lines![0]).toMatch(/^set Port_\d+\.name = ""$/);
+        expect(p2.named).toEqual([p2.lines![0].split(/[ .]/)[1]]);
     });
 });

@@ -199,8 +199,10 @@ export function diffText(input: DiffInput): TextDiff {
         }
         const was = m.slots[f.name];
         if (sameValue(now, was, f.many && ordered(t.cls, f.name))) return;
-        // Read through a default: the slot is empty, so a text that leaves it out asks for no change either.
-        if (input.defaults?.get(m.id)?.has(f.name) && isUnset(now)) return;
+        // Read through a default: the slot is empty, so a text that leaves it out asks for no change either. Not the name
+        // of a named rule: an empty name slot reads the instance's initial name, and a name the text removes is cleared
+        // (R-TXT-44 (2)).
+        if (input.defaults?.get(m.id)?.has(f.name) && isUnset(now) && !(f.name === 'name' && g.objects[t.cls]?.named)) return;
         attributes.push({ op: 'attribute', target, feature: f.name, value: f.many ? asArray(now) : isUnset(now) ? null : now });
     };
 
@@ -551,6 +553,8 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
                 const h = handle(op.target);
                 if (op.feature === 'name' && 'text' in op.target) break; // written with the creation
                 const literals = literalsOf(o.cls, op.feature);
+                // R-TXT-44 (2): a removed name is written empty, which the executor stores (`null` leaves an empty slot as it is).
+                if (op.feature === 'name' && op.value == null && g.objects[o.cls]?.named) { lines.push(`set ${h}.name = ""`); named.push(h); break; }
                 const text = Array.isArray(op.value) ? `[${op.value.map(v => valueText(v, literals)).join(', ')}]`
                     : op.value == null ? 'null' : valueText(op.value, literals);
                 lines.push(`set ${h}.${op.feature} = ${text}`);
