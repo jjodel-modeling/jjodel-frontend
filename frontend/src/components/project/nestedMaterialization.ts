@@ -521,6 +521,11 @@ export async function openRunUndoStep(
     };
 }
 
+/** The page's tab is hidden, its timers throttled; false where there is no document. */
+function pageHidden(): boolean {
+    return typeof document !== 'undefined' && document.hidden === true;
+}
+
 async function closeRunUndoStep(
     deps: RunUndoDeps, writes: Promise<unknown>, notBefore: number, quietMs: number, pollMs: number, capMs: number,
 ): Promise<RunUndoClose> {
@@ -539,7 +544,9 @@ async function closeRunUndoStep(
             await deps.flush();
             const now = deps.now();
             // Quiet is what the closer saw, not what it slept through: a long task ends as a write would.
-            if (now - polled > asked + RUN_BUSY_MS) lastBusy = now;
+            // Not in a hidden tab: the browser runs its timers about once a second, and every poll is late
+            // without a long task; read as busy, the group stayed open to the cap (P-2026-11-04-0255).
+            if (now - polled > asked + RUN_BUSY_MS && !pageHidden()) lastBusy = now;
             // Quiet counts from the deadline too: the tab opened at it writes its canvas only once mounted.
             if (settled && now - Math.max(lastWrite, lastBusy, notBefore) >= quietMs) break;
             if (now >= deadline) { capped = true; break; }

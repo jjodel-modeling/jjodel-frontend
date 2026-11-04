@@ -8,7 +8,7 @@
  * The fake store reproduces what docs/discovery/discovery_2026-10-30_jjtl_nested_materialization.md §4
  * measured in the browser: an object's slots answer only some time after `addObject` created it.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
     materializeNested,
     makeRootTargetIndex,
@@ -18,6 +18,7 @@ import {
     openRunUndoStep,
     RUN_QUIET_MS,
     RUN_UNDO_CAP_MS,
+    RUN_UNDO_POLL_MS,
     type RunUndoDeps,
     ATTRIBUTE_WAIT_CAP_MS,
     NESTED_WALK_WAIT_CAP_MS,
@@ -535,9 +536,10 @@ describe('formatNestedUnwritten (#482)', () => {
 
 /**
  * A fake store and clock for the run's undo step (#458): `sleep` moves the clock and fires, in order, the
- * store notifications and the timers due on the way, so a write-back is a script of times.
+ * store notifications and the timers due on the way, so a write-back is a script of times. `throttleMs` is the
+ * least a sleep lasts: a hidden tab, whose timers the browser runs about once a second.
  */
-function runStore() {
+function runStore(throttleMs: number = 0) {
     let clock = 0;
     const calls: string[] = [];
     const listeners = new Set<() => void>();
@@ -556,7 +558,7 @@ function runStore() {
         end: () => { calls.push(`end@${clock}`); },
         flush: async () => { calls.push('flush'); },
         subscribe: (l) => { listeners.add(l); return () => { listeners.delete(l); }; },
-        sleep: async (ms) => { runDue(clock + ms); },
+        sleep: async (ms) => { runDue(clock + Math.max(ms, throttleMs)); },
         now: () => clock,
     };
     return {
@@ -648,5 +650,45 @@ describe('openRunUndoStep, a JjTL run is one undo step (#458)', () => {
         expect(s.endAt()).toBeGreaterThanOrEqual(RUN_QUIET_MS);
         expect(s.endAt()).toBeLessThan(RUN_QUIET_MS + 200);
         expect(r).toEqual({ waitedMs: s.endAt(), capped: false });
+    });
+});
+
+describe('openRunUndoStep in a hidden tab (P-2026-11-04-0255)', () => {
+    // A hidden tab runs timers about once a second, so every poll comes back late. That is the browser's
+    // throttling, not a long task: read as busy, it held the group open until the cap.
+    const HIDDEN_TICK_MS = 1000;
+    afterEach(() => { vi.unstubAllGlobals(); });
+
+    it('a late poll while hidden is not busy: the group closes after the quiet window, not at the cap', async () => {
+        vi.stubGlobal('document', { hidden: true });
+        const s = runStore(HIDDEN_TICK_MS);
+        const step = await openRunUndoStep(s.deps);
+        const writes = s.settleAt(1000);
+        s.dispatchAt(1000);
+        const r = await step.close(writes);
+        expect(r.capped).toBe(false);
+        expect(s.endAt()).toBeGreaterThanOrEqual(1000 + RUN_QUIET_MS);
+        expect(s.endAt()).toBeLessThanOrEqual(1000 + RUN_QUIET_MS + HIDDEN_TICK_MS);
+    });
+
+    it('still does not close during a write while hidden: neither before the write-back settles nor while it dispatches', async () => {
+        vi.stubGlobal('document', { hidden: true });
+        const s = runStore(HIDDEN_TICK_MS);
+        const step = await openRunUndoStep(s.deps);
+        const writes = s.settleAt(6000);
+        for (let t = 500; t <= 9000; t += 500) s.dispatchAt(t);
+        const r = await step.close(writes);
+        expect(r.capped).toBe(false);
+        expect(s.ends()).toHaveLength(1);
+        expect(s.endAt()).toBeGreaterThanOrEqual(9000 + RUN_QUIET_MS);
+    });
+
+    it('the same late polls with the tab visible are busy, as a long task is', async () => {
+        vi.stubGlobal('document', { hidden: false });
+        const s = runStore(HIDDEN_TICK_MS);
+        const step = await openRunUndoStep(s.deps, RUN_QUIET_MS, RUN_UNDO_POLL_MS, 20000);
+        const r = await step.close(s.settleAt(1000));
+        expect(r.capped).toBe(true);
+        expect(s.endAt()).toBe(20000);
     });
 });
