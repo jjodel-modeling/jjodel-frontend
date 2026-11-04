@@ -3,10 +3,6 @@ import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { AIEvents } from '../../events/registry';
 import './ProviderSelector.scss';
 import './ProviderModelSelector.scss';
-import { applyModelCatalog } from '../../types/jodie';
-import type { TAIProvider } from '../../types/jodie';
-import { cachedModelsFor } from '../../services/aiModelCatalog';
-import type { CatalogProvider } from '../../services/aiModelCatalog';
 import {
     CATALOG_PROVIDERS,
     FeaturePreferenceStore,
@@ -67,19 +63,11 @@ export function hasCatalog(id: ProviderId): boolean {
 
 /**
  * Refreshes `id`'s live catalog when it is missing, for another key, or older than 24 h (`force`
- * skips the check). The result arrives through AIEvents.MODELS_UPDATED.
- *
- * Bridge until L3 (it deletes it): the chat, documentation and mapping calls still resolve their
- * model against AI[id].versions of types/jodie.ts, so the list the new cache stored is applied there
- * too, as AIProviderService.refreshModels did. Without it a Gemini model picked from the live list
- * would be swapped by the old chat path for the first static entry.
+ * skips the check). The result arrives through AIEvents.MODELS_UPDATED; every reader takes the list
+ * from the catalog cache of src/services/ai.
  */
 export async function refreshLiveCatalog(id: ProviderId, force: boolean = false): Promise<void> {
-    const provider = registry.get(id);
-    const models = await refreshIfStale(provider, force);
-    if (!models?.length) return;
-    const stored = cachedModelsFor(id as CatalogProvider, provider.apiKey);
-    if (stored?.models.length) applyModelCatalog(id as TAIProvider, stored.models);
+    await refreshIfStale(registry.get(id), force);
 }
 
 /** The static seed rows of `id` that are deprecated (kept for persisted selections). */

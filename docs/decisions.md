@@ -6866,6 +6866,28 @@ evidence: measured, verified: agent, reversible: trunk).
   the private helpers that only those exports use and their test cases. The exports that live files still use
   (`types/jodie.ts`, `ProviderModelSelector.tsx`, `AISettingsContent.tsx`) stay until L6.
 
+L4 merge and L6 shape, answered by Juri in chat C-2026-11-03-1227 on 2026-11-03 (R-AI-22..23: ratified by Juri,
+R-AI-22 his own answer, R-AI-23 as recommended; evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-22** (2026-11-03). **The Worker goes later, and the L4 code goes now.** Juri: «il proxy lo eliminiamo dopo».
+  This supersedes the sequencing of R-AI-20. The L4 code part is merged into `staging` (`7816c57ec`, P-2026-11-03-1430).
+  The removal of the `jjodel-ai-proxy` deployment (Alfonso asked first) and a small branch that deletes
+  `cloudflare-worker/`, the `/cloudflare-worker/node_modules` line of `.gitignore` and the Worker paragraph of
+  `docs/CODEBASE-MAP.md` come later; the chat keeps the reminder. Measured: the deployed `origin/staging` `9dc6e3906`
+  uses the Worker only as the Claude `models.list` fallback (`AIProviderService.ts:821`), and `origin/master` names no
+  Worker.
+- **R-AI-23** (2026-11-03). **L6 is three chained lanes on one branch**, `feat/196-l6-consolidation`, with rule 19
+  confirmed for about 30 entries. Lane 1 moves the live runtime readers of `types/jodie.ts` onto `src/services/ai` and
+  deletes the L2 bridge. Lane 2 moves the types, deletes `types/jodie.ts` (and `services/aiModelCatalog.ts` once
+  nothing imports it), carries the tests and writes the CHANGELOG. Lane 3 rewrites `CLAUDE.md` §16 and
+  `docs/CODEBASE-MAP.md` §19. Juri's visual check comes before the merge. The spec's L6 list (§7) names only type
+  importers. Measured on `b443faf2b`, the runtime readers it missed are: `AI[p]` in `AISettingsContent.tsx` (`versions`,
+  `keyPlaceholder`, `initial`, `color`, `bgColor`), `AIAssistantSettings.tsx`, `ProviderConfigModal.tsx` and
+  `ChatMessages.tsx`; `AI.DOCUMENTATION_STORAGE_PREFIX` in `DocumentationService.ts`; `ALL_AI_PROVIDERS` and the
+  `AIProvider` statics; and `applyModelCatalog` (the bridge) in `ProviderModelSelector.tsx`. `ProviderSpec` carries no
+  GUI data, and `src/services/ai` stays free of UI, so the twelve `addGUIinfo` rows move verbatim to a new UI-side table,
+  `components/common/providerVisuals.ts`.
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.

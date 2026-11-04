@@ -10,10 +10,12 @@
 import type { Dictionary } from '../joiner';
 import { LProject } from '../joiner';
 import { JjodieContextService } from './JjodieContext';
-import {AI} from "../types/jodie";
 import { PromptService } from './PromptService';
 import { registry } from './ai';
 import { preferredModelId, preferredProviderId } from '../components/common/ProviderModelSelector';
+
+/** localStorage prefix of a project's documentation (was AI.DOCUMENTATION_STORAGE_PREFIX): persisted, never renamed. */
+export const DOCUMENTATION_STORAGE_PREFIX = 'jjodie_doc_';
 
 // ============================================
 // TYPES
@@ -162,7 +164,7 @@ export class DocumentationService {
      */
     static load(projectId: string): ProjectDocumentation | null {
         try {
-            const stored = localStorage.getItem(`${AI.DOCUMENTATION_STORAGE_PREFIX}${projectId}`);
+            const stored = localStorage.getItem(`${DOCUMENTATION_STORAGE_PREFIX}${projectId}`);
             return stored ? JSON.parse(stored) : null;
         } catch {
             return null;
@@ -173,14 +175,14 @@ export class DocumentationService {
      * Save documentation to localStorage
      */
     static save(projectId: string, doc: ProjectDocumentation): void {
-        localStorage.setItem(`${AI.DOCUMENTATION_STORAGE_PREFIX}${projectId}`, JSON.stringify(doc));
+        localStorage.setItem(`${DOCUMENTATION_STORAGE_PREFIX}${projectId}`, JSON.stringify(doc));
     }
 
     /**
      * Delete documentation from localStorage
      */
     static delete(projectId: string): void {
-        localStorage.removeItem(`${AI.DOCUMENTATION_STORAGE_PREFIX}${projectId}`);
+        localStorage.removeItem(`${DOCUMENTATION_STORAGE_PREFIX}${projectId}`);
     }
 
     /**

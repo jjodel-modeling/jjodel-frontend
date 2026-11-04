@@ -8,17 +8,15 @@ import { useNavigate } from 'react-router-dom';
 import { JodieWindow } from './JodieWindow';
 import { JodieMinimized } from './JodieMinimized';
 import {
-    AIProvider,
     ChatMessage,
     ChatImage,
     ChatDocument,
     ChatState,
-    TAIProvider,
     ConsoleMode, CodeFlavor, CodeEntry, isChatEntry,
     CONSOLE_MODES, ConsoleModeSwitchVia, JjodieScope, ConsoleEntry
-} from '../../types/jodie';
+} from './types';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
-import { ECapabilities, FeaturePreferenceStore, registry } from '../../services/ai';
+import { ECapabilities, FeaturePreferenceStore, registry, type ProviderId } from '../../services/ai';
 import { isProviderId, preferredModelId, preferredProviderId } from '../common/ProviderModelSelector';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { JjodieContextService, ActiveArtifact } from '../../services/JjodieContext';
@@ -42,6 +40,11 @@ import type { ConsoleContext } from './console/types';
 import { consumerHelpText } from './consumerVoice';
 import { gateReply } from './reservedIdentifierGate';
 import './JodieWindow.css';
+
+// The load-time migrations of the stored AI preferences (global default, legacy ids, foreign and
+// retired models). They ran as `JodieConfig.load` when types/jodie.ts was evaluated through this
+// module's imports; #196 L6 deleted that file, so they run here, once, at the same point of startup.
+registry.load();
 
 // Generate unique message ID
 function generateMessageId(): string {
@@ -154,7 +157,7 @@ export function Jodie(): JSX.Element {
     });
 
     // Active provider (per-feature: 'chat')
-    const [activeProvider, setActiveProvider] = useState<TAIProvider>(() => preferredProviderId('chat'));
+    const [activeProvider, setActiveProvider] = useState<ProviderId>(() => preferredProviderId('chat'));
 
     // RAG state
     const lastIndexedProjectRef = useRef<string | null>(null);
@@ -589,7 +592,7 @@ export function Jodie(): JSX.Element {
     }, []);
 
     // Change provider
-    const handleProviderChange = useCallback((provider: TAIProvider) => {
+    const handleProviderChange = useCallback((provider: ProviderId) => {
         setActiveProvider(provider);
         FeaturePreferenceStore.set('chat', provider);
     }, []);

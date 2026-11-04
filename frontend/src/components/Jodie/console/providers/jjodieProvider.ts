@@ -13,7 +13,7 @@
  * try/catch mirrors the handler and never propagates.
  */
 import type { LanguageProvider, ConsoleContext, ConsoleResult } from '../types';
-import type { ChatDocument, ChatImage, ChatMessage } from '../../../../types/jodie';
+import type { ChatDocument, ChatImage, ChatMessage } from '../../types';
 import { JjodieRagService } from '../../../../services/JjodieRagService';
 import { PromptService } from '../../../../services/PromptService';
 import { registry } from '../../../../services/ai';

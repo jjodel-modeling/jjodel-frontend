@@ -11,16 +11,17 @@ import { ChatInput } from './ChatInput';
 import { ScriptEditorView } from './ScriptEditorView';
 import { ScriptFileUpdateView } from './ScriptFileUpdateView';
 import { closeScriptEditor, getScriptEditorTarget, subscribeScriptEditor } from './scriptEditorModel';
-import {TAIProvider, ChatImage, ChatDocument, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from '../../types/jodie';
+import type { ProviderId } from '../../services/ai';
+import {ChatImage, ChatDocument, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from './types';
 import { AIEvents, JjScriptEvents } from '../../events/registry';
 import { registry } from '../../services/ai';
 
 interface JodieWindowProps {
     messages: ConsoleEntry[];
-    activeProvider: TAIProvider;
+    activeProvider: ProviderId;
     isWaiting: boolean;
     onSendMessage: (message: string, images?: ChatImage[], documents?: ChatDocument[]) => void;
-    onProviderChange: (provider: TAIProvider) => void;
+    onProviderChange: (provider: ProviderId) => void;
     onClose: () => void;
     onOpenSettings: () => void;
     onOpenDocumentation?: () => void;
@@ -281,7 +282,7 @@ export function JodieWindow({
         const refreshAlive = () => setIsAlive(registry.enabled().length > 0);
         refreshAlive();
         window.addEventListener(AIEvents.SETTINGS_CHANGED, refreshAlive);
-        // #168: a key saved in Settings fires PROVIDER_CHANGED only (AIConfig.save).
+        // #168: a key saved in Settings fires PROVIDER_CHANGED only (ProviderConfigStore.save).
         window.addEventListener(AIEvents.PROVIDER_CHANGED, refreshAlive);
         return () => {
             window.removeEventListener(AIEvents.SETTINGS_CHANGED, refreshAlive);

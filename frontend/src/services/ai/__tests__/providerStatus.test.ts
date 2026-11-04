@@ -1,9 +1,10 @@
 /**
- * R-AI-11, measured on today's code: what `AIConfig.getStatus` (types/jodie.ts) returns for a
- * provider row of the AI Assistant settings, before L2 moves it.
- *
- * It imports `types/jodie.ts`, which no file of `src/services/ai/` outside `__tests__/` may do: it
- * is deleted together with that file at L6 (spec §7).
+ * R-AI-11: the status label of a provider row of the AI Assistant settings. Before L2 it was
+ * `AIConfig.getStatus` of types/jodie.ts, which inverted the configured/unconfigured condition:
+ * measured on that code, a configured never-tested provider read «Not configured» and an
+ * unconfigured one «Ready»; a tested one read «Connected» when enabled, «Error» when not.
+ * #196 L6 lane 2 deleted types/jodie.ts and the half of this file that exercised it; the new home
+ * of the label keeps the tested cases and fixes the inversion.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -32,35 +33,6 @@ afterEach(() => vi.unstubAllGlobals());
 function seed(provider: string, record: Record<string, unknown>): void {
     storage.set(`jjodie_provider_${provider.toLowerCase()}`, JSON.stringify({ name: provider, model: '', baseUrl: '', ...record }));
 }
-
-async function statusOf(provider: 'Claude' | 'Ollama'): Promise<{ text: string; class: string }> {
-    const { AIConfig } = await import('../../../types/jodie');
-    return AIConfig.get(provider).getStatus();
-}
-
-describe('R-AI-11: AIConfig.getStatus on today\'s code', () => {
-    it('labels a configured, never tested provider «Not configured»: the condition is inverted', async () => {
-        seed('Claude', { apiKey: 'sk-ant-KEY', enabled: false });
-        expect(await statusOf('Claude')).toEqual({ text: 'Not configured', class: 'not-configured' });
-    });
-
-    it('labels an unconfigured provider «Ready»: the other half of the inversion', async () => {
-        seed('Claude', { apiKey: '', enabled: false });
-        expect(await statusOf('Claude')).toEqual({ text: 'Ready', class: 'ready' });
-    });
-
-    it('labels a keyless provider by its Base URL the same inverted way (Ollama)', async () => {
-        seed('Ollama', { apiKey: '', baseUrl: 'http://localhost:11434', enabled: false });
-        expect(await statusOf('Ollama')).toEqual({ text: 'Not configured', class: 'not-configured' });
-    });
-
-    it('labels a tested and enabled provider «Connected», a tested and disabled one «Error»', async () => {
-        seed('Claude', { apiKey: 'sk-ant-KEY', enabled: true, lastTested: 1 });
-        expect(await statusOf('Claude')).toEqual({ text: 'Connected', class: 'connected' });
-        seed('Claude', { apiKey: 'sk-ant-KEY', enabled: false, lastTested: 1 });
-        expect(await statusOf('Claude')).toEqual({ text: 'Error', class: 'error' });
-    });
-});
 
 describe('R-AI-11: providerStatus, the new home of the label (pages/settings/AIAssistantSettings.tsx)', () => {
     async function newStatus(provider: 'Claude' | 'Ollama'): Promise<{ text: string; class: string }> {

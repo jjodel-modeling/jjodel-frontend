@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import {AI, AIProvider, AIVersion} from '../../types/jodie';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
 import './AISettingsContent.scss';
@@ -7,10 +6,10 @@ import type {Dictionary, GObject} from "../../joiner";
 import {U} from "../../joiner";
 import { OpenAIIcon } from '../icons/ProviderIcons';
 import { AIEvents } from '../../events/registry';
-import type { CatalogFailure } from '../../services/aiModelCatalog';
 import { FailureCatalog, FeaturePreferenceStore, PROVIDER_IDS, PROVIDER_SPECS, ProviderConfigStore, registry } from '../../services/ai';
 import type { ConnectionTestResult, ProviderId, StoredProviderConfig } from '../../services/ai';
 import { hasCatalog, refreshLiveCatalog } from '../common/ProviderModelSelector';
+import { PROVIDER_VISUALS } from '../common/providerVisuals';
 
 import groqLogo from '../../static/img/groq.webp';
 import kimiLogo from '../../static/img/kimi.svg';
@@ -43,8 +42,27 @@ interface ProviderFormState {
     custom: ProviderInfo;
 }
 
+// #196 L6: these two types came from types/jodie.ts and services/aiModelCatalog.ts, deleted; this
+// file is their only reader. Copied verbatim (AIVersion without its constructor).
+/** The kind of a failed connection test, in the words `lastTestFailure` stores. */
+type CatalogFailure = 'auth' | 'rate' | 'network' | 'server' | 'other';
+/** One model entry of the retired `AI[p].versions`. */
+interface AIVersion {
+    label: string;
+    capabilities: {
+        pdf: boolean;
+        vision: boolean;
+    }
+    deprecated: boolean;
+    contextWindow?: number;
+    family?: string;
+    rank?: number;
+    source?: 'live' | 'static';
+    unavailable?: boolean;
+}
+
 // Map settings provider IDs to PROVIDER_MODELS keys
-const SETTINGS_TO_PROVIDER: Record<string, AIProvider> = {
+const SETTINGS_TO_PROVIDER: Record<string, string> = {
     openai: 'openai',
     anthropic: 'claude',
     mistral: 'mistral',
@@ -239,7 +257,7 @@ export function AISettingsContent({
         const config = storedConfig(name);
         const liveKey = (apiKeyByProvider[name] ?? '').trim();
         const baseUrlConfigured = !!(config.baseUrl && String(config.baseUrl).trim());
-        return name === AIProvider.Custom ? (liveKey !== '' || baseUrlConfigured)
+        return name === 'Custom' ? (liveKey !== '' || baseUrlConfigured)
             : PROVIDER_SPECS[name].requiresKey ? liveKey !== ''
             : baseUrlConfigured;
     };
@@ -253,7 +271,7 @@ export function AISettingsContent({
         return provider.model(model)?.displayName || model || '';
     };
 
-    // A retired model this provider was moved off at load (AIConfig.retireModels), named until a
+    // A retired model this provider was moved off at load (FeaturePreferenceStore.retireModels), named until a
     // test passes on the current one (#179). Null when there is nothing to say.
     const replacedModelNotice = (name: ProviderId): string | null => {
         const replaced = storedConfig(name).replacedModel;
@@ -275,7 +293,7 @@ export function AISettingsContent({
     ) => {
         const isExpanded = expandedProvider === name;
         const config = storedConfig(name);
-        let llm = AI[name];
+        let llm = PROVIDER_VISUALS[name];
         const isConfigured: boolean = isProviderConfigured(name);
 
         // Row state — the persistent at-a-glance status (the transient test button complements it),
@@ -295,10 +313,6 @@ export function AISettingsContent({
             : 'Connected';
 
         const status = testStatus[name] || 'idle';
-
-        // Get available models for this provider
-        const availableModels: AIVersion[] = Object.values(llm.versions);
-        const selectedModel = llm.versions[config.model as string];
 
         // Logos are normalized by the 28x28 tile around them (.ai-provider-row__logo): the image
         // fills the tile, the glyph and the letter sit centered on the provider's pastel.
@@ -348,10 +362,10 @@ export function AISettingsContent({
                         tile keep its neutral default instead of painting it white on white. */}
                     <span
                         className="ai-provider-row__logo"
-                        style={name === AIProvider.Custom ? undefined : { background: llm.bgColor, color: llm.color }}
+                        style={name === 'Custom' ? undefined : { background: llm.bgColor, color: llm.color }}
                     >
                         {llm.logo ? AIicon(name) : (
-                            name === AIProvider.Custom ? <i className="bi bi-puzzle" /> : llm.initial
+                            name === 'Custom' ? <i className="bi bi-puzzle" /> : llm.initial
                         )}
                     </span>
 
@@ -458,7 +472,7 @@ export function AISettingsContent({
     const fieldsFor = (
         name: ProviderId
     ): {key: 'apiKey' | 'model' | 'baseUrl'; label: string; type: 'text' | 'password' | 'model'; placeholder: string }[] =>
-        name === AIProvider.Custom
+        name === 'Custom'
             ? [
                 // { key: 'name', label: 'Provider Name', type: 'text', placeholder: 'My Custom Provider' },
                 { key: 'baseUrl', label: 'Base URL', type: 'text', placeholder: 'https://api.example.com/v1/chat/completions' },
@@ -466,7 +480,7 @@ export function AISettingsContent({
                 { key: 'model', label: 'Model Name', type: 'text', placeholder: 'model-name' },
             ]
             : [
-                { key: 'apiKey', label: 'API Key', type: 'password', placeholder: AI[name].keyPlaceholder || "Your " + name + " API key" },
+                { key: 'apiKey', label: 'API Key', type: 'password', placeholder: PROVIDER_VISUALS[name].keyPlaceholder || "Your " + name + " API key" },
             ];
 
     // Two sections by state. The open row keeps the section it was opened in (see expandedGroup).

@@ -40,6 +40,7 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 ### Changed
 - The shell (top bar, editor toolbar, left palette, rails, status bar, menus) uses one token layer: denser layout, 24 px targets, muted action icons in Advanced, rail titles in sentence case (R-SHELL-1..5).
 - Sign in, registration and password reset have a new layout; registration no longer asks for the newsletter.
+- Breaking for OCL/JjEL expressions: the runtime names `AI`, `AIConfig` and `JodieConfig` are no longer registered, so an expression that names them stops evaluating (R-AI-1). The AI provider layer is `src/services/ai` (one class per SDK family, a registry, the settings and catalog stores), and the frontend no longer calls the AI proxy Worker (#196).
 
 ### Fixed
 - Large models: References lists are built only when the section is open, model names without a full scan, the canvas re-transforms only the vertices that changed, the intrinsic size of a node is measured once per content.
