@@ -1091,3 +1091,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: Three valid runs (load1 at start 7.86, 8.75, 6.73): longest 1,385 / 1,451 / 1,431 ms, total 7,828 / 8,279 / 8,451 ms. Nodes mounted at settle 4 (10 edges) / 21 / 21 (800 edges, z 0.5). A run at load 14.16 set aside: 1,373 / 7,682.
 **Prompt document name**: 2026-11-04 12:04
+
+## 2026-11-04 — merge: canvas-prod-figure into alfonso-frontend-jjtl (P-2026-11-04-1218)
+**Prompt**: `claude_2026-11-04_1218_prompt_merge_canvas-prod-figure.md`, a direct merge by `lane-run merge --direct`, no session: `canvas-prod-figure` at `330080739` into `alfonso-frontend-jjtl`, merge base `fa9d8611c`, 2 commits on the branch side.
+**Files touched**: merge `9589506f1`: 2 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_1204_prompt_canvas_prod_figure.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9589506f1` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13754 tests in 514 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, gates green, no hand run
+**Notes**: Rollback tag `pre-canvas-prod-figure` on `5d06b16f0` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1218/result.json`.
+**Prompt document name**: 2026-11-04 12:18
