@@ -1104,3 +1104,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: docs only, gates green, no hand run
 **Notes**: Rollback tag `pre-canvas-prod-figure` on `5d06b16f0` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1218/result.json`.
 **Prompt document name**: 2026-11-04 12:18
+
+## 2026-11-04 — docs: R-JTG-21, 22 ratified, R-JTG-22 rewritten; Toolbar comment (P-2026-11-04-1442)
+**Prompt**: `claude_2026-11-04_1442_prompt_rows_toolbar_comment.md`, fast lane: rewrite R-JTG-22 as one rule (a missing class and an abstract class are errors in a let body, the creation shape stays unchecked), mark R-JTG-21 and R-JTG-22 ratified by Alfonso 2026-11-04, correct the percent-button comment in `Toolbar.tsx`.
+**Files touched**: `docs/decisions.md`; `frontend/src/components/editor-v2/Toolbar.tsx` (comment only, `b46caa065`); this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Comment-only change in code; no gate beyond typecheck and check:docs was run.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The Toolbar comment claimed fit-to-view; the button runs `handleActiveResetZoom` -> `activeController.setZoom(1)` (EditorV2.tsx:4007-4012). The prompt's line numbers (1250-1254) held. The editor reported unused-variable hints in Toolbar.tsx (e.g. `onFitView`), untouched.
+**Prompt document name**: 2026-11-04 14:42
