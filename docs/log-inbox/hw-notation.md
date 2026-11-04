@@ -1117,3 +1117,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — lane, unattended: crops read with the Read tool (b6_5 a laid-out tree, b10_8, gallery Families M2/M1 base vs branch); no hand run and no visual check
 **Notes**: b6_5: ELK 1 call on 191 nodes 5/5 (base 1 node 4/5). b10_8 x7: 0 ELK, skip at 2,559/2,558, fit with RF holding 2,559 of 2,559 measured, view translate(414,-63515) z 0.5 and 21 on screen 7/7, as base 5/5; tab->decision 4.7/5.1/6.7 s at load under 15 (base 3.5-4.1), all 7 under the 10 s deadline. Gallery, 17 diagrams: ELK calls, positions, view equal base vs branch. Gates on 2b3ca5dc0: tsc 0, vitest 13,768 green + 3 red at import, build 0. Figures: ~/.jjodel-lanes/P-2026-11-04-1500 and -1616.
 **Prompt document name**: 2026-11-04 16:16
+
+## 2026-11-04 — measure: production b10_8 figure of the settled view after the ELK open race fix (P-2026-11-04-2131)
+**Prompt**: `claude_2026-11-04_2131_prompt_elk_race_prod.md`: build production in the elkrace tree, five b10_8 runs with the 1204 probe plus the 1616 viewport watcher, uptime before each, report the settled view (RF nodes at the fit, zoom and position, nodes on screen, longest task, long-task total).
+**Files touched**: no code; this inbox, the Status line of the 2131 prompt. Probe and figures outside the repo: `~/.jjodel-lanes/P-2026-11-04-2131/probe/` (wbtime.ts, run1.sh, out/).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — production, b10_8 x5: no page errors, same view every run
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — measurement, unattended; the view is read from the React Flow store and the viewport transform, not from a screenshot
+**Notes**: Build exit 0 (1m52s). 5 counted runs r3-r7, load at start 13.98/7.91/9.06/7.51/14.39. Every run: first fit at 8.7-10.1 s with RF holding 2,559 of 2,559 measured, settled translate(413.996px, -63515px) scale(0.5), 21 on screen, no later viewport change. Longest task 1,359-1,662 ms, long-task total 8.0-10.3 s (27-31 tasks). r1 (load 31) and r2 (load 245, killed) excluded.
+**Prompt document name**: 2026-11-04 21:31
