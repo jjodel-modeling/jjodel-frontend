@@ -1,0 +1,15 @@
+# Textual syntax, step C lane C1a, continuation: write the code from the handoff (continues P-2026-11-04-0732 after the context ceiling)
+
+Prompt-ID: P-2026-11-04-0910
+Chat: C-2026-11-03-1037
+Front: codegen
+Status: da eseguire
+Lane: full (grammar derivation and the LL(1) check; continuation under RC-51)
+Depends: P-2026-11-04-0732 (hard-stop at the ceiling before any code; the design, the BOOL draft and the red tests are in its handoff)
+Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)
+Request: none (RC-51 continuation, no new words from Alfonso)
+
+Before anything else run pwd, git branch --show-current, git log -1, git status --short: HEAD is this prompt's commit on top of 40182d8a2 and the tree is clean, otherwise stop with Outcome: blocked. Do not touch any CLAUDE.md 3.2 file, docs/decisions.md or the core; no new dependency. Every reply opens with [P-2026-11-04-0910 · session <id>]. Final line: Outcome: done | hard-stop | question | blocked. No subagents, no background tasks. Never cat a gate or probe log: summary lines only, through node scripts/run-quiet.mjs LABEL -- CMD. Commit after each numbered item is green, tests red first. The previous session spent its whole budget reading: do not re-read the report or the sources beyond what a change needs; start from ~/.jjodel-lanes/P-2026-11-04-0732/handoff.md and write code within the first few tool calls. Near the ceiling, commit and write a handoff.
+
+## COSA
+Chat answers to the handoff's questions: (1) the two-line parser.ts edit is approved (an `expr` case in the FIRST-set switch; a choice whose body is `expr` reads through its primaries and records a parse error instead of throwing, until C1b); parser.ts joins this lane's file list for those lines only; (2) the Pascal terminator inside expressions is left to C1d; (3) the Briefs check asserts the derived fixities and the five new rules only; (4) the handoff's unattended decisions stand (call form for n-ary only; operator rules stay in g.objects until C1b; `mandatory` set on ResolvedAnnotations; call words and word symbols reserved; rules operator-fixity, operator-symbols, operator-tokens, operator-follow, call-words; BOOL Lit as integer). Items, each committed when green: (i) BOOL in the corpus with its annotations, both styles; (ii) `call` on OperatorAnnotation and the derived fixity with its error; (iii) the `expr` GrammarNode and its EBNF rendering; (iv) the five check rules, each with a red test; (v) the parser.ts two lines, tsc green, the nearley oracle still one parse per sample; mutation bench on fixity and each rule; gates one call each from frontend/ (npx tsc --noEmit; full npx vitest run, 3 files red at import are the baseline; npm run build; npm run check:docs; npm run check:codegen-lazy both modes); one crop of the EBNF tab of BOOL, light theme, scale 1, in ~/.jjodel-lanes/P-2026-11-04-0910/; log entry (Notes under 500 characters) and the Status flips of 0732 and this prompt left uncommitted (RC-17). No push, no merge. Public repo: name no partner company. Final message: what was verified and how, Decisions taken (unattended), Decisions awaiting Alfonso, then the Outcome.
