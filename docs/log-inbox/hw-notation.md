@@ -986,3 +986,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: 200 classes, 400 refs. Branch: off-screen edge drawn (DOM, crop), 0 edge warnings; after pan the far end is 2 px from its handle at +150 ms, +2 s and pre-paint of the first frame shown; select, export ok; trunk (threshold 1e9) the same. Open fit frames 200/200 on both. Partial: no fit button exists, and Auto layout throws in ELK on both (ticket above). Probe and figures: ~/.jjodel-lanes/P-2026-11-04-1012.
 **Prompt document name**: 2026-11-04 10:12
+
+## 2026-11-04 — merge: canvas-mount-unmeasured into alfonso-frontend-jjtl (P-2026-11-04-1038)
+**Prompt**: `claude_2026-11-04_1038_prompt_merge_canvas-mount-unmeasured.md`, a direct merge by `lane-run merge --direct`, no session: `canvas-mount-unmeasured` at `58bcb36f8` into `alfonso-frontend-jjtl`, merge base `32b9c87d3`, 10 commits on the branch side.
+**Files touched**: merge `9abc989ff`: 8 files from the branch side (`docs/discovery/lir_2026-11-04_canvas_mount_unmeasured.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_0901_prompt_canvas_mount_unmeasured.md`, `docs/prompts/claude_2026-11-04_0925_prompt_canvas_mount_cont.md`, `docs/prompts/claude_2026-11-04_1012_prompt_canvas_mount_edge_check.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/__tests__/unmeasuredNodes.test.ts`, `frontend/src/components/editor-v2/unmeasuredNodes.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9abc989ff` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13740 tests in 514 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 9abc989ff; probes on the branch, no hand run. Known visible difference on models above 150 nodes: parallel edges look stacked in one band; fix lane P-2026-11-04-1050 open, #475 stays open until it closes
+**Notes**: Rollback tag `pre-canvas-mount-unmeasured` on `ad34b896f` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1038/result.json`.
+**Prompt document name**: 2026-11-04 10:38
