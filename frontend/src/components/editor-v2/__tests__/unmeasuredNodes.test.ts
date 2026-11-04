@@ -16,6 +16,7 @@ import { adoptUserNodes, getEdgePosition, getNodesInside, ConnectionMode } from 
 import type { Edge, Node } from '@xyflow/react';
 import {
     ESTIMATED_NODE_SIZE,
+    ESTIMATE_OFFSET,
     HANDLE_SIZE,
     MOUNT_ALL_MAX_NODES,
     allMeasured,
@@ -94,7 +95,8 @@ describe('decorateUnmeasured', () => {
         const out = decorateUnmeasured(nodes, [], new Map());
         expect(out[0]).not.toBe(nodes[0]);
         expect(isDecorated(out[0])).toBe(true);
-        expect(out[0].measured).toEqual(ESTIMATED_NODE_SIZE);
+        // B is the one size measured: A goes in at it, off by the estimate's fraction.
+        expect(out[0].measured).toEqual({ width: 200 + ESTIMATE_OFFSET, height: 100 + ESTIMATE_OFFSET });
         expect(out[0].handles).toHaveLength(32);
         out.slice(1).forEach((n, i) => expect(n).toBe(nodes[i + 1]));
     });
@@ -115,6 +117,48 @@ describe('decorateUnmeasured', () => {
     it('keeps the estimate off any integer size, so the first measurement always reports a change', () => {
         expect(Number.isInteger(ESTIMATED_NODE_SIZE.width)).toBe(false);
         expect(Number.isInteger(ESTIMATED_NODE_SIZE.height)).toBe(false);
+        const out = decorateUnmeasured([node('A', 0, 0), measured('B', 300, 0, 140, 42)], [], new Map());
+        expect(Number.isInteger(out[0].measured!.width)).toBe(false);
+        expect(Number.isInteger(out[0].measured!.height)).toBe(false);
+    });
+
+    // P-2026-11-04-1050: the open fit frames the decorated boxes, so an estimate off the real size moves the framing
+    // by half the difference times the zoom (measured 10.125 px and 9.625 px at zoom 0.5 on 140 x 42 classes), and an
+    // edge into an off-screen node lands on a side of the estimated box, not of the node's real one.
+    it('estimates a never-measured node at the size the canvas has measured most, off by a fraction', () => {
+        const nodes = [node('A', 0, 0), measured('B', 300, 0, 140, 42), measured('C', 600, 0, 140, 42), measured('D', 900, 0, 200, 100)];
+        const out = decorateUnmeasured(nodes, [], new Map());
+        expect(out[0].measured).toEqual({ width: 140 + ESTIMATE_OFFSET, height: 42 + ESTIMATE_OFFSET });
+        // The handles are synthesized on that box: the inactive right-0 on its right side, in the middle.
+        const right0 = out[0].handles!.find(h => h.type === 'target' && h.id === 'right-0')!;
+        expect(right0.x + HANDLE_SIZE / 2).toBeCloseTo(140 + ESTIMATE_OFFSET);
+        expect(right0.y + HANDLE_SIZE / 2).toBeCloseTo((42 + ESTIMATE_OFFSET) / 2);
+    });
+
+    it('estimates at the fallback while the canvas has measured nothing', () => {
+        const out = decorateUnmeasured([node('A', 0, 0), node('B', 300, 0)], [], new Map());
+        expect(out.map(n => n.measured)).toEqual([ESTIMATED_NODE_SIZE, ESTIMATED_NODE_SIZE]);
+    });
+
+    it('does not count a hidden node against the most measured size', () => {
+        const nodes = [node('A', 0, 0), measured('B', 300, 0, 140, 42), { ...measured('H1', 0, 0, 90, 30), hidden: true }, { ...measured('H2', 0, 0, 90, 30), hidden: true }];
+        expect(decorateUnmeasured(nodes, [], new Map())[0].measured).toEqual({ width: 140 + ESTIMATE_OFFSET, height: 42 + ESTIMATE_OFFSET });
+    });
+
+    it('makes the decorated node again when the estimate changes, on its own edges as before', () => {
+        const cache = new Map();
+        const e1 = edge('e1', 'A', 'B', 'right-0', 'left-0');
+        const first = decorateUnmeasured([node('A', 0, 0), node('B', 300, 0)], [e1], cache);
+        const b = measured('B', 300, 0, 140, 42);
+        expect(first[0].measured).toEqual(ESTIMATED_NODE_SIZE);
+        // B is measured: A, the same canvas node with the same edges, goes in at B's size.
+        const second = decorateUnmeasured([undecorate(first[0]), b], [e1], cache);
+        expect(second[0]).not.toBe(first[0]);
+        expect(second[0].measured).toEqual({ width: 140 + ESTIMATE_OFFSET, height: 42 + ESTIMATE_OFFSET });
+        const right0 = second[0].handles!.find(h => h.type === 'source' && h.id === 'right-0')!;
+        expect(right0.x + HANDLE_SIZE / 2).toBeCloseTo(140 + ESTIMATE_OFFSET);
+        // The same input again: the same object.
+        expect(decorateUnmeasured([undecorate(second[0]), b], [e1], cache)[0]).toBe(second[0]);
     });
 
     it('keeps the decorated object while the node and its own edges stay, so React Flow keeps its internal node', () => {
@@ -130,7 +174,8 @@ describe('decorateUnmeasured', () => {
         const third = decorateUnmeasured(nodes, [edge('e1', 'A', 'B', 'bottom-0', 'left-0'), e2], cache);
         expect(third[0]).not.toBe(first[0]);
         const bottom0 = third[0].handles!.find(h => h.type === 'source' && h.id === 'bottom-0')!;
-        expect(bottom0.x + HANDLE_SIZE / 2).toBeCloseTo(ESTIMATED_NODE_SIZE.width / 2);
+        // On the estimated box: B and C measured 200 x 100.
+        expect(bottom0.x + HANDLE_SIZE / 2).toBeCloseTo((200 + ESTIMATE_OFFSET) / 2);
     });
 
     it('follows the node object: a moved node goes in at its new position', () => {
@@ -214,9 +259,9 @@ describe('through React Flow', () => {
             id: 'e1', sourceNode: nodeLookup.get('A'), targetNode: nodeLookup.get('B'),
             sourceHandle: 'right-0', targetHandle: 'left-0', connectionMode: ConnectionMode.Strict,
         } as any)!;
-        // B's left-0 is a target on B's left side, in the middle of the estimated box.
+        // B's left-0 is a target on B's left side, in the middle of the estimated box: A's size.
         expect(p.targetX).toBeCloseTo(5000 - HANDLE_SIZE / 2);
-        expect(p.targetY).toBeCloseTo(ESTIMATED_NODE_SIZE.height / 2);
+        expect(p.targetY).toBeCloseTo((100 + ESTIMATE_OFFSET) / 2);
     });
 
     it('with empty handles (the throwaway patch), the same edge has no position', () => {
