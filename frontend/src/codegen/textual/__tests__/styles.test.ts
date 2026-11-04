@@ -10,10 +10,13 @@ import { describe, it, expect } from 'vitest';
 import { parseText, tokenizeText } from '../parser';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE, PASCAL_STYLE } from '../style';
+import type { SyntaxAnnotations } from '../annotations';
+import { textualNotation } from '../syntaxRecord';
 import type { NotationStyle } from '../style';
 import { GARAGE, grammarOf } from './corpus';
 import { objectsOf } from './spec';
 import type { Spec } from './spec';
+import { LIBRARY_IDS, LIBRARY_MM, libraryObjects } from './tolerantCorpus';
 
 const PASCAL_LOWER: NotationStyle = { ...PASCAL_STYLE, id: 'pascal-lower', classCase: 'lower', literalCase: 'lower' };
 
@@ -74,5 +77,23 @@ describe('D4: a line break in a doubling-style string', () => {
             expect(r.errors).toEqual([]);
             expect(printTextModel(g, r.objects).text).toBe(text);
         }
+    });
+});
+
+describe('a keyword-less feature under Pascal/Ada', () => {
+    const SUBSETS = { E_Genre: { subsets: [{ name: 'prose', literals: ['FICTION', 'HISTORY'] }, { name: 'verse', literals: ['POETRY'] }, { name: 'nonfiction', literals: ['SCIENCE'] }] } };
+    const print = (record: SyntaxAnnotations): string => printTextModel(textualNotation(LIBRARY_MM, { record, issues: [] }, LIBRARY_IDS).grammar, libraryObjects(4, 2)).text;
+
+    it('prints its value with no assign token, plain and in a grouping (mutants: the assign kept on the plain path; kept on the grouping path)', () => {
+        const plain = print({ v: 1, features: { A_Book_genre: { keyword: '' } }, style: { base: 'pascal' } });
+        expect(plain).toContain('\n      FICTION;\n');
+        expect(plain).not.toMatch(/^\s*:=/m);
+        const grouped = print({ v: 1, features: { A_Book_genre: { keyword: '' }, R_Lib_books: { groupBy: 'A_Book_genre' } }, enums: SUBSETS, style: { base: 'pascal' } });
+        expect(grouped).toMatch(/^\s*FICTION;$/m);
+        expect(grouped).not.toMatch(/^\s*:=/m);
+    });
+
+    it('the C-like print of a keyword-less feature is unchanged (mutant: a terminator dropped with the assign)', () => {
+        expect(print({ v: 1, features: { A_Book_genre: { keyword: '' } } })).toMatch(/^\s*FICTION$/m);
     });
 });

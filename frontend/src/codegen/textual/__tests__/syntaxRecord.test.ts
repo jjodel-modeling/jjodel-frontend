@@ -392,7 +392,7 @@ describe('the style base of the record', () => {
     it('base pascal prints the library in Pascal/Ada, which parses with no error, reprints byte for byte and holds the same model (mutant: the base ignored)', () => {
         const view = libraryView(encodeSyntax(PASCAL_RECORD));
         expect(errors(view.issues)).toEqual([]);
-        expect(view.text.split('\n').slice(0, 6)).toEqual(['Library city begin', '  books begin', '    prose begin', '      Book dune begin', '        := FICTION;', '      end;']);
+        expect(view.text.split('\n').slice(0, 6)).toEqual(['Library city begin', '  books begin', '    prose begin', '      Book dune begin', '        FICTION;', '      end;']);
         expect(view.text).toContain('        year := 2015;');
         expect(view.text).toContain('    Member ann begin end;');
         expect(view.ebnf).toContain('"begin"');
