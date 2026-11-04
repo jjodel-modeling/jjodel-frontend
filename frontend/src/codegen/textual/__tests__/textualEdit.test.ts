@@ -14,7 +14,7 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { agreedEvidence, APPLY_DELAY_MS, appliedRefs, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, onModelPrint, outerMarks, pastedRefs, pastedSpans, pathRewrites, pauseOf, planEdit, shiftOffset } from '../ui/TextualTab';
+import { agreedEvidence, APPLY_DELAY_MS, appliedRefs, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, namedReprint, onModelPrint, outerMarks, pastedRefs, pastedSpans, pathRewrites, pauseOf, planEdit, shiftOffset } from '../ui/TextualTab';
 import type { EditBase, TextSync } from '../ui/TextualTab';
 import { confirmRows, needsConfirmation } from '../ui/TextConfirmPanel';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
@@ -25,6 +25,7 @@ import { textualNotation } from '../syntaxRecord';
 import { planTextEdit } from '../textDiff';
 import { matchObjects } from '../textMatch';
 import { parseText } from '../parser';
+import { PORT_CLIKE, PORT_MM, PORT_PASCAL, PORT_TEXT_CLIKE, portGrammar, portObjects } from './portCorpus';
 
 // ---- The library fixture (textDiff.test.ts) -----------------------------------------------------------------------
 
@@ -698,5 +699,72 @@ describe('a text equal to the agreed one again gets its spans and tokens back (P
         expect(agreedEvidence(sync, anns.text)).toEqual({ spans: anns.spans, refs: anns.refs });
         expect(agreedEvidence(sync, anns.text + ' ')).toBeNull();
         expect(agreedEvidence({ text: anns.text, model: anns.text }, anns.text)).toBeNull();
+    });
+});
+
+// ---- R-TXT-44 (1), (2): the names the app gives (P-2026-11-04-1605) --------------------------------------------------
+
+describe('the names the app gives (R-TXT-44 (1), (2))', () => {
+    const portBase = (objs: TextObject[], record: SyntaxAnnotations = PORT_CLIKE): EditBase & { readonly text: string } => {
+        const grammar = portGrammar(record);
+        const p = printTextModel(grammar, objs);
+        return { mm: PORT_MM, grammar, objects: objs, spans: p.spans, unprinted: p.unprinted, refs: p.refs, text: p.text };
+    };
+    // The model after the first application, as measured (names-measure.md): the app named the nameless Port and Ref by
+    // their handles, and an empty name slot reads the instance's initial name, so the lookup marks those slots defaulted.
+    const named = (): TextObject[] => portObjects().map(o => (o.id === 'p2' ? { ...o, slots: { ...o.slots, name: 'Port_2' } }
+        : o.id === 'r2' ? { ...o, slots: { ...o.slots, name: 'Ref_2' } } : o));
+    const DEFAULTS = new Map([['p2', new Set(['name'])], ['r2', new Set(['name'])], ['p3', new Set(['name'])]]);
+
+    it('a nameless object created from the text is one the app names, by its handle (mutant: creates not listed)', () => {
+        const { plan } = planEdit(portBase([]), PORT_TEXT_CLIKE, []);
+        expect(plan.refusals).toEqual([]);
+        expect(plan.named).toHaveLength(2);
+        const [port, ref] = plan.named!;
+        expect(plan.lines).toContain(`create instance of Port "${port}" in cpu.inputs`);
+        expect(plan.lines!.some(l => l.startsWith(`create instance of Ref "${ref}" in `))).toBe(true);
+        // A named one, and a class whose rule prints no name, are not listed.
+        expect(plan.named).not.toContain('instr');
+        expect(plan.named!.some(h => h.startsWith('Bool') || h.startsWith('Word'))).toBe(false);
+    });
+
+    it('after such an application the tab reprints the model\'s print, else it keeps the typed text (mutant: never reprint; always reprint)', () => {
+        const print = portBase(named()).text;
+        expect(namedReprint({ named: ['Port_2'] }, print, PORT_TEXT_CLIKE)).toBe(print);
+        expect(namedReprint({ named: [] }, print, PORT_TEXT_CLIKE)).toBeNull();
+        expect(namedReprint({}, print, PORT_TEXT_CLIKE)).toBeNull();
+        expect(namedReprint({ named: ['Port_2'] }, print, print)).toBeNull();
+    });
+
+    it('the status line says why, in one sentence (mutant: the plain Applied)', () => {
+        expect(editStatusText({ kind: 'applied', failed: 0, named: 2 })).toEqual({ text: 'Applied · the app named 2 objects the text leaves nameless', error: false });
+        expect(editStatusText({ kind: 'applied', failed: 0, named: 1 }).text).toBe('Applied · the app named 1 object the text leaves nameless');
+        expect(editStatusText({ kind: 'applied', failed: 0 }).text).toBe('Applied');
+    });
+
+    it('the stuck sequence of P-2026-11-04-1447: on the reprinted text the second edit applies (a width)', () => {
+        const base = portBase(named());
+        const e = edited(base, [['Word(32)', 'Word(16)']]);
+        const { plan } = planEdit(base, e.text, e.spans, { defaults: DEFAULTS }, undefined, e.refs);
+        expect(plan.refusals).toEqual([]);
+        expect(plan.lines).toHaveLength(1);
+        expect(plan.lines![0]).toMatch(/^set Word_\d+\.width = 16$/);
+        expect(plan.named ?? []).toEqual([]);
+    });
+
+    it.each([['C-like', PORT_CLIKE], ['Pascal/Ada', PORT_PASCAL]] as const)('%s: removing a name applies, a clearing line (mutants: the default skip kept for the name; null written)', (_s, record) => {
+        const base = portBase(named(), record);
+        const e = edited(base, [['output result ', 'output ']]);
+        const { parsed, plan } = planEdit(base, e.text, e.spans, { defaults: DEFAULTS }, undefined, e.refs);
+        expect(editDecision(e.text, syncOf(base.text), parsed, plan, false).kind).toBe('apply');
+        expect(plan.lines).toEqual(['set result.name = ""']);
+        expect(plan.named).toEqual(['result']);
+        // A name the slot holds (not read through the initial name) clears the same way; `instr` is also the Ref's name,
+        // so the Port's handle is its class's.
+        const i = edited(base, [['input instr ', 'input ']]);
+        const p2 = planEdit(base, i.text, i.spans, { defaults: DEFAULTS }, undefined, i.refs).plan;
+        expect(p2.lines).toHaveLength(1);
+        expect(p2.lines![0]).toMatch(/^set Port_\d+\.name = ""$/);
+        expect(p2.named).toEqual([p2.lines![0].split(/[ .]/)[1]]);
     });
 });
