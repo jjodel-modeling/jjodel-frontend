@@ -1619,3 +1619,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — lane probe on 3471 (demoESM 17/17, library 18/18): switch to Pascal, text and EBNF follow, an edit applies, one Undo, switch back byte for byte; a typed line break stored and shown as `'…'#10'x'`; crops `~/.jjodel-lanes/P-2026-11-04-0345/c3a-*.png` checked by the chat (RC-23); Alfonso's GO on the picker pending for the merge.
 **Notes**: Mutation benches 2/2, 6/6, 8/8, 11/11 and 8/9 killed (the survivor leaves an unread `base`). Open: switching back to C-like leaves `{"v":1}` stored instead of removing the key (prints the same); lanes C1a..C1d wait for Alfonso's D1 and D3. Docs written by the chat: the lane stopped at the ceiling. Two defects fixed on the way, both new to the Pascal style: a keyword-less feature printed `:=` (concreteGrammar.ts:331,336); an unnamed object with an empty body read as named `begin` (parser.ts).
 **Prompt document name**: 2026-11-04 03:45
+
+## 2026-11-04 — merge: textual-c-notation takes alfonso-frontend-jjtl (P-2026-11-04-0653)
+**Prompt**: `claude_2026-11-04_0653_prompt_textual-c-notation_take_trunk.md`, full lane (RC-14): the trunk `alfonso-frontend-jjtl` at `26a0b21fa` into `textual-c-notation` at `ba24f6dcb`, one `--no-ff` merge commit, merge base `1f58fece6`; 20 trunk commits, 17 branch commits.
+**Files touched**: merge `df01f813c`: union of `docs/log-inbox/codegen.md` (the one conflict), the rest auto-merged from the trunk side; this commit: this entry and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `df01f813c`: typecheck exit 0, 0 `error TS`; typecheck:scripts exit 0; vitest 13696 passed in 513 files, 3 red at import (baseline), expectation 13568 + 7 trunk + 121 branch; hooks 967; build exit 0; check:docs 5/5; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: the trunk side adds only test counters (#205) to the textual code, the branch crops of P-2026-11-04-0345 stand (Alfonso's GO 06:52); no new visual check.
+**Notes**: Union: trunk entries (#205, textual-fix-205 merge) then branch entries (step C discovery, C3a), +26 lines against each parent; probes R-TXT-40..43 once, R-TXT-44 none, 8 headings once. Step 5: parser.ts and printer.ts coherent, counters declared once. Trunk count 13575 had `irCollapsedRender.test.ts` red once (Chromium hook timeout under parallel typecheck load), green on the merge run.
+**Prompt document name**: 2026-11-04 06:53
