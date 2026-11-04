@@ -5,12 +5,19 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import type { ConcreteGrammar } from '../concreteGrammar';
+import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE, PASCAL_STYLE, STYLE_CATALOG, styleOf } from '../style';
 import type { NotationStyle } from '../style';
 import { checkStyle, STYLE_RULES } from '../styleCheck';
 import type { StyleFinding } from '../styleCheck';
+import type { ElementIds, SyntaxAnnotations } from '../annotations';
+import { operatorFixity } from '../annotations';
+import type { TextMetamodel, TextObject } from '../metamodel';
+import { classFeatures } from '../metamodel';
+import { arithGrammar, BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar, withOperator } from './boolCorpus';
 import { generateSamples, nearleyGrammarOf, parseCount } from './oracle';
 import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
 import { FIXTURE, objectsOf } from './spec';
@@ -192,5 +199,207 @@ describe('nearley as the unambiguity oracle (R-TXT-21 (1))', () => {
         expect(ambiguous(grammarOf(HOMONYMS)).length).toBeGreaterThan(0);
         expect(ambiguous(grammarOf(FIXTURE, DOT_SEPARATOR)).some(t => t.includes('peers ['))).toBe(true);
         expect(parseCount(grammarOf(FIXTURE), 'Part { size one }')).toBe(0);
+    });
+});
+
+// Step C lane C1a (P-2026-11-04-0910): the conditions an expression adds, each with the BOOL variant that breaks it.
+describe('the operators of an expression', () => {
+    const findings = (record: Parameters<typeof boolGrammar>[0], mm = BOOL_MM, ids = BOOL_IDS): [string, string, string][] =>
+        checkStyle(boolGrammar(record, mm, ids)).filter(f => f.level === 'error').map(f => [f.rule, f.where, f.message]);
+    const PASCAL_NOT = withOperator(BOOL_PASCAL, 'C_Not', { symbol: 'not', precedence: 4 });
+
+    it('BOOL holds every rule in both styles', () => {
+        for (const record of [BOOL_CLIKE, BOOL_PASCAL]) {
+            expect(checkStyle(boolGrammar(record)).map(f => [f.level, f.rule])).toEqual(STYLE_RULES.map(r => ['ok', r]));
+        }
+        expect(STYLE_RULES.slice(-5)).toEqual(['operator-fixity', 'operator-symbols', 'operator-tokens', 'operator-follow', 'call-words']);
+    });
+
+    it('operator-fixity: a symbol is prefix on one class and infix on another at most (C1b)', () => {
+        // A prefix and an infix share a symbol, as the unary and the binary minus do: accepted, in either order.
+        expect(findings(withOperator(BOOL_CLIKE, 'C_Not', { symbol: '&', precedence: 4 }))).toEqual([]);
+        expect(checkStyle(arithGrammar()).filter(f => f.level === 'error')).toEqual([]);
+        // Two infix fixities on one symbol stay an error, and so does a third fixity next to the pair.
+        expect(findings(withOperator(BOOL_CLIKE, 'C_Imp', { symbol: '&', precedence: 1, assoc: 'right' }))).toEqual([
+            ['operator-fixity', 'class And', 'the symbol "&" is n-ary here and binary for Imp: one fixity per symbol'],
+        ]);
+        expect(findings(withOperator(withOperator(BOOL_CLIKE, 'C_Not', { symbol: '&', precedence: 4 }), 'C_Imp', { symbol: '&', precedence: 1, assoc: 'right' }))).toEqual([
+            ['operator-fixity', 'class And', 'the symbol "&" is n-ary here and binary for Imp: one fixity per symbol'],
+        ]);
+    });
+
+    it('operator-symbols: two classes do not share a symbol', () => {
+        expect(findings(withOperator(BOOL_CLIKE, 'C_Or', { symbol: '&', precedence: 2, call: 'or' }))).toEqual([
+            ['operator-symbols', 'class And', 'the symbol "&" is the symbol of Or too'],
+        ]);
+    });
+
+    it('operator-tokens: a symbol is no token of the style, of the expression or of a reference, and no comment', () => {
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '{', precedence: 3 }))).toEqual([
+            ['operator-tokens', 'class And', 'the symbol "{" is the style token style.blockOpen'],
+        ]);
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '(', precedence: 3 }))).toEqual([
+            ['operator-tokens', 'class And', 'the symbol "(" is a token of the expression itself'],
+        ]);
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '.', precedence: 3 }))).toEqual([
+            ['operator-tokens', 'class And', 'the symbol "." is a token of a reference'],
+        ]);
+        expect(findings(withOperator(PASCAL_NOT, 'C_Imp', { symbol: '-', precedence: 1, assoc: 'right' }))).toEqual([
+            ['operator-tokens', 'class Imp', 'the symbol "-" is a prefix of "--": the longer token would be read'],
+        ]);
+        expect(findings(withOperator(BOOL_CLIKE, 'C_Imp', { symbol: '//>', precedence: 1, assoc: 'right' }))).toEqual([
+            ['operator-tokens', 'class Imp', 'the symbol "//>" starts with the comment opener "//"'],
+        ]);
+    });
+
+    it('operator-follow: an infix symbol does not follow an expression', () => {
+        const mm = { ...BOOL_MM, classes: BOOL_MM.classes.map(c => (c.name === 'Rule' ? { ...c, references: [{ name: 'when', type: 'Expr', containment: true, many: true }] } : c)) };
+        const record = withOperator(<SyntaxAnnotations>{ ...BOOL_CLIKE, classes: { ...BOOL_CLIKE.classes, C_Lit: { keyword: 'lit', layout: 'line' } } }, 'C_Or', { symbol: 'lit', precedence: 2 });
+        expect(findings(record, mm)).toEqual([
+            ['operator-follow', 'class Or', 'the infix symbol "lit" can also follow an expression of Expr_'],
+        ]);
+    });
+
+    it('call-words: not the keyword of another class, not a symbol, not shared', () => {
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '&', precedence: 3, call: 'Rule' }))).toEqual([
+            ['call-words', 'class And', 'the call word "Rule" is the keyword of Rule'],
+        ]);
+        expect(findings(withOperator(BOOL_PASCAL, 'C_And', { symbol: 'and', precedence: 3, call: 'or' }))).toEqual([
+            ['call-words', 'class And', 'the call word "or" is an operator symbol'],
+        ]);
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '&', precedence: 3, call: 'or' }))).toEqual([
+            ['annotations', 'rule Expr_', 'not LL(1): "or" can start the call form of Or and the call form of And'],
+            ['call-words', 'class And', 'the call word "or" is the call word of Or too'],
+        ]);
+    });
+
+    it('annotations: a primary that can be empty, and two starts of an expression that overlap, are not LL(1)', () => {
+        const ids = { ...BOOL_IDS, features: { ...BOOL_IDS.features, F_Use_atom: { owner: 'Use', name: 'atom', lower: 0 } } };
+        expect(findings(BOOL_CLIKE, BOOL_MM, ids)).toEqual([['annotations', 'rule Expr_', 'not LL(1): the primary Use can be empty']]);
+        const lit: SyntaxAnnotations = { ...BOOL_CLIKE, classes: { ...BOOL_CLIKE.classes, C_Lit: { keyword: 'lit', layout: 'line' } } };
+        expect(findings(withOperator(lit, 'C_Not', { symbol: 'lit', precedence: 4 }))).toEqual([
+            ['annotations', 'rule Expr_', 'not LL(1): "lit" can start Lit and the prefix operator Not'],
+        ]);
+    });
+
+    it('nearley: BOOL samples rooted at Sheet have one parse in both styles; Or sharing "&" is ambiguous', () => {
+        for (const record of [BOOL_CLIKE, BOOL_PASCAL]) {
+            const g = boolGrammar(record);
+            const n = nearleyGrammarOf(g);
+            // The last sample joins the roots' samples, and only Sheet stands at the top level.
+            const samples = generateSamples(g).slice(0, -1).filter(x => x.covered.has('Sheet') && x.covered.has('Expr_'));
+            expect(samples.length).toBeGreaterThan(0);
+            for (const x of samples) expect([x.text, parseCount(g, x.text, n)]).toEqual([x.text, 1]);
+            const covered = new Set(samples.flatMap(x => [...x.covered]));
+            for (const k of ['Expr_>Imp', 'Expr_>Or', 'Expr_>And', 'Expr_>Not', 'Expr_>Or()', 'Expr_>And()', 'Expr_>0', 'Expr_>1', 'Expr_()']) expect(covered).toContain(k);
+        }
+        const g = boolGrammar(withOperator(BOOL_CLIKE, 'C_Or', { symbol: '&', precedence: 2, call: 'or' }));
+        expect(parseCount(g, 'Sheet s { rules { Rule r { when { a & b } } } }')).toBe(2);
+    });
+});
+
+// The RISC-V Briefs' SyncRTL, read-only from the prototype's folder in the PROTO environment variable (no path in the
+// repo); skipped without it. C1d: Ref.name is optional, and a positional one-line Ref keeps it under R-TXT-41 (D3),
+// printing `{}` when unset; the port line `input instr : Word(32)`.
+const PROTO = process.env.PROTO ?? '';
+
+function syncRtl(): { mm: TextMetamodel; ids: ElementIds } {
+    const text = readFileSync(`${PROTO}/metamodels/SyncRTL.ecore`, 'utf8');
+    const classes: TextMetamodel['classes'][number][] = [];
+    const enumerations: TextMetamodel['enumerations'][number][] = [];
+    const ids = { classes: {} as Record<string, string>, features: {} as Record<string, { owner: string; name: string; lower: number }>, enums: {} as Record<string, string> };
+    const re = /<eClassifiers xsi:type="ecore:(EClass|EEnum)" name="(\w+)"([^>]*?)(\/>|>([\s\S]*?)<\/eClassifiers>)/g;
+    for (const [, kind, name, attrs, , body = ''] of text.matchAll(re)) {
+        if (kind === 'EEnum') { enumerations.push({ name, literals: [...body.matchAll(/eLiterals name="(\w+)"/g)].map(x => x[1]) }); ids.enums[`E_${name}`] = name; continue; }
+        const supers = /eSuperTypes="([^"]+)"/.exec(attrs)?.[1].split(' ').map(x => x.replace('#//', ''));
+        const attributes: { name: string; type: string; many: boolean }[] = [];
+        const references: { name: string; type: string; many: boolean; containment: boolean }[] = [];
+        for (const [, k, n, a] of body.matchAll(/<eStructuralFeatures xsi:type="ecore:(EAttribute|EReference)" name="(\w+)"([^>]*)>/g)) {
+            const type = /eType="[^"]*?(\w+)"/.exec(a)![1];
+            const many = a.includes('upperBound="-1"');
+            if (k === 'EAttribute') attributes.push({ name: n, type, many });
+            else references.push({ name: n, type, many, containment: a.includes('containment="true"') });
+            ids.features[`F_${name}_${n}`] = { owner: name, name: n, lower: a.includes('lowerBound="1"') ? 1 : 0 };
+        }
+        classes.push({ name, isAbstract: attrs.includes('abstract="true"'), supers, attributes, references });
+        ids.classes[`C_${name}`] = name;
+    }
+    return { mm: { classes, enumerations }, ids };
+}
+
+/** A SyncRTL model from its JSON (nested objects): ids `o1`, `o2`, ... in document order (the probe's loader, C1b). */
+function loadSync(path: string): TextObject[] {
+    const out: TextObject[] = [];
+    let n = 0;
+    const walk = (e: Record<string, unknown>): string => {
+        const id = `o${++n}`;
+        const slots: Record<string, unknown> = {};
+        out.push({ id, cls: String(e.__type), slots });
+        for (const [k, v] of Object.entries(e)) {
+            if (k.startsWith('__') || k === 'className') continue;
+            if (Array.isArray(v)) slots[k] = v.map(x => (x && typeof x === 'object' ? walk(x as Record<string, unknown>) : x));
+            else if (v && typeof v === 'object') slots[k] = walk(v as Record<string, unknown>);
+            else slots[k] = v;
+        }
+        return id;
+    };
+    walk(JSON.parse(readFileSync(path, 'utf8')));
+    return out;
+}
+const SYNC_FILES = ['out/arb3-syncrtl.json', 'out/arb3_rr-syncrtl.json', 'out/arb3_fixed-syncrtl.json', 'out/scaling-ref/mc_w4_r4-syncrtl.json', 'out/scaling-ref/pf_w4_r4-syncrtl.json', 'out/scaling-ref/mc_w32_r32-syncrtl.json'];
+
+describe.skipIf(!PROTO)('the Briefs: SyncRTL with the operator table of the probe (PROTO)', () => {
+    const table: [string, { symbol: string; precedence: number; assoc?: 'left' | 'right'; call?: string }, string][] = [
+            ['Implies', { symbol: '->', precedence: 1, assoc: 'right' }, 'binary'],
+            ['Disj', { symbol: '|', precedence: 2, call: 'or' }, 'nary'],
+            ['Conj', { symbol: '&', precedence: 3, call: 'and' }, 'nary'],
+            ['Eq', { symbol: '=', precedence: 4 }, 'binary'],
+            ['Le', { symbol: '<=', precedence: 4 }, 'binary'],
+            ['Add', { symbol: '+', precedence: 5 }, 'binary'],
+            ['Sub', { symbol: '-', precedence: 5 }, 'binary'],
+            ['Neg', { symbol: '!', precedence: 9 }, 'prefix'],
+    ];
+    // Positional Port and Ref cannot both stand at the top level: the roots are the uncontained classes.
+    const record: SyntaxAnnotations = {
+        v: 1,
+        roots: 'uncontained',
+        classes: {
+            ...Object.fromEntries(table.map(([cls, operator]) => [`C_${cls}`, { operator }])),
+            C_Ref: { keyword: '', layout: 'line' }, C_Port: { keyword: '', layout: 'line' }, C_Word: { layout: 'call' }, C_Bool: { layout: 'line' },
+        },
+        features: {
+            F_Module_inputs: { itemKeyword: 'input' }, F_Module_outputs: { itemKeyword: 'output' },
+            F_Port_type: { keyword: ':', inline: true }, F_Port_driver: { inline: true },
+        },
+    };
+
+    it('derives the fixities and holds the five operator rules', () => {
+        const { mm, ids } = syncRtl();
+        for (const [cls, , fixity] of table) {
+            expect([cls, operatorFixity(classFeatures(mm, mm.classes.find(c => c.name === cls)!))?.fixity]).toEqual([cls, fixity]);
+        }
+        const g = boolGrammar(record, mm, ids);
+        const expr = g.rules.find(r => r.body.t === 'expr')?.body;
+        expect(expr?.t === 'expr' && expr.operators.map(o => o.cls)).toEqual(['Implies', 'Disj', 'Conj', 'Eq', 'Le', 'Add', 'Sub', 'Neg']);
+        expect((g.annotationIssues ?? []).filter(i => i.level === 'error')).toEqual([]);
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        const rules = new Set(STYLE_RULES.slice(-5));
+        expect(checkStyle(g).filter(f => rules.has(f.rule)).map(f => [f.level, f.rule])).toEqual(STYLE_RULES.slice(-5).map(r => ['ok', r]));
+    });
+
+    it('print-parse-print is byte-identical on the six models; dmem_we and its driver read on one line (C1b, C1d)', () => {
+        const { mm, ids } = syncRtl();
+        const g = boolGrammar(record, mm, ids);
+        for (const f of SYNC_FILES) {
+            const first = printTextModel(g, loadSync(`${PROTO}/${f}`)).text;
+            const r = parseText(first, g);
+            expect(r.errors, f).toEqual([]);
+            expect(printTextModel(g, r.objects).text === first, f).toBe(true);
+            if (f.includes('mc_w4_r4')) {
+                const lines = first.split('\n');
+                expect(lines.filter(l => /^\s*(input|output) dmem_we\b/.test(l)).map(l => l.trim())).toEqual(['output dmem_we origin "Core:memory port" : Bool driver st & or(is_sw)']);
+                expect(lines.filter(l => /^\s*input instr\b/.test(l)).map(l => l.trim())).toEqual(['input instr origin "Core:instruction port" : Word(32)']);
+            }
+        }
     });
 });

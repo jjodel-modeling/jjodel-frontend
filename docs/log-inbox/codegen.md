@@ -1645,3 +1645,107 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — crops c3a-* of P-2026-11-04-0345 checked by the chat (RC-23) and by Alfonso («go», 06:52).
 **Notes**: Blocked only by the environmental port clash, resolved with the evidence above (`resolved.txt`). Rollback tag `pre-textual-c-notation` on `26a0b21fa` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0712/result.json`.
 **Prompt document name**: 2026-11-04 07:12
+
+## 2026-11-04 — feat(codegen): operators in the grammar and the style check, textual step C lane C1a (P-2026-11-04-0732, P-2026-11-04-0910)
+**Prompt**: `claude_2026-11-04_0732_prompt_textual_c1a_operators.md` and its continuation `claude_2026-11-04_0910_prompt_textual_c1a_cont.md` (RC-51): the operator annotation applied to the grammar per R-TXT-41 (fixity read off the class's features, n-ary flat chains, the call word), the `expr` grammar node with its EBNF, five style rules, a BOOL expression corpus in both styles, the Briefs under `PROTO`.
+**Files touched**: `annotations.ts`, `concreteGrammar.ts`, `styleCheck.ts`, `parser.ts` (two approved lines), `oracle.ts`, `__tests__/boolCorpus.ts` and tests (d9a893f4b, 7f64ce6a6, 54ab3aa09, 18e6c8454, d6cee1805).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on d6cee1805: tsc 0; vitest 13714 passed, 3 red at import (baseline); build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no (parser.ts two lines and oracle.ts, approved by the chat)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — grammar and check only; the EBNF of an expression metamodel is shown with the crops of C1b, when the text prints expressions.
+**Notes**: Tests red first (6, 3, 8). Nearley oracle: one parse per BOOL sample in both styles. Briefs 71/71 under PROTO. Mutation bench 16/16 killed. New rules operator-fixity, operator-symbols, operator-tokens, operator-follow, call-words. Open for C1b: operators of equal precedence as one level; a symbol both prefix and infix (unary minus). Open for C1d: the Pascal terminator after a primary. Docs written by the chat: the lane stopped at the ceiling.
+**Prompt document name**: 2026-11-04 07:32
+
+## 2026-11-04 — test(codegen): C1b closure, call form under Pascal, "+" in the oracle samples, in-app check (P-2026-11-04-1045)
+**Prompt**: `claude_2026-11-04_1045_prompt_textual_c1b_closure.md` (RC-51, continues `claude_2026-11-04_1005_prompt_textual_c1b_cont.md` and `claude_2026-11-04_0938_prompt_textual_c1b_parser_printer.md`): the chat's answers to the 1005 handoff (an and/or under two operands never loses the object; `+` samples in the generator), the three probe fixes, one probe run with crops, the gates, the log entry.
+**Files touched**: `__tests__/expressions.test.ts`, `__tests__/oracle.ts` (fdc328a72, 8c376d5f0).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-04 10:05
+**Causa**: (c)
+**Regressions**: unknown. Gates on 8c376d5f0: tsc 0; vitest 13740 passed, 2 skipped, 3 red at import (baseline); build 0; check:codegen-lazy ALL GREEN (off, on). The failing edit below is a path C1b opens; whether the executor fails the same way outside expressions was not measured.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito (dettaglio) — Text tab is the model's print (`a & (b | c)`, `-x`), EBNF shows `Expr_` with its operators and call forms, one Undo restores text and model; the edit ` | a` leaves a Use without its var (ticket below).
+**Notes**: The 1005 premise for the call form did not reproduce: the grammar defaults the word (concreteGrammar.ts:260), Pascal prints `And()`, `Or(is_sw;)` and reads them back to the same model; tests pin it, killed by dropping the default (2 of 23). The generator gap was a form counter shared by every occurrence: the first expression of a sample now takes its round's form, red first. The EBNF crop kept the donation banner (it came back after a close); `c1b-ebnf-top.png` is cut from the same PNG.
+**Prompt document name**: 2026-11-04 10:45
+
+## 2026-11-04 — ticket: a Text tab edit adding an operand runs a set that cannot resolve the new Use
+**Ticket**: In the Text tab, typing ` | a` into `a & (b | c)` runs two JjScript lines: `create instance of Use "Use_1" in Or_1.ops` (success) and `set Use_1.var = a`, which fails with "Cannot resolve metaclass for instance 'Use_1'" (jjscript/executor/commands/instance.ts:1031-1039: the resolved object has no `instanceof`). The bar reads "Applied, 1 line failed", the tab keeps `a & (b | c | a)`, the model prints `a & (b | c |)`. Use has no name feature. Measured by the 1045 probe, one run.
+**Priority**: medium
+**Found in**: P-2026-11-04-1045
+
+## 2026-11-04 — feat(codegen): C1c, slot matching of expression objects, handle names, slot ordering (P-2026-11-04-1115, P-2026-11-04-1158, P-2026-11-04-1241)
+**Prompt**: `claude_2026-11-04_1241_prompt_textual_c1c_closure.md` (RC-51, continues `claude_2026-11-04_1158_prompt_textual_c1c_cont.md` and `claude_2026-11-04_1115_prompt_textual_c1c_diff.md`, both stopped at the context ceiling): the nestedDiff bench, created handles that avoid every instance name, line order around a create into a slot, slot matching of nameless expression objects; closure: mutation bench, before and after table, gates, one probe run, log entry.
+**Files touched**: `__tests__/nestedDiff.test.ts` (5bb033df0, 4ffbc1ba7, 725f30249), `textDiff.ts` (157d91a45, d43e420c4), `textMatch.ts` (4ffbc1ba7), `ui/TextualTab.tsx` (157d91a45), all under `frontend/src/codegen/textual/`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-04 10:45
+**Causa**: (c)
+**Regressions**: no. Gates on 725f30249: tsc 0; vitest 13817 passed, 2 skipped, 3 red at import (baseline, `window is not defined`); build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Typed ops of the 13 bench edits unchanged against the 1115 measurement.
+**Out-of-scope changes**: yes — `ui/TextualTab.tsx` (instanceNames for the diff), approved by the chat in the 1158 prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe on 725f30249, 7 rows ALL PASS: add, remove, reorder, operator, wrap, add first applied whole with one Undo; wrap whole refused with its reason, model untouched. Crops `c1c-0-base.png` .. `c1c-7-add-first.png`, light theme, scale 1, no banner. GO of Alfonso pending.
+**Notes**: Bench on 2b: drop equal subtrees (13 red), position pass (14), expr exclusions in step 2 (15) die; options[0] without the same-index preference survived, killed by (4b) in 725f30249 (2 red). Table `before-after.md` in the lane folder: uncertain refusals 5 to 0 pasted, 13 to 0 re-imported, every re-import plans as typed but unwrap (inner Not kept, one op fewer). 157d91a45 closes the 1045 ticket (Use_1 reused).
+**Prompt document name**: 2026-11-04 12:41
+
+**Ticket** (executor, medium, found in P-2026-11-04-1158): two gaps of the JjScript executor that the diff works around; C1c does not change the executor. (1) `applyCollectionUpdate` (jjscript/executor/commands/instance.ts:1314) reads the committed values only, so a list update right after `create ... in X.ops` drops the new object; the diff orders the lines and refuses another update of that slot until a line addresses the created object. (2) A removed single-valued value (`set r3.when -= And_3` succeeds) is not seen by a create into that slot in the same run, which still counts it full; so wrapping a whole single-valued expression (`-(a & (b | c))`) stays refused with "wrapping the value of r3.when in a new object is not applied yet" until this lands.
+
+## 2026-11-04 — feat(codegen): C1d, the port line, item keyword, call layout, optional head name (P-2026-11-04-1312, P-2026-11-04-1355, P-2026-11-04-1447)
+**Prompt**: `claude_2026-11-04_1447_prompt_textual_c1d_closure.md` (RC-51, continues `claude_2026-11-04_1355_prompt_textual_c1d_cont.md`, stopped at the context ceiling, which continued `claude_2026-11-04_1312_prompt_textual_c1d_port_line.md`): per-item and punctuation keywords, inline containment, call layout, D3 optional head name, Pascal terminator, Briefs record, mutation bench; closure: app check of the port line in C-like and Pascal/Ada, EBNF mode, outline, crops.
+**Files touched**: `annotations.ts`, `concreteGrammar.ts`, `parser.ts`, `printer.ts`, `styleCheck.ts`, `__tests__/{annotations,portLine,expressions,styleCheck}.test.ts`, `__tests__/portCorpus.ts` (9d5d474be, ac7a5b4b7, e80eaa872, cc7235435), all under `frontend/src/codegen/textual/`; 1447 no code.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. Gates on cc7235435 (P-2026-11-04-1355): tsc 0; vitest 13842 passed, 3 red at import (baseline); build 0; check:docs 0; check:codegen-lazy PASS off and on. Bench 27 mutations, 0 survivors.
+**Out-of-scope changes**: no — 10 files, above five, all inside the 1312 DOVE (the four modules, the tests, the Briefs record).
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito (dettaglio) — probe on cc7235435, app on 3471: width, rename, add a port line (C-like) and width (Pascal) applied whole, one Undo each; removing a port name gives `No change` in both styles, model keeps `result`; nameless Port and Ref get app names (Port_2, Ref_2). EBNF shows the four shapes. Crops `c1d-*.png`, `stuck-c1d-*.png` in the lane folder, light theme, scale 1, no banner.
+**Notes**: Decisions of 1355, unattended: D3 stricter than the 1312 handoff, an optional head name refused also when every part after it is optional; Briefs record with `roots: 'uncontained'` and Port.driver keyword `driver` (`=` is the Eq symbol); Pascal: a block element whose rule is an expression takes the terminator after. Open point: the per-item keyword gives one `input` group per port in the outline (`c1d-5-outline.png`), fix in languageService.ts `textOutline`. Probe: lane folder of 1447.
+**Prompt document name**: 2026-11-04 14:47
+
+**Ticket** (textual tab, high, found in P-2026-11-04-1447): (1) a nameless Port or Ref, applied from the text, gets an instance name from the app (Port_2, Ref_2, CLAUDE.md model §3.12); the tab says Applied and keeps the nameless text, the model's print differs, and every later edit is refused whole with `an update of Conj_3.ops after an object is created in it is not applied yet` (run2-stuck.log, stuck-c1d-*.png); writing the model's print back asks to confirm 3 Ref matches (`c1d-0-base-clike.png`). (2) Removing the name of a port (`output result :` to `output :`) settles `No change`, no line runs, the model keeps the name: neither applied nor refused with a reason (`c1d-4-unname.png`, `c1d-8-unname-pascal.png`). Not half applied, so no code change in this lane.
+
+## 2026-11-04 — merge: textual-c1-operators into alfonso-frontend-jjtl (P-2026-11-04-1542)
+
+**Prompt**: `claude_2026-11-04_1542_prompt_merge_textual-c1-operators.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c1-operators` at `dcc4231e4` into `alfonso-frontend-jjtl`, merge base `2809ad8ca`. Step C lane C1 (a to d): operators in the grammar, parser and printer of expressions, slot matching of nameless expression objects, the port line. Alfonso's GO on the crops 15:41.
+**Files touched**: merge `fe6eed263`, the branch side (`frontend/src/codegen/textual/annotations.ts`, `concreteGrammar.ts`, `styleCheck.ts`, `parser.ts`, `printer.ts`, `textMatch.ts`, `textDiff.ts`, `oracle.ts`, `ui/TextualTab.tsx`, their tests and corpora, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fe6eed263` in the worker: typecheck 0 errors; typecheck:scripts exit 0; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 13902 tests, 3 red at import (baseline), one failure in `scripts/hooks/__tests__/laneBoard.test.ts` (board import listens, environmental under load); run alone on the merge commit twice: 95/95 both times.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — crops c1b-*, c1c-*, c1d-* checked by the chat (RC-23) and by Alfonso («GO», 15:41); the two app findings of P-2026-11-04-1447 stay ticketed.
+**Notes**: Blocked only by the environmental board test, resolved with the evidence above. Rollback tag `pre-textual-c1-operators` on `d4d2495f0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1542/result.json`.
+**Prompt document name**: 2026-11-04 15:42
+
+## 2026-11-04 — fix(codegen): C1e, names the app gives, removing a name, outline groups (P-2026-11-04-1605, P-2026-11-04-1627)
+**Prompt**: `claude_2026-11-04_1627_prompt_textual_c1e_closure.md` (RC-51, continues `claude_2026-11-04_1605_prompt_textual_c1e_names_outline.md`, stopped at the context ceiling): R-TXT-44 (1)-(3), the nameless object the app names, removing a name from the text, one outline group per per-item keyword feature; closure: gates and docs.
+**Files touched**: `textDiff.ts`, `languageService.ts`, `ui/TextualTab.tsx`, `__tests__/outline.test.ts`, `__tests__/textualEdit.test.ts`, all under `frontend/src/codegen/textual/` (5fc137c02, f74e401c0, c7f6249be); 1627 no code.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-04 14:47
+**Causa**: (c)
+**Regressions**: no. Gates on c7f6249be (P-2026-11-04-1627): tsc 0; vitest 13909 passed, 2 skipped, 3 red at import (baseline); build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app check of P-2026-11-04-1605 (`app.mjs`, `.agent-logs/app1-20261104-160904.log`): 13 checks ALL PASS, first application with the reprint, width, add line, unname in C-like and Pascal/Ada, outline groups input 2 / output 1, one Undo each, tab text equal to the model print. Crops `c1e-*.png` in the 1605 lane folder.
+**Notes**: Measure (`names-measure.md`): `set X.name = ""` stores "" but the core reads initialName back, so R-TXT-44 (1) runs its fallback: `TextEditPlan.named` lists the handles the app names, the tab reprints once, status `Applied · the app named N object(s) the text leaves nameless`. Outline: consecutive item groups of one feature and keyword merge. One surviving mutant, the refusal guard of `named`, dropped as inert. Benches in the commit bodies; handoff in the 1605 lane folder.
+**Prompt document name**: 2026-11-04 16:27
+
+**Ticket** (textual tab, medium, found in P-2026-11-04-1605): removing a name whose initialName is that same name (an `output result` created from the text with it) brings the name back in the print, because the core's identity read falls back to initialName for an empty slot (`LModelElement.tsx:7786-7800`); only the status line says why. Keeping it nameless needs a core change or a textual reader that reads an explicit "" slot as nameless; neither done here, decision owed to Alfonso.
+
+## 2026-11-04 — merge: textual-c1e-names into alfonso-frontend-jjtl (P-2026-11-04-2113)
+
+**Prompt**: `claude_2026-11-04_2113_prompt_merge_textual-c1e-names.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c1e-names` at `77a4dd682` into `alfonso-frontend-jjtl`, merge base `e38500ec9`. Step C lane C1e (R-TXT-44): the tab reprints the names the app gives to nameless objects, removing a name applies, one outline group per per-item keyword feature.
+**Files touched**: merge `ddbf72645`, the branch side (`frontend/src/codegen/textual/textDiff.ts`, `languageService.ts`, `ui/TextualTab.tsx`, `__tests__/outline.test.ts`, `__tests__/textualEdit.test.ts`, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `ddbf72645` in the worker: typecheck 0 errors; typecheck:scripts exit 0; vitest 13918 tests, 3 red at import (baseline), hooks 967; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app check of P-2026-11-04-1605, 13 checks ALL PASS, crops c1e-* checked by the chat (RC-23).
+**Notes**: Rollback tag `pre-textual-c1e-names` on `d6fc11ebf` (RC-31). Union: none. The removed-name reprint is closed by the core lane of R-TXT-45 and R-TXT-46. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-2113/result.json`.
+**Prompt document name**: 2026-11-04 21:13

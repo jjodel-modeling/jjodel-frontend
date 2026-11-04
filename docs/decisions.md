@@ -7213,6 +7213,34 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
 - **R-TXT-43** (2026-11-04, Alfonso 06:52). **Extends R-TXT-37.** An application whose effect is the deletion of every object
   of the model asks for confirmation instead of applying on the pause, as commenting whole objects out does (#204: select
   all, delete, a pause over 800 ms applied the empty text; a later paste recreated the objects under new ids). Step D.
+- **R-TXT-44** (2026-11-04, Alfonso 15:53, «decidi tu»). **Answers the four open points of C1 (P-2026-11-04-1447), against
+  the goal of a lower cognitive load.** (1) The text is what the model holds: an object the text gives no name stays
+  nameless; when the app assigns its default name to an object created from the text, the same application clears it, in
+  the same undo step. Where the core refuses an empty name, the tab reprints once with the assigned name and the status
+  line says why; it never keeps a text that differs from the model's print. (2) Removing a name from the text applies:
+  the name is cleared, one Undo restores it; `No change` is never shown for an edit that changes the text's meaning.
+  (3) The outline shows one group per containment feature, labelled by its per-item keyword (`input`), whatever the
+  number of items, as R-TXT-39 (1) says for feature groups. (4) Ratified: an optional head name is refused also when
+  every part after it is optional (R-TXT-41 D3 made stricter); the prototype's record uses `roots: 'uncontained'` and
+  the keyword `driver`, since `=` is the symbol of `Eq`; inline refusals scoped to one-line owners; head words reserved
+  after an optional name, a colliding name quoted; call arguments mandatory and single-valued; empty braces omitted only
+  for a positional one-line class whose only part is the optional name.
+- **R-TXT-45** (2026-11-04, Alfonso 16:28, «A»). **Amends R-TXT-44 (1) and (2): an object can be nameless in the model.**
+  The core's read of the identity slot (`name : EString`, LModelElement.tsx, the fallback to `initialName`) falls back
+  only while the slot has never been written; a slot written with the empty string reads as nameless everywhere
+  (canvas, JjEL, export, the Text tab). The textual layer then clears the name the app gives to an object the text
+  leaves nameless, and removing a name from the text leaves the object nameless; the reprint of R-TXT-44 (1) remains
+  only where the core still assigns a name. A core change: its lane runs discovery first with the Layer Impact Report of
+  CLAUDE.md §3.2 and smoke tests on canvas, JjEL and export before the implementation.
+- **R-TXT-46** (2026-11-04, Alfonso 21:15, «sì»). **Answers D1-D10 of the core discovery for R-TXT-45
+  (docs/discovery/discovery_2026-11-04_core_nameless_identity.md §9), each as recommended.** Variant B: an identity slot
+  written with the empty string yields only to `data.name`, never to `initialName` (D1); the empty name never collides in
+  the name-uniqueness checks (D2); CHECK 12 drops `missing_name` for a nameless object (D3); v2-flow reference resolution
+  tests the target's presence, not a truthy name (D4); the XMI import echo of the identity slot is a lane of its own (D5);
+  the Text tab maps the empty name to unset, in the core lane (D6); the core lane lands after the C1e merge (D7); no
+  migration of saved empty slots (D8); `set X.name = null` stays unset and reads the automatic name (D9); a clear from
+  the canvas writes the empty slot (D10). The lane's file list is confirmed: LModelElement.tsx, nameUniqueness.ts,
+  ConformanceValidator.ts, jjomTransformers.ts, IRFormField.tsx, TextualTab.tsx and their tests.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
@@ -7337,19 +7365,141 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   fits it, the matched rule's pass 1 target when no lazy target fits, an error naming both when both fit or the type
   is unknown (`lazyOrMatched`, `executor.ts`). Evidence: `language-open-points.test.ts`; mutation M3 of the lane
   bench (lazy always wins) is killed by that file only.
-- **R-JTG-21** (2026-11-04, decided by the chat on Alfonso's delegation of 2026-11-04, not ratified word by word,
-  evidence: measured, verified: agent, reversible: trunk): a JjTL rule multiplicity with an unbounded upper bound fixes
+- **R-JTG-21** (2026-11-04, ratified by Alfonso 2026-11-04, evidence: measured, verified: agent, reversible: trunk): a JjTL rule multiplicity with an unbounded upper bound fixes
   no count. `[*]` (the same as `[0..*]`) creates one target per source; `[n..*]` creates n per source, its lower
   bound. No warning: the warning of P-2026-11-04-0015 is removed. Before, every unbounded bound created one per source: `[3..*]`
   on 2 sources created 2, now 6. Evidence: `language-open-points.test.ts` (P-2026-11-04-0900).
-- **R-JTG-22** (2026-11-04, decided by the chat on Alfonso's delegation of 2026-11-04, not ratified word by word,
-  evidence: measured, verified: agent, reversible: trunk): R-JTG-17 reaches every `let` body: a creation of a class
-  the target metamodel lacks inside a let body, in a feature or a forall, at rule level, in a nested let or in a let
-  inside a nested creation, is the same error, nothing is written. Only the missing class is checked there; an
-  abstract class and the creation shape stay unchecked in a let body, as before. Evidence: `language-open-points.test.ts`
-  (P-2026-11-04-0900). Amended 2026-11-04 on Alfonso's delegation, the lane's recommendation taken (P-2026-11-04-0900,
-  `06ce85232`): an abstract class created inside a let body is an error too, as for rule and nested targets; only the
-  creation shape stays unchecked there.
+- **R-JTG-22** (2026-11-04, ratified by Alfonso 2026-11-04, evidence: measured, verified: agent, reversible: trunk):
+  R-JTG-17 reaches every `let` body: a creation of a class the target metamodel lacks, or of an abstract class, inside
+  a let body, in a feature or a forall, at rule level, in a nested let or in a let inside a nested creation, is the
+  same error as for rule and nested targets, nothing is written. Only the shape of the creation stays unchecked in a
+  let body. Evidence: `language-open-points.test.ts` (P-2026-11-04-0900, `06ce85232`). Rewritten 2026-11-04 (P-2026-11-04-1442):
+  the first text said the abstract class stayed unchecked and the amendment said the opposite; this text keeps the amendment.
+
+## R-AI: the AI provider layer refactor of #196 (decisions 2026-11-02)
+
+Evidence: the discovery report `docs/discovery/discovery_2026-11-02_196_l0_ai_layer.md` (P-2026-11-02-1020, phase 1,
+`712aae6dd`), section «Questions for Juri»; chat C-2026-11-02-1016. Front `ai-provider`. R-AI-1..4: ratified by Juri
+2026-11-02 as recommended; R-AI-5: adopted by the chat (RC-21). All rows: evidence: measured, verified: agent,
+reversible: trunk (docs only, no code yet).
+
+- **R-AI-1** (2026-11-02, decision ④). **The runtime contract on `AI`, `AIConfig` and `JodieConfig` is dead.** No
+  compatibility facade is kept; the `@RuntimeAccessible` registrations go away with `types/jodie.ts` at L6, and the new
+  provider classes are not registered. L6 announces the break in the CHANGELOG. Measured: zero uses as identifiers in
+  shipped repo content; projects stored on the server are not measured.
+- **R-AI-2** (2026-11-02, rule 4). **Three new dependencies approved for L1, exact-pinned**: `openai` 7.47.0,
+  `@anthropic-ai/sdk` 1.3.0, `@google/genai` 2.32.0 (Apache-2.0). Each is imported dynamically inside provider methods,
+  and L1's gate shows by a build chunk diff that the initial bundle does not grow. A different version is a new decision.
+- **R-AI-3** (2026-11-02, decision ⑤). **Abstract class `BaseProvider`, module `src/services/ai/`**, as in the plan.
+- **R-AI-4** (2026-11-02, decision ⑥). **`cloudflare-worker/` is deleted, but L4 is gated** on two things: a real-key
+  Anthropic run of the spike (`models.list`, `messages`, stream), and the Claude connection `test()` moved to
+  `/v1/messages`, because a bad key on `models.list` is CORS-blocked without the Worker (spike, phase 1). The deployment
+  is removed by Alfonso on his Cloudflare account; the notifications Worker on the same account stays untouched.
+- **R-AI-5** (2026-11-02). **The fifteen corrections to the L1..L6 file lists of the report are adopted** in the
+  frozen spec (adopted by the chat under RC-21, within the lane's files). The deletion of the two files with no
+  importers (`ProviderSelector.tsx`, `ProviderSettings.tsx`) waits for Alfonso (RC-26).
+
+Open items of the frozen spec `docs/spec/claude_spec_2026-11-02_ai_provider_refactor.md` §10, answered by Juri in chat
+C-2026-11-02-1016 on 2026-11-02 (R-AI-6..12: ratified by Juri, R-AI-6..9 and 11..12 as recommended, R-AI-10 against
+the recommendation; evidence: read, verified: none, reversible: trunk).
+
+- **R-AI-6** (2026-11-02, O-1). **Key precedence stays as it is today.** L1 measures which of the two stored copies
+  (`jjodie_provider_<name>`, `jjodie-credentials.providers`) wins at load, pins it in a test, and the new store honours
+  that precedence and writes both copies. No data migration.
+- **R-AI-7** (2026-11-02, O-6). **The Claude `test()` is built on `/v1/messages` in L1** (one call, `max_tokens` 1), so
+  from L2 on a bad Claude key reads as AUTH, not NETWORK. This fulfils the second gate of R-AI-4 at L1.
+- **R-AI-8** (2026-11-02, O-3). **An OpenAI 429 with code `insufficient_quota` keeps the RATE category but its own
+  message** («no credit left on the account»), not «retry later». Every other 429 reads as today.
+- **R-AI-9** (2026-11-02, O-2). **`dockWidth` leaves the credentials blob at L2**, into a localStorage key of its own,
+  reading the old value once so the user's width is kept. L1's store preserves the field on round-trip until then.
+- **R-AI-10** (2026-11-02, O-8). **L2 stays one lane of 13 files**; Juri confirms rule 19 for it now, against the
+  recommendation to split it.
+- **R-AI-11** (2026-11-02, O-5). **L2 measures `AIConfig.getStatus` with a test before moving it**; if the label is
+  inverted it fixes it and says so in its log entry, otherwise it moves it as it is.
+- **R-AI-12** (2026-11-02, O-4). **The documentation types leave `types/jodie.ts` for a new `src/types/documentation.ts`
+  at L6.**
+- **R-AI-13** (2026-11-02, measured by chat C-2026-11-02-1016 with Juri's Anthropic key, evidence: measured, verified:
+  agent, reversible: trunk). **The real-key Anthropic gate of R-AI-4 is met, and O-7 is answered.** The L0 spike driver,
+  Anthropic arms only (`~/.jjodel-lanes/spike196/drive3.mjs`, `results3.json`, 6 calls, key scan 0 hits with a 3/3
+  positive control), from Chromium at `http://localhost:3010`, `@anthropic-ai/sdk` 1.3.0 with the direct-browser header
+  on every request: with a valid key `GET /v1/models` 200 (14 models, `access-control-allow-origin: *`),
+  `messages.create` 200 and `messages.stream` 200 on `claude-haiku-5-5`; with an invalid key `messages` 401 readable,
+  `GET /v1/models` blocked by CORS (no status). So the live Claude catalog works without the Worker for a valid key
+  (O-7), and only a bad key on `models.list` reads as NETWORK, which R-AI-7 already avoids. The remaining L4 gate is
+  R-AI-7's Claude `test()` on `/v1/messages`, built in L1. The optional OpenAI credit is not needed for any gate.
+
+L3 shape, answered by Juri in chat C-2026-11-03-0001 on 2026-11-03 (R-AI-14..16: ratified by Juri, R-AI-14 and 15 as
+recommended, R-AI-16 his own answer; evidence: read, verified: none, reversible: trunk).
+
+- **R-AI-14** (2026-11-03). **L3 is one lane in two phases**, rule 19 confirmed for up to 13 files: phase 1 moves the
+  four chat consumers and stops for Juri's real-key smoke; phase 2, after his GO, deletes `AIProviderService.ts` and its
+  test and rewrites the catalog test. The smoke falls before the deletion, as spec §7 L3 asks.
+- **R-AI-15** (2026-11-03). **`ChatRequest` gains an optional `signal?: AbortSignal`** (rule 11: optional property
+  only), forwarded by the three providers to their SDK, so `ExplainModal` keeps aborting the HTTP request on close as
+  it does today and `AIMatcher` forwards its own signal.
+- **R-AI-16** (2026-11-03). **The L3 real-key smoke uses the keys Juri has**: Claude, Gemini, Ollama (local), Custom
+  pointed at OpenRouter (an OpenAI-compatible remote server, Juri's key), OpenAI only up to its «no credit» 429, Mistral
+  if Juri finds a key. DeepSeek, Groq and Kimi are covered by mocks of the same `OpenAICompatibleProvider` class.
+
+Two gaps found by lane P-2026-11-03-0005 at its item 1 hard stop, answered by Juri in chat C-2026-11-03-0001 on
+2026-11-03 (R-AI-17..18: ratified by Juri as recommended; evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-17** (2026-11-03). **Earlier-turn attachments are still sent, as today.** `HistoryMessage` gains optional
+  `images?`/`documents?` (rule 11), the three providers place them on their own turn with the capability check, with
+  tests. The spec's text-only history (§4) is corrected: today `AIProviderService.ts:220-222` (and the other families)
+  re-sends every earlier image and PDF, and Jodie keeps them on its history (`Jodie.tsx:715-724`, `:735`).
+- **R-AI-18** (2026-11-03). **The Custom «requires a Base URL» check moves into `BaseProvider.prepare`**, with today's
+  text («Custom provider requires a Base URL. Set it in Settings.», `AIProviderService.ts:683-685`) and a test, so every
+  chat consumer gets it. `BaseProvider.ts` joins L3's DOVE (14 entries, rule 19 confirmed by this answer).
+- **R-AI-19** (2026-11-03, ratified by Juri as recommended, measured by chat C-2026-11-03-0001 with Juri's keys,
+  Chromium at `http://localhost:3198` on `cc78e8e3f`, evidence: measured, verified: agent, reversible: trunk). **The
+  OpenAI-compatible client sends no `X-Stainless-*` header.** The `openai` SDK adds seven of them (`-OS`, `-Arch`,
+  `-Lang`, `-Package-Version`, `-Runtime`, `-Runtime-Version`, `-Retry-Count`; `-Timeout` on some requests), and the
+  CORS preflight of `api.mistral.ai` («Request header field x-stainless-os is not allowed») and of `api.moonshot.cn`
+  rejects them: chat and `test()` read «Connection error» / «Cannot reach», where a plain `fetch` from the same page gets
+  a readable status (Mistral 429, Kimi 401). The same SDK client with each header set to `null` in `defaultHeaders`
+  sends none and gets the readable status (Mistral 429 `RateLimitError`, Kimi 401 `AuthenticationError`). Ollama and
+  OpenRouter accept the headers; the Anthropic and Google SDKs are unaffected on their own hosts. Fixed in L3, in
+  `OpenAICompatibleProvider.ts`, with a test.
+
+L4 shape, answered by Juri in chat C-2026-11-03-1227 on 2026-11-03 (R-AI-20..21: ratified by Juri as recommended;
+evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-20** (2026-11-03). **L4 removes the code first and the folder later, on one branch.** Measured on `staging`
+  `99b380f6f`: `AI.getEndpoint()` has no caller outside tests, and `fetchCatalog`/`fetchAnthropicCatalog`, the only
+  users of `proxyPath`, are imported only by their own test. The `jjodel-ai-proxy` Worker still answers (404 on `/`, 204
+  on the `/v1/anthropic/messages` preflight, 13:2x). One lane deletes the code proxy surface and proves that the bundle
+  no longer names the Worker host. The branch then stays unmerged. After Alfonso confirms that the deployment is
+  removed, a dedicated commit on the same branch deletes `cloudflare-worker/`, the `/cloudflare-worker/node_modules`
+  line of `.gitignore` and the Worker paragraph of `docs/CODEBASE-MAP.md`, and only then is the branch merged. Rule 19
+  is confirmed for that lane. Spec §7 L4 (a) also asks for a smoke from a production origin, which a lane cannot reach.
+  The dist check stands in for it, and the production run goes on Alfonso's test checklist.
+- **R-AI-21** (2026-11-03). **`services/aiModelCatalog.ts` loses its whole dead fetch path**, not only the proxy
+  fallback the spec names (§7 L4 «Modify»). Every export without a live importer outside its own test goes, along with
+  the private helpers that only those exports use and their test cases. The exports that live files still use
+  (`types/jodie.ts`, `ProviderModelSelector.tsx`, `AISettingsContent.tsx`) stay until L6.
+
+L4 merge and L6 shape, answered by Juri in chat C-2026-11-03-1227 on 2026-11-03 (R-AI-22..23: ratified by Juri,
+R-AI-22 his own answer, R-AI-23 as recommended; evidence: measured, verified: agent, reversible: trunk).
+
+- **R-AI-22** (2026-11-03). **The Worker goes later, and the L4 code goes now.** Juri: «il proxy lo eliminiamo dopo».
+  This supersedes the sequencing of R-AI-20. The L4 code part is merged into `staging` (`7816c57ec`, P-2026-11-03-1430).
+  The removal of the `jjodel-ai-proxy` deployment (Alfonso asked first) and a small branch that deletes
+  `cloudflare-worker/`, the `/cloudflare-worker/node_modules` line of `.gitignore` and the Worker paragraph of
+  `docs/CODEBASE-MAP.md` come later; the chat keeps the reminder. Measured: the deployed `origin/staging` `9dc6e3906`
+  uses the Worker only as the Claude `models.list` fallback (`AIProviderService.ts:821`), and `origin/master` names no
+  Worker.
+- **R-AI-23** (2026-11-03). **L6 is three chained lanes on one branch**, `feat/196-l6-consolidation`, with rule 19
+  confirmed for about 30 entries. Lane 1 moves the live runtime readers of `types/jodie.ts` onto `src/services/ai` and
+  deletes the L2 bridge. Lane 2 moves the types, deletes `types/jodie.ts` (and `services/aiModelCatalog.ts` once
+  nothing imports it), carries the tests and writes the CHANGELOG. Lane 3 rewrites `CLAUDE.md` §16 and
+  `docs/CODEBASE-MAP.md` §19. Juri's visual check comes before the merge. The spec's L6 list (§7) names only type
+  importers. Measured on `b443faf2b`, the runtime readers it missed are: `AI[p]` in `AISettingsContent.tsx` (`versions`,
+  `keyPlaceholder`, `initial`, `color`, `bgColor`), `AIAssistantSettings.tsx`, `ProviderConfigModal.tsx` and
+  `ChatMessages.tsx`; `AI.DOCUMENTATION_STORAGE_PREFIX` in `DocumentationService.ts`; `ALL_AI_PROVIDERS` and the
+  `AIProvider` statics; and `applyModelCatalog` (the bridge) in `ProviderModelSelector.tsx`. `ProviderSpec` carries no
+  GUI data, and `src/services/ai` stays free of UI, so the twelve `addGUIinfo` rows move verbatim to a new UI-side table,
+  `components/common/providerVisuals.ts`.
 
 ## Superate
 

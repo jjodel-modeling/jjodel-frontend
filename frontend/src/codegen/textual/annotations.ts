@@ -8,7 +8,7 @@
  * derivation refuses (an annotation that would make the grammar ambiguous, R-TXT-21 (4), R-TXT-27) is reported there.
  */
 
-import type { TextMetamodel } from './metamodel';
+import type { TextFeature, TextMetamodel } from './metamodel';
 import { classFeatures, isNameFeature } from './metamodel';
 import { isStyleBase } from './style';
 import type { LetterCase, NotationStyle, StyleBase } from './style';
@@ -17,24 +17,33 @@ export interface OperatorAnnotation {
     readonly symbol: string;
     readonly precedence: number;
     readonly assoc?: 'left' | 'right';
+    /** The word of the call form `w(a, b, ...)` of an n-ary operator; by default the class keyword (step C lane C1a). */
+    readonly call?: string;
 }
+
+/** `nary`: one many-valued containment. `binary`: two single-valued ones, left and right in declaration order. `prefix`: one single-valued one. */
+export type OperatorFixity = 'nary' | 'binary' | 'prefix';
 
 export interface ClassAnnotation {
     /** The class keyword; `''` makes the class positional (no keyword). */
     readonly keyword?: string;
-    /** `line`: the features on the head's line, with no block (refused when the class has a containment). */
-    readonly layout?: 'block' | 'line';
+    /** `line`: the features on the head's line, with no block (refused when the class has a containment that is not inline).
+     *  `call`: the class word and its arguments in parentheses, `Word(32)` (step C lane C1d; refused when the class has a containment). */
+    readonly layout?: 'block' | 'line' | 'call';
     /** `keyword`: the name moves after the features, behind this keyword. `default`: a pattern over the attributes (`{kind}(_{requester})?`), the name omitted when it equals it. */
     readonly name?: { readonly keyword?: string; readonly default?: string };
-    /** Stored and validated, not applied yet. */
+    /** The class as an operator of the expressions of the types it stands for; its fixity is read off its features (operatorFixity). */
     readonly operator?: OperatorAnnotation;
 }
 
 export interface FeatureAnnotation {
-    /** The feature keyword; `''` makes the feature positional. */
+    /** The feature keyword; `''` makes the feature positional; one punctuation token (`:`) is a keyword too (C1d). */
     readonly keyword?: string;
-    /** A containment whose objects stand directly in the owner's body, with no keyword and no block. */
+    /** A containment whose objects stand directly in the owner's body, with no keyword and no block. In a one-line class,
+     *  a single-valued containment whose child is printed in the line after the feature keyword (C1d). */
     readonly inline?: boolean;
+    /** A keyword printed before each object of a multi-valued containment, in place of the keyword and block around them (C1d). */
+    readonly itemKeyword?: string;
     /** A many-valued containment grouped by an enumeration attribute (its id) of the contained class, by the enumeration's subsets. */
     readonly groupBy?: string;
     /** `name`: a string attribute printed as a name (unquoted when it is an identifier). */
@@ -90,7 +99,7 @@ export interface NamePattern {
 
 export interface ResolvedClass {
     readonly keyword?: string;
-    readonly layout?: 'block' | 'line';
+    readonly layout?: 'block' | 'line' | 'call';
     readonly name?: { readonly keyword?: string; readonly default?: NamePattern };
     readonly operator?: OperatorAnnotation;
 }
@@ -98,6 +107,7 @@ export interface ResolvedClass {
 export interface ResolvedFeature {
     readonly keyword?: string;
     readonly inline?: boolean;
+    readonly itemKeyword?: string;
     readonly groupBy?: { readonly attr: string; readonly owner: string; readonly mandatory: boolean };
     readonly value?: 'name';
 }
@@ -112,12 +122,26 @@ export interface ResolvedAnnotations {
     readonly enums: Readonly<Record<string, { readonly subsets: readonly EnumSubset[] }>>;
     /** The classes whose name attribute (own or inherited) is mandatory (R-TXT-27). */
     readonly mandatoryName: ReadonlySet<string>;
+    /** The features (`Owner.f`) whose lower bound is at least 1. */
+    readonly mandatory?: ReadonlySet<string>;
     readonly issues: readonly AnnotationIssue[];
 }
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const isKeyword = (v: unknown): v is string => typeof v === 'string' && (v === '' || IDENTIFIER.test(v));
+/** A feature keyword: a class keyword, or one punctuation token, a run of characters that are neither word characters, spaces, quotes nor `@` (C1d). */
+const isFeatureKeyword = (v: unknown): v is string => isKeyword(v) || (typeof v === 'string' && /^[^\w\s"'@]+$/.test(v));
 const isCase = (v: unknown): v is LetterCase => v === 'declared' || v === 'lower';
+/** An operator symbol: a word, or a run of characters that are neither word characters nor spaces. */
+const isSymbol = (v: string): boolean => IDENTIFIER.test(v) || /^[^\w\s]+$/.test(v);
+
+/** The fixity of a class as an operator, from all its features (inherited included); undefined when they are not an operator's shape. */
+export function operatorFixity(features: readonly TextFeature[]): { readonly fixity: OperatorFixity; readonly operands: readonly string[] } | undefined {
+    if (!features.length || features.some(f => f.kind !== 'containment')) return undefined;
+    if (features.length === 1) return { fixity: features[0].many ? 'nary' : 'prefix', operands: [features[0].name] };
+    if (features.length === 2 && features.every(f => !f.many)) return { fixity: 'binary', operands: features.map(f => f.name) };
+    return undefined;
+}
 
 /** Parses a name pattern; a string is the reason it is malformed. Segments do not nest. */
 export function parseNamePattern(text: string): NamePattern | string {
@@ -196,7 +220,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         const n = classFeatures(mm, c).find(isNameFeature);
         return n && mandatory.has(`${n.owner}.${n.name}`) ? [c.name] : [];
     }));
-    const empty: ResolvedAnnotations = { style, classes, features, enums, mandatoryName, issues };
+    const empty: ResolvedAnnotations = { style, classes, features, enums, mandatoryName, mandatory, issues };
 
     if (!record || record.v !== 1) {
         error('annotations', `unknown version ${JSON.stringify(record?.v)}: nothing applied`);
@@ -236,9 +260,9 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         const cls = ids.classes[id];
         if (cls === undefined) { error('classes', `no class has the id ${JSON.stringify(id)}`); continue; }
         const where = `class ${cls}`;
-        const out: { keyword?: string; layout?: 'block' | 'line'; name?: { keyword?: string; default?: NamePattern }; operator?: OperatorAnnotation } = {};
+        const out: { keyword?: string; layout?: 'block' | 'line' | 'call'; name?: { keyword?: string; default?: NamePattern }; operator?: OperatorAnnotation } = {};
         if (a.keyword !== undefined) { if (isKeyword(a.keyword)) out.keyword = a.keyword; else error(where, `the keyword ${JSON.stringify(a.keyword)} is not an identifier or ""`); }
-        if (a.layout !== undefined) { if (a.layout === 'block' || a.layout === 'line') out.layout = a.layout; else error(where, `the layout ${JSON.stringify(a.layout)} is not block or line`); }
+        if (a.layout !== undefined) { if (a.layout === 'block' || a.layout === 'line' || a.layout === 'call') out.layout = a.layout; else error(where, `the layout ${JSON.stringify(a.layout)} is not block, line or call`); }
         if (a.name !== undefined) {
             const name: { keyword?: string; default?: NamePattern } = {};
             if (a.name.keyword !== undefined) {
@@ -255,11 +279,12 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         if (a.operator !== undefined) {
             const o = a.operator;
             if (typeof o?.symbol !== 'string' || !o.symbol.trim()) error(where, 'the operator has no symbol');
+            else if (!isSymbol(o.symbol)) error(where, `the operator symbol ${JSON.stringify(o.symbol)} is neither an identifier nor a run of symbol characters`);
+            else if (o.call !== undefined && (typeof o.call !== 'string' || !IDENTIFIER.test(o.call))) error(where, `the call word ${JSON.stringify(o.call)} is not an identifier`);
             else if (!Number.isInteger(o.precedence)) error(where, `the operator's precedence ${JSON.stringify(o.precedence)} is not an integer`);
             else if (o.assoc !== undefined && o.assoc !== 'left' && o.assoc !== 'right') error(where, `the operator's associativity ${JSON.stringify(o.assoc)} is not left or right`);
             else {
-                out.operator = { symbol: o.symbol, precedence: o.precedence, ...(o.assoc ? { assoc: o.assoc } : {}) };
-                issues.push({ level: 'notice', where, message: `the operator "${o.symbol}" is stored, not applied yet` });
+                out.operator = { symbol: o.symbol, precedence: o.precedence, ...(o.assoc ? { assoc: o.assoc } : {}), ...(o.call !== undefined ? { call: o.call } : {}) };
             }
         }
         classes[cls] = out;
@@ -269,8 +294,9 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         const f = ids.features[id];
         if (f === undefined) { error('features', `no feature has the id ${JSON.stringify(id)}`); continue; }
         const where = `${f.owner}.${f.name}`;
-        const out: { keyword?: string; inline?: boolean; groupBy?: { attr: string; owner: string; mandatory: boolean }; value?: 'name' } = {};
-        if (a.keyword !== undefined) { if (isKeyword(a.keyword)) out.keyword = a.keyword; else error(where, `the keyword ${JSON.stringify(a.keyword)} is not an identifier or ""`); }
+        const out: { keyword?: string; inline?: boolean; itemKeyword?: string; groupBy?: { attr: string; owner: string; mandatory: boolean }; value?: 'name' } = {};
+        if (a.keyword !== undefined) { if (isFeatureKeyword(a.keyword)) out.keyword = a.keyword; else error(where, `the keyword ${JSON.stringify(a.keyword)} is not an identifier, "" or one punctuation token`); }
+        if (a.itemKeyword !== undefined) { if (typeof a.itemKeyword === 'string' && IDENTIFIER.test(a.itemKeyword)) out.itemKeyword = a.itemKeyword; else error(where, `the item keyword ${JSON.stringify(a.itemKeyword)} is not an identifier`); }
         if (a.inline !== undefined) { if (typeof a.inline === 'boolean') out.inline = a.inline; else error(where, 'inline is not a boolean'); }
         if (a.value !== undefined) { if (a.value === 'name') out.value = 'name'; else error(where, `the value form ${JSON.stringify(a.value)} is not "name"`); }
         if (a.groupBy !== undefined) {
@@ -290,7 +316,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         else enums[e] = { subsets: a.subsets.map(x => ({ name: x.name, literals: [...x.literals] })) };
     }
 
-    return { ...(language !== undefined ? { language } : {}), style, ...(roots !== undefined ? { roots } : {}), classes, features, enums, mandatoryName, issues };
+    return { ...(language !== undefined ? { language } : {}), style, ...(roots !== undefined ? { roots } : {}), classes, features, enums, mandatoryName, mandatory, issues };
 }
 
 /** The style with the record's style options applied; the base is not an option, it chose `style` (syntaxRecord.ts). */

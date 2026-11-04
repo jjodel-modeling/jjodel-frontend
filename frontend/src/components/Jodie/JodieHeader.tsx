@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
-import { TAIProvider, AIProvider, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor } from '../../types/jodie';
+import type { ProviderId } from '../../services/ai';
+import type { ConsoleMode, ConsoleModeSwitchVia, CodeFlavor } from './types';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
@@ -15,8 +16,8 @@ import { consumerFocusLabel } from './consumerVoice';
 
 
 interface JodieHeaderProps {
-    activeProvider: TAIProvider;
-    onProviderChange: (provider: TAIProvider) => void;
+    activeProvider: ProviderId;
+    onProviderChange: (provider: ProviderId) => void;
     onClose: () => void;
     onOpenSettings: () => void;
     onOpenDocumentation?: () => void;

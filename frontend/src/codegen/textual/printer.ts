@@ -13,11 +13,11 @@
  * so that a printed text and its parse give equal trees and step T10 can splice nodes.
  */
 
-import type { ConcreteGrammar, GrammarNode, ObjectRule } from './concreteGrammar';
+import type { ConcreteGrammar, ExprOperator, GrammarNode, ObjectRule } from './concreteGrammar';
 import { applyCase, derivedName } from './concreteGrammar';
 import { isOuterRef } from './metamodel';
 import type { OuterRef, TextObject } from './metamodel';
-import { tokenizeText } from './parser';
+import { expressionWords, tokenizeText } from './parser';
 import type { ObjectNode, ParsedRef, SyntaxNode, SyntaxToken, TextNode, TokenRole } from './parser';
 
 /** `[start, end)` offsets into the printed text. */
@@ -280,7 +280,10 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         }
         return q + s.replace(/\\/g, '\\\\').split(q).join(`\\${q}`).replace(/\n/g, '\\n') + q;
     };
-    const name = (s: string): string => (IDENTIFIER.test(s) && !style.reservedNames.includes(s) ? s : quote(s));
+    // An expression's word symbol or call word is no name either (C1b; parser.ts `expressionWords`).
+    // R-TXT-41 (D3): a name equal to a word that can stand at an optional head name's place is quoted (C1d).
+    const words = new Set([...style.reservedNames, ...expressionWords(g), ...(g.headWords ?? [])]);
+    const name = (s: string): string => (IDENTIFIER.test(s) && !words.has(s) ? s : quote(s));
     const nameOf = (o: TextObject): unknown => (ruleOf(o).named ? o.slots.name : undefined);
     // Linear resolution (step A): the objects by name, built once, in place of a scan of all objects per reference.
     const byName = new Map<string, TextObject[]>();
@@ -311,6 +314,15 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     let last = '';
     let lastPunct = false;
     let opening: string[] = [];
+    // C1b: no space before the next token (after an expression's open or call word), and the non-word prefix symbol just
+    // printed, glued to the next token when the two still read as they print.
+    let glueNext = false;
+    let prefixed: string | undefined;
+    const readsApart = (a: string, b: string): boolean => {
+        const key = (s: string): string[] => tokenizeText(s, g).tokens.map(t => `${t.k}:${t.v}`);
+        const glued = key(a + b);
+        return glued.join(' ') === [...key(a).slice(0, -1), ...key(b)].join(' ');
+    };
     // A blank line asked by a `blank` node, written with the next line break; never at the start of a body.
     let blankPending = false;
     let bodyStart = true;
@@ -337,12 +349,14 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     /** The first keyword of an object rule's body: its class keyword (`parseText` reads it with the role `class`). */
     const classKeywords = new Set<GrammarNode>(g.rules.flatMap(r => (r.t === 'object' && r.body.t === 'seq' && r.body.items[0]?.t === 'kw' ? [r.body.items[0]] : [])));
 
-    const token = (s: string, punct = false, role: TokenRole = punct ? 'punctuation' : 'keyword'): void => {
+    const token = (s: string, punct = false, role: TokenRole = punct ? 'punctuation' : 'keyword', tight = false): void => {
         if (breakPending) { out += blankPending ? '\n\n' : '\n'; breakPending = false; atLineStart = true; }
         blankPending = false;
         bodyStart = false;
         if (atLineStart) out += ' '.repeat(depth * style.indent);
-        else if (!(punct && glueBefore.has(s)) && !(lastPunct && glueAfter.has(last))) out += ' ';
+        else if (prefixed !== undefined ? !readsApart(prefixed, s) : !tight && !glueNext && !(punct && glueBefore.has(s)) && !(lastPunct && glueAfter.has(last))) out += ' ';
+        glueNext = false;
+        prefixed = undefined;
         for (const id of opening) starts.set(id, out.length);
         opening = [];
         cur().children.push({ kind: 'emitted', start: out.length, end: out.length + s.length, role });
@@ -378,10 +392,79 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         }
     };
 
+    // Step C lane C1b: an expression, printed as the parser reads it back (parser.ts `climb`). A slot is read by a climb
+    // from a minimum precedence; a child in it prints without parentheses only where that climb reads it whole and stops
+    // where the slot ends. The left operand is read in its parent's climb: the child's last operand must stop before the
+    // parent's symbol, and an n-ary child of the parent's own symbol would take the parent's operands into its chain.
+    type Expr = Extract<GrammarNode, { t: 'expr' }>;
+    const exprs = new Map(g.rules.flatMap(r => (r.t === 'choice' && r.body.t === 'expr' ? [[r.name, r.body] as const] : [])));
+    const operatorOf = (e: Expr, c: TextObject): ExprOperator | undefined => e.operators.find(x => x.cls === c.cls);
+    const isWord = (s: string): boolean => /^\w/.test(s);
+    /** Printed in call form: an n-ary operator with fewer than two operands and a call word. */
+    const callForm = (op: ExprOperator, c: TextObject): boolean => op.fixity === 'nary' && op.call !== undefined && asArray(c.slots[op.operands[0]]).length < 2;
+    /** The minimum the last operand of `c` is read from, in a climb from `min`. */
+    const lastMin = (op: ExprOperator, min: number): number =>
+        op.fixity === 'prefix' ? Math.max(op.precedence + 1, min) : op.fixity === 'binary' && op.assoc === 'right' ? op.precedence : op.precedence + 1;
+    /** Whether `c` needs parentheses in a slot read from `min`; `parent` when it is the parent's left operand. */
+    const parens = (e: Expr, c: TextObject, min: number, parent?: ExprOperator): boolean => {
+        const op = operatorOf(e, c);
+        if (!op || callForm(op, c)) return false;
+        if (parent) return !(parent.precedence < lastMin(op, min)) || (op.fixity === 'nary' && op.symbol === parent.symbol);
+        return op.fixity !== 'prefix' && op.precedence < min;
+    };
+    /** One operand of `o`'s feature `feat`, in an item node; `min` and `parent` as `parens` reads them. */
+    const slot = (e: Expr, v: unknown, feat: string, min: number, parent?: ExprOperator): void => {
+        const c = resolve(v);
+        if (!c) return;
+        within({ kind: 'item', feature: feat }, () => {
+            if (!parens(e, c, min, parent)) { operand(e, c, min); return; }
+            within({ kind: 'paren' }, () => {
+                token(e.open, true);
+                glueNext = true;
+                operand(e, c, -Infinity);
+                token(e.close, true, 'punctuation', true);
+            });
+        });
+    };
+    /** `c` as an operand read in a climb from `min`: an operator object in its notation, a primary as its rule prints it. */
+    const operand = (e: Expr, c: TextObject, min: number): void => {
+        const op = operatorOf(e, c);
+        if (!op) { object(c); return; }
+        const sym = (): void => token(op.symbol, !isWord(op.symbol), isWord(op.symbol) ? 'keyword' : 'punctuation');
+        const [a, b] = op.operands;
+        opening.push(c.id);
+        within({ kind: 'object', id: c.id, cls: c.cls, rule: c.cls, state: 'complete' }, () => {
+            if (op.fixity === 'prefix') {
+                sym();
+                if (!isWord(op.symbol)) prefixed = op.symbol;
+                slot(e, c.slots[a], a, lastMin(op, min));
+            } else if (op.fixity === 'binary') {
+                slot(e, c.slots[a], a, min, op);
+                sym();
+                slot(e, c.slots[b], b, lastMin(op, min));
+            } else if (callForm(op, c)) {
+                token(op.call!, false, 'class');
+                token(e.open, true, 'punctuation', true);
+                glueNext = true;
+                asArray(c.slots[a]).forEach((v, i) => { if (i) token(e.separator, true, 'punctuation', true); slot(e, v, a, -Infinity); });
+                token(e.close, true, 'punctuation', true);
+            } else {
+                // The flat chain. With fewer than two operands and no call word no text reads the object back: its operands print alone.
+                asArray(c.slots[a]).forEach((v, i) => { if (i) sym(); slot(e, v, a, i ? lastMin(op, min) : min, i ? undefined : op); });
+            }
+        });
+        spans.push({ id: c.id, start: starts.get(c.id) ?? out.length, end: out.length });
+    };
+
     /** `o` and `feat`: the object and feature a reference token is written for. */
     const value = (n: GrammarNode, v: unknown, o?: TextObject, feat?: string): void => {
         switch (n.t) {
-            case 'rule': { const c = resolve(v); if (c) object(c, n.name); return; }
+            case 'rule': {
+                const c = resolve(v);
+                const e = exprs.get(n.name);
+                if (c && e) operand(e, c, -Infinity); else if (c) object(c, n.name);
+                return;
+            }
             case 'xref': {
                 const t = resolve(v);
                 const outer = t ? undefined : outerOf(v);
@@ -419,7 +502,17 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
                 }
                 return;
             case 'kw': token(n.text, false, classKeywords.has(n) ? 'class' : 'keyword'); return;
-            case 'p': token(n.text, true); return;
+            case 'p':
+                // C1d: the call layout's parentheses and commas, `Word(32)`.
+                token(n.text, true, 'punctuation', n.tight !== undefined);
+                if (n.tight === 'around') glueNext = true;
+                return;
+            case 'alt': {
+                // C1d: the first alternative the object fills, else the one that needs nothing (`{}` for a nameless Ref).
+                const a = n.alts.find(x => present(x, o)) ?? n.alts.find(x => x.t === 'block');
+                if (a) emit(a, o, elem);
+                return;
+            }
             case 'nl': if (!n.blank) newline(); else if (!bodyStart) blankPending = true; return;
             case 'assign': {
                 // A required name left unset prints nothing: the text then reads back with the error at its place.

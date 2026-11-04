@@ -1105,6 +1105,58 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Notes**: Rollback tag `pre-canvas-prod-figure` on `5d06b16f0` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1218/result.json`.
 **Prompt document name**: 2026-11-04 12:18
 
+## 2026-11-04 — docs: R-JTG-21, 22 ratified, R-JTG-22 rewritten; Toolbar comment (P-2026-11-04-1442)
+**Prompt**: `claude_2026-11-04_1442_prompt_rows_toolbar_comment.md`, fast lane: rewrite R-JTG-22 as one rule (a missing class and an abstract class are errors in a let body, the creation shape stays unchecked), mark R-JTG-21 and R-JTG-22 ratified by Alfonso 2026-11-04, correct the percent-button comment in `Toolbar.tsx`.
+**Files touched**: `docs/decisions.md`; `frontend/src/components/editor-v2/Toolbar.tsx` (comment only, `b46caa065`); this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Comment-only change in code; no gate beyond typecheck and check:docs was run.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: The Toolbar comment claimed fit-to-view; the button runs `handleActiveResetZoom` -> `activeController.setZoom(1)` (EditorV2.tsx:4007-4012). The prompt's line numbers (1250-1254) held. The editor reported unused-variable hints in Toolbar.tsx (e.g. `onFitView`), untouched.
+**Prompt document name**: 2026-11-04 14:42
+
+## 2026-11-04 — merge: rows-toolbar-comment into alfonso-frontend-jjtl (P-2026-11-04-1458)
+**Prompt**: `claude_2026-11-04_1458_prompt_merge_rows-toolbar-comment.md`, a direct merge by `lane-run merge --direct`, no session: `rows-toolbar-comment` at `6304d5fd3` into `alfonso-frontend-jjtl`, merge base `a9f0b75f7`, 3 commits on the branch side.
+**Files touched**: merge `2f61d24d6`: 4 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_1442_prompt_rows_toolbar_comment.md`, `frontend/src/components/editor-v2/Toolbar.tsx`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2f61d24d6` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13754 tests in 514 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs and one comment, gates green on 2f61d24d6, no hand run
+**Notes**: Rollback tag `pre-rows-toolbar-comment` on `a9f0b75f7` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1458/result.json`.
+**Prompt document name**: 2026-11-04 14:58
+
+## 2026-11-04 — fix(editor-v2): no network-simplex placement over 1,000 dummies (P-2026-11-04-1443, P-2026-11-04-1526)
+**Prompt**: `claude_2026-11-04_1526_prompt_elk_rangeerror_close.md`, closing `claude_2026-11-04_1443_prompt_elk_rangeerror.md`: Auto layout RangeError on 200 classes, root cause and fix; b10_8 settled view measured; close with vitest, check:docs, discovery, before/after check below the budget, entry, Status.
+**Files touched**: `c4dfabf3b` `editor-v2/utils/elkLayout.ts` + its test, `editor-v2/EditorV2.tsx`; `68b146c32` `docs/discovery/discovery_2026-11-04_elk_rangeerror.md`; docs commit: the two Status lines, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no. Seven files across the two prompts, all declared in their scope (RC-11): the three of `c4dfabf3b`, the report, the inbox, the two prompt files.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe crops read, before and after, unattended
+**Notes**: Before = temp worktree at fb09b1445: 35 canvases (ring20, 7 gallery, 2 codegen, 6 probe fixtures, save_3_0_0), transform, positions, sizes, handles equal 35/35, paths within 0.00008 px; pixel diffs are run noise (after vs after as large). No demo above the budget: only the 200-class probe fixtures. Vitest 511 files green, 3 red at import. b10_8 fit not fixed, re-measure after P-2026-11-04-1500 (discovery §5). 1443 ran 4 probes in one call; toolbar catch untested.
+**Prompt document name**: 2026-11-04 15:26
+
+## 2026-11-04 — merge: elk-rangeerror into alfonso-frontend-jjtl (P-2026-11-04-1614)
+**Prompt**: `claude_2026-11-04_1614_prompt_merge_elk-rangeerror.md`, a direct merge by `lane-run merge --direct`, no session: `elk-rangeerror` at `305796ca1` into `alfonso-frontend-jjtl`, merge base `a9f0b75f7`, 5 commits on the branch side.
+**Files touched**: merge `c79e1a1ca`: 7 files from the branch side (`docs/discovery/discovery_2026-11-04_elk_rangeerror.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_1443_prompt_elk_rangeerror.md`, `docs/prompts/claude_2026-11-04_1526_prompt_elk_rangeerror_close.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/utils/__tests__/elkLayout.test.ts`, `frontend/src/components/editor-v2/utils/elkLayout.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c79e1a1ca` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13909 tests in 517 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on c79e1a1ca; crops and layouts compared by the lane below the budget, no hand run
+**Notes**: Rollback tag `pre-elk-rangeerror` on `e38500ec9` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1614/result.json`.
+**Prompt document name**: 2026-11-04 16:14
+
 ## 2026-11-04 — fix(editor-v2): open-time ELK layout waits for the open to settle (P-2026-11-04-1444, P-2026-11-04-1500, P-2026-11-04-1616)
 **Prompt**: `claude_2026-11-04_1616_prompt_elk_open_race_close.md`, closing `claude_2026-11-04_1444_prompt_elk_open_race.md` and `claude_2026-11-04_1500_prompt_elk_open_race_cont.md` (context ceiling): remove the open-time ELK race in `useJjomSync.ts`; LIR, tests, b6_5 and b10_8 probes with ELK calls and undo count, gallery demos before and after, crops read, entry, Status.
 **Files touched**: `e78ebdffd` LIR `docs/discovery/lir_2026-11-04_elk_open_race.md`; `470719b0d`, `2b3ca5dc0` `editor-v2/hooks/useJjomSync.ts` + `hooks/__tests__/useJjomSyncOpenSettle.test.ts`; docs commit: the three Status lines, this entry.

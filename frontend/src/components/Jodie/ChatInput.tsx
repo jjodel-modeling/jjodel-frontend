@@ -5,15 +5,16 @@
 
 import React, { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, useCallback, useMemo } from 'react';
 import {
-    ChatImage, ChatDocument, JodieConfig, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor,
-    ConsoleEntry, ChatMessage, CodeEntry, CONSOLE_MODES, CONSOLE_MODE_LABELS, AI, AIConfig,
-} from '../../types/jodie';
+    ChatImage, ChatDocument, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor,
+    ConsoleEntry, ChatMessage, CodeEntry, CONSOLE_MODES, CONSOLE_MODE_LABELS,
+} from './types';
 import { AIEvents } from '../../events/registry';
+import { registry } from '../../services/ai';
 import { getJjelSuggestions, applyJjelSuggestion } from '../../jjel/autocomplete';
 import type { Suggestion } from '../../jjscript/autocomplete/types';
 import { isConsumerMode } from '../environment/consumerMode';
 import { CONSUMER_INPUT_PLACEHOLDER, consumerSlashCommand } from './consumerVoice';
-import { ProviderModelSelector } from '../common/ProviderModelSelector';
+import { ProviderModelSelector, preferredProviderId } from '../common/ProviderModelSelector';
 import { AIDisclaimer } from '../common/AIDisclaimer';
 import { JjelLiveResult } from './JjelLiveResult';
 import type { JjelLiveSubmission } from './JjelLiveResult';
@@ -138,13 +139,13 @@ export function ChatInput({
     // #168 J7: the consumer's input has no mode prompt, no mode switch, and two commands only.
     const consumer = isConsumerMode();
     // Full disclaimer sentence for the tooltip of the truncated meta line (same words as AIDisclaimer compact).
-    const disclaimerTitle = `${AI[AIConfig.getPreferred('chat')]?.name ?? 'AI'} can make mistakes. Verify important information.`;
+    const disclaimerTitle = `${preferredProviderId('chat')} can make mistakes. Verify important information.`;
     const [message, setMessage] = useState('');
     const [images, setImages] = useState<ChatImage[]>([]);
     const [documents, setDocuments] = useState<ChatDocument[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [savedMessage, setSavedMessage] = useState(''); // Save current input when navigating history
-    const [hasProvider, setHasProvider] = useState<boolean>(() => JodieConfig.hasEnabledProviders());
+    const [hasProvider, setHasProvider] = useState<boolean>(() => registry.enabled().length > 0);
     // Autocomplete dropdown state. Active only in Code mode + JjEL flavor.
     const [completions, setCompletions] = useState<Suggestion[]>([]);
     const [completionIndex, setCompletionIndex] = useState(0);
@@ -184,10 +185,10 @@ export function ChatInput({
 
     // Track AI provider configuration to drive the send button "no-provider" state
     useEffect(() => {
-        const refresh = () => setHasProvider(JodieConfig.hasEnabledProviders());
+        const refresh = () => setHasProvider(registry.enabled().length > 0);
         refresh();
         window.addEventListener(AIEvents.SETTINGS_CHANGED, refresh);
-        // #168: a key saved in Settings fires PROVIDER_CHANGED only (AIConfig.save).
+        // #168: a key saved in Settings fires PROVIDER_CHANGED only (ProviderConfigStore.save).
         window.addEventListener(AIEvents.PROVIDER_CHANGED, refresh);
         return () => {
             window.removeEventListener(AIEvents.SETTINGS_CHANGED, refresh);

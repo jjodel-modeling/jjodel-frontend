@@ -40,6 +40,7 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 ### Changed
 - The shell (top bar, editor toolbar, left palette, rails, status bar, menus) uses one token layer: denser layout, 24 px targets, muted action icons in Advanced, rail titles in sentence case (R-SHELL-1..5).
 - Sign in, registration and password reset have a new layout; registration no longer asks for the newsletter.
+- Breaking for OCL/JjEL expressions: the runtime names `AI`, `AIConfig` and `JodieConfig` are no longer registered, so an expression that names them stops evaluating (R-AI-1). The AI provider layer is `src/services/ai` (one class per SDK family, a registry, the settings and catalog stores), and the frontend no longer calls the AI proxy Worker (#196).
 
 ### Fixed
 - Large models: References lists are built only when the section is open, model names without a full scan, the canvas re-transforms only the vertices that changed, the intrinsic size of a node is measured once per content.
@@ -50,9 +51,32 @@ Draft of 3.2.0: the trunk `alfonso-frontend-jjtl` after the beta of 2026-10-18 (
 - A user view stays editable after the project is opened again or the page is reloaded (graphVertex F2).
 - A click, Enter or Space on a palette entry creates the instance at the centre of the view (graphVertex F3).
 
-## [3.1.0] - unreleased (beta of 2026-10-18)
+## [3.1.1] - 2026-11-02
 
-This release covers the trunk `alfonso-frontend-jjtl` since `3.0.0` together with the fixes released on beta (`staging`) in the same period. The code generator is not part of this release.
+The production build of `staging`, on top of 3.1.0. Projects keep format 2.230.
+
+### Added
+
+- Customize element in the Roles of an environment, and a Configurator panel that reads the presentation of each role (#186, #187).
+
+### Changed
+
+- The welcome screen also lists the Jjodie panel, Refactorings and Templates, and appears once more for users who dismissed the earlier one.
+
+### Fixed
+
+- The JjScript Console runs every line of a multi-line input.
+- The Configurator remembers the instance of each type (#187).
+
+### Removed
+
+- Orphaned Jjodie code (#196).
+
+## [3.1.0] - 2026-10-27
+
+The build released on 2026-10-27 (tag `3.1.0`) also carries the trunk work listed under Unreleased above up to that date, the Jjodie panel and Refactorings. The code generator is included, off by default under Settings → Advanced → Experimental. The list below covers the rest.
+
+This release covers the trunk `alfonso-frontend-jjtl` since `3.0.0` together with the fixes released on beta (`staging`) in the same period.
 
 Projects: 3.1 saves projects in format 2.230 and opens projects saved in formats 2.228 (3.0), 2.229 and 2.230; an older save is migrated when it is opened. A project saved by 3.1 cannot be opened by an earlier version.
 

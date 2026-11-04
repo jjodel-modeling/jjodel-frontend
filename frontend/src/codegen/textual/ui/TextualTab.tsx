@@ -292,6 +292,15 @@ export function onModelPrint(sync: TextSync, modelText: string, editorText: stri
     return editorText === sync.text ? 'reprint' : 'keep';
 }
 
+/**
+ * R-TXT-44 (1), (2): after an application in which the app named objects the text leaves nameless (`TextEditPlan.named`;
+ * the core reads an empty name as the instance's initial name), the print to reprint once, so the tab never keeps a text
+ * that differs from the model's print; null otherwise: the typed text stays the agreement.
+ */
+export function namedReprint(plan: Pick<TextEditPlan, 'named'>, print: string, typed: string): string | null {
+    return plan.named?.length && print !== typed ? print : null;
+}
+
 /** What the tab does with an edited text once read (R-TXT-26). */
 export type EditDecision =
     /** The text is the agreed one: no pending edit. */
@@ -323,6 +332,18 @@ export function editDecision(text: string, sync: TextSync, parsed: TextParseResu
 export interface EditEvidence {
     readonly defaults?: ReadonlyMap<string, ReadonlySet<string>>;
     readonly referencedElsewhere?: ReadonlySet<string>;
+    /** The instance names of the model, which a created object's handle avoids (textDiff.ts `PlanInput.reserved`). */
+    readonly reserved?: ReadonlySet<string>;
+}
+
+/** The `name` and `initialName` of the base's objects, printed or not, as the store holds them now. */
+export function instanceNames(lookup: Readonly<Record<string, any>>, base: Pick<EditBase, 'objects' | 'unprinted'>): Set<string> {
+    const out = new Set<string>();
+    for (const o of [...base.objects, ...base.unprinted]) {
+        const d = lookup[o.id];
+        for (const n of [d?.name, d?.initialName]) if (typeof n === 'string' && n) out.add(n);
+    }
+    return out;
 }
 
 /**
@@ -338,6 +359,7 @@ export function planEdit(base: EditBase, text: string, carried: readonly ObjectS
         mm: base.mm, grammar: base.grammar, model: base.objects, parsed, unprinted: base.unprinted, previous: carried, previousRefs: refs,
         ...(evidence.defaults ? { defaults: evidence.defaults } : {}),
         ...(evidence.referencedElsewhere ? { referencedElsewhere: evidence.referencedElsewhere } : {}),
+        ...(evidence.reserved ? { reserved: evidence.reserved } : {}),
         ...(confirmed ? { confirmed } : {}),
     });
     return { parsed, plan };
@@ -546,7 +568,7 @@ function NotationIssues({ issues, warnings }: { readonly issues: readonly Annota
 }
 
 /** What the bar says of the edit: a decision, or a step of the application. */
-type EditStatus = EditDecision | { readonly kind: 'editing' } | { readonly kind: 'applying' } | { readonly kind: 'applied'; readonly failed: number }
+type EditStatus = EditDecision | { readonly kind: 'editing' } | { readonly kind: 'applying' } | { readonly kind: 'applied'; readonly failed: number; readonly named?: number }
     /** T7 D-5: a cut's objects wait for their paste. */
     | { readonly kind: 'cut'; readonly count: number };
 
@@ -564,7 +586,9 @@ export function editStatusText(s: EditStatus): { readonly text: string; readonly
         case 'apply': case 'applying': return { text: 'Applying…', error: false };
         case 'applied': return s.failed
             ? { text: `Applied, ${s.failed} line${s.failed === 1 ? '' : 's'} failed`, error: true }
-            : { text: 'Applied', error: false };
+            : s.named
+                ? { text: `Applied · the app named ${s.named} object${s.named === 1 ? '' : 's'} the text leaves nameless`, error: false }
+                : { text: 'Applied', error: false };
     }
 }
 
@@ -1084,7 +1108,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
 
     const evidence = (base: EditBase): EditEvidence => {
         const now = ((store.getState() as any)?.idlookup ?? {}) as Record<string, any>;
-        return { defaults: defaultedSlots(now, base.objects), referencedElsewhere: referencedElsewhere(now, modelId) };
+        return { defaults: defaultedSlots(now, base.objects), referencedElsewhere: referencedElsewhere(now, modelId), reserved: instanceNames(now, base) };
     };
 
     const apply = async (text: string, parsed: TextParseResult, plan: TextEditPlan): Promise<void> => {
@@ -1103,6 +1127,12 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         const after = modelReading(((store.getState() as any)?.idlookup ?? {}) as Record<string, any>, modelId);
         syncRef.current = { text, model: after.view.text };
         const editor = editorRef.current;
+        // R-TXT-44: the names the app gave show at once, and the next edit reads them (the stuck edit of P-2026-11-04-1447).
+        if (after.base && editor?.getValue() === text && namedReprint(plan, after.view.text, text) !== null) {
+            reprint(after);
+            setStatus({ kind: 'applied', failed: failedLines, named: plan.named!.length });
+            return;
+        }
         if (after.base && plan.diff && editor?.getValue() === text) {
             const b = after.base;
             const rematch = matchObjects({ mm: b.mm, grammar: b.grammar, model: b.objects, parsed, previous: carriedSpans() });

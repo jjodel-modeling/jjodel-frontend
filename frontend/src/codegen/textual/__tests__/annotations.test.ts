@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
-import { expandNamePattern, parseNamePattern, resolveAnnotations, withStyleOptions } from '../annotations';
+import { expandNamePattern, operatorFixity, parseNamePattern, resolveAnnotations, withStyleOptions } from '../annotations';
 import { deriveBaseGrammar } from '../baseGrammar';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { concreteGrammarEbnf, deriveConcreteGrammar } from '../concreteGrammar';
@@ -19,6 +19,7 @@ import { printTextModel } from '../printer';
 import type { NotationStyle } from '../style';
 import { CLIKE_STYLE } from '../style';
 import { checkStyle, STYLE_RULES } from '../styleCheck';
+import { BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar, withOperator } from './boolCorpus';
 import { grammarOf } from './corpus';
 import { parseCount } from './oracle';
 import { FIXTURE, metamodelOf } from './spec';
@@ -257,10 +258,10 @@ describe('resolveAnnotations: ids to names, tolerant', () => {
         expect(r.classes).toEqual({});
     });
 
-    it('stores a well-formed operator with a notice that it is not applied yet', () => {
+    it('an operator on a class that is no operator shape is refused, with the shape it lacks', () => {
         const record: SyntaxAnnotations = { v: 1, classes: { 'c:Instruction': { operator: { symbol: '+', precedence: 3, assoc: 'left' } } } };
         const g = annotatedGrammar(CORE_MM, record, CORE_MANDATORY);
-        expect(g.annotationIssues).toEqual([{ level: 'notice', where: 'class Instruction', message: 'the operator "+" is stored, not applied yet' }]);
+        expect(g.annotationIssues).toEqual([{ level: 'error', where: 'class Instruction', message: OPERATOR_SHAPE('+', 'Instruction') }]);
         expect(concreteGrammarEbnf(g)).toBe(concreteGrammarEbnf(deriveConcreteGrammar(deriveBaseGrammar(CORE_MM), CLIKE_STYLE)));
     });
 });
@@ -415,13 +416,31 @@ describe('what the derivation refuses, with the reason', () => {
         expect(errorsOf(g)).toEqual(['class Core: Core has a containment: layout line not applied']);
     });
 
-    it('a one-line or positional class whose name is optional (R-TXT-27)', () => {
-        const g = annotatedGrammar(ARBITER_MM, ARBITER_ANNOTATIONS, []);
-        expect(errorsOf(g)).toEqual(['class Requester: Requester.name is optional: a one-line class needs a mandatory name in its head; layout line not applied']);
-        expect(print(g, ARBITER_OBJECTS.slice(0, 2).map(o => (o.id === 'a' ? { ...o, slots: { name: 'arb', requesters: ['q1'] } } : o))))
+    it('a one-line or positional class whose name is optional: kept under the LL(1) condition (R-TXT-41, D3, amends R-TXT-27 (2))', () => {
+        // Refused when every part after the optional name is optional: the next item's keyword would read as the name.
+        const loose = annotatedGrammar(ARBITER_MM, ARBITER_ANNOTATIONS, []);
+        expect(errorsOf(loose)).toEqual(['class Requester: Requester.name is optional: a one-line class needs a mandatory name in its head, since every part after Requester.name is optional, and what follows a Requester could be read as its name; layout line not applied']);
+        expect(print(loose, ARBITER_OBJECTS.slice(0, 2).map(o => (o.id === 'a' ? { ...o, slots: { name: 'arb', requesters: ['q1'] } } : o))))
             .toBe('arbiter arb {\n  requester cpu {\n    priority 0\n  }\n}');
-        const positional = annotatedGrammar(ARBITER_MM, { ...ARBITER_ANNOTATIONS, classes: { ...ARBITER_ANNOTATIONS.classes, 'c:Requester': { keyword: '' } } }, []);
-        expect(errorsOf(positional)).toEqual(['class Requester: Requester.name is optional: a positional class needs a mandatory name in its head; the keyword "" not applied']);
+        // Kept with a mandatory priority after it.
+        const g = annotatedGrammar(ARBITER_MM, ARBITER_ANNOTATIONS, ['Requester.priority']);
+        expect(errorsOf(g)).toEqual([]);
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        // The keyword after the name position is reserved there: no name reads as it.
+        expect(g.headWords).toEqual(['priority']);
+        const objects = ARBITER_OBJECTS.slice(0, 2).map(o => (o.id === 'a' ? { ...o, slots: { name: 'arb', requesters: ['q1'] } } : o));
+        expect(print(g, objects)).toBe('arbiter arb {\n  requester cpu priority 0\n}');
+        const nameless = objects.map(o => (o.id === 'q1' ? { ...o, slots: { ...o.slots, name: undefined } } : o));
+        expect(print(g, nameless)).toBe('arbiter arb {\n  requester priority 0\n}');
+        const positional = annotatedGrammar(ARBITER_MM, { ...ARBITER_ANNOTATIONS, classes: { ...ARBITER_ANNOTATIONS.classes, 'c:Requester': { keyword: '' } } }, ['Requester.priority']);
+        expect(errorsOf(positional)).toEqual([]);
+        expect(roundTrip(g, nameless).text).toBe('arbiter arb {\n  requester priority 0\n}');
+    });
+
+    it('an item keyword with groupBy (C1d)', () => {
+        const g = coreWith({ features: { ...CORE_ANNOTATIONS.features, 'f:Core.instructions': { groupBy: 'f:Instruction.mnemonic', itemKeyword: 'instr' } } });
+        expect(errorsOf(g)).toEqual(['Core.instructions: itemKeyword is not applied with groupBy: a group prints its own keyword']);
+        expect(concreteGrammarEbnf(g)).toBe(concreteGrammarEbnf(coreGrammar()));
     });
 
     it('a feature keyword that collides with another', () => {
@@ -446,5 +465,129 @@ describe('what the derivation refuses, with the reason', () => {
             'class Named: Named is abstract: a keyword, layout or name annotation goes on its concrete classes; not applied',
             'roots: no class is left at the top level; roots not applied',
         ]);
+    });
+});
+
+describe('BOOL, the expression corpus (step C lane C1a)', () => {
+    it('both records resolve without an error, Use and Lit positional on one line', () => {
+        for (const record of [BOOL_CLIKE, BOOL_PASCAL]) {
+            const r = resolveAnnotations(record, BOOL_IDS, BOOL_MM);
+            expect(r.issues.filter(i => i.level === 'error')).toEqual([]);
+            expect(r.classes.Use).toEqual({ keyword: '', layout: 'line' });
+            expect(r.classes.Lit).toEqual({ keyword: '', layout: 'line' });
+            expect(Object.keys(r.classes).filter(c => r.classes[c].operator)).toEqual(['Imp', 'Or', 'And', 'Not']);
+        }
+        expect(boolGrammar(BOOL_PASCAL).style.id).toBe('pascal');
+        expect(boolGrammar(BOOL_CLIKE).style.id).toBe('c-like');
+    });
+});
+
+const OPERATOR_SHAPE = (symbol: string, cls: string): string =>
+    `the operator "${symbol}" is not applied: ${cls} has not the shape of an operator (its only features one many-valued containment, two single-valued ones, or one single-valued one)`;
+
+describe('operators: the call word and the derived fixity (step C lane C1a)', () => {
+    const featuresOf = (cls: string) => classFeatures(BOOL_MM, BOOL_MM.classes.find(c => c.name === cls)!);
+
+    it('the fixity is read off the features: n-ary, binary in declaration order, prefix, or none', () => {
+        expect(operatorFixity(featuresOf('And'))).toEqual({ fixity: 'nary', operands: ['ops'] });
+        expect(operatorFixity(featuresOf('Imp'))).toEqual({ fixity: 'binary', operands: ['left', 'right'] });
+        expect(operatorFixity(featuresOf('Not'))).toEqual({ fixity: 'prefix', operands: ['op'] });
+        expect(operatorFixity(featuresOf('Use'))).toBeUndefined();
+        expect(operatorFixity(featuresOf('Lit'))).toBeUndefined();
+        expect(operatorFixity(featuresOf('Rule'))).toBeUndefined();
+        expect(operatorFixity([])).toBeUndefined();
+        // Two containments are binary only when both are single-valued.
+        expect(operatorFixity(featuresOf('Sheet').filter(f => f.kind === 'containment'))).toBeUndefined();
+        expect(operatorFixity([...featuresOf('Not'), ...featuresOf('And')])).toBeUndefined();
+    });
+
+    it('resolves a call word and symbols of both kinds, and no longer notes the operator as stored only', () => {
+        const record = withOperator(withOperator(BOOL_CLIKE, 'C_Or', { symbol: '|', precedence: 2, call: 'or' }), 'C_And', { symbol: 'and', precedence: 3 });
+        const r = resolveAnnotations(record, BOOL_IDS, BOOL_MM);
+        expect(r.issues).toEqual([]);
+        expect(r.classes.Or.operator).toEqual({ symbol: '|', precedence: 2, call: 'or' });
+        expect(r.classes.And.operator).toEqual({ symbol: 'and', precedence: 3 });
+        expect(r.mandatory?.has('Use.atom')).toBe(true);
+        expect(r.mandatory?.has('And.ops')).toBe(false);
+    });
+
+    it('refuses a malformed symbol or call word', () => {
+        const bad = (op: unknown): string[] => resolveAnnotations(withOperator(BOOL_CLIKE, 'C_Or', op as never), BOOL_IDS, BOOL_MM).issues.map(i => `${i.level} ${i.message}`);
+        expect(bad({ symbol: 'a|', precedence: 2 })).toEqual(['error the operator symbol "a|" is neither an identifier nor a run of symbol characters']);
+        expect(bad({ symbol: '| |', precedence: 2 })).toEqual(['error the operator symbol "| |" is neither an identifier nor a run of symbol characters']);
+        expect(bad({ symbol: '|', precedence: 2, call: 'o r' })).toEqual(['error the call word "o r" is not an identifier']);
+    });
+
+    it('applies an operator only to an operator shape, and a call word only to an n-ary operator', () => {
+        expect(errorsOf(boolGrammar(BOOL_CLIKE))).toEqual([]);
+        expect(errorsOf(boolGrammar(BOOL_PASCAL))).toEqual([]);
+        expect(errorsOf(boolGrammar(withOperator(BOOL_CLIKE, 'C_Use', { symbol: '@@', precedence: 5 })))).toEqual([`class Use: ${OPERATOR_SHAPE('@@', 'Use')}`]);
+        expect(errorsOf(boolGrammar(withOperator(BOOL_CLIKE, 'C_Imp', { symbol: '->', precedence: 1, call: 'imp' })))).toEqual([
+            'class Imp: the call word "imp" is not applied: a call form is for n-ary operators, and Imp is binary',
+        ]);
+        expect(errorsOf(boolGrammar(withOperator(BOOL_CLIKE, 'C_Expr', { symbol: '?', precedence: 5 })))).toEqual([
+            'class Expr: Expr is abstract: an operator goes on its concrete classes; not applied',
+        ]);
+    });
+
+    it('refuses an operator whose operand cannot hold the operator itself', () => {
+        const mm: TextMetamodel = {
+            classes: [...BOOL_MM.classes.filter(c => c.name !== 'Not'), { name: 'Not', supers: ['Expr'], references: [{ name: 'op', type: 'Use', containment: true }] }],
+            enumerations: [],
+        };
+        const g = boolGrammar(BOOL_CLIKE, mm);
+        expect(errorsOf(g)).toEqual([
+            'class Not: the operator "!" is not applied: its operand Not.op holds a Use, not a Not',
+        ]);
+    });
+});
+
+describe('the expression rule and its EBNF (step C lane C1a)', () => {
+    it('BOOL C-like: one alternative per operator loosest first, the call forms, the primaries, the parentheses', () => {
+        const g = boolGrammar(BOOL_CLIKE);
+        expect(concreteGrammarEbnf(g).split('\n').slice(-11)).toEqual([
+            'Use   ::= atom=REF ;',
+            'Lit   ::= value=INT ;',
+            'Expr_ ::= left=Expr_ "->" right=Expr_ (* Imp, binary, right, precedence 1 *)',
+            '        | ops+=Expr_ "|" ops+=Expr_ {"|" ops+=Expr_} (* Or, n-ary, precedence 2 *)',
+            '        | ops+=Expr_ "&" ops+=Expr_ {"&" ops+=Expr_} (* And, n-ary, precedence 3 *)',
+            '        | "!" op=Expr_ (* Not, prefix, precedence 4 *)',
+            '        | "or" "(" [ops+=Expr_ {"," ops+=Expr_}] ")" (* Or, call form *)',
+            '        | "and" "(" [ops+=Expr_ {"," ops+=Expr_}] ")" (* And, call form *)',
+            '        | Use',
+            '        | Lit',
+            '        | "(" Expr_ ")" ;',
+        ]);
+        expect(g.rules.map(r => r.name)).toEqual(['Model', 'Sheet', 'Atom', 'Rule', 'Use', 'Lit', 'Expr_']);
+        expect(Object.keys(g.objects)).toEqual(['Sheet', 'Atom', 'Rule', 'Use', 'Lit', 'Not', 'And', 'Or', 'Imp']);
+        const expr = g.rules.find(r => r.name === 'Expr_')?.body;
+        expect(expr?.t === 'expr' && expr.operators.map(o => [o.cls, o.fixity, o.call])).toEqual([
+            ['Imp', 'binary', undefined], ['Or', 'nary', 'or'], ['And', 'nary', 'and'], ['Not', 'prefix', undefined],
+        ]);
+    });
+
+    it('BOOL Pascal: word symbols, the default call words, the terminator after the expression, not after a primary (C1d)', () => {
+        const lines = concreteGrammarEbnf(boolGrammar(BOOL_PASCAL)).split('\n');
+        expect(lines.filter(l => /^(Use|Lit) /.test(l))).toEqual(['Use   ::= atom=REF ;', 'Lit   ::= value=INT ;']);
+        expect(lines.find(l => l.startsWith('Rule '))).toBe('Rule  ::= "Rule" [name=NAME] "begin" ["when" "begin" when=Expr_ ";" "end" ";"] "end" ";" ;');
+        expect(lines.filter(l => l.includes('(*'))).toEqual([
+            'Expr_ ::= left=Expr_ "implies" right=Expr_ (* Imp, binary, right, precedence 1 *)',
+            '        | ops+=Expr_ "or" ops+=Expr_ {"or" ops+=Expr_} (* Or, n-ary, precedence 2 *)',
+            '        | ops+=Expr_ "and" ops+=Expr_ {"and" ops+=Expr_} (* And, n-ary, precedence 3 *)',
+            '        | "not" op=Expr_ (* Not, prefix, precedence 4 *)',
+            '        | "Or" "(" [ops+=Expr_ {"," ops+=Expr_}] ")" (* Or, call form *)',
+            '        | "And" "(" [ops+=Expr_ {"," ops+=Expr_}] ")" (* And, call form *)',
+        ]);
+    });
+
+    it('an operator class that the model or a containment names keeps its rule', () => {
+        const g = boolGrammar({ ...BOOL_CLIKE, roots: ['C_Sheet', 'C_And'] });
+        expect(g.rules.map(r => r.name)).toEqual(['Model', 'Sheet', 'Atom', 'Rule', 'Use', 'Lit', 'And', 'Expr_']);
+    });
+
+    it('without operators the choice stays a choice, and Use.atom optional', () => {
+        const g = boolGrammar({ v: 1, roots: 'uncontained' });
+        expect(g.rules.find(r => r.name === 'Expr_')?.body.t).toBe('alt');
+        expect(concreteGrammarEbnf(g)).not.toContain('(*');
     });
 });
