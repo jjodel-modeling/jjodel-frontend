@@ -1065,3 +1065,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: Cause: open fit framed the 180.5x80.5 estimate, not 140x42; lines 1.7 px apart merged at that offset. Fix: most frequent measured size + 1/64. Pixel diff vs trunk: open 47,165 -> 3,072, pan 11,550 -> 1,878; 0 edge warnings. Unit 24/24, tsc 0, build 0. Prod b10_8 x2: longest 1,981/1,894 ms, total 10,675/10,940, load 22-73 (route A 1,369-1,464 at 5-7): not comparable, so partial. Second Causa (d), the band of 0925. Figures: ~/.jjodel-lanes/P-2026-11-04-1050 and -1130.
 **Prompt document name**: 2026-11-04 11:30
+
+## 2026-11-04 — measure: production b10_8 figure of route A with the band fix (P-2026-11-04-1204)
+**Prompt**: `claude_2026-11-04_1204_prompt_canvas_prod_figure.md`: build production on canvas-prod-figure, probe copied and retargeted to this worktree, b10_8 three times (longest task, long-task total, nodes mounted), uptime before and after, compare with route A alone and with before route A.
+**Files touched**: no code. Docs commit: the Status line of the 1204 prompt, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Three valid runs (load1 at start 7.86, 8.75, 6.73): longest 1,385 / 1,451 / 1,431 ms, total 7,828 / 8,279 / 8,451 ms. Nodes mounted at settle 4 (10 edges) / 21 / 21 (800 edges, z 0.5). A run at load 14.16 set aside: 1,373 / 7,682.
+**Prompt document name**: 2026-11-04 12:04

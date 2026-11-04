@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1204
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane fast · no code change · prod b10_8 x3 at load 5.96-8.75: longest 1,385-1,451 ms, total 7,828-8,451 ms
 Lane: fast (measure, no code)
 Depends: P-2026-11-04-1153
 Worktree: ~/jjodel-w-canvasprod, branch canvas-prod-figure
