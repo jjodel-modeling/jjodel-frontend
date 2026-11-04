@@ -1182,3 +1182,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile — measurement, unattended; the view is read from the React Flow store and the viewport transform, not from a screenshot
 **Notes**: Build exit 0 (1m52s). 5 counted runs r3-r7, load at start 13.98/7.91/9.06/7.51/14.39. Every run: first fit at 8.7-10.1 s with RF holding 2,559 of 2,559 measured, settled translate(413.996px, -63515px) scale(0.5), 21 on screen, no later viewport change. Longest task 1,359-1,662 ms, long-task total 8.0-10.3 s (27-31 tasks). r1 (load 31) and r2 (load 245, killed) excluded.
 **Prompt document name**: 2026-11-04 21:31
+
+## 2026-11-04 — merge: elk-open-race takes alfonso-frontend-jjtl (P-2026-11-04-2204)
+**Prompt**: `claude_2026-11-04_2204_prompt_elk-open-race_take_trunk.md`: bring the trunk `alfonso-frontend-jjtl` at `091e62bac` into `elk-open-race` with one `--no-ff` merge commit before the trunk takes the branch (RC-14), merge base `a9f0b75f7`, 155 trunk commits, 9 branch commits.
+**Files touched**: merge `9ef2eeab5`: 178 files from the trunk side, union in `docs/log-inbox/hw-notation.md`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `9ef2eeab5`: typecheck exit 0, 0 errors; typecheck:scripts exit 0; vitest 14034 passed, 2 skipped, 525 files (trunk 14020 + 14 of the branch), the same 3 red at import; hooks 967 = trunk; build exit 0; check:docs 5/5; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 9ef2eeab5; only the log conflicted, by union; the branch's probes ran before the trunk merge and were not rerun; no hand run
+**Notes**: Conflict only in this inbox, union: trunk's 4 entries, then the branch's 2, verbatim; first 1158 lines equal the trunk's file byte for byte, last 26 the branch's. 28 decision rows and 36 headings once each, R-AI-24 none. docs/decisions.md merged clean. check:docs has 5 checks, the prompt said 4/4. Not pushed.
+**Prompt document name**: 2026-11-04 22:04
