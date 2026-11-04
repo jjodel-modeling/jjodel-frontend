@@ -1706,3 +1706,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Prompt document name**: 2026-11-04 14:47
 
 **Ticket** (textual tab, high, found in P-2026-11-04-1447): (1) a nameless Port or Ref, applied from the text, gets an instance name from the app (Port_2, Ref_2, CLAUDE.md model §3.12); the tab says Applied and keeps the nameless text, the model's print differs, and every later edit is refused whole with `an update of Conj_3.ops after an object is created in it is not applied yet` (run2-stuck.log, stuck-c1d-*.png); writing the model's print back asks to confirm 3 Ref matches (`c1d-0-base-clike.png`). (2) Removing the name of a port (`output result :` to `output :`) settles `No change`, no line runs, the model keeps the name: neither applied nor refused with a reason (`c1d-4-unname.png`, `c1d-8-unname-pascal.png`). Not half applied, so no code change in this lane.
+
+## 2026-11-04 — merge: textual-c1-operators into alfonso-frontend-jjtl (P-2026-11-04-1542)
+
+**Prompt**: `claude_2026-11-04_1542_prompt_merge_textual-c1-operators.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c1-operators` at `dcc4231e4` into `alfonso-frontend-jjtl`, merge base `2809ad8ca`. Step C lane C1 (a to d): operators in the grammar, parser and printer of expressions, slot matching of nameless expression objects, the port line. Alfonso's GO on the crops 15:41.
+**Files touched**: merge `fe6eed263`, the branch side (`frontend/src/codegen/textual/annotations.ts`, `concreteGrammar.ts`, `styleCheck.ts`, `parser.ts`, `printer.ts`, `textMatch.ts`, `textDiff.ts`, `oracle.ts`, `ui/TextualTab.tsx`, their tests and corpora, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fe6eed263` in the worker: typecheck 0 errors; typecheck:scripts exit 0; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 13902 tests, 3 red at import (baseline), one failure in `scripts/hooks/__tests__/laneBoard.test.ts` (board import listens, environmental under load); run alone on the merge commit twice: 95/95 both times.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — crops c1b-*, c1c-*, c1d-* checked by the chat (RC-23) and by Alfonso («GO», 15:41); the two app findings of P-2026-11-04-1447 stay ticketed.
+**Notes**: Blocked only by the environmental board test, resolved with the evidence above. Rollback tag `pre-textual-c1-operators` on `d4d2495f0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1542/result.json`.
+**Prompt document name**: 2026-11-04 15:42
