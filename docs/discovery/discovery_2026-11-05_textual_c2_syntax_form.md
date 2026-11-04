@@ -277,3 +277,70 @@ optional `label` to the target (types.ts:246, an optional property, rule 11), `:
 broken path (`lastSeenRefTargetName`, :391), unchanged. For the IR chip the same label at IRFormField.tsx:154
 (`l.name || ': ' + l.instanceof?.name`), in a lane of its own with the critical-zone rules (D6). Files of the
 default-view lane: `jjomTransformers.ts`, `types.ts`, `nodes/RowValue.tsx`, `utils/__tests__/namelessRefTarget.test.ts`.
+
+## 4. Item (5) — lanes, in order
+
+Each lane at five files or fewer (rule 19); paths under `frontend/src/codegen/textual/` unless written in full.
+
+| Order | Lane | What | Files | Visual |
+|------:|------|------|-------|--------|
+| 1 | C2c | item (3): the measured `named` list, the status sentence only for objects the model names | `ui/TextualTab.tsx`, `textDiff.ts` (comment), `__tests__/textualEdit.test.ts` | yes: the status line after removing a name with a layout-only difference (the s8b scene) |
+| 2 | C2a | the pure module of the form and item (2): field list and applicability (F1), the setter that drops emptied entries, `dedupe`, `byField` (F5), `{"v":1}` equal to no key in `syntaxPatch` | `syntaxForm.ts` (new), `__tests__/syntaxForm.test.ts` (new), `syntaxRecord.ts`, `__tests__/syntaxRecord.test.ts` | no |
+| 3 | C2b | the Syntax mode: the form, the preview, Save, Basic and Advanced; the bar's issues also carry the deduplicated `checkStyle` errors (D9) | `ui/SyntaxForm.tsx` (new), `ui/SyntaxForm.scss` (new), `ui/TextualTab.tsx`, `ui/openTextualTab.tsx` (comment of `writeTextualSyntax`) | yes: Basic and Advanced on the port model, a finding at a field and Save disabled, Save then the Text reprinted, one Undo restoring both |
+| 4 | C2d | item (4) on the default view: the `: <Class>` label of a nameless target | `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `.../editor-v2/types.ts`, `.../editor-v2/nodes/RowValue.tsx`, `.../editor-v2/utils/__tests__/namelessRefTarget.test.ts` | yes: the sD4 scene, `inputs [3]` with three `: Port` chips; a named and a broken target unchanged |
+| 5 | C2e | item (4) on the IR form chip, critical zone (§3.1 `viewpoint/ir/`), effort xhigh | `frontend/src/components/editor-v2/viewpoint/ir/IRFormField.tsx`, `.../editor-v2/utils/__tests__/namelessRefTarget.test.ts` | yes: an IR view with a reference to a nameless target |
+
+C2c and C2b both touch `ui/TextualTab.tsx`, so they run in sequence, C2c first (small, independent of the form). C2a
+precedes C2b, which imports it. C2d and C2e share no file with the textual lanes and can run in parallel with them;
+C2d names the view layer (rule 20) in its prompt. C3b (indentation and the deletion guard) stays last, after C2b, as
+R-TXT-40 D5 orders.
+
+## 5. Risks
+
+- **R1.** `ui/TextualTab.tsx` is 1,593 lines and hot (CLAUDE.md §2.5): the form goes in its own file, and the tab gains
+  only the mode, the props, and the gate it already computes (`canSwitchStyle`).
+- **R2.** Preview cost beyond 1,000 objects is not measured (F6: 5.03 ms at 1,000, print dominant). `useDeferredValue`
+  keeps the inputs responsive; C2b measures one model of 10,000 objects before choosing anything more.
+- **R3.** A Save while the Text tab holds a pending edit would turn that edit stale under a new grammar: gated (§2.2 (c)).
+- **R4.** `jjomTransformers.ts` feeds `useJjomSync.ts` and `portDistribution.ts` (critical zone). C2d must confirm by a
+  search that neither reads `refTargets` or the reference row's `value` for an edge key, a handle or a guard; if one
+  does, C2d stops and reports (rule 20). ObjectNode.tsx:554 passes `t.name` to `readSingletonInstanceInfo`: with
+  `name` kept `''` that call is unchanged.
+- **R5.** Deduplication by message text is brittle: `dedupe` keys on the field and the token, and its test runs the
+  probe's seven records (F4) as cases, each with a mutation that breaks one key component.
+- **R6.** A stored record with an entry whose element was deleted resolves with an error that the author cannot fix in
+  the form (F4 last row): D7.
+
+## 6. Open questions
+
+- **Q1.** Should the preview highlight the printed objects of the selected class (the print's spans hold them)? Not in
+  C2b; worth asking after the first crops.
+- **Q2.** The new-model tab has no record writer; whether it should show the Syntax mode of its metamodel is left out of
+  C2 (R-TXT-23 keeps one textual entry per model).
+
+## 7. Decisions recommended
+
+- **D1. The Syntax mode as designed in §2.2**: a draft, a live preview from the deferred draft, Save through
+  `writeTextualSyntax` as one undo step, Save disabled on any `checkStyle` error, on an unchanged draft and on a pending
+  Text edit. Recommended: yes.
+- **D2. Basic and Advanced** as the table of §2.2, fields offered only where they can apply, Advanced fields in effect
+  announced in Basic. Recommended: yes.
+- **D3. `{"v":1}`**: keep the never-remove contract (R-SIM-99's undo measurement), make the empty record equal to no key
+  in `syntaxPatch` and in the form's `dirty`. Recommended: yes; removing the key only after a measured undo of a removed
+  `_state` key.
+- **D4. The false «the app named»**: filter `plan.named` by the model after the run (measured), not drop the list.
+  Recommended: the measured filter.
+- **D5. A nameless reference target on the default view** reads `: <Class>`, through an optional `label` on the target
+  (`name` stays `''`). Recommended: yes, lane C2d.
+- **D6. The IR chip** gets the same label in a lane of its own under the critical-zone rules, after D5's crop is
+  accepted. Recommended: yes, low priority.
+- **D7. Stale entries** (an annotation of a deleted element): the form shows «N annotations of deleted elements» once,
+  they do not block Save, and Save writes the record without them. Recommended: yes (blocking Save on something the
+  form cannot edit would leave the author stuck).
+- **D8. The accent**: the form uses `--color-canvas-accent` (#06b6d4), the token of the Text and EBNF mode buttons it
+  sits next to, not #0ea5e9 (the toolbar's active token). Recommended: yes; a different accent is a design-system
+  decision for its own lane.
+- **D9. The Text tab's bar shows the deduplicated `checkStyle` errors too** (F3), so a record that reaches the tab by
+  another path (an imported project) does not print a text that would not read back without saying so. Recommended:
+  yes, in C2b.
+- **D10. Lane order** C2c, C2a, C2b, then C3b; C2d and C2e in parallel with them. Recommended: yes.
