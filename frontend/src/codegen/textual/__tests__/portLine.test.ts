@@ -73,8 +73,15 @@ describe('(1) the four shapes of the port line, and what they refuse', () => {
 
     it('a one-line class whose containment is not inline, or inline and multi-valued, is refused as today', () => {
         expect(errorsOf(portGrammar(portWith({}, { F_Port_driver: {} })))).toEqual(['class Port: Port has a containment: layout line not applied']);
-        expect(errorsOf(portGrammar(portWith({ C_Module: { layout: 'line' } }, { F_Module_inputs: { inline: true } }))))
+        expect(errorsOf(portGrammar(portWith({ C_Module: { layout: 'line' } }, { F_Module_inputs: { inline: true }, F_Module_outputs: { inline: true } }))))
             .toEqual(['class Module: Module has a containment: layout line not applied']);
+    });
+
+    it('two features started by one item keyword, or one punctuation keyword, are refused by the style check', () => {
+        expect(checkErrors(portGrammar(portWith({}, { F_Module_outputs: { itemKeyword: 'input' } }))))
+            .toContain('distinct-features class Module: the keyword "input" starts 2 features: Module.inputs, Module.outputs');
+        expect(checkErrors(portGrammar(portWith({}, { F_Port_driver: { keyword: ':', inline: true } }))))
+            .toContain('distinct-features class Port: the keyword ":" starts 2 features: Port.type, Port.driver');
     });
 
     it('the call layout is refused on a class with a containment, a many-valued or an optional argument', () => {

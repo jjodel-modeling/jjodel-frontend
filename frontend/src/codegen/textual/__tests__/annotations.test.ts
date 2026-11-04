@@ -437,6 +437,12 @@ describe('what the derivation refuses, with the reason', () => {
         expect(roundTrip(g, nameless).text).toBe('arbiter arb {\n  requester priority 0\n}');
     });
 
+    it('an item keyword with groupBy (C1d)', () => {
+        const g = coreWith({ features: { ...CORE_ANNOTATIONS.features, 'f:Core.instructions': { groupBy: 'f:Instruction.mnemonic', itemKeyword: 'instr' } } });
+        expect(errorsOf(g)).toEqual(['Core.instructions: itemKeyword is not applied with groupBy: a group prints its own keyword']);
+        expect(concreteGrammarEbnf(g)).toBe(concreteGrammarEbnf(coreGrammar()));
+    });
+
     it('a feature keyword that collides with another', () => {
         const g = coreWith({ features: { ...CORE_ANNOTATIONS.features, 'f:Core.nregs': { keyword: 'xlen' } } });
         expect(checkStyle(g).filter(f => f.level === 'error').map(f => `${f.rule} ${f.where}`)).toEqual(['distinct-features class Core', 'annotations Core.xlen']);

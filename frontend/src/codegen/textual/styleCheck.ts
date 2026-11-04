@@ -94,11 +94,13 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
 
     // §A.2 (i).
     for (const r of objectRules) {
-        const items = new Map<string, number>();
-        for (const it of bodyItems(r).map(itemKeyword)) if (it) items.set(it.kw, (items.get(it.kw) ?? 0) + 1);
-        for (const [kw, n] of items) {
+        const items = new Map<string, string[]>();
+        for (const it of bodyItems(r).map(itemKeyword)) if (it) items.set(it.kw, [...(items.get(it.kw) ?? []), it.feat]);
+        for (const [kw, feats] of items) {
+            const n = feats.length;
             if (n < 2) continue;
-            const owners = r.features.filter(f => f.name === kw).map(f => `${f.owner}.${f.name}`);
+            // C1d: the features the keyword starts, which an item keyword or a punctuation keyword does not name.
+            const owners = r.features.filter(f => feats.includes(f.name)).map(f => `${f.owner}.${f.name}`);
             error('distinct-features', `class ${r.cls}`, `the keyword "${kw}" starts ${n} features: ${owners.join(', ')}`);
         }
     }
