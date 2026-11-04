@@ -872,3 +872,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — app probe on port 3295, not by hand: nested `-> columns { -> Ghost }` fails in the panel, no output model, 16 objects before and after; control run 27
 **Notes**: Red first: 4 JjTL and 2 hidden-tab tests, for the intended reason. `nested-creation-into-features.test.ts` pinned the old warning and now asserts the error. Mutation bench 5/5 killed (`~/.jjodel-lanes/P-2026-11-04-0255/bench.txt`). Class2Relational and parity fixtures unchanged, no assertion edited.
 **Prompt document name**: 2026-11-04 02:55
+
+## 2026-11-04 — merge: jjtl-nested-hidden into alfonso-frontend-jjtl (P-2026-11-04-0312)
+**Prompt**: `claude_2026-11-04_0312_prompt_merge_jjtl-nested-hidden.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-nested-hidden` at `93e82ab1e` into `alfonso-frontend-jjtl`, merge base `8411cfae5`, 3 commits on the branch side.
+**Files touched**: merge `efe1d320b`: 9 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_0255_prompt_jjtl_nested_hidden.md`, `frontend/src/components/project/__tests__/nestedMaterialization.test.ts`, `frontend/src/components/project/nestedMaterialization.ts`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/language-open-points.test.ts`, `frontend/src/jjtl/executor/__tests__/nested-creation-into-features.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `efe1d320b` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13575 tests in 511 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on efe1d320b; unit tests, mutation bench and an app probe on the branch; no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-nested-hidden` on `1f58fece6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0312/result.json`.
+**Prompt document name**: 2026-11-04 03:12
