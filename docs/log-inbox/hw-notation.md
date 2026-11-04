@@ -929,3 +929,21 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: Gates: tsc 0; vitest 3 red at import + 2 load-timing reds green on rerun; build 0. b10_8 dev, mounted node els 2,559 -> 9, longest 5,008 -> 2,049-2,362 ms, total 16,727 -> 11,330-14,658; prod longest 2,055-2,148 -> 1,369-1,464 ms. 0 edge warnings. b11_9 did not mount on either tree. Partial: no pan crop (out1 ends with 1 node, both trees), no src1 crop. Figures: LIR amendment, ~/.jjodel-lanes/P-2026-11-04-0925/probe/out.
 **Prompt document name**: 2026-11-04 09:25
+
+## 2026-11-04 — ticket: Auto layout throws an ELK RangeError on a 200-class metamodel, on trunk too
+**Ticket**: Measured by P-2026-11-04-1012, dev server: the toolbar Auto layout on a metamodel of 200 classes throws `RangeError: Maximum call stack size exceeded` inside elkjs, so no layout and no fit follow. Seen on both graphs of the probe (a 400-reference ring with chords; an acyclic 299-reference chain), with route A on and with MOUNT_ALL_MAX_NODES raised to 1e9 by page.route (trunk behaviour). Which ELK phase recurses, and from what size, is not traced.
+**Priority**: medium
+**Found in**: P-2026-11-04-1012
+
+## 2026-11-04 — test(editor-v2): off-screen edges of route A on 200 flat classes (P-2026-11-04-1012)
+**Prompt**: `claude_2026-11-04_1012_prompt_canvas_mount_edge_check.md`: on a probe graph over 150 flat nodes, check an edge with one end off-screen, pan, select, fit, export; compare with trunk; fix in EditorV2.tsx or unmeasuredNodes.ts on failure.
+**Files touched**: `docs/log-inbox/hw-notation.md` (this entry, one ticket); the Status line of the 1012 prompt file. No code.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 200 classes, 400 refs. Branch: off-screen edge drawn (DOM, crop), 0 edge warnings; after pan the far end is 2 px from its handle at +150 ms, +2 s and pre-paint of the first frame shown; select, export ok; trunk (threshold 1e9) the same. Open fit frames 200/200 on both. Partial: no fit button exists, and Auto layout throws in ELK on both (ticket above). Probe and figures: ~/.jjodel-lanes/P-2026-11-04-1012.
+**Prompt document name**: 2026-11-04 10:12
