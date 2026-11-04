@@ -809,8 +809,19 @@ const EDITOR_OPTIONS = {
     wordWrap: 'off',
 } as const;
 
-/** The text's editor: folding, and the semantic highlighting of the language service (step B1). */
-const TEXT_EDITOR_OPTIONS = { ...EDITOR_OPTIONS, folding: true, 'semanticHighlighting.enabled': true } as const;
+/**
+ * The text's editor: folding, and the semantic highlighting of the language service (step B1). Folding takes 16 px of
+ * the margin, so the empty glyph margin goes and the decorations take the rest of the 30 px (P-2026-11-04-0146): the
+ * global rules paint the text at 30 px, and a wider layout hid the chevrons under it and sent the first characters'
+ * clicks to the folding gutter.
+ */
+export const TEXT_EDITOR_OPTIONS = {
+    ...EDITOR_OPTIONS,
+    folding: true,
+    glyphMargin: false,
+    lineDecorationsWidth: 14,
+    'semanticHighlighting.enabled': true,
+} as const;
 
 /** The Monaco adapter, loaded on the tab's mount (it imports `joiner`, which the bench cannot). */
 type TextualMonacoModule = typeof import('./textualMonaco');

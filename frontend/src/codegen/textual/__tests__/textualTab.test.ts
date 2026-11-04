@@ -13,7 +13,7 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { textInputOf, textualView } from '../ui/TextualTab';
+import { TEXT_EDITOR_OPTIONS, textInputOf, textualView } from '../ui/TextualTab';
 import { deriveBaseGrammar } from '../baseGrammar';
 import { concreteGrammarEbnf, deriveConcreteGrammar } from '../concreteGrammar';
 import { printTextModel } from '../printer';
@@ -157,5 +157,16 @@ describe('textualView', () => {
         expect(view.text).toBe('');
         expect(view.error).toMatch(/Named/);
         expect(view.ebnf).toBe(concreteGrammarEbnf(grammar));
+    });
+});
+
+describe('TEXT_EDITOR_OPTIONS', () => {
+    // Monaco's margin, measured in the app (P-2026-11-04-0146): glyph margin 20 px when on, folding 16 px when on, plus
+    // lineDecorationsWidth. The global rules of skeleton.scss paint the text at 30 px whatever Monaco computes, so a wider
+    // layout makes the first characters of a line hit the folding gutter and hides the chevrons under the text.
+    it('keeps folding and lays the text out at the 30 px the global rules paint it (dies when the glyph margin comes back)', () => {
+        const o = TEXT_EDITOR_OPTIONS;
+        expect(o.folding).toBe(true);
+        expect((o.glyphMargin ? 20 : 0) + o.lineDecorationsWidth + (o.folding ? 16 : 0)).toBe(30);
     });
 });
