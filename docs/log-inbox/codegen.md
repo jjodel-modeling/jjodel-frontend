@@ -1554,3 +1554,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato
 **Notes**: The hover clip came from skeleton.scss `.monaco-scrollable-element { left: 30px !important }`, undone inside the tab. The same rules paint text at 30 px, so the text never started later with folding; Monaco laid it at 46, chevrons hid under it and first-char clicks hit the gutter. Fix: no glyph margin, decorations 14, contentLeft 30. Gates green bar a timing test in tolerant.test.ts, red once under full-suite load, green alone. App: 24/25 PASS (the FAIL a wrong probe assertion). GO pending.
 **Prompt document name**: 2026-11-04 01:25
+
+## 2026-11-04 — merge: textual-b-navigation into alfonso-frontend-jjtl (P-2026-11-04-0250)
+**Prompt**: `claude_2026-11-04_0250_prompt_merge_textual-b-navigation.md`, a direct merge by `lane-run merge --direct`, no session: `textual-b-navigation` at `689fd6db2` into `alfonso-frontend-jjtl`, merge base `2daef6982`, 29 commits on the branch (step B of the textual IDE plan: language service, Monaco providers, EBNF highlighting, theme, outline, breadcrumb, hover links; R-TXT-38, R-TXT-39). Alfonso's GO on the crops 2026-11-04 02:49.
+**Files touched**: merge `2f35ce2c5`, the branch side (`frontend/src/codegen/textual/languageService.ts`, `metamodel.ts`, `textDiff.ts`, `ui/textualMonaco.ts`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, their tests, two discovery reports, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2f35ce2c5` in the worker: typecheck 0 errors; typecheck:scripts exit 0; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 13568 tests, 3 red at import (baseline), 1 failed: the timing bound of `tolerant.test.ts` (viii), ratio 13.3 against 12 under load 36 (#205); run alone on the merge commit at load 16: 53/53.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — crops of P-2026-11-04-0046 and P-2026-11-04-0146 checked by the chat (RC-23) and by Alfonso («Go», 02:49).
+**Notes**: Blocked only by the flaky timing test (#205), resolved with the evidence above (`resolved.txt`); the bound is replaced by an operation count in a lane of its own. Rollback tag `pre-textual-b-navigation` on `65056eb51` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0250/result.json`.
+**Prompt document name**: 2026-11-04 02:50
