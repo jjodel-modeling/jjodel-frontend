@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0330
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · 8906621a1 · discovery only, awaiting Alfonso on D1-D6 of the report
 Lane: full (report only; the probe has run, its output is committed)
 Depends: P-2026-11-04-0303 (hard-stop at the ceiling; probe and output at d5e38cb8b, handoff in its lane folder)
 Worktree: ~/jjodel-w-textc, branch textual-c-notation (the same tree)

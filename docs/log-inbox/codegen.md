@@ -1567,3 +1567,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — crops of P-2026-11-04-0046 and P-2026-11-04-0146 checked by the chat (RC-23) and by Alfonso («Go», 02:49).
 **Notes**: Blocked only by the flaky timing test (#205), resolved with the evidence above (`resolved.txt`); the bound is replaced by an operation count in a lane of its own. Rollback tag `pre-textual-b-navigation` on `65056eb51` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0250/result.json`.
 **Prompt document name**: 2026-11-04 02:50
+
+## 2026-11-04 — discovery(codegen): textual step C, expression notation, T4b form, T5 styles (P-2026-11-04-0303, P-2026-11-04-0330)
+**Prompt**: `claude_2026-11-04_0303_prompt_textual_c_discovery.md` (probe run, stopped at the context soft ceiling) continued by `claude_2026-11-04_0330_prompt_textual_c_report.md` from its handoff: write the step C report, one design per part, lanes, decisions.
+**Files touched**: `docs/discovery/harness/probe_2026-11-04_textual_c_notation.test.ts` and `.out.txt` (`d5e38cb8b`); `docs/discovery/discovery_2026-11-04_textual_step_c.md` (`8906621a1`); Status of the two prompts and this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Flat n-ary keeps 312/312 SyncRTL roots, left-fold 269. Paren node, not trivia. Amends R-TXT-16 (3) and, if D3 (a), R-TXT-27 (2). Indentation: a truncation applies deletions (arb3 178/281). Pascal fails on a newline in a string. Section 1d unmeasured (needles not found), moved to C1c. Decisions D1-D6 in the report.
+**Prompt document name**: 2026-11-04 03:30

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0303
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · d5e38cb8b (probe and output) · hard-stop at the context soft ceiling, report written by P-2026-11-04-0330 in 8906621a1
 Lane: full (discovery only in this prompt; read-only on the code)
 Depends: P-2026-11-04-0250 (step B merged)
 Worktree: ~/jjodel-w-textc, branch textual-c-notation
