@@ -428,20 +428,23 @@ export interface DiffLines {
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /** The JjScript lines of a diff (R-TXT-21 (6)). */
-export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly TextObject[], parsed: TextParseResult, diff: TextDiff): DiffLines {
+export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly TextObject[], parsed: TextParseResult, diff: TextDiff,
+                          reserved: ReadonlySet<string> = new Set()): DiffLines {
     const featuresOf = featureTable(mm);
     const modelById = new Map(model.map(o => [o.id, o]));
     const textById = new Map(parsed.objects.map(o => [o.id, o]));
     const objectOf = (r: ObjectRef): TextObject | undefined => ('model' in r ? modelById.get(r.model) : 'text' in r ? textById.get(r.text) : undefined);
 
-    // Handles: a name no other object on either side carries, else `<Class>_<n>` free of every name.
+    // Handles: a name no other object on either side carries, else `<Class>_<n>` free of every name, the model's
+    // instance names included (`reserved`): the executor waits for a created handle by name, and an old instance of
+    // that name lets the next line run before the new object has its metaclass (NO_METACLASS, P-2026-11-04-1158).
     const owners = new Map<string, Set<string>>();
     const own = (name: string | null, key: string): void => { if (name !== null) owners.set(name, (owners.get(name) ?? new Set()).add(key)); };
     const matchedModel = new Map(diff.match.matches.map(m => [m.text, m.model]));
     for (const o of model) own(identityOf(g, o), `m:${o.id}`);
     for (const o of parsed.objects) { const m = matchedModel.get(o.id); own(identityOf(g, o), m ? `m:${m}` : `t:${o.id}`); }
     const metaNames = new Set([...mm.classes.map(c => c.name), ...mm.enumerations.map(e => e.name)]);
-    const taken = new Set([...owners.keys(), ...metaNames]);
+    const taken = new Set([...owners.keys(), ...metaNames, ...reserved]);
     const handleOf = new Map<string, string>();
     const next = new Map<string, number>();
     const handle = (r: ObjectRef): string => {
@@ -451,7 +454,8 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
         const o = objectOf(r);
         const name = o ? identityOf(g, o) : null;
         let h: string;
-        if (name !== null && owners.get(name)?.size === 1 && isWord(name) && !metaNames.has(name) && ![...handleOf.values()].includes(name)) h = name;
+        if (name !== null && owners.get(name)?.size === 1 && isWord(name) && !metaNames.has(name) && ![...handleOf.values()].includes(name)
+            && (!key.startsWith('t:') || !reserved.has(name))) h = name;
         else {
             const base = o && isWord(o.cls) ? o.cls : 'Object';
             let i = next.get(base) ?? 0;
@@ -546,6 +550,8 @@ export interface PlanInput extends DiffInput {
     readonly referencedElsewhere?: ReadonlySet<string>;
     /** The refusals the user confirmed in the Text tab's panel (R-TXT-26): only `uncertain` and `referenced` can be. */
     readonly confirmed?: readonly ApplyRefusal['code'][];
+    /** The instance names of the model (DObject `name`, `initialName`): a created object's handle avoids them all. */
+    readonly reserved?: ReadonlySet<string>;
 }
 
 /** The refusals a user may confirm: the uncertain matches and the deletion of objects other models reference (R-TXT-26). */
@@ -559,7 +565,7 @@ export function planTextEdit(input: PlanInput): TextEditPlan {
     const diff = diffText(input);
     const confirmed = (input.confirmed ?? []).filter(c => CONFIRMABLE.includes(c));
     const refusals = refusalsOf({ ...input, diff }).filter(r => !confirmed.includes(r.code));
-    const built = diffLines(input.mm, input.grammar, input.model, input.parsed, diff);
+    const built = diffLines(input.mm, input.grammar, input.model, input.parsed, diff, input.reserved);
     for (const p of built.problems) refusals.push({ code: 'unwritable', message: p.message });
     return { diff, refusals, lines: refusals.length ? null : built.lines, handles: built.handles };
 }

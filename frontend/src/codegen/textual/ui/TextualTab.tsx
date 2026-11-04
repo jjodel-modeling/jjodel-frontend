@@ -323,6 +323,18 @@ export function editDecision(text: string, sync: TextSync, parsed: TextParseResu
 export interface EditEvidence {
     readonly defaults?: ReadonlyMap<string, ReadonlySet<string>>;
     readonly referencedElsewhere?: ReadonlySet<string>;
+    /** The instance names of the model, which a created object's handle avoids (textDiff.ts `PlanInput.reserved`). */
+    readonly reserved?: ReadonlySet<string>;
+}
+
+/** The `name` and `initialName` of the base's objects, printed or not, as the store holds them now. */
+export function instanceNames(lookup: Readonly<Record<string, any>>, base: Pick<EditBase, 'objects' | 'unprinted'>): Set<string> {
+    const out = new Set<string>();
+    for (const o of [...base.objects, ...base.unprinted]) {
+        const d = lookup[o.id];
+        for (const n of [d?.name, d?.initialName]) if (typeof n === 'string' && n) out.add(n);
+    }
+    return out;
 }
 
 /**
@@ -338,6 +350,7 @@ export function planEdit(base: EditBase, text: string, carried: readonly ObjectS
         mm: base.mm, grammar: base.grammar, model: base.objects, parsed, unprinted: base.unprinted, previous: carried, previousRefs: refs,
         ...(evidence.defaults ? { defaults: evidence.defaults } : {}),
         ...(evidence.referencedElsewhere ? { referencedElsewhere: evidence.referencedElsewhere } : {}),
+        ...(evidence.reserved ? { reserved: evidence.reserved } : {}),
         ...(confirmed ? { confirmed } : {}),
     });
     return { parsed, plan };
@@ -1084,7 +1097,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
 
     const evidence = (base: EditBase): EditEvidence => {
         const now = ((store.getState() as any)?.idlookup ?? {}) as Record<string, any>;
-        return { defaults: defaultedSlots(now, base.objects), referencedElsewhere: referencedElsewhere(now, modelId) };
+        return { defaults: defaultedSlots(now, base.objects), referencedElsewhere: referencedElsewhere(now, modelId), reserved: instanceNames(now, base) };
     };
 
     const apply = async (text: string, parsed: TextParseResult, plan: TextEditPlan): Promise<void> => {

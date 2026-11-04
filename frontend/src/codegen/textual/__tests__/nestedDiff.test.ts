@@ -5,13 +5,20 @@
  */
 
 import { appendFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The imports of the Text tab that reach the store, mocked as textualEdit.test.ts does.
+vi.mock('@monaco-editor/react', () => ({ default: () => null }));
+vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
+vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
+vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 import type { ObjectSpan, RefSpan } from '../printer';
 import { printTextModel } from '../printer';
 import { parseText } from '../parser';
 import type { TextObject } from '../metamodel';
 import type { DiffOp, ObjectRef } from '../textDiff';
 import { planTextEdit } from '../textDiff';
+import { instanceNames, planEdit } from '../ui/TextualTab';
 import { BOOL_CLIKE, BOOL_MM, boolGrammar, boolObjects } from './boolCorpus';
 
 const G = boolGrammar(BOOL_CLIKE);
@@ -51,7 +58,7 @@ function termOf(objects: readonly TextObject[], id: string): string {
  * range between the common prefix and the common suffix of two states changes, and the spans are carried over it. Then
  * plans the last state against the model.
  */
-function edit(rule: string, whens: readonly string[], o: { readonly spans?: boolean } = { spans: true }) {
+function edit(rule: string, whens: readonly string[], o: { readonly spans?: boolean; readonly reserved?: ReadonlySet<string> } = { spans: true }) {
     const model = boolObjects();
     const printed = printTextModel(G, model);
     const head = printed.text.indexOf(`Rule ${rule} {`);
@@ -78,7 +85,7 @@ function edit(rule: string, whens: readonly string[], o: { readonly spans?: bool
     const inRule = (id: string): boolean => { const sp = parsed.spans.find(x => x.id === id); return !!sp && sp.start >= where && sp.end <= where + last.length; };
     const parsed = parseText(text, G, o.spans ? { keep: refs } : undefined);
     expect(parsed.errors).toEqual([]);
-    const plan = planTextEdit({ mm: BOOL_MM, grammar: G, model, parsed, unprinted: printed.unprinted, ...(o.spans ? { previous: spans, previousRefs: refs } : {}) });
+    const plan = planTextEdit({ mm: BOOL_MM, grammar: G, model, parsed, unprinted: printed.unprinted, ...(o.spans ? { previous: spans, previousRefs: refs } : {}), ...(o.reserved ? { reserved: o.reserved } : {}) });
     const name = (r: ObjectRef): string => ('model' in r ? termOf(model, r.model) : 'text' in r ? `new ${termOf(parsed.objects, r.text)}` : `@${r.outer}`);
     const opText = (op: DiffOp): string => {
         switch (op.op) {
@@ -124,4 +131,56 @@ describe('(1) measurement: nested expression edits on BOOL, today', () => {
             if (process.env.C1C_MEAS) appendFileSync(process.env.C1C_MEAS, `MEAS ${mode} | ${label} | ${states.join(' => ')} | refusals ${JSON.stringify(r.refusals)} | by ${r.by.join('; ')} | ops ${r.ops.join('; ')}\n`);
         });
     }
+});
+
+describe('(3) the handle of a created object avoids every instance name of the model', () => {
+    const ADD: readonly string[] = ['st & ld & rdy', 'st & ld & rdy & is_sw'];
+    const createdHandle = (lines: readonly string[] | null): string | undefined =>
+        (lines ?? []).map(l => /^create instance of Use "([^"]+)"/.exec(l)?.[1]).find(h => h !== undefined);
+
+    it('without the model names the created Use takes Use_1, the name a first application left on a Use', () => {
+        expect(createdHandle(edit('chain', ADD).plan.lines)).toBe('Use_1');
+    });
+
+    it('a second application does not reuse Use_1 or Use_2, and its lines address the handle it created', () => {
+        const r = edit('chain', ADD, { spans: true, reserved: new Set(['Use_1', 'Use_2']) });
+        expect(r.refusals).toEqual([]);
+        const h = createdHandle(r.plan.lines);
+        expect(h).toBeDefined();
+        expect(['Use_1', 'Use_2']).not.toContain(h);
+        expect(r.plan.lines!.filter(l => !l.startsWith('create')).some(l => l.includes(h!))).toBe(true);
+    });
+
+    it('a created named object whose name an unprinted instance carries takes another handle and sets its name', () => {
+        const model = boolObjects();
+        const printed = printTextModel(G, model);
+        const end = printed.text.indexOf('Atom rdy {}') + 'Atom rdy {}'.length;
+        const text = `${printed.text.slice(0, end)}\n    Atom go {}${printed.text.slice(end)}`;
+        const parsed = parseText(text, G, { keep: carry(printed.refs ?? [], end, 0, 15) });
+        const plan = planTextEdit({ mm: BOOL_MM, grammar: G, model, parsed, unprinted: printed.unprinted, previous: carry(printed.spans, end, 0, 15),
+            previousRefs: carry(printed.refs ?? [], end, 0, 15), reserved: new Set(['go']) });
+        expect(plan.refusals).toEqual([]);
+        const h = (plan.lines ?? []).map(l => /^create instance of Atom "([^"]+)"/.exec(l)?.[1]).find(x => x !== undefined);
+        expect(h).toBe('Atom_1');
+        expect(plan.lines).toContain('set Atom_1.name = "go"');
+    });
+
+    it('the Text tab gives the diff the name and initialName of every object of the base, printed or not', () => {
+        const model = boolObjects();
+        const printed = printTextModel(G, model);
+        const uses = model.filter(o => o.cls === 'Use');
+        const lookup: Record<string, unknown> = Object.fromEntries(uses.map((o, i) => [o.id, { id: o.id, name: `Use_${i + 1}`, initialName: `Use_${i}` }]));
+        const names = instanceNames(lookup, { objects: model, unprinted: [{ id: 'u9', owner: uses[0].id, feature: 'x', cls: 'Use' } as never] });
+        expect([...names].sort()).toEqual([...new Set(uses.flatMap((_, i) => [`Use_${i + 1}`, `Use_${i}`]))].sort());
+        lookup.u9 = { id: 'u9', name: 'Hidden_1' };
+        expect(instanceNames(lookup, { objects: [], unprinted: [{ id: 'u9', owner: '', feature: 'x', cls: 'Use' } as never] })).toEqual(new Set(['Hidden_1']));
+        const end = printed.text.indexOf('st & ld & rdy', printed.text.indexOf('Rule chain {')) + 'st & ld & rdy'.length;
+        const text = `${printed.text.slice(0, end)} & is_sw${printed.text.slice(end)}`;
+        const base = { mm: BOOL_MM, grammar: G, objects: model, spans: printed.spans, unprinted: printed.unprinted, refs: printed.refs ?? [] };
+        const { plan } = planEdit(base, text, carry(printed.spans, end, 0, 8), { reserved: names }, undefined, carry(printed.refs ?? [], end, 0, 8));
+        expect(plan.refusals).toEqual([]);
+        const h = createdHandle(plan.lines);
+        expect(h).toBeDefined();
+        expect(names.has(h!)).toBe(false);
+    });
 });
