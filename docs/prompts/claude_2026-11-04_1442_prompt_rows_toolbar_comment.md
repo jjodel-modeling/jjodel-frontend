@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1442
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane fast · docs commit below · verifica visiva non applicabile (docs and comment only)
 Lane: fast (Alfonso's ok of 2026-11-04 14:41)
 Depends: none
 Worktree: ~/jjodel-w-rowscomment, branch rows-toolbar-comment
