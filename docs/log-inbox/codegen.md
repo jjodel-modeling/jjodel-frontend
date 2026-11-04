@@ -1645,3 +1645,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — crops c3a-* of P-2026-11-04-0345 checked by the chat (RC-23) and by Alfonso («go», 06:52).
 **Notes**: Blocked only by the environmental port clash, resolved with the evidence above (`resolved.txt`). Rollback tag `pre-textual-c-notation` on `26a0b21fa` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0712/result.json`.
 **Prompt document name**: 2026-11-04 07:12
+
+## 2026-11-04 — feat(codegen): operators in the grammar and the style check, textual step C lane C1a (P-2026-11-04-0732, P-2026-11-04-0910)
+**Prompt**: `claude_2026-11-04_0732_prompt_textual_c1a_operators.md` and its continuation `claude_2026-11-04_0910_prompt_textual_c1a_cont.md` (RC-51): the operator annotation applied to the grammar per R-TXT-41 (fixity read off the class's features, n-ary flat chains, the call word), the `expr` grammar node with its EBNF, five style rules, a BOOL expression corpus in both styles, the Briefs under `PROTO`.
+**Files touched**: `annotations.ts`, `concreteGrammar.ts`, `styleCheck.ts`, `parser.ts` (two approved lines), `oracle.ts`, `__tests__/boolCorpus.ts` and tests (d9a893f4b, 7f64ce6a6, 54ab3aa09, 18e6c8454, d6cee1805).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on d6cee1805: tsc 0; vitest 13714 passed, 3 red at import (baseline); build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no (parser.ts two lines and oracle.ts, approved by the chat)
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — grammar and check only; the EBNF of an expression metamodel is shown with the crops of C1b, when the text prints expressions.
+**Notes**: Tests red first (6, 3, 8). Nearley oracle: one parse per BOOL sample in both styles. Briefs 71/71 under PROTO. Mutation bench 16/16 killed. New rules operator-fixity, operator-symbols, operator-tokens, operator-follow, call-words. Open for C1b: operators of equal precedence as one level; a symbol both prefix and infix (unary minus). Open for C1d: the Pascal terminator after a primary. Docs written by the chat: the lane stopped at the ceiling.
+**Prompt document name**: 2026-11-04 07:32

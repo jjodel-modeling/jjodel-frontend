@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0732
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · no code (ceiling before any code, RC-51), closed by P-2026-11-04-0910 · verifica visiva non applicabile
 Lane: full (grammar derivation and the LL(1) check)
 Depends: P-2026-11-04-0712 (step C report and C3a merged), R-TXT-41
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators

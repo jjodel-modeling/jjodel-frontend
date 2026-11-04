@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0910
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · d9a893f4b 7f64ce6a6 54ab3aa09 18e6c8454 d6cee1805 · verifica visiva non applicabile (grammar and check; EBNF crops with C1b), chiusa dalla chat
 Lane: full (grammar derivation and the LL(1) check; continuation under RC-51)
 Depends: P-2026-11-04-0732 (hard-stop at the ceiling before any code; the design, the BOOL draft and the red tests are in its handoff)
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)
