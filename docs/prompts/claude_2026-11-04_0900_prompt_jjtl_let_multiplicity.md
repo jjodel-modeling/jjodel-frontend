@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0900
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · 96b79cec3 · unit tests and mutation bench 4/5, no app probe and no visual check by hand (unattended)
 Lane: full (language semantics; Alfonso delegated the decision to the chat, 2026-11-04 08:57)
 Depends: none
 Worktree: ~/jjodel-w-jjtllet2, branch jjtl-let-multiplicity
