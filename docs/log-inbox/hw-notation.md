@@ -1065,3 +1065,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: Cause: open fit framed the 180.5x80.5 estimate, not 140x42; lines 1.7 px apart merged at that offset. Fix: most frequent measured size + 1/64. Pixel diff vs trunk: open 47,165 -> 3,072, pan 11,550 -> 1,878; 0 edge warnings. Unit 24/24, tsc 0, build 0. Prod b10_8 x2: longest 1,981/1,894 ms, total 10,675/10,940, load 22-73 (route A 1,369-1,464 at 5-7): not comparable, so partial. Second Causa (d), the band of 0925. Figures: ~/.jjodel-lanes/P-2026-11-04-1050 and -1130.
 **Prompt document name**: 2026-11-04 11:30
+
+## 2026-11-04 — merge: canvas-mount-band into alfonso-frontend-jjtl (P-2026-11-04-1153)
+**Prompt**: `claude_2026-11-04_1153_prompt_merge_canvas-mount-band.md`, a direct merge by `lane-run merge --direct`, no session: `canvas-mount-band` at `a8ae3d8f9` into `alfonso-frontend-jjtl`, merge base `9abc989ff`, 4 commits on the branch side.
+**Files touched**: merge `fa9d8611c`: 5 files from the branch side (`docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_1050_prompt_canvas_mount_band.md`, `docs/prompts/claude_2026-11-04_1130_prompt_canvas_band_close.md`, `frontend/src/components/editor-v2/__tests__/unmeasuredNodes.test.ts`, `frontend/src/components/editor-v2/unmeasuredNodes.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `fa9d8611c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13754 tests in 514 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on fa9d8611c; crops read by the lane on the branch, pixel difference from trunk behaviour 47,165 to 3,072 at open; no hand run
+**Notes**: Rollback tag `pre-canvas-mount-band` on `6cdc9d933` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1153/result.json`.
+**Prompt document name**: 2026-11-04 11:53
