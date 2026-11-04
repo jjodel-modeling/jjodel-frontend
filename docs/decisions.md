@@ -7232,6 +7232,15 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   leaves nameless, and removing a name from the text leaves the object nameless; the reprint of R-TXT-44 (1) remains
   only where the core still assigns a name. A core change: its lane runs discovery first with the Layer Impact Report of
   CLAUDE.md §3.2 and smoke tests on canvas, JjEL and export before the implementation.
+- **R-TXT-46** (2026-11-04, Alfonso 21:15, «sì»). **Answers D1-D10 of the core discovery for R-TXT-45
+  (docs/discovery/discovery_2026-11-04_core_nameless_identity.md §9), each as recommended.** Variant B: an identity slot
+  written with the empty string yields only to `data.name`, never to `initialName` (D1); the empty name never collides in
+  the name-uniqueness checks (D2); CHECK 12 drops `missing_name` for a nameless object (D3); v2-flow reference resolution
+  tests the target's presence, not a truthy name (D4); the XMI import echo of the identity slot is a lane of its own (D5);
+  the Text tab maps the empty name to unset, in the core lane (D6); the core lane lands after the C1e merge (D7); no
+  migration of saved empty slots (D8); `set X.name = null` stays unset and reads the automatic name (D9); a clear from
+  the canvas writes the empty slot (D10). The lane's file list is confirmed: LModelElement.tsx, nameUniqueness.ts,
+  ConformanceValidator.ts, jjomTransformers.ts, IRFormField.tsx, TextualTab.tsx and their tests.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
