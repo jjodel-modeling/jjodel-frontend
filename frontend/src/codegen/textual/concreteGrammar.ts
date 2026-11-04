@@ -520,6 +520,9 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
             if (a.inline && a.keyword !== undefined && !line) remark(key, 'inline: the keyword is not printed');
             const blank: GrammarNode[] = style.blankBeforeContainment ? [{ t: 'nl', blank: true }] : [];
             const el: GrammarNode = { t: 'assign', feat: f.name, op: v.many ? '+=' : '=', item: ruleRef(v.rule) };
+            // C1d: an expression, or a positional primary, prints no terminator inside: the terminator closes its line.
+            const closed: GrammarNode[] = classesOfRule(v.rule).some(k => operators.has(k) || (primaryClasses.has(k) && shapes.get(k)?.keyword === ''))
+                ? [el, ...tokens(style.terminator)] : [el];
             // C1d: the child of a single-valued inline containment in a one-line class, in the line after the keyword.
             if (line) {
                 const item: GrammarNode = { t: 'seq', items: [...kw, el] };
@@ -531,7 +534,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
                 return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, { t: 'star', feat: f.name, item: { t: 'seq', items: [{ t: 'kw', text: itemKw }, el, { t: 'nl' }] } }] } };
             }
             const content: GrammarNode[] = (a.groupBy ? groups(f, v, a.groupBy) : undefined)
-                ?? (v.many ? [{ t: 'star', feat: f.name, item: { t: 'seq', items: [el, { t: 'nl' }] } }] : [el, { t: 'nl' }]);
+                ?? (v.many ? [{ t: 'star', feat: f.name, item: { t: 'seq', items: [...closed, { t: 'nl' }] } }] : [...closed, { t: 'nl' }]);
             if (a.inline) return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, ...content] } };
             return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, ...kw, block(content), { t: 'nl' }] } };
         }
@@ -544,7 +547,8 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         const value: GrammarNode = v.t === 'list'
             ? { t: 'list', feat: f.name, open: style.list.open, separator: style.list.separator, close: style.list.close, item: { t: 'assign', feat: f.name, op: '+=', item: single(v.item, f) } }
             : { t: 'assign', feat: f.name, op: '=', item: single(v, f) };
-        const item: GrammarNode = { t: 'seq', items: [...kw, ...(kw.length ? tokens(style.assign) : []), value, ...tokens(style.terminator), ...nl] };
+        // C1d: a positional primary's value takes no terminator; the expression's line does (`closed`).
+        const item: GrammarNode = { t: 'seq', items: [...kw, ...(kw.length ? tokens(style.assign) : []), value, ...(primary ? [] : tokens(style.terminator)), ...nl] };
         if (((primary && v.t !== 'list') || required) && A?.mandatory?.has(key)) return item;
         return { t: 'opt', feat: f.name, item };
     };

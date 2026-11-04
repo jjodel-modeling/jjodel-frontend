@@ -560,9 +560,10 @@ describe('the expression rule and its EBNF (step C lane C1a)', () => {
         ]);
     });
 
-    it('BOOL Pascal: word symbols, the default call words, the terminator kept after a primary (C1d)', () => {
+    it('BOOL Pascal: word symbols, the default call words, the terminator after the expression, not after a primary (C1d)', () => {
         const lines = concreteGrammarEbnf(boolGrammar(BOOL_PASCAL)).split('\n');
-        expect(lines.filter(l => /^(Use|Lit) /.test(l))).toEqual(['Use   ::= atom=REF ";" ;', 'Lit   ::= value=INT ";" ;']);
+        expect(lines.filter(l => /^(Use|Lit) /.test(l))).toEqual(['Use   ::= atom=REF ;', 'Lit   ::= value=INT ;']);
+        expect(lines.find(l => l.startsWith('Rule '))).toBe('Rule  ::= "Rule" [name=NAME] "begin" ["when" "begin" when=Expr_ ";" "end" ";"] "end" ";" ;');
         expect(lines.filter(l => l.includes('(*'))).toEqual([
             'Expr_ ::= left=Expr_ "implies" right=Expr_ (* Imp, binary, right, precedence 1 *)',
             '        | ops+=Expr_ "or" ops+=Expr_ {"or" ops+=Expr_} (* Or, n-ary, precedence 2 *)',
