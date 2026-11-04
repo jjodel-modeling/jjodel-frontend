@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0046
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane fast · 87743a3ba · verifica visiva della chat passata 2026-11-04 (RC-23, crops of P-2026-11-04-0046); GO di Alfonso sulle crop in attesa per il merge
 Lane: fast (closure of work already written and unit-tested)
 Depends: P-2026-11-04-0020 (hard-stop at the ceiling; code at 52154bc57, handoff in its lane folder)
 Worktree: ~/jjodel-w-textb, branch textual-b-navigation (the same tree)

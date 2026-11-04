@@ -1510,3 +1510,22 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Prompt document name**: 2026-11-03 23:26
 
 **Ticket** (not filed as an entry): with the whole text deleted and a wait of more than 800 ms before the paste, the pause applies the empty text (every object deleted, «Applied») and the paste recreates the objects under new ids. Measured in run 1 of the probe (`probe-all-run1-settled.log`). The D-5 clip holds only a cut, not a select-and-delete.
+
+## 2026-11-04 — feat(codegen): Text tab language service checked in the app, step B1 closure (P-2026-11-04-0046)
+**Prompt**: `claude_2026-11-04_0046_prompt_textual_b1_closure.md`, continuation of P-2026-11-04-0020 after the context ceiling (RC-51): cyan-600 for names and references, check:docs, keystroke check in the app on demoESM and sample-Library, docs hover, crops, RISC-V Briefs read-only, log and Status flips of 2350, 0020 and 0046.
+**Files touched**: `frontend/src/codegen/textual/ui/textualMonaco.ts` (`87743a3ba`); this entry, the ticket below and the Status lines of three prompts (uncommitted, RC-17)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc exit 0; vitest src/codegen/textual 402/402; build exit 0; probes on 3464 20/20 (demoESM), 19/19 (sample-Library), 9/9 (docprobe)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato by the lane (crops in ~/.jjodel-lanes/P-2026-11-04-0046/crops); the chat's GO pending
+**Notes**: Keystrokes: clicks, typing, Cmd+Alt+[ ], F12, Shift+F12, Cmd+Z, hovers. Direct: project import, openTextualTab, docprobe import, createModelFromText, insertText. Folding widens the decorations lane 10 to 26 px (contentLeft 30 to 46). The JjScript editor opened in front of the tab, not beside: colours compared under the textual theme set by call, 19/19 spans equal. Briefs: 0 errors, refs resolve, hovers answer, analysis under 1 ms.
+**Prompt document name**: 2026-11-04 00:46
+
+## 2026-11-04 — ticket: the Text tab hover clips its last characters
+**Ticket**: in the app the hover box of the Text tab is narrower than its content: `.monaco-hover` 189 px wide, scrollWidth 217, overflow hidden, so «ordered» reads «orde» (sample-Library, docprobe). The inline code spans take the global Bootstrap `code` rule (rgb(214, 51, 132), 0.875em, padding 0 4.55px). Not diagnosed (CLAUDE.md §5). Also measured, older than B1 (font since 7bd41e3cf): on a long line Monaco's offset-to-pixel point sits about 15 px right of the rendered glyph in headless Chromium.
+**Priority**: medium
+**Found in**: P-2026-11-04-0046
+**Detail**: ~/.jjodel-lanes/P-2026-11-04-0046/crops/library-4-hover-reference.png
