@@ -5,7 +5,7 @@ Chat: C-2026-11-03-1227
 Front: ai-provider
 Lane: full
 Depends: P-2026-11-03-1446
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane feat/196-l6-consolidation · cb0d2d77c
 Corregge: —
 Request: none (no URL: Juri asked in a local Claude Code session on 2026-11-03, «continua a lavorare per chiudere la issue 196»; his words are `request.md` in the lane folder, RC-43)
 Model: claude-opus-5-5

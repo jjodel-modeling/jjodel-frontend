@@ -163,3 +163,16 @@ file. The active log is not touched by these lanes.
 **Smoke visivo**: passato — chat, unattended: merged staging 7816c57ec: L4 probe 30/30 on port 3190 (SMOKE_URL set), 0 page errors, 0 requests to the AI proxy Worker; Juri chose to merge the code part now, Worker and folder removal later
 **Notes**: Rollback tag `pre-feat/196-l4-proxy-removal` on `99b380f6f` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1430/result.json`.
 **Prompt document name**: 2026-11-03 14:30
+
+## 2026-11-04 — refactor: #196 L6, types/jodie.ts gone, AI layer consolidated in src/services/ai (P-2026-11-03-1445, P-2026-11-03-1446, P-2026-11-03-1447)
+**Prompt**: #196 L6 in three chained lanes on `feat/196-l6-consolidation` (R-AI-23). Lane 1 (P-2026-11-03-1445): runtime readers of `types/jodie.ts` onto `src/services/ai` and the new UI-side `providerVisuals.ts`, L2 bridge deleted. Lane 2 (P-2026-11-03-1446): types to `components/Jodie/types.ts` and `types/documentation.ts`, `types/jodie.ts` and `services/aiModelCatalog.ts` deleted, tests carried, CHANGELOG. Lane 3 (P-2026-11-03-1447): `CLAUDE.md` §16, `docs/CODEBASE-MAP.md` §19, closure.
+**Files touched**: lane 1 `e658131be` (providerVisuals.ts + its test), `5865308ef` (10 readers: AISettingsContent, AIAssistantSettings, ProviderConfigModal, ChatMessages, DocumentationService, DocumentationTab, Jodie, JodieHeader, JodieMinimized, ProviderModelSelector); lane 2 `8fa7e2f87` (25 files: 2 new, 4 deleted incl. types/jodie.ts and services/aiModelCatalog.ts, 19 modified), `3fe99ffc3` CHANGELOG.md; lane 3 `f0764c4f1` CLAUDE.md + AGENTS.md (root only regenerated), `cb0d2d77c` docs/CODEBASE-MAP.md §19.6; this inbox and the `Status:` lines of the three prompts.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Lane 1 on `5865308ef`: typecheck 0, build 0, vitest 12245 tests, 446/455 files (nine known import reds). Lane 2 on `8fa7e2f87`/`3fe99ffc3`: typecheck 0, build 0, vitest 12232 tests, 444/453 files (same nine; -13 tests explained in the handoff), dist files naming AIConfig/JodieConfig 1 -> 0. Lane 3: typecheck exit 0 (sanity, unchanged code), check:agents PASS, check:docs exit 0.
+**Out-of-scope changes**: no. Above five files (45 across the chain: 12 + 26 + 7), all in the DOVE lists; rule 19 confirmed by Juri for L6 (R-AI-23). List in Files touched.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probes on port 3195 (SMOKE_URL set), 0 page errors: L2 14/14, L4 30/30, L6 13/13 on both lanes; L6b startup migrations 5/5 (mutant without `registry.load()` 2/5). Juri's visual check (lane 2 checklist, 9 items) still owed before the merge
+**Notes**: Handoffs: `~/.jjodel-lanes/P-2026-11-03-1445/handoff.md`, `.../P-2026-11-03-1446/handoff.md`. Key unattended choice: `registry.load()` at module scope of Jodie.tsx keeps the four startup preference migrations once types/jodie.ts is gone. CHANGELOG [Unreleased]/Changed: AI runtime names unregistered from OCL/JjEL. Still owed: Juri's visual check, the Worker removal (R-AI-22), the merge into staging.
+**Prompt document name**: 2026-11-03 14:47
