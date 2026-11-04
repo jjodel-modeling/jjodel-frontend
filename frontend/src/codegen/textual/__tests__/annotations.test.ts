@@ -416,13 +416,25 @@ describe('what the derivation refuses, with the reason', () => {
         expect(errorsOf(g)).toEqual(['class Core: Core has a containment: layout line not applied']);
     });
 
-    it('a one-line or positional class whose name is optional (R-TXT-27)', () => {
-        const g = annotatedGrammar(ARBITER_MM, ARBITER_ANNOTATIONS, []);
-        expect(errorsOf(g)).toEqual(['class Requester: Requester.name is optional: a one-line class needs a mandatory name in its head; layout line not applied']);
-        expect(print(g, ARBITER_OBJECTS.slice(0, 2).map(o => (o.id === 'a' ? { ...o, slots: { name: 'arb', requesters: ['q1'] } } : o))))
+    it('a one-line or positional class whose name is optional: kept under the LL(1) condition (R-TXT-41, D3, amends R-TXT-27 (2))', () => {
+        // Refused when every part after the optional name is optional: the next item's keyword would read as the name.
+        const loose = annotatedGrammar(ARBITER_MM, ARBITER_ANNOTATIONS, []);
+        expect(errorsOf(loose)).toEqual(['class Requester: Requester.name is optional: a one-line class needs a mandatory name in its head, since every part after Requester.name is optional, and what follows a Requester could be read as its name; layout line not applied']);
+        expect(print(loose, ARBITER_OBJECTS.slice(0, 2).map(o => (o.id === 'a' ? { ...o, slots: { name: 'arb', requesters: ['q1'] } } : o))))
             .toBe('arbiter arb {\n  requester cpu {\n    priority 0\n  }\n}');
-        const positional = annotatedGrammar(ARBITER_MM, { ...ARBITER_ANNOTATIONS, classes: { ...ARBITER_ANNOTATIONS.classes, 'c:Requester': { keyword: '' } } }, []);
-        expect(errorsOf(positional)).toEqual(['class Requester: Requester.name is optional: a positional class needs a mandatory name in its head; the keyword "" not applied']);
+        // Kept with a mandatory priority after it.
+        const g = annotatedGrammar(ARBITER_MM, ARBITER_ANNOTATIONS, ['Requester.priority']);
+        expect(errorsOf(g)).toEqual([]);
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
+        // The keyword after the name position is reserved there: no name reads as it.
+        expect(g.headWords).toEqual(['priority']);
+        const objects = ARBITER_OBJECTS.slice(0, 2).map(o => (o.id === 'a' ? { ...o, slots: { name: 'arb', requesters: ['q1'] } } : o));
+        expect(print(g, objects)).toBe('arbiter arb {\n  requester cpu priority 0\n}');
+        const nameless = objects.map(o => (o.id === 'q1' ? { ...o, slots: { ...o.slots, name: undefined } } : o));
+        expect(print(g, nameless)).toBe('arbiter arb {\n  requester priority 0\n}');
+        const positional = annotatedGrammar(ARBITER_MM, { ...ARBITER_ANNOTATIONS, classes: { ...ARBITER_ANNOTATIONS.classes, 'c:Requester': { keyword: '' } } }, ['Requester.priority']);
+        expect(errorsOf(positional)).toEqual([]);
+        expect(roundTrip(g, nameless).text).toBe('arbiter arb {\n  requester priority 0\n}');
     });
 
     it('a feature keyword that collides with another', () => {

@@ -236,6 +236,23 @@ export const expressionWords = (g: ConcreteGrammar): string[] =>
 /** A token after which an operand has ended: a number written after it with a sign is an infix minus and a number (C1b). */
 const endsOperand = (t: Token | undefined): boolean => !!t && (t.k === 'ID' || t.k === 'INT' || t.k === 'FLOAT' || t.k === 'STR' || (t.k === 'P' && t.v === ')'));
 
+/** The punctuation of a grammar's own nodes: a feature's punctuation keyword, the call layout's tokens (C1d). */
+function grammarPuncts(g: ConcreteGrammar): string[] {
+    const out = new Set<string>();
+    const visit = (n: GrammarNode): void => {
+        switch (n.t) {
+            case 'p': out.add(n.text); return;
+            case 'seq': case 'block': n.items.forEach(visit); return;
+            case 'opt': case 'star': case 'assign': case 'list': visit(n.item); return;
+            case 'alt': n.alts.forEach(visit); return;
+            case 'expr': n.primaries.forEach(visit); return;
+            default: return;
+        }
+    };
+    g.rules.forEach(r => visit(r.body));
+    return [...out];
+}
+
 function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): Token[] {
     const style = g.style;
     // Step C lane C1b: the operator symbols and the tokens of an expression join the punctuation, longest match first.
@@ -243,7 +260,7 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
     const symbols = exprs.flatMap(e => [e.open, e.close, e.separator, ...e.operators.map(o => o.symbol)]);
     const puncts = [...new Set([
         ...style.blockOpen, ...style.blockClose, ...style.emptyBlock, ...style.assign, ...style.terminator,
-        style.list.open, style.list.separator, style.list.close, '[', ']', '.', '@', ...symbols,
+        style.list.open, style.list.separator, style.list.close, '[', ']', '.', '@', ...symbols, ...grammarPuncts(g),
     ].filter(s => !/^\w/.test(s)))].sort((a, b) => b.length - a.length);
     // The sign is folded into a number unless an operator symbol starts with "-", reads there, and an operand ends before it.
     const signed = exprs.some(e => e.operators.some(o => o.symbol.startsWith('-')));
@@ -528,7 +545,8 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     };
     // A style word reserved in name positions (Pascal/Ada `begin`, `end`) is no name: the printer quotes such a name (step C3a).
     // So is an expression's word symbol or call word (C1a, styleCheck.ts `reservedWords`).
-    const reserved = new Set([...g.style.reservedNames, ...expressionWords(g)]);
+    // And a word that can stand at an optional head name's place (R-TXT-41, D3; C1d).
+    const reserved = new Set([...g.style.reservedNames, ...expressionWords(g), ...(g.headWords ?? [])]);
     const isReserved = (t: Token): boolean => t.k === 'ID' && reserved.has(t.v);
     const canAt = (n: GrammarNode, t: Token): boolean => [...first(n).set].some(m => hit(t, m) && !(m === 'ID' && isReserved(t)));
 

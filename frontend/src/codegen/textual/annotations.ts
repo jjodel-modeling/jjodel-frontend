@@ -27,8 +27,9 @@ export type OperatorFixity = 'nary' | 'binary' | 'prefix';
 export interface ClassAnnotation {
     /** The class keyword; `''` makes the class positional (no keyword). */
     readonly keyword?: string;
-    /** `line`: the features on the head's line, with no block (refused when the class has a containment). */
-    readonly layout?: 'block' | 'line';
+    /** `line`: the features on the head's line, with no block (refused when the class has a containment that is not inline).
+     *  `call`: the class word and its arguments in parentheses, `Word(32)` (step C lane C1d; refused when the class has a containment). */
+    readonly layout?: 'block' | 'line' | 'call';
     /** `keyword`: the name moves after the features, behind this keyword. `default`: a pattern over the attributes (`{kind}(_{requester})?`), the name omitted when it equals it. */
     readonly name?: { readonly keyword?: string; readonly default?: string };
     /** The class as an operator of the expressions of the types it stands for; its fixity is read off its features (operatorFixity). */
@@ -36,10 +37,13 @@ export interface ClassAnnotation {
 }
 
 export interface FeatureAnnotation {
-    /** The feature keyword; `''` makes the feature positional. */
+    /** The feature keyword; `''` makes the feature positional; one punctuation token (`:`) is a keyword too (C1d). */
     readonly keyword?: string;
-    /** A containment whose objects stand directly in the owner's body, with no keyword and no block. */
+    /** A containment whose objects stand directly in the owner's body, with no keyword and no block. In a one-line class,
+     *  a single-valued containment whose child is printed in the line after the feature keyword (C1d). */
     readonly inline?: boolean;
+    /** A keyword printed before each object of a multi-valued containment, in place of the keyword and block around them (C1d). */
+    readonly itemKeyword?: string;
     /** A many-valued containment grouped by an enumeration attribute (its id) of the contained class, by the enumeration's subsets. */
     readonly groupBy?: string;
     /** `name`: a string attribute printed as a name (unquoted when it is an identifier). */
@@ -95,7 +99,7 @@ export interface NamePattern {
 
 export interface ResolvedClass {
     readonly keyword?: string;
-    readonly layout?: 'block' | 'line';
+    readonly layout?: 'block' | 'line' | 'call';
     readonly name?: { readonly keyword?: string; readonly default?: NamePattern };
     readonly operator?: OperatorAnnotation;
 }
@@ -103,6 +107,7 @@ export interface ResolvedClass {
 export interface ResolvedFeature {
     readonly keyword?: string;
     readonly inline?: boolean;
+    readonly itemKeyword?: string;
     readonly groupBy?: { readonly attr: string; readonly owner: string; readonly mandatory: boolean };
     readonly value?: 'name';
 }
@@ -124,6 +129,8 @@ export interface ResolvedAnnotations {
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const isKeyword = (v: unknown): v is string => typeof v === 'string' && (v === '' || IDENTIFIER.test(v));
+/** A feature keyword: a class keyword, or one punctuation token, a run of characters that are neither word characters, spaces, quotes nor `@` (C1d). */
+const isFeatureKeyword = (v: unknown): v is string => isKeyword(v) || (typeof v === 'string' && /^[^\w\s"'@]+$/.test(v));
 const isCase = (v: unknown): v is LetterCase => v === 'declared' || v === 'lower';
 /** An operator symbol: a word, or a run of characters that are neither word characters nor spaces. */
 const isSymbol = (v: string): boolean => IDENTIFIER.test(v) || /^[^\w\s]+$/.test(v);
@@ -253,9 +260,9 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         const cls = ids.classes[id];
         if (cls === undefined) { error('classes', `no class has the id ${JSON.stringify(id)}`); continue; }
         const where = `class ${cls}`;
-        const out: { keyword?: string; layout?: 'block' | 'line'; name?: { keyword?: string; default?: NamePattern }; operator?: OperatorAnnotation } = {};
+        const out: { keyword?: string; layout?: 'block' | 'line' | 'call'; name?: { keyword?: string; default?: NamePattern }; operator?: OperatorAnnotation } = {};
         if (a.keyword !== undefined) { if (isKeyword(a.keyword)) out.keyword = a.keyword; else error(where, `the keyword ${JSON.stringify(a.keyword)} is not an identifier or ""`); }
-        if (a.layout !== undefined) { if (a.layout === 'block' || a.layout === 'line') out.layout = a.layout; else error(where, `the layout ${JSON.stringify(a.layout)} is not block or line`); }
+        if (a.layout !== undefined) { if (a.layout === 'block' || a.layout === 'line' || a.layout === 'call') out.layout = a.layout; else error(where, `the layout ${JSON.stringify(a.layout)} is not block, line or call`); }
         if (a.name !== undefined) {
             const name: { keyword?: string; default?: NamePattern } = {};
             if (a.name.keyword !== undefined) {
@@ -287,8 +294,9 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         const f = ids.features[id];
         if (f === undefined) { error('features', `no feature has the id ${JSON.stringify(id)}`); continue; }
         const where = `${f.owner}.${f.name}`;
-        const out: { keyword?: string; inline?: boolean; groupBy?: { attr: string; owner: string; mandatory: boolean }; value?: 'name' } = {};
-        if (a.keyword !== undefined) { if (isKeyword(a.keyword)) out.keyword = a.keyword; else error(where, `the keyword ${JSON.stringify(a.keyword)} is not an identifier or ""`); }
+        const out: { keyword?: string; inline?: boolean; itemKeyword?: string; groupBy?: { attr: string; owner: string; mandatory: boolean }; value?: 'name' } = {};
+        if (a.keyword !== undefined) { if (isFeatureKeyword(a.keyword)) out.keyword = a.keyword; else error(where, `the keyword ${JSON.stringify(a.keyword)} is not an identifier, "" or one punctuation token`); }
+        if (a.itemKeyword !== undefined) { if (typeof a.itemKeyword === 'string' && IDENTIFIER.test(a.itemKeyword)) out.itemKeyword = a.itemKeyword; else error(where, `the item keyword ${JSON.stringify(a.itemKeyword)} is not an identifier`); }
         if (a.inline !== undefined) { if (typeof a.inline === 'boolean') out.inline = a.inline; else error(where, 'inline is not a boolean'); }
         if (a.value !== undefined) { if (a.value === 'name') out.value = 'name'; else error(where, `the value form ${JSON.stringify(a.value)} is not "name"`); }
         if (a.groupBy !== undefined) {

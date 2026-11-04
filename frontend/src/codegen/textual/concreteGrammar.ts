@@ -9,6 +9,7 @@ import type { AnnotationIssue, NamePattern, OperatorFixity, ResolvedAnnotations,
 import { expandNamePattern, operatorFixity, patternHoles } from './annotations';
 import type { BaseGrammar, BaseRule, BaseValue } from './baseGrammar';
 import type { TextFeature } from './metamodel';
+import { firstSetsOf } from './parser';
 import type { LetterCase, NotationStyle } from './style';
 
 /** `NAME`: an object's name, an identifier or a quoted string (R-TXT-3, R-TXT-9). */
@@ -45,7 +46,8 @@ export type GrammarNode =
     | { readonly t: 'alt'; readonly alts: readonly GrammarNode[] }
     /** A contextual keyword: an identifier matched by its text where an item starts (R-TXT-9). */
     | { readonly t: 'kw'; readonly text: string }
-    | { readonly t: 'p'; readonly text: string }
+    /** `tight`: no space before the token (`before`), nor after it (`around`); the call layout's parentheses and commas (C1d). */
+    | { readonly t: 'p'; readonly text: string; readonly tight?: 'before' | 'around' }
     | { readonly t: 'tok'; readonly terminal: ConcreteTerminal }
     /** A cross-reference (`REF`): the target's name when unique among `targets`' instances, else its path (R-TXT-4, R-TXT-11). */
     | { readonly t: 'xref'; readonly type: string; readonly targets: readonly string[] }
@@ -92,6 +94,12 @@ export interface ConcreteGrammar {
     readonly notices: readonly GrammarNotice[];
     /** Present iff the grammar was derived with annotations: their resolution issues and what the derivation refused. */
     readonly annotationIssues?: readonly AnnotationIssue[];
+    /**
+     * R-TXT-41 (D3): the words that can stand where an optional head name can, after it or in place of it (a feature
+     * keyword, the keyword of another class of the same position). No name is one of them: the printer quotes it, and
+     * the parser reads the word (C1d). Absent when no head name is optional.
+     */
+    readonly headWords?: readonly string[];
 }
 
 export const applyCase = (s: string, c: LetterCase): string => (c === 'lower' ? s.toLowerCase() : s);
@@ -106,11 +114,21 @@ function clashes(words: readonly string[], c: LetterCase): string[] {
 
 const tokens = (ts: readonly string[]): GrammarNode[] => ts.map(text => (/^\w/.test(text) ? { t: 'kw', text } : { t: 'p', text }));
 
+/** A class whose head name is optional in a one-line, positional or call head (R-TXT-41, D3), and how its head is laid out. */
+interface OptionalHead {
+    readonly line: boolean;
+    readonly positional: boolean;
+}
+
 /** The shape an object rule takes after its class's annotations, refusals applied. */
 interface ClassShape {
     /** `''`: positional. */
     readonly keyword: string;
     readonly line: boolean;
+    /** The call layout (C1d): the class word and its arguments in parentheses. */
+    readonly call: boolean;
+    /** R-TXT-41 (D3): the head's name is optional in a one-line, positional or call head; its mandatory single values are not. */
+    readonly optionalHead: boolean;
     /** The name's keyword when it moves after the features. */
     readonly nameKeyword?: string;
     readonly derive?: NamePattern;
@@ -124,6 +142,88 @@ interface ClassShape {
  * `annotationIssues`, and not applied.
  */
 export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, annotations?: ResolvedAnnotations): ConcreteGrammar {
+    // R-TXT-41 (D3): an optional head name stays when what can follow it in the head cannot be read as a name; a class
+    // whose head fails is derived again with the name refused, as R-TXT-27 (2) refused it.
+    let refused = new Map<string, string>();
+    for (;;) {
+        const { grammar, heads } = derive(base, style, annotations, refused);
+        const more = headConflicts(grammar, heads, refused);
+        if (!more.size) return withHeadWords(grammar, heads);
+        refused = new Map([...refused, ...more]);
+    }
+}
+
+/** The name position of an object rule's head: the items after the name's opt (or the name alternative's siblings). */
+function afterName(rule: ObjectRule): { readonly rest: readonly GrammarNode[]; readonly alt?: readonly GrammarNode[] } | undefined {
+    const items = rule.body.t === 'seq' ? rule.body.items : [rule.body];
+    const at = items.findIndex(x => (x.t === 'opt' && x.feat === 'name') || (x.t === 'alt' && x.alts.some(a => a.t === 'assign' && a.feat === 'name')));
+    if (at < 0) return undefined;
+    const n = items[at];
+    return { rest: items.slice(at + 1), ...(n.t === 'alt' ? { alt: n.alts.filter(a => !(a.t === 'assign' && a.feat === 'name')) } : {}) };
+}
+
+/** The feature a part of a head is about: its own, or that of the first item of a sequence that has one. */
+function featOf(x: GrammarNode): string | undefined {
+    if (x.t === 'opt' || x.t === 'assign' || x.t === 'star' || x.t === 'list') return x.feat;
+    if (x.t === 'seq') for (const i of x.items) { const f = featOf(i); if (f !== undefined) return f; }
+    return undefined;
+}
+
+/** The classes whose optional head name a following part could be read as: the part that starts with a name, by class. */
+function headConflicts(g: ConcreteGrammar, heads: ReadonlyMap<string, OptionalHead>, refused: ReadonlyMap<string, string>): Map<string, string> {
+    const first = firstSetsOf(g);
+    const out = new Map<string, string>();
+    for (const cls of heads.keys()) {
+        const rule = g.objects[cls];
+        const at = rule && !refused.has(cls) ? afterName(rule) : undefined;
+        if (!at) continue;
+        let closed = at.alt !== undefined;
+        for (const x of [...at.rest, ...(at.alt ?? [])]) {
+            const f = first(x);
+            if (f.set.has('ID') || f.set.has('STR')) {
+                const named = featOf(x);
+                const feat = named !== undefined ? `${cls}.${named}` : `a part of ${cls}`;
+                out.set(cls, `${feat} can start with a name too (an identifier or a string)`);
+                break;
+            }
+            if (!f.nullable) { closed = true; break; }
+        }
+        // With every part after an optional name optional, the name is followed by what follows the object, which its
+        // own rule does not know (the next item's keyword, a positional sibling): refused too.
+        if (!closed && !out.has(cls)) out.set(cls, `every part after ${cls}.name is optional, and what follows a ${cls} could be read as its name`);
+    }
+    return out;
+}
+
+/** The grammar with its head words (R-TXT-41): the words that start what follows an optional head name, or stands in its place. */
+function withHeadWords(g: ConcreteGrammar, heads: ReadonlyMap<string, OptionalHead>): ConcreteGrammar {
+    if (!heads.size) return g;
+    const first = firstSetsOf(g);
+    const words = new Set<string>();
+    const add = (n: GrammarNode): void => { for (const m of first(n).set) if (m.startsWith('ID:')) words.add(m.slice(3)); };
+    for (const cls of heads.keys()) {
+        const at = g.objects[cls] ? afterName(g.objects[cls]) : undefined;
+        if (!at) continue;
+        for (const x of at.rest) { add(x); if (!first(x).nullable) break; }
+        at.alt?.forEach(add);
+    }
+    // The other classes of each position an optional head stands at: the alternatives of a choice, the primaries of an expression.
+    const visit = (n: GrammarNode): void => {
+        const alts = n.t === 'alt' ? n.alts : n.t === 'expr' ? n.primaries : undefined;
+        if (alts?.some(a => a.t === 'rule' && heads.has(a.name))) alts.forEach(a => { if (!(a.t === 'rule' && heads.has(a.name))) add(a); });
+        switch (n.t) {
+            case 'seq': case 'block': n.items.forEach(visit); return;
+            case 'opt': case 'star': case 'assign': case 'list': visit(n.item); return;
+            case 'alt': n.alts.forEach(visit); return;
+            case 'expr': n.primaries.forEach(visit); return;
+            default: return;
+        }
+    };
+    g.rules.forEach(r => visit(r.body));
+    return words.size ? { ...g, headWords: [...words].sort() } : g;
+}
+
+function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAnnotations | undefined, refusedHeads: ReadonlyMap<string, string>): { readonly grammar: ConcreteGrammar; readonly heads: ReadonlyMap<string, OptionalHead> } {
     if (style.layout !== 'free') throw new Error(`style ${style.id}: layout ${style.layout} is not implemented (step T5)`);
 
     const A = annotations;
@@ -179,15 +279,31 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
     }
 
     const shapes = new Map<string, ClassShape>();
+    const heads = new Map<string, OptionalHead>();
     for (const r of objectRules) {
         const a = A?.classes[r.cls] ?? {};
         const where = `class ${r.cls}`;
         let line = a.layout === 'line';
-        if (line && r.features.some(f => f.feature.kind === 'containment')) {
+        let call = a.layout === 'call';
+        // C1d: a one-line class may hold single-valued inline containments, printed in its line.
+        if (line && r.features.some(f => f.feature.kind === 'containment' && !(featAnn(f.feature).inline && !f.feature.many))) {
             refuse(where, `${r.cls} has a containment: layout line not applied`);
             line = false;
         }
+        if (call) {
+            const contained = r.features.find(f => f.feature.kind === 'containment');
+            const many = r.features.find(f => f.feature.many);
+            const optional = r.features.find(f => !A?.mandatory?.has(featureKey(f.feature)));
+            if (contained) refuse(where, `${r.cls} has a containment: layout call not applied`);
+            else if (many) refuse(where, `${featureKey(many.feature)} is many-valued: layout call not applied, a call takes one value per argument`);
+            else if (optional) refuse(where, `${featureKey(optional.feature)} is optional: layout call not applied, a call takes every argument`);
+            if (contained || many || optional) call = false;
+        }
         let keyword = a.keyword ?? applyCase(r.cls, classCase);
+        if (call && keyword === '') {
+            remark(where, 'layout call: the keyword "" is not applied, the call word is the class name');
+            keyword = applyCase(r.cls, classCase);
+        }
         let nameKeyword = a.name?.keyword;
         let derive = a.name?.default;
         if (!r.named && (nameKeyword !== undefined || derive !== undefined)) {
@@ -205,20 +321,28 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
                 derive = undefined;
             }
         }
-        // R-TXT-27: in the head of a one-line or positional class an optional name would read a following word as the name.
+        // R-TXT-27 (2) as amended by R-TXT-41 (D3): in the head of a one-line, positional or call class an optional name
+        // stays when nothing that follows it there can be read as a name (headConflicts); otherwise it is refused here.
         const headName = r.named && nameKeyword === undefined;
         const mandatory = !!A?.mandatoryName.has(r.cls);
-        if (headName && !mandatory) {
+        const conflict = refusedHeads.get(r.cls);
+        if (headName && !mandatory && conflict !== undefined) {
             if (line) {
-                refuse(where, `${r.cls}.name is optional: a one-line class needs a mandatory name in its head; layout line not applied`);
+                refuse(where, `${r.cls}.name is optional: a one-line class needs a mandatory name in its head, since ${conflict}; layout line not applied`);
                 line = false;
             }
+            if (call) {
+                refuse(where, `${r.cls}.name is optional: a call class needs a mandatory name in its head, since ${conflict}; layout call not applied`);
+                call = false;
+            }
             if (keyword === '') {
-                refuse(where, `${r.cls}.name is optional: a positional class needs a mandatory name in its head; the keyword "" not applied`);
+                refuse(where, `${r.cls}.name is optional: a positional class needs a mandatory name in its head, since ${conflict}; the keyword "" not applied`);
                 keyword = applyCase(r.cls, classCase);
             }
         }
-        shapes.set(r.cls, { keyword, line, nameKeyword, derive, nameRequired: headName && mandatory && (line || keyword === '') });
+        const optionalHead = headName && !mandatory && (line || call || keyword === '');
+        if (optionalHead) heads.set(r.cls, { line, positional: keyword === '' });
+        shapes.set(r.cls, { keyword, line, call, optionalHead, nameKeyword, derive, nameRequired: headName && mandatory && (line || call || keyword === '') });
     }
 
     // Base rule names to concrete ones: `Obj_C` is `C`; a choice with a single class is that class.
@@ -269,6 +393,23 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
     }));
 
     const block = (items: readonly GrammarNode[]): GrammarNode => ({ t: 'block', open: style.blockOpen, close: style.blockClose, empty: style.emptyBlock, items });
+    // C1d: the tokens a punctuation keyword may not be, by what they are in the style in force.
+    const taken = new Map<string, string>();
+    const take = (what: string, ts: readonly string[]): void => { for (const t of ts) if (!/^\w/.test(t) && !taken.has(t)) taken.set(t, what); };
+    take('a block token', [...style.blockOpen, ...style.blockClose, ...style.emptyBlock]);
+    take('a list token', [style.list.open, style.list.separator, style.list.close]);
+    take('the terminator', style.terminator);
+    take('the assignment', style.assign);
+    take('a token of a reference', ['.', '[', ']', '@']);
+    take('a token of an expression or a call', ['(', ')']);
+    take('an operator symbol', [...operators.values()].map(o => o.symbol));
+    /** The keyword a feature prints, a punctuation one refused when it is a token of the style or an operator. */
+    const keywordOf = (f: TextFeature): string => {
+        const k = featAnn(f).keyword ?? f.name;
+        if (k === '' || /^\w/.test(k) || !taken.has(k)) return k;
+        refuse(featureKey(f), `the keyword "${k}" is ${taken.get(k)} of the style ${style.id}; not applied`);
+        return f.name;
+    };
     const single = (v: BaseValue, f: TextFeature): GrammarNode => {
         switch (v.t) {
             case 'terminal':
@@ -357,17 +498,38 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
 
     /** `override`: in a derived rule of a grouping, the grouping attribute is not optional and takes the subset's literals.
      *  `primary`: the class is a positional primary of an expression, where a mandatory single value is not optional (C1a). */
-    const feature = (f: TextFeature, v: BaseValue, line: boolean, override?: { readonly attr: TextFeature; readonly rule: string }, primary = false): GrammarNode => {
+    const feature = (f: TextFeature, v: BaseValue, line: boolean, override?: { readonly attr: TextFeature; readonly rule: string }, primary = false, strict = false): GrammarNode => {
         const a = featAnn(f);
         const key = featureKey(f);
-        const kwText = a.keyword ?? f.name;
-        const kw: GrammarNode[] = kwText === '' ? [] : [{ t: 'kw', text: kwText }];
+        const kwText = keywordOf(f);
+        const kw: GrammarNode[] = kwText === '' ? [] : [/^\w/.test(kwText) ? { t: 'kw', text: kwText } : { t: 'p', text: kwText }];
         const nl: GrammarNode[] = line ? [] : [{ t: 'nl' }];
+        // `strict`: a one-line head with an optional name (D3), where a mandatory single value is not optional.
+        const required = strict && !f.many && !!A?.mandatory?.has(key);
+        let itemKw = a.itemKeyword;
+        if (itemKw !== undefined && (v.t !== 'block' || !v.many)) {
+            refuse(key, `itemKeyword applies to a multi-valued containment, and ${key} is ${v.t !== 'block' ? 'not a containment' : 'single-valued'}; not applied`);
+            itemKw = undefined;
+        }
+        if (itemKw !== undefined && a.groupBy) {
+            refuse(key, 'itemKeyword is not applied with groupBy: a group prints its own keyword');
+            itemKw = undefined;
+        }
         if (v.t === 'block') {
             if (a.value === 'name') refuse(key, 'value "name" applies to a string attribute; not applied');
-            if (a.inline && a.keyword !== undefined) remark(key, 'inline: the keyword is not printed');
+            if (a.inline && a.keyword !== undefined && !line) remark(key, 'inline: the keyword is not printed');
             const blank: GrammarNode[] = style.blankBeforeContainment ? [{ t: 'nl', blank: true }] : [];
             const el: GrammarNode = { t: 'assign', feat: f.name, op: v.many ? '+=' : '=', item: ruleRef(v.rule) };
+            // C1d: the child of a single-valued inline containment in a one-line class, in the line after the keyword.
+            if (line) {
+                const item: GrammarNode = { t: 'seq', items: [...kw, el] };
+                return required ? item : { t: 'opt', feat: f.name, item };
+            }
+            if (itemKw !== undefined) {
+                if (a.inline) remark(key, 'itemKeyword: inline is not applied');
+                if (a.keyword !== undefined) remark(key, 'itemKeyword: the keyword is not printed');
+                return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, { t: 'star', feat: f.name, item: { t: 'seq', items: [{ t: 'kw', text: itemKw }, el, { t: 'nl' }] } }] } };
+            }
             const content: GrammarNode[] = (a.groupBy ? groups(f, v, a.groupBy) : undefined)
                 ?? (v.many ? [{ t: 'star', feat: f.name, item: { t: 'seq', items: [el, { t: 'nl' }] } }] : [el, { t: 'nl' }]);
             if (a.inline) return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, ...content] } };
@@ -383,18 +545,30 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
             ? { t: 'list', feat: f.name, open: style.list.open, separator: style.list.separator, close: style.list.close, item: { t: 'assign', feat: f.name, op: '+=', item: single(v.item, f) } }
             : { t: 'assign', feat: f.name, op: '=', item: single(v, f) };
         const item: GrammarNode = { t: 'seq', items: [...kw, ...(kw.length ? tokens(style.assign) : []), value, ...tokens(style.terminator), ...nl] };
-        if (primary && v.t !== 'list' && A?.mandatory?.has(key)) return item;
+        if (((primary && v.t !== 'list') || required) && A?.mandatory?.has(key)) return item;
         return { t: 'opt', feat: f.name, item };
     };
 
     function objectBody(r: Extract<BaseRule, { t: 'object' }>, override?: { readonly attr: TextFeature; readonly rule: string }): GrammarNode {
-        const sh = shapes.get(r.cls) ?? { keyword: applyCase(r.cls, classCase), line: false, nameRequired: false };
+        const sh = shapes.get(r.cls) ?? { keyword: applyCase(r.cls, classCase), line: false, call: false, optionalHead: false, nameRequired: false };
         const nameAssign: GrammarNode = { t: 'assign', feat: 'name', op: '=', item: { t: 'tok', terminal: 'NAME' } };
         const derive = sh.derive ? { derive: sh.derive } : {};
         const head: GrammarNode[] = sh.keyword === '' ? [] : [{ t: 'kw', text: sh.keyword }];
+        // C1d: a positional one-line object with nothing but an optional name prints its empty block when the name is unset.
+        if (r.named && sh.optionalHead && sh.line && sh.keyword === '' && !r.features.length && !sh.derive) {
+            return { t: 'seq', items: [{ t: 'alt', alts: [nameAssign, block([])] }] };
+        }
         if (r.named && sh.nameKeyword === undefined) head.push(sh.nameRequired ? nameAssign : { t: 'opt', feat: 'name', ...derive, item: nameAssign });
+        if (sh.call) {
+            // C1d: `Word(32)`, the arguments in declaration order, every one mandatory and single-valued (shapes).
+            const args = r.features.flatMap((f, i): GrammarNode[] => [
+                ...(i ? [{ t: 'p', text: style.list.separator, tight: 'before' } as const] : []),
+                { t: 'assign', feat: f.feature.name, op: '=', item: single(f.value, f.feature) },
+            ]);
+            return { t: 'seq', items: [...head, { t: 'p', text: '(', tight: 'around' }, ...args, { t: 'p', text: ')', tight: 'before' }] };
+        }
         const primary = sh.keyword === '' && primaryClasses.has(r.cls);
-        const items = r.features.map(f => feature(f.feature, f.value, sh.line, override, primary));
+        const items = r.features.map(f => feature(f.feature, f.value, sh.line, override, primary, sh.optionalHead && sh.line));
         if (r.named && sh.nameKeyword !== undefined) {
             const tail: GrammarNode[] = sh.line ? [] : [{ t: 'nl' }];
             items.push({ t: 'opt', feat: 'name', ...derive, item: { t: 'seq', items: [{ t: 'kw', text: sh.nameKeyword }, nameAssign, ...tail] } });
@@ -464,7 +638,7 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
         rules.push({ t: 'enum', name: e.name, literals: e.literals, body: { t: 'alt', alts: e.literals.map(l => ({ t: 'kw', text: applyCase(l, literalCase) })) } });
     }
     rules.push(...derivedEnums);
-    if (!A) return { style, rules, objects, classCase, literalCase, notices };
+    if (!A) return { grammar: { style, rules, objects, classCase, literalCase, notices }, heads };
     const seen = new Set<string>();
     const annotationIssues = issues.filter(i => {
         const k = `${i.level}|${i.where}|${i.message}`;
@@ -472,7 +646,7 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
         seen.add(k);
         return true;
     });
-    return { style, rules, objects, classCase, literalCase, notices, annotationIssues };
+    return { grammar: { style, rules, objects, classCase, literalCase, notices, annotationIssues }, heads };
 }
 
 /** The name a pattern gives an object: each hole is the attribute as printed (a literal in the literal case in effect), unquoted. */
@@ -493,7 +667,8 @@ function nodeText(n: GrammarNode, top = false): string {
         case 'seq': {
             const parts = n.items.filter(x => nodeText(x) !== '');
             if (parts.length === 1) return nodeText(parts[0], top);
-            const s = parts.map(x => nodeText(x)).join(' ');
+            // A sequence inside a sequence needs no parentheses (C1d: a required inline child, `":" type=Type_`).
+            const s = parts.map(x => nodeText(x, x.t === 'seq')).join(' ');
             return top ? s : `(${s})`;
         }
         case 'opt': {

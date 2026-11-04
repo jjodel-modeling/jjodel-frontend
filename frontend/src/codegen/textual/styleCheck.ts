@@ -68,14 +68,21 @@ function headKeyword(r: ObjectRule): string {
 function bodyItems(r: ObjectRule): readonly GrammarNode[] {
     const last = r.body.t === 'seq' ? r.body.items[r.body.items.length - 1] : undefined;
     if (last?.t === 'block') return last.items;
-    return r.body.t === 'seq' ? r.body.items.filter(x => x.t === 'opt') : [];
+    // C1d: a required inline child of a one-line head with an optional name is a sequence, not an opt.
+    return r.body.t === 'seq' ? r.body.items.filter(x => x.t === 'opt' || x.t === 'seq') : [];
 }
 
-/** The keyword a body item starts with, and the feature it sets. */
+/** The keyword a body item starts with, and the feature it sets: a punctuation keyword too, and the per-item keyword of a star (C1d). */
 function itemKeyword(n: GrammarNode): { readonly kw: string; readonly feat: string } | undefined {
-    if (n.t !== 'opt') return undefined;
-    const first = n.item.t === 'seq' ? n.item.items.find(x => x.t !== 'nl') : n.item;
-    return first?.t === 'kw' ? { kw: first.text, feat: n.feat } : undefined;
+    const body = n.t === 'opt' ? n.item : n.t === 'seq' ? n : undefined;
+    if (!body) return undefined;
+    const first = body.t === 'seq' ? body.items.find(x => x.t !== 'nl') : body;
+    if (first?.t === 'star' && first.feat !== undefined) {
+        const inner = first.item.t === 'seq' ? first.item.items[0] : first.item;
+        return inner?.t === 'kw' ? { kw: inner.text, feat: first.feat } : undefined;
+    }
+    const feat = n.t === 'opt' ? n.feat : body.t === 'seq' ? body.items.flatMap(x => (x.t === 'assign' ? [x.feat] : []))[0] : undefined;
+    return feat !== undefined && (first?.t === 'kw' || first?.t === 'p') ? { kw: first.text, feat } : undefined;
 }
 
 /** Checks a concrete grammar; one `ok` for each rule without a notice or an error. */
@@ -263,10 +270,11 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
 
 const FIXITY: Readonly<Record<ExprOperator['fixity'], string>> = { nary: 'n-ary', binary: 'binary', prefix: 'prefix' };
 
-/** The words no name can be (as the parser's `canAt`): the style's reserved names, and an expression's word symbols and call words (C1a). */
+/** The words no name can be (as the parser's `canAt`): the style's reserved names, an expression's word symbols and call
+ *  words (C1a), and the head words of an optional head name (R-TXT-41, D3; C1d). */
 function reservedWords(g: ConcreteGrammar): ReadonlySet<string> {
     const exprWords = g.rules.flatMap(r => (r.body.t === 'expr' ? r.body.operators.flatMap(o => [o.symbol, ...(o.call !== undefined ? [o.call] : [])]) : []));
-    return new Set([...g.style.reservedNames, ...exprWords.filter(isWord)]);
+    return new Set([...g.style.reservedNames, ...exprWords.filter(isWord), ...(g.headWords ?? [])]);
 }
 
 /** Two token classes overlap when one token can match both: equal, or `ID` and an `ID:x` whose word is not reserved. */

@@ -281,7 +281,8 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
         return q + s.replace(/\\/g, '\\\\').split(q).join(`\\${q}`).replace(/\n/g, '\\n') + q;
     };
     // An expression's word symbol or call word is no name either (C1b; parser.ts `expressionWords`).
-    const words = new Set([...style.reservedNames, ...expressionWords(g)]);
+    // R-TXT-41 (D3): a name equal to a word that can stand at an optional head name's place is quoted (C1d).
+    const words = new Set([...style.reservedNames, ...expressionWords(g), ...(g.headWords ?? [])]);
     const name = (s: string): string => (IDENTIFIER.test(s) && !words.has(s) ? s : quote(s));
     const nameOf = (o: TextObject): unknown => (ruleOf(o).named ? o.slots.name : undefined);
     // Linear resolution (step A): the objects by name, built once, in place of a scan of all objects per reference.
@@ -501,7 +502,17 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
                 }
                 return;
             case 'kw': token(n.text, false, classKeywords.has(n) ? 'class' : 'keyword'); return;
-            case 'p': token(n.text, true); return;
+            case 'p':
+                // C1d: the call layout's parentheses and commas, `Word(32)`.
+                token(n.text, true, 'punctuation', n.tight !== undefined);
+                if (n.tight === 'around') glueNext = true;
+                return;
+            case 'alt': {
+                // C1d: the first alternative the object fills, else the one that needs nothing (`{}` for a nameless Ref).
+                const a = n.alts.find(x => present(x, o)) ?? n.alts.find(x => x.t === 'block');
+                if (a) emit(a, o, elem);
+                return;
+            }
             case 'nl': if (!n.blank) newline(); else if (!bodyStart) blankPending = true; return;
             case 'assign': {
                 // A required name left unset prints nothing: the text then reads back with the error at its place.
