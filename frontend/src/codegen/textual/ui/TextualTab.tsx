@@ -42,7 +42,7 @@ import type { ObjectSpan, RefSpan, UnprintedObject } from '../printer';
 import { applyTextEdit, defaultedSlots, referencedElsewhere } from '../textApply';
 import { deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
-import { matchObjects } from '../textMatch';
+import { identityOf, matchObjects } from '../textMatch';
 import type { TextMatch } from '../textMatch';
 import { elementIdsOf, readSyntax, styleBaseOf, textualNotation, withStyleBase } from '../syntaxRecord';
 import { STYLE_CATALOG, isStyleBase } from '../style';
@@ -294,9 +294,23 @@ export function onModelPrint(sync: TextSync, modelText: string, editorText: stri
 }
 
 /**
- * R-TXT-44 (1), (2): after an application in which the app named objects the text leaves nameless (`TextEditPlan.named`;
- * the core reads an empty name as the instance's initial name), the print to reprint once, so the tab never keeps a text
- * that differs from the model's print; null otherwise: the typed text stays the agreement.
+ * R-TXT-45, C2c (D4): of the plan's candidates (`TextEditPlan.named`), the handles of the objects the model after the
+ * run actually names. A cleared slot reads nameless, so a removed name is listed only where the core still assigns one.
+ */
+export function namedByModel(plan: Pick<TextEditPlan, 'named' | 'handles'>, grammar: ConcreteGrammar, objects: readonly TextObject[]): string[] {
+    if (!plan.named?.length) return [];
+    const byId = new Map(objects.map(o => [o.id, o]));
+    return plan.named.filter(h => {
+        const id = plan.handles.get(h);
+        const o = id === undefined ? undefined : byId.get(id);
+        return !!o && !!identityOf(grammar, o);
+    });
+}
+
+/**
+ * R-TXT-44 (1), (2): after an application in which the app named objects the text leaves nameless (the list measured by
+ * `namedByModel`), the print to reprint once, so the tab never keeps a text that differs from the model's print; null
+ * otherwise: the typed text stays the agreement.
  */
 export function namedReprint(plan: Pick<TextEditPlan, 'named'>, print: string, typed: string): string | null {
     return plan.named?.length && print !== typed ? print : null;
@@ -1129,9 +1143,11 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         syncRef.current = { text, model: after.view.text };
         const editor = editorRef.current;
         // R-TXT-44: the names the app gave show at once, and the next edit reads them (the stuck edit of P-2026-11-04-1447).
-        if (after.base && editor?.getValue() === text && namedReprint(plan, after.view.text, text) !== null) {
+        // Only the names the model holds after the run (C2c): a cleared slot reads nameless (R-TXT-45).
+        const named = after.base ? namedByModel(plan, after.base.grammar, after.base.objects) : [];
+        if (after.base && editor?.getValue() === text && namedReprint({ named }, after.view.text, text) !== null) {
             reprint(after);
-            setStatus({ kind: 'applied', failed: failedLines, named: plan.named!.length });
+            setStatus({ kind: 'applied', failed: failedLines, named: named.length });
             return;
         }
         if (after.base && plan.diff && editor?.getValue() === text) {
