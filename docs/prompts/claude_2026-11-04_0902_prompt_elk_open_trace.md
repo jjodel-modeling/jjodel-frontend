@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0902
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane elk-open-trace · report docs/discovery/discovery_2026-11-04_elk_open_freeze.md · app reproduction not tried
 Lane: discovery (read-only; Alfonso's delegation, 2026-11-04 08:57)
 Depends: none
 Worktree: ~/jjodel-w-elktrace, branch elk-open-trace
