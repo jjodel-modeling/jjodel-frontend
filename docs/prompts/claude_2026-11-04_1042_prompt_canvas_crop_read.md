@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1042
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · read only, report in chat
 Lane: fast (read only, images)
 Depends: P-2026-11-04-1012
 Worktree: ~/jjodel-w-elkcap, branch elk-open-cap
