@@ -107,23 +107,24 @@ function edit(rule: string, whens: readonly string[], o: { readonly spans?: bool
     };
 }
 
+/** Label, rule, the states of its `when` as typed. */
+const EDITS: readonly (readonly [string, string, readonly string[]])[] = [
+    ['add last', 'chain', ['st & ld & rdy', 'st & ld & rdy & is_sw']],
+    ['add first', 'chain', ['st & ld & rdy', 'is_sw & st & ld & rdy']],
+    ['remove last', 'chain', ['st & ld & rdy', 'st & ld']],
+    ['remove middle', 'chain', ['st & ld & rdy', 'st & rdy']],
+    ['remove first', 'chain', ['st & ld & rdy', 'ld & rdy']],
+    ['move last first', 'chain', ['st & ld & rdy', 'st & ld', 'rdy & st & ld']],
+    ['swap subtrees', 'guard', ['st & ld | !rdy', 'st & ld', '!rdy | st & ld']],
+    ['operator changed', 'chain', ['st & ld & rdy', 'st | ld & rdy', 'st | ld | rdy']],
+    ['wrap operand', 'chain', ['st & ld & rdy', 'st & !ld & rdy']],
+    ['wrap two operands', 'chain', ['st & ld & rdy', 'st & (ld & rdy', 'st & (ld & rdy)', 'st & (ld | rdy)']],
+    ['wrap whole', 'guard', ['st & ld | !rdy', '!(st & ld | !rdy', '!(st & ld | !rdy)']],
+    ['unwrap', 'lit', ['1 | !!st', '1 | !st']],
+    ['retype atom', 'chain', ['st & ld & rdy', 'st & is_sw & rdy']],
+];
+
 describe('(1) measurement: nested expression edits on BOOL, today', () => {
-    /** Label, rule, the states of its `when` as typed. */
-    const EDITS: readonly (readonly [string, string, readonly string[]])[] = [
-        ['add last', 'chain', ['st & ld & rdy', 'st & ld & rdy & is_sw']],
-        ['add first', 'chain', ['st & ld & rdy', 'is_sw & st & ld & rdy']],
-        ['remove last', 'chain', ['st & ld & rdy', 'st & ld']],
-        ['remove middle', 'chain', ['st & ld & rdy', 'st & rdy']],
-        ['remove first', 'chain', ['st & ld & rdy', 'ld & rdy']],
-        ['move last first', 'chain', ['st & ld & rdy', 'st & ld', 'rdy & st & ld']],
-        ['swap subtrees', 'guard', ['st & ld | !rdy', 'st & ld', '!rdy | st & ld']],
-        ['operator changed', 'chain', ['st & ld & rdy', 'st | ld & rdy', 'st | ld | rdy']],
-        ['wrap operand', 'chain', ['st & ld & rdy', 'st & !ld & rdy']],
-        ['wrap two operands', 'chain', ['st & ld & rdy', 'st & (ld & rdy', 'st & (ld & rdy)', 'st & (ld | rdy)']],
-        ['wrap whole', 'guard', ['st & ld | !rdy', '!(st & ld | !rdy', '!(st & ld | !rdy)']],
-        ['unwrap', 'lit', ['1 | !!st', '1 | !st']],
-        ['retype atom', 'chain', ['st & ld & rdy', 'st & is_sw & rdy']],
-    ];
     for (const mode of ['typed', 'pasted', 'nospan'] as const) {
         it.each(EDITS)(`%s (${mode})`, (label, rule, whens) => {
             const states = mode === 'typed' ? whens : [whens[0], whens[whens.length - 1]];
@@ -234,4 +235,21 @@ describe('(3c) no collection update on a slot after a create into it (the update
         expect(r.plan.lines).toBeNull();
         expect(r.plan.refusals.map(x => x.message).join(' | ')).toMatch(/^an update of And_\d\.ops after an object is created in it is not applied yet/);
     });
+});
+
+describe('(4) slot matching: pasted and re-imported, an edit plans as typed, certain (evidence slot)', () => {
+    /** Without spans the equal subtree wins: the inner Not(st) is the one kept, one op fewer than typed. */
+    const OTHER: Readonly<Record<string, readonly string[]>> = {
+        'unwrap|nospan': ['move Not(st) to Or(1, Not(Not(st))).ops', 'delete Not(Not(st))'],
+    };
+    for (const mode of ['pasted', 'nospan'] as const) {
+        it.each(EDITS)(`%s (${mode})`, (label, rule, whens) => {
+            const typed = edit(rule, whens);
+            const r = edit(rule, [whens[0], whens[whens.length - 1]], { spans: mode === 'pasted' });
+            expect(r.refusals, label).toEqual(typed.refusals);
+            expect(r.refusals.includes('uncertain'), label).toBe(false);
+            expect(r.ops, label).toEqual(OTHER[`${label}|${mode}`] ?? typed.ops);
+            if (mode === 'nospan') expect(r.by.filter(b => b.endsWith(':slot')).length, label).toBeGreaterThan(0);
+        });
+    }
 });

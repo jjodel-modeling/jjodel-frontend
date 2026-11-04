@@ -9,6 +9,10 @@
  * 2. Class and name in the same container and containment feature (R-TXT-18). Homonyms there pair by their order
  *    among the homonyms and are uncertain; a nameless object counts as named `null`, so a lone nameless object in a
  *    slot is matched, two of them are homonyms.
+ * 2b. Nameless expression objects (the operators and primaries of an expression rule, P-2026-11-04-1158): under each
+ *    matched object, the unmatched ones below it in the text pair with the unmatched ones below its match in the model,
+ *    equal subtrees first (class, shown attributes, reference targets through the matches, children), then by class
+ *    in the slot of a matched parent, the same position first. Certain (evidence `slot`). Step 2 leaves them out.
  * 3. Class and name elsewhere in the model, a single candidate: a move. Uncertain (moves are step T7).
  * 4. Attribute and reference similarity among the unmatched objects of one class (§A.5 step 4, R-TXT-21 (7)): the
  *    share of the set features with equal values, at least 0.6 and 0.2 ahead of the second. A rename. Uncertain.
@@ -22,7 +26,7 @@ import type { TextFeature, TextMetamodel, TextObject } from './metamodel';
 import type { SyntaxNode, TextParseResult } from './parser';
 import type { ObjectSpan } from './printer';
 
-export type MatchEvidence = 'span' | 'name' | 'homonym' | 'move' | 'rename';
+export type MatchEvidence = 'span' | 'name' | 'homonym' | 'move' | 'rename' | 'slot';
 
 export interface ObjectMatch {
     /** The parsed object's id. */
@@ -180,8 +184,9 @@ export function matchObjects(input: MatchInput): TextMatch {
         return owner ? owner.model : null;
     };
     const slotOf = (place: Place | undefined): string => (place ? place.feature : '');
+    const expr = expressionClasses(g);
     for (const t of parsed.objects) {
-        if (toModel.has(t.id) || input.unplaced?.has(t.id)) continue;
+        if (toModel.has(t.id) || input.unplaced?.has(t.id) || expr.has(t.cls)) continue;
         const tp = textPlace.get(t.id);
         const key = containerKey(tp);
         if (key === null) continue;
@@ -189,7 +194,7 @@ export function matchObjects(input: MatchInput): TextMatch {
         const siblings = parsed.objects.filter(x => !toModel.has(x.id) && !input.unplaced?.has(x.id) && x.cls === t.cls && identityOf(g, x) === name
             && (textPlace.get(x.id)?.owner ?? '') === (tp?.owner ?? '') && slotOf(textPlace.get(x.id)) === slotOf(tp));
         const position = (id: string): number => modelPlace.get(id)?.index ?? modelOrder.get(id) ?? 0;
-        const candidates = model.filter(m => !taken.has(m.id) && m.cls === t.cls && identityOf(g, m) === name
+        const candidates = model.filter(m => !taken.has(m.id) && !expr.has(m.cls) && m.cls === t.cls && identityOf(g, m) === name
             && (modelPlace.get(m.id)?.owner ?? '') === key && slotOf(modelPlace.get(m.id)) === slotOf(tp))
             .sort((a, b) => position(a.id) - position(b.id));
         const homonyms = siblings.length > 1 || candidates.length > 1;
@@ -198,6 +203,9 @@ export function matchObjects(input: MatchInput): TextMatch {
             if (m) accept({ text: s.id, model: m.id, by: homonyms ? 'homonym' : 'name', uncertain: homonyms });
         });
     }
+
+    // 2b. Nameless expression objects, by slot under the matched objects.
+    if (expr.size) matchExpressions({ g, expr, featuresOf, model, parsed: parsed.objects, unplaced: input.unplaced, textPlace, modelPlace, toModel, taken, accept });
 
     // 3. Class and name elsewhere in the model: a move, when one candidate only.
     for (const t of parsed.objects) {
@@ -255,6 +263,103 @@ export function displayMatch(input: Omit<MatchInput, 'parsed' | 'unplaced'> & { 
     const match = matchObjects({ ...input, unplaced: new Set(ids) });
     const byText = new Map(match.matches.map(m => [m.text, m.model]));
     return { match, orphans: ids.map(id => { const model = byText.get(id); return model === undefined ? { text: id } : { text: id, model }; }) };
+}
+
+/** The classes of nameless objects an expression rule reads: its operators and its primaries, unnamed. */
+export function expressionClasses(g: ConcreteGrammar): Set<string> {
+    const out = new Set<string>();
+    for (const r of g.rules) {
+        if (r.body.t !== 'expr') continue;
+        for (const o of r.body.operators) out.add(o.cls);
+        for (const p of r.body.primaries) if (p.t === 'rule') out.add(p.name);
+    }
+    for (const c of [...out]) if (!g.objects[c] || g.objects[c].named) out.delete(c);
+    return out;
+}
+
+interface ExprMatchInput {
+    readonly g: ConcreteGrammar;
+    readonly expr: ReadonlySet<string>;
+    readonly featuresOf: (cls: string) => readonly TextFeature[];
+    readonly model: readonly TextObject[];
+    readonly parsed: readonly TextObject[];
+    readonly unplaced?: ReadonlySet<string>;
+    readonly textPlace: ReadonlyMap<string, Place>;
+    readonly modelPlace: ReadonlyMap<string, Place>;
+    readonly toModel: ReadonlyMap<string, ObjectMatch>;
+    readonly taken: ReadonlySet<string>;
+    readonly accept: (m: ObjectMatch) => void;
+}
+
+/** Step 2b of `matchObjects`. */
+function matchExpressions(x: ExprMatchInput): void {
+    const { g, expr, featuresOf, toModel, taken } = x;
+    const textById = new Map(x.parsed.map(o => [o.id, o]));
+    const modelById = new Map(x.model.map(o => [o.id, o]));
+    const children = (o: TextObject, byId: ReadonlyMap<string, TextObject>): [string, TextObject[]][] =>
+        featuresOf(o.cls).filter(f => f.kind === 'containment')
+            .map(f => [f.name, asArray(o.slots[f.name]).flatMap(id => { const c = typeof id === 'string' ? byId.get(id) : undefined; return c ? [c] : []; })]);
+    const freeText = (o: TextObject): boolean => expr.has(o.cls) && !toModel.has(o.id) && !x.unplaced?.has(o.id);
+    const freeModel = (o: TextObject): boolean => expr.has(o.cls) && !taken.has(o.id);
+    /** The free expression objects below `root`, in pre-order, not through a matched or a named object. */
+    const below = (root: TextObject, byId: ReadonlyMap<string, TextObject>, free: (o: TextObject) => boolean): TextObject[] => {
+        const out: TextObject[] = [];
+        const walk = (o: TextObject): void => { for (const [, cs] of children(o, byId)) for (const c of cs) if (free(c)) { out.push(c); walk(c); } };
+        walk(root);
+        return out;
+    };
+    // The deep signature of a subtree: what the text shows of it, references through the matches.
+    const signature = (o: TextObject, byId: ReadonlyMap<string, TextObject>, side: 'text' | 'model', memo: Map<string, string>): string => {
+        const known = memo.get(o.id);
+        if (known !== undefined) return known;
+        const rule = g.objects[o.cls];
+        const shown = rule ? shownFeatures(rule) : new Set<string>();
+        const parts: string[] = [o.cls];
+        for (const f of featuresOf(o.cls)) {
+            if (!shown.has(f.name) && f.kind !== 'containment') continue;
+            const vs = asArray(o.slots[f.name]);
+            if (f.kind === 'attribute') parts.push(`${f.name}=${JSON.stringify(vs)}`);
+            else if (f.kind === 'containment') {
+                parts.push(`${f.name}[${vs.map(id => { const c = typeof id === 'string' ? byId.get(id) : undefined; return c ? signature(c, byId, side, memo) : '?'; }).join(',')}]`);
+            } else {
+                const target = (id: unknown): string => (isOuterRef(id) ? `o:${id.outer}` : typeof id !== 'string' ? '?' : side === 'model' ? id : toModel.get(id)?.model ?? `t:${id}`);
+                parts.push(`${f.name}->${vs.map(target).join(',')}`);
+            }
+        }
+        const sig = `${parts.join(' ')}`;
+        memo.set(o.id, sig);
+        return sig;
+    };
+    const pairDeep = (t: TextObject, m: TextObject): void => {
+        x.accept({ text: t.id, model: m.id, by: 'slot', uncertain: false });
+        const mc = new Map(children(m, modelById));
+        for (const [f, ts] of children(t, textById)) ts.forEach((c, i) => { const d = mc.get(f)?.[i]; if (d && freeText(c) && freeModel(d)) pairDeep(c, d); });
+    };
+    const textMemo = new Map<string, string>();
+    const modelMemo = new Map<string, string>();
+    for (const t0 of x.parsed) {
+        const anchor = toModel.get(t0.id);
+        if (!anchor) continue;
+        const m0 = modelById.get(anchor.model);
+        if (!m0) continue;
+        // Equal subtrees, in pre-order.
+        for (const t of below(t0, textById, freeText)) {
+            if (!freeText(t)) continue;
+            const sig = signature(t, textById, 'text', textMemo);
+            const m = below(m0, modelById, freeModel).find(c => signature(c, modelById, 'model', modelMemo) === sig);
+            if (m) pairDeep(t, m);
+        }
+        // The rest: by class in the slot of a matched parent, the same position first.
+        for (const t of below(t0, textById, freeText)) {
+            if (!freeText(t)) continue;
+            const tp = x.textPlace.get(t.id);
+            const parent = tp ? toModel.get(tp.owner)?.model : undefined;
+            if (!tp || parent === undefined) continue;
+            const options = below(m0, modelById, freeModel).filter(c => c.cls === t.cls && x.modelPlace.get(c.id)?.owner === parent && x.modelPlace.get(c.id)?.feature === tp.feature);
+            const m = options.find(c => x.modelPlace.get(c.id)?.index === tp.index) ?? options[0];
+            if (m) x.accept({ text: t.id, model: m.id, by: 'slot', uncertain: false });
+        }
+    }
 }
 
 /** Equal set features over the features set on either side; a reference is equal when its targets match. */
