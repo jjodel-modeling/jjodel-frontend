@@ -854,3 +854,8 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: gates green on 73758798f; unit tests, mutation bench and an app probe on the branch; no hand run and no visual check
 **Notes**: Rollback tag `pre-jjtl-language-open` on `10fadd8ab` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0048/result.json`.
 **Prompt document name**: 2026-11-04 00:48
+
+## 2026-11-04 — ticket: JjTL output tab: the longest task is React rendering of the canvas, not vertex creation
+**Ticket**: Measured by P-2026-11-03-2332 on b10_8, probe only: the longest task after the JjTL output tab mounts (3,354 ms, three React commits) contains no vertex or edge creation. The useJjomSync Step 2bis loop takes 332 to 363 ms inside a separate 1,478 ms task, with 717 to 757 ms of edges. In the profiled longest task react-dom is 82 % of 3,791 ms; DynamicHandles 575 ms, store subscriptions 472 ms, ObjectNode 377 ms, overlapping. Spreading Step 2bis across frames would not shorten the longest task. #475 is re-aimed at the React side by Alfonso, 2026-11-04.
+**Priority**: medium
+**Found in**: P-2026-11-03-2332
