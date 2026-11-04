@@ -109,3 +109,17 @@ node (it writes through the canvas state's `setNodes`).
   handles sit on the box. The difference lies at an off-screen end until the node mounts.
 - The extra distribution runs once per newly measured batch while panning on a large canvas; its cost is measured
   in the probe and reported.
+
+## Amendment, P-2026-11-04-0925 (implementation)
+
+- **Measured once is never decorated.** `useJjomSync.ts` drops `measured` from a node whose size changes, so that React
+  Flow resets its handle bounds and measures it again. Item 1's gate (no `measured`, no `handles`) would have
+  decorated such a node with the estimate, and a mounted node whose DOM size did not change would have kept it.
+  `decorateUnmeasured` takes the ids React Flow has measured at least once (every `dimensions` change seen by
+  `handleNodesChange`, both of its paths) and leaves them alone. Tested.
+- **Item 6 is capped**: the auto-layout waits at most 5 s (`AUTO_LAYOUT_MEASURE_WAIT_MS`) for the measurement.
+- **Pan into an off-screen node, measured**: not reproducible on b10_8. At the end of the run the out1 `nodes=` prop
+  holds 1 node and 2,558 edges on both trees (the nested objects are canvas nodes only while the model is populated),
+  so there is no off-screen node to pan to. Held by the unit test (an edge into a decorated node has a position) and
+  by 0 `Couldn't create edge` warnings in every run.
+- Figures and crops: `~/.jjodel-lanes/P-2026-11-04-0925/probe/out/`.
