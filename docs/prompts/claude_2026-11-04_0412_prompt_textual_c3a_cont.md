@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0412
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: eseguito 2026-11-04 · lane full · 076b38d18 c6d22de51 7852e462b · verifica visiva della chat passata 2026-11-04 (RC-23, crops c3a-* of P-2026-11-04-0345); GO di Alfonso sul selettore in attesa per il merge
+Status: eseguito 2026-11-04 · lane full · 076b38d18 c6d22de51 7852e462b · verifica visiva della chat passata 2026-11-04 (RC-23, crops c3a-* of P-2026-11-04-0345); GO di Alfonso 2026-11-04 06:52 («go»)
 Lane: full (continuation under RC-51)
 Depends: P-2026-11-04-0345 (hard-stop at the ceiling; items 0 to 3 at 794041be3, handoff in its lane folder)
 Worktree: ~/jjodel-w-textc, branch textual-c-notation (the same tree)
