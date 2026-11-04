@@ -168,12 +168,21 @@ describe('(3) the printer: flat chains, parentheses where the parser needs them,
         expect(reprint(arithGrammar(), prints.map(([w]) => w))).toBe(sheet(...prints.map(([, p]) => p)));
     });
 
-    it('Pascal/Ada: word symbols spaced, the call form absent: a flat chain of two operands or more', () => {
+    it('Pascal/Ada: word symbols spaced, a flat chain of two operands or more', () => {
         const text = reprint(boolGrammar(BOOL_CLIKE), ['st | ld & rdy', '!(st & ld)', 'st -> ld -> rdy', '(st & ld) & rdy'], boolGrammar(BOOL_PASCAL));
         const whens = text.split('\n').filter(l => /^ {8}\S/.test(l)).map(l => l.trim());
         // The ";" after each atom is the style terminator the C1a grammar puts in a primary's feature (concreteGrammar.ts
         // `feature`), outside this lane: the text reads back, and whether a primary drops it is a decision left open.
         expect(whens).toEqual(['st; or ld; and rdy;', 'not (st; and ld;)', 'st; implies ld; implies rdy;', '(st; and ld;) and rdy;']);
+    });
+
+    it('Pascal/Ada: fewer than two operands in call form, the word defaulting to the class keyword, and read back to the same model', () => {
+        const whens = ['and()', 'or(is_sw)', 'st & or(is_sw)', 'and(or())'];
+        const text = reprint(boolGrammar(BOOL_CLIKE), whens, boolGrammar(BOOL_PASCAL));
+        expect(text.split('\n').filter(l => /^ {8}\S/.test(l)).map(l => l.trim())).toEqual(['And()', 'Or(is_sw;)', 'st; and Or(is_sw;)', 'And(Or())']);
+        const r = parseText(text, boolGrammar(BOOL_PASCAL));
+        expect(r.errors).toEqual([]);
+        expect(termsOf(r)).toEqual(['And()', 'Or(is_sw)', 'And(st, Or(is_sw))', 'And(Or())']);
     });
 
     it('a name that is an expression word is quoted', () => {
@@ -184,16 +193,17 @@ describe('(3) the printer: flat chains, parentheses where the parser needs them,
     });
 });
 
-describe('(4) the round trip: print, parse, print, byte for byte', () => {
+describe('(4) the round trip: print, parse to the same model, print, byte for byte', () => {
     it.each([
         ['BOOL, C-like', boolGrammar(BOOL_CLIKE), boolGrammar(BOOL_CLIKE), BOOL_PRINTS.map(([w]) => w)],
-        ['BOOL, Pascal/Ada', boolGrammar(BOOL_CLIKE), boolGrammar(BOOL_PASCAL), BOOL_PRINTS.map(([w]) => w).filter(w => !/\b(and|or)\(/.test(w))],
+        ['BOOL, Pascal/Ada', boolGrammar(BOOL_CLIKE), boolGrammar(BOOL_PASCAL), BOOL_PRINTS.map(([w]) => w)],
         ['ARITH', arithGrammar(), arithGrammar(), ['st - ld + rdy', '-st - (ld + -1)', '- 1 + st', '--st', 'st & -(ld - 1)', '- -1', 'st - -1']],
     ] as const)('%s', (_, source, g, whens) => {
         const first = printTextModel(g, parseText(sheet(...whens), source).objects).text;
         const r = parseText(first, g);
         expect(r.errors).toEqual([]);
         expect(isApplicableParse(r)).toBe(true);
+        expect(termsOf(r)).toEqual(termsOf(parseText(sheet(...whens), source)));
         expect(printTextModel(g, r.objects).text).toBe(first);
     });
 });
