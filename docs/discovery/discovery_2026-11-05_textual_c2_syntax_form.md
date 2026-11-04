@@ -302,8 +302,10 @@ R-TXT-40 D5 orders.
 - **R2.** Preview cost beyond 1,000 objects is not measured (F6: 5.03 ms at 1,000, print dominant). `useDeferredValue`
   keeps the inputs responsive; C2b measures one model of 10,000 objects before choosing anything more.
 - **R3.** A Save while the Text tab holds a pending edit would turn that edit stale under a new grammar: gated (§2.2 (c)).
-- **R4.** `jjomTransformers.ts` feeds `useJjomSync.ts` and `portDistribution.ts` (critical zone). C2d must confirm by a
-  search that neither reads `refTargets` or the reference row's `value` for an edge key, a handle or a guard; if one
+- **R4.** `jjomTransformers.ts` feeds `useJjomSync.ts` and `portDistribution.ts` (critical zone). `refTargets` has no
+  reader outside `nodes/ObjectNode.tsx` (:554, :644, :651, :873, :1096) and the transformer itself (search over
+  `components/editor-v2`, those hits are its positive control). C2d must still confirm that neither file reads the
+  reference row's `value` or `values` for an edge key, a handle or a guard; if one
   does, C2d stops and reports (rule 20). ObjectNode.tsx:554 passes `t.name` to `readSingletonInstanceInfo`: with
   `name` kept `''` that call is unchanged.
 - **R5.** Deduplication by message text is brittle: `dedupe` keys on the field and the token, and its test runs the
