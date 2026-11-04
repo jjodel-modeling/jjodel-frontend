@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1627
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane textual-c1e-names · c7f6249be · gates green, app check 13 of 13 of P-2026-11-04-1605, crops c1e-*.png; crops checked by the chat (RC-23); merge on Alfonso «A» 16:28
 Lane: fast (closure of C1e; code at c7f6249be)
 Depends: P-2026-11-04-1605 (hard-stop at the ceiling after items 1-5 and 7; handoff in its lane folder)
 Worktree: ~/jjodel-w-textc1e, branch textual-c1e-names (the same tree)

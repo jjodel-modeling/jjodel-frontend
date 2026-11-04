@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1605
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane textual-c1e-names · c7f6249be · hard-stop at the context ceiling after items 1-5 and 7, closed by P-2026-11-04-1627
 Lane: full (write path to a model)
 Depends: P-2026-11-04-1542 (C1 merged on the trunk, fe6eed263), R-TXT-44 (e38500ec9)
 Worktree: ~/jjodel-w-textc1e, branch textual-c1e-names, from e38500ec9

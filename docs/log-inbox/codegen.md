@@ -1720,3 +1720,18 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — crops c1b-*, c1c-*, c1d-* checked by the chat (RC-23) and by Alfonso («GO», 15:41); the two app findings of P-2026-11-04-1447 stay ticketed.
 **Notes**: Blocked only by the environmental board test, resolved with the evidence above. Rollback tag `pre-textual-c1-operators` on `d4d2495f0` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1542/result.json`.
 **Prompt document name**: 2026-11-04 15:42
+
+## 2026-11-04 — fix(codegen): C1e, names the app gives, removing a name, outline groups (P-2026-11-04-1605, P-2026-11-04-1627)
+**Prompt**: `claude_2026-11-04_1627_prompt_textual_c1e_closure.md` (RC-51, continues `claude_2026-11-04_1605_prompt_textual_c1e_names_outline.md`, stopped at the context ceiling): R-TXT-44 (1)-(3), the nameless object the app names, removing a name from the text, one outline group per per-item keyword feature; closure: gates and docs.
+**Files touched**: `textDiff.ts`, `languageService.ts`, `ui/TextualTab.tsx`, `__tests__/outline.test.ts`, `__tests__/textualEdit.test.ts`, all under `frontend/src/codegen/textual/` (5fc137c02, f74e401c0, c7f6249be); 1627 no code.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-04 14:47
+**Causa**: (c)
+**Regressions**: no. Gates on c7f6249be (P-2026-11-04-1627): tsc 0; vitest 13909 passed, 2 skipped, 3 red at import (baseline); build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app check of P-2026-11-04-1605 (`app.mjs`, `.agent-logs/app1-20261104-160904.log`): 13 checks ALL PASS, first application with the reprint, width, add line, unname in C-like and Pascal/Ada, outline groups input 2 / output 1, one Undo each, tab text equal to the model print. Crops `c1e-*.png` in the 1605 lane folder.
+**Notes**: Measure (`names-measure.md`): `set X.name = ""` stores "" but the core reads initialName back, so R-TXT-44 (1) runs its fallback: `TextEditPlan.named` lists the handles the app names, the tab reprints once, status `Applied · the app named N object(s) the text leaves nameless`. Outline: consecutive item groups of one feature and keyword merge. One surviving mutant, the refusal guard of `named`, dropped as inert. Benches in the commit bodies; handoff in the 1605 lane folder.
+**Prompt document name**: 2026-11-04 16:27
+
+**Ticket** (textual tab, medium, found in P-2026-11-04-1605): removing a name whose initialName is that same name (an `output result` created from the text with it) brings the name back in the print, because the core's identity read falls back to initialName for an empty slot (`LModelElement.tsx:7786-7800`); only the status line says why. Keeping it nameless needs a core change or a textual reader that reads an explicit "" slot as nameless; neither done here, decision owed to Alfonso.
