@@ -16,7 +16,7 @@ import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import { operatorFixity } from '../annotations';
 import type { TextMetamodel } from '../metamodel';
 import { classFeatures } from '../metamodel';
-import { BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar, withOperator } from './boolCorpus';
+import { arithGrammar, BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar, withOperator } from './boolCorpus';
 import { generateSamples, nearleyGrammarOf, parseCount } from './oracle';
 import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
 import { FIXTURE, objectsOf } from './spec';
@@ -214,9 +214,16 @@ describe('the operators of an expression', () => {
         expect(STYLE_RULES.slice(-5)).toEqual(['operator-fixity', 'operator-symbols', 'operator-tokens', 'operator-follow', 'call-words']);
     });
 
-    it('operator-fixity: a symbol has one fixity', () => {
-        expect(findings(withOperator(BOOL_CLIKE, 'C_Not', { symbol: '&', precedence: 4 }))).toEqual([
-            ['operator-fixity', 'class Not', 'the symbol "&" is prefix here and n-ary for And: one fixity per symbol'],
+    it('operator-fixity: a symbol is prefix on one class and infix on another at most (C1b)', () => {
+        // A prefix and an infix share a symbol, as the unary and the binary minus do: accepted, in either order.
+        expect(findings(withOperator(BOOL_CLIKE, 'C_Not', { symbol: '&', precedence: 4 }))).toEqual([]);
+        expect(checkStyle(arithGrammar()).filter(f => f.level === 'error')).toEqual([]);
+        // Two infix fixities on one symbol stay an error, and so does a third fixity next to the pair.
+        expect(findings(withOperator(BOOL_CLIKE, 'C_Imp', { symbol: '&', precedence: 1, assoc: 'right' }))).toEqual([
+            ['operator-fixity', 'class And', 'the symbol "&" is n-ary here and binary for Imp: one fixity per symbol'],
+        ]);
+        expect(findings(withOperator(withOperator(BOOL_CLIKE, 'C_Not', { symbol: '&', precedence: 4 }), 'C_Imp', { symbol: '&', precedence: 1, assoc: 'right' }))).toEqual([
+            ['operator-fixity', 'class And', 'the symbol "&" is n-ary here and binary for Imp: one fixity per symbol'],
         ]);
     });
 

@@ -109,7 +109,11 @@ export interface ErrorNode extends NodeBase {
     readonly kind: 'error';
     readonly message: string;
 }
-export type SyntaxNode = TextNode | ObjectNode | ItemNode | BlockNode | ListNode | RefNode | ErrorNode;
+/** A parenthesised operand of an expression (C1b): its brackets around the operand's node; no trace in the model. */
+export interface ParenNode extends NodeBase {
+    readonly kind: 'paren';
+}
+export type SyntaxNode = TextNode | ObjectNode | ItemNode | BlockNode | ListNode | RefNode | ErrorNode | ParenNode;
 export type SyntaxElement = SyntaxNode | SyntaxToken;
 
 /** A comment of the text and the node it belongs to (§A.6), derived from the tree. */
@@ -224,6 +228,10 @@ export function tokenizeText(text: string, g: ConcreteGrammar): { readonly token
 
 /** The expressions of a grammar (step C lane C1a): the bodies of its expression rules. */
 const exprsOf = (g: ConcreteGrammar): Extract<GrammarNode, { t: 'expr' }>[] => g.rules.flatMap(r => (r.body.t === 'expr' ? [r.body] : []));
+
+/** The words of the expressions of a grammar: their word symbols and call words, which no name can be (C1a). */
+export const expressionWords = (g: ConcreteGrammar): string[] =>
+    exprsOf(g).flatMap(e => e.operators.flatMap(o => [o.symbol, ...(o.call !== undefined ? [o.call] : [])])).filter(s => /^\w/.test(s));
 
 /** A token after which an operand has ended: a number written after it with a sign is an infix minus and a number (C1b). */
 const endsOperand = (t: Token | undefined): boolean => !!t && (t.k === 'ID' || t.k === 'INT' || t.k === 'FLOAT' || t.k === 'STR' || (t.k === 'P' && t.v === ')'));
@@ -519,7 +527,8 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         return r && r.t === 'enum' ? r.literals : [];
     };
     // A style word reserved in name positions (Pascal/Ada `begin`, `end`) is no name: the printer quotes such a name (step C3a).
-    const reserved = new Set(g.style.reservedNames);
+    // So is an expression's word symbol or call word (C1a, styleCheck.ts `reservedWords`).
+    const reserved = new Set([...g.style.reservedNames, ...expressionWords(g)]);
     const isReserved = (t: Token): boolean => t.k === 'ID' && reserved.has(t.v);
     const canAt = (n: GrammarNode, t: Token): boolean => [...first(n).set].some(m => hit(t, m) && !(m === 'ID' && isReserved(t)));
 
@@ -649,6 +658,8 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     };
 
     const object = (ruleName: string, attach?: (id: string) => void): string => {
+        const expr = exprOf(ruleName);
+        if (expr) return expression(expr, attach);
         const rule = objectRule(ruleName);
         const o: MutableObject = { id: `t${++counter}`, cls: rule.cls, slots: {} };
         objects.push(o);
@@ -672,6 +683,136 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             leave(node);
         }
         return o.id;
+    };
+
+    // Step C lane C1b: an expression, read by precedence climbing (§2.2 of docs/discovery/discovery_2026-11-04_textual_step_c.md).
+    // Operators of equal precedence form one level, read left to right unless right-associative; an n-ary operator reads
+    // its flat chain `a & b & c` into one object; a prefix operator is read where no operand precedes, its operand tighter
+    // than itself and than the level it stands in. An operator object is created after its operator token, around the
+    // operand read before it; a parenthesised operand is a `paren` node of the tree, and leaves no trace in the model.
+    type Expr = Extract<GrammarNode, { t: 'expr' }>;
+    interface Operand { readonly id: string; readonly node: Building }
+    const exprOf = (name: string): Expr | undefined => {
+        const r = rules.get(name);
+        return r?.t === 'choice' && r.body.t === 'expr' ? r.body : undefined;
+    };
+    const symbolRole = (s: string): TokenRole => (/^\w/.test(s) ? 'keyword' : 'punctuation');
+    /** A "-" glued to the number after it (C1b). */
+    const isSign = (t: Token): boolean => {
+        const d = peek(toks.indexOf(t) - p + 1);
+        return t.k === 'P' && t.v === '-' && (d.k === 'INT' || d.k === 'FLOAT') && d.start === t.end && !d.v.startsWith('-');
+    };
+    const operatorObject = (cls: string): MutableObject => {
+        const o: MutableObject = { id: `t${++counter}`, cls, slots: {} };
+        objects.push(o);
+        return o;
+    };
+    /** Reads one operand of `o` into an item node of `feat`, and stores it. */
+    const operandOf = (e: Expr, o: MutableObject, feat: string, op: '=' | '+=', min: number): void => {
+        const x = within('item', { feature: feat }, () => climb(e, min));
+        store(o, feat, op, x.id);
+        contained.add(x.id);
+    };
+    /** The object node of `o`, open, holding the operand read before it in an item node of `feat`. */
+    const around = (o: MutableObject, feat: string, left: Operand): Building => {
+        const siblings = cur().children;
+        siblings.splice(siblings.lastIndexOf(left.node), 1);
+        const node = enter('object', { id: o.id, cls: o.cls, rule: o.cls });
+        node.children.push({ kind: 'item', start: left.node.start, end: left.node.end, children: [left.node], feature: feat, ...(left.node.empty ? { empty: true } : {}) });
+        nodeOf.set(o.id, node);
+        contained.add(left.id);
+        return node;
+    };
+    /** Runs `fn` with `o` open, its node left and `o` recovered when it fails. */
+    const reading = (o: MutableObject, node: Building, fn: () => void): Operand => {
+        open.push(o);
+        try {
+            fn();
+        } catch (err) {
+            recovered.add(o.id);
+            throw err;
+        } finally {
+            open.pop();
+            leave(node);
+        }
+        return { id: o.id, node };
+    };
+    const climb = (e: Expr, min: number): Operand => {
+        let left = unary(e, min);
+        for (;;) {
+            const op = e.operators.find(o => o.fixity !== 'prefix' && hit(peek(), word(o.symbol)));
+            if (!op || op.precedence < min) return left;
+            const o = operatorObject(op.cls);
+            const [a, b] = op.operands;
+            const node = around(o, a, left);
+            if (op.fixity === 'nary') {
+                o.slots[a] = [left.id];
+                left = reading(o, node, () => {
+                    while (hit(peek(), word(op.symbol))) {
+                        take(symbolRole(op.symbol));
+                        operandOf(e, o, a, '+=', op.precedence + 1);
+                    }
+                });
+            } else {
+                o.slots[a] = left.id;
+                left = reading(o, node, () => {
+                    take(symbolRole(op.symbol));
+                    operandOf(e, o, b, '=', op.assoc === 'right' ? op.precedence : op.precedence + 1);
+                });
+            }
+        }
+    };
+    const closeOf = (e: Expr): void => {
+        if (hit(peek(), word(e.close))) take('punctuation');
+        else repair(word(e.close), 'punctuation', t => t.k === 'EOF' || t.first || closesBody(t));
+    };
+    const unary = (e: Expr, min: number): Operand => {
+        const t = peek();
+        const pre = isSign(t) ? undefined : e.operators.find(o => o.fixity === 'prefix' && hit(t, word(o.symbol)));
+        if (pre) {
+            const o = operatorObject(pre.cls);
+            const node = enter('object', { id: o.id, cls: o.cls, rule: o.cls });
+            nodeOf.set(o.id, node);
+            return reading(o, node, () => {
+                take(symbolRole(pre.symbol));
+                operandOf(e, o, pre.operands[0], '=', Math.max(pre.precedence + 1, min));
+            });
+        }
+        const call = e.operators.find(o => o.call !== undefined && hit(t, word(o.call)));
+        if (call) {
+            const o = operatorObject(call.cls);
+            const a = call.operands[0];
+            o.slots[a] = [];
+            const node = enter('object', { id: o.id, cls: o.cls, rule: o.cls });
+            nodeOf.set(o.id, node);
+            return reading(o, node, () => {
+                take('class');
+                expect(word(e.open), 'punctuation');
+                if (!hit(peek(), word(e.close))) {
+                    operandOf(e, o, a, '+=', -Infinity);
+                    while (hit(peek(), word(e.separator))) { take('punctuation'); operandOf(e, o, a, '+=', -Infinity); }
+                }
+                closeOf(e);
+            });
+        }
+        if (hit(t, word(e.open))) {
+            return within('paren', {}, node => {
+                take('punctuation');
+                const inner = climb(e, -Infinity);
+                closeOf(e);
+                return { id: inner.id, node };
+            });
+        }
+        const at = isSign(t) ? peek(1) : t;
+        const primary = e.primaries.find(x => canAt(x, at));
+        if (primary?.t !== 'rule') return fail(describeMatchers(first(e).set));
+        const id = object(primary.name);
+        return { id, node: nodeOf.get(id)! };
+    };
+    const expression = (e: Expr, attach?: (id: string) => void): string => {
+        const x = climb(e, -Infinity);
+        attach?.(x.id);
+        return x.id;
     };
 
     const reference = (): RefSyntax => {
@@ -703,6 +844,8 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         const t = peek();
         switch (n.t) {
             case 'tok':
+                // A "-" glued to the number after it is that number's sign, where the tokenizer left it out (C1b).
+                if ((n.terminal === 'INT' || n.terminal === 'FLOAT') && isSign(t)) { take('value'); return -Number(take('value').v); }
                 switch (n.terminal) {
                     case 'INT': if (t.k === 'INT') { take('value'); return Number(t.v); } return fail(['an integer']);
                     case 'FLOAT': if (t.k === 'INT' || t.k === 'FLOAT') { take('value'); return Number(t.v); } return fail(['a number']);

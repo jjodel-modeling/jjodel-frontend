@@ -217,15 +217,18 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
     for (const r of g.rules) {
         if (r.body.t !== 'expr') continue;
         const e = r.body;
-        const bySymbol = new Map<string, ExprOperator>();
+        const bySymbol = new Map<string, ExprOperator[]>();
         const byCall = new Map<string, ExprOperator>();
         for (const o of e.operators) {
             const at = `class ${o.cls}`;
             const sym = o.symbol;
-            const prior = bySymbol.get(sym);
-            if (prior && prior.fixity !== o.fixity) error('operator-fixity', at, `the symbol "${sym}" is ${FIXITY[o.fixity]} here and ${FIXITY[prior.fixity]} for ${prior.cls}: one fixity per symbol`);
-            else if (prior) error('operator-symbols', at, `the symbol "${sym}" is the symbol of ${prior.cls} too`);
-            else bySymbol.set(sym, o);
+            // One symbol is prefix on one class and infix on another at most, as the unary and the binary minus (C1b).
+            const priors = bySymbol.get(sym) ?? [];
+            const same = priors.find(x => x.fixity === o.fixity);
+            const infix = priors.find(x => x.fixity !== 'prefix');
+            if (same) error('operator-symbols', at, `the symbol "${sym}" is the symbol of ${same.cls} too`);
+            else if (o.fixity !== 'prefix' && infix) error('operator-fixity', at, `the symbol "${sym}" is ${FIXITY[o.fixity]} here and ${FIXITY[infix.fixity]} for ${infix.cls}: one fixity per symbol`);
+            else bySymbol.set(sym, [...priors, o]);
 
             const styled = styleTokens.find(([, ts]) => ts.includes(sym));
             const opener = comments.find(c => sym.startsWith(c));
