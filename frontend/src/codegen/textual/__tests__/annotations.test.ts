@@ -478,6 +478,9 @@ describe('operators: the call word and the derived fixity (step C lane C1a)', ()
         expect(operatorFixity(featuresOf('Lit'))).toBeUndefined();
         expect(operatorFixity(featuresOf('Rule'))).toBeUndefined();
         expect(operatorFixity([])).toBeUndefined();
+        // Two containments are binary only when both are single-valued.
+        expect(operatorFixity(featuresOf('Sheet').filter(f => f.kind === 'containment'))).toBeUndefined();
+        expect(operatorFixity([...featuresOf('Not'), ...featuresOf('And')])).toBeUndefined();
     });
 
     it('resolves a call word and symbols of both kinds, and no longer notes the operator as stored only', () => {

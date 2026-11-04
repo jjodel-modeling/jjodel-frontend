@@ -5,13 +5,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { printTextModel } from '../printer';
 import { CLIKE_STYLE, PASCAL_STYLE, STYLE_CATALOG, styleOf } from '../style';
 import type { NotationStyle } from '../style';
 import { checkStyle, STYLE_RULES } from '../styleCheck';
 import type { StyleFinding } from '../styleCheck';
-import type { SyntaxAnnotations } from '../annotations';
+import type { ElementIds, SyntaxAnnotations } from '../annotations';
+import { operatorFixity } from '../annotations';
+import type { TextMetamodel } from '../metamodel';
+import { classFeatures } from '../metamodel';
 import { BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar, withOperator } from './boolCorpus';
 import { generateSamples, nearleyGrammarOf, parseCount } from './oracle';
 import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
@@ -283,5 +287,59 @@ describe('the operators of an expression', () => {
         }
         const g = boolGrammar(withOperator(BOOL_CLIKE, 'C_Or', { symbol: '&', precedence: 2, call: 'or' }));
         expect(parseCount(g, 'Sheet s { rules { Rule r { when { a & b } } } }')).toBe(2);
+    });
+});
+
+// The RISC-V Briefs' SyncRTL, read-only from the prototype's folder in the PROTO environment variable (no path in the
+// repo); skipped without it. SyncRTL's Ref.name is optional, so a positional Ref stays refused (R-TXT-27) until C1d:
+// the check asserts the derived fixities and the five operator rules only.
+const PROTO = process.env.PROTO ?? '';
+
+function syncRtl(): { mm: TextMetamodel; ids: ElementIds } {
+    const text = readFileSync(`${PROTO}/metamodels/SyncRTL.ecore`, 'utf8');
+    const classes: TextMetamodel['classes'][number][] = [];
+    const enumerations: TextMetamodel['enumerations'][number][] = [];
+    const ids = { classes: {} as Record<string, string>, features: {} as Record<string, { owner: string; name: string; lower: number }>, enums: {} as Record<string, string> };
+    const re = /<eClassifiers xsi:type="ecore:(EClass|EEnum)" name="(\w+)"([^>]*?)(\/>|>([\s\S]*?)<\/eClassifiers>)/g;
+    for (const [, kind, name, attrs, , body = ''] of text.matchAll(re)) {
+        if (kind === 'EEnum') { enumerations.push({ name, literals: [...body.matchAll(/eLiterals name="(\w+)"/g)].map(x => x[1]) }); ids.enums[`E_${name}`] = name; continue; }
+        const supers = /eSuperTypes="([^"]+)"/.exec(attrs)?.[1].split(' ').map(x => x.replace('#//', ''));
+        const attributes: { name: string; type: string; many: boolean }[] = [];
+        const references: { name: string; type: string; many: boolean; containment: boolean }[] = [];
+        for (const [, k, n, a] of body.matchAll(/<eStructuralFeatures xsi:type="ecore:(EAttribute|EReference)" name="(\w+)"([^>]*)>/g)) {
+            const type = /eType="[^"]*?(\w+)"/.exec(a)![1];
+            const many = a.includes('upperBound="-1"');
+            if (k === 'EAttribute') attributes.push({ name: n, type, many });
+            else references.push({ name: n, type, many, containment: a.includes('containment="true"') });
+            ids.features[`F_${name}_${n}`] = { owner: name, name: n, lower: a.includes('lowerBound="1"') ? 1 : 0 };
+        }
+        classes.push({ name, isAbstract: attrs.includes('abstract="true"'), supers, attributes, references });
+        ids.classes[`C_${name}`] = name;
+    }
+    return { mm: { classes, enumerations }, ids };
+}
+
+describe.skipIf(!PROTO)('the Briefs: SyncRTL with the operator table of the probe (PROTO)', () => {
+    it('derives the fixities and holds the five operator rules', () => {
+        const { mm, ids } = syncRtl();
+        const table: [string, { symbol: string; precedence: number; assoc?: 'left' | 'right'; call?: string }, string][] = [
+            ['Implies', { symbol: '->', precedence: 1, assoc: 'right' }, 'binary'],
+            ['Disj', { symbol: '|', precedence: 2, call: 'or' }, 'nary'],
+            ['Conj', { symbol: '&', precedence: 3, call: 'and' }, 'nary'],
+            ['Eq', { symbol: '=', precedence: 4 }, 'binary'],
+            ['Le', { symbol: '<=', precedence: 4 }, 'binary'],
+            ['Add', { symbol: '+', precedence: 5 }, 'binary'],
+            ['Sub', { symbol: '-', precedence: 5 }, 'binary'],
+            ['Neg', { symbol: '!', precedence: 9 }, 'prefix'],
+        ];
+        for (const [cls, , fixity] of table) {
+            expect([cls, operatorFixity(classFeatures(mm, mm.classes.find(c => c.name === cls)!))?.fixity]).toEqual([cls, fixity]);
+        }
+        const record: SyntaxAnnotations = { v: 1, classes: Object.fromEntries(table.map(([cls, operator]) => [`C_${cls}`, { operator }])) };
+        const g = boolGrammar(record, mm, ids);
+        const expr = g.rules.find(r => r.body.t === 'expr')?.body;
+        expect(expr?.t === 'expr' && expr.operators.map(o => o.cls)).toEqual(['Implies', 'Disj', 'Conj', 'Eq', 'Le', 'Add', 'Sub', 'Neg']);
+        const rules = new Set(STYLE_RULES.slice(-5));
+        expect(checkStyle(g).filter(f => rules.has(f.rule)).map(f => [f.level, f.rule])).toEqual(STYLE_RULES.slice(-5).map(r => ['ok', r]));
     });
 });
