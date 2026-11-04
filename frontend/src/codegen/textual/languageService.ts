@@ -21,6 +21,7 @@ import type { TextAttribute, TextClass, TextEnumeration, TextFeature, TextMetamo
 import { isOuterRef } from './metamodel';
 import type { ItemNode, ListNode, ObjectNode, RefNode, SyntaxNode, SyntaxToken, TextParseResult } from './parser';
 import { commentsOf } from './parser';
+import { pathKeyword } from './printer';
 import { featureTable } from './textMatch';
 
 /** What a token is for highlighting. `feature` is a feature's keyword, `keyword` any other word of the notation. */
@@ -425,4 +426,194 @@ export function analyzeText(text: string, parsed: TextParseResult, grammar: Conc
         },
         hoverAt,
     };
+}
+
+/**
+ * A node of the outline (step B2, R-TXT-39 (1), (2); design in docs/discovery/discovery_2026-11-04_textual_b2_outline_hover.md,
+ * recommended design items 1 and 2): an object, the group of a feature the text prints a keyword for, or the
+ * `unknown container` group of the objects read inside a skipped block.
+ */
+export interface OutlineNode extends TextRange {
+    /** The path of labels from the top, unique: what keeps a node's expansion across versions of the text. */
+    readonly key: string;
+    readonly kind: 'object' | 'group' | 'unknown';
+    /** The parsed object's id; objects only. */
+    readonly id?: string;
+    readonly cls?: string;
+    /** A name; for an unnamed object rule C4', with ` [k]` when siblings collide; a group's keyword as printed. */
+    readonly label: string;
+    /** Secondary text: a named object's class, the feature an unnamed object's label comes from, a group's object count. */
+    readonly detail: string;
+    readonly named: boolean;
+    /** An object's feature in its container, a group's own feature; absent at the top and in the unknown group. */
+    readonly feature?: string;
+    /** The name token, else the class keyword, else the first token; a group's keyword: what a click selects. */
+    readonly selectStart: number;
+    readonly selectEnd: number;
+    /** As `TextSymbol.recovered` and `TextSymbol.unclosed`; false on groups. */
+    readonly recovered: boolean;
+    readonly unclosed: boolean;
+    readonly children: readonly OutlineNode[];
+}
+
+export interface TextOutline {
+    readonly nodes: readonly OutlineNode[];
+    /** The nodes from the top down to the innermost one holding `offset`; empty outside every node. */
+    pathAt(offset: number): OutlineNode[];
+}
+
+interface MutableOutline {
+    key: string;
+    kind: OutlineNode['kind'];
+    id?: string;
+    cls?: string;
+    label: string;
+    detail: string;
+    named: boolean;
+    feature?: string;
+    start: number;
+    end: number;
+    selectStart: number;
+    selectEnd: number;
+    selectRank: number;
+    recovered: boolean;
+    unclosed: boolean;
+    /** The index the object's path segment prints: within its feature, or among the top objects of its class. */
+    k: number;
+    children: MutableOutline[];
+}
+
+const LABEL_MAX = 24;
+const cut = (v: string): string => (v.length > LABEL_MAX ? `${v.slice(0, LABEL_MAX - 1)}…` : v);
+const PLAIN_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * Rule C4' (R-TXT-39 (2)): the value an unnamed object is told apart by, from its own single values in text order. The
+ * first one written as a name (a reference by name, an enum literal), else the first attribute value as printed
+ * (strings keep their quotes, cut at 24 characters); null when there is neither, and the label falls to `Class[k]`.
+ */
+function distinguishing(text: string, o: ObjectNode): { value: string; feature: string } | null {
+    let name: { value: string; feature: string } | null = null;
+    let value: { value: string; feature: string } | null = null;
+    const walk = (n: SyntaxNode): void => {
+        for (const c of n.children) {
+            if (name) return;
+            if (c.kind === 'token' || c.kind === 'object' || c.kind === 'list') continue;
+            if (c.kind === 'item' && c.feature !== 'name' && !c.children.some(x => x.kind === 'object' || x.kind === 'block')) {
+                const ref = c.children.find((x): x is RefNode => x.kind === 'ref');
+                const tok = c.children.find((x): x is SyntaxToken => x.kind === 'token' && (x.role === 'value' || x.role === 'literal'));
+                if (ref) {
+                    const written = text.slice(ref.start, ref.end);
+                    // A path or `@"id"` is readable as a path, poor as a label: rule C4' drops that tier.
+                    if (PLAIN_NAME.test(written)) name = { value: written, feature: c.feature };
+                } else if (tok?.role === 'literal') name = { value: tok.raw, feature: c.feature };
+                else if (tok && !value) value = { value: tok.raw, feature: c.feature };
+            }
+            walk(c);
+        }
+    };
+    walk(o);
+    return name ?? value;
+}
+
+/**
+ * The outline of `text` as `parsed` read it: the objects in text order, nested as the text nests them. An `item` that
+ * holds a keyword token itself and contains objects is a group node labelled with that keyword, so a grouped containment
+ * gives two levels and an inline one, printing no keyword, none (R-TXT-39 (1)). Unnamed objects are labelled by rule C4'.
+ */
+export function textOutline(text: string, parsed: TextParseResult, grammar: ConcreteGrammar): TextOutline {
+    const byId = new Map(parsed.objects.map(o => [o.id, o]));
+    const top: MutableOutline[] = [];
+    const seen = new Map<string, number>();
+    const nextK = (key: string): number => {
+        const k = seen.get(key) ?? 0;
+        seen.set(key, k + 1);
+        return k;
+    };
+
+    const walk = (n: SyntaxNode, object: ObjectNode | null, at: MutableOutline | null, into: MutableOutline[], feature: string | null, unknown: boolean): void => {
+        let here = into;
+        let group: MutableOutline | null = null;
+        if (n.kind === 'object') {
+            const o = byId.get(n.id);
+            const name = typeof o?.slots.name === 'string' ? o.slots.name : '';
+            const kw = pathKeyword(grammar, n.cls);
+            const k = nextK(object ? `${object.id}.${feature}` : `${unknown ? 'unknown' : 'top'}.${n.cls}`);
+            const value = name ? null : distinguishing(text, n);
+            const s: MutableOutline = {
+                key: '', kind: 'object', id: n.id, cls: n.cls,
+                label: name || (value ? `${kw} ${cut(value.value)}` : `${kw}[${k}]`),
+                detail: name ? kw : value?.feature ?? '', named: name !== '',
+                ...(object && feature !== null ? { feature } : {}),
+                start: n.start, end: n.end, selectStart: n.start, selectEnd: n.start, selectRank: 3,
+                recovered: n.state !== 'complete' || !!n.orphan, unclosed: n.state === 'unclosed', k, children: [],
+            };
+            into.push(s);
+            object = n;
+            at = s;
+            here = s.children;
+            feature = null;
+        } else if (n.kind === 'item' || n.kind === 'list') {
+            feature = n.feature;
+            const kw = n.kind === 'item' ? n.children.find((c): c is SyntaxToken => c.kind === 'token' && c.role === 'keyword') : undefined;
+            if (kw) {
+                group = {
+                    key: '', kind: 'group', label: kw.raw, detail: '', named: false, feature: n.feature, start: n.start, end: n.end,
+                    selectStart: kw.start, selectEnd: kw.end, selectRank: 0, recovered: false, unclosed: false, k: 0, children: [],
+                };
+                here = group.children;
+            }
+        } else if (n.kind === 'error' && n.children.some(c => c.kind === 'object')) {
+            // R-TXT-36, as in `analyzeText`: the objects read inside a skipped block sit in a group where the block was.
+            const g: MutableOutline = {
+                key: '', kind: 'unknown', label: UNKNOWN_CONTAINER, detail: '', named: false, start: n.start, end: n.end,
+                selectStart: n.start, selectEnd: n.start, selectRank: 0, recovered: true, unclosed: false, k: 0, children: [],
+            };
+            into.push(g);
+            here = g.children;
+            object = null;
+            feature = null;
+            unknown = true;
+        }
+        for (const c of n.children) {
+            if (c.kind !== 'token') { walk(c, object, at, here, feature, unknown); continue; }
+            if (!c.role || !at || !object || at.id !== object.id) continue;
+            const rank = c.role === 'name' ? 0 : c.role === 'class' ? 1 : 2;
+            if (rank < at.selectRank) { at.selectStart = c.start; at.selectEnd = c.end; at.selectRank = rank; }
+        }
+        // A keyword item holding no object is a single value, not a group.
+        if (group && group.children.length) into.push(group);
+    };
+    if (parsed.tree) walk(parsed.tree, null, null, top, null, false);
+
+    const count = (s: MutableOutline): number => s.children.reduce((a, c) => a + (c.kind === 'object' ? 1 : count(c)), 0);
+    const finish = (ss: MutableOutline[], parent: string): OutlineNode[] => {
+        const labels = new Map<string, number>();
+        for (const s of ss) if (s.kind === 'object' && !s.named) labels.set(s.label, (labels.get(s.label) ?? 0) + 1);
+        const keys = new Map<string, number>();
+        return ss.map(s => {
+            // R-TXT-39 (2), the chat's answer: the index only where two unnamed siblings read the same.
+            if (s.kind === 'object' && !s.named && (labels.get(s.label) ?? 0) > 1) s.label = `${s.label} [${s.k}]`;
+            if (s.kind === 'group') s.detail = String(count(s));
+            const base = `${parent}/${s.kind === 'group' ? `${s.feature}:` : ''}${s.label}`;
+            const dup = keys.get(base) ?? 0;
+            keys.set(base, dup + 1);
+            const { selectRank: _r, k: _k, children, ...rest } = s;
+            const key = dup ? `${base}#${dup}` : base;
+            return { ...rest, key, children: finish(children, key) };
+        });
+    };
+    const nodes = finish(top, '');
+
+    const pathAt = (offset: number): OutlineNode[] => {
+        const out: OutlineNode[] = [];
+        let level: readonly OutlineNode[] = nodes;
+        for (;;) {
+            const hit = level.find(s => s.start <= offset && offset < s.end) ?? level.find(s => s.end === offset && s.start < offset);
+            if (!hit) return out;
+            out.push(hit);
+            level = hit.children;
+        }
+    };
+    return { nodes, pathAt };
 }
