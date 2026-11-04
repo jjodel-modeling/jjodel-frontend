@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { shouldAutoLayoutOnOpen } from '../autoLayoutOnOpen';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { shouldAutoLayoutOnOpen, AUTO_LAYOUT_ON_OPEN_CAP } from '../autoLayoutOnOpen';
 
 const REC = { x: 781, y: 1010, w: 200, h: 120, isResized: false };
 
@@ -60,5 +60,50 @@ describe('shouldAutoLayoutOnOpen', () => {
         const L = lookup(2, {}, { c: { id: 'c', subElements: ['g', 'missing', 42] } });
         (L.g as any).subElements = [...(L.g as any).subElements, 'c', 'missing'];
         expect(shouldAutoLayoutOnOpen(true, 'g', L)).toBe(true);
+    });
+});
+
+describe('shouldAutoLayoutOnOpen: the size cap (P-2026-11-04-0926)', () => {
+    // b10_8 shape: 2,559 nodes, 2,558 reference edges, 153 s of ELK in the main thread
+    // (docs/discovery/discovery_2026-11-04_elk_open_freeze.md F2).
+    it('lays out at the cap: 500 nodes and 500 edges', () => {
+        expect(AUTO_LAYOUT_ON_OPEN_CAP).toBe(500);
+        expect(shouldAutoLayoutOnOpen(true, 'g', lookup(3), { nodes: 500, edges: 500 })).toBe(true);
+    });
+
+    it('skips above the cap on nodes, even with no edge in the canvas yet', () => {
+        expect(shouldAutoLayoutOnOpen(true, 'g', lookup(3), { nodes: 501, edges: 0 })).toBe(false);
+        expect(shouldAutoLayoutOnOpen(true, null, {}, { nodes: 2559, edges: 0 })).toBe(false);
+    });
+
+    it('skips above the cap on edges', () => {
+        expect(shouldAutoLayoutOnOpen(true, 'g', lookup(3), { nodes: 300, edges: 501 })).toBe(false);
+        expect(shouldAutoLayoutOnOpen(true, 'g', lookup(3), { nodes: 2559, edges: 2558 })).toBe(false);
+    });
+
+    it('without a size the rule is the record rule alone', () => {
+        expect(shouldAutoLayoutOnOpen(true, 'g', lookup(3))).toBe(true);
+    });
+
+    describe('the console', () => {
+        let info: ReturnType<typeof vi.spyOn>;
+        beforeEach(() => { info = vi.spyOn(console, 'info').mockImplementation(() => {}); });
+        afterEach(() => { info.mockRestore(); });
+
+        it('says once why the layout was skipped, with the counts and the cap', () => {
+            shouldAutoLayoutOnOpen(true, 'g', lookup(3), { nodes: 2559, edges: 2558 });
+            expect(info).toHaveBeenCalledTimes(1);
+            const msg = String(info.mock.calls[0].join(' '));
+            expect(msg).toContain('2559 nodes');
+            expect(msg).toContain('2558 edges');
+            expect(msg).toContain('500');
+        });
+
+        it('says nothing when the layout runs, or when another rule already skipped it', () => {
+            shouldAutoLayoutOnOpen(true, 'g', lookup(3), { nodes: 500, edges: 500 });
+            shouldAutoLayoutOnOpen(false, 'g', lookup(3), { nodes: 2559, edges: 2558 });
+            shouldAutoLayoutOnOpen(true, 'g', lookup(3, { v1: { __abstract__: REC } }), { nodes: 2559, edges: 2558 });
+            expect(info).not.toHaveBeenCalled();
+        });
     });
 });

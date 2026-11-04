@@ -38,15 +38,32 @@ function graphHasLayoutRecord(graphId: string, idlookup: Readonly<Record<string,
 }
 
 /**
+ * Above this many nodes, or this many edges, the open-time layout does not run (P-2026-11-04-0926).
+ * ELK runs in the main thread and grows about n^2.3 with the edges: 639 nodes with edges took 4 s,
+ * 1,535 took 61 s, 2,559 took 153 s, while 2,559 nodes with no edge took under 1 s
+ * (docs/discovery/discovery_2026-11-04_elk_open_freeze.md F2). The edges drive the cost, but at the
+ * decision the reference edges may not be in the canvas yet, and the re-layout watcher would then rerun
+ * ELK with them; the node count is there already and, on a tree, is the edge count plus one. So both
+ * count. The explicit layout command is not capped.
+ */
+export const AUTO_LAYOUT_ON_OPEN_CAP = 500;
+
+/**
  * `createdOnOpen`: the populate run of this mount created something (`justCreatedGraphRef`).
  * `graphId`: the model's v2-flow graph; absent means nothing was ever laid out.
+ * `size`: the nodes and edges the layout would get; absent means no cap.
  */
 export function shouldAutoLayoutOnOpen(
     createdOnOpen: boolean,
     graphId: string | null | undefined,
     idlookup: Readonly<Record<string, unknown>>,
+    size?: { nodes: number; edges: number },
 ): boolean {
     if (!createdOnOpen) return false;
-    if (!graphId) return true;
-    return !graphHasLayoutRecord(graphId, idlookup);
+    if (graphId && graphHasLayoutRecord(graphId, idlookup)) return false;
+    if (size && (size.nodes > AUTO_LAYOUT_ON_OPEN_CAP || size.edges > AUTO_LAYOUT_ON_OPEN_CAP)) {
+        console.info(`[autoLayoutOnOpen] auto-layout on open skipped: ${size.nodes} nodes, ${size.edges} edges, above the cap of ${AUTO_LAYOUT_ON_OPEN_CAP}. The vertices keep their default placement; the layout command still lays them out.`);
+        return false;
+    }
+    return true;
 }
