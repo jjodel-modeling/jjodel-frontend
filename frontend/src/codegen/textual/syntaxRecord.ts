@@ -28,7 +28,8 @@ import { deriveBaseGrammar } from './baseGrammar';
 import { deriveConcreteGrammar } from './concreteGrammar';
 import type { ConcreteGrammar } from './concreteGrammar';
 import type { TextMetamodel } from './metamodel';
-import { CLIKE_STYLE } from './style';
+import { CLIKE_STYLE, isStyleBase, styleOf } from './style';
+import type { StyleBase } from './style';
 
 export { TEXTUAL_SYNTAX_KEY };
 
@@ -180,8 +181,8 @@ export interface TextualNotation {
 }
 
 /**
- * The shared path of the Text tab, the EBNF view and «New model from text»: read the record, resolve it, apply its
- * style options, derive. With no record (or one that cannot be read) the grammar is the unannotated one, byte for byte.
+ * The shared path of the Text tab, the EBNF view and «New model from text»: read the record, resolve it, take the style
+ * its base names from the catalog, apply its style options, derive. With no record (or one that cannot be read) the grammar is the unannotated one, byte for byte.
  */
 export function textualNotation(mm: TextMetamodel, decoded: DecodedSyntax, ids: ElementIds): TextualNotation {
     const base = deriveBaseGrammar(mm);
@@ -190,12 +191,30 @@ export function textualNotation(mm: TextMetamodel, decoded: DecodedSyntax, ids: 
         return { grammar, issues: [...decoded.issues, ...noticesOf(grammar)] };
     }
     const resolved = resolveAnnotations(decoded.record, ids, mm);
-    const grammar = deriveConcreteGrammar(base, withStyleOptions(CLIKE_STYLE, resolved), resolved);
+    const grammar = deriveConcreteGrammar(base, withStyleOptions(styleOf(resolved.style.base), resolved), resolved);
     return {
         grammar,
         ...(resolved.language !== undefined ? { language: resolved.language } : {}),
         issues: [...decoded.issues, ...noticesOf(grammar), ...(grammar.annotationIssues ?? [])],
     };
+}
+
+/** The style a picker shows for the decoded record: its base, C-like when it has none or one the catalog does not hold. */
+export function styleBaseOf(decoded: DecodedSyntax): StyleBase {
+    const b = decoded.record?.style?.base;
+    return isStyleBase(b) ? b : 'clike';
+}
+
+/**
+ * The record with the style `base` chosen (step C3a), every other field kept: C-like, the default, is written as no base,
+ * and a style left empty goes, so a switch back gives the record's string before the switch. `null` is no record.
+ */
+export function withStyleBase(record: SyntaxAnnotations | null, base: StyleBase): SyntaxAnnotations {
+    const r: SyntaxAnnotations = record ?? { v: SYNTAX_RECORD_VERSION };
+    const { base: _old, ...options } = r.style ?? {};
+    const style = base === 'clike' ? options : { base, ...options };
+    const { style: _style, ...rest } = r;
+    return Object.keys(style).length ? { ...rest, style } : rest;
 }
 
 const noticesOf = (g: ConcreteGrammar): AnnotationIssue[] => g.notices.map(n => ({ level: 'notice', where: 'style', message: n.message }));
