@@ -859,3 +859,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Ticket**: Measured by P-2026-11-03-2332 on b10_8, probe only: the longest task after the JjTL output tab mounts (3,354 ms, three React commits) contains no vertex or edge creation. The useJjomSync Step 2bis loop takes 332 to 363 ms inside a separate 1,478 ms task, with 717 to 757 ms of edges. In the profiled longest task react-dom is 82 % of 3,791 ms; DynamicHandles 575 ms, store subscriptions 472 ms, ObjectNode 377 ms, overlapping. Spreading Step 2bis across frames would not shorten the longest task. #475 is re-aimed at the React side by Alfonso, 2026-11-04.
 **Priority**: medium
 **Found in**: P-2026-11-03-2332
+
+## 2026-11-04 — fix(jjtl): nested missing class is an error; hidden tab does not hold the undo group (P-2026-11-04-0255)
+**Prompt**: `claude_2026-11-04_0255_prompt_jjtl_nested_hidden.md`: a nested creation of a class missing from the target metamodel is an error and nothing is written (R-JTG-17 nested case, ratified 2026-11-04); a late undo-step poll while `document.hidden` does not count as busy.
+**Files touched**: code `d52a89f99`: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/components/project/nestedMaterialization.ts`, tests `language-open-points.test.ts`, `nested-creation-into-features.test.ts`, `nestedMaterialization.test.ts`; docs: `docs/decisions.md` (R-JTG-17), `frontend/src/jjtl/SPEC.md` §10, this entry and the Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d52a89f99`: typecheck exit 0, 0 errors; vitest 13510 passed, 3 red at import (baseline); build exit 0. check:docs on the docs commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe on port 3295, not by hand: nested `-> columns { -> Ghost }` fails in the panel, no output model, 16 objects before and after; control run 27
+**Notes**: Red first: 4 JjTL and 2 hidden-tab tests, for the intended reason. `nested-creation-into-features.test.ts` pinned the old warning and now asserts the error. Mutation bench 5/5 killed (`~/.jjodel-lanes/P-2026-11-04-0255/bench.txt`). Class2Relational and parity fixtures unchanged, no assertion edited.
+**Prompt document name**: 2026-11-04 02:55

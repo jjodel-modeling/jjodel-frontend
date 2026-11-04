@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0255
 Chat: C-2026-11-03-2317
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane full · d52a89f99 · app probe on a nested missing class, nothing written, control 27; no visual check by hand (unattended)
 Lane: full (decided by Alfonso, ok of 2026-11-04 02:50)
 Depends: P-2026-11-04-0048
 Worktree: ~/jjodel-w-jjtlnested, branch jjtl-nested-hidden
