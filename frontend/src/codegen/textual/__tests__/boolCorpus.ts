@@ -141,3 +141,20 @@ export const ARITH_CLIKE: SyntaxAnnotations = {
 };
 
 export const arithGrammar = (record: SyntaxAnnotations = ARITH_CLIKE): ConcreteGrammar => boolGrammar(record, ARITH_MM, ARITH_IDS);
+
+/** The atoms of a BOOL sheet (C1b). */
+export const BOOL_ATOMS = ['st', 'is_sw', 'ld', 'rdy'];
+/** A BOOL text in the C-like style (C1b): the atoms, then one rule per expression, each `when` on a line of its own. */
+export const boolSheet = (...whens: string[]): string => `Sheet core {\n  atoms {\n${BOOL_ATOMS.map(a => `    Atom ${a} {}`).join('\n')}\n  }\n  rules {\n${
+    whens.map((w, i) => `    Rule r${i} {\n      when {\n        ${w}\n      }\n    }`).join('\n')}\n  }\n}`;
+
+/** Each BOOL expression (C-like) as read, and as the printer writes it back from the model it reads into (C1b). */
+export const BOOL_PRINTS: readonly (readonly [string, string])[] = [
+    ['st | ld & rdy', 'st | ld & rdy'], ['st & ld | rdy', 'st & ld | rdy'], ['(st | ld) & rdy', '(st | ld) & rdy'],
+    ['!st & ld', '!st & ld'], ['!(st & ld)', '!(st & ld)'], ['!!st', '!!st'], ['st&ld&rdy', 'st & ld & rdy'],
+    ['(st & ld) & rdy', '(st & ld) & rdy'], ['st & (ld & rdy)', 'st & (ld & rdy)'], ['st -> ld -> rdy', 'st -> ld -> rdy'],
+    ['(st -> ld) -> rdy', '(st -> ld) -> rdy'], ['1 | !!st', '1 | !!st'], ['st & ld -> rdy | st', 'st & ld -> rdy | st'],
+    ['(st -> ld) & rdy', '(st -> ld) & rdy'], ['and()', 'and()'], ['or(is_sw)', 'or(is_sw)'], ['st & or(is_sw)', 'st & or(is_sw)'],
+    ['and(st, ld | rdy)', 'st & (ld | rdy)'], ['or(st & ld)', 'or(st & ld)'], ['st & (is_sw)', 'st & is_sw'], ['((st))', 'st'],
+    ['or( st,ld )', 'st | ld'], ['and(or())', 'and(or())'],
+];

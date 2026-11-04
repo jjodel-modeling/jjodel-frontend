@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import type { SyntaxElement, SyntaxNode, TextNode, TextParseResult } from '../parser';
 import { isApplicableParse, parseText, tokenizeText } from '../parser';
-import { BOOL_CLIKE, arithGrammar, boolGrammar, withOperator } from './boolCorpus';
+import { printTextModel } from '../printer';
+import { BOOL_CLIKE, BOOL_PASCAL, BOOL_PRINTS, arithGrammar, boolGrammar, boolSheet, withOperator } from './boolCorpus';
 
 const tokensOf = (text: string, g: ConcreteGrammar): string[] => tokenizeText(text, g).tokens.filter(t => t.k !== 'EOF').map(t => `${t.k}:${t.v}`);
 
@@ -37,10 +38,7 @@ describe('(1) the tokenizer: operator symbols and the sign of a number', () => {
     });
 });
 
-const ATOMS = ['st', 'is_sw', 'ld', 'rdy'];
-/** A BOOL text in the C-like style, one rule per expression, each `when` on a line of its own. */
-const sheet = (...whens: string[]): string => `Sheet core {\n  atoms {\n${ATOMS.map(a => `    Atom ${a} {}`).join('\n')}\n  }\n  rules {\n${
-    whens.map((w, i) => `    Rule r${i} {\n      when {\n        ${w}\n      }\n    }`).join('\n')}\n  }\n}`;
+const sheet = boolSheet;
 
 /** The `when` of each rule as a term: an atom's name, a literal's value, else `Class(operands)`. */
 function termsOf(r: Pick<TextParseResult, 'objects'>): string[] {
@@ -131,5 +129,36 @@ describe('(2) the parser: precedence climbing on the expression', () => {
     it('call words and word symbols are no names', () => {
         const r = parseText(sheet('and'), boolGrammar(BOOL_CLIKE));
         expect(r.errors[0].message).toMatch(/^expected "\(";/);
+    });
+});
+
+describe('(3) the printer: flat chains, parentheses where the parser needs them, the call form, prefix', () => {
+    /** The text the printer writes from the model a C-like BOOL or ARITH text reads into. */
+    const reprint = (g: ConcreteGrammar, whens: readonly string[], out = g): string => printTextModel(out, parseText(sheet(...whens), g).objects).text;
+
+    it('BOOL: every expression prints on one line, in the form listed (boolCorpus.ts BOOL_PRINTS)', () => {
+        expect(reprint(boolGrammar(BOOL_CLIKE), BOOL_PRINTS.map(([w]) => w))).toBe(sheet(...BOOL_PRINTS.map(([, p]) => p)));
+    });
+
+    it('ARITH: a prefix minus glued to its operand unless they would read as one token; a negative number; one level, left to right', () => {
+        const prints = [['st - ld + rdy', 'st - ld + rdy'], ['st + (ld - rdy)', 'st + (ld - rdy)'], ['st - (ld + rdy)', 'st - (ld + rdy)'], ['-st - ld', '-st - ld'],
+            ['st - -ld', 'st - -ld'], ['st -1', 'st - 1'], ['st - -1', 'st - -1'], ['-1', '-1'], ['- 1', '- 1'], ['-(st + ld)', '-(st + ld)'], ['--st', '--st'],
+            ['- -1', '--1'], ['-st & ld', '-st & ld'], ['st & -ld', 'st & -ld']] as const;
+        expect(reprint(arithGrammar(), prints.map(([w]) => w))).toBe(sheet(...prints.map(([, p]) => p)));
+    });
+
+    it('Pascal/Ada: word symbols spaced, the call form absent: a flat chain of two operands or more', () => {
+        const text = reprint(boolGrammar(BOOL_CLIKE), ['st | ld & rdy', '!(st & ld)', 'st -> ld -> rdy', '(st & ld) & rdy'], boolGrammar(BOOL_PASCAL));
+        const whens = text.split('\n').filter(l => /^ {8}\S/.test(l)).map(l => l.trim());
+        // The ";" after each atom is the style terminator the C1a grammar puts in a primary's feature (concreteGrammar.ts
+        // `feature`), outside this lane: the text reads back, and whether a primary drops it is a decision left open.
+        expect(whens).toEqual(['st; or ld; and rdy;', 'not (st; and ld;)', 'st; implies ld; implies rdy;', '(st; and ld;) and rdy;']);
+    });
+
+    it('a name that is an expression word is quoted', () => {
+        const objects = parseText(sheet('st'), boolGrammar(BOOL_CLIKE)).objects.map(o => (o.slots.name === 'st' ? { ...o, slots: { ...o.slots, name: 'and' } } : o));
+        const text = printTextModel(boolGrammar(BOOL_CLIKE), objects).text;
+        expect(text).toContain('Atom "and" {}');
+        expect(parseText(text, boolGrammar(BOOL_CLIKE)).errors).toEqual([]);
     });
 });

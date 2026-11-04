@@ -14,6 +14,7 @@ import { libraryObjects, mutantsOf, tolerantCases } from './tolerantCorpus';
 import { nearleyGrammarOf, parseCount } from './oracle';
 import { planTextEdit } from '../textDiff';
 import { displayMatch } from '../textMatch';
+import { BOOL_CLIKE, BOOL_PASCAL, BOOL_PRINTS, arithGrammar, boolGrammar, boolSheet } from './boolCorpus';
 
 const CASES = tolerantCases();
 
@@ -331,6 +332,22 @@ describe('(vii) the printer builds the same tree (P-2026-11-03-2220)', () => {
     it.each(CASES.map(c => [c.name, c] as const))('%s: the tree of the print and the tree of its parse are equal, node for node, token for token', (_, c) => {
         const print = printTextModel(c.g, c.objects);
         const parsed = parseText(print.text, c.g);
+        expect(parsed.errors).toEqual([]);
+        expect(print.tree).toBeDefined();
+        expect(plain(print.tree!)).toStrictEqual(plain(parsed.tree!));
+    });
+
+    // Step C lane C1b: the expression nodes, operator objects and `paren` nodes, on BOOL in both styles and on ARITH.
+    const EXPRESSIONS = [
+        ['BOOL, C-like', boolGrammar(BOOL_CLIKE), BOOL_PRINTS.map(([w]) => w)],
+        ['BOOL, Pascal/Ada', boolGrammar(BOOL_PASCAL), BOOL_PRINTS.map(([w]) => w).filter(w => !/\b(and|or)\(/.test(w))],
+        ['ARITH', arithGrammar(), ['st - ld + rdy', '-st - (ld + -1)', '- 1 + st', '--st', 'st & -(ld - 1)']],
+    ] as const;
+    it.each(EXPRESSIONS)('%s: the tree of the print and the tree of its parse are equal on expressions', (name, g, whens) => {
+        // The model is read from C-like text, the style of the metamodel's own C-like grammar.
+        const source = name === 'ARITH' ? arithGrammar() : boolGrammar(BOOL_CLIKE);
+        const print = printTextModel(g, parseText(boolSheet(...whens), source).objects);
+        const parsed = parseText(print.text, g);
         expect(parsed.errors).toEqual([]);
         expect(print.tree).toBeDefined();
         expect(plain(print.tree!)).toStrictEqual(plain(parsed.tree!));
