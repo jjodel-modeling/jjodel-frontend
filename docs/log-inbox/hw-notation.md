@@ -898,3 +898,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile
 **Notes**: Partial only because 0256 hit the context ceiling (RC-51) before its commit; the discovery itself is complete. No source change; throwaway patches in `~/.jjodel-lanes/P-2026-11-04-0256/probe/`, each reverted. Route A: b10_8 longest 4,248 -> 1,571 ms, breaks edges to unmeasured nodes and fitView. Route B: mount -25%/-33%, cull unchanged. Side finding: ELK auto-layout of 117 s in 1 of 9 runs. Open questions in report §8.
 **Prompt document name**: 2026-11-04 02:56
+
+## 2026-11-04 — merge: jjtl-canvas-render into alfonso-frontend-jjtl (P-2026-11-04-0404)
+**Prompt**: `claude_2026-11-04_0404_prompt_merge_jjtl-canvas-render.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-canvas-render` at `495fd97d2` into `alfonso-frontend-jjtl`, merge base `8411cfae5`, 3 commits on the branch side.
+**Files touched**: merge `158f7eb76`: 4 files from the branch side (`docs/discovery/discovery_2026-11-04_jjtl_canvas_render.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_0256_prompt_jjtl_canvas_render_discovery.md`, `docs/prompts/claude_2026-11-04_0400_prompt_jjtl_canvas_render_close.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `158f7eb76` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13575 tests in 511 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, gates green, no hand run
+**Notes**: Rollback tag `pre-jjtl-canvas-render` on `94a196964` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0404/result.json`.
+**Prompt document name**: 2026-11-04 04:04
