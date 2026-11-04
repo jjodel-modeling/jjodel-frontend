@@ -728,6 +728,20 @@ describe('the names the app gives (R-TXT-44 (1), (2))', () => {
         expect(plan.named!.some(h => h.startsWith('Bool') || h.startsWith('Word'))).toBe(false);
     });
 
+    it('R-TXT-45: the same application clears the name the app gives, so `input : Bool` prints as typed (mutant: no clearing line)', () => {
+        const { plan } = planEdit(portBase([]), PORT_TEXT_CLIKE, []);
+        const [port, ref] = plan.named!;
+        for (const h of [port, ref]) {
+            const at = plan.lines!.findIndex(l => l.startsWith(`create instance of ${h.split('_')[0]} "${h}"`));
+            expect(plan.lines![at + 1]).toBe(`set ${h}.name = ""`);
+        }
+        expect(plan.lines!.filter(l => l.endsWith('.name = ""'))).toHaveLength(2);
+        // The model after it holds the two objects nameless: its print is the typed text, no reprint, no status sentence.
+        const print = portBase(portObjects()).text;
+        expect(print).toContain('  input : Bool\n');
+        expect(namedReprint(plan, print, PORT_TEXT_CLIKE)).toBeNull();
+    });
+
     it('after such an application the tab reprints the model\'s print, else it keeps the typed text (mutant: never reprint; always reprint)', () => {
         const print = portBase(named()).text;
         expect(namedReprint({ named: ['Port_2'] }, print, PORT_TEXT_CLIKE)).toBe(print);

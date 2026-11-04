@@ -542,9 +542,11 @@ export function diffLines(mm: TextMetamodel, g: ConcreteGrammar, model: readonly
                 lines.push(`create instance of ${o.cls} ${jjscriptString(h)}${into}`);
                 if (into) filled.set(slotKey(op.into!.owner, op.into!.feature), h);
                 // A nameless object of a class with a name takes its handle as name, as any instance created without one.
+                // R-TXT-45: the same application clears it (an empty slot reads nameless); still listed, so the reprint
+                // of R-TXT-44 (1) catches an object the core names anyway.
                 const name = identityOf(g, o);
                 if (name !== null && name !== h) lines.push(`set ${h}.name = ${jjscriptString(name)}`);
-                if (name === null && g.objects[o.cls]?.named) named.push(h);
+                if (name === null && g.objects[o.cls]?.named) { lines.push(`set ${h}.name = ""`); named.push(h); }
                 break;
             }
             case 'attribute': {
