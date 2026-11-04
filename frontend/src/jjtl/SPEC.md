@@ -1028,7 +1028,8 @@ that could not be placed is reported as above.
 | Situation | Behavior |
 |---|---|
 | Source class not found | Silently skip (no instances to match) |
-| Rule target class not in the target metamodel | **Error** before pass 1 (R-JTG-17): `Target class 'Nope' not found in target metamodel (A -> Nope). Nothing is written.` The run returns no target model, as for an abstract target. A nested creation of an unknown class stays a warning, nothing created for it (provisional, not ratified) |
+| Rule target class not in the target metamodel | **Error** before pass 1 (R-JTG-17): `Target class 'Nope' not found in target metamodel (A -> Nope). Nothing is written.` The run returns no target model, as for an abstract target |
+| Nested creation of a class not in the target metamodel (`-> feature { -> Ghost { ... } }`, `forall x in xs -> Ghost { ... }`) | **Error** before pass 1, the same as a rule target (R-JTG-17, nested case, ratified 2026-11-04): `Target class 'Ghost' not found in target metamodel (object creation in Table.columns). Nothing is written.`, or `(forall in B)`. No target model. A creation inside a `let` body is not checked, as before |
 | A binding reaches a node whose class has both a matched and a lazy rule, and the feature type fits both or is unknown | **Error** naming both rules (R-JTG-20, provisional, not ratified; §5.3.3) |
 | Guard evaluation error | Log warning, skip instance (treated as false) |
 | Expression evaluation error | Log warning, return `null` |

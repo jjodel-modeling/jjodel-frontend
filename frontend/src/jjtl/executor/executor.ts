@@ -924,7 +924,7 @@ export class JjtlExecutor {
         };
 
         // Check class mappings
-        const checkTarget = (targetClass: string, context: string, skipsMapping: boolean = false) => {
+        const checkTarget = (targetClass: string, context: string) => {
             if (abstractNames.has(targetClass)) {
                 const concrete = findConcreteSubclasses(targetClass);
                 const suggestion = concrete.length > 0
@@ -933,18 +933,12 @@ export class JjtlExecutor {
                 this.errors.push(
                     `Cannot use abstract class '${targetClass}' as transformation target in ${context}.${suggestion}`
                 );
-            } else if (!knownNames.has(targetClass) && skipsMapping) {
-                // A RULE target the metamodel lacks stops the run before pass 1, as an
-                // abstract target does: going on wrote a partial model that looked done
-                // (P-2026-11-04-0015, ratified by Alfonso 2026-11-03).
-                this.errors.push(`Target class '${targetClass}' not found in target metamodel (${context}). Nothing is written.`);
-                this.unknownTargetClasses.add(targetClass);
             } else if (!knownNames.has(targetClass)) {
-                // A nested creation: nothing was ever skipped, so the message must not say so.
-                const msg = `Target class '${targetClass}' not found in target metamodel (${context}).`
-                    + ' Nothing is created for it.';
-                console.warn(`[JjTL] ${msg}`);
-                this.warnings.push(msg);
+                // A target the metamodel lacks stops the run before pass 1, as an abstract
+                // target does: going on wrote a partial model that looked done. Rule targets
+                // P-2026-11-04-0015 (ratified 2026-11-03); nested creations P-2026-11-04-0255
+                // (ratified 2026-11-04), R-JTG-17.
+                this.errors.push(`Target class '${targetClass}' not found in target metamodel (${context}). Nothing is written.`);
                 this.unknownTargetClasses.add(targetClass);
             }
         };
@@ -1011,7 +1005,7 @@ export class JjtlExecutor {
         for (const mapping of [...this.ast.mappings, ...(this.ast.rules ?? [])]) {
             // A delegating rule creates no target of its own (slice B).
             if (mapping.result) continue;
-            checkTarget(mapping.targetClass, this.ruleLabel(mapping), true);
+            checkTarget(mapping.targetClass, this.ruleLabel(mapping));
             ruleLabel = this.ruleLabel(mapping);
             if (mapping.body) {
                 checkBody(mapping.body, mapping.targetClass);

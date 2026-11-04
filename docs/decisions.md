@@ -7292,10 +7292,12 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   `unique` keeps R-JTG-6's fresh target per call. Evidence: the tests of P-2026-11-03-2111.
 - **R-JTG-17** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a
   rule whose target class is not in the target metamodel is an error before the run writes anything: nothing is
-  written. Provisional, unattended, not ratified (P-2026-11-04-0015): the error names the rule and the class, as an
-  abstract target's does, and a nested creation of an unknown class stays a warning.
-  Evidence: `language-open-points.test.ts` and the app probe of P-2026-11-04-0015 (no output model, 16 objects before
-  and after; the control run writes 27).
+  written. Nested case, ratified by Alfonso 2026-11-04 (P-2026-11-04-0255): a nested creation of a class the target
+  metamodel lacks, in a feature or in a forall, is the same error, naming the class and where it is created
+  (`object creation in Table.columns`, `forall in B`); it was a warning. Provisional, unattended, not ratified
+  (P-2026-11-04-0015): the error names the rule and the class, as an abstract target's does.
+  Evidence: `language-open-points.test.ts`, `nested-creation-into-features.test.ts`, the app probes of
+  P-2026-11-04-0015 and P-2026-11-04-0255 (no output model, 16 objects before and after; the control run writes 27).
 - **R-JTG-18** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk): a
   `lazy` rule is exempt from R-JTG-3 when its class also has a matched rule: it never matches in pass 1, so it does
   not compete there. The executor's rejection of a class with both no longer holds. How a binding that reaches a node
