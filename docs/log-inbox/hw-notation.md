@@ -859,3 +859,55 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Ticket**: Measured by P-2026-11-03-2332 on b10_8, probe only: the longest task after the JjTL output tab mounts (3,354 ms, three React commits) contains no vertex or edge creation. The useJjomSync Step 2bis loop takes 332 to 363 ms inside a separate 1,478 ms task, with 717 to 757 ms of edges. In the profiled longest task react-dom is 82 % of 3,791 ms; DynamicHandles 575 ms, store subscriptions 472 ms, ObjectNode 377 ms, overlapping. Spreading Step 2bis across frames would not shorten the longest task. #475 is re-aimed at the React side by Alfonso, 2026-11-04.
 **Priority**: medium
 **Found in**: P-2026-11-03-2332
+
+## 2026-11-04 — fix(jjtl): nested missing class is an error; hidden tab does not hold the undo group (P-2026-11-04-0255)
+**Prompt**: `claude_2026-11-04_0255_prompt_jjtl_nested_hidden.md`: a nested creation of a class missing from the target metamodel is an error and nothing is written (R-JTG-17 nested case, ratified 2026-11-04); a late undo-step poll while `document.hidden` does not count as busy.
+**Files touched**: code `d52a89f99`: `frontend/src/jjtl/executor/executor.ts`, `frontend/src/components/project/nestedMaterialization.ts`, tests `language-open-points.test.ts`, `nested-creation-into-features.test.ts`, `nestedMaterialization.test.ts`; docs: `docs/decisions.md` (R-JTG-17), `frontend/src/jjtl/SPEC.md` §10, this entry and the Status line.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d52a89f99`: typecheck exit 0, 0 errors; vitest 13510 passed, 3 red at import (baseline); build exit 0. check:docs on the docs commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe on port 3295, not by hand: nested `-> columns { -> Ghost }` fails in the panel, no output model, 16 objects before and after; control run 27
+**Notes**: Red first: 4 JjTL and 2 hidden-tab tests, for the intended reason. `nested-creation-into-features.test.ts` pinned the old warning and now asserts the error. Mutation bench 5/5 killed (`~/.jjodel-lanes/P-2026-11-04-0255/bench.txt`). Class2Relational and parity fixtures unchanged, no assertion edited.
+**Prompt document name**: 2026-11-04 02:55
+
+## 2026-11-04 — merge: jjtl-nested-hidden into alfonso-frontend-jjtl (P-2026-11-04-0312)
+**Prompt**: `claude_2026-11-04_0312_prompt_merge_jjtl-nested-hidden.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-nested-hidden` at `93e82ab1e` into `alfonso-frontend-jjtl`, merge base `8411cfae5`, 3 commits on the branch side.
+**Files touched**: merge `efe1d320b`: 9 files from the branch side (`docs/decisions.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_0255_prompt_jjtl_nested_hidden.md`, `frontend/src/components/project/__tests__/nestedMaterialization.test.ts`, `frontend/src/components/project/nestedMaterialization.ts`, `frontend/src/jjtl/SPEC.md`, `frontend/src/jjtl/executor/__tests__/language-open-points.test.ts`, `frontend/src/jjtl/executor/__tests__/nested-creation-into-features.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `efe1d320b` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13575 tests in 511 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on efe1d320b; unit tests, mutation bench and an app probe on the branch; no hand run and no visual check
+**Notes**: Rollback tag `pre-jjtl-nested-hidden` on `1f58fece6` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0312/result.json`.
+**Prompt document name**: 2026-11-04 03:12
+
+## 2026-11-04 — docs: discovery, JjTL canvas render routes A and B (P-2026-11-04-0256, P-2026-11-04-0400)
+**Prompt**: P-2026-11-04-0256, read-only discovery of the React rendering of a large output canvas (#475, #547), route A (skip the forced initial render) against route B (cheaper per-node selectors) on b10_8 and b11_9; stopped at the context ceiling, closed by P-2026-11-04-0400 (handoff items: §4 caller sentence, Status lines, check:docs, commit).
+**Files touched**: `docs/discovery/discovery_2026-11-04_jjtl_canvas_render.md` (new), this inbox, the `Status:` lines of both prompts.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Partial only because 0256 hit the context ceiling (RC-51) before its commit; the discovery itself is complete. No source change; throwaway patches in `~/.jjodel-lanes/P-2026-11-04-0256/probe/`, each reverted. Route A: b10_8 longest 4,248 -> 1,571 ms, breaks edges to unmeasured nodes and fitView. Route B: mount -25%/-33%, cull unchanged. Side finding: ELK auto-layout of 117 s in 1 of 9 runs. Open questions in report §8.
+**Prompt document name**: 2026-11-04 02:56
+
+## 2026-11-04 — merge: jjtl-canvas-render into alfonso-frontend-jjtl (P-2026-11-04-0404)
+**Prompt**: `claude_2026-11-04_0404_prompt_merge_jjtl-canvas-render.md`, a direct merge by `lane-run merge --direct`, no session: `jjtl-canvas-render` at `495fd97d2` into `alfonso-frontend-jjtl`, merge base `8411cfae5`, 3 commits on the branch side.
+**Files touched**: merge `158f7eb76`: 4 files from the branch side (`docs/discovery/discovery_2026-11-04_jjtl_canvas_render.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_0256_prompt_jjtl_canvas_render_discovery.md`, `docs/prompts/claude_2026-11-04_0400_prompt_jjtl_canvas_render_close.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `158f7eb76` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13575 tests in 511 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs only, gates green, no hand run
+**Notes**: Rollback tag `pre-jjtl-canvas-render` on `94a196964` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0404/result.json`.
+**Prompt document name**: 2026-11-04 04:04

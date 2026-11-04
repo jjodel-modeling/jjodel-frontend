@@ -1568,6 +1568,32 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Notes**: Blocked only by the flaky timing test (#205), resolved with the evidence above (`resolved.txt`); the bound is replaced by an operation count in a lane of its own. Rollback tag `pre-textual-b-navigation` on `65056eb51` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0250/result.json`.
 **Prompt document name**: 2026-11-04 02:50
 
+## 2026-11-04 — test(codegen): linearity of name resolution counted, not timed, #205 (P-2026-11-04-0302)
+**Prompt**: `claude_2026-11-04_0302_prompt_textual_fix_205.md`: replace the wall-clock ratio of `tolerant.test.ts` (viii), 13.3 to 14.2 against 12 under load, with a load-independent count of the printer's name lookups (at most c·n, below the quadratic figure), a one-second time guard kept; the same for the parser's test (v); red first on the old quadratic code. Closes #205.
+**Files touched**: `43057efc5`: `frontend/src/codegen/textual/printer.ts` (test-only `printerNameLookups`), `frontend/src/codegen/textual/parser.ts` (test-only `parserNameLookups`), `frontend/src/codegen/textual/__tests__/tolerant.test.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-03 22:20
+**Causa**: (g)
+**Regressions**: no. Gates on the tree of `43057efc5`: `npx tsc --noEmit` exit 0; textual suite 12 files, 428 tests green; full vitest 13568 passed, 3 files red at import (baseline); `npm run build` exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Count: objects examined per reference (by name; parser also a path's head). Linear: printer 267 at 1,001, 1,600 at 6,001; parser 3,200 at 12,001. c is the first count per object plus 1% (n counts the library root, the references do not). Red first: the scans of `c79d05b4c~` and `231113e79` put back with the same counter, then restored: printer 9,601,600 vs bound 1,618,290, parser 38,403,200 vs 6,460,498. Not guarded: the printer's contained-list copy. 50 ms budget tests kept.
+**Prompt document name**: 2026-11-04 03:02
+
+## 2026-11-04 — merge: textual-fix-205 into alfonso-frontend-jjtl (P-2026-11-04-0328)
+**Prompt**: `claude_2026-11-04_0328_prompt_merge_textual-fix-205.md`, a direct merge by `lane-run merge --direct`, no session: `textual-fix-205` at `91f61f7d7` into `alfonso-frontend-jjtl`, merge base `1f58fece6`, 3 commits on the branch side.
+**Files touched**: merge `7953ec4f8`: 5 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-04_0302_prompt_textual_fix_205.md`, `frontend/src/codegen/textual/__tests__/tolerant.test.ts`, `frontend/src/codegen/textual/parser.ts`, `frontend/src/codegen/textual/printer.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `7953ec4f8` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13575 tests in 511 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: merge of textual-fix-205, gates green on the merge; a test change, nothing on screen
+**Notes**: Rollback tag `pre-textual-fix-205` on `a5dee44d4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0328/result.json`.
+**Prompt document name**: 2026-11-04 03:28
+
 ## 2026-11-04 — discovery(codegen): textual step C, expression notation, T4b form, T5 styles (P-2026-11-04-0303, P-2026-11-04-0330)
 **Prompt**: `claude_2026-11-04_0303_prompt_textual_c_discovery.md` (probe run, stopped at the context soft ceiling) continued by `claude_2026-11-04_0330_prompt_textual_c_report.md` from its handoff: write the step C report, one design per part, lanes, decisions.
 **Files touched**: `docs/discovery/harness/probe_2026-11-04_textual_c_notation.test.ts` and `.out.txt` (`d5e38cb8b`); `docs/discovery/discovery_2026-11-04_textual_step_c.md` (`8906621a1`); Status of the two prompts and this entry.

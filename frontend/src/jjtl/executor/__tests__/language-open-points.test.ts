@@ -67,6 +67,33 @@ describe('a rule whose target class is not in the target metamodel', () => {
     });
 });
 
+describe('a nested creation whose class is not in the target metamodel', () => {
+    // R-JTG-17, nested case (ratified by Alfonso 2026-11-04, P-2026-11-04-0255).
+    const target = { classes: [cls('B', ['name'], [contains('items', 'Item')]), cls('Item', ['name'])] };
+
+    it.each(PATHS)('in a feature is an error naming the class and the feature, and nothing is written — %s', async (_l, withSource) => {
+        const text = HEAD + 'A -> B {\n    name := name\n    -> items {\n        -> Ghost {\n'
+            + '            name := name\n        }\n    }\n}';
+        const result = await execute(parse(text, withSource), [el('a0', 'A')], target);
+        expect(result.success).toBe(false);
+        expect(result.targetModel).toBeUndefined();
+        expect(result.errors).toEqual([
+            "Target class 'Ghost' not found in target metamodel (object creation in B.items). Nothing is written.",
+        ]);
+    });
+
+    it.each(PATHS)('in a forall is an error naming the class, and nothing is written — %s', async (_l, withSource) => {
+        const text = HEAD + 'A -> B {\n    -> items {\n        forall x in xs -> Ghost {\n'
+            + '            name := name\n        }\n    }\n}';
+        const result = await execute(parse(text, withSource), [el('a0', 'A', { xs: [{ name: 'i1' }] })], target);
+        expect(result.success).toBe(false);
+        expect(result.targetModel).toBeUndefined();
+        expect(result.errors).toEqual([
+            "Target class 'Ghost' not found in target metamodel (forall in B). Nothing is written.",
+        ]);
+    });
+});
+
 describe('multiplicity [*]', () => {
     it.each(PATHS)('warns once per rule that the count is not settled, and still creates one per source — %s', async (_l, withSource) => {
         const target = { classes: [cls('B', ['name'])] };

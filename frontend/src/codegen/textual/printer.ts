@@ -187,6 +187,12 @@ const isSet = (v: unknown): boolean => v != null && !(Array.isArray(v) && v.leng
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
 
 /**
+ * Test-only (#205): the objects the name resolution of `printTextModel` examines, summed over every reference it
+ * prints. A load-independent measure of its growth; nothing in the printer reads it.
+ */
+export const printerNameLookups = { count: 0 };
+
+/**
  * Prints the objects of a model. The roots are the objects no other object contains, in the order given; a
  * reference or containment slot names its targets by id. A containment of an id that names no object is skipped; a
  * reference to one prints `@` and the id as a string (R-TXT-32), as does an `OuterRef` the parser read.
@@ -288,7 +294,9 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     // R-TXT-4: the target's name when it is unique among the instances of the reference's type, else its path.
     const ref = (n: Extract<GrammarNode, { t: 'xref' }>, t: TextObject): string => {
         const nm = nameOf(t);
-        if (typeof nm === 'string' && (byName.get(nm) ?? []).filter(x => n.targets.includes(x.cls)).length === 1) return name(nm);
+        const candidates = typeof nm === 'string' ? byName.get(nm) ?? [] : [];
+        printerNameLookups.count += candidates.length;
+        if (typeof nm === 'string' && candidates.filter(x => n.targets.includes(x.cls)).length === 1) return name(nm);
         return path(t);
     };
 

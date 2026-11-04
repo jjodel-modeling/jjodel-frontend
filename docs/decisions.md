@@ -7189,6 +7189,30 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   and if it does not, the chat reports it with a proposal instead of working around it. Go to definition and find
   references also work through Monaco's shortcuts and context menu. (4) With a broken root, recovered objects sit under
   the `Unknown container` node (R-TXT-36). The order of the plan and the running lanes are unchanged.
+- **R-TXT-40** (2026-11-04, Alfonso 06:52). **Step C, the additions of the
+  report docs/discovery/discovery_2026-11-04_textual_step_c.md taken as recommended.** (D2) The indentation style ships only
+  with a deletion guard in the Text tab (an edit whose plan deletes objects past the last edited line, or more than one object
+  at once, asks before it applies), and last. (D4) A newline inside a string under a doubling style prints as Pascal's
+  `'line1'#10'line2'` and is read back by the lexer. (D5) Lane order C1a, C1b, C1c, C1d, C3a, C2, C3b, each at five files
+  or fewer; C3a may run before C1 since it shares no file with it. (D6) The annotations form (T4b) is a third mode
+  «Syntax» of the Text tab. The style picker is an optional `style` in the syntax annotations, absent meaning C-like, and a
+  switch changes the record only, never the model. Awaiting Alfonso: D1 (n-ary operators as flat chains, amends R-TXT-16
+  (3)) and D3 (optional name in a one-line head, amends R-TXT-27 (2)); lanes C1a..C1d wait for them.
+- **R-TXT-41** (2026-11-04, Alfonso 06:52, «ok alle raccomandazioni»). **Amends R-TXT-16 (3) and R-TXT-27 (2); answers D1 and D3 of
+  docs/discovery/discovery_2026-11-04_textual_step_c.md.** Measured on the 312 SyncRTL expressions of the Briefs. (D1) An
+  operator class prints as one flat chain with one symbol (binary or prefix); a nested operator of the same class goes in
+  parentheses; with 0 or 1 operand the call form is used, so `Conj(st, Disj(is_sw))` reads `st & or(is_sw)` and the single
+  Disj survives the round trip. (D3) A one-line head may carry an optional name when the grammar check shows that what
+  follows the name cannot be mistaken for it (the LL(1) condition), for every metamodel whose `name` is `[0..1]`; the
+  prototype's metamodel is not changed. R-TXT-40 is ratified with this answer.
+- **R-TXT-42** (2026-11-04, Alfonso 06:52). **Amends R-TXT-39 (3) on the hover card.** Monaco's own hover cannot stay open
+  through its public API (measured by P-2026-11-04-0005: `_sticky = false` in the source). The hover keeps the command links
+  («Go to definition», one per line that uses the reference); a card that stays open opens by an explicit action (a link
+  in the hover or a shortcut) as a Monaco content widget with the tab's own close rules (×, Escape, a click on the text, an
+  edit, its line out of view). Not a forcing of Monaco; implemented in step D.
+- **R-TXT-43** (2026-11-04, Alfonso 06:52). **Extends R-TXT-37.** An application whose effect is the deletion of every object
+  of the model asks for confirmation instead of applying on the pause, as commenting whole objects out does (#204: select
+  all, delete, a pause over 800 ms applied the empty text; a later paste recreated the objects under new ids). Step D.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
@@ -7292,10 +7316,12 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
   `unique` keeps R-JTG-6's fresh target per call. Evidence: the tests of P-2026-11-03-2111.
 - **R-JTG-17** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a
   rule whose target class is not in the target metamodel is an error before the run writes anything: nothing is
-  written. Provisional, unattended, not ratified (P-2026-11-04-0015): the error names the rule and the class, as an
-  abstract target's does, and a nested creation of an unknown class stays a warning.
-  Evidence: `language-open-points.test.ts` and the app probe of P-2026-11-04-0015 (no output model, 16 objects before
-  and after; the control run writes 27).
+  written. Nested case, ratified by Alfonso 2026-11-04 (P-2026-11-04-0255): a nested creation of a class the target
+  metamodel lacks, in a feature or in a forall, is the same error, naming the class and where it is created
+  (`object creation in Table.columns`, `forall in B`); it was a warning. Provisional, unattended, not ratified
+  (P-2026-11-04-0015): the error names the rule and the class, as an abstract target's does.
+  Evidence: `language-open-points.test.ts`, `nested-creation-into-features.test.ts`, the app probes of
+  P-2026-11-04-0015 and P-2026-11-04-0255 (no output model, 16 objects before and after; the control run writes 27).
 - **R-JTG-18** (2026-11-04, ratified by Alfonso 2026-11-03, evidence: measured, verified: agent, reversible: trunk): a
   `lazy` rule is exempt from R-JTG-3 when its class also has a matched rule: it never matches in pass 1, so it does
   not compete there. The executor's rejection of a class with both no longer holds. How a binding that reaches a node
