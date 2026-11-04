@@ -54,8 +54,8 @@ export const BOOL_CLIKE: SyntaxAnnotations = {
     classes: {
         ...PRIMARIES.classes,
         C_Imp: { operator: { symbol: '->', precedence: 1, assoc: 'right' } },
-        C_Or: { operator: { symbol: '|', precedence: 2 } },
-        C_And: { operator: { symbol: '&', precedence: 3 } },
+        C_Or: { operator: { symbol: '|', precedence: 2, call: 'or' } },
+        C_And: { operator: { symbol: '&', precedence: 3, call: 'and' } },
         C_Not: { operator: { symbol: '!', precedence: 4 } },
     },
 };

@@ -8,7 +8,7 @@
  * derivation refuses (an annotation that would make the grammar ambiguous, R-TXT-21 (4), R-TXT-27) is reported there.
  */
 
-import type { TextMetamodel } from './metamodel';
+import type { TextFeature, TextMetamodel } from './metamodel';
 import { classFeatures, isNameFeature } from './metamodel';
 import { isStyleBase } from './style';
 import type { LetterCase, NotationStyle, StyleBase } from './style';
@@ -17,7 +17,12 @@ export interface OperatorAnnotation {
     readonly symbol: string;
     readonly precedence: number;
     readonly assoc?: 'left' | 'right';
+    /** The word of the call form `w(a, b, ...)` of an n-ary operator; by default the class keyword (step C lane C1a). */
+    readonly call?: string;
 }
+
+/** `nary`: one many-valued containment. `binary`: two single-valued ones, left and right in declaration order. `prefix`: one single-valued one. */
+export type OperatorFixity = 'nary' | 'binary' | 'prefix';
 
 export interface ClassAnnotation {
     /** The class keyword; `''` makes the class positional (no keyword). */
@@ -26,7 +31,7 @@ export interface ClassAnnotation {
     readonly layout?: 'block' | 'line';
     /** `keyword`: the name moves after the features, behind this keyword. `default`: a pattern over the attributes (`{kind}(_{requester})?`), the name omitted when it equals it. */
     readonly name?: { readonly keyword?: string; readonly default?: string };
-    /** Stored and validated, not applied yet. */
+    /** The class as an operator of the expressions of the types it stands for; its fixity is read off its features (operatorFixity). */
     readonly operator?: OperatorAnnotation;
 }
 
@@ -112,12 +117,24 @@ export interface ResolvedAnnotations {
     readonly enums: Readonly<Record<string, { readonly subsets: readonly EnumSubset[] }>>;
     /** The classes whose name attribute (own or inherited) is mandatory (R-TXT-27). */
     readonly mandatoryName: ReadonlySet<string>;
+    /** The features (`Owner.f`) whose lower bound is at least 1. */
+    readonly mandatory?: ReadonlySet<string>;
     readonly issues: readonly AnnotationIssue[];
 }
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const isKeyword = (v: unknown): v is string => typeof v === 'string' && (v === '' || IDENTIFIER.test(v));
 const isCase = (v: unknown): v is LetterCase => v === 'declared' || v === 'lower';
+/** An operator symbol: a word, or a run of characters that are neither word characters nor spaces. */
+const isSymbol = (v: string): boolean => IDENTIFIER.test(v) || /^[^\w\s]+$/.test(v);
+
+/** The fixity of a class as an operator, from all its features (inherited included); undefined when they are not an operator's shape. */
+export function operatorFixity(features: readonly TextFeature[]): { readonly fixity: OperatorFixity; readonly operands: readonly string[] } | undefined {
+    if (!features.length || features.some(f => f.kind !== 'containment')) return undefined;
+    if (features.length === 1) return { fixity: features[0].many ? 'nary' : 'prefix', operands: [features[0].name] };
+    if (features.length === 2 && features.every(f => !f.many)) return { fixity: 'binary', operands: features.map(f => f.name) };
+    return undefined;
+}
 
 /** Parses a name pattern; a string is the reason it is malformed. Segments do not nest. */
 export function parseNamePattern(text: string): NamePattern | string {
@@ -196,7 +213,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         const n = classFeatures(mm, c).find(isNameFeature);
         return n && mandatory.has(`${n.owner}.${n.name}`) ? [c.name] : [];
     }));
-    const empty: ResolvedAnnotations = { style, classes, features, enums, mandatoryName, issues };
+    const empty: ResolvedAnnotations = { style, classes, features, enums, mandatoryName, mandatory, issues };
 
     if (!record || record.v !== 1) {
         error('annotations', `unknown version ${JSON.stringify(record?.v)}: nothing applied`);
@@ -255,11 +272,12 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         if (a.operator !== undefined) {
             const o = a.operator;
             if (typeof o?.symbol !== 'string' || !o.symbol.trim()) error(where, 'the operator has no symbol');
+            else if (!isSymbol(o.symbol)) error(where, `the operator symbol ${JSON.stringify(o.symbol)} is neither an identifier nor a run of symbol characters`);
+            else if (o.call !== undefined && (typeof o.call !== 'string' || !IDENTIFIER.test(o.call))) error(where, `the call word ${JSON.stringify(o.call)} is not an identifier`);
             else if (!Number.isInteger(o.precedence)) error(where, `the operator's precedence ${JSON.stringify(o.precedence)} is not an integer`);
             else if (o.assoc !== undefined && o.assoc !== 'left' && o.assoc !== 'right') error(where, `the operator's associativity ${JSON.stringify(o.assoc)} is not left or right`);
             else {
-                out.operator = { symbol: o.symbol, precedence: o.precedence, ...(o.assoc ? { assoc: o.assoc } : {}) };
-                issues.push({ level: 'notice', where, message: `the operator "${o.symbol}" is stored, not applied yet` });
+                out.operator = { symbol: o.symbol, precedence: o.precedence, ...(o.assoc ? { assoc: o.assoc } : {}), ...(o.call !== undefined ? { call: o.call } : {}) };
             }
         }
         classes[cls] = out;
@@ -290,7 +308,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         else enums[e] = { subsets: a.subsets.map(x => ({ name: x.name, literals: [...x.literals] })) };
     }
 
-    return { ...(language !== undefined ? { language } : {}), style, ...(roots !== undefined ? { roots } : {}), classes, features, enums, mandatoryName, issues };
+    return { ...(language !== undefined ? { language } : {}), style, ...(roots !== undefined ? { roots } : {}), classes, features, enums, mandatoryName, mandatory, issues };
 }
 
 /** The style with the record's style options applied; the base is not an option, it chose `style` (syntaxRecord.ts). */

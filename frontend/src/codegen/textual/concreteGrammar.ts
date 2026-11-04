@@ -5,8 +5,8 @@
  * object, and the parser of step T2 is to interpret the same data.
  */
 
-import type { AnnotationIssue, NamePattern, ResolvedAnnotations, ResolvedFeature } from './annotations';
-import { expandNamePattern, patternHoles } from './annotations';
+import type { AnnotationIssue, NamePattern, OperatorFixity, ResolvedAnnotations, ResolvedFeature } from './annotations';
+import { expandNamePattern, operatorFixity, patternHoles } from './annotations';
 import type { BaseGrammar, BaseRule, BaseValue } from './baseGrammar';
 import type { TextFeature } from './metamodel';
 import type { LetterCase, NotationStyle } from './style';
@@ -22,6 +22,18 @@ export type AssignOp = '=' | '+=' | '?=';
 export interface GroupFilter {
     readonly attr: string;
     readonly literals: readonly string[];
+}
+
+/** An operator of an expression (step C lane C1a): its class, its symbol and the features its operands go to. */
+export interface ExprOperator {
+    readonly cls: string;
+    readonly symbol: string;
+    readonly precedence: number;
+    readonly assoc: 'left' | 'right';
+    readonly fixity: OperatorFixity;
+    readonly operands: readonly string[];
+    /** The word of the call form, n-ary operators only. */
+    readonly call?: string;
 }
 
 export type GrammarNode =
@@ -219,6 +231,30 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
         if (cls !== undefined) return [cls];
         return (choiceRules.find(c => c.name === baseName)?.alts ?? []).flatMap(a => clsOfObjectRule.get(a) ?? []);
     };
+
+    // Step C lane C1a: the operator classes, their fixity read off their features; one that cannot stand in an expression is refused.
+    const operators = new Map<string, ExprOperator>();
+    for (const [cls, a] of Object.entries(A?.classes ?? {})) {
+        const op = a.operator;
+        if (!op) continue;
+        const where = `class ${cls}`;
+        const r = objectRules.find(o => o.cls === cls);
+        if (!r) { refuse(where, `${cls} is abstract: an operator goes on its concrete classes; not applied`); continue; }
+        const fx = operatorFixity(r.features.map(f => f.feature));
+        if (!fx) {
+            refuse(where, `the operator "${op.symbol}" is not applied: ${cls} has not the shape of an operator (its only features one many-valued containment, two single-valued ones, or one single-valued one)`);
+            continue;
+        }
+        const bad = r.features.find(f => f.value.t === 'block' && !classesOfRule(f.value.rule).includes(cls));
+        if (bad) {
+            refuse(where, `the operator "${op.symbol}" is not applied: its operand ${featureKey(bad.feature)} holds a ${bad.feature.type}, not a ${cls}`);
+            continue;
+        }
+        let call: string | undefined;
+        if (fx.fixity === 'nary') call = op.call ?? (shapes.get(cls)?.keyword || applyCase(cls, classCase));
+        else if (op.call !== undefined) refuse(where, `the call word "${op.call}" is not applied: a call form is for n-ary operators, and ${cls} is ${fx.fixity}`);
+        operators.set(cls, { cls, symbol: op.symbol, precedence: op.precedence, assoc: op.assoc ?? 'left', fixity: fx.fixity, operands: fx.operands, ...(call !== undefined ? { call } : {}) });
+    }
 
     const block = (items: readonly GrammarNode[]): GrammarNode => ({ t: 'block', open: style.blockOpen, close: style.blockClose, empty: style.emptyBlock, items });
     const single = (v: BaseValue, f: TextFeature): GrammarNode => {

@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
-import { expandNamePattern, parseNamePattern, resolveAnnotations, withStyleOptions } from '../annotations';
+import { expandNamePattern, operatorFixity, parseNamePattern, resolveAnnotations, withStyleOptions } from '../annotations';
 import { deriveBaseGrammar } from '../baseGrammar';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { concreteGrammarEbnf, deriveConcreteGrammar } from '../concreteGrammar';
@@ -19,7 +19,7 @@ import { printTextModel } from '../printer';
 import type { NotationStyle } from '../style';
 import { CLIKE_STYLE } from '../style';
 import { checkStyle, STYLE_RULES } from '../styleCheck';
-import { BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar } from './boolCorpus';
+import { BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar, withOperator } from './boolCorpus';
 import { grammarOf } from './corpus';
 import { parseCount } from './oracle';
 import { FIXTURE, metamodelOf } from './spec';
@@ -258,10 +258,10 @@ describe('resolveAnnotations: ids to names, tolerant', () => {
         expect(r.classes).toEqual({});
     });
 
-    it('stores a well-formed operator with a notice that it is not applied yet', () => {
+    it('an operator on a class that is no operator shape is refused, with the shape it lacks', () => {
         const record: SyntaxAnnotations = { v: 1, classes: { 'c:Instruction': { operator: { symbol: '+', precedence: 3, assoc: 'left' } } } };
         const g = annotatedGrammar(CORE_MM, record, CORE_MANDATORY);
-        expect(g.annotationIssues).toEqual([{ level: 'notice', where: 'class Instruction', message: 'the operator "+" is stored, not applied yet' }]);
+        expect(g.annotationIssues).toEqual([{ level: 'error', where: 'class Instruction', message: OPERATOR_SHAPE('+', 'Instruction') }]);
         expect(concreteGrammarEbnf(g)).toBe(concreteGrammarEbnf(deriveConcreteGrammar(deriveBaseGrammar(CORE_MM), CLIKE_STYLE)));
     });
 });
@@ -461,5 +461,62 @@ describe('BOOL, the expression corpus (step C lane C1a)', () => {
         }
         expect(boolGrammar(BOOL_PASCAL).style.id).toBe('pascal');
         expect(boolGrammar(BOOL_CLIKE).style.id).toBe('c-like');
+    });
+});
+
+const OPERATOR_SHAPE = (symbol: string, cls: string): string =>
+    `the operator "${symbol}" is not applied: ${cls} has not the shape of an operator (its only features one many-valued containment, two single-valued ones, or one single-valued one)`;
+
+describe('operators: the call word and the derived fixity (step C lane C1a)', () => {
+    const featuresOf = (cls: string) => classFeatures(BOOL_MM, BOOL_MM.classes.find(c => c.name === cls)!);
+
+    it('the fixity is read off the features: n-ary, binary in declaration order, prefix, or none', () => {
+        expect(operatorFixity(featuresOf('And'))).toEqual({ fixity: 'nary', operands: ['ops'] });
+        expect(operatorFixity(featuresOf('Imp'))).toEqual({ fixity: 'binary', operands: ['left', 'right'] });
+        expect(operatorFixity(featuresOf('Not'))).toEqual({ fixity: 'prefix', operands: ['op'] });
+        expect(operatorFixity(featuresOf('Use'))).toBeUndefined();
+        expect(operatorFixity(featuresOf('Lit'))).toBeUndefined();
+        expect(operatorFixity(featuresOf('Rule'))).toBeUndefined();
+        expect(operatorFixity([])).toBeUndefined();
+    });
+
+    it('resolves a call word and symbols of both kinds, and no longer notes the operator as stored only', () => {
+        const record = withOperator(withOperator(BOOL_CLIKE, 'C_Or', { symbol: '|', precedence: 2, call: 'or' }), 'C_And', { symbol: 'and', precedence: 3 });
+        const r = resolveAnnotations(record, BOOL_IDS, BOOL_MM);
+        expect(r.issues).toEqual([]);
+        expect(r.classes.Or.operator).toEqual({ symbol: '|', precedence: 2, call: 'or' });
+        expect(r.classes.And.operator).toEqual({ symbol: 'and', precedence: 3 });
+        expect(r.mandatory?.has('Use.atom')).toBe(true);
+        expect(r.mandatory?.has('And.ops')).toBe(false);
+    });
+
+    it('refuses a malformed symbol or call word', () => {
+        const bad = (op: unknown): string[] => resolveAnnotations(withOperator(BOOL_CLIKE, 'C_Or', op as never), BOOL_IDS, BOOL_MM).issues.map(i => `${i.level} ${i.message}`);
+        expect(bad({ symbol: 'a|', precedence: 2 })).toEqual(['error the operator symbol "a|" is neither an identifier nor a run of symbol characters']);
+        expect(bad({ symbol: '| |', precedence: 2 })).toEqual(['error the operator symbol "| |" is neither an identifier nor a run of symbol characters']);
+        expect(bad({ symbol: '|', precedence: 2, call: 'o r' })).toEqual(['error the call word "o r" is not an identifier']);
+    });
+
+    it('applies an operator only to an operator shape, and a call word only to an n-ary operator', () => {
+        expect(errorsOf(boolGrammar(BOOL_CLIKE))).toEqual([]);
+        expect(errorsOf(boolGrammar(BOOL_PASCAL))).toEqual([]);
+        expect(errorsOf(boolGrammar(withOperator(BOOL_CLIKE, 'C_Use', { symbol: '@@', precedence: 5 })))).toEqual([`class Use: ${OPERATOR_SHAPE('@@', 'Use')}`]);
+        expect(errorsOf(boolGrammar(withOperator(BOOL_CLIKE, 'C_Imp', { symbol: '->', precedence: 1, call: 'imp' })))).toEqual([
+            'class Imp: the call word "imp" is not applied: a call form is for n-ary operators, and Imp is binary',
+        ]);
+        expect(errorsOf(boolGrammar(withOperator(BOOL_CLIKE, 'C_Expr', { symbol: '?', precedence: 5 })))).toEqual([
+            'class Expr: Expr is abstract: an operator goes on its concrete classes; not applied',
+        ]);
+    });
+
+    it('refuses an operator whose operand cannot hold the operator itself', () => {
+        const mm: TextMetamodel = {
+            classes: [...BOOL_MM.classes.filter(c => c.name !== 'Not'), { name: 'Not', supers: ['Expr'], references: [{ name: 'op', type: 'Use', containment: true }] }],
+            enumerations: [],
+        };
+        const g = boolGrammar(BOOL_CLIKE, mm);
+        expect(errorsOf(g)).toEqual([
+            'class Not: the operator "!" is not applied: its operand Not.op holds a Use, not a Not',
+        ]);
     });
 });
