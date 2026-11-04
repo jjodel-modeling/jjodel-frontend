@@ -1195,3 +1195,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: gates green on 9ef2eeab5; only the log conflicted, by union; the branch's probes ran before the trunk merge and were not rerun; no hand run
 **Notes**: Conflict only in this inbox, union: trunk's 4 entries, then the branch's 2, verbatim; first 1158 lines equal the trunk's file byte for byte, last 26 the branch's. 28 decision rows and 36 headings once each, R-AI-24 none. docs/decisions.md merged clean. check:docs has 5 checks, the prompt said 4/4. Not pushed.
 **Prompt document name**: 2026-11-04 22:04
+
+## 2026-11-04 — merge: elk-open-race into alfonso-frontend-jjtl (P-2026-11-04-2230)
+**Prompt**: `claude_2026-11-04_2230_prompt_merge_elk-open-race.md`, a direct merge by `lane-run merge --direct`, no session: `elk-open-race` at `a49e829fe` into `alfonso-frontend-jjtl`, merge base `091e62bac`, 12 commits on the branch side.
+**Files touched**: merge `2fb262606`: 9 files from the branch side (`docs/discovery/lir_2026-11-04_elk_open_race.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_1444_prompt_elk_open_race.md`, `docs/prompts/claude_2026-11-04_1500_prompt_elk_open_race_cont.md`, `docs/prompts/claude_2026-11-04_1616_prompt_elk_open_race_close.md`, `docs/prompts/claude_2026-11-04_2131_prompt_elk_race_prod.md`, `docs/prompts/claude_2026-11-04_2204_prompt_elk-open-race_take_trunk.md`, `frontend/src/components/editor-v2/hooks/__tests__/useJjomSyncOpenSettle.test.ts`, and 1 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `2fb262606` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14036 tests in 525 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green; probes before the trunk merge, not rerun; no hand run
+**Notes**: Rollback tag `pre-elk-open-race` on `091e62bac` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-2230/result.json`.
+**Prompt document name**: 2026-11-04 22:30
