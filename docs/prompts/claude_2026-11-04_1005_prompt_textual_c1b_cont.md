@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1005
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: hard-stop 2026-11-04 al tetto di contesto · lane textual-c1-operators · 5e83da5cf · continuato da P-2026-11-04-1045
+Status: eseguito 2026-11-04 · lane textual-c1-operators · 5e83da5cf · chiuso da P-2026-11-04-1045
 Lane: full (parser and printer; continuation under RC-51)
 Depends: P-2026-11-04-0938 (hard-stop at the ceiling; item 1 at f83cbf2cc, item 2 half written and uncommitted, handoff in its lane folder)
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)

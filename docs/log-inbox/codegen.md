@@ -1676,3 +1676,18 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Ticket**: In the Text tab, typing ` | a` into `a & (b | c)` runs two JjScript lines: `create instance of Use "Use_1" in Or_1.ops` (success) and `set Use_1.var = a`, which fails with "Cannot resolve metaclass for instance 'Use_1'" (jjscript/executor/commands/instance.ts:1031-1039: the resolved object has no `instanceof`). The bar reads "Applied, 1 line failed", the tab keeps `a & (b | c | a)`, the model prints `a & (b | c |)`. Use has no name feature. Measured by the 1045 probe, one run.
 **Priority**: medium
 **Found in**: P-2026-11-04-1045
+
+## 2026-11-04 — feat(codegen): C1c, slot matching of expression objects, handle names, slot ordering (P-2026-11-04-1115, P-2026-11-04-1158, P-2026-11-04-1241)
+**Prompt**: `claude_2026-11-04_1241_prompt_textual_c1c_closure.md` (RC-51, continues `claude_2026-11-04_1158_prompt_textual_c1c_cont.md` and `claude_2026-11-04_1115_prompt_textual_c1c_diff.md`, both stopped at the context ceiling): the nestedDiff bench, created handles that avoid every instance name, line order around a create into a slot, slot matching of nameless expression objects; closure: mutation bench, before and after table, gates, one probe run, log entry.
+**Files touched**: `__tests__/nestedDiff.test.ts` (5bb033df0, 4ffbc1ba7, 725f30249), `textDiff.ts` (157d91a45, d43e420c4), `textMatch.ts` (4ffbc1ba7), `ui/TextualTab.tsx` (157d91a45), all under `frontend/src/codegen/textual/`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-04 10:45
+**Causa**: (c)
+**Regressions**: no. Gates on 725f30249: tsc 0; vitest 13817 passed, 2 skipped, 3 red at import (baseline, `window is not defined`); build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Typed ops of the 13 bench edits unchanged against the 1115 measurement.
+**Out-of-scope changes**: yes — `ui/TextualTab.tsx` (instanceNames for the diff), approved by the chat in the 1158 prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe on 725f30249, 7 rows ALL PASS: add, remove, reorder, operator, wrap, add first applied whole with one Undo; wrap whole refused with its reason, model untouched. Crops `c1c-0-base.png` .. `c1c-7-add-first.png`, light theme, scale 1, no banner. GO of Alfonso pending.
+**Notes**: Bench on 2b: drop equal subtrees (13 red), position pass (14), expr exclusions in step 2 (15) die; options[0] without the same-index preference survived, killed by (4b) in 725f30249 (2 red). Table `before-after.md` in the lane folder: uncertain refusals 5 to 0 pasted, 13 to 0 re-imported, every re-import plans as typed but unwrap (inner Not kept, one op fewer). 157d91a45 closes the 1045 ticket (Use_1 reused).
+**Prompt document name**: 2026-11-04 12:41
+
+**Ticket** (executor, medium, found in P-2026-11-04-1158): two gaps of the JjScript executor that the diff works around; C1c does not change the executor. (1) `applyCollectionUpdate` (jjscript/executor/commands/instance.ts:1314) reads the committed values only, so a list update right after `create ... in X.ops` drops the new object; the diff orders the lines and refuses another update of that slot until a line addresses the created object. (2) A removed single-valued value (`set r3.when -= And_3` succeeds) is not seen by a create into that slot in the same run, which still counts it full; so wrapping a whole single-valued expression (`-(a & (b | c))`) stays refused with "wrapping the value of r3.when in a new object is not applied yet" until this lands.

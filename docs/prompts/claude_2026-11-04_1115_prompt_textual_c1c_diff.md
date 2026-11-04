@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1115
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: hard-stop 2026-11-04 al tetto di contesto · lane textual-c1-operators · nessun commit (il bench entra come 5bb033df0 in P-2026-11-04-1158) · continuato da P-2026-11-04-1158
 Lane: full (write path to a model)
 Depends: P-2026-11-04-1045 (C1b closed on the branch)
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)

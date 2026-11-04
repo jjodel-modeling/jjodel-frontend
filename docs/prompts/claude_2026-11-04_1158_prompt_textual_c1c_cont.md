@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1158
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: hard-stop 2026-11-04 al tetto di contesto · lane textual-c1-operators · 5bb033df0, 157d91a45, d43e420c4, 4ffbc1ba7 · continuato da P-2026-11-04-1241
 Lane: full (write path to a model; continuation under RC-51)
 Depends: P-2026-11-04-1115 (hard-stop at the ceiling; the bench is untracked in the tree, the design and the cause are in its handoff)
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)

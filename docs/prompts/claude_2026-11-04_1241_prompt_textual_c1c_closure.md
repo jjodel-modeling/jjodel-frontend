@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1241
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane textual-c1-operators · 725f30249 · probe ALL PASS, 7 righe (crops of P-2026-11-04-1241); GO di Alfonso sulle crop in attesa
 Lane: fast (closure of C1c; code at 4ffbc1ba7)
 Depends: P-2026-11-04-1158 (hard-stop at the ceiling; handoff in its lane folder)
 Worktree: ~/jjodel-w-textc1, branch textual-c1-operators (the same tree)
