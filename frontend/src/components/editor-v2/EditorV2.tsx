@@ -4235,7 +4235,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution, modelid, ensureNodeInView]);
     autoLayoutRef.current = handleAutoLayout;
     // The toolbar's button runs the full layout; the first open and the re-layout keep autoLayoutRef's (P-2026-10-01-2215).
-    const handleToolbarAutoLayout = useCallback(() => handleAutoLayout({ full: true }), [handleAutoLayout]);
+    // A layout ELK cannot finish is reported, not thrown into the page (P-2026-11-04-1443): nothing moved.
+    const handleToolbarAutoLayout = useCallback(() => handleAutoLayout({ full: true }).catch((err: unknown) => {
+        console.warn('[EditorV2] auto layout failed:', err);
+        toast.error(err instanceof RangeError
+            ? 'Auto layout: this diagram is too large for the layout engine. Nothing was moved.'
+            : 'Auto layout failed. Nothing was moved.');
+    }), [handleAutoLayout]);
 
     // ── Re-run auto-layout once late M1 edges materialize (S4b) ──────────────
     // handleAutoLayout runs ~50ms after mount, before the async M1 reference edges reach

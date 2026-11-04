@@ -117,6 +117,10 @@ export async function computeElkLayout(
         }
     }
 
+    // Over the dummy budget the network-simplex placer overflows the stack or runs for minutes (P-2026-11-04-1443).
+    const placement = estimateLongEdgeDummies({ id: 'root', children: elkChildren, edges: elkEdges }) > NS_PLACEMENT_MAX_DUMMIES
+        ? 'BRANDES_KOEPF' : 'NETWORK_SIMPLEX';
+
     const elkGraph: ElkNode = {
         id: 'root',
         layoutOptions: {
@@ -135,7 +139,7 @@ export async function computeElkLayout(
             'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
             // Node placement: NETWORK_SIMPLEX spreads nodes more evenly
             // and produces less compact (but clearer) layouts than BRANDES_KOEPF
-            'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+            'elk.layered.nodePlacement.strategy': placement,
             // Consider model order for initial layer ordering
             'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
         },
@@ -328,6 +332,74 @@ function junctionEnds(e: Edge): { merge?: AnchorSide; decision?: AnchorSide } {
     return { merge: d.irJunctionTarget?.side, decision: d.irJunctionSource?.side };
 }
 
+/**
+ * The long-edge dummies above which a layered layout places its nodes with BRANDES_KOEPF, not NETWORK_SIMPLEX
+ * (P-2026-11-04-1443, docs/discovery/discovery_2026-11-04_elk_rangeerror.md). ELK's network-simplex placer walks its
+ * auxiliary graph, which holds every dummy, by recursion: measured in node, about 1,000 dummies took 1.5 s, 3,600 took
+ * 27 s, and 4,300 overflowed the stack (RangeError), as 200 classes in a ring with chords did in the app.
+ */
+export const NS_PLACEMENT_MAX_DUMMIES = 1000;
+
+/**
+ * An estimate of the dummy nodes ELK's layered algorithm adds to a flat `graph`: one per layer an edge crosses past
+ * the first, and one per centre label (ELK gives it a layer of its own). Cycles are broken by a depth-first search,
+ * layers assigned by longest path, then each source moved down against its nearest target. ELK breaks cycles greedily
+ * and layers by network simplex, so this is the size of its input, not its layering. Iterative: it does not recurse.
+ */
+export function estimateLongEdgeDummies(graph: ElkNode): number {
+    const index = new Map((graph.children ?? []).map((c, i) => [c.id, i] as const));
+    let count = index.size;
+    const arcs: Array<[number, number]> = [];
+    let labelDummies = 0;
+    for (const e of graph.edges ?? []) {
+        const s = index.get(e.sources[0]), t = index.get(e.targets[0]);
+        if (s === undefined || t === undefined || s === t) continue;
+        const centre = e.labels?.some(l => (l.layoutOptions?.['elk.edgeLabels.placement'] ?? 'CENTER') === 'CENTER');
+        if (centre) { const m = count++; arcs.push([s, m], [m, t]); labelDummies++; } else arcs.push([s, t]);
+    }
+    const out: number[][] = Array.from({ length: count }, () => []);
+    arcs.forEach(([s], a) => out[s].push(a));
+    // Depth-first, explicit stack: an arc to a node still on the stack closes a cycle and is turned round.
+    const state = new Uint8Array(count); // 0 unseen, 1 on the stack, 2 done
+    const reversed = new Uint8Array(arcs.length);
+    for (let root = 0; root < count; root++) {
+        if (state[root]) continue;
+        const stack: Array<[number, number]> = [[root, 0]];
+        state[root] = 1;
+        while (stack.length) {
+            const top = stack[stack.length - 1];
+            const [v, i] = top;
+            if (i === out[v].length) { state[v] = 2; stack.pop(); continue; }
+            top[1]++;
+            const a = out[v][i], w = arcs[a][1];
+            if (state[w] === 1) reversed[a] = 1;
+            else if (state[w] === 0) { state[w] = 1; stack.push([w, 0]); }
+        }
+    }
+    const dag = arcs.map(([s, t], a): [number, number] => (reversed[a] ? [t, s] : [s, t]));
+    const succ: number[][] = Array.from({ length: count }, () => []);
+    const indeg = new Array<number>(count).fill(0);
+    for (const [s, t] of dag) { succ[s].push(t); indeg[t]++; }
+    // Longest path from the sources, in topological order.
+    const layer = new Array<number>(count).fill(0);
+    const left = indeg.slice();
+    const queue: number[] = [];
+    for (let v = 0; v < count; v++) if (!left[v]) queue.push(v);
+    for (let q = 0; q < queue.length; q++) {
+        const v = queue[q];
+        for (const w of succ[v]) {
+            layer[w] = Math.max(layer[w], layer[v] + 1);
+            if (--left[w] === 0) queue.push(w);
+        }
+    }
+    for (let v = 0; v < count; v++) {
+        if (!indeg[v] && succ[v].length) layer[v] = succ[v].reduce((m, w) => Math.min(m, layer[w]), Infinity) - 1;
+    }
+    let dummies = labelDummies;
+    for (const [s, t] of dag) dummies += Math.max(0, layer[t] - layer[s] - 1);
+    return dummies;
+}
+
 /** The ELK graph of the toolbar auto-layout. Pure. */
 export function buildElkGraph(nodes: Node[], edges: Edge[], input: ElkAutoLayoutInput = {}): ElkNode {
     const profile = input.profile ?? null;
@@ -408,7 +480,10 @@ export function buildElkGraph(nodes: Node[], edges: Edge[], input: ElkAutoLayout
             'elk.padding': padding,
         };
     } else {
-        const placement = profile?.nodePlacement ?? 'NETWORK_SIMPLEX';
+        const wanted = profile?.nodePlacement ?? 'NETWORK_SIMPLEX';
+        // Over the dummy budget the network-simplex placer overflows the stack or runs for minutes (P-2026-11-04-1443).
+        const placement = wanted === 'NETWORK_SIMPLEX' && estimateLongEdgeDummies({ id: 'root', children, edges: elkEdges }) > NS_PLACEMENT_MAX_DUMMIES
+            ? 'BRANDES_KOEPF' : wanted;
         layoutOptions = {
             'elk.algorithm': 'layered',
             'elk.direction': profile?.direction ?? 'DOWN',
