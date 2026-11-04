@@ -22,6 +22,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useSelector, useStore } from 'react-redux';
 import Editor from '@monaco-editor/react';
 import type { OnMount } from '@monaco-editor/react';
@@ -30,6 +31,8 @@ import { evalContextFor } from '../../../components/editor-v2/sim/simBridge';
 import DockManager from '../../../components/abstract/DockManager';
 import { TEXTUAL_SYNTAX_KEY, textualLanguageNameOf, textualLanguageOf, textualOptionLabel } from '../../../components/editor-v2/dataManagerOption';
 import { concreteGrammarEbnf } from '../concreteGrammar';
+import { textOutline } from '../languageService';
+import type { OutlineNode } from '../languageService';
 import { classFeatures } from '../metamodel';
 import { readNewModel } from '../modelLines';
 import { isApplicableParse, parseText } from '../parser';
@@ -563,6 +566,226 @@ export function editStatusText(s: EditStatus): { readonly text: string; readonly
     }
 }
 
+/** One row of the outline as shown: a node, its depth, and whether its children show below it. */
+export interface OutlineRow {
+    readonly node: OutlineNode;
+    readonly depth: number;
+    readonly open: boolean;
+}
+
+/**
+ * The rows of the outline (step B2): the nodes in text order, the children of a collapsed node hidden. With a filter, the
+ * nodes whose label or secondary text holds it, case aside, each under its ancestors, every level open.
+ */
+export function outlineRows(nodes: readonly OutlineNode[], collapsed: ReadonlySet<string>, filter: string): OutlineRow[] {
+    const q = filter.trim().toLowerCase();
+    if (!q) {
+        const out: OutlineRow[] = [];
+        const walk = (ns: readonly OutlineNode[], depth: number): void => {
+            for (const n of ns) {
+                const open = n.children.length > 0 && !collapsed.has(n.key);
+                out.push({ node: n, depth, open });
+                if (open) walk(n.children, depth + 1);
+            }
+        };
+        walk(nodes, 0);
+        return out;
+    }
+    const hit = (n: OutlineNode): boolean => n.label.toLowerCase().includes(q) || n.detail.toLowerCase().includes(q);
+    const walk = (ns: readonly OutlineNode[], depth: number): OutlineRow[] => ns.flatMap(n => {
+        const below = walk(n.children, depth + 1);
+        return hit(n) || below.length ? [{ node: n, depth, open: below.length > 0 }, ...below] : [];
+    });
+    return walk(nodes, 0);
+}
+
+/** The outline's row height: the 8 px grid. */
+export const OUTLINE_ROW_HEIGHT = 24;
+
+/** The rows to render of `count` scrolled by `scrollTop` in `height` pixels, and `overscan` rows either side: `[first, last)`. */
+export function outlineWindow(count: number, scrollTop: number, height: number, overscan = 8): { readonly first: number; readonly last: number } {
+    const first = Math.max(0, Math.floor(scrollTop / OUTLINE_ROW_HEIGHT) - overscan);
+    const last = Math.min(count, Math.ceil((scrollTop + height) / OUTLINE_ROW_HEIGHT) + overscan);
+    return { first, last: Math.max(first, last) };
+}
+
+/** Where the outline's open state of a tab is kept. */
+const outlineKey = (tabId: string): string => `jjodel.textual.outline.${tabId}`;
+
+/** The outline's open state of the tab `tabId`, open when never set. */
+export function outlineOpenOf(tabId: string): boolean {
+    try { return window.localStorage.getItem(outlineKey(tabId)) !== 'closed'; } catch { return true; }
+}
+
+function storeOutlineOpen(tabId: string, open: boolean): void {
+    try { window.localStorage.setItem(outlineKey(tabId), open ? 'open' : 'closed'); } catch { /* storage unavailable: kept for the session */ }
+}
+
+const OUTLINE_ICONS: Record<OutlineNode['kind'], string> = { object: 'bi-box', group: 'bi-collection', unknown: 'bi-question-square' };
+
+/** The pause after an edit before the outline reads the text again; the caret follows at once. */
+const OUTLINE_DELAY_MS = 150;
+
+interface TextNavigatorProps {
+    readonly editor: MonacoEditor | null;
+    readonly session: TextualSession | null;
+    readonly open: boolean;
+    readonly children: ReactNode;
+}
+
+/**
+ * The outline left of the text and the breadcrumb above it (step B2, R-TXT-39 (1), (2)). Both read the session's
+ * analysis of the current version (languageService.ts `textOutline`) and follow the caret: the node at the caret is the
+ * selected row, scrolled into view, and the breadcrumb's path. A click on a row or a segment moves the caret to the node
+ * and reveals its line. The rows are windowed by hand: only the visible ones are rendered.
+ */
+function TextNavigator({ editor, session, open, children }: TextNavigatorProps) {
+    const [version, setVersion] = useState(0);
+    const [caret, setCaret] = useState(0);
+    const [filter, setFilter] = useState('');
+    const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+    const [scroll, setScroll] = useState({ top: 0, height: 0 });
+    const listRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (!editor) return;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const offset = (): number => {
+            const m = editor.getModel();
+            const p = editor.getPosition();
+            return m && p ? m.getOffsetAt(p) : 0;
+        };
+        setCaret(offset());
+        setVersion(v => v + 1);
+        const content = editor.onDidChangeModelContent(() => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => { timer = null; setVersion(v => v + 1); }, OUTLINE_DELAY_MS);
+        });
+        const cursor = editor.onDidChangeCursorPosition(() => setCaret(offset()));
+        return () => { if (timer) clearTimeout(timer); content.dispose(); cursor.dispose(); };
+    }, [editor]);
+
+    const outline = useMemo(() => {
+        const r = session?.current();
+        return r ? textOutline(r.text, r.parsed, r.grammar) : null;
+    }, [session, version]);
+    const path = useMemo(() => outline?.pathAt(caret) ?? [], [outline, caret]);
+    const selected = path.length ? path[path.length - 1].key : null;
+
+    // Following the caret: a selected node inside a collapsed one opens its ancestors.
+    useEffect(() => {
+        if (path.length < 2 || !path.slice(0, -1).some(n => collapsed.has(n.key))) return;
+        setCollapsed(c => { const next = new Set(c); for (const n of path.slice(0, -1)) next.delete(n.key); return next; });
+    }, [selected]);
+
+    const rows = useMemo(() => (outline && open ? outlineRows(outline.nodes, collapsed, filter) : []), [outline, open, collapsed, filter]);
+
+    useEffect(() => {
+        const el = listRef.current;
+        if (!el) return;
+        const measure = (): void => setScroll({ top: el.scrollTop, height: el.clientHeight });
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [open]);
+
+    // The selected row scrolled into view.
+    useEffect(() => {
+        const el = listRef.current;
+        if (!el || selected === null) return;
+        const i = rows.findIndex(r => r.node.key === selected);
+        if (i < 0) return;
+        const top = i * OUTLINE_ROW_HEIGHT;
+        if (top < el.scrollTop) el.scrollTop = top;
+        else if (top + OUTLINE_ROW_HEIGHT > el.scrollTop + el.clientHeight) el.scrollTop = top + OUTLINE_ROW_HEIGHT - el.clientHeight;
+    }, [selected, rows]);
+
+    const pick = (n: OutlineNode): void => {
+        const m = editor?.getModel();
+        if (!editor || !m) return;
+        const p = m.getPositionAt(n.selectStart);
+        editor.setPosition(p);
+        editor.revealLineInCenterIfOutsideViewport(p.lineNumber);
+        editor.focus();
+    };
+    const toggle = (n: OutlineNode): void => setCollapsed(c => {
+        const next = new Set(c);
+        if (next.has(n.key)) next.delete(n.key); else next.add(n.key);
+        return next;
+    });
+
+    const { first, last } = outlineWindow(rows.length, scroll.top, scroll.height);
+    const filtering = filter.trim() !== '';
+
+    return (
+        <div className="textual-tab__nav">
+            {open && (
+                <aside className="textual-tab__outline" aria-label="Outline">
+                    <label className="textual-tab__outline-filter">
+                        <i className="bi bi-search" aria-hidden="true" />
+                        <input type="text" value={filter} placeholder="Filter" spellCheck={false} aria-label="Filter the outline"
+                               onChange={e => setFilter(e.target.value)}
+                               onKeyDown={e => { if (e.key === 'Escape') setFilter(''); }} />
+                    </label>
+                    <div className="textual-tab__outline-list" ref={listRef} role="tree" aria-label="Objects of the text"
+                         onScroll={e => setScroll({ top: e.currentTarget.scrollTop, height: e.currentTarget.clientHeight })}>
+                        <div style={{ height: rows.length * OUTLINE_ROW_HEIGHT, position: 'relative' }}>
+                            {rows.slice(first, last).map((r, i) => {
+                                const n = r.node;
+                                const cls = 'textual-tab__outline-row'
+                                    + (n.key === selected ? ' textual-tab__outline-row--selected' : '')
+                                    + (n.kind !== 'object' ? ' textual-tab__outline-row--group' : '')
+                                    + (n.recovered && n.kind === 'object' ? ' textual-tab__outline-row--recovered' : '');
+                                return (
+                                    <div key={n.key} className={cls} role="treeitem" aria-level={r.depth + 1} aria-selected={n.key === selected}
+                                         {...(n.children.length ? { 'aria-expanded': r.open } : {})} tabIndex={-1}
+                                         title={n.recovered && n.kind === 'object' ? 'Recovered from a broken text: shown, never applied' : n.label}
+                                         style={{ top: (first + i) * OUTLINE_ROW_HEIGHT, paddingLeft: 8 + r.depth * 12 }}
+                                         onClick={() => pick(n)}>
+                                        {n.children.length && !filtering ? (
+                                            <button type="button" className="textual-tab__outline-twisty" tabIndex={-1}
+                                                    aria-label={r.open ? 'Collapse' : 'Expand'}
+                                                    onClick={e => { e.stopPropagation(); toggle(n); }}>
+                                                <i className={`bi ${r.open ? 'bi-chevron-down' : 'bi-chevron-right'}`} aria-hidden="true" />
+                                            </button>
+                                        ) : <span className="textual-tab__outline-twisty" />}
+                                        <i className={`bi ${OUTLINE_ICONS[n.kind]} textual-tab__outline-icon`} aria-hidden="true" />
+                                        <span className="textual-tab__outline-label">{n.label}</span>
+                                        {n.detail && <span className="textual-tab__outline-detail">{n.detail}</span>}
+                                        {n.unclosed && (
+                                            <i className="bi bi-exclamation-circle textual-tab__outline-unclosed"
+                                               aria-label="Its block or an enclosing one is left open" />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {outline && rows.length === 0 && (
+                            <div className="textual-tab__outline-empty">{filtering ? 'No match' : 'No objects'}</div>
+                        )}
+                    </div>
+                </aside>
+            )}
+            <div className="textual-tab__main">
+                <nav className="textual-tab__crumbs" aria-label="Breadcrumb">
+                    {path.map((n, i) => (
+                        <span key={n.key} className="textual-tab__crumb-item">
+                            {i > 0 && <i className="bi bi-chevron-right textual-tab__crumb-sep" aria-hidden="true" />}
+                            <button type="button" className={'textual-tab__crumb' + (n.kind !== 'object' ? ' textual-tab__crumb--group' : '')}
+                                    aria-current={i === path.length - 1 ? 'location' : undefined}
+                                    title={n.detail ? `${n.label} · ${n.detail}` : n.label} onClick={() => pick(n)}>
+                                {n.label}
+                            </button>
+                        </span>
+                    ))}
+                </nav>
+                <div className="textual-tab__editor">{children}</div>
+            </div>
+        </div>
+    );
+}
+
 type TextualMode = 'text' | 'ebnf';
 
 const MODES: ReadonlyArray<{ readonly mode: TextualMode; readonly label: string; readonly icon: string; readonly title: string }> = [
@@ -654,6 +877,9 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
     const heldRef = useRef(false);
     const [ui, setUi] = useState<TextualMonacoModule | null>(null);
     useEffect(() => { void import('./textualMonaco').then(m => setUi(m)); }, []);
+    // Step B2: the outline's open state, kept per tab, and what the outline and the breadcrumb read once the editor is up.
+    const [outlineOpen, setOutlineOpen] = useState(() => outlineOpenOf(tabId));
+    const [nav, setNav] = useState<{ readonly editor: MonacoEditor; readonly session: TextualSession | null } | null>(null);
     // Step B1: the parse and analysis of the text's current version, shared by the providers and the typing pause.
     const sessionRef = useRef<TextualSession | null>(null);
     const handlers = useRef<{ read: () => void; content: (changes: readonly ContentChange[]) => void; cursor: () => void }>({ read: () => {}, content: () => {}, cursor: () => {} });
@@ -996,6 +1222,7 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
             if (m) armedRef.current = { text: m.getValue(), spans: carriedSpans(), refs: carriedRefs() };
         }, true);
         updateUndoKey();
+        setNav({ editor, session: sessionRef.current });
     };
 
     const shownStatus = editStatusText(stale && status.kind !== 'errors' ? { kind: 'stale' } : status);
@@ -1037,6 +1264,13 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                         </button>
                     </span>
                 )}
+                {mode === 'text' && model && !failed && (
+                    <button type="button" className={'textual-tab__outline-toggle' + (outlineOpen ? ' textual-tab__outline-toggle--on' : '')}
+                            aria-pressed={outlineOpen} title={outlineOpen ? 'Hide the outline' : 'Show the outline'}
+                            onClick={() => { const next = !outlineOpen; setOutlineOpen(next); storeOutlineOpen(tabId, next); }}>
+                        <i className="bi bi-layout-sidebar" aria-hidden="true" />
+                    </button>
+                )}
                 <div className="textual-tab__modes" role="group" aria-label="Shown text">
                     {MODES.map(m => (
                         <button
@@ -1073,11 +1307,13 @@ export default function TextualTab({ modelId, label, tabId }: TextualTabProps) {
                     <>
                         {/* The text stays mounted under the EBNF, so a pending edit survives the toggle. */}
                         <div className={'textual-tab__layer' + (mode === 'text' ? '' : ' textual-tab__layer--hidden')}>
-                            {read.base && ui && (
-                                <Editor width="100%" height="100%" language={ui.TEXTUAL_LANGUAGE_ID} defaultValue={view.text}
-                                        theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
-                                        onMount={onMount} options={TEXT_EDITOR_OPTIONS} />
-                            )}
+                            <TextNavigator editor={nav?.editor ?? null} session={nav?.session ?? null} open={outlineOpen}>
+                                {read.base && ui && (
+                                    <Editor width="100%" height="100%" language={ui.TEXTUAL_LANGUAGE_ID} defaultValue={view.text}
+                                            theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
+                                            onMount={onMount} options={TEXT_EDITOR_OPTIONS} />
+                                )}
+                            </TextNavigator>
                         </div>
                         {mode === 'ebnf' && ui && (
                             <div className="textual-tab__layer">

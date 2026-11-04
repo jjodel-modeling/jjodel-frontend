@@ -3,13 +3,21 @@
  * the labels of unnamed objects (rule C4'), on the non-hardware corpus of step A. The turnstile is demoESM's model.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// The tab's module imports the app at load, as in textualTab.test.ts: only its pure functions are read here.
+vi.mock('@monaco-editor/react', () => ({ default: () => null }));
+vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
+vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
+vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
+
 import { textOutline, UNKNOWN_CONTAINER } from '../languageService';
 import type { OutlineNode, TextOutline } from '../languageService';
 import type { TextObject } from '../metamodel';
 import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import { textualNotation } from '../syntaxRecord';
+import { OUTLINE_ROW_HEIGHT, outlineRows, outlineWindow } from '../ui/TextualTab';
 import { LIBRARY_IDS, LIBRARY_MM, libraryObjects, tolerantCases } from './tolerantCorpus';
 import type { TolerantCase } from './tolerantCorpus';
 
@@ -180,6 +188,30 @@ describe('breadcrumb path', () => {
     });
 });
 
+describe('outline rows and window (the Text tab\'s outline)', () => {
+    const o = outlineOf(TS_PLAIN, printOf(TS_PLAIN));
+    const show = (rows: ReturnType<typeof outlineRows>): string[] => rows.map(r => `${'  '.repeat(r.depth)}${r.node.label}`);
+
+    it('every node open by default; a collapsed node hides its children only', () => {
+        expect(outlineRows(o.nodes, new Set(), '')).toHaveLength(flat(o.nodes).length);
+        const rows = outlineRows(o.nodes, new Set([o.nodes[0].children[0].key]), '');
+        expect(show(rows).slice(0, 4)).toEqual(['Initial[0]', '  transitions', 'State[0]', '  transitions']);
+        expect(rows[1].open).toBe(false);
+    });
+
+    it('a filter keeps the matches under their ancestors, matching the secondary text too, case aside', () => {
+        expect(show(outlineRows(o.nodes, new Set(), 'STOP'))).toEqual(['Initial[0]', '  transitions', '    Transition stop', 'stop']);
+        expect(outlineRows(o.nodes, new Set(), 'event').filter(r => r.node.cls === 'Transition')).toHaveLength(4);
+        expect(outlineRows(o.nodes, new Set([o.nodes[0].key]), 'coin').map(r => r.node.label)).toContain('Transition coin');
+    });
+
+    it('the window covers the viewport and eight rows either side, within the rows', () => {
+        expect(outlineWindow(1000, 100 * OUTLINE_ROW_HEIGHT, 20 * OUTLINE_ROW_HEIGHT)).toEqual({ first: 92, last: 128 });
+        expect(outlineWindow(10, 0, 480)).toEqual({ first: 0, last: 10 });
+        expect(outlineWindow(0, 0, 0)).toEqual({ first: 0, last: 0 });
+    });
+});
+
 describe('measured', () => {
     it('1,000 objects: the outline within 10 ms (measured)', () => {
         const text = printTextModel(LIB.g, libraryObjects(833, 166)).text;
@@ -188,5 +220,9 @@ describe('measured', () => {
         let least = Infinity;
         for (let i = 0; i < 7; i++) { const s = performance.now(); textOutline(text, p, LIB.g); least = Math.min(least, performance.now() - s); }
         expect(least, `outline ${least.toFixed(1)} ms`).toBeLessThan(10);
+        const nodes = textOutline(text, p, LIB.g).nodes;
+        let rows = Infinity;
+        for (let i = 0; i < 7; i++) { const s = performance.now(); outlineRows(nodes, new Set(), 'book7'); rows = Math.min(rows, performance.now() - s); }
+        expect(rows, `rows with a filter ${rows.toFixed(1)} ms`).toBeLessThan(4);
     });
 });

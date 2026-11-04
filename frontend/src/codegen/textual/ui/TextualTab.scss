@@ -346,4 +346,244 @@
     &__confirm-row--flagged td {
         color: var(--color-warning-text);
     }
+
+    // Step B2 (P-2026-11-04-0125): the outline left of the text, its toggle in the bar, the breadcrumb above the text.
+    &__outline-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &--on,
+        &--on:hover {
+            background: var(--color-bg-active);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+    }
+
+    &__nav {
+        display: flex;
+        height: 100%;
+        min-height: 0;
+    }
+
+    &__main {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    &__editor {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+    }
+
+    &__crumbs {
+        display: flex;
+        flex: 0 0 24px;
+        align-items: center;
+        min-width: 0;
+        padding: 0 8px;
+        overflow: hidden;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-primary);
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    &__crumb-item {
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
+    }
+
+    &__crumb-sep,
+    &__crumb-sep:hover {
+        margin: 0 2px;
+        color: var(--color-text-disabled);
+        font-size: 11px;
+    }
+
+    &__crumb {
+        max-width: 200px;
+        height: 20px;
+        padding: 0 4px;
+        overflow: hidden;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-canvas-accent);
+            outline-offset: -2px;
+        }
+
+        &--group {
+            color: var(--color-text-tertiary);
+            font-style: italic;
+        }
+
+        &[aria-current='location'] {
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__outline {
+        display: flex;
+        flex: 0 0 224px;
+        flex-direction: column;
+        min-height: 0;
+        border-right: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-secondary);
+        font-size: 11px;
+
+        .bi,
+        .bi:hover {
+            font-size: 11px;
+        }
+    }
+
+    &__outline-filter {
+        display: flex;
+        flex: 0 0 32px;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        padding: 0 8px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        color: var(--color-text-tertiary);
+
+        input {
+            flex: 1;
+            min-width: 0;
+            height: 22px;
+            padding: 0 6px;
+            border: 1px solid var(--color-border-secondary);
+            border-radius: 4px;
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            font-family: inherit;
+            font-size: 11px;
+
+            &:focus-visible {
+                outline: 2px solid var(--color-canvas-accent);
+                outline-offset: -2px;
+            }
+        }
+    }
+
+    &__outline-list {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+    }
+
+    &__outline-row {
+        position: absolute;
+        right: 0;
+        left: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        padding-right: 8px;
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+        }
+
+        &--group {
+            color: var(--color-text-secondary);
+        }
+
+        &--recovered {
+            color: var(--color-text-disabled);
+        }
+
+        &--selected,
+        &--selected:hover {
+            background: var(--color-selection-bg);
+            box-shadow: inset 2px 0 0 var(--color-selection-bar);
+        }
+    }
+
+    &__outline-twisty {
+        display: inline-flex;
+        flex: 0 0 16px;
+        align-items: center;
+        justify-content: center;
+        height: 16px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+    }
+
+    &__outline-icon,
+    &__outline-icon:hover {
+        flex: 0 0 auto;
+        color: var(--color-text-tertiary);
+    }
+
+    &__outline-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__outline-detail {
+        flex: 0 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        color: var(--color-text-tertiary);
+        text-overflow: ellipsis;
+    }
+
+    &__outline-unclosed,
+    &__outline-unclosed:hover {
+        flex: 0 0 auto;
+        margin-left: auto;
+        color: var(--color-warning-text);
+    }
+
+    &__outline-empty {
+        padding: 8px;
+        color: var(--color-text-tertiary);
+    }
 }
