@@ -299,8 +299,8 @@ describe('the operators of an expression', () => {
 });
 
 // The RISC-V Briefs' SyncRTL, read-only from the prototype's folder in the PROTO environment variable (no path in the
-// repo); skipped without it. SyncRTL's Ref.name is optional, so a positional Ref stays refused (R-TXT-27) until C1d:
-// the check asserts the derived fixities and the five operator rules only.
+// repo); skipped without it. C1d: Ref.name is optional, and a positional one-line Ref keeps it under R-TXT-41 (D3),
+// printing `{}` when unset; the port line `input instr : Word(32)`.
 const PROTO = process.env.PROTO ?? '';
 
 function syncRtl(): { mm: TextMetamodel; ids: ElementIds } {
@@ -359,7 +359,19 @@ describe.skipIf(!PROTO)('the Briefs: SyncRTL with the operator table of the prob
             ['Sub', { symbol: '-', precedence: 5 }, 'binary'],
             ['Neg', { symbol: '!', precedence: 9 }, 'prefix'],
     ];
-    const record: SyntaxAnnotations = { v: 1, classes: Object.fromEntries(table.map(([cls, operator]) => [`C_${cls}`, { operator }])) };
+    // Positional Port and Ref cannot both stand at the top level: the roots are the uncontained classes.
+    const record: SyntaxAnnotations = {
+        v: 1,
+        roots: 'uncontained',
+        classes: {
+            ...Object.fromEntries(table.map(([cls, operator]) => [`C_${cls}`, { operator }])),
+            C_Ref: { keyword: '', layout: 'line' }, C_Port: { keyword: '', layout: 'line' }, C_Word: { layout: 'call' }, C_Bool: { layout: 'line' },
+        },
+        features: {
+            F_Module_inputs: { itemKeyword: 'input' }, F_Module_outputs: { itemKeyword: 'output' },
+            F_Port_type: { keyword: ':', inline: true }, F_Port_driver: { inline: true },
+        },
+    };
 
     it('derives the fixities and holds the five operator rules', () => {
         const { mm, ids } = syncRtl();
@@ -369,11 +381,13 @@ describe.skipIf(!PROTO)('the Briefs: SyncRTL with the operator table of the prob
         const g = boolGrammar(record, mm, ids);
         const expr = g.rules.find(r => r.body.t === 'expr')?.body;
         expect(expr?.t === 'expr' && expr.operators.map(o => o.cls)).toEqual(['Implies', 'Disj', 'Conj', 'Eq', 'Le', 'Add', 'Sub', 'Neg']);
+        expect((g.annotationIssues ?? []).filter(i => i.level === 'error')).toEqual([]);
+        expect(checkStyle(g).filter(f => f.level === 'error')).toEqual([]);
         const rules = new Set(STYLE_RULES.slice(-5));
         expect(checkStyle(g).filter(f => rules.has(f.rule)).map(f => [f.level, f.rule])).toEqual(STYLE_RULES.slice(-5).map(r => ['ok', r]));
     });
 
-    it('print-parse-print is byte-identical on the six models; dmem_we.driver reads on one line (C1b)', () => {
+    it('print-parse-print is byte-identical on the six models; dmem_we and its driver read on one line (C1b, C1d)', () => {
         const { mm, ids } = syncRtl();
         const g = boolGrammar(record, mm, ids);
         for (const f of SYNC_FILES) {
@@ -383,9 +397,8 @@ describe.skipIf(!PROTO)('the Briefs: SyncRTL with the operator table of the prob
             expect(printTextModel(g, r.objects).text === first, f).toBe(true);
             if (f.includes('mc_w4_r4')) {
                 const lines = first.split('\n');
-                const at = lines.findIndex(l => /\bdmem_we\b/.test(l) && /^\s*Port\b/.test(l));
-                const driver = at + lines.slice(at).findIndex(l => /^\s*driver\b/.test(l));
-                expect(lines.slice(driver, driver + 3).map(l => l.trim())).toEqual(['driver {', 'Ref st {} & or(Ref is_sw {})', '}']);
+                expect(lines.filter(l => /^\s*(input|output) dmem_we\b/.test(l)).map(l => l.trim())).toEqual(['output dmem_we origin "Core:memory port" : Bool driver st & or(is_sw)']);
+                expect(lines.filter(l => /^\s*input instr\b/.test(l)).map(l => l.trim())).toEqual(['input instr origin "Core:instruction port" : Word(32)']);
             }
         }
     });
