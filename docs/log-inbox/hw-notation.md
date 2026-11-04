@@ -1143,3 +1143,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — probe crops read, before and after, unattended
 **Notes**: Before = temp worktree at fb09b1445: 35 canvases (ring20, 7 gallery, 2 codegen, 6 probe fixtures, save_3_0_0), transform, positions, sizes, handles equal 35/35, paths within 0.00008 px; pixel diffs are run noise (after vs after as large). No demo above the budget: only the 200-class probe fixtures. Vitest 511 files green, 3 red at import. b10_8 fit not fixed, re-measure after P-2026-11-04-1500 (discovery §5). 1443 ran 4 probes in one call; toolbar catch untested.
 **Prompt document name**: 2026-11-04 15:26
+
+## 2026-11-04 — merge: elk-rangeerror into alfonso-frontend-jjtl (P-2026-11-04-1614)
+**Prompt**: `claude_2026-11-04_1614_prompt_merge_elk-rangeerror.md`, a direct merge by `lane-run merge --direct`, no session: `elk-rangeerror` at `305796ca1` into `alfonso-frontend-jjtl`, merge base `a9f0b75f7`, 5 commits on the branch side.
+**Files touched**: merge `c79e1a1ca`: 7 files from the branch side (`docs/discovery/discovery_2026-11-04_elk_rangeerror.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-04_1443_prompt_elk_rangeerror.md`, `docs/prompts/claude_2026-11-04_1526_prompt_elk_rangeerror_close.md`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/utils/__tests__/elkLayout.test.ts`, `frontend/src/components/editor-v2/utils/elkLayout.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c79e1a1ca` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 13909 tests in 517 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on c79e1a1ca; crops and layouts compared by the lane below the budget, no hand run
+**Notes**: Rollback tag `pre-elk-rangeerror` on `e38500ec9` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1614/result.json`.
+**Prompt document name**: 2026-11-04 16:14

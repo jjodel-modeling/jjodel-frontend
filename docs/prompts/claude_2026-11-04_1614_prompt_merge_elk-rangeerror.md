@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-04-1614
 Chat: C-2026-11-03-2317
 Request: https://claude.ai/code/session_01DQt9R6hbytx4vz5aAdzQ8i (merge of elk-rangeerror launched by chat C-2026-11-03-2317)
 Lane: full (merge; 1 conflict: `docs/log-inbox/hw-notation.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-04 · lane merge · c79e1a1ca · verifica visiva passata 2026-11-04 (gates green on c79e1a1ca; crops and layouts compared by the lane below the budget, no hand run)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-04-1614 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
