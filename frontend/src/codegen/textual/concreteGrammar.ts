@@ -58,7 +58,13 @@ export type GrammarNode =
     /** A delimited body; `empty` is printed instead when none of its items is present. */
     | { readonly t: 'block'; readonly open: readonly string[]; readonly close: readonly string[]; readonly empty: readonly string[]; readonly items: readonly GrammarNode[] }
     /** A line break in the printed text; no token. `blank`: an empty line before what follows, unless a body starts there. */
-    | { readonly t: 'nl'; readonly blank?: true };
+    | { readonly t: 'nl'; readonly blank?: true }
+    /**
+     * An expression over the classes of `type` (step C lane C1a), the body of the choice rule `rule`: the operators loosest
+     * first (ties in metamodel order), each with its operands of `rule`; the call forms `w(a, b)` of the n-ary ones; the
+     * rules of the other classes (the primaries); and `open rule close`.
+     */
+    | { readonly t: 'expr'; readonly type: string; readonly rule: string; readonly operators: readonly ExprOperator[]; readonly primaries: readonly GrammarNode[]; readonly open: string; readonly close: string; readonly separator: string };
 
 export type ConcreteRule =
     | { readonly t: 'model'; readonly name: 'Model'; readonly body: GrammarNode }
@@ -256,6 +262,12 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
         operators.set(cls, { cls, symbol: op.symbol, precedence: op.precedence, assoc: op.assoc ?? 'left', fixity: fx.fixity, operands: fx.operands, ...(call !== undefined ? { call } : {}) });
     }
 
+    // The classes that stand as primaries of an expression: a positional one has its mandatory single values required.
+    const primaryClasses = new Set(choiceRules.flatMap(c => {
+        const classes = c.alts.flatMap(a => clsOfObjectRule.get(a) ?? []);
+        return classes.some(k => operators.has(k)) ? classes.filter(k => !operators.has(k)) : [];
+    }));
+
     const block = (items: readonly GrammarNode[]): GrammarNode => ({ t: 'block', open: style.blockOpen, close: style.blockClose, empty: style.emptyBlock, items });
     const single = (v: BaseValue, f: TextFeature): GrammarNode => {
         switch (v.t) {
@@ -343,8 +355,9 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
         return out;
     };
 
-    /** `override`: in a derived rule of a grouping, the grouping attribute is not optional and takes the subset's literals. */
-    const feature = (f: TextFeature, v: BaseValue, line: boolean, override?: { readonly attr: TextFeature; readonly rule: string }): GrammarNode => {
+    /** `override`: in a derived rule of a grouping, the grouping attribute is not optional and takes the subset's literals.
+     *  `primary`: the class is a positional primary of an expression, where a mandatory single value is not optional (C1a). */
+    const feature = (f: TextFeature, v: BaseValue, line: boolean, override?: { readonly attr: TextFeature; readonly rule: string }, primary = false): GrammarNode => {
         const a = featAnn(f);
         const key = featureKey(f);
         const kwText = a.keyword ?? f.name;
@@ -369,7 +382,9 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
         const value: GrammarNode = v.t === 'list'
             ? { t: 'list', feat: f.name, open: style.list.open, separator: style.list.separator, close: style.list.close, item: { t: 'assign', feat: f.name, op: '+=', item: single(v.item, f) } }
             : { t: 'assign', feat: f.name, op: '=', item: single(v, f) };
-        return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...kw, ...(kw.length ? tokens(style.assign) : []), value, ...tokens(style.terminator), ...nl] } };
+        const item: GrammarNode = { t: 'seq', items: [...kw, ...(kw.length ? tokens(style.assign) : []), value, ...tokens(style.terminator), ...nl] };
+        if (primary && v.t !== 'list' && A?.mandatory?.has(key)) return item;
+        return { t: 'opt', feat: f.name, item };
     };
 
     function objectBody(r: Extract<BaseRule, { t: 'object' }>, override?: { readonly attr: TextFeature; readonly rule: string }): GrammarNode {
@@ -378,7 +393,8 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
         const derive = sh.derive ? { derive: sh.derive } : {};
         const head: GrammarNode[] = sh.keyword === '' ? [] : [{ t: 'kw', text: sh.keyword }];
         if (r.named && sh.nameKeyword === undefined) head.push(sh.nameRequired ? nameAssign : { t: 'opt', feat: 'name', ...derive, item: nameAssign });
-        const items = r.features.map(f => feature(f.feature, f.value, sh.line, override));
+        const primary = sh.keyword === '' && primaryClasses.has(r.cls);
+        const items = r.features.map(f => feature(f.feature, f.value, sh.line, override, primary));
         if (r.named && sh.nameKeyword !== undefined) {
             const tail: GrammarNode[] = sh.line ? [] : [{ t: 'nl' }];
             items.push({ t: 'opt', feat: 'name', ...derive, item: { t: 'seq', items: [{ t: 'kw', text: sh.nameKeyword }, nameAssign, ...tail] } });
@@ -388,6 +404,7 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
 
     const objects: Record<string, ObjectRule> = {};
     const rules: ConcreteRule[] = [];
+    const exprClasses = new Set<string>();
     for (const r of base.rules) {
         if (r.t === 'model') {
             let alts = r.alts;
@@ -418,7 +435,30 @@ export function deriveConcreteGrammar(base: BaseGrammar, style: NotationStyle, a
     rules.push(...derivedObjects);
     for (const name of usedChoices) {
         const c = choiceRules.find(k => k.name === name);
-        if (c) rules.push({ t: 'choice', name, body: { t: 'alt', alts: c.alts.map(a => ruleRef(a)) } });
+        if (!c) continue;
+        const ops = c.alts.flatMap(a => operators.get(clsOfObjectRule.get(a) ?? '') ?? []).sort((x, y) => x.precedence - y.precedence);
+        if (!ops.length) { rules.push({ t: 'choice', name, body: { t: 'alt', alts: c.alts.map(a => ruleRef(a)) } }); continue; }
+        const primaries = c.alts.filter(a => !operators.has(clsOfObjectRule.get(a) ?? '')).map(a => ruleRef(a));
+        ops.forEach(o => exprClasses.add(o.cls));
+        rules.push({ t: 'choice', name, body: { t: 'expr', type: c.cls, rule: name, operators: ops, primaries, open: '(', close: ')', separator: style.list.separator } });
+    }
+    // An operator's rule goes when nothing but an expression names it; it stays in `objects`, the printer's (until C1b).
+    const named = new Set<string>();
+    const collect = (n: GrammarNode): void => {
+        switch (n.t) {
+            case 'seq': n.items.forEach(collect); return;
+            case 'opt': case 'star': case 'assign': case 'list': collect(n.item); return;
+            case 'alt': n.alts.forEach(collect); return;
+            case 'block': n.items.forEach(collect); return;
+            case 'rule': named.add(n.name); return;
+            case 'expr': n.primaries.forEach(collect); return;
+            default: return;
+        }
+    };
+    for (const r of rules) if (!(r.t === 'object' && exprClasses.has(r.cls))) collect(r.body);
+    for (let i = rules.length - 1; i >= 0; i--) {
+        const r = rules[i];
+        if (r.t === 'object' && exprClasses.has(r.cls) && !named.has(r.name)) rules.splice(i, 1);
     }
     for (const e of enumRules) {
         rules.push({ t: 'enum', name: e.name, literals: e.literals, body: { t: 'alt', alts: e.literals.map(l => ({ t: 'kw', text: applyCase(l, literalCase) })) } });
@@ -480,11 +520,42 @@ function nodeText(n: GrammarNode, top = false): string {
         }
         case 'block': return [...n.open.map(quoted), ...n.items.map(x => nodeText(x)).filter(Boolean), ...n.close.map(quoted)].join(' ');
         case 'nl': return '';
+        case 'expr': {
+            const s = exprAlternatives(n).join(' | ');
+            return top ? s : `(${s})`;
+        }
     }
+}
+
+const FIXITY_TEXT: Readonly<Record<OperatorFixity, string>> = { nary: 'n-ary', binary: 'binary', prefix: 'prefix' };
+
+/** The alternatives of an expression as EBNF, each operator's with a comment on its class, fixity and precedence. */
+function exprAlternatives(n: Extract<GrammarNode, { t: 'expr' }>): string[] {
+    const R = n.rule;
+    const out: string[] = [];
+    for (const o of n.operators) {
+        const s = quoted(o.symbol);
+        const [a, b] = o.operands;
+        const text = o.fixity === 'binary' ? `${a}=${R} ${s} ${b}=${R}`
+            : o.fixity === 'nary' ? `${a}+=${R} ${s} ${a}+=${R} {${s} ${a}+=${R}}`
+                : `${s} ${a}=${R}`;
+        out.push(`${text} (* ${o.cls}, ${FIXITY_TEXT[o.fixity]}${o.fixity === 'binary' ? `, ${o.assoc}` : ''}, precedence ${o.precedence} *)`);
+    }
+    for (const o of n.operators) {
+        if (o.call === undefined) continue;
+        const a = o.operands[0];
+        out.push(`${quoted(o.call)} ${quoted(n.open)} [${a}+=${R} {${quoted(n.separator)} ${a}+=${R}}] ${quoted(n.close)} (* ${o.cls}, call form *)`);
+    }
+    out.push(...n.primaries.map(p => nodeText(p)), `${quoted(n.open)} ${R} ${quoted(n.close)}`);
+    return out;
 }
 
 /** The concrete grammar as EBNF, one rule per line, the `::=` aligned; feature assignments name the features. */
 export function concreteGrammarEbnf(g: ConcreteGrammar): string {
     const width = Math.max(...g.rules.map(r => r.name.length));
-    return g.rules.map(r => `${r.name.padEnd(width)} ::= ${nodeText(r.body, true)} ;`).join('\n');
+    return g.rules.map(r => {
+        if (r.body.t !== 'expr') return `${r.name.padEnd(width)} ::= ${nodeText(r.body, true)} ;`;
+        // An expression over several lines, one alternative per line, the bars under the `=` of `::=`.
+        return `${r.name.padEnd(width)} ::= ${exprAlternatives(r.body).join(`\n${' '.repeat(width + 3)}| `)} ;`;
+    }).join('\n');
 }

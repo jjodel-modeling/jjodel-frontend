@@ -432,6 +432,7 @@ export function firstSetsOf(g: ConcreteGrammar): (n: GrammarNode) => First {
             case 'list': r = { set: new Set([word(n.open)]), nullable: false }; break;
             case 'block': r = { set: new Set([word(n.open[0]), ...(n.empty.length ? [word(n.empty[0])] : [])]), nullable: false }; break;
             case 'nl': r = EMPTY; break;
+            case 'expr': { const fs = n.primaries.map(first); r = { set: new Set([...fs.flatMap(f => [...f.set]), word(n.open), ...n.operators.flatMap(o => [...(o.fixity === 'prefix' ? [word(o.symbol)] : []), ...(o.call !== undefined ? [word(o.call)] : [])])]), nullable: fs.some(f => f.nullable) }; break; }
         }
         memo.set(n, r);
         return r;
@@ -626,7 +627,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         const r = rules.get(name);
         if (r?.t === 'object') return r;
         if (r?.t === 'choice') {
-            const alts = r.body.t === 'alt' ? r.body.alts : [r.body];
+            const alts = r.body.t === 'alt' ? r.body.alts : r.body.t === 'expr' ? r.body.primaries : [r.body];
             const a = alts.find(can);
             if (!a) fail(describeMatchers(first(r.body).set));
             if (a?.t === 'rule') return objectRule(a.name);

@@ -520,3 +520,52 @@ describe('operators: the call word and the derived fixity (step C lane C1a)', ()
         ]);
     });
 });
+
+describe('the expression rule and its EBNF (step C lane C1a)', () => {
+    it('BOOL C-like: one alternative per operator loosest first, the call forms, the primaries, the parentheses', () => {
+        const g = boolGrammar(BOOL_CLIKE);
+        expect(concreteGrammarEbnf(g).split('\n').slice(-11)).toEqual([
+            'Use   ::= atom=REF ;',
+            'Lit   ::= value=INT ;',
+            'Expr_ ::= left=Expr_ "->" right=Expr_ (* Imp, binary, right, precedence 1 *)',
+            '        | ops+=Expr_ "|" ops+=Expr_ {"|" ops+=Expr_} (* Or, n-ary, precedence 2 *)',
+            '        | ops+=Expr_ "&" ops+=Expr_ {"&" ops+=Expr_} (* And, n-ary, precedence 3 *)',
+            '        | "!" op=Expr_ (* Not, prefix, precedence 4 *)',
+            '        | "or" "(" [ops+=Expr_ {"," ops+=Expr_}] ")" (* Or, call form *)',
+            '        | "and" "(" [ops+=Expr_ {"," ops+=Expr_}] ")" (* And, call form *)',
+            '        | Use',
+            '        | Lit',
+            '        | "(" Expr_ ")" ;',
+        ]);
+        expect(g.rules.map(r => r.name)).toEqual(['Model', 'Sheet', 'Atom', 'Rule', 'Use', 'Lit', 'Expr_']);
+        expect(Object.keys(g.objects)).toEqual(['Sheet', 'Atom', 'Rule', 'Use', 'Lit', 'Not', 'And', 'Or', 'Imp']);
+        const expr = g.rules.find(r => r.name === 'Expr_')?.body;
+        expect(expr?.t === 'expr' && expr.operators.map(o => [o.cls, o.fixity, o.call])).toEqual([
+            ['Imp', 'binary', undefined], ['Or', 'nary', 'or'], ['And', 'nary', 'and'], ['Not', 'prefix', undefined],
+        ]);
+    });
+
+    it('BOOL Pascal: word symbols, the default call words, the terminator kept after a primary (C1d)', () => {
+        const lines = concreteGrammarEbnf(boolGrammar(BOOL_PASCAL)).split('\n');
+        expect(lines.filter(l => /^(Use|Lit) /.test(l))).toEqual(['Use   ::= atom=REF ";" ;', 'Lit   ::= value=INT ";" ;']);
+        expect(lines.filter(l => l.includes('(*'))).toEqual([
+            'Expr_ ::= left=Expr_ "implies" right=Expr_ (* Imp, binary, right, precedence 1 *)',
+            '        | ops+=Expr_ "or" ops+=Expr_ {"or" ops+=Expr_} (* Or, n-ary, precedence 2 *)',
+            '        | ops+=Expr_ "and" ops+=Expr_ {"and" ops+=Expr_} (* And, n-ary, precedence 3 *)',
+            '        | "not" op=Expr_ (* Not, prefix, precedence 4 *)',
+            '        | "Or" "(" [ops+=Expr_ {"," ops+=Expr_}] ")" (* Or, call form *)',
+            '        | "And" "(" [ops+=Expr_ {"," ops+=Expr_}] ")" (* And, call form *)',
+        ]);
+    });
+
+    it('an operator class that the model or a containment names keeps its rule', () => {
+        const g = boolGrammar({ ...BOOL_CLIKE, roots: ['C_Sheet', 'C_And'] });
+        expect(g.rules.map(r => r.name)).toEqual(['Model', 'Sheet', 'Atom', 'Rule', 'Use', 'Lit', 'And', 'Expr_']);
+    });
+
+    it('without operators the choice stays a choice, and Use.atom optional', () => {
+        const g = boolGrammar({ v: 1, roots: 'uncontained' });
+        expect(g.rules.find(r => r.name === 'Expr_')?.body.t).toBe('alt');
+        expect(concreteGrammarEbnf(g)).not.toContain('(*');
+    });
+});
