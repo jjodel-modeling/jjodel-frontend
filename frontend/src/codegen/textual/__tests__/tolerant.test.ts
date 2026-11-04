@@ -5,11 +5,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { commentsOf, parseText, tokenizeText } from '../parser';
+import { commentsOf, parseText, parserNameLookups, tokenizeText } from '../parser';
 import type { ObjectNode, SyntaxElement, SyntaxNode, SyntaxToken, TextNode } from '../parser';
 import { grammarOf } from './corpus';
 import { FIXTURE, objectsOf } from './spec';
-import { printTextModel } from '../printer';
+import { printTextModel, printerNameLookups } from '../printer';
 import { libraryObjects, mutantsOf, tolerantCases } from './tolerantCorpus';
 import { nearleyGrammarOf, parseCount } from './oracle';
 import { planTextEdit } from '../textDiff';
@@ -249,13 +249,23 @@ describe('(v) linear name resolution', () => {
         expect(best(small)).toBeLessThan(50);
     });
 
-    it('six times the objects cost less than twelve times the time: the resolution is not quadratic (measured)', () => {
-        // 2,001 against 12,001 objects: quadratic, the ratio was 20 and more; linear, about 6.
-        best(mid);
-        const a = best(mid);
-        const b = best(large);
-        expect(b / a, `2,001 objects ${a.toFixed(1)} ms, 12,001 objects ${b.toFixed(1)} ms`).toBeLessThan(12);
-    }, 60_000);
+    it('six times the objects, at most six times the lookups: the resolution is not quadratic (counted, #205)', () => {
+        // The objects the resolution examines, not the time: a count the load of the machine cannot move. 2,001 against
+        // 12,001 objects: a scan per reference examines every object, a count growing as n·n; an index, the few named alike.
+        const lookups = (text: string): [number, number] => { parserNameLookups.count = 0; const r = parseText(text, LIB.g); return [r.objects.length, parserNameLookups.count]; };
+        const [n, first] = lookups(mid);
+        // c from the first count, 1% over it: n counts the one library object, the references do not (n grows 5.997 times, they 6).
+        const c = (first / n) * 1.01;
+        const s = performance.now();
+        const [N, k] = lookups(large);
+        const ms = performance.now() - s;
+        expect([n, N]).toEqual([2001, 12001]);
+        expect(c, 'no lookup counted: the counter is not wired').toBeGreaterThan(0);
+        expect(k, `${k} lookups for ${N} objects, ${c.toFixed(3)} per object at ${n}`).toBeLessThanOrEqual(c * N);
+        expect(k).toBeLessThan(c * N * (N / n));
+        // A guard against a blow-up, not a budget.
+        expect(ms).toBeLessThan(1000);
+    });
 });
 
 describe('(vi) the match of a broken parse, for display only', () => {
@@ -358,11 +368,21 @@ describe('(viii) linear name resolution in the printer (P-2026-11-03-2220)', () 
         expect(best(small)).toBeLessThan(50);
     });
 
-    it('six times the objects cost less than twelve times the time: the resolution is not quadratic (measured)', () => {
-        // 1,001 against 6,001 objects: quadratic, the ratio is about 36; linear, about 6.
-        best(small);
-        const a = best(small);
-        const b = best(large);
-        expect(b / a, `1,001 objects ${a.toFixed(1)} ms, 6,001 objects ${b.toFixed(1)} ms`).toBeLessThan(12);
-    }, 60_000);
+    it('six times the objects, at most six times the lookups: the resolution is not quadratic (counted, #205)', () => {
+        // The objects the resolution examines, not the time: a count the load of the machine cannot move. 1,001 against
+        // 6,001 objects: a scan per reference examines every object, a count growing as n·n; an index, the few named alike.
+        const lookups = (objects: ReturnType<typeof libraryObjects>): number => { printerNameLookups.count = 0; printTextModel(LIB.g, objects); return printerNameLookups.count; };
+        const [n, N] = [small.length, large.length];
+        // c from the first count, 1% over it: n counts the one library object, the references do not.
+        const c = (lookups(small) / n) * 1.01;
+        const s = performance.now();
+        const k = lookups(large);
+        const ms = performance.now() - s;
+        expect([n, N]).toEqual([1001, 6001]);
+        expect(c, 'no lookup counted: the counter is not wired').toBeGreaterThan(0);
+        expect(k, `${k} lookups for ${N} objects, ${c.toFixed(3)} per object at ${n}`).toBeLessThanOrEqual(c * N);
+        expect(k).toBeLessThan(c * N * (N / n));
+        // A guard against a blow-up, not a budget.
+        expect(ms).toBeLessThan(1000);
+    });
 });

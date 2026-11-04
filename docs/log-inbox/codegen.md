@@ -1567,3 +1567,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — crops of P-2026-11-04-0046 and P-2026-11-04-0146 checked by the chat (RC-23) and by Alfonso («Go», 02:49).
 **Notes**: Blocked only by the flaky timing test (#205), resolved with the evidence above (`resolved.txt`); the bound is replaced by an operation count in a lane of its own. Rollback tag `pre-textual-b-navigation` on `65056eb51` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-0250/result.json`.
 **Prompt document name**: 2026-11-04 02:50
+
+## 2026-11-04 — test(codegen): linearity of name resolution counted, not timed, #205 (P-2026-11-04-0302)
+**Prompt**: `claude_2026-11-04_0302_prompt_textual_fix_205.md`: replace the wall-clock ratio of `tolerant.test.ts` (viii), 13.3 to 14.2 against 12 under load, with a load-independent count of the printer's name lookups (at most c·n, below the quadratic figure), a one-second time guard kept; the same for the parser's test (v); red first on the old quadratic code. Closes #205.
+**Files touched**: `43057efc5`: `frontend/src/codegen/textual/printer.ts` (test-only `printerNameLookups`), `frontend/src/codegen/textual/parser.ts` (test-only `parserNameLookups`), `frontend/src/codegen/textual/__tests__/tolerant.test.ts`; this inbox and the prompt's Status line.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-03 22:20
+**Causa**: (g)
+**Regressions**: no. Gates on the tree of `43057efc5`: `npx tsc --noEmit` exit 0; textual suite 12 files, 428 tests green; full vitest 13568 passed, 3 files red at import (baseline); `npm run build` exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Count: objects examined per reference (by name; parser also a path's head). Linear: printer 267 at 1,001, 1,600 at 6,001; parser 3,200 at 12,001. c is the first count per object plus 1% (n counts the library root, the references do not). Red first: the scans of `c79d05b4c~` and `231113e79` put back with the same counter, then restored: printer 9,601,600 vs bound 1,618,290, parser 38,403,200 vs 6,460,498. Not guarded: the printer's contained-list copy. 50 ms budget tests kept.
+**Prompt document name**: 2026-11-04 03:02
