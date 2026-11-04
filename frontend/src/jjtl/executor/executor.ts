@@ -923,10 +923,8 @@ export class JjtlExecutor {
         };
 
         // Check class mappings
-        // `missingOnly`: a let body gets the missing-class check and not the abstract one.
-        const checkTarget = (targetClass: string, context: string, missingOnly: boolean = false) => {
+        const checkTarget = (targetClass: string, context: string) => {
             if (abstractNames.has(targetClass)) {
-                if (missingOnly) return;
                 const concrete = findConcreteSubclasses(targetClass);
                 const suggestion = concrete.length > 0
                     ? ` Use concrete subclasses: ${concrete.join(', ')}`
@@ -944,9 +942,9 @@ export class JjtlExecutor {
             }
         };
 
-        // `inLet`: a let body gets the binding check (#445) and the missing-class check
-        // (R-JTG-17, P-2026-11-04-0900); the other creation checks never ran there and are
-        // left as they were.
+        // `inLet`: a let body gets the binding check (#445) and the class checks, missing and
+        // abstract (R-JTG-17, R-JTG-22, P-2026-11-04-0900); the shape checks never ran there
+        // and are left as they were.
         let ruleLabel = '';
         const checkBody = (body: any[], parentContext: string, inLet: boolean = false) => {
             for (const item of body) {
@@ -957,7 +955,7 @@ export class JjtlExecutor {
                     this.warnUndeclaredBinding(item as AttributeMappingAST, parentContext, ruleLabel);
                 }
                 if (item.type === 'ForAllMapping' && item.objectCreation) {
-                    checkTarget(item.objectCreation.targetClass, `forall in ${parentContext}`, inLet);
+                    checkTarget(item.objectCreation.targetClass, `forall in ${parentContext}`);
                     if (item.objectCreation.body) {
                         checkBody(item.objectCreation.body, item.objectCreation.targetClass, inLet);
                     }
@@ -969,7 +967,7 @@ export class JjtlExecutor {
                     const shape = this.classifyCreation(item as AttributeMappingAST, parentContext);
                     if (inLet) {
                         if (shape.kind === 'featureCreation') {
-                            checkTarget(shape.className, `object creation in ${parentContext}.${shape.featureName}`, true);
+                            checkTarget(shape.className, `object creation in ${parentContext}.${shape.featureName}`);
                         }
                     } else switch (shape.kind) {
                         case 'featureCreation':

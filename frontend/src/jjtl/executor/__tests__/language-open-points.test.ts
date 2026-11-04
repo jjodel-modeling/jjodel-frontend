@@ -144,6 +144,48 @@ describe('a creation inside a let body whose class is not in the target metamode
     });
 });
 
+describe('a creation inside a let body of an abstract class', () => {
+    // R-JTG-22 amended (P-2026-11-04-0900, on Alfonso's delegation): an abstract class created
+    // inside a let body is the same error as an abstract rule or nested target.
+    const target = {
+        classes: [
+            cls('B', ['name'], [contains('items', 'Item')]),
+            { ...cls('Item', ['name']), isAbstract: true },
+            cls('Leaf', ['name'], [], ['Item']),
+        ],
+    };
+    const abstractError = (where: string) =>
+        `Cannot use abstract class 'Item' as transformation target in ${where}. Use concrete subclasses: B, Leaf`;
+    const cases: Array<[string, string, string]> = [
+        ['a feature creation in a rule-level let',
+            'A -> B {\n    let $n = name in {\n        -> items {\n            -> Item {\n'
+            + '                name := $n\n            }\n        }\n    }\n}',
+            'object creation in B.items'],
+        ['a forall in a feature in a rule-level let',
+            'A -> B {\n    let $n = name in {\n        -> items {\n            forall x in xs -> Item {\n'
+            + '                name := $n\n            }\n        }\n    }\n}',
+            'forall in B'],
+    ];
+    for (const [label, body, where] of cases) {
+        it.each(PATHS)(`${label} is an error naming the class, and nothing is written — %s`, async (_l, withSource) => {
+            const result = await execute(parse(HEAD + body, withSource), [el('a0', 'A', { xs: [{ name: 'i1' }] })], target);
+            expect(result.success).toBe(false);
+            expect(result.targetModel).toBeUndefined();
+            expect(result.errors).toEqual([abstractError(where)]);
+        });
+    }
+
+    it.each(PATHS)('a concrete subclass in the same let is still created — %s', async (_l, withSource) => {
+        const text = HEAD + 'A -> B {\n    let $n = name in {\n        -> items {\n            -> Leaf {\n'
+            + '                name := $n\n            }\n        }\n    }\n}';
+        const result = await execute(parse(text, withSource), [el('a0', 'A')], target);
+        expect(result.errors).toEqual([]);
+        expect(result.success).toBe(true);
+        const b = result.targetModel!.instances.get('B')![0];
+        expect(ptr(b.items).map((i: any) => [i.__type, i.name])).toEqual([['Leaf', 'a0']]);
+    });
+});
+
 describe('multiplicity with an unbounded upper bound', () => {
     // Settled 2026-11-04 (chat, on Alfonso's delegation): the bound fixes no count. `[*]`
     // creates one target per source; `[n..*]` creates n, its lower bound. No warning.
