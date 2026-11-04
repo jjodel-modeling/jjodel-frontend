@@ -3,8 +3,8 @@
  * its run. Writes its findings to .agent-logs/probe_c_notation.txt at the repo root.
  *
  * (1) Expression notation: the print of today on a boolean-expression metamodel (BOOL, added here, not to the corpus)
- *     and on the SyncRTL models of the RISC-V Briefs (read-only, from ~/Downloads/micron-proto); the operator annotation
- *     as today's resolution and check see it; a probe-local precedence-climbing printer and parser, flat and left-fold,
+ *     and on the SyncRTL models of the RISC-V Briefs (read-only, from the folder in the PROTO environment variable);
+ *     the operator annotation as today's resolution and check see it; a probe-local precedence-climbing printer and parser, flat and left-fold,
  *     for the round trip; parentheses as a tree record; the existing diff on nested expression objects in block form.
  * (2) T4b: the messages of today's checks on ambiguous annotations, and the cost of a live preview at 1,000 objects.
  * (3) T5: a Pascal/Ada style record and an indentation stand-in (a pre-pass that writes the braces an INDENT/DEDENT
@@ -12,7 +12,6 @@
  */
 import { describe, it } from 'vitest';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import { resolveAnnotations } from '../annotations';
 import { deriveBaseGrammar } from '../baseGrammar';
@@ -39,7 +38,8 @@ const flush = (): void => writeFileSync(new URL('../../../../../.agent-logs/prob
 // Metamodels
 // ---------------------------------------------------------------------------------------------------------------------
 
-const PROTO = `${homedir()}/Downloads/micron-proto`;
+/** The prototype's local folder, from the environment: the probe names no path of its own. */
+const PROTO = process.env.PROTO ?? '';
 
 /** SyncRTL from its Ecore, read-only: classes, features, lower bounds, the one enumeration. */
 function syncRtl(): { mm: TextMetamodel; ids: ElementIds } {
