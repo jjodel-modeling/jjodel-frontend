@@ -7241,6 +7241,17 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   migration of saved empty slots (D8); `set X.name = null` stays unset and reads the automatic name (D9); a clear from
   the canvas writes the empty slot (D10). The lane's file list is confirmed: LModelElement.tsx, nameUniqueness.ts,
   ConformanceValidator.ts, jjomTransformers.ts, IRFormField.tsx, TextualTab.tsx and their tests.
+- **R-TXT-47** (2026-11-05, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step C lane C2:
+  the ten recommendations of docs/discovery/discovery_2026-11-05_textual_c2_syntax_form.md, taken during Alfonso's
+  night («prosegui in autonomia», 2026-11-04 23:09), for him to ratify.** D1 the Syntax mode as designed (draft, live
+  preview, Save as one undo step, Save disabled on a `checkStyle` error, on an unchanged draft, or while the Text tab
+  holds an unapplied edit); D2 Basic shows language name and style, class keyword, block or one-line layout, feature
+  keyword and per-item keyword, the rest Advanced, a field only where it applies; D3 `{"v":1}` stays written and
+  equals no record; D4 the false «the app named» is fixed by checking the model after the run; D5 a nameless reference
+  target is labelled `: <Class>` on the default view; D6 the same on the IR chip in its own critical-zone lane, low
+  priority; D7 annotations of deleted elements do not block Save and are dropped with one notice; D8 the tab's accent
+  token `#06b6d4`; D9 the bar shows the de-duplicated `checkStyle` errors; D10 lane order C2c, C2a, C2b, then C3b, C2d
+  and C2e alongside. Visual merges of C2b, C2d and C2e wait for Alfonso's GO.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
