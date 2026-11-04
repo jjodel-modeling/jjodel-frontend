@@ -14,7 +14,7 @@
  * off an integer, so that first measurement always differs from it and reaches the canvas state, which then holds
  * a real `measured` and the node is no longer decorated.
  */
-import { Position, type Edge, type Node, type NodeHandle } from '@xyflow/react';
+import { Position, type Edge, type Node } from '@xyflow/react';
 import { MAX_HANDLES_PER_SIDE, type NodePosition, type Side } from './utils/portDistribution';
 import { computeSideEndpoints, computeSidePositions } from './utils/handlePosition';
 
@@ -26,6 +26,9 @@ export const ESTIMATED_NODE_SIZE = { width: 180.5, height: 80.5 } as const;
 
 /** Side of a pool handle, from `.mm-anchor` (8 x 8 px). */
 export const HANDLE_SIZE = 8;
+
+/** One entry of a node's `handles` array (React Flow does not export the type by name). */
+type NodeHandle = NonNullable<Node['handles']>[number];
 
 const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 const SIDE_TO_POSITION: Record<Side, Position> = { top: Position.Top, right: Position.Right, bottom: Position.Bottom, left: Position.Left };

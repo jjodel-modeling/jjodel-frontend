@@ -166,9 +166,11 @@ describe('allMeasured', () => {
 });
 
 describe('through React Flow', () => {
-    // A on screen and measured; B and C far off screen, never measured.
-    const nodes = [measured('A', 0, 0), node('B', 5000, 0), node('C', 5000, 3000)];
+    // A on screen, mounted and measured: React Flow read its handle bounds off the DOM, here the pool on its real box.
+    // B and C far off screen, never measured.
     const edges = [edge('e1', 'A', 'B', 'right-0', 'left-0'), edge('e2', 'B', 'C', 'bottom-0', 'top-0')];
+    const aHandles = synthesizeHandles('A', [edges[0]], { width: 200, height: 100 }, new Map());
+    const nodes = [{ ...measured('A', 0, 0), handles: aHandles }, node('B', 5000, 0), node('C', 5000, 3000)];
     const pane = { x: 0, y: 0, width: 1000, height: 800 };
 
     it('without the decoration, React Flow renders every never-measured node and no fit resolves (the baseline)', () => {
