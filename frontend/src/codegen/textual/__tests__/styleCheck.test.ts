@@ -11,6 +11,8 @@ import { CLIKE_STYLE, PASCAL_STYLE, STYLE_CATALOG, styleOf } from '../style';
 import type { NotationStyle } from '../style';
 import { checkStyle, STYLE_RULES } from '../styleCheck';
 import type { StyleFinding } from '../styleCheck';
+import type { SyntaxAnnotations } from '../annotations';
+import { BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar, withOperator } from './boolCorpus';
 import { generateSamples, nearleyGrammarOf, parseCount } from './oracle';
 import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, LOWER, NON_DIAMOND } from './corpus';
 import { FIXTURE, objectsOf } from './spec';
@@ -192,5 +194,94 @@ describe('nearley as the unambiguity oracle (R-TXT-21 (1))', () => {
         expect(ambiguous(grammarOf(HOMONYMS)).length).toBeGreaterThan(0);
         expect(ambiguous(grammarOf(FIXTURE, DOT_SEPARATOR)).some(t => t.includes('peers ['))).toBe(true);
         expect(parseCount(grammarOf(FIXTURE), 'Part { size one }')).toBe(0);
+    });
+});
+
+// Step C lane C1a (P-2026-11-04-0910): the conditions an expression adds, each with the BOOL variant that breaks it.
+describe('the operators of an expression', () => {
+    const findings = (record: Parameters<typeof boolGrammar>[0], mm = BOOL_MM, ids = BOOL_IDS): [string, string, string][] =>
+        checkStyle(boolGrammar(record, mm, ids)).filter(f => f.level === 'error').map(f => [f.rule, f.where, f.message]);
+    const PASCAL_NOT = withOperator(BOOL_PASCAL, 'C_Not', { symbol: 'not', precedence: 4 });
+
+    it('BOOL holds every rule in both styles', () => {
+        for (const record of [BOOL_CLIKE, BOOL_PASCAL]) {
+            expect(checkStyle(boolGrammar(record)).map(f => [f.level, f.rule])).toEqual(STYLE_RULES.map(r => ['ok', r]));
+        }
+        expect(STYLE_RULES.slice(-5)).toEqual(['operator-fixity', 'operator-symbols', 'operator-tokens', 'operator-follow', 'call-words']);
+    });
+
+    it('operator-fixity: a symbol has one fixity', () => {
+        expect(findings(withOperator(BOOL_CLIKE, 'C_Not', { symbol: '&', precedence: 4 }))).toEqual([
+            ['operator-fixity', 'class Not', 'the symbol "&" is prefix here and n-ary for And: one fixity per symbol'],
+        ]);
+    });
+
+    it('operator-symbols: two classes do not share a symbol', () => {
+        expect(findings(withOperator(BOOL_CLIKE, 'C_Or', { symbol: '&', precedence: 2, call: 'or' }))).toEqual([
+            ['operator-symbols', 'class And', 'the symbol "&" is the symbol of Or too'],
+        ]);
+    });
+
+    it('operator-tokens: a symbol is no token of the style, of the expression or of a reference, and no comment', () => {
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '{', precedence: 3 }))).toEqual([
+            ['operator-tokens', 'class And', 'the symbol "{" is the style token style.blockOpen'],
+        ]);
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '(', precedence: 3 }))).toEqual([
+            ['operator-tokens', 'class And', 'the symbol "(" is a token of the expression itself'],
+        ]);
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '.', precedence: 3 }))).toEqual([
+            ['operator-tokens', 'class And', 'the symbol "." is a token of a reference'],
+        ]);
+        expect(findings(withOperator(PASCAL_NOT, 'C_Imp', { symbol: '-', precedence: 1, assoc: 'right' }))).toEqual([
+            ['operator-tokens', 'class Imp', 'the symbol "-" is a prefix of "--": the longer token would be read'],
+        ]);
+        expect(findings(withOperator(BOOL_CLIKE, 'C_Imp', { symbol: '//>', precedence: 1, assoc: 'right' }))).toEqual([
+            ['operator-tokens', 'class Imp', 'the symbol "//>" starts with the comment opener "//"'],
+        ]);
+    });
+
+    it('operator-follow: an infix symbol does not follow an expression', () => {
+        const mm = { ...BOOL_MM, classes: BOOL_MM.classes.map(c => (c.name === 'Rule' ? { ...c, references: [{ name: 'when', type: 'Expr', containment: true, many: true }] } : c)) };
+        const record = withOperator(<SyntaxAnnotations>{ ...BOOL_CLIKE, classes: { ...BOOL_CLIKE.classes, C_Lit: { keyword: 'lit', layout: 'line' } } }, 'C_Or', { symbol: 'lit', precedence: 2 });
+        expect(findings(record, mm)).toEqual([
+            ['operator-follow', 'class Or', 'the infix symbol "lit" can also follow an expression of Expr_'],
+        ]);
+    });
+
+    it('call-words: not the keyword of another class, not a symbol, not shared', () => {
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '&', precedence: 3, call: 'Rule' }))).toEqual([
+            ['call-words', 'class And', 'the call word "Rule" is the keyword of Rule'],
+        ]);
+        expect(findings(withOperator(BOOL_PASCAL, 'C_And', { symbol: 'and', precedence: 3, call: 'or' }))).toEqual([
+            ['call-words', 'class And', 'the call word "or" is an operator symbol'],
+        ]);
+        expect(findings(withOperator(BOOL_CLIKE, 'C_And', { symbol: '&', precedence: 3, call: 'or' }))).toEqual([
+            ['annotations', 'rule Expr_', 'not LL(1): "or" can start the call form of Or and the call form of And'],
+            ['call-words', 'class And', 'the call word "or" is the call word of Or too'],
+        ]);
+    });
+
+    it('annotations: a primary that can be empty, and two starts of an expression that overlap, are not LL(1)', () => {
+        const ids = { ...BOOL_IDS, features: { ...BOOL_IDS.features, F_Use_atom: { owner: 'Use', name: 'atom', lower: 0 } } };
+        expect(findings(BOOL_CLIKE, BOOL_MM, ids)).toEqual([['annotations', 'rule Expr_', 'not LL(1): the primary Use can be empty']]);
+        const lit: SyntaxAnnotations = { ...BOOL_CLIKE, classes: { ...BOOL_CLIKE.classes, C_Lit: { keyword: 'lit', layout: 'line' } } };
+        expect(findings(withOperator(lit, 'C_Not', { symbol: 'lit', precedence: 4 }))).toEqual([
+            ['annotations', 'rule Expr_', 'not LL(1): "lit" can start Lit and the prefix operator Not'],
+        ]);
+    });
+
+    it('nearley: BOOL samples rooted at Sheet have one parse in both styles; Or sharing "&" is ambiguous', () => {
+        for (const record of [BOOL_CLIKE, BOOL_PASCAL]) {
+            const g = boolGrammar(record);
+            const n = nearleyGrammarOf(g);
+            // The last sample joins the roots' samples, and only Sheet stands at the top level.
+            const samples = generateSamples(g).slice(0, -1).filter(x => x.covered.has('Sheet') && x.covered.has('Expr_'));
+            expect(samples.length).toBeGreaterThan(0);
+            for (const x of samples) expect([x.text, parseCount(g, x.text, n)]).toEqual([x.text, 1]);
+            const covered = new Set(samples.flatMap(x => [...x.covered]));
+            for (const k of ['Expr_>Imp', 'Expr_>Or', 'Expr_>And', 'Expr_>Not', 'Expr_>Or()', 'Expr_>And()', 'Expr_>0', 'Expr_>1', 'Expr_()']) expect(covered).toContain(k);
+        }
+        const g = boolGrammar(withOperator(BOOL_CLIKE, 'C_Or', { symbol: '&', precedence: 2, call: 'or' }));
+        expect(parseCount(g, 'Sheet s { rules { Rule r { when { a & b } } } }')).toBe(2);
     });
 });
