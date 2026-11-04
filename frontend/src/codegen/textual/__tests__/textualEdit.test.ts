@@ -14,7 +14,7 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { APPLY_DELAY_MS, appliedRefs, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, onModelPrint, outerMarks, pastedRefs, pastedSpans, pathRewrites, pauseOf, planEdit, shiftOffset } from '../ui/TextualTab';
+import { agreedEvidence, APPLY_DELAY_MS, appliedRefs, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, onModelPrint, outerMarks, pastedRefs, pastedSpans, pathRewrites, pauseOf, planEdit, shiftOffset } from '../ui/TextualTab';
 import type { EditBase, TextSync } from '../ui/TextualTab';
 import { confirmRows, needsConfirmation } from '../ui/TextConfirmPanel';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
@@ -170,6 +170,14 @@ describe('what a read text does', () => {
         const { parsed, plan } = planEdit(plain, text, spans);
         expect(editDecision(text, syncOf(plain.text), parsed, plan, false)).toEqual({ kind: 'apply' });
         expect(plan.lines).toEqual(['set cosmos.year = 1981']);
+    });
+
+    it('a parse handed in is the one planned on, with the same plan (step B1; mutant: parse again regardless)', () => {
+        const { text, spans } = edited(plain, [['1980', '1981']]);
+        const given = parseText(text, plain.grammar, { keep: [] });
+        const shared = planEdit(plain, text, spans, {}, undefined, [], given);
+        expect(shared.parsed).toBe(given);
+        expect(shared.plan).toEqual(planEdit(plain, text, spans).plan);
     });
 
     it('the agreed text asks for nothing, even unparsed (mutant: a reprint read as an edit)', () => {
@@ -608,5 +616,87 @@ describe('after an application the text shows the current paths (R-TXT-35)', () 
         // The app's undo restores the model: its print is the base's again.
         expect(onModelPrint({ text: r.text, model: next.text }, base.text, r.text, false)).toBe('reprint');
         expect(onModelPrint({ text, model: next.text }, base.text, r.text, false)).toBe('keep');
+    });
+});
+
+// ---- A text equal to the agreed one again gets its spans back (P-2026-11-03-2326) -----------------------------------
+
+describe('a text equal to the agreed one again gets its spans and tokens back (P-2026-11-03-2326)', () => {
+    /** Two Members named ann: with no span a comment-only edit pairs them by order, and the panel asks. */
+    const anns = baseOf(null, objects({ m2: { name: 'ann' }, b2: { borrowedBy: null }, b4: { borrowedBy: null } }));
+    const agreed = (base: ReturnType<typeof baseOf>): TextSync => ({ text: base.text, model: base.text, spans: base.spans, refs: base.refs });
+    type Edit = readonly [at: number, removed: number, inserted: string];
+
+    /** The tab over the edits: Monaco carries the decorations, an empty one is dropped, and with `restore` a text equal to the agreed one takes its evidence back. */
+    function typed(sync: TextSync, edits: readonly Edit[], restore = true) {
+        let text = sync.text;
+        let spans: ObjectSpan[] = [...sync.spans!];
+        let refs: RefSpan[] = [...(sync.refs ?? [])];
+        for (const [at, removed, inserted] of edits) {
+            text = text.slice(0, at) + inserted + text.slice(at + removed);
+            spans = carry(spans, at, removed, inserted.length).filter(s => s.end > s.start);
+            refs = carry(refs, at, removed, inserted.length).filter(s => s.end > s.start);
+            const back = restore ? agreedEvidence(sync, text) : null;
+            if (back) { spans = [...back.spans]; refs = [...back.refs]; }
+        }
+        return { text, spans, refs };
+    }
+
+    const decide = (base: ReturnType<typeof baseOf>, sync: TextSync, t: ReturnType<typeof typed>) => {
+        const { parsed, plan } = planEdit(base, t.text, t.spans, {}, undefined, t.refs);
+        return editDecision(t.text, sync, parsed, plan, false);
+    };
+
+    it('the whole text deleted and pasted back, then a comment: no change (mutant: no restore)', () => {
+        const sync = agreed(anns);
+        const comment = anns.text.indexOf('city {') + 'city {'.length;
+        const edits: Edit[] = [[0, anns.text.length, ''], [0, 0, anns.text], [comment, 0, ' // a comment']];
+        expect(decide(anns, sync, typed(sync, edits))).toEqual({ kind: 'unchanged' });
+        expect(editStatusText({ kind: 'unchanged' }).text).toBe('No change');
+        // Without the restore the paste back carries no span: the two anns are paired by order and the panel asks.
+        const lost = typed(sync, edits, false);
+        expect(lost.spans).toEqual([]);
+        expect(decide(anns, sync, lost)).toEqual({ kind: 'confirm' });
+    });
+
+    it('a block deleted and pasted back, then a comment: no change (mutant: no restore)', () => {
+        const sync = agreed(anns);
+        const block = '    Member ann {}\n    Member ann {}\n';
+        const at = anns.text.indexOf(block);
+        expect(at).toBeGreaterThan(0);
+        const comment = anns.text.indexOf('city {') + 'city {'.length;
+        const edits: Edit[] = [[at, block.length, ''], [at, 0, block], [comment, 0, ' // a comment']];
+        expect(decide(anns, sync, typed(sync, edits))).toEqual({ kind: 'unchanged' });
+        const lost = typed(sync, edits, false);
+        expect(lost.spans.map(s => s.id)).not.toContain('m1');
+        expect(decide(anns, sync, lost)).toEqual({ kind: 'confirm' });
+    });
+
+    it('the tokens come back too: a token kept on a renamed target keeps it after a paste back (mutant: the spans restored, the tokens not)', () => {
+        // R-TXT-35's swap applied, its path rewrite held under the caret: the agreed `borrowedBy bob` names m2, now rob.
+        const plain = baseOf(null);
+        const SWAP: readonly (readonly [string, string])[] = [['Member bob', 'Member rob'], ['members {', 'members {\n    Member bob {}']];
+        const swapped = edited(plain, SWAP);
+        const { parsed, plan } = planEdit(plain, swapped.text, swapped.spans, {}, undefined, swapped.refs);
+        const fresh = { ...parsed.objects.find(o => o.id === plan.diff!.match.created[0])!, id: 'n1' };
+        const model = plain.objects.map(o => (o.id === 'm2' ? { ...o, slots: { ...o.slots, name: 'rob' } } : o.id === 'lib' ? { ...o, slots: { ...o.slots, members: ['n1', 'm1', 'm2'] } } : o));
+        const next = baseOf(null, [...model, fresh]);
+        const rematch = matchObjects({ mm: MM, grammar: plain.grammar, model: next.objects, parsed, previous: swapped.spans });
+        const sync: TextSync = {
+            text: swapped.text, model: next.text,
+            spans: appliedSpans(parsed, plan.diff!.match, rematch), refs: appliedRefs(swapped.text, plan.diff!.refs ?? [], plan.diff!.match, rematch),
+        };
+        const edits: Edit[] = [[0, swapped.text.length, ''], [0, 0, swapped.text], [swapped.text.indexOf('1980'), 4, '1981']];
+        const back = typed(sync, edits);
+        expect(planEdit(next, back.text, back.spans, {}, undefined, back.refs).plan.lines).toEqual(['set cosmos.year = 1981']);
+        const lost = typed(sync, edits, false);
+        expect(planEdit(next, lost.text, lost.spans, {}, undefined, lost.refs).plan.lines).toEqual(['set cosmos.year = 1981', 'set spqr.borrowedBy = bob']);
+    });
+
+    it('another text takes nothing back, nor does an agreement that kept none (mutant: the text not compared)', () => {
+        const sync = agreed(anns);
+        expect(agreedEvidence(sync, anns.text)).toEqual({ spans: anns.spans, refs: anns.refs });
+        expect(agreedEvidence(sync, anns.text + ' ')).toBeNull();
+        expect(agreedEvidence({ text: anns.text, model: anns.text }, anns.text)).toBeNull();
     });
 });

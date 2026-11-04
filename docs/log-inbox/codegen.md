@@ -1495,3 +1495,62 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: crops of P-2026-11-03-2152 checked before the merge (RC-23); the printer half changes nothing on screen.
 **Notes**: Blocked on check:docs by a 711-char Notes field the chat wrote for P-2026-11-03-2220; shortened in `607ec2ead`, check:docs 5/5, lane resolved (`resolved.txt`). Rollback tag `pre-textual-a-tolerant-parser` on `00e4bcea4` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-2245/result.json`.
 **Prompt document name**: 2026-11-03 22:45
+
+## 2026-11-03 — fix(codegen): a pasted-back text gets its agreed spans back (P-2026-11-03-2326)
+**Prompt**: `claude_2026-11-03_2326_prompt_textual_paste_back_spans.md`, fast lane: the defect of F7 in `discovery_2026-11-03_textual_language_service.md`. The agreement keeps its spans and reference tokens, and they are put back whenever the editor's text equals it again; red test first, mutation bench, gates, in-app keystrokes.
+**Files touched**: `frontend/src/codegen/textual/ui/TextualTab.tsx`, `frontend/src/codegen/textual/__tests__/textualEdit.test.ts` (`b57178053`); this entry and the Status line of the prompt (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc 0 errors; vitest 13479/13480, the 3 baseline files red at import, plus a timing test of the printer (`tolerant.test.ts` (viii), ratio 13.5 over 12 under full-suite load) green alone at 53/53; build exit 0; check:docs 5/5; check:codegen-lazy off and on green.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — lane probe on 3461 (demoESM): Cmd+A, Backspace, Cmd+V and the 168-to-end block, then a comment: «No change», no panel, model untouched, 5/5 each; the chat's GO pending (RC-23).
+**Notes**: Red first: 4 of 4 new cases failed on a stub that restored nothing. Bench on `agreedEvidence`: null 4 die, tokens dropped 1, text not compared 3, guard dropped 1. The wiring in the component is not reachable from the bench; the probe covers it, and its control on HEAD reproduces F7 («confirm below», two unnamed Transitions). One Undo after the comment is Monaco's own, one word. Probe, logs, crops: `~/.jjodel-lanes/P-2026-11-03-2326/`.
+**Prompt document name**: 2026-11-03 23:26
+
+**Ticket** (not filed as an entry): with the whole text deleted and a wait of more than 800 ms before the paste, the pause applies the empty text (every object deleted, «Applied») and the paste recreates the objects under new ids. Measured in run 1 of the probe (`probe-all-run1-settled.log`). The D-5 clip holds only a cut, not a select-and-delete.
+
+## 2026-11-04 — feat(codegen): Text tab language service checked in the app, step B1 closure (P-2026-11-04-0046)
+**Prompt**: `claude_2026-11-04_0046_prompt_textual_b1_closure.md`, continuation of P-2026-11-04-0020 after the context ceiling (RC-51): cyan-600 for names and references, check:docs, keystroke check in the app on demoESM and sample-Library, docs hover, crops, RISC-V Briefs read-only, log and Status flips of 2350, 0020 and 0046.
+**Files touched**: `frontend/src/codegen/textual/ui/textualMonaco.ts` (`87743a3ba`); this entry, the ticket below and the Status lines of three prompts (uncommitted, RC-17)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. tsc exit 0; vitest src/codegen/textual 402/402; build exit 0; probes on 3464 20/20 (demoESM), 19/19 (sample-Library), 9/9 (docprobe)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato by the lane (crops in ~/.jjodel-lanes/P-2026-11-04-0046/crops); the chat's GO pending
+**Notes**: Keystrokes: clicks, typing, Cmd+Alt+[ ], F12, Shift+F12, Cmd+Z, hovers. Direct: project import, openTextualTab, docprobe import, createModelFromText, insertText. Folding widens the decorations lane 10 to 26 px (contentLeft 30 to 46). The JjScript editor opened in front of the tab, not beside: colours compared under the textual theme set by call, 19/19 spans equal. Briefs: 0 errors, refs resolve, hovers answer, analysis under 1 ms.
+**Prompt document name**: 2026-11-04 00:46
+
+## 2026-11-04 — ticket: the Text tab hover clips its last characters
+**Ticket**: in the app the hover box of the Text tab is narrower than its content: `.monaco-hover` 189 px wide, scrollWidth 217, overflow hidden, so «ordered» reads «orde» (sample-Library, docprobe). The inline code spans take the global Bootstrap `code` rule (rgb(214, 51, 132), 0.875em, padding 0 4.55px). Not diagnosed (CLAUDE.md §5). Also measured, older than B1 (font since 7bd41e3cf): on a long line Monaco's offset-to-pixel point sits about 15 px right of the rendered glyph in headless Chromium.
+**Priority**: medium
+**Found in**: P-2026-11-04-0046
+**Detail**: ~/.jjodel-lanes/P-2026-11-04-0046/crops/library-4-hover-reference.png
+
+## 2026-11-04 — discovery(codegen): textual step B2, outline groups, unnamed labels, hover card (P-2026-11-04-0005, P-2026-11-04-0021)
+**Prompt**: `claude_2026-11-04_0005_prompt_textual_b2_discovery.md`, full lane, read-only: outline group nodes, a label rule for unnamed objects, how far Monaco 0.52.2 allows a hover card that stays open; stopped at the context ceiling with the measurements done. `claude_2026-11-04_0021_prompt_textual_b2_report.md`, fast lane (RC-51): the report written from the handoff, no new measurement.
+**Files touched**: `docs/discovery/discovery_2026-11-04_textual_b2_outline_hover.md`, `docs/discovery/harness/probe_2026-11-04_textual_b2_outline.test.ts`, `docs/discovery/harness/probe_2026-11-04_textual_b2_app/` (11 files) (`10133057a`); this entry and the Status lines of both prompts (closure commit).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Docs only; probes ran on a vite server on 3470 (stopped). Group node = item holding a keyword token; label rule C4' gives `Transition coin`, 0 changes on reprint over the corpus. Monaco's own hover cannot stay open (`_sticky = false` is a constant); trusted command links plus a pinned content-widget card work. Shift+F12 with one use shows nothing. R-TXT-36..39 are on trunk only. Crops in `~/.jjodel-lanes/P-2026-11-04-0005/`.
+**Prompt document name**: 2026-11-04 00:05
+## 2026-11-04 — feat(codegen): Text tab outline, breadcrumb, hover links, hover box and folding margin, step B2 (P-2026-11-04-0125, P-2026-11-04-0146)
+**Prompt**: `claude_2026-11-04_0125_prompt_textual_b2_outline.md`, full lane: outline, breadcrumb, trusted hover links, hover box, folding margin; stopped at the context ceiling after item (4). `claude_2026-11-04_0146_prompt_textual_b2_closure.md`, full lane (RC-51): items (5) and (6), gates, in-app check by keystrokes, crops.
+**Files touched**: `frontend/src/codegen/textual/languageService.ts`, `__tests__/outline.test.ts` (`fc5e898b6`); `ui/TextualTab.tsx`, `ui/TextualTab.scss` (`f7b094494`); `ui/textualMonaco.ts` (`e482a33d7`); `ui/TextualTab.scss` (`8cfd25833`); `ui/TextualTab.tsx`, `__tests__/textualTab.test.ts` (`e64b95c02`); this entry and both Status lines (uncommitted, RC-17).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato
+**Notes**: The hover clip came from skeleton.scss `.monaco-scrollable-element { left: 30px !important }`, undone inside the tab. The same rules paint text at 30 px, so the text never started later with folding; Monaco laid it at 46, chevrons hid under it and first-char clicks hit the gutter. Fix: no glyph margin, decorations 14, contentLeft 30. Gates green bar a timing test in tolerant.test.ts, red once under full-suite load, green alone. App: 24/25 PASS (the FAIL a wrong probe assertion). GO pending.
+**Prompt document name**: 2026-11-04 01:25

@@ -1,0 +1,16 @@
+MEAS  control  false
+MEAS  0 decorations (start, end)  [[0,0],[0,0],[0,346],[30,144],[111,121],[134,138],[149,272],[241,249],[262,266],[277,340],[306,317],[330,334],[347,443],[375,437],[404,414],[427,431],[444,455],[456,469],[470,483],[484,497]]
+MEAS  0 empty decorations  2
+MEAS  cut offset  168
+MEAS  1 truncated: status  "3 problems · not applied"
+MEAS  1 decorations  [[0,0],[0,168],[30,144],[111,121],[134,138],[149,168],[168,168],[168,168],[168,168],[168,168],[168,168],[168,168],[168,168],[168,168],[168,168],[168,168],[168,168],[168,168],[168,168],[168,168]]
+MEAS  2 pasted back: status  "Up to date"
+MEAS  2 text = print  true
+MEAS  2 decorations  [[0,0],[0,168],[30,144],[111,121],[134,138],[149,168],[497,497],[497,497],[497,497],[497,497],[497,497],[497,497],[497,497],[497,497],[497,497],[497,497],[497,497],[497,497],[497,497],[497,497]]
+MEAS  2 empty decorations  15
+MEAS  2 decorations unchanged from 0  false
+MEAS  3 comment typed: status  "Not applied · confirm below"
+MEAS  3 comment typed: panel  ["Transition (unnamed) | Transition (unnamed) | same name, paired by order","Transition (unnamed) | Transition (unnamed) | same name, paired by order"]
+MEAS  3 decorations  [[0,0],[0,346],[30,144],[111,121],[134,138],[347,443],[375,437],[461,461],[462,473],[474,487],[488,501],[502,515],[515,515],[515,515],[515,515],[515,515],[515,515],[515,515]]
+PASS  finding reproduced: the comment-only edit stops at confirm  "Not applied · confirm below"
+ALL PASS

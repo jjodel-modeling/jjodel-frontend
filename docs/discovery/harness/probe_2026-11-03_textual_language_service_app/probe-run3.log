@@ -1,0 +1,8 @@
+MEAS  light: monaco background  "rgb(255, 255, 254)"
+MEAS  light: tab bar background  "rgb(241, 245, 249)"
+MEAS  light: monaco theme class  "monaco-editor no-user-select mac  showUnused showDeprecated vs"
+MEAS  dark: monaco background  "rgb(255, 255, 254)"
+MEAS  dark: tab bar background  "rgb(241, 245, 249)"
+MEAS  dark: monaco theme class  "monaco-editor no-user-select mac  showUnused showDeprecated vs"
+PASS  probe ran  null
+ALL PASS
