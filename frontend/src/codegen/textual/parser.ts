@@ -213,6 +213,8 @@ export type SyntaxToken = Readonly<Token>;
 
 const IDENT = /[A-Za-z_][A-Za-z0-9_]*/y;
 const NUMBER = /-?\d+(\.\d+)?([eE][+-]?\d+)?/y;
+/** The digits of a character code after `#`, in a doubling-style string (D4). */
+const CODE = /[0-9]+/y;
 
 /** The tokens of a text, the last one `EOF`, with their trivia, and the lexical errors. */
 export function tokenizeText(text: string, g: ConcreteGrammar): { readonly tokens: readonly SyntaxToken[]; readonly errors: readonly TextParseError[] } {
@@ -270,25 +272,45 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
         m = NUMBER.exec(text);
         if (m) { push(m[1] || m[2] ? 'FLOAT' : 'INT', m[0], i, i + m[0].length); i += m[0].length; continue; }
         if (ch === quote) {
-            let j = i + 1;
+            let j = i;
             let v = '';
             let closed = false;
-            while (j < text.length && text[j] !== '\n') {
-                const c = text[j];
-                if (style.string.escape === 'backslash' && c === '\\' && j + 1 < text.length && text[j + 1] !== '\n') {
-                    const e = text[j + 1];
-                    v += e === 'n' ? '\n' : e === 't' ? '\t' : e === 'r' ? '\r' : e;
-                    j += 2;
-                    continue;
-                }
-                if (c === quote) {
-                    if (style.string.escape === 'double' && text[j + 1] === quote) { v += quote; j += 2; continue; }
-                    closed = true;
+            // D4 (P-2026-11-04-0345): under a doubling style a string is quoted pieces and character codes joined with
+            // nothing between them, `'line1'#10'line2'`; it starts with a quoted piece.
+            for (let piece = true; ; ) {
+                if (piece) {
                     j++;
-                    break;
+                    closed = false;
+                    while (j < text.length && text[j] !== '\n') {
+                        const c = text[j];
+                        if (style.string.escape === 'backslash' && c === '\\' && j + 1 < text.length && text[j + 1] !== '\n') {
+                            const e = text[j + 1];
+                            v += e === 'n' ? '\n' : e === 't' ? '\t' : e === 'r' ? '\r' : e;
+                            j += 2;
+                            continue;
+                        }
+                        if (c === quote) {
+                            if (style.string.escape === 'double' && text[j + 1] === quote) { v += quote; j += 2; continue; }
+                            closed = true;
+                            j++;
+                            break;
+                        }
+                        v += c;
+                        j++;
+                    }
+                    if (!closed) break;
+                } else {
+                    CODE.lastIndex = j + 1;
+                    const digits = CODE.exec(text)![0];
+                    const n = Number(digits);
+                    if (n <= 0x10ffff) v += String.fromCodePoint(n);
+                    else errors.push({ line, col: j - lineStart + 1, start: j, end: j + 1 + digits.length, message: `character code #${digits} is out of range` });
+                    j += 1 + digits.length;
                 }
-                v += c;
-                j++;
+                if (style.string.escape !== 'double') break;
+                if (text[j] === '#' && /[0-9]/.test(text[j + 1] ?? '')) piece = false;
+                else if (text[j] === quote) piece = true;
+                else break;
             }
             if (!closed) errors.push({ line, col: i - lineStart + 1, start: i, end: j, message: 'unterminated string' });
             push('STR', v, i, j);
