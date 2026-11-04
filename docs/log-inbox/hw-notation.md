@@ -1026,3 +1026,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Notes**: Cap 500 on nodes or edges, inclusive at 500. The first commit counted the canvas only; the probe then showed ELK called on 1 node, 0 edges, while DModel.objects held 2,559, so `f33424346` counts the model's objects too. Only fixture above the cap: `scripts/benchmarks/bench.xmi`, 500 tasks and 1,000 links, a benchmark. Regressions unknown: small models ran in unit tests only. Gates: tsc 0, build 0, vitest 13,706 passed, 3 red at import.
 **Prompt document name**: 2026-11-04 09:26
 **Ticket** (residual): the S4b re-layout watcher (`EditorV2.tsx:4210`) reruns ELK with no cap. Once the open-time layout is skipped it is never armed, but a graph whose model reads under the cap and whose canvas fills with over 500 edges within 3 s would still be laid out unbounded. Open question Q3 of the 0902 report.
+
+## 2026-11-04 — merge: elk-open-cap takes alfonso-frontend-jjtl (P-2026-11-04-1053)
+**Prompt**: `claude_2026-11-04_1053_prompt_elk-open-cap_take_trunk.md`: bring the trunk `alfonso-frontend-jjtl` at `32ca59c2d` into `elk-open-cap` with one `--no-ff` merge commit before the trunk takes the branch (RC-14), merge base `32b9c87d3`, 22 trunk commits, 9 branch commits.
+**Files touched**: merge `80f03e1b6`: 15 files from the trunk side, union in `docs/log-inbox/hw-notation.md`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `80f03e1b6`: typecheck exit 0, 0 errors; typecheck:scripts exit 0; vitest 13750 passed (trunk 13740 + 10 of the branch), 3 red at import; hooks 967; build exit 0; check:docs 5/5; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 80f03e1b6; the cap probe ran on the branch before this merge and was not rerun; no hand run
+**Notes**: Conflict only in this inbox, union: trunk's 7 entries, then the branch's 2, verbatim, 93 headings, none twice. EditorV2.tsx auto-merged on disjoint regions; changed regions read, not the whole file. check:docs has 5 checks now, the prompt said 4/4.
+**Prompt document name**: 2026-11-04 10:53
