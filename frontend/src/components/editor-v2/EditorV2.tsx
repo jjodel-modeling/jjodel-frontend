@@ -600,10 +600,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // If the graph was just auto-created, apply ELK layout first. The flag is raised by any
             // creating populate run, so the layout runs only on a graph no vertex of which has a layout
             // record yet; otherwise the new vertices keep their default placement and nothing else moves
-            // (utils/autoLayoutOnOpen, P-2026-10-10-1155).
+            // (utils/autoLayoutOnOpen, P-2026-10-10-1155). Above a size cap it does not run either
+            // (P-2026-11-04-0926).
             const createdOnOpen = justCreatedGraphRef.current;
             justCreatedGraphRef.current = false;
-            if (autoLayoutRef.current && shouldAutoLayoutOnOpen(createdOnOpen, graphId, store.getState()?.idlookup ?? {})) {
+            const size = { nodes: getNodes().length, edges: getEdges().length };
+            if (autoLayoutRef.current && shouldAutoLayoutOnOpen(createdOnOpen, graphId, store.getState()?.idlookup ?? {}, size)) {
                 await autoLayoutRef.current();
                 // The M1 reference edges materialize asynchronously AFTER this first
                 // layout; watch for them and re-run the layout once when they land.

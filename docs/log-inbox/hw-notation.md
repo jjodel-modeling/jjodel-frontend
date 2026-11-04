@@ -999,3 +999,43 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: gates green on 9abc989ff; probes on the branch, no hand run. Known visible difference on models above 150 nodes: parallel edges look stacked in one band; fix lane P-2026-11-04-1050 open, #475 stays open until it closes
 **Notes**: Rollback tag `pre-canvas-mount-unmeasured` on `ad34b896f` (RC-31). Union: `docs/log-inbox/hw-notation.md`. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1038/result.json`.
 **Prompt document name**: 2026-11-04 10:38
+
+## 2026-11-04 — docs: discovery, ELK auto-layout on open freeze (P-2026-11-04-0902)
+**Prompt**: P-2026-11-04-0902, read-only trace of the ticket at this inbox (ELK auto-layout on open, 117 s in 1 of 9 b10_8 runs): why it is intermittent, which inputs ELK gets in the slow case, and a cap, a worker and removing the race compared.
+**Files touched**: `docs/discovery/discovery_2026-11-04_elk_open_freeze.md` (new, `62ddd6b09`), the `Status:` line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Entry owed by 0902 and written by P-2026-11-04-0926. ELK runs in the main thread; a node probe with the app's options measured n^2.3 with edges (b10_8: 153 s with 2,558 edges, 723 ms with none). The intermittence was read, not measured: two inputs read at one 50 ms timer. No app reproduction, by choice (report section 5). Fix A, a cap, recommended.
+**Prompt document name**: 2026-11-04 09:02
+
+## 2026-11-04 — fix(editor-v2): no auto-layout on open above 500 nodes or edges (P-2026-11-04-0926)
+**Prompt**: P-2026-11-04-0926, fix A of the 0902 report: a cap of about 500 nodes or 500 edges in `shouldAutoLayoutOnOpen`, no auto-layout on open above it, one console line saying why, the explicit layout command not capped; the race is out of scope.
+**Files touched**: `frontend/src/components/editor-v2/utils/autoLayoutOnOpen.ts`, its test, `frontend/src/components/editor-v2/EditorV2.tsx` (the call site passes the canvas counts) in `ca94f5a36` and `f33424346`; this inbox; the `Status:` line of the prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: one app probe on b10_8 after the fix (0 ELK calls, one skip line, tab open, 2,559 objects, no page error); no hand run and no visual check
+**Notes**: Cap 500 on nodes or edges, inclusive at 500. The first commit counted the canvas only; the probe then showed ELK called on 1 node, 0 edges, while DModel.objects held 2,559, so `f33424346` counts the model's objects too. Only fixture above the cap: `scripts/benchmarks/bench.xmi`, 500 tasks and 1,000 links, a benchmark. Regressions unknown: small models ran in unit tests only. Gates: tsc 0, build 0, vitest 13,706 passed, 3 red at import.
+**Prompt document name**: 2026-11-04 09:26
+**Ticket** (residual): the S4b re-layout watcher (`EditorV2.tsx:4210`) reruns ELK with no cap. Once the open-time layout is skipped it is never armed, but a graph whose model reads under the cap and whose canvas fills with over 500 edges within 3 s would still be laid out unbounded. Open question Q3 of the 0902 report.
+
+## 2026-11-04 — merge: elk-open-cap takes alfonso-frontend-jjtl (P-2026-11-04-1053)
+**Prompt**: `claude_2026-11-04_1053_prompt_elk-open-cap_take_trunk.md`: bring the trunk `alfonso-frontend-jjtl` at `32ca59c2d` into `elk-open-cap` with one `--no-ff` merge commit before the trunk takes the branch (RC-14), merge base `32b9c87d3`, 22 trunk commits, 9 branch commits.
+**Files touched**: merge `80f03e1b6`: 15 files from the trunk side, union in `docs/log-inbox/hw-notation.md`; this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `80f03e1b6`: typecheck exit 0, 0 errors; typecheck:scripts exit 0; vitest 13750 passed (trunk 13740 + 10 of the branch), 3 red at import; hooks 967; build exit 0; check:docs 5/5; check:scripts PASS; check:addonly PASS.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: gates green on 80f03e1b6; the cap probe ran on the branch before this merge and was not rerun; no hand run
+**Notes**: Conflict only in this inbox, union: trunk's 7 entries, then the branch's 2, verbatim, 93 headings, none twice. EditorV2.tsx auto-merged on disjoint regions; changed regions read, not the whole file. check:docs has 5 checks now, the prompt said 4/4.
+**Prompt document name**: 2026-11-04 10:53
