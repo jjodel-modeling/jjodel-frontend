@@ -813,3 +813,16 @@ Expected: measure it on the trunk first (open, auto layout, time to the fit, lon
 **Smoke visivo**: passato — chat, unattended: JjTL parser and executor, no UI change: not run in the app; merge gates green (13241 tests, 0 failed, 9 red at import)
 **Notes**: Rollback tag `pre-jjtl-collection-jjel-only-P-2026-11-03-1148` on `9e72593b7` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-03-1148/result.json`.
 **Prompt document name**: 2026-11-03 11:48
+
+## 2026-11-04 — merge: origin/staging b619c8300 into staging-realign (P-2026-11-04-1640)
+**Prompt**: `claude_2026-11-04_1640_prompt_staging_realign.md`: merge staging `b619c8300` into `staging-realign` with one `--no-ff` merge, resolve the four measured conflicts, carry `8d5b5a1fe` into `services/ai`, look for silent breakages and the Worker's callers. No push, no trunk merge.
+**Files touched**: merge `f59fc2371` (81 staging commits); by hand: `docs/decisions.md`, `docs/harness/fronts.json`, `frontend/src/services/ai/AnthropicCompatibleProvider.ts`, `frontend/src/services/ai/OpenAICompatibleProvider.ts`, `frontend/src/services/ai/__tests__/requestShaping.test.ts`; deleted `AIProviderService.ts` and its test. Docs: `docs/discovery/discovery_2026-11-04_staging_realign.md`, this entry, the prompt's Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck 0, build 0, check:docs 5/5, check:agents PASS; vitest before the commit, same tree: 13978 passed, 32 red all `bashGuard` from `MERGE_HEAD`, 160/160 after it. The full re-run after the commit was killed twice at 600 s, load 228.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (no sync or D-L file touched by hand)
+**Smoke visivo**: non applicabile (no UI change by hand; build only)
+**Notes**: No R- id collision (only R-GEN-18 differs, trunk-only edit). Bench: staging's send() fails 4 of the 5 ported tests. No runtime caller of jjodel-ai-proxy left. npm ci (lockfile differs), no symlink. Detail in the report.
+**Prompt document name**: 2026-11-04 16:40

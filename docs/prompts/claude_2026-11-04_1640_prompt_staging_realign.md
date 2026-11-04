@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-1640
 Chat: C-2026-11-04-1615
 Front: maintenance
-Status: da eseguire
+Status: eseguito 2026-11-04 · staging-realign · f59fc2371
 Lane: full (merge of two long-lived lines; 4 measured conflicts)
 Depends: none
 Worktree: ~/jjodel-w-stagingsync, branch staging-realign
