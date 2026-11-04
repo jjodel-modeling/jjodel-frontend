@@ -60,6 +60,7 @@ import { revealViewport } from './utils/revealNode';
 import { fitPadding, getCanvasRightInset, useFitViewOptions } from './viewportInset';
 import { openViewportFallback, type NodeRect } from './openViewport';
 import { canRenderOnlyVisible } from './onlyRenderVisible';
+import { allMeasured, decorateUnmeasured, isDecorated, shouldDecorate, undecorate, type DecorationEntry } from './unmeasuredNodes';
 import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
 import { readVertexLayout } from './viewpoint/layout/vertexLayout';
 import { EditorContext } from './contexts/EditorContext';
@@ -155,6 +156,8 @@ const nodeTypes: NodeTypes = {
 // De-overlap steps for edge labels (assigned in applyDistribution, consumed by UnifiedEdge):
 const CARD_STAGGER_STEP = 11; // px extra depth per extra cardinality on the same target side
 const ROLE_ARC_STEP = 22;     // px arc-length separation between bundled roles
+// The longest the auto-layout waits for React Flow to measure the nodes it had not mounted (unmeasuredNodes.ts).
+const AUTO_LAYOUT_MEASURE_WAIT_MS = 5000;
 
 // ─── Viewport persistence ────────────────────────────────────────────
 // Pan and zoom are pure view state: they live in localStorage, never in the D-layer
@@ -764,7 +767,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // The ghost preview's synthetic nodes and edges (S4b, R-JJD-2) are on React Flow's arrays but
     // are no canvas state: every reader below (layout, distribution, history, gestures) sees the
     // canvas without them, so none of them can be laid out, snapshotted or written back.
-    const getNodes = useCallback(() => getFlowNodes().filter((n) => !isPreviewId(n.id)), [getFlowNodes]);
+    // Undecorated (unmeasuredNodes.ts): no reader of getNodes() sees the estimated size of a never-measured node.
+    const getNodes = useCallback(() => getFlowNodes().filter((n) => !isPreviewId(n.id)).map(undecorate), [getFlowNodes]);
     const getEdges = useCallback(() => getFlowEdges().filter((e) => !isPreviewId(e.id)), [getFlowEdges]);
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
@@ -1775,6 +1779,47 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         });
         return appendPreview(flowElements, buildPreviewElements(scriptPreview.plan, scriptPreview.world, drawn, scriptPreview.script, measureObstacles(drawn)));
     }, [flowElements, scriptPreview, previewLayoutPass]);
+
+    // A large canvas that renders only the visible elements hands React Flow its never-measured nodes with the
+    // handles of the DynamicHandles pool and an estimated size, so React Flow does not mount every one of them to
+    // measure it (P-2026-11-04-0901, LIR docs/discovery/lir_2026-11-04_canvas_mount_unmeasured.md). The canvas state
+    // never holds the estimate. `mountAll` suspends the decoration while the auto-layout waits for real sizes.
+    const [mountAll, setMountAll] = useState(false);
+    const decorationCacheRef = useRef(new Map<string, DecorationEntry>());
+    // Ids React Flow has measured at least once, and ids that went in decorated and are not measured yet.
+    const measuredIdsRef = useRef(new Set<string>());
+    const decoratedIdsRef = useRef(new Set<string>());
+    const rfNodes = useMemo(() => {
+        if (mountAll || !shouldDecorate(onlyRenderVisible, canvasElements.nodes.length)) {
+            decorationCacheRef.current.clear();
+            decoratedIdsRef.current.clear();
+            return canvasElements.nodes;
+        }
+        const out = decorateUnmeasured(canvasElements.nodes, canvasElements.edges, decorationCacheRef.current, measuredIdsRef.current);
+        decoratedIdsRef.current.clear();
+        if (out !== canvasElements.nodes) for (const n of out) if (isDecorated(n)) decoratedIdsRef.current.add(n.id);
+        return out;
+    }, [canvasElements, onlyRenderVisible, mountAll]);
+
+    // The first measurement of a node that went in decorated: one more port distribution, coalesced on two frames,
+    // reads its real size once the canvas state holds it. Distribution never runs on the estimate.
+    const measuredRedistributionRafRef = useRef(0);
+    const noteMeasurements = useCallback((changes: any[]) => {
+        let first = false;
+        for (const c of changes) {
+            if (c?.type !== 'dimensions' || !c.dimensions) continue;
+            measuredIdsRef.current.add(c.id);
+            if (decoratedIdsRef.current.delete(c.id)) first = true;
+        }
+        if (!first || measuredRedistributionRafRef.current) return;
+        measuredRedistributionRafRef.current = requestAnimationFrame(() => {
+            measuredRedistributionRafRef.current = requestAnimationFrame(() => {
+                measuredRedistributionRafRef.current = 0;
+                if (applyDistributionRef.current) setEdges(eds => applyDistributionRef.current!(eds));
+            });
+        });
+    }, [setEdges]);
+    useEffect(() => () => cancelAnimationFrame(measuredRedistributionRafRef.current), []);
 
     // Persist the merged session override of a synthetic edge on the hidden
     // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
@@ -3969,6 +4014,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // `full` is the toolbar's (P-2026-10-01-2215 Phase 2): real sizes, labels, the viewpoint's profile, the 8 px grid
     // and ELK's routes. Without it (the first open, the late-edge re-layout) the layout is today's, unchanged.
     const handleAutoLayout = useCallback(async (opts?: { full?: boolean }) => {
+        // ELK reads real sizes only: with never-measured nodes decorated, mount them all as before, wait until the
+        // canvas state holds their measurement (capped), then lay out.
+        if (decoratedIdsRef.current.size > 0) {
+            setMountAll(true);
+            const start = performance.now();
+            await new Promise<void>((resolve) => {
+                const tick = () => {
+                    const pending = getNodes().filter((n) => !measuredIdsRef.current.has(n.id));
+                    if (allMeasured(pending) || performance.now() - start > AUTO_LAYOUT_MEASURE_WAIT_MS) resolve();
+                    else requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            });
+            setMountAll(false);
+        }
         const currentNodes = getNodes();
         const currentEdges = getEdges();
         if (currentNodes.length === 0) return;
@@ -4448,6 +4508,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // (e.g. from updateNodeInternals → dimension changes triggered
             // by our own setEdges), just apply the changes without edge recalc.
             if (isProcessingNodesChangeRef.current) {
+                noteMeasurements(changes);
                 onNodesChange(changes);
                 return;
             }
@@ -4743,6 +4804,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 return true; // first measurement or actual size change
             });
             if (changesToApply.length > 0) {
+                noteMeasurements(changesToApply);
                 onNodesChange(changesToApply);
             }
 
@@ -4751,7 +4813,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             }
         },
         [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave, dispatchReLayout,
-            resolveGraphVertexDragEnd, pairedPartitionSizes, applyMembershipOps, setNodes]
+            resolveGraphVertexDragEnd, pairedPartitionSizes, applyMembershipOps, setNodes, noteMeasurements]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
@@ -4867,7 +4929,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Ghost preview ids (S4b) never reach a handler: their changes, clicks, menus and connections are dropped here.
     const handleCanvasNodesChange = useCallback((changes: any[]) => {
-        const own = changes.filter((c) => !isPreviewId(c?.id ?? c?.item?.id));
+        // A `replace` or `add` React Flow builds from a decorated node goes in undecorated: no estimate in the canvas state.
+        const own = changes.filter((c) => !isPreviewId(c?.id ?? c?.item?.id))
+            .map((c) => (c?.item && isDecorated(c.item) ? { ...c, item: undecorate(c.item) } : c));
         if (own.length > 0) handleNodesChange(own);
     }, [handleNodesChange]);
     const handleCanvasEdgesChange = useCallback((changes: EdgeChange[]) => {
@@ -4907,7 +4971,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={canvasElements.nodes}
+                nodes={rfNodes}
                 edges={canvasElements.edges}
                 onNodesChange={handleCanvasNodesChange}
                 onNodeDrag={handleNodeDragPointer}
