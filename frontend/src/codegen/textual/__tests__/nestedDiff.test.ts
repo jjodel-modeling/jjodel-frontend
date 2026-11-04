@@ -253,3 +253,15 @@ describe('(4) slot matching: pasted and re-imported, an edit plans as typed, cer
         });
     }
 });
+
+describe('(4b) slot matching takes the same position first: a retyped operand keeps the object at its index', () => {
+    /** `rdy` is an equal subtree; `is_sw`, at index 1, has the Uses of `st` (0) and `ld` (1) free in And.ops. */
+    for (const mode of ['typed', 'nospan'] as const) {
+        it(`st & ld & rdy => 1 & is_sw & rdy (${mode}): is_sw is the Use of ld, and the Use of st is the one deleted`, () => {
+            const r = edit('chain', ['st & ld & rdy', '1 & is_sw & rdy'], { spans: mode === 'typed' });
+            expect(r.refusals).toEqual([]);
+            expect(r.by).toContain('is_sw=ld:slot');
+            expect(r.ops.filter(o => o.startsWith('delete'))).toEqual(['delete st']);
+        });
+    }
+});
