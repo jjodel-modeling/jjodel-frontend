@@ -10,9 +10,9 @@
  *
  * The decoration lives on React Flow's side of the prop only. `undecorate` gives the canvas node back to every
  * reader of `getNodes()` and to every change React Flow builds from a decorated node: port distribution and ELK
- * never read the estimate. A node that mounts is measured by React Flow as any other; the estimate is half a pixel
- * off an integer, so that first measurement always differs from it and reaches the canvas state, which then holds
- * a real `measured` and the node is no longer decorated.
+ * never read the estimate. A node that mounts is measured by React Flow as any other; the estimate is off an
+ * integer, so that first measurement always differs from it and reaches the canvas state, which then holds a real
+ * `measured` and the node is no longer decorated.
  */
 import { Position, type Edge, type Node } from '@xyflow/react';
 import { MAX_HANDLES_PER_SIDE, type NodePosition, type Side } from './utils/portDistribution';
@@ -21,8 +21,36 @@ import { computeSideEndpoints, computeSidePositions } from './utils/handlePositi
 /** At or under this many nodes the canvas mounts every node, as before: the decoration is for large canvases. */
 export const MOUNT_ALL_MAX_NODES = 150;
 
-/** The box a never-measured node goes in with: 180 x 80 (the size fallback of DynamicHandles and getNodeRect), half a pixel off. */
+/** The box a never-measured node goes in with while the canvas has measured nothing: 180 x 80 (the size fallback of DynamicHandles and getNodeRect), half a pixel off. */
 export const ESTIMATED_NODE_SIZE = { width: 180.5, height: 80.5 } as const;
+
+/**
+ * How far off a measured size the estimate taken from it goes. React Flow measures `offsetWidth`/`offsetHeight`,
+ * integers, so any fraction makes the first measurement differ; a sixty-fourth moves a fit framing these boxes by
+ * under a hundredth of a pixel at zoom 1, where half a pixel moved it 0.125 px at zoom 0.5 (P-2026-11-04-1050).
+ */
+export const ESTIMATE_OFFSET = 1 / 64;
+
+/**
+ * The box a never-measured node goes in with: the size React Flow has measured most often on this canvas, off by
+ * `ESTIMATE_OFFSET`; `ESTIMATED_NODE_SIZE` while it has measured none. The open fit frames these boxes, and an edge
+ * into an off-screen node lands on a side of one: off the real size, the framing moved by half the difference times
+ * the zoom, a sub-pixel offset that drew neighbouring lines as one band, and the far end of an edge sat off its
+ * node's real side (P-2026-11-04-1050).
+ */
+export function estimateNodeSize(nodes: readonly Node[]): { width: number; height: number } {
+    const counts = new Map<string, number>();
+    let best: { width: number; height: number } | null = null, bestCount = 0;
+    for (const n of nodes) {
+        const w = n.measured?.width, h = n.measured?.height;
+        if (n.hidden || !w || !h || DECORATED.has(n)) continue;
+        const k = `${w}x${h}`;
+        const c = (counts.get(k) ?? 0) + 1;
+        counts.set(k, c);
+        if (c > bestCount) { bestCount = c; best = { width: w, height: h }; }
+    }
+    return best ? { width: best.width + ESTIMATE_OFFSET, height: best.height + ESTIMATE_OFFSET } : ESTIMATED_NODE_SIZE;
+}
 
 /** Side of a pool handle, from `.mm-anchor` (8 x 8 px). */
 export const HANDLE_SIZE = 8;
@@ -87,7 +115,7 @@ function needsDecoration(n: Node): boolean {
 }
 
 /** Node centres as DynamicHandles reads them off React Flow's lookup: absolute position plus half the size it knows. */
-function centres(nodes: readonly Node[]): Map<string, NodePosition> {
+function centres(nodes: readonly Node[], estimate: { width: number; height: number }): Map<string, NodePosition> {
     const byId = new Map(nodes.map((n) => [n.id, n]));
     const abs = (n: Node): { x: number; y: number } => {
         let x = n.position.x, y = n.position.y;
@@ -101,19 +129,20 @@ function centres(nodes: readonly Node[]): Map<string, NodePosition> {
     const out = new Map<string, NodePosition>();
     for (const n of nodes) {
         const { x, y } = abs(n);
-        const w = n.measured?.width ?? (needsDecoration(n) ? ESTIMATED_NODE_SIZE.width : 180);
-        const h = n.measured?.height ?? (needsDecoration(n) ? ESTIMATED_NODE_SIZE.height : 80);
+        const w = n.measured?.width ?? (needsDecoration(n) ? estimate.width : 180);
+        const h = n.measured?.height ?? (needsDecoration(n) ? estimate.height : 80);
         out.set(n.id, { centerX: x + w / 2, centerY: y + h / 2 });
     }
     return out;
 }
 
-export interface DecorationEntry { src: Node; key: string; handles: NodeHandle[]; out: Node }
+export interface DecorationEntry { src: Node; key: string; box: { width: number; height: number }; handles: NodeHandle[]; out: Node }
 
 /**
  * `nodes` with every node that needs it decorated; the array itself when none does. `cache` (one per canvas) keeps a
- * decorated object while its node object and its own edges stay, so React Flow keeps its internal node; its handles
- * are recomputed on the node's own edges only, never on positions, as DynamicHandles recomputes them.
+ * decorated object while its node object, its own edges and the estimate stay, so React Flow keeps its internal node;
+ * its handles are recomputed on the node's own edges and the estimate only, never on positions, as DynamicHandles
+ * recomputes them on its edges.
  *
  * `measuredOnce` holds the ids React Flow has measured at least once. Such a node is never decorated, even with no
  * `measured`: the sync drops `measured` on a size change so that React Flow measures the node again
@@ -136,6 +165,8 @@ export function decorateUnmeasured(
         own.get(e.source)?.push(e);
         if (e.target !== e.source) own.get(e.target)?.push(e);
     }
+    const box = estimateNodeSize(nodes);
+    const sameBox = (b: { width: number; height: number }) => b.width === box.width && b.height === box.height;
     let positions: Map<string, NodePosition> | null = null;
     const seen = new Set<string>();
     const out = nodes.map((n) => {
@@ -144,16 +175,17 @@ export function decorateUnmeasured(
         seen.add(n.id);
         const key = topologyKey(ownEdges);
         const hit = cache.get(n.id);
-        if (hit && hit.src === n && hit.key === key) return hit.out;
+        const reuse = !!hit && hit.key === key && sameBox(hit.box);
+        if (reuse && hit!.src === n) return hit!.out;
         let handles: NodeHandle[];
-        if (hit && hit.key === key) handles = hit.handles;
+        if (reuse) handles = hit!.handles;
         else {
-            positions ??= centres(nodes);
-            handles = synthesizeHandles(n.id, ownEdges, ESTIMATED_NODE_SIZE, positions);
+            positions ??= centres(nodes, box);
+            handles = synthesizeHandles(n.id, ownEdges, box, positions);
         }
-        const decorated: Decorated = { ...n, measured: { ...ESTIMATED_NODE_SIZE }, handles, [SOURCE]: n };
+        const decorated: Decorated = { ...n, measured: { ...box }, handles, [SOURCE]: n };
         DECORATED.add(decorated);
-        cache.set(n.id, { src: n, key, handles, out: decorated });
+        cache.set(n.id, { src: n, key, box, handles, out: decorated });
         return decorated;
     });
     for (const id of cache.keys()) if (!seen.has(id)) cache.delete(id);
