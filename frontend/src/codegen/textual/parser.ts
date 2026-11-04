@@ -982,6 +982,12 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     };
 }
 
+/**
+ * Test-only (#205): the objects the reference resolution of `parseText` examines, by name and at a path's head, summed
+ * over every reference. A load-independent measure of its growth; nothing in the parser reads it.
+ */
+export const parserNameLookups = { count: 0 };
+
 /** Resolves every reference left as a `PendingRef` in the slots: by name (R-TXT-4), else by path (R-TXT-11); an outer one (R-TXT-32) is kept as its id. */
 function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], contained: ReadonlySet<string>, errors: TextParseError[], recovered: Set<string>, where: (id: string) => string,
                  tokenOf: (r: PendingRef) => { readonly start: number; readonly end: number; readonly text: string; readonly kept: boolean }, refs: ParsedRef[]): void {
@@ -1006,7 +1012,9 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
         const s = r.syntax;
         const targets = r.node.targets;
         if (s.name !== undefined) {
-            const found = (byName.get(s.name) ?? []).filter(x => targets.includes(x.cls));
+            const candidates = byName.get(s.name) ?? [];
+            parserNameLookups.count += candidates.length;
+            const found = candidates.filter(x => targets.includes(x.cls));
             if (found.length === 1) return found[0];
             if (found.length > 1) {
                 const at = found.map(x => where(x.id)).join(', ');
@@ -1046,6 +1054,7 @@ function resolve(g: ConcreteGrammar, objects: readonly MutableObject[], containe
             return `a path starts with a class: there is no class "${head.f}"`;
         }
         const tops = rootsOf.get(cls) ?? [];
+        parserNameLookups.count += tops.length;
         if (!tops[head.index]) return `there is no top-level ${head.f}[${head.index}]: the text has ${tops.length}`;
         let cur: MutableObject = tops[head.index];
         for (const seg of rest) {
