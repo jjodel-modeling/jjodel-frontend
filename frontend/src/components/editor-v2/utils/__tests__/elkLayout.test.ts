@@ -3,6 +3,9 @@ import type { Node, Edge } from '@xyflow/react';
 import {
     buildElkGraph,
     computeElkAutoLayout,
+    computeElkLayout,
+    estimateLongEdgeDummies,
+    NS_PLACEMENT_MAX_DUMMIES,
     isElkRouteValid,
     fitRouteToEnds,
     setElkRoutes,
@@ -102,6 +105,62 @@ describe('buildElkGraph: the input ELK receives', () => {
         const g = buildElkGraph([sized('a', 100, 40)], [], { profile: { algorithm: 'stress', overlapRemoval: true } });
         expect(rootOpt(g, 'algorithm')).toBe('stress');
     });
+});
+
+// P-2026-11-04-1443: ELK's network-simplex node placer recurses once per node of its auxiliary graph, which holds a
+// dummy per layer a long edge crosses: 200 classes in a ring with chords overflowed the stack (RangeError).
+describe('long edges and the network-simplex placer', () => {
+    /** N classes, `next` i -> i+1 around the ring and `far` i -> i+N/2: the graph of P-2026-11-04-1012. */
+    const ring = (n: number) => ({
+        nodes: Array.from({ length: n }, (_, i) => sized(`c${i}`, 140, 42)),
+        edges: Array.from({ length: n }, (_, i) => [edge(`next${i}`, `c${i}`, `c${(i + 1) % n}`), edge(`far${i}`, `c${i}`, `c${(i + n / 2) % n}`)]).flat(),
+    });
+    const graphOf = (children: string[], edges: Array<[string, string, boolean?]>) => ({
+        id: 'root',
+        children: children.map(id => ({ id, width: 10, height: 10 })),
+        edges: edges.map(([s, t, label], i) => ({ id: `e${i}`, sources: [s], targets: [t],
+            ...(label ? { labels: [{ id: `l${i}`, text: 'x', width: 10, height: 10, layoutOptions: { 'elk.edgeLabels.placement': 'CENTER' } }] } : {}) })),
+    });
+
+    it('counts a dummy per layer a long edge crosses: a path has none, a chord over the whole path has its length less one', () => {
+        expect(estimateLongEdgeDummies(graphOf(['a', 'b', 'c'], [['a', 'b'], ['b', 'c']]))).toBe(0);
+        expect(estimateLongEdgeDummies(graphOf(['a', 'b', 'c', 'd', 'e'], [['a', 'b'], ['b', 'c'], ['c', 'd'], ['d', 'e'], ['a', 'e']]))).toBe(3);
+    });
+
+    it('a cycle is broken, not followed: a -> b -> c -> a has one dummy', () => {
+        expect(estimateLongEdgeDummies(graphOf(['a', 'b', 'c'], [['a', 'b'], ['b', 'c'], ['c', 'a']]))).toBe(1);
+    });
+
+    it('a centre label is a layer of its own: one dummy, and the chord beside it crosses one layer more', () => {
+        expect(estimateLongEdgeDummies(graphOf(['a', 'b', 'c'], [['a', 'b', true], ['b', 'c'], ['a', 'c']]))).toBe(3);
+    });
+
+    it('a source is placed against its targets, not on the first layer', () => {
+        expect(estimateLongEdgeDummies(graphOf(['a', 'b', 'c', 'd', 'leaf'], [['a', 'b'], ['b', 'c'], ['c', 'd'], ['leaf', 'd']]))).toBe(0);
+    });
+
+    it('placement: NETWORK_SIMPLEX at or under the budget, BRANDES_KOEPF (alignment NONE) above it', () => {
+        const small = ring(20);
+        expect(estimateLongEdgeDummies(buildElkGraph(small.nodes, small.edges, { profile: CLASS_VIEW_PROFILE }))).toBeLessThanOrEqual(NS_PLACEMENT_MAX_DUMMIES);
+        expect(rootOpt(buildElkGraph(small.nodes, small.edges, { profile: CLASS_VIEW_PROFILE }), 'layered.nodePlacement.strategy')).toBe('NETWORK_SIMPLEX');
+        const big = ring(100);
+        const g = buildElkGraph(big.nodes, big.edges, { profile: CLASS_VIEW_PROFILE });
+        expect(estimateLongEdgeDummies(g)).toBeGreaterThan(NS_PLACEMENT_MAX_DUMMIES);
+        expect(rootOpt(g, 'layered.nodePlacement.strategy')).toBe('BRANDES_KOEPF');
+        expect(rootOpt(g, 'layered.nodePlacement.bk.fixedAlignment')).toBe('NONE');
+    });
+
+    it('the toolbar layout of a 100-class ring resolves with every class placed (it threw RangeError)', async () => {
+        const { nodes, edges } = ring(100);
+        const r = await computeElkAutoLayout(nodes, edges, { profile: CLASS_VIEW_PROFILE });
+        expect(r.positions.size).toBe(100);
+    }, 60000);
+
+    it('the open-time layout of a 100-class ring resolves with every class placed (it threw RangeError)', async () => {
+        const { nodes, edges } = ring(100);
+        const out = await computeElkLayout(nodes, edges);
+        expect(new Set(out.map(n => `${n.position.x},${n.position.y}`)).size).toBe(100);
+    }, 60000);
 });
 
 describe('computeElkAutoLayout: positions and routes', () => {

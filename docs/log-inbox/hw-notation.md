@@ -1130,3 +1130,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: docs and one comment, gates green on 2f61d24d6, no hand run
 **Notes**: Rollback tag `pre-rows-toolbar-comment` on `a9f0b75f7` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-1458/result.json`.
 **Prompt document name**: 2026-11-04 14:58
+
+## 2026-11-04 — fix(editor-v2): no network-simplex placement over 1,000 dummies (P-2026-11-04-1443, P-2026-11-04-1526)
+**Prompt**: `claude_2026-11-04_1526_prompt_elk_rangeerror_close.md`, closing `claude_2026-11-04_1443_prompt_elk_rangeerror.md`: Auto layout RangeError on 200 classes, root cause and fix; b10_8 settled view measured; close with vitest, check:docs, discovery, before/after check below the budget, entry, Status.
+**Files touched**: `c4dfabf3b` `editor-v2/utils/elkLayout.ts` + its test, `editor-v2/EditorV2.tsx`; `68b146c32` `docs/discovery/discovery_2026-11-04_elk_rangeerror.md`; docs commit: the two Status lines, this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no. Seven files across the two prompts, all declared in their scope (RC-11): the three of `c4dfabf3b`, the report, the inbox, the two prompt files.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe crops read, before and after, unattended
+**Notes**: Before = temp worktree at fb09b1445: 35 canvases (ring20, 7 gallery, 2 codegen, 6 probe fixtures, save_3_0_0), transform, positions, sizes, handles equal 35/35, paths within 0.00008 px; pixel diffs are run noise (after vs after as large). No demo above the budget: only the 200-class probe fixtures. Vitest 511 files green, 3 red at import. b10_8 fit not fixed, re-measure after P-2026-11-04-1500 (discovery §5). 1443 ran 4 probes in one call; toolbar catch untested.
+**Prompt document name**: 2026-11-04 15:26
