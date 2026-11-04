@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0020
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: eseguito 2026-11-04 · lane full · 7cadcae54, 3423b9f1f, fad04693b, 52154bc57 (stopped at the ceiling, closed by 0046, RC-51) · verifica visiva della chat passata 2026-11-04 (RC-23, crops of P-2026-11-04-0046); GO di Alfonso sulle crop in attesa per il merge
+Status: eseguito 2026-11-04 · lane full · 7cadcae54, 3423b9f1f, fad04693b, 52154bc57 (stopped at the ceiling, closed by 0046, RC-51) · verifica visiva della chat passata 2026-11-04 (RC-23, crops of P-2026-11-04-0046); GO di Alfonso 2026-11-04 02:49 («Go»)
 Lane: full (new language service, Monaco adapter, Text tab; continuation under RC-51)
 Depends: P-2026-11-03-2350 (hard-stop at the ceiling, nothing committed; handoff and a copy of languageService.ts in its lane folder)
 Worktree: ~/jjodel-w-textb, branch textual-b-navigation (the same tree)

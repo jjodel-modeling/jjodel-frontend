@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-04-0125
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: eseguito 2026-11-04 · lane full · fc5e898b6 f7b094494 e482a33d7 · ceiling stop, closed by P-2026-11-04-0146 (8cfd25833 e64b95c02) · verifica visiva della chat passata 2026-11-04 (RC-23, crops of P-2026-11-04-0146); GO di Alfonso sulle crop in attesa per il merge
+Status: eseguito 2026-11-04 · lane full · fc5e898b6 f7b094494 e482a33d7 · ceiling stop, closed by P-2026-11-04-0146 (8cfd25833 e64b95c02) · verifica visiva della chat passata 2026-11-04 (RC-23, crops of P-2026-11-04-0146); GO di Alfonso 2026-11-04 02:49 («Go»)
 Lane: full (Text tab UI)
 Depends: P-2026-11-04-0046 (B1 closed), P-2026-11-04-0021 (B2 discovery report, on this branch at 1ecab6736)
 Worktree: ~/jjodel-w-textb, branch textual-b-navigation (the same tree)
