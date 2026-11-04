@@ -19,6 +19,7 @@ import { printTextModel } from '../printer';
 import type { NotationStyle } from '../style';
 import { CLIKE_STYLE } from '../style';
 import { checkStyle, STYLE_RULES } from '../styleCheck';
+import { BOOL_CLIKE, BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolGrammar } from './boolCorpus';
 import { grammarOf } from './corpus';
 import { parseCount } from './oracle';
 import { FIXTURE, metamodelOf } from './spec';
@@ -446,5 +447,19 @@ describe('what the derivation refuses, with the reason', () => {
             'class Named: Named is abstract: a keyword, layout or name annotation goes on its concrete classes; not applied',
             'roots: no class is left at the top level; roots not applied',
         ]);
+    });
+});
+
+describe('BOOL, the expression corpus (step C lane C1a)', () => {
+    it('both records resolve without an error, Use and Lit positional on one line', () => {
+        for (const record of [BOOL_CLIKE, BOOL_PASCAL]) {
+            const r = resolveAnnotations(record, BOOL_IDS, BOOL_MM);
+            expect(r.issues.filter(i => i.level === 'error')).toEqual([]);
+            expect(r.classes.Use).toEqual({ keyword: '', layout: 'line' });
+            expect(r.classes.Lit).toEqual({ keyword: '', layout: 'line' });
+            expect(Object.keys(r.classes).filter(c => r.classes[c].operator)).toEqual(['Imp', 'Or', 'And', 'Not']);
+        }
+        expect(boolGrammar(BOOL_PASCAL).style.id).toBe('pascal');
+        expect(boolGrammar(BOOL_CLIKE).style.id).toBe('c-like');
     });
 });
