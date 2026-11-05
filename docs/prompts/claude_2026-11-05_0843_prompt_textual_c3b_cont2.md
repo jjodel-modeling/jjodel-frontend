@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0843
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane textual-c3b-indent · 506837dc1 · parziale (ticket: false LL(1) under Indentation) · app probe 15/15, verifica visiva in attesa del GO
 Lane: full (continuation; guard 72389e089, indentation 7c004674a; red tests for item 3 uncommitted in three test files)
 Depends: P-2026-11-05-0816 (hard-stop at the ceiling during item 3; handoff in its lane folder)
 Worktree: ~/jjodel-w-textc3b, branch textual-c3b-indent (the same tree)

@@ -1890,3 +1890,36 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — app probe of P-2026-11-05-0148, 8 checks; crops c2d-* checked by the chat (RC-23) and by Alfonso («Go», 07:24).
 **Notes**: Rollback tag `pre-v2flow-nameless-ref-label` on `6f34411de` (RC-31). Union: docs/log-inbox/codegen.md. Worker: `~/.jjodel-lanes/P-2026-11-05-0734/result.json`.
 **Prompt document name**: 2026-11-05 07:34
+
+## 2026-11-05 — feat(codegen): C3b, the deletion guard, the Indentation style, Indentation in the picker and the form (P-2026-11-05-0748, P-2026-11-05-0816, P-2026-11-05-0843)
+
+**Prompt**: `claude_2026-11-05_0748_prompt_textual_c3b_indent.md`, continued after two context-ceiling stops by `claude_2026-11-05_0816_prompt_textual_c3b_cont.md` and `claude_2026-11-05_0843_prompt_textual_c3b_cont2.md` (RC-51): (1) the deletion guard of the Text tab; (2) the style `indent`; (3) Indentation in the picker and the Syntax form; (4) mutation bench and gates; (5) app check; (6) this entry.
+**Files touched**: `72389e089` (guard: `ui/TextualTab.tsx`, `TextualTab.scss`, `__tests__/deletionGuard.test.ts`); `7c004674a` (indent: `style.ts`, `concreteGrammar.ts`, `parser.ts`, `printer.ts`, `styleCheck.ts`, `__tests__/{indent,styles,styleCheck}.test.ts`, `__tests__/oracle.ts`); `283b5dbd6` (`syntaxForm.ts`, `annotations.ts`, `__tests__/{syntaxForm,syntaxRecord,textualTab}.test.ts`); `506837dc1` (`__tests__/deletionGuard.test.ts`); all under `frontend/src/codegen/textual/`.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. Gates on `506837dc1`: typecheck exit 0; vitest 14175 passed, 3 red at import (baseline); build exit 0; check:docs 5/5; check:codegen-lazy off and on all PASS.
+**Out-of-scope changes**: yes — `syntaxForm.ts:281` and `annotations.ts:239`, one line each plus the import, approved by the chat (lane auto); more than five files across the lane, listed above.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe `~/.jjodel-lanes/P-2026-11-05-0843/probe.mjs`, 15/15, crops c3b-*; GO of Alfonso pending.
+**Notes**: Partial: the Syntax form cannot save Indentation on any annotated record: the style check's LL(1) has no line rule (ticket below). The picker writes it, the bar lists the errors, the text applies. Guard bench 7 mutants, 5 killed after two vacuous tests were fixed; G4 and G7, the wiring in readEdit, survive: no render harness, covered by the app check. One `pageerror: Canceled` in the probe, absent in 0118. Detail: probe.out.txt in the lane folder.
+**Prompt document name**: 2026-11-05 08:43
+
+## 2026-11-05 — ticket: under Indentation the style check reports false LL(1) conflicts on every annotated grammar
+**Ticket**: `ll1Conflicts` (styleCheck.ts, run only when the grammar is annotated, i.e. any saved record) computes FOLLOW without the parser's line rule, so under `indent` an optional part that starts with ID and is followed by an ID-starting item is "not LL(1)" though the parser reads it. Measured on the tolerant corpus: 5 of 5 annotated cases have 1 to 4 such errors under indent, 0 under C-like and Pascal (turnstile annotated: 3 in every style). In the app the Syntax form refuses to save Indentation (Save disabled) for the port fixture and even for `{v:1, style:{base:'indent'}}`; the Text tab picker stores it and the bar lists the errors. `indent.test.ts:131` checks an unannotated grammar, so it never runs this step.
+**Priority**: high
+**Found in**: P-2026-11-05-0843
+**Detail**: ~/.jjodel-lanes/P-2026-11-05-0843/probe.out.txt
+
+## 2026-11-05 — fix(codegen): C3b, a line-aware LL(1) check under Indentation, the picker refuses a refused style (P-2026-11-05-0910)
+**Prompt**: `claude_2026-11-05_0910_prompt_textual_c3b_ll1_lines.md`: (1) the style check's LL(1) reads the parser's line rule under Indentation; (2) the Text tab's picker refuses a style `checkStyle` refuses, as Save does (R-TXT-47 D1); (3) gates; (4) app check, the `pageerror: Canceled` traced; (5) this entry.
+**Files touched**: `e84d1c814` (`styleCheck.ts`, `__tests__/indent.test.ts`); `53f8481f0` (`__tests__/indent.test.ts`, a type fix); `559b61194` (`syntaxForm.ts`, `ui/TextualTab.tsx`, `__tests__/syntaxForm.test.ts`); all under `frontend/src/codegen/textual/`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-05 08:43
+**Causa**: (c)
+**Regressions**: no. Gates on `559b61194`: typecheck exit 0; vitest 14187 passed, 3 red at import (baseline); build exit 0; check:docs exit 0; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe `~/.jjodel-lanes/P-2026-11-05-0910/probe.mjs`, 9/9, crops ll1-*; GO of Alfonso pending.
+**Notes**: Benches: LL(1) 8/8 killed, picker gate 4/4; the picker's wiring has no render harness, covered by the probe. Port record under Indentation: the picker refuses, 2 errors, the Ref only; the default record passes and the form saves it. `Canceled`: Monaco's word highlighter cancels its Delayer when `reprint` restores the view state after Undo; unhandled, harmless. Detail: probe.out.txt, canceled-trace.out.txt in the lane folder.
+**Prompt document name**: 2026-11-05 09:10

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0748
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · hard-stop al tetto di contesto · lane textual-c3b-indent · 72389e089 · continuato da P-2026-11-05-0816 · chiuso da P-2026-11-05-0843
 Lane: full (tokenizer, grammar, printer of the textual layer; a guard on the write path)
 Depends: C3a (Pascal/Ada and the style picker, merged), R-TXT-40, R-TXT-41 D2, R-TXT-43 (delete-all guard), R-TXT-37
 Worktree: ~/jjodel-w-textc3b, branch textual-c3b-indent, from c4e446a9e (own node_modules from npm ci)

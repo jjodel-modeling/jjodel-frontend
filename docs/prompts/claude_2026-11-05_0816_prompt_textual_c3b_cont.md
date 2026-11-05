@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0816
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · hard-stop al tetto di contesto · lane textual-c3b-indent · 7c004674a · continuato da P-2026-11-05-0843 · chiuso da P-2026-11-05-0843
 Lane: full (continuation; item 1, the deletion guard, committed at 72389e089)
 Depends: P-2026-11-05-0748 (hard-stop at the ceiling; handoff in its lane folder)
 Worktree: ~/jjodel-w-textc3b, branch textual-c3b-indent (the same tree)
