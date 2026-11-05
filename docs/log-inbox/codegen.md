@@ -1980,6 +1980,50 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Notes**: Rollback tag `pre-textual-c3b-indent` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-1413/result.json`.
 **Prompt document name**: 2026-11-05 14:13
 
+## 2026-11-05 — feat(codegen): L1b, the editable literals of the EBNF mode over the shared syntax draft (P-2026-11-05-0921, P-2026-11-05-0945, P-2026-11-05-1415)
+
+**Prompt**: `claude_2026-11-05_0921_prompt_textual_ebnf_literals_l1b.md`, lane L1b of R-TXT-49: (1) the syntax draft lifted into `useSyntaxDraft`, shared by the Syntax form and the EBNF mode; (2) the EBNF mode's element literals as islands edited in place, Save and Discard, findings at the literal. 0921 stopped at the context ceiling (handoff); 0945 died in the bridge outage after its probe; 1415 closed probe, gates and commit.
+**Files touched**: `a44ff8319` (`frontend/src/codegen/textual/ui/useSyntaxDraft.ts` new, `ui/SyntaxForm.tsx`, `__tests__/syntaxDraft.test.ts` new); `c637ebf5f` (`ui/TextualTab.tsx`, `ui/TextualTab.scss`, `ui/SyntaxForm.tsx`, `__tests__/ebnfIslands.test.ts` new).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no. Six files over the two commits, all declared in the DOVE of 0921 (RC-11).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe ALL PASS, 23 checks, crops l1b-1..11 in `~/.jjodel-lanes/P-2026-11-05-1415/`; the GO visivo of the chat is pending.
+**Notes**: 1415 fix: a read-only Monaco neither paints nor hovers markers (`renderValidationDecorations: 'editable'`), so the finding rides on the island's hover; 0945's l1b-6b showed the edit hint alone. Gates on the tree of c637ebf5f: typecheck 0; vitest 14171 passed, 3 baseline import reds; build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Red first and mutation bench in the commit bodies.
+**Prompt document name**: 2026-11-05 09:21
+
+## 2026-11-05 — merge: textual-ebnf-literals takes alfonso-frontend-jjtl (P-2026-11-05-1455)
+
+**Prompt**: `claude_2026-11-05_1455_prompt_textual_ebnf_literals_take_trunk.md`: the trunk into the branch, `--no-ff`; two conflicts, `docs/log-inbox/codegen.md` by union, `ui/TextualTab.tsx` keeping C3b, C2b and L1b whole.
+**Files touched**: merge `62fc7d950` on the branch (trunk at `d95d5b9ca`, not the measured `8565e3e84`: 4 docs files later, no code); resolved by hand `docs/log-inbox/codegen.md` (union, trunk first) and `frontend/src/codegen/textual/ui/TextualTab.tsx` (the `../syntaxForm` import, union).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merged tree: typecheck 0; vitest 3 baseline import reds, plus 32 in `bashGuard.test.ts` from the open merge (MERGE_HEAD exemption, `bash-guard.mjs:167`), 160/160 rerun alone after the commit; build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no. The merge carries 28 trunk files; the hand edits are the two declared.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probes in `~/.jjodel-lanes/P-2026-11-05-1455/`: L1b 23/23, picker refusal 9/9, guard 15/15 in a variant (Notes); crops l1b-*, ll1-*, c3b-*; GO visivo of the chat pending.
+**Notes**: The 0843 probe as written fails its step 1 identically on the trunk tip: since 0910 the picker refuses Indentation on its record. Variant `probe-guard-direct.mjs` writes Indentation directly, as the pre-0910 picker did: 15/15 on the trunk tip (`trunk-control/`) and 15/15 merged. The picker keeps the trunk's `onStyle`; the branch never changed it.
+**Prompt document name**: 2026-11-05 14:55
+
+**Ticket** (low): `~/.jjodel-lanes/P-2026-11-05-0843/probe.mjs` cannot pass its step 1 on any tree carrying the 0910 picker refusal (`559b61194`); the 1413 entry's «0843 (15 checks)» predates that. `probe-guard-direct.mjs` here is the working copy.
+
+## 2026-11-05 — merge: textual-ebnf-literals into alfonso-frontend-jjtl (P-2026-11-05-1522)
+
+**Prompt**: `claude_2026-11-05_1522_prompt_merge_textual-ebnf-literals.md`, a direct merge by `lane-run merge --direct`, no session: `textual-ebnf-literals` at `df8678701` into `alfonso-frontend-jjtl` (the branch took the trunk in P-2026-11-05-1455, TextualTab.tsx resolved by hand). R-TXT-48 step 1, lane L1b: the syntax draft shared by the Syntax form and the EBNF mode (`useSyntaxDraft`), editable literal islands with a content widget, linked occurrences, findings in the island's hover, Discard and Save. Lane auto.
+**Files touched**: merge `eddaf1e6d`, the branch side (`frontend/src/codegen/textual/ui/useSyntaxDraft.ts`, `ui/SyntaxForm.tsx`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `__tests__/ebnfIslands.test.ts`, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `eddaf1e6d`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 14257 tests, 3 red at import (baseline), hooks 967.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probes on the merged tree of P-2026-11-05-1455 (L1b 23/23, picker 9/9, guard 15/15 with the direct-write variant); crops checked by the chat (RC-23).
+**Notes**: Rollback tag `pre-textual-ebnf-literals-P-2026-11-05-1522` on `f4751483b` (RC-31). Ticket, low: the 0843 guard probe picks Indentation through the picker, refused since 0910 on its corpus; use the direct-write variant of P-2026-11-05-1455. Worker: `~/.jjodel-lanes/P-2026-11-05-1522/result.json`.
+**Prompt document name**: 2026-11-05 15:22
+
 ## 2026-11-05 — feat(codegen): L2a, the style tokens as overrides on the base, a form field per token (P-2026-11-05-1430, P-2026-11-05-1457)
 
 **Prompt**: `claude_2026-11-05_1430_prompt_textual_ebnf_literals_l2a.md`, continued after the context ceiling (RC-51) by `claude_2026-11-05_1457_prompt_textual_ebnf_literals_l2a_cont.md`: lane L2a of the EBNF literals report §4/§5.1. Style token overrides resolved and applied (1), dropped on a base switch and written in a fixed order (2), the `style-tokens` rule (3), a form field per style parameter with the style EBNF literals editable (4), round trips under overrides (5), gates (6), log (7). Lane auto.
@@ -1993,6 +2037,46 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — no app probe run; the EBNF mode's style literals become editable through `setLiteral`, reachable in the Text tab and not verified in the app.
 **Notes**: Decisions D-L2a-1..7 in `~/.jjodel-lanes/P-2026-11-05-1430/handoff.md` and the commit bodies. `( )` block over the call layout measured: the LL(1) check reports it on PORT via the expression parentheses; without the operator it round-trips, so no new check. Benches in each commit body, every mutant killed.
 **Prompt document name**: 2026-11-05 14:30
+
+## 2026-11-05 — merge: textual-ebnf-literals-step2 takes alfonso-frontend-jjtl (P-2026-11-05-1537)
+
+**Prompt**: `claude_2026-11-05_1537_prompt_textual-ebnf-literals-step2_take_trunk.md`, a direct merge by `lane-run merge --trunk-into` (L1b merged on the trunk); `claude_2026-11-05_1538_prompt_textual-ebnf-literals-step2_take_trunk.md` is a duplicate launch of the same merge during the bridge outage, superseded.
+**Files touched**: merge `2f6c8111d` on the branch.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes. vitest after the merge: 46 failures in 18 files under load 49 to 57; rerun alone 973/974. The one that stays red is genuine: `ebnfIslands.test.ts` (L1b) pins style tokens as read only, and L2a now maps them to fields, so the EBNF mode shows them as islands. R-TXT-48 step 2 wants exactly that; the assertion is narrowed in P-2026-11-05-2220 (B0) with an app check of a style-token island.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — merge of the trunk into the branch.
+**Notes**: Lane folders `~/.jjodel-lanes/P-2026-11-05-1537/` and `-1538/`; rerun output /tmp/rerun1537.out on the Mac.
+**Prompt document name**: 2026-11-05 15:37
+
+## 2026-11-05 — fix(codegen): B0, a tokens input for the style token rows, style-token islands after L2a (P-2026-11-05-2220)
+**Prompt**: `claude_2026-11-05_2220_prompt_textual_ebnf_literals_b0.md`: F5 of the block-tokens report (a `tokens` input kind for the array token fields) and the merge's genuine red in `ebnfIslands.test.ts` (R-TXT-48 step 2).
+**Files touched**: `syntaxForm.ts`, `ui/SyntaxForm.tsx`, `__tests__/styleTokens.test.ts` (f28661bdd); `__tests__/ebnfIslands.test.ts` (e12db26dc).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-05 14:57
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes, the ebnfIslands assertion, declared in the prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe 13/13 PASS, crops in `~/.jjodel-lanes/P-2026-11-05-2220/`, light, scale 1.
+**Notes**: L2a had labelled the token fields but given them no rows: `styleTokenFields` adds them in Advanced, `fieldsOf` unchanged. List tokens stay text (strings). Gates: typecheck 0; build 0; check:docs 0; lazy off 4 and on 5 PASS; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files 18/18 tests alone but `afterAll` browser close timed out at load 59 (harness). 6 mutants killed.
+**Prompt document name**: 2026-11-05 22:20
+
+## 2026-11-05 — merge: textual-ebnf-literals-step2 into alfonso-frontend-jjtl (P-2026-11-05-2247)
+**Prompt**: `claude_2026-11-05_2247_prompt_merge_textual-ebnf-literals-step2.md`, a direct merge by `lane-run merge --direct`, no session: `textual-ebnf-literals-step2` at `abbdf419d` into `alfonso-frontend-jjtl`, merge base `95359d75e`, 16 commits on the branch side.
+**Files touched**: merge `6f1530d9c`: 14 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-05_1430_prompt_textual_ebnf_literals_l2a.md`, `docs/prompts/claude_2026-11-05_1457_prompt_textual_ebnf_literals_l2a_cont.md`, `docs/prompts/claude_2026-11-05_1537_prompt_textual-ebnf-literals-step2_take_trunk.md`, `docs/prompts/claude_2026-11-05_1538_prompt_textual-ebnf-literals-step2_take_trunk.md`, `docs/prompts/claude_2026-11-05_2220_prompt_textual_ebnf_literals_b0.md`, `frontend/src/codegen/textual/__tests__/ebnfIslands.test.ts`, `frontend/src/codegen/textual/__tests__/ebnfLiterals.test.ts`, and 6 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6f1530d9c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14336 tests in 535 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: B0 crops checked by the chat on the branch tip abbdf419d: token rows in Advanced, style-token island { to begin linked across rules, Save prints begin, one Undo restores
+**Notes**: Rollback tag `pre-textual-ebnf-literals-step2` on `1b70ba7f3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-05-2247/result.json`.
+**Prompt document name**: 2026-11-05 22:47
 
 ## 2026-11-05 — feat(codegen): B1, per-block tokens in the core (P-2026-11-05-1541, P-2026-11-05-2212)
 **Prompt**: `claude_2026-11-05_1541_prompt_textual_block_tokens_b1.md`, continued by `claude_2026-11-05_2212_prompt_textual_block_tokens_b1_cont.md`: B1 of the block-tokens report (R-TXT-51, R-TXT-52), per-block tokens resolved, derived, tokenized and style-checked.

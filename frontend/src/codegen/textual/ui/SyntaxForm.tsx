@@ -9,17 +9,19 @@
  * In `src/codegen/`: loaded with the Text tab's lazy chunk; it imports no `joiner`, so the bench can import the tab.
  */
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { useSelector } from 'react-redux';
 import type { ElementIds, EnumSubset, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import type { DecodedSyntax } from '../syntaxRecord';
 import {
-    EMPTY_DRAFT, advancedInEffect, byField, draftPreview, elementMarks, fieldKey, fieldPhrase, fieldValue, fieldsOf, formElements,
-    isDirty, parseSubsets, readDraft, recordToSave, saveGate, setField, storedChange, subsetsText,
+    advancedInEffect, byField, draftPreview, elementMarks, fieldKey, fieldPhrase, fieldValue, fieldsOf, formElements,
+    parseSubsets, parseTokens, setField, styleTokenFields, subsetsText, tokensText,
 } from '../syntaxForm';
-import type { DraftReading, ElementKey, FieldRef, FormElement, FormField, FormFault, InterfaceMode } from '../syntaxForm';
+import type { ElementKey, FieldRef, FormElement, FormField, FormFault, InterfaceMode } from '../syntaxForm';
+import { useSyntaxDraft } from './useSyntaxDraft';
+import type { SyntaxDraft } from './useSyntaxDraft';
 import './SyntaxForm.scss';
 
 export type PreviewKind = 'text' | 'ebnf';
@@ -41,6 +43,8 @@ export interface SyntaxFormProps {
     readonly onSave: (record: SyntaxAnnotations) => boolean;
     /** A read-only editor of the preview, from the tab (its Monaco setup). */
     readonly preview: (kind: PreviewKind, value: string) => ReactNode;
+    /** The draft shared with the EBNF mode, owned by the Text tab (L1b, R-TXT-49 D3); without it the form keeps its own. */
+    readonly draft?: SyntaxDraft;
 }
 
 const PREVIEW_MIN = 240;
@@ -48,51 +52,28 @@ const PREVIEW_DEFAULT = 420;
 
 const plural = (n: number, one: string): string => `${n} ${one}${n === 1 ? '' : 's'}`;
 
-/** The draft read, a derivation that throws included: its message is one error of the record. */
-function safeReading(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAnnotations, decoded: DecodedSyntax): Pick<DraftReading, 'faults'> {
-    try {
-        return readDraft(mm, ids, draft, decoded.issues);
-    } catch (e) {
-        return { faults: [{ level: 'error', rule: 'annotations', message: e instanceof Error ? e.message : String(e), at: [] }] };
-    }
-}
-
-export default function SyntaxForm({ mm, ids, decoded, storedRaw, objects, metamodelName, pendingEdit, onSave, preview }: SyntaxFormProps) {
+export default function SyntaxForm({ mm, ids, decoded, storedRaw, objects, metamodelName, pendingEdit, onSave, preview, draft: shared }: SyntaxFormProps) {
     // D2: the app's Basic and Advanced (Redux `advanced`, Settings «Editor mode»), as Toolbar.tsx reads it.
     const interfaceMode: InterfaceMode = useSelector((state: any) => !!state.advanced) ? 'advanced' : 'basic';
-    const [draft, setDraft] = useState<SyntaxAnnotations>(() => decoded.record ?? EMPTY_DRAFT);
-    // The stored key the draft was taken from: a change of the store under it is an undo, another tab, or a Save.
-    const [base, setBase] = useState<string | undefined>(storedRaw);
+    // L1b: the Text tab's draft when given, else the form's own (the hook runs either way, hooks are unconditional; idle,
+    // with no metamodel to read, under a shared draft).
+    const own = useSyntaxDraft({ mm: shared ? undefined : mm, ids, decoded, storedRaw, pendingEdit, onSave });
+    const { draft, setDraft, change, reading, dirty, gate, save, loadStored } = shared ?? own;
     const [selected, setSelected] = useState<ElementKey>('language');
     const [filter, setFilter] = useState('');
     const [previewKind, setPreviewKind] = useState<PreviewKind>('text');
     const [previewWidth, setPreviewWidth] = useState(PREVIEW_DEFAULT);
 
-    const change = storedChange(base, storedRaw, draft);
-    useEffect(() => {
-        if (change === 'adopt') setBase(storedRaw);
-        else if (change === 'reset') { setDraft(decoded.record ?? EMPTY_DRAFT); setBase(storedRaw); }
-    }, [change, storedRaw, decoded]);
-
     const elements = useMemo(() => formElements(mm, ids), [mm, ids]);
-    const reading = useMemo(() => safeReading(mm, ids, draft, decoded), [mm, ids, draft, decoded]);
     const fields = useMemo(() => byField(reading.faults), [reading]);
     const marks = useMemo(() => elementMarks(elements, draft, reading.faults), [elements, draft, reading]);
     const deferred = useDeferredValue(draft);
     const shown = useMemo(() => draftPreview(mm, ids, deferred, objects), [mm, ids, deferred, objects]);
 
-    const dirty = isDirty(storedRaw, draft);
-    const gate = saveGate({ faults: reading.faults, storedRaw, draft, pendingEdit });
     const errors = reading.faults.filter(f => f.level === 'error').length;
     const notices = reading.faults.length - errors;
     const recordFaults = reading.faults.filter(f => !f.at.length);
 
-    const loadStored = (): void => { setDraft(decoded.record ?? EMPTY_DRAFT); setBase(storedRaw); };
-    const save = (): void => {
-        if (!gate.enabled) return;
-        const record = recordToSave(draft, ids);
-        if (onSave(record)) setDraft(record);
-    };
     const set = (ref: FieldRef, value: unknown): void => setDraft(d => setField(d, ref, value));
 
     const q = filter.trim().toLowerCase();
@@ -122,7 +103,7 @@ export default function SyntaxForm({ mm, ids, decoded, storedRaw, objects, metam
     };
 
     const fieldList = (element: ElementKey): ReactNode => {
-        const fs = fieldsOf(mm, ids, element, interfaceMode, metamodelName);
+        const fs = [...fieldsOf(mm, ids, element, interfaceMode, metamodelName), ...(element === 'language' ? styleTokenFields(draft, interfaceMode) : [])];
         const hidden = interfaceMode === 'basic' ? advancedInEffect(draft, element) : 0;
         return (
             <>
@@ -345,6 +326,9 @@ function Field({ element, field, draft, ids, mm, findings, onChange }: FieldProp
         case 'subsets':
             input = <SubsetsInput id={id} value={value as readonly EnumSubset[] | undefined} literals={literalsOf(mm, ids, element)} onCommit={v => onChange(ref, v)} />;
             break;
+        case 'tokens':
+            input = <TokensInput id={id} value={value} placeholder={field.placeholder ?? ''} onCommit={v => onChange(ref, v)} />;
+            break;
         default:
             input = (
                 <input id={id} type="text" className="syntax-form__input" spellCheck={false} placeholder={field.placeholder ?? ''}
@@ -386,5 +370,21 @@ function SubsetsInput({ id, value, literals, onCommit }: { readonly id: string; 
                placeholder={literals.length ? `group: ${literals.slice(0, 2).join(', ')}; …` : 'group: LITERAL, …'}
                onChange={e => setText(e.target.value)} onBlur={() => onCommit(parseSubsets(text))}
                onKeyDown={e => { if (e.key === 'Enter') onCommit(parseSubsets(text)); }} />
+    );
+}
+
+/**
+ * A list of style tokens as one line (B0, F5), the tokens split on blanks, applied when the field is left or on Enter:
+ * applied per keystroke, a line equal to the base would clear itself while it is typed.
+ */
+function TokensInput({ id, value, placeholder, onCommit }: { readonly id: string; readonly value: unknown; readonly placeholder: string; readonly onCommit: (v: string[] | undefined) => void }) {
+    const printed = tokensText(value);
+    const [text, setText] = useState(printed);
+    const last = useRef(printed);
+    if (last.current !== printed) { last.current = printed; setText(printed); }
+    return (
+        <input id={id} type="text" className="syntax-form__input" spellCheck={false} value={text} placeholder={placeholder}
+               onChange={e => setText(e.target.value)} onBlur={() => onCommit(parseTokens(text))}
+               onKeyDown={e => { if (e.key === 'Enter') onCommit(parseTokens(text)); }} />
     );
 }

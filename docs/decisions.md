@@ -7290,6 +7290,18 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   Alfonso, ratified 09:26 («ratifico tutto»): overrides survive a base switch among free-layout
   styles and are ignored with a notice under Indentation; an EBNF edit of a per-block token changes that block only;
   the fields sit in the Syntax form, Advanced.
+- **R-TXT-52** (2026-11-05, Alfonso 22:20, «si alla ratifica»). **Block tokens
+  per element (R-TXT-51): the ten decisions of docs/discovery/discovery_2026-11-05_textual_block_tokens.md, taken under
+  lane auto (Alfonso 15:33, «chiudi C»), for him to ratify.** D1 the target text is reached with per-block tokens alone;
+  the head prefix (R-TXT-51 (3)) follows as its own slice inside step C; D2 per-block words join
+  `grammar.style.reservedNames` during derivation; D3 only per-block tokens survive a base switch, the language-wide
+  overrides are still dropped (R-TXT-49 D10 stands); D4 a grouped containment applies its tokens to each group's block;
+  D5 a per-block token equal to the terminator, the assignment or a list token is refused; D6 unknown keys in a class or
+  feature entry become a notice; D7 the form's language-wide block-token fields of L2a, broken (an override shows empty,
+  typing saves a string the record refuses), are fixed first in lane B0, with a ticket; D8 an empty open or close is
+  refused under free layout; D9 per-block tokens where there is no block are an error and are not applied; D10 the EBNF
+  origin is set per side, so a side the block inherits stays language-wide when edited. Lanes B0, B1, B2, then B3a and
+  B3b for the head prefix.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
@@ -7382,6 +7394,13 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-FA-11 (2026-11-03), decided by the chat under Alfonso's «decidi tu» 2026-11-03 11:32, evidence: measured (P-2026-11-03-1016), verified: none, reversible: trunk**: a builtin that fails inside a JjTL
   expression stops the mapping with an error on every path, never a warning with `null`: a transformation that goes on writes a target model that is wrong and looks done.
   With this, JjEL can be the only parser of a forall collection.
+- **R-FA-12** (2026-11-05, ratified by Alfonso 2026-11-05 15:29, registered by P-2026-11-05-1530, evidence: measured, verified: probe, reversible: trunk):
+  R-FA-11 extends to JjEL methods. A method the value's type does not have (`"4".log2()`) and a library method that
+  throws stop the mapping with an error on every path, never a warning with `null`. Out of it, unchanged: a name that
+  resolves to nothing, a property read on null or on a missing feature; a method called on null and a call on a model
+  element without that feature count as the latter (provisional, unattended, P-2026-11-05-1530). JjEL outside JjTL
+  throws the same error as before. Extends R-FA-11, which stays unchanged. Evidence: `method-failure.test.ts` and the
+  node runs of `docs/discovery/discovery_2026-11-05_jjtl_method_failure.md`.
 - **R-JTG-15** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL
   `let` holds the value of its expression, computed once, at the binding: the calls and environment lookups it holds
   are carried out there, so two uses of the name are the same object; a source element stays the element. Closes #515.
@@ -7549,6 +7568,17 @@ R-AI-22 his own answer, R-AI-23 as recommended; evidence: measured, verified: ag
   `AIProvider` statics; and `applyModelCatalog` (the bridge) in `ProviderModelSelector.tsx`. `ProviderSpec` carries no
   GUI data, and `src/services/ai` stays free of UI, so the twelve `addGUIinfo` rows move verbatim to a new UI-side table,
   `components/common/providerVisuals.ts`.
+
+## R-XMI: attribute values of the XMI M1 import (decisions 2026-11-05)
+
+- **R-XMI-1** (2026-11-05, ratified by Alfonso 2026-11-05 15:29 as it stands, registered by P-2026-11-05-1530, evidence: measured, verified: probe, reversible: trunk): the XMI M1
+  import stores an attribute value typed by its declared primitive (EByte, EShort, EInt, ELong as integers; EFloat,
+  EDouble as finite numbers; EBoolean as `true`/`false`, any case); strings and enums are unchanged. Decided by the
+  chat under Alfonso's «decidi tu» (#607). On a bad value: a value that does not parse for its type
+  keeps its text and is an import warning, never NaN or 0, the import is not refused; an integer outside its type's range is stored unclamped
+  with a warning; an ELong beyond 2^53 keeps its text with a warning. Projects saved before the change keep their
+  strings; no migration of saved projects: re-importing the XMI heals them (ratified with the row). Evidence: `xmi-import-skip.test.ts` and the app probes of P-2026-11-05-1446
+  (`docs/discovery/discovery_2026-11-05_xmi_typed_integers.md`).
 
 ## Superate
 

@@ -122,6 +122,49 @@ type PendingRef = {
     sourceTagPath: string;
 };
 
+// #607 (P-2026-11-05-1446): the text of an XMI attribute value cast by its declared primitive type.
+// Integers follow EMF's decimal form; a value that does not parse keeps its text and carries a
+// `problem` for the import warnings (never NaN, never 0): the validator and the user see it as it
+// was written. An integer outside its type's range is stored as the number, unclamped, and reported.
+// An ELong beyond 2^53 cannot be held exactly by a JS number, so it keeps its text, reported.
+// Other type names (EString, EChar, EDate, user data types) pass through as text.
+const XMI_INTEGER_RANGES: Record<string, [number, number]> = {
+    EByte: [-128, 127],
+    EShort: [-32768, 32767],
+    EInt: [-2147483648, 2147483647],
+    // EMF's ELong range is wider; past 2^53 the safe-integer check below fires first.
+    ELong: [Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+};
+function castXmiPrimitive(text: string, typeName: string): { value: string | number | boolean; problem?: string } {
+    const t = text.trim();
+    const range = XMI_INTEGER_RANGES[typeName];
+    if (range) {
+        if (!/^[+-]?\d+$/.test(t)) return { value: text, problem: `is not an integer (${typeName}), kept as text` };
+        const n = Number(t);
+        if (!Number.isSafeInteger(n)) {
+            return { value: text, problem: `cannot be held exactly by a JavaScript number (${typeName}), kept as text` };
+        }
+        if (n < range[0] || n > range[1]) {
+            return { value: n, problem: `is out of the ${typeName} range [${range[0]}, ${range[1]}], stored unclamped` };
+        }
+        return { value: n };
+    }
+    if (typeName === 'EDouble' || typeName === 'EFloat') {
+        const n = Number(t);
+        if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(t) || !Number.isFinite(n)) {
+            return { value: text, problem: `is not a finite decimal number (${typeName}), kept as text` };
+        }
+        return { value: n };
+    }
+    if (typeName === 'EBoolean') {
+        const l = t.toLowerCase();
+        if (l === 'true') return { value: true };
+        if (l === 'false') return { value: false };
+        return { value: text, problem: `is neither true nor false (EBoolean), kept as text` };
+    }
+    return { value: text };
+}
+
 // ============================================
 // XMI SERVICE
 // ============================================
@@ -899,7 +942,7 @@ export class XMIService {
         const upperBound = Number((metaFeature as any).upperBound ?? 1);
         const isMulti = upperBound !== 1;
 
-        let values: string[];
+        let values: any[];
         if (isMulti) {
             // EMF default: whitespace split for multi-valued primitive attributes.
             values = rawValue.split(/\s+/).filter(v => v.length > 0);
@@ -959,6 +1002,21 @@ export class XMIService {
                 ctx.warnings.push(msg);
                 ctx.summary.warnings++;
                 return v;
+            });
+        } else if (featType && typeof featType.name === 'string') {
+            // #607 (P-2026-11-05-1446): XMI carries every value as text; the declared primitive says
+            // what it is. Keyed on the type NAME, the same key get_values switches on when it reads
+            // the slot (LModelElement.tsx, `typestr`), so writer and reader agree on the type.
+            // Strings and other types fall through untouched.
+            values = values.map((v) => {
+                const cast = castXmiPrimitive(v, featType.name);
+                if (cast.problem) {
+                    const msg = `Attribute "${featName}" on "${metaClass.name}": value "${v}" ${cast.problem}`;
+                    console.warn('[XMI import]', msg);
+                    ctx.warnings.push(msg);
+                    ctx.summary.warnings++;
+                }
+                return cast.value;
             });
         }
 
