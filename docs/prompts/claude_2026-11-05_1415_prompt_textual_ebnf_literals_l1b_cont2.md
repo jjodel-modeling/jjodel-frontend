@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-1415
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · c637ebf5f · app probe 23 checks pass; verifica visiva in attesa del GO di Alfonso (crops l1b-1..11 in ~/.jjodel-lanes/P-2026-11-05-1415/)
 Lane: full (continuation; item 1 at a44ff8319, item 2 uncommitted in the tree)
 Depends: P-2026-11-05-0945 (died in the bridge outage 10:06-13:55; crops l1b-1..11 in its lane folder), P-2026-11-05-0921 (handoff)
 Worktree: ~/jjodel-w-ebnflit, branch textual-ebnf-literals (the same tree)

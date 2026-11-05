@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0921
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · a44ff8319, c637ebf5f (stopped at the ceiling, continued by P-2026-11-05-0945 and P-2026-11-05-1415, RC-51) · app probe 23 checks pass; verifica visiva in attesa del GO di Alfonso (crops l1b-1..11 in ~/.jjodel-lanes/P-2026-11-05-1415/)
 Lane: full (UI of the textual layer)
 Depends: P-2026-11-05-0906 (L1a merged, 4b858ee65), R-TXT-48, R-TXT-49
 Worktree: ~/jjodel-w-ebnflit, branch textual-ebnf-literals, at 5fd33809e (the trunk tip)

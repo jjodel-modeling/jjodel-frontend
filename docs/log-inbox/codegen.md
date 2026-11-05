@@ -1918,3 +1918,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — no UI change; the EBNF text is byte for byte the same.
 **Notes**: Rollback tag `pre-textual-ebnf-literals` on `1cf342a50` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-0906/result.json`.
 **Prompt document name**: 2026-11-05 09:06
+
+## 2026-11-05 — feat(codegen): L1b, the editable literals of the EBNF mode over the shared syntax draft (P-2026-11-05-0921, P-2026-11-05-0945, P-2026-11-05-1415)
+
+**Prompt**: `claude_2026-11-05_0921_prompt_textual_ebnf_literals_l1b.md`, lane L1b of R-TXT-49: (1) the syntax draft lifted into `useSyntaxDraft`, shared by the Syntax form and the EBNF mode; (2) the EBNF mode's element literals as islands edited in place, Save and Discard, findings at the literal. 0921 stopped at the context ceiling (handoff); 0945 died in the bridge outage after its probe; 1415 closed probe, gates and commit.
+**Files touched**: `a44ff8319` (`frontend/src/codegen/textual/ui/useSyntaxDraft.ts` new, `ui/SyntaxForm.tsx`, `__tests__/syntaxDraft.test.ts` new); `c637ebf5f` (`ui/TextualTab.tsx`, `ui/TextualTab.scss`, `ui/SyntaxForm.tsx`, `__tests__/ebnfIslands.test.ts` new).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no. Six files over the two commits, all declared in the DOVE of 0921 (RC-11).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe ALL PASS, 23 checks, crops l1b-1..11 in `~/.jjodel-lanes/P-2026-11-05-1415/`; the GO visivo of the chat is pending.
+**Notes**: 1415 fix: a read-only Monaco neither paints nor hovers markers (`renderValidationDecorations: 'editable'`), so the finding rides on the island's hover; 0945's l1b-6b showed the edit hint alone. Gates on the tree of c637ebf5f: typecheck 0; vitest 14171 passed, 3 baseline import reds; build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Red first and mutation bench in the commit bodies.
+**Prompt document name**: 2026-11-05 09:21

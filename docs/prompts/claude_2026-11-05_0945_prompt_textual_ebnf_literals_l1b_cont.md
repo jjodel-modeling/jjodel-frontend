@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0945
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · no commit (died in the bridge outage after its probe; closed by P-2026-11-05-1415, RC-51) · verifica visiva in attesa del GO di Alfonso (crops of P-2026-11-05-1415)
 Lane: full (continuation; item 1 committed at a44ff8319, item 2 uncommitted in the tree)
 Depends: P-2026-11-05-0921 (hard-stop at the ceiling; handoff in its lane folder)
 Worktree: ~/jjodel-w-ebnflit, branch textual-ebnf-literals (the same tree)
