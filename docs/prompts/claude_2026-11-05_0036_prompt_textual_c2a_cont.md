@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0036
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · cdeed0c35 · app probe 4 checks pass; verifica visiva della chat passata 2026-11-05 (RC-23, crops c2c-1, c2c-2) (RC-23, crops c2c-1-typed, c2c-2-name-removed in ~/.jjodel-lanes/P-2026-11-05-0036/)
 Lane: full (continuation; 90720f022 and 6c1a22241 committed, syntaxForm.ts and its test untracked in the tree)
 Depends: P-2026-11-05-0010 (hard-stop at the ceiling during item 3; handoff in its lane folder)
 Worktree: ~/jjodel-w-textc2, branch textual-c2-syntax-form (the same tree)

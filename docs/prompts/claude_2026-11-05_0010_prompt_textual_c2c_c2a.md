@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0010
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · 90720f022, 6c1a22241, cdeed0c35 (stopped at the ceiling, closed by P-2026-11-05-0036, RC-51) · verifica visiva della chat passata 2026-11-05 (RC-23, crops c2c-1, c2c-2) (RC-23, crops of P-2026-11-05-0036)
 Lane: full (write path to a model, textual layer)
 Depends: P-2026-11-04-2342 (C2 discovery report, 5c459d039), R-TXT-47 (provisional, trunk)
 Worktree: ~/jjodel-w-textc2, branch textual-c2-syntax-form (the same tree)
