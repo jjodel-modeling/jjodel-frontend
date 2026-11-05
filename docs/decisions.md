@@ -7280,6 +7280,16 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   stay errors. The Text tab's style picker refuses a style whose `checkStyle` has an error, with its reason, as the
   Syntax form's Save does (R-TXT-47 D1); the record is not written. Under Indentation a nameless object with no keyword
   and nothing else set is refused by the style check, since it would print nothing.
+- **R-TXT-51** (2026-11-05, Alfonso 09:22). **Block tokens per element, on top of the language-wide tokens of R-TXT-48
+  (2); step C, after L2a.** Target text: `begin program` / `declaration is` ... `end` / `end program`. (1) A class
+  annotation and a containment feature annotation take optional block open and close tokens; a close of several tokens
+  is allowed (`end program`); the empty block is derived from them. (2) Per-block word tokens join the language-wide
+  reserved names; punctuation tokens join the tokenizer and the `taken` check; `checkStyle` and the parser's recovery
+  (parser.ts:906) read the node's own tokens, not only the style's. (3) A separate slice: a head prefix before the class
+  keyword (`begin program`); a prefix shared among alternatives is refused as an LL(1) conflict. (4) Proposed by
+  Alfonso, taken as provisional under lane auto and reported back: overrides survive a base switch among free-layout
+  styles and are ignored with a notice under Indentation; an EBNF edit of a per-block token changes that block only;
+  the fields sit in the Syntax form, Advanced.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
