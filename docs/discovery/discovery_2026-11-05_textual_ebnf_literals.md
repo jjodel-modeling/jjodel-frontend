@@ -222,3 +222,63 @@ A view zone (an input in a zone under the line) is ruled out: a zone pushes the 
   in a component file (NON-NEGOTIABLE 28); the accent stays `#06b6d4`.
 - **Undo**: with no pending draft, Cmd/Ctrl+Z in the EBNF editor goes to the app's undo by the same `addCommand` as the
   Text editor; with a dirty draft it does nothing (the draft has no undo of its own, as in the form today, §5 D6).
+
+## 3. Back into the draft
+
+### 3.1 One edit, one field change (read, `syntaxForm.ts`)
+
+`setField(draft, ref, value)` (`:271-304`) already covers every element origin of §1.2, keyed by the form's `FieldRef`:
+
+| Literal origin (`src`) | `FieldRef` | Note |
+|---|---|---|
+| class keyword of `C` | `class:<id of C>`, `class.keyword` | `case 'class.keyword': return cls(c => put(c, 'keyword', value));` (`:286`) |
+| feature keyword of `O.f` | `feature:<id of O.f>`, `feature.keyword` | the declaring class's feature: an inherited keyword printed in several subclasses is one field (as `locate`'s `featureKey`, `:385-394`) |
+| per-item keyword | `feature.itemKeyword` | `:296` |
+| name keyword | `class.nameKeyword` | `:289` |
+| operator symbol | `class.operatorSymbol` | `:291` |
+| call word | `class.operatorCall` | `:294` |
+| group name `i` of `E` | `enum:<id of E>`, `enum.subsets` | the whole list with entry `i` renamed (`:301`) |
+
+Names to ids through `contextOf` (`:122`). A literal shown several times has one origin, so one `setField` changes every
+occurrence when the grammar re-derives. The unannotated call word follows the class keyword (§1.2).
+
+Two semantics to fix:
+
+- **An empty value clears the field** (`isCleared`, `:254`). For a class keyword, a feature keyword and a call word that is
+  «back to the default», same structure; for an item keyword, a name keyword, an operator symbol or a group name it
+  removes a structure (`concreteGrammar.ts:534` vs `:539`; `annotations.ts:281` `'the operator has no symbol'`). The EBNF
+  refuses an empty value for those four (§5 D4); positional stays a form toggle.
+- **A value equal to the default is written as given.** The form never stores a default (`syntaxForm.ts:55`, «shown as
+  the placeholder, never stored (F1)»); the EBNF should store it as cleared. The placeholder is not the printed default
+  under a case: `{ placeholder: c.name }` (`:185`) ignores `classCase` (`concreteGrammar.ts:302` prints
+  `applyCase(r.cls, classCase)`), and the call word's placeholder is `c.name` (`:197`) where the default is the class
+  keyword (`concreteGrammar.ts:384`). The exact default: the text of the same origin in the grammar derived with the
+  field cleared, one more derivation per commit.
+
+### 3.2 Where the draft lives
+
+The draft is the form's local state: `const [draft, setDraft] = useState<SyntaxAnnotations>(() => decoded.record ??
+EMPTY_DRAFT);` (`SyntaxForm.tsx:63`), with `base` (`:65`), the `storedChange` effect (`:71-75`), `reading` (`:78`), the gate
+(`:85`) and `save` (`:91-95`). The EBNF mode renders the stored `view.ebnf` (§2.1). So an EBNF edit has no draft to go to
+today, and H4 holds only partly.
+
+What it takes: lift draft, base, the `storedChange` effect, reading, gate and save into one hook (new `ui/useSyntaxDraft.ts`)
+owned by `TextualTab` and passed to the form and the EBNF view. `SyntaxFormProps` (`SyntaxForm.tsx:27`) gains one
+optional prop; without it the form keeps its own state (NON-NEGOTIABLE 11). Then the EBNF mode shows
+`draftPreview(...).ebnf` (`syntaxForm.ts:575`), equal to `view.ebnf` while clean; form and EBNF are in step by
+construction, and a store change under them goes through `storedChange` (`:623-627`).
+
+### 3.3 Checks, findings, Save
+
+- **Well-formedness before the draft**, per field, the resolution's rules: class keyword `isKeyword` (`annotations.ts:264`),
+  feature keyword identifier or one punctuation token (`:133`), item and name keyword `IDENTIFIER` (`:299`, `:269`), symbol
+  `isSymbol` (`:136`), call word (`:283`), group name (`:314`). A failing value is refused in the widget, never written
+  (written, the resolution drops it and the EBNF shows the default). Gap: `isSymbol` admits `"` and `quoted`
+  (`concreteGrammar.ts:667`) does not escape; the widget refuses `"`.
+- **Faults at the literal**: `readDraft` (`syntaxForm.ts:487-511`) gives de-duplicated faults with `at: FieldRef[]` (D9);
+  each field maps to the spans of the same origin, one marker each, the same message (`byField`, `:514-524`). Faults at
+  fields with no literal (layout, positional, inline, groupBy, `language.*`, precedence, associativity, pattern) go to the
+  bar's list.
+- **Save**: the same `saveGate` (`:557-567`, R-TXT-47 D1's three blocks), `recordToSave` (`:570`), `writeSyntax`
+  (`openTextualTab.tsx:56-62`, one `set_state`, one undo step). The EBNF bar's lock becomes the draft's state with Save
+  and Discard: a visual change.
