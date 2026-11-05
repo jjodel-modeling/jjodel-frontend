@@ -44,7 +44,7 @@ import { deletedObjects, planTextEdit } from '../textDiff';
 import type { ApplyRefusal, RefTarget, TextDiff, TextEditPlan } from '../textDiff';
 import { identityOf, matchObjects } from '../textMatch';
 import type { TextMatch } from '../textMatch';
-import { elementIdsOf, readSyntax, styleBaseOf, textualNotation, withStyleBase } from '../syntaxRecord';
+import { elementIdsOf, readSyntax, storedSyntax, styleBaseOf, textualNotation, withStyleBase } from '../syntaxRecord';
 import { STYLE_CATALOG, isStyleBase } from '../style';
 import type { StyleBase } from '../style';
 import type { AnnotationIssue, ElementIds, SyntaxAnnotations } from '../annotations';
@@ -55,6 +55,9 @@ import type { NewModelReading } from '../modelLines';
 import TextConfirmPanel, { confirmRows, needsConfirmation } from './TextConfirmPanel';
 import type { ConfirmRow } from './TextConfirmPanel';
 import type { TextualSession } from './textualMonaco';
+import SyntaxForm from './SyntaxForm';
+import type { PreviewKind } from './SyntaxForm';
+import { storedErrors } from '../syntaxForm';
 import './TextualTab.scss';
 
 /** T1's input: the metamodel and the objects as plain data (metamodel.ts). */
@@ -202,19 +205,21 @@ export interface EditBase {
 export interface ModelReading {
     readonly view: TextualView;
     readonly base: EditBase | null;
+    /** The metamodel and the objects read, also when the print fails: the Syntax mode edits a record that breaks it (C2b). */
+    readonly input?: TextInput;
 }
 
 /** The view of `textualView` and the base an edit of its text is diffed against; a failure is reported, never thrown. */
 /** The lookup, when given, reads `ordered` for the diff (`textInputOf`). */
 export function readModel(globals: Readonly<Record<string, any>>, stored: StoredNotation = NO_ANNOTATIONS, lookup?: Readonly<Record<string, any>>): ModelReading {
-    let input: TextInput;
+    let input: TextInput | undefined;
     let grammar: ConcreteGrammar;
     let issues: readonly AnnotationIssue[];
     try {
         input = textInputOf(globals, lookup);
         ({ grammar, issues } = textualNotation(input.metamodel, stored.decoded, stored.ids));
     } catch (e) {
-        return { view: { text: '', ebnf: '', error: messageOf(e) }, base: null };
+        return { view: { text: '', ebnf: '', error: messageOf(e) }, base: null, ...(input ? { input } : {}) };
     }
     const ebnf = concreteGrammarEbnf(grammar);
     try {
@@ -223,9 +228,10 @@ export function readModel(globals: Readonly<Record<string, any>>, stored: Stored
         return {
             view: { text: printed.text, ebnf, error: null, issues, ...(warnings.length ? { warnings } : {}) },
             base: { mm: input.metamodel, grammar, objects: input.objects, spans: printed.spans, unprinted: printed.unprinted, refs: printed.refs ?? [] },
+            input,
         };
     } catch (e) {
-        return { view: { text: '', ebnf, error: messageOf(e), issues }, base: null };
+        return { view: { text: '', ebnf, error: messageOf(e), issues }, base: null, input };
     }
 }
 
@@ -827,11 +833,13 @@ function TextNavigator({ editor, session, open, children }: TextNavigatorProps) 
     );
 }
 
-type TextualMode = 'text' | 'ebnf';
+type TextualMode = 'text' | 'ebnf' | 'syntax';
 
 const MODES: ReadonlyArray<{ readonly mode: TextualMode; readonly label: string; readonly icon: string; readonly title: string }> = [
     { mode: 'text', label: 'Text', icon: 'bi-file-earmark-text', title: 'The model in the textual notation' },
     { mode: 'ebnf', label: 'EBNF', icon: 'bi-braces', title: 'The concrete grammar of the notation' },
+    // Step C2b (P-2026-11-05-0118): only where the record can be written (`writeSyntax`).
+    { mode: 'syntax', label: 'Syntax', icon: 'bi-sliders', title: 'The syntax annotations of the notation' },
 ];
 
 /** The glyph margin plus the decorations fill the 30 px the global Monaco rules give the margin (ScriptTab.tsx). */
@@ -923,9 +931,25 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     // The picker's rule (Toolbar.tsx), read live: a language name set after the tab opened shows here too.
     const metamodel = lookup?.[model?.instanceof];
     const shownLabel = metamodel ? textualOptionLabel(metamodel.name, textualLanguageNameOf(lookup, modelId)) : label;
-    const failed = view.error !== null && (mode === 'text' || !view.ebnf);
+    // The Syntax mode needs the metamodel only: it edits the record that may be what breaks the print.
+    const failed = mode === 'syntax' ? !read.input : view.error !== null && (mode === 'text' || !view.ebnf);
     const metamodelId: string | undefined = typeof model?.instanceof === 'string' ? model.instanceof : undefined;
-    const decoded = useMemo(() => storedNotation(lookup ?? {}, metamodelId).decoded, [lookup, metamodelId]);
+    const stored = useMemo(() => storedNotation(lookup ?? {}, metamodelId), [lookup, metamodelId]);
+    const decoded = stored.decoded;
+    const storedRaw = metamodelId && lookup?.[metamodelId] ? storedSyntax(lookup, metamodelId) : undefined;
+    // D9 (R-TXT-47): the stored record's `checkStyle` errors, which the notation's own issues do not carry (F3).
+    const issues = useMemo(() => {
+        const shown = view.issues ?? [];
+        if (!read.input) return shown;
+        try {
+            return [...shown, ...storedErrors(read.input.metamodel, stored.ids, decoded.record, shown)];
+        } catch {
+            return shown;
+        }
+    }, [view.issues, read.input, stored, decoded]);
+    // The form stays mounted once opened, under the other modes, so its draft survives a look at the text.
+    const [syntaxOpened, setSyntaxOpened] = useState(false);
+    useEffect(() => { if (mode === 'syntax') setSyntaxOpened(true); }, [mode]);
 
     const [status, setStatus] = useState<EditStatus>({ kind: 'synced' });
     const [stale, setStale] = useState(false);
@@ -1313,6 +1337,11 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         if (record) writeSyntax(metamodelId, record);
     };
     const refusalTitle = status.kind === 'refused' ? status.reasons.join('\n') : shownStatus.text;
+    const syntaxPreview = (kind: PreviewKind, value: string): ReactNode => (ui ? (
+        <Editor width="100%" height="100%" language={kind === 'ebnf' ? ui.EBNF_LANGUAGE_ID : ui.TEXTUAL_LANGUAGE_ID} value={value}
+                theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
+                options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }} />
+    ) : null);
 
     return (
         <div className="textual-tab">
@@ -1368,7 +1397,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                     </button>
                 )}
                 <div className="textual-tab__modes" role="group" aria-label="Shown text">
-                    {MODES.map(m => (
+                    {MODES.filter(m => m.mode !== 'syntax' || writeSyntax).map(m => (
                         <button
                             key={m.mode}
                             type="button"
@@ -1387,7 +1416,7 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                     <i className="bi bi-x-lg" aria-hidden="true" />
                 </button>
             </div>
-            {model && <NotationIssues issues={view.issues} warnings={view.warnings} />}
+            {model && <NotationIssues issues={issues} warnings={view.warnings} />}
             <div className="textual-tab__body textual-tab__body--layered">
                 {!model ? (
                     <div className="textual-tab__message">
@@ -1416,6 +1445,13 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                                 <Editor width="100%" height="100%" language={ui.EBNF_LANGUAGE_ID} value={view.ebnf}
                                         theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
                                         options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }} />
+                            </div>
+                        )}
+                        {writeSyntax && metamodelId && read.input && (mode === 'syntax' || syntaxOpened) && (
+                            <div className={'textual-tab__layer' + (mode === 'syntax' ? '' : ' textual-tab__layer--hidden')}>
+                                <SyntaxForm mm={read.input.metamodel} ids={stored.ids} decoded={decoded} storedRaw={storedRaw}
+                                            objects={read.input.objects} metamodelName={typeof metamodel?.name === 'string' ? metamodel.name : undefined}
+                                            pendingEdit={!styleFree} onSave={record => writeSyntax(metamodelId, record)} preview={syntaxPreview} />
                             </div>
                         )}
                         {mode === 'text' && confirm && confirm.rows.length > 0 && (

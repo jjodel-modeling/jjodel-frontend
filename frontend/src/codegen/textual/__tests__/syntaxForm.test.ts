@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel } from '../metamodel';
 import { encodeSyntax } from '../syntaxRecord';
-import { advancedInEffect, byField, draftPreview, fieldKey, fieldValue, fieldsOf, formElements, isDirty, readDraft, saveGate, setField, staleEntries, withoutStale } from '../syntaxForm';
+import { advancedInEffect, byField, draftPreview, elementMarks, fieldKey, fieldValue, fieldsOf, formElements, isDirty, parseSubsets, readDraft, saveGate, setField, staleEntries, storedChange, storedErrors, subsetsText, withoutStale } from '../syntaxForm';
 import type { FieldRef, FormFault } from '../syntaxForm';
 import { BOOL_CLIKE, BOOL_IDS, BOOL_MM, boolObjects } from './boolCorpus';
 import { LIBRARY_IDS, LIBRARY_MM, libraryObjects } from './tolerantCorpus';
@@ -274,5 +274,59 @@ describe('the preview from a draft', () => {
         expect(p.ebnf).toContain('"shelf"');
         expect(p.ebnf).not.toBe(plain.ebnf);
         expect(draftPreview(BOOL_MM, BOOL_IDS, BOOL_CLIKE, boolObjects()).error).toBeNull();
+    });
+});
+
+describe('the element list marks (C2b)', () => {
+    it('a class is annotated by its own entry or a feature\'s, the language by its record fields; a fault marks its element, a feature\'s marks its class (mutants: features ignored; the notice as an error)', () => {
+        const draft: SyntaxAnnotations = { v: 1, language: 'Shelf', classes: { C_Lib: { name: { keyword: 'books' } } }, features: { A_Book_year: { keyword: 'in' } } };
+        const els = formElements(LIBRARY_MM, LIBRARY_IDS);
+        const marks = elementMarks(els, draft, readDraft(LIBRARY_MM, LIBRARY_IDS, draft).faults);
+        expect(marks.get('language')).toEqual({ annotated: true, finding: null });
+        expect(marks.get('class:C_Lib')).toEqual({ annotated: true, finding: 'error' });
+        expect(marks.get('class:C_Mem')).toEqual({ annotated: false, finding: null });
+        expect(marks.get('enum:E_Genre')).toEqual({ annotated: false, finding: null });
+        const book = elementMarks(els, draft, [{ level: 'notice', rule: 'x', message: 'm', at: [{ element: 'feature:A_Book_year', field: 'feature.keyword' }] }]);
+        expect(book.get('class:C_Book')).toEqual({ annotated: true, finding: 'notice' });
+        expect(elementMarks(els, { v: 1 }, []).get('language')).toEqual({ annotated: false, finding: null });
+    });
+});
+
+describe('a change of the stored record under the draft (C2b)', () => {
+    const a = encodeSyntax({ v: 1, language: 'A' });
+    const b = encodeSyntax({ v: 1, language: 'B' });
+
+    it('same, adopt (Save landed), reset (a clean draft), kept (a dirty one) (mutants: a dirty draft reset; Save read as a foreign change)', () => {
+        expect(storedChange(a, a, { v: 1, language: 'X' })).toBe('same');
+        expect(storedChange(a, b, { v: 1, language: 'B' })).toBe('adopt');
+        expect(storedChange(a, b, { v: 1, language: 'A' })).toBe('reset');
+        expect(storedChange(a, b, { v: 1, language: 'X' })).toBe('kept');
+        expect(storedChange(undefined, '{"v":1}', { v: 1 })).toBe('adopt');
+        expect(storedChange(a, undefined, { v: 1, language: 'A' })).toBe('reset');
+    });
+});
+
+describe('the bar\'s checkStyle errors of the stored record (D9)', () => {
+    it('one line per de-duplicated error, named by its first field, none already shown by the notation (mutants: no de-duplication; notices kept; a shown issue repeated)', () => {
+        const record: SyntaxAnnotations = { v: 1, classes: { C_And: { keyword: 'all' }, C_Or: { keyword: 'all' } } };
+        const errs = storedErrors(BOOL_MM, PROBE_IDS, record, []);
+        expect(errs).toHaveLength(1);
+        expect(errs[0].level).toBe('error');
+        expect(errs[0].where).toBe('the keyword of And');
+        expect(errs[0].message).toContain('"all"');
+        expect(storedErrors(BOOL_MM, PROBE_IDS, record, [{ level: 'error', where: 'x', message: errs[0].message }])).toEqual([]);
+        expect(storedErrors(BOOL_MM, BOOL_IDS, null, [])).toEqual([]);
+        expect(storedErrors(BOOL_MM, BOOL_IDS, { v: 1, classes: { C_Gone: { keyword: 'x' } } }, [])).toEqual([]);
+    });
+});
+
+describe('the groups of literals as text (C2b)', () => {
+    it('round trip, and a group without a name or a literal is dropped (mutants: empty groups kept; spaces kept)', () => {
+        const subsets = [{ name: 'prose', literals: ['FICTION', 'HISTORY'] }, { name: 'verse', literals: ['POETRY'] }];
+        expect(subsetsText(subsets)).toBe('prose: FICTION, HISTORY; verse: POETRY');
+        expect(parseSubsets('prose: FICTION, HISTORY; verse: POETRY')).toEqual(subsets);
+        expect(parseSubsets(' prose :FICTION ,HISTORY ;; verse: ; : X; POETRY')).toEqual([{ name: 'prose', literals: ['FICTION', 'HISTORY'] }]);
+        expect(parseSubsets('')).toEqual([]);
+        expect(subsetsText(undefined)).toBe('');
     });
 });

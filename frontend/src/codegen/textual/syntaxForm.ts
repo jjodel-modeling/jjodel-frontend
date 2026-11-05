@@ -14,7 +14,7 @@
  */
 
 import { operatorFixity } from './annotations';
-import type { AnnotationIssue, ClassAnnotation, ElementIds, FeatureAnnotation, SyntaxAnnotations } from './annotations';
+import type { AnnotationIssue, ClassAnnotation, ElementIds, EnumSubset, FeatureAnnotation, SyntaxAnnotations } from './annotations';
 import { concreteGrammarEbnf } from './concreteGrammar';
 import type { ConcreteGrammar, ObjectRule } from './concreteGrammar';
 import { classFeatures, isNameFeature } from './metamodel';
@@ -588,3 +588,65 @@ export function draftPreview(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAn
 
 /** The empty record, the draft of a metamodel with none. */
 export const EMPTY_DRAFT: SyntaxAnnotations = { v: SYNTAX_RECORD_VERSION };
+
+// ---- The form's list, the stored record under the draft, the bar (C2b, P-2026-11-05-0118) ----------------------------
+
+export interface ElementMark {
+    /** The draft annotates the element (a class: itself or one of its own features). */
+    readonly annotated: boolean;
+    /** The worst fault at the element or, for a class, at one of its own features. */
+    readonly finding: FormFault['level'] | null;
+}
+
+/** Each listed element's marks: the accent dot of an annotated element, the mark of a fault that maps there. */
+export function elementMarks(elements: readonly FormElement[], draft: SyntaxAnnotations, faults: readonly FormFault[]): Map<ElementKey, ElementMark> {
+    const has = (o: object | undefined): boolean => o !== undefined && Object.keys(o).length > 0;
+    const worst = new Map<ElementKey, FormFault['level']>();
+    for (const f of faults) for (const r of f.at) if (worst.get(r.element) !== 'error') worst.set(r.element, f.level);
+    const out = new Map<ElementKey, ElementMark>();
+    for (const e of elements) {
+        const keys = [e.key, ...(e.features ?? [])];
+        const annotated = e.kind === 'language' ? draft.language !== undefined || has(draft.style) || draft.roots !== undefined
+            : e.kind === 'class' ? has(draft.classes?.[idOf(e.key)]) || (e.features ?? []).some(k => has(draft.features?.[idOf(k)]))
+                : e.kind === 'enum' ? has(draft.enums?.[idOf(e.key)]) : has(draft.features?.[idOf(e.key)]);
+        const levels = keys.map(k => worst.get(k));
+        out.set(e.key, { annotated, finding: levels.includes('error') ? 'error' : levels.includes('notice') ? 'notice' : null });
+    }
+    return out;
+}
+
+/**
+ * What a change of the stored record means for the draft: `same`, nothing changed; `adopt`, the store now holds the
+ * draft (a Save landed); `reset`, the draft was clean and follows the store (an undo, another tab); `kept`, a dirty draft
+ * stays and the bar offers Reload (the Text tab's stale pattern).
+ */
+export function storedChange(base: string | null | undefined, storedRaw: string | null | undefined, draft: SyntaxAnnotations): 'same' | 'adopt' | 'reset' | 'kept' {
+    if ((base ?? null) === (storedRaw ?? null)) return 'same';
+    if (!isDirty(storedRaw, draft)) return 'adopt';
+    return isDirty(base, draft) ? 'kept' : 'reset';
+}
+
+/**
+ * D9: the de-duplicated `checkStyle` errors of the stored record, as the bar lists them, named by their first field;
+ * none the notation's own issues already show.
+ */
+export function storedErrors(mm: TextMetamodel, ids: ElementIds, record: SyntaxAnnotations | null, shown: readonly AnnotationIssue[]): AnnotationIssue[] {
+    const messages = new Set(shown.map(i => i.message));
+    return readDraft(mm, ids, record ?? EMPTY_DRAFT).faults
+        .filter(f => f.level === 'error' && !messages.has(f.message))
+        .map(f => ({ level: 'error' as const, where: f.at.length ? fieldPhrase(ids, f.at[0]) : 'syntax', message: f.message }));
+}
+
+/** An enumeration's groups as one line: `prose: FICTION, HISTORY; verse: POETRY`. */
+export const subsetsText = (subsets: readonly EnumSubset[] | undefined): string => (subsets ?? []).map(s => `${s.name}: ${s.literals.join(', ')}`).join('; ');
+
+/** The groups a line of `subsetsText` names; a group without a name or a literal is dropped. */
+export function parseSubsets(text: string): EnumSubset[] {
+    return text.split(';').flatMap(part => {
+        const colon = part.indexOf(':');
+        if (colon < 0) return [];
+        const name = part.slice(0, colon).trim();
+        const literals = part.slice(colon + 1).split(',').map(l => l.trim()).filter(Boolean);
+        return name && literals.length ? [{ name, literals }] : [];
+    });
+}
