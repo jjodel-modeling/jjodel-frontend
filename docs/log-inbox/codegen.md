@@ -1993,3 +1993,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — no app probe run; the EBNF mode's style literals become editable through `setLiteral`, reachable in the Text tab and not verified in the app.
 **Notes**: Decisions D-L2a-1..7 in `~/.jjodel-lanes/P-2026-11-05-1430/handoff.md` and the commit bodies. `( )` block over the call layout measured: the LL(1) check reports it on PORT via the expression parentheses; without the operator it round-trips, so no new check. Benches in each commit body, every mutant killed.
 **Prompt document name**: 2026-11-05 14:30
+
+## 2026-11-05 — feat(codegen): B1, per-block tokens in the core (P-2026-11-05-1541, P-2026-11-05-2212)
+**Prompt**: `claude_2026-11-05_1541_prompt_textual_block_tokens_b1.md`, continued by `claude_2026-11-05_2212_prompt_textual_block_tokens_b1_cont.md`: B1 of the block-tokens report (R-TXT-51, R-TXT-52), per-block tokens resolved, derived, tokenized and style-checked.
+**Files touched**: `annotations.ts`, `concreteGrammar.ts`, `parser.ts`, `styleCheck.ts`, `syntaxForm.ts`, `__tests__/blockTokens.test.ts` (1ba637cef, 98df231ae, 938a4109d, 0a1d50ca6).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes, syntaxForm.ts: two LITERAL_NAME entries the exhaustive Record needs for the new kinds.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — core only, no UI; the form and EBNF edit come in B2.
+**Notes**: 1541 stopped at the soft ceiling, 2212 at the next one; the chat ran the closing gates. Gates: typecheck 0; laneBoard alone green (harness red in the full run); build 0; check:codegen-lazy 0; check:docs 0. blockTokens 24 tests, 27 mutants killed. R2 (unclosed `is` taking `end program`) pinned, not changed.
+**Prompt document name**: 2026-11-05 15:41

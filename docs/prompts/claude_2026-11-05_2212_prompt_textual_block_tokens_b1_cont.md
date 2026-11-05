@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-2212
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · 0a1d50ca6 · closing gates run by the chat; core only, no visual check
 Lane: full (continuation; annotations.ts modified and __tests__/blockTokens.test.ts new, both uncommitted)
 Depends: P-2026-11-05-1541 (died in the bridge outage 15:54-22:10, no commit, no handoff)
 Worktree: ~/jjodel-w-blocktok, branch textual-block-tokens (the same tree)

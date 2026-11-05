@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-1541
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · 1ba637cef, 98df231ae, 938a4109d · stopped at the soft ceiling, continued by P-2026-11-05-2212
 Lane: full (annotations, grammar derivation, parser tokenizer, style check; no UI)
 Depends: P-2026-11-05-1525 (discovery report, cb6edf13e), R-TXT-51, R-TXT-52 (provisional)
 Worktree: ~/jjodel-w-blocktok, branch textual-block-tokens (on the L2a tip)
