@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-1446
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · 36e67e7da · fix #607, discovery, ticket R-FA-11 scope
 Lane: full (unattended; root cause first, then the smallest fix in this same lane)
 Depends: P-2026-11-05-1400
 Worktree: ~/jjodel-w-xmiints, branch xmi-typed-integers

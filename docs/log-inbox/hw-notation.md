@@ -1258,3 +1258,22 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: docs-only merge, no product code
 **Notes**: Rollback tag `pre-hw-core-jjtl-app` on `8565e3e84` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-05-1431/result.json`.
 **Prompt document name**: 2026-11-05 14:31
+
+## 2026-11-05 — ticket: JjTL: a JjEL method unknown for the value's type warns instead of R-FA-11's error
+**Ticket**: `xlen.log2()` on a string source gave 27 warnings and `null` under "Transformation completed successfully" (77 wrong or missing values on rv_mc4). R-FA-11 is implemented for builtins registered on the JjTL context only (executor.ts:390-407); JjEL method dispatch throws a plain `JjelEvaluationError` "Unknown method '<m>' for type <T>" (evaluator.ts:975, :982), which executor.ts:2993-3000 turns into a warning and `null`, like a name that resolves to nothing (builtin-error.test.ts:109). A library method that throws inside is not wrapped either (read). Decide whether R-FA-11 covers both.
+**Priority**: medium
+**Found in**: P-2026-11-05-1446
+**Detail**: docs/discovery/discovery_2026-11-05_xmi_typed_integers.md
+
+## 2026-11-05 — fix(xmi): attribute values typed by the metamodel (P-2026-11-05-1446)
+**Prompt**: P-2026-11-05-1446: fix #607 in the XMI import (cast by the declared type, test first, bad values reported), measure saved projects, explain the log2 warnings under R-FA-11, verify rv_mc4 and rv_pf4 in the app, the arbiter in node on the source-text path, and #609 with a private ELong copy.
+**Files touched**: `frontend/src/services/export/XMIService.ts`, `frontend/src/services/export/__tests__/xmi-import-skip.test.ts` (36e67e7da), `docs/discovery/discovery_2026-11-05_xmi_typed_integers.md` (31831a082), `docs/decisions.md`, `docs/log-inbox/hw-notation.md`, the `Status:` line of `docs/prompts/claude_2026-11-05_1446_prompt_xmi_typed_integers.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — export suite 101/101, JjTL 661/661 (1 known import-red file), typecheck 0, build 0; app runs byte-equal to the references
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Playwright app probes: rv_mc4 0/1,999 and rv_pf4 0/2,111 attribute differences, no page or console error)
+**Notes**: Tests red 3/10 before, green after. Saved pre-fix projects keep "4" and the 136 differences (measured; migration awaiting Alfonso). R-FA-11 scope gap ticketed. Arbiter: 108/108 equal with the source text. ELong copy: masks read unclamped. Provisional row R-XMI-1. Fixes a defect of the original XMI importer, found by P-2026-11-05-1400.
+**Prompt document name**: 2026-11-05 14:46

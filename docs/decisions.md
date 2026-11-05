@@ -7550,6 +7550,17 @@ R-AI-22 his own answer, R-AI-23 as recommended; evidence: measured, verified: ag
   GUI data, and `src/services/ai` stays free of UI, so the twelve `addGUIinfo` rows move verbatim to a new UI-side table,
   `components/common/providerVisuals.ts`.
 
+## R-XMI: attribute values of the XMI M1 import (decisions 2026-11-05)
+
+- **R-XMI-1** (2026-11-05, provisional, unattended, evidence: measured, verified: probe, reversible: trunk): the XMI M1
+  import stores an attribute value typed by its declared primitive (EByte, EShort, EInt, ELong as integers; EFloat,
+  EDouble as finite numbers; EBoolean as `true`/`false`, any case); strings and enums are unchanged. Decided by the
+  chat under Alfonso's «decidi tu» (#607). On a bad value, provisional: a value that does not parse for its type
+  keeps its text and is an import warning, never NaN or 0; an integer outside its type's range is stored unclamped
+  with a warning; an ELong beyond 2^53 keeps its text with a warning. Projects saved before the change keep their
+  strings; no migration. Evidence: `xmi-import-skip.test.ts` and the app probes of P-2026-11-05-1446
+  (`docs/discovery/discovery_2026-11-05_xmi_typed_integers.md`).
+
 ## Superate
 
 - R-RAIL-44 (2026-08-13, dark theme sospeso) — superata da D-UI-15 il 2026-10-04: il dark theme non esiste più. Il testo resta al suo posto nella serie R-RAIL perché altre righe lo citano per posizione.
