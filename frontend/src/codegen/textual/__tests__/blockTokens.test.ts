@@ -13,7 +13,7 @@ import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import { concreteGrammarEbnf, concreteGrammarEbnfSpans, DEDENT_MARK, INDENT_MARK } from '../concreteGrammar';
 import type { ConcreteGrammar, GrammarNode, LiteralSrc } from '../concreteGrammar';
-import { parseText } from '../parser';
+import { parseText, tokenizeText } from '../parser';
 import { printTextModel } from '../printer';
 import { checkStyle } from '../styleCheck';
 import { textualNotation } from '../syntaxRecord';
@@ -330,5 +330,32 @@ describe('(2) the derivation of the per-block tokens', () => {
     it('a punctuation feature keyword equal to a per-block punctuation token is refused (mutant: the per-block punctuation not taken)', () => {
         const record = withEntries({}, { fDecls: { blockOpen: ['<<'], blockClose: ['>>'] }, fStmts: { keyword: '<<' } });
         expect(issuesOf(record)).toEqual([{ level: 'error', where: 'Program.statements', message: 'the keyword "<<" is a block token of Program.declarations; not applied' }]);
+    });
+});
+
+describe('(3) the tokenizer reads the per-block punctuation', () => {
+    it('F2: a per-block << >> the style lacks prints and reads back (mutant: grammarPuncts skips the block tokens)', () => {
+        const record = withEntries({}, { fDecls: { keyword: 'declaration', blockOpen: ['<<'], blockClose: ['>>'] } });
+        const g = grammar(record);
+        expect(issuesOf(record)).toEqual([]);
+        const text = roundTrip(g, OBJECTS);
+        expect(text).toContain('declaration <<\n');
+        expect(text).toContain('  >>\n');
+    });
+
+    it('the indentation marks are not read from the text (mutant: the marks read as punctuation)', () => {
+        const g = grammar(withEntries({}, {}, { base: 'indent' }));
+        const r = tokenizeText(`declaration ${INDENT_MARK}`, g);
+        expect(r.errors.map(e => e.message)).toEqual([`unexpected character "${INDENT_MARK}"`]);
+    });
+
+    it('R2: an unclosed `is` block takes the `end` of `end program` as its close; two errors, the objects before it read (measured)', () => {
+        const text = ['begin program', '  declaration is', "    Declaration x type := 'int';", 'end program'].join('\n');
+        const r = parseText(text, grammar(TARGET));
+        expect(r.errors.map(e => `${e.line} ${e.message}`)).toEqual([
+            '4 expected "statement" or "end" "program"; found name "program"',
+            '4 expected "end" "program" to close the "begin" "program" at 1:1; found end of text',
+        ]);
+        expect(r.objects.filter(o => o.cls === 'Declaration').map(o => o.slots.name)).toEqual(['x']);
     });
 });
