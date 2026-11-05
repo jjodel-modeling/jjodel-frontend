@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { DEDENT_MARK, INDENT_MARK } from '../concreteGrammar';
+import type { ConcreteGrammar, GrammarNode } from '../concreteGrammar';
 import { isApplicableParse, parseText, tokenizeText } from '../parser';
 import { printTextModel } from '../printer';
 import { checkStyle } from '../styleCheck';
@@ -14,7 +15,8 @@ import { INDENT_STYLE, STYLE_CATALOG, styleOf } from '../style';
 import { textualNotation } from '../syntaxRecord';
 import type { ElementIds } from '../annotations';
 import { grammarOf, INNER } from './corpus';
-import { LIBRARY_IDS, LIBRARY_MM } from './tolerantCorpus';
+import { LIBRARY_IDS, LIBRARY_MM, tolerantCases, TS } from './tolerantCorpus';
+import { PORT_CLIKE, portGrammar } from './portCorpus';
 import { metamodelOf, objectsOf } from './spec';
 
 const g = grammarOf(INNER, INDENT_STYLE);
@@ -135,5 +137,66 @@ describe('a nameless positional object under indentation (chat decision, P-2026-
 
     it('the same class under C-like is not refused for it (mutant: the check applied to every style)', () => {
         expect(checkStyle(grammarFor('clike')).filter(f => f.level === 'error' && f.where === 'class Room')).toEqual([]);
+    });
+});
+
+describe('the LL(1) check reads the line rule under indentation (P-2026-11-05-0910)', () => {
+    const errors = (gr: ConcreteGrammar): string[] => checkStyle(gr).filter(f => f.level === 'error').map(f => `${f.where}: ${f.message}`);
+    const annotated = (base: 'clike' | 'pascal' | 'indent') => tolerantCases(base).filter(c => c.g.annotationIssues);
+
+    it('the five annotated tolerant cases report under indentation what they report under C-like and Pascal, the turnstile\'s 3 genuine conflicts and nothing else (mutant: no FOLLOW token marked as on the next line)', () => {
+        const byBase = (['clike', 'pascal', 'indent'] as const).map(base => annotated(base).map(c => [c.name, errors(c.g)] as const));
+        expect(byBase[2].map(([name]) => name)).toEqual(['library, plain', 'library, annotated', 'library, lines', 'turnstile, plain', 'turnstile, annotated']);
+        for (const cases of byBase) {
+            const found = Object.fromEntries(cases.filter(([, es]) => es.length));
+            expect(Object.keys(found)).toEqual(['turnstile, annotated']);
+            expect(found['turnstile, annotated'].map(e => e.slice(0, e.indexOf(':')))).toEqual(['Transition.guard', 'Transition.effect', 'Transition.nextState']);
+        }
+        expect(byBase[2]).toEqual(byBase[1].filter(([name]) => byBase[2].some(([n]) => n === name)));
+    });
+
+    it('the bare record {v:1, style:{base:"indent"}} passes on the library and the turnstile (mutant: no FOLLOW token marked as on the next line)', () => {
+        const record = { v: 1, style: { base: 'indent' as const } };
+        expect(errors(textualNotation(LIBRARY_MM, { record, issues: [] }, LIBRARY_IDS).grammar)).toEqual([]);
+        expect(errors(textualNotation(TS.mm, { record, issues: [] }, TS.ids).grammar)).toEqual([]);
+    });
+
+    it('the port fixture keeps only the refusal of the empty Ref, the module name no longer in conflict with the next line (mutant: no FOLLOW token marked as on the next line)', () => {
+        expect(errors(portGrammar({ ...PORT_CLIKE, style: { base: 'indent' } })).map(e => e.slice(0, e.indexOf(':')))).toEqual(['class Ref', 'rule Ref', 'rule Expr_']);
+    });
+
+    // Genuine conflicts across a line break: the optional part stands where a line may break, so the parser's line rule
+    // lets it start on the next line, and a name there is read as it. Each grammar is the library's with Member rewritten.
+    const library = textualNotation(LIBRARY_MM, { record: { v: 1, style: { base: 'indent' } }, issues: [] }, LIBRARY_IDS).grammar;
+    const kw = (text: string): GrammarNode => ({ t: 'kw', text });
+    const nl: GrammarNode = { t: 'nl' };
+    const name: GrammarNode = { t: 'opt', feat: 'name', item: { t: 'assign', feat: 'name', op: '=', item: { t: 'tok', terminal: 'NAME' } } };
+    const member = (body: GrammarNode): ConcreteGrammar => ({ ...library, rules: library.rules.map(r => (r.name === 'Member' ? { ...r, body } : r)) });
+    const nameConflict = (body: GrammarNode): string[] => errors(member(body)).filter(e => e.startsWith('Member.name:'));
+
+    it('an optional part right after a line break of the grammar is in conflict with the next line (mutant: a line break not making a line start)', () => {
+        expect(nameConflict({ t: 'seq', items: [kw('Member'), nl, name] })).toHaveLength(1);
+    });
+
+    it('an optional part at the start of a rule that starts a line is in conflict with the next line (mutant: a rule never at a line start)', () => {
+        expect(nameConflict({ t: 'seq', items: [name, nl, kw('Member')] })).toHaveLength(1);
+    });
+
+    it('an optional part at the start of an indented block is in conflict with the next line (mutant: a block not opening a line start)', () => {
+        expect(nameConflict({ t: 'seq', items: [kw('Member'), { t: 'block', open: [INDENT_MARK], close: [DEDENT_MARK], empty: [], items: [name, nl, kw('x')] }] })).toHaveLength(1);
+    });
+
+    it('an optional part after an optional line that may be taken is in conflict with the next line (mutant: an optional part never ending at a line break)', () => {
+        expect(nameConflict({ t: 'seq', items: [kw('Member'), { t: 'opt', feat: 'books', item: { t: 'seq', items: [kw('x'), nl] } }, name, nl, kw('x')] })).toHaveLength(1);
+    });
+
+    it('a repetition whose item ends at a line break is in conflict with the next line, from its second item on (mutant: a repetition judged at its first item only)', () => {
+        const names: GrammarNode = { t: 'star', feat: 'name', item: { t: 'seq', items: [{ t: 'assign', feat: 'name', op: '+=', item: { t: 'tok', terminal: 'NAME' } }, nl] } };
+        expect(nameConflict({ t: 'seq', items: [kw('Member'), names] })).toHaveLength(1);
+    });
+
+    it('in the middle of a head line the next line is no conflict, and the same line still is (mutant: every FOLLOW token taken as on the next line)', () => {
+        expect(nameConflict({ t: 'seq', items: [kw('Member'), name, nl, kw('x')] })).toEqual([]);
+        expect(nameConflict({ t: 'seq', items: [kw('Member'), name, kw('x'), nl] })).toHaveLength(1);
     });
 });
