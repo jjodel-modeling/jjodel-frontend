@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-2220
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · f28661bdd, e12db26dc · app probe 13/13 pass; verifica visiva in attesa del GO (crops b0-1..9 in ~/.jjodel-lanes/P-2026-11-05-2220/)
 Lane: full (the Syntax form's pure module and component; one test assertion of L1b)
 Depends: P-2026-11-05-1537 (the trunk merged into this branch, 2f6c8111d; one genuine red), P-2026-11-05-1525 (B0 row of its report), R-TXT-52 D7
 Worktree: ~/jjodel-w-ebnflit2, branch textual-ebnf-literals-step2 (the same tree)

@@ -2051,3 +2051,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — merge of the trunk into the branch.
 **Notes**: Lane folders `~/.jjodel-lanes/P-2026-11-05-1537/` and `-1538/`; rerun output /tmp/rerun1537.out on the Mac.
 **Prompt document name**: 2026-11-05 15:37
+
+## 2026-11-05 — fix(codegen): B0, a tokens input for the style token rows, style-token islands after L2a (P-2026-11-05-2220)
+**Prompt**: `claude_2026-11-05_2220_prompt_textual_ebnf_literals_b0.md`: F5 of the block-tokens report (a `tokens` input kind for the array token fields) and the merge's genuine red in `ebnfIslands.test.ts` (R-TXT-48 step 2).
+**Files touched**: `syntaxForm.ts`, `ui/SyntaxForm.tsx`, `__tests__/styleTokens.test.ts` (f28661bdd); `__tests__/ebnfIslands.test.ts` (e12db26dc).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-05 14:57
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes, the ebnfIslands assertion, declared in the prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe 13/13 PASS, crops in `~/.jjodel-lanes/P-2026-11-05-2220/`, light, scale 1.
+**Notes**: L2a had labelled the token fields but given them no rows: `styleTokenFields` adds them in Advanced, `fieldsOf` unchanged. List tokens stay text (strings). Gates: typecheck 0; build 0; check:docs 0; lazy off 4 and on 5 PASS; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files 18/18 tests alone but `afterAll` browser close timed out at load 59 (harness). 6 mutants killed.
+**Prompt document name**: 2026-11-05 22:20
