@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0841
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · commit 251e4e565, 210c61ee1 · verifica visiva non applicabile
 Lane: full (grammar derivation and the Syntax form's pure module; no UI)
 Depends: P-2026-11-05-0815 (report complete, 50382685f), R-TXT-48, R-TXT-49 (provisional)
 Worktree: ~/jjodel-w-ebnflit, branch textual-ebnf-literals (it took the trunk at 664929d03)
