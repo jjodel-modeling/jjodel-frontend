@@ -1277,3 +1277,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato (Playwright app probes: rv_mc4 0/1,999 and rv_pf4 0/2,111 attribute differences, no page or console error)
 **Notes**: Tests red 3/10 before, green after. Saved pre-fix projects keep "4" and the 136 differences (measured; migration awaiting Alfonso). R-FA-11 scope gap ticketed. Arbiter: 108/108 equal with the source text. ELong copy: masks read unclamped. Provisional row R-XMI-1. Fixes a defect of the original XMI importer, found by P-2026-11-05-1400.
 **Prompt document name**: 2026-11-05 14:46
+
+## 2026-11-05 — merge: xmi-typed-integers into alfonso-frontend-jjtl (P-2026-11-05-1512)
+**Prompt**: `claude_2026-11-05_1512_prompt_merge_xmi-typed-integers.md`, a direct merge by `lane-run merge --direct`, no session: `xmi-typed-integers` at `f1a3911d0` into `alfonso-frontend-jjtl`, merge base `d95d5b9ca`, 4 commits on the branch side.
+**Files touched**: merge `450864a4b`: 6 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-05_xmi_typed_integers.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-05_1446_prompt_xmi_typed_integers.md`, `frontend/src/services/export/XMIService.ts`, `frontend/src/services/export/__tests__/xmi-import-skip.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `450864a4b` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14247 tests in 531 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: #607 verified on the branch by the app probes of P-2026-11-05-1446: rv_mc4 and rv_pf4 byte-equal to the references
+**Notes**: Rollback tag `pre-xmi-typed-integers` on `d95d5b9ca` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-05-1512/result.json`.
+**Prompt document name**: 2026-11-05 15:12

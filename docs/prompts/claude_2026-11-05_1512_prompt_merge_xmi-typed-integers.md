@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-05-1512
 Chat: C-2026-11-03-1202
 Request: https://claude.ai/code/session_01DQt9R5EJe1reXq5Xut2Jif (merge of xmi-typed-integers launched by chat C-2026-11-03-1202)
 Lane: full (merge; zero conflicts measured)
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane merge · 450864a4b · verifica visiva passata 2026-11-05 (#607 verified on the branch by the app probes of P-2026-11-05-1446: rv_mc4 and rv_pf4 byte-equal to the references)
 
 Worktree: `/Users/alfonso/jjodel-release`, branch `alfonso-frontend-jjtl`, a fresh session started by `lane-run`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-05-1512 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
