@@ -34,6 +34,9 @@ export interface ClassAnnotation {
     readonly name?: { readonly keyword?: string; readonly default?: string };
     /** The class as an operator of the expressions of the types it stands for; its fixity is read off its features (operatorFixity). */
     readonly operator?: OperatorAnnotation;
+    /** R-TXT-51: the tokens that open and close the class's block, over the style's; a side not given is the style's (lane B1). */
+    readonly blockOpen?: readonly string[];
+    readonly blockClose?: readonly string[];
 }
 
 export interface FeatureAnnotation {
@@ -48,6 +51,9 @@ export interface FeatureAnnotation {
     readonly groupBy?: string;
     /** `name`: a string attribute printed as a name (unquoted when it is an identifier). */
     readonly value?: 'name';
+    /** R-TXT-51: the tokens that open and close a containment's block (each group's, when grouped), over the style's (lane B1). */
+    readonly blockOpen?: readonly string[];
+    readonly blockClose?: readonly string[];
 }
 
 export interface EnumSubset {
@@ -119,6 +125,8 @@ export interface ResolvedClass {
     readonly layout?: 'block' | 'line' | 'call';
     readonly name?: { readonly keyword?: string; readonly default?: NamePattern };
     readonly operator?: OperatorAnnotation;
+    readonly blockOpen?: readonly string[];
+    readonly blockClose?: readonly string[];
 }
 
 export interface ResolvedFeature {
@@ -127,6 +135,8 @@ export interface ResolvedFeature {
     readonly itemKeyword?: string;
     readonly groupBy?: { readonly attr: string; readonly owner: string; readonly mandatory: boolean };
     readonly value?: 'name';
+    readonly blockOpen?: readonly string[];
+    readonly blockClose?: readonly string[];
 }
 
 /** The annotations keyed by names: classes by name, features by `Owner.f`, enumerations by name. */
@@ -151,6 +161,11 @@ const isFeatureKeyword = (v: unknown): v is string => isKeyword(v) || (typeof v 
 const isCase = (v: unknown): v is LetterCase => v === 'declared' || v === 'lower';
 /** An operator symbol: a word, or a run of characters that are neither word characters nor spaces. */
 const isSymbol = (v: string): boolean => IDENTIFIER.test(v) || /^[^\w\s]+$/.test(v);
+/** The two sides of a per-block token annotation (R-TXT-51), in the order a record writes them. */
+const BLOCK_SIDES = ['blockOpen', 'blockClose'] as const;
+/** The keys of a class entry and of a feature entry; any other is a notice (R-TXT-52 D6). */
+const CLASS_KEYS: readonly string[] = ['keyword', 'layout', 'name', 'operator', ...BLOCK_SIDES];
+const FEATURE_KEYS: readonly string[] = ['keyword', 'inline', 'itemKeyword', 'groupBy', 'value', ...BLOCK_SIDES];
 
 /**
  * Why one style token is not well formed, or undefined (report §4.4): empty, a blank, the string quote `"` (the EBNF's
@@ -239,6 +254,7 @@ export function expandNamePattern(p: NamePattern, hole: (name: string) => string
 export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, mm: TextMetamodel): ResolvedAnnotations {
     const issues: AnnotationIssue[] = [];
     const error = (where: string, message: string): void => { issues.push({ level: 'error', where, message }); };
+    const notice = (where: string, message: string): void => { issues.push({ level: 'notice', where, message }); };
     const classes: Record<string, ResolvedClass> = {};
     const features: Record<string, ResolvedFeature> = {};
     const enums: Record<string, { subsets: EnumSubset[] }> = {};
@@ -296,6 +312,20 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         if (bad) error(`style.${key}`, `the ${key} token ${JSON.stringify(bad[0])} ${bad[1]}`);
         else style[key] = [...v];
     }
+    /** R-TXT-51: an element's per-block tokens, side by side, by the rule of the style's; whether they apply is the derivation's. */
+    const blockSides = (a: { readonly blockOpen?: unknown; readonly blockClose?: unknown }, where: string, out: { blockOpen?: readonly string[]; blockClose?: readonly string[] }): void => {
+        for (const side of BLOCK_SIDES) {
+            const v = a[side];
+            if (v === undefined) continue;
+            if (!Array.isArray(v)) { error(where, `${side} is not a list of tokens`); continue; }
+            const bad = v.map(t => [t, tokenFault(t)] as const).find(([, why]) => why);
+            if (bad) error(where, `the ${side} token ${JSON.stringify(bad[0])} ${bad[1]}`);
+            else out[side] = [...v];
+        }
+    };
+    const unknownKeys = (a: object, known: readonly string[], where: string): void => {
+        for (const k of Object.keys(a)) if (!known.includes(k)) notice(where, `unknown key ${JSON.stringify(k)}: not applied`);
+    };
 
     let roots: 'uncontained' | string[] | undefined;
     if (record.roots === 'uncontained') roots = 'uncontained';
@@ -312,7 +342,8 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         const cls = ids.classes[id];
         if (cls === undefined) { error('classes', `no class has the id ${JSON.stringify(id)}`); continue; }
         const where = `class ${cls}`;
-        const out: { keyword?: string; layout?: 'block' | 'line' | 'call'; name?: { keyword?: string; default?: NamePattern }; operator?: OperatorAnnotation } = {};
+        const out: { keyword?: string; layout?: 'block' | 'line' | 'call'; name?: { keyword?: string; default?: NamePattern }; operator?: OperatorAnnotation; blockOpen?: readonly string[]; blockClose?: readonly string[] } = {};
+        unknownKeys(a, CLASS_KEYS, where);
         if (a.keyword !== undefined) { if (isKeyword(a.keyword)) out.keyword = a.keyword; else error(where, `the keyword ${JSON.stringify(a.keyword)} is not an identifier or ""`); }
         if (a.layout !== undefined) { if (a.layout === 'block' || a.layout === 'line' || a.layout === 'call') out.layout = a.layout; else error(where, `the layout ${JSON.stringify(a.layout)} is not block, line or call`); }
         if (a.name !== undefined) {
@@ -339,6 +370,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
                 out.operator = { symbol: o.symbol, precedence: o.precedence, ...(o.assoc ? { assoc: o.assoc } : {}), ...(o.call !== undefined ? { call: o.call } : {}) };
             }
         }
+        blockSides(a, where, out);
         classes[cls] = out;
     }
 
@@ -346,7 +378,8 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
         const f = ids.features[id];
         if (f === undefined) { error('features', `no feature has the id ${JSON.stringify(id)}`); continue; }
         const where = `${f.owner}.${f.name}`;
-        const out: { keyword?: string; inline?: boolean; itemKeyword?: string; groupBy?: { attr: string; owner: string; mandatory: boolean }; value?: 'name' } = {};
+        const out: { keyword?: string; inline?: boolean; itemKeyword?: string; groupBy?: { attr: string; owner: string; mandatory: boolean }; value?: 'name'; blockOpen?: readonly string[]; blockClose?: readonly string[] } = {};
+        unknownKeys(a, FEATURE_KEYS, where);
         if (a.keyword !== undefined) { if (isFeatureKeyword(a.keyword)) out.keyword = a.keyword; else error(where, `the keyword ${JSON.stringify(a.keyword)} is not an identifier, "" or one punctuation token`); }
         if (a.itemKeyword !== undefined) { if (typeof a.itemKeyword === 'string' && IDENTIFIER.test(a.itemKeyword)) out.itemKeyword = a.itemKeyword; else error(where, `the item keyword ${JSON.stringify(a.itemKeyword)} is not an identifier`); }
         if (a.inline !== undefined) { if (typeof a.inline === 'boolean') out.inline = a.inline; else error(where, 'inline is not a boolean'); }
@@ -356,6 +389,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
             if (g === undefined) error(where, `groupBy: no feature has the id ${JSON.stringify(a.groupBy)}`);
             else out.groupBy = { attr: g.name, owner: g.owner, mandatory: (g.lower ?? 0) >= 1 };
         }
+        blockSides(a, where, out);
         features[where] = out;
     }
 

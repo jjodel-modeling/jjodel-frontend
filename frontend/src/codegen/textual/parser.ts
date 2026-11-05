@@ -236,13 +236,18 @@ export const expressionWords = (g: ConcreteGrammar): string[] =>
 /** A token after which an operand has ended: a number written after it with a sign is an infix minus and a number (C1b). */
 const endsOperand = (t: Token | undefined): boolean => !!t && (t.k === 'ID' || t.k === 'INT' || t.k === 'FLOAT' || t.k === 'STR' || (t.k === 'P' && t.v === ')'));
 
-/** The punctuation of a grammar's own nodes: a feature's punctuation keyword, the call layout's tokens (C1d). */
+/** The punctuation of a grammar's own nodes: a feature's punctuation keyword, the call layout's tokens (C1d), a block's own
+ *  tokens (R-TXT-51, report F2); never the indentation marks, which the layout gives and the text cannot hold. */
 function grammarPuncts(g: ConcreteGrammar): string[] {
     const out = new Set<string>();
     const visit = (n: GrammarNode): void => {
         switch (n.t) {
             case 'p': out.add(n.text); return;
-            case 'seq': case 'block': n.items.forEach(visit); return;
+            case 'block':
+                for (const t of [...n.open, ...n.close, ...n.empty]) if (t !== INDENT_MARK && t !== DEDENT_MARK) out.add(t);
+                n.items.forEach(visit);
+                return;
+            case 'seq': n.items.forEach(visit); return;
             case 'opt': case 'star': case 'assign': case 'list': visit(n.item); return;
             case 'alt': n.alts.forEach(visit); return;
             case 'expr': n.primaries.forEach(visit); return;

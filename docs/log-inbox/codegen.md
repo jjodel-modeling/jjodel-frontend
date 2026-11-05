@@ -2077,3 +2077,29 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — chat, unattended: B0 crops checked by the chat on the branch tip abbdf419d: token rows in Advanced, style-token island { to begin linked across rules, Save prints begin, one Undo restores
 **Notes**: Rollback tag `pre-textual-ebnf-literals-step2` on `1b70ba7f3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-05-2247/result.json`.
 **Prompt document name**: 2026-11-05 22:47
+
+## 2026-11-05 — feat(codegen): B1, per-block tokens in the core (P-2026-11-05-1541, P-2026-11-05-2212)
+**Prompt**: `claude_2026-11-05_1541_prompt_textual_block_tokens_b1.md`, continued by `claude_2026-11-05_2212_prompt_textual_block_tokens_b1_cont.md`: B1 of the block-tokens report (R-TXT-51, R-TXT-52), per-block tokens resolved, derived, tokenized and style-checked.
+**Files touched**: `annotations.ts`, `concreteGrammar.ts`, `parser.ts`, `styleCheck.ts`, `syntaxForm.ts`, `__tests__/blockTokens.test.ts` (1ba637cef, 98df231ae, 938a4109d, 0a1d50ca6).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes, syntaxForm.ts: two LITERAL_NAME entries the exhaustive Record needs for the new kinds.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — core only, no UI; the form and EBNF edit come in B2.
+**Notes**: 1541 stopped at the soft ceiling, 2212 at the next one; the chat ran the closing gates. Gates: typecheck 0; laneBoard alone green (harness red in the full run); build 0; check:codegen-lazy 0; check:docs 0. blockTokens 24 tests, 27 mutants killed. R2 (unclosed `is` taking `end program`) pinned, not changed.
+**Prompt document name**: 2026-11-05 15:41
+
+## 2026-11-05 — merge: textual-block-tokens takes alfonso-frontend-jjtl (P-2026-11-05-2346)
+**Prompt**: `claude_2026-11-05_2346_prompt_textual-block-tokens_take_trunk.md`: the trunk `alfonso-frontend-jjtl` at `0832088dc` into `textual-block-tokens` at `65d58157a`, one merge commit, `--no-ff` (RC-14), merge base `2c15d1761`, 49 trunk commits, 13 branch commits.
+**Files touched**: merge `d335bdb2a`: 39 files from the trunk side, `docs/log-inbox/codegen.md` resolved by union (the trunk's entries, then the branch's B1 entry); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `d335bdb2a`: typecheck 0 errors; typecheck:scripts exit 0; vitest 14358 passed, 2 skipped (14360) in 536 files, 3 red at import, as expected (trunk 14336 plus 24 in `blockTokens.test.ts`); hooks 967 (trunk 967); build exit 0; check:scripts PASS; check:addonly PASS; check:docs 4/5, B red on a trunk entry (Notes).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — B1 is core only; GO given by the chat.
+**Notes**: Union: 73 trunk and 12 branch lines since the base, 0 missing; 21 probes once each, control R-XMI-2 none. `syntaxForm.ts` auto-merged and read: the branch's `LITERAL_NAME` kinds and the trunk's B0 token rows are disjoint. check:docs B: the trunk's `hw-notation.md` closure entry of `892ac50b2` lacked `Corregge` and `Causa`, fixed on the trunk in `27e38755c`.
+**Prompt document name**: 2026-11-05 23:46

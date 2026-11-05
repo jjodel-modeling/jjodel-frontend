@@ -56,7 +56,16 @@ export type LiteralSrc =
     | { readonly k: 'subset'; readonly enumName: string; readonly index: number }
     | { readonly k: 'literal'; readonly enumName: string; readonly literal: string }
     | { readonly k: 'style'; readonly param: StyleParam; readonly index: number }
+    /** R-TXT-51 (D10): a token of a block's own side, a class's or a containment's, by side and index. */
+    | { readonly k: 'classBlock'; readonly cls: string; readonly side: 'open' | 'close'; readonly index: number }
+    | { readonly k: 'featureBlock'; readonly feature: string; readonly side: 'open' | 'close'; readonly index: number }
     | { readonly k: 'fixed' };
+
+/**
+ * Whose tokens a side of a block is when they are not the style's (R-TXT-51, D10): a class's or a containment's own, or
+ * the indentation marks, which no field edits (report §5.2 R4). A side without an origin is the style's.
+ */
+export type BlockOrigin = { readonly k: 'class'; readonly cls: string } | { readonly k: 'feature'; readonly feature: string } | { readonly k: 'fixed' };
 
 export type GrammarNode =
     | { readonly t: 'seq'; readonly items: readonly GrammarNode[] }
@@ -78,8 +87,8 @@ export type GrammarNode =
     | { readonly t: 'assign'; readonly feat: string; readonly op: AssignOp; readonly item: GrammarNode }
     /** The values of a many-valued attribute or reference: `open [item {separator item}] close`. */
     | { readonly t: 'list'; readonly feat: string; readonly open: string; readonly separator: string; readonly close: string; readonly item: GrammarNode }
-    /** A delimited body; `empty` is printed instead when none of its items is present. */
-    | { readonly t: 'block'; readonly open: readonly string[]; readonly close: readonly string[]; readonly empty: readonly string[]; readonly items: readonly GrammarNode[] }
+    /** A delimited body; `empty` is printed instead when none of its items is present. `origin`: per side, whose tokens they are (D10). */
+    | { readonly t: 'block'; readonly open: readonly string[]; readonly close: readonly string[]; readonly empty: readonly string[]; readonly items: readonly GrammarNode[]; readonly origin?: { readonly open?: BlockOrigin; readonly close?: BlockOrigin } }
     /** A line break in the printed text; no token. `blank`: an empty line before what follows, unless a body starts there. */
     | { readonly t: 'nl'; readonly blank?: true }
     /**
@@ -142,6 +151,7 @@ function clashes(words: readonly string[], c: LetterCase): string[] {
 }
 
 const FIXED: LiteralSrc = { k: 'fixed' };
+const FIXED_BLOCK: BlockOrigin = { k: 'fixed' };
 
 const tokens = (param: StyleParam, ts: readonly string[]): GrammarNode[] => ts.map((text, index) => {
     const src: LiteralSrc = { k: 'style', param, index };
@@ -285,9 +295,11 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         classCase = 'declared';
     }
     // R-TXT-25 (7): a folding that lands a class keyword on a style word (`End` on `end`) falls back as well.
+    // R-TXT-51 (report §5.2 R3): the per-block words of the record too, which a free layout prints.
+    const ownWords = style.layout === 'indent' ? [] : [...Object.values(A?.classes ?? {}), ...Object.values(A?.features ?? {})].flatMap(a => [...(a.blockOpen ?? []), ...(a.blockClose ?? [])]);
     const styleWords = new Set([
         ...style.blockOpen, ...style.blockClose, ...style.emptyBlock, ...style.assign, ...style.terminator,
-        style.list.open, style.list.separator, style.list.close,
+        style.list.open, style.list.separator, style.list.close, ...ownWords,
     ].filter(w => /^\w/.test(w)));
     const ontoWords = unannotated.map(r => r.cls).filter(c => !styleWords.has(c) && styleWords.has(applyCase(c, classCase)));
     if (ontoWords.length) {
@@ -425,14 +437,62 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         return classes.some(k => operators.has(k)) ? classes.filter(k => !operators.has(k)) : [];
     }));
 
-    // C3b: under indentation a block is INDENT, its items, DEDENT; an empty one is nothing.
-    const block = (items: readonly GrammarNode[]): GrammarNode => (style.layout === 'indent'
-        ? { t: 'block', open: [INDENT_MARK], close: [DEDENT_MARK], empty: [], items }
-        : { t: 'block', open: style.blockOpen, close: style.blockClose, empty: style.emptyBlock, items });
+    // R-TXT-51: the per-block tokens of each class and containment, by `class C` or `Owner.f`, after the refusals that
+    // need no context: under Indentation they are ignored (a notice); a token inside an item (D5) or an empty side (D8)
+    // is refused, that side the style's. A class with no block is refused here, a containment with none where it is built (D9).
+    type OwnBlock = { blockOpen?: readonly string[]; blockClose?: readonly string[] };
+    const ownBlocks = new Map<string, OwnBlock>();
+    const insideItem = new Map<string, string>();
+    for (const [what, ts] of [['the terminator', style.terminator], ['the assignment', style.assign], ['a list token', [style.list.open, style.list.separator, style.list.close]]] as const) {
+        for (const t of ts) if (!insideItem.has(t)) insideItem.set(t, what);
+    }
+    // A token the style's own blocks hold (Pascal's `end ;`) is not refused for being the terminator too.
+    const styleBlockTokens = new Set([...style.blockOpen, ...style.blockClose, ...style.emptyBlock]);
+    const hasOwn = (a: OwnBlock): boolean => a.blockOpen !== undefined || a.blockClose !== undefined;
+    const noBlock = (where: string, name: string, why: string): void => refuse(where, `blockOpen and blockClose apply to a block, and ${name} has none (${why}); not applied`);
+    const ownOf = (where: string, a: OwnBlock): void => {
+        if (style.layout === 'indent') { remark(where, `blockOpen and blockClose are ignored under the style ${style.id}: a block is its indentation`); return; }
+        const out: OwnBlock = {};
+        for (const side of ['blockOpen', 'blockClose'] as const) {
+            const ts = a[side];
+            if (ts === undefined) continue;
+            if (!ts.length) { refuse(where, `${side} is empty: a block needs a token on each side; not applied`); continue; }
+            const bad = ts.find(t => insideItem.has(t) && !styleBlockTokens.has(t));
+            if (bad !== undefined) { refuse(where, `the ${side} token "${bad}" is ${insideItem.get(bad)} of the style ${style.id}; not applied`); continue; }
+            out[side] = ts;
+        }
+        if (hasOwn(out)) ownBlocks.set(where, out);
+    };
+    for (const [cls, a] of Object.entries(A?.classes ?? {})) {
+        if (!hasOwn(a)) continue;
+        const where = `class ${cls}`;
+        const sh = shapes.get(cls);
+        if (!sh) refuse(where, `${cls} is abstract: blockOpen and blockClose go on its concrete classes; not applied`);
+        else if (sh.line || sh.call) noBlock(where, cls, sh.line ? 'layout line' : 'layout call');
+        else ownOf(where, a);
+    }
+    const concreteKeys = new Set(objectRules.flatMap(r => r.features.map(f => featureKey(f.feature))));
+    for (const [key, a] of Object.entries(A?.features ?? {})) if (hasOwn(a) && concreteKeys.has(key)) ownOf(key, a);
+    // D2: the words of the blocks built with tokens of their own, reserved in the grammar's style.
+    const blockWords = new Set<string>();
+    // C3b: under indentation a block is INDENT, its items, DEDENT; an empty one is nothing. R-TXT-51: a free-layout block
+    // takes its owner's tokens, a side not given the style's, and its empty form is open then close when one is its own.
+    const block = (items: readonly GrammarNode[], owner?: Exclude<BlockOrigin, { k: 'fixed' }>): GrammarNode => {
+        if (style.layout === 'indent') return { t: 'block', open: [INDENT_MARK], close: [DEDENT_MARK], empty: [], items, origin: { open: FIXED_BLOCK, close: FIXED_BLOCK } };
+        const own = owner ? ownBlocks.get(owner.k === 'class' ? `class ${owner.cls}` : owner.feature) : undefined;
+        if (!owner || !own) return { t: 'block', open: style.blockOpen, close: style.blockClose, empty: style.emptyBlock, items };
+        const open = own.blockOpen ?? style.blockOpen;
+        const close = own.blockClose ?? style.blockClose;
+        for (const w of [...(own.blockOpen ?? []), ...(own.blockClose ?? [])]) if (/^\w/.test(w)) blockWords.add(w);
+        return { t: 'block', open, close, empty: [...open, ...close], items, origin: { ...(own.blockOpen ? { open: owner } : {}), ...(own.blockClose ? { close: owner } : {}) } };
+    };
     // C1d: the tokens a punctuation keyword may not be, by what they are in the style in force.
     const taken = new Map<string, string>();
     const take = (what: string, ts: readonly string[]): void => { for (const t of ts) if (!/^\w/.test(t) && !taken.has(t)) taken.set(t, what); };
     take('a block token', [...style.blockOpen, ...style.blockClose, ...style.emptyBlock]);
+    // R-TXT-51: and the per-block punctuation, by the element whose block it is.
+    const ownTaken = new Map<string, string>();
+    for (const [where, o] of ownBlocks) for (const t of [...(o.blockOpen ?? []), ...(o.blockClose ?? [])]) if (!/^\w/.test(t) && !ownTaken.has(t)) ownTaken.set(t, where);
     take('a list token', [style.list.open, style.list.separator, style.list.close]);
     take('the terminator', style.terminator);
     take('the assignment', style.assign);
@@ -442,8 +502,9 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
     /** The keyword a feature prints, a punctuation one refused when it is a token of the style or an operator. */
     const keywordOf = (f: TextFeature): string => {
         const k = featAnn(f).keyword ?? f.name;
-        if (k === '' || /^\w/.test(k) || !taken.has(k)) return k;
-        refuse(featureKey(f), `the keyword "${k}" is ${taken.get(k)} of the style ${style.id}; not applied`);
+        if (k === '' || /^\w/.test(k) || (!taken.has(k) && !ownTaken.has(k))) return k;
+        if (taken.has(k)) refuse(featureKey(f), `the keyword "${k}" is ${taken.get(k)} of the style ${style.id}; not applied`);
+        else refuse(featureKey(f), `the keyword "${k}" is a block token of ${(ownTaken.get(k) ?? '').replace(/^class /, '')}; not applied`);
         return f.name;
     };
     const single = (v: BaseValue, f: TextFeature): GrammarNode => {
@@ -517,7 +578,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
             // line in a block, as an ungrouped containment's do (T4a-2: chained on one line they read `} Book b {`).
             const members: GrammarNode = shapes.get(T.cls)?.line
                 ? { t: 'star', feat: f.name, where, item: el }
-                : block([{ t: 'star', feat: f.name, where, item: { t: 'seq', items: [el, { t: 'nl' }] } }]);
+                : block([{ t: 'star', feat: f.name, where, item: { t: 'seq', items: [el, { t: 'nl' }] } }], { k: 'feature', feature: key });
             out.push({
                 t: 'opt', feat: f.name, where, item: {
                     t: 'seq', items: [
@@ -552,6 +613,11 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
             refuse(key, 'itemKeyword is not applied with groupBy: a group prints its own keyword');
             itemKw = undefined;
         }
+        // R-TXT-51 (D9): a containment printed without a block of its own has no block to take tokens.
+        if (ownBlocks.has(key)) {
+            const why = v.t !== 'block' ? 'not a containment' : line ? 'in a one-line class' : a.inline ? 'inline' : itemKw !== undefined ? 'an item keyword' : undefined;
+            if (why) noBlock(key, key, why);
+        }
         if (v.t === 'block') {
             if (a.value === 'name') refuse(key, 'value "name" applies to a string attribute; not applied');
             if (a.inline && a.keyword !== undefined && !line) remark(key, 'inline: the keyword is not printed');
@@ -573,7 +639,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
             const content: GrammarNode[] = (a.groupBy ? groups(f, v, a.groupBy) : undefined)
                 ?? (v.many ? [{ t: 'star', feat: f.name, item: { t: 'seq', items: [...closed, { t: 'nl' }] } }] : [...closed, { t: 'nl' }]);
             if (a.inline) return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, ...content] } };
-            return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, ...kw, block(content), { t: 'nl' }] } };
+            return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, ...kw, block(content, { k: 'feature', feature: key }), { t: 'nl' }] } };
         }
         if (a.inline) refuse(key, 'inline applies to a containment; not applied');
         if (a.groupBy) refuse(key, 'groupBy applies to a containment; not applied');
@@ -614,7 +680,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
             const tail: GrammarNode[] = sh.line ? [] : [{ t: 'nl' }];
             items.push({ t: 'opt', feat: 'name', ...derive, item: { t: 'seq', items: [{ t: 'kw', text: sh.nameKeyword, src: { k: 'nameKeyword', cls: r.cls } }, nameAssign, ...tail] } });
         }
-        return { t: 'seq', items: sh.line ? [...head, ...items] : [...head, block(items)] };
+        return { t: 'seq', items: sh.line ? [...head, ...items] : [...head, block(items, { k: 'class', cls: r.cls })] };
     }
 
     const objects: Record<string, ObjectRule> = {};
@@ -680,6 +746,9 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
     }
     rules.push(...derivedEnums);
     if (!A) return { grammar: { style, rules, objects, classCase, literalCase, notices }, heads };
+    // D2: the per-block words join the reserved names, which the printer, the parser and the check read.
+    const own = [...blockWords].filter(w => !style.reservedNames.includes(w)).sort();
+    const gStyle: NotationStyle = own.length ? { ...style, reservedNames: [...style.reservedNames, ...own] } : style;
     const seen = new Set<string>();
     const annotationIssues = issues.filter(i => {
         const k = `${i.level}|${i.where}|${i.message}`;
@@ -687,7 +756,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         seen.add(k);
         return true;
     });
-    return { grammar: { style, rules, objects, classCase, literalCase, notices, annotationIssues }, heads };
+    return { grammar: { style: gStyle, rules, objects, classCase, literalCase, notices, annotationIssues }, heads };
 }
 
 /** The name a pattern gives an object: each hole is the attribute as printed (a literal in the literal case in effect), unquoted. */
@@ -706,6 +775,9 @@ type Chunk = string | { readonly lit: string; readonly src?: LiteralSrc };
 
 const quoted = (s: string, src?: LiteralSrc): Chunk => ({ lit: s, ...(src ? { src } : {}) });
 const styleSrc = (param: StyleParam, index = 0): LiteralSrc => ({ k: 'style', param, index });
+/** The origin of a block token of a side whose tokens are not the style's (D10); undefined for a style side. */
+const blockSrc = (o: BlockOrigin | undefined, side: 'open' | 'close', index: number): LiteralSrc | undefined =>
+    (o?.k === 'class' ? { k: 'classBlock', cls: o.cls, side, index } : o?.k === 'feature' ? { k: 'featureBlock', feature: o.feature, side, index } : o ? FIXED : undefined);
 const isBlank = (cs: readonly Chunk[]): boolean => cs.every(c => c === '');
 const joined = (parts: readonly (readonly Chunk[])[], sep: string): Chunk[] => parts.flatMap((p, i) => (i ? [sep, ...p] : [...p]));
 const paren = (cs: readonly Chunk[], top: boolean): Chunk[] => (top ? [...cs] : ['(', ...cs, ')']);
@@ -738,9 +810,9 @@ function nodeText(n: GrammarNode, top = false): Chunk[] {
             return paren(s, top);
         }
         case 'block': return joined([
-            ...n.open.map((t, i) => [quoted(t, styleSrc('blockOpen', i))]),
+            ...n.open.map((t, i) => [quoted(t, blockSrc(n.origin?.open, 'open', i) ?? styleSrc('blockOpen', i))]),
             ...n.items.map(x => nodeText(x)).filter(cs => !isBlank(cs)),
-            ...n.close.map((t, i) => [quoted(t, styleSrc('blockClose', i))]),
+            ...n.close.map((t, i) => [quoted(t, blockSrc(n.origin?.close, 'close', i) ?? styleSrc('blockClose', i))]),
         ], ' ');
         case 'nl': return [''];
         case 'expr': return paren(joined(exprAlternatives(n), ' | '), top);
