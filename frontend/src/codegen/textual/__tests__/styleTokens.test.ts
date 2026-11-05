@@ -15,7 +15,7 @@ import type { NotationStyle } from '../style';
 import { checkStyle } from '../styleCheck';
 import { concreteGrammarEbnfSpans } from '../concreteGrammar';
 import type { ConcreteGrammar, LiteralSrc } from '../concreteGrammar';
-import { fieldKey, fieldPhrase, fieldValue, literalDefault, literalField, readDraft, setField, setLiteral } from '../syntaxForm';
+import { advancedInEffect, byField, fieldKey, fieldPhrase, fieldValue, literalDefault, literalField, parseTokens, readDraft, setField, setLiteral, styleTokenFields, tokensText } from '../syntaxForm';
 import type { FieldId } from '../syntaxForm';
 import { BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolObjects } from './boolCorpus';
 import { decodeSyntax, encodeSyntax, textualNotation, withStyleBase } from '../syntaxRecord';
@@ -265,6 +265,51 @@ describe('(4) the form: a field per style parameter', () => {
     it('names a parameter\'s field in a sentence', () => {
         expect(fieldPhrase(PORT_IDS, lang('language.blockOpen'))).toBe('the block open of the language');
         expect(fieldPhrase(PORT_IDS, lang('language.list.separator'))).toBe('the list separator of the language');
+    });
+});
+
+describe('(6) the form\'s token rows, lane B0 (P-2026-11-05-2220; Corregge P-2026-11-05-1457, F5)', () => {
+    const lang = (field: FieldId) => ({ element: 'language', field });
+    const PARAMS = ['blockOpen', 'blockClose', 'assign', 'terminator', 'list.open', 'list.separator', 'list.close'] as const;
+
+    it('the array parameters take the tokens input, the list tokens a text, Advanced only, the base\'s tokens as placeholder (mutants: a text input over an array; the rows in Basic; the C-like placeholder under Pascal)', () => {
+        expect(styleTokenFields(PORT_PASCAL, 'basic')).toEqual([]);
+        const pascal = styleTokenFields(PORT_PASCAL, 'advanced');
+        expect(pascal.map(f => f.id)).toEqual(PARAMS.map(p => `language.${p}`));
+        expect(pascal.map(f => f.input)).toEqual(['tokens', 'tokens', 'tokens', 'tokens', 'text', 'text', 'text']);
+        expect(pascal.every(f => f.tier === 'advanced')).toBe(true);
+        expect(pascal.map(f => f.placeholder)).toEqual(['begin', 'end ;', ':=', ';', '(', ',', ')']);
+        expect(styleTokenFields(PORT_CLIKE, 'advanced').map(f => f.placeholder)).toEqual(['{', '}', undefined, undefined, '[', ',', ']']);
+    });
+
+    it('an override shows joined by one space, an absent one empty (F5: the override shown empty)', () => {
+        const d: SyntaxAnnotations = { ...PORT_PASCAL, style: { base: 'pascal', blockClose: ['end', '.'] } };
+        expect(tokensText(fieldValue(d, lang('language.blockClose')))).toBe('end .');
+        expect(tokensText(fieldValue(d, lang('language.blockOpen')))).toBe('');
+    });
+
+    it('the text splits on blanks into the array, an empty text clears the override (F5: the input string stored as is)', () => {
+        expect(parseTokens('  begin   end ')).toEqual(['begin', 'end']);
+        expect(parseTokens(' \t ')).toBeUndefined();
+        const c = setField(setField(PORT_CLIKE, lang('language.blockOpen'), parseTokens('begin')), lang('language.blockClose'), parseTokens('end'));
+        expect(c.style).toEqual({ blockOpen: ['begin'], blockClose: ['end'] });
+        expect(readDraft(PORT_MM, PORT_IDS, c).faults.filter(f => f.level === 'error')).toEqual([]);
+        expect(setField(c, lang('language.blockOpen'), parseTokens('')).style).toEqual({ blockClose: ['end'] });
+        const p = setField(PORT_PASCAL, lang('language.blockClose'), parseTokens('end .'));
+        expect(p.style).toEqual({ base: 'pascal', blockClose: ['end', '.'] });
+        expect(setField(p, lang('language.blockClose'), parseTokens('end ;'))).toEqual(PORT_PASCAL);
+    });
+
+    it('a token with a quote is refused at its own field, with its reason (mutant: the finding at the Style row only)', () => {
+        const d = setField(PORT_PASCAL, lang('language.blockClose'), parseTokens('end"'));
+        const at = byField(readDraft(PORT_MM, PORT_IDS, d).faults).get('language#language.blockClose') ?? [];
+        expect(at.map(f => f.level)).toEqual(['error']);
+        expect(at[0].message).toMatch(/quote/);
+    });
+
+    it('Basic announces a token override in effect (mutant: the token rows not counted)', () => {
+        const n = advancedInEffect(PORT_CLIKE, 'language');
+        expect(advancedInEffect({ ...PORT_CLIKE, style: { blockOpen: ['begin'], list: { close: '>' } } }, 'language')).toBe(n + 2);
     });
 });
 

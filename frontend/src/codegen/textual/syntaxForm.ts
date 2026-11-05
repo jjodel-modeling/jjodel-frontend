@@ -50,8 +50,8 @@ export interface FormField {
     readonly id: FieldId;
     readonly label: string;
     readonly tier: InterfaceMode;
-    /** `text`, `choice` (one of `options`), `toggle`, `number`, `roots` (`uncontained` or class ids), `subsets`. */
-    readonly input: 'text' | 'choice' | 'toggle' | 'number' | 'roots' | 'subsets';
+    /** `text`, `choice` (one of `options`), `toggle`, `number`, `roots` (`uncontained` or class ids), `subsets`, `tokens` (a list of style tokens as one line). */
+    readonly input: 'text' | 'choice' | 'toggle' | 'number' | 'roots' | 'subsets' | 'tokens';
     readonly options?: readonly string[];
     /** The default the text prints when the field is absent: shown as the placeholder, never stored (F1). */
     readonly placeholder?: string;
@@ -104,12 +104,15 @@ const FEATURE: readonly Spec[] = [
     { id: 'feature.value', label: 'Printed as a name', tier: 'advanced', input: 'toggle' },
 ];
 const ENUM: readonly Spec[] = [{ id: 'enum.subsets', label: 'Groups of literals', tier: 'advanced', input: 'subsets' }];
-/** The style token overrides (L2a, P-2026-11-05-1430): named in sentences, edited from the EBNF; their rows are L2b's. */
+/**
+ * The style token overrides (L2a, P-2026-11-05-1430): named in sentences, edited from the EBNF and, in Advanced, in the
+ * rows `styleTokenFields` gives (B0, P-2026-11-05-2220); an array parameter takes the `tokens` input, a list token a text.
+ */
 const STYLE_TOKENS: readonly Spec[] = [
-    { id: 'language.blockOpen', label: 'Block open', tier: 'advanced', input: 'text' },
-    { id: 'language.blockClose', label: 'Block close', tier: 'advanced', input: 'text' },
-    { id: 'language.assign', label: 'Assignment', tier: 'advanced', input: 'text' },
-    { id: 'language.terminator', label: 'Terminator', tier: 'advanced', input: 'text' },
+    { id: 'language.blockOpen', label: 'Block open', tier: 'advanced', input: 'tokens' },
+    { id: 'language.blockClose', label: 'Block close', tier: 'advanced', input: 'tokens' },
+    { id: 'language.assign', label: 'Assignment', tier: 'advanced', input: 'tokens' },
+    { id: 'language.terminator', label: 'Terminator', tier: 'advanced', input: 'tokens' },
     { id: 'language.list.open', label: 'List open', tier: 'advanced', input: 'text' },
     { id: 'language.list.separator', label: 'List separator', tier: 'advanced', input: 'text' },
     { id: 'language.list.close', label: 'List close', tier: 'advanced', input: 'text' },
@@ -120,6 +123,29 @@ const LABELS: ReadonlyMap<FieldId, string> = new Map([...LANGUAGE, ...STYLE_TOKE
 /** A style parameter's field, and back. */
 const tokenField = (param: StyleParam): FieldId => `language.${param}` as FieldId;
 const tokenParam = (field: FieldId | undefined): StyleParam | undefined => (STYLE_TOKENS.some(s => s.id === field) ? field!.slice(9) as StyleParam : undefined);
+
+/**
+ * The language's style token rows in a mode (B0, F5): none in Basic; in Advanced one per parameter, the draft base's
+ * tokens as the placeholder, joined by a space, none where the base prints none.
+ */
+export function styleTokenFields(draft: SyntaxAnnotations | null, mode: InterfaceMode): FormField[] {
+    if (mode !== 'advanced') return [];
+    const base = styleOf(draft?.style?.base);
+    return STYLE_TOKENS.map(s => {
+        const param = tokenParam(s.id)!;
+        const shown = param.startsWith('list.') ? base.list[param.slice(5) as 'open'] : base[param as 'assign'].join(' ');
+        return { ...s, ...(shown ? { placeholder: shown } : {}) };
+    });
+}
+
+/** A `tokens` field's value as its line: the tokens joined by one space; empty without an override. */
+export const tokensText = (value: unknown): string => (Array.isArray(value) ? value.join(' ') : '');
+
+/** A `tokens` field's line as its value: the tokens split on blanks; undefined, which clears the override, when it has none. */
+export function parseTokens(text: string): string[] | undefined {
+    const tokens = text.split(/\s+/).filter(Boolean);
+    return tokens.length ? tokens : undefined;
+}
 
 const kindOf = (key: ElementKey): FormElement['kind'] => (key === 'language' ? 'language' : (key.slice(0, key.indexOf(':')) as FormElement['kind']));
 const idOf = (key: ElementKey): string => key.slice(key.indexOf(':') + 1);
@@ -344,7 +370,7 @@ export function setField(draft: SyntaxAnnotations, ref: FieldRef, value: unknown
 /** How many Advanced fields of an element the record sets, applicable or not: Basic announces them, nothing in effect hides (D2). */
 export function advancedInEffect(record: SyntaxAnnotations | null, element: ElementKey): number {
     const kind = kindOf(element);
-    const specs = kind === 'language' ? LANGUAGE : kind === 'class' ? CLASS : kind === 'feature' ? FEATURE : ENUM;
+    const specs = kind === 'language' ? [...LANGUAGE, ...STYLE_TOKENS] : kind === 'class' ? CLASS : kind === 'feature' ? FEATURE : ENUM;
     const set = (s: Spec): boolean => !isCleared(fieldValue(record, { element, field: s.id }));
     const advanced = specs.filter(s => s.tier === 'advanced' && set(s)).length;
     return advanced + (kind === 'class' && fieldValue(record, { element, field: 'class.layout' }) === 'call' ? 1 : 0);
