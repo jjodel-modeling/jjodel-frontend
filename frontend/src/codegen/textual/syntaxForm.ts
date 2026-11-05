@@ -20,7 +20,7 @@ import type { ConcreteGrammar, ObjectRule } from './concreteGrammar';
 import { classFeatures, isNameFeature } from './metamodel';
 import type { TextClass, TextFeature, TextMetamodel, TextObject } from './metamodel';
 import { printTextModel } from './printer';
-import { STYLE_CATALOG } from './style';
+import { isStyleBase, STYLE_CATALOG } from './style';
 import { checkStyle } from './styleCheck';
 import type { StyleFinding } from './styleCheck';
 import { SYNTAX_RECORD_VERSION, syntaxPatch, textualNotation, withStyleBase } from './syntaxRecord';
@@ -278,7 +278,7 @@ export function setField(draft: SyntaxAnnotations, ref: FieldRef, value: unknown
     const positional = <T extends { keyword?: string }>(x: T): T => (value === true ? { ...x, keyword: '' } : x.keyword === '' ? put(x, 'keyword', undefined) : x);
     switch (ref.field) {
         case 'language.name': return put(draft, 'language', value);
-        case 'language.style': return withStyleBase(draft, value === 'pascal' ? 'pascal' : 'clike');
+        case 'language.style': return withStyleBase(draft, isStyleBase(value) ? value : 'clike');
         case 'language.classCase': return style('classCase');
         case 'language.literalCase': return style('literalCase');
         case 'language.blankBeforeContainment': return style('blankBeforeContainment');

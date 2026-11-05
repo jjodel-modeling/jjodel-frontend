@@ -132,6 +132,14 @@ describe('values and the draft setter', () => {
         expect(setField({ v: 1 }, { element: 'language', field: 'language.blankBeforeContainment' }, true)).toEqual({ v: 1, style: { blankBeforeContainment: true } });
     });
 
+    it('every style of the catalog is listed and written as chosen, Indentation included (C3b; mutant: a base other than Pascal/Ada written as C-like)', () => {
+        const style = fieldsOf(LIBRARY_MM, LIBRARY_IDS, 'language', 'basic').find(f => f.id === 'language.style');
+        expect(style?.options).toEqual(['clike', 'pascal', 'indent']);
+        expect(setField({ v: 1 }, { element: 'language', field: 'language.style' }, 'indent')).toEqual({ v: 1, style: { base: 'indent' } });
+        expect(setField({ v: 1, style: { base: 'indent', classCase: 'lower' } }, { element: 'language', field: 'language.style' }, 'pascal')).toEqual({ v: 1, style: { base: 'pascal', classCase: 'lower' } });
+        expect(setField({ v: 1 }, { element: 'language', field: 'language.style' }, 'cobol')).toEqual({ v: 1 });
+    });
+
     it('the operator group: a field set alone, the others kept, the group gone when emptied; value "name" as a toggle (mutant: the operator replaced whole)', () => {
         let d = setField({ v: 1 }, { element: 'class:C_And', field: 'class.operatorSymbol' }, '&');
         d = setField(d, { element: 'class:C_And', field: 'class.operatorPrecedence' }, 3);

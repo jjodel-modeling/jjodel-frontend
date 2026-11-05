@@ -425,7 +425,7 @@ describe('the style base of the record', () => {
             const view = libraryView(encodeSyntax(withBase(LIBRARY_RECORD, base)));
             expect(view.error).toBeNull();
             expect(view.text).toBe(LIBRARY_TEXT);
-            expect(errors(view.issues)).toEqual([`style: base ${JSON.stringify(base)} is not a style of the catalog (clike, pascal): C-like applied`]);
+            expect(errors(view.issues)).toEqual([`style: base ${JSON.stringify(base)} is not a style of the catalog (clike, pascal, indent): C-like applied`]);
         }
     });
 
