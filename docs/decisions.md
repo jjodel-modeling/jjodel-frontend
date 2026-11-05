@@ -7260,9 +7260,9 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   the same Save as one undo step. Two steps: (1) the literals of single elements, the style tokens read only; (2) then
   the style tokens too (`{`, `}`, `;`, `:=`, `begin` ...): editing one at any place changes it everywhere, written as
   overrides on top of `style.base`, a custom style; this extends the record and the style checks. Step C, after C2.
-- **R-TXT-49** (2026-11-05, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Editable
+- **R-TXT-49** (2026-11-05, Alfonso 09:26, «ratifico tutto»). **Editable
   EBNF literals (R-TXT-48): the twelve decisions of docs/discovery/discovery_2026-11-05_textual_ebnf_literals.md §5.3,
-  taken under lane auto (Alfonso 07:38), for him to ratify.** D1 the origin is an optional `src` on the `kw` and `p`
+  taken under lane auto (Alfonso 07:38); ratified by Alfonso 2026-11-05 09:26.** D1 the origin is an optional `src` on the `kw` and `p`
   grammar nodes plus a spans printer, the EBNF text unchanged; D2 a read-only model with decorations and a content widget
   over the literal; D3 the draft lifted into `ui/useSyntaxDraft.ts`, owned by the Text tab, shared by the Syntax form and
   the EBNF mode; D4 an empty value means the default for a class keyword, a feature keyword and a call word, and is
@@ -7273,9 +7273,9 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   new `style-tokens` rule; D10 switching the base drops the token overrides; D11 the fixed tokens, comments and the string
   quote stay read only; D12 the record stays at version 1. Lanes L1a, L1b, L2a, L2b; the visual ones (L1b, L2b) merge
   after the chat's crop check.
-- **R-TXT-50** (2026-11-05, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step C lane
-  C3b: the style check under Indentation, option (a) of P-2026-11-05-0843, taken under lane auto (Alfonso 07:38), for
-  him to ratify.** Under the indentation style the LL(1) check is line aware: an optional part of a header line does not
+- **R-TXT-50** (2026-11-05, Alfonso 09:26, «ratifico tutto»). **Step C lane
+  C3b: the style check under Indentation, option (a) of P-2026-11-05-0843, taken under lane auto (Alfonso 07:38);
+  ratified by Alfonso 2026-11-05 09:26.** Under the indentation style the LL(1) check is line aware: an optional part of a header line does not
   start a new line, as the parser reads it, so its FOLLOW ends at the line break and genuine conflicts on the same line
   stay errors. The Text tab's style picker refuses a style whose `checkStyle` has an error, with its reason, as the
   Syntax form's Save does (R-TXT-47 D1); the record is not written. Under Indentation a nameless object with no keyword
@@ -7287,7 +7287,7 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   reserved names; punctuation tokens join the tokenizer and the `taken` check; `checkStyle` and the parser's recovery
   (parser.ts:906) read the node's own tokens, not only the style's. (3) A separate slice: a head prefix before the class
   keyword (`begin program`); a prefix shared among alternatives is refused as an LL(1) conflict. (4) Proposed by
-  Alfonso, taken as provisional under lane auto and reported back: overrides survive a base switch among free-layout
+  Alfonso, ratified 09:26 («ratifico tutto»): overrides survive a base switch among free-layout
   styles and are ignored with a notice under Indentation; an EBNF edit of a per-block token changes that block only;
   the fields sit in the Syntax form, Advanced.
 
