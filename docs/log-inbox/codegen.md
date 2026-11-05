@@ -1904,3 +1904,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile
 **Notes**: Red first 27/27 and 28/28; 55 tests on the probe's six grammars (191 literals, counts per origin as measured). Mutation bench: 6/6 and 14/14 killed, counts in the commit bodies. Gates: typecheck 0; vitest 14161 pass, 3 baseline import reds; build 0; check:docs 0; check:codegen-lazy ALL GREEN (off, on). EBNF text byte for byte unchanged.
 **Prompt document name**: 2026-11-05 08:41
+
+## 2026-11-05 — merge: textual-ebnf-literals into alfonso-frontend-jjtl (P-2026-11-05-0906)
+
+**Prompt**: `claude_2026-11-05_0906_prompt_merge_textual-ebnf-literals.md`, a direct merge by `lane-run merge --direct`, no session: `textual-ebnf-literals` at `2c0cec54b` into `alfonso-frontend-jjtl`, merge base `1cf342a50`. R-TXT-48 and R-TXT-49: the EBNF literals discovery report and lane L1a (each quoted literal carries its origin, `concreteGrammarEbnfSpans`, origin to field, D4 and D5), no UI. Lane auto (Alfonso 07:38).
+**Files touched**: merge `4b858ee65`, the branch side (`frontend/src/codegen/textual/concreteGrammar.ts`, `syntaxForm.ts`, `__tests__/ebnfLiterals.test.ts`, the discovery report, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4b858ee65`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 14163 tests, 3 red at import (baseline), hooks 967.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no UI change; the EBNF text is byte for byte the same.
+**Notes**: Rollback tag `pre-textual-ebnf-literals` on `1cf342a50` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-0906/result.json`.
+**Prompt document name**: 2026-11-05 09:06
