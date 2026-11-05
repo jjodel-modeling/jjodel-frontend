@@ -13,6 +13,11 @@ import type { TextMetamodel } from '../metamodel';
 import { CLIKE_STYLE, INDENT_STYLE, PASCAL_STYLE, styleOf } from '../style';
 import type { NotationStyle } from '../style';
 import { checkStyle } from '../styleCheck';
+import { concreteGrammarEbnfSpans } from '../concreteGrammar';
+import type { ConcreteGrammar, LiteralSrc } from '../concreteGrammar';
+import { fieldKey, fieldPhrase, fieldValue, literalDefault, literalField, readDraft, setField, setLiteral } from '../syntaxForm';
+import type { FieldId } from '../syntaxForm';
+import { BOOL_IDS, BOOL_MM, BOOL_PASCAL } from './boolCorpus';
 import { decodeSyntax, encodeSyntax, textualNotation, withStyleBase } from '../syntaxRecord';
 import { PORT_CLIKE, PORT_IDS, PORT_MM, PORT_PASCAL } from './portCorpus';
 import { GARAGE, grammarOf } from './corpus';
@@ -175,5 +180,86 @@ describe('(3) the style-tokens rule', () => {
         expect(findings(rec({ terminator: ['//'] }))).toContainEqual(['style-tokens', 'style.terminator']);
         expect(findings(rec({ terminator: ['a b'] }))).toEqual([['annotations', 'style.terminator']]);
         expect(findings(PORT_PASCAL).filter(([r]) => r === 'style-tokens')).toEqual([]);
+    });
+});
+
+describe('(4) the form: a field per style parameter', () => {
+    const grammarOf2 = (mm: TextMetamodel, ids: ElementIds, d: SyntaxAnnotations): ConcreteGrammar => textualNotation(mm, { record: d, issues: [] }, ids).grammar;
+    const styleSrc = (param: Extract<LiteralSrc, { k: 'style' }>['param'], index = 0): LiteralSrc => ({ k: 'style', param, index });
+    const lang = (field: FieldId) => ({ element: 'language', field });
+    const editPort = (d: SyntaxAnnotations, src: LiteralSrc, value: string) => setLiteral(PORT_MM, PORT_IDS, d, src, value);
+    const ok = (r: ReturnType<typeof setLiteral>): SyntaxAnnotations => { if (!r.ok) throw new Error(r.reason); return r.draft; };
+
+    it('a style token\'s EBNF literal maps to its parameter\'s field (mutant: style origins left read only)', () => {
+        const g = grammarOf2(PORT_MM, PORT_IDS, PORT_PASCAL);
+        const at = (src: LiteralSrc) => { const r = literalField(PORT_MM, PORT_IDS, src); return r && fieldKey(r); };
+        const printed = concreteGrammarEbnfSpans(g).literals.flatMap(l => (l.src?.k === 'style' ? [[at(l.src), `language#language.${l.src.param}`]] : []));
+        expect(printed.length).toBeGreaterThan(0);
+        for (const [got, want] of printed) expect(got).toBe(want);
+        const params = ['assign', 'terminator', 'blockOpen', 'blockClose', 'list.open', 'list.separator', 'list.close'] as const;
+        expect(params.map(p => at(styleSrc(p)))).toEqual(params.map(p => `language#language.${p}`));
+        expect(literalField(PORT_MM, PORT_IDS, { k: 'fixed' })).toBeUndefined();
+    });
+
+    it('an edit writes the whole array with its element replaced, only when different from the base (D9; mutants: the element alone stored; the base value stored)', () => {
+        const d1 = ok(editPort(PORT_PASCAL, styleSrc('blockClose', 1), '.'));
+        expect(d1.style).toEqual({ base: 'pascal', blockClose: ['end', '.'] });
+        const d2 = ok(editPort(d1, styleSrc('blockOpen'), 'start'));
+        expect(d2.style).toEqual({ base: 'pascal', blockClose: ['end', '.'], blockOpen: ['start'] });
+        const back = ok(editPort(d2, styleSrc('blockClose', 1), ';'));
+        expect(back.style).toEqual({ base: 'pascal', blockOpen: ['start'] });
+        expect(ok(editPort(back, styleSrc('blockOpen'), 'begin'))).toEqual(PORT_PASCAL);
+    });
+
+    it('a list token is stored key by key, and set back to the base it goes, with an emptied style (mutant: the list stored whole)', () => {
+        const d = ok(editPort(PORT_CLIKE, styleSrc('list.separator'), ';'));
+        expect(d.style).toEqual({ list: { separator: ';' } });
+        expect(ok(editPort(d, styleSrc('list.separator'), ','))).toEqual(PORT_CLIKE);
+    });
+
+    it('one edit changes the token everywhere it is printed (R-TXT-48 (2))', () => {
+        const d = ok(setLiteral(BOOL_MM, BOOL_IDS, BOOL_PASCAL, styleSrc('blockOpen'), 'start'));
+        const spans = concreteGrammarEbnfSpans(grammarOf2(BOOL_MM, BOOL_IDS, d)).literals.filter(l => l.src?.k === 'style' && l.src.param === 'blockOpen');
+        expect(spans.length).toBeGreaterThan(1);
+        expect(new Set(spans.map(l => l.text))).toEqual(new Set(['start']));
+    });
+
+    it('refuses an empty token, a blank, a quote, a mixed token (mutant: the style shape not checked before the draft)', () => {
+        const why = (v: string) => { const r = editPort(PORT_PASCAL, styleSrc('terminator'), v); return r.ok ? undefined : r.reason; };
+        expect(why('')).toMatch(/empty/);
+        expect(why('; ;')).toMatch(/blank/);
+        expect(why('"')).toMatch(/quote/);
+        expect(why('a;')).toMatch(/word|punctuation/);
+        expect(why('.')).toBeUndefined();
+    });
+
+    it('the printed default of a style token is the base\'s token at its index', () => {
+        const d = ok(editPort(PORT_PASCAL, styleSrc('blockClose', 1), '.'));
+        expect(literalDefault(PORT_MM, PORT_IDS, d, styleSrc('blockClose', 1))).toBe(';');
+    });
+
+    it('fieldValue and setField read and write a parameter, cleared when equal to the base (mutant: a base-equal array stored)', () => {
+        const d = setField(PORT_PASCAL, lang('language.assign'), ['=']);
+        expect(fieldValue(d, lang('language.assign'))).toEqual(['=']);
+        expect(setField(d, lang('language.assign'), [':='])).toEqual(PORT_PASCAL);
+        expect(setField(d, lang('language.assign'), undefined)).toEqual(PORT_PASCAL);
+        const l = setField(PORT_CLIKE, lang('language.list.close'), '>');
+        expect(fieldValue(l, lang('language.list.close'))).toBe('>');
+        expect(fieldValue(l, lang('language.list.open'))).toBeUndefined();
+    });
+
+    it('a finding at style.<param> lands on that parameter\'s field, and on the Style row until it has its own (mutant: every style finding at language.style only)', () => {
+        const at = (style: Record<string, unknown>, rule: string) => readDraft(PORT_MM, PORT_IDS, { ...PORT_CLIKE, style } as SyntaxAnnotations).faults
+            .filter(f => f.rule === rule).map(f => f.at.map(fieldKey));
+        expect(at({ blockOpen: ['|'], blockClose: ['|'] }, 'style-tokens')).toEqual([['language#language.blockOpen', 'language#language.blockClose', 'language#language.style']]);
+        expect(at({ terminator: ['//'] }, 'style-tokens')).toEqual([['language#language.terminator', 'language#language.style']]);
+        expect(at({ terminator: ['a b'] }, 'annotations')).toEqual([['language#language.terminator', 'language#language.style']]);
+        expect(at({ list: { open: ',' } }, 'list-tokens')).toEqual([['language#language.list.open', 'language#language.list.separator', 'language#language.list.close', 'language#language.style']]);
+        expect(at({ classCase: 'upper' }, 'annotations')).toEqual([['language#language.classCase']]);
+    });
+
+    it('names a parameter\'s field in a sentence', () => {
+        expect(fieldPhrase(PORT_IDS, lang('language.blockOpen'))).toBe('the block open of the language');
+        expect(fieldPhrase(PORT_IDS, lang('language.list.separator'))).toBe('the list separator of the language');
     });
 });
