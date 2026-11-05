@@ -1954,7 +1954,7 @@ An index hole now takes the origin of its last read, but a value passed through 
 
 ## 2026-11-05 — merge: textual-c3b-indent takes alfonso-frontend-jjtl (P-2026-11-05-0943)
 
-**Prompt**: `claude_2026-11-05_0943_prompt_merge_alfonso-frontend-jjtl_into_textual-c3b-indent.md`, a session merge by `lane-run merge --trunk-into --launch` (RC-14: concreteGrammar.ts and syntaxForm.ts changed on both sides since the base, by L1a on the trunk): the trunk at `5fd33809e` into `textual-c3b-indent`.
+**Prompt**: `claude_2026-11-05_0943_prompt_textual-c3b-indent_take_trunk.md`, a session merge by `lane-run merge --trunk-into --launch` (RC-14: concreteGrammar.ts and syntaxForm.ts changed on both sides since the base, by L1a on the trunk): the trunk at `5fd33809e` into `textual-c3b-indent`.
 **Files touched**: merge `38a49d347` on the branch.
 **Outcome**: ⚠️ partial
 **Corregge**: —
