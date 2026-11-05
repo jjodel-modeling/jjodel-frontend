@@ -30,7 +30,7 @@ import { buildEvalContext } from '../../../jjscript';
 import { evalContextFor } from '../../../components/editor-v2/sim/simBridge';
 import DockManager from '../../../components/abstract/DockManager';
 import { TEXTUAL_SYNTAX_KEY, textualLanguageNameOf, textualLanguageOf, textualOptionLabel } from '../../../components/editor-v2/dataManagerOption';
-import { concreteGrammarEbnf } from '../concreteGrammar';
+import { concreteGrammarEbnf, concreteGrammarEbnfSpans } from '../concreteGrammar';
 import { textOutline } from '../languageService';
 import type { OutlineNode } from '../languageService';
 import { classFeatures } from '../metamodel';
@@ -48,7 +48,7 @@ import { elementIdsOf, readSyntax, storedSyntax, styleBaseOf, textualNotation, w
 import { STYLE_CATALOG, isStyleBase } from '../style';
 import type { StyleBase } from '../style';
 import type { AnnotationIssue, ElementIds, SyntaxAnnotations } from '../annotations';
-import type { ConcreteGrammar } from '../concreteGrammar';
+import type { ConcreteGrammar, LiteralSrc } from '../concreteGrammar';
 import type { DecodedSyntax } from '../syntaxRecord';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import type { NewModelReading } from '../modelLines';
@@ -57,7 +57,9 @@ import type { ConfirmRow } from './TextConfirmPanel';
 import type { TextualSession } from './textualMonaco';
 import SyntaxForm from './SyntaxForm';
 import type { PreviewKind } from './SyntaxForm';
-import { storedErrors } from '../syntaxForm';
+import { fieldKey, fieldPhrase, literalField, setLiteral, storedErrors } from '../syntaxForm';
+import type { FieldRef, FormFault } from '../syntaxForm';
+import { useSyntaxDraft } from './useSyntaxDraft';
 import './TextualTab.scss';
 
 /** T1's input: the metamodel and the objects as plain data (metamodel.ts). */
@@ -881,6 +883,17 @@ const EDIT_MARKER_OWNER = 'textual-edit';
 /** The context key that sends Cmd/Ctrl+Z to the app's undo: set while the text holds no pending edit (R-TXT-26). */
 const APP_UNDO_KEY = 'textualNoPendingEdit';
 
+/** The same in the EBNF editor: set while the syntax draft is clean (R-TXT-49 D6); a dirty draft has no undo. */
+const EBNF_APP_UNDO_KEY = 'textualEbnfDraftClean';
+
+/** The owner of the draft's findings at the EBNF literals. */
+const EBNF_MARKER_OWNER = 'textual-ebnf';
+
+/** The app's undo, one step (the Text editor's Cmd/Ctrl+Z). */
+const appUndo = (): void => {
+    void import('../../../joiner').then(({ UndoAction, DUser }) => { UndoAction.new(1, DUser.current, false).commit(); });
+};
+
 type MonacoEditor = Parameters<OnMount>[0];
 /** A change of the Monaco model's content: what replaced which offsets. */
 type ContentChange = { readonly rangeOffset: number; readonly rangeLength: number; readonly text: string };
@@ -902,6 +915,42 @@ export function styleSwitchRecord(decoded: DecodedSyntax, base: StyleBase): Synt
 /** The picker's entries, in the catalog's order. */
 const STYLE_ENTRIES = (Object.keys(STYLE_CATALOG) as StyleBase[]).map(base => ({ base, name: STYLE_CATALOG[base].name }));
 
+/**
+ * An editable literal of the EBNF mode (lane L1b, P-2026-11-05-0921; R-TXT-48 step 1, R-TXT-49 D2): its span between
+ * the quotes, its origin, the record field it edits, and the origin as a key, which links its occurrences.
+ */
+export interface EbnfIsland {
+    readonly start: number;
+    readonly end: number;
+    readonly text: string;
+    readonly src: LiteralSrc;
+    readonly at: FieldRef;
+    readonly origin: string;
+}
+
+/**
+ * The EBNF of a draft's grammar, `draftPreview(...).ebnf` (both print it with `concreteGrammarEbnf`), with an island on
+ * every element literal: none on a style token (step 2), a fixed token (D11) or an enumeration literal (D8), for which
+ * `literalField` has no field. Null without a grammar, a draft that does not derive.
+ */
+export function ebnfOfDraft(mm: TextMetamodel, ids: ElementIds, grammar: ConcreteGrammar | undefined): { readonly text: string; readonly islands: readonly EbnfIsland[] } | null {
+    if (!grammar) return null;
+    const { text, literals } = concreteGrammarEbnfSpans(grammar);
+    const islands = literals.flatMap((l): EbnfIsland[] => {
+        const at = l.src && literalField(mm, ids, l.src);
+        return l.src && at ? [{ start: l.start, end: l.end, text: l.text, src: l.src, at, origin: JSON.stringify(l.src) }] : [];
+    });
+    return { text, islands };
+}
+
+/** Each island's faults: those whose fields include the island's field (R-TXT-47 D9's `at`), in the faults' order. */
+export function islandFaults(islands: readonly EbnfIsland[], faults: readonly FormFault[]): FormFault[][] {
+    return islands.map(i => {
+        const k = fieldKey(i.at);
+        return faults.filter(f => f.at.some(r => fieldKey(r) === k));
+    });
+}
+
 export interface TextualTabProps {
     readonly modelId: string;
     /** The picker entry's label: the language's name (dataManagerOption.ts `textualOptionLabel`). */
@@ -918,7 +967,8 @@ export interface TextualTabProps {
  * print changed, rewritten to the new print (R-TXT-35, P-2026-11-03-1535). The previous parse's spans, carried
  * by Monaco decorations, are the first evidence of identity (R-TXT-22). A change of the model from elsewhere reprints
  * a text with no pending edit and never overwrites one. With no pending edit, Cmd/Ctrl+Z is the app's undo, whose
- * change reprints the text: one step restores model and text together. The EBNF view stays read-only.
+ * change reprints the text: one step restores model and text together. The EBNF view's structure stays read-only; its
+ * element literals edit the syntax draft the Syntax form shares (lane L1b, R-TXT-48, R-TXT-49 D2, D3).
  */
 export default function TextualTab({ modelId, label, tabId, writeSyntax }: TextualTabProps) {
     const lookup = useSelector((state: any) => state.idlookup) as Record<string, any>;
@@ -954,6 +1004,17 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const [status, setStatus] = useState<EditStatus>({ kind: 'synced' });
     const [stale, setStale] = useState(false);
     const [confirm, setConfirm] = useState<{ readonly text: string; readonly rows: readonly ConfirmRow[] } | null>(null);
+    // L1b (R-TXT-49 D3): the syntax draft, owned here and shared by the Syntax form and the EBNF mode; only where Save
+    // can write it. Without a writer the EBNF stays the stored one, read only.
+    const editableSyntax = !!(writeSyntax && metamodelId && read.input);
+    const syntaxDraft = useSyntaxDraft({
+        mm: editableSyntax ? read.input?.metamodel : undefined, ids: stored.ids, decoded, storedRaw,
+        pendingEdit: !canSwitchStyle(status, stale),
+        onSave: record => !!writeSyntax && !!metamodelId && writeSyntax(metamodelId, record),
+    });
+    const draftEbnf = useMemo(() => (editableSyntax && read.input ? ebnfOfDraft(read.input.metamodel, stored.ids, syntaxDraft.reading.grammar) : null),
+        [editableSyntax, read.input, stored.ids, syntaxDraft.reading]);
+    const draftFaults = useMemo(() => (draftEbnf ? islandFaults(draftEbnf.islands, syntaxDraft.reading.faults) : []), [draftEbnf, syntaxDraft.reading]);
     const readRef = useRef(read);
     readRef.current = read;
     const editorRef = useRef<MonacoEditor | null>(null);
@@ -1337,6 +1398,23 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         if (record) writeSyntax(metamodelId, record);
     };
     const refusalTitle = status.kind === 'refused' ? status.reasons.join('\n') : shownStatus.text;
+    const islandTitle = (island: EbnfIsland): string => {
+        const phrase = fieldPhrase(stored.ids, island.at);
+        return phrase.charAt(0).toUpperCase() + phrase.slice(1);
+    };
+    const literalEdit = (island: EbnfIsland, value: string) => (read.input
+        ? setLiteral(read.input.metamodel, stored.ids, syntaxDraft.draft, island.src, value)
+        : { ok: false as const, reason: 'The metamodel cannot be read' });
+    const literalCheck = (island: EbnfIsland, value: string): string | null => {
+        const r = literalEdit(island, value);
+        return r.ok ? null : r.reason;
+    };
+    const literalApply = (island: EbnfIsland, value: string): string | null => {
+        const r = literalEdit(island, value);
+        if (!r.ok) return r.reason;
+        syntaxDraft.setDraft(() => r.draft);
+        return null;
+    };
     const syntaxPreview = (kind: PreviewKind, value: string): ReactNode => (ui ? (
         <Editor width="100%" height="100%" language={kind === 'ebnf' ? ui.EBNF_LANGUAGE_ID : ui.TEXTUAL_LANGUAGE_ID} value={value}
                 theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
@@ -1351,7 +1429,22 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                     <span className="textual-tab__name">{modelName}</span>
                     <span className="textual-tab__language">{shownLabel}</span>
                 </span>
-                {mode === 'ebnf' ? (
+                {mode === 'ebnf' && draftEbnf ? (
+                    <span className="textual-tab__draft">
+                        <span className={'textual-tab__draft-state' + (syntaxDraft.dirty ? ' textual-tab__draft-state--dirty' : '')} role="status">
+                            {syntaxDraft.dirty ? 'Unsaved changes' : 'Saved'}
+                        </span>
+                        <button type="button" className="textual-tab__draft-button" disabled={!syntaxDraft.dirty}
+                                title={syntaxDraft.dirty ? 'Drop the draft and show the stored syntax' : 'No unsaved changes'} onClick={syntaxDraft.loadStored}>
+                            Discard
+                        </button>
+                        <button type="button" className="textual-tab__draft-button textual-tab__draft-button--primary" disabled={!syntaxDraft.gate.enabled}
+                                title={syntaxDraft.gate.title} onClick={syntaxDraft.save}>
+                            <i className="bi bi-check2" aria-hidden="true" />
+                            Save
+                        </button>
+                    </span>
+                ) : mode === 'ebnf' ? (
                     <span className="textual-tab__readonly" title="The grammar is derived from the metamodel">
                         <i className="bi bi-lock" aria-hidden="true" />
                         Read-only
@@ -1442,16 +1535,22 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         </div>
                         {mode === 'ebnf' && ui && (
                             <div className="textual-tab__layer">
-                                <Editor width="100%" height="100%" language={ui.EBNF_LANGUAGE_ID} value={view.ebnf}
-                                        theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
-                                        options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }} />
+                                {draftEbnf ? (
+                                    <EbnfLiterals ui={ui} text={draftEbnf.text} islands={draftEbnf.islands} faults={draftFaults} titleOf={islandTitle}
+                                                  check={literalCheck} apply={literalApply} clean={!syntaxDraft.dirty} />
+                                ) : (
+                                    <Editor width="100%" height="100%" language={ui.EBNF_LANGUAGE_ID} value={view.ebnf}
+                                            theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco}
+                                            options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }} />
+                                )}
                             </div>
                         )}
                         {writeSyntax && metamodelId && read.input && (mode === 'syntax' || syntaxOpened) && (
                             <div className={'textual-tab__layer' + (mode === 'syntax' ? '' : ' textual-tab__layer--hidden')}>
                                 <SyntaxForm mm={read.input.metamodel} ids={stored.ids} decoded={decoded} storedRaw={storedRaw}
                                             objects={read.input.objects} metamodelName={typeof metamodel?.name === 'string' ? metamodel.name : undefined}
-                                            pendingEdit={!styleFree} onSave={record => writeSyntax(metamodelId, record)} preview={syntaxPreview} />
+                                            pendingEdit={!styleFree} onSave={record => writeSyntax(metamodelId, record)} preview={syntaxPreview}
+                                            draft={syntaxDraft} />
                             </div>
                         )}
                         {mode === 'text' && confirm && confirm.rows.length > 0 && (
@@ -1461,6 +1560,200 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                 )}
             </div>
         </div>
+    );
+}
+
+interface EbnfLiteralsProps {
+    readonly ui: TextualMonacoModule;
+    readonly text: string;
+    readonly islands: readonly EbnfIsland[];
+    /** `islandFaults` of the islands: each island's findings, one marker each. */
+    readonly faults: readonly (readonly FormFault[])[];
+    /** The hover and the input's label: what the island edits. */
+    readonly titleOf: (island: EbnfIsland) => string;
+    /** Why a value is refused for an island, or null (the live check, `setLiteral`). */
+    readonly check: (island: EbnfIsland, value: string) => string | null;
+    /** Writes a value into the draft through `setLiteral`; the refusal's reason, or null when written. */
+    readonly apply: (island: EbnfIsland, value: string) => string | null;
+    /** The draft is clean: Cmd/Ctrl+Z goes to the app's undo (D6). */
+    readonly clean: boolean;
+}
+
+/**
+ * The EBNF mode over the syntax draft (lane L1b, R-TXT-49 D2): a read-only model whose element literals are islands; a
+ * click, Enter or F2 on one lays an input over it as a content widget, an overlay that moves no line. Enter writes the
+ * value into the draft, Escape or leaving the input drops it; a refused value shows its reason under the input. The
+ * islands of the origin under the pointer or being edited are highlighted together. The text is set by hand, keeping
+ * the scroll, so the wrapper's `setValue` does not reset the view on every edit.
+ */
+function EbnfLiterals(props: EbnfLiteralsProps) {
+    const { ui, text, islands, faults, clean } = props;
+    const live = useRef(props);
+    live.current = props;
+    const editorRef = useRef<MonacoEditor | null>(null);
+    const monacoRef = useRef<MonacoApi | null>(null);
+    const islandIdsRef = useRef<string[]>([]);
+    const linkedIdsRef = useRef<string[]>([]);
+    const hoverRef = useRef<string | null>(null);
+    const openRef = useRef<{ readonly origin: string; readonly input: HTMLInputElement; readonly close: () => void } | null>(null);
+    const undoKeyRef = useRef<{ set(v: boolean): void } | null>(null);
+    const [ready, setReady] = useState(false);
+
+    const rangeOf = (i: Pick<EbnfIsland, 'start' | 'end'>) => {
+        const m = editorRef.current!.getModel()!;
+        const a = m.getPositionAt(i.start);
+        const b = m.getPositionAt(i.end);
+        return new monacoRef.current!.Range(a.lineNumber, a.column, b.lineNumber, b.column);
+    };
+
+    const paintLinked = (): void => {
+        const m = editorRef.current?.getModel();
+        if (!m) return;
+        const origin = openRef.current?.origin ?? hoverRef.current;
+        const linked = origin ? live.current.islands.filter(i => i.origin === origin) : [];
+        linkedIdsRef.current = m.deltaDecorations(linkedIdsRef.current, linked.map(i => ({ range: rangeOf(i), options: { inlineClassName: 'textual-tab__island--linked' } })));
+    };
+
+    const close = (): void => {
+        const open = openRef.current;
+        openRef.current = null;
+        open?.close();
+        paintLinked();
+    };
+
+    const islandAt = (offset: number): EbnfIsland | undefined => live.current.islands.find(i => offset >= i.start && offset <= i.end);
+
+    const open = (island: EbnfIsland): void => {
+        const editor = editorRef.current;
+        const monaco = monacoRef.current;
+        const m = editor?.getModel();
+        if (!editor || !monaco || !m) return;
+        close();
+        const node = document.createElement('div');
+        node.className = 'textual-tab__literal-widget';
+        const input = document.createElement('input');
+        input.className = 'textual-tab__literal-input';
+        input.value = island.text;
+        input.spellcheck = false;
+        input.setAttribute('aria-label', live.current.titleOf(island));
+        input.style.height = `${editor.getOption(monaco.editor.EditorOption.lineHeight)}px`;
+        const reason = document.createElement('div');
+        reason.className = 'textual-tab__literal-reason';
+        reason.setAttribute('role', 'alert');
+        node.append(input, reason);
+        const size = (): void => { input.style.width = `${Math.max(island.text.length, input.value.length) + 1}ch`; };
+        const refuse = (r: string | null): void => {
+            reason.textContent = r ?? '';
+            node.classList.toggle('textual-tab__literal-widget--refused', r !== null);
+        };
+        const done = (): void => { close(); editor.focus(); };
+        size();
+        input.addEventListener('input', () => {
+            size();
+            refuse(input.value === island.text ? null : live.current.check(island, input.value));
+        });
+        // Native and stopped here: the editor's own keybindings (Cmd/Ctrl+Z included) never see the input's keys.
+        input.addEventListener('keydown', e => {
+            e.stopPropagation();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (input.value === island.text) { done(); return; }
+                const r = live.current.apply(island, input.value);
+                if (r === null) done(); else refuse(r);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                done();
+            }
+        });
+        input.addEventListener('blur', () => { if (openRef.current?.input === input) close(); });
+        const position = m.getPositionAt(island.start);
+        const widget = {
+            getId: () => 'textual.ebnf.literal',
+            getDomNode: () => node,
+            getPosition: () => ({ position, preference: [monaco.editor.ContentWidgetPositionPreference.EXACT] }),
+        };
+        editor.addContentWidget(widget);
+        openRef.current = { origin: island.origin, input, close: () => editor.removeContentWidget(widget) };
+        paintLinked();
+        // After the editor's own mouse-down handling, which focuses its text area.
+        setTimeout(() => { if (openRef.current?.input === input) { input.focus(); input.select(); } }, 0);
+    };
+
+    const paint = (): void => {
+        const editor = editorRef.current;
+        const monaco = monacoRef.current;
+        const m = editor?.getModel();
+        if (!editor || !monaco || !m) return;
+        const { text: shown, islands: list, faults: found, titleOf } = live.current;
+        if (m.getValue() !== shown) {
+            close();
+            const state = editor.saveViewState();
+            m.setValue(shown);
+            if (state) editor.restoreViewState(state);
+        }
+        islandIdsRef.current = m.deltaDecorations(islandIdsRef.current, list.map((i, k) => {
+            const level = found[k]?.some(f => f.level === 'error') ? 'error' : found[k]?.length ? 'notice' : null;
+            return {
+                range: rangeOf(i),
+                options: {
+                    inlineClassName: 'textual-tab__island' + (level ? ` textual-tab__island--${level}` : ''),
+                    // The findings ride on the island's hover: a read-only editor neither paints nor hovers its markers
+                    // (Monaco's `renderValidationDecorations: 'editable'`), so the wavy underline is the island's own.
+                    hoverMessage: [...(found[k] ?? []).map(f => ({ value: f.message })), { value: `${titleOf(i)}: click or press Enter to edit` }],
+                    stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+                },
+            };
+        }));
+        monaco.editor.setModelMarkers(m, EBNF_MARKER_OWNER, list.flatMap((i, k) => (found[k] ?? []).map(f => {
+            const r = rangeOf(i);
+            return {
+                severity: f.level === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Info,
+                message: f.message,
+                startLineNumber: r.startLineNumber, startColumn: r.startColumn, endLineNumber: r.endLineNumber, endColumn: r.endColumn,
+            };
+        })));
+        paintLinked();
+    };
+
+    useEffect(() => { paint(); }, [text, islands, faults, ready]);
+    useEffect(() => { undoKeyRef.current?.set(clean); }, [clean, ready]);
+
+    const onMount: OnMount = (editor, monaco) => {
+        editorRef.current = editor;
+        monacoRef.current = monaco;
+        editor.onDidFocusEditorText(() => monaco.editor.setTheme(ui.TEXTUAL_THEME_ID));
+        const key = editor.createContextKey<boolean>(EBNF_APP_UNDO_KEY, live.current.clean);
+        undoKeyRef.current = key;
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, appUndo, EBNF_APP_UNDO_KEY);
+        const offsetOf = (p: { lineNumber: number; column: number } | null): number | null => (p ? editor.getModel()?.getOffsetAt(p) ?? null : null);
+        editor.onMouseMove(e => {
+            const at = e.target.type === monaco.editor.MouseTargetType.CONTENT_TEXT ? offsetOf(e.target.position) : null;
+            const origin = (at === null ? undefined : islandAt(at))?.origin ?? null;
+            if (origin !== hoverRef.current) { hoverRef.current = origin; paintLinked(); }
+        });
+        editor.onMouseLeave(() => { if (hoverRef.current !== null) { hoverRef.current = null; paintLinked(); } });
+        editor.onMouseDown(e => {
+            if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) return;
+            const at = offsetOf(e.target.position);
+            const island = at === null ? undefined : islandAt(at);
+            if (island) open(island);
+        });
+        editor.onKeyDown(e => {
+            if (openRef.current || (e.keyCode !== monaco.KeyCode.Enter && e.keyCode !== monaco.KeyCode.F2)) return;
+            const at = offsetOf(editor.getPosition());
+            const island = at === null ? undefined : islandAt(at);
+            if (!island) return;
+            e.preventDefault();
+            e.stopPropagation();
+            open(island);
+        });
+        setReady(true);
+    };
+
+    return (
+        <Editor width="100%" height="100%" language={ui.EBNF_LANGUAGE_ID} defaultValue={text}
+                theme={ui.TEXTUAL_THEME_ID} beforeMount={ui.registerTextualMonaco} onMount={onMount}
+                options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }} />
     );
 }
 

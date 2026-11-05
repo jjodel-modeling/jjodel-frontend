@@ -55,8 +55,9 @@ const plural = (n: number, one: string): string => `${n} ${one}${n === 1 ? '' : 
 export default function SyntaxForm({ mm, ids, decoded, storedRaw, objects, metamodelName, pendingEdit, onSave, preview, draft: shared }: SyntaxFormProps) {
     // D2: the app's Basic and Advanced (Redux `advanced`, Settings «Editor mode»), as Toolbar.tsx reads it.
     const interfaceMode: InterfaceMode = useSelector((state: any) => !!state.advanced) ? 'advanced' : 'basic';
-    // L1b: the Text tab's draft when given, else the form's own (the hook runs either way, hooks are unconditional).
-    const own = useSyntaxDraft({ mm, ids, decoded, storedRaw, pendingEdit, onSave });
+    // L1b: the Text tab's draft when given, else the form's own (the hook runs either way, hooks are unconditional; idle,
+    // with no metamodel to read, under a shared draft).
+    const own = useSyntaxDraft({ mm: shared ? undefined : mm, ids, decoded, storedRaw, pendingEdit, onSave });
     const { draft, setDraft, change, reading, dirty, gate, save, loadStored } = shared ?? own;
     const [selected, setSelected] = useState<ElementKey>('language');
     const [filter, setFilter] = useState('');
