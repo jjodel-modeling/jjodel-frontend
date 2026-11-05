@@ -163,3 +163,62 @@ Two ways, both shown feasible by the probe:
   order and of the derivation's shapes (the two probe bugs above), which drifts the day a shape changes.
 
 Recommendation: (A). The derivation is the one place that knows the origin, at the line that creates the node.
+
+## 2. Editor
+
+### 2.1 The EBNF mode today (read, `ui/TextualTab.tsx`)
+
+- Three modes, `type TextualMode = 'text' | 'ebnf' | 'syntax';` (`:836`). The EBNF is its own `<Editor>` mounted only
+  in that mode (`:1443-1449`): `language={ui.EBNF_LANGUAGE_ID} value={view.ebnf}` with
+  `options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }}`, no `onMount`, so no ref, no decorations, no
+  markers, no commands.
+- `view.ebnf` is the **stored** notation's EBNF (`readModel`, `:224`, `const ebnf = concreteGrammarEbnf(grammar);`), not a
+  draft's. The bar shows a lock while in the mode (`:1354-1358`): `title="The grammar is derived from the metamodel"`,
+  `Read-only`. The Syntax form's preview has a second read-only EBNF editor (`syntaxPreview`, `:1340-1344`) fed by
+  `draftPreview(...).ebnf` (`syntaxForm.ts:575-587`).
+- The Text editor shows the mechanisms an island editor would reuse: decorations with
+  `TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges` (`:995-996`), `monaco.editor.setModelMarkers(m, EDIT_MARKER_OWNER,
+  ...)` (`:1064`), and Cmd/Ctrl+Z sent to the app's undo under a context key (`:1316-1320`,
+  `editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => { ... UndoAction.new(1, DUser.current, false).commit(); }, APP_UNDO_KEY);`).
+- The EBNF tokenizer colours a quoted string `string.jjodel-ebnf` in `CYAN` (`textualMonaco.ts:61`, Monarch rule `:78`
+  `[/"(?:[^"\\]|\\.)*"/, 'string']`), the tab's accent (R-TXT-47 D8, `#06b6d4`).
+- The wrapper (`@monaco-editor/react` 4.7.0, measured in `node_modules/@monaco-editor/react/dist/index.mjs`) updates a
+  read-only editor by `setValue`, a writable one by a whole-range `executeEdits` plus `pushUndoStop`:
+  `readOnly)?i.setValue(r||""):r!==i.getValue()&&(i.executeEdits("",[{range:i.getModel().getFullModelRange(),...}]),i.pushUndoStop())`.
+
+### 2.2 The options
+
+Monaco has no editable-range API in the version bundled here (read, not measured: no such option in `EDITOR_OPTIONS` or in
+the wrapper's props; the "editable regions" requests in Monaco's tracker are open feature requests). Four ways:
+
+| | Option | Layout shift | Undo | Verdict |
+|---|---|---|---|---|
+| (a) | Read-only model; islands as decorations; a **content widget** with an `<input>` laid over the literal on click, Enter or F2; Enter or blur commits to the draft, Escape cancels | none: a content widget is an overlay, the lines do not move | Monaco holds no edit; on commit the draft changes, the EBNF re-derives and the wrapper `setValue`s it (no Monaco undo stack); the only undo step is the Save, one `set_state` | **recommended** |
+| (b) | Writable model; `onDidChangeModelContent` undoes any change outside an island | none | two stacks: Monaco's keystrokes and the wrapper's whole-range replace (`executeEdits` + `pushUndoStop`) on every re-derivation; Cmd+Z brings back an EBNF that no longer matches the draft; paste across islands, multi-cursor, IME composition, find-and-replace each need a guard | rejected |
+| (c) | Writable only while the selection is inside an island (`readOnly` toggled on `onDidChangeCursorSelection`) | none | as (b) inside an island; a selection that starts in an island and ends outside it still edits outside | rejected |
+| (d) | Decorations only; a click jumps to the field in the Syntax form | none | none | a fallback, not R-TXT-48: the literal is not edited where it is read |
+
+A view zone (an input in a zone under the line) is ruled out: a zone pushes the following lines down, a layout shift.
+
+### 2.3 The recommended editor in detail
+
+- **Islands**: a decoration per editable literal span, the text between the quotes only, `inlineClassName` with a
+  background tint or an underline and a pointer cursor, never padding, margin or border, which change the glyph positions
+  Monaco measures. A hover message names the field: «Keyword of class Module». A literal of origin `fixed` or `literal`
+  (enum literal) gets no island; in step 1 neither does a `style` one, which keeps a muted, read-only look.
+- **Input**: an `IContentWidget` positioned `EXACT` at the literal's first character, the editor's font and line height,
+  width `max(literal, value)` in `ch`; the input's background hides the literal under it, and a longer value covers the
+  following text rather than moving it. Enter or blur commits, Escape restores, Tab and Shift+Tab move to the next and the
+  previous island (the islands are in document order).
+- **Linked occurrences**: while an island is open, every span of the same origin gets a second decoration
+  (`--linked`), so that `Book` three times, or `begin` six times, show what the edit will change. The other occurrences
+  change at the commit, when the EBNF re-derives; they are not rewritten keystroke by keystroke, which would re-derive
+  and re-`setValue` on every character.
+- **Live check in the widget**: each keystroke reads the candidate draft through `readDraft` (as the form does on every
+  change, `SyntaxForm.tsx:78`) and shows the first fault of that field under the input; a value that is not well formed
+  for its field (§3.3) disables Enter there.
+- **Tokens and styles**: the widget and the decorations get a class in `ui/TextualTab.scss` reading existing tokens
+  (`--color-canvas-accent` is already used there for the focus outline, `TextualTab.scss:131`), no new CSS variable
+  in a component file (NON-NEGOTIABLE 28); the accent stays `#06b6d4`.
+- **Undo**: with no pending draft, Cmd/Ctrl+Z in the EBNF editor goes to the app's undo by the same `addCommand` as the
+  Text editor; with a dirty draft it does nothing (the draft has no undo of its own, as in the form today, §5 D6).
