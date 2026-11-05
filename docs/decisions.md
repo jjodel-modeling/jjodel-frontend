@@ -7290,6 +7290,18 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   Alfonso, ratified 09:26 («ratifico tutto»): overrides survive a base switch among free-layout
   styles and are ignored with a notice under Indentation; an EBNF edit of a per-block token changes that block only;
   the fields sit in the Syntax form, Advanced.
+- **R-TXT-52** (2026-11-05, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Block tokens
+  per element (R-TXT-51): the ten decisions of docs/discovery/discovery_2026-11-05_textual_block_tokens.md, taken under
+  lane auto (Alfonso 15:33, «chiudi C»), for him to ratify.** D1 the target text is reached with per-block tokens alone;
+  the head prefix (R-TXT-51 (3)) follows as its own slice inside step C; D2 per-block words join
+  `grammar.style.reservedNames` during derivation; D3 only per-block tokens survive a base switch, the language-wide
+  overrides are still dropped (R-TXT-49 D10 stands); D4 a grouped containment applies its tokens to each group's block;
+  D5 a per-block token equal to the terminator, the assignment or a list token is refused; D6 unknown keys in a class or
+  feature entry become a notice; D7 the form's language-wide block-token fields of L2a, broken (an override shows empty,
+  typing saves a string the record refuses), are fixed first in lane B0, with a ticket; D8 an empty open or close is
+  refused under free layout; D9 per-block tokens where there is no block are an error and are not applied; D10 the EBNF
+  origin is set per side, so a side the block inherits stays language-wide when edited. Lanes B0, B1, B2, then B3a and
+  B3b for the head prefix.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
