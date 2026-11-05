@@ -51,7 +51,7 @@ import type { JjelValue, JjelFunction } from '../../jjel';
 
 import { toJjelAst } from './astBridge';
 import { extractAttributeValues } from '../../jjel/evaluator/modelContext';
-import { registerRangeBuiltin } from '../../jjel/evaluator/evaluator';
+import { registerRangeBuiltin, methodFailureOf } from '../../jjel/evaluator/evaluator';
 
 import {
     TraceModel,
@@ -368,21 +368,25 @@ interface ApplicationFrame {
 class JjtlApplicationAbort extends Error {}
 
 /**
- * A builtin that threw inside a JjTL expression (R-FA-11): it stops the mapping
- * with an error on both parser paths, never a warning with `null`. The message
- * names the builtin and, once `evaluateExpression` has located it, the outermost
+ * A builtin that threw inside a JjTL expression (R-FA-11), or a JjEL method that
+ * failed there (R-FA-12, kind 'Method'): it stops the mapping with an error on
+ * both parser paths, never a warning with `null`. The message names the builtin
+ * or method and, once `evaluateExpression` has located it, the outermost
  * expression it was evaluated in.
  */
 class JjtlBuiltinError extends Error {
-    constructor(readonly builtin: string, readonly reason: string) {
-        super(`Builtin '${builtin}' failed: ${reason}`);
+    /** Where the run was when it failed, ` (rule '...', source element '...')`; set for a method only. */
+    origin = '';
+
+    constructor(readonly builtin: string, readonly reason: string, readonly kind: 'Builtin' | 'Method' = 'Builtin') {
+        super(`${kind} '${builtin}' failed: ${reason}`);
     }
 
     /** Called by each enclosing evaluateExpression: the outermost call names the expression. */
     locate(expr: ExpressionAST): void {
         const start = expr.location?.start;
         const where = start ? `expression at line ${start.line}, column ${start.column}` : 'expression';
-        this.message = `Builtin '${this.builtin}' failed in ${where}: ${this.reason}`;
+        this.message = `${this.kind} '${this.builtin}' failed in ${where}${this.origin}: ${this.reason}`;
     }
 }
 
@@ -2987,12 +2991,21 @@ export class JjtlExecutor {
             return this.jjelEvaluator.evaluate(jjelExpr, ctx);
         } catch (error) {
             // A builtin that failed stops the mapping, as on the legacy fast path
-            // above (R-FA-11): rethrown, naming the expression. Any other
-            // evaluation error, a call to a name that resolves to nothing among
-            // them, is logged and falls back to null.
+            // above (R-FA-11), and so does a JjEL method that failed (R-FA-12):
+            // rethrown, naming the expression. Any other evaluation error, a call
+            // to a name that resolves to nothing or a read on null among them,
+            // is logged and falls back to null.
             if (error instanceof JjtlBuiltinError) {
                 error.locate(expr);
                 throw error;
+            }
+            const method = methodFailureOf(error);
+            if (method !== undefined) {
+                const failed = new JjtlBuiltinError(method, error instanceof Error ? error.message : String(error), 'Method');
+                const { currentRuleName, currentInstanceName } = this.context;
+                if (currentRuleName) failed.origin = ` (rule '${currentRuleName}', source element '${currentInstanceName ?? '?'}')`;
+                failed.locate(expr);
+                throw failed;
             }
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.warn(`[JjTL Executor] JjEL evaluation failed for ${expr.type}: ${errorMessage}`);
