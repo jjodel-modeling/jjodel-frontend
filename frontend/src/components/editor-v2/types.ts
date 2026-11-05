@@ -242,8 +242,11 @@ export interface FeatureValueRow {
      * entry used to be dropped silently, which made a deleted target look like
      * an unset property; it is kept now so the row can say what happened, with
      * `name` filled from `brokenRefMemory.ts`.
+     *
+     * `label` is set only for a resolved target whose name is empty: `: <Class>`,
+     * what the row paints in place of the empty name (R-TXT-47 D5).
      */
-    refTargets?: Array<{ id: string; name: string; broken?: boolean }>;
+    refTargets?: Array<{ id: string; name: string; label?: string; broken?: boolean }>;
     /**
      * Metamodel declarations for this feature, from the `jjodel/*` annotations
      * (`rowViewAnnotations.ts`). All four are absent unless declared: that
