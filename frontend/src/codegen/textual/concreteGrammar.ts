@@ -104,6 +104,14 @@ export interface ConcreteGrammar {
 
 export const applyCase = (s: string, c: LetterCase): string => (c === 'lower' ? s.toLowerCase() : s);
 
+/**
+ * The layout tokens of the indentation style (step C3b): zero-width punctuation the tokenizer derives from the
+ * indentation of a line, never read from the text (no style token is one of them). A block under `layout: 'indent'`
+ * opens with INDENT and closes with DEDENT.
+ */
+export const INDENT_MARK = '\u21e5';
+export const DEDENT_MARK = '\u21e4';
+
 /** The words of a group of names that one case folding would merge, e.g. `FAST` and `Fast` under `lower`. */
 function clashes(words: readonly string[], c: LetterCase): string[] {
     if (c === 'declared') return [];
@@ -186,7 +194,8 @@ function headConflicts(g: ConcreteGrammar, heads: ReadonlyMap<string, OptionalHe
                 out.set(cls, `${feat} can start with a name too (an identifier or a string)`);
                 break;
             }
-            if (!f.nullable) { closed = true; break; }
+            // C3b: an indented body starts on a line of its own, so the head ends at its line end even when the body is empty.
+            if (!f.nullable || (x.t === 'block' && g.style.layout === 'indent')) { closed = true; break; }
         }
         // With every part after an optional name optional, the name is followed by what follows the object, which its
         // own rule does not know (the next item's keyword, a positional sibling): refused too.
@@ -224,8 +233,6 @@ function withHeadWords(g: ConcreteGrammar, heads: ReadonlyMap<string, OptionalHe
 }
 
 function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAnnotations | undefined, refusedHeads: ReadonlyMap<string, string>): { readonly grammar: ConcreteGrammar; readonly heads: ReadonlyMap<string, OptionalHead> } {
-    if (style.layout !== 'free') throw new Error(`style ${style.id}: layout ${style.layout} is not implemented (step T5)`);
-
     const A = annotations;
     const notices: GrammarNotice[] = [];
     const issues: AnnotationIssue[] = A ? [...A.issues] : [];
@@ -392,7 +399,10 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         return classes.some(k => operators.has(k)) ? classes.filter(k => !operators.has(k)) : [];
     }));
 
-    const block = (items: readonly GrammarNode[]): GrammarNode => ({ t: 'block', open: style.blockOpen, close: style.blockClose, empty: style.emptyBlock, items });
+    // C3b: under indentation a block is INDENT, its items, DEDENT; an empty one is nothing.
+    const block = (items: readonly GrammarNode[]): GrammarNode => (style.layout === 'indent'
+        ? { t: 'block', open: [INDENT_MARK], close: [DEDENT_MARK], empty: [], items }
+        : { t: 'block', open: style.blockOpen, close: style.blockClose, empty: style.emptyBlock, items });
     // C1d: the tokens a punctuation keyword may not be, by what they are in the style in force.
     const taken = new Map<string, string>();
     const take = (what: string, ts: readonly string[]): void => { for (const t of ts) if (!/^\w/.test(t) && !taken.has(t)) taken.set(t, what); };

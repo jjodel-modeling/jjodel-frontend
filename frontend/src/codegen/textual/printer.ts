@@ -155,8 +155,13 @@ function treeOf(g: ConcreteGrammar, text: string, root: Building): TextNode | un
     const fill = (n: Building): boolean => {
         const children: Building['children'] = [];
         for (const c of n.children) {
-            if (c.kind === 'emitted') {
-                for (; k < read.length - 1 && read[k].start >= c.start && read[k].end <= c.end; k++) {
+            if (c.kind === 'emitted' && c.start === c.end) {
+                // C3b: an INDENT or a DEDENT, zero-width: exactly the one mark read at its place.
+                const t = read[k];
+                if (k < read.length - 1 && t.start === c.start && t.end === c.end) { const leaf: SyntaxToken = { ...t, role: c.role }; tokens.push(leaf); children.push(leaf); k++; } else ok = false;
+            } else if (c.kind === 'emitted') {
+                // A zero-width mark at the end of this token is the next chunk's (C3b).
+                for (; k < read.length - 1 && read[k].start >= c.start && read[k].end <= c.end && read[k].end > read[k].start; k++) {
                     const t = read[k];
                     const role: TokenRole = c.role === 'reference' && t.k === 'P' && t.v !== '@' ? 'punctuation' : c.role;
                     const leaf: SyntaxToken = { ...t, role };
@@ -349,12 +354,21 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     /** The first keyword of an object rule's body: its class keyword (`parseText` reads it with the role `class`). */
     const classKeywords = new Set<GrammarNode>(g.rules.flatMap(r => (r.t === 'object' && r.body.t === 'seq' && r.body.items[0]?.t === 'kw' ? [r.body.items[0]] : [])));
 
+    // C3b: the INDENT and DEDENT of an indented block, zero-width, placed where the next token is written (or at the end).
+    let marks: { kind: 'emitted'; start: number; end: number; role: TokenRole }[] = [];
+    const mark = (): void => {
+        const m = { kind: 'emitted' as const, start: 0, end: 0, role: 'punctuation' as const };
+        cur().children.push(m);
+        marks.push(m);
+    };
+    const placeMarks = (): void => { for (const m of marks) m.start = m.end = out.length; marks = []; };
     const token = (s: string, punct = false, role: TokenRole = punct ? 'punctuation' : 'keyword', tight = false): void => {
         if (breakPending) { out += blankPending ? '\n\n' : '\n'; breakPending = false; atLineStart = true; }
         blankPending = false;
         bodyStart = false;
         if (atLineStart) out += ' '.repeat(depth * style.indent);
         else if (prefixed !== undefined ? !readsApart(prefixed, s) : !tight && !glueNext && !(punct && glueBefore.has(s)) && !(lastPunct && glueAfter.has(last))) out += ' ';
+        placeMarks();
         glueNext = false;
         prefixed = undefined;
         for (const id of opening) starts.set(id, out.length);
@@ -531,6 +545,21 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
                 return;
             }
             case 'block':
+                if (style.layout === 'indent') {
+                    // C3b: the items on the lines under the head, one level deeper; an empty body prints nothing, no node.
+                    if (!n.items.some(x => present(x, o))) return;
+                    within({ kind: 'block', closed: true }, () => {
+                        newline();
+                        bodyStart = true;
+                        depth++;
+                        mark();
+                        for (const x of n.items) emit(x, o, elem);
+                        newline();
+                        depth--;
+                        mark();
+                    });
+                    return;
+                }
                 // Open, close and empty block are punctuation to the parser, words included.
                 within({ kind: 'block', closed: true }, () => {
                     if (!n.items.some(x => present(x, o))) { for (const s of n.empty) token(s, !/^\w/.test(s), 'punctuation'); return; }
@@ -549,6 +578,7 @@ export function printTextModel(g: ConcreteGrammar, objects: readonly TextObject[
     };
 
     for (const r of roots) { object(r); newline(); }
+    placeMarks();
 
     // R-TXT-30: a value left out by a printed owner; one inside an owner left out is counted in it, not listed.
     const printed = new Set(spans.map(s => s.id));

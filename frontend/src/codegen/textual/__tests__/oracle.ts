@@ -6,6 +6,7 @@
 
 import nearley from 'nearley';
 import type { ConcreteGrammar, ConcreteRule, GrammarNode } from '../concreteGrammar';
+import { tokenizeText } from '../parser';
 
 interface Tok { readonly kind: 'word' | 'int' | 'float' | 'string' | 'punct'; readonly value: string }
 
@@ -24,6 +25,15 @@ const exprWords = (g: ConcreteGrammar): string[] => exprsOf(g).flatMap(e => e.op
 /** The tokens of a text in the grammar's style: words, numbers, quoted strings, the style's punctuation; comments skipped. */
 export function tokenize(g: ConcreteGrammar, text: string): Tok[] {
     const s = g.style;
+    // C3b: under indentation the layout is the production tokenizer's, its INDENT and DEDENT read as punctuation; a
+    // lexical error, an inconsistent dedent included, puts the text outside the language. The CFG has no line rule, so
+    // it is used one way only: a text with no parse must have a syntax error.
+    if (s.layout === 'indent') {
+        const { tokens, errors } = tokenizeText(text, g);
+        if (errors.length) throw new Error(`no token: ${errors[0].message}`);
+        const kinds = { ID: 'word', INT: 'int', FLOAT: 'float', STR: 'string', P: 'punct' } as const;
+        return tokens.filter(t => t.k !== 'EOF').map(t => ({ kind: kinds[t.k as keyof typeof kinds], value: t.k === 'STR' ? t.raw.slice(1, -1) : t.v }));
+    }
     const puncts = [...new Set([...s.blockOpen, ...s.blockClose, ...s.emptyBlock, ...s.assign, ...s.terminator, s.list.open, s.list.separator, s.list.close, '.', '[', ']',
         ...exprsOf(g).flatMap(e => [e.open, e.close, e.separator, ...e.operators.map(o => o.symbol)])])]
         .filter(p => p && !isWord(p)).sort((a, b) => b.length - a.length);

@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import type { ConcreteGrammar } from '../concreteGrammar';
 import { parseText } from '../parser';
 import { printTextModel } from '../printer';
-import { CLIKE_STYLE, PASCAL_STYLE, STYLE_CATALOG, styleOf } from '../style';
+import { CLIKE_STYLE, INDENT_STYLE, PASCAL_STYLE, STYLE_CATALOG, styleOf } from '../style';
 import type { NotationStyle } from '../style';
 import { checkStyle, STYLE_RULES } from '../styleCheck';
 import type { StyleFinding } from '../styleCheck';
@@ -83,7 +83,7 @@ describe('style check (R-TXT-16, §A.2)', () => {
     });
 
     it('the catalog: C-like and Pascal/Ada by their record ids, C-like when the record names none (kills: a default other than C-like)', () => {
-        expect(STYLE_CATALOG).toEqual({ clike: CLIKE_STYLE, pascal: PASCAL_STYLE });
+        expect(STYLE_CATALOG).toEqual({ clike: CLIKE_STYLE, pascal: PASCAL_STYLE, indent: INDENT_STYLE });
         expect(styleOf(undefined)).toBe(CLIKE_STYLE);
         expect(styleOf('pascal')).toBe(PASCAL_STYLE);
         expect(PASCAL_STYLE).toMatchObject({ blockOpen: ['begin'], blockClose: ['end', ';'], assign: [':='], terminator: [';'], string: { quote: "'", escape: 'double' } });

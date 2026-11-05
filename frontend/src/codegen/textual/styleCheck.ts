@@ -170,8 +170,16 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
     }
 
     // Block delimiters: a keyword equal to a block token makes the close (or the open) start an item.
-    if (s.blockOpen.length === 0) error('block-delimiters', 'style.blockOpen', 'a free-layout block needs an opening token');
-    if (s.blockClose.length === 0) error('block-delimiters', 'style.blockClose', 'a free-layout block needs a closing token');
+    if (s.layout === 'free' && s.blockOpen.length === 0) error('block-delimiters', 'style.blockOpen', 'a free-layout block needs an opening token');
+    if (s.layout === 'free' && s.blockClose.length === 0) error('block-delimiters', 'style.blockClose', 'a free-layout block needs a closing token');
+    // C3b: under indentation an empty body prints nothing; an object with no keyword, no name and nothing else set would
+    // print nothing at all, and nothing cannot read back as it.
+    if (s.layout === 'indent') {
+        const first = firstSetsOf(g);
+        for (const r of objectRules) {
+            if (first(r.body).nullable) error('block-delimiters', `class ${r.cls}`, `under indentation a ${r.cls} with no keyword, no name and nothing set prints nothing, and cannot read back`);
+        }
+    }
     const blockTokens = new Set([...s.blockOpen, ...s.blockClose, ...s.emptyBlock]);
     for (const r of objectRules) {
         if (blockTokens.has(headKeyword(r)) && !foldedOntoWord(r)) error('block-delimiters', `class ${r.cls}`, `the class keyword "${headKeyword(r)}" is a block token`);
