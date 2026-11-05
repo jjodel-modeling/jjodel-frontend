@@ -7382,6 +7382,13 @@ verified: R-JTG-2 by the A0 lane's tests, the others none, reversible: trunk.
 - **R-FA-11 (2026-11-03), decided by the chat under Alfonso's «decidi tu» 2026-11-03 11:32, evidence: measured (P-2026-11-03-1016), verified: none, reversible: trunk**: a builtin that fails inside a JjTL
   expression stops the mapping with an error on every path, never a warning with `null`: a transformation that goes on writes a target model that is wrong and looks done.
   With this, JjEL can be the only parser of a forall collection.
+- **R-FA-12** (2026-11-05, ratified by Alfonso 2026-11-05 15:29, registered by P-2026-11-05-1530, evidence: measured, verified: probe, reversible: trunk):
+  R-FA-11 extends to JjEL methods. A method the value's type does not have (`"4".log2()`) and a library method that
+  throws stop the mapping with an error on every path, never a warning with `null`. Out of it, unchanged: a name that
+  resolves to nothing, a property read on null or on a missing feature; a method called on null and a call on a model
+  element without that feature count as the latter (provisional, unattended, P-2026-11-05-1530). JjEL outside JjTL
+  throws the same error as before. Extends R-FA-11, which stays unchanged. Evidence: `method-failure.test.ts` and the
+  node runs of `docs/discovery/discovery_2026-11-05_jjtl_method_failure.md`.
 - **R-JTG-15** (2026-11-03, ratified by Alfonso 2026-11-03, evidence: measured, verified: probe, reversible: trunk): a JjTL
   `let` holds the value of its expression, computed once, at the binding: the calls and environment lookups it holds
   are carried out there, so two uses of the name are the same object; a source element stays the element. Closes #515.
@@ -7552,13 +7559,13 @@ R-AI-22 his own answer, R-AI-23 as recommended; evidence: measured, verified: ag
 
 ## R-XMI: attribute values of the XMI M1 import (decisions 2026-11-05)
 
-- **R-XMI-1** (2026-11-05, provisional, unattended, evidence: measured, verified: probe, reversible: trunk): the XMI M1
+- **R-XMI-1** (2026-11-05, ratified by Alfonso 2026-11-05 15:29 as it stands, registered by P-2026-11-05-1530, evidence: measured, verified: probe, reversible: trunk): the XMI M1
   import stores an attribute value typed by its declared primitive (EByte, EShort, EInt, ELong as integers; EFloat,
   EDouble as finite numbers; EBoolean as `true`/`false`, any case); strings and enums are unchanged. Decided by the
-  chat under Alfonso's «decidi tu» (#607). On a bad value, provisional: a value that does not parse for its type
-  keeps its text and is an import warning, never NaN or 0; an integer outside its type's range is stored unclamped
+  chat under Alfonso's «decidi tu» (#607). On a bad value: a value that does not parse for its type
+  keeps its text and is an import warning, never NaN or 0, the import is not refused; an integer outside its type's range is stored unclamped
   with a warning; an ELong beyond 2^53 keeps its text with a warning. Projects saved before the change keep their
-  strings; no migration. Evidence: `xmi-import-skip.test.ts` and the app probes of P-2026-11-05-1446
+  strings; no migration of saved projects: re-importing the XMI heals them (ratified with the row). Evidence: `xmi-import-skip.test.ts` and the app probes of P-2026-11-05-1446
   (`docs/discovery/discovery_2026-11-05_xmi_typed_integers.md`).
 
 ## Superate
