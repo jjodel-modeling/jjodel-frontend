@@ -1308,4 +1308,6 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Prompt**: P-2026-11-05-2234, direct merge of `jjtl-method-failure-error` (R-FA-12), landed as `1b70ba7f3`, reported blocked by the vitest gate.
 **File toccati**: the merge prompt's `Status:` line, this entry
 **Esito**: ✅ completato
+**Corregge**: —
+**Causa**: —
 **Note**: The one red test, `laneRun.test.ts` (lane-run monitor kills), failed twice at load 70-244 (status null, the 20 s limit of its spawn) and passes alone at load 7. The merge touches no harness script. `lane-run go` refuses a blocked merge, so this closure is by hand. The app's write-back of a failed run remains unmeasured.
