@@ -16,6 +16,9 @@ import { parseText } from '../parser';
 import { printTextModel } from '../printer';
 import { planTextEdit } from '../textDiff';
 import { tolerantCases } from './tolerantCorpus';
+import { GARAGE, grammarOf } from './corpus';
+import { metamodelOf, objectsOf } from './spec';
+import type { Spec } from './spec';
 
 const lib = tolerantCases()[0];
 const print = printTextModel(lib.g, lib.objects);
@@ -55,7 +58,29 @@ describe('deletion guard (C3b item 1)', () => {
     });
 
     it('two objects deleted apply without asking', () => {
-        expect(guardOf(without(leaves.slice(0, 2)))).toBeNull();
+        // Two books: reader1, a leaf too, is named by `borrowedBy`, and a text without it is refused before the guard.
+        expect(planOf(without(books.slice(0, 2))).lines?.length).toBeGreaterThan(0);
+        expect(guardOf(without(books.slice(0, 2)))).toBeNull();
+    });
+
+    it('one block deleted with its contents applies without asking (mutant: every deleted object counted)', () => {
+        const spec: Spec = {
+            ...GARAGE,
+            objects: [
+                { id: 'c1', cls: 'Car', slots: { name: 'alpha', wheels: ['w1', 'w2'] } },
+                { id: 'w1', cls: 'Wheel', slots: { name: 'front', size: 16, bolts: ['b1', 'b2'] } },
+                { id: 'w2', cls: 'Wheel', slots: { name: 'rear', size: 17 } },
+                { id: 'b1', cls: 'Bolt', slots: { name: 'b' } },
+                { id: 'b2', cls: 'Bolt', slots: { name: 'c' } },
+            ],
+        };
+        const mm = metamodelOf(spec), g = grammarOf(spec), objects = objectsOf(spec);
+        const p = printTextModel(g, objects);
+        const span = p.spans.find(s => s.id === 'w1')!;
+        const from = p.text.lastIndexOf('\n', span.start - 1) + 1, to = p.text.indexOf('\n', span.end) + 1;
+        const plan = planTextEdit({ mm, grammar: g, model: objects, parsed: parseText(p.text.slice(0, from) + p.text.slice(to), g), unprinted: [], previous: [] });
+        expect(plan.diff?.ops.filter(op => op.op === 'delete').map(op => op.model)).toEqual(['w1']);
+        expect(deletionGuard({ mm, objects }, plan)).toBeNull();
     });
 
     it(`${GUARD_ROOTS} objects deleted at once ask, with the count`, () => {
