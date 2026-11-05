@@ -201,12 +201,12 @@ describe.each([
 ] as const)('a many-valued feature with one value or none — %s', (_label, withSource) => {
     const run = async (upperBound: number | undefined) => {
         const result = await execute(parseJjtl(RULE, withSource), source(upperBound), TARGET);
-        expect(result.success).toBe(true);
-        return { m: result.targetModel!.instances.get('M')![0], warnings: result.warnings };
+        return { m: result.targetModel!.instances.get('M')![0], warnings: result.warnings, result };
     };
 
     it('reaches the rules as a collection: size, first, map, forall', async () => {
-        const { m, warnings } = await run(-1);
+        const { m, warnings, result } = await run(-1);
+        expect(result.success).toBe(true);
         expect(warnings).toEqual([]);
         expect(m.a).toBe(1);
         expect(m.b).toBe('X');
@@ -217,7 +217,13 @@ describe.each([
     });
 
     it('the bare value, the shape of the count-based serializer, is what broke the rules', async () => {
-        const { m, warnings } = await run(undefined);
+        const { m, warnings, result } = await run(undefined);
+        // `tags.size()` on the bare string is a method the string does not have: since
+        // R-FA-12 it stops that binding with an error. The calls on the bare element stay
+        // warnings, a model element without the feature (P-2026-11-05-1530).
+        expect(result.success).toBe(false);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/^Failed to map \(creation\) -> d: Method 'size' failed in expression at line 9, column \d+ \(rule 'Arbiter -> M', source element 'arb'\): Unknown method 'size' for type String/);
         expect(warnings.some(w => /Unknown method 'map'/.test(w))).toBe(true);
         expect(warnings.some(w => /ForAll collection is not an array/.test(w))).toBe(true);
         expect(m.c ?? null).toBeNull();
