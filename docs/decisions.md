@@ -7273,6 +7273,13 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   new `style-tokens` rule; D10 switching the base drops the token overrides; D11 the fixed tokens, comments and the string
   quote stay read only; D12 the record stays at version 1. Lanes L1a, L1b, L2a, L2b; the visual ones (L1b, L2b) merge
   after the chat's crop check.
+- **R-TXT-50** (2026-11-05, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Step C lane
+  C3b: the style check under Indentation, option (a) of P-2026-11-05-0843, taken under lane auto (Alfonso 07:38), for
+  him to ratify.** Under the indentation style the LL(1) check is line aware: an optional part of a header line does not
+  start a new line, as the parser reads it, so its FOLLOW ends at the line break and genuine conflicts on the same line
+  stay errors. The Text tab's style picker refuses a style whose `checkStyle` has an error, with its reason, as the
+  Syntax form's Save does (R-TXT-47 D1); the record is not written. Under Indentation a nameless object with no keyword
+  and nothing else set is refused by the style check, since it would print nothing.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
