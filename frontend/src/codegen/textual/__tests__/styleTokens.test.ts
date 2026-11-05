@@ -17,10 +17,14 @@ import { concreteGrammarEbnfSpans } from '../concreteGrammar';
 import type { ConcreteGrammar, LiteralSrc } from '../concreteGrammar';
 import { fieldKey, fieldPhrase, fieldValue, literalDefault, literalField, readDraft, setField, setLiteral } from '../syntaxForm';
 import type { FieldId } from '../syntaxForm';
-import { BOOL_IDS, BOOL_MM, BOOL_PASCAL } from './boolCorpus';
+import { BOOL_IDS, BOOL_MM, BOOL_PASCAL, boolObjects } from './boolCorpus';
 import { decodeSyntax, encodeSyntax, textualNotation, withStyleBase } from '../syntaxRecord';
-import { PORT_CLIKE, PORT_IDS, PORT_MM, PORT_PASCAL } from './portCorpus';
-import { GARAGE, grammarOf } from './corpus';
+import { PORT_CLIKE, PORT_IDS, PORT_MM, PORT_PASCAL, portObjects, portWith } from './portCorpus';
+import { BOX, CASES, DIAMOND, GARAGE, grammarOf, INNER, NON_DIAMOND } from './corpus';
+import { parseText } from '../parser';
+import { printTextModel } from '../printer';
+import type { TextObject } from '../metamodel';
+import { FIXTURE, metamodelOf, objectsOf } from './spec';
 
 const EMPTY_MM: TextMetamodel = { classes: [], enumerations: [] };
 const EMPTY_IDS: ElementIds = { classes: {}, features: {}, enums: {} };
@@ -261,5 +265,59 @@ describe('(4) the form: a field per style parameter', () => {
     it('names a parameter\'s field in a sentence', () => {
         expect(fieldPhrase(PORT_IDS, lang('language.blockOpen'))).toBe('the block open of the language');
         expect(fieldPhrase(PORT_IDS, lang('language.list.separator'))).toBe('the list separator of the language');
+    });
+});
+
+describe('(5) round trips under overrides', () => {
+    const errors = (g: ConcreteGrammar): string[] => checkStyle(g).filter(f => f.level === 'error').map(f => `${f.rule}@${f.where}: ${f.message}`);
+    /** Print, parse with no error, print byte for byte; the text, for the caller's own checks. */
+    const roundTrip = (g: ConcreteGrammar, objects: readonly TextObject[]): string => {
+        const text = printTextModel(g, objects).text;
+        const r = parseText(text, g);
+        expect(r.errors).toEqual([]);
+        expect(printTextModel(g, r.objects).text).toBe(text);
+        return text;
+    };
+    const PASCAL_OVERRIDE = { base: 'pascal', blockOpen: ['start'], blockClose: ['stop', '.'], assign: ['is'], terminator: ['!'] };
+    const CLIKE_OVERRIDE = { blockOpen: ['<<'], blockClose: ['>>'], assign: ['<-'], list: { open: '<', separator: ';', close: '>' } };
+
+    it.each([
+        ['PORT, C-like', PORT_MM, PORT_IDS, { ...PORT_CLIKE, style: CLIKE_OVERRIDE }, portObjects, ['Module cpu <<', '<< >>']],
+        ['PORT, Pascal', PORT_MM, PORT_IDS, { ...PORT_PASCAL, style: PASCAL_OVERRIDE }, portObjects, ['start', 'stop .']],
+        ['BOOL, Pascal', BOOL_MM, BOOL_IDS, { ...BOOL_PASCAL, style: PASCAL_OVERRIDE }, boolObjects, ['start', 'stop .', '!']],
+    ] as const)('%s: the overridden tokens print, no error, and the text reads back byte for byte', (_, mm, ids, record, objects, printed) => {
+        const g = textualNotation(mm, { record: record as SyntaxAnnotations, issues: [] }, ids).grammar;
+        expect(errors(g)).toEqual([]);
+        const text = roundTrip(g, objects());
+        for (const t of printed) expect(text).toContain(t);
+    });
+
+    const SPECS = [['the 1709 fixture', FIXTURE], ['a diamond', DIAMOND], ['a multiple inheritance without a diamond', NON_DIAMOND], ['the garage', GARAGE],
+        ['a nameless recursive class', BOX], ['a single containment', INNER], ['two class keywords one case apart', CASES]] as const;
+    it.each(SPECS.flatMap(([n, sp]) => [[n, 'C-like', sp, CLIKE_OVERRIDE], [n, 'Pascal', sp, PASCAL_OVERRIDE]] as const))('%s, %s with overrides: print, parse with no error, print byte for byte', (_, __, sp, style) => {
+        const g = grammarOf(sp, effective(style));
+        expect(errors(g)).toEqual([]);
+        roundTrip(g, objectsOf(sp));
+    });
+
+    it('a ( ) block beside the call layout of Word(32): the expression\'s parentheses conflict and the LL(1) check reports it; without the operator they coexist (measured, report §4 open point)', () => {
+        const parens = { blockOpen: ['('], blockClose: [')'] };
+        const withOperator = textualNotation(PORT_MM, { record: { ...PORT_CLIKE, style: parens }, issues: [] }, PORT_IDS).grammar;
+        expect(errors(withOperator)).toEqual(['annotations@rule Expr_: not LL(1): "(" can start Ref and the parentheses']);
+        for (const style of [parens, { base: 'pascal', ...parens }]) {
+            const g = textualNotation(PORT_MM, { record: { ...portWith({ C_Conj: {} }), style } as SyntaxAnnotations, issues: [] }, PORT_IDS).grammar;
+            expect(errors(g)).toEqual([]);
+            const text = roundTrip(g, portObjects());
+            expect(text).toContain('input instr : Word(32)');
+            expect(text).toMatch(/^Module cpu \(\n/);
+        }
+    });
+
+    it('an object named like a new word token prints quoted and reads back with its name (mutant: the reserved names not following the word tokens)', () => {
+        const g = textualNotation(PORT_MM, { record: { ...PORT_PASCAL, style: { base: 'pascal', blockOpen: ['start'] } }, issues: [] }, PORT_IDS).grammar;
+        const objects = portObjects().map(o => (o.id === 'm' ? { ...o, slots: { ...o.slots, name: 'start' } } : o));
+        const text = roundTrip(g, objects);
+        expect(text.startsWith(`Module 'start' start\n`)).toBe(true);
+        expect(parseText(text, g).objects.find(o => o.cls === 'Module')?.slots.name).toBe('start');
     });
 });
