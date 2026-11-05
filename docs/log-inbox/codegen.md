@@ -2037,3 +2037,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — no app probe run; the EBNF mode's style literals become editable through `setLiteral`, reachable in the Text tab and not verified in the app.
 **Notes**: Decisions D-L2a-1..7 in `~/.jjodel-lanes/P-2026-11-05-1430/handoff.md` and the commit bodies. `( )` block over the call layout measured: the LL(1) check reports it on PORT via the expression parentheses; without the operator it round-trips, so no new check. Benches in each commit body, every mutant killed.
 **Prompt document name**: 2026-11-05 14:30
+
+## 2026-11-05 — merge: textual-ebnf-literals-step2 takes alfonso-frontend-jjtl (P-2026-11-05-1537)
+
+**Prompt**: `claude_2026-11-05_1537_prompt_textual-ebnf-literals-step2_take_trunk.md`, a direct merge by `lane-run merge --trunk-into` (L1b merged on the trunk); `claude_2026-11-05_1538_prompt_textual-ebnf-literals-step2_take_trunk.md` is a duplicate launch of the same merge during the bridge outage, superseded.
+**Files touched**: merge `2f6c8111d` on the branch.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes. vitest after the merge: 46 failures in 18 files under load 49 to 57; rerun alone 973/974. The one that stays red is genuine: `ebnfIslands.test.ts` (L1b) pins style tokens as read only, and L2a now maps them to fields, so the EBNF mode shows them as islands. R-TXT-48 step 2 wants exactly that; the assertion is narrowed in P-2026-11-05-2220 (B0) with an app check of a style-token island.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — merge of the trunk into the branch.
+**Notes**: Lane folders `~/.jjodel-lanes/P-2026-11-05-1537/` and `-1538/`; rerun output /tmp/rerun1537.out on the Mac.
+**Prompt document name**: 2026-11-05 15:37

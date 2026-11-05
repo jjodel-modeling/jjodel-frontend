@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-05-1537
 Chat: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH
 Request: none (rendered by lane-run, no chat URL known for https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH)
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/log-inbox/codegen.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane textual-ebnf-literals-step2 · 2f6c8111d · vitest red on one genuine conflict (ebnfIslands.test.ts pins style tokens read only, L2a makes them editable), fixed in P-2026-11-05-2220 (B0); the other 45 failures were load, 973/974 alone
 
 Worktree: `/Users/alfonso/jjodel-w-ebnflit2`, branch `textual-ebnf-literals-step2`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-ebnflit2`, branch `textual-ebnf-literals-step2`, `git log -1` is the commit that adds this file (its parent `2c15d1761`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-05-1537 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 
