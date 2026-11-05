@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0148
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · fe26dc850 · app probe 8 checks pass, crops c2d-* in ~/.jjodel-lanes/P-2026-11-05-0148/; verifica visiva in attesa del GO di Alfonso (R-TXT-47 D5)
 Lane: full (canvas v2-flow default view, a reader of the L name)
 Depends: P-2026-11-04-2321 (core nameless merged), C2 discovery report §3.3 (on the trunk at 04ada9f61)
 Worktree: ~/jjodel-w-textc2d, branch v2flow-nameless-ref-label, from 04ada9f61 (own node_modules from npm ci)

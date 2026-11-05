@@ -1836,3 +1836,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — app probe of P-2026-11-05-0036, 4 checks; crops c2c-1, c2c-2 checked by the chat (RC-23).
 **Notes**: Rollback tag `pre-textual-c2-syntax-form` on `6a0a5fdfd` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-0103/result.json`.
 **Prompt document name**: 2026-11-05 01:03
+
+## 2026-11-05 — fix(editor-v2): C2d, a nameless reference target is labelled `: <Class>` on the v2-flow default view (P-2026-11-05-0148)
+**Prompt**: `claude_2026-11-05_0148_prompt_v2flow_nameless_ref_label.md`, R-TXT-47 D5, C2 report §3.3: confirm R4, then an optional `label` on the reference target, `: <metaclass>`, painted by RowValue; `name` stays ''.
+**Files touched**: `fe26dc850`: `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `types.ts`, `nodes/RowValue.tsx`, `utils/__tests__/namelessRefTarget.test.ts`; this entry and the prompt's Status, uncommitted (RC-17).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-04 22:55
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe 8/8 on port 3497, crops c2d-* in ~/.jjodel-lanes/P-2026-11-05-0148/; Alfonso's GO pending (R-TXT-47)
+**Notes**: R4 held, evidence in the commit body. Tests red first (6), 8/8 mutations killed. Gates: typecheck 0; vitest 14100 pass, 3 baseline import reds plus 2 Chromium hook timeouts that pass alone; build 0; check:docs 5/5. L `.delete()` of a contained Port now scrubs the inbound pointer (dash, no broken); the broken path was smoked on a pointer written back by SetFieldAction, and its chip reads the transient app name `Port_1`.
+**Prompt document name**: 2026-11-05 01:48
