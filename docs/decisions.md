@@ -7290,7 +7290,7 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   Alfonso, ratified 09:26 («ratifico tutto»): overrides survive a base switch among free-layout
   styles and are ignored with a notice under Indentation; an EBNF edit of a per-block token changes that block only;
   the fields sit in the Syntax form, Advanced.
-- **R-TXT-52** (2026-11-05, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Block tokens
+- **R-TXT-52** (2026-11-05, Alfonso 22:20, «si alla ratifica»). **Block tokens
   per element (R-TXT-51): the ten decisions of docs/discovery/discovery_2026-11-05_textual_block_tokens.md, taken under
   lane auto (Alfonso 15:33, «chiudi C»), for him to ratify.** D1 the target text is reached with per-block tokens alone;
   the head prefix (R-TXT-51 (3)) follows as its own slice inside step C; D2 per-block words join
