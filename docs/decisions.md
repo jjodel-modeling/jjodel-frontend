@@ -7252,6 +7252,14 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   priority; D7 annotations of deleted elements do not block Save and are dropped with one notice; D8 the tab's accent
   token `#06b6d4`; D9 the bar shows the de-duplicated `checkStyle` errors; D10 lane order C2c, C2a, C2b, then C3b, C2d
   and C2e alongside. Visual merges of C2b, C2d and C2e wait for Alfonso's GO.
+- **R-TXT-48** (2026-11-05, Alfonso 07:37, «1 e poi 2»). **The literals of the EBNF mode become editable, the structure
+  stays read only.** Inside the EBNF mode only the text between quotes can be edited; rule names, EBNF operators, order
+  and optionality stay locked. Each literal carries the record field it comes from (class keyword, feature keyword
+  including a punctuation keyword, per-item keyword, name keyword, operator symbol, call word), and an edit goes into
+  the same draft as the Syntax form (R-TXT-47), with the same checks (LL(1), style rules, the finding at the literal) and
+  the same Save as one undo step. Two steps: (1) the literals of single elements, the style tokens read only; (2) then
+  the style tokens too (`{`, `}`, `;`, `:=`, `begin` ...): editing one at any place changes it everywhere, written as
+  overrides on top of `style.base`, a custom style; this extends the record and the style checks. Step C, after C2.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
