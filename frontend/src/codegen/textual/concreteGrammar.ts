@@ -37,6 +37,27 @@ export interface ExprOperator {
     readonly call?: string;
 }
 
+/** A style parameter a token comes from, as the record's `style` will name it (R-TXT-48 step 2). */
+export type StyleParam = 'assign' | 'terminator' | 'blockOpen' | 'blockClose' | 'list.open' | 'list.separator' | 'list.close';
+
+/**
+ * Where a quoted literal of the EBNF comes from (R-TXT-48, R-TXT-49 D1): the element of the metamodel and its record
+ * field by name (`feature` is `Owner.f`, the declaring class), a style token by parameter and index, a literal of an
+ * enumeration, or a fixed token of the grammar. A role, not the presence of an annotation: the default keyword of a
+ * class has the same origin as an annotated one.
+ */
+export type LiteralSrc =
+    | { readonly k: 'class'; readonly cls: string }
+    | { readonly k: 'nameKeyword'; readonly cls: string }
+    | { readonly k: 'operatorSymbol'; readonly cls: string }
+    | { readonly k: 'operatorCall'; readonly cls: string }
+    | { readonly k: 'feature'; readonly feature: string }
+    | { readonly k: 'itemKeyword'; readonly feature: string }
+    | { readonly k: 'subset'; readonly enumName: string; readonly index: number }
+    | { readonly k: 'literal'; readonly enumName: string; readonly literal: string }
+    | { readonly k: 'style'; readonly param: StyleParam; readonly index: number }
+    | { readonly k: 'fixed' };
+
 export type GrammarNode =
     | { readonly t: 'seq'; readonly items: readonly GrammarNode[] }
     /** Present iff the feature is set (R-TXT-5); with `where`, iff one of its values passes the filter; with `derive` (the name), absent when the name equals the pattern's expansion, which the parser fills in. */
@@ -45,9 +66,9 @@ export type GrammarNode =
     | { readonly t: 'star'; readonly feat?: string; readonly item: GrammarNode; readonly where?: GroupFilter }
     | { readonly t: 'alt'; readonly alts: readonly GrammarNode[] }
     /** A contextual keyword: an identifier matched by its text where an item starts (R-TXT-9). */
-    | { readonly t: 'kw'; readonly text: string }
+    | { readonly t: 'kw'; readonly text: string; readonly src?: LiteralSrc }
     /** `tight`: no space before the token (`before`), nor after it (`around`); the call layout's parentheses and commas (C1d). */
-    | { readonly t: 'p'; readonly text: string; readonly tight?: 'before' | 'around' }
+    | { readonly t: 'p'; readonly text: string; readonly tight?: 'before' | 'around'; readonly src?: LiteralSrc }
     | { readonly t: 'tok'; readonly terminal: ConcreteTerminal }
     /** A cross-reference (`REF`): the target's name when unique among `targets`' instances, else its path (R-TXT-4, R-TXT-11). */
     | { readonly t: 'xref'; readonly type: string; readonly targets: readonly string[] }
@@ -120,7 +141,12 @@ function clashes(words: readonly string[], c: LetterCase): string[] {
     return [...seen.values()].filter(ws => ws.length > 1).map(ws => ws.join(', '));
 }
 
-const tokens = (ts: readonly string[]): GrammarNode[] => ts.map(text => (/^\w/.test(text) ? { t: 'kw', text } : { t: 'p', text }));
+const FIXED: LiteralSrc = { k: 'fixed' };
+
+const tokens = (param: StyleParam, ts: readonly string[]): GrammarNode[] => ts.map((text, index) => {
+    const src: LiteralSrc = { k: 'style', param, index };
+    return /^\w/.test(text) ? { t: 'kw', text, src } : { t: 'p', text, src };
+});
 
 /** A class whose head name is optional in a one-line, positional or call head (R-TXT-41, D3), and how its head is laid out. */
 interface OptionalHead {
@@ -483,7 +509,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
             takenNames.add(enumName);
             takenNames.add(objName);
             const literals = s.literals;
-            derivedEnums.push({ t: 'enum', name: enumName, literals, body: { t: 'alt', alts: literals.map(l => ({ t: 'kw', text: applyCase(l, literalCase) })) } });
+            derivedEnums.push({ t: 'enum', name: enumName, literals, body: { t: 'alt', alts: literals.map(l => ({ t: 'kw', text: applyCase(l, literalCase), src: { k: 'literal', enumName: en.name, literal: l } })) } });
             derivedObjects.push({ t: 'object', name: objName, cls: T.cls, named: T.named, features: T.features.map(x => x.feature), body: objectBody(T, { attr, rule: enumName }) });
             const where: GroupFilter = { attr: attr.name, literals };
             const el: GrammarNode = { t: 'assign', feat: f.name, op: '+=', item: { t: 'rule', name: objName } };
@@ -495,7 +521,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
             out.push({
                 t: 'opt', feat: f.name, where, item: {
                     t: 'seq', items: [
-                        { t: 'kw', text: s.name },
+                        { t: 'kw', text: s.name, src: { k: 'subset', enumName: en.name, index: subsets.indexOf(s) } },
                         members,
                         { t: 'nl' },
                     ],
@@ -512,7 +538,8 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         const a = featAnn(f);
         const key = featureKey(f);
         const kwText = keywordOf(f);
-        const kw: GrammarNode[] = kwText === '' ? [] : [/^\w/.test(kwText) ? { t: 'kw', text: kwText } : { t: 'p', text: kwText }];
+        const kwSrc: LiteralSrc = { k: 'feature', feature: key };
+        const kw: GrammarNode[] = kwText === '' ? [] : [/^\w/.test(kwText) ? { t: 'kw', text: kwText, src: kwSrc } : { t: 'p', text: kwText, src: kwSrc }];
         const nl: GrammarNode[] = line ? [] : [{ t: 'nl' }];
         // `strict`: a one-line head with an optional name (D3), where a mandatory single value is not optional.
         const required = strict && !f.many && !!A?.mandatory?.has(key);
@@ -532,7 +559,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
             const el: GrammarNode = { t: 'assign', feat: f.name, op: v.many ? '+=' : '=', item: ruleRef(v.rule) };
             // C1d: an expression, or a positional primary, prints no terminator inside: the terminator closes its line.
             const closed: GrammarNode[] = classesOfRule(v.rule).some(k => operators.has(k) || (primaryClasses.has(k) && shapes.get(k)?.keyword === ''))
-                ? [el, ...tokens(style.terminator)] : [el];
+                ? [el, ...tokens('terminator', style.terminator)] : [el];
             // C1d: the child of a single-valued inline containment in a one-line class, in the line after the keyword.
             if (line) {
                 const item: GrammarNode = { t: 'seq', items: [...kw, el] };
@@ -541,7 +568,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
             if (itemKw !== undefined) {
                 if (a.inline) remark(key, 'itemKeyword: inline is not applied');
                 if (a.keyword !== undefined) remark(key, 'itemKeyword: the keyword is not printed');
-                return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, { t: 'star', feat: f.name, item: { t: 'seq', items: [{ t: 'kw', text: itemKw }, el, { t: 'nl' }] } }] } };
+                return { t: 'opt', feat: f.name, item: { t: 'seq', items: [...blank, { t: 'star', feat: f.name, item: { t: 'seq', items: [{ t: 'kw', text: itemKw, src: { k: 'itemKeyword', feature: key } }, el, { t: 'nl' }] } }] } };
             }
             const content: GrammarNode[] = (a.groupBy ? groups(f, v, a.groupBy) : undefined)
                 ?? (v.many ? [{ t: 'star', feat: f.name, item: { t: 'seq', items: [...closed, { t: 'nl' }] } }] : [...closed, { t: 'nl' }]);
@@ -552,13 +579,13 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         if (a.groupBy) refuse(key, 'groupBy applies to a containment; not applied');
         if (override && f.name === override.attr.name && f.owner === override.attr.owner) {
             const value: GrammarNode = { t: 'assign', feat: f.name, op: '=', item: { t: 'lit', rule: override.rule } };
-            return { t: 'seq', items: [...kw, ...(kw.length ? tokens(style.assign) : []), value, ...tokens(style.terminator), ...nl] };
+            return { t: 'seq', items: [...kw, ...(kw.length ? tokens('assign', style.assign) : []), value, ...tokens('terminator', style.terminator), ...nl] };
         }
         const value: GrammarNode = v.t === 'list'
             ? { t: 'list', feat: f.name, open: style.list.open, separator: style.list.separator, close: style.list.close, item: { t: 'assign', feat: f.name, op: '+=', item: single(v.item, f) } }
             : { t: 'assign', feat: f.name, op: '=', item: single(v, f) };
         // C1d: a positional primary's value takes no terminator; the expression's line does (`closed`).
-        const item: GrammarNode = { t: 'seq', items: [...kw, ...(kw.length ? tokens(style.assign) : []), value, ...(primary ? [] : tokens(style.terminator)), ...nl] };
+        const item: GrammarNode = { t: 'seq', items: [...kw, ...(kw.length ? tokens('assign', style.assign) : []), value, ...(primary ? [] : tokens('terminator', style.terminator)), ...nl] };
         if (((primary && v.t !== 'list') || required) && A?.mandatory?.has(key)) return item;
         return { t: 'opt', feat: f.name, item };
     };
@@ -567,7 +594,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         const sh = shapes.get(r.cls) ?? { keyword: applyCase(r.cls, classCase), line: false, call: false, optionalHead: false, nameRequired: false };
         const nameAssign: GrammarNode = { t: 'assign', feat: 'name', op: '=', item: { t: 'tok', terminal: 'NAME' } };
         const derive = sh.derive ? { derive: sh.derive } : {};
-        const head: GrammarNode[] = sh.keyword === '' ? [] : [{ t: 'kw', text: sh.keyword }];
+        const head: GrammarNode[] = sh.keyword === '' ? [] : [{ t: 'kw', text: sh.keyword, src: { k: 'class', cls: r.cls } }];
         // C1d: a positional one-line object with nothing but an optional name prints its empty block when the name is unset.
         if (r.named && sh.optionalHead && sh.line && sh.keyword === '' && !r.features.length && !sh.derive) {
             return { t: 'seq', items: [{ t: 'alt', alts: [nameAssign, block([])] }] };
@@ -576,16 +603,16 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         if (sh.call) {
             // C1d: `Word(32)`, the arguments in declaration order, every one mandatory and single-valued (shapes).
             const args = r.features.flatMap((f, i): GrammarNode[] => [
-                ...(i ? [{ t: 'p', text: style.list.separator, tight: 'before' } as const] : []),
+                ...(i ? [{ t: 'p', text: style.list.separator, tight: 'before', src: { k: 'style', param: 'list.separator', index: 0 } } as const] : []),
                 { t: 'assign', feat: f.feature.name, op: '=', item: single(f.value, f.feature) },
             ]);
-            return { t: 'seq', items: [...head, { t: 'p', text: '(', tight: 'around' }, ...args, { t: 'p', text: ')', tight: 'before' }] };
+            return { t: 'seq', items: [...head, { t: 'p', text: '(', tight: 'around', src: FIXED }, ...args, { t: 'p', text: ')', tight: 'before', src: FIXED }] };
         }
         const primary = sh.keyword === '' && primaryClasses.has(r.cls);
         const items = r.features.map(f => feature(f.feature, f.value, sh.line, override, primary, sh.optionalHead && sh.line));
         if (r.named && sh.nameKeyword !== undefined) {
             const tail: GrammarNode[] = sh.line ? [] : [{ t: 'nl' }];
-            items.push({ t: 'opt', feat: 'name', ...derive, item: { t: 'seq', items: [{ t: 'kw', text: sh.nameKeyword }, nameAssign, ...tail] } });
+            items.push({ t: 'opt', feat: 'name', ...derive, item: { t: 'seq', items: [{ t: 'kw', text: sh.nameKeyword, src: { k: 'nameKeyword', cls: r.cls } }, nameAssign, ...tail] } });
         }
         return { t: 'seq', items: sh.line ? [...head, ...items] : [...head, block(items)] };
     }
@@ -649,7 +676,7 @@ function derive(base: BaseGrammar, style: NotationStyle, annotations: ResolvedAn
         if (r.t === 'object' && exprClasses.has(r.cls) && !named.has(r.name)) rules.splice(i, 1);
     }
     for (const e of enumRules) {
-        rules.push({ t: 'enum', name: e.name, literals: e.literals, body: { t: 'alt', alts: e.literals.map(l => ({ t: 'kw', text: applyCase(l, literalCase) })) } });
+        rules.push({ t: 'enum', name: e.name, literals: e.literals, body: { t: 'alt', alts: e.literals.map(l => ({ t: 'kw', text: applyCase(l, literalCase), src: { k: 'literal', enumName: e.name, literal: l } })) } });
     }
     rules.push(...derivedEnums);
     if (!A) return { grammar: { style, rules, objects, classCase, literalCase, notices }, heads };
@@ -674,77 +701,109 @@ export function derivedName(g: ConcreteGrammar, rule: ObjectRule, slots: Readonl
     });
 }
 
-const quoted = (s: string): string => `"${s}"`;
+/** A piece of the EBNF text: plain text, or a quoted literal with its origin (printed between quotes). */
+type Chunk = string | { readonly lit: string; readonly src?: LiteralSrc };
 
-function nodeText(n: GrammarNode, top = false): string {
+const quoted = (s: string, src?: LiteralSrc): Chunk => ({ lit: s, ...(src ? { src } : {}) });
+const styleSrc = (param: StyleParam, index = 0): LiteralSrc => ({ k: 'style', param, index });
+const isBlank = (cs: readonly Chunk[]): boolean => cs.every(c => c === '');
+const joined = (parts: readonly (readonly Chunk[])[], sep: string): Chunk[] => parts.flatMap((p, i) => (i ? [sep, ...p] : [...p]));
+const paren = (cs: readonly Chunk[], top: boolean): Chunk[] => (top ? [...cs] : ['(', ...cs, ')']);
+
+function nodeText(n: GrammarNode, top = false): Chunk[] {
     switch (n.t) {
         case 'seq': {
-            const parts = n.items.filter(x => nodeText(x) !== '');
+            const parts = n.items.filter(x => !isBlank(nodeText(x)));
             if (parts.length === 1) return nodeText(parts[0], top);
             // A sequence inside a sequence needs no parentheses (C1d: a required inline child, `":" type=Type_`).
-            const s = parts.map(x => nodeText(x, x.t === 'seq')).join(' ');
-            return top ? s : `(${s})`;
+            return paren(joined(parts.map(x => nodeText(x, x.t === 'seq')), ' '), top);
         }
         case 'opt': {
             // An inline containment: the optional star prints as the star.
             const inner = n.item.t === 'seq' ? n.item.items.filter(x => x.t !== 'nl') : [n.item];
             if (inner.length === 1 && inner[0].t === 'star') return nodeText(inner[0]);
-            return `[${nodeText(n.item, true)}]${n.derive ? ` (* else name = ${n.derive.source} *)` : ''}`;
+            return ['[', ...nodeText(n.item, true), `]${n.derive ? ` (* else name = ${n.derive.source} *)` : ''}`];
         }
-        case 'star': return `{${nodeText(n.item, true)}}`;
-        case 'alt': {
-            const s = n.alts.map(x => nodeText(x)).join(' | ');
-            return top ? s : `(${s})`;
-        }
-        case 'kw': case 'p': return quoted(n.text);
-        case 'tok': return n.terminal;
-        case 'xref': return 'REF';
-        case 'lit': return n.rule;
-        case 'rule': return n.name;
-        case 'assign': return `${n.feat}${n.op}${nodeText(n.item)}`;
+        case 'star': return ['{', ...nodeText(n.item, true), '}'];
+        case 'alt': return paren(joined(n.alts.map(x => nodeText(x)), ' | '), top);
+        case 'kw': case 'p': return [quoted(n.text, n.src)];
+        case 'tok': return [n.terminal];
+        case 'xref': return ['REF'];
+        case 'lit': return [n.rule];
+        case 'rule': return [n.name];
+        case 'assign': return [`${n.feat}${n.op}`, ...nodeText(n.item)];
         case 'list': {
             const item = nodeText(n.item);
-            const s = `${quoted(n.open)} [${item} {${quoted(n.separator)} ${item}}] ${quoted(n.close)}`;
-            return top ? s : `(${s})`;
+            const s: Chunk[] = [quoted(n.open, styleSrc('list.open')), ' [', ...item, ' {', quoted(n.separator, styleSrc('list.separator')), ' ', ...item, '}] ', quoted(n.close, styleSrc('list.close'))];
+            return paren(s, top);
         }
-        case 'block': return [...n.open.map(quoted), ...n.items.map(x => nodeText(x)).filter(Boolean), ...n.close.map(quoted)].join(' ');
-        case 'nl': return '';
-        case 'expr': {
-            const s = exprAlternatives(n).join(' | ');
-            return top ? s : `(${s})`;
-        }
+        case 'block': return joined([
+            ...n.open.map((t, i) => [quoted(t, styleSrc('blockOpen', i))]),
+            ...n.items.map(x => nodeText(x)).filter(cs => !isBlank(cs)),
+            ...n.close.map((t, i) => [quoted(t, styleSrc('blockClose', i))]),
+        ], ' ');
+        case 'nl': return [''];
+        case 'expr': return paren(joined(exprAlternatives(n), ' | '), top);
     }
 }
 
 const FIXITY_TEXT: Readonly<Record<OperatorFixity, string>> = { nary: 'n-ary', binary: 'binary', prefix: 'prefix' };
 
 /** The alternatives of an expression as EBNF, each operator's with a comment on its class, fixity and precedence. */
-function exprAlternatives(n: Extract<GrammarNode, { t: 'expr' }>): string[] {
+function exprAlternatives(n: Extract<GrammarNode, { t: 'expr' }>): Chunk[][] {
     const R = n.rule;
-    const out: string[] = [];
+    const open = quoted(n.open, FIXED);
+    const close = quoted(n.close, FIXED);
+    const out: Chunk[][] = [];
     for (const o of n.operators) {
-        const s = quoted(o.symbol);
+        const s = quoted(o.symbol, { k: 'operatorSymbol', cls: o.cls });
         const [a, b] = o.operands;
-        const text = o.fixity === 'binary' ? `${a}=${R} ${s} ${b}=${R}`
-            : o.fixity === 'nary' ? `${a}+=${R} ${s} ${a}+=${R} {${s} ${a}+=${R}}`
-                : `${s} ${a}=${R}`;
-        out.push(`${text} (* ${o.cls}, ${FIXITY_TEXT[o.fixity]}${o.fixity === 'binary' ? `, ${o.assoc}` : ''}, precedence ${o.precedence} *)`);
+        const text: Chunk[] = o.fixity === 'binary' ? [`${a}=${R} `, s, ` ${b}=${R}`]
+            : o.fixity === 'nary' ? [`${a}+=${R} `, s, ` ${a}+=${R} {`, s, ` ${a}+=${R}}`]
+                : [s, ` ${a}=${R}`];
+        out.push([...text, ` (* ${o.cls}, ${FIXITY_TEXT[o.fixity]}${o.fixity === 'binary' ? `, ${o.assoc}` : ''}, precedence ${o.precedence} *)`]);
     }
     for (const o of n.operators) {
         if (o.call === undefined) continue;
         const a = o.operands[0];
-        out.push(`${quoted(o.call)} ${quoted(n.open)} [${a}+=${R} {${quoted(n.separator)} ${a}+=${R}}] ${quoted(n.close)} (* ${o.cls}, call form *)`);
+        out.push([quoted(o.call, { k: 'operatorCall', cls: o.cls }), ' ', open, ` [${a}+=${R} {`, quoted(n.separator, styleSrc('list.separator')), ` ${a}+=${R}}] `, close, ` (* ${o.cls}, call form *)`]);
     }
-    out.push(...n.primaries.map(p => nodeText(p)), `${quoted(n.open)} ${R} ${quoted(n.close)}`);
+    out.push(...n.primaries.map(p => nodeText(p)), [open, ` ${R} `, close]);
     return out;
+}
+
+/** A quoted literal of the EBNF text: `text` is `ebnf.slice(start, end)`, between its quotes, and `src` its origin. */
+export interface EbnfLiteral {
+    readonly start: number;
+    readonly end: number;
+    readonly text: string;
+    readonly src?: LiteralSrc;
+}
+
+/**
+ * The concrete grammar as EBNF with the span and the origin of every quoted literal, in text order (R-TXT-49 D1); the
+ * comments hold none. `text` is what `concreteGrammarEbnf` prints.
+ */
+export function concreteGrammarEbnfSpans(g: ConcreteGrammar): { readonly text: string; readonly literals: readonly EbnfLiteral[] } {
+    const width = Math.max(...g.rules.map(r => r.name.length));
+    const lines = g.rules.map((r): Chunk[] => {
+        const head = `${r.name.padEnd(width)} ::= `;
+        if (r.body.t !== 'expr') return [head, ...nodeText(r.body, true), ' ;'];
+        // An expression over several lines, one alternative per line, the bars under the `=` of `::=`.
+        return [head, ...joined(exprAlternatives(r.body), `\n${' '.repeat(width + 3)}| `), ' ;'];
+    });
+    let text = '';
+    const literals: EbnfLiteral[] = [];
+    for (const c of joined(lines, '\n')) {
+        if (typeof c === 'string') { text += c; continue; }
+        const start = text.length + 1;
+        text += `"${c.lit}"`;
+        literals.push({ start, end: start + c.lit.length, text: c.lit, ...(c.src ? { src: c.src } : {}) });
+    }
+    return { text, literals };
 }
 
 /** The concrete grammar as EBNF, one rule per line, the `::=` aligned; feature assignments name the features. */
 export function concreteGrammarEbnf(g: ConcreteGrammar): string {
-    const width = Math.max(...g.rules.map(r => r.name.length));
-    return g.rules.map(r => {
-        if (r.body.t !== 'expr') return `${r.name.padEnd(width)} ::= ${nodeText(r.body, true)} ;`;
-        // An expression over several lines, one alternative per line, the bars under the `=` of `::=`.
-        return `${r.name.padEnd(width)} ::= ${exprAlternatives(r.body).join(`\n${' '.repeat(width + 3)}| `)} ;`;
-    }).join('\n');
+    return concreteGrammarEbnfSpans(g).text;
 }

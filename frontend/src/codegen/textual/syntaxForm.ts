@@ -15,8 +15,8 @@
 
 import { operatorFixity } from './annotations';
 import type { AnnotationIssue, ClassAnnotation, ElementIds, EnumSubset, FeatureAnnotation, SyntaxAnnotations } from './annotations';
-import { concreteGrammarEbnf } from './concreteGrammar';
-import type { ConcreteGrammar, ObjectRule } from './concreteGrammar';
+import { concreteGrammarEbnf, concreteGrammarEbnfSpans } from './concreteGrammar';
+import type { ConcreteGrammar, LiteralSrc, ObjectRule } from './concreteGrammar';
 import { classFeatures, isNameFeature } from './metamodel';
 import type { TextClass, TextFeature, TextMetamodel, TextObject } from './metamodel';
 import { printTextModel } from './printer';
@@ -593,6 +593,108 @@ export function draftPreview(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAn
     } catch (e) {
         return { ebnf: '', text: '', error: e instanceof Error ? e.message : String(e) };
     }
+}
+
+// ---- The literals of the EBNF mode (R-TXT-48, R-TXT-49 D4, D5, D8, D11; lane L1a, P-2026-11-05-0841) ---------------
+
+/**
+ * The record field an EBNF literal edits, by its origin (report docs/discovery/discovery_2026-11-05_textual_ebnf_literals.md
+ * §3.1): names to ids through `contextOf`. None for an enumeration literal (D8), a fixed token (D11), a style token
+ * (read only until step 2), or an element the ids do not hold.
+ */
+export function literalField(mm: TextMetamodel, ids: ElementIds, src: LiteralSrc | undefined): FieldRef | undefined {
+    if (!src) return undefined;
+    const cx = contextOf(mm, ids);
+    const ofClass = (cls: string, field: FieldId): FieldRef | undefined => {
+        const id = cx.classId(cls);
+        return id === undefined ? undefined : { element: `class:${id}`, field };
+    };
+    const ofFeature = (key: string, field: FieldId): FieldRef | undefined => {
+        const dot = key.indexOf('.');
+        const id = cx.featureId(key.slice(0, dot), key.slice(dot + 1));
+        return id === undefined ? undefined : { element: `feature:${id}`, field };
+    };
+    switch (src.k) {
+        case 'class': return ofClass(src.cls, 'class.keyword');
+        case 'nameKeyword': return ofClass(src.cls, 'class.nameKeyword');
+        case 'operatorSymbol': return ofClass(src.cls, 'class.operatorSymbol');
+        case 'operatorCall': return ofClass(src.cls, 'class.operatorCall');
+        case 'feature': return ofFeature(src.feature, 'feature.keyword');
+        case 'itemKeyword': return ofFeature(src.feature, 'feature.itemKeyword');
+        case 'subset': {
+            const id = cx.enumId(src.enumName);
+            return id === undefined ? undefined : { element: `enum:${id}`, field: 'enum.subsets' };
+        }
+        default: return undefined;
+    }
+}
+
+const sameSrc = (a: LiteralSrc | undefined, b: LiteralSrc): boolean => a !== undefined && JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * The text an origin prints with its field cleared: the grammar derived a second time from the draft without the field
+ * (D5). Not the form's placeholder, which ignores the class case and the call word's class keyword. Undefined where
+ * clearing the field removes the literal (a per-item keyword, a name keyword, an operator symbol, a group name).
+ */
+export function literalDefault(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAnnotations, src: LiteralSrc): string | undefined {
+    const ref = literalField(mm, ids, src);
+    if (!ref || src.k === 'subset') return undefined;
+    const { grammar } = textualNotation(mm, { record: withoutStale(setField(draft, ref, undefined), ids), issues: [] }, ids);
+    return concreteGrammarEbnfSpans(grammar).literals.find(l => sameSrc(l.src, src))?.text;
+}
+
+export type LiteralEdit =
+    | { readonly ok: true; readonly draft: SyntaxAnnotations; readonly at: FieldRef }
+    | { readonly ok: false; readonly reason: string };
+
+// The resolution's rules (annotations.ts `IDENTIFIER`, `isFeatureKeyword`, `isSymbol`), checked before the draft so
+// that a value the resolution would drop is never written.
+const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const PUNCTUATION_KEYWORD = /^[^\w\s"'@]+$/;
+const SYMBOL_RUN = /^[^\w\s]+$/;
+
+/** What an EBNF literal of each origin is called in a refusal. */
+const LITERAL_NAME: Readonly<Record<LiteralSrc['k'], string>> = {
+    class: 'a class keyword', nameKeyword: 'a name keyword', operatorSymbol: 'an operator symbol', operatorCall: 'a call word',
+    feature: 'a feature keyword', itemKeyword: 'a per-item keyword', subset: 'a group name',
+    literal: 'an enumeration literal', style: 'a style token', fixed: 'a fixed token',
+};
+
+/** D4: the origins whose empty value is their default; for the others clearing would remove a structure. */
+const EMPTY_IS_DEFAULT: ReadonlySet<LiteralSrc['k']> = new Set(['class', 'feature', 'operatorCall']);
+
+/** Why a value is not well formed for an origin's field, or undefined. */
+function malformed(k: LiteralSrc['k'], value: string): string | undefined {
+    if (k === 'feature') return IDENTIFIER.test(value) || PUNCTUATION_KEYWORD.test(value) ? undefined : `"${value}" is not an identifier or a run of punctuation`;
+    if (k === 'operatorSymbol') return IDENTIFIER.test(value) || SYMBOL_RUN.test(value) ? undefined : `"${value}" is neither an identifier nor a run of symbol characters`;
+    return IDENTIFIER.test(value) ? undefined : `"${value}" is not an identifier`;
+}
+
+/**
+ * The draft with an EBNF literal set to a value, or the reason it is refused (R-TXT-48). A value equal to the printed
+ * default is stored as cleared (D5); an empty one is the default where D4 says so and refused elsewhere; a quote, a
+ * blank, or a value the field's resolution would drop is refused; an enumeration literal, a fixed token and a style token
+ * are read only (D8, D11). A group name renames its own group in the enumeration's list.
+ */
+export function setLiteral(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAnnotations, src: LiteralSrc | undefined, value: string): LiteralEdit {
+    const at = literalField(mm, ids, src);
+    if (!src || !at) return { ok: false, reason: `${src ? LITERAL_NAME[src.k] : 'this literal'} is read only` };
+    const what = LITERAL_NAME[src.k];
+    if (value.includes('"')) return { ok: false, reason: `${what} cannot hold a quote` };
+    if (/\s/.test(value)) return { ok: false, reason: `${what} cannot hold a blank` };
+    if (value === '') {
+        if (!EMPTY_IS_DEFAULT.has(src.k)) return { ok: false, reason: `${what} cannot be empty: clearing it removes it from the notation` };
+        return { ok: true, draft: setField(draft, at, undefined), at };
+    }
+    const bad = malformed(src.k, value);
+    if (bad) return { ok: false, reason: `${what}: ${bad}` };
+    if (src.k === 'subset') {
+        const subsets = draft.enums?.[idOf(at.element)]?.subsets;
+        if (!subsets?.[src.index]) return { ok: false, reason: `${what}: the group is not in the draft` };
+        return { ok: true, draft: setField(draft, at, subsets.map((s, i) => (i === src.index ? { ...s, name: value } : s))), at };
+    }
+    const cleared = value === literalDefault(mm, ids, draft, src);
+    return { ok: true, draft: setField(draft, at, cleared ? undefined : value), at };
 }
 
 /** The empty record, the draft of a metamodel with none. */

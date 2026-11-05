@@ -1891,6 +1891,34 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Notes**: Rollback tag `pre-v2flow-nameless-ref-label` on `6f34411de` (RC-31). Union: docs/log-inbox/codegen.md. Worker: `~/.jjodel-lanes/P-2026-11-05-0734/result.json`.
 **Prompt document name**: 2026-11-05 07:34
 
+## 2026-11-05 — feat(codegen): L1a, the origin of each EBNF literal and its record field (P-2026-11-05-0841)
+
+**Prompt**: `claude_2026-11-05_0841_prompt_textual_ebnf_literals_l1a.md`, lane L1a of R-TXT-48 under R-TXT-49 D1, D4, D5, D8, D11 (provisional): an optional `src` on the `kw` and `p` grammar nodes, `concreteGrammarEbnfSpans`, and the mapping of a literal to its `FieldRef` with default, D4 and well-formedness in `syntaxForm.ts`. Pure, no UI.
+**Files touched**: `frontend/src/codegen/textual/concreteGrammar.ts` and `__tests__/ebnfLiterals.test.ts` (new) in `251e4e565`; `frontend/src/codegen/textual/syntaxForm.ts` and the same test in `210c61ee1`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Red first 27/27 and 28/28; 55 tests on the probe's six grammars (191 literals, counts per origin as measured). Mutation bench: 6/6 and 14/14 killed, counts in the commit bodies. Gates: typecheck 0; vitest 14161 pass, 3 baseline import reds; build 0; check:docs 0; check:codegen-lazy ALL GREEN (off, on). EBNF text byte for byte unchanged.
+**Prompt document name**: 2026-11-05 08:41
+
+## 2026-11-05 — merge: textual-ebnf-literals into alfonso-frontend-jjtl (P-2026-11-05-0906)
+
+**Prompt**: `claude_2026-11-05_0906_prompt_merge_textual-ebnf-literals.md`, a direct merge by `lane-run merge --direct`, no session: `textual-ebnf-literals` at `2c0cec54b` into `alfonso-frontend-jjtl`, merge base `1cf342a50`. R-TXT-48 and R-TXT-49: the EBNF literals discovery report and lane L1a (each quoted literal carries its origin, `concreteGrammarEbnfSpans`, origin to field, D4 and D5), no UI. Lane auto (Alfonso 07:38).
+**Files touched**: merge `4b858ee65`, the branch side (`frontend/src/codegen/textual/concreteGrammar.ts`, `syntaxForm.ts`, `__tests__/ebnfLiterals.test.ts`, the discovery report, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `4b858ee65`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 14163 tests, 3 red at import (baseline), hooks 967.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no UI change; the EBNF text is byte for byte the same.
+**Notes**: Rollback tag `pre-textual-ebnf-literals` on `1cf342a50` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-0906/result.json`.
+**Prompt document name**: 2026-11-05 09:06
+
 ## 2026-11-05 — feat(codegen): C3b, the deletion guard, the Indentation style, Indentation in the picker and the form (P-2026-11-05-0748, P-2026-11-05-0816, P-2026-11-05-0843)
 
 **Prompt**: `claude_2026-11-05_0748_prompt_textual_c3b_indent.md`, continued after two context-ceiling stops by `claude_2026-11-05_0816_prompt_textual_c3b_cont.md` and `claude_2026-11-05_0843_prompt_textual_c3b_cont2.md` (RC-51): (1) the deletion guard of the Text tab; (2) the style `indent`; (3) Indentation in the picker and the Syntax form; (4) mutation bench and gates; (5) app check; (6) this entry.
