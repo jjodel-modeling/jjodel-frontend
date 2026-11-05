@@ -16,7 +16,7 @@ import type { ElementIds, EnumSubset, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel, TextObject } from '../metamodel';
 import type { DecodedSyntax } from '../syntaxRecord';
 import {
-    advancedInEffect, byField, draftPreview, elementMarks, fieldKey, fieldPhrase, fieldValue, fieldsOf, formElements,
+    advancedInEffect, blockTokenFields, byField, draftPreview, elementMarks, fieldKey, fieldPhrase, fieldValue, fieldsOf, formElements,
     parseSubsets, parseTokens, setField, styleTokenFields, subsetsText, tokensText,
 } from '../syntaxForm';
 import type { ElementKey, FieldRef, FormElement, FormField, FormFault, InterfaceMode } from '../syntaxForm';
@@ -103,7 +103,7 @@ export default function SyntaxForm({ mm, ids, decoded, storedRaw, objects, metam
     };
 
     const fieldList = (element: ElementKey): ReactNode => {
-        const fs = [...fieldsOf(mm, ids, element, interfaceMode, metamodelName), ...(element === 'language' ? styleTokenFields(draft, interfaceMode) : [])];
+        const fs = [...fieldsOf(mm, ids, element, interfaceMode, metamodelName), ...(element === 'language' ? styleTokenFields(draft, interfaceMode) : blockTokenFields(mm, ids, element, interfaceMode, draft))];
         const hidden = interfaceMode === 'basic' ? advancedInEffect(draft, element) : 0;
         return (
             <>
@@ -152,7 +152,7 @@ export default function SyntaxForm({ mm, ids, decoded, storedRaw, objects, metam
                 </section>
             );
         }
-        const classFields = fieldsOf(mm, ids, current.key, interfaceMode);
+        const classFields = [...fieldsOf(mm, ids, current.key, interfaceMode), ...blockTokenFields(mm, ids, current.key, interfaceMode, draft)];
         return (
             <>
                 <section className="syntax-form__group" aria-label={current.name}>

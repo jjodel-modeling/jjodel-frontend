@@ -32,8 +32,8 @@ export type FieldId =
     | 'language.name' | 'language.style' | 'language.classCase' | 'language.literalCase' | 'language.blankBeforeContainment' | 'language.roots'
     | 'language.blockOpen' | 'language.blockClose' | 'language.assign' | 'language.terminator' | 'language.list.open' | 'language.list.separator' | 'language.list.close'
     | 'class.keyword' | 'class.positional' | 'class.layout' | 'class.nameKeyword' | 'class.namePattern'
-    | 'class.operatorSymbol' | 'class.operatorPrecedence' | 'class.operatorAssoc' | 'class.operatorCall'
-    | 'feature.keyword' | 'feature.itemKeyword' | 'feature.positional' | 'feature.inline' | 'feature.groupBy' | 'feature.value'
+    | 'class.operatorSymbol' | 'class.operatorPrecedence' | 'class.operatorAssoc' | 'class.operatorCall' | 'class.blockOpen' | 'class.blockClose'
+    | 'feature.keyword' | 'feature.itemKeyword' | 'feature.positional' | 'feature.inline' | 'feature.groupBy' | 'feature.value' | 'feature.blockOpen' | 'feature.blockClose'
     | 'enum.subsets';
 
 /** A field of an element; without `field`, the element itself (a fault no field of it can fix). */
@@ -55,6 +55,8 @@ export interface FormField {
     readonly options?: readonly string[];
     /** The default the text prints when the field is absent: shown as the placeholder, never stored (F1). */
     readonly placeholder?: string;
+    /** A token override: the row has a Reset that clears it, back to the base or the inherited tokens (L2b, P-2026-11-05-2350). */
+    readonly reset?: true;
 }
 
 export interface FormElement {
@@ -103,6 +105,15 @@ const FEATURE: readonly Spec[] = [
     { id: 'feature.groupBy', label: 'Grouped by', tier: 'advanced', input: 'choice' },
     { id: 'feature.value', label: 'Printed as a name', tier: 'advanced', input: 'toggle' },
 ];
+/** The per-block tokens of R-TXT-51 (B2, P-2026-11-05-2350), rows of their own as the style's are (`blockTokenFields`). */
+const CLASS_BLOCK: readonly Spec[] = [
+    { id: 'class.blockOpen', label: 'Block open', tier: 'advanced', input: 'tokens', reset: true },
+    { id: 'class.blockClose', label: 'Block close', tier: 'advanced', input: 'tokens', reset: true },
+];
+const FEATURE_BLOCK: readonly Spec[] = [
+    { id: 'feature.blockOpen', label: 'Block open', tier: 'advanced', input: 'tokens', reset: true },
+    { id: 'feature.blockClose', label: 'Block close', tier: 'advanced', input: 'tokens', reset: true },
+];
 const ENUM: readonly Spec[] = [{ id: 'enum.subsets', label: 'Groups of literals', tier: 'advanced', input: 'subsets' }];
 /**
  * The style token overrides (L2a, P-2026-11-05-1430): named in sentences, edited from the EBNF and, in Advanced, in the
@@ -118,7 +129,7 @@ const STYLE_TOKENS: readonly Spec[] = [
     { id: 'language.list.close', label: 'List close', tier: 'advanced', input: 'text' },
 ];
 
-const LABELS: ReadonlyMap<FieldId, string> = new Map([...LANGUAGE, ...STYLE_TOKENS, ...CLASS, ...FEATURE, ...ENUM].map(s => [s.id, s.label]));
+const LABELS: ReadonlyMap<FieldId, string> = new Map([...LANGUAGE, ...STYLE_TOKENS, ...CLASS, ...CLASS_BLOCK, ...FEATURE, ...FEATURE_BLOCK, ...ENUM].map(s => [s.id, s.label]));
 
 /** A style parameter's field, and back. */
 const tokenField = (param: StyleParam): FieldId => `language.${param}` as FieldId;
@@ -146,6 +157,15 @@ export function parseTokens(text: string): string[] | undefined {
     const tokens = text.split(/\s+/).filter(Boolean);
     return tokens.length ? tokens : undefined;
 }
+
+/** R-TXT-51: the sides of a per-block token entry, and what a side inherits in a draft: the language-wide override, else the base's (Q1). */
+const BLOCK_SIDES = ['blockOpen', 'blockClose'] as const;
+type BlockSide = typeof BLOCK_SIDES[number];
+const inheritedSide = (draft: SyntaxAnnotations | null | undefined, side: BlockSide): readonly string[] => {
+    const own = draft?.style?.[side];
+    return Array.isArray(own) ? own : styleOf(draft?.style?.base)[side];
+};
+const setsBlock = (entry: { readonly blockOpen?: unknown; readonly blockClose?: unknown }): boolean => BLOCK_SIDES.some(side => entry[side] !== undefined);
 
 const kindOf = (key: ElementKey): FormElement['kind'] => (key === 'language' ? 'language' : (key.slice(0, key.indexOf(':')) as FormElement['kind']));
 const idOf = (key: ElementKey): string => key.slice(key.indexOf(':') + 1);
@@ -256,6 +276,28 @@ export function fieldsOf(mm: TextMetamodel, ids: ElementIds, element: ElementKey
     return out;
 }
 
+/**
+ * The per-block token rows of a class or a feature (B2, R-TXT-51), Advanced only: on a concrete class and a containment,
+ * each side with the tokens it inherits as the placeholder (Q1); elsewhere only while the draft sets them, so that their
+ * refusal (D9, an abstract class) has a field and a Reset.
+ */
+export function blockTokenFields(mm: TextMetamodel, ids: ElementIds, element: ElementKey, mode: InterfaceMode, draft: SyntaxAnnotations | null): FormField[] {
+    const kind = kindOf(element);
+    if (mode !== 'advanced' || (kind !== 'class' && kind !== 'feature')) return [];
+    const cx = contextOf(mm, ids);
+    const id = idOf(element);
+    const rows = (specs: readonly Spec[]): FormField[] => specs.map((s, k) => {
+        const shown = inheritedSide(draft, BLOCK_SIDES[k]).join(' ');
+        return { ...s, ...(shown ? { placeholder: shown } : {}) };
+    });
+    if (kind === 'class') {
+        const c = cx.classById(id);
+        return c && (!c.isAbstract || setsBlock(classEntry(draft, id))) ? rows(CLASS_BLOCK) : [];
+    }
+    const f = cx.featureById(id);
+    return f && (f.kind === 'containment' || setsBlock(featureEntry(draft, id))) ? rows(FEATURE_BLOCK) : [];
+}
+
 const classEntry = (r: SyntaxAnnotations | null, id: string): ClassAnnotation => r?.classes?.[id] ?? {};
 const featureEntry = (r: SyntaxAnnotations | null, id: string): FeatureAnnotation => r?.features?.[id] ?? {};
 
@@ -280,12 +322,16 @@ export function fieldValue(record: SyntaxAnnotations | null, ref: FieldRef): unk
         case 'class.operatorPrecedence': return c.operator?.precedence;
         case 'class.operatorAssoc': return c.operator?.assoc;
         case 'class.operatorCall': return c.operator?.call;
+        case 'class.blockOpen': return c.blockOpen;
+        case 'class.blockClose': return c.blockClose;
         case 'feature.keyword': return f.keyword === '' ? undefined : f.keyword;
         case 'feature.itemKeyword': return f.itemKeyword;
         case 'feature.positional': return f.keyword === '' ? true : undefined;
         case 'feature.inline': return f.inline;
         case 'feature.groupBy': return f.groupBy;
         case 'feature.value': return f.value === 'name' ? true : undefined;
+        case 'feature.blockOpen': return f.blockOpen;
+        case 'feature.blockClose': return f.blockClose;
         case 'enum.subsets': return record?.enums?.[id]?.subsets;
         default: {
             const param = tokenParam(ref.field);
@@ -336,6 +382,12 @@ export function setField(draft: SyntaxAnnotations, ref: FieldRef, value: unknown
     const feat = (next: (f: FeatureAnnotation) => object): SyntaxAnnotations => withEntry(draft, 'features', id, next(featureEntry(draft, id)));
     const name = (key: string) => (c: ClassAnnotation) => put(c, 'name', put(c.name, key, value));
     const operator = (key: string) => (c: ClassAnnotation) => put(c, 'operator', put(c.operator, key, value));
+    /** A per-block side, stored only when it differs from what the side inherits (R-TXT-49 D5's rule, as `withToken`). */
+    const side = (key: BlockSide) => <T extends object>(x: T): T => {
+        const was = inheritedSide(draft, key);
+        const same = Array.isArray(value) && value.length === was.length && value.every((t, i) => t === was[i]);
+        return put(x, key, same ? undefined : value);
+    };
     const positional = <T extends { keyword?: string }>(x: T): T => (value === true ? { ...x, keyword: '' } : x.keyword === '' ? put(x, 'keyword', undefined) : x);
     switch (ref.field) {
         case 'language.name': return put(draft, 'language', value);
@@ -353,12 +405,16 @@ export function setField(draft: SyntaxAnnotations, ref: FieldRef, value: unknown
         case 'class.operatorPrecedence': return cls(operator('precedence'));
         case 'class.operatorAssoc': return cls(operator('assoc'));
         case 'class.operatorCall': return cls(operator('call'));
+        case 'class.blockOpen': return cls(side('blockOpen'));
+        case 'class.blockClose': return cls(side('blockClose'));
         case 'feature.keyword': return feat(f => put(f, 'keyword', value));
         case 'feature.itemKeyword': return feat(f => put(f, 'itemKeyword', value));
         case 'feature.positional': return feat(positional);
         case 'feature.inline': return feat(f => put(f, 'inline', value));
         case 'feature.groupBy': return feat(f => put(f, 'groupBy', value));
         case 'feature.value': return feat(f => put(f, 'value', value === true ? 'name' : undefined));
+        case 'feature.blockOpen': return feat(side('blockOpen'));
+        case 'feature.blockClose': return feat(side('blockClose'));
         case 'enum.subsets': return withEntry(draft, 'enums', id, put(draft.enums?.[id], 'subsets', value));
         default: {
             const param = tokenParam(ref.field);
@@ -370,7 +426,7 @@ export function setField(draft: SyntaxAnnotations, ref: FieldRef, value: unknown
 /** How many Advanced fields of an element the record sets, applicable or not: Basic announces them, nothing in effect hides (D2). */
 export function advancedInEffect(record: SyntaxAnnotations | null, element: ElementKey): number {
     const kind = kindOf(element);
-    const specs = kind === 'language' ? [...LANGUAGE, ...STYLE_TOKENS] : kind === 'class' ? CLASS : kind === 'feature' ? FEATURE : ENUM;
+    const specs = kind === 'language' ? [...LANGUAGE, ...STYLE_TOKENS] : kind === 'class' ? [...CLASS, ...CLASS_BLOCK] : kind === 'feature' ? [...FEATURE, ...FEATURE_BLOCK] : ENUM;
     const set = (s: Spec): boolean => !isCleared(fieldValue(record, { element, field: s.id }));
     const advanced = specs.filter(s => s.tier === 'advanced' && set(s)).length;
     return advanced + (kind === 'class' && fieldValue(record, { element, field: 'class.layout' }) === 'call' ? 1 : 0);
@@ -438,6 +494,9 @@ function styleField(message: string): FieldId {
     return 'language.style';
 }
 
+/** The messages about an element's own block tokens (concreteGrammar.ts, annotations.ts, styleCheck.ts, B1). */
+const OWN_BLOCK_MESSAGE = /(^|: )blockOpen and blockClose |^(blockOpen|blockClose) is |^the (blockOpen|blockClose) token |^the block open .* is the block close too/;
+
 interface Located { readonly at: FieldRef[]; readonly message: string }
 
 /** Where a finding belongs, and its message as the form shows it (F5's table). */
@@ -470,6 +529,30 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
         const kw = k === undefined ? undefined : classEntry(draft, idOf(k)).name?.keyword;
         return k !== undefined && kw !== undefined && quoted(message).includes(kw) ? [{ element: k, field: 'class.nameKeyword' }] : [];
     };
+    /**
+     * R-TXT-51: a finding about an element's own block, at its sides: the one the message names, else the ones the entry
+     * sets; undefined when the message is not about them.
+     */
+    const blockAt = (element: ElementKey | undefined): FieldRef[] | undefined => {
+        if (element === undefined || !OWN_BLOCK_MESSAGE.test(message)) return undefined;
+        const open = /\bblockOpen\b/.test(message);
+        const close = /\bblockClose\b/.test(message);
+        const prefix = kindOf(element) === 'class' ? 'class' : 'feature';
+        const entry = prefix === 'class' ? classEntry(draft, idOf(element)) : featureEntry(draft, idOf(element));
+        const set = BLOCK_SIDES.filter(s => entry[s] !== undefined);
+        const sides = open !== close ? [open ? 'blockOpen' : 'blockClose'] : set.length ? set : BLOCK_SIDES;
+        return sides.map(s => ({ element, field: `${prefix}.${s}` as FieldId }));
+    };
+    /** «is a block token of X»: the sides of X's own block that hold the token the message quotes. */
+    const tokenOwnerAt = (): FieldRef[] => {
+        const owner = /is a block token of ([\w.]+)/.exec(message)?.[1];
+        const token = quoted(message)[0];
+        const element = owner === undefined ? undefined : owner.includes('.') ? featureKey(owner) : classKey(owner);
+        if (element === undefined || token === undefined) return [];
+        const prefix = kindOf(element) === 'class' ? 'class' : 'feature';
+        const entry = prefix === 'class' ? classEntry(draft, idOf(element)) : featureEntry(draft, idOf(element));
+        return BLOCK_SIDES.filter(s => entry[s]?.includes(token)).map(s => ({ element, field: `${prefix}.${s}` as FieldId }));
+    };
     const isFeaturePath = (w: string): boolean => !w.includes(' ') && w.includes('.') && !w.startsWith('style.');
     /** A `style.<param>` finding: the parameter's fields first, then the Style row, until L2b gives the parameter a row. */
     const styleAt = (w: string): FieldRef[] => {
@@ -480,6 +563,11 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
         return [...fields, 'language.style' as const].map(field => ({ element: 'language', field }));
     };
 
+    // A finding at a class or a feature about its own block tokens (B1's refusals, the per-block style check).
+    if (where.startsWith('class ') || isFeaturePath(where)) {
+        const own = blockAt(where.startsWith('class ') ? classKey(where.slice(6)) : featureKey(where));
+        if (own) return { at: own, message };
+    }
     switch (rule) {
         case 'distinct-features':
             return { at: [...nameKeywordAt(where.startsWith('class ') ? where.slice(6) : undefined), ...keywords(listAfterColon(message).map(featureKey))], message };
@@ -489,8 +577,8 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
             return { at: where.startsWith('style.') ? styleAt(where) : [{ element: 'language', field: 'language.style' }], message };
         case 'block-delimiters':
             if (where.startsWith('style.')) return { at: styleAt(where), message };
-            if (where.startsWith('class ')) return { at: keywords([classKey(where.slice(6))]), message };
-            return { at: keywords([featureKey(where)]), message };
+            if (where.startsWith('class ')) return { at: [...keywords([classKey(where.slice(6))]), ...tokenOwnerAt()], message };
+            return { at: [...keywords([featureKey(where)]), ...tokenOwnerAt()], message };
         case 'operator-fixity': case 'operator-symbols': case 'operator-tokens': case 'operator-follow': {
             const others = [...message.matchAll(/(?:symbol of|for) ([A-Za-z_]\w*)/g)].map(m => classKey(m[1]));
             return { at: [classKey(where.slice(6)), ...others].flatMap(k => one(k, 'class.operatorSymbol')), message };
@@ -523,7 +611,7 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
     }
     if (isFeaturePath(where)) {
         const k = featureKey(where);
-        if (!ll1) return { at: one(k, featureField(message)), message };
+        if (!ll1) return { at: [...one(k, featureField(message)), ...tokenOwnerAt()], message };
         if (k === undefined) return { at: [], message };
         // LL(1) at a feature: two positional features cannot be told apart; else the keyword and its inline forms.
         const owner = where.slice(0, where.lastIndexOf('.'));
