@@ -12,6 +12,7 @@ import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel } from '../metamodel';
 import { CLIKE_STYLE, PASCAL_STYLE, styleOf } from '../style';
 import type { NotationStyle } from '../style';
+import { decodeSyntax, encodeSyntax, withStyleBase } from '../syntaxRecord';
 
 const EMPTY_MM: TextMetamodel = { classes: [], enumerations: [] };
 const EMPTY_IDS: ElementIds = { classes: {}, features: {}, enums: {} };
@@ -89,5 +90,42 @@ describe('(1) the effective style', () => {
         expect(effective({ base: 'pascal', blockClose: ['end'] }).emptyBlock).toEqual(['begin', 'end']);
         expect(effective({ list: { open: '<' } }).emptyBlock).toEqual(['{}']);
         expect(effective({ blockOpen: ['{'] }).emptyBlock).toEqual(['{}']);
+    });
+});
+
+describe('(2) the record', () => {
+    const OVERRIDES = { blockOpen: ['start'], blockClose: ['stop'], assign: ['='], terminator: ['.'], list: { open: '<', separator: '|', close: '>' } };
+
+    it('a base switch drops the token overrides and keeps the case and blank options (D10; mutant: withStyleBase spreads every key)', () => {
+        const r: SyntaxAnnotations = { v: 1, language: 'L', style: { base: 'pascal', classCase: 'lower', literalCase: 'lower', blankBeforeContainment: true, ...OVERRIDES } };
+        expect(withStyleBase(r, 'clike')).toEqual({ v: 1, language: 'L', style: { classCase: 'lower', literalCase: 'lower', blankBeforeContainment: true } });
+        expect(withStyleBase(r, 'indent')).toEqual({ v: 1, language: 'L', style: { base: 'indent', classCase: 'lower', literalCase: 'lower', blankBeforeContainment: true } });
+        expect(withStyleBase({ v: 1, style: { blockOpen: ['start'] } }, 'pascal')).toEqual({ v: 1, style: { base: 'pascal' } });
+        expect(withStyleBase({ v: 1, style: { base: 'pascal', terminator: ['.'] } }, 'clike')).toEqual({ v: 1 });
+    });
+
+    it('choosing the base already in effect is no switch: the overrides stay (mutant: tokens dropped on any call)', () => {
+        const r: SyntaxAnnotations = { v: 1, style: { base: 'pascal', ...OVERRIDES } };
+        expect(withStyleBase(r, 'pascal')).toEqual(r);
+        expect(withStyleBase({ v: 1, style: { blockOpen: ['start'] } }, 'clike')).toEqual({ v: 1, style: { blockOpen: ['start'] } });
+    });
+
+    it('writes the token keys after the options in a fixed order, the list keys too, whatever the insertion order (mutant: style written as given)', () => {
+        const a: SyntaxAnnotations = { v: 1, style: { base: 'pascal', classCase: 'lower', ...OVERRIDES } };
+        const b: SyntaxAnnotations = { v: 1, style: { list: { close: '>', open: '<', separator: '|' }, base: 'pascal', terminator: ['.'], assign: ['='], blockClose: ['stop'], classCase: 'lower', blockOpen: ['start'] } };
+        expect(encodeSyntax(b)).toBe(encodeSyntax(a));
+        expect(encodeSyntax(a)).toBe('{"v":1,"style":{"base":"pascal","classCase":"lower","blockOpen":["start"],"blockClose":["stop"],"assign":["="],"terminator":["."],"list":{"open":"<","separator":"|","close":">"}}}');
+    });
+
+    it('a record with no token keys encodes as before, its options in their own order (mutant: the options reordered too)', () => {
+        expect(encodeSyntax({ v: 1, style: { blankBeforeContainment: true, classCase: 'lower', base: 'pascal' } })).toBe('{"v":1,"style":{"blankBeforeContainment":true,"classCase":"lower","base":"pascal"}}');
+    });
+
+    it('stays at version 1 and reads back byte for byte (D12; mutant: the version bumped)', () => {
+        const raw = encodeSyntax({ v: 1, style: { base: 'pascal', ...OVERRIDES } });
+        expect(raw.startsWith('{"v":1,')).toBe(true);
+        const decoded = decodeSyntax(raw);
+        expect(decoded.issues).toEqual([]);
+        expect(encodeSyntax(decoded.record!)).toBe(raw);
     });
 });
