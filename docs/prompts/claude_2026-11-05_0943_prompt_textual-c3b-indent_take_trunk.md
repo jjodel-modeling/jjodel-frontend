@@ -4,7 +4,7 @@ Prompt-ID: P-2026-11-05-0943
 Chat: https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH
 Request: none (rendered by lane-run, no chat URL known for https://claude.ai/code/session_01DQt9R5nh3m4Y234MPGL9kH)
 Lane: full (merge of the trunk into the branch; 1 conflict: `docs/log-inbox/codegen.md` measured)
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane textual-c3b-indent · 38a49d347 · the session died in the bridge outage after the merge commit; gates run by the direct merge into the trunk
 
 Worktree: `/Users/alfonso/jjodel-w-textc3b`, branch `textual-c3b-indent`, a fresh session started by `lane-run`. Before anything else: `pwd` is `/Users/alfonso/jjodel-w-textc3b`, branch `textual-c3b-indent`, `git log -1` is the commit that adds this file (its parent `9d41c6ed5`), `git status` empty apart from gitignored `frontend/scripts/smoke/_tmp_*`, `MERGE_HEAD` absent. Otherwise stop with `Outcome: blocked`. Every reply opens with `[P-2026-11-05-0943 · session <id>]` and ends with an `Outcome:` line (P16). Run gates in the foreground, never as a background task.
 

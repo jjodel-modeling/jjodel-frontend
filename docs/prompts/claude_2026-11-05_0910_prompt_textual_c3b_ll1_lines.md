@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0910
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: eseguito 2026-11-05 · lane textual-c3b-indent · 559b61194 · app probe 9/9, verifica visiva in attesa del GO
+Status: eseguito 2026-11-05 · lane textual-c3b-indent · 559b61194 · app probe 9/9, verifica visiva della chat passata 2026-11-05 (RC-23, crops ll1-*), lane auto
 Lane: full (style check of the textual layer; the Text tab's style picker)
 Depends: P-2026-11-05-0843 (Outcome question: false LL(1) conflicts under Indentation; ticket in its log entry, uncommitted in this tree)
 Worktree: ~/jjodel-w-textc3b, branch textual-c3b-indent (the same tree)

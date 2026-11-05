@@ -1951,3 +1951,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — app probe `~/.jjodel-lanes/P-2026-11-05-0910/probe.mjs`, 9/9, crops ll1-*; GO of Alfonso pending.
 **Notes**: Benches: LL(1) 8/8 killed, picker gate 4/4; the picker's wiring has no render harness, covered by the probe. Port record under Indentation: the picker refuses, 2 errors, the Ref only; the default record passes and the form saves it. `Canceled`: Monaco's word highlighter cancels its Delayer when `reprint` restores the view state after Undo; unhandled, harmless. Detail: probe.out.txt, canceled-trace.out.txt in the lane folder.
 **Prompt document name**: 2026-11-05 09:10
+
+## 2026-11-05 — merge: textual-c3b-indent takes alfonso-frontend-jjtl (P-2026-11-05-0943)
+
+**Prompt**: `claude_2026-11-05_0943_prompt_merge_alfonso-frontend-jjtl_into_textual-c3b-indent.md`, a session merge by `lane-run merge --trunk-into --launch` (RC-14: concreteGrammar.ts and syntaxForm.ts changed on both sides since the base, by L1a on the trunk): the trunk at `5fd33809e` into `textual-c3b-indent`.
+**Files touched**: merge `38a49d347` on the branch.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown on the branch: the session died in the bridge outage (10:06 to 13:55) after the merge commit, before its gates; the gates run on the trunk merge that follows.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — a merge of the trunk into the branch; the C3b crops c3b-* and ll1-* were checked by the chat before it.
+**Notes**: Lane folder `~/.jjodel-lanes/P-2026-11-05-0943/` (outcome died, 222 min).
+**Prompt document name**: 2026-11-05 09:43
