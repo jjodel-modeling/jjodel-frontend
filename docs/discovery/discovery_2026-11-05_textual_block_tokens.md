@@ -242,3 +242,116 @@ per-block tokens are ignored there with a notice. The derivation's `remark` (`co
 `notice`-level issue, which the style check shows as an `annotations` notice (`styleCheck.ts:222`), and which neither the
 picker's refusal (R-TXT-50, an error only) nor Save blocks. Measured (P8): the same record under Indentation prints the
 blocks as indentation, 0 check errors.
+
+## 3. The head prefix (a separate slice)
+
+### 3.1 Two readings of `begin program` (H4, confirmed)
+
+- **Reading A, no prefix.** `Program` positional (class keyword `''`) and nameless, its block open `begin program` and
+  close `end program`. Every piece exists but the per-block tokens: positional is `keyword: ''` (`annotations.ts:28`), and
+  a nameless positional class takes no head-name check (`concreteGrammar.ts:359`, `headName = r.named && ...`). Measured
+  (P4): prints and reads back the target, check clean. The body of `Program` is then `seq [block]`; the Model's FIRST is
+  `begin`.
+- **Reading B, prefix.** `begin` before the class keyword `program`, the block with no open. Measured (P5, prefix
+  patched in as a `kw` node before the head): the text prints and reads back with 0 errors, and the check reports a false
+  error, `case-injective @ class Program: case declared folds the keyword of Program onto the style word "begin"`: the
+  check takes the first item of the body for the class keyword (§3.2). The block with no open is the shape §2.3 says to
+  refuse under free layout.
+
+Reading A reaches the target with the slice of §1-§2 alone. The prefix is needed when the class is named, or keeps its
+keyword: `begin program P ... end program` is a prefix `begin`, the keyword `program`, the name `P`; reading A would print
+`P begin program ...` (a positional named class prints its name first). The prefix slice is therefore separate, as R-TXT-51
+(3) says, and not on the path to the target text.
+
+### 3.2 Where the prefix sits, and who reads the head by position (read)
+
+The head is built at `concreteGrammar.ts:597` (`const head: GrammarNode[] = sh.keyword === '' ? [] : [{ t: 'kw', text:
+sh.keyword, src: { k: 'class', cls: r.cls } }];`); a prefix goes before it, as `kw` or `p` nodes with an origin of their
+own (e.g. `{ k: 'classPrefix', cls, index }`), and before the name opt of a positional class. Six readers find the class
+keyword as the first item of the body, by position:
+
+| Reader | Line | Use |
+|---|---|---|
+| parser `classKeywords` | `parser.ts:705` | a class keyword is never inferred by the repair (step A, decision 2) |
+| printer `pathKeyword` | `printer.ts:87-91` | the first segment of a path (R-TXT-28) |
+| printer `classKeywords` | `printer.ts:355` | the role `class` of the token |
+| style check `headKeyword` | `styleCheck.ts:66-69` | `distinct-classes`, `case-injective` (`foldedOntoWord`, `:165`), `block-delimiters` (`:189`), `call-words` (`:269`) |
+| syntax form | `syntaxForm.ts:382` | the class keyword a finding is located at |
+
+With a prefix each would read the prefix. The fix is to find the head keyword by its origin (`src.k === 'class'`) rather
+than by position; `concreteGrammar.ts` itself finds the name by its `opt` (`afterName`, `:191-197`), not by position, and
+needs nothing there.
+
+### 3.3 LL(1) and a shared prefix (H5, confirmed)
+
+Measured (P7, `begin` before both `Program` and `Statement`, both roots): the check reports
+`annotations @ rule Model: not LL(1): "begin" can start two alternatives` and `distinct-classes @ Model: the keyword
+"begin" starts 2 classes: Program, Statement` (plus the two false `case-injective` errors of §3.1). The refusal R-TXT-51 (3)
+asks for comes from `ll1Conflicts`'s alternatives (`styleCheck.ts:402-409`) with no new rule; `distinct-classes` would
+then compare the prefix's first token, which states the same conflict a second time, by the class keyword field. With the
+head keyword read by origin (§3.2), `distinct-classes` compares keywords only, and the shared prefix is the LL(1) finding
+alone. A prefix shared by classes at different positions (one at the top level, one in a containment) is no conflict, and
+the LL(1) check does not report it.
+
+Word tokens of a prefix join the reserved names as per-block words do (§2.1); punctuation joins the tokenizer and `taken`.
+The parser needs nothing beyond `:705`: a prefix is a `kw`/`p` node of the sequence, read by `run` (`parser.ts:1127-1133`),
+and the object rule is predicted by FIRST (`objectRule`, `:719-729`; `descentRule`, `:1002-1004`). The printer prints a
+`kw` node as any other.
+
+## 4. Interplay with R-TXT-51 (4)
+
+### 4.1 A base switch
+
+`withStyleBase` (`syntaxRecord.ts:233-241`) drops only `STYLE_TOKEN_KEYS` from `style` on a switch (R-TXT-49 D10):
+`const options = switched ? Object.fromEntries(Object.entries(kept).filter(([k]) => !(STYLE_TOKEN_KEYS as readonly
+string[]).includes(k))) : kept;`. Per-block tokens live in `classes` and `features`, which a switch never touches: they
+survive a switch among the free-layout styles by construction, and under Indentation they stay in the record, ignored
+with a notice (§2.4), and apply again on a switch back. No change to `syntaxRecord.ts`. Whether R-TXT-51 (4) also means the
+language-wide overrides survive a switch (amending D10) is D3.
+
+### 4.2 An EBNF edit of a per-block token
+
+With the per-node origin of §1.5, `literalField` (`syntaxForm.ts:652-678`) maps the new kinds to the class or feature
+element and a new field (`class.blockOpen`, `class.blockClose`, `feature.blockOpen`, `feature.blockClose`), and `setLiteral`
+rewrites that element's own array at `src.index`, as it rewrites the style's (`:746-750`). The edit changes that block only.
+A block that inherits shows style origins and an edit there is language-wide, as today. `literalDefault` (`:687-692`)
+derives again with the field cleared: for a per-block token that is the inherited style token at that index, or none when
+the inherited array is shorter (the `end program` close over Pascal's `end ;` has an index 1 in both, but over C-like's `}`
+none): undefined, as for a per-item keyword.
+
+### 4.3 The Syntax form, Advanced
+
+The fields are specs in `CLASS` and `FEATURE` (`syntaxForm.ts:88-104`), tier `advanced`, read by `fieldValue` (`:237-269`)
+and written by `setField` (`:306-341`); findings land through `locate` (`:420-481`), where a `class C` or `C.f` `where`
+already maps to the element. The feature fields apply to containments only (as `inline`, `itemKeyword`), the class fields
+to block-layout classes.
+
+**Finding F5 (measured, `probe_form_field`; L2a, not R-TXT-51).** The language-wide token fields of L2a are text inputs
+over array values. `fieldValue` returns the override array (`fieldValue of an override ["end","."] typeof object`), and the
+form's default input shows a value only when it is a string (`ui/SyntaxForm.tsx:350-351`, `value={typeof value === 'string'
+? value : ''}`), so an override shows empty; typing passes the input's string to `setField`, which stores it as is
+(`setField with the input string {"base":"pascal","blockClose":"end program"}`), and the resolution refuses it
+(`faults ["blockClose is not a list of tokens"]`). The list fields (`list.open` ...) are strings and work. The EBNF edit
+path (`setLiteral`) builds arrays and is not affected. L2a's log records the form fields as not verified in the app. The
+per-block fields need the same array input, so the fix (a `tokens` input kind: the array shown joined by spaces, the text
+split on blanks) serves both; D7.
+
+### 4.4 The probe
+
+The metamodel of the probe (`probe_block_tokens.ts`): `Program` with containments `declarations: Declaration[*]` and
+`statements: Statement[*]`, no name; `Declaration` and `Statement` with a mandatory `name` and one optional attribute,
+one-line. Base record: Pascal, roots `uncontained`, `Program` keyword `program`, feature keywords `declaration` and
+`statement`.
+
+| Case | What | Result |
+|---|---|---|
+| P1 | the record today | `program begin` / `declaration begin` ... `end;` / `end;`, round trip 0 errors |
+| P2 | per-block keys added by hand | no issue, same text (F1) |
+| P3 | language-wide `is` / `end` | every block `is ... end`, the target's program line unreachable |
+| P4 | reading A, grammar patched per node | the target text, 0 errors; check clean; names `is`, `program`, `declaration` round trip; EBNF origins wrong (F3) |
+| P5 | reading B, prefix patched | text and round trip fine; a false `case-injective` error (§3.1) |
+| P6 | per-block `<<` `>>` | printed, not read back, check clean (F2) |
+| P7 | shared prefix | LL(1) and `distinct-classes` report it (H5) |
+| P8 | Indentation | blocks as indentation, check clean |
+| P9 | positional Declaration, close `done` | LL(1) conflict reported; a Declaration named `done` lost (F4) |
+| P10 | recovery in and around `is ... end` | one error each, every object read |
