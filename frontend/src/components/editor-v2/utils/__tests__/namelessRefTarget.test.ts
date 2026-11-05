@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { transformSync } from 'esbuild';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import RowValue from '../../nodes/RowValue';
+import { detectValueRenderer } from '../../nodes/valueRenderer';
 
 /**
  * R-TXT-46 D4 — a reference to a nameless object is not broken on the v2-flow canvas.
@@ -47,14 +51,14 @@ const refBranch = (() => {
 const resolveRefs = compile(
     `let values, refTargets, value;\n${refBranch}\nreturn { values, refTargets, value };`,
     ['fv', 'rememberRefTargetName', 'lastSeenRefTargetName'],
-) as (fv: any, r: any, l: any) => { values: string[]; refTargets: Array<{ id: string; name: string; broken?: boolean }>; value: string };
+) as (fv: any, r: any, l: any) => { values: string[]; refTargets: Array<{ id: string; name: string; label?: string; broken?: boolean }>; value: string };
 
-function rowOf(raw: string[], resolved: Array<{ id: string; name: any }>) {
+function rowOf(raw: string[], resolved: Array<{ id: string; name: any; instanceof?: any }>, lastKnown = 'LAST_KNOWN') {
     const remembered: Array<[string, string]> = [];
     const out = resolveRefs(
         { __raw: { values: raw }, values: resolved },
         (id: string, name: string) => { remembered.push([id, name]); },
-        (_id: string) => 'LAST_KNOWN',
+        (_id: string) => lastKnown,
     );
     return { ...out, remembered };
 }
@@ -76,8 +80,8 @@ const isBrokenChip = (v: string) => displayValue(v) === v;
 
 describe('D4 — jjomTransformers: a nameless target resolves', () => {
     it("a target whose name is '' is not broken", () => {
-        const r = rowOf(['p_nameless'], [{ id: 'p_nameless', name: '' }]);
-        expect(r.refTargets).toEqual([{ id: 'p_nameless', name: '' }]);
+        const r = rowOf(['p_nameless'], [{ id: 'p_nameless', name: '', instanceof: { name: 'Port' } }]);
+        expect(r.refTargets).toEqual([{ id: 'p_nameless', name: '', label: ': Port' }]);
     });
 
     it('a named target, as before (control)', () => {
@@ -109,5 +113,80 @@ describe('D4 — IRFormField.displayValue: a nameless target is not a broken chi
         expect(isBrokenChip('p_gone')).toBe(true);
         expect(displayValue('Running')).toBe('Running');
         expect(displayValue(null)).toBe('');
+    });
+});
+
+/**
+ * R-TXT-47 D5 (C2d, P-2026-11-05-0148) — a nameless target is labelled `: <Class>` on the
+ * default view, as its own header reads, instead of an empty slot drawn as a dash.
+ * Report: `docs/discovery/discovery_2026-11-05_textual_c2_syntax_form.md` §3.3.
+ */
+const PORT = { name: 'Port' };
+
+describe('D5 — jjomTransformers: a nameless target carries the label `: <Class>`', () => {
+    it('three nameless Ports: three labels, the names stay empty, the row is not blank', () => {
+        const r = rowOf(['p1', 'p2', 'p3'], ['p1', 'p2', 'p3'].map(id => ({ id, name: '', instanceof: PORT })));
+        expect(r.refTargets).toStrictEqual(['p1', 'p2', 'p3'].map(id => ({ id, name: '', label: ': Port' })));
+        expect(r.values).toEqual([': Port', ': Port', ': Port']);
+        expect(r.value).toBe(': Port, : Port, : Port');
+    });
+
+    it('the memory of names is fed the empty name, never the label', () => {
+        const r = rowOf(['p1'], [{ id: 'p1', name: '', instanceof: PORT }]);
+        expect(r.remembered).toEqual([['p1', '']]);
+    });
+
+    it('a named target carries no label (strict: the key is absent)', () => {
+        const r = rowOf(['p_named'], [{ id: 'p_named', name: 'Port_1', instanceof: PORT }]);
+        expect(r.refTargets).toStrictEqual([{ id: 'p_named', name: 'Port_1' }]);
+        expect(r.values).toEqual(['Port_1']);
+    });
+
+    it('a nameless target without a readable metaclass falls back to `: Object`', () => {
+        const r = rowOf(['p1'], [{ id: 'p1', name: '' }]);
+        expect(r.refTargets[0].label).toBe(': Object');
+    });
+
+    it('a deleted nameless target keeps the broken path, with no label', () => {
+        const r = rowOf(['p_gone'], [], '');
+        expect(r.refTargets).toStrictEqual([{ id: 'p_gone', name: '', broken: true }]);
+    });
+
+    it('the slot the node builds from those values decides a pill, not a dash', () => {
+        const r = rowOf(['p1', 'p2', 'p3'], ['p1', 'p2', 'p3'].map(id => ({ id, name: '', instanceof: PORT })));
+        const decision = detectValueRenderer({ value: r.value, values: r.values, isReference: true, isMany: true } as any);
+        expect(decision.kind).toBe('refPill');
+    });
+});
+
+describe('D5 — RowValue paints the label of a nameless target', () => {
+    const paint = (targets: any[]) => renderToStaticMarkup(createElement(RowValue as any, {
+        decision: { kind: 'refPill', reason: 'test' },
+        values: targets.map((t: any) => t.name),
+        variant: 'row',
+        targets,
+    }));
+
+    it('a reference pill shows `: Port` as its text and title', () => {
+        const html = paint([{ id: 'p1', name: '', label: ': Port' }]);
+        expect(html).toContain('</i>: Port</span>');
+        expect(html).toContain('title="Go to : Port"');
+    });
+
+    it('a singleton pill target takes the label in its title', () => {
+        const html = renderToStaticMarkup(createElement(RowValue as any, {
+            decision: { kind: 'refPill', reason: 'test' },
+            values: [''],
+            variant: 'row',
+            targets: [{ id: 'p1', name: '', label: ': Port' }],
+            pillTargets: new Map([['p1', 'Port']]),
+        }));
+        expect(html).toContain('title="Go to : Port"');
+    });
+
+    it('a named target still shows its name (control)', () => {
+        const html = paint([{ id: 'p2', name: 'Port_1' }]);
+        expect(html).toContain('</i>Port_1</span>');
+        expect(html).toContain('title="Go to Port_1"');
     });
 });
