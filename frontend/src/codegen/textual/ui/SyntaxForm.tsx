@@ -17,7 +17,7 @@ import type { TextMetamodel, TextObject } from '../metamodel';
 import type { DecodedSyntax } from '../syntaxRecord';
 import {
     advancedInEffect, byField, draftPreview, elementMarks, fieldKey, fieldPhrase, fieldValue, fieldsOf, formElements,
-    parseSubsets, setField, subsetsText,
+    parseSubsets, parseTokens, setField, styleTokenFields, subsetsText, tokensText,
 } from '../syntaxForm';
 import type { ElementKey, FieldRef, FormElement, FormField, FormFault, InterfaceMode } from '../syntaxForm';
 import { useSyntaxDraft } from './useSyntaxDraft';
@@ -103,7 +103,7 @@ export default function SyntaxForm({ mm, ids, decoded, storedRaw, objects, metam
     };
 
     const fieldList = (element: ElementKey): ReactNode => {
-        const fs = fieldsOf(mm, ids, element, interfaceMode, metamodelName);
+        const fs = [...fieldsOf(mm, ids, element, interfaceMode, metamodelName), ...(element === 'language' ? styleTokenFields(draft, interfaceMode) : [])];
         const hidden = interfaceMode === 'basic' ? advancedInEffect(draft, element) : 0;
         return (
             <>
@@ -326,6 +326,9 @@ function Field({ element, field, draft, ids, mm, findings, onChange }: FieldProp
         case 'subsets':
             input = <SubsetsInput id={id} value={value as readonly EnumSubset[] | undefined} literals={literalsOf(mm, ids, element)} onCommit={v => onChange(ref, v)} />;
             break;
+        case 'tokens':
+            input = <TokensInput id={id} value={value} placeholder={field.placeholder ?? ''} onCommit={v => onChange(ref, v)} />;
+            break;
         default:
             input = (
                 <input id={id} type="text" className="syntax-form__input" spellCheck={false} placeholder={field.placeholder ?? ''}
@@ -367,5 +370,21 @@ function SubsetsInput({ id, value, literals, onCommit }: { readonly id: string; 
                placeholder={literals.length ? `group: ${literals.slice(0, 2).join(', ')}; …` : 'group: LITERAL, …'}
                onChange={e => setText(e.target.value)} onBlur={() => onCommit(parseSubsets(text))}
                onKeyDown={e => { if (e.key === 'Enter') onCommit(parseSubsets(text)); }} />
+    );
+}
+
+/**
+ * A list of style tokens as one line (B0, F5), the tokens split on blanks, applied when the field is left or on Enter:
+ * applied per keystroke, a line equal to the base would clear itself while it is typed.
+ */
+function TokensInput({ id, value, placeholder, onCommit }: { readonly id: string; readonly value: unknown; readonly placeholder: string; readonly onCommit: (v: string[] | undefined) => void }) {
+    const printed = tokensText(value);
+    const [text, setText] = useState(printed);
+    const last = useRef(printed);
+    if (last.current !== printed) { last.current = printed; setText(printed); }
+    return (
+        <input id={id} type="text" className="syntax-form__input" spellCheck={false} value={text} placeholder={placeholder}
+               onChange={e => setText(e.target.value)} onBlur={() => onCommit(parseTokens(text))}
+               onKeyDown={e => { if (e.key === 'Enter') onCommit(parseTokens(text)); }} />
     );
 }

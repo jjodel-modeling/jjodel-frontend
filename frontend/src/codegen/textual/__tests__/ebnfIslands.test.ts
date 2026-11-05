@@ -31,18 +31,38 @@ describe('ebnfOfDraft', () => {
         expect(shown(edit.draft).text).not.toContain('"input"');
     });
 
-    it('islands every element literal and nothing else: no style token, fixed token or enumeration literal (kills: an island per quoted string)', () => {
+    // Narrowed by B0 (P-2026-11-05-2220): after L2a the style tokens map to their parameter's field, so they are islands
+    // too (R-TXT-48 step 2); the fixed tokens (D11) and the enumeration literals (D8) still are not.
+    it('islands every element literal and every style token and nothing else: no fixed token or enumeration literal (kills: an island per quoted string; style tokens left read only)', () => {
         for (const draft of [PORT_CLIKE, PORT_PASCAL]) {
             const s = shown(draft);
             const { literals } = concreteGrammarEbnfSpans(readDraft(PORT_MM, PORT_IDS, draft).grammar);
             const editable = literals.filter(l => literalField(PORT_MM, PORT_IDS, l.src));
             expect(s.islands.map(i => [i.start, i.end])).toEqual(editable.map(l => [l.start, l.end]));
             expect(s.islands.length).toBeLessThan(literals.length);
+            expect(s.islands.some(i => i.src.k === 'style')).toBe(true);
             for (const i of s.islands) {
-                expect(['style', 'fixed', 'literal']).not.toContain(i.src.k);
+                expect(['fixed', 'literal']).not.toContain(i.src.k);
                 expect(s.text.slice(i.start, i.end)).toBe(i.text);
             }
         }
+    });
+
+    it('a style-token island is one origin at every place, and its edit changes the parameter everywhere (kills: the origin keyed by span; style tokens left read only)', () => {
+        const s = shown();
+        const open = s.islands.filter(i => i.src.k === 'style' && i.src.param === 'blockOpen');
+        expect(open.length).toBeGreaterThan(1);
+        expect(new Set(open.map(i => i.text))).toEqual(new Set(['{']));
+        expect(new Set(open.map(i => i.origin)).size).toBe(1);
+        const edit = setLiteral(PORT_MM, PORT_IDS, PORT_CLIKE, open[0].src, 'begin');
+        if (!edit.ok) throw new Error(edit.reason);
+        expect(edit.at).toEqual({ element: 'language', field: 'language.blockOpen' });
+        expect(edit.draft.style).toEqual({ blockOpen: ['begin'] });
+        const after = shown(edit.draft);
+        const moved = after.islands.filter(i => i.origin === open[0].origin);
+        expect(moved.length).toBe(open.length);
+        expect(new Set(moved.map(i => i.text))).toEqual(new Set(['begin']));
+        expect(after.text).not.toContain('"{"');
     });
 
     it('links the occurrences of one origin: the symbol `&` of Conj twice, one origin (kills: the origin keyed by span)', () => {

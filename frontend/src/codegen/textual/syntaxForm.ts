@@ -13,14 +13,14 @@
  * Pure: no React, no store; the bench imports it.
  */
 
-import { operatorFixity } from './annotations';
+import { operatorFixity, styleTokenFault } from './annotations';
 import type { AnnotationIssue, ClassAnnotation, ElementIds, EnumSubset, FeatureAnnotation, SyntaxAnnotations } from './annotations';
 import { concreteGrammarEbnf, concreteGrammarEbnfSpans } from './concreteGrammar';
-import type { ConcreteGrammar, LiteralSrc, ObjectRule } from './concreteGrammar';
+import type { ConcreteGrammar, LiteralSrc, ObjectRule, StyleParam } from './concreteGrammar';
 import { classFeatures, isNameFeature } from './metamodel';
 import type { TextClass, TextFeature, TextMetamodel, TextObject } from './metamodel';
 import { printTextModel } from './printer';
-import { isStyleBase, STYLE_CATALOG } from './style';
+import { isStyleBase, STYLE_CATALOG, styleOf } from './style';
 import { checkStyle } from './styleCheck';
 import type { StyleFinding } from './styleCheck';
 import { SYNTAX_RECORD_VERSION, syntaxPatch, textualNotation, withStyleBase } from './syntaxRecord';
@@ -30,6 +30,7 @@ export type ElementKey = string;
 
 export type FieldId =
     | 'language.name' | 'language.style' | 'language.classCase' | 'language.literalCase' | 'language.blankBeforeContainment' | 'language.roots'
+    | 'language.blockOpen' | 'language.blockClose' | 'language.assign' | 'language.terminator' | 'language.list.open' | 'language.list.separator' | 'language.list.close'
     | 'class.keyword' | 'class.positional' | 'class.layout' | 'class.nameKeyword' | 'class.namePattern'
     | 'class.operatorSymbol' | 'class.operatorPrecedence' | 'class.operatorAssoc' | 'class.operatorCall'
     | 'feature.keyword' | 'feature.itemKeyword' | 'feature.positional' | 'feature.inline' | 'feature.groupBy' | 'feature.value'
@@ -49,8 +50,8 @@ export interface FormField {
     readonly id: FieldId;
     readonly label: string;
     readonly tier: InterfaceMode;
-    /** `text`, `choice` (one of `options`), `toggle`, `number`, `roots` (`uncontained` or class ids), `subsets`. */
-    readonly input: 'text' | 'choice' | 'toggle' | 'number' | 'roots' | 'subsets';
+    /** `text`, `choice` (one of `options`), `toggle`, `number`, `roots` (`uncontained` or class ids), `subsets`, `tokens` (a list of style tokens as one line). */
+    readonly input: 'text' | 'choice' | 'toggle' | 'number' | 'roots' | 'subsets' | 'tokens';
     readonly options?: readonly string[];
     /** The default the text prints when the field is absent: shown as the placeholder, never stored (F1). */
     readonly placeholder?: string;
@@ -103,8 +104,48 @@ const FEATURE: readonly Spec[] = [
     { id: 'feature.value', label: 'Printed as a name', tier: 'advanced', input: 'toggle' },
 ];
 const ENUM: readonly Spec[] = [{ id: 'enum.subsets', label: 'Groups of literals', tier: 'advanced', input: 'subsets' }];
+/**
+ * The style token overrides (L2a, P-2026-11-05-1430): named in sentences, edited from the EBNF and, in Advanced, in the
+ * rows `styleTokenFields` gives (B0, P-2026-11-05-2220); an array parameter takes the `tokens` input, a list token a text.
+ */
+const STYLE_TOKENS: readonly Spec[] = [
+    { id: 'language.blockOpen', label: 'Block open', tier: 'advanced', input: 'tokens' },
+    { id: 'language.blockClose', label: 'Block close', tier: 'advanced', input: 'tokens' },
+    { id: 'language.assign', label: 'Assignment', tier: 'advanced', input: 'tokens' },
+    { id: 'language.terminator', label: 'Terminator', tier: 'advanced', input: 'tokens' },
+    { id: 'language.list.open', label: 'List open', tier: 'advanced', input: 'text' },
+    { id: 'language.list.separator', label: 'List separator', tier: 'advanced', input: 'text' },
+    { id: 'language.list.close', label: 'List close', tier: 'advanced', input: 'text' },
+];
 
-const LABELS: ReadonlyMap<FieldId, string> = new Map([...LANGUAGE, ...CLASS, ...FEATURE, ...ENUM].map(s => [s.id, s.label]));
+const LABELS: ReadonlyMap<FieldId, string> = new Map([...LANGUAGE, ...STYLE_TOKENS, ...CLASS, ...FEATURE, ...ENUM].map(s => [s.id, s.label]));
+
+/** A style parameter's field, and back. */
+const tokenField = (param: StyleParam): FieldId => `language.${param}` as FieldId;
+const tokenParam = (field: FieldId | undefined): StyleParam | undefined => (STYLE_TOKENS.some(s => s.id === field) ? field!.slice(9) as StyleParam : undefined);
+
+/**
+ * The language's style token rows in a mode (B0, F5): none in Basic; in Advanced one per parameter, the draft base's
+ * tokens as the placeholder, joined by a space, none where the base prints none.
+ */
+export function styleTokenFields(draft: SyntaxAnnotations | null, mode: InterfaceMode): FormField[] {
+    if (mode !== 'advanced') return [];
+    const base = styleOf(draft?.style?.base);
+    return STYLE_TOKENS.map(s => {
+        const param = tokenParam(s.id)!;
+        const shown = param.startsWith('list.') ? base.list[param.slice(5) as 'open'] : base[param as 'assign'].join(' ');
+        return { ...s, ...(shown ? { placeholder: shown } : {}) };
+    });
+}
+
+/** A `tokens` field's value as its line: the tokens joined by one space; empty without an override. */
+export const tokensText = (value: unknown): string => (Array.isArray(value) ? value.join(' ') : '');
+
+/** A `tokens` field's line as its value: the tokens split on blanks; undefined, which clears the override, when it has none. */
+export function parseTokens(text: string): string[] | undefined {
+    const tokens = text.split(/\s+/).filter(Boolean);
+    return tokens.length ? tokens : undefined;
+}
 
 const kindOf = (key: ElementKey): FormElement['kind'] => (key === 'language' ? 'language' : (key.slice(0, key.indexOf(':')) as FormElement['kind']));
 const idOf = (key: ElementKey): string => key.slice(key.indexOf(':') + 1);
@@ -246,7 +287,11 @@ export function fieldValue(record: SyntaxAnnotations | null, ref: FieldRef): unk
         case 'feature.groupBy': return f.groupBy;
         case 'feature.value': return f.value === 'name' ? true : undefined;
         case 'enum.subsets': return record?.enums?.[id]?.subsets;
-        default: return undefined;
+        default: {
+            const param = tokenParam(ref.field);
+            if (!param) return undefined;
+            return param.startsWith('list.') ? record?.style?.list?.[param.slice(5) as 'open'] : record?.style?.[param as 'assign'];
+        }
     }
 }
 
@@ -257,6 +302,22 @@ const isCleared = (v: unknown): boolean => v === undefined || v === null || v ==
 function put<T extends object>(o: T | undefined, key: string, value: unknown): T {
     const { [key]: _old, ...rest } = (o ?? {}) as Record<string, unknown>;
     return (isCleared(value) || (typeof value === 'object' && value !== null && !Array.isArray(value) && !Object.keys(value).length) ? rest : { ...rest, [key]: value }) as T;
+}
+
+/**
+ * The draft with a style token set: a whole array per parameter, a list token in its key (D9), stored only when it differs
+ * from the base's, removed otherwise; an emptied list, and an emptied style, go.
+ */
+function withToken(draft: SyntaxAnnotations, param: StyleParam, value: unknown): SyntaxAnnotations {
+    const base = styleOf(draft.style?.base);
+    if (param.startsWith('list.')) {
+        const key = param.slice(5) as keyof typeof base.list;
+        const v = value === base.list[key] ? undefined : value;
+        return put(draft, 'style', put(draft.style, 'list', put(draft.style?.list, key, v)));
+    }
+    const was = base[param as 'assign'];
+    const same = Array.isArray(value) && value.length === was.length && value.every((t, i) => t === was[i]);
+    return put(draft, 'style', put(draft.style, param, same ? undefined : value));
 }
 
 /** The record with one section's entry replaced; an emptied entry, and an emptied section, go. */
@@ -299,14 +360,17 @@ export function setField(draft: SyntaxAnnotations, ref: FieldRef, value: unknown
         case 'feature.groupBy': return feat(f => put(f, 'groupBy', value));
         case 'feature.value': return feat(f => put(f, 'value', value === true ? 'name' : undefined));
         case 'enum.subsets': return withEntry(draft, 'enums', id, put(draft.enums?.[id], 'subsets', value));
-        default: return draft;
+        default: {
+            const param = tokenParam(ref.field);
+            return param ? withToken(draft, param, value) : draft;
+        }
     }
 }
 
 /** How many Advanced fields of an element the record sets, applicable or not: Basic announces them, nothing in effect hides (D2). */
 export function advancedInEffect(record: SyntaxAnnotations | null, element: ElementKey): number {
     const kind = kindOf(element);
-    const specs = kind === 'language' ? LANGUAGE : kind === 'class' ? CLASS : kind === 'feature' ? FEATURE : ENUM;
+    const specs = kind === 'language' ? [...LANGUAGE, ...STYLE_TOKENS] : kind === 'class' ? CLASS : kind === 'feature' ? FEATURE : ENUM;
     const set = (s: Spec): boolean => !isCleared(fieldValue(record, { element, field: s.id }));
     const advanced = specs.filter(s => s.tier === 'advanced' && set(s)).length;
     return advanced + (kind === 'class' && fieldValue(record, { element, field: 'class.layout' }) === 'call' ? 1 : 0);
@@ -407,16 +471,24 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
         return k !== undefined && kw !== undefined && quoted(message).includes(kw) ? [{ element: k, field: 'class.nameKeyword' }] : [];
     };
     const isFeaturePath = (w: string): boolean => !w.includes(' ') && w.includes('.') && !w.startsWith('style.');
+    /** A `style.<param>` finding: the parameter's fields first, then the Style row, until L2b gives the parameter a row. */
+    const styleAt = (w: string): FieldRef[] => {
+        const param = w.slice(6);
+        const params: string[] = param === 'list' ? ['list.open', 'list.separator', 'list.close']
+            : rule === 'style-tokens' && param === 'blockOpen' && /is the block close too/.test(message) ? ['blockOpen', 'blockClose'] : [param];
+        const fields = params.map(p => tokenField(p as StyleParam)).filter(x => tokenParam(x) !== undefined);
+        return [...fields, 'language.style' as const].map(field => ({ element: 'language', field }));
+    };
 
     switch (rule) {
         case 'distinct-features':
             return { at: [...nameKeywordAt(where.startsWith('class ') ? where.slice(6) : undefined), ...keywords(listAfterColon(message).map(featureKey))], message };
         case 'distinct-classes': return { at: keywords(listAfterColon(message).map(classKey)), message };
         case 'case-injective': return { at: [{ element: 'language', field: where.startsWith('enumeration ') ? 'language.literalCase' : 'language.classCase' }], message };
-        case 'reserved-words': case 'list-tokens': case 'terminator': case 'outer-reference':
-            return { at: [{ element: 'language', field: 'language.style' }], message };
+        case 'reserved-words': case 'list-tokens': case 'terminator': case 'outer-reference': case 'style-tokens':
+            return { at: where.startsWith('style.') ? styleAt(where) : [{ element: 'language', field: 'language.style' }], message };
         case 'block-delimiters':
-            if (where.startsWith('style.')) return { at: [{ element: 'language', field: 'language.style' }], message };
+            if (where.startsWith('style.')) return { at: styleAt(where), message };
             if (where.startsWith('class ')) return { at: keywords([classKey(where.slice(6))]), message };
             return { at: keywords([featureKey(where)]), message };
         case 'operator-fixity': case 'operator-symbols': case 'operator-tokens': case 'operator-follow': {
@@ -433,6 +505,7 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
     const ll1 = message.startsWith('not LL(1): ');
     if (where === 'language') return { at: [{ element: 'language', field: 'language.name' }], message };
     if (where === 'style' || where.startsWith('style ')) return { at: [{ element: 'language', field: styleField(message) }], message };
+    if (where.startsWith('style.')) return { at: styleAt(where), message };
     if (where === 'roots') return { at: [{ element: 'language', field: 'language.roots' }], message };
     if (where.startsWith('enumeration ')) {
         const id = cx.enumId(where.slice(12));
@@ -599,8 +672,8 @@ export function draftPreview(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAn
 
 /**
  * The record field an EBNF literal edits, by its origin (report docs/discovery/discovery_2026-11-05_textual_ebnf_literals.md
- * §3.1): names to ids through `contextOf`. None for an enumeration literal (D8), a fixed token (D11), a style token
- * (read only until step 2), or an element the ids do not hold.
+ * §3.1): names to ids through `contextOf`; a style token to its parameter's field (L2a). None for an enumeration literal
+ * (D8), a fixed token (D11), or an element the ids do not hold.
  */
 export function literalField(mm: TextMetamodel, ids: ElementIds, src: LiteralSrc | undefined): FieldRef | undefined {
     if (!src) return undefined;
@@ -625,6 +698,7 @@ export function literalField(mm: TextMetamodel, ids: ElementIds, src: LiteralSrc
             const id = cx.enumId(src.enumName);
             return id === undefined ? undefined : { element: `enum:${id}`, field: 'enum.subsets' };
         }
+        case 'style': return { element: 'language', field: tokenField(src.param) };
         default: return undefined;
     }
 }
@@ -665,6 +739,7 @@ const EMPTY_IS_DEFAULT: ReadonlySet<LiteralSrc['k']> = new Set(['class', 'featur
 
 /** Why a value is not well formed for an origin's field, or undefined. */
 function malformed(k: LiteralSrc['k'], value: string): string | undefined {
+    if (k === 'style') { const why = styleTokenFault(value); return why ? `"${value}" ${why}` : undefined; }
     if (k === 'feature') return IDENTIFIER.test(value) || PUNCTUATION_KEYWORD.test(value) ? undefined : `"${value}" is not an identifier or a run of punctuation`;
     if (k === 'operatorSymbol') return IDENTIFIER.test(value) || SYMBOL_RUN.test(value) ? undefined : `"${value}" is neither an identifier nor a run of symbol characters`;
     return IDENTIFIER.test(value) ? undefined : `"${value}" is not an identifier`;
@@ -673,8 +748,9 @@ function malformed(k: LiteralSrc['k'], value: string): string | undefined {
 /**
  * The draft with an EBNF literal set to a value, or the reason it is refused (R-TXT-48). A value equal to the printed
  * default is stored as cleared (D5); an empty one is the default where D4 says so and refused elsewhere; a quote, a
- * blank, or a value the field's resolution would drop is refused; an enumeration literal, a fixed token and a style token
- * are read only (D8, D11). A group name renames its own group in the enumeration's list.
+ * blank, or a value the field's resolution would drop is refused; an enumeration literal and a fixed token are read only
+ * (D8, D11). A group name renames its own group in the enumeration's list; a style token replaces its element of the
+ * parameter's effective array, the whole array stored, cleared when equal to the base's (D9).
  */
 export function setLiteral(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAnnotations, src: LiteralSrc | undefined, value: string): LiteralEdit {
     const at = literalField(mm, ids, src);
@@ -692,6 +768,12 @@ export function setLiteral(mm: TextMetamodel, ids: ElementIds, draft: SyntaxAnno
         const subsets = draft.enums?.[idOf(at.element)]?.subsets;
         if (!subsets?.[src.index]) return { ok: false, reason: `${what}: the group is not in the draft` };
         return { ok: true, draft: setField(draft, at, subsets.map((s, i) => (i === src.index ? { ...s, name: value } : s))), at };
+    }
+    if (src.k === 'style') {
+        if (src.param.startsWith('list.')) return { ok: true, draft: setField(draft, at, value), at };
+        const effective = textualNotation(mm, { record: withoutStale(draft, ids), issues: [] }, ids).grammar.style[src.param as 'assign'];
+        if (effective[src.index] === undefined) return { ok: false, reason: `${what}: the token is not in the style` };
+        return { ok: true, draft: setField(draft, at, effective.map((t, i) => (i === src.index ? value : t))), at };
     }
     const cleared = value === literalDefault(mm, ids, draft, src);
     return { ok: true, draft: setField(draft, at, cleared ? undefined : value), at };

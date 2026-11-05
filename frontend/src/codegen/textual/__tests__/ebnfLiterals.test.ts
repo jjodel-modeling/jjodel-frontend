@@ -178,9 +178,9 @@ describe('the field of an EBNF literal (R-TXT-48)', () => {
         }
     });
 
-    it.each(CASES)('$name: an enumeration literal, a fixed token and a style token map to no field (D8, D11)', c => {
+    it.each(CASES)('$name: an enumeration literal and a fixed token map to no field (D8, D11)', c => {
         for (const l of concreteGrammarEbnfSpans(c.grammar()).literals) {
-            if (isElement(l)) continue;
+            if (isElement(l) || l.src?.k === 'style') continue;
             expect(literalField(c.mm, c.ids, l.src)).toBeUndefined();
         }
     });
@@ -303,10 +303,8 @@ describe('the value of an EBNF literal (D4, well-formedness)', () => {
         expect(concreteGrammarEbnfSpans(derived(LIBRARY, d)).literals.filter(l => l.src?.k === 'subset').map(l => l.text)).toEqual(['prose', 'poetry']);
     });
 
-    it('an enumeration literal, a fixed token and a style token are read only (D8, D11)', () => {
+    it('an enumeration literal and a fixed token are read only (D8, D11)', () => {
         expect(refusal(LIBRARY, LIB(), 'FICTION', 'FACT')).toMatch(/read only/);
         expect(refusal(PORT, PORT_CLIKE, '(', '[')).toMatch(/read only/);
-        expect(refusal(PORT, PORT_CLIKE, ',', ';')).toMatch(/read only/);
-        expect(refusal(BOOL, BOOL_PASCAL, 'begin', 'do')).toMatch(/read only/);
     });
 });

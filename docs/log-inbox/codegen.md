@@ -2023,3 +2023,44 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — probes on the merged tree of P-2026-11-05-1455 (L1b 23/23, picker 9/9, guard 15/15 with the direct-write variant); crops checked by the chat (RC-23).
 **Notes**: Rollback tag `pre-textual-ebnf-literals-P-2026-11-05-1522` on `f4751483b` (RC-31). Ticket, low: the 0843 guard probe picks Indentation through the picker, refused since 0910 on its corpus; use the direct-write variant of P-2026-11-05-1455. Worker: `~/.jjodel-lanes/P-2026-11-05-1522/result.json`.
 **Prompt document name**: 2026-11-05 15:22
+
+## 2026-11-05 — feat(codegen): L2a, the style tokens as overrides on the base, a form field per token (P-2026-11-05-1430, P-2026-11-05-1457)
+
+**Prompt**: `claude_2026-11-05_1430_prompt_textual_ebnf_literals_l2a.md`, continued after the context ceiling (RC-51) by `claude_2026-11-05_1457_prompt_textual_ebnf_literals_l2a_cont.md`: lane L2a of the EBNF literals report §4/§5.1. Style token overrides resolved and applied (1), dropped on a base switch and written in a fixed order (2), the `style-tokens` rule (3), a form field per style parameter with the style EBNF literals editable (4), round trips under overrides (5), gates (6), log (7). Lane auto.
+**Files touched**: `frontend/src/codegen/textual/annotations.ts` (`1794d0dd0`), `syntaxRecord.ts` (`e34070b3b`), `styleCheck.ts` (`612626c76`), `syntaxForm.ts` (`eb73f7b49`), `__tests__/styleTokens.test.ts` (new; `1794d0dd0`..`f87481236`), `__tests__/ebnfLiterals.test.ts` (`eb73f7b49`), `docs/log-inbox/codegen.md`, the two prompts' Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 0 errors; vitest 14291 passed, 3 red at import (baseline); build exit 0; check:codegen-lazy ALL GREEN (off, on); check:docs below.
+**Out-of-scope changes**: yes — `__tests__/ebnfLiterals.test.ts`, two L1a assertions pinning style tokens as read only narrowed to the enumeration literal and the fixed token (D-L2a-6, decided by the chat in P-2026-11-05-1457).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no app probe run; the EBNF mode's style literals become editable through `setLiteral`, reachable in the Text tab and not verified in the app.
+**Notes**: Decisions D-L2a-1..7 in `~/.jjodel-lanes/P-2026-11-05-1430/handoff.md` and the commit bodies. `( )` block over the call layout measured: the LL(1) check reports it on PORT via the expression parentheses; without the operator it round-trips, so no new check. Benches in each commit body, every mutant killed.
+**Prompt document name**: 2026-11-05 14:30
+
+## 2026-11-05 — merge: textual-ebnf-literals-step2 takes alfonso-frontend-jjtl (P-2026-11-05-1537)
+
+**Prompt**: `claude_2026-11-05_1537_prompt_textual-ebnf-literals-step2_take_trunk.md`, a direct merge by `lane-run merge --trunk-into` (L1b merged on the trunk); `claude_2026-11-05_1538_prompt_textual-ebnf-literals-step2_take_trunk.md` is a duplicate launch of the same merge during the bridge outage, superseded.
+**Files touched**: merge `2f6c8111d` on the branch.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes. vitest after the merge: 46 failures in 18 files under load 49 to 57; rerun alone 973/974. The one that stays red is genuine: `ebnfIslands.test.ts` (L1b) pins style tokens as read only, and L2a now maps them to fields, so the EBNF mode shows them as islands. R-TXT-48 step 2 wants exactly that; the assertion is narrowed in P-2026-11-05-2220 (B0) with an app check of a style-token island.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — merge of the trunk into the branch.
+**Notes**: Lane folders `~/.jjodel-lanes/P-2026-11-05-1537/` and `-1538/`; rerun output /tmp/rerun1537.out on the Mac.
+**Prompt document name**: 2026-11-05 15:37
+
+## 2026-11-05 — fix(codegen): B0, a tokens input for the style token rows, style-token islands after L2a (P-2026-11-05-2220)
+**Prompt**: `claude_2026-11-05_2220_prompt_textual_ebnf_literals_b0.md`: F5 of the block-tokens report (a `tokens` input kind for the array token fields) and the merge's genuine red in `ebnfIslands.test.ts` (R-TXT-48 step 2).
+**Files touched**: `syntaxForm.ts`, `ui/SyntaxForm.tsx`, `__tests__/styleTokens.test.ts` (f28661bdd); `__tests__/ebnfIslands.test.ts` (e12db26dc).
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-05 14:57
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: yes, the ebnfIslands assertion, declared in the prompt.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probe 13/13 PASS, crops in `~/.jjodel-lanes/P-2026-11-05-2220/`, light, scale 1.
+**Notes**: L2a had labelled the token fields but given them no rows: `styleTokenFields` adds them in Advanced, `fieldsOf` unchanged. List tokens stay text (strings). Gates: typecheck 0; build 0; check:docs 0; lazy off 4 and on 5 PASS; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files 18/18 tests alone but `afterAll` browser close timed out at load 59 (harness). 6 mutants killed.
+**Prompt document name**: 2026-11-05 22:20

@@ -22,7 +22,7 @@
  */
 
 import { TEXTUAL_SYNTAX_KEY } from '../../components/editor-v2/dataManagerOption';
-import { resolveAnnotations, withStyleOptions } from './annotations';
+import { LIST_TOKEN_KEYS, resolveAnnotations, STYLE_TOKEN_KEYS, withStyleOptions } from './annotations';
 import type { AnnotationIssue, ElementIds, SyntaxAnnotations } from './annotations';
 import { deriveBaseGrammar } from './baseGrammar';
 import { deriveConcreteGrammar } from './concreteGrammar';
@@ -48,12 +48,27 @@ const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 
 const WHERE = 'annotations record';
 
+/**
+ * A record's `style` as written: the other keys as given, so a record with no token key encodes as before, then the token
+ * keys in a fixed order and the list's keys in theirs (L2a, report §4.2), so the same overrides give the same string.
+ */
+function orderedStyle(style: NonNullable<SyntaxAnnotations['style']>): Record<string, unknown> {
+    const tokenKeys = new Set<string>(STYLE_TOKEN_KEYS);
+    const out: Record<string, unknown> = Object.fromEntries(Object.entries(style).filter(([k]) => !tokenKeys.has(k)));
+    for (const k of STYLE_TOKEN_KEYS) {
+        const v = style[k];
+        if (v === undefined) continue;
+        out[k] = k === 'list' && isRecord(v) ? Object.fromEntries([...LIST_TOKEN_KEYS.filter(x => v[x] !== undefined).map(x => [x, v[x]]), ...Object.entries(v).filter(([x]) => !(LIST_TOKEN_KEYS as readonly string[]).includes(x))]) : v;
+    }
+    return out;
+}
+
 /** The one string of the key: `v`, then the fields present, in a fixed order. */
 export function encodeSyntax(record: SyntaxAnnotations): string {
     return JSON.stringify({
         v: SYNTAX_RECORD_VERSION,
         ...(record.language !== undefined ? { language: record.language } : {}),
-        ...(record.style !== undefined ? { style: record.style } : {}),
+        ...(record.style !== undefined ? { style: isRecord(record.style) ? orderedStyle(record.style) : record.style } : {}),
         ...(record.roots !== undefined ? { roots: record.roots } : {}),
         ...(record.classes !== undefined ? { classes: record.classes } : {}),
         ...(record.features !== undefined ? { features: record.features } : {}),
@@ -212,10 +227,14 @@ export function styleBaseOf(decoded: DecodedSyntax): StyleBase {
 /**
  * The record with the style `base` chosen (step C3a), every other field kept: C-like, the default, is written as no base,
  * and a style left empty goes, so a switch back gives the record's string before the switch. `null` is no record.
+ * A switch to another base drops the token overrides and keeps the case and blank options (R-TXT-49 D10); the base
+ * already in effect is no switch, and keeps them.
  */
 export function withStyleBase(record: SyntaxAnnotations | null, base: StyleBase): SyntaxAnnotations {
     const r: SyntaxAnnotations = record ?? { v: SYNTAX_RECORD_VERSION };
-    const { base: _old, ...options } = r.style ?? {};
+    const { base: old, ...kept } = r.style ?? {};
+    const switched = (isStyleBase(old) ? old : 'clike') !== base;
+    const options = switched ? Object.fromEntries(Object.entries(kept).filter(([k]) => !(STYLE_TOKEN_KEYS as readonly string[]).includes(k))) : kept;
     const style = base === 'clike' ? options : { base, ...options };
     const { style: _style, ...rest } = r;
     return Object.keys(style).length ? { ...rest, style } : rest;
