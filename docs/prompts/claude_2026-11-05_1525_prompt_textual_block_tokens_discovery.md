@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-1525
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito (discovery, report committed; hard stop)
 Lane: full (discovery, read only)
 Depends: P-2026-11-05-1457 (L2a style token overrides, on textual-ebnf-literals-step2 at 2c15d1761), R-TXT-51
 Worktree: ~/jjodel-w-blocktok, branch textual-block-tokens, from 2c15d1761 (L2a tip; own node_modules)
