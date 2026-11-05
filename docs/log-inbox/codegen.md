@@ -2103,3 +2103,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — B1 is core only; GO given by the chat.
 **Notes**: Union: 73 trunk and 12 branch lines since the base, 0 missing; 21 probes once each, control R-XMI-2 none. `syntaxForm.ts` auto-merged and read: the branch's `LITERAL_NAME` kinds and the trunk's B0 token rows are disjoint. check:docs B: the trunk's `hw-notation.md` closure entry of `892ac50b2` lacked `Corregge` and `Causa`, fixed on the trunk in `27e38755c`.
 **Prompt document name**: 2026-11-05 23:46
+
+## 2026-11-06 — merge: textual-block-tokens into alfonso-frontend-jjtl (P-2026-11-06-0030)
+**Prompt**: `claude_2026-11-06_0030_prompt_merge_textual-block-tokens.md`, a direct merge by `lane-run merge --direct`, no session: `textual-block-tokens` at `f6bb939a9` into `alfonso-frontend-jjtl`, merge base `0832088dc`, 16 commits on the branch side.
+**Files touched**: merge `5dfa13429`: 12 files from the branch side (`docs/discovery/discovery_2026-11-05_textual_block_tokens.md`, `docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-05_1525_prompt_textual_block_tokens_discovery.md`, `docs/prompts/claude_2026-11-05_1541_prompt_textual_block_tokens_b1.md`, `docs/prompts/claude_2026-11-05_2212_prompt_textual_block_tokens_b1_cont.md`, `docs/prompts/claude_2026-11-05_2346_prompt_textual-block-tokens_take_trunk.md`, `frontend/src/codegen/textual/__tests__/blockTokens.test.ts`, `frontend/src/codegen/textual/annotations.ts`, and 4 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `5dfa13429` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14360 tests in 536 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: non applicabile: B1 core only, no UI
+**Notes**: Rollback tag `pre-textual-block-tokens` on `27e38755c` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-06-0030/result.json`.
+**Prompt document name**: 2026-11-06 00:30
