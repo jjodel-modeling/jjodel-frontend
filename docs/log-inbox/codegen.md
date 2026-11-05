@@ -1979,3 +1979,33 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — app probes of P-2026-11-05-0843 (15 checks) and P-2026-11-05-0910 (9 checks); crops c3b-* and ll1-* checked by the chat (RC-23).
 **Notes**: Rollback tag `pre-textual-c3b-indent` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-1413/result.json`.
 **Prompt document name**: 2026-11-05 14:13
+
+## 2026-11-05 — feat(codegen): L1b, the editable literals of the EBNF mode over the shared syntax draft (P-2026-11-05-0921, P-2026-11-05-0945, P-2026-11-05-1415)
+
+**Prompt**: `claude_2026-11-05_0921_prompt_textual_ebnf_literals_l1b.md`, lane L1b of R-TXT-49: (1) the syntax draft lifted into `useSyntaxDraft`, shared by the Syntax form and the EBNF mode; (2) the EBNF mode's element literals as islands edited in place, Save and Discard, findings at the literal. 0921 stopped at the context ceiling (handoff); 0945 died in the bridge outage after its probe; 1415 closed probe, gates and commit.
+**Files touched**: `a44ff8319` (`frontend/src/codegen/textual/ui/useSyntaxDraft.ts` new, `ui/SyntaxForm.tsx`, `__tests__/syntaxDraft.test.ts` new); `c637ebf5f` (`ui/TextualTab.tsx`, `ui/TextualTab.scss`, `ui/SyntaxForm.tsx`, `__tests__/ebnfIslands.test.ts` new).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no. Six files over the two commits, all declared in the DOVE of 0921 (RC-11).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe ALL PASS, 23 checks, crops l1b-1..11 in `~/.jjodel-lanes/P-2026-11-05-1415/`; the GO visivo of the chat is pending.
+**Notes**: 1415 fix: a read-only Monaco neither paints nor hovers markers (`renderValidationDecorations: 'editable'`), so the finding rides on the island's hover; 0945's l1b-6b showed the edit hint alone. Gates on the tree of c637ebf5f: typecheck 0; vitest 14171 passed, 3 baseline import reds; build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on). Red first and mutation bench in the commit bodies.
+**Prompt document name**: 2026-11-05 09:21
+
+## 2026-11-05 — merge: textual-ebnf-literals takes alfonso-frontend-jjtl (P-2026-11-05-1455)
+
+**Prompt**: `claude_2026-11-05_1455_prompt_textual_ebnf_literals_take_trunk.md`: the trunk into the branch, `--no-ff`; two conflicts, `docs/log-inbox/codegen.md` by union, `ui/TextualTab.tsx` keeping C3b, C2b and L1b whole.
+**Files touched**: merge `62fc7d950` on the branch (trunk at `d95d5b9ca`, not the measured `8565e3e84`: 4 docs files later, no code); resolved by hand `docs/log-inbox/codegen.md` (union, trunk first) and `frontend/src/codegen/textual/ui/TextualTab.tsx` (the `../syntaxForm` import, union).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on the merged tree: typecheck 0; vitest 3 baseline import reds, plus 32 in `bashGuard.test.ts` from the open merge (MERGE_HEAD exemption, `bash-guard.mjs:167`), 160/160 rerun alone after the commit; build 0; check:docs 5/5; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no. The merge carries 28 trunk files; the hand edits are the two declared.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probes in `~/.jjodel-lanes/P-2026-11-05-1455/`: L1b 23/23, picker refusal 9/9, guard 15/15 in a variant (Notes); crops l1b-*, ll1-*, c3b-*; GO visivo of the chat pending.
+**Notes**: The 0843 probe as written fails its step 1 identically on the trunk tip: since 0910 the picker refuses Indentation on its record. Variant `probe-guard-direct.mjs` writes Indentation directly, as the pre-0910 picker did: 15/15 on the trunk tip (`trunk-control/`) and 15/15 merged. The picker keeps the trunk's `onStyle`; the branch never changed it.
+**Prompt document name**: 2026-11-05 14:55
+
+**Ticket** (low): `~/.jjodel-lanes/P-2026-11-05-0843/probe.mjs` cannot pass its step 1 on any tree carrying the 0910 picker refusal (`559b61194`); the 1413 entry's «0843 (15 checks)» predates that. `probe-guard-direct.mjs` here is the working copy.
