@@ -191,7 +191,14 @@ describe('the findings at their fields (F4, F5, D9)', () => {
         const fs = errors(readDraft(LIBRARY_MM, LIBRARY_IDS, { v: 1, classes: { C_Lib: { name: { keyword: 'books' } } }, features: { R_Lib_books: { keyword: '{' } } }).faults);
         const books = fs.filter(f => f.at.some(r => fieldKey(r) === at('feature:R_Lib_books', 'feature.keyword')));
         expect(books.map(f => f.message).sort()).toEqual(['the keyword "books" starts 2 features: Library.books', 'the keyword "{" is a block token of the style c-like; not applied']);
-        expect(books.every(f => keysOf(f).join() === at('feature:R_Lib_books', 'feature.keyword'))).toBe(true);
+        expect(books.find(f => f.message.startsWith('the keyword "{"'))!.at.map(fieldKey)).toEqual([at('feature:R_Lib_books', 'feature.keyword')]);
+    });
+
+    it('a name keyword that is a feature\'s keyword: the fault is at both fields (mutant: only the real features located; ticket of P-2026-11-05-0036)', () => {
+        const fs = errors(readDraft(LIBRARY_MM, LIBRARY_IDS, { v: 1, classes: { C_Lib: { name: { keyword: 'books' } } } }).faults);
+        expect(fs).toHaveLength(1);
+        expect(keysOf(fs[0])).toEqual([at('class:C_Lib', 'class.nameKeyword'), at('feature:R_Lib_books', 'feature.keyword')]);
+        expect(byField(fs).get(at('class:C_Lib', 'class.nameKeyword'))?.[0].message).toBe('the keyword "books" starts 2 features: Library.books');
     });
 
     it('byField: one message per fault at each of its fields, naming the others (mutant: also lists the field itself)', () => {

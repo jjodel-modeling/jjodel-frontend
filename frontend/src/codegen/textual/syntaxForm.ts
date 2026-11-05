@@ -400,10 +400,17 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
         return kind === 'class' ? 'class.keyword' : 'feature.keyword';
     };
     const keywords = (keys: (ElementKey | undefined)[]): FieldRef[] => keys.flatMap(k => (k === undefined ? [] : [{ element: k, field: keywordOf(k) }]));
+    /** A class's name keyword when it is a token the message names: the side a list of real features leaves out. */
+    const nameKeywordAt = (cls: string | undefined): FieldRef[] => {
+        const k = cls === undefined ? undefined : classKey(cls);
+        const kw = k === undefined ? undefined : classEntry(draft, idOf(k)).name?.keyword;
+        return k !== undefined && kw !== undefined && quoted(message).includes(kw) ? [{ element: k, field: 'class.nameKeyword' }] : [];
+    };
     const isFeaturePath = (w: string): boolean => !w.includes(' ') && w.includes('.') && !w.startsWith('style.');
 
     switch (rule) {
-        case 'distinct-features': return { at: keywords(listAfterColon(message).map(featureKey)), message };
+        case 'distinct-features':
+            return { at: [...nameKeywordAt(where.startsWith('class ') ? where.slice(6) : undefined), ...keywords(listAfterColon(message).map(featureKey))], message };
         case 'distinct-classes': return { at: keywords(listAfterColon(message).map(classKey)), message };
         case 'case-injective': return { at: [{ element: 'language', field: where.startsWith('enumeration ') ? 'language.literalCase' : 'language.classCase' }], message };
         case 'reserved-words': case 'list-tokens': case 'terminator': case 'outer-reference':
@@ -454,7 +461,7 @@ function locate(f: StyleFinding, g: ConcreteGrammar, mm: TextMetamodel, cx: Cont
             return { at: positional.map(x => ({ element: x, field: 'feature.positional' as const })), message: `the features ${joinNames(names)} have no keyword, so the parser cannot tell which one a value is for` };
         }
         const e = featureEntry(draft, idOf(k));
-        return { at: [{ element: k, field: keywordOf(k) }, ...(e.inline ? [{ element: k, field: 'feature.inline' as const }] : []), ...(e.itemKeyword !== undefined && e.keyword !== undefined ? [{ element: k, field: 'feature.itemKeyword' as const }] : [])], message };
+        return { at: [...nameKeywordAt(objectRuleNamed(g, owner)?.cls ?? owner), { element: k, field: keywordOf(k) }, ...(e.inline ? [{ element: k, field: 'feature.inline' as const }] : []), ...(e.itemKeyword !== undefined && e.keyword !== undefined ? [{ element: k, field: 'feature.itemKeyword' as const }] : [])], message };
     }
     return { at: [], message };
 }
