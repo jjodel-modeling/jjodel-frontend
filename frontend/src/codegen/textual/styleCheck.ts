@@ -8,6 +8,7 @@
  * and the derivation refused, and checks the grammar is LL(1): an annotation can make a style's argument fail locally.
  */
 
+import { styleTokenFault } from './annotations';
 import type { ConcreteGrammar, ExprOperator, GrammarNode, ObjectRule } from './concreteGrammar';
 import type { Matcher } from './parser';
 import { firstSetsOf, word } from './parser';
@@ -30,6 +31,9 @@ export type StyleRule =
     | 'terminator'
     /** No style token, comment opener or string quote starts with `@`: it starts a reference outside the text (R-TXT-32). */
     | 'outer-reference'
+    /** R-TXT-48 (2): each editable style token is one word or one run of punctuation, starts no comment and with no style
+     *  token makes a comment opener, and the block open is not the block close (lane L2a). */
+    | 'style-tokens'
     /** The syntax annotations resolve and apply, and the grammar they give is LL(1) (step T4). */
     | 'annotations'
     /** Step C lane C1a: a symbol has one fixity in an expression. */
@@ -44,7 +48,7 @@ export type StyleRule =
     | 'call-words';
 
 /** Every rule the check evaluates, in the order of its findings. */
-export const STYLE_RULES: readonly StyleRule[] = ['distinct-features', 'distinct-classes', 'case-injective', 'reserved-words', 'block-delimiters', 'list-tokens', 'terminator', 'outer-reference', 'annotations',
+export const STYLE_RULES: readonly StyleRule[] = ['distinct-features', 'distinct-classes', 'case-injective', 'reserved-words', 'block-delimiters', 'list-tokens', 'terminator', 'outer-reference', 'style-tokens', 'annotations',
     'operator-fixity', 'operator-symbols', 'operator-tokens', 'operator-follow', 'call-words'];
 
 export interface StyleFinding {
@@ -270,6 +274,31 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
             else if (twice) error('call-words', at, `the call word "${o.call}" is the call word of ${twice.cls} too`);
             byCall.set(o.call, o);
         }
+    }
+
+    // L2a: the shape of each editable token, which the resolution also refuses in a record (annotations.ts).
+    const editable: [string, readonly string[]][] = [
+        ['blockOpen', s.blockOpen], ['blockClose', s.blockClose], ['assign', s.assign], ['terminator', s.terminator],
+        ['list.open', [s.list.open]], ['list.separator', [s.list.separator]], ['list.close', [s.list.close]],
+    ];
+    for (const [param, ts] of editable) {
+        for (const t of ts) {
+            // A token starting with `@` is outer-reference's finding.
+            if (t.startsWith('@')) continue;
+            const why = styleTokenFault(t);
+            if (why) { error('style-tokens', `style.${param}`, `the ${param} token "${t}" ${why}`); continue; }
+            if (isWord(t)) continue;
+            // The tokenizer reads a comment first: a token that starts one, or that a style token can complete into one.
+            const opener = comments.find(c => t.startsWith(c));
+            if (opener) { error('style-tokens', `style.${param}`, `the ${param} token "${t}" starts with the comment opener "${opener}"`); continue; }
+            for (const c of comments) {
+                const next = c.length > t.length && c.startsWith(t) ? puncts.find(u => u.startsWith(c.slice(t.length))) : undefined;
+                if (next !== undefined) { error('style-tokens', `style.${param}`, `the ${param} token "${t}" followed by "${next}" reads as the comment opener "${c}"`); break; }
+            }
+        }
+    }
+    if (s.blockOpen.length && s.blockOpen[0] === s.blockClose[0]) {
+        error('style-tokens', 'style.blockOpen', `the block open "${s.blockOpen[0]}" is the block close too: an open would read as a close`);
     }
 
     for (const rule of STYLE_RULES) {

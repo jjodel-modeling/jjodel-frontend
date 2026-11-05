@@ -10,9 +10,12 @@ import { describe, expect, it } from 'vitest';
 import { resolveAnnotations, withStyleOptions } from '../annotations';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel } from '../metamodel';
-import { CLIKE_STYLE, PASCAL_STYLE, styleOf } from '../style';
+import { CLIKE_STYLE, INDENT_STYLE, PASCAL_STYLE, styleOf } from '../style';
 import type { NotationStyle } from '../style';
-import { decodeSyntax, encodeSyntax, withStyleBase } from '../syntaxRecord';
+import { checkStyle } from '../styleCheck';
+import { decodeSyntax, encodeSyntax, textualNotation, withStyleBase } from '../syntaxRecord';
+import { PORT_CLIKE, PORT_IDS, PORT_MM, PORT_PASCAL } from './portCorpus';
+import { GARAGE, grammarOf } from './corpus';
 
 const EMPTY_MM: TextMetamodel = { classes: [], enumerations: [] };
 const EMPTY_IDS: ElementIds = { classes: {}, features: {}, enums: {} };
@@ -127,5 +130,50 @@ describe('(2) the record', () => {
         const decoded = decodeSyntax(raw);
         expect(decoded.issues).toEqual([]);
         expect(encodeSyntax(decoded.record!)).toBe(raw);
+    });
+});
+
+describe('(3) the style-tokens rule', () => {
+    /** The `style-tokens` findings of the garage under a style, as [where, message]. */
+    const tokenFindings = (style: NotationStyle): [string, string][] =>
+        checkStyle(grammarOf(GARAGE, style)).filter(f => f.rule === 'style-tokens' && f.level === 'error').map(f => [f.where, f.message]);
+
+    it('holds on every style of the catalog, Pascal\'s "(" beside its "(*" included (mutant: a strict prefix of a comment opener refused whatever follows)', () => {
+        for (const s of [CLIKE_STYLE, PASCAL_STYLE, INDENT_STYLE]) {
+            const fs = checkStyle(grammarOf(GARAGE, s)).filter(f => f.rule === 'style-tokens');
+            expect(fs, s.id).toEqual([{ level: 'ok', rule: 'style-tokens', where: '', message: 'holds' }]);
+        }
+    });
+
+    it('refuses an empty token, a blank, a quote, a mixed token, each at its parameter (mutant: well-formedness not checked here)', () => {
+        expect(tokenFindings({ ...CLIKE_STYLE, assign: [''] })).toEqual([['style.assign', 'the assign token "" is empty']]);
+        expect(tokenFindings({ ...PASCAL_STYLE, blockClose: ['end x', ';'] })).toEqual([['style.blockClose', 'the blockClose token "end x" holds a blank']]);
+        expect(tokenFindings({ ...CLIKE_STYLE, list: { ...CLIKE_STYLE.list, open: '<"' } })).toEqual([['style.list.open', 'the list.open token "<"" holds a quote']]);
+        expect(tokenFindings({ ...PASCAL_STYLE, terminator: ['a;'] })).toEqual([['style.terminator', 'the terminator token "a;" is neither a word nor a run of punctuation']]);
+    });
+
+    it('refuses a token that starts with a comment opener (mutant: the opener check dropped)', () => {
+        expect(tokenFindings({ ...CLIKE_STYLE, terminator: ['//'] })).toEqual([['style.terminator', 'the terminator token "//" starts with the comment opener "//"']]);
+        expect(tokenFindings({ ...PASCAL_STYLE, list: { ...PASCAL_STYLE.list, close: '--)' } })).toEqual([['style.list.close', 'the list.close token "--)" starts with the comment opener "--"']]);
+        expect(tokenFindings({ ...PASCAL_STYLE, blockOpen: ['(*'], emptyBlock: ['(*', 'end', ';'] })).toEqual([['style.blockOpen', 'the blockOpen token "(*" starts with the comment opener "(*"']]);
+    });
+
+    it('refuses a strict prefix of a comment opener that a style token can complete (mutant: only "starts with" checked)', () => {
+        expect(tokenFindings({ ...CLIKE_STYLE, terminator: ['/'] })).toEqual([['style.terminator', 'the terminator token "/" followed by "/" reads as the comment opener "//"']]);
+        expect(tokenFindings({ ...PASCAL_STYLE, assign: ['-'] })).toEqual([['style.assign', 'the assign token "-" followed by "-" reads as the comment opener "--"']]);
+        expect(tokenFindings({ ...PASCAL_STYLE, terminator: ['*'] })).toEqual([['style.list.open', 'the list.open token "(" followed by "*" reads as the comment opener "(*"']]);
+    });
+
+    it('refuses a block open equal to the block close (mutant: open = close not checked)', () => {
+        expect(tokenFindings({ ...CLIKE_STYLE, blockOpen: ['|'], blockClose: ['|'], emptyBlock: ['|', '|'] })).toEqual([['style.blockOpen', 'the block open "|" is the block close too: an open would read as a close']]);
+    });
+
+    it('reaches a record: a relational fault is a style-tokens error, a malformed token an annotations error, both at the parameter', () => {
+        const rec = (style: Record<string, unknown>): SyntaxAnnotations => ({ ...PORT_CLIKE, style } as SyntaxAnnotations);
+        const findings = (r: SyntaxAnnotations) => checkStyle(textualNotation(PORT_MM, { record: r, issues: [] }, PORT_IDS).grammar).filter(f => f.level === 'error').map(f => [f.rule, f.where]);
+        expect(findings(rec({ blockOpen: ['|'], blockClose: ['|'] }))).toContainEqual(['style-tokens', 'style.blockOpen']);
+        expect(findings(rec({ terminator: ['//'] }))).toContainEqual(['style-tokens', 'style.terminator']);
+        expect(findings(rec({ terminator: ['a b'] }))).toEqual([['annotations', 'style.terminator']]);
+        expect(findings(PORT_PASCAL).filter(([r]) => r === 'style-tokens')).toEqual([]);
     });
 });
