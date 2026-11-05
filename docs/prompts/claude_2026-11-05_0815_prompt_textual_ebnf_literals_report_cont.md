@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0815
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane fast · 50382685f · nessuna verifica visiva (discovery; report §4-§5)
 Lane: fast (discovery, read only; report §0-§3 committed at a61e4fdfc)
 Depends: P-2026-11-05-0746 (hard-stop at the ceiling; handoff in its lane folder)
 Worktree: ~/jjodel-w-ebnflit, branch textual-ebnf-literals (the same tree)

@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0746
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane fast · a61e4fdfc · nessuna verifica visiva (discovery; §0-§3, stopped at the context ceiling, continued by P-2026-11-05-0815)
 Lane: full (discovery, read only)
 Depends: P-2026-11-05-0724 (C2b Syntax form merged, c3a469c71), R-TXT-48 (c4e446a9e)
 Worktree: ~/jjodel-w-ebnflit, branch textual-ebnf-literals, from c4e446a9e (own node_modules from npm ci)
