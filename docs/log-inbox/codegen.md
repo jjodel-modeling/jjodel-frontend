@@ -2009,3 +2009,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Prompt document name**: 2026-11-05 14:55
 
 **Ticket** (low): `~/.jjodel-lanes/P-2026-11-05-0843/probe.mjs` cannot pass its step 1 on any tree carrying the 0910 picker refusal (`559b61194`); the 1413 entry's «0843 (15 checks)» predates that. `probe-guard-direct.mjs` here is the working copy.
+
+## 2026-11-05 — merge: textual-ebnf-literals into alfonso-frontend-jjtl (P-2026-11-05-1522)
+
+**Prompt**: `claude_2026-11-05_1522_prompt_merge_textual-ebnf-literals.md`, a direct merge by `lane-run merge --direct`, no session: `textual-ebnf-literals` at `df8678701` into `alfonso-frontend-jjtl` (the branch took the trunk in P-2026-11-05-1455, TextualTab.tsx resolved by hand). R-TXT-48 step 1, lane L1b: the syntax draft shared by the Syntax form and the EBNF mode (`useSyntaxDraft`), editable literal islands with a content widget, linked occurrences, findings in the island's hover, Discard and Save. Lane auto.
+**Files touched**: merge `eddaf1e6d`, the branch side (`frontend/src/codegen/textual/ui/useSyntaxDraft.ts`, `ui/SyntaxForm.tsx`, `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `__tests__/ebnfIslands.test.ts`, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `eddaf1e6d`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 14257 tests, 3 red at import (baseline), hooks 967.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — probes on the merged tree of P-2026-11-05-1455 (L1b 23/23, picker 9/9, guard 15/15 with the direct-write variant); crops checked by the chat (RC-23).
+**Notes**: Rollback tag `pre-textual-ebnf-literals-P-2026-11-05-1522` on `f4751483b` (RC-31). Ticket, low: the 0843 guard probe picks Indentation through the picker, refused since 0910 on its corpus; use the direct-write variant of P-2026-11-05-1455. Worker: `~/.jjodel-lanes/P-2026-11-05-1522/result.json`.
+**Prompt document name**: 2026-11-05 15:22
