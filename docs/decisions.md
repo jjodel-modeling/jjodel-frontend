@@ -7260,6 +7260,19 @@ Ratified as recommended, evidence: read (code of the grouped print), verified: n
   the same Save as one undo step. Two steps: (1) the literals of single elements, the style tokens read only; (2) then
   the style tokens too (`{`, `}`, `;`, `:=`, `begin` ...): editing one at any place changes it everywhere, written as
   overrides on top of `style.base`, a custom style; this extends the record and the style checks. Step C, after C2.
+- **R-TXT-49** (2026-11-05, provisional, unattended, evidence: measured, verified: none, reversible: branch). **Editable
+  EBNF literals (R-TXT-48): the twelve decisions of docs/discovery/discovery_2026-11-05_textual_ebnf_literals.md §5.3,
+  taken under lane auto (Alfonso 07:38), for him to ratify.** D1 the origin is an optional `src` on the `kw` and `p`
+  grammar nodes plus a spans printer, the EBNF text unchanged; D2 a read-only model with decorations and a content widget
+  over the literal; D3 the draft lifted into `ui/useSyntaxDraft.ts`, owned by the Text tab, shared by the Syntax form and
+  the EBNF mode; D4 an empty value means the default for a class keyword, a feature keyword and a call word, and is
+  refused for a per-item keyword, a name keyword, an operator symbol and a group name; D5 a value equal to the printed
+  default is stored as cleared; D6 the draft has no undo of its own, Cmd/Ctrl+Z goes to the app's undo only when the
+  draft is clean; D7 every element literal is editable in Basic and Advanced alike; D8 enumeration literals stay read
+  only; D9 style overrides are whole arrays per parameter in `style`, stored only when different from the base, with a
+  new `style-tokens` rule; D10 switching the base drops the token overrides; D11 the fixed tokens, comments and the string
+  quote stay read only; D12 the record stays at version 1. Lanes L1a, L1b, L2a, L2b; the visual ones (L1b, L2b) merge
+  after the chat's crop check.
 
 ## R-FA: `forall` and `exists` over several variables (decisions 2026-11-02)
 
