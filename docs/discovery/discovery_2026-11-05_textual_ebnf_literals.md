@@ -400,3 +400,58 @@ handling; L2a adds the round-trip case.
   the string before the switch when there were overrides; the app's undo does.
 - **Syntax form**: the Language element gains one line per editable parameter, Advanced, each with Reset (back to the
   base). The form and the EBNF share the draft (§3.2), so a token edited in either shows in both.
+
+## 5. Lane plan and decisions
+
+### 5.1 Lanes
+
+Four lanes, two per step, each at most five files (NON-NEGOTIABLE 19). None touches a file of the critical zone
+(CLAUDE.md §3.1): no Layer Impact Report. The record is the metamodel's syntax annotation, written by `writeSyntax`
+(one `set_state`), not a VersionFixer migration.
+
+| Lane | Step | Files | Visual |
+|---|---|---|---|
+| **L1a** pure | 1 | `concreteGrammar.ts` (optional `src` on `kw`/`p`, the style `src` through `tokens(param, ts)`, `concreteGrammarEbnfSpans` wrapped by `concreteGrammarEbnf`, text byte for byte unchanged); `syntaxForm.ts` (origin to `FieldRef` through `contextOf`, the printed default by a second derivation and value == default stored cleared, empty refused per D4, well-formedness per field, `"` refused); one new test file under `__tests__/` (the probe's six grammars: spans == quoted strings of the EBNF, every element origin maps to a field, `annotations.test.ts:293` still equal) | no |
+| **L1b** UI | 1 | `ui/useSyntaxDraft.ts` (new: draft, base, `storedChange`, reading, gate, save, lifted from `SyntaxForm`); `ui/SyntaxForm.tsx` (one optional prop, own state without it); `ui/TextualTab.tsx` (EBNF mode on `draftPreview(...).ebnf`, islands, content widget, linked occurrences, markers, bar with Save and Discard, Cmd+Z per D6); `ui/TextualTab.scss` (island, linked, widget classes on existing tokens); `ui/textualMonaco.ts` only if a theme rule is needed | **yes**: crops of the EBNF mode clean, an island open, a finding at a literal, the bar dirty; merge waits for Alfonso's GO |
+| **L2a** pure | 2 | `annotations.ts` (the optional token keys, their validation in `resolveAnnotations`, `withStyleOptions` with `list` merged and `reservedNames`, `emptyBlock` derived; the helper lives here, so `style.ts` is not touched); `syntaxRecord.ts` (`withStyleBase` drops token keys, the fixed key order of `style`); `styleCheck.ts` (`style-tokens`); `syntaxForm.ts` (`FieldId` per parameter, `locate` of `style.<param>`, the setter); one test file (C-like and Pascal overrides round-trip, each `style-tokens` case, block `(`/`)` over a call layout, a name equal to a new word token) | no |
+| **L2b** UI | 2 | `ui/TextualTab.tsx` (picker `<base> (custom)`, style-token islands enabled); `ui/SyntaxForm.tsx` (the token lines with Reset, Advanced) | **yes**: picker custom, a token edited at one place and changed everywhere, a token finding; merge waits for the GO |
+
+Order: L1a, then L1b and L2a side by side (disjoint files; L2a needs L1a's style `src`), then L2b after both. L1a and L2a
+close with the typecheck, the build and the textual tests; L1b and L2b with the same plus the visual smoke.
+
+### 5.2 Risks
+
+- **One text, two origins.** Pascal's `;` is both `blockClose[1]` and `terminator[0]` (`style.ts:67`, `:70`). The linked
+  decoration (§2.3) follows the origin, not the text, so editing the `;` that closes a block leaves the terminator `;`
+  as it was. Correct by R-TXT-48 (the unit is the origin) but surprising: the hover names the parameter.
+- **Inferred origins.** The probe's own rules were wrong twice (§1.3); option (A) puts the origin at the creating line,
+  and L1a's test compares spans with the printed text on six grammars so that a missed `src` shows as a failure.
+- **Older builds** print the base's tokens with no notice (§4.2, accepted under D12).
+- **`StyleRule` gains a member**: an exported union, not an interface property; C1a did the same with five rules.
+  Named here so that the L2a prompt lists it.
+
+### 5.3 Decisions
+
+Recommendations of this report; D7 and D12 answered by the chat under lane auto (P-2026-11-05-0815). The others wait for
+ratification.
+
+- **D1** The origin is an optional `src` on `kw` and `p`, set where the node is created, and a spans printer; not a side
+  table from a second walk (§1.4).
+- **D2** The editor is a read-only model with decorations and a content widget laid over the literal; no writable model
+  (§2.2, §2.3).
+- **D3** The draft is lifted into `ui/useSyntaxDraft.ts`, owned by `TextualTab`, shared by the form and the EBNF; the EBNF
+  mode shows the draft's EBNF (§3.2).
+- **D4** An empty value means the default for a class keyword, a feature keyword and a call word; it is refused for a
+  per-item keyword, a name keyword, an operator symbol and a group name, whose clearing removes a structure (§3.1).
+- **D5** A value equal to the printed default is stored as cleared, the default computed by deriving with the field
+  cleared (§3.1).
+- **D6** The draft has no undo of its own; Cmd/Ctrl+Z in the EBNF editor goes to the app's undo only when the draft is
+  clean (§2.3).
+- **D7** (answered) Every element literal is editable in the EBNF mode in Basic and Advanced alike: opening the EBNF mode
+  is itself the disclosure.
+- **D8** Enum literals stay read only: they are metamodel names, not syntax (§1.2).
+- **D9** Style overrides are whole arrays per parameter in `style`, next to the options, stored only when different from
+  the base; `emptyBlock` and `reservedNames` are derived; a new rule `style-tokens` checks one token's shape (§4.2-§4.4).
+- **D10** Switching the base drops the token overrides and keeps the case and blank options, one undo step (§4.6).
+- **D11** The fixed tokens `(` `)` `.` `[` `]` `@`, the comments and the string quote stay read only in both steps (§4.1).
+- **D12** (answered) The record stays at version 1: the token overrides are additive and optional.
