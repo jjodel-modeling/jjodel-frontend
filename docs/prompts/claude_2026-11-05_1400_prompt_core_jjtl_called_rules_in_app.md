@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-1400
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · e68d12776 · discovery, tickets #607-#610
 Lane: full (discovery with probes; no product code; unattended)
 Depends: none
 Worktree: ~/jjodel-w-corexf, branch hw-core-jjtl-app (from the trunk commit this was cut from)
