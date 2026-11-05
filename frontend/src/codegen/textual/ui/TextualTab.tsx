@@ -531,6 +531,31 @@ export function heldByCut(clip: CutClip | null, base: Pick<EditBase, 'mm' | 'obj
     return clip.spans.filter(s => gone.has(s.id)).length;
 }
 
+/**
+ * Step C lane C3b (R-TXT-41 D2, R-TXT-43, R-TXT-37): the deletions that ask before the pause applies them, counted at
+ * the top of each deleted subtree. Measured on the step C corpus, a truncated indentation text deletes 3 to 9 such
+ * subtrees, while deleting one printed block deletes 1, with what it contains.
+ */
+export const GUARD_ROOTS = 3;
+
+/** What the guard asks about: the objects the plan deletes, contents included, of the printed ones. */
+export interface DeletionGuard {
+    readonly deleted: number;
+    readonly total: number;
+    /** Every printed object goes (R-TXT-43). */
+    readonly all: boolean;
+}
+
+/** The guard of an applicable plan: `GUARD_ROOTS` deleted subtrees or more, or every object; null otherwise. */
+export function deletionGuard(base: Pick<EditBase, 'mm' | 'objects'>, plan: TextEditPlan): DeletionGuard | null {
+    if (!plan.diff || !plan.lines?.length) return null;
+    const gone = deletedObjects(base.mm, base.objects, plan.diff.ops);
+    if (!gone.size) return null;
+    const roots = plan.diff.ops.filter(op => op.op === 'delete' && gone.has(op.model)).length;
+    const all = base.objects.every(o => gone.has(o.id));
+    return all || roots >= GUARD_ROOTS ? { deleted: gone.size, total: base.objects.length, all } : null;
+}
+
 /** A marker of the text: the offsets and the message. */
 export interface TextMark {
     readonly start: number;
@@ -591,7 +616,9 @@ function NotationIssues({ issues, warnings }: { readonly issues: readonly Annota
 /** What the bar says of the edit: a decision, or a step of the application. */
 type EditStatus = EditDecision | { readonly kind: 'editing' } | { readonly kind: 'applying' } | { readonly kind: 'applied'; readonly failed: number; readonly named?: number }
     /** T7 D-5: a cut's objects wait for their paste. */
-    | { readonly kind: 'cut'; readonly count: number };
+    | { readonly kind: 'cut'; readonly count: number }
+    /** C3b: the deletions of the edit wait for a confirmation; `kept`, the user cancelled them. */
+    | ({ readonly kind: 'guard' } & DeletionGuard) | { readonly kind: 'kept' };
 
 /** The bar's line for an edit status, and whether it reads as an error. */
 export function editStatusText(s: EditStatus): { readonly text: string; readonly error: boolean } {
@@ -604,6 +631,11 @@ export function editStatusText(s: EditStatus): { readonly text: string; readonly
         case 'refused': return { text: `Not applied: ${s.reasons[0]}${s.reasons.length > 1 ? ` (+${s.reasons.length - 1})` : ''}`, error: true };
         case 'unchanged': return { text: 'No change', error: false };
         case 'cut': return { text: `Cut · paste to move ${s.count === 1 ? 'it' : 'them'}`, error: false };
+        case 'guard': return {
+            text: s.all ? `Not applied · deletes every object (${s.total}), confirm below` : `Not applied · deletes ${s.deleted} objects of ${s.total}, confirm below`,
+            error: false,
+        };
+        case 'kept': return { text: 'Not applied · deletions cancelled', error: true };
         case 'apply': case 'applying': return { text: 'Applying…', error: false };
         case 'applied': return s.failed
             ? { text: `Applied, ${s.failed} line${s.failed === 1 ? '' : 's'} failed`, error: true }
@@ -968,6 +1000,8 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     // R-TXT-35: the reference tokens of the last agreement (a print or an application), carried as decorations.
     const refDecorationsRef = useRef<{ ids: string[]; refs: Map<string, RefSpan> }>({ ids: [], refs: new Map() });
     const clipRef = useRef<CutClip | null>(null);
+    // C3b: the text whose deletions the guard asks about, while it asks, and the refusals the panel confirmed for it.
+    const guardTextRef = useRef<{ readonly text: string; readonly confirmed?: readonly ApplyRefusal['code'][] } | null>(null);
     // R-TXT-35 (P-2026-11-03-1535): the rewrite of the paths runs; a token was held under the caret.
     const rewritingRef = useRef(false);
     const heldRef = useRef(false);
@@ -1187,8 +1221,12 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         if (editor && editor.getValue() !== syncRef.current?.text) pause.poke(); // typed during the run (not the rewrite of the paths)
     };
 
-    /** Reads the editor's text after a pause; `confirmed`, from the panel, drops the refusals it confirms. */
-    const readEdit = (confirmed?: readonly ApplyRefusal['code'][]): void => {
+    /**
+     * Reads the editor's text after a pause; `confirmed`, from the panel, drops the refusals it confirms; `deletions`,
+     * from the guard's Confirm, applies the deletions it asked about.
+     */
+    const readEdit = (confirmed?: readonly ApplyRefusal['code'][], deletions = false): void => {
+        guardTextRef.current = null;
         const editor = editorRef.current;
         const sync = syncRef.current;
         const r = readRef.current;
@@ -1220,7 +1258,28 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
         setConfirm(d.kind === 'confirm'
             ? { text, rows: confirmRows({ plan, parsed, mm: r.base.mm, grammar: r.base.grammar, model: r.base.objects, referencedElsewhere: ev.referencedElsewhere }) }
             : null);
+        // C3b: a truncation, a lost indent or a select-all-delete reads as a valid text; its deletions ask first.
+        const guard = d.kind === 'apply' && !deletions ? deletionGuard(r.base, plan) : null;
+        if (guard) {
+            guardTextRef.current = { text, ...(confirmed ? { confirmed } : {}) };
+            setStatus({ kind: 'guard', ...guard });
+            return;
+        }
         if (d.kind === 'apply') void apply(text, parsed, plan); else setStatus(d);
+    };
+
+    /** C3b: the guard's Confirm applies the text it asked about; an edit since then is read afresh. */
+    const onGuardConfirm = (): void => {
+        const editor = editorRef.current;
+        const asked = guardTextRef.current;
+        if (!editor) return;
+        if (asked?.text === editor.getValue()) readEdit(asked.confirmed, true); else readEdit();
+    };
+
+    /** C3b: Cancel keeps the text and the model; the next edit reads the text again. */
+    const onGuardCancel = (): void => {
+        guardTextRef.current = null;
+        setStatus({ kind: 'kept' });
     };
 
     /** T7 D-5: the change of a cut makes the clip; an identical paste re-attaches its spans and ends it. */
@@ -1456,6 +1515,25 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                         )}
                         {mode === 'text' && confirm && confirm.rows.length > 0 && (
                             <TextConfirmPanel rows={confirm.rows} busy={status.kind === 'applying'} onConfirm={onConfirm} />
+                        )}
+                        {mode === 'text' && status.kind === 'guard' && (
+                            <section className="textual-tab__confirm" aria-label="Deletions to confirm">
+                                <header className="textual-tab__confirm-head">
+                                    <i className="bi bi-exclamation-triangle" aria-hidden="true" />
+                                    <span>{status.all
+                                        ? `The text deletes every object of the model (${status.total})`
+                                        : `The text deletes ${status.deleted} objects of ${status.total}`}</span>
+                                    <button type="button" className="textual-tab__create" onClick={onGuardConfirm}
+                                            title="Apply the text with these deletions, as one undo step">
+                                        <i className="bi bi-check2" aria-hidden="true" />
+                                        Confirm
+                                    </button>
+                                    <button type="button" className="textual-tab__stale-reload" onClick={onGuardCancel}
+                                            title="Keep the text and the model as they are">
+                                        Cancel
+                                    </button>
+                                </header>
+                            </section>
                         )}
                     </>
                 )}
