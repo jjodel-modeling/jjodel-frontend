@@ -1965,3 +1965,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: non applicabile — a merge of the trunk into the branch; the C3b crops c3b-* and ll1-* were checked by the chat before it.
 **Notes**: Lane folder `~/.jjodel-lanes/P-2026-11-05-0943/` (outcome died, 222 min).
 **Prompt document name**: 2026-11-05 09:43
+
+## 2026-11-05 — merge: textual-c3b-indent into alfonso-frontend-jjtl (P-2026-11-05-1413)
+
+**Prompt**: `claude_2026-11-05_1413_prompt_merge_textual-c3b-indent.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c3b-indent` at `e04259214` into `alfonso-frontend-jjtl` (the branch took the trunk in P-2026-11-05-0943). Step C lane C3b: the deletion guard of the Text tab (R-TXT-41 D2, R-TXT-43), the indentation style, Indentation in the picker and the Syntax form, the line-aware LL(1) check and the picker refusing a refused style (R-TXT-50). Lane auto.
+**Files touched**: merge `45fcd7233`, the branch side (`frontend/src/codegen/textual/parser.ts`, `concreteGrammar.ts`, `style.ts`, `printer.ts`, `styleCheck.ts`, `syntaxForm.ts`, `annotations.ts`, `ui/TextualTab.tsx`, their tests incl. `indent.test.ts` and `deletionGuard.test.ts`, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `45fcd7233`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 14244 tests, 3 red at import (baseline), hooks 967.
+**Out-of-scope changes**: yes — syntaxForm.ts:281 and annotations.ts:239, one line each, approved by the chat (P-2026-11-05-0843).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probes of P-2026-11-05-0843 (15 checks) and P-2026-11-05-0910 (9 checks); crops c3b-* and ll1-* checked by the chat (RC-23).
+**Notes**: Rollback tag `pre-textual-c3b-indent` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-1413/result.json`.
+**Prompt document name**: 2026-11-05 14:13
