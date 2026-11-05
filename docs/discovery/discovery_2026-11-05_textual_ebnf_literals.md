@@ -282,3 +282,121 @@ construction, and a store change under them goes through `storedChange` (`:623-6
 - **Save**: the same `saveGate` (`:557-567`, R-TXT-47 D1's three blocks), `recordToSave` (`:570`), `writeSyntax`
   (`openTextualTab.tsx:56-62`, one `set_state`, one undo step). The EBNF bar's lock becomes the draft's state with Save
   and Discard: a visual change.
+
+## 4. Step 2: style tokens as overrides on `style.base`
+
+Continued by P-2026-11-05-0815 (the 0746 session stopped at the context ceiling, RC-51; findings gathered by 0746 and
+listed in its `handoff.md`, re-read here at the lines cited). Added to the files read: `style.ts` (whole, 89 lines),
+`annotations.ts` (:228-249, :316-326), `syntaxRecord.ts` (:44-63, :205-224), `styleCheck.ts` (:16-48, :150-211, :268-282),
+`ui/TextualTab.tsx` (:1375-1395 and a grep), `syntaxForm.ts` (a grep of `language.style`).
+
+### 4.1 What a token edit is
+
+A style token is printed in many places (`{`/`}` six times in BOOL, `begin` and `end` six, §1.3) and has one origin, the
+style parameter: editing it at any place changes it everywhere (R-TXT-48 (2)). The editable parameters are the ones the
+EBNF prints (§1.1): `blockOpen`, `blockClose`, `assign`, `terminator`, `list.open`, `list.separator`, `list.close`.
+Not editable: `emptyBlock` (not printed in the EBNF, `concreteGrammar.ts:700`; derived, §4.3), `reservedNames` (derived),
+`comments`, `string.quote` (not in the EBNF; form-only or out of scope), and the fixed tokens `(` `)` of calls and
+expressions and `.` `[` `]` `@` of references (§1.2, §5 D11).
+
+The two catalog styles (`style.ts:43-75`):
+
+| Parameter | C-like | Pascal |
+|---|---|---|
+| `blockOpen` | `['{']` | `['begin']` |
+| `blockClose` | `['}']` | `['end', ';']` |
+| `emptyBlock` | `['{}']` (one token) | `['begin', 'end', ';']` (open + close) |
+| `assign` | `[]` | `[':=']` |
+| `terminator` | `[]` | `[';']` |
+| `list` | `[` `,` `]` | `(` `,` `)` |
+| `reservedNames` | `[]` | `['begin', 'end']` (exactly the word tokens) |
+
+### 4.2 The record
+
+`SyntaxAnnotations.style` (`annotations.ts:69`) is `{ base?, classCase?, literalCase?, blankBeforeContainment? }`. Step 2
+adds optional keys next to them (NON-NEGOTIABLE 11 allows optional properties):
+`blockOpen?: string[]`, `blockClose?: string[]`, `assign?: string[]`, `terminator?: string[]`,
+`list?: { open?: string; separator?: string; close?: string }`.
+
+- **Whole array per parameter.** An edit of the token at index `i` of `blockClose` writes the whole array with element `i`
+  replaced; the literal's `src` carries `{ k: 'style'; param; index }` (§1.4). The arrays keep their length: the EBNF edits
+  the text between quotes, not the structure (R-TXT-48), so a Pascal `blockClose` stays two tokens and a C-like `assign`
+  stays empty (it has no literal to edit).
+- **Stored only when different from the base.** A parameter equal to the base's is removed from `style`, as the form never
+  stores a default (§3.1); an empty `style` goes, as `withStyleBase` already does (`syntaxRecord.ts:221`).
+- **Key order.** `encodeSyntax` writes `style` as the object it is given (`syntaxRecord.ts:56`, `{ style: record.style }`),
+  so two drafts with the same overrides in a different insertion order encode to two strings and the draft reads as
+  changed. The setter builds `style` in a fixed order (`base`, the three options, then the token keys in the table's
+  order).
+- **Version.** The record stays `v: 1` (§5 D12, answered by the chat): the field is additive and optional. An older build
+  ignores unknown `style` keys silently (`annotations.ts:236-246` reads four named keys, nothing else), so it prints the
+  base's tokens and its picker (`withStyleBase`, `:218-219`, spreads every other key) keeps the overrides through a base
+  switch. The cost is that an older build shows a different notation with no notice; accepted with D12.
+
+### 4.3 Resolution and the effective style
+
+- `resolveAnnotations` (`annotations.ts:236-246`) validates the new keys like the four it has: a value of the wrong shape
+  is an `error('style', ...)` and dropped, the base's token applies. Well-formedness (§4.4) is checked here, not only in
+  the widget, because a hand-written or older record reaches the resolution without the widget.
+- `withStyleOptions` (`annotations.ts:323-326`) spreads the options over the style: `{ ...style, ...options }`. For tokens
+  a spread is not enough:
+  - `list` must be merged key by key (`{ ...style.list, ...options.list }`), a partial `list` override would drop the other
+    two tokens;
+  - `reservedNames` becomes the word tokens of the effective style (for Pascal that is the base's own list,
+    `style.ts:74`), so a word token is always reserved (`reserved-words`, `styleCheck.ts:166-170`, stays satisfied by
+    construction) and a token changed from a word to punctuation frees the word;
+  - `emptyBlock` stays the base's when neither `blockOpen` nor `blockClose` is overridden, else `[...blockOpen,
+    ...blockClose]` (Pascal's own shape, `style.ts:68`; C-like's `{}` is one token, `:49`, and is not derivable from an
+    override, so the derived one is two tokens).
+- The derived style then goes to `deriveConcreteGrammar` unchanged (`syntaxRecord.ts:198`). This is where H5 holds.
+
+### 4.4 Validation of a custom token
+
+The existing rules already cover the relations between tokens and the grammar (read, `styleCheck.ts`):
+`reserved-words` (:166-170), `block-delimiters` (:173-181, an empty open or close, a class or feature keyword equal to a
+block token), `list-tokens` (:184-189, empty, not distinct, separator or close `.` or `[`), `terminator` (:191-195, not
+inside an assignment or a list), `outer-reference` (:197-205, no `@` start), `operator-tokens` (:242-249, a symbol vs style
+tokens and comment openers), `call-words` (a call word is no style word, :279 via `reservedWords`); and LL(1) runs on any
+annotated grammar (:209), which a record with overrides always is.
+
+What is missing is the shape of one token. A new rule, `style-tokens` (an added member of the exported `StyleRule` union
+and of `STYLE_RULES`, as C1a added five), refuses a token that:
+
+- is empty or contains whitespace;
+- is neither a word (the `IDENTIFIER` form, `isWord`) nor a run of punctuation `/^[^\w\s"'@]+$/` (a mixed `a;` would be
+  split by the tokenizer, which reads an identifier before a punct, `parser.ts:294-359`);
+- contains the string quote `"` (the parser's string; and `quoted`, `concreteGrammar.ts:667`, does not escape);
+- starts with a comment opener, or is a prefix of one (the tokenizer reads comments first, `parser.ts:294-359`);
+- makes `blockOpen[0]` equal `blockClose[0]` (an open would read as a close).
+
+The fixed tokens `(` `)` are not refused by a blanket rule: Pascal's own list uses them (`style.ts:71`). Whether a block
+token `(`/`)` over a grammar with a call layout is caught by LL(1) is a hypothesis, not measured: L2a writes that case as
+a test first.
+
+The well-formedness half of the rule (empty, whitespace, shape, quote) is also checked in the widget before the draft, as
+for element literals (§3.3); the relational half (comment prefix, open = close, and every existing rule) shows as a finding.
+
+**Locating the finding.** `locate` maps every `style.*` finding to `language.style` (`syntaxForm.ts:417-419`). Step 2 adds
+one `FieldId` per editable parameter (`language.blockOpen`, ..., `language.list.close`, Advanced tier) so that a finding
+whose `where` is `style.blockOpen` (the form the rules already write) lands on the spans of that parameter in the EBNF and
+on its row in the form.
+
+### 4.5 Printer and parser
+
+No change expected, from the windows read and greps (not the whole files): the tokenizer builds its punct set from the
+style and the grammar, longest first (`parser.ts:261-264`); reserved words are `style.reservedNames` plus expression and
+head words (`parser.ts:549`, `printer.ts:285`); the printer takes tokens from the nodes and glue and reserved words from the
+style (`printer.ts:285`, `:308-309`). `concreteGrammar.ts` changes only for the step-1 `src` and the parameter name passed
+to `tokens(param, ts)` (`:115`); its `styleWords`/`taken` (`:255-258`, `:397-405`) follow the style it is given. Risk not
+measured: a model whose object is named like a new word token (`start`) prints that name through the printer's reserved
+handling; L2a adds the round-trip case.
+
+### 4.6 The picker and the form
+
+- **Picker** (`TextualTab.tsx:1382-1390`): the `<select>` lists `STYLE_ENTRIES` (`:903`) and writes through `onStyle`
+  (`:1334`) and `withStyleBase` (`:899`). With overrides present the selected entry reads `<base> (custom)`. Switching the
+  base drops the token overrides and keeps `classCase`, `literalCase`, `blankBeforeContainment` (§5 D10): `withStyleBase`
+  (`syntaxRecord.ts:216-222`) changes to drop the token keys, one write, one undo step. The switch back no longer gives
+  the string before the switch when there were overrides; the app's undo does.
+- **Syntax form**: the Language element gains one line per editable parameter, Advanced, each with Reset (back to the
+  base). The form and the EBNF share the draft (§3.2), so a token edited in either shows in both.
