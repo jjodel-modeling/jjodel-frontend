@@ -1245,3 +1245,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: non applicabile (discovery; app runs measured by Playwright, screenshots in the lane folder)
 **Notes**: Node: 4/4 core models equal to the reference; the arbiter does not parse with the source text (line 74), equal without it. App: 2,524/2,524 objects, settled 13.0-16.2 s, 136/1,999 attributes differ for both transformations: XMI integers reach JjTL as strings (27 log2 warnings). EInt masks clamped on L-layer read. Tickets #607-#610. Stopped once at the context soft ceiling (AM-8), resumed on Alfonso's go.
 **Prompt document name**: 2026-11-05 14:00
+
+## 2026-11-05 — merge: hw-core-jjtl-app into alfonso-frontend-jjtl (P-2026-11-05-1431)
+**Prompt**: `claude_2026-11-05_1431_prompt_merge_hw-core-jjtl-app.md`, a direct merge by `lane-run merge --direct`, no session: `hw-core-jjtl-app` at `8d0eae1bd` into `alfonso-frontend-jjtl`, merge base `547bba697`, 3 commits on the branch side.
+**Files touched**: merge `6b98a59de`: 3 files from the branch side (`docs/discovery/discovery_2026-11-05_core_jjtl_called_rules_in_app.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-05_1400_prompt_core_jjtl_called_rules_in_app.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6b98a59de` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14244 tests in 531 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge, no product code
+**Notes**: Rollback tag `pre-hw-core-jjtl-app` on `8565e3e84` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-05-1431/result.json`.
+**Prompt document name**: 2026-11-05 14:31
