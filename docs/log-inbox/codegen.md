@@ -1803,3 +1803,22 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — smoke run 2 of P-2026-11-04-2255, 8 checks pass; crops s8a, s8b, sD4 checked by the chat (RC-23). Classic canvas not smoked: shut down in this build.
 **Notes**: Rollback tag `pre-core-nameless-identity` on `f001f2fbd` (RC-31). Union: none. Open, cosmetic: a false «the app named» after removing a name when the text differs from the print only in layout; a v2-flow reference to a nameless target shows —. Worker: `~/.jjodel-lanes/P-2026-11-04-2321/result.json`.
 **Prompt document name**: 2026-11-04 23:21
+
+## 2026-11-05 — fix(codegen): C2c and C2a, the false «named», the empty record, the Syntax form module (P-2026-11-05-0010, P-2026-11-05-0036)
+**Prompt**: `claude_2026-11-05_0010_prompt_textual_c2c_c2a.md`: (1) C2c, the app names only what the model names; (2) C2a, `{"v":1}` is no record in `syntaxPatch`; (3) the pure module `syntaxForm.ts` (report `discovery_2026-11-05_textual_c2_syntax_form.md` §2.2, D1-D3, D7, D9). Stopped at the context ceiling mid item 3, continued by `claude_2026-11-05_0036_prompt_textual_c2a_cont.md` (RC-51) for items 3 to 6.
+**Files touched**: 90720f022: `frontend/src/codegen/textual/ui/TextualTab.tsx`, `textDiff.ts` (comment), `__tests__/textualEdit.test.ts`; 6c1a22241: `syntaxRecord.ts`, `__tests__/syntaxRecord.test.ts`; cdeed0c35: `syntaxForm.ts` (new), `__tests__/syntaxForm.test.ts` (new). Docs: this entry, the two Status lines.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-04 22:55
+**Causa**: (c)
+**Regressions**: no. Gates on cdeed0c35: typecheck 0; vitest 528 files, 14091 passed, 2 skipped, 3 red at import (baseline); build 0; check:docs 0; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (app probe, 4 checks, `~/.jjodel-lanes/P-2026-11-05-0036/probe.out.txt`): a name removed by keystroke on a typed text ending in a newline reads «Applied», no «named» sentence; one Undo restores. Crops `c2c-1-typed.png`, `c2c-2-name-removed.png` await the chat's check (RC-23).
+**Notes**: syntaxForm bench 11/11 killed; c2c 3/3, c2a 1/1 (commit bodies). The loose «two faults at one field» test is replaced by a probe case on the library corpus, plus «one message at two fields» for the key's fields mutant, which survived first. Preview at 1,000 objects, median of 15: readDraft 0.20 ms, draftPreview 5.4 ms. The probe's 2255 keys miss the 3.1.1 What's new modal: `jjodel_welcome_3_1_1_seen` added.
+**Prompt document name**: 2026-11-05 00:10
+
+## 2026-11-05 — ticket: a name-keyword collision is located only at the feature's keyword in the Syntax form
+**Ticket**: `checkStyle` distinct-features lists only real features after the colon (styleCheck.ts:103), so Library's name keyword "books" colliding with the containment keyword "books" gives «starts 2 features: Library.books», and `syntaxForm.ts` `locate` puts the fault only at the keyword of books; the name keyword field of Library carries no fault. Fix in `locate` (or in the message) before C2b shows the fault at its fields.
+**Priority**: low
+**Found in**: P-2026-11-05-0036
+**Detail**: ~/.jjodel-lanes/P-2026-11-05-0010/probe/form.out.txt

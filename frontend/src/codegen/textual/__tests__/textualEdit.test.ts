@@ -14,7 +14,7 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { agreedEvidence, APPLY_DELAY_MS, appliedRefs, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, namedReprint, onModelPrint, outerMarks, pastedRefs, pastedSpans, pathRewrites, pauseOf, planEdit, shiftOffset } from '../ui/TextualTab';
+import { agreedEvidence, APPLY_DELAY_MS, appliedRefs, appliedSpans, certainSpans, cutClip, editDecision, editStatusText, heldByCut, namedByModel, namedReprint, onModelPrint, outerMarks, pastedRefs, pastedSpans, pathRewrites, pauseOf, planEdit, shiftOffset } from '../ui/TextualTab';
 import type { EditBase, TextSync } from '../ui/TextualTab';
 import { confirmRows, needsConfirmation } from '../ui/TextConfirmPanel';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
@@ -780,5 +780,41 @@ describe('the names the app gives (R-TXT-44 (1), (2))', () => {
         expect(p2.lines).toHaveLength(1);
         expect(p2.lines![0]).toMatch(/^set Port_\d+\.name = ""$/);
         expect(p2.named).toEqual([p2.lines![0].split(/[ .]/)[1]]);
+    });
+
+    // ---- C2c, D4 (P-2026-11-05-0010): the named list measured on the model after the run --------------------------
+
+    const cleared = (objs: TextObject[], id: string, name?: string | null): TextObject[] => objs.map(o => {
+        if (o.id !== id) return o;
+        const { name: _gone, ...rest } = o.slots;
+        return { ...o, slots: name === undefined ? rest : { ...rest, name } };
+    });
+
+    it.each([['the slot absent', undefined], ['the slot read nameless (TextualTab.tsx textInputOf)', null]] as const)('R-TXT-45: a removed name the core leaves nameless is not one the app named, %s (mutants: the candidates kept; an empty name read as a name)', (_c, emptied) => {
+        const base = portBase(named());
+        const e = edited(base, [['output result ', 'output ']]);
+        const typed = e.text + '\n';
+        const { plan } = planEdit(base, typed, e.spans, { defaults: DEFAULTS }, undefined, e.refs);
+        expect(plan.named).toEqual(['result']);
+        const after = portBase(cleared(named(), 'p3', emptied));
+        // The typed text differs from the print only by the trailing newline.
+        expect(after.text).toBe(e.text);
+        const measured = namedByModel(plan, after.grammar, after.objects);
+        expect(measured).toEqual([]);
+        expect(namedReprint({ named: measured }, after.text, typed)).toBeNull();
+        // An empty string, should a reader ever hand one over, is no name either.
+        expect(namedByModel(plan, after.grammar, cleared(named(), 'p3', ''))).toEqual([]);
+    });
+
+    it('R-TXT-44 (1), C1e: where the core still names the object, it is listed and the tab reprints (mutant: nothing ever listed)', () => {
+        const base = portBase(named());
+        const e = edited(base, [['output result ', 'output ']]);
+        const typed = e.text + '\n';
+        const { plan } = planEdit(base, typed, e.spans, { defaults: DEFAULTS }, undefined, e.refs);
+        const after = portBase(cleared(named(), 'p3', 'Port_3'));
+        const measured = namedByModel(plan, after.grammar, after.objects);
+        expect(measured).toEqual(['result']);
+        expect(namedReprint({ named: measured }, after.text, typed)).toBe(after.text);
+        expect(namedByModel({ handles: plan.handles }, after.grammar, after.objects)).toEqual([]);
     });
 });

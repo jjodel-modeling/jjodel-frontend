@@ -427,8 +427,9 @@ export interface DiffLines {
     readonly handles: ReadonlyMap<string, string>;
     /**
      * R-TXT-44 (1), (2): the handles of the objects the app may name although the text gives them none: a name the text
-     * removes. A nameless object created in a named rule is not listed: its handle name is cleared in the same lines
-     * (R-TXT-45). Absent when none.
+     * removes. Candidates only: the Text tab keeps those the model names after the run (`namedByModel`, C2c), since a
+     * cleared slot reads nameless (R-TXT-45). A nameless object created in a named rule is not listed: its handle name is
+     * cleared in the same lines. Absent when none.
      */
     readonly named?: readonly string[];
 }

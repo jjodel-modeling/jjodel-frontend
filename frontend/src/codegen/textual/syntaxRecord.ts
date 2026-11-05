@@ -114,13 +114,17 @@ export function decodeSyntax(raw: string | null | undefined): DecodedSyntax {
     return { record, issues };
 }
 
+/** The string of the empty record, `{"v":1}`: it reads as no record (C2a, D3). */
+const EMPTY_SYNTAX = JSON.stringify({ v: SYNTAX_RECORD_VERSION });
+
 /**
  * What a save writes: one `state` assignment holding the key alone, so one `set_state` and one undo step; `null` when
- * the record is the stored one. `raw` is the key as stored, `null` or `undefined` when absent.
+ * the record is the stored one. `raw` is the key as stored, `null` or `undefined` when absent. The empty record over no
+ * key is the stored one too, so a switch to C-like on a metamodel with no record creates no key (C2a, D3).
  */
 export function syntaxPatch(raw: string | null | undefined, record: SyntaxAnnotations): Record<string, string> | null {
     const encoded = encodeSyntax(record);
-    return encoded === raw ? null : { [TEXTUAL_SYNTAX_KEY]: encoded };
+    return encoded === raw || (raw == null && encoded === EMPTY_SYNTAX) ? null : { [TEXTUAL_SYNTAX_KEY]: encoded };
 }
 
 /** The key as stored on the metamodel `metamodelId`: a string, or `undefined` when absent. */
