@@ -13,7 +13,7 @@ import { printTextModel } from '../printer';
 import { checkStyle } from '../styleCheck';
 import { INDENT_STYLE, STYLE_CATALOG, styleOf } from '../style';
 import { textualNotation } from '../syntaxRecord';
-import type { ElementIds } from '../annotations';
+import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import { grammarOf, INNER } from './corpus';
 import { LIBRARY_IDS, LIBRARY_MM, tolerantCases, TS } from './tolerantCorpus';
 import { PORT_CLIKE, portGrammar } from './portCorpus';
@@ -156,7 +156,7 @@ describe('the LL(1) check reads the line rule under indentation (P-2026-11-05-09
     });
 
     it('the bare record {v:1, style:{base:"indent"}} passes on the library and the turnstile (mutant: no FOLLOW token marked as on the next line)', () => {
-        const record = { v: 1, style: { base: 'indent' as const } };
+        const record: SyntaxAnnotations = { v: 1, style: { base: 'indent' } };
         expect(errors(textualNotation(LIBRARY_MM, { record, issues: [] }, LIBRARY_IDS).grammar)).toEqual([]);
         expect(errors(textualNotation(TS.mm, { record, issues: [] }, TS.ids).grammar)).toEqual([]);
     });
