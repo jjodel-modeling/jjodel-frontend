@@ -1876,3 +1876,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — probe 8/8 on port 3497, crops c2d-* in ~/.jjodel-lanes/P-2026-11-05-0148/; Alfonso's GO pending (R-TXT-47)
 **Notes**: R4 held, evidence in the commit body. Tests red first (6), 8/8 mutations killed. Gates: typecheck 0; vitest 14100 pass, 3 baseline import reds plus 2 Chromium hook timeouts that pass alone; build 0; check:docs 5/5. L `.delete()` of a contained Port now scrubs the inbound pointer (dash, no broken); the broken path was smoked on a pointer written back by SetFieldAction, and its chip reads the transient app name `Port_1`.
 **Prompt document name**: 2026-11-05 01:48
+
+## 2026-11-05 — merge: v2flow-nameless-ref-label into alfonso-frontend-jjtl (P-2026-11-05-0734)
+
+**Prompt**: `claude_2026-11-05_0734_prompt_merge_v2flow-nameless-ref-label.md`, a direct merge by `lane-run merge --direct`, no session: `v2flow-nameless-ref-label` at `f5549d33d` into `alfonso-frontend-jjtl`, merge base `04ada9f61`. Step C lane C2d (R-TXT-47 D5): a reference to a nameless target shows a `: <Class>` chip on the v2-flow default view. Alfonso's «Go» 07:24.
+**Files touched**: merge `f1bef5364`, the branch side (`frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `types.ts`, `nodes/RowValue.tsx`, `utils/__tests__/namelessRefTarget.test.ts`, `docs/log-inbox/codegen.md`, prompt).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `f1bef5364`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 14108 tests, 3 red at import (baseline), hooks 967.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe of P-2026-11-05-0148, 8 checks; crops c2d-* checked by the chat (RC-23) and by Alfonso («Go», 07:24).
+**Notes**: Rollback tag `pre-v2flow-nameless-ref-label` on `6f34411de` (RC-31). Union: docs/log-inbox/codegen.md. Worker: `~/.jjodel-lanes/P-2026-11-05-0734/result.json`.
+**Prompt document name**: 2026-11-05 07:34
