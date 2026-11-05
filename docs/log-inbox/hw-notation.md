@@ -1208,3 +1208,85 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: gates green; probes before the trunk merge, not rerun; no hand run
 **Notes**: Rollback tag `pre-elk-open-race` on `091e62bac` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-04-2230/result.json`.
 **Prompt document name**: 2026-11-04 22:30
+
+## 2026-11-05 — ticket: XMI-imported integer attributes reach JjTL as strings
+**Ticket**: An M1 model imported from XMI reaches the JjTL executor with its integer attributes as strings: XMIService.ts:898 stores `String(...)` for every attribute, and the source serialiser (ProjectEditor.tsx:1567-1573) passes the raw D-layer values with no cast to the declared type. Reproduction (measured on 5c744b50c, dev server): import CoreSpec.ecore, SyncRTL.ecore and rv_mc4.xmi (Core xlen="4" nregs="4", EInt); run CoreSpec2SyncRTL.jjtl, or the generated control, on rv_mc4. Result: 27 warnings "Unknown method 'log2' for type String"; out1 has all 2,524 objects but 136 of 1,999 attribute values differ from the reference: 59 integers written as "4", 57 attributes unset (Slice.hi, Word.width), 20 wrong (Word/Extend.width "4" for 12). The same transformation in node on a typed source gives the reference exactly; on a source with the integers as strings it reproduces the app's out1.
+**Priority**: high
+**Found in**: P-2026-11-05-1400
+**Detail**: docs/discovery/discovery_2026-11-05_core_jjtl_called_rules_in_app.md
+
+## 2026-11-05 — ticket: JjTL: one-line 'attr := expr -> feature {...}' fails to parse with the source text
+**Ticket**: A JjTL assignment followed by a nested creation on the same line does not parse when the parser gets the source text, which is the app's path (useJjtlParser.ts:61, JjtlEditor.tsx:58): parseJjELExpression stops only at NEWLINE or RBRACE (parser.ts:420-422), so in `value := 0 -> type { -> Bool { } }` the JjEL text becomes `0 -> type { -> Bool {`. Reproduction (measured on 5c744b50c, node): lex and parse ArbiterSpec2SyncRTL.jjtl with `new JjtlParser(tokens, src)`: 3 errors at 74:44-57 ("JjEL uses '.' for method calls, not '->'"), no AST. With `new JjtlParser(tokens)` it parses and gives the reference model of arbiter3 (108 objects, 0 differences).
+**Priority**: medium
+**Found in**: P-2026-11-05-1400
+**Detail**: docs/discovery/discovery_2026-11-05_core_jjtl_called_rules_in_app.md
+
+## 2026-11-05 — ticket: EInt value above 2^31-1 silently clamped on L-layer read
+**Ticket**: An EInt attribute holding a value above 2^31-1 is stored raw and clamped, with no warning, on every L-layer read: LModelElement.tsx:7769-7771 sets numbermax 2147483647 for EInt and :7661 applies Math.min on read. Reproduction (measured on 5c744b50c, dev server): import SyncRTL.ecore (Const.value : EInt; the import gives no warning), run CoreSpec2SyncRTL.jjtl on rv_mc4: 13 Const objects hold 4261441663 in the D-layer and read 2147483647 through the proxy; the model panel says "Conforms to SyncRTL". The metamodel is arguably wrong (ELong); the defect is the silence.
+**Priority**: medium
+**Found in**: P-2026-11-05-1400
+**Detail**: docs/discovery/discovery_2026-11-05_core_jjtl_called_rules_in_app.md
+
+## 2026-11-05 — ticket: Smoke seed sets a stale welcome-modal key
+**Ticket**: The smoke seed sets a stale welcome-modal key: frontend/scripts/smoke/states.ts:186-187 write jjodel_welcome_3_seen and jjodel_welcome_3_1_seen, while WelcomeModal.tsx:6 reads jjodel_welcome_3_1_1_seen. Reproduction (measured on 5c744b50c): a Playwright probe using seed(ctx, true), then a click on "New Project" on #/allProjects, times out: `<div class="wm-backdrop">` intercepts pointer events. Setting jjodel_welcome_3_1_1_seen in an init script clears it.
+**Priority**: low
+**Found in**: P-2026-11-05-1400
+**Detail**: docs/discovery/discovery_2026-11-05_core_jjtl_called_rules_in_app.md
+
+## 2026-11-05 — discovery: core JjTL with called rules, node on the trunk and the app write-back (P-2026-11-05-1400)
+**Prompt**: P-2026-11-05-1400: does the 500-line hand-written CoreSpec2SyncRTL.jjtl still match the references in node on the trunk (four core models, arbiter on the source-text parser path), and what does the app write back on rv_mc4 against the generated control. No fix; defects as tickets.
+**Files touched**: `docs/discovery/discovery_2026-11-05_core_jjtl_called_rules_in_app.md` (e68d12776), `docs/log-inbox/hw-notation.md`, the `Status:` line of `docs/prompts/claude_2026-11-05_1400_prompt_core_jjtl_called_rules_in_app.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no product code; the copied harness tests were deleted before any commit
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (discovery; app runs measured by Playwright, screenshots in the lane folder)
+**Notes**: Node: 4/4 core models equal to the reference; the arbiter does not parse with the source text (line 74), equal without it. App: 2,524/2,524 objects, settled 13.0-16.2 s, 136/1,999 attributes differ for both transformations: XMI integers reach JjTL as strings (27 log2 warnings). EInt masks clamped on L-layer read. Tickets #607-#610. Stopped once at the context soft ceiling (AM-8), resumed on Alfonso's go.
+**Prompt document name**: 2026-11-05 14:00
+
+## 2026-11-05 — merge: hw-core-jjtl-app into alfonso-frontend-jjtl (P-2026-11-05-1431)
+**Prompt**: `claude_2026-11-05_1431_prompt_merge_hw-core-jjtl-app.md`, a direct merge by `lane-run merge --direct`, no session: `hw-core-jjtl-app` at `8d0eae1bd` into `alfonso-frontend-jjtl`, merge base `547bba697`, 3 commits on the branch side.
+**Files touched**: merge `6b98a59de`: 3 files from the branch side (`docs/discovery/discovery_2026-11-05_core_jjtl_called_rules_in_app.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-05_1400_prompt_core_jjtl_called_rules_in_app.md`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6b98a59de` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14244 tests in 531 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: docs-only merge, no product code
+**Notes**: Rollback tag `pre-hw-core-jjtl-app` on `8565e3e84` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-05-1431/result.json`.
+**Prompt document name**: 2026-11-05 14:31
+
+## 2026-11-05 — ticket: JjTL: a JjEL method unknown for the value's type warns instead of R-FA-11's error
+**Ticket**: `xlen.log2()` on a string source gave 27 warnings and `null` under "Transformation completed successfully" (77 wrong or missing values on rv_mc4). R-FA-11 is implemented for builtins registered on the JjTL context only (executor.ts:390-407); JjEL method dispatch throws a plain `JjelEvaluationError` "Unknown method '<m>' for type <T>" (evaluator.ts:975, :982), which executor.ts:2993-3000 turns into a warning and `null`, like a name that resolves to nothing (builtin-error.test.ts:109). A library method that throws inside is not wrapped either (read). Decide whether R-FA-11 covers both.
+**Priority**: medium
+**Found in**: P-2026-11-05-1446
+**Detail**: docs/discovery/discovery_2026-11-05_xmi_typed_integers.md
+
+## 2026-11-05 — fix(xmi): attribute values typed by the metamodel (P-2026-11-05-1446)
+**Prompt**: P-2026-11-05-1446: fix #607 in the XMI import (cast by the declared type, test first, bad values reported), measure saved projects, explain the log2 warnings under R-FA-11, verify rv_mc4 and rv_pf4 in the app, the arbiter in node on the source-text path, and #609 with a private ELong copy.
+**Files touched**: `frontend/src/services/export/XMIService.ts`, `frontend/src/services/export/__tests__/xmi-import-skip.test.ts` (36e67e7da), `docs/discovery/discovery_2026-11-05_xmi_typed_integers.md` (31831a082), `docs/decisions.md`, `docs/log-inbox/hw-notation.md`, the `Status:` line of `docs/prompts/claude_2026-11-05_1446_prompt_xmi_typed_integers.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — export suite 101/101, JjTL 661/661 (1 known import-red file), typecheck 0, build 0; app runs byte-equal to the references
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Playwright app probes: rv_mc4 0/1,999 and rv_pf4 0/2,111 attribute differences, no page or console error)
+**Notes**: Tests red 3/10 before, green after. Saved pre-fix projects keep "4" and the 136 differences (measured; migration awaiting Alfonso). R-FA-11 scope gap ticketed. Arbiter: 108/108 equal with the source text. ELong copy: masks read unclamped. Provisional row R-XMI-1. Fixes a defect of the original XMI importer, found by P-2026-11-05-1400.
+**Prompt document name**: 2026-11-05 14:46
+
+## 2026-11-05 — merge: xmi-typed-integers into alfonso-frontend-jjtl (P-2026-11-05-1512)
+**Prompt**: `claude_2026-11-05_1512_prompt_merge_xmi-typed-integers.md`, a direct merge by `lane-run merge --direct`, no session: `xmi-typed-integers` at `f1a3911d0` into `alfonso-frontend-jjtl`, merge base `d95d5b9ca`, 4 commits on the branch side.
+**Files touched**: merge `450864a4b`: 6 files from the branch side (`docs/decisions.md`, `docs/discovery/discovery_2026-11-05_xmi_typed_integers.md`, `docs/log-inbox/hw-notation.md`, `docs/prompts/claude_2026-11-05_1446_prompt_xmi_typed_integers.md`, `frontend/src/services/export/XMIService.ts`, `frontend/src/services/export/__tests__/xmi-import-skip.test.ts`); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `450864a4b` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14247 tests in 531 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: #607 verified on the branch by the app probes of P-2026-11-05-1446: rv_mc4 and rv_pf4 byte-equal to the references
+**Notes**: Rollback tag `pre-xmi-typed-integers` on `d95d5b9ca` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-05-1512/result.json`.
+**Prompt document name**: 2026-11-05 15:12
