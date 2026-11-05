@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0145
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane fast · gates on f243a8152 green · verifica visiva in attesa del GO di Alfonso (crops of P-2026-11-05-0118)
 Lane: fast (closure of C2b; code at f243a8152)
 Depends: P-2026-11-05-0118 (hard-stop at the ceiling after items 1-4 and 6; handoff in its lane folder)
 Worktree: ~/jjodel-w-textc2, branch textual-c2-syntax-form (the same tree)

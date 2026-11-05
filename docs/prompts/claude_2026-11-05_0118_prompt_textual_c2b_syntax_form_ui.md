@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-0118
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · 0d49db028, f243a8152 (stopped at the ceiling, closed by P-2026-11-05-0145, RC-51) · app probe 19 checks pass; verifica visiva in attesa del GO di Alfonso (crops c2b-0..10 in ~/.jjodel-lanes/P-2026-11-05-0118/)
 Lane: full (UI of the textual layer, write path through writeTextualSyntax)
 Depends: P-2026-11-05-0103 (C2c and C2a merged, a0817b92e), R-TXT-47 (provisional)
 Worktree: ~/jjodel-w-textc2, branch textual-c2-syntax-form, at 04ada9f61 (the trunk tip)
