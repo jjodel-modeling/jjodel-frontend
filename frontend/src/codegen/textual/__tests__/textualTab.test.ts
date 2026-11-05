@@ -214,4 +214,12 @@ describe('the style picker (step C3a, P-2026-11-04-0412)', () => {
         expect(styleSwitchRecord({ record: { ...record, style: { base: 'pascal' } }, issues: [] }, 'clike')).toEqual(record);
         expect(styleSwitchRecord({ record: null, issues: [] }, 'pascal')).toEqual({ v: 1, style: { base: 'pascal' } });
     });
+
+    it('switches to Indentation and back, the other style fields kept (C3b; a guard: the record writer is shared by every base)', () => {
+        const record = { v: 1 as const, language: 'Shelf', style: { classCase: 'lower' as const } };
+        const indent = styleSwitchRecord({ record, issues: [] }, 'indent');
+        expect(indent).toEqual({ v: 1, language: 'Shelf', style: { base: 'indent', classCase: 'lower' } });
+        expect(styleSwitchRecord({ record: indent, issues: [] }, 'indent')).toBeNull();
+        expect(styleSwitchRecord({ record: indent, issues: [] }, 'clike')).toEqual(record);
+    });
 });

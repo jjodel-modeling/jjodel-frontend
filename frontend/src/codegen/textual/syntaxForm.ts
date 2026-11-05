@@ -20,7 +20,7 @@ import type { ConcreteGrammar, LiteralSrc, ObjectRule } from './concreteGrammar'
 import { classFeatures, isNameFeature } from './metamodel';
 import type { TextClass, TextFeature, TextMetamodel, TextObject } from './metamodel';
 import { printTextModel } from './printer';
-import { STYLE_CATALOG } from './style';
+import { isStyleBase, STYLE_CATALOG } from './style';
 import { checkStyle } from './styleCheck';
 import type { StyleFinding } from './styleCheck';
 import { SYNTAX_RECORD_VERSION, syntaxPatch, textualNotation, withStyleBase } from './syntaxRecord';
@@ -278,7 +278,7 @@ export function setField(draft: SyntaxAnnotations, ref: FieldRef, value: unknown
     const positional = <T extends { keyword?: string }>(x: T): T => (value === true ? { ...x, keyword: '' } : x.keyword === '' ? put(x, 'keyword', undefined) : x);
     switch (ref.field) {
         case 'language.name': return put(draft, 'language', value);
-        case 'language.style': return withStyleBase(draft, value === 'pascal' ? 'pascal' : 'clike');
+        case 'language.style': return withStyleBase(draft, isStyleBase(value) ? value : 'clike');
         case 'language.classCase': return style('classCase');
         case 'language.literalCase': return style('literalCase');
         case 'language.blankBeforeContainment': return style('blankBeforeContainment');
@@ -564,6 +564,15 @@ export function saveGate(input: SaveGateInput): { readonly enabled: boolean; rea
         : blocks[0] === 'errors' ? `${errs.length} error${errs.length === 1 ? '' : 's'}: ${errs[0].message}`
             : blocks[0] === 'unchanged' ? 'No unsaved changes' : 'Apply or discard the edit in Text first';
     return { enabled: !blocks.length, blocks, title };
+}
+
+/**
+ * The Text tab's style picker (P-2026-11-05-0910): a record the style check refuses is not written, as Save is not (D1);
+ * the reason in Save's words, the count and the first error. Null when nothing refuses it; a notice never does.
+ */
+export function styleRefusal(mm: TextMetamodel, ids: ElementIds, record: SyntaxAnnotations, decodingIssues: readonly AnnotationIssue[] = []): string | null {
+    const errs = readDraft(mm, ids, record, decodingIssues).faults.filter(f => f.level === 'error');
+    return errs.length ? `${errs.length} error${errs.length === 1 ? '' : 's'}: ${errs[0].message}` : null;
 }
 
 /** What Save writes: the draft without the entries of deleted elements (D7). */

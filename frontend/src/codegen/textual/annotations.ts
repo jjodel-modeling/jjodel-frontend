@@ -10,7 +10,7 @@
 
 import type { TextFeature, TextMetamodel } from './metamodel';
 import { classFeatures, isNameFeature } from './metamodel';
-import { isStyleBase } from './style';
+import { isStyleBase, STYLE_CATALOG } from './style';
 import type { LetterCase, NotationStyle, StyleBase } from './style';
 
 export interface OperatorAnnotation {
@@ -236,7 +236,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
     const s = record.style ?? {};
     if (s.base !== undefined) {
         if (isStyleBase(s.base)) style.base = s.base;
-        else error('style', `base ${JSON.stringify(s.base)} is not a style of the catalog (clike, pascal): C-like applied`);
+        else error('style', `base ${JSON.stringify(s.base)} is not a style of the catalog (${Object.keys(STYLE_CATALOG).join(', ')}): C-like applied`);
     }
     if (s.classCase !== undefined) { if (isCase(s.classCase)) style.classCase = s.classCase; else error('style', `classCase ${JSON.stringify(s.classCase)} is not declared or lower`); }
     if (s.literalCase !== undefined) { if (isCase(s.literalCase)) style.literalCase = s.literalCase; else error('style', `literalCase ${JSON.stringify(s.literalCase)} is not declared or lower`); }

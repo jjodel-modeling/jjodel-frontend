@@ -1919,6 +1919,67 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Notes**: Rollback tag `pre-textual-ebnf-literals` on `1cf342a50` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-0906/result.json`.
 **Prompt document name**: 2026-11-05 09:06
 
+## 2026-11-05 — feat(codegen): C3b, the deletion guard, the Indentation style, Indentation in the picker and the form (P-2026-11-05-0748, P-2026-11-05-0816, P-2026-11-05-0843)
+
+**Prompt**: `claude_2026-11-05_0748_prompt_textual_c3b_indent.md`, continued after two context-ceiling stops by `claude_2026-11-05_0816_prompt_textual_c3b_cont.md` and `claude_2026-11-05_0843_prompt_textual_c3b_cont2.md` (RC-51): (1) the deletion guard of the Text tab; (2) the style `indent`; (3) Indentation in the picker and the Syntax form; (4) mutation bench and gates; (5) app check; (6) this entry.
+**Files touched**: `72389e089` (guard: `ui/TextualTab.tsx`, `TextualTab.scss`, `__tests__/deletionGuard.test.ts`); `7c004674a` (indent: `style.ts`, `concreteGrammar.ts`, `parser.ts`, `printer.ts`, `styleCheck.ts`, `__tests__/{indent,styles,styleCheck}.test.ts`, `__tests__/oracle.ts`); `283b5dbd6` (`syntaxForm.ts`, `annotations.ts`, `__tests__/{syntaxForm,syntaxRecord,textualTab}.test.ts`); `506837dc1` (`__tests__/deletionGuard.test.ts`); all under `frontend/src/codegen/textual/`.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. Gates on `506837dc1`: typecheck exit 0; vitest 14175 passed, 3 red at import (baseline); build exit 0; check:docs 5/5; check:codegen-lazy off and on all PASS.
+**Out-of-scope changes**: yes — `syntaxForm.ts:281` and `annotations.ts:239`, one line each plus the import, approved by the chat (lane auto); more than five files across the lane, listed above.
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe `~/.jjodel-lanes/P-2026-11-05-0843/probe.mjs`, 15/15, crops c3b-*; GO of Alfonso pending.
+**Notes**: Partial: the Syntax form cannot save Indentation on any annotated record: the style check's LL(1) has no line rule (ticket below). The picker writes it, the bar lists the errors, the text applies. Guard bench 7 mutants, 5 killed after two vacuous tests were fixed; G4 and G7, the wiring in readEdit, survive: no render harness, covered by the app check. One `pageerror: Canceled` in the probe, absent in 0118. Detail: probe.out.txt in the lane folder.
+**Prompt document name**: 2026-11-05 08:43
+
+## 2026-11-05 — ticket: under Indentation the style check reports false LL(1) conflicts on every annotated grammar
+**Ticket**: `ll1Conflicts` (styleCheck.ts, run only when the grammar is annotated, i.e. any saved record) computes FOLLOW without the parser's line rule, so under `indent` an optional part that starts with ID and is followed by an ID-starting item is "not LL(1)" though the parser reads it. Measured on the tolerant corpus: 5 of 5 annotated cases have 1 to 4 such errors under indent, 0 under C-like and Pascal (turnstile annotated: 3 in every style). In the app the Syntax form refuses to save Indentation (Save disabled) for the port fixture and even for `{v:1, style:{base:'indent'}}`; the Text tab picker stores it and the bar lists the errors. `indent.test.ts:131` checks an unannotated grammar, so it never runs this step.
+**Priority**: high
+**Found in**: P-2026-11-05-0843
+**Detail**: ~/.jjodel-lanes/P-2026-11-05-0843/probe.out.txt
+
+## 2026-11-05 — fix(codegen): C3b, a line-aware LL(1) check under Indentation, the picker refuses a refused style (P-2026-11-05-0910)
+**Prompt**: `claude_2026-11-05_0910_prompt_textual_c3b_ll1_lines.md`: (1) the style check's LL(1) reads the parser's line rule under Indentation; (2) the Text tab's picker refuses a style `checkStyle` refuses, as Save does (R-TXT-47 D1); (3) gates; (4) app check, the `pageerror: Canceled` traced; (5) this entry.
+**Files touched**: `e84d1c814` (`styleCheck.ts`, `__tests__/indent.test.ts`); `53f8481f0` (`__tests__/indent.test.ts`, a type fix); `559b61194` (`syntaxForm.ts`, `ui/TextualTab.tsx`, `__tests__/syntaxForm.test.ts`); all under `frontend/src/codegen/textual/`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-11-05 08:43
+**Causa**: (c)
+**Regressions**: no. Gates on `559b61194`: typecheck exit 0; vitest 14187 passed, 3 red at import (baseline); build exit 0; check:docs exit 0; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe `~/.jjodel-lanes/P-2026-11-05-0910/probe.mjs`, 9/9, crops ll1-*; GO of Alfonso pending.
+**Notes**: Benches: LL(1) 8/8 killed, picker gate 4/4; the picker's wiring has no render harness, covered by the probe. Port record under Indentation: the picker refuses, 2 errors, the Ref only; the default record passes and the form saves it. `Canceled`: Monaco's word highlighter cancels its Delayer when `reprint` restores the view state after Undo; unhandled, harmless. Detail: probe.out.txt, canceled-trace.out.txt in the lane folder.
+**Prompt document name**: 2026-11-05 09:10
+
+## 2026-11-05 — merge: textual-c3b-indent takes alfonso-frontend-jjtl (P-2026-11-05-0943)
+
+**Prompt**: `claude_2026-11-05_0943_prompt_textual-c3b-indent_take_trunk.md`, a session merge by `lane-run merge --trunk-into --launch` (RC-14: concreteGrammar.ts and syntaxForm.ts changed on both sides since the base, by L1a on the trunk): the trunk at `5fd33809e` into `textual-c3b-indent`.
+**Files touched**: merge `38a49d347` on the branch.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown on the branch: the session died in the bridge outage (10:06 to 13:55) after the merge commit, before its gates; the gates run on the trunk merge that follows.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — a merge of the trunk into the branch; the C3b crops c3b-* and ll1-* were checked by the chat before it.
+**Notes**: Lane folder `~/.jjodel-lanes/P-2026-11-05-0943/` (outcome died, 222 min).
+**Prompt document name**: 2026-11-05 09:43
+
+## 2026-11-05 — merge: textual-c3b-indent into alfonso-frontend-jjtl (P-2026-11-05-1413)
+
+**Prompt**: `claude_2026-11-05_1413_prompt_merge_textual-c3b-indent.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c3b-indent` at `e04259214` into `alfonso-frontend-jjtl` (the branch took the trunk in P-2026-11-05-0943). Step C lane C3b: the deletion guard of the Text tab (R-TXT-41 D2, R-TXT-43), the indentation style, Indentation in the picker and the Syntax form, the line-aware LL(1) check and the picker refusing a refused style (R-TXT-50). Lane auto.
+**Files touched**: merge `45fcd7233`, the branch side (`frontend/src/codegen/textual/parser.ts`, `concreteGrammar.ts`, `style.ts`, `printer.ts`, `styleCheck.ts`, `syntaxForm.ts`, `annotations.ts`, `ui/TextualTab.tsx`, their tests incl. `indent.test.ts` and `deletionGuard.test.ts`, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `45fcd7233`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 14244 tests, 3 red at import (baseline), hooks 967.
+**Out-of-scope changes**: yes — syntaxForm.ts:281 and annotations.ts:239, one line each, approved by the chat (P-2026-11-05-0843).
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probes of P-2026-11-05-0843 (15 checks) and P-2026-11-05-0910 (9 checks); crops c3b-* and ll1-* checked by the chat (RC-23).
+**Notes**: Rollback tag `pre-textual-c3b-indent` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-1413/result.json`.
+**Prompt document name**: 2026-11-05 14:13
+
 ## 2026-11-05 — feat(codegen): L1b, the editable literals of the EBNF mode over the shared syntax draft (P-2026-11-05-0921, P-2026-11-05-0945, P-2026-11-05-1415)
 
 **Prompt**: `claude_2026-11-05_0921_prompt_textual_ebnf_literals_l1b.md`, lane L1b of R-TXT-49: (1) the syntax draft lifted into `useSyntaxDraft`, shared by the Syntax form and the EBNF mode; (2) the EBNF mode's element literals as islands edited in place, Save and Discard, findings at the literal. 0921 stopped at the context ceiling (handoff); 0945 died in the bridge outage after its probe; 1415 closed probe, gates and commit.

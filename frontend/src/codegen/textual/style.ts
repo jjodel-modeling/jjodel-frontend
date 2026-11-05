@@ -77,11 +77,34 @@ export const PASCAL_STYLE: NotationStyle = {
     indent: 2,
 };
 
+/**
+ * Indentation (step C3b, P-2026-11-05-0748): a block is the lines indented under its head, delimited by the INDENT and
+ * DEDENT the tokenizer derives from the layout; no block token, no assignment, no terminator; `#` comments (report
+ * 2026-11-01 §A.2). An empty body prints nothing.
+ */
+export const INDENT_STYLE: NotationStyle = {
+    id: 'indent',
+    name: 'Indentation',
+    layout: 'indent',
+    blockOpen: [],
+    blockClose: [],
+    emptyBlock: [],
+    assign: [],
+    terminator: [],
+    list: { open: '[', separator: ',', close: ']' },
+    string: { quote: '"', escape: 'backslash' },
+    comments: { line: '#', block: null },
+    reservedNames: [],
+    classCase: 'declared',
+    literalCase: 'declared',
+    indent: 2,
+};
+
 /** The id a syntax record names a style by (annotations.ts `SyntaxAnnotations.style.base`). */
-export type StyleBase = 'clike' | 'pascal';
+export type StyleBase = 'clike' | 'pascal' | 'indent';
 
 /** The styles of the catalog, by their record id, in the order a picker lists them. */
-export const STYLE_CATALOG: Readonly<Record<StyleBase, NotationStyle>> = { clike: CLIKE_STYLE, pascal: PASCAL_STYLE };
+export const STYLE_CATALOG: Readonly<Record<StyleBase, NotationStyle>> = { clike: CLIKE_STYLE, pascal: PASCAL_STYLE, indent: INDENT_STYLE };
 
 export const isStyleBase = (v: unknown): v is StyleBase => typeof v === 'string' && Object.prototype.hasOwnProperty.call(STYLE_CATALOG, v);
 
