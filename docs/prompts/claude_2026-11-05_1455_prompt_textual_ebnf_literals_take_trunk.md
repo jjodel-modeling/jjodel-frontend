@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-1455
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · 62fc7d950 · probes L1b 23/23, picker 9/9, guard 15/15 (direct-write variant); verifica visiva in attesa del GO (crops in ~/.jjodel-lanes/P-2026-11-05-1455/)
 Lane: full (merge of the trunk into the branch; one code conflict)
 Depends: P-2026-11-05-1415 (L1b closed on the branch, 6ef8fbd10), P-2026-11-05-1413 (C3b on the trunk, 45fcd7233)
 Worktree: ~/jjodel-w-ebnflit, branch textual-ebnf-literals (the same tree)
