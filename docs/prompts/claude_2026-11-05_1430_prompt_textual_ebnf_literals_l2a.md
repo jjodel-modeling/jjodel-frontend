@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-1430
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · 1794d0dd0, e34070b3b, 612626c76 (stopped at the ceiling, continued by P-2026-11-05-1457, RC-51) · verifica visiva non eseguita (style literals editable in the EBNF mode, no app probe)
 Lane: full (the syntax record, the style options, the style check; no UI)
 Depends: P-2026-11-05-0906 (L1a merged), P-2026-11-05-1413 (C3b merged, 45fcd7233), R-TXT-48 (2), R-TXT-49 D9 D10 D11 D12
 Worktree: ~/jjodel-w-ebnflit2, branch textual-ebnf-literals-step2, from 8565e3e84 (own node_modules from npm ci)

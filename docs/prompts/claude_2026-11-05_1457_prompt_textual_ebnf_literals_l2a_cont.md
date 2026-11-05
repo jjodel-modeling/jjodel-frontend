@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-1457
 Chat: C-2026-11-03-1037
 Front: codegen
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · eb73f7b49, f87481236 · closes P-2026-11-05-1430 · verifica visiva non eseguita (style literals editable in the EBNF mode, no app probe)
 Lane: full (continuation; items 1-3 committed at 612626c76; item 4's tests written, failing, uncommitted)
 Depends: P-2026-11-05-1430 (hard-stop at the ceiling; handoff in its lane folder)
 Worktree: ~/jjodel-w-ebnflit2, branch textual-ebnf-literals-step2 (the same tree)

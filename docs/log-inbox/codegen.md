@@ -1979,3 +1979,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — app probes of P-2026-11-05-0843 (15 checks) and P-2026-11-05-0910 (9 checks); crops c3b-* and ll1-* checked by the chat (RC-23).
 **Notes**: Rollback tag `pre-textual-c3b-indent` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-1413/result.json`.
 **Prompt document name**: 2026-11-05 14:13
+
+## 2026-11-05 — feat(codegen): L2a, the style tokens as overrides on the base, a form field per token (P-2026-11-05-1430, P-2026-11-05-1457)
+
+**Prompt**: `claude_2026-11-05_1430_prompt_textual_ebnf_literals_l2a.md`, continued after the context ceiling (RC-51) by `claude_2026-11-05_1457_prompt_textual_ebnf_literals_l2a_cont.md`: lane L2a of the EBNF literals report §4/§5.1. Style token overrides resolved and applied (1), dropped on a base switch and written in a fixed order (2), the `style-tokens` rule (3), a form field per style parameter with the style EBNF literals editable (4), round trips under overrides (5), gates (6), log (7). Lane auto.
+**Files touched**: `frontend/src/codegen/textual/annotations.ts` (`1794d0dd0`), `syntaxRecord.ts` (`e34070b3b`), `styleCheck.ts` (`612626c76`), `syntaxForm.ts` (`eb73f7b49`), `__tests__/styleTokens.test.ts` (new; `1794d0dd0`..`f87481236`), `__tests__/ebnfLiterals.test.ts` (`eb73f7b49`), `docs/log-inbox/codegen.md`, the two prompts' Status.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Typecheck 0 errors; vitest 14291 passed, 3 red at import (baseline); build exit 0; check:codegen-lazy ALL GREEN (off, on); check:docs below.
+**Out-of-scope changes**: yes — `__tests__/ebnfLiterals.test.ts`, two L1a assertions pinning style tokens as read only narrowed to the enumeration literal and the fixed token (D-L2a-6, decided by the chat in P-2026-11-05-1457).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — no app probe run; the EBNF mode's style literals become editable through `setLiteral`, reachable in the Text tab and not verified in the app.
+**Notes**: Decisions D-L2a-1..7 in `~/.jjodel-lanes/P-2026-11-05-1430/handoff.md` and the commit bodies. `( )` block over the call layout measured: the LL(1) check reports it on PORT via the expression parentheses; without the operator it round-trips, so no new check. Benches in each commit body, every mutant killed.
+**Prompt document name**: 2026-11-05 14:30
