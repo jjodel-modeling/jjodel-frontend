@@ -355,3 +355,61 @@ one-line. Base record: Pascal, roots `uncontained`, `Program` keyword `program`,
 | P8 | Indentation | blocks as indentation, check clean |
 | P9 | positional Declaration, close `done` | LL(1) conflict reported; a Declaration named `done` lost (F4) |
 | P10 | recovery in and around `is ... end` | one error each, every object read |
+
+## 5. Lane plan and decisions
+
+### 5.1 Lanes
+
+| Lane | Files | What | Visual |
+|---|---|---|---|
+| **B0** fix of L2a (Corregge P-2026-11-05-1457, D7) | `syntaxForm.ts`, `ui/SyntaxForm.tsx`, `__tests__/styleTokens.test.ts` | a `tokens` input kind for the array-valued token fields: the array shown joined by a space, the text split on blanks into the array (F5) | yes, the form |
+| **B1** per-block tokens, core | `annotations.ts`, `concreteGrammar.ts`, `parser.ts`, `styleCheck.ts`, `__tests__/blockTokens.test.ts` (new) | `blockOpen`/`blockClose` on class and feature annotations, validated by `styleTokenFault`; `block()` takes the owner's tokens, a side not given inherits, `empty` derived; the block node carries its origin, `nodeText` gives the new `LiteralSrc` kinds where tokens are own (F3); the words join `grammar.style.reservedNames` (D2) and the case fallback's `styleWords` (`concreteGrammar.ts:288-291`); the punctuation joins `taken` (§2.2); `grammarPuncts` reads block tokens, marks excluded (F2); refusals: a class with no block (line, call), a feature with no block (attribute, inline, `itemKeyword`), an empty side (D8); a notice under Indentation; the check's per-block `style-tokens` and `block-delimiters` | no |
+| **B2** form and EBNF edit | `syntaxForm.ts`, `__tests__/blockTokens.test.ts` (or `ebnfLiterals.test.ts`) | four Advanced fields with the `tokens` input of B0; `fieldValue`, `setField`, `literalField`, `setLiteral`, `literalDefault` for the new kinds; `locate` of the new findings | yes, the form and the EBNF mode |
+| **B3a** head prefix, core | `annotations.ts`, `concreteGrammar.ts`, `styleCheck.ts`, `__tests__/blockTokens.test.ts` | `prefix` on a class annotation, its nodes and origin, its words reserved and its punctuation taken; `headKeyword` by origin (§3.2) | no |
+| **B3b** head prefix, readers and form | `parser.ts` (`:705`), `printer.ts` (`:89`, `:355`), `syntaxForm.ts` (`:382`, a `class.prefix` field), `__tests__/blockTokens.test.ts` | the class keyword by origin in the other readers; the field | yes |
+
+Order: B0, B1, B2; B3a and B3b after, on their own (D1). B1 alone reaches the target text from a record written by hand;
+B2 makes it reachable from the form and the EBNF mode. Each lane at five files or fewer; none touches the critical zone
+of `CLAUDE.md` §3.1.
+
+### 5.2 Risks
+
+- **R1.** The block node gains an optional origin and `LiteralSrc` gains kinds: an exported union grows; every switch over
+  `src.k` (`syntaxForm.ts:664-677`) and `LITERAL_NAME` (`:705-709`, a `Record` keyed by the kinds) must meet them, which the
+  typecheck enforces.
+- **R2.** `closesBody` reads `close[0]` only (`parser.ts:687-690`), and the inner close `end` is the first token of the
+  outer `end program`. P4 and P10 are clean; an unclosed `is` block before `end program` is not measured and may take the
+  program's `end` as its own close. B1 writes that case.
+- **R3.** The case fallback (`concreteGrammar.ts:288-297`) knows only the style's words: under `lower` a class `Is` would
+  fold onto a per-block `is` unnoticed until the per-block words join `styleWords` (B1).
+- **R4.** Under Indentation `nodeText` quotes a block's INDENT/DEDENT marks with a style origin (`concreteGrammar.ts:740-744`
+  over `:430`); not measured whether the EBNF mode offers them as editable. B1 must leave the marks without an editable origin.
+- **R5.** A record with per-block tokens read by an older build loses them silently (F1).
+
+### 5.3 Decisions
+
+- **D1. The path to the target.** (a) Reading A, per-block tokens only (P4), the head prefix a separate later slice (B3);
+  (b) prefix first. **Recommended: (a)**; the prefix is needed only for a named or keyworded class (§3.1).
+- **D2. Where the per-block words are reserved.** (a) `deriveConcreteGrammar` extends `grammar.style.reservedNames`, one
+  file; (b) a `blockWords` field added to three unions. **Recommended: (a).**
+- **D3. Scope of «overrides survive a base switch».** (a) The per-block ones, by construction (§4.1), D10 unchanged for
+  the language-wide ones; (b) both, amending D10. **Recommended: (a).**
+- **D4. A grouped containment.** Its per-block tokens apply to each group's block (`concreteGrammar.ts:520`).
+  **Recommended: yes.**
+- **D5. A per-block token equal to the terminator, the assignment or a list token.** (a) Refused, as the language-wide
+  rules refuse it; (b) left to LL(1). **Recommended: (a)**: the recovery resynchronises on the terminator, which LL(1) does
+  not see.
+- **D6. An unknown key in a class or feature entry.** (a) A notice; (b) silent, as today. **Recommended: (a)**, in B1.
+- **D7. F5.** (a) A fix lane B0 before B2, `Corregge: P-2026-11-05-1457`, with a ticket; (b) folded into B2.
+  **Recommended: (a)**: it corrects shipped behaviour, and B2 reuses the input.
+- **D8. An empty side** (`blockOpen: []` under free layout). **Recommended: refused**, as `block-delimiters` refuses the
+  style's (FIRST would read `word(undefined)`); reconsidered in B3 for a prefixed head.
+- **D9. Per-block tokens where there is no block** (one-line or call class; attribute, inline or `itemKeyword`
+  containment). **Recommended: an error, not applied**, as `itemKeyword` on a non-containment (`concreteGrammar.ts:547-549`).
+- **D10. The EBNF origin of an inherited side.** Per side: a side without own tokens keeps the style origin, its edit
+  language-wide. **Recommended: yes.**
+
+### 5.4 Open questions
+
+- Q1. Should a per-block field show the inherited token as its placeholder? Proposed yes, in B2.
+- Q2. R-TXT-51 shows only the declarations block; the statements' block is not specified. Nothing in the slice depends on it.
