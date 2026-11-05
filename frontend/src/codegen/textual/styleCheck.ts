@@ -9,7 +9,7 @@
  */
 
 import { styleTokenFault } from './annotations';
-import type { ConcreteGrammar, ExprOperator, GrammarNode, ObjectRule } from './concreteGrammar';
+import type { BlockOrigin, ConcreteGrammar, ExprOperator, GrammarNode, ObjectRule } from './concreteGrammar';
 import type { Matcher } from './parser';
 import { firstSetsOf, word } from './parser';
 import { featureKeyword } from './printer';
@@ -299,6 +299,72 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
     }
     if (s.blockOpen.length && s.blockOpen[0] === s.blockClose[0]) {
         error('style-tokens', 'style.blockOpen', `the block open "${s.blockOpen[0]}" is the block close too: an open would read as a close`);
+    }
+
+    // R-TXT-51: the blocks with tokens of their own, checked as the style's are, at the element whose they are; a block a
+    // feature builds in several rules (a subclass, a group) is reported once.
+    const own: { readonly owner: Exclude<BlockOrigin, { k: 'fixed' }>; readonly n: Extract<GrammarNode, { t: 'block' }> }[] = [];
+    const visitBlocks = (n: GrammarNode): void => {
+        switch (n.t) {
+            case 'block': {
+                const o = n.origin?.open ?? n.origin?.close;
+                if (o && o.k !== 'fixed') own.push({ owner: o, n });
+                n.items.forEach(visitBlocks);
+                return;
+            }
+            case 'seq': n.items.forEach(visitBlocks); return;
+            case 'opt': case 'star': case 'assign': case 'list': visitBlocks(n.item); return;
+            case 'alt': n.alts.forEach(visitBlocks); return;
+            case 'expr': n.primaries.forEach(visitBlocks); return;
+            default: return;
+        }
+    };
+    g.rules.forEach(r => visitBlocks(r.body));
+    const once = new Set<string>();
+    const ownError = (rule: StyleRule, where: string, message: string): void => {
+        if (once.has(`${rule}|${where}|${message}`)) return;
+        once.add(`${rule}|${where}|${message}`);
+        error(rule, where, message);
+    };
+    const ownPuncts = own.flatMap(({ n }) => [...n.open, ...n.close].filter(t => !isWord(t)));
+    for (const { owner, n } of own) {
+        const where = owner.k === 'class' ? `class ${owner.cls}` : owner.feature;
+        const name = owner.k === 'class' ? owner.cls : owner.feature;
+        const sides: [string, readonly string[]][] = [
+            ...(n.origin?.open ? [['blockOpen', n.open] as [string, readonly string[]]] : []),
+            ...(n.origin?.close ? [['blockClose', n.close] as [string, readonly string[]]] : []),
+        ];
+        for (const [param, ts] of sides) {
+            for (const t of ts) {
+                if (t.startsWith('@')) continue;
+                const why = styleTokenFault(t);
+                if (why) { ownError('style-tokens', where, `the ${param} token "${t}" ${why}`); continue; }
+                if (isWord(t)) continue;
+                const opener = comments.find(c => t.startsWith(c));
+                if (opener) { ownError('style-tokens', where, `the ${param} token "${t}" starts with the comment opener "${opener}"`); continue; }
+                for (const c of comments) {
+                    const next = c.length > t.length && c.startsWith(t) ? [...puncts, ...ownPuncts].find(u => u.startsWith(c.slice(t.length))) : undefined;
+                    if (next !== undefined) { ownError('style-tokens', where, `the ${param} token "${t}" followed by "${next}" reads as the comment opener "${c}"`); break; }
+                }
+            }
+        }
+        if (n.open.length && n.open[0] === n.close[0]) ownError('style-tokens', where, `the block open "${n.open[0]}" is the block close too: an open would read as a close`);
+        // Block delimiters: a keyword that starts an item of this block, equal to one of its own tokens.
+        const tokens = new Set(sides.flatMap(([, ts]) => ts));
+        if (owner.k === 'class') {
+            for (const it of n.items.map(itemKeyword)) if (it && tokens.has(it.kw)) ownError('block-delimiters', `${owner.cls}.${it.feat}`, `the feature keyword "${it.kw}" is a block token of ${name}`);
+            continue;
+        }
+        const heads = (x: GrammarNode): void => {
+            if (x.t === 'assign' && x.item.t === 'rule') {
+                for (const o of objectsNamed(x.item.name)) if (tokens.has(headKeyword(o))) ownError('block-delimiters', `class ${o.cls}`, `the class keyword "${headKeyword(o)}" is a block token of ${name}`);
+                return;
+            }
+            if (x.t === 'seq') x.items.forEach(heads);
+            else if (x.t === 'opt' || x.t === 'star') heads(x.item);
+            else if (x.t === 'alt') x.alts.forEach(heads);
+        };
+        n.items.forEach(heads);
     }
 
     for (const rule of STYLE_RULES) {

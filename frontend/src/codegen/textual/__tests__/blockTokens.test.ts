@@ -359,3 +359,36 @@ describe('(3) the tokenizer reads the per-block punctuation', () => {
         expect(r.objects.filter(o => o.cls === 'Declaration').map(o => o.slots.name)).toEqual(['x']);
     });
 });
+
+describe('(4) the style check reads the per-block tokens', () => {
+    const findings = (g: ConcreteGrammar, rule: string) => checkStyle(g).filter(f => f.level === 'error' && f.rule === rule).map(f => [f.where, f.message]);
+
+    it('the target has no finding (mutant: none; a guard on the rules below)', () => {
+        expect(checkStyle(grammar(TARGET)).filter(f => f.level === 'error')).toEqual([]);
+    });
+
+    it('style-tokens: a per-block token that starts a comment, or completes into one, at the element (mutant: per-block tokens not checked)', () => {
+        const clike = (open: string) => grammar(withEntries({}, { fDecls: { keyword: 'declaration', blockOpen: [open], blockClose: ['>>'] } }, {}));
+        expect(findings(clike('//'), 'style-tokens')).toEqual([['Program.declarations', 'the blockOpen token "//" starts with the comment opener "//"']]);
+        expect(findings(clike('/'), 'style-tokens')).toEqual([['Program.declarations', 'the blockOpen token "/" followed by "/" reads as the comment opener "//"']]);
+    });
+
+    it('style-tokens: a per-block token of a bad shape, in a grammar not built from a record (mutant: the shape not checked per block)', () => {
+        const g = structuredClone(grammar(TARGET));
+        const own = blocks(g).find(b => b.origin?.open?.k === 'feature') as unknown as { open: string[] };
+        own.open = ['a b'];
+        expect(findings(g, 'style-tokens')).toEqual([['Program.declarations', 'the blockOpen token "a b" holds a blank']]);
+    });
+
+    it('style-tokens: a block whose open is its close, one side its own (mutant: open = close not checked per block)', () => {
+        const g = grammar(withEntries({}, { fDecls: { keyword: 'declaration', blockOpen: ['end'] } }));
+        expect(findings(g, 'style-tokens')).toEqual([['Program.declarations', 'the block open "end" is the block close too: an open would read as a close']]);
+    });
+
+    it('block-delimiters: a feature keyword in a class block, a class keyword in a containment block, equal to its own token (mutant: per-block tokens not checked)', () => {
+        const inClass = grammar(withEntries({}, { fStmts: { keyword: 'program' } }));
+        expect(findings(inClass, 'block-delimiters')).toEqual([['Program.statements', 'the feature keyword "program" is a block token of Program']]);
+        const inFeature = grammar(withEntries({}, { fDecls: { keyword: 'declaration', blockOpen: ['is'], blockClose: ['Declaration'] } }));
+        expect(findings(inFeature, 'block-delimiters')).toEqual([['class Declaration', 'the class keyword "Declaration" is a block token of Program.declarations']]);
+    });
+});
