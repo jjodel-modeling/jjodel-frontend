@@ -252,3 +252,66 @@ describe('XMI M1 import — unknown xsi:type and abstract classes are skipped an
         expect(JSON.stringify(fake.state.ops)).toMatchInlineSnapshot(`"[["DModel.new","model_1","zoo1","MM",false,true],["DObject.new","object_2","C_Zoo","model_1","DModel",true],["SetFieldAction.new","slot_3","values",["City"],"",false],["SetFieldAction.new","slot_3","isMirage",false,"",false],["SetFieldAction.new","slot_4","isMirage",false,"",false],["DObject.new","object_6","C_Dog","slot_4","DValue",true],["SetFieldAction.new","slot_7","values",["Rex"],"",false],["SetFieldAction.new","slot_7","isMirage",false,"",false],["SetFieldAction.new","slot_8","values",["Lab"],"",false],["SetFieldAction.new","slot_8","isMirage",false,"",false],["SetFieldAction.new","slot_9","isMirage",false,"",false],["DObject.new","object_10","C_Part","slot_9","DValue",true],["SetFieldAction.new","slot_11","values",["tail"],"",false],["SetFieldAction.new","slot_11","isMirage",false,"",false],["DObject.new","object_12","C_Dog","slot_4","DValue",true],["SetFieldAction.new","slot_13","values",["Fido"],"",false],["SetFieldAction.new","slot_13","isMirage",false,"",false],["SetFieldAction.new","slot_5","values","object_12","+=",true],["SetFieldAction.new","slot_5","isMirage",false,"",false],["SetFieldAction.new","model_1","metadata",{"xmiIdMap":{"object_2":"z1","object_6":"d1","object_10":"p1","object_12":"d2"}},"",false]]"`);
     });
 });
+
+// P-2026-11-05-1446 (#607): XMI carries every attribute value as text; the importer stores it typed
+// by the attribute's declared primitive, so a JjTL source reads `xlen.log2()` on a number.
+describe('XMI M1 import — attribute values typed by the metamodel', () => {
+    function typed(id: string, name: string, typeName: string, upperBound = 1): any {
+        return { id, name, className: 'DAttribute', type: { isEnum: false, name: typeName }, upperBound };
+    }
+    beforeEach(() => {
+        const Meter = cls('C_Meter', 'Meter');
+        Meter.allAttributes = [
+            typed('A_i', 'i', 'EInt'), typed('A_l', 'l', 'ELong'), typed('A_s', 's', 'EShort'),
+            typed('A_b', 'b', 'EByte'), typed('A_d', 'd', 'EDouble'), typed('A_f', 'f', 'EFloat'),
+            typed('A_on', 'on', 'EBoolean'), typed('A_off', 'off', 'EBoolean'), typed('A_text', 'text', 'EString'),
+            typed('A_ints', 'ints', 'EInt', -1),
+            { id: 'A_mode', name: 'mode', className: 'DAttribute', upperBound: 1,
+                type: { isEnum: true, name: 'Mode', literals: [{ id: 'L_fast', name: 'fast' }] } },
+        ];
+        fake.state.packages[0].model.classes.push(Meter);
+        fake.state.classesById.set(Meter.id, Meter);
+    });
+    // feature id -> the `values` array the importer wrote into that feature's conformity slot
+    const written = (): Record<string, any[]> => {
+        const out: Record<string, any[]> = {};
+        for (const o of fake.state.ops) {
+            const slot = fake.state.pendingCreation[o[1]];
+            if (o[0] === 'SetFieldAction.new' && o[2] === 'values' && slot) out[slot.instanceof] = o[3];
+        }
+        return out;
+    };
+
+    it('stores integers, decimals and booleans as numbers and booleans, strings and enums as before', async () => {
+        const xml = `${HEAD}<zoo:Meter ${NS} xmi:id="m1" i="-4" l="4261441663" s="300" b="-7" d="2.5e-3" f="1.5"`
+            + ` on="true" off="FALSE" text="007" ints="1 2 3" mode="fast"/>`;
+        const r = await importXml(xml);
+        expect(r.success).toBe(true);
+        expect(r.warnings.filter((w: string) => !w.includes('space-separated'))).toEqual([]);
+        expect(written()).toEqual({
+            A_i: [-4], A_l: [4261441663], A_s: [300], A_b: [-7], A_d: [0.0025], A_f: [1.5],
+            A_on: [true], A_off: [false], A_text: ['007'], A_ints: [1, 2, 3], A_mode: ['L_fast'],
+        });
+    });
+
+    it('reports a value that does not parse for its type and keeps its text, never NaN or 0', async () => {
+        const xml = `${HEAD}<zoo:Meter ${NS} xmi:id="m1" i="4x" l="1.5" d="abc" f="NaN" on="yes" ints="1 two"/>`;
+        const r = await importXml(xml);
+        expect(r.success).toBe(true);
+        expect(written()).toEqual({ A_i: ['4x'], A_l: ['1.5'], A_d: ['abc'], A_f: ['NaN'], A_on: ['yes'], A_ints: [1, 'two'] });
+        const typeWarnings = r.warnings.filter((w: string) => w.includes('kept as text'));
+        expect(typeWarnings).toHaveLength(6);
+        expect(typeWarnings.some((w: string) => w.includes('"i"') && w.includes('"4x"') && w.includes('EInt'))).toBe(true);
+        expect(typeWarnings.some((w: string) => w.includes('"on"') && w.includes('"yes"') && w.includes('EBoolean'))).toBe(true);
+    });
+
+    it('reports an integer outside its type range and stores the number unclamped', async () => {
+        const xml = `${HEAD}<zoo:Meter ${NS} xmi:id="m1" i="4261441663" b="128" l="9223372036854775807"/>`;
+        const r = await importXml(xml);
+        expect(r.success).toBe(true);
+        expect(written()).toEqual({ A_i: [4261441663], A_b: [128], A_l: ['9223372036854775807'] });
+        expect(r.warnings.filter((w: string) => w.includes('out of the EInt range'))).toHaveLength(1);
+        expect(r.warnings.filter((w: string) => w.includes('out of the EByte range'))).toHaveLength(1);
+        expect(r.warnings.filter((w: string) => w.includes('"l"') && w.includes('kept as text'))).toHaveLength(1);
+    });
+});
