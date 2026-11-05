@@ -1849,3 +1849,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato (app probe, 19 checks, `~/.jjodel-lanes/P-2026-11-05-0118/probe.out.txt`): Syntax mode, Basic keyword edit and preview, Advanced via Profile, a keyword fault disables Save at its fields, Save, Cmd+Z, Discard. Crops c2b-0..10 in the lane folder, GO di Alfonso in attesa.
 **Notes**: Ticket closed in `locate` (0d49db028, red first). Unattended, for Alfonso to ratify: the global Basic/Advanced is Redux `advanced` (ModeToggle and useInterfaceMode are dead code); the D9 line under the tab bar pushes the body down; `ModelReading.input` optional. Benches: `nameKeywordAt` and readModel's `input` killed. Crops regenerated after the input-size fix, not re-inspected. Handoff: `~/.jjodel-lanes/P-2026-11-05-0118/handoff.md`.
 **Prompt document name**: 2026-11-05 01:18
+
+## 2026-11-05 — merge: textual-c2-syntax-form into alfonso-frontend-jjtl (P-2026-11-05-0724)
+
+**Prompt**: `claude_2026-11-05_0724_prompt_merge_textual-c2-syntax-form.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c2-syntax-form` at `7c63bdd99` into `alfonso-frontend-jjtl`, merge base `04ada9f61`. Step C lane C2b: the Syntax mode of the Text tab (SyntaxForm.tsx, its stylesheet, Save through writeTextualSyntax, the de-duplicated checkStyle errors in the bar), and the name-keyword collision located at both fields. Alfonso's «Go» 07:24.
+**Files touched**: merge `c3a469c71`, the branch side (`frontend/src/codegen/textual/ui/SyntaxForm.tsx`, `ui/SyntaxForm.scss`, `ui/TextualTab.tsx`, `ui/openTextualTab.tsx`, `syntaxForm.ts`, their tests, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `c3a469c71`: typecheck 0 errors; typecheck:scripts, build, check:docs, check:agents, check:scripts, check:addonly exit 0; vitest 14099 tests, 3 red at import (baseline), one failure in `src/codegen/engine/__tests__/generateFiles.test.ts`, outside the branch, 8/8 alone twice (order-dependent in the full run).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe of P-2026-11-05-0118, 19 checks; crops c2b-0..10 checked by the chat (RC-23) and by Alfonso («Go», 07:24).
+**Notes**: Rollback tag `pre-textual-c2-syntax-form-P-2026-11-05-0724` on `04ada9f61` (RC-31). Union: none. The generateFiles order dependence deserves a ticket of its own front. Worker: `~/.jjodel-lanes/P-2026-11-05-0724/result.json`.
+**Prompt document name**: 2026-11-05 07:24
