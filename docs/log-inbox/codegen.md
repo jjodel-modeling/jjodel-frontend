@@ -1822,3 +1822,17 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Priority**: low
 **Found in**: P-2026-11-05-0036
 **Detail**: ~/.jjodel-lanes/P-2026-11-05-0010/probe/form.out.txt
+
+## 2026-11-05 — merge: textual-c2-syntax-form into alfonso-frontend-jjtl (P-2026-11-05-0103)
+
+**Prompt**: `claude_2026-11-05_0103_prompt_merge_textual-c2-syntax-form.md`, a direct merge by `lane-run merge --direct`, no session: `textual-c2-syntax-form` at `793b170df` into `alfonso-frontend-jjtl`, merge base `c09e8f22f`. Step C: the C2 discovery report, C2c (the app named only what the model names), C2a (the empty syntax record is no record; `syntaxForm.ts`, the pure module of the Syntax form, no UI yet). Unattended run (R-TXT-47 provisional).
+**Files touched**: merge `a0817b92e`, the branch side (`frontend/src/codegen/textual/textDiff.ts`, `ui/TextualTab.tsx`, `syntaxRecord.ts`, `syntaxForm.ts`, their tests, the discovery report, `docs/log-inbox/codegen.md`, prompts).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `a0817b92e` in the worker: typecheck 0 errors; typecheck:scripts exit 0; vitest 14093 tests in 528 files, 3 red at import (baseline), hooks 967; build exit 0; check:docs, check:agents, check:scripts, check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — app probe of P-2026-11-05-0036, 4 checks; crops c2c-1, c2c-2 checked by the chat (RC-23).
+**Notes**: Rollback tag `pre-textual-c2-syntax-form` on `6a0a5fdfd` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-0103/result.json`.
+**Prompt document name**: 2026-11-05 01:03
