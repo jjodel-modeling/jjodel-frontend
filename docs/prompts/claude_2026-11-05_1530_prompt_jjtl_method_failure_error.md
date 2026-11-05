@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-11-05-1530
 Chat: C-2026-11-03-1202
 Front: hw-notation
-Status: da eseguire
+Status: eseguito 2026-11-05 · lane full · 32e777031
 Lane: full (unattended; measure first, then the smallest fix in this same lane)
 Depends: P-2026-11-05-1446
 Worktree: ~/jjodel-w-jjtlmeth, branch jjtl-method-failure-error

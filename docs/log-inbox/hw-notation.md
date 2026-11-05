@@ -1290,3 +1290,16 @@ Two b10_8 runs are left out: one never saw the `open2` mark (after the edits Vit
 **Smoke visivo**: passato — chat, unattended: #607 verified on the branch by the app probes of P-2026-11-05-1446: rv_mc4 and rv_pf4 byte-equal to the references
 **Notes**: Rollback tag `pre-xmi-typed-integers` on `d95d5b9ca` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-05-1512/result.json`.
 **Prompt document name**: 2026-11-05 15:12
+
+## 2026-11-05 — fix(jjtl): a failing JjEL method stops the mapping (P-2026-11-05-1530, P-2026-11-05-2225)
+**Prompt**: P-2026-11-05-1530: R-FA-11 extended to JjEL methods (R-FA-12), test first, node regression on the real transformations, closing the ticket "JjTL: a JjEL method unknown for the value's type warns instead of R-FA-11's error"; cut at the context ceiling and closed by P-2026-11-05-2225 (commits, gates, report, log).
+**Files touched**: `frontend/src/jjel/evaluator/evaluator.ts`, `frontend/src/jjtl/executor/executor.ts`, `frontend/src/jjtl/executor/__tests__/method-failure.test.ts` (new), `frontend/src/components/project/__tests__/jjtlSourceValues.test.ts` (32e777031); `frontend/src/jjtl/SPEC.md` (097410e34); `docs/decisions.md` (8746cb976); `docs/discovery/discovery_2026-11-05_jjtl_method_failure.md` (2a14b3e72); `docs/log-inbox/hw-notation.md` and the `Status:` lines of the 1530 and 2225 prompt documents
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — typecheck 0; JjTL+JjEL 1,250/1,250 (1 known import-red file); build ok; full suite 3 known import-reds plus 3 timing reds under load 95 that pass alone (74/74); node runs 6/6 SAME
+**Out-of-scope changes**: yes — `jjtlSourceValues.test.ts` (outside `jjtl/`, expectation changed: `tags.size()` on a bare string now stops the run); more than five files, listed above
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (no UI change; node runs on rv_mc4, rv_pf4, rv_mc32, core_mc4, arbiter3)
+**Notes**: Red 16/22 before the fix. Mark, not subclass: validationEvaluator.ts:300 prints the constructor name, so JjEL outside JjTL throws the same object. R-FA-11 messages byte-identical. App write-back of a failed run not measured (load 95, limit 20). A background typecheck ran in 1530 against its prompt. Closes the ticket of P-2026-11-05-1446. Detail in the discovery report.
+**Prompt document name**: 2026-11-05 15:30
