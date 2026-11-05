@@ -2064,3 +2064,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — probe 13/13 PASS, crops in `~/.jjodel-lanes/P-2026-11-05-2220/`, light, scale 1.
 **Notes**: L2a had labelled the token fields but given them no rows: `styleTokenFields` adds them in Advanced, `fieldsOf` unchanged. List tokens stay text (strings). Gates: typecheck 0; build 0; check:docs 0; lazy off 4 and on 5 PASS; vitest 3 baseline import reds, `tolerant` 56/56 alone, two IR Chromium files 18/18 tests alone but `afterAll` browser close timed out at load 59 (harness). 6 mutants killed.
 **Prompt document name**: 2026-11-05 22:20
+
+## 2026-11-05 — merge: textual-ebnf-literals-step2 into alfonso-frontend-jjtl (P-2026-11-05-2247)
+**Prompt**: `claude_2026-11-05_2247_prompt_merge_textual-ebnf-literals-step2.md`, a direct merge by `lane-run merge --direct`, no session: `textual-ebnf-literals-step2` at `abbdf419d` into `alfonso-frontend-jjtl`, merge base `95359d75e`, 16 commits on the branch side.
+**Files touched**: merge `6f1530d9c`: 14 files from the branch side (`docs/log-inbox/codegen.md`, `docs/prompts/claude_2026-11-05_1430_prompt_textual_ebnf_literals_l2a.md`, `docs/prompts/claude_2026-11-05_1457_prompt_textual_ebnf_literals_l2a_cont.md`, `docs/prompts/claude_2026-11-05_1537_prompt_textual-ebnf-literals-step2_take_trunk.md`, `docs/prompts/claude_2026-11-05_1538_prompt_textual-ebnf-literals-step2_take_trunk.md`, `docs/prompts/claude_2026-11-05_2220_prompt_textual_ebnf_literals_b0.md`, `frontend/src/codegen/textual/__tests__/ebnfIslands.test.ts`, `frontend/src/codegen/textual/__tests__/ebnfLiterals.test.ts`, and 6 more); this commit: this entry and the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `6f1530d9c` in the worker: typecheck 0 errors, the receiving tip's set; typecheck:scripts exit 0; vitest 14336 tests in 535 files, 3 red at import, hooks 967; build exit 0; check:docs exit 0; check:agents exit 0; check:scripts exit 0; check:addonly exit 0.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — chat, unattended: B0 crops checked by the chat on the branch tip abbdf419d: token rows in Advanced, style-token island { to begin linked across rules, Save prints begin, one Undo restores
+**Notes**: Rollback tag `pre-textual-ebnf-literals-step2` on `1b70ba7f3` (RC-31). Union: none. Worker and gates: `~/.jjodel-lanes/P-2026-11-05-2247/result.json`.
+**Prompt document name**: 2026-11-05 22:47
