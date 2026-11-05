@@ -60,13 +60,30 @@ export interface EnumAnnotation {
     readonly subsets?: readonly EnumSubset[];
 }
 
+/**
+ * The style tokens a record overrides on its base (R-TXT-48 (2), R-TXT-49 D9): whole arrays per parameter, the list
+ * key by key; stored only when different from the base's. The parameters the EBNF prints (concreteGrammar.ts `StyleParam`).
+ */
+export interface StyleTokenOverrides {
+    readonly blockOpen?: readonly string[];
+    readonly blockClose?: readonly string[];
+    readonly assign?: readonly string[];
+    readonly terminator?: readonly string[];
+    readonly list?: { readonly open?: string; readonly separator?: string; readonly close?: string };
+}
+
+/** The token keys of a record's `style`, in the order a record writes them (syntaxRecord.ts `encodeSyntax`). */
+export const STYLE_TOKEN_KEYS = ['blockOpen', 'blockClose', 'assign', 'terminator', 'list'] as const;
+/** The keys of a `list` override, in the order a record writes them. */
+export const LIST_TOKEN_KEYS = ['open', 'separator', 'close'] as const;
+
 /** The annotations of one metamodel, keyed by element id. */
 export interface SyntaxAnnotations {
     readonly v: 1;
     /** The language's name (by default the metamodel's, R-TXT-25 (12)). */
     readonly language?: string;
     /** `base`: the style of the catalog (style.ts `STYLE_CATALOG`), C-like when absent (step C3a); the options apply over it. */
-    readonly style?: { readonly base?: StyleBase; readonly classCase?: LetterCase; readonly literalCase?: LetterCase; readonly blankBeforeContainment?: boolean };
+    readonly style?: { readonly base?: StyleBase; readonly classCase?: LetterCase; readonly literalCase?: LetterCase; readonly blankBeforeContainment?: boolean } & StyleTokenOverrides;
     /** The classes the top level admits: `uncontained` (the concrete classes no containment can hold) or a list of class ids (R-TXT-24 (a)). */
     readonly roots?: 'uncontained' | readonly string[];
     readonly classes?: Readonly<Record<string, ClassAnnotation>>;
@@ -83,7 +100,7 @@ export interface ElementIds {
 
 export interface AnnotationIssue {
     readonly level: 'error' | 'notice';
-    /** `class C`, `C.f`, `enumeration E`, `roots`, `style`. */
+    /** `class C`, `C.f`, `enumeration E`, `roots`, `style`, a style token parameter (`style.blockOpen`, `style.list.open`). */
     readonly where: string;
     readonly message: string;
 }
@@ -115,7 +132,7 @@ export interface ResolvedFeature {
 /** The annotations keyed by names: classes by name, features by `Owner.f`, enumerations by name. */
 export interface ResolvedAnnotations {
     readonly language?: string;
-    readonly style: { readonly base?: StyleBase; readonly classCase?: LetterCase; readonly literalCase?: LetterCase; readonly blankBeforeContainment?: boolean };
+    readonly style: { readonly base?: StyleBase; readonly classCase?: LetterCase; readonly literalCase?: LetterCase; readonly blankBeforeContainment?: boolean } & StyleTokenOverrides;
     readonly roots?: 'uncontained' | readonly string[];
     readonly classes: Readonly<Record<string, ResolvedClass>>;
     readonly features: Readonly<Record<string, ResolvedFeature>>;
@@ -134,6 +151,18 @@ const isFeatureKeyword = (v: unknown): v is string => isKeyword(v) || (typeof v 
 const isCase = (v: unknown): v is LetterCase => v === 'declared' || v === 'lower';
 /** An operator symbol: a word, or a run of characters that are neither word characters nor spaces. */
 const isSymbol = (v: string): boolean => IDENTIFIER.test(v) || /^[^\w\s]+$/.test(v);
+
+/**
+ * Why one style token is not well formed, or undefined (report §4.4): empty, a blank, the string quote `"` (the EBNF's
+ * quote, which `quoted` does not escape), or neither a word nor a run of punctuation, which the tokenizer would split.
+ */
+export function styleTokenFault(t: string): string | undefined {
+    if (t === '') return 'is empty';
+    if (/\s/.test(t)) return 'holds a blank';
+    if (t.includes('"')) return 'holds a quote';
+    if (!IDENTIFIER.test(t) && !/^[^\w\s"'@]+$/.test(t)) return 'is neither a word nor a run of punctuation';
+    return undefined;
+}
 
 /** The fixity of a class as an operator, from all its features (inherited included); undefined when they are not an operator's shape. */
 export function operatorFixity(features: readonly TextFeature[]): { readonly fixity: OperatorFixity; readonly operands: readonly string[] } | undefined {
@@ -213,7 +242,7 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
     const classes: Record<string, ResolvedClass> = {};
     const features: Record<string, ResolvedFeature> = {};
     const enums: Record<string, { subsets: EnumSubset[] }> = {};
-    const style: { base?: StyleBase; classCase?: LetterCase; literalCase?: LetterCase; blankBeforeContainment?: boolean } = {};
+    const style: { base?: StyleBase; classCase?: LetterCase; literalCase?: LetterCase; blankBeforeContainment?: boolean } & { -readonly [K in keyof StyleTokenOverrides]: StyleTokenOverrides[K] } = {};
 
     const mandatory = new Set(Object.values(ids.features).filter(f => (f.lower ?? 0) >= 1).map(f => `${f.owner}.${f.name}`));
     const mandatoryName = new Set(mm.classes.flatMap(c => {
@@ -243,6 +272,29 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
     if (s.blankBeforeContainment !== undefined) {
         if (typeof s.blankBeforeContainment === 'boolean') style.blankBeforeContainment = s.blankBeforeContainment;
         else error('style', 'blankBeforeContainment is not a boolean');
+    }
+    // R-TXT-48 (2): a token override that is not a list of well-formed tokens is dropped, the base's applies.
+    const tokenFault = (v: unknown): string | undefined => (typeof v !== 'string' ? 'is not a string' : styleTokenFault(v));
+    for (const key of STYLE_TOKEN_KEYS) {
+        const v: unknown = s[key];
+        if (v === undefined) continue;
+        if (key === 'list') {
+            if (!v || typeof v !== 'object' || Array.isArray(v)) { error('style.list', 'list is not a record of open, separator and close tokens'); continue; }
+            const list: { open?: string; separator?: string; close?: string } = {};
+            for (const k of LIST_TOKEN_KEYS) {
+                const t: unknown = (v as Record<string, unknown>)[k];
+                if (t === undefined) continue;
+                const why = tokenFault(t);
+                if (why) error(`style.list.${k}`, `the list token ${JSON.stringify(t)} ${why}`);
+                else list[k] = t as string;
+            }
+            if (Object.keys(list).length) style.list = list;
+            continue;
+        }
+        if (!Array.isArray(v)) { error(`style.${key}`, `${key} is not a list of tokens`); continue; }
+        const bad = v.map(t => [t, tokenFault(t)] as const).find(([, why]) => why);
+        if (bad) error(`style.${key}`, `the ${key} token ${JSON.stringify(bad[0])} ${bad[1]}`);
+        else style[key] = [...v];
     }
 
     let roots: 'uncontained' | string[] | undefined;
@@ -319,8 +371,28 @@ export function resolveAnnotations(record: SyntaxAnnotations, ids: ElementIds, m
     return { ...(language !== undefined ? { language } : {}), style, ...(roots !== undefined ? { roots } : {}), classes, features, enums, mandatoryName, mandatory, issues };
 }
 
-/** The style with the record's style options applied; the base is not an option, it chose `style` (syntaxRecord.ts). */
+const sameTokens = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((t, i) => t === b[i]);
+const isWordToken = (t: string): boolean => /^\w/.test(t);
+/** The word tokens of a style, in the order of its parameters (styleCheck.ts `styleTokens`). */
+const wordTokens = (s: NotationStyle): string[] =>
+    [...new Set([...s.blockOpen, ...s.blockClose, ...s.emptyBlock, ...s.assign, ...s.terminator, s.list.open, s.list.separator, s.list.close].filter(isWordToken))];
+
+/**
+ * The style with the record's style options applied; the base is not an option, it chose `style` (syntaxRecord.ts).
+ * Token overrides (R-TXT-48 (2), report §4.3): each array replaces the base's, the list merges key by key; the reserved
+ * names follow the word tokens (a word no token is any more is freed; a catalog style's are exactly its word tokens), and
+ * the empty block becomes open followed by close when either of them differs from the base's.
+ */
 export function withStyleOptions(style: NotationStyle, a: ResolvedAnnotations): NotationStyle {
-    const { base: _base, ...options } = a.style;
-    return { ...style, ...options };
+    const { base: _base, blockOpen, blockClose, assign, terminator, list, ...options } = a.style;
+    const out: NotationStyle = {
+        ...style, ...options,
+        ...(blockOpen ? { blockOpen } : {}), ...(blockClose ? { blockClose } : {}), ...(assign ? { assign } : {}), ...(terminator ? { terminator } : {}),
+        ...(list ? { list: { ...style.list, ...list } } : {}),
+    };
+    const blockChanged = !sameTokens(out.blockOpen, style.blockOpen) || !sameTokens(out.blockClose, style.blockClose);
+    const effective: NotationStyle = blockChanged ? { ...out, emptyBlock: [...out.blockOpen, ...out.blockClose] } : out;
+    const baseWords = new Set(wordTokens(style));
+    const reservedNames = [...new Set([...style.reservedNames.filter(w => !baseWords.has(w)), ...wordTokens(effective)])];
+    return { ...effective, reservedNames };
 }
