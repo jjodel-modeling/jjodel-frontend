@@ -1836,3 +1836,16 @@ An index hole now takes the origin of its last read, but a value passed through 
 **Smoke visivo**: passato — app probe of P-2026-11-05-0036, 4 checks; crops c2c-1, c2c-2 checked by the chat (RC-23).
 **Notes**: Rollback tag `pre-textual-c2-syntax-form` on `6a0a5fdfd` (RC-31). Union: none. Worker: `~/.jjodel-lanes/P-2026-11-05-0103/result.json`.
 **Prompt document name**: 2026-11-05 01:03
+
+## 2026-11-05 — feat(codegen): C2b, the Syntax mode of the Text tab and its form (P-2026-11-05-0118, P-2026-11-05-0145)
+**Prompt**: `claude_2026-11-05_0118_prompt_textual_c2b_syntax_form_ui.md`: (1) the name-keyword ticket of P-2026-11-05-0036; (2) the Syntax mode; (3) the form, Basic and Advanced (D2); (4) Save as one undo step and D9; (5) gates; (6) app check; (7) log and Status. Stopped at the context ceiling after items 1-4 and 6, closed by `claude_2026-11-05_0145_prompt_textual_c2b_closure.md` (RC-51) for items 5 and 7.
+**Files touched**: 0d49db028: `frontend/src/codegen/textual/syntaxForm.ts`, `__tests__/syntaxForm.test.ts`; f243a8152: `syntaxForm.ts`, `ui/SyntaxForm.tsx` (new), `ui/SyntaxForm.scss` (new), `ui/TextualTab.tsx`, `ui/openTextualTab.tsx` (comment), `__tests__/syntaxForm.test.ts`, `__tests__/textualTab.test.ts`. Docs: this entry, the two Status lines.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on f243a8152: typecheck 0; vitest 528 files, 14097 passed, 2 skipped, 3 red at import (baseline), 2 Chromium harness files timed out under load and passed alone (18/18); build 0; check:docs 0; check:codegen-lazy ALL GREEN (off, on).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (app probe, 19 checks, `~/.jjodel-lanes/P-2026-11-05-0118/probe.out.txt`): Syntax mode, Basic keyword edit and preview, Advanced via Profile, a keyword fault disables Save at its fields, Save, Cmd+Z, Discard. Crops c2b-0..10 in the lane folder, GO di Alfonso in attesa.
+**Notes**: Ticket closed in `locate` (0d49db028, red first). Unattended, for Alfonso to ratify: the global Basic/Advanced is Redux `advanced` (ModeToggle and useInterfaceMode are dead code); the D9 line under the tab bar pushes the body down; `ModelReading.input` optional. Benches: `nameKeywordAt` and readModel's `input` killed. Crops regenerated after the input-size fix, not re-inspected. Handoff: `~/.jjodel-lanes/P-2026-11-05-0118/handoff.md`.
+**Prompt document name**: 2026-11-05 01:18

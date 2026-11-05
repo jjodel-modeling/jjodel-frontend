@@ -13,7 +13,7 @@ vi.mock('../../../jjscript', () => ({ buildEvalContext: () => ({}) }));
 vi.mock('../../../components/editor-v2/sim/simBridge', () => ({ evalContextFor: () => ({}) }));
 vi.mock('../../../components/abstract/DockManager', () => ({ default: { closeTab: () => true } }));
 
-import { canSwitchStyle, styleSwitchRecord, TEXT_EDITOR_OPTIONS, textInputOf, textualView } from '../ui/TextualTab';
+import { canSwitchStyle, readModel, styleSwitchRecord, TEXT_EDITOR_OPTIONS, textInputOf, textualView } from '../ui/TextualTab';
 import { deriveBaseGrammar } from '../baseGrammar';
 import { concreteGrammarEbnf, deriveConcreteGrammar } from '../concreteGrammar';
 import { printTextModel } from '../printer';
@@ -176,6 +176,15 @@ describe('textualView', () => {
         expect(view.text).toBe('');
         expect(view.error).toMatch(/Named/);
         expect(view.ebnf).toBe(concreteGrammarEbnf(grammar));
+    });
+
+    it('keeps the metamodel and the objects read when the print fails: the Syntax mode edits that record (C2b; mutant: input dropped on a failed print)', () => {
+        const stray = ({ named }: any) => ({ id: 'n', __type: 'Object', name: 'stray', instanceOf: named, instanceof: named, parent: null });
+        const g = garageGlobals([stray]);
+        const r = readModel(g);
+        expect(r.base).toBeNull();
+        expect(r.input?.metamodel).toEqual(textInputOf(g).metamodel);
+        expect(readModel(garageGlobals()).input?.objects).toEqual(EXPECTED_OBJECTS);
     });
 });
 

@@ -50,7 +50,8 @@ const metamodelLabel = (mm: any): string => textualOptionLabel(nameOf(mm), textu
 /**
  * Stores `record` as the syntax annotations of the metamodel `metamodelId`: one `state` assignment, one undo step, as
  * a generator's Save (TemplateEditorTab.tsx). Nothing is written when the record is the stored one. False when the
- * metamodel is not in the store.
+ * metamodel is not in the store. Its callers: the Text tab's style picker, and Save of its Syntax mode (SyntaxForm.tsx,
+ * step C2b), which writes the whole draft at once.
  */
 export function writeTextualSyntax(metamodelId: string, record: SyntaxAnnotations): boolean {
     const lookup = lookupOf();
