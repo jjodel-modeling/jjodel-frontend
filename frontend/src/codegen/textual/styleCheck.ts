@@ -170,8 +170,16 @@ export function checkStyle(g: ConcreteGrammar): StyleFinding[] {
     }
 
     // Block delimiters: a keyword equal to a block token makes the close (or the open) start an item.
-    if (s.blockOpen.length === 0) error('block-delimiters', 'style.blockOpen', 'a free-layout block needs an opening token');
-    if (s.blockClose.length === 0) error('block-delimiters', 'style.blockClose', 'a free-layout block needs a closing token');
+    if (s.layout === 'free' && s.blockOpen.length === 0) error('block-delimiters', 'style.blockOpen', 'a free-layout block needs an opening token');
+    if (s.layout === 'free' && s.blockClose.length === 0) error('block-delimiters', 'style.blockClose', 'a free-layout block needs a closing token');
+    // C3b: under indentation an empty body prints nothing; an object with no keyword, no name and nothing else set would
+    // print nothing at all, and nothing cannot read back as it.
+    if (s.layout === 'indent') {
+        const first = firstSetsOf(g);
+        for (const r of objectRules) {
+            if (first(r.body).nullable) error('block-delimiters', `class ${r.cls}`, `under indentation a ${r.cls} with no keyword, no name and nothing set prints nothing, and cannot read back`);
+        }
+    }
     const blockTokens = new Set([...s.blockOpen, ...s.blockClose, ...s.emptyBlock]);
     for (const r of objectRules) {
         if (blockTokens.has(headKeyword(r)) && !foldedOntoWord(r)) error('block-delimiters', `class ${r.cls}`, `the class keyword "${headKeyword(r)}" is a block token`);
@@ -290,6 +298,9 @@ const shownMatchers = (ms: readonly Matcher[]): string => [...new Set(ms)].map(m
  * here to a fixpoint (`EOF` after `Model`): at an optional part or a repetition, no token both starts it and follows it;
  * a repeated part is never empty; the alternatives of a choice start with distinct tokens, and at most one is empty.
  * The parser predicts with one token, so a conflict here is a text it reads differently from the printer.
+ * Under indentation (C3b, P-2026-11-05-0910) the walk reads the parser's line rule: a token past a line break of the
+ * grammar is marked as on the next line, and an optional part or a repetition that cannot stand where a line may break
+ * (the start, after a line break, at an INDENT or a DEDENT) never starts on the next line, so such a token is no conflict.
  */
 function ll1Conflicts(g: ConcreteGrammar): { readonly conflicts: { readonly where: string; readonly message: string }[]; readonly follow: ReadonlyMap<string, ReadonlySet<Matcher>> } {
     const first = firstSetsOf(g);
@@ -300,28 +311,63 @@ function ll1Conflicts(g: ConcreteGrammar): { readonly conflicts: { readonly wher
     let report = false;
     let changed = true;
     let rule = '';
+    // C3b: the line rule. A FOLLOW token on the next line carries NEXT; `atStart` says a node may stand where a line may break.
+    const indent = g.style.layout === 'indent';
+    const rules = new Map(g.rules.map(r => [r.name, r]));
+    const atLineStart = new Set<string>(['Model']);
+    const onNextLine = (ms: ReadonlySet<Matcher>): Set<Matcher> => new Set([...ms].map(m => (m.startsWith(NEXT) ? m : NEXT + m)));
+    /** The tokens that may follow a decision taken at a line start or not: a token on the next line counts only at one. */
+    const facing = (after: ReadonlySet<Matcher>, atStart: boolean): Set<Matcher> =>
+        new Set([...after].flatMap(m => (!m.startsWith(NEXT) ? [m] : atStart ? [m.slice(NEXT.length)] : [])));
+    const ending = new Map<string, boolean>();
+    /** Whether a line may break right after `n`, given whether one may right before it. */
+    const breaksAfter = (n: GrammarNode, before: boolean): boolean => {
+        switch (n.t) {
+            case 'nl': return true;
+            case 'seq': return n.items.reduce((b, x) => breaksAfter(x, b), before);
+            case 'opt': return before || breaksAfter(n.item, before);
+            case 'star': return before || breaksAfter(n.item, true);
+            case 'alt': return n.alts.some(a => breaksAfter(a, before));
+            case 'assign': return breaksAfter(n.item, before);
+            // After an indented body comes its DEDENT; an absent one leaves `before`.
+            case 'block': return indent || before;
+            case 'rule': {
+                const k = `${n.name}|${before}`;
+                const known = ending.get(k);
+                if (known !== undefined) return known;
+                ending.set(k, true);
+                const r = rules.get(n.name);
+                const b = r ? breaksAfter(r.body, before) : before;
+                ending.set(k, b);
+                return b;
+            }
+            default: return false;
+        }
+    };
 
     const conflict = (n: GrammarNode, message: string): void => {
         if (!report) return;
         const feat = n.t === 'opt' || n.t === 'star' ? n.feat : undefined;
         out.push({ where: feat ? `${rule}.${feat}` : `rule ${rule}`, message });
     };
-    /** Walks `n` with the tokens that may follow it; adds to the FOLLOW of the rules it reaches. */
-    const walk = (n: GrammarNode, after: ReadonlySet<Matcher>): void => {
+    /** Walks `n` with the tokens that may follow it and whether it may stand at a line start; adds to the FOLLOW of the rules it reaches. */
+    const walk = (n: GrammarNode, after: ReadonlySet<Matcher>, atStart: boolean): void => {
         switch (n.t) {
-            case 'seq': walkSeq(n.items, after); return;
+            case 'seq': walkSeq(n.items, after, atStart); return;
             case 'opt': {
-                const both = common(first(n.item).set, after, reserved);
+                const both = common(first(n.item).set, facing(after, atStart), reserved);
                 if (both.length) conflict(n, `${shownMatchers(both)} can both start the optional part and follow it`);
-                walk(n.item, after);
+                walk(n.item, after, atStart);
                 return;
             }
             case 'star': {
                 const f = first(n.item);
                 if (f.nullable) conflict(n, 'the repeated part can be empty');
-                const both = common(f.set, after, reserved);
+                // The loop decides again after each item, at a line start if the item may end at a line break.
+                const again = atStart || breaksAfter(n.item, true);
+                const both = common(f.set, facing(after, again), reserved);
                 if (both.length) conflict(n, `${shownMatchers(both)} can both start the repeated part and follow it`);
-                walk(n.item, new Set([...f.set, ...after]));
+                walk(n.item, new Set([...f.set, ...after]), again);
                 return;
             }
             case 'alt': {
@@ -335,21 +381,23 @@ function ll1Conflicts(g: ConcreteGrammar): { readonly conflicts: { readonly wher
                 const empties = fs.filter(f => f.nullable).length;
                 if (empties > 1) conflict(n, `${empties} alternatives can be empty`);
                 if (empties) {
-                    const both = common(new Set(fs.flatMap(f => [...f.set])), after, reserved);
+                    // The parser's choice reads no line rule: every token that may follow counts.
+                    const both = common(new Set(fs.flatMap(f => [...f.set])), facing(after, true), reserved);
                     if (both.length) conflict(n, `${shownMatchers(both)} can both start an alternative and follow the empty one`);
                 }
-                for (const a of n.alts) walk(a, after);
+                for (const a of n.alts) walk(a, after, atStart);
                 return;
             }
             case 'rule': {
                 const set = follow.get(n.name);
                 if (!set) return;
                 for (const m of after) if (!set.has(m)) { set.add(m); changed = true; }
+                if (atStart && !atLineStart.has(n.name)) { atLineStart.add(n.name); changed = true; }
                 return;
             }
-            case 'assign': walk(n.item, after); return;
-            case 'list': walk(n.item, new Set([word(n.separator), word(n.close)])); return;
-            case 'block': walkSeq(n.items, new Set(n.close.length ? [word(n.close[0])] : [])); return;
+            case 'assign': walk(n.item, after, atStart); return;
+            case 'list': walk(n.item, new Set([word(n.separator), word(n.close)]), false); return;
+            case 'block': walkSeq(n.items, new Set(n.close.length ? [word(n.close[0])] : []), indent || atStart); return;
             case 'expr': {
                 // C1a: no primary is empty, and the starts of an expression are pairwise disjoint.
                 const name = (p: GrammarNode): string => (p.t === 'rule' ? p.name : 'a primary');
@@ -368,28 +416,33 @@ function ll1Conflicts(g: ConcreteGrammar): { readonly conflicts: { readonly wher
                 }
                 const infix = n.operators.filter(o => o.fixity !== 'prefix').map(o => word(o.symbol));
                 const inner = new Set([...after, ...infix, word(n.close), word(n.separator)]);
-                for (const p of n.primaries) walk(p, inner);
+                for (const p of n.primaries) walk(p, inner, atStart);
                 return;
             }
             default: return;
         }
     };
-    const walkSeq = (items: readonly GrammarNode[], after: ReadonlySet<Matcher>): void => {
+    const walkSeq = (items: readonly GrammarNode[], after: ReadonlySet<Matcher>, atStart: boolean): void => {
         let rest = new Set(after);
         const afters: Set<Matcher>[] = [];
         for (let i = items.length - 1; i >= 0; i--) {
             afters[i] = rest;
+            if (indent && items[i].t === 'nl') { rest = onNextLine(rest); continue; }
             const f = first(items[i]);
             rest = new Set(f.nullable ? [...f.set, ...rest] : f.set);
         }
-        items.forEach((x, i) => walk(x, afters[i]));
+        let start = atStart;
+        items.forEach((x, i) => { walk(x, afters[i], start); start = indent && breaksAfter(x, start); });
     };
 
     while (changed) {
         changed = false;
-        for (const r of g.rules) { rule = r.name; walk(r.body, follow.get(r.name) ?? new Set()); }
+        for (const r of g.rules) { rule = r.name; walk(r.body, follow.get(r.name) ?? new Set(), atLineStart.has(r.name)); }
     }
     report = true;
-    for (const r of g.rules) { rule = r.name; walk(r.body, follow.get(r.name) ?? new Set()); }
-    return { conflicts: out, follow };
+    for (const r of g.rules) { rule = r.name; walk(r.body, follow.get(r.name) ?? new Set(), atLineStart.has(r.name)); }
+    return { conflicts: out, follow: new Map([...follow].map(([k, ms]) => [k, facing(ms, true)])) };
 }
+
+/** The mark of a FOLLOW token past a line break of the grammar (C3b): never the start of a matcher. */
+const NEXT = '\n';

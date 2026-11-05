@@ -22,7 +22,7 @@
 
 import type { NamePattern } from './annotations';
 import type { ConcreteGrammar, ConcreteRule, GrammarNode, ObjectRule } from './concreteGrammar';
-import { applyCase, derivedName } from './concreteGrammar';
+import { applyCase, DEDENT_MARK, derivedName, INDENT_MARK } from './concreteGrammar';
 import type { OuterRef, TextFeature, TextObject } from './metamodel';
 import type { ObjectSpan } from './printer';
 import { featureKeyword, pathKeyword } from './printer';
@@ -361,6 +361,7 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
         i++;
     }
     toks.push({ kind: 'token', k: 'EOF', v: '', raw: '', line, col: i - lineStart + 1, start: i, end: i, first: line !== lastLine, leading: '', trailing: '' });
+    if (style.layout === 'indent') toks.splice(0, toks.length, ...layout(toks, text, exprs, errors));
 
     // Trivia (§A.6): what lies between two tokens goes, up to and including the first line end outside a comment, to the
     // token before as trailing trivia; the rest to the token after as leading. A gap with no line end is leading trivia,
@@ -382,12 +383,55 @@ function tokenize(g: ConcreteGrammar, text: string, errors: TextParseError[]): T
     let at = 0;
     for (let k = 0; k < toks.length; k++) {
         const t = toks[k];
+        if (isMark(t)) continue;
         t.leading = text.slice(at, t.start);
         const next = k + 1 < toks.length ? toks[k + 1].start : t.end;
         at = trailEnd(t.end, next);
         t.trailing = text.slice(t.end, at);
     }
     return toks;
+}
+
+/** An INDENT or a DEDENT of the indentation style: zero-width, no trivia (step C3b). */
+const isMark = (t: Token): boolean => t.k === 'P' && (t.v === INDENT_MARK || t.v === DEDENT_MARK);
+
+/**
+ * The layout of the indentation style (step C3b, the rule of Python): the indentation of a line is the count of spaces
+ * and tabs before its first token; deeper than the enclosing level, an INDENT before that token; shallower, a DEDENT per
+ * level left, and a level it matches none of is an error, the line read at the level it fell to (never a silent
+ * reparent: the text is not applied). No layout inside brackets; the levels still open close at the end of the text.
+ */
+function layout(toks: readonly Token[], text: string, exprs: readonly Extract<GrammarNode, { t: 'expr' }>[], errors: TextParseError[]): Token[] {
+    const opens = new Set(['[', '(', ...exprs.map(e => e.open)]);
+    const closes = new Set([']', ')', ...exprs.map(e => e.close)]);
+    const mark = (v: string, at: Token, pos: number): Token => ({ kind: 'token', k: 'P', v, raw: '', line: at.line, col: at.col, start: pos, end: pos, first: true, leading: '', trailing: '' });
+    const levels = [0];
+    const out: Token[] = [];
+    let nesting = 0;
+    for (const t of toks) {
+        if (t.k === 'EOF') {
+            for (; levels.length > 1; levels.pop()) out.push(mark(DEDENT_MARK, t, t.start));
+        } else if (t.first && nesting === 0) {
+            let from = t.start;
+            while (from > 0 && text[from - 1] !== '\n') from--;
+            let width = 0;
+            while (text[from + width] === ' ' || text[from + width] === '\t') width++;
+            if (width > levels[levels.length - 1]) {
+                levels.push(width);
+                out.push(mark(INDENT_MARK, t, t.start));
+            } else if (width < levels[levels.length - 1]) {
+                const before = levels.join(', ');
+                while (width < levels[levels.length - 1]) { levels.pop(); out.push(mark(DEDENT_MARK, t, t.start)); }
+                if (width !== levels[levels.length - 1]) {
+                    errors.push({ line: t.line, col: 1, start: from, end: t.start, message: `inconsistent indentation: ${width} matches no enclosing level (${before})` });
+                }
+            }
+        }
+        if (t.k === 'P' && opens.has(t.v)) nesting++;
+        else if (t.k === 'P' && closes.has(t.v) && nesting > 0) nesting--;
+        out.push(t);
+    }
+    return out;
 }
 
 /** A token class: `ID`, `ID:x` (the identifier x), `P:x`, `STR`, `INT`, `FLOAT`. */
@@ -411,9 +455,11 @@ const describeToken = (t: Token): string => {
         case 'ID': return `name "${t.v}"`;
         case 'STR': return `string ${JSON.stringify(t.v)}`;
         case 'INT': case 'FLOAT': return `number ${t.v}`;
-        case 'P': return `"${t.v}"`;
+        case 'P': return t.v === INDENT_MARK ? 'an indented block' : t.v === DEDENT_MARK ? 'the end of an indented block' : `"${t.v}"`;
     }
 };
+/** A style token as a message shows it: the layout marks in words (step C3b). */
+const shownToken = (s: string): string => (s === INDENT_MARK ? 'an indented block' : s === DEDENT_MARK ? 'the end of an indented block' : `"${s}"`);
 const describeMatchers = (ms: Iterable<Matcher>): string[] => {
     const set = new Set(ms);
     const out: string[] = [];
@@ -421,7 +467,7 @@ const describeMatchers = (ms: Iterable<Matcher>): string[] => {
     else if (set.has('STR')) out.push('a string');
     if (set.has('FLOAT')) out.push('a number');
     else if (set.has('INT')) out.push('an integer');
-    for (const m of set) if (m.includes(':')) out.push(`"${m.slice(m.indexOf(':') + 1)}"`);
+    for (const m of set) if (m.includes(':')) out.push(shownToken(m.slice(m.indexOf(':') + 1)));
     return out;
 };
 const either = (xs: readonly string[]): string => {
@@ -468,7 +514,8 @@ export function firstSetsOf(g: ConcreteGrammar): (n: GrammarNode) => First {
             case 'rule': { const k = rules.get(n.name); r = k ? first(k.body) : EMPTY; break; }
             case 'assign': r = first(n.item); break;
             case 'list': r = { set: new Set([word(n.open)]), nullable: false }; break;
-            case 'block': r = { set: new Set([word(n.open[0]), ...(n.empty.length ? [word(n.empty[0])] : [])]), nullable: false }; break;
+            // C3b: an indented block with no mandatory item may be absent, its body empty.
+            case 'block': r = { set: new Set([word(n.open[0]), ...(n.empty.length ? [word(n.empty[0])] : [])]), nullable: !n.empty.length && n.items.every(x => first(x).nullable) }; break;
             case 'nl': r = EMPTY; break;
             case 'expr': { const fs = n.primaries.map(first); r = { set: new Set([...fs.flatMap(f => [...f.set]), word(n.open), ...n.operators.flatMap(o => [...(o.fixity === 'prefix' ? [word(o.symbol)] : []), ...(o.call !== undefined ? [word(o.call)] : [])])]), nullable: fs.some(f => f.nullable) }; break; }
         }
@@ -552,6 +599,12 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
 
     let p = 0;
     const peek = (k = 0): Token => toks[Math.min(p + k, toks.length - 1)];
+    // C3b, the line rule of the indentation style: an optional part starts on a new line only where a line may break (at
+    // the start, after a line break of the grammar, after an INDENT or a DEDENT, after a skip), so that `Room` over
+    // `Room x` reads as two objects, never the second keyword as the first one's name.
+    const indent = g.style.layout === 'indent';
+    let breakAt = 0;
+    const lineOk = (): boolean => !indent || !peek().first || p === breakAt || (p > 0 && isMark(toks[p - 1]));
     const can = (n: GrammarNode): boolean => canAt(n, peek());
     const errorAt = (t: Token, message: string, end = t.end): TextParseError => ({ line: t.line, col: t.col, start: t.start, end, message });
     const fail = (expected: readonly string[], t: Token = peek()): never => {
@@ -903,8 +956,8 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
      * of this frame or of an enclosing one on a later line. The skipped tokens are an error node with `message`.
      */
     const sync = (frame: Frame, errLine: number, message: string): void => {
-        const opens = new Set((frame.open ?? g.style.blockOpen).map(word));
-        const closes = new Set((frame.close ?? g.style.blockClose).map(word));
+        const opens = new Set((frame.open ?? (indent ? [INDENT_MARK] : g.style.blockOpen)).map(word));
+        const closes = new Set((frame.close ?? (indent ? [DEDENT_MARK] : g.style.blockClose)).map(word));
         const err = enter('error', { message });
         try {
             let depth = 0;
@@ -942,6 +995,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         } finally {
             leave(err);
             if (!err.children.length) cur().children.pop();
+            breakAt = p;
         }
     };
     /** The object rule a token starts by its keyword, for the descent into a skipped block; none for a positional class. */
@@ -952,6 +1006,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     const skipOne = (message: string): void => {
         if (peek().k === 'EOF') { p++; return; }
         within('error', { message }, () => take());
+        breakAt = p;
     };
 
     const guarded = (frame: Frame, n: GrammarNode, o: MutableObject | undefined): void => {
@@ -978,6 +1033,13 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             // Step A (a): a missing open before an item of the block, a missing empty block before what follows the object.
             const t = peek();
             const message = `expected ${either(describeMatchers([word(n.open[0])]))}; found ${describeToken(t)}`;
+            if (indent) {
+                // C3b: an indented body is the lines under the head; with none, its mandatory items are missing.
+                record(errorAt(t, message));
+                recovered.add(o.id);
+                within('error', { message }, () => undefined);
+                return;
+            }
             if (t.k !== 'EOF' && items.some(x => canAt(x, t))) {
                 record(errorAt(t, message));
                 recovered.add(o.id);
@@ -1030,13 +1092,13 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                     continue;
                 }
                 if (t.k === 'EOF' || (t.first && enclosing.some(f => f.can(t)))) {
-                    record(errorAt(t, `expected "${n.close.join(' ')}" to close the "${n.open.join(' ')}" at ${opener.line}:${opener.col}; found ${describeToken(t)}`));
+                    record(errorAt(t, `expected ${n.close.map(shownToken).join(' ')} to close the ${n.open.map(shownToken).join(' ')} at ${opener.line}:${opener.col}; found ${describeToken(t)}`));
                     unclosed.add(o.id);
                     for (const x of objects.slice(since)) unclosed.add(x.id);
                     return;
                 }
                 const expected = describeMatchers(items.slice(i, j + 1).flatMap(x => [...first(x).set]));
-                const e = errorAt(t, `expected ${either([...expected, ...(j === items.length ? [`"${n.close.join(' ')}"`] : [])])}; found ${describeToken(t)}`);
+                const e = errorAt(t, `expected ${either([...expected, ...(j === items.length ? [n.close.map(shownToken).join(' ')] : [])])}; found ${describeToken(t)}`);
                 record(e);
                 recovered.add(o.id);
                 sync(frame, t.line, e.message);
@@ -1071,11 +1133,11 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                 });
                 return;
             case 'opt':
-                if (can(n.item)) within('item', { feature: n.feat }, () => run(n.item, o));
+                if (can(n.item) && lineOk()) within('item', { feature: n.feat }, () => run(n.item, o));
                 else if (n.derive && o) derives.set(o, n.derive);
                 return;
             case 'star':
-                while (can(n.item)) {
+                while (can(n.item) && lineOk()) {
                     const before = p;
                     if (n.feat !== undefined) within('item', { feature: n.feat }, () => run(n.item, o));
                     else run(n.item, o);
@@ -1090,7 +1152,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             }
             case 'kw': expect(word(n.text), classKeywords.has(n) ? 'class' : 'keyword'); return;
             case 'p': expect(word(n.text), 'punctuation'); return;
-            case 'nl': return;
+            case 'nl': breakAt = p; return;
             case 'rule': object(n.name); return;
             case 'assign': {
                 if (!o) throw new Error('an assignment outside an object');
@@ -1119,7 +1181,12 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                 });
                 return;
             }
-            case 'block': if (!o) throw new Error('a block outside an object'); block(n, o); return;
+            case 'block':
+                if (!o) throw new Error('a block outside an object');
+                // C3b: an indented body left out is an empty one, and leaves no node, as the printer prints none.
+                if (indent && !hit(peek(), word(n.open[0])) && first(n).nullable) return;
+                block(n, o);
+                return;
             case 'tok': case 'xref': case 'lit': throw new Error(`a ${n.t} node outside an assignment`);
         }
     };

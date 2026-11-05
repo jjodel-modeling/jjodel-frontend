@@ -103,7 +103,7 @@ describe('a keyword-less feature under Pascal/Ada', () => {
 });
 
 // Item 4: the whole corpus per style, the style check's cases and the tolerant parser's seven.
-const BASES: readonly StyleBase[] = ['clike', 'pascal'];
+const BASES: readonly StyleBase[] = ['clike', 'pascal', 'indent'];
 const lowerOf = (style: NotationStyle): NotationStyle => ({ ...style, id: `${style.id}-lower`, classCase: 'lower', literalCase: 'lower' });
 const corpusOf = (base: StyleBase): TolerantCase[] => {
     const style = styleOf(base);
@@ -139,8 +139,8 @@ describe('the whole corpus, per style', () => {
     });
 });
 
-describe('the tolerant corpus under Pascal/Ada', () => {
-    it.each(tolerantCases('pascal').map(c => [c.name, c] as const))('%s: every mutant outside the language has a syntax error, and its diff is null (oracle)', (_, c) => {
+describe('the tolerant corpus under Pascal/Ada and under indentation', () => {
+    it.each([...tolerantCases('pascal'), ...tolerantCases('indent')].map(c => [c.name, c] as const))('%s: every mutant outside the language has a syntax error, and its diff is null (oracle)', (_, c) => {
         const { mutants } = mutantsOf(c);
         const ng = nearleyGrammarOf(c.g);
         const print = printTextModel(c.g, c.objects);
@@ -155,7 +155,8 @@ describe('the tolerant corpus under Pascal/Ada', () => {
             const plan = planTextEdit({ mm: c.mm, grammar: c.g, model: c.objects, parsed, unprinted: [], previous: print.spans });
             expect(plan.diff).toBeNull();
         }
-        expect(outside).toBeGreaterThan(mutants.length / 2);
+        // Indentation has no delimiter to lose: more of its cuts are texts of the language (F18), so a third, not a half.
+        expect(outside).toBeGreaterThan(mutants.length / (c.g.style.layout === 'indent' ? 3 : 2));
     });
 
     it('a Pascal string and ":=" are one mutant token each (mutant: the C-like cut on a Pascal print)', () => {
