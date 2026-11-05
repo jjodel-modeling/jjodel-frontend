@@ -57,7 +57,7 @@ import type { ConfirmRow } from './TextConfirmPanel';
 import type { TextualSession } from './textualMonaco';
 import SyntaxForm from './SyntaxForm';
 import type { PreviewKind } from './SyntaxForm';
-import { storedErrors } from '../syntaxForm';
+import { storedErrors, styleRefusal } from '../syntaxForm';
 import './TextualTab.scss';
 
 /** T1's input: the metamodel and the objects as plain data (metamodel.ts). */
@@ -982,6 +982,9 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     // The form stays mounted once opened, under the other modes, so its draft survives a look at the text.
     const [syntaxOpened, setSyntaxOpened] = useState(false);
     useEffect(() => { if (mode === 'syntax') setSyntaxOpened(true); }, [mode]);
+    // P-2026-11-05-0910: the picker's last refused style and why, until the stored record changes.
+    const [styleRefused, setStyleRefused] = useState<{ readonly base: StyleBase; readonly reason: string } | null>(null);
+    useEffect(() => { setStyleRefused(null); }, [storedRaw]);
 
     const [status, setStatus] = useState<EditStatus>({ kind: 'synced' });
     const [stale, setStale] = useState(false);
@@ -1393,7 +1396,18 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
     const onStyle = (value: string): void => {
         if (!writeSyntax || !metamodelId || !isStyleBase(value) || !canSwitchStyle(status, staleRef.current)) return;
         const record = styleSwitchRecord(decoded, value);
-        if (record) writeSyntax(metamodelId, record);
+        if (!record) return;
+        // R-TXT-47 D1: a style the style check refuses is not written, as Save does not write it.
+        let reason: string | null = null;
+        if (read.input) {
+            try {
+                reason = styleRefusal(read.input.metamodel, stored.ids, record, decoded.issues);
+            } catch (e) {
+                reason = e instanceof Error ? e.message : String(e);
+            }
+        }
+        setStyleRefused(reason ? { base: value, reason } : null);
+        if (!reason) writeSyntax(metamodelId, record);
     };
     const refusalTitle = status.kind === 'refused' ? status.reasons.join('\n') : shownStatus.text;
     const syntaxPreview = (kind: PreviewKind, value: string): ReactNode => (ui ? (
@@ -1436,6 +1450,12 @@ export default function TextualTab({ modelId, label, tabId, writeSyntax }: Textu
                                 onClick={() => reprint(readRef.current)}>
                             Reprint
                         </button>
+                    </span>
+                )}
+                {writeSyntax && metamodel && styleRefused && (
+                    <span className="textual-tab__stale" role="alert" title={styleRefused.reason}>
+                        <i className="bi bi-exclamation-triangle" aria-hidden="true" />
+                        {STYLE_CATALOG[styleRefused.base].name} refused: {styleRefused.reason}
                     </span>
                 )}
                 {writeSyntax && metamodel && (

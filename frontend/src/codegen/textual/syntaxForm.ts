@@ -566,6 +566,15 @@ export function saveGate(input: SaveGateInput): { readonly enabled: boolean; rea
     return { enabled: !blocks.length, blocks, title };
 }
 
+/**
+ * The Text tab's style picker (P-2026-11-05-0910): a record the style check refuses is not written, as Save is not (D1);
+ * the reason in Save's words, the count and the first error. Null when nothing refuses it; a notice never does.
+ */
+export function styleRefusal(mm: TextMetamodel, ids: ElementIds, record: SyntaxAnnotations, decodingIssues: readonly AnnotationIssue[] = []): string | null {
+    const errs = readDraft(mm, ids, record, decodingIssues).faults.filter(f => f.level === 'error');
+    return errs.length ? `${errs.length} error${errs.length === 1 ? '' : 's'}: ${errs[0].message}` : null;
+}
+
 /** What Save writes: the draft without the entries of deleted elements (D7). */
 export const recordToSave = (draft: SyntaxAnnotations, ids: ElementIds): SyntaxAnnotations => withoutStale(draft, ids);
 

@@ -10,10 +10,11 @@ import { describe, it, expect } from 'vitest';
 import type { ElementIds, SyntaxAnnotations } from '../annotations';
 import type { TextMetamodel } from '../metamodel';
 import { encodeSyntax } from '../syntaxRecord';
-import { advancedInEffect, byField, draftPreview, elementMarks, fieldKey, fieldValue, fieldsOf, formElements, isDirty, parseSubsets, readDraft, saveGate, setField, staleEntries, storedChange, storedErrors, subsetsText, withoutStale } from '../syntaxForm';
+import { advancedInEffect, byField, draftPreview, elementMarks, fieldKey, fieldValue, fieldsOf, formElements, isDirty, parseSubsets, readDraft, saveGate, setField, staleEntries, storedChange, storedErrors, styleRefusal, subsetsText, withoutStale } from '../syntaxForm';
 import type { FieldRef, FormFault } from '../syntaxForm';
 import { BOOL_CLIKE, BOOL_IDS, BOOL_MM, boolObjects } from './boolCorpus';
 import { LIBRARY_IDS, LIBRARY_MM, libraryObjects } from './tolerantCorpus';
+import { PORT_CLIKE, PORT_IDS, PORT_MM } from './portCorpus';
 
 const ids = (form: ReturnType<typeof fieldsOf>): string[] => form.map(f => f.id);
 const at = (element: string, field: FieldRef['field']): string => fieldKey({ element, field });
@@ -336,5 +337,24 @@ describe('the groups of literals as text (C2b)', () => {
         expect(parseSubsets(' prose :FICTION ,HISTORY ;; verse: ; : X; POETRY')).toEqual([{ name: 'prose', literals: ['FICTION', 'HISTORY'] }]);
         expect(parseSubsets('')).toEqual([]);
         expect(subsetsText(undefined)).toBe('');
+    });
+});
+
+describe('the style picker refuses a style the style check refuses (P-2026-11-05-0910, R-TXT-47 D1)', () => {
+    it('a style with an error is refused with the count and the first error, as Save is (mutant: the gate never refusing)', () => {
+        const reason = styleRefusal(PORT_MM, PORT_IDS, { ...PORT_CLIKE, style: { base: 'indent' } });
+        expect(reason).toBe('3 errors: under indentation a Ref with no keyword, no name and nothing set prints nothing, and cannot read back');
+    });
+
+    it('a style the check passes is not refused, nor one with a notice only (mutants: refusing every switch; a notice counted as an error)', () => {
+        expect(styleRefusal(LIBRARY_MM, LIBRARY_IDS, { v: 1, style: { base: 'indent' } })).toBeNull();
+        expect(styleRefusal(PORT_MM, PORT_IDS, { ...PORT_CLIKE, style: { base: 'pascal' } })).toBeNull();
+        const stale: SyntaxAnnotations = { v: 1, style: { base: 'indent' }, features: { F_Gone_x: { keyword: 'x' } } };
+        expect(readDraft(LIBRARY_MM, LIBRARY_IDS, stale).faults.map(f => f.level)).toEqual(['notice']);
+        expect(styleRefusal(LIBRARY_MM, LIBRARY_IDS, stale)).toBeNull();
+    });
+
+    it('a decoding error of the stored record refuses as well, one error in the singular (mutant: the decoding issues left out)', () => {
+        expect(styleRefusal(LIBRARY_MM, LIBRARY_IDS, { v: 1, style: { base: 'indent' } }, [{ level: 'error', where: 'syntax', message: 'bad key' }])).toBe('1 error: bad key');
     });
 });
