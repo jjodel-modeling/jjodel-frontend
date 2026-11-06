@@ -377,9 +377,10 @@ Smoke-test scenarios potentially affected:
 ### 8.1 What exists (read)
 
 No textual probe has clicked the canvas yet: the session of 2026-11-01 says «The probe diagram edit was a direct model
-write, not a canvas click» (`sessione_2026-11-01_default-textual-notation.md:105`), and a grep of the lane folders for
-`page.mouse.click|page.mouse.down` together with `react-flow` finds none among the textual probes (measured; the files
-with `page.mouse` and `react-flow` are three, `P-2026-11-04-2206`, `P-2026-11-04-2255`, `P-2026-11-05-0148`, and they
+write, not a canvas click» (`sessione_2026-11-01_default-textual-notation.md:105`), and of the 11 probes in the lane folders
+that click with `page.mouse.click|page.mouse.down`, none mentions `react-flow` (measured: `xargs command grep -l
+react-flow` over them exits 1; positive control through the same pipe on `page.mouse`: the files with `page.mouse` and
+`react-flow` are three, `P-2026-11-04-2206`, `P-2026-11-04-2255`, `P-2026-11-05-0148`, and they
 move the mouse away for crops, `P-2026-11-05-0148/probe.mjs:67`, they do not click nodes). The pieces to copy:
 
 - **Setup** (direct calls, declared as such): the fixture `scene_3_DemoESM.jjodel` loaded as in
@@ -418,3 +419,66 @@ never as a gesture (plan rule, `sessione_2026-11-03_textual_ide_plan.md:7`).
 - **Open beside (E9)**: the dock after the picker opens the Text tab with the canvas shown.
 
 E's crops go to Alfonso (plan, line 7).
+
+## 9. Lane plan and decisions
+
+### 9.1 Lanes, in order
+
+| Lane | Delivers | Files | Visual | Critical zone |
+|---|---|---|---|---|
+| E1a | T10, the pure splice `reprintChanged` (§3.3 rules 1-5, the `null` fallbacks, print-parse equality), tests first on the corpus and DemoESM: attribute, rename with referrers, create, delete, move, comments own-line and trailing, a one-root model; mutation bench on rules 1, 2 and 4 | `codegen/textual/textReprint.ts` (new), `codegen/textual/__tests__/textReprint.test.ts` (new) | no | no |
+| E1b | T10 wired: the `reprint` branch splices when the agreed text is not the bare print, `setValue` with the view state kept (E3), identity spans from the splice, today's full reprint as fallback; scenario 2 by canvas gestures (§8.2) | `ui/TextualTab.tsx`, `textReprint.ts` (if the wiring needs an input), `__tests__/textReprint.test.ts` | yes | no |
+| E2a | Text to canvas: `selectionSync.ts` (innermost span at an offset, the last-id guard, the user-move filter), the cursor handler, `SELECT_NODE` through `pickOnCanvas` on the pane's ids, the outline click (E7), `_lastSelected` (E2) | `codegen/textual/selectionSync.ts` (new), `__tests__/selectionSync.test.ts` (new), `ui/TextualTab.tsx` | yes | no (imports `codegen/ui/codeOrigins.ts`, `codegen/ui/canvasSelection.ts`, read only) |
+| E2b | Canvas to text: the `CANVAS_SELECTION_CHANGED` listener, the highlight collection, reveal without caret or focus (E1), kept across reprint, apply and splice | `ui/TextualTab.tsx`, `ui/TextualTab.scss`, `selectionSync.ts`, `__tests__/selectionSync.test.ts` | yes | no |
+| E3 | The Text tab opens beside the model's canvas when the canvas is shown (E9), with `dockBeside` / `shownCanvas` | `ui/openTextualTab.tsx`, a test of the placement rule if it is pure | yes | no |
+
+Each lane at five files or fewer. E1a and E2a are independent and can run in either order; E1b after E1a, E2b after
+E2a; E3 last, so the sync is verified with the split made by the probe before the default changes. Tests first in every
+lane; the T10 lanes write text, not the model, so the mutation bench is on the splice's rules. One visual lane at a time.
+
+### 9.2 Decisions
+
+- **E1. Does a canvas selection move the caret?** Recommended: **no**, highlight and reveal only. The caret and the
+  focus stay the user's; no cursor event, so no loop (§6.1), and a pending edit's caret is never moved under the user.
+- **E2. Does a caret move also write `_lastSelected`, so the Properties panel follows?** Recommended: **yes**, as the
+  tree view writes it (`TreeViewContent.tsx:1216-1220`): a transient root key, no undo step, no model write (§4.3, draft
+  report §7.2).
+- **E3. How does T10 replace the text?** Recommended: **`setValue`** of the spliced text with the view state restored,
+  as `reprint` does today; not `executeEdits`, which would leave the pre-diagram text on the editor's undo stack (§3.3).
+- **E4. A caret outside every span, or a new object not yet applied.** Recommended: the **innermost carried span** that
+  holds the caret (a new object's container, then); outside every span, **nothing**: the canvas keeps its selection.
+- **E5. A caret on a reference token selects its owner or its target?** Recommended: **the owner**, the object whose
+  span holds the token; F12 and the hover already go to the target.
+- **E6. Edges.** Recommended: **nodes only in E**. Selecting or publishing edges needs a change in `EditorV2.tsx`
+  (canvas layer, Rule 20); a later lane with its own report.
+- **E7. Does an outline click select on the canvas?** Recommended: **yes**, called directly from the outline's click
+  handler (it is a user gesture whose caret move has an `api` source, so the cursor filter alone would drop it).
+- **E8. A canvas selection with no span in the text** (stale tab, unprinted object). Recommended: **silent**, no
+  highlight and no message.
+- **E9. Open the Text tab beside the canvas.** Recommended: **yes**, as the generator tab does (`dockBeside`), in its own
+  lane E3 after the sync is verified; it changes where an existing tab opens, so it is Alfonso's call.
+- **E10. T10's granularity.** Recommended: **per object, recursive on own text** (§3.3 rule 1), not top level only,
+  which is a full reprint on one-root models.
+
+## 10. Risks and open questions
+
+- **R1, cursor sources not measured.** That a typed character gives a cursor event with a source the filter can drop
+  (§4.3, §6.2) is read from the type, not measured. E2a measures it first, in the app; if typing and arrows share a
+  source, the filter is «no content change in the same task».
+- **R2, the hidden canvas.** That rc-dock unmounts an inactive tab's content (§6.4) is not measured. If it keeps it
+  mounted, `SELECT_NODE` reaches a canvas not on screen and `revealViewport` reads a zero-size pane: E2a's probe checks a
+  hidden canvas too, and the text path skips a pane whose bounding box is empty.
+- **R3, T10 on a style change** gains little (§3.3); the comments kept by owner are the gain. A style change is also
+  gated today (`canSwitchStyle`, `TextualTab.tsx:1467`), so it reprints only an agreed text.
+- **R4, comments inside a changed object's own text** are put back by owner, not by place: a comment between two
+  attributes of a changed object moves to the object's head (leading) or the line end (trailing). That is the D5 rule;
+  exactness inside a changed object would need a token-level diff, not in E.
+- **R5, D5 and T10 share the comment carry-over.** D5 (formatting) has not landed (`format.ts` does not exist on this
+  branch: `ls frontend/src/codegen/textual` lists no such file). E1a writes the carry-over in `textReprint.ts`; D5 then
+  reuses it rather than writing a second one.
+- **R6, a second Text tab or a canvas of the metamodel.** Events are filtered by `modelId`; a metamodel canvas shows
+  classes, never the M1 objects, so it is never a target.
+- **Q1.** Should a canvas selection also follow when the selection comes from the tree view or Properties
+  (`_lastSelected`) rather than the canvas? Out of the plan's wording («between text and canvas»); not in E unless asked.
+- **Q2.** Scenario 2 with a pending text edit stays «keep and mark stale» (no three-way merge). Confirmed by R-TXT-26's
+  rule that a change from elsewhere never overwrites a pending edit; listed so the choice is explicit.
