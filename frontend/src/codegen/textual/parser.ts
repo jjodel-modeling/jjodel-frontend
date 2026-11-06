@@ -37,6 +37,16 @@ export interface TextParseError {
     /** A reference error in a text with a syntax error: it may follow from that error (step A); listed after the syntax errors. */
     readonly secondary?: true;
     readonly severity?: 'warning';
+    /** D3a: with `ParseOptions.fixes` only, the edits that would remove the error, one per alternative, best first. */
+    readonly fix?: readonly TextFix[];
+}
+
+/** D3a (report §4.3, decision D6): one text edit, replacing `[start, end)` with `text`; the user's to apply, never a model write. */
+export interface TextFix {
+    readonly title: string;
+    readonly start: number;
+    readonly end: number;
+    readonly text: string;
 }
 
 export interface TextParseResult {
@@ -208,6 +218,8 @@ export interface ParseOptions {
     readonly keep?: readonly { readonly start: number; readonly end: number; readonly text: string }[];
     /** D2a: an offset of the text; the result then lists what may stand at the first token at or after it (`expected`). */
     readonly cursor?: number;
+    /** D3a: the errors then carry their fixes (`TextParseError.fix`); without it, the result is the same, with none. */
+    readonly fixes?: boolean;
 }
 
 /** R-TXT-21 (8): only a text read without any error may be applied. */
@@ -755,7 +767,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
      * and is taken as read; or the next token is `m`, so the current one is extra and is skipped. Either is an error, and
      * the object being read is recovered (R-TXT-21 (8)). Otherwise the parse fails here.
      */
-    const repair = (m: Matcher, role: TokenRole, follows: (t: Token) => boolean): void => {
+    const repair = (m: Matcher, role: TokenRole, follows: (t: Token) => boolean, tight = false): void => {
         const t = peek();
         const message = `expected ${either(describeMatchers([m]))}; found ${describeToken(t)}`;
         const o = owner();
@@ -767,7 +779,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
             return;
         }
         if (!follows(t)) fail(describeMatchers([m]), t);
-        record(errorAt(t, message));
+        record(withFix(errorAt(t, message), inserted([m.replace(/^(ID|P):/, '')], tight)));
         if (o) recovered.add(o.id);
         within('error', { message }, () => undefined);
     };
@@ -785,6 +797,29 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
         return !!f?.close && hit(t, word(f.close[0]));
     };
     const lastEnd = (): number => (p > 0 ? toks[Math.min(p, toks.length) - 1].end : 0);
+    /** The end of the last token read or skipped that is no layout mark. */
+    const readEnd = (): number => {
+        for (let k = Math.min(p, toks.length) - 1; k >= 0; k--) if (!isMark(toks[k])) return toks[k].end;
+        return 0;
+    };
+    /** Tokens as one piece of text: a space between two of them unless both are punctuation (`{}`, `end module`). */
+    const joined = (ws: readonly string[]): string => ws.reduce((s, w, k) => (k && (/^\w/.test(w) || /\w$/.test(ws[k - 1])) ? `${s} ${w}` : s + w), '');
+    /**
+     * D3a (1), report §4.3: the fix of tokens the parse took as read, written after the last token read, `lead` before
+     * them unless `tight`. None without `ParseOptions.fixes`, and none for a layout mark, which no text writes.
+     */
+    const inserted = (ws: readonly string[], tight = false, lead = ' '): TextFix[] | undefined => {
+        if (!options.fixes || ws.some(s => s === INDENT_MARK || s === DEDENT_MARK)) return undefined;
+        const at = readEnd();
+        const t = joined(ws);
+        return [{ title: `insert "${t}"`, start: at, end: at, text: (at === 0 || tight ? '' : lead) + t }];
+    };
+    const withFix = (e: TextParseError, fix: readonly TextFix[] | undefined): TextParseError => (fix ? { ...e, fix } : e);
+    /** The indentation of the line an object starts on, for a close written on a line of its own. */
+    const headIndent = (o: MutableObject): string => {
+        const s = nodeOf.get(o.id)?.start ?? 0;
+        return /^[ \t]*/.exec(text.slice(text.lastIndexOf('\n', s - 1) + 1))![0];
+    };
 
     const objects: MutableObject[] = [];
     const recovered = new Set<string>();
@@ -934,7 +969,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
     const closeOf = (e: Expr): void => {
         if (here()) need([tokenItem(e.close)], hit(peek(), word(e.close)));
         if (hit(peek(), word(e.close))) take('punctuation');
-        else repair(word(e.close), 'punctuation', t => t.k === 'EOF' || t.first || closesBody(t));
+        else repair(word(e.close), 'punctuation', t => t.k === 'EOF' || t.first || closesBody(t), true);
     };
     const unary = (e: Expr, min: number): Operand => {
         const t = peek();
@@ -1156,11 +1191,11 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                 return;
             }
             if (t.k !== 'EOF' && items.some(x => canAt(x, t))) {
-                record(errorAt(t, message));
+                record(withFix(errorAt(t, message), inserted(n.open)));
                 recovered.add(o.id);
                 within('error', { message }, () => undefined);
             } else if (n.empty.length && nullableAll && (t.k === 'EOF' || (t.first && frames.some(f => f.can(t))) || closesBody(t))) {
-                record(errorAt(t, message));
+                record(withFix(errorAt(t, message), inserted(n.empty)));
                 recovered.add(o.id);
                 within('error', { message }, () => undefined);
                 return;
@@ -1228,7 +1263,8 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                 if (t.k === 'EOF' || (t.first && enclosing.some(f => f.can(t)))) {
                     // A block with no open (B3a's prefixed head, D8) is named by its class.
                     const opened = n.open.length ? n.open.map(shownToken).join(' ') : `body of ${o.cls}`;
-                    record(errorAt(t, `expected ${n.close.map(shownToken).join(' ')} to close the ${opened} at ${opener.line}:${opener.col}; found ${describeToken(t)}`));
+                    record(withFix(errorAt(t, `expected ${n.close.map(shownToken).join(' ')} to close the ${opened} at ${opener.line}:${opener.col}; found ${describeToken(t)}`),
+                        inserted(n.close, false, `\n${headIndent(o)}`)));
                     unclosed.add(o.id);
                     for (const x of objects.slice(since)) unclosed.add(x.id);
                     return;
@@ -1321,7 +1357,7 @@ export function parseText(text: string, g: ConcreteGrammar, options: ParseOption
                     after();
                     while (hit(peek(), word(n.separator))) { take('punctuation'); run(n.item, o); after(); }
                     // A list left open at the end of its line is closed there.
-                    if (!hit(peek(), word(n.close))) repair(word(n.close), 'punctuation', t => t.k === 'EOF' || t.first || closesBody(t));
+                    if (!hit(peek(), word(n.close))) repair(word(n.close), 'punctuation', t => t.k === 'EOF' || t.first || closesBody(t), true);
                     else take('punctuation');
                 });
                 return;

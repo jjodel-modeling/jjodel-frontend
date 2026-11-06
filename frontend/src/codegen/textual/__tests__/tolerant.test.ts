@@ -403,3 +403,39 @@ describe('(viii) linear name resolution in the printer (P-2026-11-03-2220)', () 
         expect(ms).toBeLessThan(1000);
     });
 });
+
+describe('(ix) D3a: structured fixes on parse errors (P-2026-11-06-2328; report §4.3, decision D6)', () => {
+    const LIB = CASES[0];
+    const text = printTextModel(LIB.g, libraryObjects(2, 2)).text;
+    const fixed = (t: string, g = LIB.g) => parseText(t, g, { fixes: true });
+    const apply = (t: string, f: { start: number; end: number; text: string }): string => t.slice(0, f.start) + f.text + t.slice(f.end);
+
+    it('(1) a token the repair inserted: the fix inserts it where it is missing, and the text reads again in full', () => {
+        const fixture = grammarOf(FIXTURE);
+        const cases: [string, string, ReturnType<typeof grammarOf>][] = [
+            [text.replace('Library city {', 'Library city'), 'insert "{"', LIB.g],
+            [text.replace('Member reader0 {}', 'Member reader0'), 'insert "{}"', LIB.g],
+            [text.slice(0, text.lastIndexOf('\n')), 'insert "}"', LIB.g],
+            ['Part a {\n  peers b]\n}\nPart b {}\n', 'insert "["', fixture],
+            ['Part a {\n  peers [b\n}\nPart b {}\n', 'insert "]"', fixture],
+        ];
+        for (const [broken, title, g] of cases) {
+            const r = fixed(broken, g);
+            expect(r.errors.length, broken).toBe(1);
+            const fix = r.errors[0].fix ?? [];
+            expect(fix.map(f => f.title), broken).toEqual([title]);
+            expect(fix[0].start).toBe(fix[0].end);
+            const again = parseText(apply(broken, fix[0]), g);
+            expect(again.errors, apply(broken, fix[0])).toEqual([]);
+            expect(again.recovered).toEqual([]);
+        }
+        expect(apply(text.replace('Library city {', 'Library city'), fixed(text.replace('Library city {', 'Library city')).errors[0].fix![0])).toBe(text);
+        expect(apply(text.slice(0, text.lastIndexOf('\n')), fixed(text.slice(0, text.lastIndexOf('\n'))).errors[0].fix![0])).toBe(text);
+    });
+
+    it('(4) without `fixes`, no error carries a fix', () => {
+        const r = parseText(text.replace('Library city {', 'Library city'), LIB.g);
+        expect(r.errors.length).toBe(1);
+        expect('fix' in r.errors[0]).toBe(false);
+    });
+});
