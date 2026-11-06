@@ -30,6 +30,7 @@ import type {
 } from '../types';
 import { setEdgeRefId } from '../sync/syncState';
 import { rememberRefTargetName, lastSeenRefTargetName } from '../nodes/brokenRefMemory';
+import { namelessTargetLabel } from './namelessTargetLabel';
 import { parseRowViewAnnotations } from '../nodes/rowViewAnnotations';
 import { displayTypeLabel } from '../types';
 import { readVertexLayout, type VertexLayout, type VertexLayoutSource } from '../viewpoint/layout/vertexLayout';
@@ -372,7 +373,8 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                             // resolves and is not broken.
                             if (rv && typeof rv !== 'string' && rv.id) {
                                 resolved.set(rv.id, rv.name ?? '');
-                                if (!rv.name) labels.set(rv.id, `: ${rv.instanceof?.name || 'Object'}`);
+                                const label = namelessTargetLabel(rv);
+                                if (label) labels.set(rv.id, label);
                             }
                         }
                     } catch { /* proxy access can throw */ }

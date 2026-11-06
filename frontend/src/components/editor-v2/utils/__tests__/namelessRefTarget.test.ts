@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { transformSync } from 'esbuild';
@@ -6,6 +6,17 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import RowValue from '../../nodes/RowValue';
 import { detectValueRenderer } from '../../nodes/valueRenderer';
+import { namelessTargetLabel } from '../namelessTargetLabel';
+import { IRFormField } from '../../viewpoint/ir/IRFormField';
+
+// The render bench of D6: the `joiner` barrel pulls monaco, so it is replaced by the one
+// export IRFormField reads; the writes are never exercised here.
+const RENDER_LOOKUP = vi.hoisted(() => ({
+    p_named: { name: 'Port_1', instanceof: { name: 'Port' } },
+    p_nameless: { name: '', instanceof: { name: 'Port' } },
+} as { [id: string]: any }));
+vi.mock('../../../../joiner', () => ({ LPointerTargetable: { fromPointer: (p: any) => RENDER_LOOKUP[p] } }));
+vi.mock('../../viewpoint/ir/formWrite', () => ({ appendValue: () => ({}), clearValue: () => ({}), setValue: () => ({}) }));
 
 /**
  * R-TXT-46 D4 — a reference to a nameless object is not broken on the v2-flow canvas.
@@ -50,8 +61,8 @@ const refBranch = (() => {
 })();
 const resolveRefs = compile(
     `let values, refTargets, value;\n${refBranch}\nreturn { values, refTargets, value };`,
-    ['fv', 'rememberRefTargetName', 'lastSeenRefTargetName'],
-) as (fv: any, r: any, l: any) => { values: string[]; refTargets: Array<{ id: string; name: string; label?: string; broken?: boolean }>; value: string };
+    ['fv', 'rememberRefTargetName', 'lastSeenRefTargetName', 'namelessTargetLabel'],
+) as (fv: any, r: any, l: any, n: typeof namelessTargetLabel) => { values: string[]; refTargets: Array<{ id: string; name: string; label?: string; broken?: boolean }>; value: string };
 
 function rowOf(raw: string[], resolved: Array<{ id: string; name: any; instanceof?: any }>, lastKnown = 'LAST_KNOWN') {
     const remembered: Array<[string, string]> = [];
@@ -59,6 +70,7 @@ function rowOf(raw: string[], resolved: Array<{ id: string; name: any; instanceo
         { __raw: { values: raw }, values: resolved },
         (id: string, name: string) => { remembered.push([id, name]); },
         (_id: string) => lastKnown,
+        namelessTargetLabel,
     );
     return { ...out, remembered };
 }
@@ -71,10 +83,10 @@ const displayBody = (() => {
     expect(at, 'the signature of displayValue changed: update the test').toBeGreaterThan(-1);
     return blockAt(fSource, at + SIG.length - 1, 'displayValue');
 })();
-const displayValueOf = compile(displayBody, ['raw', 'LPointerTargetable']) as (raw: unknown, LPT: any) => string;
-const LOOKUP: { [id: string]: any } = { p_named: { name: 'Port_1' }, p_nameless: { name: '' } };
+const displayValueOf = compile(displayBody, ['raw', 'LPointerTargetable', 'namelessTargetLabel']) as (raw: unknown, LPT: any, n: typeof namelessTargetLabel) => string;
+const LOOKUP: { [id: string]: any } = { p_named: { name: 'Port_1' }, p_nameless: { name: '', instanceof: { name: 'Port' } } };
 const LPT = { fromPointer: (p: any) => LOOKUP[p] };
-const displayValue = (raw: unknown) => displayValueOf(raw, LPT);
+const displayValue = (raw: unknown) => displayValueOf(raw, LPT, namelessTargetLabel);
 /** The chip's broken test, as IRFormField writes it: the label fell through to the pointer. */
 const isBrokenChip = (v: string) => displayValue(v) === v;
 
@@ -103,8 +115,9 @@ describe('D4 — jjomTransformers: a nameless target resolves', () => {
 });
 
 describe('D4 — IRFormField.displayValue: a nameless target is not a broken chip', () => {
-    it("a pointer to a nameless object labels '' and is not broken", () => {
-        expect(displayValue('p_nameless')).toBe('');
+    // R-TXT-47 D6 (C2e) changed the label from '' to `: <Class>`; the chip stays not broken.
+    it('a pointer to a nameless object labels `: <Class>` and is not broken', () => {
+        expect(displayValue('p_nameless')).toBe(': Port');
         expect(isBrokenChip('p_nameless')).toBe(false);
     });
 
@@ -188,5 +201,59 @@ describe('D5 — RowValue paints the label of a nameless target', () => {
         const html = paint([{ id: 'p2', name: 'Port_1' }]);
         expect(html).toContain('</i>Port_1</span>');
         expect(html).toContain('title="Go to Port_1"');
+    });
+});
+
+/**
+ * R-TXT-47 D6 (C2e, P-2026-11-06-2041) — the same `: <Class>` label on the IR form, through
+ * the one helper both readers call. Report: `docs/discovery/discovery_2026-11-06_textual_c2e_ir_chip.md`
+ * §3.3: the three readers of `displayValue`, rendered with the `joiner` barrel mocked.
+ */
+describe('D6 — namelessTargetLabel, the helper', () => {
+    it('a nameless target reads `: <Class>`, without a metaclass `: Object`', () => {
+        expect(namelessTargetLabel({ name: '', instanceof: { name: 'Port' } })).toBe(': Port');
+        expect(namelessTargetLabel({ name: '' })).toBe(': Object');
+    });
+
+    it('a named target and a missing one have no label', () => {
+        expect(namelessTargetLabel({ name: 'Port_1', instanceof: { name: 'Port' } })).toBeUndefined();
+        expect(namelessTargetLabel(undefined)).toBeUndefined();
+    });
+});
+
+describe('D6 — IRFormField: a nameless target is labelled `: <Class>`', () => {
+    const fieldOf = (over: any) => ({
+        slotId: 's', name: 'inputs', widget: 'chips', derivedWidget: 'chips', typeName: 'Port',
+        lowerBound: 0, upperBound: -1, isMultivalued: true, isRequired: false, isEnum: false,
+        isReference: true, isComposition: false, isReadOnly: false, isDerived: false,
+        treatment: 'inline', options: [], values: ['p_named', 'p_nameless', 'p_gone'], filled: [],
+        step: 1, featureId: 'f', ...over,
+    });
+    const paint = (field: any, layout?: any) =>
+        renderToStaticMarkup(createElement(IRFormField as any, { objectId: 'o', field, layout }));
+    const pillTexts = (html: string) =>
+        [...html.matchAll(/<span class="ir-chipinput__pill([^"]*)">.*?<span class="ir-chipinput__pill-text" title="([^"]*)">([^<]*)<\/span>/g)]
+            .map(m => ({ broken: m[1].includes('--broken'), title: m[2], text: m[3] }));
+
+    it('the chip input: `: Port` beside a named chip and a broken one, unchanged', () => {
+        const html = paint(fieldOf({}), { widget: 'chips' });
+        expect(pillTexts(html)).toEqual([
+            { broken: false, title: 'Port_1', text: 'Port_1' },
+            { broken: false, title: ': Port', text: ': Port' },
+            { broken: true, title: 'p_gone', text: 'p_gone' },
+        ]);
+    });
+
+    it('a read-only single value set to a nameless target reads `: Port`, not «empty»', () => {
+        const one = (v: string) => paint(fieldOf({ isMultivalued: false, isReadOnly: true, upperBound: 1, values: [v] }));
+        expect(one('p_nameless')).toContain('<div class="ir-field__readonly" id="ir-field-s">: Port</div>');
+        expect(one('p_named')).toContain('<div class="ir-field__readonly" id="ir-field-s">Port_1</div>');
+        expect(one('p_gone')).toContain('<div class="ir-field__readonly" id="ir-field-s">p_gone</div>');
+    });
+
+    it('the rows of a read-only list keep the nameless target, as `: Port`', () => {
+        const html = paint(fieldOf({ isReadOnly: true }));
+        const rows = [...html.matchAll(/<div class="ir-field__row">([^<]*)<\/div>/g)].map(m => m[1]);
+        expect(rows).toEqual(['Port_1', ': Port', 'p_gone']);
     });
 });
